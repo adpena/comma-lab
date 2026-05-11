@@ -8,11 +8,28 @@ optimization, provider paths, and broad algorithmic search space. It is a
 read-only synthesis converted into durable next actions; no score claim is
 created here.
 
+## Supersession note (2026-05-11T16:40Z)
+
+Later PR106 latent sidecar R2 adjudication supersedes the active-floor wording
+below. The current measured PR106-sidecar `[contest-CUDA]` frontier /
+constructive upper bound is:
+
+- score `0.20664588545741508`
+- archive bytes `186822`
+- archive SHA-256
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- result JSON
+  `experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json`
+
+The earlier PR106 latent sidecar `0.20739428085403283` remains valid history,
+not the current best measured upper bound. Reserve "floor" for certified lower
+bounds; use "frontier" or "constructive upper bound" for measured packets.
+
 ## Correct current frontier separation
 
 Evidence axes remain separate:
 
-- active internal `[contest-CUDA]` floor:
+- historical pre-R2 internal `[contest-CUDA]` frontier:
   PR106 latent sidecar, score `0.20739428085403283`, archive bytes
   `186808`, archive SHA-256
   `947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48`,
@@ -28,7 +45,7 @@ Evidence axes remain separate:
   `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`;
 - PR103 `-16B` clean-runtime packet:
   exact Modal T4 rate-only positive versus PR103 source, but score
-  `0.22776742708207615`, so it is not the active CUDA floor.
+  `0.22776742708207615`, so it is not the active CUDA frontier.
 
 Do not rank CPU, CUDA, macOS CPU, MPS, or proxy signals against each other.
 MPS remains configuration discovery only, never auth eval.
@@ -143,3 +160,23 @@ other.
 ```
 
 The CPU replay itself still needs a fresh lane claim before dispatch.
+
+## Supersession note - 2026-05-11 PR106 R2 exact T4
+
+This ledger's floor language above is historical where it names PR106 latent
+sidecar `0.20739428085403283` as the active internal `[contest-CUDA]` floor or
+labels PR103-on-PR106 as an active floor. PR106 latent radius-2 sidecar exact
+Modal T4 `[contest-CUDA]` has since landed as the stricter comparison anchor:
+
+- canonical score: `0.20664588545741508`
+- archive bytes: `186822`
+- archive SHA-256:
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- job id: `pr106_latent_sidecar_r2_20260511T160358Z`
+- result JSON:
+  `experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json`
+
+Treat `0.20739428085403283` as the previous PR106 latent-sidecar anchor and
+PR103-on-PR106 as a previous rate anchor only. Future floor/frontier language
+and candidate spend gates should compare against PR106 R2 exact T4 on the
+`[contest-CUDA]` axis unless a newer exact CUDA packet supersedes it.

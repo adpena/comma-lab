@@ -88,6 +88,15 @@ exact contest-CUDA auth eval.
 
 ## Immediate follow-up
 
+Supersession note (`2026-05-11T16:40Z`): steps 1-4 below are historical.
+The CPU retry and R2 harvest/materialization/exact-T4 adjudication later
+completed in this same ledger. The current measured PR106-sidecar
+`[contest-CUDA]` frontier / constructive upper bound is
+`0.20664588545741508` at `186822` bytes, archive SHA-256
+`7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`.
+Continue to treat this as a measured frontier, not a certified lower-bound
+floor, until strict compliance and any scoped lower-bound certificate land.
+
 1. Harvest CPU retry when Modal call `fc-01KRBT0389N3CCPN4P9BDTYGWR` completes.
 2. Harvest Kaggle kernel outputs after `KernelWorkerStatus.COMPLETE`; ingest via
    `tools/harvest_kaggle_pr106_latent_score_table.py`.
@@ -331,3 +340,26 @@ Delta versus Kaggle P100 diagnostic:
 Classification: legitimate score-lowering exact CUDA result. The P100 signal
 transferred to T4, but with a measurable SegNet-axis drift; keep axis labels in
 all future sidecar score-table comparisons.
+
+## Supersession note - 2026-05-11 PR106 R2 exact T4
+
+This ledger's final exact T4 section supersedes any earlier sections here or in
+sibling 2026-05-11 ledgers that call PR106 latent sidecar
+`0.20739428085403283` the current floor, treat radius-2 exact adjudication as
+pending, or promote Kaggle P100 `0.2066238854574151` beyond diagnostic status.
+
+Current internal PR106-family measured frontier / constructive upper bound is
+the byte-closed PR106 latent radius-2 sidecar exact Modal T4 `[contest-CUDA]`
+packet:
+
+- canonical score: `0.20664588545741508`
+- archive bytes: `186822`
+- archive SHA-256:
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- job id: `pr106_latent_sidecar_r2_20260511T160358Z`
+- result JSON:
+  `experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json`
+
+Future floor/frontier, Pareto, and spend-gate language should use this exact
+T4 result as the comparison baseline unless a newer `[contest-CUDA]` artifact
+supersedes it.

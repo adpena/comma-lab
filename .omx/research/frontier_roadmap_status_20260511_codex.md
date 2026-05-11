@@ -2,6 +2,19 @@
 
 Live-safe operator roadmap. It does not claim scores or dispatch work.
 
+## Supersession note (2026-05-11T16:40Z)
+
+This roadmap was generated before the PR106 latent sidecar R2 exact-T4 result
+landed. Any row or selected-candidate wording that assumes PR103-on-PR106 or
+PR106 R1 is the active CUDA frontier is stale for routing. The current measured
+PR106-sidecar `[contest-CUDA]` frontier / constructive upper bound is
+`0.20664588545741508` at `186822` bytes, archive SHA-256
+`7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`.
+
+This note does not recompute the table below. Regenerate the roadmap before
+using selected-candidate fields for dispatch. Reserve "floor" for certified
+lower bounds; use "frontier" for measured packets.
+
 - row_count: `13`
 - dirty_path_count: `4`
 - dirty_blocked_row_count: `0`
@@ -78,3 +91,21 @@ Live-safe operator roadmap. It does not claim scores or dispatch work.
 | `meta_lagrangian_cross_paradigm_allocator` | 110 | `canonical_ranker` | `needs_research_or_contract_hardening` | `yes` | `attach_byte_closed_manifest_gate` | derivation/planning with deterministic acquisition artifact | 3 | Feed every paradigm into field_acquisition_ranking, then promote only rows with Pareto/KKT readiness, byte-closed archive manifests, and explicit Volterra/interaction assumptions. |
 | `pr106_latent_sidecar` | 850 | `current_exact_cuda_floor` | `exact_evidence_present_review_before_promotion` | `yes` | `materialize_radius2_score_table_then_exact_cuda` | A++ contest T4 exact CUDA score 0.20739428085403283 at 186808 bytes; paired Linux CPU result is worse and diagnostic only | 1 | Treat PR106 latent sidecar as the current CUDA floor, keep score tables `score_claim=false`, materialize radius-2 tables into charged sidecar bytes, then claim and run exact contest-CUDA before any promotion. |
 | `hnerv_pr103_pr106_ac_repack_runtime_closure` | 900 | `previous_exact_rate_anchor` | `exact_evidence_present_review_before_promotion` | `yes` | `maintain_as_rate_anchor_not_current_floor` | A++ contest T4 exact CUDA plus contest-final compliance | 1 | Use strict formula score 0.2089810755823297 at 185578 bytes as the previous HNeRV rate anchor (report-reconstructed score 0.20898105277982337), feed it into Pareto/meta-Lagrangian calibration, and require future rate-only HNeRV candidates to beat this byte floor or stack cleanly before spending exact-eval wall clock. |
+
+## Supersession note - 2026-05-11 PR106 R2 exact T4
+
+The roadmap table above was generated before the PR106 latent radius-2 exact T4
+adjudication returned. Its `selected_candidate_*`, `pr106_latent_sidecar`, and
+rate-only comparison fields are stale anywhere they treat radius-2 as pending
+or compare against `0.20739428085403283`.
+
+Authoritative current internal floor for this roadmap is PR106 latent radius-2
+sidecar exact Modal T4 `[contest-CUDA]`: score `0.20664588545741508`, archive
+bytes `186822`, archive SHA-256
+`7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`, job
+`pr106_latent_sidecar_r2_20260511T160358Z`, result JSON
+`experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json`.
+
+Treat the older PR106 latent sidecar `0.20739428085403283` row as the previous
+anchor, not the live floor. Future roadmap refreshes should recompute frontier,
+Pareto, KKT, and dispatch-readiness decisions against the R2 exact T4 packet.

@@ -1236,6 +1236,7 @@ def test_cli_parser_flag_set_matches_api_kwargs() -> None:
         "baseline_archive_sha256",
         "baseline_archive_size_bytes",
         "fail_on_score_affecting_change",
+        "packet_compiler_transforms",
     }
     cli_only_extras = {"input_packet", "output_dir", "print_result_json"}
     expected = api_kwargs | cli_only_extras

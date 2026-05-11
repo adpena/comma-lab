@@ -1,0 +1,8 @@
+{
+  "lgwin": 22,
+  "n_streams": 3,
+  "payload_len": 157,
+  "quality": 11,
+  "schema": "split_brotli_self_delim.v1",
+  "sha256": "8184f24aba550df8057f31ec7eb57b558cb3e9bdcdff96b6b2ce90b113604915"
+}

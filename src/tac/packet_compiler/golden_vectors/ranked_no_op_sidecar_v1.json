@@ -1,0 +1,27 @@
+{
+  "deltas": [
+    -10,
+    -8,
+    -6,
+    -5,
+    -4,
+    -3,
+    -2,
+    -1,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    10
+  ],
+  "huff_max_len": 8,
+  "huff_min_len": 2,
+  "n_dims": 8,
+  "n_pairs": 24,
+  "payload_len": 15,
+  "schema": "ranked_no_op_sidecar.v1",
+  "sha256": "565a7bd96231ba1fee393b1c17de8a6dda3611cfae77c9ad5fd3eedb06e786ba"
+}

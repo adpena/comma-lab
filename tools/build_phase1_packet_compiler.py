@@ -62,6 +62,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.phase1_packet_compiler import (  # noqa: E402
     COMPILER_MODES,
+    PACKET_COMPILER_TRANSFORMS,
     Phase1PacketCompilerError,
     Phase1PacketResult,
     TARGET_MODES,
@@ -161,6 +162,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.set_defaults(fail_on_score_affecting_change=True)
     parser.add_argument(
+        "--packet-compiler-transform",
+        dest="packet_compiler_transforms",
+        action="append",
+        choices=PACKET_COMPILER_TRANSFORMS,
+        default=None,
+        help=(
+            "Declare a tac.packet_compiler transform already applied by the "
+            "upstream trainer. May be repeated; optimize mode only."
+        ),
+    )
+    parser.add_argument(
         "--print-result-json",
         action="store_true",
         help="Print the structured result as JSON on stdout (for piping).",
@@ -196,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
             baseline_archive_sha256=args.baseline_archive_sha256,
             baseline_archive_size_bytes=args.baseline_archive_size_bytes,
             fail_on_score_affecting_change=args.fail_on_score_affecting_change,
+            packet_compiler_transforms=args.packet_compiler_transforms,
         )
     except Phase1PacketCompilerError as exc:
         print(f"[phase1-packet-compiler] FAIL: {exc}", file=sys.stderr)

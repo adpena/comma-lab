@@ -132,6 +132,14 @@ Immediate engineering consequence:
 - keep expanding score-table producers, but never promote Kaggle/P100/MPS
   directly. Promote only materialized archives after exact T4/CUDA custody.
 
+Supersession note (`2026-05-11T16:40Z`): the PR106 latent radius-2 table later
+was harvested, materialized, and exact-T4 adjudicated at
+`0.20664588545741508` with archive SHA-256
+`7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`.
+Any "pending R2 exact adjudication" wording in this memo is historical context.
+The result is still a measured frontier / constructive upper bound, not a
+certified lower-bound floor.
+
 ## Non-HNeRV escape routes
 
 These are not alternatives to rigor; they are alternative basis families that
@@ -148,9 +156,10 @@ must enter the same archive/export/scorer loop.
 
 ## Required next experiments
 
-1. Complete the pending Modal T4 exact adjudication for the PR106 latent
-   radius-2 materialized archive. This decides whether the Kaggle P100 signal
-   transfers to contest-equivalent CUDA.
+1. Historical pre-supersession item: complete the pending Modal T4 exact
+   adjudication for the PR106 latent radius-2 materialized archive. This has
+   since completed at `0.20664588545741508`; preserve the line as context for
+   why R2 became the measured frontier.
 2. For every PR100/101/103/106-family candidate, run a four-cell axis matrix:
    CPU scorer + CPU inflate, CPU scorer + CUDA inflate, CUDA scorer + CPU
    inflate, CUDA scorer + CUDA inflate. Save raw-output aggregate SHA for each.
@@ -172,3 +181,24 @@ entropy compiler -> scorer-axis sidecar optimizer -> exact dual-axis xray`.
 HNeRV is only the current best substrate. The score floor moves when we combine
 its useful parts with non-HNeRV residual bases and an exact packet compiler,
 while treating CPU/CUDA as a measured axis rather than a belief.
+
+## Supersession note - 2026-05-11 PR106 R2 exact T4
+
+The "Current best exact CUDA path" and "Required next experiments" sections
+above are stale where they list PR106 latent sidecar `0.20739428085403283` as
+best or describe radius-2 exact T4 adjudication as pending. That adjudication
+has landed and is now the authoritative internal PR106-family
+`[contest-CUDA]` anchor:
+
+- packet: PR106 latent radius-2 sidecar
+- canonical score: `0.20664588545741508`
+- archive bytes: `186822`
+- archive SHA-256:
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- job id: `pr106_latent_sidecar_r2_20260511T160358Z`
+- result JSON:
+  `experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json`
+
+The Kaggle P100 `0.2066238854574151` row remains diagnostic only. Future public
+frontier/mechanism language should compare exact CUDA candidates against the
+R2 T4 score above and keep CPU, Kaggle/P100, and T4 evidence axes separate.

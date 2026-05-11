@@ -1442,6 +1442,7 @@ def _compile_optimize(
     baseline_archive_sha256: str,
     baseline_archive_size_bytes: int,
     score_affecting_payload_changed: bool,
+    declared_packet_compiler_transforms: tuple[str, ...] = (),
 ) -> Phase1PacketResult:
     """Emit a new packet from a Phase 1 trained checkpoint. Score-affecting
     bytes change by definition.
@@ -1501,6 +1502,7 @@ def _compile_optimize(
         baseline_archive_size_bytes=baseline_archive_size_bytes,
         score_affecting_payload_changed=score_affecting_payload_changed,
         declared_files=declared_files,
+        declared_packet_compiler_transforms=declared_packet_compiler_transforms,
     )
 
 
@@ -1516,6 +1518,7 @@ def _finalize_packet_result(
     baseline_archive_size_bytes: int | None,
     score_affecting_payload_changed: bool,
     declared_files: list[str],
+    declared_packet_compiler_transforms: tuple[str, ...] = (),
 ) -> Phase1PacketResult:
     """Run the fail-closed gates + write build_manifest.json + no_op_proof.json,
     and return a Phase1PacketResult.
@@ -1706,6 +1709,7 @@ def _finalize_packet_result(
         "parser_section_manifest": parser_section_manifest,
         "hnerv_parity_manifest": hnerv_parity_manifest,
         "no_op_proof": no_op_proof,
+        "packet_compiler_transforms": list(declared_packet_compiler_transforms),
         "blockers": blockers,
     }
     (output_dir / "build_manifest.json").write_text(
@@ -1741,6 +1745,23 @@ def _finalize_packet_result(
 # ---------------------------------------------------------------------------
 
 
+#: Recognised typed packet-compiler transforms callers can declare were
+#: applied by the upstream trainer. These are recorded in the build manifest
+#: under ``packet_compiler_transforms`` so reviewers know which
+#: ``tac.packet_compiler`` primitive produced the score-affecting bytes. The
+#: Phase 1 compiler does NOT mutate archive bytes itself; it only records the
+#: declared transforms for downstream audit + future Rust/Zig port routing.
+#: Unknown tokens are refused so a typo cannot silently slip into a manifest.
+PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
+    "pr101_ranked_no_op_sidecar",
+    "pr101_centered_delta_uint8_lzma",
+    "pr101_split_brotli_self_delimiting",
+    "pr103_merged_range_stream",
+    "pr103_latent_hi_arithmetic",
+    "pr103_adaptive_brotli_param_search",
+)
+
+
 def compile_phase1_packet(
     input_packet: Path | str,
     output_dir: Path | str,
@@ -1755,6 +1776,7 @@ def compile_phase1_packet(
     baseline_archive_sha256: str | None = None,
     baseline_archive_size_bytes: int | None = None,
     fail_on_score_affecting_change: bool = True,
+    packet_compiler_transforms: Iterable[str] | None = None,
 ) -> Phase1PacketResult:
     """Compile a Phase 1 packet from an input packet directory or archive.
 
@@ -1793,6 +1815,16 @@ def compile_phase1_packet(
         When True (default), refuse to write outputs if canonicalize mode
         would alter any payload SHA. Set False only for
         diagnostic/inspection workflows.
+    packet_compiler_transforms
+        Optional list of ``tac.packet_compiler`` primitive identifiers the
+        upstream trainer used to produce the archive bytes. The compiler
+        records these in ``build_manifest.json::packet_compiler_transforms``
+        for downstream audit + future native-port routing. The list MUST
+        come from :data:`PACKET_COMPILER_TRANSFORMS`; unknown tokens are
+        refused. Default behaviour is unchanged (None → empty list); this
+        flag never mutates archive bytes — that responsibility stays with
+        the trainer per the existing "optimize mode is a custody contract"
+        contract.
 
     Returns
     -------
@@ -1823,6 +1855,21 @@ def compile_phase1_packet(
         raise Phase1PacketCompilerError(
             f"{mode} mode forbids score_affecting_payload_changed=True; "
             "use optimize mode for any payload-changing emit"
+        )
+
+    declared_transforms = tuple(packet_compiler_transforms or ())
+    unknown_transforms = [
+        t for t in declared_transforms if t not in PACKET_COMPILER_TRANSFORMS
+    ]
+    if unknown_transforms:
+        raise Phase1PacketCompilerError(
+            f"unknown packet_compiler_transforms tokens: {unknown_transforms}; "
+            f"expected subset of {list(PACKET_COMPILER_TRANSFORMS)}"
+        )
+    if declared_transforms and mode != "optimize":
+        raise Phase1PacketCompilerError(
+            "packet_compiler_transforms may only be declared in optimize "
+            f"mode (mode={mode!r} forbids byte-changing transforms)"
         )
 
     input_path = Path(input_packet)
@@ -1926,6 +1973,7 @@ def compile_phase1_packet(
             baseline_archive_sha256=baseline_archive_sha256,
             baseline_archive_size_bytes=baseline_archive_size_bytes,
             score_affecting_payload_changed=score_affecting_payload_changed,
+            declared_packet_compiler_transforms=declared_transforms,
         )
     raise Phase1PacketCompilerError(f"unreachable mode: {mode!r}")
 
@@ -1941,6 +1989,7 @@ __all__ = [
     "FORBIDDEN_NETWORK_TOKENS",
     "FORBIDDEN_PYTHON_RUNTIME_MODULES",
     "HNERV_PARITY_FIELDS",
+    "PACKET_COMPILER_TRANSFORMS",
     "Phase1PacketCompilerError",
     "Phase1PacketResult",
     "SCHEMA_VERSION",

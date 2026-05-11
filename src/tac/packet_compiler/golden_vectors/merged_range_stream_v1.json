@@ -1,0 +1,25 @@
+{
+  "payload_len": 136,
+  "schema": "merged_range_stream.v1",
+  "sha256": "ab00a8b5ca5bedc49b2aafc69006bc9d9c3d6e09a7d017aaea0fddc48d85b1a1",
+  "tensor_shapes": [
+    [
+      60
+    ],
+    [
+      10,
+      8
+    ],
+    [
+      3,
+      3,
+      4
+    ]
+  ],
+  "tensor_symbol_counts": [
+    60,
+    80,
+    36
+  ],
+  "word_count": 34
+}
