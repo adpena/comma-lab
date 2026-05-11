@@ -3,7 +3,7 @@
 This wrapper is intentionally thin: Modal only supplies the CUDA host. The
 score path remains the repository's canonical evaluator:
 
-    archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda
+    archive.zip -> inflate.sh -> upstream/evaluate.py --device {cuda,cpu}
 
 The wrapper fails closed. It does not retry on CPU, does not call
 inflate_renderer.py directly, and does not mark results promotion-eligible.
@@ -225,14 +225,17 @@ def _validate_contest_result(
     *,
     expected_archive_sha256: str,
     expected_archive_size_bytes: int,
+    expected_device: str = "cuda",
 ) -> list[str]:
     errors: list[str] = []
     provenance = payload.get("provenance")
     if not isinstance(provenance, dict):
         return ["contest_auth_eval.json missing provenance object"]
 
-    if provenance.get("device") != "cuda":
-        errors.append(f"provenance.device={provenance.get('device')!r}, expected 'cuda'")
+    if provenance.get("device") != expected_device:
+        errors.append(
+            f"provenance.device={provenance.get('device')!r}, expected {expected_device!r}"
+        )
     if provenance.get("cuda_available") is not True:
         errors.append("provenance.cuda_available is not true")
     if provenance.get("archive_sha256") != expected_archive_sha256:
@@ -283,6 +286,7 @@ def _run_auth_eval_inner(
     source_repo_commit: str,
     inflate_timeout: int,
     evaluate_timeout: int,
+    scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
@@ -291,6 +295,32 @@ def _run_auth_eval_inner(
     import subprocess
     import sys
     import time
+
+    scorer_device = str(scorer_device or "cuda").lower()
+    inflate_device_policy = str(inflate_device_policy or "auto").lower()
+    if scorer_device not in {"cuda", "cpu"}:
+        return {
+            "schema_version": 1,
+            "passed": False,
+            "returncode": 11,
+            "error": f"invalid scorer_device {scorer_device!r}",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    if inflate_device_policy not in {"auto", "cpu", "cuda"}:
+        return {
+            "schema_version": 1,
+            "passed": False,
+            "returncode": 12,
+            "error": f"invalid inflate_device_policy {inflate_device_policy!r}",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    diagnostic_only = (
+        bool(inflate_env_overrides)
+        or inflate_device_policy != "auto"
+        or scorer_device != "cuda"
+    )
 
     out_dir = REMOTE_OUT
     work_dir = REMOTE_WORK_ROOT / "eval_work"
@@ -302,6 +332,9 @@ def _run_auth_eval_inner(
         shutil.rmtree(REMOTE_WORK_ROOT)
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
+    canonical_path = (
+        f"archive.zip -> inflate.sh -> upstream/evaluate.py --device {scorer_device}"
+    )
 
     os.environ["DALI_DISABLE_NVML"] = DALI_DISABLE_NVML_VALUE
     preflight = _probe_cuda_environment()
@@ -312,7 +345,8 @@ def _run_auth_eval_inner(
             "inflate_sh_rel": inflate_sh_rel,
             "submission_dir_zip_sha256": submission_dir_zip_sha256,
             "source_repo_commit": source_repo_commit,
-            "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+            "canonical_path": canonical_path,
+            "scorer_device": scorer_device,
             "inflate_device_policy": inflate_device_policy,
             "inflate_env_overrides": list(inflate_env_overrides),
         }
@@ -446,7 +480,7 @@ def _run_auth_eval_inner(
         "--video-names-file",
         str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
         "--device",
-        "cuda",
+        scorer_device,
         "--keep-work-dir",
         "--work-dir",
         str(work_dir),
@@ -498,7 +532,7 @@ def _run_auth_eval_inner(
             "returncode": 124,
             "modal_elapsed_seconds": elapsed,
             "command": cmd,
-            "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+            "canonical_path": canonical_path,
             "error": "outer Modal contest_auth_eval timeout expired",
             "score_claim": False,
             "promotion_eligible": False,
@@ -534,17 +568,20 @@ def _run_auth_eval_inner(
                 payload,
                 expected_archive_sha256=archive_sha256,
                 expected_archive_size_bytes=archive_size_bytes,
+                expected_device=scorer_device,
             )
         )
 
     passed = proc.returncode == 0 and not validation_errors
     payload_score_claim = bool(
         passed
+        and not diagnostic_only
         and isinstance(payload, dict)
         and (payload.get("score_claim") is True or payload.get("score_claim_valid") is True)
     )
     payload_promotion_eligible = bool(
         passed
+        and not diagnostic_only
         and isinstance(payload, dict)
         and payload.get("promotion_eligible") is True
     )
@@ -554,11 +591,14 @@ def _run_auth_eval_inner(
         "returncode": proc.returncode if passed else (proc.returncode or 10),
         "modal_elapsed_seconds": elapsed,
         "command": cmd,
-        "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+        "canonical_path": canonical_path,
         "expected_archive_sha256": archive_sha256,
         "expected_archive_size_bytes": archive_size_bytes,
         "inflate_sh_rel": inflate_sh_rel,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
+        "scorer_device": scorer_device,
+        "inflate_device_policy": inflate_device_policy,
+        "diagnostic_only": diagnostic_only,
         "validation_errors": validation_errors,
         "score_claim": payload_score_claim,
         "promotion_eligible": payload_promotion_eligible,
@@ -615,6 +655,7 @@ def _run_auth_eval_fail_closed(
     source_repo_commit: str,
     inflate_timeout: int,
     evaluate_timeout: int,
+    scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
@@ -629,6 +670,7 @@ def _run_auth_eval_fail_closed(
             source_repo_commit=source_repo_commit,
             inflate_timeout=inflate_timeout,
             evaluate_timeout=evaluate_timeout,
+            scorer_device=scorer_device,
             inflate_device_policy=inflate_device_policy,
             inflate_env_overrides=inflate_env_overrides,
         )
@@ -637,7 +679,9 @@ def _run_auth_eval_fail_closed(
             out_dir=REMOTE_OUT,
             work_dir=REMOTE_WORK_ROOT / "eval_work",
             validation_path=REMOTE_OUT / "modal_cuda_auth_eval_validation.json",
-            canonical_path="archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+            canonical_path=(
+                f"archive.zip -> inflate.sh -> upstream/evaluate.py --device {scorer_device}"
+            ),
             exc=exc,
             collect_artifacts=_collect_artifacts,
         )
@@ -658,6 +702,7 @@ def run_auth_eval(
     source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
@@ -673,6 +718,7 @@ def run_auth_eval(
         source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
+        scorer_device=scorer_device,
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
     )
@@ -693,6 +739,7 @@ def run_auth_eval_a100(
     source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
@@ -708,6 +755,7 @@ def run_auth_eval_a100(
         source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
+        scorer_device=scorer_device,
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
     )
@@ -728,6 +776,7 @@ def run_auth_eval_h100(
     source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
@@ -743,6 +792,7 @@ def run_auth_eval_h100(
         source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
+        scorer_device=scorer_device,
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
     )
@@ -755,6 +805,7 @@ def main(
     inflate_sh: str = "submissions/robust_current/inflate.sh",
     submission_dir: str = "",
     gpu: str = "T4",
+    scorer_device: str = "cuda",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
     inflate_device: str = "auto",
@@ -785,11 +836,25 @@ def main(
     archive_sha256 = _sha256_bytes(archive_bytes)
     archive_size_bytes = len(archive_bytes)
     source_repo_commit = _local_git_commit()
+    scorer_device_policy = str(scorer_device or "cuda").lower()
+    if scorer_device_policy not in {"cuda", "cpu"}:
+        raise SystemExit("FATAL: --scorer-device must be one of cuda, cpu")
     inflate_device_policy = str(inflate_device or "auto").lower()
     if inflate_device_policy not in {"auto", "cpu", "cuda"}:
         raise SystemExit("FATAL: --inflate-device must be one of auto, cpu, cuda")
+    if scorer_device_policy == "cpu" and inflate_device_policy == "auto":
+        raise SystemExit(
+            "FATAL: Modal GPU-host CPU scorer diagnostics require an explicit "
+            "--inflate-device cpu or --inflate-device cuda. Use "
+            "experiments/modal_auth_eval_cpu.py for pure contest-CPU host eval."
+        )
     inflate_env_overrides = (inflate_env,) if inflate_env else ()
-    diagnostic_only = bool(inflate_env_overrides) or inflate_device_policy != "auto"
+    diagnostic_only = (
+        bool(inflate_env_overrides)
+        or inflate_device_policy != "auto"
+        or scorer_device_policy != "cuda"
+    )
+    axis_label = f"diagnostic_{scorer_device_policy}" if diagnostic_only else "contest_cuda"
     submission_dir_zip: bytes | None = None
     submission_dir_zip_sha256: str | None = None
     submission_dir_path = Path(submission_dir).resolve() if submission_dir else None
@@ -847,8 +912,9 @@ def main(
         "submission_dir": str(submission_dir_path) if submission_dir_path else None,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "source_repo_commit": source_repo_commit,
-        "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+        "canonical_path": f"archive.zip -> inflate.sh -> upstream/evaluate.py --device {scorer_device_policy}",
         "modal_dispatch_mode": "detached_spawn" if detach else "blocking_remote",
+        "scorer_device": scorer_device_policy,
         "inflate_device_policy": inflate_device_policy,
         "inflate_env_overrides": list(inflate_env_overrides),
         "diagnostic_only": diagnostic_only,
@@ -867,7 +933,7 @@ def main(
             claim_notes
             or (
                 "Modal CUDA auth eval; exact archive path; "
-                f"axis=contest_cuda; archive_sha256={archive_sha256}"
+                f"axis={axis_label}; archive_sha256={archive_sha256}"
             )
         ),
     )
@@ -896,6 +962,7 @@ def main(
         source_repo_commit,
         int(inflate_timeout),
         int(evaluate_timeout),
+        scorer_device_policy,
         inflate_device_policy,
         inflate_env_overrides,
     )
@@ -928,13 +995,14 @@ def main(
             out_dir=out_dir,
             tool="experiments/modal_auth_eval.py",
             app=APP_NAME,
-            axis="diagnostic_cuda" if diagnostic_only else "contest_cuda",
+            axis=axis_label,
             call_id=call_id,
             local_request=local_summary,
             result_json_name="modal_cuda_auth_eval_result.json",
             extra={
                 "gpu": gpu_key,
                 "diagnostic_only": diagnostic_only,
+                "scorer_device": scorer_device_policy,
                 "inflate_device_policy": inflate_device_policy,
                 "inflate_env_overrides": list(inflate_env_overrides),
                 "lane_id": lane_id,
@@ -988,8 +1056,13 @@ def main(
     result["archive_size_bytes"] = archive_size_bytes
     result["inflate_sh"] = inflate_sh_rel
     result["source_repo_commit"] = source_repo_commit
+    result["scorer_device"] = scorer_device_policy
     result["inflate_device_policy"] = inflate_device_policy
     result["inflate_env_overrides"] = list(inflate_env_overrides)
+    if diagnostic_only:
+        result["diagnostic_only"] = True
+        result["score_claim"] = False
+        result["promotion_eligible"] = False
     write_json(out_dir / "modal_cuda_auth_eval_result.json", result)
 
     print("=" * 60)
