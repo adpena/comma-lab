@@ -53,6 +53,105 @@ def test_apply_latent_candidates_torch_expands_and_applies_deltas():
     assert out[5, 3].item() == pytest.approx(0.01)
 
 
+def test_adaptive_latent_table_retries_cuda_oom_without_changing_scores(monkeypatch):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "EVAL_SIZE", (2, 2))
+    monkeypatch.setattr(mod, "CAMERA_H", 2)
+    monkeypatch.setattr(mod, "CAMERA_W", 2)
+
+    class FakeDecoder:
+        def __call__(self, latents: torch.Tensor) -> torch.Tensor:
+            values = latents.sum(dim=1).view(-1, 1, 1, 1, 1)
+            return values.expand(-1, 2, 3, 2, 2)
+
+    class FakeDistortionNet:
+        def __init__(self, *, max_rows: int | None = None):
+            self.max_rows = max_rows
+
+        def compute_distortion(self, gt_batch: torch.Tensor, cand_batch: torch.Tensor):
+            if self.max_rows is not None and int(cand_batch.shape[0]) > self.max_rows:
+                raise RuntimeError("CUDA out of memory. Tried to allocate test bytes")
+            diff = (gt_batch.float() - cand_batch.float()).abs()
+            pose = diff.mean(dim=(1, 2, 3, 4))
+            seg = diff[:, 1].mean(dim=(1, 2, 3))
+            return pose, seg
+
+    gt_pairs = torch.zeros((2, 2, 2, 2, 3), dtype=torch.uint8)
+    latents = torch.tensor([[0.0, 0.5], [1.0, -0.5]], dtype=torch.float32)
+    candidates = torch.tensor(
+        [
+            [mod.NO_OP_DIM, 0],
+            [0, 1],
+            [1, -1],
+        ],
+        dtype=torch.int16,
+    )
+
+    reference = mod.score_pair_batch_candidate_table(
+        FakeDistortionNet(),
+        FakeDecoder(),
+        gt_pairs=gt_pairs,
+        latents_batch=latents,
+        candidates=candidates,
+        candidate_batch_size=3,
+    )
+    adaptive, telemetry = mod.score_pair_batch_candidate_table_adaptive(
+        FakeDistortionNet(max_rows=2),
+        FakeDecoder(),
+        gt_pairs=gt_pairs,
+        latents_batch=latents,
+        candidates=candidates,
+        pair_chunk_size=2,
+        candidate_batch_size=3,
+        device=torch.device("cpu"),
+    )
+
+    assert np.allclose(adaptive, reference, rtol=0.0, atol=1e-6)
+    assert telemetry["oom_retry_count"] > 0
+    assert telemetry["min_candidate_batch_size_used"] == 1
+
+
+def test_adaptive_latent_table_reduces_pair_chunk_after_candidate_floor(monkeypatch):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "EVAL_SIZE", (2, 2))
+    monkeypatch.setattr(mod, "CAMERA_H", 2)
+    monkeypatch.setattr(mod, "CAMERA_W", 2)
+
+    class FakeDecoder:
+        def __call__(self, latents: torch.Tensor) -> torch.Tensor:
+            values = latents.sum(dim=1).view(-1, 1, 1, 1, 1)
+            return values.expand(-1, 2, 3, 2, 2)
+
+    class FakeDistortionNet:
+        def compute_distortion(self, gt_batch: torch.Tensor, cand_batch: torch.Tensor):
+            if int(cand_batch.shape[0]) > 1:
+                raise RuntimeError("CUDA out of memory. Tried to allocate test bytes")
+            diff = (gt_batch.float() - cand_batch.float()).abs()
+            pose = diff.mean(dim=(1, 2, 3, 4))
+            seg = diff[:, 1].mean(dim=(1, 2, 3))
+            return pose, seg
+
+    gt_pairs = torch.zeros((2, 2, 2, 2, 3), dtype=torch.uint8)
+    latents = torch.zeros((2, 2), dtype=torch.float32)
+    candidates = torch.tensor([[mod.NO_OP_DIM, 0], [0, 1]], dtype=torch.int16)
+
+    rows, telemetry = mod.score_pair_batch_candidate_table_adaptive(
+        FakeDistortionNet(),
+        FakeDecoder(),
+        gt_pairs=gt_pairs,
+        latents_batch=latents,
+        candidates=candidates,
+        pair_chunk_size=2,
+        candidate_batch_size=2,
+        device=torch.device("cpu"),
+    )
+
+    assert rows.shape == (2, 2)
+    assert np.isfinite(rows).all()
+    assert telemetry["min_candidate_batch_size_used"] == 1
+    assert telemetry["min_pair_chunk_size_used"] == 1
+
+
 def _checkpoint_args(tmp_path: Path) -> SimpleNamespace:
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"fake-pr106-archive")

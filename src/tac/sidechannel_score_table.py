@@ -7,6 +7,7 @@ emitted into an archive.
 """
 from __future__ import annotations
 
+import gc
 import json
 import os
 import sys
@@ -84,6 +85,22 @@ def verify_active_lane_claim(
 def score_without_rate(pose_dist: torch.Tensor, seg_dist: torch.Tensor) -> torch.Tensor:
     """Contest objective without the archive-rate constant."""
     return 100.0 * seg_dist + torch.sqrt(torch.clamp(10.0 * pose_dist, min=0.0))
+
+
+def is_cuda_oom(exc: BaseException) -> bool:
+    """Return true for PyTorch CUDA OOM failures without catching CPU/parser OOMs."""
+    oom_type = getattr(torch, "OutOfMemoryError", None)
+    if oom_type is not None and isinstance(exc, oom_type):
+        return True
+    text = f"{type(exc).__name__}: {exc}".lower()
+    return "cuda" in text and ("out of memory" in text or "outofmemoryerror" in text)
+
+
+def clear_cuda_retry_state(device: torch.device) -> None:
+    """Release Python and CUDA allocator state before retrying a smaller tile."""
+    gc.collect()
+    if device.type == "cuda" and torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def load_distortion_net(device: torch.device, *, repo_root: Path | None = None):

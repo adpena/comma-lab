@@ -22,7 +22,6 @@ archive from the table and running exact CUDA auth eval on that archive.
 from __future__ import annotations
 
 import argparse
-import gc
 import hashlib
 import importlib.util
 import json
@@ -67,7 +66,9 @@ from tac.repo_io import json_text, sha256_file
 from tac.sidechannel_score_table import (
     atomic_save_npy as _atomic_save_npy,
     atomic_write_text as _atomic_write_text,
+    clear_cuda_retry_state,
     completed_prefix_rows,
+    is_cuda_oom,
     load_distortion_net,
     load_gt_dataloader,
     resume_safe_prefix_pairs,
@@ -403,20 +404,6 @@ def score_pair_batch_candidate_table(
     return rows
 
 
-def _is_cuda_oom(exc: BaseException) -> bool:
-    oom_type = getattr(torch, "OutOfMemoryError", None)
-    if oom_type is not None and isinstance(exc, oom_type):
-        return True
-    text = f"{type(exc).__name__}: {exc}".lower()
-    return "cuda" in text and ("out of memory" in text or "outofmemoryerror" in text)
-
-
-def _clear_cuda_retry_state(device: torch.device) -> None:
-    gc.collect()
-    if device.type == "cuda" and torch.cuda.is_available():
-        torch.cuda.empty_cache()
-
-
 @torch.inference_mode()
 def score_pair_batch_candidate_table_adaptive(
     distortion_net,
@@ -475,10 +462,10 @@ def score_pair_batch_candidate_table_adaptive(
                 )
                 break
             except Exception as exc:
-                if not _is_cuda_oom(exc):
+                if not is_cuda_oom(exc):
                     raise
                 telemetry["oom_retry_count"] += 1
-                _clear_cuda_retry_state(device)
+                clear_cuda_retry_state(device)
                 if current_candidate_batch > 1:
                     current_candidate_batch = max(1, current_candidate_batch // 2)
                     telemetry["min_candidate_batch_size_used"] = min(
@@ -679,7 +666,7 @@ def build_score_table(args: argparse.Namespace) -> int:
                 table[frame_index] = row
         pair_cursor += batch_pairs
         del comp_batch, gt_batch, scored_rows
-        _clear_cuda_retry_state(device)
+        clear_cuda_retry_state(device)
         print(f"[yshift-score-table] scored {min(pair_cursor * 2, n_frames)}/{n_frames} frames", flush=True)
         if args.resume_checkpoint:
             _write_score_table_checkpoint(

@@ -62,7 +62,9 @@ from tac.repo_io import json_text, sha256_bytes, sha256_file
 from tac.sidechannel_score_table import (
     atomic_save_npy as _atomic_save_npy,
     atomic_write_text as _atomic_write_text,
+    clear_cuda_retry_state,
     completed_prefix_rows,
+    is_cuda_oom,
     load_distortion_net,
     load_gt_dataloader,
     read_json_object,
@@ -325,6 +327,106 @@ def score_pair_batch_candidate_table(
     return rows
 
 
+@torch.inference_mode()
+def score_pair_batch_candidate_table_adaptive(
+    distortion_net,
+    decoder,
+    *,
+    gt_pairs: torch.Tensor,
+    latents_batch: torch.Tensor,
+    candidates: torch.Tensor,
+    pair_chunk_size: int,
+    candidate_batch_size: int,
+    device: torch.device,
+) -> tuple[np.ndarray, dict[str, int]]:
+    """Score a latent candidate table with deterministic CUDA-OOM backoff."""
+    if pair_chunk_size <= 0:
+        raise ValueError(f"pair_chunk_size must be positive, got {pair_chunk_size}")
+    if candidate_batch_size <= 0:
+        raise ValueError(f"candidate_batch_size must be positive, got {candidate_batch_size}")
+    if gt_pairs.ndim != 5 or gt_pairs.shape[1] != 2 or gt_pairs.shape[-1] != 3:
+        raise ValueError(f"gt_pairs must be (P,2,H,W,3), got {tuple(gt_pairs.shape)}")
+    if latents_batch.ndim != 2:
+        raise ValueError(f"latents_batch must be (P,D), got {tuple(latents_batch.shape)}")
+    if int(gt_pairs.shape[0]) != int(latents_batch.shape[0]):
+        raise ValueError("gt_pairs and latents_batch pair counts differ")
+
+    pair_count = int(gt_pairs.shape[0])
+    rows = np.empty((pair_count, int(candidates.shape[0])), dtype=np.float32)
+    current_pair_chunk = min(int(pair_chunk_size), max(1, pair_count))
+    current_candidate_batch = int(candidate_batch_size)
+    telemetry = {
+        "initial_pair_chunk_size": int(pair_chunk_size),
+        "initial_candidate_batch_size": int(candidate_batch_size),
+        "min_pair_chunk_size_used": current_pair_chunk,
+        "min_candidate_batch_size_used": current_candidate_batch,
+        "oom_retry_count": 0,
+    }
+
+    pair_start = 0
+    while pair_start < pair_count:
+        pair_chunk = min(current_pair_chunk, pair_count - pair_start)
+        while True:
+            try:
+                chunk_rows = score_pair_batch_candidate_table(
+                    distortion_net,
+                    decoder,
+                    gt_pairs=gt_pairs[pair_start:pair_start + pair_chunk],
+                    latents_batch=latents_batch[pair_start:pair_start + pair_chunk],
+                    candidates=candidates,
+                    candidate_batch_size=current_candidate_batch,
+                )
+                break
+            except Exception as exc:
+                if not is_cuda_oom(exc):
+                    raise
+                telemetry["oom_retry_count"] += 1
+                clear_cuda_retry_state(device)
+                if current_candidate_batch > 1:
+                    current_candidate_batch = max(1, current_candidate_batch // 2)
+                    telemetry["min_candidate_batch_size_used"] = min(
+                        telemetry["min_candidate_batch_size_used"],
+                        current_candidate_batch,
+                    )
+                    print(
+                        "[latent-score-table] CUDA OOM retry: "
+                        f"pair_chunk_size={pair_chunk} "
+                        f"candidate_batch_size={current_candidate_batch}",
+                        flush=True,
+                    )
+                    continue
+                if pair_chunk > 1:
+                    current_pair_chunk = max(1, pair_chunk // 2)
+                    telemetry["min_pair_chunk_size_used"] = min(
+                        telemetry["min_pair_chunk_size_used"],
+                        current_pair_chunk,
+                    )
+                    pair_chunk = min(current_pair_chunk, pair_count - pair_start)
+                    print(
+                        "[latent-score-table] CUDA OOM retry: "
+                        f"pair_chunk_size={pair_chunk} candidate_batch_size=1",
+                        flush=True,
+                    )
+                    continue
+                raise RuntimeError(
+                    "CUDA OOM while scoring PR106 latent table even at "
+                    "pair_chunk_size=1 and candidate_batch_size=1"
+                ) from exc
+
+        rows[pair_start:pair_start + pair_chunk] = chunk_rows
+        telemetry["min_pair_chunk_size_used"] = min(
+            telemetry["min_pair_chunk_size_used"],
+            pair_chunk,
+        )
+        telemetry["min_candidate_batch_size_used"] = min(
+            telemetry["min_candidate_batch_size_used"],
+            current_candidate_batch,
+        )
+        pair_start += pair_chunk
+
+    return rows, telemetry
+
+
 def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict[str, Any]:
     n_pairs = int(args.n_pairs)
     if args.max_pairs is not None:
@@ -424,6 +526,13 @@ def build_score_table(args: argparse.Namespace) -> int:
     else:
         table, resume_pair_cursor = checkpoint
     candidates = torch.from_numpy(candidates_np.astype(np.int16)).to(device)
+    adaptive_batching = {
+        "initial_pair_chunk_size": int(args.batch_pairs),
+        "initial_candidate_batch_size": int(args.candidate_batch_size),
+        "min_pair_chunk_size_used": int(args.batch_pairs),
+        "min_candidate_batch_size_used": int(args.candidate_batch_size),
+        "oom_retry_count": 0,
+    }
 
     pair_cursor = 0
     for _, _, gt_batch in gt_loader:
@@ -441,16 +550,29 @@ def build_score_table(args: argparse.Namespace) -> int:
             pair_cursor += local_start
             batch_pairs -= local_start
         gt_batch = gt_batch[:batch_pairs].to(device)
-        scored_rows = score_pair_batch_candidate_table(
+        scored_rows, batch_telemetry = score_pair_batch_candidate_table_adaptive(
             distortion_net,
             decoder,
             gt_pairs=gt_batch,
             latents_batch=latents[pair_cursor:pair_cursor + batch_pairs],
             candidates=candidates,
+            pair_chunk_size=batch_pairs,
             candidate_batch_size=args.candidate_batch_size,
+            device=device,
         )
+        adaptive_batching["min_pair_chunk_size_used"] = min(
+            adaptive_batching["min_pair_chunk_size_used"],
+            batch_telemetry["min_pair_chunk_size_used"],
+        )
+        adaptive_batching["min_candidate_batch_size_used"] = min(
+            adaptive_batching["min_candidate_batch_size_used"],
+            batch_telemetry["min_candidate_batch_size_used"],
+        )
+        adaptive_batching["oom_retry_count"] += batch_telemetry["oom_retry_count"]
         table[pair_cursor:pair_cursor + batch_pairs] = scored_rows
         pair_cursor += batch_pairs
+        del gt_batch, scored_rows
+        clear_cuda_retry_state(device)
         print(f"[latent-score-table] scored {pair_cursor}/{n_pairs} pairs", flush=True)
         if args.resume_checkpoint:
             _write_score_table_checkpoint(
@@ -510,6 +632,7 @@ def build_score_table(args: argparse.Namespace) -> int:
         "device": str(device),
         "torch_version": torch.__version__,
         "cuda_version": getattr(torch.version, "cuda", None),
+        "adaptive_batching": adaptive_batching,
         "elapsed_seconds": float(elapsed),
         "resume_checkpoint_enabled": bool(args.resume_checkpoint),
         "resume_pair_cursor_at_start": int(resume_pair_cursor),

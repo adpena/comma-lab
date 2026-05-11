@@ -18,6 +18,7 @@ import pytest
 import torch
 
 from tac.repo_io import read_json
+from tac.sidechannel_score_table import is_cuda_oom
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "experiments/build_pr106_yshift_score_table.py"
@@ -206,11 +207,9 @@ def test_adaptive_candidate_table_reduces_pair_chunk_after_candidate_floor():
 
 
 def test_is_cuda_oom_requires_cuda_oom_signal():
-    mod = _load_module()
-
-    assert mod._is_cuda_oom(RuntimeError("CUDA out of memory. Tried to allocate 4 GiB"))
-    assert not mod._is_cuda_oom(RuntimeError("cpu out of memory in unrelated parser"))
-    assert not mod._is_cuda_oom(ValueError("candidate shape mismatch"))
+    assert is_cuda_oom(RuntimeError("CUDA out of memory. Tried to allocate 4 GiB"))
+    assert not is_cuda_oom(RuntimeError("cpu out of memory in unrelated parser"))
+    assert not is_cuda_oom(ValueError("candidate shape mismatch"))
 
 
 def test_verify_active_lane_claim_accepts_newest_nonterminal(tmp_path):
