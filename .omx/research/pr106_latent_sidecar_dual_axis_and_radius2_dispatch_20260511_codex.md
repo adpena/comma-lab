@@ -41,11 +41,24 @@ Paired Linux x86_64 contest-CPU retry was dispatched after the runtime fix:
 - job id: `pr106_latent_sidecar_modal_contest_cpu_retry_cpuinflate_20260511T151955Z`
 - Modal call id: `fc-01KRBT0389N3CCPN4P9BDTYGWR`
 - output dir: `experiments/results/modal_auth_eval_cpu/pr106_latent_sidecar_20260511T151955Z`
-- status at dispatch record time: pending
+- status: recovered successfully
+- contest-CPU score: `0.2286802845175232`
+- CPU components: `avg_segnet_dist=0.00063766`, `avg_posenet_dist=0.00016424`
+- CPU inflate elapsed: `58.1s`
+- CPU evaluate elapsed: `174.9s`
+- CPU inflated raw aggregate sha256:
+  `936d9c568d7adcf9b0da76c25531b668f8ad94bc1d64037ca2f583123318c7aa`
 
 The prior CPU attempt failed before scoring because the inflate runtime
 hard-required CUDA. That failure is classified as `runtime_cpu_inflate_blocker`,
 not as a CPU score result and not as evidence CPU is worse.
+
+Recovered result: CPU is worse than CUDA for this packet, but the reason is not
+monotone "CPU bad". CPU slightly improves the seg term relative to CUDA
+(`0.063766` vs about `0.064893`) while the pose term worsens sharply
+(`0.0405265` vs about `0.01811`). Device-axis behavior is therefore
+submission-specific and component-specific. Do not generalize from A1's CPU
+advantage to PR106-derived packets.
 
 ## Radius-2 score-table dispatch
 
