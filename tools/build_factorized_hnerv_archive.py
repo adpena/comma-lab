@@ -78,6 +78,32 @@ DEFAULT_PLAN = {
 }
 
 
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _archive_member_manifest(archive_zip: Path) -> list[dict[str, object]]:
+    members: list[dict[str, object]] = []
+    with zipfile.ZipFile(archive_zip) as zf:
+        for info in zf.infolist():
+            members.append({
+                "name": info.filename,
+                "file_size": info.file_size,
+                "compress_size": info.compress_size,
+                "crc": info.CRC,
+                "sha256": _sha256_bytes(zf.read(info)),
+            })
+    return members
+
+
 def _load_pr107_substrate(archive_path: Path) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
     """Load PR107 (apogee) ``archive.zip`` -> (state_dict, latents)."""
     pr107_codec_dir = (
@@ -197,6 +223,79 @@ def _stage_submission_dir(out_dir: Path) -> None:
     (src_target / "__init__.py").touch()
 
 
+def _write_submission_custody(
+    *,
+    out_dir: Path,
+    archive_zip: Path,
+    archive_payload_sha256: str,
+    archive_payload_bytes: int,
+    candidate_manifest: dict[str, object],
+) -> dict[str, object]:
+    """Close the local submission surface around the built archive.
+
+    ``scripts/pre_submission_compliance_check.py`` treats ``archive.zip``,
+    ``archive_manifest.json``, and ``report.txt`` as the operator-facing
+    packet surface.  The factorized builder used to emit only an external
+    archive plus ``build_manifest.json``; that was not dispatchable without
+    manual glue and it also made the word ``archive_sha256`` ambiguous.  This
+    helper makes the ZIP archive the canonical archive identity and stores the
+    inner ``0.bin`` payload hash separately.
+    """
+
+    submission_dir = out_dir / "submission_dir"
+    submission_archive = submission_dir / "archive.zip"
+    shutil.copy2(archive_zip, submission_archive)
+
+    archive_zip_sha256 = _sha256_file(archive_zip)
+    archive_zip_bytes = int(archive_zip.stat().st_size)
+    members = _archive_member_manifest(archive_zip)
+    archive_manifest: dict[str, object] = {
+        "schema_version": "factorized_hnerv_archive_manifest_v1",
+        "lane_id": candidate_manifest["lane_id"],
+        "archive_path": "archive.zip",
+        "archive_sha256": archive_zip_sha256,
+        "archive_size_bytes": archive_zip_bytes,
+        "archive_bytes": archive_zip_bytes,
+        "archive_payload_sha256": archive_payload_sha256,
+        "archive_payload_bytes": archive_payload_bytes,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "members": members,
+        "build_manifest_path": "../build_manifest.json",
+    }
+    (submission_dir / "archive_manifest.json").write_text(
+        json.dumps(archive_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (submission_dir / "report.txt").write_text(
+        "\n".join(
+            [
+                "factorized_hnerv_v1",
+                f"archive_sha256: {archive_zip_sha256}",
+                f"archive_size_bytes: {archive_zip_bytes}",
+                f"archive_payload_sha256: {archive_payload_sha256}",
+                f"archive_payload_bytes: {archive_payload_bytes}",
+                "score_claim: false",
+                "ready_for_exact_eval_dispatch: false",
+                "evidence_grade: [CPU-build proxy; not yet contest-CPU or contest-CUDA anchored]",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "submission_dir": str(submission_dir),
+        "submission_archive_path": str(submission_archive),
+        "archive_manifest_path": str(submission_dir / "archive_manifest.json"),
+        "report_path": str(submission_dir / "report.txt"),
+        "archive_zip_sha256": archive_zip_sha256,
+        "archive_zip_bytes": archive_zip_bytes,
+        "members": members,
+    }
+
+
 def _smoke_test_inflate(archive_zip_path: Path, out_raw: Path) -> dict[str, object]:
     """End-to-end smoke: parse archive bytes, decode, run forward on first
     few latents on CPU, return diagnostics. Does NOT compute a contest score.
@@ -287,7 +386,7 @@ def main() -> int:
     latent_section = _encode_pr_style_latents(latents, brotli_quality=args.brotli_quality)
     # 3. Pack to factorized_hnerv_v1 wire format.
     archive_bytes = _build_archive_bytes(decoder_section, latent_section)
-    archive_sha256 = hashlib.sha256(archive_bytes).hexdigest()
+    archive_payload_sha256 = _sha256_bytes(archive_bytes)
 
     # 4. Write archive.zip + stage submission_dir.
     out_dir = args.output_dir
@@ -301,6 +400,7 @@ def main() -> int:
 
     # 6. Build manifest.
     archive_zip_bytes = int(archive_zip.stat().st_size)
+    archive_zip_sha256 = _sha256_file(archive_zip)
     manifest: dict[str, object] = {
         "schema_version": WIRE_FORMAT_VERSION,
         "lane_id": "factorized_hnerv_v1",
@@ -315,8 +415,10 @@ def main() -> int:
         "decoder_section_bytes": int(len(decoder_section)),
         "latent_section_bytes": int(len(latent_section)),
         "archive_payload_bytes": int(len(archive_bytes)),
+        "archive_payload_sha256": archive_payload_sha256,
         "archive_zip_bytes": archive_zip_bytes,
-        "archive_sha256": archive_sha256,
+        "archive_zip_sha256": archive_zip_sha256,
+        "archive_sha256": archive_zip_sha256,
         "brotli_quality": args.brotli_quality,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
@@ -350,10 +452,17 @@ def main() -> int:
             "CLAUDE.md 'KILL is LAST RESORT'; predicted score lift NOT claimed."
         ),
     }
+    manifest["submission_custody"] = _write_submission_custody(
+        out_dir=out_dir,
+        archive_zip=archive_zip,
+        archive_payload_sha256=archive_payload_sha256,
+        archive_payload_bytes=int(len(archive_bytes)),
+        candidate_manifest=manifest,
+    )
     with (out_dir / "build_manifest.json").open("w") as f:
         json.dump(manifest, f, indent=2)
 
-    print(f"Built {archive_zip} ({archive_zip_bytes} bytes, sha256={archive_sha256[:16]}...)")
+    print(f"Built {archive_zip} ({archive_zip_bytes} bytes, sha256={archive_zip_sha256[:16]}...)")
     print(f"Manifest at {out_dir / 'build_manifest.json'}")
     return 0
 
