@@ -6,6 +6,7 @@ members = [
   "crates/raw-writer",
   "crates/residual-codec",
   "crates/stbm1br-codec",
+  "crates/tac-packet-compiler",
   "crates/zipwire"
 ]
 resolver = "2"

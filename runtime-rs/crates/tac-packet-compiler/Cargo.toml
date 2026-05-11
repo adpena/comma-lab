@@ -1,0 +1,70 @@
+# `tac-packet-compiler` — Rust native port scaffold for `tac.packet_compiler`.
+#
+# Status: SCAFFOLD-ONLY (no implementation; every public fn is `unimplemented!()`).
+# Promotion path:
+#   1. Python oracle (`src/tac/packet_compiler/`) is the canonical reference.
+#   2. Native impl writes against the golden vectors checked in under
+#      `src/tac/packet_compiler/golden_vectors/`.
+#   3. Parity test (`tests/golden_vector_parity.rs`) compares Rust output
+#      byte-for-byte against the committed SHA-256 digests.
+#   4. Promotable only after `cargo test -p tac-packet-compiler` is green on
+#      every golden vector AND a deterministic rebuild verifies.
+#
+# Source memo: handoff Bottom-line tranche item #7 + "Native-first candidates"
+# ordering 1-2 + CLAUDE.md "Deterministic packet compiler" non-negotiable.
+# Operator directive 2026-05-11: "production hardened OSS direction".
+#
+# Per CLAUDE.md "Rust/Zig is a speed layer, not a license to change semantics":
+# Python remains the oracle until native parity is proven on the golden vectors.
+
+[package]
+name = "tac-packet-compiler"
+version = "0.1.0-prerelease"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Rust native port scaffold for tac.packet_compiler (PR101 sidecar grammar + PR103 arithmetic coding). SCAFFOLD-ONLY: no impl yet; parity test harness wired against committed golden vectors."
+repository = "https://github.com/commaai/commavq-comma-video-compression-challenge"
+readme = "README.md"
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+# Range/arithmetic coder — same authors (Bamler Lab) as the Python
+# `constriction` package; byte-for-byte uint32 stream parity is the design
+# target. License: MIT OR Apache-2.0 OR BSL-1.0.
+constriction = "0.4"
+
+# Brotli compressor — pure Rust impl, matches the Python `brotli` package
+# wire format. Used by PR101 split-Brotli + PR103 adaptive search.
+brotli = "8"
+
+# liblzma — Rust bindings to the *same* liblzma C library that Python's
+# stdlib `lzma` module wraps; RAW LZMA1 (FILTER_LZMA1) bit-stream parity is
+# the design target for PR101 centered-delta uint8 latents.
+liblzma = "0.4"
+
+# JSON for loading golden vector manifests under tests + diagnostics.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# SHA-256 for byte-for-byte parity verification against committed vectors.
+sha2 = "0.10"
+
+# Hex encoding for human-readable SHA-256 diff diagnostics.
+hex = "0.4"
+
+# ndarray for numpy-equivalent shape semantics (centered-delta uint8 has a
+# column-major 2D block; merged range stream has per-tensor shape metadata).
+ndarray = "0.16"
+
+[dev-dependencies]
+# Property-based round-trip tests once impl lands (encode ∘ decode = id).
+proptest = "1"
+
+# Microbenchmarks (e.g. Rust-vs-Python parity-loop throughput).
+criterion = { version = "0.6", default-features = false }
+
+[[bench]]
+name = "golden_vector_parity"
+harness = false
+required-features = []
