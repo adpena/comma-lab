@@ -46,6 +46,14 @@ from typing import Any
 
 import modal
 
+from tac.deploy.modal.auth_eval import (
+    ClaimSpec,
+    claim_modal_auth_eval_dispatch,
+    function_call_id,
+    submission_dir_zip_bytes,
+    terminal_modal_auth_eval_claim,
+    write_spawn_metadata,
+)
 from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 APP_NAME = "comma-auth-eval-cpu"
@@ -329,6 +337,8 @@ def _run_auth_eval_inner(
     archive_sha256: str,
     archive_size_bytes: int,
     inflate_sh_rel: str,
+    submission_dir_zip_bytes: bytes | None,
+    submission_dir_zip_sha256: str | None,
     inflate_timeout: int,
     evaluate_timeout: int,
 ) -> dict[str, Any]:
@@ -353,6 +363,7 @@ def _run_auth_eval_inner(
             "archive_sha256": archive_sha256,
             "archive_size_bytes": archive_size_bytes,
             "inflate_sh_rel": inflate_sh_rel,
+            "submission_dir_zip_sha256": submission_dir_zip_sha256,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
         }
     )
@@ -411,14 +422,51 @@ def _run_auth_eval_inner(
         (out_dir / "modal_cpu_auth_eval_validation.json").write_bytes(_json_bytes(validation))
         return {**validation, "artifacts": _collect_artifacts(out_dir, work_dir)}
 
-    inflate_sh_path = (REMOTE_REPO / inflate_sh_rel).resolve()
-    remote_repo = REMOTE_REPO.resolve()
-    if not str(inflate_sh_path).startswith(str(remote_repo) + "/"):
+    if submission_dir_zip_bytes is not None:
+        if not submission_dir_zip_sha256:
+            validation = {
+                "schema_version": 1,
+                "passed": False,
+                "returncode": 8,
+                "error": "submission_dir_zip_sha256 missing for uploaded runtime tree",
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            (out_dir / "modal_cpu_auth_eval_validation.json").write_bytes(_json_bytes(validation))
+            return {**validation, "artifacts": _collect_artifacts(out_dir, work_dir)}
+        runtime_zip = out_dir / "submission_dir.zip"
+        runtime_root = out_dir / "submission_dir"
+        runtime_zip.write_bytes(submission_dir_zip_bytes)
+        observed_runtime_sha = _sha256_path(runtime_zip)
+        if observed_runtime_sha != submission_dir_zip_sha256:
+            validation = {
+                "schema_version": 1,
+                "passed": False,
+                "returncode": 9,
+                "error": "uploaded submission_dir.zip custody mismatch",
+                "expected_submission_dir_zip_sha256": submission_dir_zip_sha256,
+                "observed_submission_dir_zip_sha256": observed_runtime_sha,
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            (out_dir / "modal_cpu_auth_eval_validation.json").write_bytes(_json_bytes(validation))
+            return {**validation, "artifacts": _collect_artifacts(out_dir, work_dir)}
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(runtime_zip, runtime_root)
+        inflate_sh_path = (runtime_root / inflate_sh_rel).resolve()
+        runtime_base = runtime_root.resolve()
+        runtime_base_name = "uploaded submission_dir"
+    else:
+        inflate_sh_path = (REMOTE_REPO / inflate_sh_rel).resolve()
+        runtime_base = REMOTE_REPO.resolve()
+        runtime_base_name = "remote repo"
+    if not str(inflate_sh_path).startswith(str(runtime_base) + "/") and inflate_sh_path != runtime_base:
         validation = {
             "schema_version": 1,
             "passed": False,
             "returncode": 6,
-            "error": f"inflate_sh path escapes remote repo: {inflate_sh_rel}",
+            "error": f"inflate_sh path escapes {runtime_base_name}: {inflate_sh_rel}",
             "score_claim": False,
             "promotion_eligible": False,
         }
@@ -609,6 +657,8 @@ def run_auth_eval_cpu(
     archive_sha256: str,
     archive_size_bytes: int,
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
+    submission_dir_zip_bytes: bytes | None = None,
+    submission_dir_zip_sha256: str | None = None,
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
 ) -> dict[str, Any]:
@@ -619,6 +669,8 @@ def run_auth_eval_cpu(
         archive_sha256=archive_sha256,
         archive_size_bytes=archive_size_bytes,
         inflate_sh_rel=inflate_sh_rel,
+        submission_dir_zip_bytes=submission_dir_zip_bytes,
+        submission_dir_zip_sha256=submission_dir_zip_sha256,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
     )
@@ -629,8 +681,15 @@ def main(
     archive: str = "/tmp/modal_submission/archive.zip",
     output_dir: str = "",
     inflate_sh: str = "submissions/robust_current/inflate.sh",
+    submission_dir: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
+    detach: bool = False,
+    lane_id: str = "",
+    instance_job_id: str = "",
+    claim_agent: str = "codex:modal_auth_eval_cpu",
+    claim_notes: str = "",
+    force_claim: bool = False,
 ) -> None:
     """Upload an archive and harvest Modal CPU auth-eval artifacts."""
 
@@ -641,21 +700,49 @@ def main(
     archive_bytes = archive_path.read_bytes()
     archive_sha256 = _sha256_bytes(archive_bytes)
     archive_size_bytes = len(archive_bytes)
+    submission_dir_zip: bytes | None = None
+    submission_dir_zip_sha256: str | None = None
+    submission_dir_path = Path(submission_dir).resolve() if submission_dir else None
     inflate_sh_path = Path(inflate_sh)
-    if inflate_sh_path.is_absolute():
-        try:
-            inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(Path.cwd().resolve()))
-        except ValueError as exc:
+    if submission_dir_path is not None:
+        if not submission_dir_path.is_dir():
+            raise SystemExit(f"FATAL: --submission-dir is not a directory: {submission_dir_path}")
+        if inflate_sh_path.is_absolute():
+            try:
+                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(submission_dir_path))
+            except ValueError as exc:
+                raise SystemExit(
+                    "FATAL: absolute --inflate-sh must be inside --submission-dir "
+                    f"when uploading a runtime tree: {inflate_sh_path}"
+                ) from exc
+        else:
+            inflate_sh_rel = str(inflate_sh_path)
+        if ".." in Path(inflate_sh_rel).parts:
             raise SystemExit(
-                "FATAL: --inflate-sh must be relative to repo root or inside it: "
-                f"{inflate_sh_path}"
-            ) from exc
+                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
+            )
+        if not (submission_dir_path / inflate_sh_rel).is_file():
+            raise SystemExit(
+                f"FATAL: --inflate-sh {inflate_sh_rel!r} not found under --submission-dir "
+                f"{submission_dir_path}"
+            )
+        submission_dir_zip = submission_dir_zip_bytes(submission_dir_path)
+        submission_dir_zip_sha256 = _sha256_bytes(submission_dir_zip)
     else:
-        inflate_sh_rel = str(inflate_sh_path)
-    if ".." in Path(inflate_sh_rel).parts:
-        raise SystemExit(
-            f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
-        )
+        if inflate_sh_path.is_absolute():
+            try:
+                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(Path.cwd().resolve()))
+            except ValueError as exc:
+                raise SystemExit(
+                    "FATAL: --inflate-sh must be relative to repo root or inside it: "
+                    f"{inflate_sh_path}"
+                ) from exc
+        else:
+            inflate_sh_rel = str(inflate_sh_path)
+        if ".." in Path(inflate_sh_rel).parts:
+            raise SystemExit(
+                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
+            )
     label = _safe_label(archive_path.stem)
     out_dir = (
         Path(output_dir).resolve()
@@ -672,7 +759,10 @@ def main(
         "archive_sha256": archive_sha256,
         "archive_size_bytes": archive_size_bytes,
         "inflate_sh": inflate_sh_rel,
+        "submission_dir": str(submission_dir_path) if submission_dir_path else None,
+        "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
+        "modal_dispatch_mode": "detached_spawn" if detach else "blocking_remote",
         "score_claim": False,
         "promotion_eligible": False,
         "adjudication_required": True,
@@ -680,19 +770,109 @@ def main(
     }
     write_json(out_dir / "modal_cpu_auth_eval_local_request.json", local_summary)
 
+    claim_spec = ClaimSpec(
+        lane_id=lane_id,
+        instance_job_id=instance_job_id,
+        agent=claim_agent,
+        force=force_claim,
+        notes=(
+            claim_notes
+            or (
+                "Modal CPU auth eval; exact archive path; "
+                f"axis=contest_cpu; archive_sha256={archive_sha256}"
+            )
+        ),
+    )
+
     print(
         f"Uploading {archive_size_bytes:,} bytes to Modal CPU container "
         f"(sha256={archive_sha256}) for [contest-CPU] auth eval..."
     )
 
-    result = run_auth_eval_cpu.remote(
+    call_args = (
         archive_bytes,
         archive_sha256,
         archive_size_bytes,
         inflate_sh_rel,
+        submission_dir_zip,
+        submission_dir_zip_sha256,
         int(inflate_timeout),
         int(evaluate_timeout),
     )
+    claim_modal_auth_eval_dispatch(
+        repo_root=Path.cwd(),
+        spec=claim_spec,
+        status="active_modal_cpu_auth_eval_spawning" if detach else "active_modal_cpu_auth_eval_running",
+    )
+    if detach:
+        try:
+            call = run_auth_eval_cpu.spawn(*call_args)
+        except Exception as exc:
+            claim_modal_auth_eval_dispatch(
+                repo_root=Path.cwd(),
+                spec=ClaimSpec(
+                    lane_id=lane_id,
+                    instance_job_id=instance_job_id,
+                    agent=claim_agent,
+                    force=True,
+                    notes=(
+                        "Modal CPU auth eval spawn raised after dispatch boundary; "
+                        f"manual Modal reconciliation required; error={type(exc).__name__}"
+                    ),
+                ),
+                status="ambiguous_modal_cpu_auth_eval_spawn_submission_recovery_required",
+            )
+            raise
+        call_id = function_call_id(call)
+        write_spawn_metadata(
+            out_dir=out_dir,
+            tool="experiments/modal_auth_eval_cpu.py",
+            app=APP_NAME,
+            axis="contest_cpu",
+            call_id=call_id,
+            local_request=local_summary,
+            result_json_name="modal_cpu_auth_eval_result.json",
+            extra={
+                "lane_id": lane_id,
+                "instance_job_id": instance_job_id,
+                "claim_agent": claim_agent,
+                "claim_platform": "modal",
+            },
+        )
+        claim_modal_auth_eval_dispatch(
+            repo_root=Path.cwd(),
+            spec=ClaimSpec(
+                lane_id=lane_id,
+                instance_job_id=instance_job_id,
+                agent=claim_agent,
+                force=True,
+                notes=(
+                    "Modal CPU auth eval detached spawn accepted; "
+                    f"call_id={call_id}; output_dir={out_dir}"
+                ),
+            ),
+            status="active_modal_cpu_auth_eval_spawned",
+        )
+        print("=" * 60)
+        print(f"MODAL CPU AUTH EVAL DISPATCHED DETACHED call_id={call_id}")
+        print(f"  Artifacts: {out_dir}")
+        print(
+            "  Recover:   "
+            f".venv/bin/python tools/recover_modal_auth_eval.py --output-dir {out_dir}"
+        )
+        print("=" * 60)
+        return
+
+    try:
+        result = run_auth_eval_cpu.remote(*call_args)
+    except Exception as exc:
+        terminal_modal_auth_eval_claim(
+            repo_root=Path.cwd(),
+            spec=claim_spec,
+            status="failed_modal_cpu_auth_eval_exception",
+            notes=f"Modal CPU auth eval raised {type(exc).__name__}; no score claim",
+        )
+        raise
 
     artifacts = result.pop("artifacts", {})
     for name, data in sorted(artifacts.items()):
@@ -724,4 +904,16 @@ def main(
     print("=" * 60)
 
     if not result.get("passed"):
+        terminal_modal_auth_eval_claim(
+            repo_root=Path.cwd(),
+            spec=claim_spec,
+            status="failed_modal_cpu_auth_eval_no_score_claim",
+            notes=f"Modal CPU auth eval failed closed; output_dir={out_dir}",
+        )
         raise SystemExit(int(result.get("returncode") or 1))
+    terminal_modal_auth_eval_claim(
+        repo_root=Path.cwd(),
+        spec=claim_spec,
+        status="completed_modal_cpu_auth_eval_recovered",
+        notes=f"Modal CPU auth eval passed path validation; output_dir={out_dir}",
+    )

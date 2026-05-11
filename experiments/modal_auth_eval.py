@@ -18,16 +18,22 @@ Usage:
 from __future__ import annotations
 
 import hashlib
-import io
 import json
 import math
 import re
-import zipfile
 from pathlib import Path
 from typing import Any
 
 import modal
 
+from tac.deploy.modal.auth_eval import (
+    ClaimSpec,
+    claim_modal_auth_eval_dispatch,
+    function_call_id,
+    submission_dir_zip_bytes,
+    terminal_modal_auth_eval_claim,
+    write_spawn_metadata,
+)
 from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 APP_NAME = "comma-auth-eval"
@@ -37,27 +43,6 @@ REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")
 REQUIRED_SAMPLES = 600
 DALI_DISABLE_NVML_VALUE = "1"
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
-SKIPPED_RUNTIME_UPLOAD_FILENAMES = {".DS_Store"}
-SENSITIVE_RUNTIME_UPLOAD_NAMES = {
-    ".env",
-    ".env.local",
-    ".netrc",
-    "authorized_keys",
-    "credentials",
-    "credentials.json",
-    "id_dsa",
-    "id_ecdsa",
-    "id_ed25519",
-    "id_rsa",
-}
-SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS = (
-    "apikey",
-    "api_key",
-    "credential",
-    "private_key",
-    "secret",
-    "token",
-)
 
 app = modal.App(APP_NAME)
 
@@ -163,45 +148,6 @@ def _json_bytes(payload: dict[str, Any]) -> bytes:
 def _safe_label(value: str) -> str:
     label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
     return label or "archive"
-
-
-def _runtime_upload_skip_reason(rel: str) -> str | None:
-    path = Path(rel)
-    if path.name in SKIPPED_RUNTIME_UPLOAD_FILENAMES:
-        return "ignored host metadata"
-    if path.suffix == ".pyc" or "__pycache__" in path.parts:
-        return "ignored python bytecode cache"
-    return None
-
-
-def _validate_runtime_upload_file(path: Path, rel: str) -> None:
-    rel_path = Path(rel)
-    if path.is_symlink():
-        raise ValueError(f"refusing symlink in uploaded runtime tree: {rel}")
-    for part in rel_path.parts:
-        if part.startswith("."):
-            raise ValueError(f"refusing hidden file or directory in uploaded runtime tree: {rel}")
-    lowered_parts = {part.lower() for part in rel_path.parts}
-    if lowered_parts & SENSITIVE_RUNTIME_UPLOAD_NAMES:
-        raise ValueError(f"refusing secret-looking file in uploaded runtime tree: {rel}")
-    lowered_rel = rel.lower()
-    if any(marker in lowered_rel for marker in SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS):
-        raise ValueError(f"refusing secret-looking file in uploaded runtime tree: {rel}")
-
-
-def _submission_dir_zip_bytes(submission_dir: Path) -> bytes:
-    """Return a deterministic transport zip for an uploaded runtime tree."""
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-        for path in sorted(p for p in submission_dir.rglob("*") if p.is_file()):
-            rel = path.relative_to(submission_dir).as_posix()
-            if _runtime_upload_skip_reason(rel):
-                continue
-            _validate_runtime_upload_file(path, rel)
-            info = zipfile.ZipInfo(rel, date_time=(1980, 1, 1, 0, 0, 0))
-            info.external_attr = 0o644 << 16
-            zf.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
-    return buffer.getvalue()
 
 
 def _probe_cuda_environment() -> dict[str, Any]:
@@ -727,6 +673,12 @@ def main(
     gpu: str = "T4",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    detach: bool = False,
+    lane_id: str = "",
+    instance_job_id: str = "",
+    claim_agent: str = "codex:modal_auth_eval",
+    claim_notes: str = "",
+    force_claim: bool = False,
 ) -> None:
     """Upload an archive and harvest Modal CUDA auth-eval artifacts."""
 
@@ -762,7 +714,7 @@ def main(
                 f"FATAL: --inflate-sh {inflate_sh_rel!r} not found under --submission-dir "
                 f"{submission_dir_path}"
             )
-        submission_dir_zip = _submission_dir_zip_bytes(submission_dir_path)
+        submission_dir_zip = submission_dir_zip_bytes(submission_dir_path)
         submission_dir_zip_sha256 = _sha256_bytes(submission_dir_zip)
     else:
         if inflate_sh_path.is_absolute():
@@ -796,11 +748,26 @@ def main(
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "source_repo_commit": source_repo_commit,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+        "modal_dispatch_mode": "detached_spawn" if detach else "blocking_remote",
         "score_claim": False,
         "promotion_eligible": False,
         "adjudication_required": True,
     }
     write_json(out_dir / "modal_cuda_auth_eval_local_request.json", local_summary)
+
+    claim_spec = ClaimSpec(
+        lane_id=lane_id,
+        instance_job_id=instance_job_id,
+        agent=claim_agent,
+        force=force_claim,
+        notes=(
+            claim_notes
+            or (
+                "Modal CUDA auth eval; exact archive path; "
+                f"axis=contest_cuda; archive_sha256={archive_sha256}"
+            )
+        ),
+    )
 
     print(
         f"Uploading {archive_size_bytes:,} bytes to Modal {gpu} for CUDA auth eval "
@@ -816,7 +783,7 @@ def main(
     else:
         raise SystemExit(f"FATAL: unsupported --gpu {gpu!r}; use T4, A100, or H100")
 
-    result = auth_eval_fn.remote(
+    call_args = (
         archive_bytes,
         archive_sha256,
         archive_size_bytes,
@@ -827,6 +794,81 @@ def main(
         int(inflate_timeout),
         int(evaluate_timeout),
     )
+    claim_modal_auth_eval_dispatch(
+        repo_root=Path.cwd(),
+        spec=claim_spec,
+        status="active_modal_auth_eval_spawning" if detach else "active_modal_auth_eval_running",
+    )
+    if detach:
+        try:
+            call = auth_eval_fn.spawn(*call_args)
+        except Exception as exc:
+            claim_modal_auth_eval_dispatch(
+                repo_root=Path.cwd(),
+                spec=ClaimSpec(
+                    lane_id=lane_id,
+                    instance_job_id=instance_job_id,
+                    agent=claim_agent,
+                    force=True,
+                    notes=(
+                        "Modal CUDA auth eval spawn raised after dispatch boundary; "
+                        f"manual Modal reconciliation required; error={type(exc).__name__}"
+                    ),
+                ),
+                status="ambiguous_modal_auth_eval_spawn_submission_recovery_required",
+            )
+            raise
+        call_id = function_call_id(call)
+        write_spawn_metadata(
+            out_dir=out_dir,
+            tool="experiments/modal_auth_eval.py",
+            app=APP_NAME,
+            axis="contest_cuda",
+            call_id=call_id,
+            local_request=local_summary,
+            result_json_name="modal_cuda_auth_eval_result.json",
+            extra={
+                "gpu": gpu_key,
+                "lane_id": lane_id,
+                "instance_job_id": instance_job_id,
+                "claim_agent": claim_agent,
+                "claim_platform": "modal",
+            },
+        )
+        claim_modal_auth_eval_dispatch(
+            repo_root=Path.cwd(),
+            spec=ClaimSpec(
+                lane_id=lane_id,
+                instance_job_id=instance_job_id,
+                agent=claim_agent,
+                force=True,
+                notes=(
+                    "Modal CUDA auth eval detached spawn accepted; "
+                    f"call_id={call_id}; output_dir={out_dir}"
+                ),
+            ),
+            status="active_modal_auth_eval_spawned",
+        )
+        print("=" * 60)
+        print(f"MODAL CUDA AUTH EVAL DISPATCHED DETACHED call_id={call_id}")
+        print(f"  Artifacts: {out_dir}")
+        print(
+            "  Recover:   "
+            f".venv/bin/python tools/recover_modal_auth_eval.py --output-dir {out_dir}"
+        )
+        print("=" * 60)
+        return
+
+    try:
+        result = auth_eval_fn.remote(*call_args)
+    except Exception as exc:
+        terminal_modal_auth_eval_claim(
+            repo_root=Path.cwd(),
+            spec=claim_spec,
+            status="failed_modal_auth_eval_exception",
+            notes=f"Modal CUDA auth eval raised {type(exc).__name__}; no score claim",
+        )
+        raise
 
     artifacts = result.pop("artifacts", {})
     for name, data in sorted(artifacts.items()):
@@ -856,7 +898,19 @@ def main(
     print("=" * 60)
 
     if not result.get("passed"):
+        terminal_modal_auth_eval_claim(
+            repo_root=Path.cwd(),
+            spec=claim_spec,
+            status="failed_modal_auth_eval_no_score_claim",
+            notes=f"Modal CUDA auth eval failed closed; output_dir={out_dir}",
+        )
         raise SystemExit(int(result.get("returncode") or 1))
+    terminal_modal_auth_eval_claim(
+        repo_root=Path.cwd(),
+        spec=claim_spec,
+        status="completed_modal_auth_eval_recovered",
+        notes=f"Modal CUDA auth eval passed path validation; output_dir={out_dir}",
+    )
 
 
 def _local_git_commit() -> str:

@@ -130,8 +130,8 @@ def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_pat
     (pycache / "inflate.cpython-311.pyc").write_bytes(b"pyc")
     (submission_dir / ".DS_Store").write_bytes(b"junk")
 
-    first = mod._submission_dir_zip_bytes(submission_dir)
-    second = mod._submission_dir_zip_bytes(submission_dir)
+    first = mod.submission_dir_zip_bytes(submission_dir)
+    second = mod.submission_dir_zip_bytes(submission_dir)
 
     assert first == second
     zip_path = tmp_path / "transport.zip"
@@ -157,7 +157,7 @@ def test_submission_dir_transport_zip_rejects_hidden_and_secrets(mod, tmp_path, 
     path.write_text("do-not-upload")
 
     with pytest.raises(ValueError, match="refusing"):
-        mod._submission_dir_zip_bytes(submission_dir)
+        mod.submission_dir_zip_bytes(submission_dir)
 
 
 def test_submission_dir_transport_zip_rejects_symlinks(mod, tmp_path):
@@ -172,7 +172,7 @@ def test_submission_dir_transport_zip_rejects_symlinks(mod, tmp_path):
         pytest.skip("symlinks unavailable on this filesystem")
 
     with pytest.raises(ValueError, match="symlink"):
-        mod._submission_dir_zip_bytes(submission_dir)
+        mod.submission_dir_zip_bytes(submission_dir)
 
 
 def test_validate_contest_result_rejects_non_cuda(mod):
@@ -222,6 +222,8 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
     archive = tmp_path / "point_004_eps_p2.zip"
     archive.write_bytes(b"archive bytes")
     out_dir = tmp_path / "out"
+    claim_calls = []
+    terminal_calls = []
 
     class FakeRemote:
         @staticmethod
@@ -241,8 +243,23 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
             }
 
     monkeypatch.setattr(mod, "run_auth_eval", FakeRemote)
+    monkeypatch.setattr(
+        mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **kwargs: claim_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        mod,
+        "terminal_modal_auth_eval_claim",
+        lambda **kwargs: terminal_calls.append(kwargs),
+    )
 
-    mod.main(str(archive), str(out_dir))
+    mod.main(
+        str(archive),
+        str(out_dir),
+        lane_id="lane_unit_modal_auth_eval",
+        instance_job_id="job_unit_modal_auth_eval",
+    )
 
     request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
     result = json.loads((out_dir / "modal_cuda_auth_eval_result.json").read_text())
@@ -250,4 +267,46 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
     assert request["promotion_eligible"] is False
     assert request["adjudication_required"] is True
     assert request["submission_dir"] is None
+    assert request["modal_dispatch_mode"] == "blocking_remote"
     assert result["promotion_eligible"] is False
+    assert claim_calls[0]["status"] == "active_modal_auth_eval_running"
+    assert terminal_calls[0]["status"] == "completed_modal_auth_eval_recovered"
+
+
+def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path, monkeypatch):
+    archive = tmp_path / "point_004_eps_p2.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+    claim_calls = []
+
+    class FakeSpawn:
+        @staticmethod
+        def spawn(*_args):
+            return type("Call", (), {"object_id": "fc-test-modal-auth"})()
+
+    monkeypatch.setattr(mod, "run_auth_eval", FakeSpawn)
+    monkeypatch.setattr(
+        mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **kwargs: claim_calls.append(kwargs),
+    )
+
+    mod.main(
+        str(archive),
+        str(out_dir),
+        detach=True,
+        lane_id="lane_unit_modal_auth_eval",
+        instance_job_id="job_unit_modal_auth_eval_detached",
+    )
+
+    metadata = json.loads((out_dir / "modal_auth_eval_spawn.json").read_text())
+    assert metadata["schema_version"] == "modal_auth_eval_spawn_v1"
+    assert metadata["axis"] == "contest_cuda"
+    assert metadata["call_id"] == "fc-test-modal-auth"
+    assert metadata["result_json_name"] == "modal_cuda_auth_eval_result.json"
+    assert metadata["lane_id"] == "lane_unit_modal_auth_eval"
+    assert (out_dir / "modal_call_id.txt").read_text().strip() == "fc-test-modal-auth"
+    assert [call["status"] for call in claim_calls] == [
+        "active_modal_auth_eval_spawning",
+        "active_modal_auth_eval_spawned",
+    ]

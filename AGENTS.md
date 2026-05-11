@@ -206,6 +206,13 @@ Manual table edits are acceptable only for emergency recovery or correcting stal
 
 Lightning Studio-backed submitters enforce this rule in `scripts/launch_lightning_batch_job.py`: non-dry-run exact-eval, component-response, and component-sensitivity submissions must have a matching active claim row for the lane/job, unless an auditable `--allow-missing-dispatch-claim-reason` is supplied.
 
+Modal auth-eval submitters enforce the same rule in `experiments/modal_auth_eval.py`
+and `experiments/modal_auth_eval_cpu.py`. Use `--detach` for long exact-eval
+runs, then harvest through the canonical `tools/recover_modal_auth_eval.py`
+path so `contest_auth_eval.json`, `inflated_outputs_manifest.json`, runtime
+custody, and terminal claim rows are preserved consistently across CUDA and CPU
+axes.
+
 ## Operator Gates And Discoverability — NON-NEGOTIABLE
 
 Recovered or newly created tools are not complete until they are discoverable
