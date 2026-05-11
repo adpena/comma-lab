@@ -1,0 +1,20 @@
+{
+  "schema": "pre_submission_archive_manifest_v1",
+  "archive_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip",
+  "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+  "archive_size_bytes": 186780,
+  "member_count": 1,
+  "members": [
+    {
+      "name": "0.bin",
+      "file_size": 186672,
+      "compress_size": 186672,
+      "crc": 1838385254,
+      "sha256": "8c9f259e497033e0e22971ebd9f3b899fe644ae234998664f3edc3a790706b0e"
+    }
+  ],
+  "score_claim": false,
+  "lane_id": "lane_pr106_latent_sidecar_r2_pr101_grammar",
+  "job_id": "pr106_latent_sidecar_r2_pr101_grammar_20260511T180000Z",
+  "notes": "PR106 r2 + PR101 ranked-Huffman/no-op grammar variant (format_id=0x02). Saves 42 bytes net (575->527 sidecar payload + 6B framing overhead) vs the format_id=0x01 brotli sidecar baseline. The dim/delta_q arrays reconstructed by decode_ranked_no_op_sidecar are bit-identical to the brotli-decoded version (SHA a55bd9bdecb4a462... / 616ee8fbee1e4770...), so HNeRV decoder behavior is unchanged by construction. Local smoke (CPU, same-device cross-format comparison) confirms inflate output is byte-identical between format_id=0x01 and format_id=0x02. score_claim=false here because the contest-CUDA score will be re-measured via Modal T4 dispatch (lane_pr106_latent_sidecar_r2_pr101_grammar_20260511T180000Z). The actual score lives in contest_auth_eval.json with promotion_eligible=false until the gate passes."
+}

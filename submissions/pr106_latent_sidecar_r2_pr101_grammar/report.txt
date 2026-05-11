@@ -1,0 +1,49 @@
+PR106 latent sidecar r2 + PR101 grammar paired runtime variant — submission report
+
+lane_id            : lane_pr106_latent_sidecar_r2_pr101_grammar
+job_id             : pr106_latent_sidecar_r2_pr101_grammar_20260511T180000Z
+archive_sha256     : c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383
+archive_size_bytes : 186780
+runtime_tree_sha256: e1408c6a8608c0e361d1096e19c20f85271f9edf915d3de8f765d666b37c3715
+
+Provenance
+==========
+Operator approved 2026-05-11. Paired runtime change + Modal T4 dispatch on the
+PR101 ranked-Huffman/no-op grammar optimized variant of the PR106 r2 frontier.
+
+The runtime change adds src/pr101_grammar.py (decode-only subset of
+tac.packet_compiler.pr101_sidecar_grammar) and extends inflate.py to dispatch
+on format_id (0x01 brotli ↔ 0x02 PR101 grammar). The (dim, delta_q) arrays
+under format_id=0x02 are bit-identical to the brotli-decoded arrays under
+format_id=0x01, so HNeRV decoder behavior is unchanged by construction.
+
+Byte savings vs r2 r1
+=====================
+sidecar payload : 575 → 527 bytes (-48)
+framing meta    :   0 →   6 bytes (+6)
+archive total   : 186822 → 186780 bytes (-42)
+
+[predicted] score delta
+=======================
+42 bytes × 25 / 37545489 = -0.0000280 score points (byte-rate only).
+SegNet + PoseNet distortion unchanged by construction.
+
+Empirical [contest-CUDA] score
+==============================
+See contest_auth_eval.json (populated after Modal Tesla T4 dispatch lands).
+
+Local smoke verification
+========================
+On CPU (PACT_INFLATE_DEVICE=cpu), inflate output of format_id=0x02 is
+byte-identical to inflate output of format_id=0x01:
+  pr101_grammar (0x02) sha256: e6d9170b92997db1e6211eeb665187a3ac6a23c743dd3659c46633e509af329f
+  baseline brotli  (0x01) sha256: e6d9170b92997db1e6211eeb665187a3ac6a23c743dd3659c46633e509af329f
+  byte-identical: True
+
+Cross-references
+================
+- Parallel-E measurement: feedback_pr101_pr103_grammar_on_pr106_r2_landed_20260511.md
+- Sister r1 release surface: submissions/pr106_latent_sidecar_r2/
+- PR101 grammar source-of-truth: src/tac/packet_compiler/pr101_sidecar_grammar.py
+- Optimized variant artifacts: experiments/results/pr106_r2_pr101_pr103_grammar_measurement_20260511T180000Z/
+- Takeover memo: project_full_custody_takeover_codex_offline_20260511.md
