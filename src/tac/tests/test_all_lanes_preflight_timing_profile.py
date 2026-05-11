@@ -125,6 +125,46 @@ def test_all_lanes_preflight_timeout_rejects_non_positive_budget() -> None:
         raise AssertionError("expected ValueError")
 
 
+def test_hard_watchdog_can_be_disabled_for_diagnostic_runs(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+
+    monkeypatch.setenv("PACT_ALL_LANES_PREFLIGHT_HARD_WATCHDOG", "0")
+
+    assert module._hard_watchdog_enabled() is False
+    assert module._start_hard_wall_clock_watchdog(30.0) is None
+
+
+def test_hard_watchdog_fires_exit_func_after_budget_plus_grace(monkeypatch, capsys) -> None:
+    module = _load_all_lanes_module()
+    fired = module.threading.Event()
+    exit_codes: list[int] = []
+
+    def fake_exit(code: int) -> None:
+        exit_codes.append(code)
+        fired.set()
+
+    monkeypatch.setenv("PACT_ALL_LANES_PREFLIGHT_HARD_WATCHDOG", "1")
+    monkeypatch.setenv("PACT_ALL_LANES_PREFLIGHT_HARD_WATCHDOG_GRACE_S", "0")
+
+    timer = module._start_hard_wall_clock_watchdog(0.01, exit_func=fake_exit)
+    assert timer is not None
+    assert fired.wait(timeout=1.0)
+    timer.cancel()
+
+    assert exit_codes == [124]
+    assert "hard watchdog fired" in capsys.readouterr().err
+
+
+def test_hard_watchdog_message_names_noncooperative_gate_class() -> None:
+    module = _load_all_lanes_module()
+
+    message = module._format_hard_watchdog_message(timeout_s=30.0, grace_s=2.0)
+
+    assert "30.00s budget + 2.00s grace" in message
+    assert "did not return cooperatively" in message
+    assert "DO NOT DISPATCH" in message
+
+
 def test_all_lanes_budget_failure_reports_hot_steps() -> None:
     module = _load_all_lanes_module()
     results = [

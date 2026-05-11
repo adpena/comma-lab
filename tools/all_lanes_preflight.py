@@ -290,6 +290,7 @@ PR106X_ARCHIVE = (
 TIMING_PROFILE_SCHEMA = "pact.all_lanes_preflight_timing.v1"
 SLOW_STEP_THRESHOLD_S = 0.50
 DEFAULT_ALL_LANES_PREFLIGHT_TIMEOUT_S = 30.0
+DEFAULT_HARD_WATCHDOG_GRACE_S = 2.0
 
 LANES = [
     {
@@ -1906,6 +1907,53 @@ def _all_lanes_preflight_timeout_seconds(
     return float(timeout_s)
 
 
+def _hard_watchdog_enabled() -> bool:
+    raw = os.environ.get("PACT_ALL_LANES_PREFLIGHT_HARD_WATCHDOG", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _hard_watchdog_grace_seconds() -> float:
+    raw = os.environ.get("PACT_ALL_LANES_PREFLIGHT_HARD_WATCHDOG_GRACE_S", "").strip()
+    if raw:
+        try:
+            value = float(raw)
+        except ValueError:
+            value = DEFAULT_HARD_WATCHDOG_GRACE_S
+    else:
+        value = DEFAULT_HARD_WATCHDOG_GRACE_S
+    return max(0.0, value)
+
+
+def _format_hard_watchdog_message(*, timeout_s: float, grace_s: float) -> str:
+    return (
+        "FATAL: all-lanes preflight hard watchdog fired after "
+        f"{timeout_s:.2f}s budget + {grace_s:.2f}s grace. "
+        "A preflight gate did not return cooperatively; DO NOT DISPATCH from this run."
+    )
+
+
+def _start_hard_wall_clock_watchdog(
+    timeout_s: float | None,
+    *,
+    exit_func: Callable[[int], object] = os._exit,
+) -> threading.Timer | None:
+    """Hard-exit if an in-process gate ignores the cooperative budget."""
+
+    if timeout_s is None or not _hard_watchdog_enabled():
+        return None
+    grace_s = _hard_watchdog_grace_seconds()
+
+    def _crash() -> None:
+        sys.stderr.write(_format_hard_watchdog_message(timeout_s=timeout_s, grace_s=grace_s) + "\n")
+        sys.stderr.flush()
+        exit_func(124)
+
+    timer = threading.Timer(float(timeout_s) + grace_s, _crash)
+    timer.daemon = True
+    timer.start()
+    return timer
+
+
 def _format_wall_clock_budget_failure(
     results: list[PreflightResult],
     *,
@@ -2396,12 +2444,17 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     max_workers = args.jobs or _default_jobs(len(steps))
     run_started = time.perf_counter()
-    results = _run_steps_with_budget(
-        steps,
-        max_workers=max_workers,
-        wall_clock_budget_s=wall_clock_budget_s,
-        run_started=run_started,
-    )
+    hard_watchdog = _start_hard_wall_clock_watchdog(wall_clock_budget_s)
+    try:
+        results = _run_steps_with_budget(
+            steps,
+            max_workers=max_workers,
+            wall_clock_budget_s=wall_clock_budget_s,
+            run_started=run_started,
+        )
+    finally:
+        if hard_watchdog is not None:
+            hard_watchdog.cancel()
     source_index.save_persistent_text_facts()
     wall_elapsed_s = time.perf_counter() - run_started
 
