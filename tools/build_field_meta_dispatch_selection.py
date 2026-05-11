@@ -40,6 +40,7 @@ from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
     RATE_ONLY_FLOOR_BLOCKER_PREFIX,
     build_rate_only_floor_proof,
 )
+from tac.continual_learning import contest_result_from_auth_eval_payload  # noqa: E402
 from tac.optimization.meta_lagrangian_allocator import rate_score_delta  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
@@ -59,6 +60,14 @@ PROXY_EVIDENCE_GRADE_MARKERS = (
     "planning",
     "proxy",
     "prediction",
+)
+EXACT_CUDA_SCORE_EVIDENCE_PATH_KEYS = (
+    "exact_cuda_auth_eval_json",
+    "exact_cuda_score_json_path",
+    "contest_cuda_auth_eval_json",
+    "contest_cuda_score_json_path",
+    "contest_auth_eval_json",
+    "score_json_path",
 )
 PARETO_MINIMIZE_OBJECTIVES = (
     "expected_total_score_delta",
@@ -3687,6 +3696,94 @@ def _field_meta_ingestion_contract(
     }
 
 
+def _score_evidence_path_values(payload: Mapping[str, Any]) -> list[str]:
+    values: list[Any] = [
+        payload[key]
+        for key in EXACT_CUDA_SCORE_EVIDENCE_PATH_KEYS
+        if key in payload and payload.get(key) is not None
+    ]
+    for section_key in ("exact_cuda_eval", "exact_eval", "score_evidence"):
+        section = payload.get(section_key)
+        if isinstance(section, Mapping):
+            values.extend(
+                section[key]
+                for key in EXACT_CUDA_SCORE_EVIDENCE_PATH_KEYS
+                if key in section and section.get(key) is not None
+            )
+    return _path_values(values)
+
+
+def _exact_cuda_score_evidence_proof(
+    *,
+    payload: Mapping[str, Any],
+    manifest_path: Path,
+    repo_root: Path,
+    candidate_archive_sha256: str,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    checked_paths: list[str] = []
+    if not _is_sha256(candidate_archive_sha256):
+        blockers.append("candidate_archive_sha256_missing_or_invalid")
+
+    for value in _score_evidence_path_values(payload):
+        path = _resolve_local_path(value, repo_root=repo_root, manifest_dir=manifest_path.parent)
+        if path is None:
+            continue
+        checked_paths.append(_repo_relative_if_possible(path, repo_root=repo_root))
+        if not path.is_file():
+            blockers.append(f"auth_eval_json_missing:{_repo_relative_if_possible(path, repo_root=repo_root)}")
+            continue
+        try:
+            evidence_payload = read_json(path)
+        except (OSError, ValueError) as exc:
+            blockers.append(f"auth_eval_json_unreadable:{type(exc).__name__}")
+            continue
+        if not isinstance(evidence_payload, Mapping):
+            blockers.append("auth_eval_json_not_object")
+            continue
+        try:
+            result = contest_result_from_auth_eval_payload(
+                dict(evidence_payload),
+                architecture_class=str(payload.get("candidate_id") or "field_meta_candidate"),
+                source_path=path,
+            )
+        except (TypeError, ValueError) as exc:
+            blockers.append(f"auth_eval_json_contract_invalid:{type(exc).__name__}")
+            continue
+        verdict = result.validate_custody_verdict()
+        if not verdict.accepted or result.axis != "cuda":
+            blockers.append(f"auth_eval_json_not_authoritative_cuda:{verdict.refused_class or result.axis}")
+            continue
+        if candidate_archive_sha256 and result.archive_sha256 != candidate_archive_sha256:
+            blockers.append("auth_eval_archive_sha256_mismatch")
+            continue
+        return {
+            "schema": "field_meta_exact_cuda_score_evidence_proof_v1",
+            "status": "passed",
+            "auth_eval_json_path": _repo_relative_if_possible(path, repo_root=repo_root),
+            "archive_sha256": result.archive_sha256,
+            "archive_bytes": result.archive_bytes,
+            "score": result.score_value,
+            "hardware_substrate": result.hardware_substrate,
+            "blockers": [],
+            "checked_paths": checked_paths,
+        }
+
+    if not checked_paths:
+        blockers.append("exact_cuda_auth_eval_json_path_missing")
+    return {
+        "schema": "field_meta_exact_cuda_score_evidence_proof_v1",
+        "status": "blocked",
+        "auth_eval_json_path": "",
+        "archive_sha256": "",
+        "archive_bytes": None,
+        "score": None,
+        "hardware_substrate": "",
+        "blockers": _unique_strings(blockers),
+        "checked_paths": checked_paths,
+    }
+
+
 def _score_evidence_contract(
     *,
     payload: Mapping[str, Any],
@@ -3694,11 +3791,20 @@ def _score_evidence_contract(
     proxy_row: bool,
     ingestion_contract: Mapping[str, Any],
     expected_total_score_delta: float,
+    manifest_path: Path,
+    repo_root: Path,
+    candidate_archive_sha256: str,
 ) -> dict[str, Any]:
     grade = evidence_grade.strip().lower()
     source_score_lowering_evidence = payload.get("score_lowering_evidence")
     exact_cuda_positive = payload.get("exact_positive_cuda_evidence") is True
     exact_cuda_grade = grade in {"a", "a++"} or "contest_cuda_exact_eval_positive" in grade
+    exact_cuda_proof = _exact_cuda_score_evidence_proof(
+        payload=payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        candidate_archive_sha256=candidate_archive_sha256,
+    )
     blockers: list[str] = []
     if ingestion_contract.get("local_field_meta_ingestion_ready") is not True:
         blockers.append("field_meta_ingestion_contract_not_ready")
@@ -3708,6 +3814,10 @@ def _score_evidence_contract(
         blockers.append("proxy_or_planning_evidence_grade_not_score_evidence")
     if not (exact_cuda_positive or exact_cuda_grade):
         blockers.append("missing_exact_cuda_positive_score_evidence")
+    if exact_cuda_proof["status"] != "passed":
+        blockers.append("missing_verified_exact_cuda_auth_eval_artifact")
+    if (exact_cuda_positive or exact_cuda_grade) and exact_cuda_proof["status"] != "passed":
+        blockers.append("self_declared_exact_cuda_evidence_without_verified_artifact")
     if expected_total_score_delta >= 0.0:
         blockers.append("expected_delta_not_score_lowering")
     rankable = not blockers
@@ -3722,6 +3832,8 @@ def _score_evidence_contract(
         "source_score_lowering_evidence": source_score_lowering_evidence,
         "exact_positive_cuda_evidence": exact_cuda_positive,
         "exact_cuda_grade": exact_cuda_grade,
+        "verified_exact_cuda_auth_eval": exact_cuda_proof["status"] == "passed",
+        "exact_cuda_score_evidence_proof": exact_cuda_proof,
         "expected_total_score_delta": round(float(expected_total_score_delta), 12),
         "blockers": _unique_strings(blockers),
     }
@@ -3904,6 +4016,9 @@ def _row_for_manifest(
         proxy_row=proxy_row,
         ingestion_contract=ingestion_contract,
         expected_total_score_delta=expected_score_delta,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        candidate_archive_sha256=archive["sha256_actual"] or archive["sha256_expected"],
     )
     selector_static_ready = bool(static_ready and not selector_blockers)
     blockers = _unique_strings([*static_blockers, *selector_blockers, *dispatch_blockers])

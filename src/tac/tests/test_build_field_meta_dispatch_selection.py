@@ -1271,6 +1271,70 @@ def test_field_meta_selector_refuses_planning_packet_as_score_evidence_even_if_s
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_field_meta_selector_refuses_self_declared_exact_cuda_without_artifact(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="forged_exact_cuda_evidence",
+        lane_id="lane_forged_exact_cuda_evidence",
+        job_name="job_forged_exact_cuda_evidence",
+        kkt_proof=_kkt_proof(),
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["evidence_grade"] = "A++"
+    payload["score_lowering_evidence"] = True
+    payload["exact_positive_cuda_evidence"] = True
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["source_score_lowering_evidence"] is True
+    assert row["score_evidence_rankable"] is False
+    assert row["score_lowering_evidence"] is False
+    assert "missing_verified_exact_cuda_auth_eval_artifact" in row["score_evidence_contract"]["blockers"]
+    assert (
+        "self_declared_exact_cuda_evidence_without_verified_artifact"
+        in row["score_evidence_contract"]["blockers"]
+    )
+    assert (
+        "exact_cuda_auth_eval_json_path_missing"
+        in row["score_evidence_contract"]["exact_cuda_score_evidence_proof"]["blockers"]
+    )
+
+
+def test_field_meta_selector_accepts_matching_exact_cuda_auth_eval_artifact(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="verified_exact_cuda_evidence",
+        lane_id="lane_verified_exact_cuda_evidence",
+        job_name="job_verified_exact_cuda_evidence",
+        kkt_proof=_kkt_proof(),
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    auth_eval = tmp_path / "contest_auth_eval.json"
+    _write_cuda_auth_eval(auth_eval, archive_sha256=payload["archive"]["sha256"])
+    payload["evidence_grade"] = "A++"
+    payload["score_lowering_evidence"] = True
+    payload["exact_positive_cuda_evidence"] = True
+    payload["exact_cuda_auth_eval_json"] = auth_eval.as_posix()
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    proof = row["score_evidence_contract"]["exact_cuda_score_evidence_proof"]
+    assert row["score_evidence_rankable"] is True
+    assert row["score_lowering_evidence"] is True
+    assert row["score_evidence_contract"]["verified_exact_cuda_auth_eval"] is True
+    assert proof["status"] == "passed"
+    assert proof["archive_sha256"] == payload["archive"]["sha256"]
+    assert proof["hardware_substrate"] == "linux_x86_64_t4"
+
+
 def test_field_meta_selector_normalizes_hdm3_and_pr101_rate_recode_manifests(
     tmp_path: Path,
 ) -> None:
@@ -1679,6 +1743,35 @@ def _zip_fixture(path: Path, member: str, payload: bytes) -> Path:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr(info, payload)
     return path
+
+
+def _write_cuda_auth_eval(path: Path, *, archive_sha256: str) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cuda",
+                "canonical_score": 0.18,
+                "avg_segnet_dist": 0.0004,
+                "avg_posenet_dist": 0.00002,
+                "archive_size_bytes": 1234,
+                "evidence_grade": "contest-CUDA",
+                "lane_tag": "[contest-CUDA]",
+                "score_claim_valid": True,
+                "promotion_eligible": True,
+                "provenance": {
+                    "archive_sha256": archive_sha256,
+                    "archive_size_bytes": 1234,
+                    "device": "cuda",
+                    "hardware": "Modal Tesla T4 Linux x86_64",
+                    "platform_system": "Linux",
+                    "platform_machine": "x86_64",
+                    "gpu_model": "Tesla T4",
+                    "gpu_t4_match": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def _packet_manifest(
