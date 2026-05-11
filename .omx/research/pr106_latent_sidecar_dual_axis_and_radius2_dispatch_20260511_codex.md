@@ -96,3 +96,28 @@ exact contest-CUDA auth eval.
    byte-closed archive/runtime/no-op proof exists.
 5. Continue polling T1 Modal call `fc-01KR955JSYQAVTTYZA48VAV7WJ`; do not
    duplicate the T1 job while that claim is active.
+
+## Yshift retry note
+
+The pre-existing Kaggle yshift kernel ERROR was inspected on 2026-05-11. Its
+log shows a packaging failure, not a method failure:
+
+```text
+FileNotFoundError: required source bundle 'pact_pr106_yshift_source_bundle.tar.gz' not found under ['/kaggle/src', '/kaggle/input']
+```
+
+Corrective action:
+
+- lane id: `lane_pr106_yshift_score_table`
+- platform: `kaggle`
+- job id: `kaggle_pr106_yshift_score_table_retry_20260511T1526Z`
+- source dataset: `adpena/comma-lab-pr106-yshift-source`
+- source dataset version message:
+  `PR106 yshift source bundle retry 20260511`
+- kernel: `adpena/comma-lab-pr106-yshift-score-table`
+- kernel version: `3`
+- status immediately after push: `KernelWorkerStatus.RUNNING`
+
+This remains `score_claim=false`. The yshift score table is only a
+compress-time profiler until harvested, compiled into a runtime-consumed
+sidechannel archive, and adjudicated by exact contest-CUDA auth eval.
