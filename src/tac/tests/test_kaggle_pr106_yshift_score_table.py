@@ -59,6 +59,7 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
     assert "_ensure_pr106_archive_zip(workspace)" in launcher
     assert "torch==2.4.1+cu121" in launcher
     assert "PR106_YSHIFT_TORCH_FALLBACK_REEXEC" in launcher
+    assert "PYTORCH_CUDA_ALLOC_CONF" in launcher
     assert "_ensure_torch_supports_visible_cuda()" in launcher
     assert "zipfile.ZipFile(archive, \"w\", compression=zipfile.ZIP_STORED)" in launcher
     compile(launcher, "run_kernel.py", "exec")

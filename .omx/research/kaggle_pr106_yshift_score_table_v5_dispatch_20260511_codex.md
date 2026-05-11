@@ -86,3 +86,42 @@ Expected classification after harvest:
 - `failed_kaggle_gpu_arch_unsupported`: pinned fallback still lacks `sm_60` or
   cannot run on P100.
 - `indeterminate`: terminal output lacks contest-auth JSON or custody closure.
+
+## Terminal update — 2026-05-11T09:08:00Z
+
+`kaggle kernels status adpena/comma-lab-pr106-yshift-score-table-v5` reached
+terminal error after real scorer execution.
+
+What worked:
+
+- Kaggle mounted the expanded source tree.
+- The launcher reconstructed `inputs/pr106_archive.zip`.
+- The P100 torch fallback detected `sm_60`, installed pinned PyTorch CUDA 12.1,
+  and re-execed.
+- Upstream clone, DALI bootstrap, and NVDEC probe succeeded.
+- Stage 1a y-shift CUDA score table started.
+
+Failure class: `failed_kaggle_cuda_oom`.
+
+Relevant log evidence:
+
+```text
+[kaggle] Installing PyTorch P100 fallback for sm_60; current torch=2.10.0+cu128
+[probe_nvdec] OK (NVDEC exposed, DALI video pipeline buildable)
+[lane-pr106-yshift_score_table] ... === Stage 1a: generate CUDA yshift score table ===
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 4.50 GiB.
+```
+
+Interpretation: this is a Kaggle P100 resource/batch-shape failure, not a PR106
+y-shift method result and not a score claim. The next valid Kaggle attempt is a
+smaller CUDA batch shape, preserving the same candidate grid and method.
+
+Terminal claim recorded:
+
+```bash
+.venv/bin/python tools/claim_lane_dispatch.py claim --force \
+  --lane-id lane_pr106_yshift_score_table \
+  --platform kaggle \
+  --instance-job-id kaggle_pr106_yshift_score_table_v5 \
+  --status failed_kaggle_cuda_oom
+```

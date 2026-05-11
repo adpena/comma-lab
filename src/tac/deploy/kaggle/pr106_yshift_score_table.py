@@ -370,6 +370,7 @@ def _ensure_upstream(workspace: Path) -> Path:
 
 def main() -> int:
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
+    os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     bundle = _find_source_bundle()
     if bundle is not None:
         _safe_extract_tarball(bundle, WORKSPACE)
