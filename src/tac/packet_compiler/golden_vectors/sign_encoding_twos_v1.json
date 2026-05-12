@@ -1,0 +1,6 @@
+{
+  "input_length": 256,
+  "schema": "sign_encoding_twos.v1",
+  "sha256": "7f8e42839fcb543837ae2dba37d2d285c0f284b3d6c29085f560009601d74d70",
+  "strategy": "twos"
+}

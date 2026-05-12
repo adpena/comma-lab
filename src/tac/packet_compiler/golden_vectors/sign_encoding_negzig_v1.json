@@ -1,0 +1,6 @@
+{
+  "input_length": 255,
+  "schema": "sign_encoding_negzig.v1",
+  "sha256": "996ffba36da20b49adaeadb82a9840a3faae1fe9292018f36aa0be5409aabb22",
+  "strategy": "negzig"
+}

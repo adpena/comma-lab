@@ -1,0 +1,6 @@
+{
+  "input_length": 256,
+  "schema": "sign_encoding_zig.v1",
+  "sha256": "41b34f1880df46ccf971335002a87344cfa93edaac5b8153adb529c0362727e0",
+  "strategy": "zig"
+}
