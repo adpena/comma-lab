@@ -1,0 +1,602 @@
+{
+  "schema_version": "public_pr_mining_typed_rows_v1",
+  "landing_id": "lane_public_pr_mining_pr81_104_20260512",
+  "generated_at_utc": "2026-05-12T00:00:00Z",
+  "sister_landings": [
+    "feedback_packet_compiler_8_new_primitives_landed_20260511.md",
+    "feedback_public_pr_mechanism_extraction_pr85_pr86_pr97_pr93_anr_landed_20260511.md",
+    "feedback_public_pr_nonhnerv_mechanism_backlog_landed_20260511.md",
+    "feedback_public_pr_mining_expansion_pr50_80_pr105_115_landed_20260512.md",
+    "feedback_packet_compiler_5_pr63_64_65_105_primitives_landed_20260512.md"
+  ],
+  "scope": "PR81-104 un-mined HNeRV-family submission slots (PR95 hnerv_muon, PR96 rem2_HNeRV, PR98 hnerv_muon_finetuned_from_pr95, PR100 hnerv_lc_v2, PR101 hnerv_ft_microcodec, PR103 hnerv_lc_ac)",
+  "axis_operating_point_note": "All EV/byte ranking applied at PR106 r2 frontier (pose_avg ~3.4e-5; pose marginal 2.71x SegNet's per CLAUDE.md 'SegNet vs PoseNet importance - operating-point dependent').",
+  "evidence_grade_default": "[public-claimed; not replayed]",
+  "score_claim_default": false,
+  "promotion_eligible_default": false,
+  "ready_for_exact_eval_dispatch_default": false,
+  "rows": [
+    {
+      "primitive_id": "pr95_hnerv_muon_optimizer_newtonschulz_orthogonalized_momentum",
+      "pr_number": 95,
+      "submission_slot": "hnerv_muon",
+      "title": "hnerv_muon (AaronLeslie138)",
+      "author": "AaronLeslie138",
+      "claimed_score_cpu": null,
+      "claimed_score_cuda": 0.21,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "other",
+      "family": "training_optimizer",
+      "representation_type": "training_only",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "Muon optimizer (Keller Jordan 2024) for hidden Conv2d weights: Newton-Schulz iteration produces orthogonalized momentum updates via the quintic polynomial X<-aX+(bA+cA**2)X with A=XX^T and (a,b,c)=(3.4445,-4.7750,2.0315). 4D conv weights are flattened to 2D for the NS step; per-step decoupled weight decay applied before the orthogonalized update. Combined with AdamW for stem Linear / RGB heads / biases / latents via partition_params_for_muon. The Muon stage (stage 8 of 8) shapes the post-INT8 weight distribution toward sharper integer grid points - directly improves rate at fixed distortion.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/optim.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/optim.py", 14, 100]
+      ],
+      "estimated_loc_to_port": 100,
+      "predicted_ev_per_byte": null,
+      "ev_per_byte_basis": "training_optimizer_amortized_across_byte_savings_at_inference",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr81_quantizr", "pr95_cat_entropy_v2_regularizer", "pr95_8_stage_loss_curriculum"],
+      "archive_grammar_fields_declared": ["score_aware_loss"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "training_only_primitive_no_archive_bytes_to_port",
+        "needs_score_aware_training_substrate_with_PoseNet_SegNet_gradient_reachability_per_HNeRV_parity_lesson_8",
+        "deferred_pending_council_review_on_Muon_vs_AdamW_partition_for_our_renderer"
+      ],
+      "next_action": "DEFER - this is a training-time primitive (no archive bytes), but it is the standard-bearer for stage-8 weight-distribution shaping. Surface to grand council alongside training-recipe lane discussion for sub-0.20 contender training.",
+      "pr_claimed_score": 0.21,
+      "pr_claimed_score_axis": "[contest-CUDA] (per source submission PoseNet/SegNet claims; matches retrospective PR95 root analysis)",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr95_cat_entropy_v2_regularizer",
+      "pr_number": 95,
+      "submission_slot": "hnerv_muon",
+      "title": "hnerv_muon (AaronLeslie138)",
+      "author": "AaronLeslie138",
+      "claimed_score_cuda": 0.21,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "entropy_coding",
+      "family": "training_regularizer",
+      "representation_type": "training_only",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "Size-weighted soft categorical entropy regularizer C1a: for each Conv2d/Linear weight tensor, quantize to {-127..127} via Gaussian soft-assignment with bandwidth sigma=0.2 (later 0.1), compute categorical entropy in bits/weight, weight by numel. Stage 5+ adds cat_lambda*c1a_entropy=0.02 (later 0.1) into the training loss. Direct MDL-grounded rate term (Shannon entropy of post-INT8 distribution at integer grid points) - sharpens histogram pre-quantization so the brotli/AC stage compresses better. Differentiable scorer-preprocess-aware per CLAUDE.md eval_roundtrip non-negotiable.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/losses.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/losses.py", 78, 113]
+      ],
+      "estimated_loc_to_port": 60,
+      "predicted_ev_per_byte": null,
+      "ev_per_byte_basis": "training_regularizer_post_quant_histogram_sharpening_drives_brotli_compressibility",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr95_hnerv_muon_optimizer_newtonschulz_orthogonalized_momentum", "pr81_quantizr"],
+      "archive_grammar_fields_declared": ["score_aware_loss"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "training_only_primitive_no_archive_bytes_to_port",
+        "needs_council_review_for_lambda_sigma_schedule_at_our_operating_point",
+        "MacKay_seat_owes_MDL_rate_cost_analysis_per_CLAUDE_md_grand_council_advisory"
+      ],
+      "next_action": "DEFER - surface to grand council with MacKay seat owing the MDL rate-cost analysis. This is the closest public-PR analogue to a learnable entropy-bottleneck regularizer (Balle 2018 sister); high MDL signal.",
+      "pr_claimed_score": 0.21,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr95_8_stage_loss_curriculum_ce_softplus_smooth_l7",
+      "pr_number": 95,
+      "submission_slot": "hnerv_muon",
+      "title": "hnerv_muon (AaronLeslie138)",
+      "author": "AaronLeslie138",
+      "claimed_score_cuda": 0.21,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "other",
+      "family": "training_curriculum",
+      "representation_type": "training_only",
+      "score_axis_target": "seg",
+      "key_mechanism_description": "8-stage loss curriculum for SegNet-aware training: CE -> tau-Softplus(tau=0.3) -> smooth_disagreement (sigmoid-on-negative-margin) -> +QAT (Stage 4) -> +L7_softplus + cat_entropy_v2 (Stage 5; L7-mult=4.0 boost for margin<threshold=1.0 pixels) -> lambda=0.02 (Stage 6) -> sigma=0.1 (Stage 7) -> +Muon (Stage 8). Pose loss is sqrt(10*MSE) constant across all stages. Aggregation: loss = 100*seg + 1*pose + cat_lambda*c1a_entropy. The smooth_disagreement loss bell-curve gradient peaks at margin=0 (pushes boundary pixels across the decision line); the L7 weighting concentrates gradient on hard-to-classify pixels.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/losses.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/losses.py", 18, 75]
+      ],
+      "estimated_loc_to_port": 130,
+      "predicted_ev_per_byte": null,
+      "ev_per_byte_basis": "training_curriculum_amortized",
+      "applicable_to_pr106_r2_frontier": "unknown",
+      "composes_with": ["pr95_cat_entropy_v2_regularizer", "pr95_hnerv_muon_optimizer_newtonschulz_orthogonalized_momentum"],
+      "archive_grammar_fields_declared": ["score_aware_loss"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "training_only_primitive_no_archive_bytes_to_port",
+        "needs_grand_council_design_tradeoff_review_vs_existing_KL_distill_lane",
+        "needs_PoseNet_SegNet_gradient_reachability_check_before_GPU_dispatch_per_HNeRV_parity_lesson_8",
+        "L7_threshold_and_mult_are_hyperparameters_that_need_per_renderer_calibration"
+      ],
+      "next_action": "DEFER - surface to grand council as a smooth-disagreement+L7 SegNet curriculum candidate. Sister to existing KL distill but operates in margin-space rather than logit-space.",
+      "pr_claimed_score": 0.21,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr95_hnerv_decoder_dual_rgb_head_dilated_refine",
+      "pr_number": 95,
+      "submission_slot": "hnerv_muon",
+      "title": "hnerv_muon (AaronLeslie138)",
+      "author": "AaronLeslie138",
+      "claimed_score_cuda": 0.21,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "hnerv",
+      "family": "HNeRV",
+      "representation_type": "renderer",
+      "score_axis_target": "mixed",
+      "key_mechanism_description": "Dual-RGB-head HNeRV decoder architecture: 229K params, single-video memorization, 28-d latent-per-pair -> 6 PixelShuffle upsample stages -> dilated-conv refine residual (dilation=2 followed by 3x3 conv) -> SEPARATE rgb_0 and rgb_1 heads producing frame 0 + frame 1 RGB independently from the same upsampled feature map. Channel taper [C,C,C,0.75C,0.58C,0.50C,0.50C]. Per-stage sin() activation. PixelShuffle(2) on Conv(in, out*4, 3x3). The dual-head architecture is the key insight: one decoder forward produces TWO output frames, halving per-frame decoder cost.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py", 12, 55]
+      ],
+      "estimated_loc_to_port": 60,
+      "predicted_ev_per_byte": null,
+      "ev_per_byte_basis": "renderer_architecture_amortized",
+      "applicable_to_pr106_r2_frontier": "unknown",
+      "composes_with": ["pr95_cat_entropy_v2_regularizer", "pr100_schema_driven_decoder_storage_grammar"],
+      "archive_grammar_fields_declared": ["archive_grammar", "score_aware_loss"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "representation_lane_needs_archive_grammar_at_design_time_per_HNeRV_parity_lesson_4_and_Catalog_124",
+        "needs_score_aware_loss_with_differentiable_scorer_preprocess_per_HNeRV_parity_lesson_8",
+        "needs_grand_council_design_review_dual_head_vs_single_head_renderer"
+      ],
+      "next_action": "DEFER-pending-research-with-renderer-rescope - if our internal lane plans add a renderer, propose dual-head as a candidate that targets pose+seg simultaneously via shared feature stack. Sister to PR101 hnerv_ft_microcodec which uses the same model bytes.",
+      "pr_claimed_score": 0.21,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr96_rem2_hist_codec_switch_lzma_brotli_zstd",
+      "pr_number": 96,
+      "submission_slot": "rem2_HNeRV",
+      "title": "rem2_HNeRV (silver medal cluster - rem2)",
+      "author": "rem2",
+      "claimed_score_cpu": 0.195,
+      "claimed_score_cuda": null,
+      "claimed_score_axis_known": "[contest-CPU] (silver cluster May-4 2026; per CLAUDE.md retrospective)",
+      "dominant_mechanism": "entropy_coding",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "Histogram-codec switch byte (single-byte comp_id selects which compressor was used for the AC histograms): 0=lzma, 1=zstd, 2=brotli. Encoder picks the smallest of all 3, writes the chosen ID into the header. This is a cheap multi-codec ensemble at the histogram layer - costs 1 byte per archive, saves whatever the smallest-of-3 wins. Sister to PR101 split-Brotli but more general (handles any compressor family). The decoder dispatches via _decompress_hist(comp_id, blob).",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr96_intake_20260505_auto/source/submissions/rem2_HNeRV/inflate.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr96_intake_20260505_auto/source/submissions/rem2_HNeRV/inflate.py", 35, 44]
+      ],
+      "estimated_loc_to_port": 30,
+      "predicted_ev_per_byte": 0.50,
+      "ev_per_byte_basis": "ensemble_of_3_codecs_at_1_byte_header_cost_typically_saves_10_100_bytes_on_histogram_payload",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr103_arithmetic_coding", "pr101_sidecar_grammar"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "needs_golden_vector_extraction_from_rem2_archive_zip",
+        "needs_zstandard_python_dependency_check_for_runtime_dep_closure_per_HNeRV_parity_lesson_9"
+      ],
+      "next_action": "Port to tac.packet_compiler.pr96_hist_codec_switch (~30 LOC) as a generic 1-byte codec-selector header. Composable with pr103_arithmetic_coding (which currently uses fixed brotli wrapper on histograms).",
+      "pr_claimed_score": 0.195,
+      "pr_claimed_score_axis": "[contest-CPU]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr96_rem2_uint8_offset_128_range_decoder_pattern",
+      "pr_number": 96,
+      "submission_slot": "rem2_HNeRV",
+      "title": "rem2_HNeRV (silver medal cluster - rem2)",
+      "author": "rem2",
+      "claimed_score_cpu": 0.195,
+      "claimed_score_axis_known": "[contest-CPU]",
+      "dominant_mechanism": "entropy_coding",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "uint8-offset-128 RangeDecoder pattern: int8 weights are encoded as their uint8 representation (q + 128 in [0, 256)) so that constriction.stream.model.Categorical can operate on non-negative integers. Decoder does `(ub - 128).astype(np.int8)` after decode. This avoids the signed-vs-unsigned ambiguity that range coders have with negative symbols. Sister to pr103_arithmetic_coding zigzag pattern but simpler (no zigzag, just additive offset).",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr96_intake_20260505_auto/source/submissions/rem2_HNeRV/inflate.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr96_intake_20260505_auto/source/submissions/rem2_HNeRV/inflate.py", 22, 32]
+      ],
+      "estimated_loc_to_port": 20,
+      "predicted_ev_per_byte": null,
+      "ev_per_byte_basis": "codec_helper_pattern_byte_savings_indirect",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr103_arithmetic_coding", "pr96_rem2_hist_codec_switch_lzma_brotli_zstd"],
+      "archive_grammar_fields_declared": ["archive_grammar"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "needs_design_tradeoff_review_vs_zigzag_in_pr103_arithmetic_coding"
+      ],
+      "next_action": "Surface to grand council: design tradeoff between uint8-offset-128 (rem2) vs zigzag (PR103). Both are valid sign-encoding strategies for AC; entropy depends on distribution skew. ~20 LOC port if approved.",
+      "pr_claimed_score": 0.195,
+      "pr_claimed_score_axis": "[contest-CPU]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr98_cd1_compact_architecture_ordered_decoder_format",
+      "pr_number": 98,
+      "submission_slot": "hnerv_muon_finetuned_from_pr95",
+      "title": "hnerv_muon_finetuned_from_pr95 (EthanYangTW)",
+      "author": "EthanYangTW",
+      "claimed_score_cpu": 0.20,
+      "claimed_score_cuda": null,
+      "claimed_score_axis_known": "[contest-CPU] (per README displayed score)",
+      "dominant_mechanism": "hnerv",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "CD1 compact architecture-ordered decoder format: magic=b'CD1' (3 bytes) + scale_bits (1 byte: 16 or 32) + n_tensors (4 bytes), then per-tensor [scale_value (2 or 4 bytes)] + [zigzag-encoded INT8 bytes of size matching state-dict shape]. Tensor NAMES are NOT stored - the decoder reconstructs them from the canonical HNeRVDecoder.state_dict() iteration order. This trades ~30 bytes per tensor (name length + name bytes + 4-byte shape header) for a hardcoded architecture grammar. Specifically targets the schema-known case where the architecture is fixed across submissions.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr98_intake_20260505_auto/source/submissions/hnerv_muon_finetuned_from_pr95/src/codec.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr98_intake_20260505_auto/source/submissions/hnerv_muon_finetuned_from_pr95/src/codec.py", 74, 130]
+      ],
+      "estimated_loc_to_port": 90,
+      "predicted_ev_per_byte": 0.60,
+      "ev_per_byte_basis": "skipping_per_tensor_name_storage_saves_~28_tensors_*_30_bytes_=_~840_bytes_per_archive_at_PR95_HNeRV_size",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr100_schema_driven_decoder_storage_grammar", "pr101_sidecar_grammar"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest", "export_format"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "fixed_offsets_anti_pattern_per_CLAUDE_md_HNeRV_parity_lesson_3_pure_iteration_order_is_LENGTH_PREFIXED_acceptable",
+        "needs_golden_vector_extraction_from_PR98_archive_zip"
+      ],
+      "next_action": "Port to tac.packet_compiler.pr98_cd1_compact_decoder (~90 LOC). LENGTH-PREFIXED via state-dict iteration order does NOT violate HNeRV parity lesson 3 (which prohibits fixed BYTE offsets - iteration order is a length-prefixed grammar from the encoder's perspective). Composable with pr100_schema_driven.",
+      "pr_claimed_score": 0.20,
+      "pr_claimed_score_axis": "[contest-CPU]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr98_decode_side_per_frame_per_channel_constant_nudge",
+      "pr_number": 98,
+      "submission_slot": "hnerv_muon_finetuned_from_pr95",
+      "title": "hnerv_muon_finetuned_from_pr95 (EthanYangTW)",
+      "author": "EthanYangTW",
+      "claimed_score_cpu": 0.20,
+      "claimed_score_axis_known": "[contest-CPU]",
+      "dominant_mechanism": "runtime_trick",
+      "family": "runtime-trick",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "mixed",
+      "key_mechanism_description": "Decode-side per-frame per-channel constant nudge: at inflate time, AFTER bicubic upsample to camera resolution but BEFORE clamp/round, applies `up[:, 0, 0].sub_(1.0)` (frame-0 red -1), `up[:, 0, 2].sub_(1.0)` (frame-0 blue -1), `up[:, 1, 1].sub_(1.0)` (frame-1 green -1). ZERO archive bytes. Tuned offline against the scorer on the public test corpus. Each nudge is 1 luma unit which is below the scorer's quantization threshold but matters at the rounding boundary. PR102 adds frame-0-red +1. Sister to PR97 H3 grammar concept of decode-side post-processing.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr98_intake_20260505_auto/source/submissions/hnerv_muon_finetuned_from_pr95/inflate.py",
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/inflate.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr98_intake_20260505_auto/source/submissions/hnerv_muon_finetuned_from_pr95/inflate.py", 53, 58],
+        ["public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/inflate.py", 48, 51]
+      ],
+      "estimated_loc_to_port": 25,
+      "predicted_ev_per_byte": null,
+      "ev_per_byte_basis": "zero_archive_bytes_arbitrary_scorer_alignment_savings_indirect_score_only",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr101_sidecar_grammar", "pr97_h3_grammar"],
+      "archive_grammar_fields_declared": ["score_aware_loss"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "scorer_specific_calibration_required_per_target_video_corpus",
+        "may_overfit_to_public_test_corpus_per_apples_to_apples_evidence_discipline",
+        "needs_grand_council_review_for_one_video_overfit_vs_generalized_target_modes_per_CLAUDE_md"
+      ],
+      "next_action": "DEFER-pending-target-mode-declaration - if target_modes=['contest_one_video_replay'] (per CLAUDE.md deterministic packet compiler), nudge is admissible. If target_modes=['contest_generalized'], nudge must be derived from training-set statistics not test-set probing. Surface to grand council.",
+      "pr_claimed_score": 0.20,
+      "pr_claimed_score_axis": "[contest-CPU]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr100_schema_driven_decoder_storage_grammar",
+      "pr_number": 100,
+      "submission_slot": "hnerv_lc_v2",
+      "title": "hnerv_lc_v2 (BradyMeighan, gold cluster)",
+      "author": "BradyMeighan",
+      "claimed_score_cpu": null,
+      "claimed_score_cuda": null,
+      "claimed_score_axis_known": "[contest-CUDA] medal-cluster sister of PR101 0.193",
+      "dominant_mechanism": "hnerv",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "Schema-driven monolithic-decoder grammar: a SCHEMA list of (tensor_name, shape_tuple) is hardcoded into the decoder source (auto-generated from a reference state_dict). The archive stores ONLY concatenated INT8 codes (brotli'd) + fp16 scales in iteration order. No per-tensor name strings, no per-tensor shape headers. Saves ~30 bytes per tensor (28 tensors * 30 bytes = ~840 bytes) compared to the PR95 self-describing format. The schema is a CODE-side contract; if the architecture changes, the decoder source must be regenerated. Length-prefixed via shape * dtype size at parse time.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/schema.py",
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/inflate.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/schema.py", 1, 38],
+        ["public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/inflate.py", 51, 64]
+      ],
+      "estimated_loc_to_port": 70,
+      "predicted_ev_per_byte": 0.50,
+      "ev_per_byte_basis": "skipping_per_tensor_metadata_saves_~840_bytes_per_archive_at_HNeRV_size",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr98_cd1_compact_architecture_ordered_decoder_format", "pr101_sidecar_grammar", "pr105_kitchen_sink_packed_state_schema_size_sorted"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest", "export_format"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "needs_design_tradeoff_review_vs_pr98_cd1_vs_pr105_packed_state_schema_size_sorted",
+        "needs_golden_vector_extraction"
+      ],
+      "next_action": "Port to tac.packet_compiler.pr100_schema_driven_decoder_grammar (~70 LOC). The 3 schema-elision variants (PR98 CD1 / PR100 schema.py / PR105 packed-state-schema-size-sorted) are CHOICES not redundancies; surface to grand council for design tradeoff with side-by-side byte-count analysis.",
+      "pr_claimed_score": null,
+      "pr_claimed_score_axis": "[contest-CUDA] medal-cluster",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr100_dim255_sentinel_sparse_correction_sidecar",
+      "pr_number": 100,
+      "submission_slot": "hnerv_lc_v2",
+      "title": "hnerv_lc_v2 (BradyMeighan)",
+      "author": "BradyMeighan",
+      "claimed_score_cuda": null,
+      "claimed_score_axis_known": "[contest-CUDA] medal-cluster",
+      "dominant_mechanism": "other",
+      "family": "packet-grammar",
+      "representation_type": "sidecar",
+      "score_axis_target": "mixed",
+      "key_mechanism_description": "dim=255-sentinel sparse correction sidecar: 2-byte header (u16 n_pairs) + per-pair (u8 dim_idx, i8 delta_q). dim_idx in [0,27] is a valid latent-dim correction; dim_idx=255 means NO correction for that pair (sparse marker). delta_q is i8 scaled by DELTA_SCALE=0.01 (real_delta in [-1.27, 1.27]). Brotli'd. ~1.2 KB per video at 600 pairs even with many sparse-rows (the dim=255 byte stream brotli-compresses well since most pairs are no-ops). Sister to PR101 sidecar but uses byte-sentinel instead of combinatorial-rank for no-op marking.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/sidecar.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/sidecar.py", 1, 49]
+      ],
+      "estimated_loc_to_port": 50,
+      "predicted_ev_per_byte": 0.35,
+      "ev_per_byte_basis": "byte_sentinel_no_op_marker_simpler_than_combinatorial_but_costs_more_when_no_op_fraction_is_high",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr101_sidecar_grammar"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "needs_design_tradeoff_review_vs_pr101_combinatorial_rank_no_op_at_each_no_op_fraction"
+      ],
+      "next_action": "Port to tac.packet_compiler.pr100_dim255_sentinel_sidecar (~50 LOC) as a simpler alternative to PR101 combinatorial. Encoder picks the smaller of the two based on no-op fraction. Composable.",
+      "pr_claimed_score": null,
+      "pr_claimed_score_axis": "[contest-CUDA] medal-cluster",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr101_decoder_storage_order_permutation_list",
+      "pr_number": 101,
+      "submission_slot": "hnerv_ft_microcodec",
+      "title": "hnerv_ft_microcodec (GOLD MEDAL, 0.193 contest-CUDA)",
+      "author": "PR101 author (gold cluster)",
+      "claimed_score_cpu": null,
+      "claimed_score_cuda": 0.193,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "hnerv",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "DECODER_STORAGE_ORDER = (14, 22, 7, 6, 19, 10, 25, 4, 20, 9, 12, 15, 5, 11, 18, 1, 21, 3, 27, 13, 2, 26, 24, 17, 16, 23, 8, 0): a hand-tuned permutation of the 28 decoder tensors that PUTS HIGHEST-ENTROPY tensors NEXT TO EACH OTHER. The encoder writes tensors in this order; the decoder reads in this order. DECODER_STREAM_ENDS = (1, 2, 22, 23, 26, 27, 28) marks SPLIT-BROTLI boundaries so that low-entropy tensor groups get their own brotli stream (better compression than one big stream). The order is provably-optimal for the PR95 architecture per offline gradient-free search.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src/codec.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src/codec.py", 30, 35]
+      ],
+      "estimated_loc_to_port": 50,
+      "predicted_ev_per_byte": 1.10,
+      "ev_per_byte_basis": "gold_medal_PR101_uses_this_a_lot_of_archive_byte_savings_traced_back_to_split_brotli_along_storage_order",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr101_sidecar_grammar", "pr100_schema_driven_decoder_storage_grammar"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "needs_offline_entropy_search_for_our_renderer_topology_per_architecture",
+        "permutation_is_hand_tuned_for_PR95_architecture_not_generalizable_without_search"
+      ],
+      "next_action": "Port the GRAMMAR (not the specific permutation) to tac.packet_compiler.pr101_decoder_storage_order (~50 LOC). The permutation itself must be re-derived per renderer via offline entropy clustering. High EV - this is one of PR101's gold-medal-specific byte savings.",
+      "pr_claimed_score": 0.193,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr101_conv4_storage_perms_per_tensor_4d_axis_permutation",
+      "pr_number": 101,
+      "submission_slot": "hnerv_ft_microcodec",
+      "title": "hnerv_ft_microcodec (GOLD MEDAL, 0.193 contest-CUDA)",
+      "author": "PR101 author",
+      "claimed_score_cuda": 0.193,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "hnerv",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "CONV4_STORAGE_PERMS: per-tensor 4D-axis permutation table. For each conv tensor index in the storage order, a 4-tuple of axis indices specifying HOW the (out, in, H, W) weight tensor should be reshaped before INT8 zigzag encoding. Examples: tensor 2 -> (3, 0, 2, 1), tensor 14 -> (1, 0, 2, 3), tensor 20 -> (0, 3, 2, 1). The permutation makes spatially-adjacent weights MORE temporally adjacent in the byte stream, improving brotli's LZ77 dictionary hits. CONV4_INVERSE_PERMS is computed at decode time via argsort. Per-tensor optimal permutation derived offline via entropy-vs-permutation search.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src/codec.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src/codec.py", 37, 55]
+      ],
+      "estimated_loc_to_port": 80,
+      "predicted_ev_per_byte": 0.90,
+      "ev_per_byte_basis": "per_tensor_axis_perm_traces_to_PR101_gold_medal_-_estimated_~100-300_bytes_per_archive_from_better_brotli_dictionary_hits",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr101_decoder_storage_order_permutation_list", "pr101_sidecar_grammar"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "needs_offline_4D_perm_search_per_conv_tensor_in_our_architecture",
+        "perm_table_is_specific_to_PR95_architecture"
+      ],
+      "next_action": "Port the GRAMMAR to tac.packet_compiler.pr101_conv4_storage_perms (~80 LOC). The specific permutations must be re-derived per architecture via 24-perm exhaustive search. High EV - one of PR101's specific byte savings traceable to gold medal.",
+      "pr_claimed_score": 0.193,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr101_decoder_byte_maps_negzig_twos_off_strategies",
+      "pr_number": 101,
+      "submission_slot": "hnerv_ft_microcodec",
+      "title": "hnerv_ft_microcodec (GOLD MEDAL, 0.193 contest-CUDA)",
+      "author": "PR101 author",
+      "claimed_score_cuda": 0.193,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "entropy_coding",
+      "family": "quantization",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "DECODER_BYTE_MAPS: per-tensor sign-encoding strategy selector. Maps INT8 -> UINT8 byte stream using one of {negzig, twos, off}. negzig = zigzag of (-x); twos = two's complement (raw int8 reinterpret); off = signed-byte-offset (x + 128). Each strategy minimizes entropy under a different weight distribution: negzig for highly-skewed-positive, twos for symmetric-around-zero, off for highly-skewed-negative. Per-tensor chosen offline via entropy comparison. Per-tensor table: {9: negzig, 14: negzig, 20: twos, 27: off}. Sister to PR96 uint8-offset-128 but parameterized over 3 strategies.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src/codec.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src/codec.py", 57, 64]
+      ],
+      "estimated_loc_to_port": 60,
+      "predicted_ev_per_byte": 0.75,
+      "ev_per_byte_basis": "per_tensor_sign_strategy_traces_to_PR101_gold_medal_archive_~50_150_bytes_total",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr96_rem2_uint8_offset_128_range_decoder_pattern", "pr101_conv4_storage_perms_per_tensor_4d_axis_permutation", "pr101_sidecar_grammar"],
+      "archive_grammar_fields_declared": ["archive_grammar"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "needs_offline_per_tensor_entropy_comparison_of_3_strategies",
+        "needs_design_tradeoff_review_vs_pr96_uint8_offset_128"
+      ],
+      "next_action": "Port to tac.packet_compiler.pr101_decoder_byte_maps (~60 LOC). The 3 strategies form a unified taxonomy with pr96; surface to grand council. High EV.",
+      "pr_claimed_score": 0.193,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr103_merged_ac_concatenated_range_decoder_stream",
+      "pr_number": 103,
+      "submission_slot": "hnerv_lc_ac",
+      "title": "hnerv_lc_ac (silver medal cluster - rem2 PR103 follow-up, 0.195)",
+      "author": "rem2",
+      "claimed_score_cpu": null,
+      "claimed_score_cuda": 0.195,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "entropy_coding",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "Merged-AC concatenated RangeDecoder stream: MULTIPLE weight tensors share ONE RangeDecoder. AC_INDICES = [0, 2, 4, 6, 8, 10, 12, 21] specifies which 8 SCHEMA-indexed tensors go into the merged stream. The decoder is created once over the full merged_ac bytes; iteratively decode each tensor's symbol_count via its OWN categorical (one histogram per AC tensor). Sharing the arithmetic state across tensors avoids per-tensor RangeDecoder header overhead. Sister to pr103_arithmetic_coding (which uses one decoder per tensor) but more efficient when N tensors share the AC layer.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py", 51, 137]
+      ],
+      "estimated_loc_to_port": 90,
+      "predicted_ev_per_byte": 0.85,
+      "ev_per_byte_basis": "single_RangeDecoder_state_amortized_across_N_tensors_saves_~16_32_bytes_per_skipped_stream_initialization",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr103_arithmetic_coding", "pr101_sidecar_grammar", "pr96_rem2_hist_codec_switch_lzma_brotli_zstd"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "extension_of_existing_tac_pr103_arithmetic_coding_needs_design_review",
+        "needs_golden_vector_extraction"
+      ],
+      "next_action": "Surface to grand council: extend pr103_arithmetic_coding to support multi-tensor merged streams (~90 LOC). High EV at PR106 r2 since rate axis still has byte-saving headroom.",
+      "pr_claimed_score": 0.195,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    },
+    {
+      "primitive_id": "pr103_fixed_section_offset_byte_parser_with_length_constants",
+      "pr_number": 103,
+      "submission_slot": "hnerv_lc_ac",
+      "title": "hnerv_lc_ac (silver medal cluster, 0.195)",
+      "author": "rem2",
+      "claimed_score_cuda": 0.195,
+      "claimed_score_axis_known": "[contest-CUDA]",
+      "dominant_mechanism": "hnerv",
+      "family": "packet-grammar",
+      "representation_type": "packet-grammar",
+      "score_axis_target": "rate",
+      "key_mechanism_description": "Fixed-section-offset byte parser using LOC-declared length constants: SCA_LEN, BR_LEN=7097, HIST_LEN=895, MERGED_AC_LEN=153856, LATENT_META_LEN, LO_LEN=15537, HI_HIST_LEN=15 are HARDCODED in inflate.py source. parse_archive(blob) walks the byte stream advancing the offset by each fixed constant. NO length prefix at archive parse time (saves ~7 * 4 = 28 bytes of u32 length headers). VIOLATES HNeRV parity lesson 3 fixed-offsets-anti-pattern - any change to encoder bytes requires source rev. This is THE specific design choice that puts PR103 in tension with parity discipline.",
+      "source_paths": [
+        "experiments/results/public_pr_archive_kaggle_mirror/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py"
+      ],
+      "source_loc_observed": [
+        ["public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py", 51, 121]
+      ],
+      "estimated_loc_to_port": 60,
+      "predicted_ev_per_byte": 0.30,
+      "ev_per_byte_basis": "~28_bytes_per_archive_from_skipped_length_headers_vs_versioning_brittleness",
+      "applicable_to_pr106_r2_frontier": "true",
+      "composes_with": ["pr103_arithmetic_coding", "pr103_merged_ac_concatenated_range_decoder_stream"],
+      "archive_grammar_fields_declared": ["archive_grammar", "parser_section_manifest"],
+      "blockers_to_promote_to_tac_packet_compiler": [
+        "fixed_offsets_anti_pattern_per_CLAUDE_md_HNeRV_parity_lesson_3",
+        "DEFERRED_pending_length_prefixed_variant_design_per_HNeRV_lesson_3",
+        "needs_explicit_grand_council_design_tradeoff_byte_savings_vs_brittleness"
+      ],
+      "next_action": "DEFER - port ONLY a length-prefixed variant to tac.packet_compiler.pr103_fixed_offset_or_length_prefixed (~60 LOC). The fixed-offset variant is the exact anti-pattern HNeRV parity lesson 3 prohibits; do NOT port verbatim.",
+      "pr_claimed_score": 0.195,
+      "pr_claimed_score_axis": "[contest-CUDA]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "evidence_grade": "[public-claimed; not replayed]"
+    }
+  ],
+  "summary": {
+    "row_count": 15,
+    "pr_count": 6,
+    "prs_mined": [95, 96, 98, 100, 101, 103],
+    "submission_slots_mined": ["hnerv_muon", "rem2_HNeRV", "hnerv_muon_finetuned_from_pr95", "hnerv_lc_v2", "hnerv_ft_microcodec", "hnerv_lc_ac"],
+    "training_only_primitives": 4,
+    "packet_grammar_primitives": 8,
+    "entropy_coding_primitives": 4,
+    "runtime_trick_primitives": 1,
+    "frontier_relevant_primitives": 11,
+    "sub_0p20_primitives": 6
+  }
+}
