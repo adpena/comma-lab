@@ -1,11 +1,13 @@
 """Train the wavelet substrate end-to-end on contest video.
 
 Operator-callable training script per the Fields-medal grand council substrate
-design wave (2026-05-12). PHASE-B2-BUILD wires ``_full_main`` so the trainer
-is dispatch-ready as a HIGH-target attack on beating PR101's 0.193 [contest-CUDA].
+design wave (2026-05-12). PHASE-B2-BUILD wires ``_full_main`` but the dense
+full-grid WLV1 grammar is byte-floor blocked by default; it is research-only
+until a sparse/top-k/low-rank/codebook subband compiler lands.
 
 Council prediction (Mallat PAMI 1989 + grand council Phase 5):
-target ~0.175 [contest-CUDA]. Wavelet substrate stores per-pair DWT
+target ~0.175 [contest-CUDA] only after byte-closed sparse subband coding.
+This dense scaffold stores per-pair DWT
 coefficients (LL, LH, HL, HH at depth-1) using fixed Daubechies-4 filters,
 synthesizes RGB via a small MLP that consumes the IDWT-reconstructed feature
 field plus a frame-conditional FiLM modulation.
@@ -42,8 +44,9 @@ Architectural risk (council Round 3 — NVIDIA-grade):
   per-pair subband coefficients (~150K params dominated by 4 * num_pairs * C *
   H/2 * W/2 = 4 * 600 * 8 * 192 * 256 = 943M elements at default config —
   too large; council default coeff_channels=8 needs reduction to fit memory).
-  Adjusted to coeff_channels=2 default for full-resolution to keep total
-  params ~30K. Trainer can sweep.
+  Even coeff_channels=2 is 235,929,600 elements, or 471,859,200 raw int16
+  subband bytes before ZIP. The trainer fails closed unless
+  --allow-oversize-research is explicit.
 - IDWT separable-conv path uses reflect-padding for edge handling; small
   numerical mismatch is bicubic-reinterpolated to exact (H, W). Acceptable.
 - Per-subband bit-proxy uses Shannon entropy estimate of the empirical
@@ -76,6 +79,7 @@ import json
 import math
 import os
 import random
+import shutil
 import subprocess
 import sys
 import time
@@ -221,10 +225,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--coeff-channels", type=int, default=2,
         help=(
-            "Subband channel count. Default 2 keeps full-res params ~57K "
-            "(4 subbands * 600 pairs * 2 ch * 192 * 256 = 590M elements * 2B "
-            "= reduced by quantization to int16 in archive). Sweep 2/4/6 to "
-            "find Mallat-rate sweet spot."
+            "Subband channel count. Default 2 is still byte-floor blocked for "
+            "full contest resolution: 4 * 600 * 2 * 192 * 256 = 235,929,600 "
+            "elements, or 471,859,200 raw int16 bytes before ZIP."
         ),
     )
     p.add_argument("--synthesis-hidden", type=int, default=32,
@@ -271,6 +274,26 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Tiny CPU smoke (no scorer load, tiny config).")
     p.add_argument("--max-pairs", type=int, default=None,
                    help="Cap on number of pairs decoded (debug only).")
+    p.add_argument(
+        "--max-raw-subband-bytes",
+        type=int,
+        default=int(CONTEST_NORMALIZER),
+        help=(
+            "Fail closed when WLV1 raw int16 subband payload exceeds this "
+            "contest-grounded byte budget. Default is the contest normalizer "
+            "N=37,545,489; oversize wavelet variants are research-only unless "
+            "--allow-oversize-research is explicit."
+        ),
+    )
+    p.add_argument(
+        "--allow-oversize-research",
+        action="store_true",
+        help=(
+            "Permit full training even when the raw WLV1 subband payload cannot "
+            "be score-lowering under the contest byte term. Never set this for "
+            "operator dispatch."
+        ),
+    )
 
     # ---- Post-train artifacts ----
     p.add_argument("--skip-auth-eval", action="store_true",
@@ -380,6 +403,41 @@ def _archive_bytes_proxy_closed_form(model):
     return torch.tensor(bytes_proxy, dtype=torch.float32, device=device)
 
 
+def _raw_subband_bytes(*, num_pairs: int, coeff_channels: int, output_height: int, output_width: int) -> int:
+    """Return the WLV1 raw int16 subband byte count before ZIP compression."""
+
+    h_half = output_height // 2
+    w_half = output_width // 2
+    subbands = 4
+    bytes_per_coeff = 2
+    return int(subbands * num_pairs * coeff_channels * h_half * w_half * bytes_per_coeff)
+
+
+def _enforce_wavelet_byte_floor(args: argparse.Namespace, cfg: Any) -> None:
+    """Fail closed when the naive WLV1 payload is too large to lower score."""
+
+    raw_bytes = _raw_subband_bytes(
+        num_pairs=cfg.num_pairs,
+        coeff_channels=cfg.coeff_channels,
+        output_height=cfg.output_height,
+        output_width=cfg.output_width,
+    )
+    max_bytes = int(args.max_raw_subband_bytes)
+    if raw_bytes <= max_bytes:
+        return
+    byte_term = 25.0 * float(raw_bytes) / CONTEST_NORMALIZER
+    raise SystemExit(
+        "[wavelet] DEFERRED-pending-byte-closed-redesign: raw WLV1 subband "
+        f"payload would be {raw_bytes:,} bytes before ZIP compression "
+        f"(byte-term alone {byte_term:.3f}), exceeding "
+        f"--max-raw-subband-bytes={max_bytes:,}. This dense Mallat grid is "
+        "research-only until replaced by a sparse/top-k/low-rank/codebook "
+        "subband compiler or residual-over-champion packet. Pass "
+        "--allow-oversize-research only for local proxy studies; do not use it "
+        "for Modal/operator dispatch."
+    )
+
+
 def _subband_bit_proxy(subband, *, num_levels: int = 256):
     """Differentiable bit-count proxy for a subband tensor.
 
@@ -418,6 +476,19 @@ def _subband_bit_proxy(subband, *, num_levels: int = 256):
 def _write_runtime(submission_dir: Path) -> None:
     """Emit the contest-compliant ``inflate.sh`` + ``inflate.py`` pair."""
     submission_dir.mkdir(parents=True, exist_ok=True)
+    runtime_pkg = submission_dir / "src" / "tac" / "substrates" / "wavelet"
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    # Vendor only inflate-time modules. Do not ship score-aware training code
+    # or scorer imports in the runtime tree.
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+        runtime_pkg / "__init__.py",
+    ):
+        pkg_init.write_text("", encoding="utf-8")
+    substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "wavelet"
+    for name in ("architecture.py", "archive.py", "inflate.py"):
+        shutil.copy2(substrate_src / name, runtime_pkg / name)
 
     inflate_sh = (
         "#!/usr/bin/env bash\n"
@@ -488,6 +559,13 @@ def _build_archive_zip(archive_zip_path: Path, *, bin_bytes: bytes, submission_d
             zi = zipfile.ZipInfo(name, date_time=fixed_ts)
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, src.read_bytes())
+        runtime_root = submission_dir / "src"
+        if runtime_root.is_dir():
+            for src in sorted(runtime_root.rglob("*.py")):
+                rel = src.relative_to(submission_dir).as_posix()
+                zi = zipfile.ZipInfo(rel, date_time=fixed_ts)
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                zf.writestr(zi, src.read_bytes())
 
 
 # ---------------------------------------------------------------------------
@@ -674,6 +752,8 @@ def _full_main(args: argparse.Namespace) -> int:
             output_height=EVAL_HW[0],
             output_width=EVAL_HW[1],
         )
+        if not args.allow_oversize_research:
+            _enforce_wavelet_byte_floor(args, cfg)
         model = WaveletSubstrate(cfg).to(device)
         print(f"[full] wavelet params: {model.num_parameters():,}")
         _stage("model_built")

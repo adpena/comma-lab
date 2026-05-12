@@ -2,6 +2,9 @@ schema_version: 1
 name: substrate_wavelet_modal_a100_dispatch
 lane_id: lane_substrate_wavelet_20260512
 summary: Wavelet DWT-subband first-anchor dispatch on Modal A100 (PHASE-B2-BUILD HIGH-target attack on 0.193).
+dispatch_enabled: false
+research_only: true
+defer_reason: Dense WLV1 full-grid subbands exceed contest byte-normalizer before compression; needs sparse/top-k/low-rank/codebook subband compiler or residual-over-champion redesign before Modal spend.
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -33,7 +36,7 @@ risk: |
   encourage coarser quantization of high-freq detail per Yousfi UNIWARD
   intuition. Trainer _full_main wires 16 stages including auth eval at stage
   12. Single-axis [contest-CUDA] acceptable for first anchor.
-envelope_status: "FITS $20 envelope at p50 fallback"
+envelope_status: "DEFERRED: byte-floor guard blocks dense full-grid WLV1 dispatch before GPU spend"
 
 remote_driver: scripts/remote_lane_substrate_wavelet.sh
 timeout_hours: 4.0
@@ -57,6 +60,8 @@ env_overrides:
   WAVELET_OUTPUT_DIR: /workspace/pact/lane_substrate_wavelet_results/output
   WAVELET_EPOCHS: "2000"
   WAVELET_BATCH_SIZE: "4"
+  WAVELET_MAX_RAW_SUBBAND_BYTES: "37545489"
+  WAVELET_ALLOW_OVERSIZE_RESEARCH: "0"
   WAVELET_UPSTREAM_DIR: /workspace/pact/upstream
   WAVELET_DEVICE: cuda
   LOCAL_CUDA_WORKER: "1"
@@ -68,14 +73,17 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
 
 notes: |
-  PHASE-B2-BUILD HIGH-target attack on PR101's 0.193 [contest-CUDA] gold.
+  PHASE-B2-BUILD research scaffold for a future wavelet attack on PR101's
+  0.193 [contest-CUDA] gold. This recipe is intentionally NOT dispatch-enabled:
+  the dense full-grid WLV1 grammar is byte-floor blocked by default.
 
   Wavelet architectural distinction: per-pair Mallat-hierarchy subband
   coefficients (LL = approximation, LH/HL/HH = detail) with fixed Daubechies-4
   IDWT synthesis filters. Total ~50K params at coeff_channels=2 dominated by
-  4 * 600 * 2 * 192 * 256 = 590M float-tensor elements (quantized to int16
-  in the archive — ~1.18GB raw, but score-aware Lagrangian + Mallat-hierarchy
-  rate weights drive sparse detail subbands which compress hard via brotli).
+  4 * 600 * 2 * 192 * 256 = 235,929,600 float-tensor elements (quantized to
+  int16 in the archive — 471,859,200 raw subband bytes before ZIP). That byte
+  term is not score-lowering; reactivation requires a sparse/top-k/low-rank/
+  codebook subband compiler or residual-over-champion packet.
 
   Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
   .spawn(); harvest within 24h via tools/harvest_modal_calls.py or

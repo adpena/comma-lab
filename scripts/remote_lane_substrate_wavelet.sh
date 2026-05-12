@@ -37,6 +37,8 @@ WAVELET_VIDEO_PATH="${WAVELET_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 WAVELET_OUTPUT_DIR="${WAVELET_OUTPUT_DIR:-$OUTPUT_DIR}"
 WAVELET_EPOCHS="${WAVELET_EPOCHS:-2000}"
 WAVELET_BATCH_SIZE="${WAVELET_BATCH_SIZE:-4}"
+WAVELET_MAX_RAW_SUBBAND_BYTES="${WAVELET_MAX_RAW_SUBBAND_BYTES:-37545489}"
+WAVELET_ALLOW_OVERSIZE_RESEARCH="${WAVELET_ALLOW_OVERSIZE_RESEARCH:-0}"
 WAVELET_UPSTREAM_DIR="${WAVELET_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 WAVELET_DEVICE="${WAVELET_DEVICE:-cuda}"
 
@@ -129,6 +131,8 @@ prov = {
     'upstream_dir': '$WAVELET_UPSTREAM_DIR',
     'epochs': $WAVELET_EPOCHS,
     'batch_size': $WAVELET_BATCH_SIZE,
+    'max_raw_subband_bytes': $WAVELET_MAX_RAW_SUBBAND_BYTES,
+    'allow_oversize_research': '$WAVELET_ALLOW_OVERSIZE_RESEARCH',
     'device': '$WAVELET_DEVICE',
     # Council Phase 5 prediction: 0.175 [contest-CUDA].
     # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
@@ -156,14 +160,20 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # Stage 4: invoke trainer.
 log "stage_4_trainer_invoke_begin video=$WAVELET_VIDEO_PATH epochs=$WAVELET_EPOCHS device=$WAVELET_DEVICE"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
+ALLOW_OVERSIZE_ARGS=()
+if [ "$WAVELET_ALLOW_OVERSIZE_RESEARCH" = "1" ]; then
+    ALLOW_OVERSIZE_ARGS+=(--allow-oversize-research)
+fi
 set +e
 "$PYBIN" experiments/train_substrate_wavelet.py \
     --video-path "$WAVELET_VIDEO_PATH" \
     --output-dir "$WAVELET_OUTPUT_DIR" \
     --epochs "$WAVELET_EPOCHS" \
     --batch-size "$WAVELET_BATCH_SIZE" \
+    --max-raw-subband-bytes "$WAVELET_MAX_RAW_SUBBAND_BYTES" \
     --upstream-dir "$WAVELET_UPSTREAM_DIR" \
     --device "$WAVELET_DEVICE" \
+    "${ALLOW_OVERSIZE_ARGS[@]}" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e
