@@ -78,7 +78,14 @@ if [ ! -f "$WORKSPACE/scripts/remote_archive_only_eval.sh" ]; then
     exit 22
 fi
 # shellcheck source=/dev/null
-source "$WORKSPACE/scripts/remote_archive_only_eval.sh"
+# REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 prevents the sourced script's main
+# flow (which expects a pre-built archive.zip at /workspace/pact/iter_0/) from
+# running. We only need its bootstrap_runtime_deps() function. Precedent:
+# scripts/remote_track1_phase_a1_score_gradient_pr101.sh:170. Without this
+# sentinel the source triggers Stage 0+ archive-only-eval main flow which
+# fails with "FATAL: archive missing" before any training can start
+# (observed 2026-05-12 fc-01KREXK209TRX7ED5ZRVXHY1VT rc=1 in 12.87s).
+REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source "$WORKSPACE/scripts/remote_archive_only_eval.sh"
 
 # bootstrap_runtime_deps installs uv + torch (driver-version-pinned per CLAUDE.md
 # "Forbidden uv torch install without driver-version pin"). It also exports PYBIN.
