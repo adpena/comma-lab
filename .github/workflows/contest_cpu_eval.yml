@@ -1,0 +1,324 @@
+name: contest_cpu_eval
+
+# Canonical [contest-CPU] auth eval workflow for committed lane archives.
+#
+# Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-
+# COMPLIANT HARDWARE": ubuntu-latest is the 1:1 contest-CPU axis (matches the
+# contest's GitHub Actions ubuntu-latest CPU runner family — Linux x86_64).
+# This workflow takes a committed archive + the canonical inflate.sh +
+# upstream/evaluate.py and produces a [contest-CPU GHA Linux x86_64]
+# authoritative anchor, then atomically updates the continual-learning
+# posterior via tac.continual_learning.posterior_update_locked_from_auth_eval_json.
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" the result is tagged
+# [contest-CPU GHA Linux x86_64] ONLY. The paired CUDA score is recorded as
+# `paired_cuda_score=missing-not-extrapolated` — never inferred from this run.
+#
+# Per CLAUDE.md "Public Disclosure Hygiene": no secrets, no provider URLs, no
+# private paths. The upstream test video is fetched from the comma.ai-published
+# Hugging Face dataset (publicly mirrored) via upstream/download_and_remux.sh.
+#
+# Per CLAUDE.md "Auth eval EVERYWHERE" + Catalog #146 trainer runtime contract:
+# the workflow runs the canonical entry-point experiments/contest_auth_eval.py,
+# which validates archive+inflate.sh+upstream layout end-to-end and emits a
+# schema-versioned contest_auth_eval.json that is durable evidence.
+
+on:
+  workflow_dispatch:
+    inputs:
+      archive_path:
+        description: 'Repo-relative path to the committed archive.zip to evaluate.'
+        required: false
+        type: string
+        default: 'experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip'
+      lane_id:
+        description: 'Lane registry id this anchor maps to (used for posterior architecture_class).'
+        required: false
+        type: string
+        default: 'lane_g_v3'
+      inflate_sh_path:
+        description: 'Repo-relative path to the submission inflate.sh.'
+        required: false
+        type: string
+        default: 'submissions/robust_current/inflate.sh'
+  push:
+    tags:
+      - 'lane_g_v3_v*'
+      - 'contest_cpu_eval_v*'
+
+# Concurrency: scope to the ref so two manual dispatches at the same SHA queue
+# instead of cancel each other; cancel-in-progress=false because a real
+# [contest-CPU] eval takes 60-120 min and we never want to lose it mid-flight.
+concurrency:
+  group: contest_cpu_eval-${{ github.ref }}-${{ github.event.inputs.archive_path }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  contest_cpu_eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    env:
+      ARCHIVE_PATH: ${{ github.event.inputs.archive_path || 'experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip' }}
+      LANE_ID: ${{ github.event.inputs.lane_id || 'lane_g_v3' }}
+      INFLATE_SH_PATH: ${{ github.event.inputs.inflate_sh_path || 'submissions/robust_current/inflate.sh' }}
+      # Canonical CPU torch wheel index — matches CI lane-1.
+      INFLATE_TORCH_SPEC: 'torch==2.5.1'
+      UV_INDEX_STRATEGY: 'unsafe-best-match'
+
+    steps:
+      - name: Checkout repo at the dispatched ref
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Resolve runner identity (becomes hardware_substrate)
+        id: hw
+        run: |
+          set -euo pipefail
+          echo "uname_s=$(uname -s)" >> "$GITHUB_OUTPUT"
+          echo "uname_m=$(uname -m)" >> "$GITHUB_OUTPUT"
+          echo "runner_os=${RUNNER_OS}" >> "$GITHUB_OUTPUT"
+          echo "runner_arch=${RUNNER_ARCH}" >> "$GITHUB_OUTPUT"
+          # Hard fail if not Linux x86_64 — per CLAUDE.md only Linux x86_64 is
+          # the 1:1 contest-CPU axis.
+          if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
+            echo "::error::Runner is not Linux x86_64 (got $(uname -s)/$(uname -m)). Refusing to emit [contest-CPU] tag." >&2
+            exit 1
+          fi
+
+      - name: Set up Python 3.12 (matches CI lane-1 + contest pin window)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: |
+          set -euo pipefail
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: System deps (ffmpeg for inflate.sh + libsvtav1 decode)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          # ubuntu-latest already ships ffmpeg with libsvtav1; verify and surface
+          # version so the audit trail captures the decoder used.
+          which ffmpeg
+          ffmpeg -version | head -3
+
+      - name: Create venv + install tac with runtime extras (CPU torch)
+        run: |
+          set -euo pipefail
+          uv venv
+          # CPU torch first via PyTorch CPU index — never pull CUDA wheels on
+          # this Linux x86_64 GHA runner. Per CLAUDE.md "Forbidden CLI flag
+          # inventions" we pin torch explicitly to avoid the cu13/cu124 trap.
+          uv pip install --index-url https://download.pytorch.org/whl/cpu \
+            --extra-index-url https://pypi.org/simple \
+            "${INFLATE_TORCH_SPEC}"
+          uv pip install -e '.[runtime]'
+          # Sanity: torch must be CPU-only here. A surprise CUDA wheel would
+          # invalidate the [contest-CPU] tag.
+          .venv/bin/python -c "import torch; assert not torch.cuda.is_available(), 'CUDA must NOT be available on the CPU runner'; print('torch', torch.__version__, 'CPU-only OK')"
+
+      - name: Verify committed archive exists at expected path
+        run: |
+          set -euo pipefail
+          if [[ ! -f "${ARCHIVE_PATH}" ]]; then
+            echo "::error::Archive not found at ${ARCHIVE_PATH}. Per Catalog #154 archive custody discipline the canonical archive must be committed in repo. Add the archive (or correct --archive_path input)." >&2
+            exit 1
+          fi
+          ARCHIVE_SHA="$(sha256sum "${ARCHIVE_PATH}" | awk '{print $1}')"
+          ARCHIVE_BYTES="$(stat -c%s "${ARCHIVE_PATH}")"
+          echo "archive_sha256=${ARCHIVE_SHA}" >> "$GITHUB_ENV"
+          echo "archive_bytes=${ARCHIVE_BYTES}" >> "$GITHUB_ENV"
+          echo "Archive: ${ARCHIVE_PATH} (${ARCHIVE_BYTES} bytes, sha256=${ARCHIVE_SHA})"
+
+      - name: Verify upstream/inflate inputs exist
+        run: |
+          set -euo pipefail
+          for f in "${INFLATE_SH_PATH}" upstream/evaluate.py upstream/modules.py upstream/frame_utils.py upstream/public_test_video_names.txt; do
+            if [[ ! -f "$f" ]]; then
+              echo "::error::missing required input: $f" >&2
+              exit 1
+            fi
+          done
+
+      - name: Fetch upstream test video (public HF mirror, no secrets)
+        run: |
+          set -euo pipefail
+          if [[ -f upstream/videos/0.mkv ]]; then
+            echo "Video already present — skipping fetch."
+          else
+            # Per CLAUDE.md "Public Disclosure Hygiene" we use only the
+            # public Hugging Face dataset URL (already in the upstream-vendored
+            # download_and_remux.sh). No secrets are required.
+            cd upstream
+            bash download_and_remux.sh
+          fi
+          ls -lh upstream/videos/
+
+      - name: Run [contest-CPU] auth eval (canonical contest_auth_eval.py)
+        id: eval
+        env:
+          PYTHONPATH: src:upstream
+        run: |
+          set -euo pipefail
+          OUT_DIR="reports/raw/contest_cpu_eval/${LANE_ID}/$(date -u +%Y%m%dT%H%M%SZ)"
+          mkdir -p "${OUT_DIR}"
+          echo "out_dir=${OUT_DIR}" >> "$GITHUB_OUTPUT"
+          # contest_auth_eval.py:
+          #   - copies archive into work_dir/archive.zip
+          #   - runs inflate.sh archive_dir inflated_dir video_names_file
+          #   - runs upstream/evaluate.py --device cpu --submission-dir <work>
+          #   - emits work_dir/contest_auth_eval.json + report.txt + provenance.json
+          # Per CLAUDE.md "Forbidden score claims" the JSON is the durable evidence;
+          # no proxy, no MPS, no extrapolation.
+          .venv/bin/python experiments/contest_auth_eval.py \
+            --archive "${ARCHIVE_PATH}" \
+            --inflate-sh "${INFLATE_SH_PATH}" \
+            --upstream-dir upstream \
+            --device cpu \
+            --work-dir "${OUT_DIR}/eval_work" \
+            --json-out "${OUT_DIR}/contest_auth_eval.json" \
+            --keep-work-dir
+          # Surface key fields in the run log
+          .venv/bin/python -c "
+          import json, pathlib
+          j = json.loads(pathlib.Path('${OUT_DIR}/contest_auth_eval.json').read_text())
+          print('final_score:', j.get('final_score'))
+          print('avg_posenet_dist:', j.get('avg_posenet_dist'))
+          print('avg_segnet_dist:', j.get('avg_segnet_dist'))
+          print('rate_unscaled:', j.get('rate_unscaled'))
+          print('archive_size_bytes:', j.get('archive_size_bytes'))
+          print('n_samples:', j.get('n_samples'))
+          "
+
+      - name: Stamp GHA hardware + axis labels onto the eval JSON
+        env:
+          OUT_DIR: ${{ steps.eval.outputs.out_dir }}
+          UNAME_S: ${{ steps.hw.outputs.uname_s }}
+          UNAME_M: ${{ steps.hw.outputs.uname_m }}
+        run: |
+          set -euo pipefail
+          # Per CLAUDE.md "Apples-to-apples evidence discipline" we stamp the
+          # axis label inline so downstream consumers see [contest-CPU GHA
+          # Linux x86_64] explicitly, never an inferred axis. We also record
+          # paired_cuda_score=missing-not-extrapolated per the same rule.
+          .venv/bin/python - <<'PY'
+          import json, os, pathlib, platform
+          out_dir = pathlib.Path(os.environ["OUT_DIR"])
+          j_path = out_dir / "contest_auth_eval.json"
+          j = json.loads(j_path.read_text(encoding="utf-8"))
+          j["score_axis"] = "contest_cpu_gha"
+          j["evidence_grade"] = "contest-CPU"
+          j["lane_tag"] = "[contest-CPU GHA Linux x86_64]"
+          j["score_claim_axis"] = "contest_cpu"
+          j["paired_cuda_score"] = "missing-not-extrapolated"
+          # Hardware substrate metadata so
+          # tac.continual_learning._hardware_substrate_from_auth_eval_payload
+          # returns 'linux_x86_64_gha_cpu' (Catalog #127 fast path).
+          j.setdefault("provenance", {})
+          j["provenance"]["platform_system"] = os.environ.get("UNAME_S", platform.system())
+          j["provenance"]["platform_machine"] = os.environ.get("UNAME_M", platform.machine()).lower()
+          j["provenance"]["hardware"] = "github-actions ubuntu-latest"
+          j["provenance"]["runner_os"] = os.environ.get("RUNNER_OS", "")
+          j["provenance"]["runner_arch"] = os.environ.get("RUNNER_ARCH", "")
+          j["provenance"]["github_repository"] = os.environ.get("GITHUB_REPOSITORY", "")
+          j["provenance"]["github_sha"] = os.environ.get("GITHUB_SHA", "")
+          j["provenance"]["github_ref"] = os.environ.get("GITHUB_REF", "")
+          j["provenance"]["github_run_id"] = os.environ.get("GITHUB_RUN_ID", "")
+          j["provenance"]["workflow"] = "contest_cpu_eval.yml"
+          j_path.write_text(json.dumps(j, indent=2, sort_keys=True), encoding="utf-8")
+          print("stamped:", j_path)
+          PY
+
+      - name: Update continual-learning posterior (locked, atomic)
+        env:
+          OUT_DIR: ${{ steps.eval.outputs.out_dir }}
+        run: |
+          set -euo pipefail
+          # Per CLAUDE.md "Subagent coherence-by-default" wire-in #5 (continual-
+          # learning posterior). posterior_update_locked_from_auth_eval_json
+          # acquires fcntl.flock(LOCK_EX) on .omx/state/.continual_learning.lock
+          # (Catalog #128) and validates custody via Catalog #127 before
+          # promotion (refuses non-GHA Linux CPU substrates).
+          .venv/bin/python - <<'PY'
+          import json, os, pathlib
+          from tac.continual_learning import posterior_update_locked_from_auth_eval_json
+          out_dir = pathlib.Path(os.environ["OUT_DIR"])
+          j_path = out_dir / "contest_auth_eval.json"
+          lane_id = os.environ.get("LANE_ID", "lane_g_v3")
+          notes = (
+              f"GHA workflow contest_cpu_eval.yml run "
+              f"{os.environ.get('GITHUB_RUN_ID', '')} on "
+              f"{os.environ.get('GITHUB_REPOSITORY', '')}@"
+              f"{os.environ.get('GITHUB_SHA', '')[:12]}"
+          )
+          update = posterior_update_locked_from_auth_eval_json(
+              j_path,
+              architecture_class=lane_id,
+              notes=notes,
+          )
+          status = {
+              "schema": "contest_cpu_eval_posterior_update_v1",
+              "lane_id": lane_id,
+              "accepted": update.accepted,
+              "refusal_reason": update.refusal_reason,
+              "axis": update.axis,
+              "evidence_tag": update.evidence_tag,
+              "archive_sha256": update.archive_sha256,
+              "score_value": update.score_value,
+              "posterior_n_anchors_after": update.posterior_n_anchors_after,
+          }
+          (out_dir / "posterior_update.json").write_text(
+              json.dumps(status, indent=2, sort_keys=True), encoding="utf-8",
+          )
+          print(json.dumps(status, indent=2, sort_keys=True))
+          # The workflow does NOT fail on a custody refusal — refusal is
+          # documented evidence per Catalog #127. The artifact upload step
+          # captures both the eval JSON and the refusal reason.
+          PY
+
+      - name: Record GHA CPU eval timing into the artifact (audit trail only)
+        env:
+          OUT_DIR: ${{ steps.eval.outputs.out_dir }}
+        run: |
+          set -euo pipefail
+          # NOTE: cost-band calibration (tac.cost_band_calibration.append_anchor)
+          # is scoped to TRAINING dispatches (requires trainer/epochs/batch_size/
+          # all_flags_on/actual_wall_clock_sec — see CostBandAnchor schema). Auth
+          # evals are not training dispatches, so we do NOT append into that
+          # JSONL. The GHA wall-clock + run metadata are captured in the
+          # contest_auth_eval.json provenance block (uploaded as artifact),
+          # which is the durable [contest-CPU] evidence per CLAUDE.md
+          # "Auth eval EVERYWHERE".
+          .venv/bin/python - <<'PY'
+          import json, os, pathlib
+          out_dir = pathlib.Path(os.environ["OUT_DIR"])
+          j_path = out_dir / "contest_auth_eval.json"
+          j = json.loads(j_path.read_text(encoding="utf-8"))
+          j.setdefault("provenance", {})["gha_run_id"] = os.environ.get("GITHUB_RUN_ID", "")
+          j["provenance"]["gha_workflow"] = "contest_cpu_eval.yml"
+          j["provenance"]["gha_repository"] = os.environ.get("GITHUB_REPOSITORY", "")
+          j_path.write_text(json.dumps(j, indent=2, sort_keys=True), encoding="utf-8")
+          print("GHA metadata recorded in contest_auth_eval.json provenance block")
+          PY
+
+      - name: Upload contest_auth_eval artifact (90-day retention)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contest_cpu_eval-${{ env.LANE_ID }}-${{ github.run_id }}
+          path: |
+            ${{ steps.eval.outputs.out_dir }}/contest_auth_eval.json
+            ${{ steps.eval.outputs.out_dir }}/posterior_update.json
+            ${{ steps.eval.outputs.out_dir }}/eval_work/report.txt
+            ${{ steps.eval.outputs.out_dir }}/eval_work/provenance.json
+          retention-days: 90
+          if-no-files-found: warn
