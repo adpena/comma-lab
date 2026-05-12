@@ -1,0 +1,29 @@
+{
+  "archive_sha256": "37c5eeeb6ab0ea758eda8a6dc86f667776868d596e45ffaf4f9b881de945b8b5",
+  "archive_size_bytes": 273,
+  "blockers": [],
+  "mode": "optimize",
+  "no_op_proof_no_op_detector_passed": true,
+  "no_op_proof_runtime_consumption_proof": true,
+  "no_op_proof_score_affecting_payload_changed": true,
+  "parser_section_manifest_section_count": 2,
+  "parser_section_manifest_section_names": [
+    "renderer.bin",
+    "masks.mkv"
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_tree_sha256": "1405618ee4eda703e7e17886c774b31209a7a20514bb21d6851e6e95860e2674",
+  "schema_version": "deterministic_golden_vectors.v1",
+  "score_claim": false,
+  "target_profile": "production_generalized",
+  "target_profile_policy": {
+    "allows_one_video_replay": false,
+    "allows_optional_device_learning": false,
+    "contest_dispatch_candidate": false,
+    "description": "comma-ai/openpilot production target. Preserves cross-video behavior, portability, maintainability, and deterministic reproducible native builds. inflate.sh is optional since the runtime contract may be a Python/Rust/C++ entry point.",
+    "requires_cross_video_generalization": true,
+    "requires_inflate_sh": false,
+    "requires_runtime_tree": true
+  }
+}
