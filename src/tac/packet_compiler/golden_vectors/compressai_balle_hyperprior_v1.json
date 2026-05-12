@@ -1,0 +1,17 @@
+{
+  "n_batch": 1,
+  "schema": "compressai_balle_hyperprior.v1",
+  "sha256": "f2ec39577b134dfe89f4caa95e5426079a89bb9c580cea08848e2357f8e9e808",
+  "shape": [
+    1,
+    1
+  ],
+  "string_lens_y": [
+    8
+  ],
+  "string_lens_z": [
+    48
+  ],
+  "variant": 1,
+  "wire_len": 83
+}

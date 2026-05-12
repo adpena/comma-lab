@@ -1,0 +1,13 @@
+{
+  "n_batch": 1,
+  "schema": "compressai_factorized_prior.v1",
+  "sha256": "867f6aa8c7342853693a700d2664f49bbdfc17198955fc39c8f396ff4ed1f456",
+  "shape": [
+    4,
+    4
+  ],
+  "string_lens": [
+    1044
+  ],
+  "wire_len": 1065
+}

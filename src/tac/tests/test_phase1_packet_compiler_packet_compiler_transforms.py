@@ -82,6 +82,21 @@ def _write_synthetic_packet(tmp_path: Path) -> Path:
     return packet_dir
 
 
+def _write_transform_proof(packet_dir: Path, transforms: list[str]) -> None:
+    proof = {
+        "schema": "tac.packet_compiler.transform_proof.v1",
+        "proof_kind": "upstream_trainer_materialized_bytes",
+        "packet_compiler_transforms": transforms,
+        "archive_sha256": sha256_file(packet_dir / "archive.zip"),
+        "score_claim": False,
+        "runtime_consumption_proof": False,
+        "producer": "test_phase1_packet_compiler_packet_compiler_transforms",
+    }
+    (packet_dir / "packet_compiler_transform_proof.json").write_text(
+        json.dumps(proof, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+
 # ── Default behaviour preserved ─────────────────────────────────────────────
 
 
@@ -108,6 +123,12 @@ def test_default_no_transforms_records_empty_list(tmp_path: Path) -> None:
 
 def test_records_declared_transforms_in_manifest(tmp_path: Path) -> None:
     packet_dir = _write_synthetic_packet(tmp_path)
+    transforms = [
+        "pr101_ranked_no_op_sidecar",
+        "pr103_merged_range_stream",
+        "pr103_adaptive_brotli_param_search",
+    ]
+    _write_transform_proof(packet_dir, transforms)
     out_dir = tmp_path / "out_with_transforms"
     result = compile_phase1_packet(
         input_packet=packet_dir,
@@ -116,18 +137,12 @@ def test_records_declared_transforms_in_manifest(tmp_path: Path) -> None:
         score_affecting_payload_changed=True,
         baseline_archive_sha256="0" * 64,
         baseline_archive_size_bytes=999_999,
-        packet_compiler_transforms=[
-            "pr101_ranked_no_op_sidecar",
-            "pr103_merged_range_stream",
-            "pr103_adaptive_brotli_param_search",
-        ],
+        packet_compiler_transforms=transforms,
     )
     manifest = json.loads((out_dir / "build_manifest.json").read_text(encoding="utf-8"))
-    assert manifest["packet_compiler_transforms"] == [
-        "pr101_ranked_no_op_sidecar",
-        "pr103_merged_range_stream",
-        "pr103_adaptive_brotli_param_search",
-    ]
+    assert manifest["packet_compiler_transforms"] == transforms
+    assert manifest["packet_compiler_transform_proof"]["status"] == "materialization_proof_present"
+    assert manifest["packet_compiler_transform_proof"]["score_claim"] is False
     assert result.score_claim is False
     assert result.promotion_eligible is False
 
@@ -147,6 +162,41 @@ def test_rejects_unknown_transform_token(tmp_path: Path) -> None:
             baseline_archive_sha256="0" * 64,
             baseline_archive_size_bytes=999_999,
             packet_compiler_transforms=["pr999_not_a_real_transform"],
+        )
+
+
+def test_rejects_declared_transforms_without_materialization_proof(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    out_dir = tmp_path / "out_missing_proof"
+    with pytest.raises(Phase1PacketCompilerError, match="materialization proof"):
+        compile_phase1_packet(
+            input_packet=packet_dir,
+            output_dir=out_dir,
+            mode="optimize",
+            score_affecting_payload_changed=True,
+            baseline_archive_sha256="0" * 64,
+            baseline_archive_size_bytes=999_999,
+            packet_compiler_transforms=["pr101_ranked_no_op_sidecar"],
+        )
+
+
+def test_rejects_transform_proof_archive_sha_mismatch(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    _write_transform_proof(packet_dir, ["pr101_ranked_no_op_sidecar"])
+    proof_path = packet_dir / "packet_compiler_transform_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["archive_sha256"] = "f" * 64
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+    out_dir = tmp_path / "out_bad_proof"
+    with pytest.raises(Phase1PacketCompilerError, match="archive_sha256"):
+        compile_phase1_packet(
+            input_packet=packet_dir,
+            output_dir=out_dir,
+            mode="optimize",
+            score_affecting_payload_changed=True,
+            baseline_archive_sha256="0" * 64,
+            baseline_archive_size_bytes=999_999,
+            packet_compiler_transforms=["pr101_ranked_no_op_sidecar"],
         )
 
 

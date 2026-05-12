@@ -1816,6 +1816,17 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     # `.omx/research/schema_elision_design_pr98_pr100_pr105_20260512.md`).
     "pr98_cd1_compact_architecture_ordered_decoder_format",
     "pr100_schema_driven_decoder_storage_grammar",
+    # CompressAI reference neural-compression codecs — packet-compiler
+    # adapters (2026-05-12). Each token tags one CompressAI model family.
+    # Adapters in ``src/tac/packet_compiler/{factorized_prior,
+    # balle_hyperprior, cheng2020}.py`` wrap encode/decode + serialize/
+    # deserialize behind a typed wire format with a magic+version header.
+    # ``score_claim=false`` per
+    # ``forbidden_score_claim_with_byte_change_unless_inflate_consumes``;
+    # archive-grammar declaration lives in each adapter's docstring.
+    "compressai_factorized_prior",
+    "compressai_balle_hyperprior",
+    "compressai_cheng2020",
 )
 
 

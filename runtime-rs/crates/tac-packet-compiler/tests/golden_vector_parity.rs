@@ -226,10 +226,16 @@ fn pr101_split_brotli_self_delim_parity() {
     let mut pos = 4usize;
     let mut streams_owned: Vec<Vec<u8>> = Vec::with_capacity(n_streams);
     for _ in 0..n_streams {
-        assert!(pos + 4 <= raw.len(), "fixture truncated reading length prefix");
+        assert!(
+            pos + 4 <= raw.len(),
+            "fixture truncated reading length prefix"
+        );
         let len = u32::from_le_bytes([raw[pos], raw[pos + 1], raw[pos + 2], raw[pos + 3]]) as usize;
         pos += 4;
-        assert!(pos + len <= raw.len(), "fixture truncated reading sub-stream body");
+        assert!(
+            pos + len <= raw.len(),
+            "fixture truncated reading sub-stream body"
+        );
         streams_owned.push(raw[pos..pos + len].to_vec());
         pos += len;
     }
@@ -295,8 +301,8 @@ fn pr103_merged_range_stream_parity() {
             alphabet_size: 256,
         },
     ];
-    let stream = encode_merged_range_stream(&flat, &specs)
-        .expect("encode_merged_range_stream must succeed");
+    let stream =
+        encode_merged_range_stream(&flat, &specs).expect("encode_merged_range_stream must succeed");
     assert_sha256_parity(&stream.payload, &manifest)
         .expect("merged-range-stream payload must match Python oracle SHA-256");
 }
@@ -354,6 +360,39 @@ fn try_load_only(name: &'static str) {
     let _manifest = try_load(name);
 }
 
+fn try_load_non_claim_stub(name: &'static str) {
+    let manifest = match try_load(name) {
+        Some(m) => m,
+        None => return,
+    };
+    assert_eq!(
+        manifest.extras.get("source_fixture_type").and_then(|v| v.as_str()),
+        Some("synthetic_unit_vector"),
+        "{name} is a load-only Rust stub; manifest must label the vector as a synthetic unit fixture"
+    );
+    assert_eq!(
+        manifest.extras.get("score_claim").and_then(|v| v.as_bool()),
+        Some(false),
+        "{name} load-only stub must not imply a score claim"
+    );
+    assert_eq!(
+        manifest
+            .extras
+            .get("runtime_consumption_proof")
+            .and_then(|v| v.as_bool()),
+        Some(false),
+        "{name} load-only stub must not imply runtime-consumption proof"
+    );
+    assert_eq!(
+        manifest
+            .extras
+            .get("promotion_eligible")
+            .and_then(|v| v.as_bool()),
+        Some(false),
+        "{name} load-only stub must be promotion-ineligible until Rust byte parity lands"
+    );
+}
+
 #[test]
 fn pr81_fp4_codebook_parity() {
     let manifest = match try_load("pr81_fp4_codebook_v1") {
@@ -403,8 +442,8 @@ fn pr81_router_action_parity() {
     };
     // Manifest pins bits=3, count=600, packed_len=225.
     assert_eq!(actions_bin.len(), 600);
-    let payload = encode_router_actions(&actions_bin, 3)
-        .expect("encode_router_actions must succeed");
+    let payload =
+        encode_router_actions(&actions_bin, 3).expect("encode_router_actions must succeed");
     assert_sha256_parity(&payload, &manifest)
         .expect("PR81 ROUTER_ACTION payload must match Python oracle SHA-256");
 }
@@ -533,13 +572,12 @@ fn pr92_rmc_joint_stream_parity() {
     assert_eq!(seg_bin.len(), 128);
     assert_eq!(actions_bin.len(), 120);
     // Step 1: pack actions via PR81 router_actions (bits=3).
-    let body = encode_router_actions(&actions_bin, 3)
-        .expect("encode_router_actions must succeed");
+    let body = encode_router_actions(&actions_bin, 3).expect("encode_router_actions must succeed");
     // Step 2: wrap in RSA1 (count=120, action_bits=3, table_id=2).
     let rsa = pack_rsa1_side(120, 3, 2, &body).expect("pack_rsa1_side must succeed");
     // Step 3: wrap in RMC1 (seg_bytes + rsa.payload).
-    let composite = pack_rmc1_composite(&seg_bin, &rsa.payload)
-        .expect("pack_rmc1_composite must succeed");
+    let composite =
+        pack_rmc1_composite(&seg_bin, &rsa.payload).expect("pack_rmc1_composite must succeed");
     assert_sha256_parity(&composite.payload, &manifest)
         .expect("PR92 RMC1 joint stream payload must match Python oracle SHA-256");
 }
@@ -601,8 +639,7 @@ fn pr93_qzmb1_parity() {
     //   block = pack_qzmb1_block(block_size=32, arch_config_json=arch_json, body=body)
     let arch_json: &[u8] = b"{\"hidden\": 64, \"blocks\": 3, \"input_dim\": 5}";
     let body: Vec<u8> = (0..64).map(|i| i as u8).collect();
-    let block = pack_qzmb1_block(32, arch_json, &body)
-        .expect("pack_qzmb1_block must succeed");
+    let block = pack_qzmb1_block(32, arch_json, &body).expect("pack_qzmb1_block must succeed");
     assert_sha256_parity(&block.payload, &manifest)
         .expect("PR93 QZMB1 payload must match Python oracle SHA-256");
 }
@@ -622,8 +659,8 @@ fn pr93_lowpass_luma_parity() {
         height: 384,
         width: 512,
     };
-    let blob = serialize_lowpass_luma_residual(&r)
-        .expect("serialize_lowpass_luma_residual must succeed");
+    let blob =
+        serialize_lowpass_luma_residual(&r).expect("serialize_lowpass_luma_residual must succeed");
     assert_sha256_parity(&blob, &manifest)
         .expect("PR93 lowpass-luma payload must match Python oracle SHA-256");
 }
@@ -661,8 +698,7 @@ fn pr97_h3_tile_band_streams_parity() {
     //   blob = encode_tile_band_streams(streams)
     let bufs: Vec<Vec<u8>> = (0..22u8).map(|i| vec![i; (i + 1) as usize]).collect();
     let streams: Vec<&[u8]> = bufs.iter().map(|v| v.as_slice()).collect();
-    let blob =
-        encode_tile_band_streams(&streams).expect("encode_tile_band_streams must succeed");
+    let blob = encode_tile_band_streams(&streams).expect("encode_tile_band_streams must succeed");
     assert_sha256_parity(&blob, &manifest)
         .expect("PR97 H3 tile-band streams payload must match Python oracle SHA-256");
 }
@@ -688,8 +724,8 @@ fn sparse_rle_of_zeros_parity() {
     let dense: Vec<i8> = dense_bin.iter().map(|&b| b as i8).collect();
     let stream =
         sparse_encode_rle_of_zeros(&dense).expect("sparse_encode_rle_of_zeros must succeed");
-    let blob = sparse_serialize_rle_of_zeros(&stream)
-        .expect("sparse_serialize_rle_of_zeros must succeed");
+    let blob =
+        sparse_serialize_rle_of_zeros(&stream).expect("sparse_serialize_rle_of_zeros must succeed");
     assert_sha256_parity(&blob, &manifest)
         .expect("sparse RLE-of-zeros payload must match Python oracle SHA-256");
 }
@@ -814,17 +850,17 @@ fn pr105_packed_state_schema_parity() {
 
 #[test]
 fn pr101_decoder_storage_order_parity() {
-    try_load_only("pr101_decoder_storage_order_v1");
+    try_load_non_claim_stub("pr101_decoder_storage_order_v1");
 }
 
 #[test]
 fn pr101_conv4_storage_perms_parity() {
-    try_load_only("pr101_conv4_storage_perms_v1");
+    try_load_non_claim_stub("pr101_conv4_storage_perms_v1");
 }
 
 #[test]
 fn pr101_decoder_byte_maps_parity() {
-    try_load_only("pr101_decoder_byte_maps_v1");
+    try_load_non_claim_stub("pr101_decoder_byte_maps_v1");
 }
 
 // ── Sign-encoding 5-strategy unified taxonomy parity stubs (2026-05-12) ────
@@ -894,6 +930,42 @@ fn pr98_cd1_compact_format_parity() {
 #[test]
 fn pr100_schema_driven_decoder_parity() {
     try_load_only("pr100_schema_driven_decoder_v1");
+}
+
+// ── CompressAI reference neural-compression codec parity stubs (2026-05-12) ──
+//
+// Three CompressAI codec families wired as packet_compiler primitives:
+//
+// * `compressai_factorized_prior_v1` — `compressai.models.FactorizedPrior`
+//   (Ballé 2018 baseline; single-substream EntropyBottleneck).
+// * `compressai_balle_hyperprior_v1` — Ballé 2018 ScaleHyperprior /
+//   MeanScaleHyperprior / JointAutoregressiveHierarchicalPriors
+//   (two-substream y+z wire format, variant-tagged).
+// * `compressai_cheng2020_v1` — Cheng-2020 anchor / attention
+//   (two-substream y+z wire format, variant-tagged).
+//
+// Each is `try_load_only` until a Rust source module under
+// `src/tac-packet-compiler/src/compressai_*/` lands. The Python tests at
+// `src/tac/tests/test_packet_compiler_{factorized_prior,
+// balle_hyperprior, cheng2020}_roundtrip.py` produce the pinned SHA-256
+// against deterministic torch seeds (20260512). A native Rust port of the
+// CompressAI inference path (analysis/synthesis nets + range coder) would
+// be required to reproduce the SHA byte-for-byte — that work is out of
+// scope for the Python oracle landing.
+
+#[test]
+fn compressai_factorized_prior_parity() {
+    try_load_only("compressai_factorized_prior_v1");
+}
+
+#[test]
+fn compressai_balle_hyperprior_parity() {
+    try_load_only("compressai_balle_hyperprior_v1");
+}
+
+#[test]
+fn compressai_cheng2020_parity() {
+    try_load_only("compressai_cheng2020_v1");
 }
 
 // ── Magic codec auto-selector parity stub (2026-05-11) ──────────────────────
@@ -984,6 +1056,10 @@ fn every_golden_vector_has_paired_parity_test() {
         // Schema-elision V1 (PR98 CD1) + V2 (PR100 schema-driven) (2026-05-12)
         "pr98_cd1_compact_format_v1",
         "pr100_schema_driven_decoder_v1",
+        // CompressAI reference neural-compression codecs (2026-05-12)
+        "compressai_factorized_prior_v1",
+        "compressai_balle_hyperprior_v1",
+        "compressai_cheng2020_v1",
     ]
     .into_iter()
     .collect();

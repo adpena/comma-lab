@@ -1,0 +1,17 @@
+{
+  "n_batch": 1,
+  "schema": "compressai_cheng2020.v1",
+  "sha256": "3285e306931e9e83b4e4fae8bb2ac210b61e1028703643dacb07d66e8ee331f5",
+  "shape": [
+    1,
+    1
+  ],
+  "string_lens_y": [
+    8
+  ],
+  "string_lens_z": [
+    48
+  ],
+  "variant": 1,
+  "wire_len": 83
+}
