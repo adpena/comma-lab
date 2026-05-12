@@ -74,6 +74,22 @@ from tac.nerv_mask_codec import (  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
 
 
+# Tier-1 operator-required CLI flags manifest. Catalog #151
+# (`check_operator_wrapper_threads_trainer_tier_required_flags`) refuses any
+# wrapper that invokes this trainer without threading the env-var ladder for
+# each flag below. Per OD-WIRE-3 grand council 2026-05-12 verdict (6/10 PROCEED,
+# INVOKED-ONLY at TIER_1).
+#
+# This trainer exposes NO `--enable-*` semantic gates (the OD-WIRE-3 pattern
+# that catches "landed-but-not-wired" feature flags per the design memo
+# `.omx/research/design_trainer_flag_manifest_for_wireup_and_composition_20260512.md`).
+# argparse `required=True` on --profile and --device already hard-fails if
+# absent; --allow-forensic-segnet-target has inverse semantics (production
+# wrappers must NOT thread it) which the wrapper-threads-flag schema cannot
+# express cleanly. Sister CLAUDE.md checks cover canonical non-negotiables.
+TIER_1_OPERATOR_REQUIRED_FLAGS = {}  # No operator-tier semantic gates declared.
+
+
 def _load_segnet_argmax_masks(
     upstream_dir: Path,
     device: str,

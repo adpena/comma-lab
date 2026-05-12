@@ -389,3 +389,76 @@ def test_wrapper_threads_flag_neither_returns_false() -> None:
     assert not _check_151_wrapper_threads_flag(
         text, "--enable-autocast-fp16", "T1_AUTOCAST", ()
     )
+
+
+# -- OD-WIRE-3 INVOKED-ONLY manifest declarations (2026-05-12) -----------
+#
+# Grand council 2026-05-12 verdict (subagent a6046518ed0ec4869): TIER_1 manifest
+# constants must be declared on every operator-invoked trainer so Catalog #151
+# can audit wire-up. The 5 trainers below were retrofitted; each carries an
+# empty dict (no `--enable-*` semantic gates declared) — this pins the
+# AST-discoverable manifest at byte zero so any future addition surfaces
+# through the council process and a wrapper update lands in the same batch.
+
+def _trainer_path(rel: str) -> Path:
+    return Path.cwd() / rel
+
+
+def test_tier_1_manifest_on_train_renderer() -> None:
+    """train_renderer.py (canonical mask-conditioned renderer) declares
+    TIER_1_OPERATOR_REQUIRED_FLAGS at module level."""
+    p = _trainer_path("src/tac/experiments/train_renderer.py")
+    assert p.exists(), f"trainer file missing: {p}"
+    out = _check_151_extract_tier_manifests(p)
+    assert out == {}, (
+        f"train_renderer.py manifest should be empty (no operator-tier "
+        f"semantic gates); got {out!r}"
+    )
+
+
+def test_tier_1_manifest_on_train_distill() -> None:
+    """train_distill.py (distillation trainer) declares
+    TIER_1_OPERATOR_REQUIRED_FLAGS at module level."""
+    p = _trainer_path("experiments/train_distill.py")
+    assert p.exists(), f"trainer file missing: {p}"
+    out = _check_151_extract_tier_manifests(p)
+    assert out == {}, (
+        f"train_distill.py manifest should be empty (no operator-tier "
+        f"semantic gates); got {out!r}"
+    )
+
+
+def test_tier_1_manifest_on_train_segmap() -> None:
+    """train_segmap.py (SegMap renderer trainer) declares
+    TIER_1_OPERATOR_REQUIRED_FLAGS at module level."""
+    p = _trainer_path("experiments/train_segmap.py")
+    assert p.exists(), f"trainer file missing: {p}"
+    out = _check_151_extract_tier_manifests(p)
+    assert out == {}, (
+        f"train_segmap.py manifest should be empty (no operator-tier "
+        f"semantic gates); got {out!r}"
+    )
+
+
+def test_tier_1_manifest_on_train_joint_pair() -> None:
+    """train_joint_pair.py (Click-based JointPairGenerator trainer) declares
+    TIER_1_OPERATOR_REQUIRED_FLAGS at module level."""
+    p = _trainer_path("experiments/train_joint_pair.py")
+    assert p.exists(), f"trainer file missing: {p}"
+    out = _check_151_extract_tier_manifests(p)
+    assert out == {}, (
+        f"train_joint_pair.py manifest should be empty (no operator-tier "
+        f"semantic gates); got {out!r}"
+    )
+
+
+def test_tier_1_manifest_on_train_nerv_mask() -> None:
+    """train_nerv_mask.py (Lane 12 NeRV mask codec trainer) declares
+    TIER_1_OPERATOR_REQUIRED_FLAGS at module level."""
+    p = _trainer_path("experiments/train_nerv_mask.py")
+    assert p.exists(), f"trainer file missing: {p}"
+    out = _check_151_extract_tier_manifests(p)
+    assert out == {}, (
+        f"train_nerv_mask.py manifest should be empty (no operator-tier "
+        f"semantic gates); got {out!r}"
+    )

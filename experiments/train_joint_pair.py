@@ -79,6 +79,22 @@ RESULTS_DIR = (
 ORIGINAL_UNCOMPRESSED_SIZE = 37_545_489
 
 
+# Tier-1 operator-required CLI flags manifest. Catalog #151
+# (`check_operator_wrapper_threads_trainer_tier_required_flags`) refuses any
+# wrapper that invokes this trainer without threading the env-var ladder for
+# each flag below. Per OD-WIRE-3 grand council 2026-05-12 verdict (6/10 PROCEED,
+# INVOKED-ONLY at TIER_1).
+#
+# This Click-based trainer exposes NO `--enable-*` semantic gates (the
+# OD-WIRE-3 pattern that catches "landed-but-not-wired" feature flags per the
+# design memo `.omx/research/design_trainer_flag_manifest_for_wireup_and_composition_20260512.md`).
+# Click flag-pairs (--eval-roundtrip/--no-eval-roundtrip, --fp4-qat/--no-fp4-qat)
+# are CLAUDE.md-referenced but default to the safe side and have settled wrapper
+# conventions; canonical non-negotiables are enforced trainer-internally
+# AND by sister checks (Catalog #5 / #7 / #88).
+TIER_1_OPERATOR_REQUIRED_FLAGS = {}  # No operator-tier semantic gates declared.
+
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
