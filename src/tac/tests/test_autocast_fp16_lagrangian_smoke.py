@@ -169,7 +169,7 @@ def test_teacher_cache_dtype_handoff_to_student_fp16():
     assert student_fp32.shape == teacher_fp32.shape
 
     # Simulated KL loss — verify gradient flows
-    kl = F.kl_div(
+    kl = F.kl_div(  # KL_BATCHMEAN_OK: flat (B, pose_dim=12) pose tensor; not spatial — batchmean is canonical for classifier-shaped logits per check guidance
         F.log_softmax(student_fp32 / 2.0, dim=-1),
         F.softmax(teacher_fp32 / 2.0, dim=-1),
         reduction="batchmean",

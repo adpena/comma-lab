@@ -72,6 +72,23 @@ if [ -z "$CLAIM_PYTHON" ]; then
     CLAIM_PYTHON="python3"
 fi
 
+# Stage 0b: NVDEC probe (per CLAUDE.md `feedback_vastai_nvdec_host_variation`).
+# Early failure-class probe BEFORE any uv/torch install or training spend.
+# Failure rate on cold-pool hosts is ~30-50%; this saves $0.05-0.10 per bad host.
+# Skip cleanly on Modal containers (NVDEC always available in CUDA images);
+# the probe itself is idempotent and tolerates the no-DALI scenario by exiting 0
+# when torchvision-only path is acceptable.
+if [ -x "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    log "stage_0b_nvdec_probe_begin"
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+        log "FATAL: NVDEC probe failed (host hardware/driver/DALI mismatch); refusing dispatch"
+        exit 2
+    }
+    log "stage_0b_nvdec_probe_done"
+else
+    log "WARN: scripts/probe_nvdec.sh missing — skipping NVDEC early-fail probe"
+fi
+
 # Stage 1: bootstrap runtime deps (canonical, per CLAUDE.md).
 if [ ! -f "$WORKSPACE/scripts/remote_archive_only_eval.sh" ]; then
     log "FATAL: canonical bootstrap script missing at scripts/remote_archive_only_eval.sh"
@@ -125,6 +142,13 @@ prov = {
     'upstream_dir': '$SANE_HNERV_UPSTREAM_DIR',
     'epochs': $SANE_HNERV_EPOCHS,
     'device': '$SANE_HNERV_DEVICE',
+    # predicted_band per council calibration (CLAUDE.md no-signal-loss).
+    # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
+    # + recipe substrate_sane_hnerv_modal_a100_dispatch.yaml::predicted_delta
+    # = '-0.030 to -0.050' [predicted; council substrate design memo].
+    # Band convention: [LOW, HIGH] in score-space (lower = better contest score).
+    'predicted_band': [-0.050, -0.030],
+    'predicted_basis': 'grand_council_fields_medal_substrate_design_20260512',
 }
 import pathlib
 pathlib.Path('$PROVENANCE').write_text(json.dumps(prov, indent=2, sort_keys=True))
