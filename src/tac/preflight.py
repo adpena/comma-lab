@@ -822,9 +822,9 @@ def _preflight_parallel_worker_count() -> int:
 
     Broad preflight checks share a SourceIndex and several still parse or scan
     overlapping candidate files. Unbounded fan-out increases lock contention
-    and I/O pressure, so the default is a small fixed worker pool. Four workers
-    keeps cold CI under the 30s DX budget by overlapping the slow full-tree
-    policy scanners without turning normal local edits into an I/O storm.
+    and I/O pressure, so the default is a fixed worker pool. Eight workers keeps
+    cold CI under the 30s DX budget by starting all slow full-tree policy
+    scanners immediately instead of queueing them in long waves.
     """
 
     raw = os.environ.get("PACT_PREFLIGHT_PARALLEL_WORKERS", "").strip()
@@ -832,17 +832,17 @@ def _preflight_parallel_worker_count() -> int:
         try:
             value = int(raw)
         except ValueError:
-            value = 4
+            value = 8
     else:
-        value = 4
+        value = 8
     return max(1, min(value, 16))
 
 
 def _preflight_source_index_prewarm_enabled() -> bool:
     """Return true when source-index facts should be warmed before fan-out."""
 
-    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "1").strip().lower()
-    return value not in {"0", "false", "no", "off"}
+    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
 
 def _prewarm_preflight_source_index(root: Path) -> None:
