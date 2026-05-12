@@ -1,0 +1,9 @@
+{
+  "bias": 20.0,
+  "n_frames": 600,
+  "payload_len": 1200,
+  "scale": 0.001953125,
+  "schema": "pr64_unified_brotli_pose_velocity.v1",
+  "seed": 20260512,
+  "sha256": "7923a9f73c5bf7c2d3647debbb1627c73fc666364193055126ffe0b512159399"
+}

@@ -1,0 +1,8 @@
+{
+  "n_dims": 6,
+  "n_frames": 600,
+  "payload_len": 7200,
+  "schema": "pr63_qpose14_uint16_int16.v1",
+  "seed": 20260512,
+  "sha256": "5f975ec1f2166115931f2ed705f1848537c677cbdc97d094efa4e3c23a485f4c"
+}

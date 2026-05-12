@@ -1,0 +1,11 @@
+{
+  "n_members": 3,
+  "payload_len": 136,
+  "schema": "pr63_qpose14_single_zip_member.v1",
+  "section_lens": [
+    40,
+    40,
+    40
+  ],
+  "sha256": "9949a012a99948a4e438f94a936d5d0e88f2a99cdc12b2b3c5b4d18df0add5f2"
+}

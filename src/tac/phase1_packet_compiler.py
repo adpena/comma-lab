@@ -1774,6 +1774,15 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     # PR93 — delta-varint pose + QZMB1
     "pr93_delta_varint_pose",
     "pr93_qzmb_qzpdv_grammar",
+    # PR63 — qpose14 uint16-view int16 + single-zip-member packed payload (2026-05-12)
+    "pr63_qpose14_uint16_view_int16",
+    "pr63_qpose14_packed_payload",
+    # PR64 — unified-brotli pose-velocity-only codec (2026-05-12)
+    "pr64_unified_brotli_pose_velocity",
+    # PR65 — PQ12 12-bit / 3-byte / 2-value packed pose codec (2026-05-12)
+    "pr65_pq12_pose",
+    # PR105 — kitchen_sink packed-state-schema size-sorted helper (2026-05-12)
+    "pr105_packed_state_schema_size_sorted",
     # PR93 — lowpass-luma residual codec (3 or 6 fp32 coeffs, low-freq RGB-luma correction)
     "pr93_lowpass_luma_residual",
     # PR97 — H3 wire-format grammar (length-prefixed sections + tile-band multi-stream)
@@ -1783,6 +1792,8 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     "sparse_rle_of_zeros",
     "sparse_arithmetic_coefficients",
     "sparse_temporal_subsampled",
+    # Magic codec — per-stream auto-selector + meta-codec dispatch (2026-05-11)
+    "magic_codec_auto_select",
 )
 
 

@@ -1,0 +1,8 @@
+{
+  "n_dims": 6,
+  "n_frames": 600,
+  "payload_len": 5456,
+  "schema": "pr65_pq12_pose.v1",
+  "seed": 20260512,
+  "sha256": "441e56a87ffbb255b212dc83329c3e21188a724d06509f8df3f0c84a0b94a70a"
+}

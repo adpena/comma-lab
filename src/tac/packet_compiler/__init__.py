@@ -63,6 +63,10 @@ from tac.packet_compiler.pr93_pose_codec import (
     pack_qzmb1_block,
     unpack_qzmb1_block,
 )
+from tac.packet_compiler.pr105_packed_state_schema import (
+    PackedStateSchemaEntry,
+    pack_state_schema_size_sorted,
+)
 from tac.packet_compiler.pr97_h3_grammar import (
     LengthPrefixedSectionPayload,
     TileBandStreamPayload,
@@ -70,6 +74,30 @@ from tac.packet_compiler.pr97_h3_grammar import (
     decode_tile_band_streams,
     encode_length_prefixed_sections,
     encode_tile_band_streams,
+)
+from tac.packet_compiler.pr63_qpose14_codec import (
+    PR63_QPOSE14_N_DIMS,
+    PR63_SIGNED_SCALE,
+    PR63_VEL_BIAS,
+    PR63_VEL_SCALE,
+    QPose14PackedPayload,
+    QPose14Uint16Int16Stream,
+    decode_qpose14_uint16_view_int16,
+    encode_qpose14_uint16_view_int16,
+    pack_qpose14_packed_payload,
+    unpack_qpose14_packed_payload,
+)
+from tac.packet_compiler.pr64_unified_brotli_pose_velocity import (
+    UnifiedBrotliPoseVelocityStream,
+    decode_unified_brotli_pose_velocity,
+    encode_unified_brotli_pose_velocity,
+)
+from tac.packet_compiler.pr65_pq12_pose_codec import (
+    MAGIC_PQ12,
+    PQ12_MAX_QUANTUM,
+    PQ12PoseStream,
+    decode_pq12_pose,
+    encode_pq12_pose,
 )
 from tac.packet_compiler.pr101_sidecar_grammar import (
     CenteredDeltaUint8Stream,
@@ -176,6 +204,30 @@ __all__ = [
     "unpack_rmc1_composite",
     "unpack_rsa1_side",
     "unpack_rsb1_side",
+    # PR63 — qpose14 uint16-view int16 codec + packed-payload single-zip-member grammar
+    "PR63_QPOSE14_N_DIMS",
+    "PR63_SIGNED_SCALE",
+    "PR63_VEL_BIAS",
+    "PR63_VEL_SCALE",
+    "QPose14PackedPayload",
+    "QPose14Uint16Int16Stream",
+    "decode_qpose14_uint16_view_int16",
+    "encode_qpose14_uint16_view_int16",
+    "pack_qpose14_packed_payload",
+    "unpack_qpose14_packed_payload",
+    # PR64 — unified-brotli pose-velocity-only codec
+    "UnifiedBrotliPoseVelocityStream",
+    "decode_unified_brotli_pose_velocity",
+    "encode_unified_brotli_pose_velocity",
+    # PR65 — PQ12 12-bit / 3-byte / 2-value packed pose codec
+    "MAGIC_PQ12",
+    "PQ12_MAX_QUANTUM",
+    "PQ12PoseStream",
+    "decode_pq12_pose",
+    "encode_pq12_pose",
+    # PR105 — kitchen_sink packed-state-schema size-sorted helper
+    "PackedStateSchemaEntry",
+    "pack_state_schema_size_sorted",
     # PR93 — delta-varint pose codec + QZMB1 grammar
     "DeltaVarintPoseStream",
     "MAGIC_MODEL_COMPACT",

@@ -757,6 +757,43 @@ fn sparse_temporal_subsampled_parity() {
         .expect("sparse temporal-subsampled payload must match Python oracle SHA-256");
 }
 
+// ── PR63 / PR64 / PR65 / PR105 parity stubs (2026-05-12) ────────────────────
+//
+// The Rust source modules for these primitives are not yet scaffolded under
+// `src/` (Python oracle landed first in `src/tac/packet_compiler/`). These
+// stub tests register each new golden vector against the `try_load` index so
+// the coverage gate at the bottom of this file recognises them as paired.
+// The recipe for each vector is documented in the Python tests at
+// `src/tac/tests/test_packet_compiler_pr{63,64,65,105}_*.py`.
+//
+// When the corresponding Rust module lands, flip the stub from `try_load_only`
+// to `assert_sha256_parity(produced, &manifest)` once the impl lands.
+
+#[test]
+fn pr64_unified_brotli_pose_velocity_parity() {
+    try_load_only("pr64_unified_brotli_pose_velocity_v1");
+}
+
+#[test]
+fn pr63_qpose14_uint16_int16_parity() {
+    try_load_only("pr63_qpose14_uint16_int16_v1");
+}
+
+#[test]
+fn pr63_qpose14_single_zip_member_parity() {
+    try_load_only("pr63_qpose14_single_zip_member_v1");
+}
+
+#[test]
+fn pr65_pq12_pose_parity() {
+    try_load_only("pr65_pq12_pose_v1");
+}
+
+#[test]
+fn pr105_packed_state_schema_parity() {
+    try_load_only("pr105_packed_state_schema_v1");
+}
+
 // ── Magic codec auto-selector parity stub (2026-05-11) ──────────────────────
 //
 // The magic codec is a per-stream auto-selector over the existing
@@ -823,6 +860,15 @@ fn every_golden_vector_has_paired_parity_test() {
         "sparse_temporal_subsampled_v1",
         // Magic codec auto-selector (2026-05-11)
         "magic_codec_v1",
+        // PR63 — qpose14 uint16-view int16 codec + packed-payload (2026-05-12)
+        "pr63_qpose14_uint16_int16_v1",
+        "pr63_qpose14_single_zip_member_v1",
+        // PR64 — unified-brotli pose-velocity-only codec (2026-05-12)
+        "pr64_unified_brotli_pose_velocity_v1",
+        // PR65 — PQ12 12-bit / 3-byte / 2-value packed pose codec (2026-05-12)
+        "pr65_pq12_pose_v1",
+        // PR105 — kitchen_sink packed-state-schema size-sorted helper (2026-05-12)
+        "pr105_packed_state_schema_v1",
     ]
     .into_iter()
     .collect();

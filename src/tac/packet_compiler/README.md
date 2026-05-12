@@ -350,9 +350,51 @@ Every primitive in this package satisfies:
 * **Frozen typed dataclasses** — every container is `@dataclass(frozen=True)`.
 * **OSS-friendly** — public surface is narrow; everything else is `_`-prefixed.
 
+## Magic codec — per-stream auto-selector
+
+The **magic codec** auto-selects the optimal primitive per typed stream from
+the 27 primitives + 5 residual-basis families above. It is a meta-codec
+layer: each magic-codec archive is dispatch-by-magic at runtime, no per-stream
+"selected primitive" enum to invent because the wire-format magic already
+names it.
+
+```python
+import numpy as np
+from tac.packet_compiler import encode_magic_codec, decode_magic_codec, StreamHint
+
+# Pick the best primitive for a sparse residual stream.
+dense = np.zeros(1024, dtype=np.int8)
+dense[::16] = 7
+result = encode_magic_codec(dense, hint=StreamHint("residual_basis"))
+# result.selected_primitive ∈ {"sparse_rle_of_zeros", "sparse_arithmetic_coefficients"}
+# result.payload — self-delimiting envelope (4B magic "MAGC" + 1B pid + 1B ver + 4B len + inner)
+recovered = decode_magic_codec(result.payload)
+assert (recovered == dense).all()
+```
+
+Per-stream-type recommendations:
+
+| Stream type | Primary primitive | Fallback | Source PR |
+|---|---|---|---|
+| `weight_tensor` | `sparse_arithmetic_coefficients` | `sparse_rle_of_zeros` | PR103 |
+| `latent_sidecar` | `sparse_arithmetic_coefficients` | `pr101_centered_delta_uint8_lzma` | PR101 |
+| `pose` | `pr93_delta_varint_pose` | `pr101_centered_delta_uint8_lzma` | PR93 |
+| `mask` | `pr91_arithmetic_coder_constriction` | `sparse_rle_of_zeros` | PR97/PR91 |
+| `residual_basis` | `sparse_rle_of_zeros` | `sparse_arithmetic_coefficients` | Sparse PacketIR |
+| `categorical` | `pr91_arithmetic_coder_constriction` | `sparse_arithmetic_coefficients` | PR91/PR103 |
+| `low_pass_residual` | `pr93_lowpass_luma_residual` | (none) | PR93 |
+
+Magic-codec primitive ids live in the reserved `0xF0-0xFF` namespace so they
+do not collide with the existing format_id ranges (`0x01-0x14` dense
+residual / `0x20-0x24` sparse residual). Production materializer:
+`tools/materialize_magic_codec_archive.py`. Inflate runtime:
+`submissions/magic_codec_pr106_r2/inflate.py` (≤200 LOC, substrate-engineering
+waiver). `score_claim` is permanently False on magic-codec output until exact
+CUDA + CPU adjudication.
+
 ## Golden vectors
 
-Thirteen golden vectors land alongside this README:
+Nineteen golden vectors land alongside this README:
 
 | File | What it pins | Constriction-sensitive? |
 |---|---|---|
@@ -369,6 +411,12 @@ Thirteen golden vectors land alongside this README:
 | `golden_vectors/pr92_rmc_joint_stream_v1.json` | RMC1 framing of `seg + RSA1(120×3-bit actions)` | No |
 | `golden_vectors/pr93_delta_varint_pose_v1.json` | QZPDV1 16×4 pose at 1/255 scale | No |
 | `golden_vectors/pr93_qzmb1_v1.json` | QZMB1 framing with 42-byte arch-config JSON + 64-byte body | No |
+| `golden_vectors/magic_codec_v1.json` | Magic-codec envelope over pinned sparse int8 residual (1024 / 64 nonzero) | Yes (depends on inner AC) |
+| `golden_vectors/pr63_qpose14_uint16_int16_v1.json` | 600×6 pose tensor as flat uint16, cols 1-5 reinterpreted int16 | No |
+| `golden_vectors/pr63_qpose14_single_zip_member_v1.json` | Length-prefixed packed-payload grammar (3 sections, 120 bytes) | No |
+| `golden_vectors/pr64_unified_brotli_pose_velocity_v1.json` | uint16 vel0 + int16[599] deltas at 1/512 scale, bias 20.0 | No |
+| `golden_vectors/pr65_pq12_pose_v1.json` | 600×6 pose packed 12-bit / 3-byte / 2-value with PQ12 magic | No |
+| `golden_vectors/pr105_packed_state_schema_v1.json` | Stable-sorted descending-size ordering of HNeRV-style schema | No |
 
 Native ports MUST reproduce these SHA-256 digests. Any regeneration of a
 constriction-sensitive vector requires a paired version bump (`_v2`).
