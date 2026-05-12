@@ -173,15 +173,15 @@ def test_parse_report_marks_reported_score_as_display_rounded(cae, tmp_path: Pat
     text = """=== Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.004
   Average SegNet Distortion: 0.001
-  Submission file size: 337748 bytes
-  Original uncompressed size: 37545489 bytes
+  Submission file size: 3 bytes
+  Original uncompressed size: 1000 bytes
   Compression Rate: 0.003
   Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.38
 """
     rp = tmp_path / "report.txt"
     rp.write_text(text)
 
-    result = cae._parse_report(rp, archive_size=337748)
+    result = cae._parse_report(rp, archive_size=3)
 
     assert result["final_score"] == pytest.approx(0.38)
     assert result["canonical_score"] == pytest.approx(0.375)
@@ -202,7 +202,29 @@ def test_parse_report_raw_stdout_not_treated_as_path(cae):
 """
     result = cae._parse_report(text, archive_size=337748, source="stdout")
 
-    assert result["score_recomputed_from_components"] == pytest.approx(0.7918585446759225)
+    assert result["score_recomputed_from_components"] == pytest.approx(0.7920010743750296)
+
+
+def test_parse_report_uses_exact_byte_rate_not_rounded_printed_rate(cae, tmp_path: Path):
+    """The report prints Compression Rate to 8 decimals; custody score uses bytes."""
+    text = """=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00003236
+  Average SegNet Distortion: 0.00064260
+  Submission file size: 186780 bytes
+  Original uncompressed size: 37545489 bytes
+  Compression Rate: 0.00497477
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.21
+"""
+    rp = tmp_path / "report.txt"
+    rp.write_text(text)
+
+    result = cae._parse_report(rp, archive_size=186780)
+
+    exact_rate = 186780 / 37545489
+    assert result["rate_unscaled"] == pytest.approx(exact_rate)
+    assert result["rate_unscaled_reported_rounded"] == pytest.approx(0.00497477)
+    assert result["score_rate_contribution"] == pytest.approx(25 * exact_rate)
+    assert abs(result["score_rate_contribution"] - 25 * 0.00497477) > 1e-8
 
 
 def test_upstream_evaluate_records_elapsed_seconds(cae, tmp_path: Path, monkeypatch):
@@ -222,8 +244,8 @@ def test_upstream_evaluate_records_elapsed_seconds(cae, tmp_path: Path, monkeypa
   Average SegNet Distortion: 0.00240
   Submission file size: 7 bytes
   Original uncompressed size: 37545489 bytes
-  Compression Rate: 0.00899
-  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.7919
+  Compression Rate: 0.00000019
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.57
 """)
         return subprocess.CompletedProcess(
             args=["python", "evaluate.py"],

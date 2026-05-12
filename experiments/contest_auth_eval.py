@@ -1244,30 +1244,55 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
 
     pose = _grab(r"Average PoseNet Distortion:\s*([0-9.eE+-]+)")
     seg = _grab(r"Average SegNet Distortion:\s*([0-9.eE+-]+)")
-    rate_unscaled = _grab(r"Compression Rate:\s*([0-9.eE+-]+)")
+    rate_unscaled_reported = _grab(r"Compression Rate:\s*([0-9.eE+-]+)")
     final = _grab(r"Final score[^=]*=\s*([0-9.eE+-]+)")
     n_samples = re.search(r"results over (\d+) samples", text)
+    submission_size = re.search(r"Submission file size:\s*([0-9,]+)\s*bytes", text)
+    original_size = re.search(r"Original uncompressed size:\s*([0-9,]+)\s*bytes", text)
 
-    if pose is None or seg is None or rate_unscaled is None or final is None:
+    if pose is None or seg is None or rate_unscaled_reported is None or final is None:
         raise RuntimeError(
             f"[evaluate] could not parse report.txt:\n{text[:1024]}"
         )
+
+    submission_size_bytes = (
+        int(submission_size.group(1).replace(",", ""))
+        if submission_size is not None
+        else archive_size
+    )
+    original_size_bytes = (
+        int(original_size.group(1).replace(",", ""))
+        if original_size is not None
+        else None
+    )
+    if submission_size_bytes != archive_size:
+        raise RuntimeError(
+            f"[evaluate] report submission size {submission_size_bytes} != "
+            f"observed archive size {archive_size}; refusing rounded-rate custody drift."
+        )
+    if original_size_bytes is None or original_size_bytes <= 0:
+        raise RuntimeError(
+            "[evaluate] could not parse positive Original uncompressed size from report"
+        )
+    rate_unscaled = archive_size / original_size_bytes
 
     # Council R3 #5 (Medium): reject NaN/inf — float() parses both silently.
     # A divide-by-zero in upstream's distortion sum would slip through as
     # final_score=NaN that "looks like" a number. Refuse loud.
     import math as _math
     for label, val in (("posenet_dist", pose), ("segnet_dist", seg),
-                       ("rate_unscaled", rate_unscaled), ("final_score", final)):
+                       ("rate_unscaled", rate_unscaled),
+                       ("rate_unscaled_reported", rate_unscaled_reported),
+                       ("final_score", final)):
         if not _math.isfinite(val):
             raise RuntimeError(
                 f"[evaluate] non-finite {label}={val} in report.txt — refuse "
                 f"to ship a NaN/inf score. Investigate upstream evaluate run."
             )
-    if pose < 0 or seg < 0 or rate_unscaled < 0 or final < 0:
+    if pose < 0 or seg < 0 or rate_unscaled < 0 or rate_unscaled_reported < 0 or final < 0:
         raise RuntimeError(
             f"[evaluate] negative metric in report (pose={pose}, seg={seg}, "
-            f"rate={rate_unscaled}, final={final}) — distortions must be ≥0."
+            f"rate={rate_unscaled_reported}, final={final}) — distortions must be ≥0."
         )
     expected_n = 600  # contest pair count (1200 frames / seq_len=2)
     actual_n = int(n_samples.group(1)) if n_samples else None
@@ -1302,6 +1327,8 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
         "avg_posenet_dist": pose,
         "avg_segnet_dist": seg,
         "rate_unscaled": rate_unscaled,
+        "rate_unscaled_reported_rounded": rate_unscaled_reported,
+        "original_uncompressed_size_bytes": original_size_bytes,
         "score_pose_contribution": score_pose,
         "score_seg_contribution": score_seg,
         "score_rate_contribution": score_rate,
