@@ -57,12 +57,49 @@ from __future__ import annotations
 import datetime
 import fcntl
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 SCHEMA_VERSION = "cost_band_posterior_v1"
 POSTERIOR_PATH = Path(".omx/state/cost_band_posterior.jsonl")
 LOCK_PATH = Path(".omx/state/.cost_band_posterior.lock")
+
+# Platform-keyed hourly rate tables. Adding a new platform here is the
+# canonical way to extend cost-band coverage; previously each provider had
+# a sibling helper module (``tac.deploy.modal.training_cost``,
+# ``tac.deploy.vastai.training_cost``, ...). Inlining the lookup here keeps
+# the rate tables next to the posterior they feed.
+PLATFORM_RATES_USD_PER_HOUR: dict[str, dict[str, float]] = {
+    "modal": {
+        "T4": 0.59,
+        "A10G": 1.10,
+        "A100": 4.00,
+        "A100-40GB": 4.00,
+        "A100-80GB": 4.00,
+        "H100": 3.90,
+        "H100-80GB": 3.90,
+    },
+    "vastai": {
+        "4090": 0.25,
+        "RTX_4090": 0.25,
+        "A100": 0.80,
+        "H100": 1.80,
+    },
+    "lightning": {
+        "T4": 0.0,  # free tier
+        "A10G": 0.40,
+    },
+    "azure": {
+        "A100": 3.60,
+        "H100": 8.00,
+    },
+    "kaggle": {
+        "T4": 0.0,  # free tier
+        "P100": 0.0,
+    },
+}
 
 # Confidence-tag thresholds (per Council probe-disambiguator pattern).
 #
@@ -435,6 +472,222 @@ def predict(
         freshness_seconds=freshness_seconds,
         fallback_rationale=rationale,
     )
+
+
+# ---------------------------------------------------------------------------
+# Platform-keyed cost helpers (inlined from tac.deploy.modal.training_cost
+# 2026-05-12 simplification T1-B). The Modal-specific shim in
+# tac.deploy.modal.training_cost now delegates here.
+# ---------------------------------------------------------------------------
+
+
+def normalize_gpu(platform: str, gpu: str) -> str:
+    """Return a canonical GPU label for one platform's rate-table buckets.
+
+    Per-platform normalisation:
+
+    - ``modal``: ``A100*`` → ``A100`` unless an exact variant exists; ``H100*``
+      similarly. ``A10G`` and ``T4`` are returned as-is.
+    - ``vastai``: ``RTX_4090`` collapses to ``4090``.
+    - other platforms: case-folded passthrough.
+    """
+
+    value = str(gpu or "").strip().upper()
+    if not value:
+        return value
+    platform_norm = platform.lower()
+    table = PLATFORM_RATES_USD_PER_HOUR.get(platform_norm, {})
+    if platform_norm == "modal":
+        if value == "A10G":
+            return "A10G"
+        if value.startswith("A100"):
+            return value if value in table else "A100"
+        if value.startswith("H100"):
+            return value if value in table else "H100"
+        if value == "T4":
+            return "T4"
+        return value
+    if platform_norm == "vastai":
+        if value in {"4090", "RTX_4090"}:
+            return "4090"
+    return value
+
+
+def estimate_cost_usd(
+    platform: str, gpu: str, elapsed_seconds: float
+) -> tuple[float, float]:
+    """Estimate provider cost from a platform/GPU class + measured elapsed seconds.
+
+    Returns ``(cost_usd, hourly_rate_usd)``.
+
+    Per CLAUDE.md "Forbidden score claims" sister rule: the returned value is
+    an ESTIMATE, not an invoice. Callers must record the rate / source in
+    the anchor notes.
+    """
+
+    platform_norm = platform.lower()
+    table = PLATFORM_RATES_USD_PER_HOUR.get(platform_norm)
+    if table is None:
+        raise ValueError(
+            f"no hourly-rate table configured for platform={platform!r}; "
+            f"known platforms: {sorted(PLATFORM_RATES_USD_PER_HOUR)}"
+        )
+    gpu_norm = normalize_gpu(platform_norm, gpu)
+    rate = table.get(gpu_norm)
+    if rate is None:
+        raise ValueError(
+            f"no hourly rate configured for platform={platform!r} gpu={gpu!r} "
+            f"(normalised to {gpu_norm!r}); known buckets: {sorted(table)}"
+        )
+    elapsed = float(elapsed_seconds)
+    if not math.isfinite(elapsed) or elapsed < 0:
+        raise ValueError(
+            f"elapsed_seconds must be finite and nonnegative; got {elapsed!r}"
+        )
+    return rate * elapsed / 3600.0, rate
+
+
+def _bool_field(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _numeric_field(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    return None
+
+
+def append_platform_training_anchor(
+    platform: str,
+    *,
+    out_dir: Path,
+    metadata: dict[str, Any],
+    result: dict[str, Any],
+    posterior_path: Path | None = None,
+    lock_path: Path | None = None,
+) -> dict[str, Any]:
+    """Append a platform training cost anchor once, if metadata requests it.
+
+    Returns a small status manifest and writes it to
+    ``cost_band_anchor_appended.json`` inside ``out_dir``. Re-running is
+    idempotent: an existing marker file is returned and no second posterior
+    row is appended.
+
+    ``metadata`` must contain a ``cost_band_anchor`` dict with at least
+    ``trainer``, ``epochs``, ``batch_size``. ``result`` must contain a
+    finite ``elapsed_seconds``.
+    """
+
+    out_dir = Path(out_dir)
+    marker = out_dir / "cost_band_anchor_appended.json"
+    if marker.is_file():
+        try:
+            payload = json.loads(marker.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return {**payload, "already_appended": True}
+        except json.JSONDecodeError:
+            pass
+
+    cost_meta = metadata.get("cost_band_anchor")
+    if not isinstance(cost_meta, dict):
+        return {
+            "schema": "platform_training_cost_anchor_append_v1",
+            "appended": False,
+            "reason": "metadata_missing_cost_band_anchor",
+        }
+
+    elapsed = result.get("elapsed_seconds")
+    if not isinstance(elapsed, (int, float)) or isinstance(elapsed, bool):
+        return {
+            "schema": "platform_training_cost_anchor_append_v1",
+            "appended": False,
+            "reason": "result_missing_numeric_elapsed_seconds",
+        }
+
+    gpu = normalize_gpu(platform, str(metadata.get("gpu") or cost_meta.get("gpu") or ""))
+    try:
+        estimated_cost, hourly_rate = estimate_cost_usd(platform, gpu, float(elapsed))
+        epochs = int(cost_meta["epochs"])
+        batch_size = int(cost_meta["batch_size"])
+        trainer = str(cost_meta["trainer"])
+    except (KeyError, TypeError, ValueError) as exc:
+        return {
+            "schema": "platform_training_cost_anchor_append_v1",
+            "appended": False,
+            "reason": f"invalid_cost_band_metadata:{type(exc).__name__}:{exc}",
+        }
+
+    label = str(metadata.get("label") or cost_meta.get("dispatch_label") or f"{platform}_training")
+    rc = result.get("returncode")
+    timed_out = bool(result.get("timed_out", False))
+    source_tag = f"{platform}_elapsed_seconds_x_configured_hourly_rate"
+    notes = (
+        f"cost_estimate_source={source_tag}; "
+        f"hourly_rate_usd={hourly_rate}; returncode={rc}; timed_out={timed_out}"
+    )
+    if cost_meta.get("notes"):
+        notes += f"; {cost_meta['notes']}"
+
+    pred_low = _numeric_field(cost_meta.get("predicted_cost_usd_low"))
+    pred_high = _numeric_field(cost_meta.get("predicted_cost_usd_high"))
+    prediction_in_band: bool | None
+    if pred_low is not None and pred_high is not None:
+        prediction_in_band = bool(pred_low <= estimated_cost <= pred_high)
+    else:
+        prediction_in_band = None
+
+    anchor = CostBandAnchor(
+        logged_at_utc=_now_utc_iso(),
+        dispatch_label=label,
+        trainer=trainer,
+        platform=platform,
+        gpu=gpu,
+        epochs=epochs,
+        batch_size=batch_size,
+        all_flags_on=_bool_field(cost_meta.get("all_flags_on", False)),
+        actual_wall_clock_sec=float(elapsed),
+        actual_cost_usd=estimated_cost,
+        predicted_cost_usd_low=pred_low,
+        predicted_cost_usd_high=pred_high,
+        prediction_in_band=prediction_in_band,
+        notes=notes,
+    )
+    append_anchor(anchor, posterior_path=posterior_path, lock_path=lock_path)
+    manifest = {
+        "schema": "platform_training_cost_anchor_append_v1",
+        "appended": True,
+        "already_appended": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "cost_estimate": True,
+        "cost_estimate_source": source_tag,
+        "dispatch_label": label,
+        "trainer": trainer,
+        "platform": platform,
+        "gpu": gpu,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "all_flags_on": anchor.all_flags_on,
+        "elapsed_seconds": float(elapsed),
+        "estimated_cost_usd": estimated_cost,
+        "hourly_rate_usd": hourly_rate,
+        "posterior_path": str(posterior_path) if posterior_path is not None else None,
+        "notes": notes,
+    }
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # The marker file's JSON payload must match what an idempotent re-run
+    # returns. Serialize stably to keep byte-identical output across runs.
+    marker.write_text(
+        json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+    )
+    return manifest
 
 
 def summary_by_bucket(
