@@ -313,6 +313,42 @@ def test_split_state_dict_partitions_keys_correctly(trainer_module):
     assert latents.shape == sd["latents"].shape
 
 
+def test_balle_renderer_config_wires_gdn_eps_and_quant_noise():
+    """Operator flags must change constructed substrate behavior."""
+    from tac.substrates.balle_renderer.architecture import (
+        BalleRendererConfig,
+        BalleRendererSubstrate,
+    )
+
+    cfg = BalleRendererConfig(
+        latent_dim=4,
+        hyper_latent_dim=4,
+        embed_dim=16,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(8, 6, 4, 4, 4, 4, 4),
+        hyper_mlp_channels=(4, 4),
+        num_pairs=2,
+        output_height=24,
+        output_width=32,
+        num_upsample_blocks=3,
+        quantize_noise_std=0.125,
+        gdn_eps=1e-6,
+    )
+    model = BalleRendererSubstrate(cfg)
+    assert model.cfg.quantize_noise_std == 0.125
+    assert model.blocks[0].igdn.eps == 1e-6
+
+
+def test_balle_renderer_config_rejects_invalid_numeric_floors():
+    from tac.substrates.balle_renderer.architecture import BalleRendererConfig
+
+    with pytest.raises(ValueError, match="gdn_eps"):
+        BalleRendererConfig(gdn_eps=0.0)
+    with pytest.raises(ValueError, match="quantize_noise_std"):
+        BalleRendererConfig(quantize_noise_std=-0.1)
+
+
 # ---------------------------------------------------------------------------
 # 5. Runtime emission (Catalog #146 contract)
 # ---------------------------------------------------------------------------
@@ -558,6 +594,42 @@ def test_score_aware_loss_refuses_eval_roundtrip_false():
             torch.tensor(1.0),
             rc,
             apply_eval_roundtrip=False,
+        )
+
+
+def test_score_aware_loss_refuses_negative_noise_std():
+    import torch
+    import torch.nn as nn
+
+    from tac.substrates.balle_renderer.score_aware_loss import (
+        BalleRendererScoreAwareLoss,
+        BalleScoreAwareLossWeights,
+    )
+
+    class _Dummy(nn.Module):
+        def forward(self, x):
+            return x.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
+
+    loss_fn = BalleRendererScoreAwareLoss(
+        seg_scorer=_Dummy(),
+        pose_scorer=_Dummy(),
+        weights=BalleScoreAwareLossWeights(),
+    )
+    rc = {
+        "hyper_rate": torch.tensor(0.0),
+        "main_rate": torch.tensor(0.0),
+        "total_rate": torch.tensor(0.0),
+    }
+    with pytest.raises(ValueError, match="noise_std"):
+        loss_fn(
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.tensor(1.0),
+            rc,
+            apply_eval_roundtrip=True,
+            noise_std=-0.1,
         )
 
 

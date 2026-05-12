@@ -2,6 +2,9 @@
   "buffer_length": 812,
   "n_streams": 7,
   "n_tensors": 28,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "runtime_consumption_proof": false,
   "schema": "pr101_decoder_storage_order.v1",
   "segment_lengths": [
     30,
@@ -12,7 +15,9 @@
     18,
     2
   ],
+  "score_claim": false,
   "sha256": "ed628c006b2cc6e79e122fa304d4b10f57a660319c04822cd377a952fece3ca7",
+  "source_fixture_type": "synthetic_unit_vector",
   "storage_order": [
     14,
     22,

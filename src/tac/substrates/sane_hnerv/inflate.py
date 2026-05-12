@@ -56,7 +56,14 @@ def inflate_one_video(
     )
 
     model = SaneHnervSubstrate(cfg).to(device).eval()
-    model.load_state_dict(arc.decoder_state_dict, strict=False)
+    incompat = model.load_state_dict(arc.decoder_state_dict, strict=False)
+    missing = set(incompat.missing_keys)
+    unexpected = set(incompat.unexpected_keys)
+    if missing - {"latents"} or unexpected:
+        raise RuntimeError(
+            "sane_hnerv archive state_dict mismatch: "
+            f"missing={sorted(missing)} unexpected={sorted(unexpected)}"
+        )
     with torch.no_grad():
         model.latents.copy_(arc.latents.to(device=device, dtype=model.latents.dtype))
 

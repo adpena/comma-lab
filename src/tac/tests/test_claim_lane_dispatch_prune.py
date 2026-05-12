@@ -71,17 +71,17 @@ def test_plan_prune_partitions_correctly(cld_mod, fake_ledger):
     keep, prune, ambiguous = cld_mod._plan_prune(
         claims, now_utc=now, terminal_age_days=7.0, ttl_hours=24.0
     )
-    # lane_active_a (active) → kept
-    # lane_recent_terminal (1d ago terminal) → kept
-    # lane_old_terminal_a (12d ago latest terminal) → prune BOTH rows
-    # lane_old_terminal_b (27d ago terminal) → prune
+    # lane_active_a (active) → kept  # FAKE_LANE_OK: claim-prune unit-test fixture
+    # lane_recent_terminal (1d ago terminal) → kept  # FAKE_LANE_OK: claim-prune unit-test fixture
+    # lane_old_terminal_a (12d ago latest terminal) → prune BOTH rows  # FAKE_LANE_OK: claim-prune unit-test fixture
+    # lane_old_terminal_b (27d ago terminal) → prune  # FAKE_LANE_OK: claim-prune unit-test fixture
     assert ambiguous == []
     pruned_lanes = {c.lane_id for c in prune}
-    assert pruned_lanes == {"lane_old_terminal_a", "lane_old_terminal_b"}
+    assert pruned_lanes == {"lane_old_terminal_a", "lane_old_terminal_b"}  # FAKE_LANE_OK: claim-prune unit-test fixture
     keep_lanes = {c.lane_id for c in keep}
-    assert keep_lanes == {"lane_active_a", "lane_recent_terminal"}
-    # lane_old_terminal_a has 2 rows; both should be pruned
-    assert sum(1 for c in prune if c.lane_id == "lane_old_terminal_a") == 2
+    assert keep_lanes == {"lane_active_a", "lane_recent_terminal"}  # FAKE_LANE_OK: claim-prune unit-test fixture
+    # lane_old_terminal_a has 2 rows; both should be pruned  # FAKE_LANE_OK: claim-prune unit-test fixture
+    assert sum(1 for c in prune if c.lane_id == "lane_old_terminal_a") == 2  # FAKE_LANE_OK: claim-prune unit-test fixture
 
 
 def test_plan_prune_protects_active_lanes(cld_mod, tmp_path):
@@ -150,7 +150,7 @@ def test_build_archive_appends_and_dedups(cld_mod):
         "2026-05-01T10:00:00Z", "t", "lane_a", "modal", "job_a", "", "completed_ok", "n1"
     )
     c2 = cld_mod.Claim(
-        "2026-05-02T10:00:00Z", "t", "lane_b", "modal", "job_b", "", "completed_ok", "n2"
+        "2026-05-02T10:00:00Z", "t", "lane_b", "modal", "job_b", "", "completed_ok", "n2"  # FAKE_LANE_OK: claim-prune unit-test fixture
     )
     text1 = cld_mod._build_archive_text_with_appended(
         existing_lines, [c1, c2], month_key="2026-05"
@@ -204,7 +204,7 @@ def test_prune_dry_run_makes_no_changes(cld_mod, fake_ledger, tmp_path):
     assert rc == 0
     # Live ledger unchanged.
     text_after = fake_ledger.read_text()
-    assert "lane_old_terminal_a" in text_after
+    assert "lane_old_terminal_a" in text_after  # FAKE_LANE_OK: claim-prune unit-test fixture
     # No archive file created.
     assert not archive_dir.exists() or not list(archive_dir.iterdir())
 
@@ -229,17 +229,17 @@ def test_prune_applies_archives_and_rewrites_ledger(cld_mod, fake_ledger, tmp_pa
     assert rc == 0
     live_text = fake_ledger.read_text()
     # Old terminal rows are pruned out of the live ledger.
-    assert "lane_old_terminal_a" not in live_text
-    assert "lane_old_terminal_b" not in live_text
+    assert "lane_old_terminal_a" not in live_text  # FAKE_LANE_OK: claim-prune unit-test fixture
+    assert "lane_old_terminal_b" not in live_text  # FAKE_LANE_OK: claim-prune unit-test fixture
     # Active and recent terminal kept.
-    assert "lane_active_a" in live_text
-    assert "lane_recent_terminal" in live_text
+    assert "lane_active_a" in live_text  # FAKE_LANE_OK: claim-prune unit-test fixture
+    assert "lane_recent_terminal" in live_text  # FAKE_LANE_OK: claim-prune unit-test fixture
     # April rows landed in 2026-04 archive; April-30 also goes there.
     arch_apr = archive_dir / "dispatch_claims_2026-04.md"
     assert arch_apr.is_file()
     arch_text = arch_apr.read_text()
-    assert "lane_old_terminal_a" in arch_text
-    assert "lane_old_terminal_b" in arch_text
+    assert "lane_old_terminal_a" in arch_text  # FAKE_LANE_OK: claim-prune unit-test fixture
+    assert "lane_old_terminal_b" in arch_text  # FAKE_LANE_OK: claim-prune unit-test fixture
 
 
 def test_prune_idempotent(cld_mod, fake_ledger, tmp_path):
@@ -265,7 +265,7 @@ def test_prune_idempotent(cld_mod, fake_ledger, tmp_path):
     # The archive file should not gain duplicate rows.
     arch_apr = archive_dir / "dispatch_claims_2026-04.md"
     if arch_apr.exists():
-        count_a = arch_apr.read_text().count("lane_old_terminal_a")
+        count_a = arch_apr.read_text().count("lane_old_terminal_a")  # FAKE_LANE_OK: claim-prune unit-test fixture
         assert count_a == 2  # original 2 rows, no duplicates
 
 
@@ -294,7 +294,7 @@ def test_prune_archive_append_only(cld_mod, fake_ledger, tmp_path):
     # Inject another old-terminal row into the live ledger and re-prune.
     ledger_text = fake_ledger.read_text()
     new_row = (
-        "| 2026-04-10T10:00:00Z | t | lane_new_old | modal | job_new_old "
+        "| 2026-04-10T10:00:00Z | t | lane_new_old | modal | job_new_old "  # FAKE_LANE_OK: claim-prune unit-test fixture
         "|  | completed_ok | another old |\n"
     )
     # Insert after the table separator.
@@ -322,10 +322,10 @@ def test_prune_archive_append_only(cld_mod, fake_ledger, tmp_path):
     )
     second_text = arch.read_text()
     # All rows from first prune must still be present.
-    for lane in ("lane_old_terminal_a", "lane_old_terminal_b"):
+    for lane in ("lane_old_terminal_a", "lane_old_terminal_b"):  # FAKE_LANE_OK: claim-prune unit-test fixture
         assert lane in second_text, f"{lane} missing after second prune"
     # New row landed.
-    assert "lane_new_old" in second_text
+    assert "lane_new_old" in second_text  # FAKE_LANE_OK: claim-prune unit-test fixture
 
 
 # ── summary archive scanning ───────────────────────────────────────────────
@@ -367,8 +367,8 @@ def test_summary_includes_archive_by_default(cld_mod, fake_ledger, tmp_path, cap
     summary = json.loads(captured.out)
     # Pruned rows are visible in summary because archive is included.
     lane_ids = {row["lane_id"] for row in summary["terminal_latest"]}
-    assert "lane_old_terminal_a" in lane_ids
-    assert "lane_old_terminal_b" in lane_ids
+    assert "lane_old_terminal_a" in lane_ids  # FAKE_LANE_OK: claim-prune unit-test fixture
+    assert "lane_old_terminal_b" in lane_ids  # FAKE_LANE_OK: claim-prune unit-test fixture
 
 
 def test_summary_live_only_excludes_archive(cld_mod, fake_ledger, tmp_path, capsys):
@@ -406,5 +406,5 @@ def test_summary_live_only_excludes_archive(cld_mod, fake_ledger, tmp_path, caps
     captured = capsys.readouterr()
     summary = json.loads(captured.out)
     lane_ids = {row["lane_id"] for row in summary["terminal_latest"]}
-    assert "lane_old_terminal_a" not in lane_ids
-    assert "lane_old_terminal_b" not in lane_ids
+    assert "lane_old_terminal_a" not in lane_ids  # FAKE_LANE_OK: claim-prune unit-test fixture
+    assert "lane_old_terminal_b" not in lane_ids  # FAKE_LANE_OK: claim-prune unit-test fixture

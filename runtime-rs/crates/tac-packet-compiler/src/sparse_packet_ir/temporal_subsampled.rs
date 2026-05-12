@@ -79,11 +79,7 @@ impl TemporalSubsampledResidualStream {
             )));
         }
         // popcount(bitmap) == K
-        let popcount: u32 = self
-            .indicator_bitmap
-            .iter()
-            .map(|&b| b.count_ones())
-            .sum();
+        let popcount: u32 = self.indicator_bitmap.iter().map(|&b| b.count_ones()).sum();
         if popcount != self.K {
             return Err(PacketCompilerError::GoldenVectorIo(format!(
                 "temporal indicator_bitmap popcount {popcount} != K {}",
@@ -204,9 +200,7 @@ pub fn decode_temporal_subsampled(
 }
 
 /// Serialise a [`TemporalSubsampledResidualStream`] to wire bytes.
-pub fn serialize_temporal_subsampled(
-    stream: &TemporalSubsampledResidualStream,
-) -> Result<Vec<u8>> {
+pub fn serialize_temporal_subsampled(stream: &TemporalSubsampledResidualStream) -> Result<Vec<u8>> {
     stream.validate()?;
     let mut out = Vec::with_capacity(
         4 + 4 + 4 + 4 + stream.indicator_bitmap.len() + stream.residuals_packed.len(),
@@ -222,9 +216,7 @@ pub fn serialize_temporal_subsampled(
 
 /// Inverse of [`serialize_temporal_subsampled`]. Hard errors on truncation,
 /// magic mismatch, or trailing bytes.
-pub fn deserialize_temporal_subsampled(
-    blob: &[u8],
-) -> Result<TemporalSubsampledResidualStream> {
+pub fn deserialize_temporal_subsampled(blob: &[u8]) -> Result<TemporalSubsampledResidualStream> {
     if blob.len() < 16 {
         return Err(PacketCompilerError::GoldenVectorIo(format!(
             "temporal blob too short for header: {} < 16",

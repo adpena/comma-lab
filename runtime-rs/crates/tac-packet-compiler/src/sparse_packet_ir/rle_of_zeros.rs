@@ -84,7 +84,10 @@ impl RleOfZerosStream {
             let itemsize = self.nonzero_value_itemsize as usize;
             for i in 0..n {
                 let off = i * itemsize;
-                if self.nonzero_values[off..off + itemsize].iter().all(|&b| b == 0) {
+                if self.nonzero_values[off..off + itemsize]
+                    .iter()
+                    .all(|&b| b == 0)
+                {
                     return Err(PacketCompilerError::GoldenVectorIo(format!(
                         "RLE-of-zeros nonzero_values[{i}] is zero (the contract is non-zero only)"
                     )));

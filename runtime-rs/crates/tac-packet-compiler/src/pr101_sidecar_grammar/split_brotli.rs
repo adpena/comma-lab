@@ -56,9 +56,7 @@ fn compress_one(raw: &[u8], lgwin: u8, quality: u8) -> Result<Vec<u8>> {
     {
         let mut writer = CompressorWriter::with_params(&mut out, 4096, &params);
         writer.write_all(raw).map_err(|e| {
-            PacketCompilerError::GoldenVectorIo(format!(
-                "brotli compress write failed: {e:?}"
-            ))
+            PacketCompilerError::GoldenVectorIo(format!("brotli compress write failed: {e:?}"))
         })?;
         // CompressorWriter::flush emits the final block; drop closes the writer.
     }
@@ -209,7 +207,10 @@ mod tests {
         let streams = [s0, s1, s2];
         let result = split_brotli_self_delimiting(&streams, 22, 11).unwrap();
         assert_eq!(result.n_streams, 3);
-        assert_eq!(result.stream_byte_offsets.last().copied().unwrap(), result.payload.len());
+        assert_eq!(
+            result.stream_byte_offsets.last().copied().unwrap(),
+            result.payload.len()
+        );
         let out = parse_split_brotli_self_delimiting(&result.payload, 3).unwrap();
         assert_eq!(out.len(), 3);
         assert_eq!(out[0], s0);

@@ -25,11 +25,31 @@ from tac.cost_band_calibration import (
     _percentile,
     append_anchor,
     load_anchors,
+    parse_actual_cost_usd,
     predict,
     summary_by_bucket,
 )
 
 # -- Anchor roundtrip --------------------------------------------------------
+
+
+def test_parse_actual_cost_usd_absent_is_not_zero_anchor() -> None:
+    assert parse_actual_cost_usd(None) is None
+    assert parse_actual_cost_usd("") is None
+    assert parse_actual_cost_usd("  ") is None
+
+
+def test_parse_actual_cost_usd_rejects_nonfinite_or_negative() -> None:
+    import pytest
+
+    with pytest.raises(ValueError):
+        parse_actual_cost_usd("nan")
+    with pytest.raises(ValueError):
+        parse_actual_cost_usd("-0.01")
+
+
+def test_parse_actual_cost_usd_accepts_measured_zero() -> None:
+    assert parse_actual_cost_usd("0.0") == 0.0
 
 def _make_anchor(
     *,

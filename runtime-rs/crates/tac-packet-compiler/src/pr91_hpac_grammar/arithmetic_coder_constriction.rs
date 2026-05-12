@@ -141,9 +141,7 @@ pub fn decode_categorical_stream(
     let p = normalise_probs(probs, n_symbols, alphabet)?;
     let words = be_bytes_to_words(payload)?;
     let mut decoder = DefaultRangeDecoder::from_compressed(words).map_err(|e| {
-        PacketCompilerError::GoldenVectorIo(format!(
-            "RangeDecoder::from_compressed failed: {e:?}"
-        ))
+        PacketCompilerError::GoldenVectorIo(format!("RangeDecoder::from_compressed failed: {e:?}"))
     })?;
     let mut out: Vec<i32> = Vec::with_capacity(n_symbols);
     for i in 0..n_symbols {
@@ -186,10 +184,8 @@ mod tests {
         }
         // Symbols sampled by argmax for determinism.
         let symbols: Vec<i32> = (0..n_symbols).map(|i| (i % alphabet) as i32).collect();
-        let payload =
-            encode_categorical_stream(&symbols, &probs, n_symbols, alphabet).unwrap();
-        let decoded =
-            decode_categorical_stream(&payload, &probs, n_symbols, alphabet).unwrap();
+        let payload = encode_categorical_stream(&symbols, &probs, n_symbols, alphabet).unwrap();
+        let decoded = decode_categorical_stream(&payload, &probs, n_symbols, alphabet).unwrap();
         assert_eq!(decoded, symbols);
     }
 }

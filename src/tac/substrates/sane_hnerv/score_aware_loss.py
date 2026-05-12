@@ -117,11 +117,11 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         # Lazy import to keep this module's import-time cheap
         from tac.differentiable_eval_roundtrip import apply_eval_roundtrip_during_training
 
-        # ``noise_std`` is reserved for a future variant of the eval-roundtrip
-        # (currently the canonical ``apply_eval_roundtrip_during_training``
-        # uses ``Uint8STE`` deterministically — no additive noise). Kept as a
-        # kwarg for forward-compat so the trainer's CLI surface remains stable.
-        del noise_std  # unused at this revision; STE is deterministic
+        if noise_std < 0.0:
+            raise ValueError("noise_std must be >= 0")
+        if self.training and noise_std > 0.0:
+            rgb_0 = rgb_0 + (torch.rand_like(rgb_0) - 0.5) * (2.0 * noise_std)
+            rgb_1 = rgb_1 + (torch.rand_like(rgb_1) - 0.5) * (2.0 * noise_std)
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 

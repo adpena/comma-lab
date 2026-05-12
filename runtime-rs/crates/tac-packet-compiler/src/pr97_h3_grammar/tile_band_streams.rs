@@ -109,8 +109,7 @@ pub fn decode_tile_band_streams(
                 "tile-band truncated stream-{i} length prefix at offset {o}"
             )));
         }
-        let sz =
-            u32::from_le_bytes([blob[o], blob[o + 1], blob[o + 2], blob[o + 3]]) as usize;
+        let sz = u32::from_le_bytes([blob[o], blob[o + 1], blob[o + 2], blob[o + 3]]) as usize;
         o += 4;
         if o + sz > blob.len() {
             return Err(PacketCompilerError::GoldenVectorIo(format!(

@@ -38,8 +38,7 @@ pub mod length_prefixed_sections;
 pub mod tile_band_streams;
 
 pub use length_prefixed_sections::{
-    decode_length_prefixed_sections, encode_length_prefixed_sections,
-    LengthPrefixedSectionPayload,
+    decode_length_prefixed_sections, encode_length_prefixed_sections, LengthPrefixedSectionPayload,
 };
 pub use tile_band_streams::{
     decode_tile_band_streams, encode_tile_band_streams, TileBandStreamPayload,

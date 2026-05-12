@@ -15,6 +15,11 @@
     26
   ],
   "n_entries": 13,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "runtime_consumption_proof": false,
   "schema": "pr101_conv4_storage_perms.v1",
-  "sha256": "6289adc462944af11b5fb4fd68de4d379c343f9790a489507c31f82d7b0b104f"
+  "score_claim": false,
+  "sha256": "6289adc462944af11b5fb4fd68de4d379c343f9790a489507c31f82d7b0b104f",
+  "source_fixture_type": "synthetic_unit_vector"
 }

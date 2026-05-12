@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "tools" / "cathedral_autopilot.py"
+CONTEST_UNCOMPRESSED_BYTES = 37_545_489
 
 
 def _load_autopilot():
@@ -17,6 +19,27 @@ def _load_autopilot():
     sys.modules["cathedral_autopilot"] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _promotable_exact_cuda_fields(score: float, archive_bytes: int) -> dict[str, object]:
+    """Return a complete exact-CUDA evidence contract for a synthetic score row."""
+
+    pose = 1e-6
+    rate_term = 25.0 * archive_bytes / CONTEST_UNCOMPRESSED_BYTES
+    seg = (score - rate_term - math.sqrt(10.0 * pose)) / 100.0
+    assert seg > 0.0
+    return {
+        "sample_count": 1_200,
+        "seg_distortion": seg,
+        "pose_distortion": pose,
+        "rate_term": rate_term,
+        "recomputed_score": score,
+        "exact_eval_command": "python upstream/contest_auth_eval.py archive.zip --device cuda",
+        "hardware": "T4 [contest-CUDA]",
+        "log_path": "reports/synthetic_exact_cuda.log",
+        "dispatch_claim_status": "completed_success",
+        "exact_cuda_auth_eval": True,
+    }
 
 
 def test_pr106_frontier_targets_arch_techniques() -> None:
@@ -171,6 +194,7 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
             empirical_score=0.191,
             score_contest_cuda=0.191,
             evidence_grade="[contest-CUDA]",
+            **_promotable_exact_cuda_fields(0.191, 170_000),
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
@@ -185,6 +209,7 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
             empirical_score=0.192,
             score_contest_cuda=0.192,
             evidence_grade="[contest-CUDA]",
+            **_promotable_exact_cuda_fields(0.192, 171_000),
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
@@ -199,6 +224,7 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
             empirical_score=0.190,
             score_contest_cuda=0.190,
             evidence_grade="[contest-CUDA]",
+            **_promotable_exact_cuda_fields(0.190, 169_500),
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,

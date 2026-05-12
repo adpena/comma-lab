@@ -106,5 +106,10 @@ fn bench_centered_delta(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_hi_byte, bench_rle_of_zeros, bench_centered_delta);
+criterion_group!(
+    benches,
+    bench_hi_byte,
+    bench_rle_of_zeros,
+    bench_centered_delta
+);
 criterion_main!(benches);

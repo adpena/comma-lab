@@ -53,6 +53,8 @@ def inflate_one_video(
         decoder_channels=tuple(int(c) for c in meta["decoder_channels"]),
         hyper_mlp_channels=tuple(int(c) for c in meta["hyper_mlp_channels"]),
         sin_frequency=float(meta["sin_frequency"]),
+        gdn_eps=float(meta.get("gdn_eps", 1e-12)),
+        quantize_noise_std=float(meta.get("quantize_noise_std", 0.0)),
         num_pairs=int(arc.latents.shape[0]),
         output_height=int(meta["output_height"]),
         output_width=int(meta["output_width"]),
@@ -72,7 +74,14 @@ def inflate_one_video(
     merged.update({"hyper_analysis." + k: v for k, v in arc.encoder_state_dict.items()})
     merged.update(arc.decoder_state_dict)  # decoder keys are already top-level
     merged.update(arc.hyperprior_state_dict)
-    model.load_state_dict(merged, strict=False)
+    incompat = model.load_state_dict(merged, strict=False)
+    missing = set(incompat.missing_keys)
+    unexpected = set(incompat.unexpected_keys)
+    if missing - {"latents"} or unexpected:
+        raise RuntimeError(
+            "balle_renderer archive state_dict mismatch: "
+            f"missing={sorted(missing)} unexpected={sorted(unexpected)}"
+        )
 
     with torch.no_grad():
         model.latents.copy_(arc.latents.to(device=device, dtype=model.latents.dtype))

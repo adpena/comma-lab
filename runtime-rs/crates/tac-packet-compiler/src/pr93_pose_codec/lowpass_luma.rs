@@ -204,7 +204,9 @@ mod tests {
     #[test]
     fn deserialize_rejects_bad_n_coeffs() {
         // header claims 4 coefficients
-        let bad = [4u8, 10, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let bad = [
+            4u8, 10, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
         assert!(deserialize_lowpass_luma_residual(&bad).is_err());
     }
 

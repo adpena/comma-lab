@@ -66,9 +66,7 @@ fn floor_and_renormalise(histogram: &[f64]) -> Result<Vec<f64>> {
 /// Build the Categorical entropy model from a 256-bin (or shorter)
 /// histogram. Mirrors `_make_categorical(weights)` in Python (uses the
 /// "fast" — non-perfect — fixed-point quantiser per constriction defaults).
-fn build_categorical(
-    histogram: &[f64],
-) -> Result<DefaultContiguousCategoricalEntropyModel> {
+fn build_categorical(histogram: &[f64]) -> Result<DefaultContiguousCategoricalEntropyModel> {
     let p = floor_and_renormalise(histogram)?;
     DefaultContiguousCategoricalEntropyModel::from_floating_point_probabilities_fast(&p, None)
         .map_err(|_| {
@@ -133,9 +131,7 @@ pub fn encode_latent_hi_arithmetic(latents: &[u16], histogram: &[f64]) -> Result
             ))
         })?;
     let compressed: Vec<u32> = encoder.into_compressed().map_err(|e| {
-        PacketCompilerError::GoldenVectorIo(format!(
-            "constriction into_compressed failed: {e:?}"
-        ))
+        PacketCompilerError::GoldenVectorIo(format!("constriction into_compressed failed: {e:?}"))
     })?;
     Ok(words_to_be_bytes(&compressed))
 }
@@ -157,9 +153,7 @@ pub fn decode_latent_hi_arithmetic(
     }
     let words = be_bytes_to_words(payload)?;
     let mut decoder = DefaultRangeDecoder::from_compressed(words).map_err(|e| {
-        PacketCompilerError::GoldenVectorIo(format!(
-            "RangeDecoder::from_compressed failed: {e:?}"
-        ))
+        PacketCompilerError::GoldenVectorIo(format!("RangeDecoder::from_compressed failed: {e:?}"))
     })?;
     let cat = build_categorical(histogram)?;
     let mut out = Vec::with_capacity(n_symbols);

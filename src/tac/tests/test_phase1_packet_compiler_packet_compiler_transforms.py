@@ -83,14 +83,26 @@ def _write_synthetic_packet(tmp_path: Path) -> Path:
 
 
 def _write_transform_proof(packet_dir: Path, transforms: list[str]) -> None:
+    archive_sha = sha256_file(packet_dir / "archive.zip")
     proof = {
         "schema": "tac.packet_compiler.transform_proof.v1",
         "proof_kind": "upstream_trainer_materialized_bytes",
         "packet_compiler_transforms": transforms,
-        "archive_sha256": sha256_file(packet_dir / "archive.zip"),
+        "archive_sha256": archive_sha,
         "score_claim": False,
-        "runtime_consumption_proof": False,
+        "runtime_consumption_proof": True,
         "producer": "test_phase1_packet_compiler_packet_compiler_transforms",
+        "transform_evidence": [
+            {
+                "transform": transform,
+                "target_member": "x",
+                "input_sha256": f"{index + 1:064x}",
+                "output_sha256": archive_sha,
+                "byte_delta": -(index + 1),
+                "changed_bytes_count": index + 1,
+            }
+            for index, transform in enumerate(transforms)
+        ],
     }
     (packet_dir / "packet_compiler_transform_proof.json").write_text(
         json.dumps(proof, indent=2, sort_keys=True), encoding="utf-8"
@@ -200,6 +212,46 @@ def test_rejects_transform_proof_archive_sha_mismatch(tmp_path: Path) -> None:
         )
 
 
+def test_rejects_transform_proof_without_runtime_consumption(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    _write_transform_proof(packet_dir, ["pr101_ranked_no_op_sidecar"])
+    proof_path = packet_dir / "packet_compiler_transform_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["runtime_consumption_proof"] = False
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+    out_dir = tmp_path / "out_unconsumed_proof"
+    with pytest.raises(Phase1PacketCompilerError, match="runtime_consumption_proof=true"):
+        compile_phase1_packet(
+            input_packet=packet_dir,
+            output_dir=out_dir,
+            mode="optimize",
+            score_affecting_payload_changed=True,
+            baseline_archive_sha256="0" * 64,
+            baseline_archive_size_bytes=999_999,
+            packet_compiler_transforms=["pr101_ranked_no_op_sidecar"],
+        )
+
+
+def test_rejects_transform_proof_without_per_transform_evidence(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    _write_transform_proof(packet_dir, ["pr101_ranked_no_op_sidecar"])
+    proof_path = packet_dir / "packet_compiler_transform_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof.pop("transform_evidence")
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+    out_dir = tmp_path / "out_missing_transform_evidence"
+    with pytest.raises(Phase1PacketCompilerError, match="transform_evidence"):
+        compile_phase1_packet(
+            input_packet=packet_dir,
+            output_dir=out_dir,
+            mode="optimize",
+            score_affecting_payload_changed=True,
+            baseline_archive_sha256="0" * 64,
+            baseline_archive_size_bytes=999_999,
+            packet_compiler_transforms=["pr101_ranked_no_op_sidecar"],
+        )
+
+
 def test_rejects_transforms_in_identity_mode(tmp_path: Path) -> None:
     packet_dir = _write_synthetic_packet(tmp_path)
     out_dir = tmp_path / "out_identity"
@@ -283,6 +335,10 @@ def test_known_transform_tokens_match_packet_compiler_module() -> None:
         # Schema-elision V1+V2 (2026-05-12)
         "pr98_cd1_compact_architecture_ordered_decoder_format",
         "pr100_schema_driven_decoder_storage_grammar",
+        # CompressAI reference adapters (2026-05-12)
+        "compressai_factorized_prior",
+        "compressai_balle_hyperprior",
+        "compressai_cheng2020",
     }
     assert set(PACKET_COMPILER_TRANSFORMS) == expected
 

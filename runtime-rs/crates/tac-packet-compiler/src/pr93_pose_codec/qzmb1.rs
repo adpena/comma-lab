@@ -92,8 +92,7 @@ pub fn unpack_qzmb1_block(payload: &[u8]) -> Result<QZMB1Block> {
         ));
     }
     let block_size = u16::from_le_bytes([payload[magic_len], payload[magic_len + 1]]);
-    let arch_len =
-        u16::from_le_bytes([payload[magic_len + 2], payload[magic_len + 3]]) as usize;
+    let arch_len = u16::from_le_bytes([payload[magic_len + 2], payload[magic_len + 3]]) as usize;
     let arch_start = magic_len + 4;
     let arch_end = arch_start
         .checked_add(arch_len)
@@ -125,7 +124,10 @@ mod tests {
         let body = vec![0xABu8, 0xCD, 0xEF];
         let block = pack_qzmb1_block(32, arch_json, &body).unwrap();
         // 8 (magic) + 2 (block_size) + 2 (arch_len) + 14 (arch_json) + 3 = 29
-        assert_eq!(block.payload.len(), 8 + 2 + 2 + arch_json.len() + body.len());
+        assert_eq!(
+            block.payload.len(),
+            8 + 2 + 2 + arch_json.len() + body.len()
+        );
         assert_eq!(&block.payload[..8], &MAGIC_MODEL_COMPACT);
         assert_eq!(u16::from_le_bytes([block.payload[8], block.payload[9]]), 32);
         assert_eq!(

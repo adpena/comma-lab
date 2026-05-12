@@ -110,6 +110,19 @@ def modal_image_candidate_paths(
                 )
             )
             continue
+        except OSError as exc:
+            violations.append(
+                ModalImageOrderViolation(
+                    path=rel,
+                    line=0,
+                    method="read",
+                    message=(
+                        "could not read tracked Python file while auditing Modal image order: "
+                        f"{exc}"
+                    ),
+                )
+            )
+            continue
         if any(method in text for method in LOCAL_MOUNT_METHODS):
             candidates.append(path)
     return len(paths), candidates, violations

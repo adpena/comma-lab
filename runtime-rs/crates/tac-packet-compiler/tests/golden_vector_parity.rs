@@ -393,6 +393,43 @@ fn try_load_non_claim_stub(name: &'static str) {
     );
 }
 
+fn try_load_deterministic_compiler_stub(name: &'static str) {
+    let path = vector_path(name);
+    if !path.exists() {
+        eprintln!(
+            "deterministic compiler vector {} not present at {}; skipping",
+            name,
+            path.display()
+        );
+        return;
+    }
+    let text = std::fs::read_to_string(&path).expect("deterministic compiler vector must read");
+    let value: serde_json::Value =
+        serde_json::from_str(&text).expect("deterministic compiler vector must parse as JSON");
+    assert_eq!(
+        value.get("schema_version").and_then(|v| v.as_str()),
+        Some("deterministic_golden_vectors.v1"),
+        "{name} must declare the deterministic compiler vector schema"
+    );
+    assert_eq!(
+        value.get("score_claim").and_then(|v| v.as_bool()),
+        Some(false),
+        "{name} must not imply a score claim"
+    );
+    assert_eq!(
+        value.get("promotion_eligible").and_then(|v| v.as_bool()),
+        Some(false),
+        "{name} must be promotion-ineligible until exact eval consumes emitted bytes"
+    );
+    assert_eq!(
+        value
+            .get("ready_for_exact_eval_dispatch")
+            .and_then(|v| v.as_bool()),
+        Some(false),
+        "{name} must not be exact-eval-dispatch ready as a conformance vector"
+    );
+}
+
 #[test]
 fn pr81_fp4_codebook_parity() {
     let manifest = match try_load("pr81_fp4_codebook_v1") {
@@ -968,6 +1005,33 @@ fn compressai_cheng2020_parity() {
     try_load_only("compressai_cheng2020_v1");
 }
 
+// ── Deterministic compiler PacketIR parity stubs (2026-05-12) ────────────────
+//
+// These vectors pin the cross-product of compiler mode × target mode for the
+// Python PacketIR compiler surface. They are manifest/conformance fixtures,
+// not score claims; Rust ports must preserve the exact mode/target lowering
+// semantics before replacing these stubs with byte-producing parity tests.
+
+#[test]
+fn deterministic_compiler_packetir_mode_target_parity() {
+    for name in [
+        "deterministic_compiler_canonicalize_contest_generalized_v1",
+        "deterministic_compiler_canonicalize_contest_one_video_replay_v1",
+        "deterministic_compiler_canonicalize_production_edge_adaptive_v1",
+        "deterministic_compiler_canonicalize_production_generalized_v1",
+        "deterministic_compiler_identity_contest_generalized_v1",
+        "deterministic_compiler_identity_contest_one_video_replay_v1",
+        "deterministic_compiler_identity_production_edge_adaptive_v1",
+        "deterministic_compiler_identity_production_generalized_v1",
+        "deterministic_compiler_optimize_contest_generalized_v1",
+        "deterministic_compiler_optimize_contest_one_video_replay_v1",
+        "deterministic_compiler_optimize_production_edge_adaptive_v1",
+        "deterministic_compiler_optimize_production_generalized_v1",
+    ] {
+        try_load_deterministic_compiler_stub(name);
+    }
+}
+
 // ── Magic codec auto-selector parity stub (2026-05-11) ──────────────────────
 //
 // The magic codec is a per-stream auto-selector over the existing
@@ -1060,6 +1124,19 @@ fn every_golden_vector_has_paired_parity_test() {
         "compressai_factorized_prior_v1",
         "compressai_balle_hyperprior_v1",
         "compressai_cheng2020_v1",
+        // Deterministic compiler PacketIR mode x target-mode conformance (2026-05-12)
+        "deterministic_compiler_canonicalize_contest_generalized_v1",
+        "deterministic_compiler_canonicalize_contest_one_video_replay_v1",
+        "deterministic_compiler_canonicalize_production_edge_adaptive_v1",
+        "deterministic_compiler_canonicalize_production_generalized_v1",
+        "deterministic_compiler_identity_contest_generalized_v1",
+        "deterministic_compiler_identity_contest_one_video_replay_v1",
+        "deterministic_compiler_identity_production_edge_adaptive_v1",
+        "deterministic_compiler_identity_production_generalized_v1",
+        "deterministic_compiler_optimize_contest_generalized_v1",
+        "deterministic_compiler_optimize_contest_one_video_replay_v1",
+        "deterministic_compiler_optimize_production_edge_adaptive_v1",
+        "deterministic_compiler_optimize_production_generalized_v1",
     ]
     .into_iter()
     .collect();

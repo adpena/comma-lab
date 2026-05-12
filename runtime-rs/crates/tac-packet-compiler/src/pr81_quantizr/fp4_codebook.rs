@@ -278,7 +278,9 @@ mod tests {
         let nibbles = cb.quantize(&values, &scales, 32).unwrap();
         // All zero → nibble 0 (sign 0, mag_idx 0).
         assert!(nibbles.iter().all(|&n| n == 0));
-        let recovered = cb.dequantize(&nibbles, &scales, 32, Some(values.len())).unwrap();
+        let recovered = cb
+            .dequantize(&nibbles, &scales, 32, Some(values.len()))
+            .unwrap();
         for (i, &v) in recovered.iter().enumerate() {
             assert!(v.abs() < 1e-6, "recovered[{i}] = {v}");
         }

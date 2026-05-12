@@ -382,11 +382,11 @@ mod tests {
     fn roundtrip_smoke() {
         // 4×3 deterministic float32 values; encode→decode→assert close.
         let values: Vec<f32> = (0..12).map(|i| (i as f32) * 0.05).collect();
-        let stream = encode_centered_delta_uint8(&values, 4, 3, None, None)
-            .expect("encode must succeed");
+        let stream =
+            encode_centered_delta_uint8(&values, 4, 3, None, None).expect("encode must succeed");
         assert!(!stream.lzma_bytes.is_empty());
-        let recovered = decode_centered_delta_uint8(&stream.lzma_bytes, 4, 3)
-            .expect("decode must succeed");
+        let recovered =
+            decode_centered_delta_uint8(&stream.lzma_bytes, 4, 3).expect("decode must succeed");
         assert_eq!(recovered.len(), values.len());
         // Quantisation tolerance: at most ~2 quanta where scale = (max-min)/255.
         // Range per column is small (~0.05*3 = 0.15), so quanta ≈ 0.0006.

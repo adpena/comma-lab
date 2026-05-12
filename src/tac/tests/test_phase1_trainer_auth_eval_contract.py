@@ -29,6 +29,41 @@ def test_phase1_trainer_auth_eval_refuses_scaffold_before_training() -> None:
     assert "exact_cuda_score_not_run" in blockers
 
 
+def test_phase1_direct_score_rate_penalty_scales_minibatch_to_full_archive() -> None:
+    module = _load_trainer_module()
+
+    per_pair_bits = 7.0
+    penalty_batch_1 = module.contest_rate_penalty_from_batch_bits(
+        torch.tensor(per_pair_bits * 1),
+        batch_pairs=1,
+        total_pairs=600,
+    )
+    penalty_batch_16 = module.contest_rate_penalty_from_batch_bits(
+        torch.tensor(per_pair_bits * 16),
+        batch_pairs=16,
+        total_pairs=600,
+    )
+
+    assert torch.allclose(penalty_batch_1, penalty_batch_16)
+
+
+def test_phase1_direct_score_rate_penalty_rejects_invalid_batch_shape() -> None:
+    module = _load_trainer_module()
+
+    with pytest.raises(ValueError, match="batch_pairs must be positive"):
+        module.contest_rate_penalty_from_batch_bits(
+            torch.tensor(1.0),
+            batch_pairs=0,
+            total_pairs=600,
+        )
+    with pytest.raises(ValueError, match="cannot exceed total_pairs"):
+        module.contest_rate_penalty_from_batch_bits(
+            torch.tensor(1.0),
+            batch_pairs=601,
+            total_pairs=600,
+        )
+
+
 def test_phase1_trainer_loads_pr95_parity_profile_contract(tmp_path: Path) -> None:
     module = _load_trainer_module()
     profile = tmp_path / "profile_pr95_hnerv_muon_intake.json"

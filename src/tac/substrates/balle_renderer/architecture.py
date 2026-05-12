@@ -132,6 +132,15 @@ class BalleRendererConfig:
     """Uniform-noise additive proxy for quantization during training
     (Ballé 2017's noise-relaxation; STE alternative)."""
 
+    gdn_eps: float = 1e-12
+    """Numerical floor for GDN/IGDN normalization."""
+
+    def __post_init__(self) -> None:
+        if self.quantize_noise_std < 0.0:
+            raise ValueError("quantize_noise_std must be >= 0")
+        if self.gdn_eps <= 0.0:
+            raise ValueError("gdn_eps must be > 0")
+
 
 class _GDN(nn.Module):
     """Generalized Divisive Normalization (Ballé 2016/2018).
@@ -144,9 +153,12 @@ class _GDN(nn.Module):
     Minimal re-implementation (no CompressAI dep per L9 runtime closure).
     """
 
-    def __init__(self, channels: int, inverse: bool = False) -> None:
+    def __init__(self, channels: int, inverse: bool = False, *, eps: float = 1e-12) -> None:
         super().__init__()
         self.inverse = bool(inverse)
+        if eps <= 0.0:
+            raise ValueError("eps must be > 0")
+        self.eps = float(eps)
         # beta: (C,) positive offset
         # gamma: (C, C) positive coupling matrix; init as identity for stability
         self.beta = nn.Parameter(torch.ones(channels) * 1e-4)
@@ -162,7 +174,7 @@ class _GDN(nn.Module):
         # gamma_ij as 1x1 conv weight: gamma viewed as (C_out, C_in, 1, 1)
         norm = F.conv2d(x_sq, gamma.view(*gamma.shape, 1, 1))
         norm = norm + beta.view(1, -1, 1, 1)
-        norm = norm.clamp(min=1e-12).sqrt()
+        norm = norm.clamp(min=self.eps).sqrt()
         if self.inverse:
             return x * norm
         return x / norm
@@ -189,15 +201,17 @@ class _UpBlock(nn.Module):
         sin_freq: float,
         *,
         kernel_size: int = 3,
+        gdn_eps: float = 1e-12,
     ) -> None:
         super().__init__()
         # PixelShuffle(2) needs 4x output channels in the conv before shuffle
         self.conv = nn.Conv2d(in_ch, out_ch * 4, kernel_size, padding=kernel_size // 2)
         self.act = _SinAct(sin_freq)
         self.shuffle = nn.PixelShuffle(2)
+        self.igdn = _GDN(out_ch, inverse=True, eps=gdn_eps)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # noqa: D401
-        return self.shuffle(self.act(self.conv(x)))
+        return self.igdn(self.shuffle(self.act(self.conv(x))))
 
 
 class _HyperAnalysis(nn.Module):
@@ -301,7 +315,7 @@ class BalleRendererSubstrate(nn.Module):
         for i in range(cfg.num_upsample_blocks):
             in_ch = channels[i]
             out_ch = channels[i + 1]
-            blocks.append(_UpBlock(in_ch, out_ch, cfg.sin_frequency))
+            blocks.append(_UpBlock(in_ch, out_ch, cfg.sin_frequency, gdn_eps=cfg.gdn_eps))
         self.blocks = nn.ModuleList(blocks)
 
         final_ch = channels[cfg.num_upsample_blocks]

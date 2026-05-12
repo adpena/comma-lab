@@ -373,6 +373,26 @@ SCORE_DOMAIN_OBJECTIVE_CHOICES = (
 )
 
 
+def contest_rate_penalty_from_batch_bits(
+    rate_bits: torch.Tensor,
+    *,
+    batch_pairs: int,
+    total_pairs: int,
+) -> torch.Tensor:
+    """Estimate the contest byte term from a minibatch entropy-model output."""
+
+    if batch_pairs <= 0:
+        raise ValueError(f"batch_pairs must be positive, got {batch_pairs!r}")
+    if total_pairs <= 0:
+        raise ValueError(f"total_pairs must be positive, got {total_pairs!r}")
+    if batch_pairs > total_pairs:
+        raise ValueError(
+            f"batch_pairs={batch_pairs!r} cannot exceed total_pairs={total_pairs!r}"
+        )
+    full_archive_rate_bits = rate_bits * (float(total_pairs) / float(batch_pairs))
+    return 25.0 * (full_archive_rate_bits / 8.0) / CONTEST_UNCOMPRESSED_BYTES
+
+
 def phase1_scaffold_blockers() -> list[str]:
     """Return the hard blockers that keep this trainer scaffold-only."""
     return list(PHASE1_SCAFFOLD_BLOCKERS)
@@ -2741,7 +2761,11 @@ def main() -> int:
                 and args.score_domain_objective == SCORE_DOMAIN_OBJECTIVE_DIRECT
             )
             if use_direct_score:
-                rate_penalty = 25.0 * (rate_bits / 8.0) / CONTEST_UNCOMPRESSED_BYTES
+                rate_penalty = contest_rate_penalty_from_batch_bits(
+                    rate_bits,
+                    batch_pairs=int(idx.numel()),
+                    total_pairs=n_pairs,
+                )
                 total_loss = distortion + rate_penalty
             else:
                 res = coord.step(

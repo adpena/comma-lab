@@ -264,7 +264,9 @@ pub fn decode_delta_varint_pose(payload: &[u8]) -> Result<Vec<f32>> {
     }
     let mut lo = Vec::with_capacity(n_dims);
     for j in 0..n_dims {
-        lo.push(f32::from_le_bytes(payload[off + j * 4..off + j * 4 + 4].try_into().unwrap()));
+        lo.push(f32::from_le_bytes(
+            payload[off + j * 4..off + j * 4 + 4].try_into().unwrap(),
+        ));
     }
     off += n_dims * 4;
     if payload.len() < off + n_dims * 4 {
@@ -274,8 +276,7 @@ pub fn decode_delta_varint_pose(payload: &[u8]) -> Result<Vec<f32>> {
     }
     let mut scale = Vec::with_capacity(n_dims);
     for j in 0..n_dims {
-        let s =
-            f32::from_le_bytes(payload[off + j * 4..off + j * 4 + 4].try_into().unwrap());
+        let s = f32::from_le_bytes(payload[off + j * 4..off + j * 4 + 4].try_into().unwrap());
         if !(s > 0.0 && s.is_finite()) {
             return Err(PacketCompilerError::GoldenVectorIo(
                 "scale must be strictly positive everywhere".into(),

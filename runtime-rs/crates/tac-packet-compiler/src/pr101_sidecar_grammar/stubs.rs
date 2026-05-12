@@ -131,9 +131,7 @@ pub fn encode_centered_delta_uint8(
     mins: Option<&[u8]>,
     scales: Option<&[u8]>,
 ) -> Result<CenteredDeltaUint8Stream> {
-    super::centered_delta_uint8::encode_centered_delta_uint8(
-        values, n_pairs, n_dims, mins, scales,
-    )
+    super::centered_delta_uint8::encode_centered_delta_uint8(values, n_pairs, n_dims, mins, scales)
 }
 
 /// Decode a centered-delta uint8 stream back to row-major `(n_pairs, n_dims)`

@@ -80,16 +80,15 @@ fn build_categoricals(
     for ctx in 0..spec.n_contexts as usize {
         let row = &spec.cdf_table[ctx * alphabet..(ctx + 1) * alphabet];
         let normalised = normalise_row(row)?;
-        let cat =
-            DefaultContiguousCategoricalEntropyModel::from_floating_point_probabilities_fast(
-                &normalised,
-                None,
-            )
-            .map_err(|_| {
-                PacketCompilerError::GoldenVectorIo(format!(
-                    "constriction Categorical quantisation failed at ctx={ctx}"
-                ))
-            })?;
+        let cat = DefaultContiguousCategoricalEntropyModel::from_floating_point_probabilities_fast(
+            &normalised,
+            None,
+        )
+        .map_err(|_| {
+            PacketCompilerError::GoldenVectorIo(format!(
+                "constriction Categorical quantisation failed at ctx={ctx}"
+            ))
+        })?;
         cats.push(cat);
     }
     Ok(cats)
@@ -190,9 +189,7 @@ pub fn decode_adaptive_context_stream(
     let cats = build_categoricals(spec)?;
     let words = be_bytes_to_words(payload)?;
     let mut decoder = DefaultRangeDecoder::from_compressed(words).map_err(|e| {
-        PacketCompilerError::GoldenVectorIo(format!(
-            "RangeDecoder::from_compressed failed: {e:?}"
-        ))
+        PacketCompilerError::GoldenVectorIo(format!("RangeDecoder::from_compressed failed: {e:?}"))
     })?;
     let mut out: Vec<i32> = Vec::with_capacity(context_ids.len());
     let alphabet = spec.alphabet_size as usize;
@@ -228,11 +225,9 @@ mod tests {
         }
         let spec = AdaptiveContextSpec::new(alphabet, n_contexts, cdf).unwrap();
         let n_symbols = 30;
-        let context_ids: Vec<i32> =
-            (0..n_symbols).map(|i| i % n_contexts as i32).collect();
+        let context_ids: Vec<i32> = (0..n_symbols).map(|i| i % n_contexts as i32).collect();
         let symbols: Vec<i32> = (0..n_symbols).map(|i| i % alphabet as i32).collect();
-        let payload =
-            encode_adaptive_context_stream(&symbols, &context_ids, &spec).unwrap();
+        let payload = encode_adaptive_context_stream(&symbols, &context_ids, &spec).unwrap();
         let decoded = decode_adaptive_context_stream(&payload, &context_ids, &spec).unwrap();
         assert_eq!(decoded, symbols);
     }

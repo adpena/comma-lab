@@ -159,8 +159,7 @@ pub unsafe fn centered_delta_avx2(q: &[u8], n_pairs: usize, n_dims: usize) -> Ve
         return centered_delta_portable(q, n_pairs, n_dims);
     }
     use std::arch::x86_64::{
-        _mm256_add_epi8, _mm256_loadu_si256, _mm256_set1_epi8, _mm256_storeu_si256,
-        _mm256_sub_epi8,
+        _mm256_add_epi8, _mm256_loadu_si256, _mm256_set1_epi8, _mm256_storeu_si256, _mm256_sub_epi8,
     };
 
     let mut out = vec![0u8; n_pairs * n_dims];

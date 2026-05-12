@@ -40,9 +40,7 @@ fn floor_and_renormalise(histogram: &[f64]) -> Result<Vec<f64>> {
     Ok(p)
 }
 
-fn build_categorical(
-    histogram: &[f64],
-) -> Result<DefaultContiguousCategoricalEntropyModel> {
+fn build_categorical(histogram: &[f64]) -> Result<DefaultContiguousCategoricalEntropyModel> {
     let p = floor_and_renormalise(histogram)?;
     DefaultContiguousCategoricalEntropyModel::from_floating_point_probabilities_fast(&p, None)
         .map_err(|_| {
@@ -180,9 +178,7 @@ pub fn decode_merged_range_stream(
         )));
     }
     let mut decoder = DefaultRangeDecoder::from_compressed(words).map_err(|e| {
-        PacketCompilerError::GoldenVectorIo(format!(
-            "RangeDecoder::from_compressed failed: {e:?}"
-        ))
+        PacketCompilerError::GoldenVectorIo(format!("RangeDecoder::from_compressed failed: {e:?}"))
     })?;
     let mut out: Vec<i32> = Vec::with_capacity(stream.tensor_symbol_counts.iter().sum());
     for (s, &count) in specs.iter().zip(stream.tensor_symbol_counts.iter()) {
@@ -222,10 +218,7 @@ mod tests {
 
     #[test]
     fn roundtrip_small_two_tensor() {
-        let specs = vec![
-            make_spec("t0", vec![6], 8),
-            make_spec("t1", vec![2, 3], 8),
-        ];
+        let specs = vec![make_spec("t0", vec![6], 8), make_spec("t1", vec![2, 3], 8)];
         let flat: Vec<i32> = vec![3, 1, 0, 5, 2, 7, 4, 6, 1, 0, 2, 7];
         let stream = encode_merged_range_stream(&flat, &specs).unwrap();
         let decoded = decode_merged_range_stream(&stream, &specs).unwrap();

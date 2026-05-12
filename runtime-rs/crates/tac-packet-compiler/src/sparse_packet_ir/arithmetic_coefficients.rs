@@ -83,9 +83,7 @@ fn floor_and_renormalise(histogram_f32: &[f32]) -> Result<Vec<f64>> {
     Ok(p)
 }
 
-fn build_categorical(
-    histogram_f32: &[f32],
-) -> Result<DefaultContiguousCategoricalEntropyModel> {
+fn build_categorical(histogram_f32: &[f32]) -> Result<DefaultContiguousCategoricalEntropyModel> {
     let p = floor_and_renormalise(histogram_f32)?;
     DefaultContiguousCategoricalEntropyModel::from_floating_point_probabilities_fast(&p, None)
         .map_err(|_| {
@@ -126,13 +124,11 @@ pub fn encode_arithmetic_coefficients(
     let v_min = values.iter().copied().min().expect("non-empty");
     let v_max = values.iter().copied().max().expect("non-empty");
     let symbol_offset = symbol_offset.unwrap_or(-v_min);
-    let auto_alphabet = (v_max - v_min)
-        .checked_add(1)
-        .ok_or_else(|| {
-            PacketCompilerError::GoldenVectorIo(format!(
-                "AC value range overflow: v_min={v_min} v_max={v_max}"
-            ))
-        })? as i64;
+    let auto_alphabet = (v_max - v_min).checked_add(1).ok_or_else(|| {
+        PacketCompilerError::GoldenVectorIo(format!(
+            "AC value range overflow: v_min={v_min} v_max={v_max}"
+        ))
+    })? as i64;
     let mut alphabet = match alphabet_size {
         Some(a) => a as i64,
         None => auto_alphabet,
@@ -212,9 +208,7 @@ pub fn encode_arithmetic_coefficients(
             ))
         })?;
     let compressed: Vec<u32> = encoder.into_compressed().map_err(|e| {
-        PacketCompilerError::GoldenVectorIo(format!(
-            "constriction into_compressed failed: {e:?}"
-        ))
+        PacketCompilerError::GoldenVectorIo(format!("constriction into_compressed failed: {e:?}"))
     })?;
     let mut encoded_bytes = Vec::with_capacity(compressed.len() * 4);
     for w in &compressed {
@@ -259,9 +253,7 @@ pub fn decode_arithmetic_coefficients(
     let mut out = Vec::with_capacity(stream.n_symbols as usize);
     for i in 0..stream.n_symbols {
         let sym = Decode::decode_symbol(&mut decoder, cat.as_view()).map_err(|e| {
-            PacketCompilerError::GoldenVectorIo(format!(
-                "AC decode_symbol failed at i={i}: {e:?}"
-            ))
+            PacketCompilerError::GoldenVectorIo(format!("AC decode_symbol failed at i={i}: {e:?}"))
         })?;
         let signed = (sym as i64) - (stream.symbol_offset as i64);
         if !(i32::MIN as i64..=i32::MAX as i64).contains(&signed) {

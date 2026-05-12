@@ -115,10 +115,7 @@ pub fn decode_router_actions(payload: &[u8], count: usize, bits: u32) -> Result<
             break;
         }
     }
-    debug_assert_eq!(
-        j, count,
-        "decoded {j} actions, expected {count}",
-    );
+    debug_assert_eq!(j, count, "decoded {j} actions, expected {count}",);
     Ok(out)
 }
 

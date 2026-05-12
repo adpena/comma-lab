@@ -112,7 +112,12 @@ pub fn encode_container(records: &[TacpRecord]) -> Result<Vec<u8>> {
             records.len()
         )));
     }
-    let mut out: Vec<u8> = Vec::with_capacity(48 + records.iter().map(|r| 6 + r.name.len() + r.body.len()).sum::<usize>());
+    let mut out: Vec<u8> = Vec::with_capacity(
+        48 + records
+            .iter()
+            .map(|r| 6 + r.name.len() + r.body.len())
+            .sum::<usize>(),
+    );
     out.extend_from_slice(&TACP_MAGIC);
     out.push(TACP_VERSION);
     out.push(0u8); // flags = 0 (no sub-payload)
@@ -215,12 +220,8 @@ pub fn decode_container(blob: &[u8]) -> Result<Vec<TacpRecord>> {
                 "TACP truncated reading body_len at record {r_idx}"
             )));
         }
-        let body_len = u32::from_le_bytes([
-            blob[pos],
-            blob[pos + 1],
-            blob[pos + 2],
-            blob[pos + 3],
-        ]) as usize;
+        let body_len =
+            u32::from_le_bytes([blob[pos], blob[pos + 1], blob[pos + 2], blob[pos + 3]]) as usize;
         pos += 4;
         if pos + body_len > trailer_start {
             return Err(PacketCompilerError::GoldenVectorIo(format!(

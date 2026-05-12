@@ -1490,6 +1490,11 @@ def _compile_optimize(
             f"({baseline_archive_sha256}); use canonicalize mode for "
             "byte-identical re-emit"
         )
+    transform_proof = _load_packet_compiler_transform_proof(
+        input_packet_dir=input_packet_dir,
+        declared_transforms=declared_packet_compiler_transforms,
+        archive_sha256=new_sha,
+    )
 
     return _finalize_packet_result(
         output_dir=output_dir,
@@ -1503,6 +1508,7 @@ def _compile_optimize(
         score_affecting_payload_changed=score_affecting_payload_changed,
         declared_files=declared_files,
         declared_packet_compiler_transforms=declared_packet_compiler_transforms,
+        packet_compiler_transform_proof=transform_proof,
     )
 
 
@@ -1519,6 +1525,7 @@ def _finalize_packet_result(
     score_affecting_payload_changed: bool,
     declared_files: list[str],
     declared_packet_compiler_transforms: tuple[str, ...] = (),
+    packet_compiler_transform_proof: dict[str, Any] | None = None,
 ) -> Phase1PacketResult:
     """Run the fail-closed gates + write build_manifest.json + no_op_proof.json,
     and return a Phase1PacketResult.
@@ -1710,6 +1717,16 @@ def _finalize_packet_result(
         "hnerv_parity_manifest": hnerv_parity_manifest,
         "no_op_proof": no_op_proof,
         "packet_compiler_transforms": list(declared_packet_compiler_transforms),
+        "packet_compiler_transform_proof": (
+            packet_compiler_transform_proof
+            if packet_compiler_transform_proof is not None
+            else {
+                "status": "not_applicable",
+                "packet_compiler_transforms": [],
+                "score_claim": False,
+                "runtime_consumption_proof": False,
+            }
+        ),
         "blockers": blockers,
     }
     (output_dir / "build_manifest.json").write_text(
@@ -1828,6 +1845,143 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     "compressai_balle_hyperprior",
     "compressai_cheng2020",
 )
+PACKET_COMPILER_TRANSFORM_PROOF_FILENAME = "packet_compiler_transform_proof.json"
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _load_packet_compiler_transform_proof(
+    *,
+    input_packet_dir: Path,
+    declared_transforms: tuple[str, ...],
+    archive_sha256: str,
+) -> dict[str, Any]:
+    """Load fail-closed proof that declared transforms materialized bytes."""
+
+    if not declared_transforms:
+        return {
+            "status": "not_applicable",
+            "packet_compiler_transforms": [],
+            "score_claim": False,
+            "runtime_consumption_proof": False,
+        }
+    proof_path = input_packet_dir / PACKET_COMPILER_TRANSFORM_PROOF_FILENAME
+    if not proof_path.is_file():
+        raise Phase1PacketCompilerError(
+            "declared packet_compiler_transforms require "
+            f"{PACKET_COMPILER_TRANSFORM_PROOF_FILENAME} beside archive.zip; "
+            "loose transform labels are not materialization proof"
+        )
+    try:
+        proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise Phase1PacketCompilerError(
+            f"could not parse {PACKET_COMPILER_TRANSFORM_PROOF_FILENAME}: {exc}"
+        ) from exc
+    if not isinstance(proof, dict):
+        raise Phase1PacketCompilerError(
+            f"{PACKET_COMPILER_TRANSFORM_PROOF_FILENAME} must be a JSON object"
+        )
+    proof_transforms = tuple(
+        proof.get("packet_compiler_transforms") or proof.get("transforms") or ()
+    )
+    if proof_transforms != declared_transforms:
+        raise Phase1PacketCompilerError(
+            "packet_compiler_transform_proof transform list does not match "
+            f"declared packet_compiler_transforms: proof={list(proof_transforms)} "
+            f"declared={list(declared_transforms)}"
+        )
+    if proof.get("archive_sha256") != archive_sha256:
+        raise Phase1PacketCompilerError(
+            "packet_compiler_transform_proof archive_sha256 does not match "
+            f"compiled archive: proof={proof.get('archive_sha256')!r} "
+            f"compiled={archive_sha256}"
+        )
+    proof_kind = proof.get("proof_kind")
+    if proof_kind not in {
+        "upstream_trainer_materialized_bytes",
+        "packet_compiler_materialized_bytes",
+    }:
+        raise Phase1PacketCompilerError(
+            "packet_compiler_transform_proof requires proof_kind in "
+            "{'upstream_trainer_materialized_bytes', 'packet_compiler_materialized_bytes'}"
+        )
+    if proof.get("score_claim") is True:
+        raise Phase1PacketCompilerError(
+            "packet_compiler_transform_proof must not claim score; exact auth eval owns score claims"
+        )
+    if proof.get("runtime_consumption_proof") is not True:
+        raise Phase1PacketCompilerError(
+            "packet_compiler_transform_proof requires runtime_consumption_proof=true; "
+            "declared transforms without consumed-byte proof remain forensic"
+        )
+    evidence = proof.get("transform_evidence")
+    if not isinstance(evidence, list) or len(evidence) != len(proof_transforms):
+        raise Phase1PacketCompilerError(
+            "packet_compiler_transform_proof requires transform_evidence with one row per transform"
+        )
+    for index, (expected_transform, row) in enumerate(zip(proof_transforms, evidence, strict=True)):
+        if not isinstance(row, dict):
+            raise Phase1PacketCompilerError(
+                f"packet_compiler_transform_proof transform_evidence[{index}] must be an object"
+            )
+        if row.get("transform") != expected_transform:
+            raise Phase1PacketCompilerError(
+                "packet_compiler_transform_proof transform_evidence transform mismatch: "
+                f"row={row.get('transform')!r} expected={expected_transform!r}"
+            )
+        input_sha = row.get("input_sha256")
+        output_sha = row.get("output_sha256")
+        if not (isinstance(input_sha, str) and _SHA256_RE.match(input_sha)):
+            raise Phase1PacketCompilerError(
+                f"packet_compiler_transform_proof transform_evidence[{index}] input_sha256 is required"
+            )
+        if not (isinstance(output_sha, str) and _SHA256_RE.match(output_sha)):
+            raise Phase1PacketCompilerError(
+                f"packet_compiler_transform_proof transform_evidence[{index}] output_sha256 is required"
+            )
+        if input_sha == output_sha:
+            raise Phase1PacketCompilerError(
+                f"packet_compiler_transform_proof transform_evidence[{index}] did not change bytes"
+            )
+        has_target_member = isinstance(row.get("target_member"), str) and bool(
+            row["target_member"].strip()
+        )
+        has_section_id = isinstance(row.get("section_id"), str) and bool(
+            row["section_id"].strip()
+        )
+        if not (has_target_member or has_section_id):
+            raise Phase1PacketCompilerError(
+                f"packet_compiler_transform_proof transform_evidence[{index}] requires target_member or section_id"
+            )
+        byte_delta = row.get("byte_delta")
+        changed_bytes = row.get("changed_bytes_count")
+        has_byte_delta = (
+            isinstance(byte_delta, int)
+            and not isinstance(byte_delta, bool)
+            and byte_delta != 0
+        )
+        has_changed_bytes = (
+            isinstance(changed_bytes, int)
+            and not isinstance(changed_bytes, bool)
+            and changed_bytes > 0
+        )
+        if not (has_byte_delta or has_changed_bytes):
+            raise Phase1PacketCompilerError(
+                f"packet_compiler_transform_proof transform_evidence[{index}] requires nonzero byte_delta or changed_bytes_count"
+            )
+    return {
+        "status": "materialization_proof_present",
+        "path": proof_path.name,
+        "schema": proof.get("schema"),
+        "proof_kind": proof_kind,
+        "packet_compiler_transforms": list(proof_transforms),
+        "archive_sha256": archive_sha256,
+        "score_claim": False,
+        "runtime_consumption_proof": True,
+        "transform_evidence": evidence,
+        "producer": proof.get("producer"),
+        "source_manifest": proof.get("source_manifest"),
+    }
 
 
 def compile_phase1_packet(

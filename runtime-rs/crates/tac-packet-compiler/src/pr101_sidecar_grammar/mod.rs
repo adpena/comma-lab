@@ -29,6 +29,6 @@ pub mod stubs;
 
 pub use stubs::{
     decode_centered_delta_uint8, decode_ranked_no_op_sidecar, encode_centered_delta_uint8,
-    encode_ranked_no_op_sidecar, parse_split_brotli_self_delimiting,
-    split_brotli_self_delimiting, CenteredDeltaUint8Stream, RankedSidecarSchema, SplitBrotliStream,
+    encode_ranked_no_op_sidecar, parse_split_brotli_self_delimiting, split_brotli_self_delimiting,
+    CenteredDeltaUint8Stream, RankedSidecarSchema, SplitBrotliStream,
 };

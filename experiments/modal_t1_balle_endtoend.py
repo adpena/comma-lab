@@ -797,7 +797,7 @@ def build_local_plan(
             "score_domain_objective": DEFAULT_T1_SCORE_DOMAIN_OBJECTIVE,
             "max_stable_train_loss_abs": DEFAULT_T1_MAX_STABLE_TRAIN_LOSS_ABS,
             "enable_t13_sqrt_n_budget": True,
-            "enable_t19_adaptive_rho": False,
+            "enable_t19_adaptive_rho": True,
             "contest_cuda_auth_eval_requested": contest_auth_eval_requested,
         },
         "canonical_a1_payload": canonical_a1_payload,

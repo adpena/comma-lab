@@ -289,8 +289,7 @@ pub fn build_optimal_huffman_lengths(
     items.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
 
     // Step 3: seed package and final_package.
-    let package: Vec<(i64, Vec<usize>)> =
-        items.iter().map(|(c, s)| (*c, vec![*s])).collect();
+    let package: Vec<(i64, Vec<usize>)> = items.iter().map(|(c, s)| (*c, vec![*s])).collect();
     let mut final_package: Vec<(i64, Vec<usize>)> = package.clone();
 
     // Step 4: package-merge rounds.
@@ -382,10 +381,7 @@ pub fn build_canonical_huffman_codebook(lengths: &[u8]) -> HashMap<usize, (u8, u
 
 /// MSB-first bit-pack `symbols` using `codebook` into bytes; final byte is
 /// zero-padded on the right.
-pub fn bit_pack(
-    symbols: &[usize],
-    codebook: &HashMap<usize, (u8, u64)>,
-) -> Result<Vec<u8>> {
+pub fn bit_pack(symbols: &[usize], codebook: &HashMap<usize, (u8, u64)>) -> Result<Vec<u8>> {
     let mut out: Vec<u8> = Vec::new();
     let mut cur: u128 = 0;
     let mut cur_len: u32 = 0;
@@ -448,7 +444,10 @@ fn pack_le(value: u128, n_bytes: usize) -> Vec<u8> {
     if v != 0 {
         // The caller controls n_bytes; overflow is a logic error.
         // We surface via a debug assertion; in production we'd thread `Result`.
-        debug_assert!(false, "pack_le overflow: value did not fit in {n_bytes} bytes");
+        debug_assert!(
+            false,
+            "pack_le overflow: value did not fit in {n_bytes} bytes"
+        );
     }
     out
 }
@@ -559,8 +558,9 @@ pub fn encode_ranked_no_op_sidecar(
     let noop_rank_blob = pack_le(noop_rank_value, noop_blob_bytes);
 
     // Concatenate.
-    let mut out =
-        Vec::with_capacity(dim_blob.len() + length_rank_blob.len() + huff_bits.len() + noop_rank_blob.len());
+    let mut out = Vec::with_capacity(
+        dim_blob.len() + length_rank_blob.len() + huff_bits.len() + noop_rank_blob.len(),
+    );
     out.extend_from_slice(&dim_blob);
     out.extend_from_slice(&length_rank_blob);
     out.extend_from_slice(&huff_bits);

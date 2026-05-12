@@ -179,8 +179,8 @@ mod tests {
             let latents = deterministic_latents(n);
             let histogram = deterministic_histogram(&latents);
             let standard = encode_latent_hi_arithmetic(&latents, &histogram).expect("std encode");
-            let hand =
-                encode_latent_hi_arithmetic_hand_optimized(&latents, &histogram).expect("hand encode");
+            let hand = encode_latent_hi_arithmetic_hand_optimized(&latents, &histogram)
+                .expect("hand encode");
             assert_eq!(hand, standard, "byte-parity failed at n={n}");
         }
     }

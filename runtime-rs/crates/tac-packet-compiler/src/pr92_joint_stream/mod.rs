@@ -34,7 +34,6 @@
 pub mod rmc;
 
 pub use rmc::{
-    pack_rmc1_composite, pack_rsa1_side, pack_rsb1_side, unpack_rmc1_composite,
-    unpack_rsa1_side, unpack_rsb1_side, RMC1Composite, RSA1Side, RSB1Side, MAGIC_RMC1,
-    MAGIC_RSA1, MAGIC_RSB1,
+    pack_rmc1_composite, pack_rsa1_side, pack_rsb1_side, unpack_rmc1_composite, unpack_rsa1_side,
+    unpack_rsb1_side, RMC1Composite, RSA1Side, RSB1Side, MAGIC_RMC1, MAGIC_RSA1, MAGIC_RSB1,
 };

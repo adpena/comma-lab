@@ -437,6 +437,36 @@ def test_score_aware_loss_refuses_eval_roundtrip_false():
         )
 
 
+def test_score_aware_loss_refuses_negative_noise_std():
+    import torch
+    import torch.nn as nn
+
+    from tac.substrates.sane_hnerv.score_aware_loss import (
+        SaneHnervScoreAwareLoss,
+        ScoreAwareLossWeights,
+    )
+
+    class _Dummy(nn.Module):
+        def forward(self, x):
+            return x.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
+
+    loss_fn = SaneHnervScoreAwareLoss(
+        seg_scorer=_Dummy(),
+        pose_scorer=_Dummy(),
+        weights=ScoreAwareLossWeights(),
+    )
+    with pytest.raises(ValueError, match="noise_std"):
+        loss_fn(
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.rand(1, 3, 8, 8) * 255.0,
+            torch.tensor(1.0),
+            apply_eval_roundtrip=True,
+            noise_std=-0.1,
+        )
+
+
 # ---------------------------------------------------------------------------
 # 8. _full_main wiring proof (source-level introspection)
 # ---------------------------------------------------------------------------

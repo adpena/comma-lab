@@ -80,6 +80,8 @@ def _make_meta(cfg: BalleRendererConfig) -> dict:
         "decoder_channels": list(cfg.decoder_channels),
         "hyper_mlp_channels": list(cfg.hyper_mlp_channels),
         "sin_frequency": cfg.sin_frequency,
+        "gdn_eps": cfg.gdn_eps,
+        "quantize_noise_std": cfg.quantize_noise_std,
         "output_height": cfg.output_height,
         "output_width": cfg.output_width,
         "num_upsample_blocks": cfg.num_upsample_blocks,

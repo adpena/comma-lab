@@ -49,8 +49,8 @@ pub use arithmetic_coefficients::{
     ArithmeticCodedCoefficientStream, SPARSE_AC_MAGIC,
 };
 pub use rle_of_zeros::{
-    decode_rle_of_zeros, deserialize_rle_of_zeros, encode_rle_of_zeros,
-    serialize_rle_of_zeros, RleOfZerosStream, SPARSE_RLE_MAGIC,
+    decode_rle_of_zeros, deserialize_rle_of_zeros, encode_rle_of_zeros, serialize_rle_of_zeros,
+    RleOfZerosStream, SPARSE_RLE_MAGIC,
 };
 pub use temporal_subsampled::{
     decode_temporal_subsampled, deserialize_temporal_subsampled, encode_temporal_subsampled,

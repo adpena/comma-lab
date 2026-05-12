@@ -2229,7 +2229,7 @@ def preflight_all(
         check_commit_serializer_pre_lock_hash_against_head(
             strict=True, verbose=verbose,
         )
-        # 2026-05-12 Catalog #158 (FFFF Bug 1 self-protection): substrate
+        # 2026-05-12 Catalog #160 (FFFF Bug 1 self-protection): substrate
         # archive `_quantize_intN` degenerate-range branch must fill `q`
         # with `-(MAX_LEVELS // 2)` so dequant recovers `lo` exactly. The
         # buggy zero-fill pattern produced an off-by-32767-scale error.
@@ -40004,7 +40004,7 @@ def check_commit_serializer_pre_lock_hash_against_head(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #158 — substrate archive _quantize_intN degenerate-range fill
+# Catalog #160 — substrate archive _quantize_intN degenerate-range fill
 # must be -(MAX_LEVELS // 2) so that dequant recovers `lo` exactly.
 # (FFFF Bug 1 self-protection, 2026-05-12)
 # ─────────────────────────────────────────────────────────────────────────
@@ -40039,14 +40039,14 @@ def check_commit_serializer_pre_lock_hash_against_head(
 # `torch.full_like(..., -<sentinel>, dtype=torch.intN)` OR a same-line
 # `# QUANTIZE_DEGENERATE_OK:<reason>` waiver.
 
-_CHECK_158_QUANTIZE_FN_NAME_PATTERNS: tuple[re.Pattern, ...] = (
+_CHECK_160_QUANTIZE_FN_NAME_PATTERNS: tuple[re.Pattern, ...] = (
     re.compile(r"_quantize_int(\d+)\b"),
     re.compile(r"_quantize_[a-z_]*to_int(\d+)\b"),
     re.compile(r"_quantize_latents_to_int(\d+)\b"),
 )
-_CHECK_158_WAIVER_TOKEN = "QUANTIZE_DEGENERATE_OK:"
+_CHECK_160_WAIVER_TOKEN = "QUANTIZE_DEGENERATE_OK:"
 # Allowed sentinels keyed by intN bit-width
-_CHECK_158_EXPECTED_SENTINELS: dict[int, int] = {
+_CHECK_160_EXPECTED_SENTINELS: dict[int, int] = {
     8: -127,    # int8 maps to [-127, 127] via (q + 127) * scale + lo
     16: -32767,  # int16 maps to [-32767, 32767] via (q + 32767) * scale + lo
     32: -2147483647,  # int32, same pattern (rare)
@@ -40059,7 +40059,7 @@ def check_quantize_degenerate_range_clamped_correctly(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #158 — refuse substrate archive `_quantize_intN` functions
+    """Catalog #160 — refuse substrate archive `_quantize_intN` functions
     whose degenerate (``hi <= lo``) branch fills `q` with zeros instead of
     `-(MAX_LEVELS // 2)`.
 
@@ -40101,16 +40101,16 @@ def check_quantize_degenerate_range_clamped_correctly(
                 continue
             # Match function name against quantize patterns; extract bit width.
             bit_width: int | None = None
-            for pat in _CHECK_158_QUANTIZE_FN_NAME_PATTERNS:
+            for pat in _CHECK_160_QUANTIZE_FN_NAME_PATTERNS:
                 m = pat.match(node.name)
                 if m:
                     bit_width = int(m.group(1))
                     break
             if bit_width is None:
                 continue
-            if bit_width not in _CHECK_158_EXPECTED_SENTINELS:
+            if bit_width not in _CHECK_160_EXPECTED_SENTINELS:
                 continue  # exotic bit-widths not yet covered
-            expected_sentinel = _CHECK_158_EXPECTED_SENTINELS[bit_width]
+            expected_sentinel = _CHECK_160_EXPECTED_SENTINELS[bit_width]
             # Find the degenerate-range If statement inside the function.
             for sub in ast.walk(node):
                 if not isinstance(sub, ast.If):
@@ -40149,8 +40149,8 @@ def check_quantize_degenerate_range_clamped_correctly(
                     lines[if_lineno - 1] if 0 <= if_lineno - 1 < len(lines) else ""
                 )
                 if (
-                    _CHECK_158_WAIVER_TOKEN in ret_line_text
-                    or _CHECK_158_WAIVER_TOKEN in if_line_text
+                    _CHECK_160_WAIVER_TOKEN in ret_line_text
+                    or _CHECK_160_WAIVER_TOKEN in if_line_text
                 ):
                     continue
                 # Multi-line return: scan a small window around the return
@@ -40180,7 +40180,7 @@ def check_quantize_degenerate_range_clamped_correctly(
                         f"dtype=torch.int{bit_width})` so dequant recovers "
                         f"`lo` exactly. Sister bugs fixed in block_nerv + "
                         f"sane_hnerv + 7 others 2026-05-12 (NNN+FFFF). "
-                        f"Add same-line `# {_CHECK_158_WAIVER_TOKEN}<reason>` "
+                        f"Add same-line `# {_CHECK_160_WAIVER_TOKEN}<reason>` "
                         f"waiver if intentional."
                     )
                 break  # one violation per quantize function is enough

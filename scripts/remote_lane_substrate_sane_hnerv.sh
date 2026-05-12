@@ -148,6 +148,7 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # before promotion-grade status).
 log "stage_4_trainer_invoke_begin video=$SANE_HNERV_VIDEO_PATH epochs=$SANE_HNERV_EPOCHS device=$SANE_HNERV_DEVICE"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
+set +e
 "$PYBIN" experiments/train_substrate_sane_hnerv.py \
     --video-path "$SANE_HNERV_VIDEO_PATH" \
     --output-dir "$SANE_HNERV_OUTPUT_DIR" \
@@ -156,6 +157,7 @@ TRAIN_START_UTC=$(date -u +%FT%TZ)
     --device "$SANE_HNERV_DEVICE" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
+set -e
 TRAIN_END_UTC=$(date -u +%FT%TZ)
 log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
 

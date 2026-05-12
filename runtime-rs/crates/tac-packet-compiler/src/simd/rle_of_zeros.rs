@@ -112,9 +112,9 @@ pub unsafe fn scan_nonzero_neon(dense: &[i8]) -> (Vec<u32>, Vec<i8>) {
             let v = vld1q_s8(ptr.add(b * block));
             let is_zero = vceqzq_s8(v); // 0xFF where v==0
             let is_nonzero = vmvnq_u8(is_zero); // 0xFF where v!=0
-            // Each lane is 0xFF (=255) for nonzero, 0 for zero. Sum of u8 lanes
-            // = 255 * popcount; we want popcount, so divide by 255 at the
-            // accumulate step.
+                                                // Each lane is 0xFF (=255) for nonzero, 0 for zero. Sum of u8 lanes
+                                                // = 255 * popcount; we want popcount, so divide by 255 at the
+                                                // accumulate step.
             vaddvq_u8(is_nonzero) as u16
         };
         counts[b] = (sum / 255) as u8;

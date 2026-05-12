@@ -124,6 +124,24 @@ _EMPIRICAL_MIN_ANCHORS = 3
 _WEAK_MIN_ANCHORS = 1
 
 
+def parse_actual_cost_usd(value: str | None, *, field_name: str = "actual_cost_usd") -> float | None:
+    """Parse a measured cost value, returning ``None`` when absent.
+
+    Absence means "do not append a cost-band anchor"; it is not equivalent to a
+    measured zero-dollar run.
+    """
+
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise ValueError(f"{field_name} must be a finite non-negative float; got {value!r}") from exc
+    if not math.isfinite(parsed) or parsed < 0.0:
+        raise ValueError(f"{field_name} must be a finite non-negative float; got {value!r}")
+    return parsed
+
+
 @dataclass(frozen=True)
 class CostBandPrediction:
     """A confidence-tagged cost-band prediction for one (platform, gpu, epochs, flags) bucket.

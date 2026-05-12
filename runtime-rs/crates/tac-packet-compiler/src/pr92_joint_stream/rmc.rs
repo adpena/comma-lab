@@ -123,8 +123,7 @@ pub fn unpack_rmc1_composite(payload: &[u8]) -> Result<RMC1Composite> {
         ));
     }
     let seg_len = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]) as usize;
-    let side_len =
-        u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]) as usize;
+    let side_len = u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]) as usize;
     let off: usize = 12;
     let end = off
         .checked_add(seg_len)
@@ -155,12 +154,7 @@ pub fn unpack_rmc1_composite(payload: &[u8]) -> Result<RMC1Composite> {
 ///
 /// `body` must carry at least `ceil(count * action_bits / 8)` bytes of
 /// LSB-first packed actions. `action_bits` must satisfy `1 <= bits <= 8`.
-pub fn pack_rsa1_side(
-    count: u16,
-    action_bits: u8,
-    table_id: u8,
-    body: &[u8],
-) -> Result<RSA1Side> {
+pub fn pack_rsa1_side(count: u16, action_bits: u8, table_id: u8, body: &[u8]) -> Result<RSA1Side> {
     if !(1..=8).contains(&action_bits) {
         return Err(PacketCompilerError::GoldenVectorIo(format!(
             "action_bits must satisfy 1 <= action_bits <= 8; got {action_bits}"

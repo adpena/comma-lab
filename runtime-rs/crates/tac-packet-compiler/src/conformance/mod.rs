@@ -49,10 +49,12 @@ pub struct GoldenVectorManifest {
 /// Returns [`PacketCompilerError::GoldenVectorIo`] on i/o or JSON parse
 /// failure.
 pub fn load_golden_vector(path: &Path) -> Result<GoldenVectorManifest> {
-    let text = fs::read_to_string(path)
-        .map_err(|e| PacketCompilerError::GoldenVectorIo(format!("read {}: {}", path.display(), e)))?;
-    let manifest: GoldenVectorManifest = serde_json::from_str(&text)
-        .map_err(|e| PacketCompilerError::GoldenVectorIo(format!("parse {}: {}", path.display(), e)))?;
+    let text = fs::read_to_string(path).map_err(|e| {
+        PacketCompilerError::GoldenVectorIo(format!("read {}: {}", path.display(), e))
+    })?;
+    let manifest: GoldenVectorManifest = serde_json::from_str(&text).map_err(|e| {
+        PacketCompilerError::GoldenVectorIo(format!("parse {}: {}", path.display(), e))
+    })?;
     Ok(manifest)
 }
 
@@ -88,12 +90,13 @@ pub fn assert_sha256_parity(produced: &[u8], manifest: &GoldenVectorManifest) ->
 /// `CARGO_MANIFEST_DIR` so the path is stable across local checkouts and
 /// CI.
 pub fn golden_vectors_dir() -> std::path::PathBuf {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-        .unwrap_or_else(|_| ".".to_string());
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
     Path::new(&manifest_dir)
         .join("../../../src/tac/packet_compiler/golden_vectors")
         .canonicalize()
-        .unwrap_or_else(|_| Path::new(&manifest_dir).join("../../../src/tac/packet_compiler/golden_vectors"))
+        .unwrap_or_else(|_| {
+            Path::new(&manifest_dir).join("../../../src/tac/packet_compiler/golden_vectors")
+        })
 }
 
 #[cfg(test)]

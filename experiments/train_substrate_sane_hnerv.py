@@ -1022,14 +1022,27 @@ def _full_main(args: argparse.Namespace) -> int:
                     # Parse score from JSON output
                     if auth_eval_result_path.is_file():
                         try:
+                            from tac.auth_eval_result import parse_finite_auth_eval_score
+
                             ae = json.loads(auth_eval_result_path.read_text())
-                            contest_cuda_score = float(
-                                ae.get("score") or ae.get("final_score") or "nan"
+                            parsed_score = parse_finite_auth_eval_score(
+                                ae,
+                                require_component_recompute=True,
                             )
-                            print(
-                                f"[full] [contest-CUDA] score = {contest_cuda_score} "
-                                f"(archive_sha256={archive_sha})"
-                            )
+                            if parsed_score is None:
+                                print(
+                                    "[full] auth eval JSON did not contain a finite, "
+                                    "component-coherent score; no [contest-CUDA] "
+                                    "score claim will be recorded",
+                                    file=sys.stderr,
+                                )
+                            else:
+                                contest_cuda_score = parsed_score.score
+                                print(
+                                    f"[full] [contest-CUDA] score = {contest_cuda_score} "
+                                    f"(source={parsed_score.source_key}, "
+                                    f"archive_sha256={archive_sha})"
+                                )
                         except Exception as exc:  # noqa: BLE001
                             print(f"[full] could not parse auth eval JSON: {exc}", file=sys.stderr)
             except subprocess.TimeoutExpired:
@@ -1060,10 +1073,24 @@ def _full_main(args: argparse.Namespace) -> int:
             except Exception as exc:  # noqa: BLE001
                 print(f"[full] posterior_update_locked failed: {exc}", file=sys.stderr)
 
-        # 14. Cost-band anchor (best-effort; never fail the run on this)
-        if COST_BAND_TOOL.is_file() and train_elapsed_sec > 0:
+        # 14. Cost-band anchor (best-effort; never fail the run on this).
+        # Missing ACTUAL_COST is not a measured $0 run; skip rather than
+        # writing a fake zero-cost anchor into the posterior.
+        cost_band_anchor_appended = False
+        cost_band_anchor_skip_reason: str | None = None
+        try:
+            from tac.cost_band_calibration import parse_actual_cost_usd
+
+            actual_cost_usd = parse_actual_cost_usd(
+                os.environ.get("SANE_HNERV_ACTUAL_COST_USD"),
+                field_name="SANE_HNERV_ACTUAL_COST_USD",
+            )
+        except ValueError as exc:
+            actual_cost_usd = None
+            cost_band_anchor_skip_reason = f"invalid_SANE_HNERV_ACTUAL_COST_USD:{exc}"
+        if COST_BAND_TOOL.is_file() and train_elapsed_sec > 0 and actual_cost_usd is not None:
             try:
-                subprocess.run(
+                proc = subprocess.run(
                     [
                         sys.executable, str(COST_BAND_TOOL),
                         "--dispatch-label", f"sane_hnerv_{_utc_now_iso()}",
@@ -1074,13 +1101,28 @@ def _full_main(args: argparse.Namespace) -> int:
                         "--batch-size", str(args.batch_size),
                         "--actual-wall-clock-sec", str(train_elapsed_sec),
                         "--actual-cost-usd",
-                        os.environ.get("SANE_HNERV_ACTUAL_COST_USD", "0.0"),
+                        str(actual_cost_usd),
                         "--notes", "OD-SUBSTRATE-4 first-anchor dispatch",
                     ],
                     capture_output=True, text=True, timeout=30, check=False,
                 )
+                if proc.returncode == 0:
+                    cost_band_anchor_appended = True
+                else:
+                    cost_band_anchor_skip_reason = (
+                        f"append_failed_rc_{proc.returncode}:"
+                        f"{(proc.stderr or proc.stdout)[-500:]}"
+                    )
             except Exception as exc:  # noqa: BLE001
+                cost_band_anchor_skip_reason = f"append_failed:{exc}"
                 print(f"[full] cost-band anchor append failed (non-fatal): {exc}", file=sys.stderr)
+        else:
+            if actual_cost_usd is None and cost_band_anchor_skip_reason is None:
+                cost_band_anchor_skip_reason = "missing_SANE_HNERV_ACTUAL_COST_USD"
+            elif not COST_BAND_TOOL.is_file():
+                cost_band_anchor_skip_reason = "cost_band_tool_missing"
+            else:
+                cost_band_anchor_skip_reason = "nonpositive_train_elapsed_sec"
 
         # 15. Provenance manifest
         provenance = {
@@ -1110,6 +1152,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None
             ),
+            "cost_band_anchor_appended": cost_band_anchor_appended,
+            "cost_band_anchor_skip_reason": cost_band_anchor_skip_reason,
             "stage_log": stage_log,
             "custody_status": "ci-rebuildable",
             "score_claim": contest_cuda_score is not None,
