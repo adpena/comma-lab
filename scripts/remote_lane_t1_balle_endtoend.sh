@@ -50,6 +50,7 @@ DISPATCH_CLAIMS_PATH="${T1_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_la
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-vastai}"
 DECLARED_MOUNTED_GIT_HEAD="${T1_MOUNTED_CODE_GIT_HEAD:-}"
 DECLARED_MOUNTED_GIT_BRANCH="${T1_MOUNTED_CODE_GIT_BRANCH:-}"
+PR95_PARITY_PROFILE="${T1_PR95_PARITY_PROFILE:-$WORKSPACE/.omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json}"
 CLAIM_VERIFIED=0
 TERMINAL_CLAIM_CLOSED=0
 HEARTBEAT_PID=""
@@ -283,6 +284,7 @@ cat > "$PROVENANCE" <<EOF
   "archive_every_epochs_env": "${T1_ARCHIVE_EVERY_EPOCHS:-${EVAL_EVERY_EPOCHS:-100}}",
   "max_candidate_archive_bytes_env": "${T1_MAX_CANDIDATE_ARCHIVE_BYTES:-190000}",
   "max_exact_cuda_candidates_env": "${T1_MAX_EXACT_CUDA_CANDIDATES:-1}",
+  "pr95_parity_profile": "${PR95_PARITY_PROFILE}",
   "predicted_band": [0.155, 0.180],
   "prediction_scope": "Phase 1 scorer-domain A1 substrate training when T1_ALLOW_SCORE_DOMAIN_TRAINING=1; no score claim unless packet compiler plus contest-CUDA auth-eval adjudication both pass",
   "score_claim": false
@@ -379,6 +381,7 @@ TRAIN_CMD=(
     --max-exact-cuda-candidates "${T1_MAX_EXACT_CUDA_CANDIDATES:-1}"
     --baseline-archive-sha256 "${T1_BASELINE_ARCHIVE_SHA256:-87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5}"
     --baseline-archive-size-bytes "${T1_BASELINE_ARCHIVE_SIZE_BYTES:-178262}"
+    --pr95-parity-profile "$PR95_PARITY_PROFILE"
     --enable-t13-sqrt-n-budget
     --enable-t19-adaptive-rho
     --no-auth-eval
@@ -386,6 +389,10 @@ TRAIN_CMD=(
 )
 
 if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
+    if [ ! -f "$PR95_PARITY_PROFILE" ]; then
+        log "FATAL: missing PR95 parity profile at $PR95_PARITY_PROFILE; set T1_PR95_PARITY_PROFILE or run experiments/profile_pr95_hnerv_muon_intake.py before dispatch"
+        exit 22
+    fi
     log "Stage 5: score-domain training (epochs=${EPOCHS:-3000})"
     TRAIN_CMD+=(
         --enable-scorer-domain-loss
@@ -439,6 +446,7 @@ else
         --noise-std 0.5
         --eval-every-epochs "${EVAL_EVERY_EPOCHS:-100}"
         --eval-batch-size "${EVAL_BATCH_SIZE:-${BATCH_SIZE:-16}}"
+        --pr95-parity-profile "$PR95_PARITY_PROFILE"
         --smoke
         --allow-missing-canonical-a1
         --no-auth-eval

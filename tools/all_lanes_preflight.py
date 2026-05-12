@@ -76,6 +76,9 @@ Currently runs:
   Gate #25: tools/audit_modal_image_build_order.py --strict
            (Modal image build/env steps must happen before add_local_* mounts,
             otherwise dispatch fails locally before remote execution)
+  Gate #26: PR106/R2 sidecar runtime-consumption proof
+           (runtime decodes and applies changed sidecar bytes for both packet
+            grammars, while remaining non-promotable without full-frame parity)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -210,6 +213,10 @@ A6_BLOCKFP_HYPERPRIOR_ANCHOR = TOOLS / "pr101_a6_blockfp_hyperprior_anchor.py"
 MODAL_IMAGE_BUILD_ORDER_AUDIT = TOOLS / "audit_modal_image_build_order.py"
 MODAL_A1_SCORE_GRADIENT_DISPATCHER = REPO / "experiments/modal_phase_a1_score_gradient_pr101.py"
 LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER = TOOLS / "dispatch_phase_a1_score_gradient_pr101.py"
+PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
+PR106_R2_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2"
+PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
+PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS = "missing_prerequisite"
 EVAL_LOADER_DRIFT_PROBE_RUNTIME_ERROR_CLASS = "probe_runtime_error"
 EVAL_LOADER_DRIFT_KNOWN_MISSING_PREREQ_CODES = frozenset(
@@ -1737,6 +1744,101 @@ def _run_phase_a_post_green_discoverability_gate() -> tuple[bool, str]:
     )
 
 
+def _pr106_sidecar_runtime_consumption_failures(
+    label: str,
+    manifest: dict[str, object],
+    *,
+    expected_format_id: str,
+) -> list[str]:
+    failures: list[str] = []
+    expected_fields = {
+        "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+        "format_id": expected_format_id,
+        "payload_sha256_changed": True,
+        "inner_pr106_payload_sha256_unchanged": True,
+        "sidecar_payload_sha256_changed": True,
+        "runtime_semantic_digest_changed": True,
+        "runtime_corrected_latents_digest_changed": True,
+        "runtime_sidecar_decode_consumption_claim": True,
+        "runtime_sidecar_apply_consumption_claim": True,
+        "full_frame_inflate_output_parity_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    for field, expected in expected_fields.items():
+        if manifest.get(field) != expected:
+            failures.append(
+                f"{label}:{field}_drift expected {expected!r}, got {manifest.get(field)!r}"
+            )
+
+    for digest_field in (
+        "source_runtime_correction_digest",
+        "mutated_runtime_correction_digest",
+    ):
+        digest = manifest.get(digest_field)
+        if not isinstance(digest, dict):
+            failures.append(f"{label}:{digest_field}_missing")
+            continue
+        if digest.get("format_id") != expected_format_id:
+            failures.append(
+                f"{label}:{digest_field}_format_id_drift expected {expected_format_id!r}, "
+                f"got {digest.get('format_id')!r}"
+            )
+        if digest.get("n_pairs") != 600:
+            failures.append(f"{label}:{digest_field}_n_pairs_drift")
+        if digest.get("latents_changed_by_sidecar") is not True:
+            failures.append(f"{label}:{digest_field}_latents_not_changed_by_sidecar")
+
+    source_digest = manifest.get("source_runtime_correction_digest")
+    mutated_digest = manifest.get("mutated_runtime_correction_digest")
+    if isinstance(source_digest, dict) and isinstance(mutated_digest, dict):
+        if source_digest.get("source_latents_sha256") != mutated_digest.get("source_latents_sha256"):
+            failures.append(f"{label}:source_latents_changed_under_sidecar_mutation")
+        if source_digest.get("corrected_latents_sha256") == mutated_digest.get(
+            "corrected_latents_sha256"
+        ):
+            failures.append(f"{label}:corrected_latents_unchanged_under_sidecar_mutation")
+        if source_digest.get("combined_sha256") == mutated_digest.get("combined_sha256"):
+            failures.append(f"{label}:combined_digest_unchanged_under_sidecar_mutation")
+    return failures
+
+
+def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
+    from tac.packet_compiler import prove_pr106_sidecar_runtime_decode_consumption
+
+    failures: list[str] = []
+    observed_formats: list[str] = []
+    for label, archive_path, runtime_dir, expected_format_id in (
+        ("r2_brotli", PR106_R2_ARCHIVE, PR106_R2_RUNTIME, "0x01"),
+        ("r2_pr101_grammar", PR106_R2_PR101_ARCHIVE, PR106_R2_PR101_RUNTIME, "0x02"),
+    ):
+        try:
+            manifest = prove_pr106_sidecar_runtime_decode_consumption(
+                archive_path=archive_path,
+                runtime_dir=runtime_dir,
+            )
+        except Exception as exc:
+            failures.append(f"{label}: proof raised {type(exc).__name__}: {exc}")
+            continue
+        observed_formats.append(str(manifest.get("format_id")))
+        failures.extend(
+            _pr106_sidecar_runtime_consumption_failures(
+                label,
+                manifest,
+                expected_format_id=expected_format_id,
+            )
+        )
+
+    if failures:
+        return False, "PR106 sidecar runtime-consumption proof failed: " + "; ".join(failures)
+    return True, (
+        "PR106 sidecar runtime-consumption proof: PASS "
+        f"(format_ids={','.join(observed_formats)}; runtime decodes/applies sidecar bytes; "
+        "score_claim=false; ready_for_exact_eval_dispatch=false)"
+    )
+
+
 def _cancelled_result(
     step: PreflightStep,
     *,
@@ -2194,6 +2296,10 @@ def main(argv: list[str] | None = None) -> int:
         MODAL_A1_SCORE_GRADIENT_DISPATCHER,
         LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER,
         HSTACK_VSTACK_PLAN,
+        PR106_R2_ARCHIVE,
+        PR106_R2_RUNTIME / "inflate.py",
+        PR106_R2_PR101_ARCHIVE,
+        PR106_R2_PR101_RUNTIME / "inflate.py",
         PR91_HPM1_READINESS_ARTIFACT,
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
@@ -2429,6 +2535,14 @@ def main(argv: list[str] | None = None) -> int:
             lambda: _run_gate("Modal image build order", MODAL_IMAGE_BUILD_ORDER_AUDIT),
             "  ✓ Gate #25: Modal image build order — PASSED",
             "  ✗ Gate #25: Modal image build order — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            26,
+            "PR106 sidecar runtime consumption",
+            _run_pr106_sidecar_runtime_consumption_gate,
+            "  ✓ Gate #26: PR106 sidecar runtime consumption — PASSED",
+            "  ✗ Gate #26: PR106 sidecar runtime consumption — FAILED",
         ),
     ]
     lane_steps = [
