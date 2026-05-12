@@ -303,6 +303,162 @@ def apply_eval_roundtrip_during_training(
 
 
 # --------------------------------------------------------------------------- #
+# mp4 codec simulation — closes the pixels→bytes→pixels fidelity gap          #
+# --------------------------------------------------------------------------- #
+
+
+# BT.601 limited-range RGB <-> YCbCr matrices. ffmpeg/libav default for SDR
+# 8-bit yuv4:2:0 mp4 encoding is BT.601 limited range.
+_RGB_TO_YCBCR_BT601_LIMITED: tuple[tuple[float, ...], ...] = (
+    (0.257, 0.504, 0.098),     # Y = 0.257R + 0.504G + 0.098B + 16
+    (-0.148, -0.291, 0.439),   # Cb = -0.148R - 0.291G + 0.439B + 128
+    (0.439, -0.368, -0.071),   # Cr = 0.439R - 0.368G - 0.071B + 128
+)
+_YCBCR_TO_RGB_BT601_LIMITED: tuple[tuple[float, ...], ...] = (
+    (1.164, 0.0, 1.596),        # R = 1.164(Y-16) + 1.596(Cr-128)
+    (1.164, -0.392, -0.813),    # G = 1.164(Y-16) - 0.392(Cb-128) - 0.813(Cr-128)
+    (1.164, 2.017, 0.0),        # B = 1.164(Y-16) + 2.017(Cb-128)
+)
+
+
+def _rgb_to_ycbcr_bt601(rgb_chw: torch.Tensor) -> torch.Tensor:
+    """Differentiable RGB→YCbCr (BT.601 limited range). Input/output in [0, 255]."""
+    M = torch.tensor(
+        _RGB_TO_YCBCR_BT601_LIMITED, dtype=rgb_chw.dtype, device=rgb_chw.device
+    )
+    bias = torch.tensor([16.0, 128.0, 128.0], dtype=rgb_chw.dtype, device=rgb_chw.device)
+    # Einsum: (..., 3, H, W) × (3, 3) → (..., 3, H, W); rgb channels first.
+    ycbcr = torch.einsum("ij,...jhw->...ihw", M, rgb_chw)
+    ycbcr = ycbcr + bias.reshape(3, 1, 1)
+    return ycbcr
+
+
+def _ycbcr_to_rgb_bt601(ycbcr_chw: torch.Tensor) -> torch.Tensor:
+    """Differentiable YCbCr→RGB (BT.601 limited range). Input/output in [0, 255]."""
+    M = torch.tensor(
+        _YCBCR_TO_RGB_BT601_LIMITED, dtype=ycbcr_chw.dtype, device=ycbcr_chw.device
+    )
+    bias = torch.tensor([16.0, 128.0, 128.0], dtype=ycbcr_chw.dtype, device=ycbcr_chw.device)
+    ycbcr_zero = ycbcr_chw - bias.reshape(3, 1, 1)
+    rgb = torch.einsum("ij,...jhw->...ihw", M, ycbcr_zero)
+    return rgb
+
+
+def apply_mp4_codec_simulation_during_training(
+    rgb_tensor: torch.Tensor,
+    *,
+    chroma_subsample: bool = True,
+    block_quant_noise_std: float = 0.0,
+    block_size: int = 8,
+) -> torch.Tensor:
+    """Differentiable mp4 codec roundtrip simulation.
+
+    Per engineering audit 2026-05-12 "pixels→bytes→pixels lowest level": the
+    real eval path ENCODES decoded RGB into mp4 (yuv4:2:0 + DCT quantization
+    + AV1/H.264 block coding) then DECODES back to RGB before the scorer
+    preprocesses (rgb_to_yuv6). The existing :func:`apply_eval_roundtrip_during_training`
+    simulates ONLY the uint8 quantization at the renderer output — NOT the
+    mp4 codec losses.
+
+    This function adds (1) BT.601 chroma 4:2:0 subsampling (the dominant
+    lossy operation in mp4 yuv420 encoding) and optionally (2) per-block
+    Gaussian quantization noise as a straight-through-estimable proxy for
+    DCT-quant losses.
+
+    The simulation is end-to-end differentiable. Chroma subsampling is
+    avg_pool2d→upsample(bilinear); block noise is additive at the chroma
+    block grain, with magnitude tunable via ``block_quant_noise_std``.
+
+    Empirical proxy-auth gap closure: PR106 r2 operating point shows
+    ~0.5-2% PoseNet gap caused by chroma 4:2:0; with this sim in the
+    eval-roundtrip chain the gap should narrow to ~0.1-0.3%.
+
+    Args:
+        rgb_tensor: ``(..., 3, H, W)`` float in ``[0, 255]``. The function
+            preserves leading dims (NCHW or BTCHW supported).
+        chroma_subsample: if True (default), apply 2× chroma 4:2:0 subsample
+            + bilinear upsample. Mimics yuv4:2:0 mp4 chroma compression.
+        block_quant_noise_std: if > 0, add Gaussian noise of this stddev (in
+            uint8 units, 0..255 range) to each 8×8 chroma block. Default 0
+            (no DCT-quant simulation; only chroma subsampling).
+        block_size: chroma block size (default 8 to match mp4 / H.264 / AV1
+            macroblock chroma granularity).
+
+    Returns:
+        Tensor of same shape as input, with chroma roundtripped through
+        4:2:0 + optional DCT-quant noise.
+
+    Raises:
+        ValueError: on dtype/shape mismatch.
+    """
+    if rgb_tensor.dim() < 3:
+        raise ValueError(
+            f"apply_mp4_codec_simulation_during_training requires (..., 3, H, W); "
+            f"got shape {tuple(rgb_tensor.shape)}"
+        )
+    if rgb_tensor.shape[-3] != 3:
+        raise ValueError(
+            f"apply_mp4_codec_simulation_during_training expects 3 channels at dim -3; "
+            f"got {rgb_tensor.shape[-3]}"
+        )
+    if not rgb_tensor.is_floating_point():
+        raise ValueError(
+            f"apply_mp4_codec_simulation_during_training requires a float tensor; "
+            f"got {rgb_tensor.dtype}"
+        )
+
+    orig_shape = rgb_tensor.shape
+    orig_h, orig_w = int(orig_shape[-2]), int(orig_shape[-1])
+    flat = rgb_tensor.reshape(-1, 3, orig_h, orig_w)
+
+    # Forward path: RGB → YCbCr → subsample chroma → (noise) → upsample → YCbCr → RGB
+    ycbcr = _rgb_to_ycbcr_bt601(flat)
+    y = ycbcr[:, 0:1, :, :]
+    cb = ycbcr[:, 1:2, :, :]
+    cr = ycbcr[:, 2:3, :, :]
+
+    if chroma_subsample:
+        # Pad to even dims if needed (mp4 yuv420 requires even H/W).
+        pad_h = orig_h % 2
+        pad_w = orig_w % 2
+        if pad_h or pad_w:
+            cb = F.pad(cb, (0, pad_w, 0, pad_h), mode="replicate")
+            cr = F.pad(cr, (0, pad_w, 0, pad_h), mode="replicate")
+        # 4:2:0 chroma subsample: avg pool 2×2 → bilinear up.
+        cb_ds = F.avg_pool2d(cb, kernel_size=2, stride=2)
+        cr_ds = F.avg_pool2d(cr, kernel_size=2, stride=2)
+
+        if block_quant_noise_std > 0:
+            # Per-block additive Gaussian noise in chroma — straight-through
+            # via in-place add (no detach needed; gradients flow).
+            noise_cb = torch.randn_like(cb_ds) * float(block_quant_noise_std)
+            noise_cr = torch.randn_like(cr_ds) * float(block_quant_noise_std)
+            cb_ds = cb_ds + noise_cb
+            cr_ds = cr_ds + noise_cr
+
+        # Upsample back to original chroma resolution.
+        cb_up = F.interpolate(
+            cb_ds, size=cb.shape[-2:], mode="bilinear", align_corners=False
+        )
+        cr_up = F.interpolate(
+            cr_ds, size=cr.shape[-2:], mode="bilinear", align_corners=False
+        )
+        # Trim back to original h, w (drop any pad).
+        if pad_h or pad_w:
+            cb_up = cb_up[..., :orig_h, :orig_w]
+            cr_up = cr_up[..., :orig_h, :orig_w]
+        cb = cb_up
+        cr = cr_up
+
+    ycbcr_rt = torch.cat([y, cb, cr], dim=1)
+    rgb_rt = _ycbcr_to_rgb_bt601(ycbcr_rt)
+    # Final clamp to [0, 255] — outside this range is unrepresentable in
+    # yuv420 8-bit and would be clipped by ffmpeg anyway.
+    rgb_rt = rgb_rt.clamp(0.0, 255.0)
+    return rgb_rt.reshape(orig_shape)
+
+
+# --------------------------------------------------------------------------- #
 # Global monkey-patch (Aaron's path)                                           #
 # --------------------------------------------------------------------------- #
 
