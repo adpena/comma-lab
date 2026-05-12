@@ -83,16 +83,16 @@ from __future__ import annotations
 
 import importlib
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import torch
 import torch.nn.functional as F
 
 from tac.quantization import Uint8STE
-
 
 # --------------------------------------------------------------------------- #
 # Constants                                                                    #
@@ -112,7 +112,7 @@ SCORER_HW: tuple[int, int] = (384, 512)
 # --------------------------------------------------------------------------- #
 
 
-class Yuv6RoutingMode(str, Enum):
+class Yuv6RoutingMode(StrEnum):
     """How the trainer should achieve autograd-friendly rgb_to_yuv6.
 
     MONKEY_PATCH_GLOBAL
@@ -289,15 +289,13 @@ def apply_eval_roundtrip_during_training(
     else:
         down = flat
 
-    if simulate_uint8:
-        if ste_round:
-            # Canonical STE: forward is exact uint8 clamp/round; backward is
-            # identity inside range and zero outside saturation.
-            out_flat = Uint8STE.apply(down)
-        else:
-            out_flat = down.clamp(0.0, 255.0)
-    else:
-        out_flat = down
+    # Canonical STE: forward is exact uint8 clamp/round; backward is identity
+    # inside range and zero outside saturation.
+    out_flat = (
+        (Uint8STE.apply(down) if ste_round else down.clamp(0.0, 255.0))
+        if simulate_uint8
+        else down
+    )
 
     return out_flat.reshape(orig_shape)
 
@@ -327,7 +325,7 @@ def _rgb_to_ycbcr_bt601(rgb_chw: torch.Tensor) -> torch.Tensor:
         _RGB_TO_YCBCR_BT601_LIMITED, dtype=rgb_chw.dtype, device=rgb_chw.device
     )
     bias = torch.tensor([16.0, 128.0, 128.0], dtype=rgb_chw.dtype, device=rgb_chw.device)
-    # Einsum: (..., 3, H, W) × (3, 3) → (..., 3, H, W); rgb channels first.
+    # Einsum: (..., 3, H, W) x (3, 3) -> (..., 3, H, W); rgb channels first.
     ycbcr = torch.einsum("ij,...jhw->...ihw", M, rgb_chw)
     ycbcr = ycbcr + bias.reshape(3, 1, 1)
     return ycbcr
@@ -351,27 +349,39 @@ def apply_mp4_codec_simulation_during_training(
     block_quant_noise_std: float = 0.0,
     block_size: int = 8,
 ) -> torch.Tensor:
-    """Differentiable mp4 codec roundtrip simulation.
+    """PARTIAL differentiable mp4 codec roundtrip simulation.
 
-    Per engineering audit 2026-05-12 "pixels→bytes→pixels lowest level": the
-    real eval path ENCODES decoded RGB into mp4 (yuv4:2:0 + DCT quantization
-    + AV1/H.264 block coding) then DECODES back to RGB before the scorer
-    preprocesses (rgb_to_yuv6). The existing :func:`apply_eval_roundtrip_during_training`
-    simulates ONLY the uint8 quantization at the renderer output — NOT the
-    mp4 codec losses.
+    SCOPE OF SIMULATION (per 2026-05-12 adversarial-review honesty pass):
+    This function captures ~30% of real mp4 codec losses. Specifically it
+    simulates:
+      1. BT.601 RGB→YCbCr conversion (matches ffmpeg yuv420 default)
+      2. Chroma 4:2:0 subsampling (avg_pool2d→bilinear-upsample)
+      3. Optional per-block additive Gaussian noise (proxy for DCT-quant)
+      4. YCbCr→RGB inverse + clamp[0, 255]
 
-    This function adds (1) BT.601 chroma 4:2:0 subsampling (the dominant
-    lossy operation in mp4 yuv420 encoding) and optionally (2) per-block
-    Gaussian quantization noise as a straight-through-estimable proxy for
-    DCT-quant losses.
+    What this function DOES NOT simulate (the other ~70% of real mp4 loss):
+      - Block DCT quantization with per-frequency quant tables (real codecs
+        use structured quantization tables tuned to HVS, NOT Gaussian noise)
+      - Motion-compensated prediction (cross-frame residuals — typically
+        the DOMINANT compression contributor for video)
+      - Deblocking filter (smoothing across 8×8 block boundaries)
+      - Loop filter (SAO for AV1, etc.)
+      - Rate-distortion-optimized quantization decisions
+
+    THE NAME OVERSTATES THE SCOPE: a more faithful name would be
+    `apply_chroma_subsample_with_optional_noise`. The name kept for API
+    discoverability; this docstring is the authoritative scope contract.
+
+    GAP-CLOSURE CLAIM IS A PREDICTION, NOT A MEASUREMENT:
+    "0.5-2% PoseNet gap closure at PR106 r2" is the prediction assuming
+    chroma 4:2:0 dominates the gap. If motion-compensated residual loss
+    dominates instead (more likely for video data), this function closes
+    essentially nothing of the proxy-auth gap. Empirical paired-eval would
+    be required to validate.
 
     The simulation is end-to-end differentiable. Chroma subsampling is
     avg_pool2d→upsample(bilinear); block noise is additive at the chroma
     block grain, with magnitude tunable via ``block_quant_noise_std``.
-
-    Empirical proxy-auth gap closure: PR106 r2 operating point shows
-    ~0.5-2% PoseNet gap caused by chroma 4:2:0; with this sim in the
-    eval-roundtrip chain the gap should narrow to ~0.1-0.3%.
 
     Args:
         rgb_tensor: ``(..., 3, H, W)`` float in ``[0, 255]``. The function
@@ -424,7 +434,7 @@ def apply_mp4_codec_simulation_during_training(
         if pad_h or pad_w:
             cb = F.pad(cb, (0, pad_w, 0, pad_h), mode="replicate")
             cr = F.pad(cr, (0, pad_w, 0, pad_h), mode="replicate")
-        # 4:2:0 chroma subsample: avg pool 2×2 → bilinear up.
+        # 4:2:0 chroma subsample: avg pool 2x2 -> bilinear up.
         cb_ds = F.avg_pool2d(cb, kernel_size=2, stride=2)
         cr_ds = F.avg_pool2d(cr, kernel_size=2, stride=2)
 
@@ -633,11 +643,11 @@ def assert_yuv6_forward_equivalence_to_upstream(
 __all__ = [
     "CAMERA_HW",
     "SCORER_HW",
-    "Yuv6RoutingMode",
     "Yuv6PatchToken",
-    "differentiable_rgb_to_yuv6",
+    "Yuv6RoutingMode",
     "apply_eval_roundtrip_during_training",
+    "assert_yuv6_forward_equivalence_to_upstream",
+    "differentiable_rgb_to_yuv6",
     "patch_upstream_yuv6_globally",
     "unpatch_upstream_yuv6",
-    "assert_yuv6_forward_equivalence_to_upstream",
 ]

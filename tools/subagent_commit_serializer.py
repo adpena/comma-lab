@@ -23,6 +23,18 @@ single fcntl.flock(LOCK_EX) on .omx/state/.commit-lock. Inside the lock the
 wrapper performs `git add <files>` then `git commit -m <msg>` so the index
 + HEAD update is atomic w.r.t. other concurrent invocations.
 
+SCOPE OF PROTECTION (honest, per 2026-05-12 adversarial-review pass):
+This serializer protects against concurrent commits ON A SINGLE MACHINE.
+`fcntl.flock` is filesystem-local — multiple machines (e.g., one agent on
+local + one agent on a Vast.ai/Modal/Lightning instance) running git operations
+on COPIES of the repo do NOT coordinate via this lock. The bug class CLAUDE.md
+describes ("2+ subagents commit near-simultaneously") happens at the
+operating-system process layer, which fcntl covers; multi-machine git
+coordination is a separate problem space requiring (e.g.) a network-side
+serializer, push-with-lease semantics, or a distributed lock service. NOT
+covered by this tool. Multi-machine subagents should still call this wrapper
+on their local machine, then rely on git push-with-lease at sync time.
+
 Usage
 ─────
 From a subagent:

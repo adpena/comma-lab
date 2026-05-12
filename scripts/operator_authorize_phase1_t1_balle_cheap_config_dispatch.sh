@@ -7,21 +7,28 @@
 # WITH 2026-05-12 ENGINEERING-AUDIT REFINEMENT
 # (feedback_council_t1_balle_engineering_audit_pixels_bytes_pixels_20260512.md):
 #
-# COST BAND — HONESTLY DOCUMENTED:
-#   - The original TT "$0.59 cost band" assumed all flags OFF or smoke-only.
-#     With T13+T19+T20+T22 ALL ON, codex's 2026-05-11 empirical Modal T4 run
-#     made only ~100/3000 epochs in 23.5h before hitting Modal's 24h cap
-#     (14 min/epoch on T4, $14 spent for partial result). The real cost band
-#     for 3000 epochs of all-flags-on T1 Balle on T4 is $50-80, not $0.59.
-#   - With Tier-1 engineering patches (teacher-pose cache, autocast FP16,
-#     soft_cosine surrogate, batch_size=32) — Modal T4 ~5-10× faster:
-#     3000 epochs ≈ 100-200 min ≈ $1-2 on T4. Still not "cheap" at $0.59 but
-#     within $5/individual cap.
-#   - Honest pre-patch cost band per platform:
-#       * Modal T4 all-flags-on (PRE-patch): ~$50-80 for 3000 epochs (DO NOT)
-#       * Modal T4 all-flags-on (POST-patch, with teacher cache): ~$5-10
-#       * Vast.ai 4090 (faster GPU, native AMP): ~$0.50-1.50 at 3000 epochs
-#       * Modal A100 (best $/TFLOP for this workload): ~$3-5 at 3000 epochs
+# COST BAND — HONESTLY DOCUMENTED (post-adversarial-review 2026-05-12):
+#
+# AMDAHL-ADJUSTED SPEEDUP MATH (the prior "33-50×" was multiplicative-naive):
+#   Per-batch decomposition on T4: ~80% scorer work + ~20% other.
+#   - teacher cache: eliminates ~25% of scorer = 0.20·T saved → 1.25× (NOT 1.4×)
+#   - soft_cosine: ~5× on Sinkhorn fraction (~10-20% of scorer work) = ~10% saved → 1.11× (NOT 5×)
+#   - batch_size 32: ~15-20% on scorer SM util = ~12% saved → 1.13× (NOT 1.18× of total)
+#   - autocast FP16: 4× on remaining scorer (~50% of remaining time) = ~38% saved → ~1.6× (NOT 4-6×)
+#   - Compound (sequentially applied, NOT multiplied): ~2.5-3.5× total speedup, NOT 33-50×.
+#
+# REALIZED COST BAND post-Tier-1 (calibrated to 2.5-3.5× speedup, not 33-50×):
+#   - Modal T4 all-flags-on PRE-patch:    ~$50-80 / 3000 ep (codex empirical)
+#   - Modal T4 all-flags-on POST-patch:   ~$15-25 / 3000 ep (3× speedup of $50-80, NOT $5-10)
+#   - Modal A100 all-flags-on POST-patch: ~$8-15 / 3000 ep (A100 ~2× T4 speed; NOT $0.50-1)
+#   - Vast.ai 4090 all-flags-on POST-patch: ~$3-8 / 3000 ep (4090 ~3× T4 speed)
+#
+# WORKABLE COST FRAME FOR THE $5-INDIVIDUAL CAP:
+#   At 3000 epochs the only platform within $5 is Vast.ai 4090, AND only after
+#   the autocast path is runtime-smoked (NOT yet — see Finding 2 of 2026-05-12
+#   adversarial review). For sub-$5 dispatches on Modal, use REDUCED epoch counts
+#   (--epochs 500-1000) which compresses linearly with time. Operator must
+#   explicitly choose: full 3000ep (~$10-25 Modal A100) OR short 500ep (~$1.5-4 T4).
 #   - This wrapper currently DOES NOT enforce a 2h timeout that would cap
 #     partial-result spending. Caller's `--timeout-hours` (set by the modal
 #     run --detach call below) is the only safety. ENSURE 2h or less.
