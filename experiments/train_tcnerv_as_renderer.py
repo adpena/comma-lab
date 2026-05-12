@@ -238,7 +238,7 @@ def main(argv: list[str] | None = None) -> int:
     if yuv6_token is not None:
         from tac.differentiable_eval_roundtrip import unpatch_upstream_yuv6
         try: unpatch_upstream_yuv6(yuv6_token)
-        except Exception: pass
+        except Exception: pass  # silent-swallow-OK: cleanup unpatch in finalizer; original error already surfaced upstream
     return 0
 
 

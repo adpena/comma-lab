@@ -45,7 +45,7 @@ from src.tac.categorical_substrate import (  # noqa: E402
 )
 
 
-class _EMA:
+class EMA:
     """Weight EMA mirroring ``tac.training.EMA``."""
 
     def __init__(self, model: nn.Module, decay: float = 0.997) -> None:
@@ -133,6 +133,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--device", type=str, default="cuda")
+    # CLAUDE.md "Auth eval EVERYWHERE" canonical opt-out flag. The categorical
+    # substrate trainer defers archive build + auth eval to the operator-gated
+    # Phase B dispatch step (per feedback_anr_token_renderer_categorical_full
+    # _substrate_landed_20260511.md). When set, the trainer saves the EMA
+    # checkpoint and exits cleanly; the operator runs auth eval as a separate
+    # step that consumes the saved checkpoint via the dispatch helper.
+    parser.add_argument(
+        "--no-auth-eval-on-best",
+        action="store_true",
+        default=False,
+        help=(
+            "Skip auth_eval at end of training. Defers to operator-gated "
+            "Phase B dispatch (CLAUDE.md operator-gate non-negotiable + II's "
+            "ANR/categorical landing memo). Default OFF; CI/dispatch wrappers "
+            "must pass this flag explicitly to acknowledge they own the "
+            "subsequent auth eval step."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.device.lower() == "mps":
@@ -164,7 +182,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         cuda_required=(args.device == "cuda"),
     )
     renderer = CategoricalRenderer(cfg).to(device)
-    ema = _EMA(renderer, decay=args.ema_decay)
+    ema = EMA(renderer, decay=args.ema_decay)
     opt = torch.optim.AdamW(renderer.parameters(), lr=args.lr)
 
     # SMOKE PATH

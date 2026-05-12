@@ -115,7 +115,7 @@ def inflate(src_bin: str, dst_raw: str) -> int:
     blob = Path(src_bin).read_bytes()
     if blob[:4] != MAGIC:
         raise ValueError(f"bad magic {blob[:4]!r}")
-    (version, fid, latent_dim, n_pairs, tile_rows, tile_cols) = struct.unpack_from("<HHHHHH", blob, 4)
+    (version, fid, latent_dim, n_pairs, tile_rows, tile_cols) = struct.unpack_from("<HHHHHH", blob, 4)  # DEAD_BYTES_AUDIT_OK: forward-compat version field; codec is v1 by construction (single MAGIC + format_id check below)
     if fid != FORMAT_ID:
         raise ValueError(f"unexpected format_id {fid:#x}")
     pos = 16

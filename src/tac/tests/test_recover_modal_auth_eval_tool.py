@@ -71,7 +71,7 @@ def test_terminal_notes_include_exact_custody_fields(tmp_path: Path) -> None:
             "passed": True,
             "result_json": str(tmp_path / "modal_cuda_auth_eval_result.json"),
         },
-        {"lane_id": "lane_pr106_r2"},
+        {"lane_id": "lane_pr106_r2"},  # FAKE_LANE_OK:test-fixture lane_id
         "posterior_update=accepted",
     )
 
@@ -114,9 +114,9 @@ def test_maybe_update_posterior_routes_auth_eval_artifact(monkeypatch, tmp_path:
 
     note = tool._maybe_update_posterior(
         {"output_dir": str(tmp_path), "passed": True},
-        {"lane_id": "lane_pr106_r2"},
+        {"lane_id": "lane_pr106_r2"},  # FAKE_LANE_OK:test-fixture lane_id
     )
 
     assert calls[0]["path"] == tmp_path / "contest_auth_eval.json"
-    assert calls[0]["architecture_class"] == "lane_pr106_r2"
+    assert calls[0]["architecture_class"] == "lane_pr106_r2"  # FAKE_LANE_OK:test-fixture lane_id
     assert "posterior_update=accepted" in note

@@ -417,7 +417,7 @@ def _run_subprocess(*popenargs, **kwargs) -> subprocess.CompletedProcess:
             else min(float(existing_timeout), max(remaining, 0.001))
         )
     try:
-        return subprocess.run(*popenargs, **kwargs)
+        return subprocess.run(*popenargs, **kwargs)  # subprocess-no-check-OK: helper returns CompletedProcess; caller owns returncode handling
     except subprocess.TimeoutExpired as exc:
         stdout = _as_text(exc.stdout)
         stderr = _as_text(exc.stderr)

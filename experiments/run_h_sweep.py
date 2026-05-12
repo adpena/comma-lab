@@ -302,7 +302,7 @@ def provider_env(gate: dict) -> dict[str, str] | None:
 
 
 def run_provider_command(cmd: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=str(REPO_ROOT), env=env)
+    return subprocess.run(cmd, cwd=str(REPO_ROOT), env=env)  # subprocess-no-check-OK: helper returns CompletedProcess; caller owns returncode handling
 
 
 def load_sweep_config() -> dict:

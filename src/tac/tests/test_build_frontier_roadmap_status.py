@@ -299,7 +299,7 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
                 "score_claim": False,
                 "dispatch_attempted": False,
                 "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
-                "lane_id": "lane_generic_packet",
+                "lane_id": "lane_generic_packet",  # FAKE_LANE_OK:test-fixture lane_id
                 "job_name": "job_generic_packet",
                 "dispatch_unlocked": True,
                 "ready_for_exact_eval_dispatch_claim": True,

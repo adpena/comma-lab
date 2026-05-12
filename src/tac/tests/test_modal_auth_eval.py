@@ -424,7 +424,7 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
     mod.main(
         str(archive),
         str(out_dir),
-        lane_id="lane_unit_modal_auth_eval",
+        lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval",
     )
 
@@ -473,7 +473,7 @@ def test_modal_cuda_inflate_env_request_is_diagnostic_only(mod, tmp_path, monkey
         str(archive),
         str(out_dir),
         inflate_env="CUDA_VISIBLE_DEVICES=",
-        lane_id="lane_unit_modal_auth_eval_diag",
+        lane_id="lane_unit_modal_auth_eval_diag",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_diag",
     )
 
@@ -520,7 +520,7 @@ def test_modal_cuda_inflate_device_request_is_diagnostic_only(mod, tmp_path, mon
         str(archive),
         str(out_dir),
         inflate_device="cpu",
-        lane_id="lane_unit_modal_auth_eval_diag_device",
+        lane_id="lane_unit_modal_auth_eval_diag_device",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_diag_device",
     )
 
@@ -548,7 +548,7 @@ def test_modal_gpu_host_cpu_scorer_requires_explicit_inflate_device(
             str(archive),
             str(out_dir),
             scorer_device="cpu",
-            lane_id="lane_unit_modal_auth_eval_diag_cpu_scorer",
+            lane_id="lane_unit_modal_auth_eval_diag_cpu_scorer",  # FAKE_LANE_OK:test-fixture lane_id
             instance_job_id="job_unit_modal_auth_eval_diag_cpu_scorer",
         )
 
@@ -589,7 +589,7 @@ def test_modal_gpu_host_cpu_scorer_cuda_inflate_is_diagnostic_only(
         str(out_dir),
         scorer_device="cpu",
         inflate_device="cuda",
-        lane_id="lane_unit_modal_auth_eval_cpu_scorer_cuda_inflate",
+        lane_id="lane_unit_modal_auth_eval_cpu_scorer_cuda_inflate",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_cpu_scorer_cuda_inflate",
     )
 
@@ -631,7 +631,7 @@ def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path,
         str(out_dir),
         detach=True,
         provider_detach_ack=True,
-        lane_id="lane_unit_modal_auth_eval",
+        lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_detached",
     )
 
@@ -640,7 +640,7 @@ def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path,
     assert metadata["axis"] == "contest_cuda"
     assert metadata["call_id"] == "fc-test-modal-auth"
     assert metadata["result_json_name"] == "modal_cuda_auth_eval_result.json"
-    assert metadata["lane_id"] == "lane_unit_modal_auth_eval"
+    assert metadata["lane_id"] == "lane_unit_modal_auth_eval"  # FAKE_LANE_OK:test-fixture lane_id
     assert (out_dir / "modal_call_id.txt").read_text().strip() == "fc-test-modal-auth"
     assert [call["status"] for call in claim_calls] == [
         "active_modal_auth_eval_spawning",
@@ -668,7 +668,7 @@ def test_detached_modal_auth_eval_marks_inflate_env_as_diagnostic_axis(mod, tmp_
         inflate_device="cpu",
         detach=True,
         provider_detach_ack=True,
-        lane_id="lane_unit_modal_auth_eval",
+        lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_diag_detached",
     )
 
@@ -701,7 +701,7 @@ def test_detached_modal_auth_eval_marks_cpu_scorer_as_diagnostic_axis(
         inflate_device="cuda",
         detach=True,
         provider_detach_ack=True,
-        lane_id="lane_unit_modal_auth_eval",
+        lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_cpu_scorer_detached",
     )
 
@@ -729,7 +729,7 @@ def test_detached_modal_auth_eval_requires_provider_detach_ack(mod, tmp_path, mo
             str(archive),
             str(out_dir),
             detach=True,
-            lane_id="lane_unit_modal_auth_eval",
+            lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
             instance_job_id="job_unit_modal_auth_eval_detached",
         )
 

@@ -306,7 +306,7 @@ def build_scorer_surface_shaking_plan(
     rows = [_atom_row(point, atom) for atom in families]
     rows.sort(
         key=lambda row: (
-            row["predicted_score_delta"],
+            row["predicted_score_delta"],  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
             -row["benefit_per_added_byte"],
             row["atom_id"],
         )
@@ -387,7 +387,7 @@ def render_markdown(plan: dict[str, Any]) -> str:
             + " | ".join(
                 (
                     f"`{_md(row['atom_id'])}`",
-                    f"`{row['predicted_score_delta']:.9f}`",
+                    f"`{row['predicted_score_delta']:.9f}`",  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                     f"`{row['expected_added_bytes']}`",
                     f"`{row['benefit_per_added_byte']:.12g}`",
                     _md(row["packetir_stream"]),
@@ -420,7 +420,7 @@ def _atom_row(point: OperatingPoint, atom: SurfaceAtomFamily) -> dict[str, Any]:
     total_delta = rate_delta + seg_delta + pose_delta
     benefit = max(0.0, -total_delta)
     added = max(1, atom.expected_added_bytes)
-    return {
+    return {  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
         "atom_id": atom.atom_id,
         "surface": atom.surface,
         "perturbation_space": atom.perturbation_space,

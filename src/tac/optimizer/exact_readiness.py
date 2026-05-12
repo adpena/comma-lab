@@ -36,7 +36,7 @@ ACTIVE_FLOOR_SCORE = ACTIVE_SCORE_FRONTIER_SCORE
 SHA256_HEX = frozenset("0123456789abcdef")
 PREDICTED_SCORE_FIELDS = frozenset(
     {
-        "predicted_score",
+        "predicted_score",  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
         "predicted_score_point_estimate",
         "predicted_score_band",
         "predicted_contest_cpu_gha",

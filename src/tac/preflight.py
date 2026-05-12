@@ -1400,6 +1400,8 @@ def preflight_all(
     verbose: bool = True,
     use_fs_cache: bool = True,
     _fs_cache_wrapped: bool = False,
+    wall_clock_budget_s: float | None = DEFAULT_PREFLIGHT_CLI_TIMEOUT_S,
+    _timing_wrapped: bool = False,
 ) -> None:
     """Single entry point: run ALL preflight checks. Raises on any failure.
 
@@ -1413,6 +1415,52 @@ def preflight_all(
     profile_name + tto_frames_path + gt_poses_path + masks_path. Inflate-time
     preflight needs renderer_path + masks_path + archive_path.
     """
+    if wall_clock_budget_s is not None and wall_clock_budget_s <= 0:
+        raise ValueError("full preflight wall-clock budget must be positive")
+
+    if wall_clock_budget_s is not None and not _timing_wrapped:
+        started = time.perf_counter()
+        recorder = _PreflightCliTimingRecorder(scope="all", runner=preflight_all)
+        try:
+            with recorder, _preflight_timeout_after(wall_clock_budget_s):
+                preflight_all(
+                    profile_name=profile_name,
+                    profile_arch=profile_arch,
+                    tto_frames_path=tto_frames_path,
+                    gt_poses_path=gt_poses_path,
+                    masks_path=masks_path,
+                    renderer_path=renderer_path,
+                    archive_path=archive_path,
+                    check_codebase=check_codebase,
+                    verbose=verbose,
+                    use_fs_cache=use_fs_cache,
+                    _fs_cache_wrapped=_fs_cache_wrapped,
+                    wall_clock_budget_s=None,
+                    _timing_wrapped=True,
+                )
+        except PreflightTimeoutError as exc:
+            elapsed = time.perf_counter() - started
+            raise PreflightTimeoutError(
+                _preflight_budget_error_message(
+                    scope="full",
+                    budget_s=wall_clock_budget_s,
+                    elapsed_s=elapsed,
+                    step_rows=recorder.rows(),
+                    cause=str(exc),
+                )
+            ) from exc
+        elapsed = time.perf_counter() - started
+        if elapsed > wall_clock_budget_s:
+            raise PreflightTimeoutError(
+                _preflight_budget_error_message(
+                    scope="full",
+                    budget_s=wall_clock_budget_s,
+                    elapsed_s=elapsed,
+                    step_rows=recorder.rows(),
+                )
+            )
+        return
+
     codebase_cache_token: str | None = None
     codebase_cache_paths: tuple[Path, ...] = ()
     if (
@@ -1472,6 +1520,8 @@ def preflight_all(
                 verbose=verbose,
                 use_fs_cache=use_fs_cache,
                 _fs_cache_wrapped=True,
+                wall_clock_budget_s=wall_clock_budget_s,
+                _timing_wrapped=_timing_wrapped,
         )
         return
 
@@ -9910,8 +9960,19 @@ def _scan_inflate_for_scorer_load_with_waivers(
     else:
         # Shell file fallback: any line mentioning posenet.bin / segnet.bin
         # / safetensors.load near scorer keywords.
+        #
+        # Hardening 2026-05-12 (integration audit v3 polish): skip pure-comment
+        # shell lines (those whose first non-whitespace char is '#'). A shell
+        # comment cannot load a scorer at runtime — including comment text in
+        # the scan produces false-positives on documentation that itself cites
+        # the strict-scorer-rule (e.g. `# * NO scorer load (strict-scorer-rule)`).
+        # The canonical loader-invocation patterns (python -c "...load_scorers...",
+        # cp posenet.bin, source load_segnet.sh) all live on non-comment lines.
         for i, line in enumerate(text.splitlines(), start=1):
-            low = line.lower()
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            low = stripped.lower()
             if "scorer" in low and ("load" in low or "import" in low):
                 msg = (
                     f"{rel}:{i}: shell line references scorer load at "
@@ -13075,11 +13136,37 @@ def check_no_raw_zip_extractall(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Block raw ZipFile.extractall outside the canonical safe extractor."""
+    """Block raw ZipFile.extractall outside the canonical safe extractor.
+
+    Hardening 2026-05-12 (integration audit v3 polish): the bare ``.extractall(``
+    substring also matches ``tar.extractall(...)`` / ``tarfile.extractall(...)``,
+    producing false-positives on TAR (not ZIP) extraction. The CLAUDE.md rule
+    is about ZIP because ZIP archives can carry path-traversal payloads via
+    member name shenanigans the canonical ``safe_extract_zip`` defends against.
+    TAR has the same risk class, but the canonical defense is per-member
+    path-traversal validation BEFORE the call (the Kaggle kernels already do
+    this — they walk ``tar.getmembers()``, resolve each member, and ``raise
+    RuntimeError`` on any member whose resolved path escapes ``destination``).
+    Skip lines whose receiver is clearly a tar handle (tokens ``tar`` /
+    ``tarfile`` / ``t`` named TarFile / etc.) so the gate stays focused on the
+    ZIP class. Same-line waiver ``# RAW_EXTRACTALL_OK:<reason>`` honored for
+    intentional cases.
+    """
     root = Path(repo_root or REPO_ROOT).resolve()
     scan_roots = ("src", "tools", "scripts", "experiments", "submissions")
     violations: list[str] = []
     needle = "." + "extractall("
+    # Patterns that mean "this is a tar handle, not a zip handle". We accept
+    # ``<name>.extractall(`` where <name> contains ``tar`` (case-insensitive)
+    # OR is a known tar-context receiver. The substring is intentionally
+    # conservative — narrow patterns that show up at scale in this codebase.
+    tar_receiver_tokens: tuple[str, ...] = (
+        "tar.extractall(",
+        "tarball.extractall(",
+        "tarfile.extractall(",
+        "self.tar.extractall(",
+        "tar_handle.extractall(",
+    )
     source_index = _current_source_index(root)
     if source_index is not None:
         candidate_paths = source_index.files_containing_substrings(
@@ -13110,11 +13197,30 @@ def check_no_raw_zip_extractall(
         except UnicodeDecodeError:
             continue
         for lineno, line in enumerate(text.splitlines(), start=1):
-            if needle in line:
-                violations.append(
-                    f"{rel}:{lineno}: raw ZipFile.extractall is forbidden; "
-                    "use tac.submission_archive.safe_extract_zip"
-                )
+            if needle not in line:
+                continue
+            stripped = line.strip()
+            # Skip pure-comment / docstring lines.
+            if stripped.startswith("#"):
+                continue
+            # Skip same-line waiver.
+            if "RAW_EXTRACTALL_OK" in line:
+                continue
+            # Skip TAR-handle receivers (gate is for ZIP class only).
+            if any(tok in line for tok in tar_receiver_tokens):
+                continue
+            # Skip lines where the substring is inside a backtick (markdown
+            # code-span inside a docstring or string literal). This avoids
+            # false-positives on the gate's own self-documenting docstring
+            # which mentions ``.extractall(`` to explain what it blocks.
+            backtick_idx = line.find("``")
+            needle_idx = line.find(needle)
+            if backtick_idx != -1 and backtick_idx < needle_idx:
+                continue
+            violations.append(
+                f"{rel}:{lineno}: raw ZipFile.extractall is forbidden; "
+                "use tac.submission_archive.safe_extract_zip"
+            )
     if verbose and violations:
         print(f"  [safe-zip-extract] {len(violations)} raw extractall violation(s):")
         for violation in violations:
@@ -13701,10 +13807,27 @@ def _check_mps_decision_in_text(
     violations: list[str] = []
     lines = text.splitlines()
     n = len(lines)
+    # Hardening 2026-05-12 (integration audit v3 polish): NEGATED decision
+    # verbs (e.g. "do not promote advisory macOS CPU curves") are GUARDRAILS,
+    # not violations. The rule is "don't promote on MPS evidence", and a line
+    # that literally restates the rule is documenting it, not violating it.
+    # The negator must immediately precede the verb on the same line within
+    # ~12 chars so we don't accidentally exempt an arbitrarily-distant "not".
+    _NEGATED_VERB = re.compile(
+        r"(?:\b(?:do not|don['’]t|must not|never|cannot|can['’]t|"
+        r"shall not|won['’]t|will not|do NOT|MUST NOT|NEVER|NOT)\s+(?:[a-z]+\s+){0,2})"
+        r"(?:GREEN|RED|KILL|killed|promote|promoted|FALSIFIED|FALSIFICATION|"
+        r"dispatched|blessed)\b",
+        re.IGNORECASE,
+    )
     for i, line in enumerate(lines):
         if not _MPS_DECISION_VERBS.search(line):
             continue
         if not _MPS_PROXY_TOKENS.search(line):
+            continue
+        # Skip if the verb is negated on the same line (rule restatement,
+        # not a decision being made).
+        if _NEGATED_VERB.search(line):
             continue
         # Paragraph window: ±10 lines.
         lo = max(0, i - 10)
@@ -22449,12 +22572,30 @@ def check_subprocess_run_checked(
             # Common safe patterns on the same line
             if "check=True" in line or "check = True" in line:
                 continue
-            # Multi-line call: scan next 8 lines for check=True
+            # Inline returncode check: `subprocess.run(...).returncode == 0` /
+            # `if subprocess.run(...).returncode != 0` etc. The return value
+            # is consumed immediately by a returncode comparison — that IS
+            # the canonical safe pattern, just without a temporary variable.
+            # Hardening 2026-05-12 (integration audit v3 polish).
+            if ".returncode" in line:
+                # Confirm the .returncode is actually attached to the
+                # subprocess.run call (not on a different identifier on
+                # the same line). Conservative: accept any same-line
+                # `).returncode` token after the subprocess.run call.
+                run_idx = line.find("subprocess.run(")
+                rc_idx = line.find(".returncode", run_idx)
+                if run_idx != -1 and rc_idx > run_idx:
+                    continue
+            # Multi-line call: scan next 8 lines for check=True / .returncode
             window = "\n".join(lines[i:i + 8])
             if "check=True" in window or "check = True" in window:
                 continue
             if "check=False" in window or "check = False" in window:
                 # Explicit opt-out — accept (operator made an active choice).
+                continue
+            # Multi-line call with trailing `).returncode` (canonical
+            # `result = subprocess.run(...,\n  ...\n).returncode` shape).
+            if ").returncode" in window:
                 continue
             # If the return value is captured (e.g., `r =` or `result =`),
             # look forward up to 50 lines for a `.returncode` reference.
@@ -32861,6 +33002,7 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_claim_status",
     "lane_claim_preflight",
     "lane_id_missing",
+    "lane_id_claim_template",
     "lane_dispatch_claim_required_before_gpu_or_remote_eval",
     # Test / placeholder names. Real lane_ids should not collide with these.
     "lane_dispatch_claim_missing",
@@ -38346,12 +38488,11 @@ if __name__ == "__main__":
             "check_codebase": not args.no_codebase,
             "verbose": True,
         }
-        if runner is preflight_developer:
-            # The CLI already owns the user-facing timeout and timing JSON.
-            # Avoid a nested developer recorder/timer so parallel checks pay
-            # one instrumentation layer while direct library calls still get
-            # the 30s DX crash budget by default.
-            runner_kwargs["wall_clock_budget_s"] = None
+        # The CLI already owns the user-facing timeout and timing JSON. Avoid
+        # a nested recorder/timer so parallel checks pay one instrumentation
+        # layer while direct library calls still get the 30s DX crash budget by
+        # default.
+        runner_kwargs["wall_clock_budget_s"] = None
         with recorder, _preflight_timeout_after(timeout_s):
             runner(**runner_kwargs)
         print("\nPREFLIGHT PASSED")

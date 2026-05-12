@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Regenerate the binary input fixtures consumed by Rust parity tests.
 
+# no-argparse-OK: parameterless regenerator; no operator options to surface.
+
+
 The Rust port of `tac.packet_compiler` lives in
 `runtime-rs/crates/tac-packet-compiler/`. Its byte-for-byte parity tests
 (`tests/golden_vector_parity.rs`) read the canonical Python inputs from

@@ -675,6 +675,11 @@
   rationale: "Rust workspace readme; documentation snapshot"
   append_fields: [addendum]
 
+- pattern: "runtime-rs/crates/**/README.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "Rust crate readme; documentation snapshot paired with crate source"
+  append_fields: [addendum]
+
 - pattern: "runtime-rs/crates/**/Cargo.toml"
   kind: LIVE_RECIPE
   rationale: "Rust crate manifest; reusable build config"
@@ -682,6 +687,18 @@
 - pattern: "runtime-rs/crates/**/*.rs"
   kind: LIVE_RECIPE
   rationale: "Rust source code; reusable implementation"
+
+- pattern: "runtime-rs/crates/**/web/*.html"
+  kind: LIVE_RECIPE
+  rationale: "WASM crate web demo HTML asset (paired with .rs source); reusable demo page"
+
+- pattern: "runtime-rs/crates/**/web/*.js"
+  kind: LIVE_RECIPE
+  rationale: "WASM crate web demo JS asset (paired with .rs source); reusable demo glue"
+
+- pattern: "runtime-rs/crates/**/web/*.css"
+  kind: LIVE_RECIPE
+  rationale: "WASM crate web demo CSS asset (paired with .rs source); reusable styling"
 
 # --- cuda/** ---
 

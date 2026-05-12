@@ -189,7 +189,7 @@ SCORE_JSON="$EVAL_DIR/contest_auth_eval.json"
 if [ -f "$SCORE_JSON" ]; then
     AUTH_SUMMARY=$("$PYBIN" -m tac.auth_eval_schema completion-summary "$SCORE_JSON")
     SCORE=$("$PYBIN" -m tac.auth_eval_schema completion-summary "$SCORE_JSON" --field score 2>/dev/null || echo "PARSE_FAIL")
-    log "DONE: lane=$LANE_ID archive_bytes=$ARCHIVE_BYTES auth_eval_summary=$AUTH_SUMMARY"
+    log "DONE [contest-CUDA]: lane=$LANE_ID archive_bytes=$ARCHIVE_BYTES auth_eval_summary=$AUTH_SUMMARY"
     log "  beats PR106 baseline 0.20946? $("$PYBIN" -c "
 s = $SCORE
 print('YES — new public-frontier candidate' if isinstance(s, (int, float)) and s < 0.20946 else f'no (score {s} >= 0.20946)')

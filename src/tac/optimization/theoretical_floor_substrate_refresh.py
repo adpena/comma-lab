@@ -348,7 +348,7 @@ def refreshed_pareto_frontier(
         # Rate term at midpoint vs PR106 r2.
         rate_savings = ALPHA_RATE * (PR106_R2_BYTES - midpoint) / N_REF_VIDEO_BYTES
         delta_mid = s.predicted_delta_alone_midpoint()
-        predicted_score = PR106_R2_SCORE_CONTEST_CUDA + delta_mid - rate_savings
+        predicted_score = PR106_R2_SCORE_CONTEST_CUDA + delta_mid - rate_savings  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
         out.append(
             ParetoFrontierPoint(
                 substrate_id=s.substrate_id,
@@ -356,7 +356,7 @@ def refreshed_pareto_frontier(
                 bytes_low=bytes_low,
                 bytes_high=bytes_high,
                 bytes_midpoint=midpoint,
-                predicted_score_at_midpoint=predicted_score,
+                predicted_score_at_midpoint=predicted_score,  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
             )
         )
     # Sort by bytes_midpoint ascending.

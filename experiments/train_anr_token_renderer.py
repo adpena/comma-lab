@@ -62,7 +62,7 @@ from src.tac.anr_token_renderer import (  # noqa: E402
 # ── EMA helper (CLAUDE.md EMA non-negotiable, decay=0.997) ──────────────
 
 
-class _EMA:
+class EMA:
     """Weight EMA mirroring ``tac.training.EMA`` (canonical).
 
     Decay=0.997 per CLAUDE.md non-negotiable. Apply EMA only at eval time with
@@ -248,8 +248,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     # This trainer only optimises master + slave RGB renderers via score-aware loss.
     # The HPAC weights ship in the archive but their training is a sister script.
 
-    ema_master = _EMA(master, decay=args.ema_decay)
-    ema_slave = _EMA(slave, decay=args.ema_decay)
+    ema_master = EMA(master, decay=args.ema_decay)
+    ema_slave = EMA(slave, decay=args.ema_decay)
 
     opt = torch.optim.AdamW(
         list(master.parameters()) + list(slave.parameters()), lr=args.lr,

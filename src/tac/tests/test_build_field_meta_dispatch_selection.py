@@ -23,7 +23,7 @@ def test_field_meta_selector_reports_static_ready_but_not_dispatch_ready_without
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="closed_candidate",
-        lane_id="lane_closed_candidate",
+        lane_id="lane_closed_candidate",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_closed_candidate",
     )
 
@@ -59,7 +59,7 @@ def test_field_meta_selector_summarizes_operator_next_steps_without_dispatch(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="operator_packet",
-        lane_id="lane_operator_packet",
+        lane_id="lane_operator_packet",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_operator_packet",
     )
     payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -154,13 +154,13 @@ def test_field_meta_selector_marks_duplicate_candidate_ids_with_packet_keys(
     first = _packet_manifest(
         tmp_path / "first",
         candidate_id="duplicate_candidate",
-        lane_id="lane_duplicate_candidate",
+        lane_id="lane_duplicate_candidate",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_duplicate_candidate_a",
     )
     second = _packet_manifest(
         tmp_path / "second",
         candidate_id="duplicate_candidate",
-        lane_id="lane_duplicate_candidate",
+        lane_id="lane_duplicate_candidate",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_duplicate_candidate_b",
         expected_score_delta=-0.0002,
     )
@@ -184,7 +184,7 @@ def test_field_meta_selector_records_operator_approval_context_without_unlocking
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="approval_context_candidate",
-        lane_id="lane_approval_context_candidate",
+        lane_id="lane_approval_context_candidate",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_approval_context_candidate",
     )
     payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -511,7 +511,7 @@ def test_field_meta_selector_honors_packet_static_blockers(tmp_path: Path) -> No
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="packet_static_blocked",
-        lane_id="lane_packet_static_blocked",
+        lane_id="lane_packet_static_blocked",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_packet_static_blocked",
         static_packet_ready=False,
         static_blockers=[
@@ -546,11 +546,11 @@ def test_field_meta_selector_requires_matching_active_claim_for_dispatch_ready(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="claimed_candidate",
-        lane_id="lane_claimed_candidate",
+        lane_id="lane_claimed_candidate",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_claimed_candidate",
         kkt_proof=_kkt_proof(),
     )
-    claims = _claims_file(tmp_path, lane_id="lane_claimed_candidate", job_name="job_claimed_candidate")
+    claims = _claims_file(tmp_path, lane_id="lane_claimed_candidate", job_name="job_claimed_candidate")  # FAKE_LANE_OK:test-fixture lane_id
 
     report = build_selection_report(
         repo_root=REPO,
@@ -583,10 +583,10 @@ def test_field_meta_selector_keeps_active_claim_blocked_by_missing_kkt_for_field
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="claimed_no_kkt",
-        lane_id="lane_claimed_no_kkt",
+        lane_id="lane_claimed_no_kkt",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_claimed_no_kkt",
     )
-    claims = _claims_file(tmp_path, lane_id="lane_claimed_no_kkt", job_name="job_claimed_no_kkt")
+    claims = _claims_file(tmp_path, lane_id="lane_claimed_no_kkt", job_name="job_claimed_no_kkt")  # FAKE_LANE_OK:test-fixture lane_id
 
     report = build_selection_report(
         repo_root=REPO,
@@ -612,7 +612,7 @@ def test_field_meta_selector_rejects_non_zip_archive_even_with_matching_sha(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="not_a_zip",
-        lane_id="lane_not_a_zip",
+        lane_id="lane_not_a_zip",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_not_a_zip",
         valid_zip=False,
     )
@@ -690,7 +690,7 @@ def test_field_meta_selector_surfaces_packet_static_blockers(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="wr01_static_blocked",
-        lane_id="lane_wr01_static_blocked",
+        lane_id="lane_wr01_static_blocked",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_wr01_static_blocked",
     )
     payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -744,7 +744,7 @@ def test_field_meta_selector_is_deterministic_and_orders_static_ready_packets_fi
         tmp_path / "ready",
         candidate_id="ready",
         expected_score_delta=-0.0002,
-        lane_id="lane_ready",
+        lane_id="lane_ready",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_ready",
     )
 
@@ -762,7 +762,7 @@ def test_field_meta_selector_exposes_pareto_kkt_and_information_gain(
     tmp_path: Path,
 ) -> None:
     common = {
-        "lane_id": "lane_pareto",
+        "lane_id": "lane_pareto",  # FAKE_LANE_OK:test-fixture lane_id
         "job_name": "job_pareto",
         "family_group": "hnerv_rate_recode",
         "pareto_scope": "hnerv_rate_recode",
@@ -831,7 +831,7 @@ def test_field_meta_selector_requires_real_kkt_proof_before_kkt_ready(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="no_kkt_proof",
-        lane_id="lane_no_kkt_proof",
+        lane_id="lane_no_kkt_proof",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_no_kkt_proof",
     )
 
@@ -855,7 +855,7 @@ def test_field_meta_selector_accepts_converged_admm_result_as_kkt_proof(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="admm_kkt_ready",
-        lane_id="lane_admm_kkt_ready",
+        lane_id="lane_admm_kkt_ready",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_admm_kkt_ready",
         admm_result={
             "converged": True,
@@ -879,7 +879,7 @@ def test_field_meta_selector_penalizes_dirty_packet_over_raw_delta(
     dirty = _packet_manifest(
         tmp_path / "dirty",
         candidate_id="dirty_raw_best",
-        lane_id="lane_dirty_raw_best",
+        lane_id="lane_dirty_raw_best",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_dirty_raw_best",
         expected_score_delta=-10.0,
         code_paths=["src/tac/optimization/dirty_packet_owner.py"],
@@ -888,7 +888,7 @@ def test_field_meta_selector_penalizes_dirty_packet_over_raw_delta(
     clean = _packet_manifest(
         tmp_path / "clean",
         candidate_id="clean_weaker",
-        lane_id="lane_clean_weaker",
+        lane_id="lane_clean_weaker",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_clean_weaker",
         expected_score_delta=-0.0001,
         interaction_assumptions=["clean_candidate_first_order"],
@@ -917,7 +917,7 @@ def test_field_meta_selector_dirty_blocks_global_modules_without_manifest_code_p
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="global_selector_dirty",
-        lane_id="lane_global_selector_dirty",
+        lane_id="lane_global_selector_dirty",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_global_selector_dirty",
     )
 
@@ -1050,7 +1050,7 @@ def test_field_meta_selector_blocks_rate_only_delta_that_mismatches_byte_term(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="bad_rate_only_delta",
-        lane_id="lane_bad_rate_only_delta",
+        lane_id="lane_bad_rate_only_delta",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_bad_rate_only_delta",
         family_group="hnerv_lowlevel_brotli_repack",
         pareto_scope="hnerv_lowlevel_brotli_repack",
@@ -1080,7 +1080,7 @@ def test_field_meta_selector_blocks_rate_only_candidate_above_pr103_pr106_floor(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="above_floor_rate_only",
-        lane_id="lane_above_floor_rate_only",
+        lane_id="lane_above_floor_rate_only",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_above_floor_rate_only",
         family_group="hnerv_lowlevel_brotli_repack",
         pareto_scope="hnerv_rate_only_exact_archive",
@@ -1122,7 +1122,7 @@ def test_field_meta_selector_blocks_unstructured_scorer_changing_stack_path_abov
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="above_floor_stack_path",
-        lane_id="lane_above_floor_stack_path",
+        lane_id="lane_above_floor_stack_path",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_above_floor_stack_path",
         family_group="hnerv_lowlevel_brotli_repack",
         pareto_scope="hnerv_rate_only_exact_archive",
@@ -1164,7 +1164,7 @@ def test_field_meta_selector_exposes_closed_ingestion_contract_without_score_evi
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="closed_not_score_evidence",
-        lane_id="lane_closed_not_score_evidence",
+        lane_id="lane_closed_not_score_evidence",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_closed_not_score_evidence",
         kkt_proof=_kkt_proof(),
     )
@@ -1190,7 +1190,7 @@ def test_field_meta_selector_emits_comparable_frontier_rows(tmp_path: Path) -> N
         candidate_id="categorical_frontier_fixture",
         family_group="categorical_qma9_clade_spade_openpilot",
         pareto_scope="categorical_mask_runtime",
-        lane_id="lane_categorical_frontier_fixture",
+        lane_id="lane_categorical_frontier_fixture",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_categorical_frontier_fixture",
         kkt_proof=_kkt_proof(),
     )
@@ -1242,7 +1242,7 @@ def test_field_meta_selector_refuses_planning_packet_as_score_evidence_even_if_s
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="planning_claimed_score_evidence",
-        lane_id="lane_planning_claimed_score_evidence",
+        lane_id="lane_planning_claimed_score_evidence",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_planning_claimed_score_evidence",
         kkt_proof=_kkt_proof(),
     )
@@ -1277,7 +1277,7 @@ def test_field_meta_selector_refuses_self_declared_exact_cuda_without_artifact(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="forged_exact_cuda_evidence",
-        lane_id="lane_forged_exact_cuda_evidence",
+        lane_id="lane_forged_exact_cuda_evidence",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_forged_exact_cuda_evidence",
         kkt_proof=_kkt_proof(),
     )
@@ -1310,7 +1310,7 @@ def test_field_meta_selector_accepts_matching_exact_cuda_auth_eval_artifact(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="verified_exact_cuda_evidence",
-        lane_id="lane_verified_exact_cuda_evidence",
+        lane_id="lane_verified_exact_cuda_evidence",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_verified_exact_cuda_evidence",
         kkt_proof=_kkt_proof(),
     )
@@ -1685,7 +1685,7 @@ def test_field_meta_selector_does_not_ingest_unclosed_runtime_as_dispatch_ready(
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="unclosed_runtime_packet",
-        lane_id="lane_unclosed_runtime_packet",
+        lane_id="lane_unclosed_runtime_packet",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_unclosed_runtime_packet",
         runtime_tree_sha256=None,
         kkt_proof=_kkt_proof(),
@@ -1708,7 +1708,7 @@ def test_build_field_meta_dispatch_selection_cli_writes_json(tmp_path: Path) -> 
     manifest = _packet_manifest(
         tmp_path,
         candidate_id="cli_candidate",
-        lane_id="lane_cli_candidate",
+        lane_id="lane_cli_candidate",  # FAKE_LANE_OK:test-fixture lane_id
         job_name="job_cli_candidate",
     )
     out = tmp_path / "selection.json"

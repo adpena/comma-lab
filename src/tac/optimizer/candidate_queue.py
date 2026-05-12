@@ -152,7 +152,7 @@ def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
         "predicted_contest_cpu_gha",
         "rank_score",
         "fitness",
-        "predicted_score",
+        "predicted_score",  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
         "proxy_score",
         "macos_cpu_score",
     ):
@@ -364,8 +364,8 @@ def _codec_param_manifest_candidates(
                 "dispatch_attempted": False,
                 "score_claim": False,
                 "promotion_eligible": False,
-                "rank_score": _as_float(cand.get("predicted_score")),
-                "rank_score_field": "predicted_score",
+                "rank_score": _as_float(cand.get("predicted_score")),  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
+                "rank_score_field": "predicted_score",  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                 "evidence_semantics": cand.get("evidence_semantics")
                 or payload.get("evidence_semantics")
                 or "cpu_substrate_predicted_band",

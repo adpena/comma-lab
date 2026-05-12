@@ -214,7 +214,7 @@ mkdir -p "$EVAL_DIR"
 SCORE_JSON="$EVAL_DIR/contest_auth_eval.json"
 if [ -f "$SCORE_JSON" ]; then
     AUTH_SUMMARY=$("$PYBIN" -m tac.auth_eval_schema completion-summary "$SCORE_JSON")
-    log "DONE: lane=$LANE_ID mode=$PR106_YSHIFT_MODE archive_bytes=$ARCHIVE_BYTES auth_eval_summary=$AUTH_SUMMARY"
+    log "DONE [contest-CUDA]: lane=$LANE_ID mode=$PR106_YSHIFT_MODE archive_bytes=$ARCHIVE_BYTES auth_eval_summary=$AUTH_SUMMARY"
     log "  beats lane_pr106_latent_sidecar landed score? Operator must compare via tools/score_dashboard.py."
     log "  cross-ref docs/INDEX_score_aware_sidechannel_thread_20260504.md TICK 2 gate."
 else

@@ -96,7 +96,7 @@ class RankedDispatchCandidate:
     candidate_id: str
     family: str  # substrate_class value (e.g., "renderer_replacement").
     substrate_ids: tuple[str, ...]  # 1+ substrates participating in this dispatch.
-    predicted_score_delta: float  # negative = improvement; from composite delta.
+    predicted_score_delta: float  # negative = improvement; from composite delta.  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
     expected_information_gain: float
     estimated_dispatch_cost_usd: float
     eig_per_dollar: float
@@ -110,7 +110,7 @@ class RankedDispatchCandidate:
 
     def as_candidate_row_kwargs(self) -> dict[str, Any]:
         """Return kwargs for `tools.cathedral_autopilot_autonomous_loop.CandidateRow`."""
-        return {
+        return {  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
             "candidate_id": self.candidate_id,
             "family": self.family,
             "predicted_score_delta": self.predicted_score_delta,
@@ -161,7 +161,7 @@ def _build_singleton_dispatch_candidates(
                 candidate_id=f"singleton__{r.substrate_id}",
                 family=r.substrate_class.value,
                 substrate_ids=(r.substrate_id,),
-                predicted_score_delta=r.predicted_delta_alone_midpoint,
+                predicted_score_delta=r.predicted_delta_alone_midpoint,  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                 expected_information_gain=r.expected_information_gain,
                 estimated_dispatch_cost_usd=r.estimated_dispatch_cost_usd,
                 eig_per_dollar=r.eig_per_dollar,
@@ -216,7 +216,7 @@ def _build_orthogonal_pair_candidates(
                     candidate_id=f"orthogonal_pair__{ri.substrate_id}__{rj.substrate_id}",
                     family=f"{ri.substrate_class.value}+{rj.substrate_class.value}",
                     substrate_ids=(ri.substrate_id, rj.substrate_id),
-                    predicted_score_delta=composite["predicted_composite_delta"],
+                    predicted_score_delta=composite["predicted_composite_delta"],  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                     expected_information_gain=joint_eig,
                     estimated_dispatch_cost_usd=joint_cost,
                     eig_per_dollar=joint_eig_per_dollar,
@@ -371,7 +371,7 @@ def synthetic_l2_encoder_dispatch_candidates(
                 candidate_id=f"l2_hinton_saliency__{enc}",
                 family="residual_l2_hinton_distilled",
                 substrate_ids=(enc,),
-                predicted_score_delta=delta_mid,
+                predicted_score_delta=delta_mid,  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                 expected_information_gain=eig,
                 estimated_dispatch_cost_usd=cost_per_encoder_usd,
                 eig_per_dollar=eig_per_dollar,

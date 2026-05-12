@@ -444,7 +444,7 @@ def _run_claim(
     notes: str,
     force: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # subprocess-no-check-OK: helper returns CompletedProcess; caller owns returncode handling
         _claim_command(
             lane_id=lane_id,
             instance_job_id=instance_job_id,
