@@ -1,0 +1,84 @@
+schema_version: 1
+name: substrate_siren_modal_a100_dispatch
+lane_id: lane_substrate_siren_20260512
+summary: SIREN coordinate-MLP first-anchor dispatch on Modal A100 (PHASE-B2-BUILD HIGH-target attack on 0.193).
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 6.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: 0.145
+predicted_delta: "-0.048 vs PR101 0.193 [predicted; council Phase 5]"
+predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md#siren"
+literature_anchor: "Sitzmann, Martel, Bergman, Lindell, Wetzstein — 'Implicit Neural Representations with Periodic Activation Functions' NeurIPS 2020"
+council_phase_5_prediction: 0.145
+
+risk: |
+  PHASE-B2-BUILD HIGH-target dispatch on Modal A100. SIREN is the
+  purely-coordinate-based counterpart to NeRV/HNeRV with ZERO bytes in latents;
+  all per-frame variation must be encoded in MLP weights via the t-axis input.
+  Architectural risk: first-layer omega=30 (Sitzmann signature) is high-frequency
+  by design — gradients can explode if LR is too aggressive. Council default
+  lr=5e-4 with cosine annealing is conservative; grad-clip=1.0 enforced.
+  Trainer _full_main wires 16 stages including auth eval at stage 12. Single-axis
+  [contest-CUDA] acceptable for first anchor; CPU axis required separately
+  before promotion.
+envelope_status: "FITS $20 envelope at p50 fallback"
+
+remote_driver: scripts/remote_lane_substrate_siren.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_siren.sh
+  cost_band_trainer: experiments/train_substrate_siren.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_siren.py
+
+env_overrides:
+  SIREN_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SIREN_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  SIREN_OUTPUT_DIR: /workspace/pact/lane_substrate_siren_results/output
+  SIREN_EPOCHS: "2000"
+  SIREN_UPSTREAM_DIR: /workspace/pact/upstream
+  SIREN_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_siren.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_siren.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+
+notes: |
+  PHASE-B2-BUILD HIGH-target attack on PR101's 0.193 [contest-CUDA] gold.
+
+  SIREN architectural distinction vs HNeRV: ZERO bytes in latents — all per-pair
+  variation flows through the (x, y, t) coordinate input where t = pair_idx /
+  num_pairs. This puts ALL ~150K param budget into MLP weights (highly
+  compressible via FP16 + brotli). The hypothesis: a sufficiently-expressive
+  6-layer SIREN MLP at hidden=128 with first_omega=30 can memorize the
+  contest video's 600 pair signatures, producing a smaller archive than HNeRV
+  while the score-aware Lagrangian shapes the implicit representation toward
+  PoseNet/SegNet preferences.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    feedback_phase_b2_build_3_high_target_trainers_LANDED_20260512.md
+    feedback_modal_strategy_reevaluation_post_tier1_engineering_20260512.md
+    feedback_substrate_sane_hnerv_full_main_wired_landed_20260512.md
