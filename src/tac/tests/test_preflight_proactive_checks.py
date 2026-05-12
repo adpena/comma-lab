@@ -114,7 +114,7 @@ def test_preflight_source_index_prewarm_is_opt_in(monkeypatch):
 
     monkeypatch.delenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", raising=False)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    assert preflight._preflight_source_index_prewarm_enabled() is True
+    assert preflight._preflight_source_index_prewarm_enabled() is False
 
     monkeypatch.setenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "0")
     assert preflight._preflight_source_index_prewarm_enabled() is False

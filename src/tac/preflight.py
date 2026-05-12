@@ -849,8 +849,7 @@ def _preflight_parallel_worker_count() -> int:
 def _preflight_source_index_prewarm_enabled() -> bool:
     """Return true when source-index facts should be warmed before fan-out."""
 
-    default = "1" if os.environ.get("GITHUB_ACTIONS") == "true" else ""
-    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", default).strip().lower()
+    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "").strip().lower()
     return value in {"1", "true", "yes", "on"}
 
 
@@ -3941,10 +3940,54 @@ def preflight_developer(
             verbose=verbose,
         )
         dev_checks: tuple[tuple[str, str, object], ...] = (
+            # Broad full-tree scans first. GitHub-hosted runners are slow
+            # enough that FIFO submission order matters under the 30s DX
+            # watchdog; starting the broad scans first prevents cheap checks
+            # from delaying them in the bounded worker pool.
+            (
+                "check_dispatch_cli_shell_hazards",
+                "[dispatch-cli-shell-hazards]",
+                lambda: check_dispatch_cli_shell_hazards(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_state_writers_strict_load_for_mutating_path",
+                "[state-writers-strict-load]",
+                lambda: check_state_writers_strict_load_for_mutating_path(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_authoritative_tag_requires_custody_metadata",
+                "[authoritative-tag-custody-metadata]",
+                lambda: check_authoritative_tag_requires_custody_metadata(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_continual_learning_writes_use_lock",
+                "[continual-learning-lock]",
+                lambda: check_continual_learning_writes_use_lock(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_no_bare_writes_to_shared_state",
+                "[no-bare-shared-state-writes]",
+                lambda: check_no_bare_writes_to_shared_state(
+                    strict=True, verbose=False
+                ),
+            ),
             (
                 "check_codebase_drift",
                 "[codebase-drift]",
                 lambda: check_codebase_drift(strict=True, verbose=False),
+            ),
+            (
+                "check_no_mps_fallback_default",
+                "[no-mps-fallback-default]",
+                lambda: check_no_mps_fallback_default(strict=True, verbose=False),
             ),
             (
                 "check_dispatch_claim_helper_present",
@@ -3971,13 +4014,6 @@ def preflight_developer(
                 ),
             ),
             (
-                "check_dispatch_cli_shell_hazards",
-                "[dispatch-cli-shell-hazards]",
-                lambda: check_dispatch_cli_shell_hazards(
-                    strict=True, verbose=False
-                ),
-            ),
-            (
                 "check_subagent_landing_has_solver_wire_in",
                 "[subagent-landing-solver-wire-in]",
                 lambda: check_subagent_landing_has_solver_wire_in(
@@ -3992,30 +4028,9 @@ def preflight_developer(
                 ),
             ),
             (
-                "check_authoritative_tag_requires_custody_metadata",
-                "[authoritative-tag-custody-metadata]",
-                lambda: check_authoritative_tag_requires_custody_metadata(
-                    strict=True, verbose=False
-                ),
-            ),
-            (
-                "check_continual_learning_writes_use_lock",
-                "[continual-learning-lock]",
-                lambda: check_continual_learning_writes_use_lock(
-                    strict=True, verbose=False
-                ),
-            ),
-            (
                 "check_no_tag_only_custody_validation",
                 "[no-tag-only-custody]",
                 lambda: check_no_tag_only_custody_validation(
-                    strict=True, verbose=False
-                ),
-            ),
-            (
-                "check_no_bare_writes_to_shared_state",
-                "[no-bare-shared-state-writes]",
-                lambda: check_no_bare_writes_to_shared_state(
                     strict=True, verbose=False
                 ),
             ),
@@ -4039,18 +4054,6 @@ def preflight_developer(
                 lambda: check_remote_dispatch_runbooks_no_local_cuda_probe_default(
                     strict=True, verbose=False
                 ),
-            ),
-            (
-                "check_state_writers_strict_load_for_mutating_path",
-                "[state-writers-strict-load]",
-                lambda: check_state_writers_strict_load_for_mutating_path(
-                    strict=True, verbose=False
-                ),
-            ),
-            (
-                "check_no_mps_fallback_default",
-                "[no-mps-fallback-default]",
-                lambda: check_no_mps_fallback_default(strict=True, verbose=False),
             ),
             (
                 "check_no_eval_roundtrip_false",

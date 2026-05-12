@@ -208,7 +208,7 @@ def test_wavelet_probe_mode_produces_nonzero_residual(
     with zipfile.ZipFile(archive_zip, mode="r") as zf:
         parsed = parse_archive(zf.read(PR106_BIN_MEMBER_NAME))
     assert len(parsed.residual_bytes) > 0
-    # The 17th byte is the first int8 coefficient (after 4×4B band scales).
+    # The 17th byte is the first int8 coefficient (after 4x4B band scales).
     # In probe mode it should be 0x01.
     assert parsed.residual_bytes[16] == 0x01
 
@@ -276,8 +276,302 @@ def test_siren_probe_mode_produces_sparse_coefs(
     archive_zip = out / "siren_pr106_residual_sidecar_archive.zip"
     with zipfile.ZipFile(archive_zip, mode="r") as zf:
         parsed = parse_archive(zf.read(PR106_BIN_MEMBER_NAME))
-    # Header: 4B scale + 2B count = 6B; then 16 × 9B coefs = 144B; total 150B.
+    # Header: 4B scale + 2B count = 6B; then 16 x 9B coefs = 144B; total 150B.
     assert len(parsed.residual_bytes) == 150
+
+
+def test_siren_l2_encoded_selects_low_frequency_fft_residual(
+    fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / "siren_decoded.raw"
+    gt_raw = tmp_path / "siren_gt.raw"
+    decoded = np.zeros((1, 874, 1164, 3), dtype=np.uint8)
+    gt = np.zeros((1, 874, 1164, 3), dtype=np.uint8)
+    gt[..., 0] = 1
+    decoded.tofile(decoded_raw)
+    gt.tofile(gt_raw)
+
+    out = tmp_path / "siren_l2"
+    result = _run_materializer(
+        MATERIALIZERS["siren"],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(out),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "1",
+            "--byte-budget",
+            "15",
+            "--max-k",
+            "0",
+            "--decoded-axis",
+            "synthetic_test",
+            "--decoded-inflate-device",
+            "synthetic",
+        ],
+    )
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    archive_zip = out / "siren_pr106_residual_sidecar_archive.zip"
+    with zipfile.ZipFile(archive_zip, mode="r") as zf:
+        parsed = parse_archive(zf.read(PR106_BIN_MEMBER_NAME))
+    assert parsed.family == "siren"
+    assert len(parsed.residual_bytes) == 15
+    _scale, n_coefs = struct.unpack_from("<fH", parsed.residual_bytes, 0)
+    assert n_coefs == 1
+    frame_idx, k_row, k_col, channel, real_q, imag_q = struct.unpack_from(
+        "<HhhBbb",
+        parsed.residual_bytes,
+        6,
+    )
+    assert (frame_idx, k_row, k_col, channel) == (0, 0, 0, 0)
+    assert real_q == 127
+    assert imag_q == 0
+    inflate = _load_inflate_module("siren")
+    residual = inflate.decode_siren_residual(parsed.residual_bytes, n_frames=1)
+    assert residual.shape == (1, 874, 1164, 3)
+    np.testing.assert_allclose(residual[..., 0], 1.0, rtol=0, atol=3e-8)
+    np.testing.assert_allclose(residual[..., 1:], 0.0, rtol=0, atol=0)
+    manifest = json.loads((out / "materialization_manifest.json").read_text())
+    diagnostics = manifest["extra"]["l2_encoder_diagnostics"]
+    assert diagnostics["n_frames_encoded"] == 1.0
+    assert diagnostics["emitted_residual_bytes"] == 15.0
+    assert diagnostics["byte_budget"] == 15.0
+    assert diagnostics["decoded_axis"] == "synthetic_test"
+    assert diagnostics["decoded_inflate_device"] == "synthetic"
+    assert diagnostics["decoded_raw_sha256"]
+    assert diagnostics["gt_raw_sha256"]
+
+
+def test_siren_l2_encoded_non_dc_uses_conjugate_pair_atom(
+    fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / "siren_cos_decoded.raw"
+    gt_raw = tmp_path / "siren_cos_gt.raw"
+    decoded = np.full((1, 874, 1164, 3), 128, dtype=np.uint8)
+    gt = decoded.copy()
+    square_wave = np.where(np.arange(1164) < 582, 1, -1).astype(np.int16)
+    gt[0, :, :, 0] = (decoded[0, :, :, 0].astype(np.int16) + square_wave).astype(
+        np.uint8
+    )
+    decoded.tofile(decoded_raw)
+    gt.tofile(gt_raw)
+
+    out = tmp_path / "siren_l2_cos"
+    result = _run_materializer(
+        MATERIALIZERS["siren"],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(out),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "1",
+            "--byte-budget",
+            "24",
+            "--max-k",
+            "1",
+            "--decoded-axis",
+            "synthetic_test",
+            "--decoded-inflate-device",
+            "synthetic",
+        ],
+    )
+
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    archive_zip = out / "siren_pr106_residual_sidecar_archive.zip"
+    with zipfile.ZipFile(archive_zip, mode="r") as zf:
+        parsed = parse_archive(zf.read(PR106_BIN_MEMBER_NAME))
+    _scale, n_coefs = struct.unpack_from("<fH", parsed.residual_bytes, 0)
+    assert n_coefs == 2
+    records = [
+        struct.unpack_from("<HhhBbb", parsed.residual_bytes, 6 + i * 9)
+        for i in range(n_coefs)
+    ]
+    assert {(frame_idx, k_row, k_col, channel) for frame_idx, k_row, k_col, channel, _real, _imag in records} == {
+        (0, 0, 1, 0),
+        (0, 0, -1, 0),
+    }
+
+
+def test_siren_l2_encoded_sparse_path_is_not_double_repacked(
+    fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / "siren_sparse_decoded.raw"
+    gt_raw = tmp_path / "siren_sparse_gt.raw"
+    decoded = np.zeros((1, 874, 1164, 3), dtype=np.uint8)
+    gt = np.zeros((1, 874, 1164, 3), dtype=np.uint8)
+    gt[..., 0] = 1
+    decoded.tofile(decoded_raw)
+    gt.tofile(gt_raw)
+
+    out = tmp_path / "siren_l2_sparse"
+    result = _run_materializer(
+        MATERIALIZERS["siren"],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(out),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "1",
+            "--byte-budget",
+            "64",
+            "--max-k",
+            "0",
+            "--encoding",
+            "sparse",
+            "--decoded-axis",
+            "synthetic_test",
+            "--decoded-inflate-device",
+            "synthetic",
+        ],
+    )
+
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    archive_zip = out / "siren_sparse_pr106_residual_sidecar_archive.zip"
+    with zipfile.ZipFile(archive_zip, mode="r") as zf:
+        parsed = parse_archive(zf.read(PR106_BIN_MEMBER_NAME))
+    assert parsed.family == "siren_sparse"
+    assert parsed.format_id == PR106_RESIDUAL_FORMAT_IDS["siren_sparse"]
+    inflate = _load_inflate_module("siren")
+    residual = inflate.decode_siren_residual_sparse(parsed.residual_bytes, n_frames=1)
+    assert residual.shape == (1, 874, 1164, 3)
+    np.testing.assert_allclose(residual[..., 0], 1.0, rtol=0, atol=3e-8)
+    np.testing.assert_allclose(residual[..., 1:], 0.0, rtol=0, atol=0)
+
+
+def test_siren_l2_encoded_refuses_silent_frame_truncation(
+    fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / "siren_short_decoded.raw"
+    gt_raw = tmp_path / "siren_short_gt.raw"
+    _write_raw_frames(decoded_raw, n_frames=1)
+    _write_raw_frames(gt_raw, n_frames=2)
+
+    result = _run_materializer(
+        MATERIALIZERS["siren"],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(tmp_path / "siren_l2_truncate"),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "2",
+            "--byte-budget",
+            "15",
+            "--max-k",
+            "0",
+            "--decoded-axis",
+            "synthetic_test",
+            "--decoded-inflate-device",
+            "synthetic",
+        ],
+    )
+
+    assert result.returncode == 2
+    assert "refusing silent truncation" in result.stderr
+
+
+def test_siren_l2_encoded_requires_runtime_custody_for_non_synthetic_raw(
+    fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / "siren_custody_decoded.raw"
+    gt_raw = tmp_path / "siren_custody_gt.raw"
+    _write_raw_frames(decoded_raw, n_frames=1)
+    _write_raw_frames(gt_raw, n_frames=1)
+
+    result = _run_materializer(
+        MATERIALIZERS["siren"],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(tmp_path / "siren_l2_missing_custody"),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "1",
+            "--byte-budget",
+            "15",
+            "--max-k",
+            "0",
+        ],
+    )
+
+    assert result.returncode == 2
+    assert "decoded-runtime-sha256" in result.stderr
+
+
+def test_siren_l2_encoded_sparse_refuses_empty_no_op_fit(
+    fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / "siren_sparse_tiny_decoded.raw"
+    gt_raw = tmp_path / "siren_sparse_tiny_gt.raw"
+    decoded = np.zeros((1, 874, 1164, 3), dtype=np.uint8)
+    gt = np.zeros((1, 874, 1164, 3), dtype=np.uint8)
+    gt[..., 0] = 1
+    decoded.tofile(decoded_raw)
+    gt.tofile(gt_raw)
+
+    result = _run_materializer(
+        MATERIALIZERS["siren"],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(tmp_path / "siren_l2_sparse_noop"),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "1",
+            "--byte-budget",
+            "15",
+            "--max-k",
+            "0",
+            "--encoding",
+            "sparse",
+            "--decoded-axis",
+            "synthetic_test",
+            "--decoded-inflate-device",
+            "synthetic",
+        ],
+    )
+
+    assert result.returncode == 2
+    assert "refusing empty no-op L2 artifact" in result.stderr
 
 
 def test_coord_mlp_probe_mode_produces_nonzero_residual(
@@ -401,7 +695,7 @@ def test_materializer_refuses_non_empty_mode_without_n_count(
     assert "n-frames" in result.stderr or "n-coefs" in result.stderr
 
 
-@pytest.mark.parametrize("family", ("wavelet", "cool_chic", "c3"))
+@pytest.mark.parametrize("family", ("wavelet", "cool_chic", "c3", "siren"))
 def test_l2_encoded_materializer_requires_explicit_byte_budget(
     family: str, fake_pr106_archive: Path, tmp_path: Path
 ) -> None:
