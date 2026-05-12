@@ -2229,6 +2229,28 @@ def preflight_all(
         check_commit_serializer_pre_lock_hash_against_head(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #158 (FFFF Bug 1 self-protection): substrate
+        # archive `_quantize_intN` degenerate-range branch must fill `q`
+        # with `-(MAX_LEVELS // 2)` so dequant recovers `lo` exactly. The
+        # buggy zero-fill pattern produced an off-by-32767-scale error.
+        # NNN's same-day fix on block_nerv + FFFF's sister-bug fix on
+        # 8 other substrate archives extincted the bug class. This META
+        # gate refuses re-introduction at any substrate archive.
+        # STRICT-FLIPPED 2026-05-12 — live count at landing: 0.
+        check_quantize_degenerate_range_clamped_correctly(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #159 (FFFF Bug 4, UUU Path B): CLAUDE.md
+        # catalog table is the canonical strictness ledger. When a
+        # strict-flip happens in code without updating the entry text,
+        # the table drifts from the wired contract. Sister of Catalog
+        # #118 (`check_claude_md_catalog_no_duplicate_numbers`).
+        # UUU's audit 2026-05-12 identified 23 drift entries; FFFF Bug 3
+        # bulk text-fix landed in commit 44ac1465 driving the drift to 0.
+        # STRICT-FLIPPED 2026-05-12 — live count at landing: 0.
+        check_claude_md_catalog_text_matches_preflight_strict_value(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -37924,18 +37946,15 @@ def check_preflight_cli_default_scope_is_bounded_dev(
     return violations
 
 
-def check_preflight_cli_default_scope_is_all(
-    *,
-    repo_root: Path | None = None,
-    strict: bool = False,
-    verbose: bool = True,
-) -> list[str]:
-    """Backward-compatible alias for the Catalog #145 bounded-default gate."""
-    return check_preflight_cli_default_scope_is_bounded_dev(
-        repo_root=repo_root,
-        strict=strict,
-        verbose=verbose,
-    )
+# NOTE (FFFF Bug 5, 2026-05-12 per UUU audit at
+# `.omx/research/catalog_drift_documentation_vs_code_audit_20260512.md`):
+# The historical alias `check_preflight_cli_default_scope_is_all` was a
+# DEFINED_BUT_NOT_INVOKED orphan that forwarded to
+# `check_preflight_cli_default_scope_is_bounded_dev`. The canonical
+# Catalog #145 gate is the bounded-dev variant. The alias was deleted in
+# the FFFF bug sweep to extinct the orphan-function class. The canonical
+# function is `check_preflight_cli_default_scope_is_bounded_dev` and is
+# wired into `preflight_all()` strict=True at line ~2101.
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -39979,6 +39998,427 @@ def check_commit_serializer_pre_lock_hash_against_head(
             "bug class (CLAUDE.md 'Subagent commits MUST use serializer') "
             "re-emerges at every bypass. Route via the wrapper OR add a "
             "same-line waiver:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #158 — substrate archive _quantize_intN degenerate-range fill
+# must be -(MAX_LEVELS // 2) so that dequant recovers `lo` exactly.
+# (FFFF Bug 1 self-protection, 2026-05-12)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (NNN flagged 2026-05-12 sister bug class FFFF fix):
+# When pack_archive() encounters a tensor whose min == max (degenerate
+# range — all-equal value), the int16/int8 quantizer code path must fill
+# `q` with the negative sentinel value `-(MAX_LEVELS // 2)` so the
+# dequant formula `(q + (MAX_LEVELS // 2)) * scale + zero_point` produces
+# exactly `lo`. The buggy pattern fills with zeros, which dequant'd to
+# `(0 + 32767) * scale + lo = 32767 * scale + lo`, off by `MAX_LEVELS // 2 * scale`.
+#
+# NNN's same-day fix in `src/tac/substrates/block_nerv/archive.py`:
+#
+#     if hi <= lo:
+#         return (
+#             torch.full_like(f, -32767, dtype=torch.int16),
+#             1.0,
+#             lo,
+#         )
+#
+# FFFF applied the identical pattern to 8 sister substrate archives
+# (sane_hnerv + 7 others surfaced via the proactive META-class audit).
+# This META gate refuses any future substrate archive code that
+# re-introduces the zero-fill or any non-`-MAX_LEVELS//2` degenerate-range
+# fill pattern.
+#
+# Scope: scans every `src/tac/substrates/*/archive.py` for functions
+# named `_quantize_int*` / `_quantize_latents_to_int*` containing
+# `if hi <= lo` (or equivalent `if hi == lo` / `if hi - lo <= 0`) and
+# requires the returned tensor inside that branch be a
+# `torch.full_like(..., -<sentinel>, dtype=torch.intN)` OR a same-line
+# `# QUANTIZE_DEGENERATE_OK:<reason>` waiver.
+
+_CHECK_158_QUANTIZE_FN_NAME_PATTERNS: tuple[re.Pattern, ...] = (
+    re.compile(r"_quantize_int(\d+)\b"),
+    re.compile(r"_quantize_[a-z_]*to_int(\d+)\b"),
+    re.compile(r"_quantize_latents_to_int(\d+)\b"),
+)
+_CHECK_158_WAIVER_TOKEN = "QUANTIZE_DEGENERATE_OK:"
+# Allowed sentinels keyed by intN bit-width
+_CHECK_158_EXPECTED_SENTINELS: dict[int, int] = {
+    8: -127,    # int8 maps to [-127, 127] via (q + 127) * scale + lo
+    16: -32767,  # int16 maps to [-32767, 32767] via (q + 32767) * scale + lo
+    32: -2147483647,  # int32, same pattern (rare)
+}
+
+
+def check_quantize_degenerate_range_clamped_correctly(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #158 — refuse substrate archive `_quantize_intN` functions
+    whose degenerate (``hi <= lo``) branch fills `q` with zeros instead of
+    `-(MAX_LEVELS // 2)`.
+
+    NNN's same-day fix on `src/tac/substrates/block_nerv/archive.py` and
+    FFFF's sister-bug fix on 8 other substrate archives extincted the bug
+    class. This gate refuses re-introduction at any substrate archive.
+
+    Detection: AST-walk every ``src/tac/substrates/*/archive.py`` for
+    functions whose name matches ``_quantize_int(N)``. Within each such
+    function body, find the degenerate-test branch (``if hi <= lo``
+    etc.); the return statement inside that branch must contain a
+    ``torch.full_like(..., -<sentinel>, dtype=torch.intN)`` call where
+    sentinel matches ``MAX_LEVELS_N // 2``, OR carry a same-line
+    ``# QUANTIZE_DEGENERATE_OK:<reason>`` waiver on the return.
+
+    Waivers honored: same-line ``# QUANTIZE_DEGENERATE_OK:<reason>`` on
+    the offending return line OR on the ``if hi <= lo`` line.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    substrates_dir = root / "src" / "tac" / "substrates"
+    violations: list[str] = []
+    if not substrates_dir.is_dir():
+        return violations
+    scanned = 0
+    for archive_py in substrates_dir.glob("*/archive.py"):
+        rel = str(archive_py.relative_to(root))
+        try:
+            text = archive_py.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        lines = text.splitlines()
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            # Match function name against quantize patterns; extract bit width.
+            bit_width: int | None = None
+            for pat in _CHECK_158_QUANTIZE_FN_NAME_PATTERNS:
+                m = pat.match(node.name)
+                if m:
+                    bit_width = int(m.group(1))
+                    break
+            if bit_width is None:
+                continue
+            if bit_width not in _CHECK_158_EXPECTED_SENTINELS:
+                continue  # exotic bit-widths not yet covered
+            expected_sentinel = _CHECK_158_EXPECTED_SENTINELS[bit_width]
+            # Find the degenerate-range If statement inside the function.
+            for sub in ast.walk(node):
+                if not isinstance(sub, ast.If):
+                    continue
+                test_src = ast.unparse(sub.test) if hasattr(ast, "unparse") else ""
+                # Look for hi <= lo / hi == lo / (hi - lo) <= 0
+                is_degenerate_test = (
+                    bool(re.search(r"\bhi\s*<=\s*lo\b", test_src))
+                    or bool(re.search(r"\bhi\s*==\s*lo\b", test_src))
+                    or bool(re.search(r"\(?\s*hi\s*-\s*lo\s*\)?\s*<=\s*0", test_src))
+                )
+                if not is_degenerate_test:
+                    continue
+                # Walk the body for a Return whose expr touches torch.full_like
+                # or torch.zeros_like / torch.full / similar.
+                hit_return: ast.Return | None = None
+                for body_stmt in sub.body:
+                    for body_sub in ast.walk(body_stmt):
+                        if isinstance(body_sub, ast.Return):
+                            hit_return = body_sub
+                            break
+                    if hit_return is not None:
+                        break
+                if hit_return is None:
+                    continue
+                return_src = (
+                    ast.unparse(hit_return) if hasattr(ast, "unparse") else ""
+                )
+                ret_lineno = getattr(hit_return, "lineno", node.lineno)
+                if_lineno = getattr(sub, "lineno", node.lineno)
+                # Same-line waiver check (return line OR if line)
+                ret_line_text = (
+                    lines[ret_lineno - 1] if 0 <= ret_lineno - 1 < len(lines) else ""
+                )
+                if_line_text = (
+                    lines[if_lineno - 1] if 0 <= if_lineno - 1 < len(lines) else ""
+                )
+                if (
+                    _CHECK_158_WAIVER_TOKEN in ret_line_text
+                    or _CHECK_158_WAIVER_TOKEN in if_line_text
+                ):
+                    continue
+                # Multi-line return: scan a small window around the return
+                window_start = max(0, ret_lineno - 1)
+                window_end = min(len(lines), ret_lineno + 6)
+                window_text = "\n".join(lines[window_start:window_end])
+                # Accept: full_like(..., -<sentinel>, dtype=torch.intN) OR
+                # full_like(..., -<sentinel>) somewhere in the return AST.
+                expected_neg = str(expected_sentinel)  # negative number string
+                has_expected_sentinel = (
+                    expected_neg in return_src or expected_neg in window_text
+                )
+                # Reject: zeros_like / zero-fill in this branch
+                forbidden_patterns = (
+                    "zeros_like",
+                    "torch.zeros(",
+                )
+                has_forbidden = any(
+                    pat in return_src or pat in window_text
+                    for pat in forbidden_patterns
+                )
+                if has_forbidden or not has_expected_sentinel:
+                    violations.append(
+                        f"{rel}:{if_lineno}: function `{node.name}` "
+                        f"degenerate-range branch must return "
+                        f"`torch.full_like(..., {expected_sentinel}, "
+                        f"dtype=torch.int{bit_width})` so dequant recovers "
+                        f"`lo` exactly. Sister bugs fixed in block_nerv + "
+                        f"sane_hnerv + 7 others 2026-05-12 (NNN+FFFF). "
+                        f"Add same-line `# {_CHECK_158_WAIVER_TOKEN}<reason>` "
+                        f"waiver if intentional."
+                    )
+                break  # one violation per quantize function is enough
+    if verbose:
+        if violations:
+            print(
+                f"  [quantize-degenerate-range] {len(violations)} "
+                f"violation(s) across {scanned} substrate archive(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+        else:
+            print(
+                f"  [quantize-degenerate-range] OK "
+                f"({scanned} substrate archive(s) scanned; 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_quantize_degenerate_range_clamped_correctly found "
+            f"{len(violations)} substrate archive function(s) with "
+            "incorrect degenerate-range fill. Per CLAUDE.md 'Bugs must "
+            "be permanently fixed AND self-protected against' "
+            "non-negotiable, fill must be `-(MAX_LEVELS // 2)` so "
+            "dequant recovers `lo` exactly:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #159 — CLAUDE.md catalog text strictness must match preflight.py
+# wired `strict=` parameter at orchestrator callsites (UUU's Path B,
+# FFFF Bug 4 self-protection, 2026-05-12).
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (UUU's audit 2026-05-12,
+# .omx/research/catalog_drift_documentation_vs_code_audit_20260512.md):
+# CLAUDE.md catalog entries describe each check's strictness mode
+# ("warn-only initially" vs "STRICT @ 0" / "STRICT-FLIPPED"). When a
+# strict-flip happens in code without updating CLAUDE.md, the catalog
+# table silently drifts from the wired contract. UUU's audit found 23
+# drift entries across the 89-entry table. FFFF Bug 3 Path A bulk-fix
+# rotated the stale entries; this Path B gate refuses re-introduction.
+#
+# The check is conservative: it only fires when a CLAUDE.md entry
+# CLAIMS warn-only (string match on `Held warn-only` or
+# `warn-only initially` without an adjacent `STRICT-FLIPPED` /
+# `STRICT @ 0`) while the orchestrator callsite is `strict=True`.
+# The opposite direction (claim strict but code warn-only) is also
+# refused. Ambiguous entries without strictness language are accepted.
+
+_CHECK_159_WARN_ONLY_PHRASES: tuple[str, ...] = (
+    "held warn-only initially",
+    "warn-only initially",
+    "currently warn-only",
+)
+_CHECK_159_STRICT_PHRASES: tuple[str, ...] = (
+    "strict-flipped",
+    "strict @ 0",
+    "strict-from-byte-one",
+    "strict from byte one",
+    "→ strict",
+    "-> strict",
+    "live count: 0 → strict",
+    "live count: 0 -> strict",
+)
+
+
+def _check_159_extract_catalog_entries(
+    claude_md_text: str,
+) -> list[tuple[int, str, str]]:
+    """Extract (catalog_num, check_name, entry_text) tuples from CLAUDE.md.
+
+    Entry format: ``N. \\`check_*\\` — entry text body``. Body extends
+    until the next catalog entry header or a section header.
+    """
+    entries: list[tuple[int, str, str]] = []
+    lines = claude_md_text.splitlines()
+    entry_re = re.compile(r"^([0-9]+)\.\s+`(check_[a-zA-Z0-9_]+)`")
+    cur_num: int | None = None
+    cur_name: str | None = None
+    cur_body: list[str] = []
+    for line in lines:
+        m = entry_re.match(line)
+        if m:
+            if cur_num is not None and cur_name is not None:
+                entries.append((cur_num, cur_name, "\n".join(cur_body)))
+            cur_num = int(m.group(1))
+            cur_name = m.group(2)
+            cur_body = [line]
+        else:
+            if cur_num is not None:
+                # Stop entry on blank-line-followed-by-header / new section
+                if line.startswith("**") and (line.endswith("**") or "**:" in line):
+                    # Section break — close current entry
+                    entries.append((cur_num, cur_name, "\n".join(cur_body)))
+                    cur_num = None
+                    cur_name = None
+                    cur_body = []
+                else:
+                    cur_body.append(line)
+    if cur_num is not None and cur_name is not None:
+        entries.append((cur_num, cur_name, "\n".join(cur_body)))
+    return entries
+
+
+def _check_159_extract_callsite_strict(
+    preflight_text: str, check_name: str
+) -> bool | None:
+    """Find the orchestrator callsite for `check_name` in preflight.py
+    and return the resolved `strict=` value (True / False / None if not
+    invoked).
+    """
+    # Look for a Call where the callee is `check_name` with up to ~15-line
+    # forward window for multi-line invocations.
+    lines = preflight_text.splitlines()
+    callsite_re = re.compile(rf"\b{re.escape(check_name)}\s*\(")
+    for i, line in enumerate(lines):
+        if not callsite_re.search(line):
+            continue
+        # Skip the `def check_name(...)` definition line
+        if line.lstrip().startswith("def "):
+            continue
+        # Window: this line + up to 15 forward lines until balanced parens
+        window = "\n".join(lines[i : i + 15])
+        # Look for `strict=True` / `strict=False` inside this window
+        m_true = re.search(r"\bstrict\s*=\s*True\b", window)
+        m_false = re.search(r"\bstrict\s*=\s*False\b", window)
+        if m_true and not m_false:
+            return True
+        if m_false and not m_true:
+            return False
+        if m_true and m_false:
+            # Both present — return the first one by position
+            return m_true.start() < m_false.start()
+    return None  # not invoked
+
+
+def check_claude_md_catalog_text_matches_preflight_strict_value(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #159 — refuse CLAUDE.md catalog entries whose strictness
+    text claim contradicts the orchestrator callsite `strict=` value.
+
+    Sister to Catalog #118 (`check_claude_md_catalog_no_duplicate_numbers`)
+    — both keep the CLAUDE.md catalog table the canonical strictness
+    ledger. UUU's audit 2026-05-12 identified 23 drift entries; this
+    gate refuses re-introduction.
+
+    Conservative classifier:
+      - Entry text contains "Held warn-only initially" / "warn-only
+        initially" / "currently warn-only" with NO adjacent
+        "STRICT-FLIPPED" / "STRICT @ 0" / "→ STRICT" phrase ⇒ entry
+        claims WARN-ONLY.
+      - Entry text contains "STRICT-FLIPPED" / "STRICT @ 0" /
+        "strict-from-byte-one" ⇒ entry claims STRICT.
+      - Otherwise ambiguous; accepted.
+    Drift fires only when claim and code disagree.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    claude_md = root / "CLAUDE.md"
+    preflight_py = root / "src" / "tac" / "preflight.py"
+    if not claude_md.is_file() or not preflight_py.is_file():
+        return []
+    try:
+        claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
+        preflight_text = preflight_py.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    violations: list[str] = []
+    entries = _check_159_extract_catalog_entries(claude_text)
+    for cat_num, check_name, body in entries:
+        body_lower = body.lower()
+        claims_warn = False
+        claims_strict = False
+        for phrase in _CHECK_159_WARN_ONLY_PHRASES:
+            if phrase in body_lower:
+                claims_warn = True
+                break
+        # Allow "warn-only initially; ... STRICT-FLIPPED" — only count as
+        # warn-only if NO strict phrase appears AFTER the warn phrase.
+        if claims_warn:
+            for phrase in _CHECK_159_STRICT_PHRASES:
+                if phrase in body_lower:
+                    claims_warn = False
+                    claims_strict = True
+                    break
+        if not claims_warn:
+            for phrase in _CHECK_159_STRICT_PHRASES:
+                if phrase in body_lower:
+                    claims_strict = True
+                    break
+        if not (claims_warn or claims_strict):
+            continue  # ambiguous; accept
+        code_strict = _check_159_extract_callsite_strict(preflight_text, check_name)
+        if code_strict is None:
+            # Function not invoked from orchestrator. Catalog #145 surface;
+            # handled separately. Skip drift comparison.
+            continue
+        if claims_warn and code_strict is True:
+            violations.append(
+                f"Catalog #{cat_num} `{check_name}`: CLAUDE.md text claims "
+                f"warn-only but orchestrator callsite is strict=True. "
+                f"Update CLAUDE.md to 'STRICT @ 0' / 'STRICT-FLIPPED' OR "
+                f"revert the callsite to strict=False."
+            )
+        elif claims_strict and code_strict is False:
+            violations.append(
+                f"Catalog #{cat_num} `{check_name}`: CLAUDE.md text claims "
+                f"strict but orchestrator callsite is strict=False. "
+                f"Flip the callsite to strict=True OR update CLAUDE.md "
+                f"to reflect warn-only-pending status."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-drift] {len(violations)} drift entries between "
+                f"CLAUDE.md catalog text and preflight.py strict= callsite:"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+        else:
+            print(
+                f"  [catalog-drift] OK ({len(entries)} catalog entries "
+                f"checked; 0 drift between CLAUDE.md text and preflight.py "
+                f"strict=)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_claude_md_catalog_text_matches_preflight_strict_value "
+            f"found {len(violations)} drift entries. Per CLAUDE.md 'Bugs "
+            "must be permanently fixed AND self-protected against' "
+            "non-negotiable, the catalog table is the canonical "
+            "strictness ledger:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
