@@ -1,0 +1,114 @@
+[
+  {
+    "symbol": "verify_checkpoint_quality",
+    "kind": "function",
+    "file": "src/tac/checkpoint.py",
+    "line": 105,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "write_plan_manifest",
+    "kind": "function",
+    "file": "src/tac/codec_stack_planner.py",
+    "line": 1070,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ControlSummationAdapter",
+    "kind": "class",
+    "file": "src/tac/contrib/multi_control_hint_encoder.py",
+    "line": 127,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "EC2InstanceSpec",
+    "kind": "class",
+    "file": "src/tac/deploy/aws/ec2_client.py",
+    "line": 119,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "adapt_for_aws",
+    "kind": "function",
+    "file": "src/tac/deploy/aws/experiments.py",
+    "line": 13,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "iter_layer_pairs",
+    "kind": "function",
+    "file": "src/tac/frozen_bit_quant.py",
+    "line": 294,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "config_from_mapping",
+    "kind": "function",
+    "file": "src/tac/hnerv_arch_schema.py",
+    "line": 286,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_pr101_archive_state_dict",
+    "kind": "function",
+    "file": "src/tac/pr101_archive_state_loader.py",
+    "line": 157,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "write_range_contract_json",
+    "kind": "function",
+    "file": "src/tac/pr91_hpm1_range_contract.py",
+    "line": 1040,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_pose_fit_module_has_white_noise_test",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 27333,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_preflight_hook_supports_changed_files_mode",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 27463,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_renderer_codec_has_posenet_protection",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 27141,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "fp8_format_metadata",
+    "kind": "function",
+    "file": "src/tac/quantization_fp8.py",
+    "line": 365,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compute_rate_term",
+    "kind": "function",
+    "file": "src/tac/submission_archive.py",
+    "line": 1547,
+    "external_ref_count": 0,
+    "external_refs": []
+  }
+]

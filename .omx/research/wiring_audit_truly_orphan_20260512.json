@@ -1,0 +1,2626 @@
+[
+  {
+    "symbol": "AlphaMaskCodecFamilyContract",
+    "kind": "class",
+    "file": "src/tac/alpha_mask_codec_readiness.py",
+    "line": 33,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "dilate_binary_mask",
+    "kind": "function",
+    "file": "src/tac/analysis/segnet_boundary_marginals.py",
+    "line": 66,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ArchiveSignalError",
+    "kind": "class",
+    "file": "src/tac/archive_signal.py",
+    "line": 29,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "baseline_from_exact_eval",
+    "kind": "function",
+    "file": "src/tac/archive_signal.py",
+    "line": 86,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "component_rows_from_trace",
+    "kind": "function",
+    "file": "src/tac/archive_signal.py",
+    "line": 425,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "expand_globs",
+    "kind": "function",
+    "file": "src/tac/archive_signal.py",
+    "line": 499,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "rows_from_archive_profile",
+    "kind": "function",
+    "file": "src/tac/archive_signal.py",
+    "line": 269,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "rows_from_pr81_profile",
+    "kind": "function",
+    "file": "src/tac/archive_signal.py",
+    "line": 319,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "rows_from_pr82_profile",
+    "kind": "function",
+    "file": "src/tac/archive_signal.py",
+    "line": 375,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "synthetic_baseline",
+    "kind": "function",
+    "file": "src/tac/archive_signal.py",
+    "line": 125,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "decode_static",
+    "kind": "function",
+    "file": "src/tac/arithmetic_terminal.py",
+    "line": 138,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "encode_static",
+    "kind": "function",
+    "file": "src/tac/arithmetic_terminal.py",
+    "line": 112,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ArtifactLifecycleViolation",
+    "kind": "class",
+    "file": "src/tac/artifact_lifecycle.py",
+    "line": 217,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "GuardResult",
+    "kind": "class",
+    "file": "src/tac/artifact_lifecycle.py",
+    "line": 239,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "RegistryEntry",
+    "kind": "class",
+    "file": "src/tac/artifact_lifecycle.py",
+    "line": 86,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "contest_cuda_hardware_is_documented",
+    "kind": "function",
+    "file": "src/tac/auth_eval_schema.py",
+    "line": 309,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "first_numeric",
+    "kind": "function",
+    "file": "src/tac/auth_eval_schema.py",
+    "line": 66,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "int_or_none",
+    "kind": "function",
+    "file": "src/tac/auth_eval_schema.py",
+    "line": 42,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_auth_eval_json",
+    "kind": "function",
+    "file": "src/tac/auth_eval_schema.py",
+    "line": 170,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "numeric_or_none",
+    "kind": "function",
+    "file": "src/tac/auth_eval_schema.py",
+    "line": 25,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "BHv1Header",
+    "kind": "class",
+    "file": "src/tac/balle_hyperprior_codec.py",
+    "line": 638,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "BHPHeader",
+    "kind": "class",
+    "file": "src/tac/balle_hyperprior_renderer.py",
+    "line": 214,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "RuntimeConsumerError",
+    "kind": "class",
+    "file": "src/tac/categorical_candidate_runtime_skeleton.py",
+    "line": 48,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "md5_prefix",
+    "kind": "function",
+    "file": "src/tac/checkpoint.py",
+    "line": 35,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "verify_checkpoint_quality",
+    "kind": "function",
+    "file": "src/tac/checkpoint.py",
+    "line": 105,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "BlockFPSplit",
+    "kind": "class",
+    "file": "src/tac/codec/a6_selfcomp_blockfp_hyperprior_compose.py",
+    "line": 285,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "unpack_frame_conditional_q_bits_by_encoding",
+    "kind": "function",
+    "file": "src/tac/codec/frame_conditional_bit_budget.py",
+    "line": 403,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "CodecMagicEntry",
+    "kind": "class",
+    "file": "src/tac/codec_magic_registry.py",
+    "line": 33,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "CodecOpADMMSnapshot",
+    "kind": "class",
+    "file": "src/tac/codec_op_admm_adapter.py",
+    "line": 107,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "DecodeValidation",
+    "kind": "class",
+    "file": "src/tac/codec_op_admm_adapter.py",
+    "line": 51,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "MaterializedPayloadCustody",
+    "kind": "class",
+    "file": "src/tac/codec_op_admm_adapter.py",
+    "line": 97,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "validate_full_decode_shapes",
+    "kind": "function",
+    "file": "src/tac/codec_op_admm_adapter.py",
+    "line": 455,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ArchiveInspection",
+    "kind": "class",
+    "file": "src/tac/codec_op_archive_substitution.py",
+    "line": 92,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "read_materialized_codec_op_bitstream",
+    "kind": "function",
+    "file": "src/tac/codec_op_bitstream_materializer.py",
+    "line": 272,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "EpochReport",
+    "kind": "class",
+    "file": "src/tac/codec_pipeline_deltaepszeta_callback.py",
+    "line": 80,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "BakeoffEntry",
+    "kind": "class",
+    "file": "src/tac/codec_pipeline_mask.py",
+    "line": 656,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "CodecPass",
+    "kind": "class",
+    "file": "src/tac/codec_stack_planner.py",
+    "line": 391,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ParallelComponentGroup",
+    "kind": "class",
+    "file": "src/tac/codec_stack_planner.py",
+    "line": 354,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PromotionStatus",
+    "kind": "class",
+    "file": "src/tac/codec_stack_planner.py",
+    "line": 481,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SerialTransform",
+    "kind": "class",
+    "file": "src/tac/codec_stack_planner.py",
+    "line": 307,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "learned_hyperprior_component",
+    "kind": "function",
+    "file": "src/tac/codec_stack_planner.py",
+    "line": 653,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "write_plan_manifest",
+    "kind": "function",
+    "file": "src/tac/codec_stack_planner.py",
+    "line": 1070,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "canonicalize_component_sensitivity_manifest",
+    "kind": "function",
+    "file": "src/tac/component_sensitivity_artifact.py",
+    "line": 364,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "custody_metadata",
+    "kind": "function",
+    "file": "src/tac/component_sensitivity_artifact.py",
+    "line": 256,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "file_metadata",
+    "kind": "function",
+    "file": "src/tac/component_sensitivity_artifact.py",
+    "line": 196,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PosteriorUpdate",
+    "kind": "class",
+    "file": "src/tac/continual_learning.py",
+    "line": 344,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ControlSummationAdapter",
+    "kind": "class",
+    "file": "src/tac/contrib/multi_control_hint_encoder.py",
+    "line": 127,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "zero_module",
+    "kind": "function",
+    "file": "src/tac/contrib/multi_control_hint_encoder.py",
+    "line": 20,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SzabolcsBuildResult",
+    "kind": "class",
+    "file": "src/tac/contrib/szabolcs_renderer.py",
+    "line": 393,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ArtifactRequirement",
+    "kind": "class",
+    "file": "src/tac/cross_paradigm_wiring.py",
+    "line": 36,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "CrossParadigmRuntimeContract",
+    "kind": "class",
+    "file": "src/tac/cross_paradigm_wiring.py",
+    "line": 88,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "RuntimeLaneContract",
+    "kind": "class",
+    "file": "src/tac/cross_paradigm_wiring.py",
+    "line": 54,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "EC2Client",
+    "kind": "class",
+    "file": "src/tac/deploy/aws/ec2_client.py",
+    "line": 157,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "EC2InstanceSpec",
+    "kind": "class",
+    "file": "src/tac/deploy/aws/ec2_client.py",
+    "line": 119,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "resolve_default_ami_id",
+    "kind": "function",
+    "file": "src/tac/deploy/aws/ec2_client.py",
+    "line": 54,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "adapt_for_aws",
+    "kind": "function",
+    "file": "src/tac/deploy/aws/experiments.py",
+    "line": 13,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ActiveVMsCorruptError",
+    "kind": "class",
+    "file": "src/tac/deploy/azure/active_vms_state.py",
+    "line": 56,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ensure_resource_group",
+    "kind": "function",
+    "file": "src/tac/deploy/azure/azure_dispatch.py",
+    "line": 329,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "install_packages",
+    "kind": "function",
+    "file": "src/tac/deploy/cloud_paths.py",
+    "line": 256,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "uv_pip_install",
+    "kind": "function",
+    "file": "src/tac/deploy/cloud_paths.py",
+    "line": 218,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "DatasetSourceSpec",
+    "kind": "class",
+    "file": "src/tac/deploy/kaggle/source_bundle.py",
+    "line": 12,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "deterministic_tar_filter",
+    "kind": "function",
+    "file": "src/tac/deploy/kaggle/source_bundle.py",
+    "line": 26,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "include_in_source_bundle",
+    "kind": "function",
+    "file": "src/tac/deploy/kaggle/source_bundle.py",
+    "line": 40,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "classify_empty_ssh_exact_eval_artifact_dir",
+    "kind": "function",
+    "file": "src/tac/deploy/lightning/batch_jobs.py",
+    "line": 4468,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "job_status_snapshot",
+    "kind": "function",
+    "file": "src/tac/deploy/lightning/batch_jobs.py",
+    "line": 3124,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "default_remote_tac",
+    "kind": "function",
+    "file": "src/tac/deploy/lightning/defaults.py",
+    "line": 46,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PreparedModalAuthEvalRequest",
+    "kind": "class",
+    "file": "src/tac/deploy/modal/auth_eval.py",
+    "line": 52,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "validate_runtime_upload_file",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/auth_eval.py",
+    "line": 106,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "auth_eval_entry",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 963,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "contest_compliant_eval",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 1395,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "contest_eval_entry",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 1467,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "gt_sparse_tto_entry",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 2128,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "gt_sparse_tto_eval",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 2036,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "joint_pair_train_entry",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 2260,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "train_asymmetric_warp",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 406,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "tto_entry",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 1954,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "tto_eval",
+    "kind": "function",
+    "file": "src/tac/deploy/modal/modal_asymmetric_warp_deploy.py",
+    "line": 1787,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ProviderDeployContract",
+    "kind": "class",
+    "file": "src/tac/deploy/provider_contracts.py",
+    "line": 26,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "cmd_budget",
+    "kind": "function",
+    "file": "src/tac/deploy/vastai/cli.py",
+    "line": 315,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "cmd_launch",
+    "kind": "function",
+    "file": "src/tac/deploy/vastai/cli.py",
+    "line": 46,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "cmd_results",
+    "kind": "function",
+    "file": "src/tac/deploy/vastai/cli.py",
+    "line": 206,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "cmd_search",
+    "kind": "function",
+    "file": "src/tac/deploy/vastai/cli.py",
+    "line": 25,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "InstanceInfo",
+    "kind": "class",
+    "file": "src/tac/deploy/vastai/client.py",
+    "line": 85,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compute_score_jacobian_per_layer",
+    "kind": "function",
+    "file": "src/tac/diagnostics/cuda_cpu_drift.py",
+    "line": 307,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "CorrectionReadinessReport",
+    "kind": "class",
+    "file": "src/tac/engineered_correction_readiness.py",
+    "line": 34,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "EngineeredCorrectionReadinessError",
+    "kind": "class",
+    "file": "src/tac/engineered_correction_readiness.py",
+    "line": 29,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "serialize_corrections",
+    "kind": "function",
+    "file": "src/tac/engineered_corrections.py",
+    "line": 163,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "rank_correction_candidates",
+    "kind": "function",
+    "file": "src/tac/engineered_corrections_v2.py",
+    "line": 60,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "select_pareto_frontier",
+    "kind": "function",
+    "file": "src/tac/engineered_corrections_v2.py",
+    "line": 169,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "select_top_k_per_frame",
+    "kind": "function",
+    "file": "src/tac/engineered_corrections_v2.py",
+    "line": 121,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "score_pairs",
+    "kind": "function",
+    "file": "src/tac/ensemble.py",
+    "line": 35,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "select_best_pairs",
+    "kind": "function",
+    "file": "src/tac/ensemble.py",
+    "line": 116,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "RoundtripGateResult",
+    "kind": "class",
+    "file": "src/tac/eval_roundtrip_gate.py",
+    "line": 57,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "EvidenceGate",
+    "kind": "class",
+    "file": "src/tac/external_sources_20260505.py",
+    "line": 49,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "LaneRecommendation",
+    "kind": "class",
+    "file": "src/tac/external_sources_20260505.py",
+    "line": 59,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SourceRecord",
+    "kind": "class",
+    "file": "src/tac/external_sources_20260505.py",
+    "line": 36,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compress_flow_dct",
+    "kind": "function",
+    "file": "src/tac/flow_compress.py",
+    "line": 25,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "decompress_flow_dct",
+    "kind": "function",
+    "file": "src/tac/flow_compress.py",
+    "line": 84,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "boundary_artifact_score",
+    "kind": "function",
+    "file": "src/tac/forensics.py",
+    "line": 49,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "eval_roundtrip_distortion_map",
+    "kind": "function",
+    "file": "src/tac/forensics.py",
+    "line": 417,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "segnet_class_boundary_analysis",
+    "kind": "function",
+    "file": "src/tac/forensics.py",
+    "line": 170,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "iter_layer_pairs",
+    "kind": "function",
+    "file": "src/tac/frozen_bit_quant.py",
+    "line": 294,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HiddenGemReadiness",
+    "kind": "class",
+    "file": "src/tac/hidden_gem_readiness.py",
+    "line": 40,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PathReadiness",
+    "kind": "class",
+    "file": "src/tac/hidden_gem_readiness.py",
+    "line": 29,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "path_readiness_to_dict",
+    "kind": "function",
+    "file": "src/tac/hidden_gem_readiness.py",
+    "line": 110,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "audit_evidence_paths",
+    "kind": "function",
+    "file": "src/tac/hidden_gems.py",
+    "line": 735,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HNeRVArchSchemaError",
+    "kind": "class",
+    "file": "src/tac/hnerv_arch_schema.py",
+    "line": 40,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "config_from_mapping",
+    "kind": "function",
+    "file": "src/tac/hnerv_arch_schema.py",
+    "line": 286,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "BrotliGridParams",
+    "kind": "class",
+    "file": "src/tac/hnerv_brotli_saturation.py",
+    "line": 62,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HnervBrotliSaturationError",
+    "kind": "class",
+    "file": "src/tac/hnerv_brotli_saturation.py",
+    "line": 57,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HnervFrontierEntropyRankingError",
+    "kind": "class",
+    "file": "src/tac/hnerv_frontier_entropy_ranking.py",
+    "line": 30,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "EncodedGeneratedSchemaState",
+    "kind": "class",
+    "file": "src/tac/hnerv_generated_schema_codec.py",
+    "line": 50,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "validate_state_dict_matches_schema",
+    "kind": "function",
+    "file": "src/tac/hnerv_generated_schema_codec.py",
+    "line": 79,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HNGPSection",
+    "kind": "class",
+    "file": "src/tac/hnerv_generated_schema_packet.py",
+    "line": 56,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HNeRVGeneratedSchemaPacket",
+    "kind": "class",
+    "file": "src/tac/hnerv_generated_schema_packet.py",
+    "line": 80,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "build_hdm3_runtime_tree_inflate_output_parity_contract",
+    "kind": "function",
+    "file": "src/tac/hnerv_hdm3_archive_candidate.py",
+    "line": 524,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "materialize_hdm3_exact_eval_release_surface",
+    "kind": "function",
+    "file": "src/tac/hnerv_hdm3_archive_candidate.py",
+    "line": 261,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HnervLosslessControlPromotionReviewError",
+    "kind": "class",
+    "file": "src/tac/hnerv_lossless_control_promotion_review.py",
+    "line": 27,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "BrotliRecodeChoice",
+    "kind": "class",
+    "file": "src/tac/hnerv_lowlevel_packer.py",
+    "line": 90,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr103LcAcPayload",
+    "kind": "class",
+    "file": "src/tac/hnerv_pr103_lc_ac_schema.py",
+    "line": 135,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr103LcAcSection",
+    "kind": "class",
+    "file": "src/tac/hnerv_pr103_lc_ac_schema.py",
+    "line": 116,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HnervWaveletApplyGateError",
+    "kind": "class",
+    "file": "src/tac/hnerv_wavelet_apply_gate.py",
+    "line": 23,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HnervWaveletCompressTimeConfig",
+    "kind": "class",
+    "file": "src/tac/hnerv_wavelet_compress_time_harness.py",
+    "line": 44,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HnervWaveletResidualError",
+    "kind": "class",
+    "file": "src/tac/hnerv_wavelet_residual.py",
+    "line": 37,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "HnervWaveletSidechannelError",
+    "kind": "class",
+    "file": "src/tac/hnerv_wavelet_sidechannel.py",
+    "line": 40,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ParsedWaveletSidechannelArchive",
+    "kind": "class",
+    "file": "src/tac/hnerv_wavelet_sidechannel.py",
+    "line": 45,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "AdmmIteration",
+    "kind": "class",
+    "file": "src/tac/joint_admm_coordinator.py",
+    "line": 491,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "JointCodecStackResult",
+    "kind": "class",
+    "file": "src/tac/joint_codec_stack_orchestrator.py",
+    "line": 1027,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_jcsp_local_skeleton_archive_member",
+    "kind": "function",
+    "file": "src/tac/joint_codec_stack_orchestrator.py",
+    "line": 1793,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "unpack_jcsp_local_skeleton_container",
+    "kind": "function",
+    "file": "src/tac/joint_codec_stack_orchestrator.py",
+    "line": 1486,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ConvBlock",
+    "kind": "class",
+    "file": "src/tac/joint_pair_generator.py",
+    "line": 27,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "DownBlock",
+    "kind": "class",
+    "file": "src/tac/joint_pair_generator.py",
+    "line": 45,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "UpBlock",
+    "kind": "class",
+    "file": "src/tac/joint_pair_generator.py",
+    "line": 58,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "AuthEvalAwareRegularizer",
+    "kind": "class",
+    "file": "src/tac/joint_renderer_scorer_finetune.py",
+    "line": 239,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "MultiHeadScorerProxy",
+    "kind": "class",
+    "file": "src/tac/joint_renderer_scorer_finetune.py",
+    "line": 114,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compute_joint_loss",
+    "kind": "function",
+    "file": "src/tac/joint_renderer_scorer_finetune.py",
+    "line": 477,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compute_proxy_distill_loss",
+    "kind": "function",
+    "file": "src/tac/joint_renderer_scorer_finetune.py",
+    "line": 315,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compute_renderer_proxy_loss",
+    "kind": "function",
+    "file": "src/tac/joint_renderer_scorer_finetune.py",
+    "line": 364,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compute_uncertainty_regularizer",
+    "kind": "function",
+    "file": "src/tac/joint_renderer_scorer_finetune.py",
+    "line": 391,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "predicted_auth_eval_score",
+    "kind": "function",
+    "file": "src/tac/joint_renderer_scorer_finetune.py",
+    "line": 299,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ClassWeightsMetadata",
+    "kind": "class",
+    "file": "src/tac/kl_config.py",
+    "line": 73,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ControllerMetadata",
+    "kind": "class",
+    "file": "src/tac/kl_config.py",
+    "line": 189,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "RoundtripContract",
+    "kind": "class",
+    "file": "src/tac/kl_config.py",
+    "line": 130,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "distillation_policy_to_json",
+    "kind": "function",
+    "file": "src/tac/kl_config.py",
+    "line": 375,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "normalize_class_weights_metadata",
+    "kind": "function",
+    "file": "src/tac/kl_config.py",
+    "line": 416,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "normalize_controller_metadata",
+    "kind": "function",
+    "file": "src/tac/kl_config.py",
+    "line": 476,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "normalize_roundtrip_contract",
+    "kind": "function",
+    "file": "src/tac/kl_config.py",
+    "line": 449,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "validate_distillation_policy",
+    "kind": "function",
+    "file": "src/tac/kl_config.py",
+    "line": 362,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "RuntimeSkeletonError",
+    "kind": "class",
+    "file": "src/tac/lapose_foveation_runtime_skeleton.py",
+    "line": 70,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "LoRAConv2d",
+    "kind": "class",
+    "file": "src/tac/lora.py",
+    "line": 51,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "LoRAConvTranspose2d",
+    "kind": "class",
+    "file": "src/tac/lora.py",
+    "line": 100,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_lora_state",
+    "kind": "function",
+    "file": "src/tac/lora.py",
+    "line": 230,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TinyFrameSelfCompressionArtifact",
+    "kind": "class",
+    "file": "src/tac/lossless/tiny_frame_self_compress.py",
+    "line": 21,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "summarize_tiny_frame_combined_bytes",
+    "kind": "function",
+    "file": "src/tac/lossless/tiny_frame_train.py",
+    "line": 284,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "dequantize_int4_tensor",
+    "kind": "function",
+    "file": "src/tac/mixed_precision_export.py",
+    "line": 140,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "dequantize_uniform_tensor",
+    "kind": "function",
+    "file": "src/tac/mixed_precision_export.py",
+    "line": 259,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_int4_lzma2_into_model",
+    "kind": "function",
+    "file": "src/tac/mixed_precision_export.py",
+    "line": 550,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "measure_quantization_error",
+    "kind": "function",
+    "file": "src/tac/mixed_precision_export.py",
+    "line": 575,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "quantize_uniform_tensor",
+    "kind": "function",
+    "file": "src/tac/mixed_precision_export.py",
+    "line": 181,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "NeRVHeader",
+    "kind": "class",
+    "file": "src/tac/nerv_mask_codec.py",
+    "line": 240,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "blocks_to_tensor",
+    "kind": "function",
+    "file": "src/tac/neural_weight_codec.py",
+    "line": 342,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "NWCSRendererContainer",
+    "kind": "class",
+    "file": "src/tac/neural_weight_codec_sensitivity.py",
+    "line": 135,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "discover_checkpoint_paths",
+    "kind": "function",
+    "file": "src/tac/neural_weight_corpus.py",
+    "line": 171,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "validate_manifest_has_corpus",
+    "kind": "function",
+    "file": "src/tac/neural_weight_corpus.py",
+    "line": 449,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "OmegaOptClaim",
+    "kind": "class",
+    "file": "src/tac/omega_opt_claims.py",
+    "line": 57,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "required_ledger_tokens_for_claim",
+    "kind": "function",
+    "file": "src/tac/omega_opt_claims.py",
+    "line": 400,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "exact_linear_stack_anchor_blockers",
+    "kind": "function",
+    "file": "src/tac/omega_opt_linear_stack_packet.py",
+    "line": 253,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "linear_stack_exact_anchor_fields",
+    "kind": "function",
+    "file": "src/tac/omega_opt_linear_stack_packet.py",
+    "line": 214,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "OptimalStackOrchestrator",
+    "kind": "class",
+    "file": "src/tac/optimal_stack_orchestrator.py",
+    "line": 270,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "StreamInput",
+    "kind": "class",
+    "file": "src/tac/optimal_stack_orchestrator.py",
+    "line": 241,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "StreamProvenance",
+    "kind": "class",
+    "file": "src/tac/optimal_stack_orchestrator.py",
+    "line": 113,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_manifest_source",
+    "kind": "function",
+    "file": "src/tac/optimization/architecture_sweep_recommendations.py",
+    "line": 90,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "BayesianExperimentalDesignError",
+    "kind": "class",
+    "file": "src/tac/optimization/bayesian_experimental_design.py",
+    "line": 28,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "expected_design_row",
+    "kind": "function",
+    "file": "src/tac/optimization/bayesian_experimental_design.py",
+    "line": 369,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SensitivityScalar",
+    "kind": "class",
+    "file": "src/tac/optimization/beta_fisher_lossy_weights.py",
+    "line": 117,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "is_sha256_hex",
+    "kind": "function",
+    "file": "src/tac/optimization/candidate_evidence_contract.py",
+    "line": 115,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ProfileUpdate",
+    "kind": "class",
+    "file": "src/tac/optimization/cuda_cpu_axis_profile_registry.py",
+    "line": 500,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "volterra_interaction_rows",
+    "kind": "function",
+    "file": "src/tac/optimization/field_equation_planner.py",
+    "line": 438,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ImportanceWeights",
+    "kind": "class",
+    "file": "src/tac/optimization/jacobian_fisher_importance_allocator.py",
+    "line": 190,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TensorCandidate",
+    "kind": "class",
+    "file": "src/tac/optimization/jacobian_fisher_importance_allocator.py",
+    "line": 141,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TensorImportanceRow",
+    "kind": "class",
+    "file": "src/tac/optimization/jacobian_fisher_importance_allocator.py",
+    "line": 160,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "normalize_candidate_curves",
+    "kind": "function",
+    "file": "src/tac/optimization/jacobian_fisher_importance_allocator.py",
+    "line": 415,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "reduce_per_weight_importance",
+    "kind": "function",
+    "file": "src/tac/optimization/jacobian_fisher_importance_allocator.py",
+    "line": 522,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ResolvedImportance",
+    "kind": "class",
+    "file": "src/tac/optimization/jacobian_weighted_selected_k.py",
+    "line": 121,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "select_jacobian_weighted_k_allocations",
+    "kind": "function",
+    "file": "src/tac/optimization/jacobian_weighted_selected_k.py",
+    "line": 476,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "validate_importance_manifest_metadata",
+    "kind": "function",
+    "file": "src/tac/optimization/jacobian_weighted_selected_k.py",
+    "line": 206,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "MetaLagrangianError",
+    "kind": "class",
+    "file": "src/tac/optimization/meta_lagrangian_allocator.py",
+    "line": 91,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "LedgerAdapterError",
+    "kind": "class",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 54,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "LedgerAdapterResult",
+    "kind": "class",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 59,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "adapt_bilevel_jsonl",
+    "kind": "function",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 442,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "adapt_candidate_packet_json",
+    "kind": "function",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 473,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "adapt_mps_research_signal_manifest",
+    "kind": "function",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 497,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "bilevel_record_to_atom",
+    "kind": "function",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 236,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "candidate_packet_to_atoms",
+    "kind": "function",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 346,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "read_jsonl_records",
+    "kind": "function",
+    "file": "src/tac/optimization/meta_lagrangian_ledger_adapter.py",
+    "line": 212,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "CandidateDraft",
+    "kind": "class",
+    "file": "src/tac/optimization/optimizer_guided_candidate_generation.py",
+    "line": 245,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ParameterSpec",
+    "kind": "class",
+    "file": "src/tac/optimization/optimizer_guided_candidate_generation.py",
+    "line": 53,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ReferenceBaseline",
+    "kind": "class",
+    "file": "src/tac/optimization/phase1_t13_t19_t20_t22_cost_refinement.py",
+    "line": 96,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ordered_unique",
+    "kind": "function",
+    "file": "src/tac/optimization/proxy_candidate_contract.py",
+    "line": 37,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "default_surface_atoms",
+    "kind": "function",
+    "file": "src/tac/optimization/scorer_surface_shaking.py",
+    "line": 147,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "serialize_pareto_point",
+    "kind": "function",
+    "file": "src/tac/optimization/theoretical_floor_substrate_refresh.py",
+    "line": 439,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "extract_candidates_from_source",
+    "kind": "function",
+    "file": "src/tac/optimizer/candidate_queue.py",
+    "line": 753,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "as_positive_int",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 170,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "build_promoted_queue",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 976,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "claim_status_terminal",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 396,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "iter_mappings",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 259,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "parse_claim_rows",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 400,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "parse_utc",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 381,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "promoted_row",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 882,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "score_affecting_change_proof",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 269,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "source_blocker_violations",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 363,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "validate_runtime_consumption_proof",
+    "kind": "function",
+    "file": "src/tac/optimizer/exact_readiness.py",
+    "line": 592,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PacketSectionTransform",
+    "kind": "class",
+    "file": "src/tac/packet_section_transform.py",
+    "line": 170,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PacketSectionTransformError",
+    "kind": "class",
+    "file": "src/tac/packet_section_transform.py",
+    "line": 59,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SectionIR",
+    "kind": "class",
+    "file": "src/tac/packet_section_transform.py",
+    "line": 64,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TransformOutput",
+    "kind": "class",
+    "file": "src/tac/packet_section_transform.py",
+    "line": 161,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "AlphaCandidateDefinition",
+    "kind": "class",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 47,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "AlphaCandidateReadiness",
+    "kind": "class",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 82,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PathGroup",
+    "kind": "class",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 28,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PathProbe",
+    "kind": "class",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 60,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TextProbe",
+    "kind": "class",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 71,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TextRequirement",
+    "kind": "class",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 37,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "alpha_readiness_to_dict",
+    "kind": "function",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 267,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "path_probe_to_dict",
+    "kind": "function",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 293,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "text_probe_to_dict",
+    "kind": "function",
+    "file": "src/tac/paradigm_alpha_readiness.py",
+    "line": 305,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PerArchiveUpdateResult",
+    "kind": "class",
+    "file": "src/tac/per_archive_drift_posterior.py",
+    "line": 226,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "extract_gt_poses",
+    "kind": "function",
+    "file": "src/tac/pose_extraction.py",
+    "line": 27,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr101ArchiveLatents",
+    "kind": "class",
+    "file": "src/tac/pr101_archive_state_loader.py",
+    "line": 57,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr101ArchiveState",
+    "kind": "class",
+    "file": "src/tac/pr101_archive_state_loader.py",
+    "line": 46,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_pr101_archive_state_dict",
+    "kind": "function",
+    "file": "src/tac/pr101_archive_state_loader.py",
+    "line": 157,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TransformTargetSelection",
+    "kind": "class",
+    "file": "src/tac/pr103_arithmetic_transform_plan.py",
+    "line": 62,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr103Pr106DecodedPayload",
+    "kind": "class",
+    "file": "src/tac/pr103_pr106_runtime_closure.py",
+    "line": 79,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr106DecodedPayload",
+    "kind": "class",
+    "file": "src/tac/pr103_pr106_runtime_closure.py",
+    "line": 70,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr106PackedSections",
+    "kind": "class",
+    "file": "src/tac/pr103_pr106_runtime_closure.py",
+    "line": 61,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SingleMemberPayload",
+    "kind": "class",
+    "file": "src/tac/pr103_pr106_runtime_closure.py",
+    "line": 50,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "decode_pr106_fixed_latents",
+    "kind": "function",
+    "file": "src/tac/pr103_pr106_runtime_closure.py",
+    "line": 221,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "section_lengths_from_layout",
+    "kind": "function",
+    "file": "src/tac/pr103_pr106_runtime_closure.py",
+    "line": 258,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PR106SidechannelStackReadinessError",
+    "kind": "class",
+    "file": "src/tac/pr106_sidechannel_stack_readiness.py",
+    "line": 21,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr79PayloadPart",
+    "kind": "class",
+    "file": "src/tac/pr79_segaction_payload.py",
+    "line": 45,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "Pr79SegactionPayload",
+    "kind": "class",
+    "file": "src/tac/pr79_segaction_payload.py",
+    "line": 79,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "read_pr79_archive_payload",
+    "kind": "function",
+    "file": "src/tac/pr79_segaction_payload.py",
+    "line": 155,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "write_range_contract_json",
+    "kind": "function",
+    "file": "src/tac/pr91_hpm1_range_contract.py",
+    "line": 1040,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ComponentTrace",
+    "kind": "class",
+    "file": "src/tac/pr95_residual_atoms.py",
+    "line": 48,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ExactBaseline",
+    "kind": "class",
+    "file": "src/tac/pr95_residual_atoms.py",
+    "line": 38,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PairProfile",
+    "kind": "class",
+    "file": "src/tac/pr95_residual_atoms.py",
+    "line": 53,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "LoaderFormatSafetyError",
+    "kind": "class",
+    "file": "src/tac/preflight.py",
+    "line": 11886,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PreflightWarning",
+    "kind": "class",
+    "file": "src/tac/preflight.py",
+    "line": 1167,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_dispatch_claim_helper_present",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 24134,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_imp_cycles_use_ema_and_auth_eval",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 25652,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_lane_anchor_masks_full_resolution",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 19171,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_lane_scripts_set_up_inflate_environment",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 24234,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_launcher_tarball_includes_lane_anchors",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 19064,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_no_off_manifold_pose_zeros",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 19285,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_no_tmux_kill_server_in_lane_scripts",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 18232,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_pose_fit_module_has_white_noise_test",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 27333,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_preflight_hook_supports_changed_files_mode",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 27463,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_preflight_scanners_use_oss_mirror_helper",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 7054,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_python_heredocs_in_shell_compile",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 19788,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_python_heredocs_no_undefined_names",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 19405,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_remote_scripts_executable_bit",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 17891,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_renderer_codec_has_posenet_protection",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 27141,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_resume_from_state_dict_shape_compat",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 18166,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_silent_default_audit_clean",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 13478,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "check_training_script_metric_keys_consistent",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 14484,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "preflight_arch_consistency",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 12306,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "preflight_build_renderer_signature",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 11464,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "preflight_canonical_checkpoints",
+    "kind": "function",
+    "file": "src/tac/preflight.py",
+    "line": 11525,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PublicSubmissionRef",
+    "kind": "class",
+    "file": "src/tac/public_submission_refs.py",
+    "line": 18,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "normalize_public_pr_key",
+    "kind": "function",
+    "file": "src/tac/public_submission_refs.py",
+    "line": 156,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "PythonAstIndexerBridgeError",
+    "kind": "class",
+    "file": "src/tac/python_ast_indexer_bridge.py",
+    "line": 18,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "resolve_python_ast_indexer_binary",
+    "kind": "function",
+    "file": "src/tac/python_ast_indexer_bridge.py",
+    "line": 22,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QBF1Container",
+    "kind": "class",
+    "file": "src/tac/qbf1_renderer_codec.py",
+    "line": 146,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QBF1TensorMetadata",
+    "kind": "class",
+    "file": "src/tac/qbf1_renderer_codec.py",
+    "line": 112,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QBF1TensorRecord",
+    "kind": "class",
+    "file": "src/tac/qbf1_renderer_codec.py",
+    "line": 138,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "load_qbf1_renderer",
+    "kind": "function",
+    "file": "src/tac/qbf1_renderer_codec.py",
+    "line": 550,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "pack_qbf1_renderer_state_dict",
+    "kind": "function",
+    "file": "src/tac/qbf1_renderer_codec.py",
+    "line": 500,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "unpack_qbf1_renderer_container",
+    "kind": "function",
+    "file": "src/tac/qbf1_renderer_codec.py",
+    "line": 510,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "AltGrammarRun",
+    "kind": "class",
+    "file": "src/tac/qma9_alt_grammar.py",
+    "line": 58,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "CompiledCodec",
+    "kind": "class",
+    "file": "src/tac/qma9_alt_grammar.py",
+    "line": 48,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ascii_magic",
+    "kind": "function",
+    "file": "src/tac/qma9_alt_grammar.py",
+    "line": 89,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QMA9DecodedMask",
+    "kind": "class",
+    "file": "src/tac/qma9_range_mask_contract.py",
+    "line": 79,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QMA9FirstRowSpecializationHeader",
+    "kind": "class",
+    "file": "src/tac/qma9_range_mask_contract.py",
+    "line": 106,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QMA9VerticalBlockEscapeHeader",
+    "kind": "class",
+    "file": "src/tac/qma9_range_mask_contract.py",
+    "line": 89,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "RateBreakEven",
+    "kind": "class",
+    "file": "src/tac/qma9_range_mask_contract.py",
+    "line": 135,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ZipPayload",
+    "kind": "class",
+    "file": "src/tac/qma9_range_mask_contract.py",
+    "line": 50,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QRG1Decoded",
+    "kind": "class",
+    "file": "src/tac/qma9_run_grammar.py",
+    "line": 76,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QRG1Encoded",
+    "kind": "class",
+    "file": "src/tac/qma9_run_grammar.py",
+    "line": 65,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QRG1Header",
+    "kind": "class",
+    "file": "src/tac/qma9_run_grammar.py",
+    "line": 48,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QRG1Mode",
+    "kind": "class",
+    "file": "src/tac/qma9_run_grammar.py",
+    "line": 38,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "parse_qrg1_header",
+    "kind": "function",
+    "file": "src/tac/qma9_run_grammar.py",
+    "line": 319,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "FP8Linear",
+    "kind": "class",
+    "file": "src/tac/quantization_fp8.py",
+    "line": 165,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "assert_hardware_supported",
+    "kind": "function",
+    "file": "src/tac/quantization_fp8.py",
+    "line": 75,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "fp8_format_metadata",
+    "kind": "function",
+    "file": "src/tac/quantization_fp8.py",
+    "line": 365,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "QZS4Candidate",
+    "kind": "class",
+    "file": "src/tac/quantizr_qzs3_codec.py",
+    "line": 46,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "save_zoom_scalars",
+    "kind": "function",
+    "file": "src/tac/radial_zoom.py",
+    "line": 269,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "export_renderer_checkpoint",
+    "kind": "function",
+    "file": "src/tac/renderer_export.py",
+    "line": 237,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "MaterializationManifest",
+    "kind": "class",
+    "file": "src/tac/residual_basis/pr106_materializer_helpers.py",
+    "line": 59,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "OperatingRegime",
+    "kind": "class",
+    "file": "src/tac/score_geometry.py",
+    "line": 91,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ScoreDecomposition",
+    "kind": "class",
+    "file": "src/tac/score_geometry.py",
+    "line": 50,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ScoreGradient",
+    "kind": "class",
+    "file": "src/tac/score_geometry.py",
+    "line": 70,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "StackingPrediction",
+    "kind": "class",
+    "file": "src/tac/score_geometry_stacking.py",
+    "line": 73,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TripleStackingPrediction",
+    "kind": "class",
+    "file": "src/tac/score_geometry_stacking.py",
+    "line": 233,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "build_film_canvas_from_state",
+    "kind": "function",
+    "file": "src/tac/segmap_film_canvas_renderer.py",
+    "line": 144,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SemanticClass",
+    "kind": "class",
+    "file": "src/tac/semantic_label_contract.py",
+    "line": 19,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SensitivityMapStats",
+    "kind": "class",
+    "file": "src/tac/sensitivity_map.py",
+    "line": 159,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SharedPMFEncodedPayload",
+    "kind": "class",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 94,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SharedPMFModel",
+    "kind": "class",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 53,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SharedPMFProbeResult",
+    "kind": "class",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 112,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "decode_rows_with_model",
+    "kind": "function",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 454,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "deserialize_model",
+    "kind": "function",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 384,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "encode_rows_with_model",
+    "kind": "function",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 431,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "payload_bits_for_assignments",
+    "kind": "function",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 326,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "symbol_stream_sha256",
+    "kind": "function",
+    "file": "src/tac/shared_pmf_model.py",
+    "line": 197,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "repo_root_from_tac",
+    "kind": "function",
+    "file": "src/tac/sidechannel_score_table.py",
+    "line": 23,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ArchiveValidationResult",
+    "kind": "class",
+    "file": "src/tac/submission_archive.py",
+    "line": 1251,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "brotli_compress",
+    "kind": "function",
+    "file": "src/tac/submission_archive.py",
+    "line": 435,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "brotli_decompress",
+    "kind": "function",
+    "file": "src/tac/submission_archive.py",
+    "line": 441,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "build_typed_sidechannel_contract",
+    "kind": "function",
+    "file": "src/tac/submission_archive.py",
+    "line": 191,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "compute_rate_term",
+    "kind": "function",
+    "file": "src/tac/submission_archive.py",
+    "line": 1547,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "decompress_file_brotli",
+    "kind": "function",
+    "file": "src/tac/submission_archive.py",
+    "line": 877,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "deterministic_zip_info",
+    "kind": "function",
+    "file": "src/tac/submission_archive.py",
+    "line": 73,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "TrialResult",
+    "kind": "class",
+    "file": "src/tac/sweep_runner.py",
+    "line": 208,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SzabolcsArchiveContents",
+    "kind": "class",
+    "file": "src/tac/szabolcs_archive.py",
+    "line": 260,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "SzabolcsArchiveStats",
+    "kind": "class",
+    "file": "src/tac/szabolcs_archive.py",
+    "line": 119,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "VQVAEFullDecoder",
+    "kind": "class",
+    "file": "src/tac/vqvae_as_full_renderer.py",
+    "line": 289,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "VQVAEFullEncoder",
+    "kind": "class",
+    "file": "src/tac/vqvae_as_full_renderer.py",
+    "line": 211,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "db4_kernels",
+    "kind": "function",
+    "file": "src/tac/wavelet_variance.py",
+    "line": 92,
+    "external_ref_count": 0,
+    "external_refs": []
+  },
+  {
+    "symbol": "ZipwireBridgeError",
+    "kind": "class",
+    "file": "src/tac/zipwire_archive.py",
+    "line": 28,
+    "external_ref_count": 0,
+    "external_refs": []
+  }
+]
