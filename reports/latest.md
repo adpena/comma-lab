@@ -1,10 +1,129 @@
 <!--
-generated_at: 2026-05-09T23:03:24Z
-from_state_hash: aff267e66c0925296e7e16c85eaae7e9daa528b8
-regenerated_by: codex:roadmap-state-reconciliation
+generated_at: 2026-05-12T00:00:00Z
+from_state_hash: 328bf2f9b493561d11b73a4196e87089d059671c
+regenerated_by: subagent:uuu_reports_runlog_catalog_drift_20260512
 -->
 
-# Latest Report - 2026-05-09 A1 Split-Axis Roadmap And Custody Reconciliation
+# Latest Report - 2026-05-12 Substrate Wave + Catalog Surge + Modal Mount Consolidation
+
+## 2026-05-12 (session) — Substrate scaffolds + Catalog flurry + state hygiene
+
+This section supersedes the 2026-05-09 reconciliation below. Today's session
+landed two new representation substrates wired as `_full_main` ready for
+dispatch, an unusually dense Catalog # surge (#98 strict-flip + #117/118/119
+commit-machinery + #150 phase-B + #151 wrapper-TIER + #152 required-input
+validation + #153 Modal mount + #154 GC helper canonical, with #155 pending
+Wave 2/F), Modal training-image mount manifest consolidation, posterior +
+cost-band canonical wire-up, a T1-D GC run that freed ~82 MB, claim-ledger
+prune from 1338 → 537 rows, and the in-flight MMM PR101 GOLD primitive port
+with sign-encoding + schema-elision.
+
+### Substrate landings
+
+- **α `sane_hnerv` substrate** (commit `c9d5aae7`) — Fields-medal grand-council
+  α primary scaffold landed via GGG wave. `_full_main` wires 16 stages: seed
+  pin → yuv6 patch → differentiable scorers → real pyav pairs → 2-phase
+  training → EMA → archive build → inflate smoke. SCAFFOLD / L1 in lane
+  registry. Dispatch-ready (no GPU dispatched today).
+- **β `balle_renderer` substrate** (commit `d5b69eff`) — Ballé-hyperprior-as-
+  renderer scaffold landed in parallel (commit `dbc77170`). `_full_main`
+  wired matching α's stage contract. Dispatch-ready (no GPU dispatched today).
+  SCAFFOLD / L1 in lane registry.
+
+Both substrates honor CLAUDE.md HNeRV parity discipline (13 inviolable
+lessons), including export-first design, ≤200 LOC `inflate.py`, monolithic
+single-file archive grammar, and score-aware loss with differentiable scorer
+preprocess.
+
+### Catalog # progression
+
+- **Catalog #98** `check_pr101_tools_torch_load_allowlist` — strict-flipped at
+  live count 0 (commit `058517cf`, T2-D cluster 4).
+- **Catalog #117** `check_subagent_commit_serializer_uses_lock` — commit
+  machinery (held warn-only initially per CLAUDE.md table; verify text update).
+- **Catalog #118** `check_claude_md_catalog_no_duplicate_numbers` — extincts
+  the dual-#114 collision class via `tools/claim_catalog_number.py` fcntl-lock.
+- **Catalog #119** `check_subagent_commits_have_co_author_trailer` — held
+  warn-only initially per legacy-commit allowlist baseline.
+- **Catalog #150** `check_phase_b_auth_memo_in_repo` — operator decision C
+  compromise (in-repo `auth_memo_path` argument, forbidden anchors raise at
+  runtime + STRICT preflight at call-site time).
+- **Catalog #151** `check_operator_wrapper_threads_trainer_tier_required_flags`
+  — Option D hybrid landed per grand council 9/10 (R1-R7 stipulations, 25
+  tests, STRICT @ 0).
+- **Catalog #152** `check_operator_wrapper_validates_required_input_files_pre_dispatch`
+  — permanent fix for wrapper-doesn't-validate-required-inputs bug class
+  (commit `527c6ceb`).
+- **Catalog #153** `check_modal_dispatcher_uses_canonical_mount_builder` —
+  STRICT gate for Modal training image (commit `0810fc15`, T1-A + T2-C).
+- **Catalog #154** `check_experiments_results_gc_helper_is_canonical` —
+  GC helper canonical (commit `92aba3ca`, T1-D + T1-E state hygiene).
+- **Catalog #155** — pending Wave 2/F.
+- **Catalog #156** `check_gc_helper_refuses_delete_on_tracked_paths` —
+  strict-from-byte-one (live count 0 at landing). Pairs with #154.
+- **Catalog #157** `check_commit_serializer_pre_lock_hash_against_head` —
+  strict-from-byte-one. Permanent fix for the commit-swap bug class observed
+  in the `92aba3ca` incident.
+
+### Modal mount manifest consolidation
+
+- Commit `0810fc15` — canonical Modal mount manifest builder (T1-A + T2-C).
+- Commit `d049c563` — inline Modal training_cost into canonical
+  `cost_band_calibration` (T1-B).
+- Effect: every Modal training/eval dispatcher now uses a single mount
+  manifest derived from the canonical builder; downstream Catalog #153
+  refuses dispatcher bypass.
+
+### Cost-band canonical + posterior
+
+- Commit `5eb355aa` — self-calibrating posterior: every dispatch APPENDS a
+  measured anchor; `predict()` returns confidence band centered on the
+  posterior median.
+- Commit `62d133b8` — W/I (i-1): wire continual-learning posterior +
+  cost-band into autonomous loop. Closes the predict-and-update feedback loop
+  per CLAUDE.md "the planner becomes self-calibrating" framing.
+
+### State hygiene
+
+- T1-D `--apply` executed (commit `7873bfd6`) — GC freed ~82 MB of
+  `experiments/results/` artifacts; surfaced classifier bug (logged for
+  follow-up).
+- Claim ledger prune: `.omx/state/active_lane_dispatch_claims.md`
+  1338 → 537 rows after TTL-expired and terminal-status row reaping.
+- Modal training recovery custody wired (commit `37e174ed`).
+
+### In-flight (no scoring claim until landed)
+
+- **MMM (PR101 GOLD primitive port)** — 3 primitives ported to
+  `tac.packet_compiler` (commit `bf1d4792`). Sign-encoding + schema-elision
+  unified taxonomy design memos landed (commit `b61e5d28`, covers
+  PR98/PR100/PR105/PR96/PR101/PR103).
+- 12 parallel subagents fanned out this turn. Total GPU spend: ~$0.50-1.00
+  on 1 Wave 3 dispatch in flight. Other 11 subagents ran $0 (research, audits,
+  scaffolds, doc rotations).
+
+### Apples-to-apples discipline
+
+No score claims this section. All score-affecting work is scaffold-only
+(α + β substrates) or research-only (sign-encoding taxonomy, drift audit).
+Every numeric reference above carries its evidence axis tag inline or
+references the upstream landing memo whose tag is canonical.
+
+### Catalog drift audit (this session, deliverable C)
+
+`.omx/research/catalog_drift_documentation_vs_code_audit_20260512.md` —
+read-only audit of all 89 CLAUDE.md catalog entries against `preflight.py`
+wired `strict=` values. **23 drift surface entries identified.** Root causes:
+stale section headers (10 entries: A-L block "NOT YET wired" + R5-r6 block
+"warn-only initially"); "strict-flip after" entries that flipped but kept the
+"warn-only initially" prefix (6 entries: #123, #125, #126, #127, #128, #130,
+#131); stale "Live count: N" rows (8 entries); 1 defined-but-not-invoked
+(#145 `check_preflight_cli_default_scope_is_all`). Operator decision surfaced:
+Path A bulk text-fix, Path B new Catalog #XXX self-protection gate, or Path C
+(recommended) both. No edits applied inline per "Multiple contenders → multiple
+paths" non-negotiable.
+
+## 2026-05-09 (reconciliation) - Current routing state after `aff267e6`
 
 ## 2026-05-09 (reconciliation) - Current routing state after `aff267e6`
 

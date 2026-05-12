@@ -1,5 +1,60 @@
 # run log
 
+## 2026-05-12T (session) — substrate wave + catalog surge + state hygiene + UUU audit landed
+
+- **Substrates.** Two new representation substrates wired `_full_main` and
+  ready for dispatch (no GPU dispatched today): α `sane_hnerv` at SHA
+  `c9d5aae7` (Fields-medal grand-council α primary, 16-stage `_full_main`
+  with seed pin + yuv6 patch + diff scorers + real pyav pairs + 2-phase
+  training) and β `balle_renderer` at SHA `d5b69eff` (Ballé-hyperprior-as-
+  renderer, parallel scaffold from commit `dbc77170`). Both SCAFFOLD / L1 in
+  lane registry; both honor HNeRV parity discipline (export-first, ≤200 LOC
+  inflate, monolithic archive grammar, differentiable scorer preprocess).
+- **Catalog # surge.** #98 strict-flipped at 0 (commit `058517cf`,
+  T2-D cluster 4); #117/#118/#119 commit-machinery; #150 phase-B in-repo
+  auth-memo (operator decision C compromise); #151 Option D hybrid trainer-
+  flag-manifest (council 9/10, R1-R7, 25 tests, STRICT @ 0); #152 wrapper-
+  required-input pre-dispatch validation (commit `527c6ceb`); #153 Modal
+  dispatcher canonical mount builder (commit `0810fc15`, T1-A + T2-C); #154
+  GC helper canonical (commit `92aba3ca`, T1-D + T1-E); #155 pending Wave
+  2/F; #156 GC helper refuses-delete-on-tracked + #157 commit-serializer
+  pre-lock hash against HEAD (both strict-from-byte-one, live count 0 at
+  landing, pair with #154 / commit-swap class permanently extinct).
+- **Modal mount manifest consolidation.** Commits `0810fc15` + `d049c563`
+  consolidate every Modal training/eval dispatcher to use the single canonical
+  mount manifest builder; Catalog #153 enforces it strict.
+- **Cost-band canonical + posterior wire-up.** Commit `5eb355aa` —
+  self-calibrating posterior: every dispatch APPENDS a measured anchor;
+  `predict()` returns confidence band centered on posterior median. Commit
+  `62d133b8` (W/I i-1) wires it into the autonomous loop. The planner is now
+  self-calibrating on the cost-band axis.
+- **State hygiene.** T1-D `--apply` executed at SHA `7873bfd6` — GC freed
+  ~82 MB of `experiments/results/`. Surfaced a classifier bug for follow-up.
+  Claim-ledger prune `.omx/state/active_lane_dispatch_claims.md`
+  1338 → 537 rows after reaping TTL-expired and terminal-status rows. Modal
+  training recovery custody wired (commit `37e174ed`).
+- **In-flight (no score claim).** MMM PR101 GOLD primitive port: 3 primitives
+  to `tac.packet_compiler` (commit `bf1d4792`); sign-encoding + schema-elision
+  unified taxonomy design memos (commit `b61e5d28`, PR98/PR100/PR105/PR96/
+  PR101/PR103).
+- **Parallel fan-out.** 12 parallel subagents this turn. Total GPU spend:
+  ~$0.50-1.00 on 1 Wave 3 dispatch in flight. Other 11 subagents $0
+  (research, audits, scaffolds, doc rotations).
+- **UUU (this landing): reports/latest + run_log + catalog drift audit.**
+  Read-only audit of all 89 CLAUDE.md catalog entries against `preflight.py`
+  wired `strict=` values. **23 drift surface entries identified.** Root
+  causes: (a) stale section headers (10 entries: A-L "NOT YET wired" + R5-r6
+  "warn-only initially"); (b) strict-flip-after entries that flipped but kept
+  "warn-only initially" prefix (#123, #125, #126, #127, #128, #130, #131);
+  (c) stale "Live count: N" rows in A-L block (8 entries); (d) 1 defined-but-
+  not-invoked (#145 `check_preflight_cli_default_scope_is_all`). Operator
+  decision surfaced: Path A bulk text-fix, Path B new Catalog #XXX self-
+  protection gate, or Path C (recommended) both. Audit memo at
+  `.omx/research/catalog_drift_documentation_vs_code_audit_20260512.md`.
+  Lane `lane_uuu_reports_runlog_catalog_drift_20260512` L1+ (impl_complete +
+  memory_entry); no GPU dispatched; no edits applied inline per "Multiple
+  contenders → multiple paths" non-negotiable.
+
 ## 2026-05-08T (evening, latest) — A6 Selfcomp×hyperprior landed; Phase A complete
 
 - A6 subagent (`a35933ea306c1a39b`) completed at SHA `97fbfef2`. A6 ships:
