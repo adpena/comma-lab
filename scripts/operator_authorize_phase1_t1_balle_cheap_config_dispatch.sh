@@ -132,13 +132,23 @@ ENV_OVERRIDES="${ENV_OVERRIDES},LOCAL_CUDA_WORKER=1"
 
 case "$PLATFORM" in
     modal)
-        # Cheap-config Modal T4 ~$0.59 cost band (~1h on T4). modal_train_lane.py
-        # uses .spawn() for detached runs — harvest via tools/harvest_modal_calls.py.
+        # Modal GPU selection — per engineering audit 2026-05-12:
+        # T4    $0.59/hr   65 TFLOPS FP16   baseline
+        # A10G  $1.10/hr  125 TFLOPS FP16   0.97× $/TFLOP-hr (same value, 2× speed)
+        # A100  $2.10/hr  312 TFLOPS FP16   0.74× $/TFLOP-hr (cheaper per work, 5× speed)
+        # H100  $3.90/hr  900 TFLOPS FP16   0.47× $/TFLOP-hr (cheapest per work)
+        # For scorer-bound T1 Balle training, A100 is the optimal price/perf
+        # at $/TFLOP-hr; T4 is the budget default; H100 is for time-critical.
+        # Override via MODAL_GPU=A100|H100|A10G|T4 env-var.
+        MODAL_GPU="${MODAL_GPU:-T4}"
+        TIMEOUT_HOURS="${MODAL_TIMEOUT_HOURS:-2.0}"
+        # modal_train_lane.py uses .spawn() for detached runs — harvest via
+        # tools/harvest_modal_calls.py or experiments/modal_recover_lane.py within 24h.
         .venv/bin/modal run --detach experiments/modal_train_lane.py \
             --lane-script scripts/remote_lane_t1_balle_endtoend.sh \
             --label "${INSTANCE_JOB_ID}" \
-            --gpu T4 \
-            --timeout-hours 2.0 \
+            --gpu "${MODAL_GPU}" \
+            --timeout-hours "${TIMEOUT_HOURS}" \
             --env-overrides "${ENV_OVERRIDES}"
         ;;
     vastai|vast)

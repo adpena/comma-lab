@@ -1570,7 +1570,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu", "mps"])
     parser.add_argument("--epochs", type=int, default=3000)
-    parser.add_argument("--batch-size", type=int, default=16)
+    # Per engineering audit 2026-05-12: T4 has 40 SMs × 64 cores; batch_size=16
+    # under-utilizes SM count for scorer forwards (SegNet EfficientNet-B2 amortizes
+    # over batch>=32 for its BN+conv kernels). Default raised to 32 for better
+    # SM utilization. Reduce manually with --batch-size 16 if T4 VRAM-bound at AMP+1080p.
+    parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--aux-learning-rate", type=float, default=1e-3)
     parser.add_argument("--ema-decay", type=float, default=0.997)
@@ -1597,7 +1601,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             SEGMENTATION_SURROGATE_FISHER_RAO,
             SEGMENTATION_SURROGATE_SINKHORN,
         ],
-        default=SEGMENTATION_SURROGATE_SINKHORN,
+        # Per engineering audit 2026-05-12: sinkhorn is O(N²) on per-pixel
+        # positions (384×512=196608); soft_cosine is O(N) and works well for
+        # the SegNet logit surrogate at PR106 r2 operating point. Default
+        # switched to soft_cosine for ~5× per-batch speedup. Use
+        # --segmentation-surrogate sinkhorn explicitly for legacy parity runs.
+        default=SEGMENTATION_SURROGATE_SOFT_COSINE,
         help=(
             "SegNet differentiable surrogate used when "
             "--enable-scorer-domain-loss is set. Default sinkhorn follows the "
