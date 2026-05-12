@@ -37,7 +37,7 @@ from tac.optimization.substrate_composition_matrix import (
 
 
 def test_inventory_has_expected_count():
-    """39-row inventory: 24 legacy rows + 15 FIX-J substrate-scaffold rows.
+    """48-row inventory: 24 legacy + 15 FIX-J + 9 WAVE-A-2 single-file rows.
 
     Legacy 24 = residual basis 5 + pose-axis 3 + self-compression 3 +
     NeRV-family 5 + NeRV/MNeRV/VQVAE 3 + ANR/categorical 2 + magic codec 1 +
@@ -51,9 +51,20 @@ def test_inventory_has_expected_count():
     tc_nerv_substrate, ff_nerv_substrate, ds_nerv_substrate,
     hi_nerv_substrate). See
     ``feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512.md``.
+
+    WAVE-A-2 wire-in 2026-05-12 (CANON-1.A explicit-taxonomy resolution)
+    added 9 TRADITION 2 single-file substrate rows for the older
+    ``src/tac/<name>_as_renderer.py`` / ``<name>_renderer.py`` substrates
+    that pre-date the substrate-scaffold subpackage discipline: cnerv,
+    e_nerv, ego_nerv, lane_12_v2_nerv, nervdc, quantizr_faithful,
+    mlx_mask_renderer, dp_sims_renderer, diffusion_renderer. See
+    ``.omx/research/substrate_tradition_taxonomy_20260512.md`` and
+    ``feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512.md``.
     """
     rows = canonical_substrate_inventory()
-    assert len(rows) == 39, f"expected 39 substrate rows (24 legacy + 15 FIX-J), got {len(rows)}"
+    assert len(rows) == 48, (
+        f"expected 48 substrate rows (24 legacy + 15 FIX-J + 9 WAVE-A-2), got {len(rows)}"
+    )
 
 
 def test_inventory_substrate_ids_unique():

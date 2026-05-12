@@ -31,6 +31,90 @@ Designed by the Fields-medal grand council 2026-05-12; see::
 
     .omx/research/grand_council_fields_medal_substrate_design_20260512.md
 
+Substrate implementation traditions (CANON-1.A taxonomy, 2026-05-12)
+=====================================================================
+
+There are TWO co-existing substrate implementation traditions in this
+codebase. Both are CANONICAL; neither subsumes the other yet. The
+classification was formalized in
+``.omx/research/substrate_tradition_taxonomy_20260512.md`` and originates
+in the ``.omx/research/canonicalization_dedup_oss_rigor_ledger_20260512.md``
+CANON-1.A finding.
+
+TRADITION 1 — ``src/tac/substrates/<name>/`` (THIS PACKAGE)
+-----------------------------------------------------------
+**Status**: L0 SKETCH, ``research_only=true`` per Catalog #124 declaration.
+**Discipline**: Catalog #124 STRICT 8-archive-grammar fields at design time,
+the 13 HNeRV parity discipline lessons, 3-clean-pass grand-council
+adversarial review, mandatory ``score_aware_loss.py`` + ``inflate.py`` <=
+100 LOC + monolithic ``0.bin``.
+**Composition**: each substrate is an isolated subpackage; the structure
+forces every new representation/codec lane through the design-time gate.
+**Migration target**: at first ``<= 0.21 [contest-CUDA]`` empirical anchor,
+the substrate SUBSUMES its sibling under TRADITION 2 (the older
+``<name>_as_renderer.py`` is archived to
+``.omx/research/historical_substrates/`` with provenance).
+
+TRADITION 2 — ``src/tac/<name>_as_renderer.py`` (PRODUCTION-MATURE SINGLE-FILE)
+------------------------------------------------------------------------------
+**Status**: production-mature single-file substrates that PRE-DATE
+the Fields-medal substrate-scaffold subpackage discipline.
+**Discipline**: in-line ``MaskRenderer`` / ``Renderer`` class + training
+script + archive builder co-located; no separate ``inflate.py`` <= 100 LOC
+budget; no monolithic ``0.bin`` grammar contract.
+**Composition**: linked into the lane registry as standalone production
+renderers; many have hit ``[contest-CUDA]`` evaluations.
+**Examples**: ``blocknerv_as_renderer.py``, ``cnerv_as_renderer.py``,
+``dp_sims_renderer.py``, ``dsnerv_as_renderer.py``, ``e_nerv_as_renderer.py``,
+``ego_nerv_as_renderer.py``, ``ffnerv_as_renderer.py``,
+``hinerv_as_renderer.py``, ``lane_12_v2_nerv_as_renderer.py``,
+``mlx_renderer.py``, ``mnerv_as_renderer.py``, ``nervdc_as_renderer.py``,
+``quantizr_faithful_renderer.py``, ``tcnerv_as_renderer.py``,
+``vqvae_as_full_renderer.py``, ``contrib/diffusion_renderer.py``.
+
+Both traditions appear in ``canonical_substrate_inventory()`` so the
+autopilot, Pareto solver, sensitivity-map, and bit-allocator see every
+substrate. No tradition silently dominates; per CLAUDE.md "Multiple
+contenders → multiple paths" non-negotiable + "KILL is LAST RESORT", BOTH
+are preserved with explicit reactivation criteria documented in the
+tradition memo.
+
+Literature citations per substrate family
+-----------------------------------------
+Every substrate scaffold below cites the foundational paper so future
+council deliberations can ground architectural choices in the published
+literature (per operator directive 2026-05-12 "ground in literature first
+if possible"):
+
+- **HNeRV family** (sane_hnerv + tc_nerv + block_nerv + ff_nerv + ds_nerv
+  + hi_nerv + hybrid_renderer_residual + pr101_lc_v2_clone):
+  Chen et al. "HNeRV: A Hybrid Neural Representation for Videos"
+  NeurIPS 2023.
+- **Ballé hyperprior** (balle_renderer): Ballé, Minnen, Singh, Hwang,
+  Johnston "Variational image compression with a scale hyperprior"
+  ICLR 2018.
+- **Cool-Chic** (cool_chic): Ladune, Berraf, Bourgault, et al.
+  "COOL-CHIC: Coordinate-based Low Complexity Hierarchical Image Codec"
+  ICCV 2023.
+- **C3** (residual basis only): Kim, Lee, Lee
+  "C3: High-performance and low-complexity neural compression from a
+  single image or video" 2023.
+- **VQ-VAE** (vq_vae + vqvae_as_full_renderer): van den Oord, Vinyals,
+  Kavukcuoglu "Neural Discrete Representation Learning" NeurIPS 2017.
+- **SIREN** (siren + siren_residual): Sitzmann, Martel, Bergman,
+  Lindell, Wetzstein "Implicit Neural Representations with Periodic
+  Activation Functions" NeurIPS 2020.
+- **Wavelet** (wavelet): Mallat "A theory for multiresolution signal
+  decomposition: the wavelet representation" PAMI 1989.
+- **Self-Compress NN / SC++** (self_compress_nn + grayscale_lut):
+  He et al. "Self-supervised model compression" 2024 + comma.ai
+  Selfcomp's empirical PR #56 paradigm.
+- **Coordinate MLP** (coordinate_mlp_residual): Tancik et al.
+  "Fourier Features Let Networks Learn High Frequency Functions"
+  NeurIPS 2020.
+- **MNeRV** (mnerv_as_renderer.py — TRADITION 2): Lee, Lee, Lee
+  "MNeRV: Modular Neural Representation for Videos" 2024.
+
 FIX-J 2026-05-12 wire-in — Canonical scaffold inventory
 -------------------------------------------------------
 Per LOOPCLOSE 2026-05-12, every substrate-scaffold subpackage under

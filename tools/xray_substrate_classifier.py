@@ -137,6 +137,16 @@ _SUBSTRATE_CLASSES: tuple[str, ...] = (
     "compressai_factorized_prior_packet",
     "compressai_balle_hyperprior_packet",
     "compressai_cheng2020_packet",
+    # ── WAVE-A-2 TRADITION 2 single-file substrates (2026-05-12 CANON-1.A) ──
+    # Production-mature single-file renderers pre-dating substrate-scaffold
+    # subpackage discipline; tradition memo at
+    # ``.omx/research/substrate_tradition_taxonomy_20260512.md``.
+    "cnerv_substrate",
+    "lane_12_v2_nerv_substrate",
+    "quantizr_faithful_substrate",
+    "mlx_mask_renderer_substrate",  # `[macOS-CPU advisory only]`.
+    "dp_sims_renderer_substrate",
+    "diffusion_renderer_substrate",
     "unknown_substrate_unclassifiable",
 )
 
@@ -179,6 +189,22 @@ _SECTION_MAGIC_SIGNATURES: tuple[tuple[bytes, str], ...] = (
     (b"CAFP", "compressai_factorized_prior"),
     (b"CABH", "compressai_balle_hyperprior"),
     (b"CACG", "compressai_cheng2020"),
+    # ── WAVE-A-2 TRADITION 2 single-file substrate magic bytes (2026-05-12) ──
+    # Per CANON-1.A explicit-taxonomy resolution; substrate identity carried
+    # by 4-byte ASCII magic when the substrate's archive emits a dedicated
+    # packet member. For single-file substrates that ship via a shared
+    # contest-archive grammar, the classifier falls back to ZIP-member-name
+    # rules; these magics gate xray-time substrate disambiguation when the
+    # archive contains a substrate-tagged section.
+    (b"CNRV", "cnerv_v1"),
+    (b"ENRV", "e_nerv_v1"),
+    (b"EGOV", "ego_nerv_v1"),
+    (b"L12V", "lane_12_v2_nerv_v1"),
+    (b"NDCV", "nervdc_v1"),
+    (b"QZRV", "quantizr_faithful_v1"),
+    (b"MLXR", "mlx_mask_renderer_v1"),  # Apple-Silicon-only; advisory tag.
+    (b"DPSV", "dp_sims_renderer_v1"),
+    (b"DIFV", "diffusion_renderer_v1"),
 )
 
 

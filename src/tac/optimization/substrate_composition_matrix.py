@@ -208,7 +208,17 @@ class CompositionResult:
 
 
 def canonical_substrate_inventory() -> list[SubstrateRow]:
-    """Return the 39-row substrate inventory (24 legacy + 15 FIX-J scaffolds).
+    """Return the 48-row substrate inventory.
+
+    Composition:
+    - 24 legacy rows (residual basis 5 + pose-axis 3 + self-compression 3 +
+      NeRV-family 5 + NeRV/MNeRV/VQVAE 3 + ANR/categorical 2 +
+      magic codec 1 + bolt-ons 2)
+    - 15 FIX-J substrate-scaffold rows (Fields-medal 2026-05-12 council
+      design under `src/tac/substrates/<name>/`)
+    - 9 WAVE-A-2 TRADITION 2 rows for older single-file `<name>_renderer.py`
+      substrates that pre-date the substrate-scaffold subpackage discipline
+      (CANON-1.A explicit-taxonomy resolution, 2026-05-12)
 
     Order is stable (alphabetical by substrate_class then substrate_id) to
     preserve deterministic matrix construction across runs.
@@ -232,6 +242,12 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
       wavelet_full_renderer, grayscale_lut, vq_vae_substrate, siren_substrate,
       block_nerv_substrate, tc_nerv_substrate, ff_nerv_substrate,
       ds_nerv_substrate, hi_nerv_substrate.
+    - WAVE-A-2 TRADITION 2 single-file substrates (9 rows, 2026-05-12 CANON-1.A):
+      ``feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512.md``
+      Adds: cnerv, e_nerv, ego_nerv, lane_12_v2_nerv_as_renderer, nervdc, quantizr_faithful,
+      mlx_mask_renderer, dp_sims_renderer, diffusion_renderer.
+      Cross-ref tradition taxonomy memo at
+      ``.omx/research/substrate_tradition_taxonomy_20260512.md``.
     """
     rows: list[SubstrateRow] = [
         # ── 5 RESIDUAL basis substrates ──
@@ -798,6 +814,145 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             landed_at="2026-05-12",
             landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
         ),
+        # ── 9 WAVE-A-2 TRADITION 2 single-file substrate rows ──
+        # Per CANON-1.A (`canonicalization_dedup_oss_rigor_ledger_20260512.md`)
+        # + tradition taxonomy memo
+        # (`.omx/research/substrate_tradition_taxonomy_20260512.md`):
+        # the older single-file `<name>_as_renderer.py` / `<name>_renderer.py`
+        # substrates pre-date the substrate-scaffold subpackage discipline
+        # (Fields-medal 2026-05-12). They are PRODUCTION-MATURE and ship into
+        # the canonical inventory so the autopilot / Pareto solver /
+        # sensitivity-map see them. Format-id band 0xA0-0xAF reserved for
+        # WAVE-A-2 single-file rows; magic-byte band ASCII *-V1 (already
+        # used by FIX-J) extended via 4-char distinct tokens.
+        SubstrateRow(
+            substrate_id="cnerv",
+            name="CNeRV (fully-Convolutional NeRV; convolutional stem)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xA0,
+            magic_bytes="CNRV",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0050, 0.0150),
+            requires_score_aware_training=True,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="e_nerv",
+            name="E-NeRV (Encoder-NeRV; standalone substrate w/ encoder identity)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xA1,
+            magic_bytes="ENRV",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0050, 0.0150),
+            requires_score_aware_training=True,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="ego_nerv",
+            name="Ego-NeRV (egocentric pose-conditioning NeRV)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.POSE,  # Pose-conditioned by construction.
+            format_id=0xA2,
+            magic_bytes="EGOV",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0060, 0.0120),
+            requires_score_aware_training=True,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="lane_12_v2_nerv_as_renderer",
+            name="Lane 12-v2 NeRV-as-renderer (Phase B reference)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xA3,
+            magic_bytes="L12V",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(150_000, 220_000),
+            predicted_delta_alone_band=(-0.0080, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-09",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="nervdc",
+            name="NeRVdc (NeRV with explicit decoder-conditioning)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xA4,
+            magic_bytes="NDCV",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0050, 0.0120),
+            requires_score_aware_training=True,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="quantizr_faithful",
+            name="Quantizr-faithful (1:1 PR55 reverse-engineering renderer)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xA5,
+            magic_bytes="QZRV",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(60_000, 100_000),  # FiLM 88K-param renderer band.
+            predicted_delta_alone_band=(-0.0080, 0.0100),
+            requires_score_aware_training=True,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="mlx_mask_renderer",
+            name="MLX MaskRenderer (Apple Silicon dev/research)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xA6,
+            magic_bytes="MLXR",
+            runtime_dep_closure=("mlx",),  # Apple-only; CUDA dispatch refuses.
+            byte_budget_band=(50_000, 120_000),
+            # MLX is `[macOS-CPU advisory only]` per CLAUDE.md; no CUDA-axis
+            # claim. Predicted band reflects research-signal scope only.
+            predicted_delta_alone_band=(-0.0030, 0.0050),
+            requires_score_aware_training=False,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="dp_sims_renderer",
+            name="DP-SIMS renderer (semantic image synthesis CVPR 2024)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.SEG,  # Mask-conditioned generation -> seg axis.
+            format_id=0xA7,
+            magic_bytes="DPSV",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(180_000, 260_000),
+            predicted_delta_alone_band=(-0.0050, 0.0150),
+            requires_score_aware_training=True,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="diffusion_renderer",
+            name="Diffusion-based renderer (contrib lane, research_only)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xA8,
+            magic_bytes="DIFV",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(200_000, 320_000),  # Diffusion weights heavier.
+            predicted_delta_alone_band=(-0.0050, 0.0200),
+            requires_score_aware_training=True,
+            landed_at="2026-05-11",
+            landing_memo="feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512",
+        ),
     ]
     # Stable sort: by class then id.
     rows.sort(key=lambda r: (r.substrate_class.value, r.substrate_id))
@@ -1242,6 +1397,22 @@ DISPATCH_COST_USD_MIDPOINT: dict[str, float] = {
     "ff_nerv_substrate": 40.0,  # L0 SKETCH; DCT-frequency NeRV training.
     "ds_nerv_substrate": 35.0,  # L0 SKETCH; depth-separable NeRV training.
     "hi_nerv_substrate": 50.0,  # L0 SKETCH; hierarchical NeRV training.
+    # ── WAVE-A-2 TRADITION 2 single-file substrate cost band (2026-05-12) ──
+    # Per CANON-1.A explicit-taxonomy resolution + tradition memo
+    # ``.omx/research/substrate_tradition_taxonomy_20260512.md``. Each row's
+    # dispatch cost reflects "full trainer on T4 ~5-12h" for the NeRV-family
+    # entries; Quantizr-faithful is bandwidth-light (smaller model);
+    # mlx_mask_renderer is `[macOS-CPU advisory only]` so $0 (no paid
+    # remote-GPU dispatch path); dp_sims/diffusion are heavier.
+    "cnerv": 40.0,
+    "e_nerv": 40.0,
+    "ego_nerv": 40.0,
+    "lane_12_v2_nerv_as_renderer": 45.0,
+    "nervdc": 40.0,
+    "quantizr_faithful": 25.0,
+    "mlx_mask_renderer": 0.0,  # `[macOS-CPU advisory only]`; no paid remote.
+    "dp_sims_renderer": 55.0,
+    "diffusion_renderer": 70.0,
 }
 
 
