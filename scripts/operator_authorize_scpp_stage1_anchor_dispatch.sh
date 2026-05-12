@@ -19,7 +19,16 @@
 # Per CLAUDE.md "CROSS-AGENT DISPATCH COORDINATION": claims the lane via
 # tools/claim_lane_dispatch.py BEFORE Modal launch.
 #
-# Cost: ~$3 Modal T4 (3 epochs smoke; conservative)
+# W/I/A I-2 backport (2026-05-12, decision I-2): the previous hand-derived
+# cost literal $3.00 is replaced with a runtime call to the canonical
+# cost-band posterior at `.omx/state/cost_band_posterior.jsonl`. The
+# tac.cost_band_calibration.predict() call returns p10/p50/p90 + confidence
+# tag. When the posterior has no anchors matching the (modal, T4, 3-epoch)
+# bucket, predict() returns a hand_calibrated_fallback band. See the
+# OD-CB-1 + F1 fix pattern (commit 5eb355aa + 0666720a) for the canonical
+# wire-in. Sister of operator_authorize_phase1_t1_balle_cheap_config_dispatch.sh.
+#
+# Cost band: see runtime call below; hand-derived fallback ~$3 Modal T4
 # Predicted Δ: -0.005 to -0.010 [predicted; SC++ block-FP per HNeRV parity
 #              discipline lesson 7]
 # Risk: Stage 1 smoke is the first empirical SC++ anchor; falsification risk
@@ -36,16 +45,45 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 LANE_ID="lane_scpp_stage1_smoke_anchor"
-EXPECTED_COST_USD="3.00"
 PLATFORM="modal"
+
+# W/I/A I-2 fix (2026-05-12): replace stale literal EXPECTED_COST_USD with
+# runtime call to the cost-band posterior. The MODAL_GPU env-var below
+# defaults to T4 for SC++ Stage 1 smoke (overridable). The fallback handles
+# the cold-start case where the posterior has no matching anchors yet.
+MODAL_GPU="${MODAL_GPU:-T4}"
+PLATFORM_KEY="modal"
+GPU_CLASS="${MODAL_GPU}"
+SCPP_EPOCHS_SMOKE=3
+COST_BAND_TEXT=$(.venv/bin/python -c "
+from tac.cost_band_calibration import predict
+p = predict('${PLATFORM_KEY}', '${GPU_CLASS}', ${SCPP_EPOCHS_SMOKE}, all_flags_on=True)
+print(f'\${p.p10_cost_usd:.2f}/\${p.p50_cost_usd:.2f}/\${p.p90_cost_usd:.2f}'
+      f'  (N={p.n_anchors}, {p.confidence_tag})')
+" 2>/dev/null || echo "predict() unavailable — hand-calibrated fallback \$3.00")
+EXPECTED_COST_USD=$(.venv/bin/python -c "
+from tac.cost_band_calibration import predict
+p = predict('${PLATFORM_KEY}', '${GPU_CLASS}', ${SCPP_EPOCHS_SMOKE}, all_flags_on=True)
+# Cold-start bucket (no matching anchors AND no hand-stub for this bucket)
+# falls back to a literal so the operator banner is informative.
+print(f'{p.p50_cost_usd:.2f}' if p.p50_cost_usd > 0 else '3.00')
+" 2>/dev/null || echo "3.00")
+CONFIDENCE_TAG=$(.venv/bin/python -c "
+from tac.cost_band_calibration import predict
+print(predict('${PLATFORM_KEY}', '${GPU_CLASS}', ${SCPP_EPOCHS_SMOKE}, all_flags_on=True).confidence_tag)
+" 2>/dev/null || echo "hand_calibrated_fallback")
 
 cat <<EOF
 
 === SC++ Stage 1 anchor dispatch operator confirmation ===
 
 lane_id:                 ${LANE_ID}
-platform:                ${PLATFORM} (Modal T4)
-expected cost:           \$${EXPECTED_COST_USD} USD (3-epoch smoke)
+platform:                ${PLATFORM} (Modal ${MODAL_GPU})
+cost band p10/p50/p90:   ${COST_BAND_TEXT}
+                         Source: tac.cost_band_calibration.predict()
+                         Posterior: .omx/state/cost_band_posterior.jsonl
+                         Confidence: ${CONFIDENCE_TAG}
+expected p50 cost:       \$${EXPECTED_COST_USD} USD (3-epoch smoke)
 predicted Δ:             -0.005 to -0.010 [predicted; SC++ block-FP;
                          HNeRV parity discipline lesson 7]
 risk:                    First empirical SC++ anchor — falsification risk
@@ -108,7 +146,7 @@ ENV_OVERRIDES="${ENV_OVERRIDES},LOCAL_CUDA_WORKER=1"
 # Modal GPU selection — per engineering audit 2026-05-12. Override via
 # MODAL_GPU=A100|H100|A10G|T4 (default T4 for SC++ Stage 1 smoke; A100 5× faster
 # at 0.74× $/TFLOP-hr — better $/work for substrate engineering iteration).
-MODAL_GPU="${MODAL_GPU:-T4}"
+# MODAL_GPU already resolved above for cost-band prediction.
 MODAL_TIMEOUT_HOURS="${MODAL_TIMEOUT_HOURS:-3.0}"
 .venv/bin/modal run --detach experiments/modal_train_lane.py \
     --lane-script "$REMOTE_DRIVER" \
