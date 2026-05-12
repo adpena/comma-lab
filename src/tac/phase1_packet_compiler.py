@@ -1821,6 +1821,16 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     # Unifies PR96 / PR101 / PR103 sign-encoding strategies into one typed
     # API. Each token tags one of the 5 strategies; encoders/decoders are
     # in ``src/tac/packet_compiler/sign_encoding.py``.
+    #
+    # MUTUAL EXCLUSION CONTRACT (per ZZZZZ audit Shannon-Low 2026-05-12):
+    # the 5 ``sign_encode_*`` strategies are MUTUALLY EXCLUSIVE on the SAME
+    # byte region — at most one strategy may be tagged per (tensor, region)
+    # pair. Stacking two strategies on the same bytes is a no-op + roundtrip
+    # corruption (the second decoder would interpret bytes the first
+    # encoder produced under a different convention). Adapter callers are
+    # responsible for enforcing per-region uniqueness; the token list here
+    # does not. Catalog #139 ``check_packet_compiler_no_op_proof_promotes_to_blocker``
+    # catches the stacking violation at byte-mutation smoke time.
     "sign_encode_negzig",
     "sign_encode_zig",
     "sign_encode_twos",
