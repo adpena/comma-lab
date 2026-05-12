@@ -88,7 +88,7 @@ def test_autocast_lagrangian_path_does_not_break_gradients(autocast_enabled):
     optim_main = torch.optim.Adam(main_params, lr=1e-4)
     # GradScaler only meaningful on CUDA; on CPU it's a no-op even when enabled.
     # The test instead validates the *code structure* runs without dtype mismatches.
-    scaler = torch.cuda.amp.GradScaler(enabled=False)  # CPU forced-off
+    scaler = torch.amp.GradScaler("cuda", enabled=False)  # CPU forced-off
 
     y = torch.randn(batch_size, latent_dim, device=device)
     tgt = (torch.rand(batch_size, 2, 3, 8, 8, device=device) * 255.0)
@@ -153,8 +153,9 @@ def test_teacher_cache_dtype_handoff_to_student_fp16():
     # Student forward under (synthetic) autocast — produces fp16 tensor
     # (or bfloat16 on CPU; the test verifies the .float() cast at consume-time)
     idx = torch.arange(4)
+    student_leaf = torch.randn(4, pose_dim, requires_grad=True)
     with torch.autocast("cpu", dtype=torch.bfloat16, enabled=True):
-        student_pose = torch.randn(4, pose_dim, requires_grad=True).bfloat16()
+        student_pose = (student_leaf * 1.0).bfloat16()
 
     teacher_pose = teacher_pose_cache[idx].detach()
 
@@ -175,15 +176,14 @@ def test_teacher_cache_dtype_handoff_to_student_fp16():
     )
     assert torch.isfinite(kl)
     kl.backward()
-    # student_pose was created inside the autocast context — its .grad
-    # should be populated through the .float() cast
-    # (in practice this works for bfloat16 backward on CPU)
+    assert student_leaf.grad is not None
+    assert torch.isfinite(student_leaf.grad).all()
 
 
 def test_gradscaler_disabled_on_cpu_is_no_op():
     """Verify GradScaler with enabled=False (CPU-only smoke fallback)
     behaves identically to plain backward+step pipeline."""
-    scaler = torch.cuda.amp.GradScaler(enabled=False)
+    scaler = torch.amp.GradScaler("cuda", enabled=False)
     assert not scaler.is_enabled()
     # scaler.scale(x) on disabled returns x unchanged
     x = torch.tensor(1.0, requires_grad=True)

@@ -147,7 +147,7 @@ DEFAULT_TIMEOUT_SECONDS = 120
 
 
 def _now_iso() -> str:
-    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _append_log(record: dict) -> None:
@@ -170,7 +170,7 @@ def _acquire_lock(timeout_seconds: int):
     """
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     LOCK_PATH.touch(exist_ok=True)
-    fh = open(LOCK_PATH, "w")
+    fh = open(LOCK_PATH, "w")  # noqa: SIM115 - caller must hold the handle until explicit unlock.
     deadline = time.monotonic() + timeout_seconds
     while True:
         try:
@@ -183,7 +183,7 @@ def _acquire_lock(timeout_seconds: int):
                     f"Could not acquire {LOCK_PATH} within {timeout_seconds}s "
                     f"— another subagent's commit hook is taking unusually "
                     f"long. Inspect: tail .omx/state/commit-serializer.log"
-                )
+                ) from None
             # Brief backoff so we don't spin at 100% CPU.
             time.sleep(0.25)
 
@@ -267,7 +267,7 @@ def _git_add(files: list[str], env: dict) -> tuple[int, str]:
         return 0, "(no files)"
     # NEVER use `git add -A` / `git add .` — per CLAUDE.md "Always commit
     # specific files by name" (sensitive-file leakage prevention).
-    cmd = ["git", "add", "--"] + files
+    cmd = ["git", "add", "--", *files]
     proc = subprocess.run(cmd, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
     return proc.returncode, (proc.stdout + proc.stderr).strip()
 
