@@ -105,14 +105,21 @@ training_image = (
     .add_local_dir("submissions", remote_path="/workspace/pact/submissions")
     .add_local_dir("upstream", remote_path="/workspace/pact/upstream")
     .add_local_dir("experiments", remote_path="/workspace/pact/experiments", ignore=["results/**"])
-    .add_local_dir(
-        "experiments/results/public_pr95_intake_20260504_codex",
-        remote_path="/workspace/pact/experiments/results/public_pr95_intake_20260504_codex",
-    )
-    .add_local_dir(
-        "experiments/results/c067_fixed_renderer_burn_prep_20260503",
-        remote_path="/workspace/pact/experiments/results/c067_fixed_renderer_burn_prep_20260503",
-    )
+)
+
+import os as _os
+_RESULTS_MOUNTS = (
+    ("experiments/results/public_pr95_intake_20260504_codex",
+     "/workspace/pact/experiments/results/public_pr95_intake_20260504_codex"),
+    ("experiments/results/c067_fixed_renderer_burn_prep_20260503",
+     "/workspace/pact/experiments/results/c067_fixed_renderer_burn_prep_20260503"),
+)
+for _local, _remote in _RESULTS_MOUNTS:
+    if _os.path.isdir(_local):
+        training_image = training_image.add_local_dir(_local, remote_path=_remote)
+
+training_image = (
+    training_image
     .add_local_dir("tools", remote_path="/workspace/pact/tools")
     .add_local_file("pyproject.toml", remote_path="/workspace/pact/pyproject.toml")
 )
