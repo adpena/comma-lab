@@ -1,25 +1,40 @@
-"""Composition cell registry: (substrate × primitive × order) tuples.
+"""Composition cell registry: (substrate x primitive x order) tuples.
 
 Per operator directive 2026-05-12 ("stacking and composition on everything"),
 this module extends :mod:`tac.optimization.substrate_composition_matrix`
-(the pairwise SUBSTRATE × SUBSTRATE matrix) with a NEW second dimension —
+(the pairwise SUBSTRATE x SUBSTRATE matrix) with a NEW second dimension —
 **packet-compiler PRIMITIVES** — and enumerates the cross-product as typed
 :class:`CompositionCell` rows the cathedral autopilot can rank.
 
-The substrate × substrate matrix already lives at
+The substrate x substrate matrix already lives at
 :mod:`tac.optimization.substrate_composition_matrix`; we re-use its
 ``SubstrateRow`` / ``SubstrateClass`` / ``ScoreAxis`` taxonomy and its
 canonical 18-row inventory. THIS module adds:
 
-- ``PrimitiveRow``: one packet-compiler primitive (PR101 GOLD ×3,
-  sign-encoding ×5, schema-elision ×3, magic_codec_dense_streams, brotli,
+- ``PrimitiveRow``: one packet-compiler primitive (PR101 GOLD x3,
+  sign-encoding x5, schema-elision x3, magic_codec_dense_streams, brotli,
   lzma) with its archive-grammar metadata.
 - ``PRIMITIVE_INVENTORY``: the frozen list of primitive rows.
-- ``CompositionCell``: one (substrate × ordered-primitive-list) tuple with
+- ``CompositionCell``: one (substrate x ordered-primitive-list) tuple with
   predicted bytes_delta and score_delta.
-- ``primitive_compatibility``: per (substrate_class × primitive_category)
+- ``primitive_compatibility``: per (substrate_class x primitive_category)
   compatibility matrix (which primitives apply to which substrates).
 - Per-cell ordering / mutual-exclusion rules.
+
+FIX-D enrichments (2026-05-12, per ZZZZZ medium polish audit):
+
+- :class:`SemanticConstraint` on each :class:`PrimitiveRow` declares
+  substrates whose own design already implements the primitive's
+  benefit (``redundant_with_substrate_ids``) AND substrate properties
+  the primitive structurally requires (``expects_substrate_property``).
+  Cells populate :attr:`CompositionCell.semantic_compatibility_warning`
+  when the (substrate x primitive) pair is formally compatible but
+  semantically no-op.
+- :class:`RefusedReason` taxonomy makes the 8,975 refused cells
+  machine-checkable: ``ORDERING_VIOLATION`` / ``MUTUAL_EXCLUSION`` /
+  ``SUBSTRATE_INCOMPATIBLE`` / ``SEMANTIC_INCOMPATIBLE`` /
+  ``DEPENDENCY_MISSING``. Each refused cell carries a typed
+  :attr:`CompositionCell.refused_reason` next to its free-form blocker.
 
 **Score-claim discipline (NON-NEGOTIABLE per CLAUDE.md).** Every
 :class:`CompositionCell` carries ``score_claim=False``,
@@ -38,7 +53,7 @@ autopilot's ranking input. The autopilot reads
 Cross-references
 ----------------
 - :mod:`tac.optimization.substrate_composition_matrix` — pairwise SUBSTRATE
-  × SUBSTRATE matrix (re-used taxonomy).
+  x SUBSTRATE matrix (re-used taxonomy).
 - :mod:`tac.optimization.autopilot_dispatch_ranking` — consumer.
 - :mod:`tac.packet_compiler.__init__` — primitive symbol surface.
 - :mod:`tac.packet_compiler.magic_codec_dense_streams` — primitive bundle
@@ -59,7 +74,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from tac.optimization.substrate_composition_matrix import (
@@ -84,7 +99,7 @@ READY_FOR_EXACT_EVAL_DISPATCH = False
 # ── Primitive taxonomy ────────────────────────────────────────────────────
 
 
-class PrimitiveCategory(str, Enum):
+class PrimitiveCategory(StrEnum):
     """Top-level primitive taxonomy class.
 
     The category governs:
@@ -120,7 +135,7 @@ class PrimitiveCategory(str, Enum):
     LZMA = "lzma"
 
 
-class PrimitiveOrderSensitivity(str, Enum):
+class PrimitiveOrderSensitivity(StrEnum):
     """How the primitive composes with siblings in its category.
 
     - ``ordered_pipeline``: order matters; primitives in this category
@@ -134,6 +149,86 @@ class PrimitiveOrderSensitivity(str, Enum):
     ORDERED_PIPELINE = "ordered_pipeline"
     MUTUALLY_EXCLUSIVE = "mutually_exclusive"
     STACKABLE = "stackable"
+
+
+class RefusedReason(StrEnum):
+    """Machine-checkable taxonomy for refused composition cells.
+
+    Per ZZZZZ stress-test audit 2026-05-12, the 8,975 refused cells
+    emitted by :func:`tac.composition.enumerate.enumerate_cells` carry
+    only a free-form ``blockers`` rationale. A typed taxonomy makes the
+    refusal machine-checkable so downstream consumers (autopilot bridge,
+    Pareto solver, sensitivity-map updater) can branch on the refusal
+    class without parsing prose.
+
+    Categories
+    ----------
+    - ``ORDERING_VIOLATION``: primitives are mutually-ordered but the
+      pipeline lists them out of declared order (e.g., PR101 GOLD trio
+      in wrong sequence).
+    - ``MUTUAL_EXCLUSION``: multiple primitives from a
+      MUTUALLY_EXCLUSIVE category appear in the pipeline (e.g., two
+      sign-encoding strategies, two schema-elision primitives).
+    - ``SUBSTRATE_INCOMPATIBLE``: the primitive's category does NOT
+      apply to the substrate's class per the compatibility matrix (e.g.,
+      PR101 GOLD on a RESIDUAL substrate).
+    - ``SEMANTIC_INCOMPATIBLE``: primitives operate on incompatible
+      byte regions or the primitive's expected substrate property is
+      not present (formally legal but cannot actually compose).
+    - ``DEPENDENCY_MISSING``: the primitive requires another primitive
+      that is NOT in the pipeline (e.g., PR101 GOLD step 2 without
+      step 1's storage-order reordering).
+    - ``DUPLICATE_PRIMITIVE``: the same primitive_id appears more than
+      once in the pipeline.
+    - ``UNKNOWN_PRIMITIVE``: the pipeline references a primitive_id
+      that is not in the canonical inventory.
+    """
+
+    ORDERING_VIOLATION = "ordering_violation"
+    MUTUAL_EXCLUSION = "mutual_exclusion"
+    SUBSTRATE_INCOMPATIBLE = "substrate_incompatible"
+    SEMANTIC_INCOMPATIBLE = "semantic_incompatible"
+    DEPENDENCY_MISSING = "dependency_missing"
+    DUPLICATE_PRIMITIVE = "duplicate_primitive"
+    UNKNOWN_PRIMITIVE = "unknown_primitive"
+
+
+@dataclass(frozen=True)
+class SemanticConstraint:
+    """Per-primitive semantic-composition constraint declaration.
+
+    Per ZZZZZ medium polish 2026-05-12, primitives declare:
+
+    - ``redundant_with_substrate_ids``: substrates whose own design
+      already implements this primitive's benefit (applying the
+      primitive on top is a semantic no-op). Example:
+      ``magic_codec_dense_streams`` primitive applied to the
+      ``magic_codec`` substrate is redundant — the substrate IS the
+      magic codec.
+    - ``expects_substrate_property``: free-form tokens documenting
+      what the primitive structurally requires of the substrate (e.g.,
+      ``"int_tensor_weights"`` for sign-encoding, ``"ar_coded_latent"``
+      for primitives that consume an arithmetic-coded latent stream).
+      Used in the cell's
+      :attr:`CompositionCell.semantic_compatibility_warning` string.
+    - ``incompatible_with_substrate_ids``: hard structural
+      incompatibility (the primitive cannot operate on this substrate
+      even though the compatibility matrix permits the category).
+      Surfaces a :class:`RefusedReason.SEMANTIC_INCOMPATIBLE` cell.
+    - ``requires_primitive_ids``: other primitive_ids that MUST be in
+      the same pipeline for this primitive to function. Empty tuple
+      means the primitive is standalone. Surfaces
+      :class:`RefusedReason.DEPENDENCY_MISSING` when violated.
+
+    Frozen and optional: empty tuples mean "no semantic constraint
+    declared for this primitive". The enumerator never raises on a
+    missing constraint — the field is purely additive metadata.
+    """
+
+    redundant_with_substrate_ids: tuple[str, ...] = ()
+    expects_substrate_property: tuple[str, ...] = ()
+    incompatible_with_substrate_ids: tuple[str, ...] = ()
+    requires_primitive_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -175,6 +270,10 @@ class PrimitiveRow:
     # Within-category ordering for ORDERED_PIPELINE primitives. Empty
     # tuple for non-ordered.
     within_category_order: tuple[str, ...] = ()
+    # Per-primitive semantic-composition constraint. Empty constraint
+    # (default) means "no semantic gate beyond the compatibility matrix".
+    # Per ZZZZZ medium polish 2026-05-12.
+    semantic_constraint: SemanticConstraint = SemanticConstraint()
     # Documentation / rationale tag.
     notes: str = ""
 
@@ -188,12 +287,12 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
     Inventory (13 primitives, alphabetical-by-category-then-id for stable
     matrix construction):
 
-    PR101 GOLD ×3 (HNeRV-family substrates only, ordered pipeline):
+    PR101 GOLD x3 (HNeRV-family substrates only, ordered pipeline):
       1. ``pr101_decoder_storage_order`` (order_index=0)
       2. ``pr101_conv4_storage_perms`` (order_index=1)
       3. ``pr101_decoder_byte_maps`` (order_index=2)
 
-    Sign-encoding ×5 (any substrate with int-tensor weights, mutually
+    Sign-encoding x5 (any substrate with int-tensor weights, mutually
     exclusive within a tensor):
       4. ``sign_encoding_negzig``
       5. ``sign_encoding_zig``
@@ -201,20 +300,20 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
       7. ``sign_encoding_off``
       8. ``sign_encoding_raw_uint8``
 
-    Schema-elision ×3 (HNeRV-family decoder grammar, mutually exclusive):
+    Schema-elision x3 (HNeRV-family decoder grammar, mutually exclusive):
       9. ``pr98_cd1_compact_format``
       10. ``pr100_schema_driven_decoder``
       11. ``pr105_packed_state_schema``
 
-    Magic-codec dense-streams ×1 (universal byte-stream wrapper):
+    Magic-codec dense-streams x1 (universal byte-stream wrapper):
       12. ``magic_codec_dense_streams``
 
-    Generic byte-stream compressors ×2:
+    Generic byte-stream compressors x2:
       13. ``brotli`` (contest baseline)
       14. ``lzma`` (universal-density alternative)
 
-    Total: 14 primitives. (PR101 GOLD ×3 + sign-encoding ×5 + schema-
-    elision ×3 + magic-codec-dense ×1 + brotli + lzma = 14.)
+    Total: 14 primitives. (PR101 GOLD x3 + sign-encoding x5 + schema-
+    elision x3 + magic-codec-dense x1 + brotli + lzma = 14.)
 
     Cross-references for each row are in the ``notes`` field.
     """
@@ -263,6 +362,13 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
                 "pr101_conv4_storage_perms",
                 "pr101_decoder_byte_maps",
             ),
+            semantic_constraint=SemanticConstraint(
+                # step 2 hits the storage-order substrate produced by step 1;
+                # without step 1 the conv4 permutation has no consistent
+                # tensor layout to permute against.
+                requires_primitive_ids=("pr101_decoder_storage_order",),
+                expects_substrate_property=("hnerv_family_decoder_layout",),
+            ),
             notes=(
                 "PR101 GOLD step 2: per-conv4 axis storage permutations "
                 "that hit lower entropy after step 1's storage order"
@@ -287,6 +393,15 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
                 "pr101_conv4_storage_perms",
                 "pr101_decoder_byte_maps",
             ),
+            semantic_constraint=SemanticConstraint(
+                # byte-maps overlays on top of conv4 perms; needs both
+                # earlier steps to have produced a consistent layout.
+                requires_primitive_ids=(
+                    "pr101_decoder_storage_order",
+                    "pr101_conv4_storage_perms",
+                ),
+                expects_substrate_property=("hnerv_family_decoder_layout",),
+            ),
             notes=(
                 "PR101 GOLD step 3: per-tensor sign-encoding byte map "
                 "(consumes sign_encoding family); HNeRV-family only"
@@ -305,6 +420,17 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="tac.packet_compiler.sign_encoding",
             canonical_symbol="SignEncodingStrategy.NEGZIG",
             applicable_substrate_classes=(),  # universal (any int-tensor).
+            semantic_constraint=SemanticConstraint(
+                # Sign-encoding rewrites signed int weights as a more
+                # entropy-friendly nibble stream. Substrates whose weights
+                # are inherently uint8 categorical / palette tokens gain
+                # nothing — they don't carry signed magnitudes.
+                expects_substrate_property=("int_tensor_weights",),
+                redundant_with_substrate_ids=(
+                    "categorical_substrate",
+                    "anr_token_renderer_v62",
+                ),
+            ),
             notes=(
                 "Best for distributions with both signs but skewed negative; "
                 "negate-then-zig-zag often produces lower-entropy nibble stream"
@@ -322,6 +448,13 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="tac.packet_compiler.sign_encoding",
             canonical_symbol="SignEncodingStrategy.ZIG",
             applicable_substrate_classes=(),  # universal.
+            semantic_constraint=SemanticConstraint(
+                expects_substrate_property=("int_tensor_weights",),
+                redundant_with_substrate_ids=(
+                    "categorical_substrate",
+                    "anr_token_renderer_v62",
+                ),
+            ),
             notes=(
                 "Canonical zig-zag: -1→1, 1→2, -2→3, 2→4, … bias to small "
                 "magnitudes; standard for protobuf/varint pipelines"
@@ -339,6 +472,13 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="tac.packet_compiler.sign_encoding",
             canonical_symbol="SignEncodingStrategy.TWOS",
             applicable_substrate_classes=(),  # universal.
+            semantic_constraint=SemanticConstraint(
+                expects_substrate_property=("int_tensor_weights",),
+                redundant_with_substrate_ids=(
+                    "categorical_substrate",
+                    "anr_token_renderer_v62",
+                ),
+            ),
             notes=(
                 "Two's-complement view of int8 as uint8 — zero-cost transform; "
                 "best when entropy coder already handles sign bit via context"
@@ -356,6 +496,8 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="tac.packet_compiler.sign_encoding",
             canonical_symbol="SignEncodingStrategy.OFF",
             applicable_substrate_classes=(),  # universal.
+            # Identity passthrough has no semantic constraint by design —
+            # it is the ablation baseline and applies everywhere.
             notes=(
                 "Identity passthrough — baseline for ablation; never improves "
                 "over the best strategy but ensures determinism"
@@ -373,12 +515,20 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="tac.packet_compiler.sign_encoding",
             canonical_symbol="SignEncodingStrategy.RAW_UINT8",
             applicable_substrate_classes=(),  # universal.
+            semantic_constraint=SemanticConstraint(
+                # raw_uint8 is the canonical no-op view for already-uint8
+                # categorical substrates — applying it is redundant.
+                redundant_with_substrate_ids=(
+                    "categorical_substrate",
+                    "anr_token_renderer_v62",
+                ),
+            ),
             notes=(
                 "Reinterpret signed int as raw uint8 byte stream; for "
                 "already-uint8-quantized weights this is the canonical no-op view"
             ),
         ),
-        # ── Schema-elision ×3 (HNeRV-family decoder grammar, MX) ──
+        # ── Schema-elision x3 (HNeRV-family decoder grammar, MX) ──
         PrimitiveRow(
             primitive_id="pr98_cd1_compact_format",
             name="Schema-elision: PR98 CD1 compact format",
@@ -436,7 +586,7 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
                 "smallest schema-elision but most-universal applicability"
             ),
         ),
-        # ── Magic-codec dense-streams ×1 (universal byte-stream auto-select) ──
+        # ── Magic-codec dense-streams x1 (universal byte-stream auto-select) ──
         PrimitiveRow(
             primitive_id="magic_codec_dense_streams",
             name="Magic codec: dense-streams auto-selector bundle",
@@ -449,6 +599,17 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="tac.packet_compiler.magic_codec_dense_streams",
             canonical_symbol="select_best_dense_stream_primitive",
             applicable_substrate_classes=(),  # universal.
+            semantic_constraint=SemanticConstraint(
+                # Per ZZZZZ stress-test 2026-05-12: substrates that already
+                # ship an arithmetic-coded latent stream gain little from
+                # the magic-codec dense-streams auto-selector — the
+                # selector's best pick on the substrate's own AR-coded
+                # output is the substrate's own AR coder.
+                redundant_with_substrate_ids=(
+                    "cool_chic_residual",
+                    "c3_residual",
+                ),
+            ),
             notes=(
                 "Auto-selects between 6 dense-stream primitives (sparse-RLE, "
                 "arithmetic-coefficients, centered-delta-uint8, delta-varint-"
@@ -456,7 +617,7 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
                 "score-claim=false until vendored runtime closure lands"
             ),
         ),
-        # ── Generic byte-stream compressors ×2 ──
+        # ── Generic byte-stream compressors x2 ──
         PrimitiveRow(
             primitive_id="brotli",
             name="Generic compressor: brotli (contest baseline)",
@@ -469,6 +630,16 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="brotli",
             canonical_symbol="brotli.compress",
             applicable_substrate_classes=(),  # universal.
+            semantic_constraint=SemanticConstraint(
+                # Substrates that ship their own AR-coded latent stream
+                # (cool_chic, c3) already exhaust the entropy a generic
+                # byte-stream coder could find — applying brotli/lzma
+                # on top is largely a no-op (residual incompressible).
+                redundant_with_substrate_ids=(
+                    "cool_chic_residual",
+                    "c3_residual",
+                ),
+            ),
             notes=(
                 "Contest-baseline byte-stream compressor; orthogonal to "
                 "every substrate via byte-stream wrapping"
@@ -486,6 +657,12 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
             canonical_module="lzma",
             canonical_symbol="lzma.compress",
             applicable_substrate_classes=(),  # universal.
+            semantic_constraint=SemanticConstraint(
+                redundant_with_substrate_ids=(
+                    "cool_chic_residual",
+                    "c3_residual",
+                ),
+            ),
             notes=(
                 "LZMA / xz universal-density entropy coder; tends to outperform "
                 "brotli on small dense streams but at higher decode cost"
@@ -494,7 +671,7 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
     ]
 
 
-# ── Compatibility matrix (substrate_class × primitive_category) ──────────
+# ── Compatibility matrix (substrate_class x primitive_category) ──────────
 
 
 # Each cell answers: "can this primitive_category compose with substrates
@@ -574,7 +751,7 @@ def primitive_compatibility(
 
 @dataclass(frozen=True)
 class CompositionCell:
-    """One (substrate × ordered primitives × order) composition cell.
+    """One (substrate x ordered primitives x order) composition cell.
 
     The cell is the autopilot's ranking unit. Each cell carries:
 
@@ -586,7 +763,7 @@ class CompositionCell:
       ("storage_order → conv4_perms → byte_maps" for PR101 GOLD; or
       "sign_encoding → brotli" for the universal byte-stream path).
     - ``predicted_bytes_delta``: aggregated from primitive metadata.
-    - ``predicted_score_delta``: aggregated; ``[predicted; substrate × primitive matrix v1]``.
+    - ``predicted_score_delta``: aggregated; ``[predicted; substrate x primitive matrix v1]``.
     - ``compatibility_verdict``: "compatible" / "violates_compatibility_matrix" /
       "violates_ordering" / "mutually_exclusive_collision".
 
@@ -610,6 +787,21 @@ class CompositionCell:
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
     notes: str = ""
+    # FIX-D enrichment 1 (ZZZZZ medium polish 2026-05-12): when the cell
+    # is FORMALLY compatible (passes the compatibility matrix AND ordering
+    # rules) but one or more primitives is semantically a no-op on the
+    # substrate (e.g., magic_codec primitive applied to a substrate that
+    # already ships its own AR-coded latent stream), populate a short
+    # operator-facing string. ``None`` means "no semantic warning to
+    # surface". Refused cells (compatibility_verdict != "compatible*")
+    # never set this field — they carry refused_reason instead.
+    semantic_compatibility_warning: str | None = None
+    # FIX-D enrichment 2 (ZZZZZ medium polish 2026-05-12): when the cell
+    # is REFUSED (compatibility_verdict != "compatible*"), the typed
+    # taxonomy classifying WHY the cell was refused. ``None`` for
+    # compatible cells. The free-form rationale stays in ``blockers``;
+    # this field makes the refusal class machine-checkable.
+    refused_reason: RefusedReason | None = None
 
     def primitive_ids(self) -> tuple[str, ...]:
         """Return the primitive_ids in pipeline order."""
@@ -631,17 +823,30 @@ class CompositionCell:
             "estimated_dispatch_cost_usd": 0.0,  # set by ranker.
             "blockers": list(self.blockers),
             "notes": self._format_notes(),
+            "semantic_compatibility_warning": self.semantic_compatibility_warning,
+            "refused_reason": (
+                self.refused_reason.value
+                if self.refused_reason is not None
+                else None
+            ),
         }
 
     def _format_notes(self) -> str:
         lines = [
-            "[predicted; substrate × primitive composition matrix v1]",
+            "[predicted; substrate x primitive composition matrix v1]",
             f"substrate_id: {self.substrate_id}",
             f"primitives (in order): {list(self.primitive_ids())}",
             f"composition_order: {list(self.composition_order)}",
             f"predicted_bytes_delta: {self.predicted_bytes_delta}",
             f"compatibility_verdict: {self.compatibility_verdict}",
         ]
+        if self.semantic_compatibility_warning is not None:
+            lines.append(
+                f"semantic_compatibility_warning: "
+                f"{self.semantic_compatibility_warning}"
+            )
+        if self.refused_reason is not None:
+            lines.append(f"refused_reason: {self.refused_reason.value}")
         if self.notes:
             lines.append(f"notes: {self.notes}")
         return "\n".join(lines)
@@ -657,40 +862,78 @@ def validate_pipeline_ordering(
     """Validate a primitive pipeline against ordering / mutual-exclusion rules.
 
     Returns ``(ok, rationale)``. If ``ok`` is False, ``rationale`` carries
-    the reason the pipeline violates the rules.
+    the reason the pipeline violates the rules. Kept stable for
+    backward-compat consumers; new callers should prefer
+    :func:`classify_pipeline_violation` which returns the typed
+    :class:`RefusedReason` alongside the rationale.
+    """
+    ok, _reason, rationale = classify_pipeline_violation(
+        primitive_ids, primitives_by_id
+    )
+    return ok, rationale
 
-    Rules enforced:
 
-    1. **Mutual-exclusion within category**: at most one primitive per
-       MUTUALLY_EXCLUSIVE category (e.g., one sign-encoding, one schema-
-       elision).
-    2. **Ordered-pipeline within-category order**: primitives in an
-       ORDERED_PIPELINE category MUST appear in the order declared by
-       ``within_category_order``.
-    3. **Cross-category order**: primitives with lower ``order_index``
-       MUST appear before primitives with higher ``order_index``.
-    4. **No duplicates**: a primitive_id appears at most once in the
-       pipeline.
+def classify_pipeline_violation(
+    primitive_ids: list[str],
+    primitives_by_id: dict[str, PrimitiveRow],
+) -> tuple[bool, RefusedReason | None, str]:
+    """Validate a primitive pipeline and classify the refusal class.
+
+    Per FIX-D 2026-05-12 (ZZZZZ medium polish), this function pairs the
+    free-form rationale with a typed :class:`RefusedReason`. Downstream
+    consumers can branch on the refusal class without parsing prose.
+
+    Returns
+    -------
+    (ok, reason, rationale):
+        ``ok`` is True iff the pipeline satisfies all ordering / MX /
+        duplicate / unknown-primitive rules. ``reason`` is None when
+        ``ok`` is True; otherwise it is the typed refusal class.
+        ``rationale`` is the human-readable explanation (same as the
+        legacy :func:`validate_pipeline_ordering` return).
+
+    Rules enforced (with typed classification):
+
+    1. **No duplicates** → :attr:`RefusedReason.DUPLICATE_PRIMITIVE`.
+    2. **Known primitive_ids** → :attr:`RefusedReason.UNKNOWN_PRIMITIVE`.
+    3. **Cross-category order_index monotonic** →
+       :attr:`RefusedReason.ORDERING_VIOLATION`.
+    4. **Mutual-exclusion within MX categories** →
+       :attr:`RefusedReason.MUTUAL_EXCLUSION`.
+    5. **Ordered-pipeline within-category order** →
+       :attr:`RefusedReason.ORDERING_VIOLATION`.
     """
     if not primitive_ids:
-        return True, "empty pipeline trivially valid"
+        return True, None, "empty pipeline trivially valid"
 
     if len(set(primitive_ids)) != len(primitive_ids):
         dupes = sorted({p for p in primitive_ids if primitive_ids.count(p) > 1})
-        return False, f"duplicate primitive_ids: {dupes}"
+        return (
+            False,
+            RefusedReason.DUPLICATE_PRIMITIVE,
+            f"duplicate primitive_ids: {dupes}",
+        )
 
     rows: list[PrimitiveRow] = []
     for pid in primitive_ids:
         if pid not in primitives_by_id:
-            return False, f"unknown primitive_id: {pid!r}"
+            return (
+                False,
+                RefusedReason.UNKNOWN_PRIMITIVE,
+                f"unknown primitive_id: {pid!r}",
+            )
         rows.append(primitives_by_id[pid])
 
     # Rule 3: cross-category order_index monotonic.
     indices = [r.order_index for r in rows]
     if indices != sorted(indices):
-        return False, (
-            f"cross-category order_index not monotonic: {indices} "
-            f"for {primitive_ids}; smaller order_index must appear first"
+        return (
+            False,
+            RefusedReason.ORDERING_VIOLATION,
+            (
+                f"cross-category order_index not monotonic: {indices} "
+                f"for {primitive_ids}; smaller order_index must appear first"
+            ),
         )
 
     # Rule 1: mutual-exclusion within MUTUALLY_EXCLUSIVE categories.
@@ -704,9 +947,13 @@ def validate_pipeline_ordering(
             [r.primitive_id for r in rows].index(members[0])
         ].order_sensitivity
         if sensitivity == PrimitiveOrderSensitivity.MUTUALLY_EXCLUSIVE:
-            return False, (
-                f"mutually-exclusive category {cat.value} has multiple "
-                f"primitives: {members}; choose one"
+            return (
+                False,
+                RefusedReason.MUTUAL_EXCLUSION,
+                (
+                    f"mutually-exclusive category {cat.value} has multiple "
+                    f"primitives: {members}; choose one"
+                ),
             )
 
     # Rule 2: ordered-pipeline within-category order.
@@ -729,17 +976,111 @@ def validate_pipeline_ordering(
         try:
             observed_indices = [expected_index[pid] for pid in observed_order]
         except KeyError as exc:
-            return False, (
-                f"category {cat.value} pipeline contains primitive not in "
-                f"declared within_category_order: {exc.args[0]!r}"
+            return (
+                False,
+                RefusedReason.ORDERING_VIOLATION,
+                (
+                    f"category {cat.value} pipeline contains primitive not in "
+                    f"declared within_category_order: {exc.args[0]!r}"
+                ),
             )
         if observed_indices != sorted(observed_indices):
-            return False, (
-                f"category {cat.value} pipeline order {observed_order} "
-                f"violates declared within_category_order {expected_order}"
+            return (
+                False,
+                RefusedReason.ORDERING_VIOLATION,
+                (
+                    f"category {cat.value} pipeline order {observed_order} "
+                    f"violates declared within_category_order {expected_order}"
+                ),
             )
 
-    return True, "pipeline ordering valid"
+    return True, None, "pipeline ordering valid"
+
+
+def compute_semantic_warning(
+    substrate_id: str,
+    primitives: list[PrimitiveRow],
+) -> str | None:
+    """Compute a semantic-compatibility warning for a (substrate, pipeline) pair.
+
+    Returns ``None`` when no warning applies. Walks each primitive's
+    :class:`SemanticConstraint`:
+
+    - Primitives that declare ``redundant_with_substrate_ids`` containing
+      ``substrate_id`` contribute a redundancy warning.
+    - Primitives that declare ``incompatible_with_substrate_ids``
+      containing ``substrate_id`` contribute a SEMANTIC_INCOMPATIBLE
+      caveat (this surface only — the caller decides whether to mark
+      the cell refused via :class:`RefusedReason.SEMANTIC_INCOMPATIBLE`).
+
+    Multiple primitives can contribute; the warnings are joined with
+    ``" | "``. Per FIX-D 2026-05-12 (ZZZZZ medium polish).
+    """
+    warnings: list[str] = []
+    for p in primitives:
+        sc = p.semantic_constraint
+        if substrate_id in sc.redundant_with_substrate_ids:
+            warnings.append(
+                f"primitive {p.primitive_id!r} is semantically redundant on "
+                f"substrate {substrate_id!r} (substrate already provides "
+                f"this primitive's benefit; applying it is a no-op)"
+            )
+        if substrate_id in sc.incompatible_with_substrate_ids:
+            warnings.append(
+                f"primitive {p.primitive_id!r} is semantically incompatible "
+                f"with substrate {substrate_id!r} (structural mismatch even "
+                f"though compatibility matrix permits the category)"
+            )
+    if not warnings:
+        return None
+    return " | ".join(warnings)
+
+
+def detect_dependency_violation(
+    primitive_ids: list[str],
+    primitives_by_id: dict[str, PrimitiveRow],
+) -> tuple[bool, str | None]:
+    """Detect required-primitive dependencies not satisfied by the pipeline.
+
+    Returns ``(ok, rationale)``. ``ok`` is True when every primitive's
+    ``semantic_constraint.requires_primitive_ids`` is present in the
+    pipeline.
+
+    Caller uses :class:`RefusedReason.DEPENDENCY_MISSING` to classify
+    the refusal.
+    """
+    pipeline_set = set(primitive_ids)
+    for pid in primitive_ids:
+        row = primitives_by_id.get(pid)
+        if row is None:
+            continue
+        for required in row.semantic_constraint.requires_primitive_ids:
+            if required not in pipeline_set:
+                return False, (
+                    f"primitive {pid!r} requires {required!r} in the same "
+                    f"pipeline, but the pipeline is {sorted(pipeline_set)!r}"
+                )
+    return True, None
+
+
+def detect_substrate_semantic_incompatibility(
+    substrate_id: str,
+    primitives: list[PrimitiveRow],
+) -> tuple[bool, str | None]:
+    """Detect hard substrate x primitive semantic incompatibility.
+
+    Returns ``(ok, rationale)``. ``ok`` is True when no primitive's
+    ``semantic_constraint.incompatible_with_substrate_ids`` lists
+    ``substrate_id``. When False, the caller classifies the refusal as
+    :class:`RefusedReason.SEMANTIC_INCOMPATIBLE`.
+    """
+    for p in primitives:
+        if substrate_id in p.semantic_constraint.incompatible_with_substrate_ids:
+            return False, (
+                f"primitive {p.primitive_id!r} declares substrate "
+                f"{substrate_id!r} as semantically incompatible"
+            )
+    return True, None
 
 
 # ── Serialization helpers ────────────────────────────────────────────────
@@ -756,6 +1097,17 @@ def _primitive_to_dict(p: PrimitiveRow) -> dict[str, Any]:
     d["predicted_bytes_delta_band"] = list(p.predicted_bytes_delta_band)
     d["predicted_score_delta_band"] = list(p.predicted_score_delta_band)
     d["within_category_order"] = list(p.within_category_order)
+    # FIX-D 2026-05-12: ensure SemanticConstraint serializes as JSON-friendly
+    # lists rather than the dataclass-as-dict default tuples.
+    sc = p.semantic_constraint
+    d["semantic_constraint"] = {
+        "redundant_with_substrate_ids": list(sc.redundant_with_substrate_ids),
+        "expects_substrate_property": list(sc.expects_substrate_property),
+        "incompatible_with_substrate_ids": list(
+            sc.incompatible_with_substrate_ids
+        ),
+        "requires_primitive_ids": list(sc.requires_primitive_ids),
+    }
     return d
 
 
@@ -767,6 +1119,14 @@ def _cell_to_dict(c: CompositionCell) -> dict[str, Any]:
     ]
     d["composition_order"] = list(c.composition_order)
     d["blockers"] = list(c.blockers)
+    # FIX-D 2026-05-12: serialize RefusedReason as its enum value (string)
+    # for JSON friendliness; None passes through unchanged.
+    d["refused_reason"] = (
+        c.refused_reason.value if c.refused_reason is not None else None
+    )
+    # semantic_compatibility_warning is already a string-or-None; no
+    # transformation needed but call out explicitly for clarity.
+    d["semantic_compatibility_warning"] = c.semantic_compatibility_warning
     return d
 
 
@@ -776,24 +1136,29 @@ def serialize_primitive_inventory() -> list[dict[str, Any]]:
 
 
 __all__ = [
-    "SCHEMA_VERSION",
     "PLANNING_ONLY",
-    "SCORE_CLAIM",
     "PROMOTION_ELIGIBLE",
     "READY_FOR_EXACT_EVAL_DISPATCH",
+    "SCHEMA_VERSION",
+    "SCORE_CLAIM",
+    "CompositionCell",
     "PrimitiveCategory",
     "PrimitiveOrderSensitivity",
     "PrimitiveRow",
-    "CompositionCell",
-    "canonical_primitive_inventory",
-    "primitive_compatibility",
-    "validate_pipeline_ordering",
-    "serialize_primitive_inventory",
-    "_primitive_to_dict",
-    "_cell_to_dict",
-    # Re-exports for convenience.
+    "RefusedReason",
     "ScoreAxis",
+    "SemanticConstraint",
     "SubstrateClass",
     "SubstrateRow",
+    "_cell_to_dict",
+    "_primitive_to_dict",
+    "canonical_primitive_inventory",
     "canonical_substrate_inventory",
+    "classify_pipeline_violation",
+    "compute_semantic_warning",
+    "detect_dependency_violation",
+    "detect_substrate_semantic_incompatibility",
+    "primitive_compatibility",
+    "serialize_primitive_inventory",
+    "validate_pipeline_ordering",
 ]

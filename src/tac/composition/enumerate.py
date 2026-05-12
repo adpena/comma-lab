@@ -1,4 +1,4 @@
-"""Enumerate (substrate × primitive × order) composition cells.
+"""Enumerate (substrate x primitive x order) composition cells.
 
 Per operator directive 2026-05-12 ("stacking and composition on everything"),
 :func:`enumerate_cells` produces the autopilot's ranking input as a stream
@@ -16,7 +16,7 @@ The enumeration respects:
    skip cells where the primitive_category does not apply to the
    substrate_class (e.g., PR101 GOLD does NOT apply to RESIDUAL substrates).
 2. **Mutually-exclusive categories**: at most ONE primitive per
-   MUTUALLY_EXCLUSIVE category (sign-encoding × 1, schema-elision × 1).
+   MUTUALLY_EXCLUSIVE category (sign-encoding x 1, schema-elision x 1).
 3. **Ordered-pipeline within-category order**: PR101 GOLD trio appears
    strictly in declared order if multiple members are included.
 4. **Cross-category order_index monotonicity**: smaller index appears
@@ -37,7 +37,7 @@ Cross-references
 ----------------
 - :mod:`tac.composition.registry` — types + canonical inventory.
 - :mod:`tac.optimization.substrate_composition_matrix` — pairwise
-  SUBSTRATE × SUBSTRATE matrix (re-used for substrate classification).
+  SUBSTRATE x SUBSTRATE matrix (re-used for substrate classification).
 - :mod:`tac.optimization.autopilot_dispatch_ranking` — ranker that
   consumes the enumerated cells.
 - :mod:`tac.continual_learning` — posterior anchors that update
@@ -47,7 +47,7 @@ Cross-references
 from __future__ import annotations
 
 import itertools
-from typing import Any, Optional
+from typing import Any
 
 from tac.composition.registry import (
     SCHEMA_VERSION,
@@ -55,12 +55,16 @@ from tac.composition.registry import (
     PrimitiveCategory,
     PrimitiveOrderSensitivity,
     PrimitiveRow,
+    RefusedReason,
     SubstrateRow,
     _cell_to_dict,
     canonical_primitive_inventory,
     canonical_substrate_inventory,
+    classify_pipeline_violation,
+    compute_semantic_warning,
+    detect_dependency_violation,
+    detect_substrate_semantic_incompatibility,
     primitive_compatibility,
-    validate_pipeline_ordering,
 )
 
 ENUMERATION_SCHEMA = "tac_composition_cell_enumeration_v1"
@@ -95,7 +99,7 @@ def _aggregate_predicted_deltas(
     score_mid = 0.0
     for p in primitives:
         bytes_lo, bytes_hi = p.predicted_bytes_delta_band
-        bytes_mid += int(round((bytes_lo + bytes_hi) / 2.0))
+        bytes_mid += round((bytes_lo + bytes_hi) / 2.0)
         score_lo, score_hi = p.predicted_score_delta_band
         score_mid += (score_lo + score_hi) / 2.0
     # Add substrate's predicted_delta_alone_midpoint() to the score (the
@@ -107,7 +111,7 @@ def _aggregate_predicted_deltas(
 def _detect_pr101_gold_overlap(
     substrate: SubstrateRow,
     primitive_ids: list[str],
-) -> Optional[str]:
+) -> str | None:
     """Detect PR101 GOLD applied to non-HNeRV substrate IDs.
 
     Per ``feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md``
@@ -142,19 +146,19 @@ def _detect_pr101_gold_overlap(
 
 
 def enumerate_cells(
-    substrates: Optional[list[SubstrateRow]] = None,
-    primitives: Optional[list[PrimitiveRow]] = None,
+    substrates: list[SubstrateRow] | None = None,
+    primitives: list[PrimitiveRow] | None = None,
     *,
     max_primitives_per_cell: int = 4,
     include_bare_substrate: bool = True,
 ) -> list[CompositionCell]:
-    """Enumerate (substrate × ordered-primitive-pipeline) composition cells.
+    """Enumerate (substrate x ordered-primitive-pipeline) composition cells.
 
     Per operator directive 2026-05-12 ("stacking and composition on
     everything"), produces the autopilot ranking input. The enumeration:
 
-    1. Iterates every substrate × primitive-subset combination.
-    2. Filters by :func:`primitive_compatibility` (substrate_class ×
+    1. Iterates every substrate x primitive-subset combination.
+    2. Filters by :func:`primitive_compatibility` (substrate_class x
        primitive_category gate).
     3. Filters by within-category mutual-exclusion + ordered-pipeline
        constraints via :func:`validate_pipeline_ordering`.
@@ -196,7 +200,7 @@ def enumerate_cells(
     ``score_claim=False``, ``promotion_eligible=False``,
     ``ready_for_exact_eval_dispatch=False``. The cell's
     ``predicted_score_delta`` is a planning prediction
-    ``[predicted; substrate × primitive matrix v1]``.
+    ``[predicted; substrate x primitive matrix v1]``.
     """
     if max_primitives_per_cell < 0:
         raise ValueError(
@@ -295,14 +299,15 @@ def enumerate_cells(
                 normalized.sort(key=lambda x: x.order_index)
                 normalized_ids = [p.primitive_id for p in normalized]
 
-                ok, rationale = validate_pipeline_ordering(
+                ok, refused_reason, rationale = classify_pipeline_violation(
                     normalized_ids, primitives_by_id
                 )
                 if not ok:
                     # The combination violates the ordering / MX rules
                     # (e.g., two sign-encoding strategies). Emit it
-                    # with a clear compatibility_verdict so the operator
-                    # sees why it was rejected, but mark it un-rankable.
+                    # with a clear compatibility_verdict + typed
+                    # refused_reason (FIX-D 2026-05-12) so consumers can
+                    # branch on the refusal class without parsing prose.
                     cells.append(
                         CompositionCell(
                             cell_id=_cell_id(
@@ -318,9 +323,75 @@ def enumerate_cells(
                             blockers=(
                                 f"pipeline_ordering_invalid: {rationale}",
                             ),
+                            refused_reason=refused_reason,
                             notes=(
                                 f"primitive combination {normalized_ids} "
                                 f"violates ordering/MX: {rationale}"
+                            ),
+                        )
+                    )
+                    continue
+
+                # FIX-D dependency check (ZZZZZ medium polish 2026-05-12):
+                # primitives may declare requires_primitive_ids that MUST
+                # appear in the same pipeline. PR101 GOLD step 2 requires
+                # step 1; step 3 requires steps 1 and 2.
+                dep_ok, dep_rationale = detect_dependency_violation(
+                    normalized_ids, primitives_by_id
+                )
+                if not dep_ok:
+                    cells.append(
+                        CompositionCell(
+                            cell_id=_cell_id(
+                                substrate.substrate_id, tuple(normalized_ids)
+                            ),
+                            substrate_id=substrate.substrate_id,
+                            substrate_class=substrate.substrate_class,
+                            primitives=tuple((pid, {}) for pid in normalized_ids),
+                            composition_order=tuple(normalized_ids),
+                            predicted_bytes_delta=0,
+                            predicted_score_delta=0.0,
+                            compatibility_verdict="violates_dependency",
+                            blockers=(
+                                f"primitive_dependency_missing: {dep_rationale}",
+                            ),
+                            refused_reason=RefusedReason.DEPENDENCY_MISSING,
+                            notes=(
+                                f"primitive combination {normalized_ids} "
+                                f"missing required primitive: {dep_rationale}"
+                            ),
+                        )
+                    )
+                    continue
+
+                # FIX-D substrate x primitive hard incompatibility
+                # (ZZZZZ medium polish 2026-05-12). The compatibility
+                # matrix already gates by SubstrateClass x PrimitiveCategory;
+                # this layer surfaces per-primitive-per-substrate refusals.
+                inc_ok, inc_rationale = detect_substrate_semantic_incompatibility(
+                    substrate.substrate_id, normalized
+                )
+                if not inc_ok:
+                    cells.append(
+                        CompositionCell(
+                            cell_id=_cell_id(
+                                substrate.substrate_id, tuple(normalized_ids)
+                            ),
+                            substrate_id=substrate.substrate_id,
+                            substrate_class=substrate.substrate_class,
+                            primitives=tuple((pid, {}) for pid in normalized_ids),
+                            composition_order=tuple(normalized_ids),
+                            predicted_bytes_delta=0,
+                            predicted_score_delta=0.0,
+                            compatibility_verdict="violates_substrate_semantic",
+                            blockers=(
+                                f"substrate_semantic_incompatible: {inc_rationale}",
+                            ),
+                            refused_reason=RefusedReason.SEMANTIC_INCOMPATIBLE,
+                            notes=(
+                                f"primitive pipeline {normalized_ids} is "
+                                f"semantically incompatible with substrate "
+                                f"{substrate.substrate_id}: {inc_rationale}"
                             ),
                         )
                     )
@@ -335,6 +406,15 @@ def enumerate_cells(
                 if pr101_warn is not None:
                     blockers.append(pr101_warn)
 
+                # FIX-D 2026-05-12: compute the semantic-compatibility
+                # warning for cells that PASS the formal compatibility +
+                # ordering gates but contain a primitive that is
+                # semantically a no-op on this substrate (e.g.,
+                # magic_codec_dense_streams on cool_chic_residual).
+                semantic_warning = compute_semantic_warning(
+                    substrate.substrate_id, normalized
+                )
+
                 cells.append(
                     CompositionCell(
                         cell_id=_cell_id(
@@ -348,6 +428,7 @@ def enumerate_cells(
                         predicted_score_delta=score_mid,
                         compatibility_verdict="compatible",
                         blockers=tuple(blockers),
+                        semantic_compatibility_warning=semantic_warning,
                         notes=(
                             f"primitive pipeline {normalized_ids} (order: by "
                             f"primitive.order_index, ties broken by primitive_id)"
@@ -379,7 +460,22 @@ def serialize_enumeration(
     Per CLAUDE.md "Forbidden /tmp paths" the caller is responsible for
     writing the output to a durable location (``experiments/results/`` /
     ``reports/`` / ``.omx/``); this function only emits the dict.
+
+    Per FIX-D 2026-05-12: the payload also reports per-:class:`RefusedReason`
+    counts so audits like ZZZZZ can confirm the typed taxonomy covers all
+    refused cells without manual prose parsing.
     """
+    # Per-refused-reason histogram for the audit-friendly summary.
+    refused_reason_counts: dict[str, int] = {}
+    n_with_semantic_warning = 0
+    for c in cells:
+        if c.refused_reason is not None:
+            refused_reason_counts[c.refused_reason.value] = (
+                refused_reason_counts.get(c.refused_reason.value, 0) + 1
+            )
+        if c.semantic_compatibility_warning is not None:
+            n_with_semantic_warning += 1
+
     return {
         "schema": ENUMERATION_SCHEMA,
         "registry_schema": SCHEMA_VERSION,
@@ -392,6 +488,9 @@ def serialize_enumeration(
             1 for c in cells
             if c.compatibility_verdict == "violates_ordering_or_mutually_exclusive"
         ),
+        # FIX-D 2026-05-12: typed taxonomy histograms.
+        "n_refused_by_reason": refused_reason_counts,
+        "n_with_semantic_warning": n_with_semantic_warning,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -402,8 +501,74 @@ def serialize_enumeration(
             "no_mps_authoritative",
             "no_tmp_paths",
             "substrate_primitive_composition_cell_registry_v1",
+            "fix_d_semantic_warning_and_refused_reason_v1",
         ],
     }
+
+
+def enumerate_substrate_incompatible_cells(
+    substrates: list[SubstrateRow] | None = None,
+    primitives: list[PrimitiveRow] | None = None,
+) -> list[CompositionCell]:
+    """Emit explicit REFUSED cells for every (substrate x primitive) pair
+    blocked by the compatibility matrix.
+
+    Per FIX-D 2026-05-12 (ZZZZZ medium polish): the main
+    :func:`enumerate_cells` silently skips (substrate x primitive) pairs
+    where :func:`primitive_compatibility` returns False. This helper
+    surfaces those pairs as typed
+    :class:`RefusedReason.SUBSTRATE_INCOMPATIBLE` cells so the operator's
+    audit dashboard can show the FULL refusal taxonomy.
+
+    The output is intentionally separate from the main enumerator: callers
+    that want the typed audit dashboard call this in addition to
+    :func:`enumerate_cells`; callers that only want autopilot-rankable
+    candidates do not.
+    """
+    s_inv = substrates if substrates is not None else canonical_substrate_inventory()
+    p_inv = primitives if primitives is not None else canonical_primitive_inventory()
+    if not s_inv:
+        raise ValueError("substrate inventory empty; refusing to enumerate cells")
+
+    cells: list[CompositionCell] = []
+    for substrate in s_inv:
+        for primitive in p_inv:
+            if primitive_compatibility(substrate.substrate_class, primitive.category):
+                continue
+            cell_id = (
+                "cell__"
+                + substrate.substrate_id
+                + "__refused__"
+                + primitive.primitive_id
+            )
+            rationale = (
+                f"substrate_class {substrate.substrate_class.value!r} is not "
+                f"in the compatibility matrix for primitive category "
+                f"{primitive.category.value!r}"
+            )
+            cells.append(
+                CompositionCell(
+                    cell_id=cell_id,
+                    substrate_id=substrate.substrate_id,
+                    substrate_class=substrate.substrate_class,
+                    primitives=((primitive.primitive_id, {}),),
+                    composition_order=(primitive.primitive_id,),
+                    predicted_bytes_delta=0,
+                    predicted_score_delta=0.0,
+                    compatibility_verdict="violates_substrate_class",
+                    blockers=(f"substrate_class_incompatible: {rationale}",),
+                    refused_reason=RefusedReason.SUBSTRATE_INCOMPATIBLE,
+                    notes=(
+                        f"(substrate, primitive) pair "
+                        f"({substrate.substrate_id!r}, {primitive.primitive_id!r}) "
+                        f"refused: {rationale}"
+                    ),
+                )
+            )
+    cells.sort(
+        key=lambda c: (c.substrate_id, tuple(p for p, _ in c.primitives))
+    )
+    return cells
 
 
 # ── Autopilot wire-in helper ──────────────────────────────────────────────
@@ -413,8 +578,8 @@ def autopilot_ranking_input(
     *,
     only_compatible: bool = True,
     only_with_primitives: bool = False,
-    substrates: Optional[list[SubstrateRow]] = None,
-    primitives: Optional[list[PrimitiveRow]] = None,
+    substrates: list[SubstrateRow] | None = None,
+    primitives: list[PrimitiveRow] | None = None,
     max_primitives_per_cell: int = 4,
 ) -> list[dict[str, Any]]:
     """Return enumerated cells as autopilot CandidateRow-compatible dicts.
@@ -480,7 +645,8 @@ def autopilot_ranking_input(
 
 __all__ = [
     "ENUMERATION_SCHEMA",
-    "enumerate_cells",
-    "serialize_enumeration",
     "autopilot_ranking_input",
+    "enumerate_cells",
+    "enumerate_substrate_incompatible_cells",
+    "serialize_enumeration",
 ]

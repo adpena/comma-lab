@@ -4,7 +4,7 @@ Per operator directive 2026-05-12 ("stacking and composition on
 everything"), this test file pins:
 
 1. The 14-primitive canonical inventory shape + integrity.
-2. The substrate × primitive compatibility matrix (every entry checked).
+2. The substrate x primitive compatibility matrix (every entry checked).
 3. The pipeline-ordering / mutually-exclusive validator.
 4. The enumerator's compatibility-matrix gate.
 5. The enumerator's mutual-exclusion enforcement (one sign-encoding only,
@@ -32,6 +32,7 @@ from tac.composition.enumerate import (
     ENUMERATION_SCHEMA,
     autopilot_ranking_input,
     enumerate_cells,
+    enumerate_substrate_incompatible_cells,
     serialize_enumeration,
 )
 from tac.composition.registry import (
@@ -40,14 +41,19 @@ from tac.composition.registry import (
     SCHEMA_VERSION,
     SCORE_CLAIM,
     PrimitiveCategory,
+    RefusedReason,
+    SemanticConstraint,
     SubstrateClass,
     canonical_primitive_inventory,
     canonical_substrate_inventory,
+    classify_pipeline_violation,
+    compute_semantic_warning,
+    detect_dependency_violation,
+    detect_substrate_semantic_incompatibility,
     primitive_compatibility,
     serialize_primitive_inventory,
     validate_pipeline_ordering,
 )
-
 
 # ── 1. Primitive inventory shape ──────────────────────────────────────────
 
@@ -70,13 +76,13 @@ def test_primitive_inventory_categories():
         by_cat.setdefault(p.category, []).append(p.primitive_id)
     # PR101 GOLD trio:
     assert len(by_cat[PrimitiveCategory.PR101_GOLD_STORAGE]) == 3
-    # Sign-encoding ×5:
+    # Sign-encoding x5:
     assert len(by_cat[PrimitiveCategory.SIGN_ENCODING]) == 5
-    # Schema-elision ×3:
+    # Schema-elision x3:
     assert len(by_cat[PrimitiveCategory.SCHEMA_ELISION]) == 3
-    # Magic-codec dense-streams ×1:
+    # Magic-codec dense-streams x1:
     assert len(by_cat[PrimitiveCategory.MAGIC_CODEC_DENSE_STREAMS]) == 1
-    # Brotli ×1, LZMA ×1:
+    # Brotli x1, LZMA x1:
     assert len(by_cat[PrimitiveCategory.BROTLI]) == 1
     assert len(by_cat[PrimitiveCategory.LZMA]) == 1
 
@@ -616,3 +622,469 @@ def test_compatibility_matrix_no_missing_class_category_combo():
             # The function never raises — it returns False for un-set keys.
             result = primitive_compatibility(sc, cat)
             assert isinstance(result, bool)
+
+
+# ── FIX-D (2026-05-12) — semantic_compatibility_warning + RefusedReason ──
+#
+# Per ZZZZZ medium polish audit 2026-05-12. Adds:
+# - SemanticConstraint declaration on PrimitiveRow.
+# - semantic_compatibility_warning field on CompositionCell (populated
+#   for compatible cells whose pipeline has a semantically no-op
+#   primitive on the substrate).
+# - RefusedReason enum + refused_reason field on CompositionCell
+#   (populated for every refused cell so consumers can branch on the
+#   refusal class without parsing prose).
+
+
+# ── FIX-D.1: RefusedReason enum coverage ─────────────────────────────────
+
+
+def test_refused_reason_enum_has_all_taxonomy_classes():
+    expected = {
+        "ordering_violation",
+        "mutual_exclusion",
+        "substrate_incompatible",
+        "semantic_incompatible",
+        "dependency_missing",
+        "duplicate_primitive",
+        "unknown_primitive",
+    }
+    actual = {r.value for r in RefusedReason}
+    assert actual == expected, f"refused_reason taxonomy drift: {actual ^ expected}"
+
+
+def test_refused_reason_values_are_strings():
+    for r in RefusedReason:
+        assert isinstance(r.value, str)
+        assert r.value == r.value.lower(), "values must be lowercase snake"
+
+
+# ── FIX-D.2: SemanticConstraint defaults + serialization ─────────────────
+
+
+def test_semantic_constraint_default_empty_tuples():
+    sc = SemanticConstraint()
+    assert sc.redundant_with_substrate_ids == ()
+    assert sc.expects_substrate_property == ()
+    assert sc.incompatible_with_substrate_ids == ()
+    assert sc.requires_primitive_ids == ()
+
+
+def test_primitive_inventory_carries_semantic_constraints():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    # PR101 GOLD step 2 requires step 1.
+    step2 = by_id["pr101_conv4_storage_perms"]
+    assert (
+        "pr101_decoder_storage_order"
+        in step2.semantic_constraint.requires_primitive_ids
+    )
+    # PR101 GOLD step 3 requires both step 1 and step 2.
+    step3 = by_id["pr101_decoder_byte_maps"]
+    assert (
+        "pr101_decoder_storage_order"
+        in step3.semantic_constraint.requires_primitive_ids
+    )
+    assert (
+        "pr101_conv4_storage_perms"
+        in step3.semantic_constraint.requires_primitive_ids
+    )
+    # magic_codec_dense_streams is redundant on cool_chic and c3.
+    magic = by_id["magic_codec_dense_streams"]
+    assert (
+        "cool_chic_residual"
+        in magic.semantic_constraint.redundant_with_substrate_ids
+    )
+    assert (
+        "c3_residual"
+        in magic.semantic_constraint.redundant_with_substrate_ids
+    )
+
+
+def test_primitive_inventory_sign_encoding_expects_int_tensor_weights():
+    prims = canonical_primitive_inventory()
+    for p in prims:
+        if p.category == PrimitiveCategory.SIGN_ENCODING and p.primitive_id != "sign_encoding_off":
+            assert (
+                "int_tensor_weights"
+                in p.semantic_constraint.expects_substrate_property
+                or "categorical_substrate"
+                in p.semantic_constraint.redundant_with_substrate_ids
+            ), (
+                f"sign-encoding primitive {p.primitive_id} should declare "
+                "either int_tensor_weights property or categorical redundancy"
+            )
+
+
+# ── FIX-D.3: classify_pipeline_violation returns typed RefusedReason ────
+
+
+def test_classify_pipeline_violation_duplicate_primitive():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    ok, reason, msg = classify_pipeline_violation(["brotli", "brotli"], by_id)
+    assert ok is False
+    assert reason is RefusedReason.DUPLICATE_PRIMITIVE
+    assert "duplicate primitive_ids" in msg
+
+
+def test_classify_pipeline_violation_unknown_primitive():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    ok, reason, msg = classify_pipeline_violation(["does_not_exist"], by_id)
+    assert ok is False
+    assert reason is RefusedReason.UNKNOWN_PRIMITIVE
+
+
+def test_classify_pipeline_violation_mutual_exclusion():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    ok, reason, msg = classify_pipeline_violation(
+        ["sign_encoding_negzig", "sign_encoding_zig"], by_id
+    )
+    assert ok is False
+    assert reason is RefusedReason.MUTUAL_EXCLUSION
+    assert "mutually-exclusive" in msg
+
+
+def test_classify_pipeline_violation_ordering_violation_cross_category():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    # brotli (idx=4) before pr101_storage_order (idx=0) — bad ordering.
+    ok, reason, msg = classify_pipeline_violation(
+        ["brotli", "pr101_decoder_storage_order"], by_id
+    )
+    assert ok is False
+    assert reason is RefusedReason.ORDERING_VIOLATION
+
+
+def test_classify_pipeline_violation_valid_returns_none_reason():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    ok, reason, msg = classify_pipeline_violation(["brotli"], by_id)
+    assert ok is True
+    assert reason is None
+
+
+def test_validate_pipeline_ordering_legacy_signature_preserved():
+    # Back-compat: the legacy 2-tuple validator remains intact.
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    ok, msg = validate_pipeline_ordering(["brotli", "brotli"], by_id)
+    assert ok is False
+    assert "duplicate primitive_ids" in msg
+
+
+# ── FIX-D.4: detect_dependency_violation ─────────────────────────────────
+
+
+def test_detect_dependency_violation_step3_missing_step1():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    # PR101 GOLD step 3 requires step 1 AND step 2.
+    ok, msg = detect_dependency_violation(
+        ["pr101_decoder_byte_maps"], by_id
+    )
+    assert ok is False
+    assert msg is not None
+    assert "pr101_decoder_storage_order" in msg or "pr101_conv4_storage_perms" in msg
+
+
+def test_detect_dependency_violation_full_trio_ok():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    ok, msg = detect_dependency_violation(
+        [
+            "pr101_decoder_storage_order",
+            "pr101_conv4_storage_perms",
+            "pr101_decoder_byte_maps",
+        ],
+        by_id,
+    )
+    assert ok is True
+    assert msg is None
+
+
+# ── FIX-D.5: compute_semantic_warning ────────────────────────────────────
+
+
+def test_compute_semantic_warning_redundant_returns_string():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    magic = by_id["magic_codec_dense_streams"]
+    warning = compute_semantic_warning("cool_chic_residual", [magic])
+    assert warning is not None
+    assert "magic_codec_dense_streams" in warning
+    assert "cool_chic_residual" in warning
+    assert "redundant" in warning.lower()
+
+
+def test_compute_semantic_warning_no_match_returns_none():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    magic = by_id["magic_codec_dense_streams"]
+    # blocknerv is RENDERER_REPLACEMENT but not in magic's redundant list.
+    warning = compute_semantic_warning("blocknerv", [magic])
+    assert warning is None
+
+
+def test_compute_semantic_warning_empty_pipeline_returns_none():
+    assert compute_semantic_warning("blocknerv", []) is None
+
+
+def test_compute_semantic_warning_joins_multiple_with_pipe():
+    prims = canonical_primitive_inventory()
+    by_id = {p.primitive_id: p for p in prims}
+    magic = by_id["magic_codec_dense_streams"]
+    brot = by_id["brotli"]  # also declares cool_chic_residual redundancy.
+    warning = compute_semantic_warning("cool_chic_residual", [magic, brot])
+    assert warning is not None
+    assert " | " in warning  # joined.
+    assert "magic_codec_dense_streams" in warning
+    assert "brotli" in warning
+
+
+# ── FIX-D.6: enumerate_cells populates refused_reason on refused cells ───
+
+
+def test_enumerate_cells_refused_cells_carry_refused_reason():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    for c in cells:
+        if c.compatibility_verdict == "compatible":
+            assert c.refused_reason is None, (
+                f"compatible cell {c.cell_id} unexpectedly has "
+                f"refused_reason={c.refused_reason}"
+            )
+            continue
+        if c.compatibility_verdict == "compatible_bare_substrate":
+            assert c.refused_reason is None
+            continue
+        # Refused cell — must have a typed reason.
+        assert c.refused_reason is not None, (
+            f"refused cell {c.cell_id} (verdict={c.compatibility_verdict}) "
+            "lacks refused_reason"
+        )
+        assert isinstance(c.refused_reason, RefusedReason)
+
+
+def test_enumerate_cells_mutual_exclusion_refused_reason():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    mx_cells = [
+        c for c in cells
+        if c.refused_reason == RefusedReason.MUTUAL_EXCLUSION
+    ]
+    assert mx_cells, "expected at least one MUTUAL_EXCLUSION cell"
+    # Every such cell has two primitives in the same MX category.
+    for c in mx_cells[:5]:
+        sign_ids = {
+            "sign_encoding_negzig",
+            "sign_encoding_zig",
+            "sign_encoding_twos",
+            "sign_encoding_off",
+            "sign_encoding_raw_uint8",
+        }
+        schema_ids = {
+            "pr98_cd1_compact_format",
+            "pr100_schema_driven_decoder",
+            "pr105_packed_state_schema",
+        }
+        cell_ids = {pid for pid, _ in c.primitives}
+        # Either >=2 sign-encodings or >=2 schema-elisions.
+        n_sign = len(cell_ids & sign_ids)
+        n_schema = len(cell_ids & schema_ids)
+        assert n_sign >= 2 or n_schema >= 2, c.primitives
+
+
+def test_enumerate_cells_dependency_missing_refused_reason():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    dep_cells = [
+        c for c in cells
+        if c.refused_reason == RefusedReason.DEPENDENCY_MISSING
+    ]
+    assert dep_cells, "expected at least one DEPENDENCY_MISSING cell"
+    # Every such cell has a PR101 step without its prerequisite.
+    for c in dep_cells[:5]:
+        cell_pids = {pid for pid, _ in c.primitives}
+        has_step3 = "pr101_decoder_byte_maps" in cell_pids
+        has_step2 = "pr101_conv4_storage_perms" in cell_pids
+        has_step1 = "pr101_decoder_storage_order" in cell_pids
+        if has_step3:
+            assert not (has_step1 and has_step2), (
+                f"DEPENDENCY_MISSING cell {c.cell_id} has full trio: {cell_pids}"
+            )
+        elif has_step2:
+            assert not has_step1
+
+
+# ── FIX-D.7: enumerate_cells populates semantic_compatibility_warning ──
+
+
+def test_enumerate_cells_semantic_warning_on_magic_codec_cool_chic():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    # Find the compatible cell that pairs cool_chic_residual with
+    # magic_codec_dense_streams as the only primitive.
+    target = None
+    for c in cells:
+        if (
+            c.substrate_id == "cool_chic_residual"
+            and c.compatibility_verdict == "compatible"
+            and tuple(p for p, _ in c.primitives)
+            == ("magic_codec_dense_streams",)
+        ):
+            target = c
+            break
+    assert target is not None, "no compatible (cool_chic, magic_codec) cell"
+    assert target.semantic_compatibility_warning is not None
+    assert "redundant" in target.semantic_compatibility_warning.lower()
+
+
+def test_enumerate_cells_compatible_cells_warning_is_none_or_str():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    for c in cells:
+        if c.compatibility_verdict != "compatible":
+            continue
+        # type contract: either None or str.
+        assert (
+            c.semantic_compatibility_warning is None
+            or isinstance(c.semantic_compatibility_warning, str)
+        )
+
+
+def test_enumerate_cells_warning_count_is_positive():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    n_warned = sum(
+        1 for c in cells if c.semantic_compatibility_warning is not None
+    )
+    assert n_warned > 0, "expected at least one semantic warning on enumeration"
+
+
+# ── FIX-D.8: substrate-incompatible cells helper ─────────────────────────
+
+
+def test_enumerate_substrate_incompatible_cells_emits_typed_refused():
+    cells = enumerate_substrate_incompatible_cells()
+    assert cells, "expected at least one substrate-incompatible cell"
+    for c in cells:
+        assert c.refused_reason == RefusedReason.SUBSTRATE_INCOMPATIBLE
+        assert c.compatibility_verdict == "violates_substrate_class"
+        # By construction the (substrate, primitive) pair fails the matrix.
+        assert len(c.primitives) == 1, c.primitives
+
+
+def test_enumerate_substrate_incompatible_cells_skips_compatible_pairs():
+    cells = enumerate_substrate_incompatible_cells()
+    # PR101 GOLD on a RENDERER_REPLACEMENT substrate is compatible — should
+    # NOT appear in this output.
+    for c in cells:
+        if c.substrate_class == SubstrateClass.RENDERER_REPLACEMENT:
+            for pid, _ in c.primitives:
+                assert not pid.startswith("pr101_"), (
+                    f"pair ({c.substrate_id}, {pid}) is compatible — should "
+                    "not appear in substrate-incompatible output"
+                )
+
+
+def test_enumerate_substrate_incompatible_cells_empty_inv_raises():
+    with pytest.raises(ValueError, match="substrate inventory empty"):
+        enumerate_substrate_incompatible_cells(substrates=[])
+
+
+# ── FIX-D.9: serialization captures new fields ───────────────────────────
+
+
+def test_serialize_enumeration_has_refused_reason_histogram():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    payload = serialize_enumeration(cells)
+    assert "n_refused_by_reason" in payload
+    counts = payload["n_refused_by_reason"]
+    assert isinstance(counts, dict)
+    assert "mutual_exclusion" in counts
+    assert counts["mutual_exclusion"] > 0
+    # n_with_semantic_warning is also reported.
+    assert "n_with_semantic_warning" in payload
+    assert payload["n_with_semantic_warning"] > 0
+
+
+def test_serialize_enumeration_cells_carry_refused_reason_string():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    payload = serialize_enumeration(cells)
+    sample = next(
+        c for c in payload["cells"]
+        if c["refused_reason"] is not None
+    )
+    # Must serialize as a string value (not the enum object).
+    assert isinstance(sample["refused_reason"], str)
+    assert sample["refused_reason"] in {r.value for r in RefusedReason}
+
+
+def test_serialize_primitive_inventory_carries_semantic_constraint():
+    out = serialize_primitive_inventory()
+    by_id = {d["primitive_id"]: d for d in out}
+    # PR101 GOLD step 3 declares semantic_constraint.requires_primitive_ids.
+    step3 = by_id["pr101_decoder_byte_maps"]
+    assert "semantic_constraint" in step3
+    sc = step3["semantic_constraint"]
+    assert "requires_primitive_ids" in sc
+    assert "pr101_decoder_storage_order" in sc["requires_primitive_ids"]
+
+
+# ── FIX-D.10: autopilot_candidate_kwargs propagates new fields ──────────
+
+
+def test_autopilot_candidate_kwargs_includes_new_fields():
+    cells = enumerate_cells(max_primitives_per_cell=2, include_bare_substrate=False)
+    compatible = [c for c in cells if c.compatibility_verdict == "compatible"]
+    assert compatible
+    sample = compatible[0]
+    kw = sample.autopilot_candidate_kwargs()
+    assert "semantic_compatibility_warning" in kw
+    assert "refused_reason" in kw
+    # refused_reason is a string-or-None (already enum-value-extracted).
+    assert kw["refused_reason"] is None or isinstance(kw["refused_reason"], str)
+
+
+def test_autopilot_candidate_kwargs_refused_cell_reports_typed_reason():
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    refused = next(c for c in cells if c.refused_reason is not None)
+    kw = refused.autopilot_candidate_kwargs()
+    assert kw["refused_reason"] is not None
+    assert kw["refused_reason"] == refused.refused_reason.value
+
+
+# ── FIX-D.11: backward-compat invariants ─────────────────────────────────
+
+
+def test_existing_compatible_cells_still_emit_after_fix_d():
+    # The pre-FIX-D enumeration had 7858 compatible cells (7834 non-bare +
+    # 24 bare). FIX-D dependency-missing classification subtracts the
+    # PR101 GOLD subset combos that lacked their prerequisites. The
+    # remaining compatible count is still substantial.
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    n_compat = sum(1 for c in cells if c.compatibility_verdict == "compatible")
+    n_bare = sum(
+        1 for c in cells
+        if c.compatibility_verdict == "compatible_bare_substrate"
+    )
+    assert n_compat > 4000  # post-FIX-D compatible (was 7834).
+    assert n_bare == len(canonical_substrate_inventory())
+
+
+def test_existing_violating_cells_still_emit_after_fix_d():
+    # The 8975 MX violations remain (now typed via refused_reason).
+    cells = enumerate_cells(max_primitives_per_cell=4)
+    n_mx = sum(
+        1 for c in cells
+        if c.refused_reason == RefusedReason.MUTUAL_EXCLUSION
+    )
+    assert n_mx > 0
+
+
+def test_detect_substrate_semantic_incompatibility_empty_returns_ok():
+    # No primitives declare incompatible_with_substrate_ids by default;
+    # any substrate passes.
+    prims = canonical_primitive_inventory()
+    ok, msg = detect_substrate_semantic_incompatibility(
+        "blocknerv", prims
+    )
+    assert ok is True
+    assert msg is None
