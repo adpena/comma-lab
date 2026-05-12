@@ -266,12 +266,23 @@ def repack_dense_as_sparse(
     from tac.packet_compiler.sparse_packet_ir import (
         encode_rle_of_zeros,
         encode_temporal_subsampled,
+        pad_per_frame_to_uniform_size_with_length_prefix,
         serialize_rle_of_zeros,
         serialize_temporal_subsampled,
     )
     import struct
 
     import numpy as np
+
+    def _temporal_payload_stream(payloads: list[bytes | None]) -> bytes:
+        # Per Sparse PacketIR uniform-per-frame contract: variable-size payloads
+        # are zero-padded to the longest payload, with a 4-byte LE u32 length
+        # prefix per frame so the decoder recovers the original size.
+        # `pad_per_frame_to_uniform_size_with_length_prefix` is the canonical
+        # adapter; the family inflate.py decoders read the leading <I and slice
+        # off the zero padding (see e.g. wavelet inflate.py:99-102).
+        frames = pad_per_frame_to_uniform_size_with_length_prefix(payloads)
+        return serialize_temporal_subsampled(encode_temporal_subsampled(frames))
 
     if not dense_residual_bytes:
         return b""
@@ -285,7 +296,7 @@ def repack_dense_as_sparse(
                 f"wavelet dense bytes {len(dense_residual_bytes)} != "
                 f"n_frames*per_frame {n_frames * per_frame_bytes}"
             )
-        per_frame: list[np.ndarray | None] = []
+        per_frame: list[bytes | None] = []
         pos = 0
         for _t in range(n_frames):
             scales_blob = dense_residual_bytes[pos : pos + 16]
@@ -294,11 +305,13 @@ def repack_dense_as_sparse(
                 dense_residual_bytes, dtype=np.int8, count=4 * rgb * band_size, offset=pos
             )
             pos += 4 * rgb * band_size
+            if scales_blob == b"\x00" * 16 and not bool(np.any(band_int8)):
+                per_frame.append(None)
+                continue
             rle = encode_rle_of_zeros(band_int8.copy())
             rle_bytes = serialize_rle_of_zeros(rle)
-            frame_bytes = scales_blob + rle_bytes
-            per_frame.append(np.frombuffer(frame_bytes, dtype=np.uint8).copy())
-        return serialize_temporal_subsampled(encode_temporal_subsampled(per_frame))
+            per_frame.append(scales_blob + rle_bytes)
+        return _temporal_payload_stream(per_frame)
     if family in ("c3", "coord_mlp"):
         camera_h, camera_w, rgb = 874, 1164, 3
         if family == "c3":
@@ -311,7 +324,7 @@ def repack_dense_as_sparse(
                 f"{family} dense bytes {len(dense_residual_bytes)} != "
                 f"n_frames*per_frame {n_frames * per_frame_bytes}"
             )
-        per_frame_list: list[np.ndarray | None] = []
+        per_frame_list: list[bytes | None] = []
         pos = 0
         for _t in range(n_frames):
             scale_bytes = dense_residual_bytes[pos : pos + 4]
@@ -320,11 +333,12 @@ def repack_dense_as_sparse(
                 dense_residual_bytes, dtype=np.int8, count=grid_h * grid_w * rgb, offset=pos
             )
             pos += grid_h * grid_w * rgb
+            if scale_bytes == b"\x00" * 4 and not bool(np.any(coeffs)):
+                per_frame_list.append(None)
+                continue
             rle_bytes = serialize_rle_of_zeros(encode_rle_of_zeros(coeffs.copy()))
-            per_frame_list.append(
-                np.frombuffer(scale_bytes + rle_bytes, dtype=np.uint8).copy()
-            )
-        return serialize_temporal_subsampled(encode_temporal_subsampled(per_frame_list))
+            per_frame_list.append(scale_bytes + rle_bytes)
+        return _temporal_payload_stream(per_frame_list)
     if family == "cool_chic":
         if len(dense_residual_bytes) < 2:
             raise MaterializerError("cool_chic dense bytes too short for header")
@@ -371,6 +385,64 @@ def repack_dense_as_sparse(
         rle_bytes = serialize_rle_of_zeros(encode_rle_of_zeros(coef_stream))
         return scale_bytes + struct.pack("<I", n_coefs) + b"".join(addr_parts) + rle_bytes
     raise MaterializerError(f"sparse repack not implemented for family {family!r}")
+
+
+def truncate_wavelet_dense_to_top_k(
+    *,
+    dense_residual_bytes: bytes,
+    n_frames: int,
+    top_k_per_frame: int,
+) -> bytes:
+    """Zero all but the largest-magnitude wavelet coefficients per frame.
+
+    This is a deterministic sparse-budget bridge between the dense L2 wavelet
+    oracle and the runtime-consumed sparse PacketIR stream. It deliberately
+    keeps the per-frame scale words unchanged and sparsifies only the int8
+    coefficient payload, so downstream decoders still consume the standard
+    wavelet residual grammar.
+    """
+
+    import numpy as np
+
+    if top_k_per_frame < 0:
+        raise MaterializerError(
+            f"top_k_per_frame must be >= 0; got {top_k_per_frame}"
+        )
+    if not dense_residual_bytes or top_k_per_frame == 0:
+        return b""
+    camera_h, camera_w, rgb = 874, 1164, 3
+    half_h, half_w = camera_h // 2, camera_w // 2
+    coeff_count = 4 * rgb * half_h * half_w
+    per_frame_bytes = 16 + coeff_count
+    expected = n_frames * per_frame_bytes
+    if len(dense_residual_bytes) != expected:
+        raise MaterializerError(
+            f"wavelet dense bytes {len(dense_residual_bytes)} != expected {expected}"
+        )
+    parts: list[bytes] = []
+    pos = 0
+    for _t in range(n_frames):
+        scales_blob = dense_residual_bytes[pos : pos + 16]
+        pos += 16
+        coeffs = np.frombuffer(
+            dense_residual_bytes,
+            dtype=np.int8,
+            count=coeff_count,
+            offset=pos,
+        ).copy()
+        pos += coeff_count
+        nonzero = np.flatnonzero(coeffs)
+        if nonzero.size > top_k_per_frame:
+            magnitudes = np.abs(coeffs[nonzero].astype(np.int16))
+            # Stable descending-magnitude order keeps tie breaks deterministic
+            # by preserving the ascending-index order from flatnonzero().
+            keep_local = np.argsort(-magnitudes, kind="stable")[:top_k_per_frame]
+            keep = nonzero[keep_local]
+            sparse = np.zeros_like(coeffs)
+            sparse[keep] = coeffs[keep]
+            coeffs = sparse
+        parts.append(scales_blob + coeffs.tobytes())
+    return b"".join(parts)
 
 
 def run_no_op_detector_byte_mutation(
@@ -422,5 +494,6 @@ __all__ = [
     "run_no_op_detector_byte_mutation",
     "sha256_bytes",
     "sha256_file",
+    "truncate_wavelet_dense_to_top_k",
     "write_manifest",
 ]

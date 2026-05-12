@@ -77,6 +77,9 @@ def _build_l2_encoded_residual_blob(
     sparse_aware: bool = False,
     use_hinton_distilled_scorer: bool = False,
     use_saliency_masking: bool = False,
+    per_level_top_k_budget: dict[int, int] | None = None,
+    pose_only_mode: bool = False,
+    pose_marginal_multiplier: float = 1.0,
 ) -> tuple[bytes, dict[str, float]]:
     """Run the L2 score-aware cool_chic encoder on decoded/GT raw frame streams.
 
@@ -148,10 +151,13 @@ def _build_l2_encoded_residual_blob(
             byte_budget=encoder_byte_budget,
             candidate_n_levels=candidate_n_levels,
             sparse_aware=sparse_aware,
+            per_level_top_k_budget=per_level_top_k_budget,
             use_hinton_distilled_scorer=use_hinton_distilled_scorer,
             distilled_segnet=distilled_segnet,
             distilled_posenet=distilled_posenet,
             use_saliency_masking=use_saliency_masking,
+            pose_only_mode=pose_only_mode,
+            pose_marginal_multiplier=pose_marginal_multiplier,
         )
     except ValueError as exc:
         raise MaterializerError(str(exc)) from exc
@@ -236,7 +242,71 @@ def main(argv: list[str] | None = None) -> int:
             "REQUIRES --use-hinton-distilled-scorer."
         ),
     )
+    parser.add_argument(
+        "--per-level-top-k-budget",
+        type=str,
+        default=None,
+        help=(
+            "(l2_encoded only) Per-level top-K coefficient budget as comma-"
+            "separated 'L:K' pairs (e.g. '0:1024,1:512,2:256,3:128'). The "
+            "post-quantization int8 array at each level is truncated to keep "
+            "only the K largest-magnitude non-zero coefficients (zeroing rest), "
+            "enforcing a hard per-level byte budget. Operator decision "
+            "2026-05-11: cool_chic 28MB minimum stream is too large for a 2KB "
+            "global cap; per-level allocation enables sparse output that fits."
+        ),
+    )
+    parser.add_argument(
+        "--pose-only-mode",
+        action="store_true",
+        help=(
+            "(l2_encoded only) Zero the SegNet term in the L2 Lagrangian. "
+            "Per W DEFERRED criterion #4 + CLAUDE.md operating-point analysis."
+        ),
+    )
+    parser.add_argument(
+        "--pose-marginal-multiplier",
+        type=float,
+        default=1.0,
+        help=(
+            "(l2_encoded only) Multiply the pose Lagrangian term by this scalar. "
+            "Default 1.0 = contest-faithful. Set to 2.79 for the PR106 r2 "
+            "operating-point upweight."
+        ),
+    )
     args = parser.parse_args(argv)
+    if args.pose_only_mode and args.residual_mode != "l2_encoded":
+        print("ERROR: --pose-only-mode requires --residual-mode l2_encoded", file=sys.stderr)
+        return 2
+    if args.pose_marginal_multiplier <= 0.0:
+        print(
+            f"ERROR: --pose-marginal-multiplier={args.pose_marginal_multiplier} must be > 0",
+            file=sys.stderr,
+        )
+        return 2
+    per_level_top_k: dict[int, int] | None = None
+    if args.per_level_top_k_budget is not None:
+        per_level_top_k = {}
+        try:
+            for tok in args.per_level_top_k_budget.split(","):
+                tok = tok.strip()
+                if not tok:
+                    continue
+                lvl_s, k_s = tok.split(":")
+                per_level_top_k[int(lvl_s)] = int(k_s)
+        except (ValueError, IndexError) as exc:
+            print(
+                f"ERROR: --per-level-top-k-budget parse error: {exc}; "
+                "expected 'L:K[,L:K,...]' (e.g. '0:1024,1:512')",
+                file=sys.stderr,
+            )
+            return 2
+        if args.residual_mode != "l2_encoded":
+            print(
+                "ERROR: --per-level-top-k-budget requires --residual-mode l2_encoded",
+                file=sys.stderr,
+            )
+            return 2
     if args.sparse_aware and args.encoding != "sparse":
         print("ERROR: --sparse-aware requires --encoding sparse", file=sys.stderr)
         return 2
@@ -279,6 +349,9 @@ def main(argv: list[str] | None = None) -> int:
                 sparse_aware=args.sparse_aware,
                 use_hinton_distilled_scorer=args.use_hinton_distilled_scorer,
                 use_saliency_masking=args.use_saliency_masking,
+                per_level_top_k_budget=per_level_top_k,
+                pose_only_mode=args.pose_only_mode,
+                pose_marginal_multiplier=args.pose_marginal_multiplier,
             )
         except MaterializerError as exc:
             print(f"ERROR: {exc}", file=sys.stderr)

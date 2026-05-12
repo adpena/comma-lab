@@ -338,6 +338,8 @@ def encode_wavelet_residual_l2(
     distilled_posenet=None,
     use_saliency_masking: bool = False,
     saliency_masking_config=None,
+    pose_only_mode: bool = False,
+    pose_marginal_multiplier: float = 1.0,
 ) -> WaveletEncoderL2Result:
     """L2 score-aware wavelet encoder over (T, H, W, 3) decoded vs GT frames.
 
@@ -570,6 +572,8 @@ def encode_wavelet_residual_l2(
                 use_hinton_distilled_scorer=use_hinton_distilled_scorer,
                 distilled_segnet=distilled_segnet,
                 distilled_posenet=distilled_posenet,
+                pose_only_mode=pose_only_mode,
+                pose_marginal_multiplier=pose_marginal_multiplier,
             )
         diag["wavelet_residual_blob_bytes"] = float(len(residual_blob))
         diag["wavelet_residual_blob_dense_bytes"] = float(len(residual_blob_dense))
@@ -578,6 +582,8 @@ def encode_wavelet_residual_l2(
             1.0 if use_hinton_distilled_scorer else 0.0
         )
         diag["wavelet_use_saliency_masking"] = float(1.0 if use_saliency_masking else 0.0)
+        diag["wavelet_pose_only_mode"] = float(1.0 if pose_only_mode else 0.0)
+        diag["wavelet_pose_marginal_multiplier"] = float(pose_marginal_multiplier)
         return float(loss.detach().item()), diag, len(residual_blob)
 
     init_loss, init_diag, init_blob_size = _evaluate_current(scales_per_frame)

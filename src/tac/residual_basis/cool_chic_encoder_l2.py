@@ -151,11 +151,38 @@ def _upsample_level_to_camera(coeffs_thwc: np.ndarray, level: int) -> np.ndarray
     return up.permute(0, 2, 3, 1).numpy()
 
 
+def _truncate_quantized_to_top_k(
+    quantized: np.ndarray, top_k: int
+) -> np.ndarray:
+    """Keep only the largest-magnitude top_k quantized coefficients; zero rest.
+
+    Sister of ``tac.residual_basis.pr106_materializer_helpers.truncate_wavelet_dense_to_top_k``
+    — applies the score-aware sparse-budget truncation per-level to enforce
+    the operator's per-level byte budget on cool_chic. Stable descending-
+    magnitude tie-break preserves first-occurrence order for determinism.
+    """
+    if top_k < 0:
+        raise CoolChicEncoderL2Error(f"top_k must be >= 0; got {top_k}")
+    if top_k == 0:
+        return np.zeros_like(quantized)
+    flat = quantized.reshape(-1)
+    nonzero_idx = np.flatnonzero(flat)
+    if nonzero_idx.size <= top_k:
+        return quantized
+    magnitudes = np.abs(flat[nonzero_idx].astype(np.int16))
+    keep_local = np.argsort(-magnitudes, kind="stable")[:top_k]
+    keep = nonzero_idx[keep_local]
+    sparse = np.zeros_like(flat)
+    sparse[keep] = flat[keep]
+    return sparse.reshape(quantized.shape)
+
+
 def _quantize_level(
     level_target: np.ndarray,
     *,
     scale_grid: tuple[float, ...],
     sparse_bias: bool = False,
+    top_k_budget: int | None = None,
 ) -> tuple[np.ndarray, float, float]:
     """int8 quantize a level's target with grid-searched scale.
 
@@ -164,6 +191,12 @@ def _quantize_level(
     When ``sparse_bias=True``, picks the largest-multiplier scale (sparsest
     quantization) instead of MSE-min so the per-level starting point biases
     toward more zero coefficients. Used by sparse-aware encoder mode.
+
+    When ``top_k_budget`` is not None, the post-quantization int8 array is
+    truncated to keep only the largest-magnitude ``top_k_budget`` non-zero
+    coefficients (zeroing the rest). This enforces the operator's per-level
+    byte budget for cool_chic sparse output: a level with top_k=128 produces
+    at most 128 non-zero coefficients regardless of native level dimensions.
     """
     max_abs = float(np.abs(level_target).max())
     if max_abs <= 1e-9:
@@ -173,6 +206,8 @@ def _quantize_level(
         s = s_auto * float(max(scale_grid))
         scaled = level_target / s
         q = np.clip(np.round(scaled), -128, 127).astype(np.int8)
+        if top_k_budget is not None:
+            q = _truncate_quantized_to_top_k(q, top_k_budget)
         recon = q.astype(np.float64) * s
         mse = float(np.mean((level_target - recon) ** 2))
         return q, s, mse
@@ -185,6 +220,8 @@ def _quantize_level(
             continue
         scaled = level_target / s
         q = np.clip(np.round(scaled), -128, 127).astype(np.int8)
+        if top_k_budget is not None:
+            q = _truncate_quantized_to_top_k(q, top_k_budget)
         recon = q.astype(np.float64) * s
         mse = float(np.mean((level_target - recon) ** 2))
         if mse < best_mse:
@@ -195,6 +232,8 @@ def _quantize_level(
         # Fallback: use auto scale.
         scaled = level_target / s_auto
         best_q = np.clip(np.round(scaled), -128, 127).astype(np.int8)
+        if top_k_budget is not None:
+            best_q = _truncate_quantized_to_top_k(best_q, top_k_budget)
         best_s = s_auto
         best_mse = float(np.mean((level_target - best_q.astype(np.float64) * s_auto) ** 2))
     return best_q, best_s, best_mse
@@ -258,6 +297,7 @@ def _encode_pyramid_for_n_levels(
     n_levels: int,
     scale_grid: tuple[float, ...],
     sparse_aware: bool = False,
+    per_level_top_k_budget: dict[int, int] | None = None,
 ) -> tuple[list[float], list[np.ndarray], np.ndarray]:
     """Laplacian-pyramid decomposition of the (gt - decoded) residual.
 
@@ -287,8 +327,15 @@ def _encode_pyramid_for_n_levels(
         # Target at this level: (residual - reconstructed_so_far) downsampled.
         target_full = residual_full.astype(np.float32) - reconstructed
         target_level = _downsample_thwc_to_level(target_full, L)
+        # Per-level top-K budget: if specified, the post-quantization int8 array
+        # is truncated to the operator-supplied K to enforce the per-level
+        # byte budget for cool_chic sparse output (operator decision 2026-05-11).
+        top_k_for_level = (
+            per_level_top_k_budget.get(L) if per_level_top_k_budget else None
+        )
         q, scale, _ = _quantize_level(
             target_level, scale_grid=scale_grid, sparse_bias=sparse_aware,
+            top_k_budget=top_k_for_level,
         )
         scales[L] = scale
         coeffs[L] = q
@@ -318,11 +365,14 @@ def encode_cool_chic_residual_l2(
     device: str = "cpu",
     seed: int | None = 20260511,
     sparse_aware: bool = False,
+    per_level_top_k_budget: dict[int, int] | None = None,
     use_hinton_distilled_scorer: bool = False,
     distilled_segnet=None,
     distilled_posenet=None,
     use_saliency_masking: bool = False,
     saliency_masking_config=None,
+    pose_only_mode: bool = False,
+    pose_marginal_multiplier: float = 1.0,
 ) -> CoolChicEncoderL2Result:
     """L2 score-aware Cool-Chic hierarchical residual encoder.
 
@@ -351,6 +401,16 @@ def encode_cool_chic_residual_l2(
         Frozen result with ``residual_bytes`` + permanent promotion-status
         invariants.
     """
+    if per_level_top_k_budget is not None:
+        for _lvl, _k in per_level_top_k_budget.items():
+            if not isinstance(_lvl, int) or _lvl < 0 or _lvl >= MAX_N_LEVELS:
+                raise CoolChicEncoderL2Error(
+                    f"per_level_top_k_budget level {_lvl!r} out of [0, {MAX_N_LEVELS-1}]"
+                )
+            if not isinstance(_k, int) or _k < 0:
+                raise CoolChicEncoderL2Error(
+                    f"per_level_top_k_budget[{_lvl}]={_k!r} must be a non-negative int"
+                )
     if decoded_frames.shape != gt_frames.shape:
         raise CoolChicEncoderL2Error(
             f"shape mismatch: decoded={decoded_frames.shape} gt={gt_frames.shape}"
@@ -487,6 +547,8 @@ def encode_cool_chic_residual_l2(
                 use_hinton_distilled_scorer=use_hinton_distilled_scorer,
                 distilled_segnet=distilled_segnet,
                 distilled_posenet=distilled_posenet,
+                pose_only_mode=pose_only_mode,
+                pose_marginal_multiplier=pose_marginal_multiplier,
             )
         diag["cool_chic_residual_blob_bytes"] = float(len(blob))
         diag["cool_chic_residual_blob_dense_bytes"] = float(len(blob_dense))
@@ -496,6 +558,11 @@ def encode_cool_chic_residual_l2(
             1.0 if use_hinton_distilled_scorer else 0.0
         )
         diag["cool_chic_use_saliency_masking"] = float(1.0 if use_saliency_masking else 0.0)
+        diag["cool_chic_per_level_top_k_budget_active"] = float(
+            1.0 if per_level_top_k_budget else 0.0
+        )
+        diag["cool_chic_pose_only_mode"] = float(1.0 if pose_only_mode else 0.0)
+        diag["cool_chic_pose_marginal_multiplier"] = float(pose_marginal_multiplier)
         return float(loss.detach().item()), diag, len(blob)
 
     init_loss = float("inf")
@@ -527,6 +594,7 @@ def encode_cool_chic_residual_l2(
             decoded_frames, masked_gt_frames,
             n_levels=n_lvl, scale_grid=scale_grid,
             sparse_aware=sparse_aware,
+            per_level_top_k_budget=per_level_top_k_budget,
         )
         loss, diag, _ = _eval_pyramid(scales, coeffs, recon)
         if not init_diag:

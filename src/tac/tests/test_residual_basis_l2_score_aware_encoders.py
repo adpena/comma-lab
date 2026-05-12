@@ -579,6 +579,78 @@ def test_cool_chic_l2_refuses_odd_frame_count() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Per-level top-K budget (operator decision 2026-05-11 — sparse PacketIR fix) #
+# --------------------------------------------------------------------------- #
+
+
+def test_cool_chic_per_level_top_k_budget_truncates_each_level() -> None:
+    """per_level_top_k_budget zeros all but the K largest-magnitude coeffs per level."""
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense_l2 = dense_cool_chic_residual_blob_bytes(2, 2)
+    result = encode_cool_chic_residual_l2(
+        decoded, gt,
+        byte_budget=dense_l2,
+        candidate_n_levels=(2,),
+        per_level_top_k_budget={0: 64, 1: 32},
+    )
+    # Encoder must run successfully with per-level budget active.
+    assert result.n_levels_used == 2
+    # Diagnostic must record per-level budget activation.
+    assert result.diagnostics.get("cool_chic_per_level_top_k_budget_active") == 1.0
+    # Permanent score-claim invariants preserved.
+    assert result.score_claim is False
+    assert result.promotion_eligible is False
+    assert result.ready_for_exact_eval_dispatch is False
+
+
+def test_cool_chic_per_level_top_k_budget_default_inactive() -> None:
+    """Default per_level_top_k_budget=None preserves back-compat (diag=0)."""
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense_l1 = dense_cool_chic_residual_blob_bytes(2, 1)
+    result = encode_cool_chic_residual_l2(
+        decoded, gt, byte_budget=dense_l1, candidate_n_levels=(1,)
+    )
+    assert result.diagnostics.get("cool_chic_per_level_top_k_budget_active") == 0.0
+
+
+def test_cool_chic_per_level_top_k_budget_validates_negative_k() -> None:
+    """per_level_top_k_budget refuses negative K."""
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense_l1 = dense_cool_chic_residual_blob_bytes(2, 1)
+    with pytest.raises(CoolChicEncoderL2Error, match="non-negative"):
+        encode_cool_chic_residual_l2(
+            decoded, gt, byte_budget=dense_l1, candidate_n_levels=(1,),
+            per_level_top_k_budget={0: -5},
+        )
+
+
+def test_cool_chic_per_level_top_k_budget_validates_invalid_level() -> None:
+    """per_level_top_k_budget refuses out-of-range level."""
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense_l1 = dense_cool_chic_residual_blob_bytes(2, 1)
+    with pytest.raises(CoolChicEncoderL2Error, match="out of"):
+        encode_cool_chic_residual_l2(
+            decoded, gt, byte_budget=dense_l1, candidate_n_levels=(1,),
+            per_level_top_k_budget={99: 100},
+        )
+
+
+def test_cool_chic_per_level_top_k_zero_zeros_level() -> None:
+    """top_k=0 fully zeros the corresponding level (sister of full sparsification)."""
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense_l1 = dense_cool_chic_residual_blob_bytes(2, 1)
+    result = encode_cool_chic_residual_l2(
+        decoded, gt,
+        byte_budget=dense_l1,
+        candidate_n_levels=(1,),
+        per_level_top_k_budget={0: 0},
+    )
+    # Encoder ran successfully with K=0.
+    assert result.n_levels_used == 1
+    assert result.diagnostics.get("cool_chic_per_level_top_k_budget_active") == 1.0
+
+
+# --------------------------------------------------------------------------- #
 # Cross-encoder invariants                                                     #
 # --------------------------------------------------------------------------- #
 

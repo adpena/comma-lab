@@ -33,6 +33,7 @@ from tac.packet_compiler import (
     encode_arithmetic_coefficients,
     encode_rle_of_zeros,
     encode_temporal_subsampled,
+    pad_per_frame_to_uniform_size_with_length_prefix,
     serialize_arithmetic_coefficients,
     serialize_rle_of_zeros,
     serialize_temporal_subsampled,
@@ -489,6 +490,149 @@ def test_temporal_non_uniform_dtype_rejected() -> None:
         encode_temporal_subsampled(frames)
 
 
+# ── pad_per_frame_to_uniform_size_with_length_prefix + pad_to_uniform_size ─
+
+
+def test_pad_per_frame_uniform_size_basic() -> None:
+    """Variable-length payloads get zero-padded to max(len) with a <I prefix."""
+    import struct as _s
+    payloads: list[bytes | None] = [b"abc", None, b"abcdef", b"a"]
+    framed = pad_per_frame_to_uniform_size_with_length_prefix(payloads)
+    assert len(framed) == 4
+    # Skipped frames stay None.
+    assert framed[1] is None
+    # Non-None frames are uint8 ndarrays of identical size = 4 + max_payload_len.
+    max_len = 6  # max(len("abc"), len("abcdef"), len("a")) == 6
+    expected_size = 4 + max_len
+    for i in (0, 2, 3):
+        assert framed[i] is not None
+        assert framed[i].dtype == np.uint8
+        assert framed[i].nbytes == expected_size
+    # Length prefixes recover the original sizes.
+    for i, expected_len in [(0, 3), (2, 6), (3, 1)]:
+        prefix = framed[i].tobytes()[:4]
+        (recovered_len,) = _s.unpack("<I", prefix)
+        assert recovered_len == expected_len
+    # Payload bytes immediately after the prefix are the original payload.
+    assert framed[0].tobytes()[4 : 4 + 3] == b"abc"
+    assert framed[2].tobytes()[4 : 4 + 6] == b"abcdef"
+    assert framed[3].tobytes()[4 : 4 + 1] == b"a"
+    # Padding bytes are pure zeros.
+    assert framed[0].tobytes()[4 + 3 :] == b"\x00\x00\x00"
+    assert framed[3].tobytes()[4 + 1 :] == b"\x00\x00\x00\x00\x00"
+
+
+def test_pad_per_frame_uniform_size_all_none_returns_none_list() -> None:
+    """All-None input returns identical-length all-None list (no error)."""
+    framed = pad_per_frame_to_uniform_size_with_length_prefix([None, None, None])
+    assert framed == [None, None, None]
+
+
+def test_pad_per_frame_uniform_size_empty_input() -> None:
+    """Empty input returns empty list."""
+    framed = pad_per_frame_to_uniform_size_with_length_prefix([])
+    assert framed == []
+
+
+def test_pad_per_frame_uniform_size_single_frame() -> None:
+    """Single non-None frame: padded to len(payload) (max == len)."""
+    framed = pad_per_frame_to_uniform_size_with_length_prefix([b"hello"])
+    assert len(framed) == 1
+    assert framed[0] is not None
+    assert framed[0].nbytes == 4 + 5  # prefix + payload
+    assert framed[0].tobytes()[4:] == b"hello"
+
+
+def test_pad_per_frame_uniform_size_composes_with_encode_temporal_subsampled() -> None:
+    """The helper output is a valid input to encode_temporal_subsampled."""
+    payloads: list[bytes | None] = [b"aa", None, b"bbbb", b"c"]
+    framed = pad_per_frame_to_uniform_size_with_length_prefix(payloads)
+    stream = encode_temporal_subsampled(framed)
+    blob = serialize_temporal_subsampled(stream)
+    recovered_stream = deserialize_temporal_subsampled(blob)
+    decoded = decode_temporal_subsampled(recovered_stream, dtype=np.uint8)
+    # Recover original payloads via the <I prefix.
+    import struct as _s
+    for i, original in enumerate(payloads):
+        if original is None:
+            assert decoded[i] is None
+            continue
+        raw_bytes = decoded[i].tobytes()
+        (payload_len,) = _s.unpack_from("<I", raw_bytes, 0)
+        assert payload_len == len(original)
+        assert raw_bytes[4 : 4 + payload_len] == original
+
+
+def test_encode_temporal_subsampled_pad_to_uniform_size_true() -> None:
+    """pad_to_uniform_size=True flag accepts variable-size uint8 ndarrays."""
+    import struct as _s
+    rng = np.random.default_rng(7)
+    frames: list[np.ndarray | None] = [
+        rng.integers(0, 256, size=10, dtype=np.uint8),
+        None,
+        rng.integers(0, 256, size=20, dtype=np.uint8),
+        rng.integers(0, 256, size=5, dtype=np.uint8),
+    ]
+    stream = encode_temporal_subsampled(frames, pad_to_uniform_size=True)
+    # K = 3 non-None entries; per_frame_bytes = 4 (prefix) + max_payload_len = 4 + 20 = 24.
+    assert stream.K == 3
+    assert stream.N == 4
+    assert stream.per_frame_bytes == 24
+    decoded = decode_temporal_subsampled(stream, dtype=np.uint8)
+    for i, orig in enumerate(frames):
+        if orig is None:
+            assert decoded[i] is None
+            continue
+        raw = decoded[i].tobytes()
+        (payload_len,) = _s.unpack_from("<I", raw, 0)
+        assert payload_len == orig.nbytes
+        np.testing.assert_array_equal(
+            np.frombuffer(raw, dtype=np.uint8, count=payload_len, offset=4),
+            orig,
+        )
+
+
+def test_encode_temporal_subsampled_pad_to_uniform_size_requires_uint8() -> None:
+    """pad_to_uniform_size=True refuses non-uint8 arrays (caller must cast)."""
+    frames: list[np.ndarray | None] = [
+        np.array([1, 2, 3], dtype=np.int8),
+    ]
+    with pytest.raises(SparsePacketIRError, match="requires uint8"):
+        encode_temporal_subsampled(frames, pad_to_uniform_size=True)
+
+
+def test_encode_temporal_subsampled_pad_to_uniform_size_default_false_back_compat() -> None:
+    """Default pad_to_uniform_size=False preserves strict uniform-size contract."""
+    # Pre-existing variable-size int8 input still raises.
+    frames: list[np.ndarray | None] = [
+        np.zeros(10, dtype=np.int8),
+        np.zeros(20, dtype=np.int8),
+    ]
+    with pytest.raises(SparsePacketIRError, match="non-uniform per_frame_bytes"):
+        encode_temporal_subsampled(frames)  # default False
+    # Same input WITH pad_to_uniform_size=True (after cast to uint8) succeeds.
+    framed = [f.view(np.uint8) for f in frames]
+    stream = encode_temporal_subsampled(framed, pad_to_uniform_size=True)
+    assert stream.K == 2
+    assert stream.per_frame_bytes == 4 + 20
+
+
+def test_encode_temporal_subsampled_pad_to_uniform_size_with_skipped_frames() -> None:
+    """pad_to_uniform_size=True correctly preserves None entries."""
+    frames: list[np.ndarray | None] = [
+        np.array([1, 2], dtype=np.uint8),
+        None,
+        None,
+        np.array([3, 4, 5, 6, 7], dtype=np.uint8),
+    ]
+    stream = encode_temporal_subsampled(frames, pad_to_uniform_size=True)
+    assert stream.N == 4
+    assert stream.K == 2
+    decoded = decode_temporal_subsampled(stream, dtype=np.uint8)
+    assert decoded[1] is None
+    assert decoded[2] is None
+
+
 def test_temporal_dataclass_rejects_k_gt_n() -> None:
     """TemporalSubsampledResidualStream constructor refuses K > N."""
     with pytest.raises(SparsePacketIRError, match="K must be in"):
@@ -835,16 +979,30 @@ def test_repack_dense_as_sparse_wavelet_round_trip() -> None:
         f"sparse {len(sparse_bytes)} should be << dense {len(dense_bytes)}"
     )
 
-    # Decode the temporal-subsampled wrapper, then per-frame scale + RLE.
+    # Decode the temporal-subsampled wrapper. Per the Sparse PacketIR
+    # uniform-per-frame contract (see
+    # `pad_per_frame_to_uniform_size_with_length_prefix`), each per-frame raw
+    # payload begins with a 4-byte LE u32 length prefix capturing the actual
+    # payload length, followed by the payload itself, followed by zero
+    # padding to the longest-frame size. The decoder reads the <I prefix to
+    # recover the actual payload length and slices off the trailing zeros.
+    # This matches the family inflate.py path (e.g. wavelet inflate.py:99-102).
+    import struct as _struct
     per_frame_raw = decode_temporal(sparse_bytes, dtype=np.uint8)
     assert len(per_frame_raw) == n_frames
     for t, raw in enumerate(per_frame_raw):
         assert raw is not None
         raw_bytes = raw.tobytes()
-        # First 16 bytes are scales.
-        assert raw_bytes[:16] == dense_bytes[t * per_frame_bytes : t * per_frame_bytes + 16]
+        # Recover the length-prefixed payload (the family inflate.py mirror).
+        (payload_len,) = _struct.unpack_from("<I", raw_bytes, 0)
+        assert 4 + payload_len <= len(raw_bytes), (
+            f"frame {t}: declared payload_len={payload_len} > raw_bytes_len-4={len(raw_bytes)-4}"
+        )
+        payload = raw_bytes[4 : 4 + payload_len]
+        # First 16 bytes of the payload are the scales.
+        assert payload[:16] == dense_bytes[t * per_frame_bytes : t * per_frame_bytes + 16]
         # Remainder is RLE-encoded; decode to recover the int8 band coeffs.
-        flat = decode_rle(raw_bytes[16:])
+        flat = decode_rle(payload[16:])
         original_bands = np.frombuffer(
             dense_bytes,
             dtype=np.int8,

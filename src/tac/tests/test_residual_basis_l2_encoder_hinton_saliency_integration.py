@@ -398,3 +398,175 @@ def test_c3_encoder_signature_accepts_sparse_aware_with_hinton(distilled_pair):
         "saliency_masking_config",
     }
     assert expected_kwargs.issubset(set(sig.parameters.keys()))
+
+
+# ---------------------------------------------------------------------------
+# pose_only_mode + pose_marginal_multiplier (W DEFERRED criterion #4 +
+# CLAUDE.md operating-point analysis)
+# ---------------------------------------------------------------------------
+
+
+def test_proxy_loss_pose_only_mode_zeros_seg_term():
+    """pose_only_mode=True zeroes beta_term; gamma_term unchanged."""
+    decoded = torch.rand(2, 3, 64, 96) * 200.0 + 28.0
+    gt = decoded + (torch.rand(2, 3, 64, 96) * 4.0 - 2.0)
+    gt = gt.clamp(0.0, 255.0)
+    archive_bytes = 200_000
+    _loss_joint, diag_joint = compute_score_aware_proxy_loss(
+        decoded, gt, archive_bytes,
+    )
+    _loss_pose_only, diag_pose = compute_score_aware_proxy_loss(
+        decoded, gt, archive_bytes, pose_only_mode=True,
+    )
+    assert diag_joint["beta_term"] > 0.0
+    assert diag_pose["beta_term"] == 0.0
+    # Gamma term unchanged when multiplier is 1.0 (default).
+    assert abs(diag_pose["gamma_term"] - diag_joint["gamma_term"]) < 1e-6
+    # Seg proxy MSE diagnostic still recorded for forensic transparency.
+    assert diag_pose["seg_proxy_mse"] == diag_joint["seg_proxy_mse"]
+    # Diagnostic indicators set.
+    assert diag_pose["pose_only_mode"] == 1.0
+    assert diag_joint["pose_only_mode"] == 0.0
+
+
+def test_proxy_loss_pose_marginal_multiplier_scales_pose_only():
+    """pose_marginal_multiplier=2.79 scales gamma_term linearly; beta unchanged."""
+    decoded = torch.rand(2, 3, 64, 96) * 200.0 + 28.0
+    gt = decoded + (torch.rand(2, 3, 64, 96) * 4.0 - 2.0)
+    gt = gt.clamp(0.0, 255.0)
+    archive_bytes = 200_000
+    _loss1, diag1 = compute_score_aware_proxy_loss(
+        decoded, gt, archive_bytes, pose_marginal_multiplier=1.0,
+    )
+    _loss279, diag279 = compute_score_aware_proxy_loss(
+        decoded, gt, archive_bytes, pose_marginal_multiplier=2.79,
+    )
+    # Gamma term scales linearly with the multiplier.
+    assert abs(diag279["gamma_term"] - 2.79 * diag1["gamma_term"]) < 1e-4
+    # Beta term unchanged by pose multiplier.
+    assert abs(diag279["beta_term"] - diag1["beta_term"]) < 1e-6
+    # Diagnostic records the multiplier value.
+    assert diag279["pose_marginal_multiplier"] == 2.79
+    assert diag1["pose_marginal_multiplier"] == 1.0
+
+
+def test_proxy_loss_pose_only_with_multiplier_compose():
+    """pose_only_mode=True + multiplier=2.79 zeros seg AND scales pose."""
+    decoded = torch.rand(2, 3, 64, 96) * 200.0 + 28.0
+    gt = decoded + (torch.rand(2, 3, 64, 96) * 4.0 - 2.0)
+    gt = gt.clamp(0.0, 255.0)
+    archive_bytes = 200_000
+    _loss_joint, diag_joint = compute_score_aware_proxy_loss(
+        decoded, gt, archive_bytes,
+    )
+    _loss_combo, diag_combo = compute_score_aware_proxy_loss(
+        decoded, gt, archive_bytes,
+        pose_only_mode=True, pose_marginal_multiplier=2.79,
+    )
+    assert diag_combo["beta_term"] == 0.0
+    assert abs(diag_combo["gamma_term"] - 2.79 * diag_joint["gamma_term"]) < 1e-4
+    assert diag_combo["pose_only_mode"] == 1.0
+    assert diag_combo["pose_marginal_multiplier"] == 2.79
+
+
+def test_proxy_loss_rejects_zero_pose_multiplier():
+    """pose_marginal_multiplier <= 0 raises L2ScoreAwareLossError."""
+    decoded = torch.rand(2, 3, 64, 96) * 200.0 + 28.0
+    gt = decoded.clone()
+    with pytest.raises(L2ScoreAwareLossError, match="pose_marginal_multiplier"):
+        compute_score_aware_proxy_loss(
+            decoded, gt, 200_000, pose_marginal_multiplier=0.0,
+        )
+    with pytest.raises(L2ScoreAwareLossError, match="pose_marginal_multiplier"):
+        compute_score_aware_proxy_loss(
+            decoded, gt, 200_000, pose_marginal_multiplier=-1.0,
+        )
+
+
+def test_proxy_loss_pose_only_with_hinton_distilled_scorer(distilled_pair):
+    """pose_only_mode + use_hinton_distilled_scorer composes correctly."""
+    seg, pose = distilled_pair
+    decoded = torch.rand(2, 3, 64, 96) * 200.0 + 28.0
+    gt = decoded + (torch.rand(2, 3, 64, 96) * 4.0 - 2.0)
+    gt = gt.clamp(0.0, 255.0)
+    archive_bytes = 200_000
+    _l, diag = compute_score_aware_proxy_loss(
+        decoded, gt, archive_bytes,
+        use_hinton_distilled_scorer=True,
+        distilled_segnet=seg,
+        distilled_posenet=pose,
+        pose_only_mode=True,
+        pose_marginal_multiplier=2.79,
+    )
+    assert diag["proxy_kind_hinton_distilled"] == 1.0
+    assert diag["beta_term"] == 0.0
+    assert diag["pose_only_mode"] == 1.0
+    assert diag["pose_marginal_multiplier"] == 2.79
+
+
+def test_c3_encoder_pose_only_mode_propagates_diagnostics(distilled_pair):
+    """encode_c3_residual_l2 forwards pose_only_mode + multiplier into diagnostics."""
+    seg, pose = distilled_pair
+    decoded, gt = _make_camera_pair(seed=11)
+    budget = dense_c3_residual_blob_bytes(T) + 100
+    res = encode_c3_residual_l2(
+        decoded, gt, byte_budget=budget, n_iterations=1,
+        use_hinton_distilled_scorer=True,
+        distilled_segnet=seg,
+        distilled_posenet=pose,
+        pose_only_mode=True,
+        pose_marginal_multiplier=2.79,
+    )
+    assert res.diagnostics.get("c3_pose_only_mode") == 1.0
+    assert res.diagnostics.get("c3_pose_marginal_multiplier") == 2.79
+    assert res.diagnostics.get("beta_term") == 0.0
+    assert res.score_claim is False
+    assert res.promotion_eligible is False
+    assert res.ready_for_exact_eval_dispatch is False
+
+
+def test_wavelet_encoder_pose_only_mode_propagates_diagnostics(distilled_pair):
+    """encode_wavelet_residual_l2 forwards pose_only_mode + multiplier into diagnostics."""
+    seg, pose = distilled_pair
+    decoded, gt = _make_camera_pair(seed=12)
+    budget = dense_wavelet_residual_blob_bytes(T) + 100
+    res = encode_wavelet_residual_l2(
+        decoded, gt, byte_budget=budget, n_iterations=1,
+        use_hinton_distilled_scorer=True,
+        distilled_segnet=seg,
+        distilled_posenet=pose,
+        pose_only_mode=True,
+        pose_marginal_multiplier=2.79,
+    )
+    assert res.diagnostics.get("wavelet_pose_only_mode") == 1.0
+    assert res.diagnostics.get("wavelet_pose_marginal_multiplier") == 2.79
+    assert res.diagnostics.get("beta_term") == 0.0
+    assert res.score_claim is False
+
+
+def test_cool_chic_encoder_pose_only_mode_propagates_diagnostics(distilled_pair):
+    """encode_cool_chic_residual_l2 forwards pose_only_mode + multiplier into diagnostics."""
+    seg, pose = distilled_pair
+    decoded, gt = _make_camera_pair(seed=13)
+    budget = dense_cool_chic_residual_blob_bytes(T, 1)
+    res = encode_cool_chic_residual_l2(
+        decoded, gt, byte_budget=budget, candidate_n_levels=(1,),
+        use_hinton_distilled_scorer=True,
+        distilled_segnet=seg,
+        distilled_posenet=pose,
+        pose_only_mode=True,
+        pose_marginal_multiplier=2.79,
+    )
+    assert res.diagnostics.get("cool_chic_pose_only_mode") == 1.0
+    assert res.diagnostics.get("cool_chic_pose_marginal_multiplier") == 2.79
+    assert res.diagnostics.get("beta_term") == 0.0
+    assert res.score_claim is False
+
+
+def test_pr106_r2_pose_marginal_multiplier_constant_value():
+    """The exported PR106_R2_POSE_MARGINAL_MULTIPLIER is the canonical 2.79 value."""
+    from tac.residual_basis.l2_score_aware_loss import (
+        PR106_R2_POSE_MARGINAL_MULTIPLIER,
+    )
+    # Per CLAUDE.md "SegNet vs PoseNet importance" derivation.
+    assert PR106_R2_POSE_MARGINAL_MULTIPLIER == 2.79

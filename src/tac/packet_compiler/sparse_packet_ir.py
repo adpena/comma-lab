@@ -695,8 +695,59 @@ def _unpack_indicator_bitmap(bitmap: bytes, N: int) -> list[bool]:
     return out
 
 
+def pad_per_frame_to_uniform_size_with_length_prefix(
+    per_frame_payloads: Sequence[bytes | None],
+) -> list[np.ndarray | None]:
+    """Zero-pad variable-length per-frame byte payloads to a uniform size.
+
+    Each non-None payload is wrapped as ``<I (LE u32 length) | payload | zero-pad>``
+    so the payload's true byte length survives the uniform-size contract. The
+    decoder side (e.g. ``decode_wavelet_residual_sparse`` in family inflate.py)
+    reads the leading ``<I`` to recover the actual payload length and slices
+    off the zero padding.
+
+    This is the canonical adapter between variable-size encoder outputs (RLE,
+    AC, score-aware sparse) and the temporal-subsampled wire format's strict
+    uniform-per-frame-bytes contract. The padding bytes are pure zeros so any
+    downstream entropy coder (RLE-of-zeros, brotli, etc.) compresses them to
+    near-zero overhead.
+
+    Parameters
+    ----------
+    per_frame_payloads:
+        Sequence of length ``N``; each entry is either ``bytes`` (signal-
+        carrying frame) or ``None`` (skipped frame). Variable-size payloads
+        are accepted; all non-None payloads are padded to ``max(len(p))``.
+
+    Returns
+    -------
+    list[np.ndarray | None]
+        Sequence of length ``N``; non-None entries are uint8 numpy arrays of
+        identical size ``4 + max_payload_len``. Suitable as input to
+        :func:`encode_temporal_subsampled`.
+    """
+    non_empty = [payload for payload in per_frame_payloads if payload is not None]
+    if not non_empty:
+        return [None] * len(per_frame_payloads)
+    max_payload = max(len(payload) for payload in non_empty)
+    out: list[np.ndarray | None] = []
+    for payload in per_frame_payloads:
+        if payload is None:
+            out.append(None)
+            continue
+        framed = (
+            struct.pack("<I", len(payload))
+            + payload
+            + b"\x00" * (max_payload - len(payload))
+        )
+        out.append(np.frombuffer(framed, dtype=np.uint8).copy())
+    return out
+
+
 def encode_temporal_subsampled(
     per_frame_residuals: Sequence[np.ndarray | None],
+    *,
+    pad_to_uniform_size: bool = False,
 ) -> TemporalSubsampledResidualStream:
     """Build a :class:`TemporalSubsampledResidualStream` from per-frame residuals.
 
@@ -705,9 +756,33 @@ def encode_temporal_subsampled(
     per_frame_residuals:
         Sequence of length ``N``; each entry is either a uniform-size numpy
         array (signal-carrying frame) or ``None`` (skipped frame). All
-        signal-carrying entries must share dtype + byte-size.
+        signal-carrying entries must share dtype + byte-size unless
+        ``pad_to_uniform_size=True``.
+    pad_to_uniform_size:
+        When True, accept variable-size numpy arrays. The implementation
+        zero-pads each non-None array (after a 4-byte LE u32 length prefix
+        capturing the original size) so the encoded stream still satisfies
+        the strict uniform-per-frame-bytes wire contract. Each non-None
+        entry must be a ``np.uint8`` array (caller is responsible for the
+        casting); the dtype-uniformity check still fires on the post-pad
+        arrays. Defaults to False for back-compat.
     """
     N = len(per_frame_residuals)
+    if pad_to_uniform_size:
+        # Convert each non-None numpy array to a length-prefixed uint8 frame.
+        adapted: list[np.ndarray | None] = []
+        for r in per_frame_residuals:
+            if r is None:
+                adapted.append(None)
+                continue
+            if r.dtype != np.uint8:
+                raise SparsePacketIRError(
+                    f"pad_to_uniform_size=True requires uint8 arrays "
+                    f"(caller must cast); got dtype {r.dtype}"
+                )
+            adapted.append(r.tobytes())
+        adapted_padded = pad_per_frame_to_uniform_size_with_length_prefix(adapted)
+        per_frame_residuals = adapted_padded
     indicators = [r is not None for r in per_frame_residuals]
     signal_arrays = [r for r in per_frame_residuals if r is not None]
     K = len(signal_arrays)
@@ -720,7 +795,9 @@ def encode_temporal_subsampled(
             if int(r.nbytes) != per_frame_bytes:
                 raise SparsePacketIRError(
                     f"non-uniform per_frame_bytes: {int(r.nbytes)} != {per_frame_bytes} "
-                    f"(caller must zero-pad to a common size)"
+                    f"(caller must zero-pad to a common size, e.g. via "
+                    f"pad_per_frame_to_uniform_size_with_length_prefix or "
+                    f"pad_to_uniform_size=True)"
                 )
             if r.dtype != first.dtype:
                 raise SparsePacketIRError(
@@ -864,6 +941,7 @@ __all__ = [
     "encode_arithmetic_coefficients",
     "encode_rle_of_zeros",
     "encode_temporal_subsampled",
+    "pad_per_frame_to_uniform_size_with_length_prefix",
     "serialize_arithmetic_coefficients",
     "serialize_rle_of_zeros",
     "serialize_temporal_subsampled",

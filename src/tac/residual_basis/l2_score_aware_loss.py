@@ -293,6 +293,14 @@ def _zero_preserving_sqrt(x: torch.Tensor) -> torch.Tensor:
     )
 
 
+#: Pose marginal-value multiplier at the PR106 r2 frontier operating point.
+#: Per CLAUDE.md "SegNet vs PoseNet importance — operating-point dependent":
+#: at pose_avg = 3.4e-5, d(pose)/d(pose_avg) ≈ 277.95 vs d(seg)/d(seg_avg) = 100,
+#: so pose marginal-value-per-byte is 2.79× SegNet's. W's DEFERRED reactivation
+#: criterion #4 is to use this multiplier in pose-only sparse-aware encoding.
+PR106_R2_POSE_MARGINAL_MULTIPLIER: Final[float] = 2.79
+
+
 def compute_score_aware_proxy_loss(
     decoded_rgb: torch.Tensor,
     gt_rgb: torch.Tensor,
@@ -306,6 +314,8 @@ def compute_score_aware_proxy_loss(
     distilled_segnet=None,
     distilled_posenet=None,
     distill_temperature: float = 2.0,
+    pose_only_mode: bool = False,
+    pose_marginal_multiplier: float = 1.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """Compute the score-aware proxy Lagrangian.
 
@@ -351,6 +361,21 @@ def compute_score_aware_proxy_loss(
     distill_temperature
         Hinton T for the seg KL distill term when
         ``use_hinton_distilled_scorer=True``. Council canon = 2.0.
+    pose_only_mode
+        If True, ZERO the seg term entirely (``beta_term = 0``). Per W's
+        DEFERRED reactivation criterion #4 + CLAUDE.md operating-point
+        analysis: at the PR106 r2 frontier, pose marginal value (2.79× SegNet)
+        means a residual that improves pose without breaking seg can dominate
+        marginal score-improvement-per-byte. Pose-only encoding searches for
+        such a residual by removing the seg-axis competition. Default False
+        (joint mode = contest-faithful).
+    pose_marginal_multiplier
+        Per-call override of the pose marginal-value multiplier (default 1.0
+        = contest functional). Set to ``PR106_R2_POSE_MARGINAL_MULTIPLIER``
+        (= 2.79) when running pose_only_mode at the PR106 r2 operating point.
+        Caller-provided multipliers MULTIPLY (not REPLACE) the
+        ``lagrangian.proxy_pose_marginal_multiplier``, so the contest-faithful
+        sqrt(10*pose_avg) form remains intact at multiplier=1.0.
 
     Returns
     -------
@@ -381,6 +406,13 @@ def compute_score_aware_proxy_loss(
                 "tac.residual_basis.hinton_distilled_scorer_surrogate."
                 "load_pretrained_distilled_scorer_pair)."
             )
+    if pose_marginal_multiplier <= 0.0:
+        raise L2ScoreAwareLossError(
+            f"pose_marginal_multiplier={pose_marginal_multiplier} must be > 0; "
+            f"use 1.0 for contest-faithful, "
+            f"PR106_R2_POSE_MARGINAL_MULTIPLIER={PR106_R2_POSE_MARGINAL_MULTIPLIER} "
+            f"for the operating-point upweight"
+        )
 
     decoded_bchw = _validate_pixel_range(
         _coerce_rgb_to_bchw_float(decoded_rgb), name="decoded_rgb"
@@ -419,10 +451,18 @@ def compute_score_aware_proxy_loss(
         # Score-domain Lagrangian terms in distilled-scorer units. Pose uses
         # the contest's sqrt(10 * d_pose) form to match the contest's marginal-
         # value derivative at the L2 operating point.
-        beta_term = lag.beta * d_seg
+        if pose_only_mode:
+            # Per W's reactivation criterion #4: zero seg term entirely so the
+            # encoder solves only for pose-axis improvement. Multiply by 0 (not
+            # subtract from total) so the diagnostic still records the proxy
+            # seg distortion for forensic transparency.
+            beta_term = lag.beta * d_seg * 0.0
+        else:
+            beta_term = lag.beta * d_seg
         gamma_term = (
             lag.gamma
             * lag.proxy_pose_marginal_multiplier
+            * pose_marginal_multiplier
             * _zero_preserving_sqrt(lag.pose_sqrt_factor * d_pose)
         )
         seg_proxy_diag = float(d_seg.detach().item())
@@ -466,10 +506,17 @@ def compute_score_aware_proxy_loss(
 
         seg_proxy = _seg_proxy_distortion(decoded_yuv6, gt_yuv6)
         pose_proxy = _pose_proxy_distortion(decoded_yuv6, gt_yuv6)
-        beta_term = lag.beta * seg_proxy
+        if pose_only_mode:
+            # Per W's reactivation criterion #4: zero seg term so the encoder
+            # solves only for pose-axis improvement. Multiply by 0 to preserve
+            # the proxy seg diagnostic for forensic transparency.
+            beta_term = lag.beta * seg_proxy * 0.0
+        else:
+            beta_term = lag.beta * seg_proxy
         gamma_term = (
             lag.gamma
             * lag.proxy_pose_marginal_multiplier
+            * pose_marginal_multiplier
             * _zero_preserving_sqrt(lag.pose_sqrt_factor * pose_proxy)
         )
         seg_proxy_diag = float(seg_proxy.detach().item())
@@ -505,6 +552,8 @@ def compute_score_aware_proxy_loss(
         "proxy_kind_hinton_distilled": float(
             1.0 if proxy_kind == "hinton_distilled_scorer" else 0.0
         ),
+        "pose_only_mode": float(1.0 if pose_only_mode else 0.0),
+        "pose_marginal_multiplier": float(pose_marginal_multiplier),
     }
     return total, diagnostics
 
@@ -520,6 +569,7 @@ __all__ = [
     "L2ScoreAwareLossError",
     "PR106_R2_FRONTIER_POSE_AVG",
     "PR106_R2_FRONTIER_SEG_AVG",
+    "PR106_R2_POSE_MARGINAL_MULTIPLIER",
     "POSE_SQRT_EPS",
     "ResidualByteBudget",
     "SCORER_H",
