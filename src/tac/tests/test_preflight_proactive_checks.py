@@ -97,6 +97,14 @@ def test_preflight_parallel_worker_count_is_bounded(monkeypatch):
     assert preflight._preflight_parallel_worker_count() == 4
 
 
+def test_preflight_source_index_prewarm_enabled_by_default(monkeypatch):
+    monkeypatch.delenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", raising=False)
+    assert preflight._preflight_source_index_prewarm_enabled() is True
+
+    monkeypatch.setenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "0")
+    assert preflight._preflight_source_index_prewarm_enabled() is False
+
+
 def test_gate5_runtime_closure_runs_in_fast_fail_block():
     source = inspect.getsource(preflight.preflight_all)
     gate5 = "check_gate5_runtime_closure(strict=True"

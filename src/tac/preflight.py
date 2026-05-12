@@ -839,10 +839,10 @@ def _preflight_parallel_worker_count() -> int:
 
 
 def _preflight_source_index_prewarm_enabled() -> bool:
-    """Return true when the experimental source-index prewarm is enabled."""
+    """Return true when source-index facts should be warmed before fan-out."""
 
-    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "").strip().lower()
-    return value in {"1", "true", "yes", "on"}
+    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "1").strip().lower()
+    return value not in {"0", "false", "no", "off"}
 
 
 def _prewarm_preflight_source_index(root: Path) -> None:
