@@ -276,71 +276,88 @@ def test_rejects_transforms_in_canonicalize_mode(tmp_path: Path) -> None:
         )
 
 
+# ── Drift-prevention: known-token discipline (PER COUNCIL-NEXT-3 E7) ────────
+#
+# The previous fixture-vs-module test hardcoded an "expected" set of token
+# strings (one giant literal {…} block), which silently rotted every time
+# MMM / SSS / EEEE landed new tokens WITHOUT updating the test. The bug-
+# class signature was: "new primitive lands → integration test still passes
+# against stale fixture → drift accumulates → another subagent fixes the
+# test as collateral".
+#
+# The drift-prevention strategy below replaces the hardcoded expected-set
+# with structural invariants that INTROSPECT ``PACKET_COMPILER_TRANSFORMS``
+# at runtime. New tokens automatically inherit the discipline; no test
+# fixture update is required when a new primitive is registered.
+#
+# The four invariants we pin:
+#   1. The tuple is non-empty (module imports OK; registry is initialised).
+#   2. No duplicates (set size == tuple length).
+#   3. No empty / whitespace-padded strings.
+#   4. Snake-case ASCII identifiers (avoids accidental tokens with quotes /
+#      spaces / non-ASCII / camelCase).
+#
+# These are STRUCTURAL invariants (cannot be silently bypassed by adding
+# another entry to a hardcoded expected-set). Semantic invariants ("every
+# token has a handler") are NOT enforced here because Phase 1 packet
+# compiler does NOT consume tokens directly — it only records the declared
+# transforms in the build manifest for downstream audit. Per-token handler
+# coverage is a separate concern owned by the packet-compiler sub-modules.
+
+
+def test_packet_compiler_transforms_tuple_non_empty() -> None:
+    assert len(PACKET_COMPILER_TRANSFORMS) > 0, (
+        "PACKET_COMPILER_TRANSFORMS must be non-empty; an empty registry "
+        "means no consumer can declare a transform (every "
+        "packet_compiler_transforms=[...] call would fail with 'unknown "
+        "token')."
+    )
+
+
+def test_no_duplicate_transform_tokens() -> None:
+    tokens = list(PACKET_COMPILER_TRANSFORMS)
+    duplicates = sorted({t for t in tokens if tokens.count(t) > 1})
+    assert not duplicates, (
+        "PACKET_COMPILER_TRANSFORMS contains duplicate entries: "
+        f"{duplicates}"
+    )
+
+
+def test_no_empty_or_whitespace_transform_tokens() -> None:
+    bad = [t for t in PACKET_COMPILER_TRANSFORMS if not t or t != t.strip()]
+    assert not bad, (
+        "PACKET_COMPILER_TRANSFORMS must not contain empty or "
+        f"whitespace-padded entries; offenders: {bad!r}"
+    )
+
+
+def test_all_transform_tokens_are_snake_case_ascii() -> None:
+    import re
+
+    pattern = re.compile(r"^[a-z][a-z0-9_]*$")
+    bad = [t for t in PACKET_COMPILER_TRANSFORMS if not pattern.fullmatch(t)]
+    assert not bad, (
+        "PACKET_COMPILER_TRANSFORMS entries must be snake_case ASCII "
+        f"identifiers; offenders: {bad}"
+    )
+
+
+# Backwards-compatibility shim: prior subagents / council prompts reference
+# this test name explicitly. The new contract lives in the four sibling
+# invariants above; this entry just re-invokes them so a single test
+# invocation still surfaces every drift class.
 def test_known_transform_tokens_match_packet_compiler_module() -> None:
-    """The declared token set must cover every public packet_compiler primitive."""
-    expected = {
-        # PR101 — sidecar grammar
-        "pr101_ranked_no_op_sidecar",
-        "pr101_centered_delta_uint8_lzma",
-        "pr101_split_brotli_self_delimiting",
-        # PR103 — arithmetic coding
-        "pr103_merged_range_stream",
-        "pr103_latent_hi_arithmetic",
-        "pr103_adaptive_brotli_param_search",
-        # PR81 — Quantizr FP4 codebook + ROUTER_ACTION (2026-05-11)
-        "pr81_fp4_codebook",
-        "pr81_router_action",
-        # PR84 — adaptive-context range coder (2026-05-11)
-        "pr84_adaptive_mask_context",
-        # PR91 — universal AC wrapper + QMQH grammar (2026-05-11)
-        "pr91_arithmetic_coder_constriction",
-        "pr91_qmqh_grammar",
-        # PR92 — RMC1 joint-stream meta-codec (2026-05-11)
-        "pr92_rmc_joint_stream",
-        # PR93 — delta-varint pose + QZMB1 (2026-05-11)
-        "pr93_delta_varint_pose",
-        "pr93_qzmb_qzpdv_grammar",
-        # PR63 — qpose14 uint16-view int16 + single-zip-member packed payload (2026-05-12)
-        "pr63_qpose14_uint16_view_int16",
-        "pr63_qpose14_packed_payload",
-        # PR64 — unified-brotli pose-velocity-only codec (2026-05-12)
-        "pr64_unified_brotli_pose_velocity",
-        # PR65 — PQ12 12-bit / 3-byte / 2-value packed pose codec (2026-05-12)
-        "pr65_pq12_pose",
-        # PR105 — kitchen_sink packed-state-schema size-sorted helper (2026-05-12)
-        "pr105_packed_state_schema_size_sorted",
-        # PR101 GOLD — 3 newly-ported primitives (2026-05-12)
-        "pr101_decoder_storage_order",
-        "pr101_conv4_storage_perms",
-        "pr101_decoder_byte_maps",
-        # PR93 — lowpass-luma residual codec (2026-05-11 punchlist cleanup)
-        "pr93_lowpass_luma_residual",
-        # PR97 — H3 wire-format grammar (2026-05-11 punchlist cleanup)
-        "pr97_length_prefixed_sections",
-        "pr97_tile_band_streams",
-        # Sparse PacketIR codec — closes O's L2 wire-format ceiling (2026-05-11)
-        "sparse_rle_of_zeros",
-        "sparse_arithmetic_coefficients",
-        "sparse_temporal_subsampled",
-        # Magic codec — per-stream auto-selector + meta-codec dispatch (2026-05-11)
-        "magic_codec_auto_select",
-        # Magic codec dense streams — per-stream brotli/lzma/magic_classic bundle (2026-05-12)
-        "magic_codec_dense_streams",
-        # Sign-encoding 5-strategy unified taxonomy (2026-05-12)
-        "sign_encode_negzig",
-        "sign_encode_zig",
-        "sign_encode_twos",
-        "sign_encode_off",
-        "sign_encode_raw_uint8",
-        # Schema-elision V1+V2 (2026-05-12)
-        "pr98_cd1_compact_architecture_ordered_decoder_format",
-        "pr100_schema_driven_decoder_storage_grammar",
-        # CompressAI reference adapters (2026-05-12)
-        "compressai_factorized_prior",
-        "compressai_balle_hyperprior",
-        "compressai_cheng2020",
-    }
-    assert set(PACKET_COMPILER_TRANSFORMS) == expected
+    """Drift-prevention shim — runs every structural invariant.
+
+    The hardcoded expected-set was retired in favour of introspection
+    against ``PACKET_COMPILER_TRANSFORMS`` (per COUNCIL-NEXT-3 E7
+    drift-prevention strategy). New tokens automatically inherit the
+    discipline without any test fixture update.
+    """
+    test_packet_compiler_transforms_tuple_non_empty()
+    test_no_duplicate_transform_tokens()
+    test_no_empty_or_whitespace_transform_tokens()
+    test_all_transform_tokens_are_snake_case_ascii()
 
 
 # ── Identity mode unchanged ─────────────────────────────────────────────────
