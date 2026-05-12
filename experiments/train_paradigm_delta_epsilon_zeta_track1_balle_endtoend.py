@@ -197,6 +197,98 @@ from tac.temporal_consistency_regularizer import (  # noqa: E402
 )
 
 
+# Tier-1 operator-required CLI flags manifest. Catalog #151
+# (`check_operator_wrapper_threads_trainer_tier_required_flags`) scans every
+# wrapper / dispatch script (.sh under scripts/, .py under tools/ that
+# subprocess-invokes a trainer) and refuses any that invokes THIS trainer
+# without threading the env-var ladder for each flag below.
+#
+# Schema per grand council review 2026-05-12 (9/10 PROCEED with R1-R7):
+#   "--cli-flag-name": {
+#       "env":                  "WRAPPER_ENV_VAR_NAME",       # required
+#       "rationale":            "operator-facing reason",     # required
+#       "default":              "<str> or None if opt-in",    # optional
+#       "satisfied_by_profile": ("profile1", "profile2"),     # R4: profile-equiv
+#       "requires":             ("--upstream-flag",),         # MacKay: dep edges
+#   }
+#
+# Acceptance rule (per council R3 + R4 + R5):
+#   The check passes if the wrapper EITHER (a) threads the literal flag,
+#   OR (b) threads an env-var-gated block referencing meta["env"],
+#   OR (c) threads --profile X where X is in meta["satisfied_by_profile"],
+#   OR (d) carries same-line `# TIER_REQUIRED_FLAG_WAIVED_OK:<flag>:<reason>`.
+#
+# Multi-tier: a trainer may also expose TIER_2_OPERATOR_REQUIRED_FLAGS etc.
+# The check unions every TIER_N_OPERATOR_REQUIRED_FLAGS module-level Assign.
+TIER_1_OPERATOR_REQUIRED_FLAGS = {
+    "--enable-autocast-fp16": {
+        "env": "T1_ENABLE_AUTOCAST_FP16",
+        "rationale": (
+            "fp16 forward + GradScaler + fp32-Lagrangian cast; 4-6x T4 / 5x A100 "
+            "throughput on scorer-bound training (audit 2026-05-12)"
+        ),
+        "default": None,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--enable-mp4-codec-sim": {
+        "env": "T1_ENABLE_MP4_CODEC_SIM",
+        "rationale": (
+            "differentiable BT.601 chroma 4:2:0 + optional DCT-quant noise STE; "
+            "shrinks pixels->bytes->pixels proxy-auth gap ~0.5-2% at PR106 r2"
+        ),
+        "default": None,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--mp4-codec-sim-noise-std": {
+        "env": "T1_MP4_CODEC_SIM_NOISE_STD",
+        "rationale": "per-block Gaussian noise std for mp4 codec sim",
+        "default": "0.0",
+        "satisfied_by_profile": (),
+        "requires": ("--enable-mp4-codec-sim",),  # MacKay: dependency edge
+    },
+    "--enable-t20-kl-pose-distill": {
+        "env": "T1_ENABLE_T20_KL_POSE_DISTILL",
+        "rationale": "T20 KL-distill on pose axis; teacher_pose_cache eliminates 1 of 4 scorer forwards per batch",
+        "default": None,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--enable-t22-temporal-consistency": {
+        "env": "T1_ENABLE_T22_TEMPORAL_CONSISTENCY",
+        "rationale": "T22 temporal-consistency regularizer; pose-axis stabilizer",
+        "default": None,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--segmentation-surrogate": {
+        "env": "SEGMENTATION_SURROGATE",
+        "rationale": (
+            "O(N) soft_cosine vs O(N^2) sinkhorn at 384x512 per-pixel positions; "
+            "default flipped per engineering audit 2026-05-12"
+        ),
+        "default": "soft_cosine",
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--enable-t13-sqrt-n-budget": {
+        "env": "T1_ENABLE_T13_SQRT_N_BUDGET",
+        "rationale": "Fridrich sqrt(n) latent-rate budget; T13 free $0 lateral-leap",
+        "default": None,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--enable-t19-adaptive-rho": {
+        "env": "T1_ENABLE_T19_ADAPTIVE_RHO",
+        "rationale": "Boyd adaptive ρ; T19 free $0 2-3x convergence speedup",
+        "default": None,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+}
+
+
 CONTEST_AUTH_EVAL_RELATIVE = "experiments/contest_auth_eval.py"
 DISPATCH_CLAIMS_RELATIVE = ".omx/state/active_lane_dispatch_claims.md"
 INFLATE_ROUNDTRIP_CAMERA_HW = (874, 1164)

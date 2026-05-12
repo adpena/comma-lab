@@ -2140,6 +2140,17 @@ def preflight_all(
         check_phase_b_auth_memo_in_repo(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #151 (council 9/10 PROCEED with R1-R7):
+        # `check_operator_wrapper_threads_trainer_tier_required_flags`
+        # refuses wrappers that invoke a trainer declaring
+        # `TIER_<N>_OPERATOR_REQUIRED_FLAGS` without threading the env→CLI
+        # ladder for each flag. Sister of Catalog #12 (`preflight_arity`,
+        # the dead-flag detector). Strict-from-byte-one per council R7
+        # atomicity rule — NF1 wire-fix (commit d37c6b20) already drove
+        # the 4-instance live count to 0.
+        check_operator_wrapper_threads_trainer_tier_required_flags(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -38372,6 +38383,267 @@ def check_phase_b_auth_memo_in_repo(
             "check_phase_b_auth_memo_in_repo found "
             f"{len(violations)} non-repo auth_memo_path callsite(s):\n  "
             + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #151: check_operator_wrapper_threads_trainer_tier_required_flags
+# ============================================================================
+# Refuses operator-authorize / remote-lane wrappers that invoke a trainer
+# declaring `TIER_<N>_OPERATOR_REQUIRED_FLAGS` without threading the env→CLI
+# ladder for each flag. Sister of Catalog #12 `preflight_arity` (dead-flag
+# detector): #12 catches CALLER flags not in target argparse; #151 catches
+# TARGET-required flags not threaded by caller. Together they close the
+# bidirectional wire-up gap.
+#
+# Grand council 2026-05-12 verdict: 9/10 PROCEED with R1-R7 stipulations,
+# strict-from-byte-one (live count = 0 after NF1 wire-fix d37c6b20). See
+# `.omx/research/design_trainer_flag_manifest_for_wireup_and_composition_20260512.md`.
+
+_CHECK_151_TIER_MANIFEST_NAME_RE = re.compile(r"^TIER_\d+_OPERATOR_REQUIRED_FLAGS$")
+_CHECK_151_TRAINER_PATH_RE = re.compile(r"experiments/train_[A-Za-z0-9_]+\.py")
+_CHECK_151_WAIVER_RE = re.compile(
+    r"#\s*TIER_REQUIRED_FLAG_WAIVED_OK:([^:\s]+):([^\n]+)"
+)
+# Vendored-intake exclusion (R6 + sister of Catalog #109).
+_CHECK_151_EXCLUDED_PATH_MARKERS = (
+    "experiments/results/public_pr",
+    "experiments/results/",  # build artifacts (DERIVED_OUTPUT per #113)
+    ".omx/oss_export/",
+    "_intake_",
+)
+
+
+def _check_151_extract_tier_manifests(trainer_path: Path) -> dict[str, dict]:
+    """AST-walk a trainer module, return union of every TIER_N_OPERATOR_REQUIRED_FLAGS dict.
+
+    Per council R1: a trainer may declare TIER_1 AND TIER_2 etc. — union them.
+    Per council R3: trainer with no manifest returns {} (fail-open).
+    """
+    try:
+        text = trainer_path.read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(text)
+    except (OSError, SyntaxError):
+        return {}
+    union: dict[str, dict] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        for tgt in node.targets:
+            if not (isinstance(tgt, ast.Name)
+                    and _CHECK_151_TIER_MANIFEST_NAME_RE.match(tgt.id)):
+                continue
+            if not isinstance(node.value, ast.Dict):
+                continue
+            for k_node, v_node in zip(node.value.keys, node.value.values):
+                if not isinstance(k_node, ast.Constant) or not isinstance(k_node.value, str):
+                    continue
+                if not isinstance(v_node, ast.Dict):
+                    continue
+                meta: dict = {}
+                for mk, mv in zip(v_node.keys, v_node.values):
+                    if not isinstance(mk, ast.Constant) or not isinstance(mk.value, str):
+                        continue
+                    if isinstance(mv, ast.Constant):
+                        meta[mk.value] = mv.value
+                    elif isinstance(mv, ast.Tuple):
+                        items = tuple(
+                            el.value for el in mv.elts
+                            if isinstance(el, ast.Constant)
+                        )
+                        meta[mk.value] = items
+                union[k_node.value] = meta
+    return union
+
+
+_CHECK_151_INVOCATION_TOKENS = (
+    "subprocess.",
+    "Popen(",
+    "execvp",
+    "execvpe",
+    "execv(",
+    "os.system",
+    "sh.run",
+    "shell.run",
+    "$PYBIN",
+    "$PYTHON",
+    "python -u",
+    "python3 -u",
+    "uv run",
+    "modal run",
+    "lightning run",
+    "lightning.ai run",
+)
+
+
+def _check_151_extract_trainer_paths(wrapper_text: str) -> list[str]:
+    """Find every `experiments/train_*.py` actually INVOKED by the wrapper.
+
+    Per council R5: scope by INVOCATION (the wrapper runs the trainer), not
+    by string-mention. A trainer path mentioned only in a docstring or
+    comment is NOT an invocation — it's a reference. Heuristic: the trainer
+    path must appear on a line containing OR within 3 lines of an
+    invocation token (`subprocess.`, `python -u`, `uv run`, `$PYBIN`, etc.),
+    AND must not appear inside a triple-quoted docstring at module level.
+    """
+    if not _CHECK_151_TRAINER_PATH_RE.search(wrapper_text):
+        return []
+    lines = wrapper_text.splitlines()
+    invoked: set[str] = set()
+    for i, line in enumerate(lines):
+        # Skip lines that look like pure prose / docstring text.
+        stripped = line.lstrip()
+        if stripped.startswith(("#", "//", "*", '"""', "'''")):
+            # Inline comments still scan (e.g., `cmd = [...]  # invokes X.py`)
+            # but pure documentation/banner lines don't.
+            if "#" in stripped and stripped.startswith("#"):
+                continue
+        matches = _CHECK_151_TRAINER_PATH_RE.findall(line)
+        if not matches:
+            continue
+        # Check ±3-line window for an invocation token (subprocess args often
+        # span multiple lines).
+        lo, hi = max(0, i - 3), min(len(lines), i + 4)
+        window = "\n".join(lines[lo:hi])
+        if any(tok in window for tok in _CHECK_151_INVOCATION_TOKENS):
+            invoked.update(matches)
+    return sorted(invoked)
+
+
+def _check_151_wrapper_threads_flag(
+    wrapper_text: str,
+    flag: str,
+    env: str,
+    satisfied_by_profile: tuple,
+) -> bool:
+    """Per council acceptance rule: literal flag OR env-gated block OR profile.
+
+    Same-line waiver `# TIER_REQUIRED_FLAG_WAIVED_OK:<flag>:<reason>` is
+    handled at the caller level so the waiver appears once per violation.
+    """
+    if flag in wrapper_text:
+        return True
+    if env and env in wrapper_text:
+        # Common shell forms: ${ENV:-...}, $ENV, "$ENV", T_ENV=1, etc.
+        return True
+    if satisfied_by_profile:
+        for prof in satisfied_by_profile:
+            if isinstance(prof, str) and (
+                f"--profile {prof}" in wrapper_text
+                or f"--profile={prof}" in wrapper_text
+                or f"PROFILE={prof}" in wrapper_text
+            ):
+                return True
+    return False
+
+
+def _check_151_collect_waivers(wrapper_text: str) -> set[str]:
+    """Return the set of waived flag names from same-line markers."""
+    return {m.group(1) for m in _CHECK_151_WAIVER_RE.finditer(wrapper_text)}
+
+
+def check_operator_wrapper_threads_trainer_tier_required_flags(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #151. Refuses wrappers that invoke a trainer without threading
+    every tier-required flag the trainer declares.
+
+    Scan scope (council R5 + R6):
+      - `scripts/*.sh` (operator_authorize_*, remote_lane_*, etc.)
+      - `tools/*.py` AND `experiments/*.py` whose body contains a
+        `experiments/train_*.py` substring (subprocess invokers)
+    Excludes:
+      - `experiments/results/public_pr*_intake_*/**` (vendored)
+      - `experiments/results/**` build artifacts
+      - `.omx/oss_export/**` mirrors
+
+    Per council R3: trainer with NO `TIER_N_OPERATOR_REQUIRED_FLAGS` → OK
+    (declaration is opt-in; silence is correct fail-open behavior).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned = 0
+
+    candidates: list[Path] = []
+    scripts_dir = root / "scripts"
+    if scripts_dir.is_dir():
+        candidates.extend(sorted(scripts_dir.glob("*.sh")))
+    for top in (root / "tools", root / "experiments"):
+        if top.is_dir():
+            for p in sorted(top.rglob("*.py")):
+                # Skip vendored / DERIVED_OUTPUT trees per R6.
+                rel = str(p.relative_to(root))
+                if any(m in rel for m in _CHECK_151_EXCLUDED_PATH_MARKERS):
+                    continue
+                candidates.append(p)
+
+    # Trainer-manifest cache (one AST parse per trainer file).
+    trainer_cache: dict[str, dict[str, dict]] = {}
+
+    for wrapper in candidates:
+        rel = str(wrapper.relative_to(root))
+        if any(m in rel for m in _CHECK_151_EXCLUDED_PATH_MARKERS):
+            continue
+        try:
+            text = wrapper.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # Per R5: only scan wrappers that actually invoke a trainer.
+        trainer_paths = _check_151_extract_trainer_paths(text)
+        if not trainer_paths:
+            continue
+        scanned += 1
+        # Per R2: union required flags across every trainer the wrapper invokes.
+        union_required: dict[str, dict] = {}
+        for tp in trainer_paths:
+            if tp not in trainer_cache:
+                trainer_cache[tp] = _check_151_extract_tier_manifests(root / tp)
+            for flag, meta in trainer_cache[tp].items():
+                if flag not in union_required:
+                    union_required[flag] = meta
+        if not union_required:
+            continue  # R3: no trainer manifest → no required flags
+        waivers = _check_151_collect_waivers(text)
+        for flag, meta in union_required.items():
+            if flag in waivers:
+                continue
+            env = meta.get("env", "") or ""
+            satisfied_by = meta.get("satisfied_by_profile", ()) or ()
+            if _check_151_wrapper_threads_flag(text, flag, env, satisfied_by):
+                continue
+            rationale = (meta.get("rationale", "") or "")[:80]
+            violations.append(
+                f"{rel}: missing tier-required flag {flag} "
+                f"(env={env or '<none>'}; rationale: {rationale}); "
+                f"thread via env-var block OR add same-line "
+                f"# TIER_REQUIRED_FLAG_WAIVED_OK:{flag}:<reason>"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [tier-required-flags] {len(violations)} violation(s) "
+                f"across {scanned} wrapper(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+            if len(violations) > 10:
+                print(f"    ... ({len(violations) - 10} more)")
+        else:
+            print(
+                "  [tier-required-flags] OK "
+                f"({scanned} wrapper(s) scanned; 0 missing-flag violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_operator_wrapper_threads_trainer_tier_required_flags found "
+            f"{len(violations)} wrapper(s) missing trainer-declared "
+            f"tier-required flags:\n  " + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
 
