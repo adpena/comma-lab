@@ -813,11 +813,11 @@ class _ParallelPreflightRunner:
 def _preflight_parallel_enabled() -> bool:
     """Return true when independent preflight scanners should run in parallel."""
 
-    # GitHub's small runners are slower under cross-check fan-out because the
-    # broad custody checks contend on the shared SourceIndex. Keep per-file
-    # SourceIndex extraction parallel, but run the developer checks in the
-    # one-pass cached order unless an operator explicitly overrides it.
-    default = "0" if os.environ.get("GITHUB_ACTIONS") == "true" else "1"
+    # Keep the normal developer gate parallel by default. The GHA runner's
+    # cold-cache sequential path exceeded the 30s DX budget on 2026-05-12;
+    # per-file SourceIndex locks keep extraction coherent while wall-clock is
+    # bounded by the slowest independent scanner instead of their sum.
+    default = "1"
     value = os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL", default).strip().lower()
     return value in {"1", "true", "yes", "on"}
 
