@@ -828,8 +828,11 @@ def _preflight_parallel_worker_count() -> int:
     Broad preflight checks share a SourceIndex and several still parse or scan
     overlapping candidate files. Unbounded fan-out increases lock contention
     and I/O pressure, so the default is a fixed worker pool. Eight workers keeps
-    cold CI under the 30s DX budget by starting all slow full-tree policy
-    scanners immediately instead of queueing them in long waves.
+    local developer machines responsive by starting slow full-tree policy
+    scanners immediately instead of queueing them in long waves. GitHub-hosted
+    runners have much lower I/O and CPU headroom; two workers is faster there
+    than eight because it avoids SourceIndex/cache contention while still
+    overlapping independent scans.
     """
 
     raw = os.environ.get("PACT_PREFLIGHT_PARALLEL_WORKERS", "").strip()
@@ -837,9 +840,9 @@ def _preflight_parallel_worker_count() -> int:
         try:
             value = int(raw)
         except ValueError:
-            value = 8
+            value = 2 if os.environ.get("GITHUB_ACTIONS") == "true" else 8
     else:
-        value = 8
+        value = 2 if os.environ.get("GITHUB_ACTIONS") == "true" else 8
     return max(1, min(value, 16))
 
 

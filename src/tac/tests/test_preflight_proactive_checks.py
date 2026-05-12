@@ -85,6 +85,7 @@ def test_preflight_parallel_runner_can_be_disabled(monkeypatch):
 
 def test_preflight_parallel_worker_count_is_bounded(monkeypatch):
     monkeypatch.delenv("PACT_PREFLIGHT_PARALLEL_WORKERS", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     assert preflight._preflight_parallel_worker_count() == 8
 
     monkeypatch.setenv("PACT_PREFLIGHT_PARALLEL_WORKERS", "2")
@@ -95,6 +96,13 @@ def test_preflight_parallel_worker_count_is_bounded(monkeypatch):
 
     monkeypatch.setenv("PACT_PREFLIGHT_PARALLEL_WORKERS", "bad")
     assert preflight._preflight_parallel_worker_count() == 8
+
+    monkeypatch.delenv("PACT_PREFLIGHT_PARALLEL_WORKERS", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    assert preflight._preflight_parallel_worker_count() == 2
+
+    monkeypatch.setenv("PACT_PREFLIGHT_PARALLEL_WORKERS", "bad")
+    assert preflight._preflight_parallel_worker_count() == 2
 
 
 def test_preflight_source_index_prewarm_is_opt_in(monkeypatch):
