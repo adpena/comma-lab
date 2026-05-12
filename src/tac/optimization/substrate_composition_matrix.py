@@ -1019,10 +1019,23 @@ def per_substrate_pareto_rows(
         delta_mid = s.predicted_delta_alone_midpoint()
         # Information gain: |predicted delta|; clamps to 0 for zero-delta.
         eig = abs(delta_mid)
-        if cost <= 0.0:
-            eig_per_dollar = float("inf") if eig > 0.0 else 0.0
+        # Cost-zero is treated as cost-unknown (missing estimation), NOT free.
+        # Emit eig_per_dollar=0.0 (sorts LAST per reverse=True ranking) and
+        # surface a `cost_estimation_required` blocker so consumers see the
+        # underlying gap. Previously emitted float("inf") which (a) violated
+        # RFC 8259 when JSON-serialized and (b) falsely promoted cost-unknown
+        # rows to the top of the ranking, masking real signal.
+        cost_estimation_pending = cost <= 0.0
+        if cost_estimation_pending:
+            eig_per_dollar = 0.0
         else:
             eig_per_dollar = eig / cost
+        notes = (
+            f"[predicted; substrate composition matrix v1] "
+            f"target_axis={s.target_axis.value}, class={s.substrate_class.value}"
+        )
+        if cost_estimation_pending:
+            notes += "; cost_estimation_required (cost=0.0 treated as unknown, not free)"
         rows.append(
             ParetoRow(
                 substrate_id=s.substrate_id,
@@ -1033,10 +1046,7 @@ def per_substrate_pareto_rows(
                 estimated_dispatch_cost_usd=cost,
                 expected_information_gain=eig,
                 eig_per_dollar=eig_per_dollar,
-                notes=(
-                    f"[predicted; substrate composition matrix v1] "
-                    f"target_axis={s.target_axis.value}, class={s.substrate_class.value}"
-                ),
+                notes=notes,
             )
         )
     return rows

@@ -203,10 +203,14 @@ def _build_orthogonal_pair_candidates(
             if joint_cost > per_dispatch_cap_usd:
                 continue
             joint_eig = ri.expected_information_gain + rj.expected_information_gain
+            # Cost-zero is treated as cost-unknown (missing estimation), NOT
+            # free. Emit eig_per_dollar=0.0 (sorts LAST) so the row's existing
+            # `cost_estimation_required` blocker (propagated from singletons)
+            # surfaces the gap. float("inf") would (a) violate RFC 8259 when
+            # JSON-serialized and (b) trivially dominate the sort, masking
+            # real signal.
             joint_eig_per_dollar = (
-                joint_eig / joint_cost if joint_cost > 0 else (
-                    float("inf") if joint_eig > 0 else 0.0
-                )
+                joint_eig / joint_cost if joint_cost > 0 else 0.0
             )
             composite = predicted_composite_delta(
                 [ri.substrate_id, rj.substrate_id], matrix=matrix

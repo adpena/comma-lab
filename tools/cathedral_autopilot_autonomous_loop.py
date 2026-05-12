@@ -1131,11 +1131,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     }
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
+        # allow_nan=False refuses Infinity/NaN emission per RFC 8259. The
+        # eig_per_dollar source fix already enforces this; adding it here
+        # as defense-in-depth so any future numeric field that goes
+        # non-finite fails loud at the serializer boundary, not silently
+        # in the consumer.
         args.output.write_text(
-            json.dumps(output_payload, indent=2, sort_keys=True), encoding="utf-8"
+            json.dumps(output_payload, indent=2, sort_keys=True, allow_nan=False),
+            encoding="utf-8",
         )
 
-    print(json.dumps(output_payload, indent=2, sort_keys=True))
+    print(json.dumps(output_payload, indent=2, sort_keys=True, allow_nan=False))
     return 0
 
 

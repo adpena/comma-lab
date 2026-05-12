@@ -61,11 +61,21 @@ class OperatingPoint:
     def seg_slope(self) -> float:
         return 100.0
 
+    # Boundary-regularization epsilon for pose_dist near zero. The score
+    # function `sqrt(10*pose_dist)` has derivative `5/sqrt(10*pose_dist)`
+    # which diverges as pose_dist → 0 (physically impossible — would imply
+    # perfect pose recovery). Clamp at 1e-12 to produce a very-large-but-
+    # finite slope (~1.6e6) instead of float("inf"). This makes the slope
+    # JSON-serializable (RFC 8259 — no Infinity literal), preserves the
+    # derivative's correct sign + order-of-magnitude, and lets consumers
+    # tag the operating point as `pose_dist_at_singularity_boundary` if
+    # they care to distinguish the regularized case.
+    _POSE_DIST_REGULARIZATION_EPS: float = 1e-12
+
     @property
     def pose_slope(self) -> float:
-        if self.pose_dist <= 0:
-            return float("inf")
-        return math.sqrt(10.0) / (2.0 * math.sqrt(self.pose_dist))
+        pose_dist_reg = max(self.pose_dist, self._POSE_DIST_REGULARIZATION_EPS)
+        return math.sqrt(10.0) / (2.0 * math.sqrt(pose_dist_reg))
 
     def as_dict(self) -> dict[str, Any]:
         return {

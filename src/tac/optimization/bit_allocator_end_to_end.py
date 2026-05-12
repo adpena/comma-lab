@@ -310,16 +310,20 @@ class EndToEndBitAllocator:
     ) -> float:
         """Return the autopilot ranking EV/$ as a tiebreaker score.
 
-        Substrates with cost-zero (allocators, bolt-ons) get a +inf
-        tiebreaker; substrates with positive cost get the published EV/$
-        from the per-substrate Pareto rows.
+        Substrates with cost-zero (allocators, bolt-ons or missing cost
+        estimation) get eig_per_dollar=0.0 — they SHOULD sort last because
+        the cost is unknown, not free. The substrate's row carries the
+        `cost_estimation_required` annotation so consumers see the gap.
+        Substrates with positive cost get the published EV/$ from the
+        per-substrate Pareto rows. Sister of the eig_per_dollar fix in
+        `substrate_composition_matrix.py` + `autopilot_dispatch_ranking.py`.
         """
         if not self._enable_autopilot_ranking:
             return 0.0
         cost = DISPATCH_COST_USD_MIDPOINT.get(s.substrate_id, 0.0)
         delta_mid = abs(s.predicted_delta_alone_midpoint())
         if cost <= 0.0:
-            return float("inf") if delta_mid > 0.0 else 0.0
+            return 0.0
         return delta_mid / cost
 
     def allocate_bits_across_substrates(
