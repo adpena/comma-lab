@@ -827,6 +827,75 @@ fn pr101_decoder_byte_maps_parity() {
     try_load_only("pr101_decoder_byte_maps_v1");
 }
 
+// ── Sign-encoding 5-strategy unified taxonomy parity stubs (2026-05-12) ────
+//
+// Five sign-encoding strategies unified from PR96 / PR101 / PR103 into one
+// typed API in `src/tac/packet_compiler/sign_encoding.py`:
+//
+// * `negzig` — negated-zigzag (PR101 hnerv_ft_microcodec/src/codec.py:233-234)
+// * `zig`    — zigzag (PR101 hnerv_ft_microcodec/src/codec.py:225-227)
+// * `twos`   — two's-complement raw reinterpret (PR101 codec.py:237-238)
+// * `off`    — signed-byte-offset x+128 (PR96 inflate.py:90; PR103 inflate.py:147)
+// * `raw_uint8` — already-unsigned passthrough (PR103 lo/hi byte streams)
+//
+// Each is `try_load_only` until a Rust source module under
+// `src/tac-packet-compiler/src/sign_encoding/` lands. The Python tests at
+// `src/tac/tests/test_packet_compiler_sign_encoding.py` produce the pinned
+// SHA-256 against deterministic fixtures so Rust ports can verify byte
+// parity once they land.
+
+#[test]
+fn sign_encoding_zig_parity() {
+    try_load_only("sign_encoding_zig_v1");
+}
+
+#[test]
+fn sign_encoding_negzig_parity() {
+    try_load_only("sign_encoding_negzig_v1");
+}
+
+#[test]
+fn sign_encoding_twos_parity() {
+    try_load_only("sign_encoding_twos_v1");
+}
+
+#[test]
+fn sign_encoding_off_parity() {
+    try_load_only("sign_encoding_off_v1");
+}
+
+#[test]
+fn sign_encoding_raw_uint8_parity() {
+    try_load_only("sign_encoding_raw_uint8_v1");
+}
+
+// ── Schema-elision V1 + V2 parity stubs (2026-05-12) ──────────────────────
+//
+// V1 — PR98 CD1 compact archive grammar (`b'CD1' + sb + n_t + per_tensor`).
+// V2 — PR100 schema-driven decoder grammar (bodies blob + scales blob,
+//      schema iteration order shared between encoder + decoder).
+// V3 — PR105 size-sort (already landed as `pr105_packed_state_schema_v1`).
+//
+// V1 and V2 are MUTUALLY EXCLUSIVE (both elide the same per-tensor
+// metadata region). V2 + V3 stack (different byte regions).
+//
+// Each is `try_load_only` until a Rust source module under
+// `src/tac-packet-compiler/src/{pr98_cd1_compact, pr100_schema_driven}/`
+// lands. The Python tests at
+// `src/tac/tests/test_packet_compiler_{pr98_cd1_compact_format, pr100_schema_driven_decoder}.py`
+// produce the pinned SHA-256 against deterministic fixtures so Rust
+// ports can verify byte parity once they land.
+
+#[test]
+fn pr98_cd1_compact_format_parity() {
+    try_load_only("pr98_cd1_compact_format_v1");
+}
+
+#[test]
+fn pr100_schema_driven_decoder_parity() {
+    try_load_only("pr100_schema_driven_decoder_v1");
+}
+
 // ── Magic codec auto-selector parity stub (2026-05-11) ──────────────────────
 //
 // The magic codec is a per-stream auto-selector over the existing
@@ -906,6 +975,15 @@ fn every_golden_vector_has_paired_parity_test() {
         "pr101_decoder_storage_order_v1",
         "pr101_conv4_storage_perms_v1",
         "pr101_decoder_byte_maps_v1",
+        // Sign-encoding 5-strategy unified taxonomy (2026-05-12)
+        "sign_encoding_zig_v1",
+        "sign_encoding_negzig_v1",
+        "sign_encoding_twos_v1",
+        "sign_encoding_off_v1",
+        "sign_encoding_raw_uint8_v1",
+        // Schema-elision V1 (PR98 CD1) + V2 (PR100 schema-driven) (2026-05-12)
+        "pr98_cd1_compact_format_v1",
+        "pr100_schema_driven_decoder_v1",
     ]
     .into_iter()
     .collect();

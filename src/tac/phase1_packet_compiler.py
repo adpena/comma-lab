@@ -1798,6 +1798,22 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     "sparse_temporal_subsampled",
     # Magic codec — per-stream auto-selector + meta-codec dispatch (2026-05-11)
     "magic_codec_auto_select",
+    # Sign-encoding 5-strategy unified taxonomy (2026-05-12)
+    # Unifies PR96 / PR101 / PR103 sign-encoding strategies into one typed
+    # API. Each token tags one of the 5 strategies; encoders/decoders are
+    # in ``src/tac/packet_compiler/sign_encoding.py``.
+    "sign_encode_negzig",
+    "sign_encode_zig",
+    "sign_encode_twos",
+    "sign_encode_off",
+    "sign_encode_raw_uint8",
+    # Schema-elision V1+V2 — PR98 CD1 compact + PR100 schema-driven decoder
+    # grammar. Sister to PR105 packed-state-schema size-sort already
+    # registered above. V1 and V2 are MUTUALLY EXCLUSIVE (both elide the
+    # same per-tensor metadata region — see design memo
+    # `.omx/research/schema_elision_design_pr98_pr100_pr105_20260512.md`).
+    "pr98_cd1_compact_architecture_ordered_decoder_format",
+    "pr100_schema_driven_decoder_storage_grammar",
 )
 
 

@@ -63,6 +63,19 @@ from tac.packet_compiler.pr93_pose_codec import (
     pack_qzmb1_block,
     unpack_qzmb1_block,
 )
+from tac.packet_compiler.pr98_cd1_compact_format import (
+    CD1_MAGIC,
+    SUPPORTED_SCALE_BITS,
+    CD1CompactFormat,
+    ScaleBits,
+    decode_cd1_compact,
+    encode_cd1_compact,
+)
+from tac.packet_compiler.pr100_schema_driven_decoder import (
+    SchemaDrivenPayload,
+    decode_schema_driven,
+    encode_schema_driven,
+)
 from tac.packet_compiler.pr105_packed_state_schema import (
     PackedStateSchemaEntry,
     pack_state_schema_size_sorted,
@@ -161,6 +174,14 @@ from tac.packet_compiler.pr101_decoder_byte_maps import (
     DecoderByteMapsSchema,
     decode_byte_map,
     encode_byte_map,
+)
+from tac.packet_compiler.sign_encoding import (
+    VALID_SIGN_ENCODING_STRATEGIES,
+    SignEncodingStrategy,
+    StrategySelection,
+    decode_sign,
+    encode_sign,
+    select_optimal_strategy,
 )
 from tac.packet_compiler.pr103_arithmetic_coding import (
     AdaptiveBrotliResult,
@@ -277,6 +298,17 @@ __all__ = [
     "PQ12PoseStream",
     "decode_pq12_pose",
     "encode_pq12_pose",
+    # PR98 — CD1 compact decoder-format (schema-elision V1)
+    "CD1CompactFormat",
+    "CD1_MAGIC",
+    "SUPPORTED_SCALE_BITS",
+    "ScaleBits",
+    "decode_cd1_compact",
+    "encode_cd1_compact",
+    # PR100 — schema-driven decoder storage grammar (schema-elision V2)
+    "SchemaDrivenPayload",
+    "decode_schema_driven",
+    "encode_schema_driven",
     # PR105 — kitchen_sink packed-state-schema size-sorted helper
     "PackedStateSchemaEntry",
     "pack_state_schema_size_sorted",
@@ -359,6 +391,13 @@ __all__ = [
     "VALID_BYTE_MAP_STRATEGIES",
     "decode_byte_map",
     "encode_byte_map",
+    # Sign-encoding 5-strategy unified taxonomy (2026-05-12)
+    "SignEncodingStrategy",
+    "StrategySelection",
+    "VALID_SIGN_ENCODING_STRATEGIES",
+    "decode_sign",
+    "encode_sign",
+    "select_optimal_strategy",
     # PR103 — arithmetic coding
     "AdaptiveBrotliResult",
     "MergedRangeStream",
