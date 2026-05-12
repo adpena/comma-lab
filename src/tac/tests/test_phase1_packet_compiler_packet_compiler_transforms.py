@@ -222,6 +222,17 @@ def test_known_transform_tokens_match_packet_compiler_module() -> None:
         "sparse_temporal_subsampled",
         # Magic codec — per-stream auto-selector + meta-codec dispatch (2026-05-11)
         "magic_codec_auto_select",
+        # Magic codec dense streams — per-stream brotli/lzma/magic_classic bundle (2026-05-12)
+        "magic_codec_dense_streams",
+        # Sign-encoding 5-strategy unified taxonomy (2026-05-12)
+        "sign_encode_negzig",
+        "sign_encode_zig",
+        "sign_encode_twos",
+        "sign_encode_off",
+        "sign_encode_raw_uint8",
+        # Schema-elision V1+V2 (2026-05-12)
+        "pr98_cd1_compact_architecture_ordered_decoder_format",
+        "pr100_schema_driven_decoder_storage_grammar",
     }
     assert set(PACKET_COMPILER_TRANSFORMS) == expected
 
