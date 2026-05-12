@@ -252,6 +252,9 @@ _DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES = frozenset(
         "wrapper",
     }
 )
+_DEFAULT_CASEFOLD_TEXT_FACT_NEEDLE_PAIRS = tuple(
+    (needle, needle.casefold()) for needle in sorted(_DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES)
+)
 
 
 def _source_line_count(text: str) -> int:
@@ -263,6 +266,19 @@ def _source_line_count(text: str) -> int:
     if not text.endswith(("\n", "\r")):
         count += 1
     return count
+
+
+def _casefold_substrings_for_text(text: str) -> frozenset[str]:
+    """Return casefolded prefilter needles present in ``text``."""
+
+    if not _DEFAULT_CASEFOLD_TEXT_FACT_NEEDLE_PAIRS:
+        return frozenset()
+    folded_text = text.casefold()
+    return frozenset(
+        folded
+        for _needle, folded in _DEFAULT_CASEFOLD_TEXT_FACT_NEEDLE_PAIRS
+        if folded in folded_text
+    )
 
 
 @dataclass(frozen=True)
@@ -554,7 +570,6 @@ class SourceIndex:
                 return facts
 
             text = self.read_text(target)
-            folded_text: str | None = None
             facts = SourceTextFacts(
                 path=target,
                 rel_path=self.repo_relative(target),
@@ -569,16 +584,7 @@ class SourceIndex:
                 substrings=frozenset(
                     needle for needle in _DEFAULT_TEXT_FACT_NEEDLES if needle in text
                 ),
-                casefold_substrings=frozenset(
-                    folded
-                    for needle in _DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES
-                    for folded in (needle.casefold(),)
-                    if folded in (
-                        folded_text
-                        if folded_text is not None
-                        else (folded_text := text.casefold())
-                    )
-                ),
+                casefold_substrings=_casefold_substrings_for_text(text),
             )
             with self._lock:
                 self._text_facts_cache[key] = facts

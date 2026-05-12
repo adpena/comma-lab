@@ -19,7 +19,7 @@ wide-casefold rows do not silently carry forward.
 
 - Added `_DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES` as a tiny explicit set for
   case-insensitive scanner prefilters.
-- Made casefold computation lazy and limited to that set.
+- Limited casefold computation to that set and cached folded needle pairs.
 - Replaced `len(text.splitlines())` with `_source_line_count(text)` to avoid a
   full line-list allocation on every file.
 - Kept exact-match `_DEFAULT_TEXT_FACT_NEEDLES` unchanged, so strict scanner
