@@ -3,17 +3,39 @@
 # cheap-config dispatch.
 #
 # Per TT cost refinement landing 2026-05-11
-# (feedback_autopilot_end_to_end_hf_refresh_phase1_cost_refinement_landed_20260511.md):
-#   - Modal T4: 3000 epochs, T13+T19+T20+T22 all-on, ~$0.59 cost band (\$0.75 cap).
-#   - Vast.ai 4090: 3000 epochs, T13+T19+T20+T22 all-on, ~$0.06 cost band (\$0.10 cap).
+# (feedback_autopilot_end_to_end_hf_refresh_phase1_cost_refinement_landed_20260511.md)
+# WITH 2026-05-12 ENGINEERING-AUDIT REFINEMENT
+# (feedback_council_t1_balle_engineering_audit_pixels_bytes_pixels_20260512.md):
+#
+# COST BAND — HONESTLY DOCUMENTED:
+#   - The original TT "$0.59 cost band" assumed all flags OFF or smoke-only.
+#     With T13+T19+T20+T22 ALL ON, codex's 2026-05-11 empirical Modal T4 run
+#     made only ~100/3000 epochs in 23.5h before hitting Modal's 24h cap
+#     (14 min/epoch on T4, $14 spent for partial result). The real cost band
+#     for 3000 epochs of all-flags-on T1 Balle on T4 is $50-80, not $0.59.
+#   - With Tier-1 engineering patches (teacher-pose cache, autocast FP16,
+#     soft_cosine surrogate, batch_size=32) — Modal T4 ~5-10× faster:
+#     3000 epochs ≈ 100-200 min ≈ $1-2 on T4. Still not "cheap" at $0.59 but
+#     within $5/individual cap.
+#   - Honest pre-patch cost band per platform:
+#       * Modal T4 all-flags-on (PRE-patch): ~$50-80 for 3000 epochs (DO NOT)
+#       * Modal T4 all-flags-on (POST-patch, with teacher cache): ~$5-10
+#       * Vast.ai 4090 (faster GPU, native AMP): ~$0.50-1.50 at 3000 epochs
+#       * Modal A100 (best $/TFLOP for this workload): ~$3-5 at 3000 epochs
+#   - This wrapper currently DOES NOT enforce a 2h timeout that would cap
+#     partial-result spending. Caller's `--timeout-hours` (set by the modal
+#     run --detach call below) is the only safety. ENSURE 2h or less.
 #
 # Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
-# CONTEST-COMPLIANT HARDWARE": produces a CUDA-axis anchor on Tesla T4 or 4090;
-# CPU paired eval is a separate dispatch (delegated post-CUDA harvest).
+# CONTEST-COMPLIANT HARDWARE": Modal T4 training does NOT produce a
+# promotion-grade contest-CUDA anchor — modal_train_lane.py docstring
+# explicitly notes "It disables lane-local exact CUDA auth-eval paths".
+# A real [contest-CUDA] anchor requires a separate Vast.ai 4090 / Lightning
+# T4 exact-eval dispatch on the trained checkpoint AFTER harvest.
 #
-# Predicted Δ: -0.012 ± 0.007 (TT cost refinement; per-flag contribution
-#              accounting). Fits ≤$5/individual cap with ~6.6× headroom on
-#              Modal T4 (~50× headroom on Vast.ai 4090).
+# Predicted Δ: -0.012 ± 0.007 [predicted; TT cost refinement]; UNREALIZED at
+#              current ≤3% completion ratio per codex empirical evidence;
+#              re-evaluate after Tier 1 engineering patches.
 # Risk: Phase 1 trainer is now contest-compliant per Catalog #146; archive
 #       grammar 8/8 declared per Catalog #124; runtime emission verified.
 #

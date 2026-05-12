@@ -2151,6 +2151,32 @@ def main() -> int:
             f"{args.pixel_l1_anchor_weight}"
         )
 
+    # T20 teacher PoseNet output cache. The teacher path tgt → PoseNet is
+    # gradient-free and DETERMINISTIC on frozen scorer weights — recomputing
+    # it every batch wastes 1 of 4 scorer forwards per step. Per "exploit
+    # auth scorer eval" 2026-05-12: precompute once, cache as a tensor
+    # indexed by pair id, look up per-batch. ~25-40% wall-clock saving on
+    # T4 with T20 enabled, $0 fidelity cost.
+    # Skipped when T20 disabled (no teacher forward needed).
+    teacher_pose_cache: torch.Tensor | None = None
+    if args.enable_scorer_domain_loss and getattr(args, 'enable_t20_kl_pose_distill', False):
+        with torch.no_grad():
+            cache_chunks: list[torch.Tensor] = []
+            cache_chunk_size = max(1, int(getattr(args, 'batch_size', 16)))
+            for cstart in range(0, target_pixels.shape[0], cache_chunk_size):
+                cend = min(cstart + cache_chunk_size, target_pixels.shape[0])
+                tgt_chunk = target_pixels[cstart:cend].contiguous()
+                pose_out_chunk, _ = scorer_forward_pair(tgt_chunk, posenet, segnet)
+                cache_chunks.append(pose_out_chunk["pose"].detach())
+            teacher_pose_cache = torch.cat(cache_chunks, dim=0)
+            cache_n = teacher_pose_cache.shape[0]
+            cache_bytes = teacher_pose_cache.element_size() * teacher_pose_cache.numel()
+            print(
+                f"[t1] T20 teacher_pose_cache built: {cache_n} pairs × "
+                f"{teacher_pose_cache.shape[1:]}; {cache_bytes/1024:.1f}KB on device; "
+                f"saves 1 PoseNet forward per batch (was {cache_n // max(1, int(getattr(args, 'batch_size', 16)))} per epoch)"
+            )
+
     # Build modules.
     decoder_config = Decoder128KConfig(latent_dim=int(latents.shape[1]))
     decoder = build_decoder_128k(decoder_config).to(device)
@@ -2347,15 +2373,27 @@ def main() -> int:
                         "Refusing silent skip per CLAUDE.md fail-loud rule."
                     )
                 # Student logits (gradient-reaching): decoded_rt → PoseNet.
-                # Teacher logits (stop-grad inside KL helper): tgt → PoseNet
-                # under no_grad to mirror scorer_loss_terms_btchw teacher path.
+                # Teacher logits: precomputed cache lookup (deterministic on
+                # frozen scorer weights). Per "exploit auth scorer eval" 2026-05-12
+                # engineering audit, the teacher forward (tgt → PoseNet) is
+                # cached once before the epoch loop in teacher_pose_cache; the
+                # batch indexing replaces a full PoseNet forward with O(B)
+                # memory bandwidth — ~25-40% wall-clock saving on T4 with T20.
                 student_pose_out, _ = scorer_forward_pair(
                     decoded_rt, posenet, segnet
                 )
-                with torch.no_grad():
-                    teacher_pose_out, _ = scorer_forward_pair(
-                        tgt, posenet, segnet
-                    )
+                if teacher_pose_cache is not None:
+                    teacher_pose_out = {
+                        "pose": teacher_pose_cache[idx].detach()
+                    }
+                else:
+                    # Defensive fallback if cache wasn't built (e.g., T20
+                    # toggled mid-run via legacy path). Keep behavior identical.
+                    with torch.no_grad():
+                        _teacher_full, _ = scorer_forward_pair(
+                            tgt, posenet, segnet
+                        )
+                    teacher_pose_out = _teacher_full
                 t20_cfg = KLPoseDistillConfig(
                     temperature=float(args.t20_temperature),
                     weight_pose=float(args.t20_weight_pose),
