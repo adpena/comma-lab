@@ -169,6 +169,7 @@ from tac.differentiable_eval_roundtrip import (  # noqa: E402
     Yuv6PatchToken,
     Yuv6RoutingMode,
     apply_eval_roundtrip_during_training,
+    apply_mp4_codec_simulation_during_training,
     patch_upstream_yuv6_globally,
     unpatch_upstream_yuv6,
 )
@@ -1650,6 +1651,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--enable-mp4-codec-sim",
+        action="store_true",
+        default=False,
+        help=(
+            "Wire apply_mp4_codec_simulation_during_training (BT.601 chroma 4:2:0 "
+            "+ optional DCT-quant noise STE) into the per-batch decoded_rt chain "
+            "AFTER apply_eval_roundtrip_during_training. Closes the "
+            "pixels→bytes→pixels fidelity gap: the eval roundtrip simulates "
+            "uint8 quant but NOT mp4 chroma 4:2:0 / DCT-quant losses. Predicted "
+            "proxy-auth gap closure ~0.5-2% PoseNet at PR106 r2. OFF by default "
+            "for backward-compat; enable when training a new substrate where "
+            "the eval pipeline includes mp4 reencoding."
+        ),
+    )
+    parser.add_argument(
+        "--mp4-codec-sim-noise-std",
+        type=float,
+        default=0.0,
+        help=(
+            "Stddev (in uint8 units) of per-block Gaussian DCT-quant noise added "
+            "to chroma during mp4 codec sim. Default 0 (chroma 4:2:0 only; no "
+            "block-level noise). 5-10 simulates CRF 23-30 mp4 quality."
+        ),
+    )
+    parser.add_argument(
         "--pixel-l1-anchor-weight",
         type=float,
         default=0.0,
@@ -2357,6 +2383,15 @@ def main() -> int:
                         noise_std=args.noise_std,
                         enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
                     )
+                    # Optional mp4 codec sim wire-in — closes the pixels→bytes→pixels
+                    # gap (eval roundtrip simulates uint8 quant but NOT mp4 chroma
+                    # 4:2:0 / DCT-quant losses). Per engineering audit 2026-05-12.
+                    if getattr(args, 'enable_mp4_codec_sim', False):
+                        decoded_rt = apply_mp4_codec_simulation_during_training(
+                            decoded_rt,
+                            chroma_subsample=True,
+                            block_quant_noise_std=float(getattr(args, 'mp4_codec_sim_noise_std', 0.0)),
+                        )
                     scorer_distortion, pose_loss, seg_loss = scorer_loss_terms_btchw(
                         decoded_rt,
                         tgt,
