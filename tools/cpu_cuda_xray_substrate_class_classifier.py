@@ -37,6 +37,22 @@ This is a RESEARCH-SIGNAL DIAGNOSTIC tool. All output is tagged
 HARDWARE" non-negotiables. The classifier is a hypothesis-testing
 primitive, not a kill/promote primitive.
 
+SISTER TOOL DISTINCTION (per ZZZZZ audit L3a 2026-05-12):
+This tool is NOT a duplicate of ``tools/xray_substrate_classifier.py``.
+The two tools share the ``substrate_class`` output token but operate on
+DIFFERENT INPUTS:
+
+- THIS tool (``cpu_cuda_xray_substrate_class_classifier.py``): consumes N
+  per-substrate ``layer_drift.json`` files and classifies via CPU-vs-CUDA
+  per-layer drift signature pairwise cosine similarity. Requires prior P5
+  xray sweeps; runs post-dispatch as a numerical fingerprint check.
+- SISTER tool (``xray_substrate_classifier.py``): consumes an archive ZIP
+  and classifies via static magic-byte signatures + member-name lookup
+  tables. Cheap, deterministic, runs offline pre-dispatch.
+
+Both feed the autopilot's ``substrate_class`` column; they are complementary
+(numerical post-dispatch + static pre-dispatch) rather than redundant.
+
 CLAUDE.md compliance:
 
 * no scorer load (consumes pre-emitted layer_drift.json files);

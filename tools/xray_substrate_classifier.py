@@ -19,6 +19,22 @@ bytes path, autopilot asks "what substrate is this?" and routes composition
 primitives accordingly (per CLAUDE.md "Subagent coherence-by-default" probe-
 disambiguator wire-in).
 
+SISTER TOOL DISTINCTION (per ZZZZZ audit L3a 2026-05-12):
+This tool is NOT a duplicate of ``tools/cpu_cuda_xray_substrate_class_classifier.py``.
+The two tools share the ``substrate_class`` output token but operate on
+DIFFERENT INPUTS:
+
+- THIS tool (``xray_substrate_classifier.py``): consumes an archive ZIP and
+  classifies via static magic-byte signatures + member-name lookup tables.
+  Cheap, deterministic, runs offline pre-dispatch.
+- SISTER tool (``cpu_cuda_xray_substrate_class_classifier.py``): consumes N
+  per-substrate ``layer_drift.json`` files and classifies via CPU-vs-CUDA
+  per-layer drift signature pairwise cosine similarity. Requires prior P5
+  xray sweeps; runs post-dispatch as a numerical fingerprint check.
+
+Both feed the autopilot's ``substrate_class`` column; they are complementary
+(static pre-dispatch + numerical post-dispatch) rather than redundant.
+
 Output JSON schema::
 
     {
