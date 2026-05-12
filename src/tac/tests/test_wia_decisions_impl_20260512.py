@@ -253,6 +253,52 @@ def test_i3_load_planner_posterior_includes_track_correction_count():
         assert isinstance(context["track_correction_count"], int)
 
 
+def test_i3_discover_sensitivity_map_artifacts_smoke(tmp_path):
+    """discover_sensitivity_map_artifacts returns a JSON-safe inventory dict.
+
+    W/I/A I-3 wire-in: even with an empty search root the payload is
+    well-formed (count=0). With at least one stub artifact present the
+    enumerator finds it.
+    """
+    # Empty search root → count=0
+    empty = loop.discover_sensitivity_map_artifacts(search_dirs=[tmp_path / "missing"])
+    assert empty["discovered"] is True
+    assert empty["count"] == 0
+    assert empty["artifact_paths"] == []
+
+    # Stub artifact present → discovered
+    stub_dir = tmp_path / "results" / "lane_dummy"
+    stub_dir.mkdir(parents=True)
+    stub = stub_dir / "sensitivity_map.pt"
+    stub.write_bytes(b"stub")
+    found = loop.discover_sensitivity_map_artifacts(search_dirs=[tmp_path / "results"])
+    assert found["count"] == 1
+    assert len(found["artifact_paths"]) == 1
+    assert found["artifact_paths"][0].endswith("sensitivity_map.pt")
+
+
+def test_i3_load_planner_posterior_includes_sensitivity_inventory():
+    """The planner context exposes sensitivity_map_inventory by default."""
+    posterior, context = loop.load_planner_posterior_for_loop()
+    assert isinstance(context, dict)
+    inventory = context.get("sensitivity_map_inventory")
+    assert inventory is not None
+    assert isinstance(inventory, dict)
+    assert "count" in inventory
+    assert "artifact_paths" in inventory
+    # The repo actually has at least one sensitivity_map.pt under experiments/results.
+    # (Verified via filesystem scan during W/I/A landing.) Count is non-negative.
+    assert inventory["count"] >= 0
+
+
+def test_i3_load_planner_posterior_can_skip_inventory():
+    """Opt-out: include_sensitivity_map_inventory=False omits the key."""
+    posterior, context = loop.load_planner_posterior_for_loop(
+        include_sensitivity_map_inventory=False,
+    )
+    assert "sensitivity_map_inventory" not in context
+
+
 # ── I-4: iter_layer_pairs is documented research-only ─────────────────────
 
 

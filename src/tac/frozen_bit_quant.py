@@ -297,6 +297,21 @@ def iter_layer_pairs(
     """Yield (full_name, parent, child_name, child_module) for every nn.Module
     so callers can locate where to splice FrozenBitConv2d. Used by Lane Ω
     Phase 3 QAT setup.
+
+    Status (2026-05-12, W/I/A I-4 decision): RESEARCH-ONLY utility helper.
+    The bit-allocator side of the unified-Lagrangian solver does not yet
+    consume this iterator (per integration_gap_audit_20260512.md I-4). The
+    helper is preserved per CLAUDE.md "KILL/FALSIFIED is LAST RESORT" with
+    the following reactivation criterion:
+
+    Reactivation requires a Lane Ω Phase 3 QAT consumer that takes the
+    iterator and produces per-layer FrozenBitConv2d splice decisions wired
+    into the autopilot's bit-allocator hook (CLAUDE.md unified-Lagrangian
+    wire-in hook 3). Until then the helper stays here as a typed iterator
+    contract for that future consumer.
+
+    Wire-in declaration per CLAUDE.md Catalog #125 (subagent
+    coherence-by-default): hook 3 (bit-allocator) — DEFERRED-pending-consumer.
     """
     parents: dict[str, nn.Module] = {"": model}
     for name, mod in model.named_modules():

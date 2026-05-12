@@ -384,8 +384,58 @@ def rank_candidates(
     )
 
 
+def discover_sensitivity_map_artifacts(
+    search_dirs: list[Path] | None = None,
+) -> dict[str, Any]:
+    """Enumerate available sensitivity-map artifacts under ``experiments/results``.
+
+    W/I/A I-3 wire-in (2026-05-12): the autopilot's planner context now
+    surfaces the inventory of saved sensitivity maps. This exercises
+    CLAUDE.md unified-Lagrangian wire-in hook 1 (sensitivity-map
+    contribution) — the autopilot is structurally aware of per-tensor
+    importance evidence even when it does not consume the maps directly.
+
+    Returns a JSON-safe dict::
+
+        {
+            "discovered": True,
+            "artifact_paths": ["experiments/results/posenet_sensitivity_v5/sensitivity_map.pt", ...],
+            "count": 3,
+            "search_roots": ["experiments/results"]
+        }
+
+    No file is opened or parsed; the enumerator scans for ``sensitivity_map.pt``
+    files only. Per CLAUDE.md "Forbidden /tmp paths" the search is rooted at
+    the repo's ``experiments/results`` tree.
+    """
+    if search_dirs is None:
+        roots = [REPO_ROOT / "experiments" / "results"]
+    else:
+        roots = list(search_dirs)
+    artifact_paths: list[str] = []
+    search_roots: list[str] = []
+    for root in roots:
+        search_roots.append(str(root.relative_to(REPO_ROOT)) if root.is_relative_to(REPO_ROOT) else str(root))
+        if not root.is_dir():
+            continue
+        try:
+            for p in root.rglob("sensitivity_map.pt"):
+                rel = p.relative_to(REPO_ROOT) if p.is_relative_to(REPO_ROOT) else p
+                artifact_paths.append(str(rel))
+        except Exception:  # pragma: no cover - defensive
+            continue
+    return {
+        "discovered": True,
+        "artifact_paths": sorted(artifact_paths),
+        "count": len(artifact_paths),
+        "search_roots": search_roots,
+    }
+
+
 def load_planner_posterior_for_loop(
     continual_posterior_path: Path | None = None,
+    *,
+    include_sensitivity_map_inventory: bool = True,
 ) -> tuple[Any | None, dict[str, Any]]:
     """Load read-only continual-learning posterior context for the loop.
 
@@ -393,24 +443,39 @@ def load_planner_posterior_for_loop(
     JSON-serializable dict reporting load status / anchor counts so iteration
     notes can surface ``loaded N=X anchors`` for operator visibility.
 
+    W/I/A I-3 wire-in (2026-05-12): when
+    ``include_sensitivity_map_inventory=True`` (default), the context payload
+    ALSO includes a ``sensitivity_map_inventory`` key with the enumerated
+    artifact paths (CLAUDE.md unified-Lagrangian hook 1 — sensitivity-map
+    contribution).
+
     Per CLAUDE.md "Operator gates must be wired and used": failure to load
     falls back to ``(None, {"loaded": False, "reason": ...})`` — the loop
     keeps ranking without posterior context rather than crashing. The
     operator sees the load_error in iteration notes.
     """
     if not _POSTERIOR_IMPORTS_OK or load_continual_learning_posterior is None:
-        return None, {"loaded": False, "reason": "tac.continual_learning import unavailable"}
+        ctx: dict[str, Any] = {"loaded": False, "reason": "tac.continual_learning import unavailable"}
+        if include_sensitivity_map_inventory:
+            ctx["sensitivity_map_inventory"] = discover_sensitivity_map_artifacts()
+        return None, ctx
     try:
         posterior = load_continual_learning_posterior(continual_posterior_path)
     except Exception as exc:  # pragma: no cover - exercised by load_error test
-        return None, {"loaded": False, "reason": f"load_error:{type(exc).__name__}", "message": str(exc)}
-    return posterior, {
+        ctx = {"loaded": False, "reason": f"load_error:{type(exc).__name__}", "message": str(exc)}
+        if include_sensitivity_map_inventory:
+            ctx["sensitivity_map_inventory"] = discover_sensitivity_map_artifacts()
+        return None, ctx
+    payload: dict[str, Any] = {
         "loaded": True,
         "schema": getattr(posterior, "schema", "unknown"),
         "accepted_anchor_count": getattr(posterior, "accepted_anchor_count", 0),
         "refused_anchor_count": getattr(posterior, "refused_anchor_count", 0),
         "track_correction_count": len(getattr(posterior, "track_correction_posteriors", {})),
     }
+    if include_sensitivity_map_inventory:
+        payload["sensitivity_map_inventory"] = discover_sensitivity_map_artifacts()
+    return posterior, payload
 
 
 def cost_band_envelope_check(
