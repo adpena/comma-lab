@@ -3565,6 +3565,46 @@ def preflight_all(
         check_gate9_blocker_ownership(strict=True, verbose=verbose)
         check_gate10_stack_promotion(strict=True, verbose=verbose)
 
+        # 2026-05-12 FFF pass W-1: wire three previously-orphan preflight
+        # checks into preflight_all(). All three checks were defined in
+        # src/tac/preflight.py but never called from preflight_all() —
+        # exactly the "landed but not wired" failure mode that Catalog #151
+        # extincts for trainer flag manifests. Sister failure: dormant
+        # guards that would not catch a regression in the pose-fit /
+        # preflight-hook / renderer-codec bug classes.
+        # Memory: .omx/research/wiring_audit_20260512.md (W-1 finding).
+        # Memory: feedback_wiring_integration_arbitrariness_pass_landed_20260512.md.
+        # Live counts (verified pre-wire-in):
+        #   check_pose_fit_module_has_white_noise_test           0  → STRICT
+        #   check_preflight_hook_supports_changed_files_mode     0  → STRICT
+        #   check_renderer_codec_has_posenet_protection         27  → WARN-ONLY
+        # The renderer-codec check carries 27 live violations and lands
+        # WARN-ONLY per its own docstring promotion plan ("Lands WARN-ONLY
+        # initially. Promotion plan: per-module owner adds the appropriate
+        # tag, then flip strict=True via the Lane A pattern.").
+        _parallel.run(
+            "check_pose_fit_module_has_white_noise_test",
+            "[pose-fit-white-noise]",
+            lambda: check_pose_fit_module_has_white_noise_test(
+                strict=True, verbose=verbose,
+            ),
+        )
+        _parallel.run(
+            "check_preflight_hook_supports_changed_files_mode",
+            "[preflight-hook-changed-files]",
+            lambda: check_preflight_hook_supports_changed_files_mode(
+                strict=True, verbose=verbose,
+            ),
+        )
+        _parallel.run(
+            "check_renderer_codec_has_posenet_protection",
+            "[renderer-codec-posenet]",
+            lambda: check_renderer_codec_has_posenet_protection(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
+
         # PCC9: shell-script runtime references must resolve. Catches the
         # subagent-worktree-lost-helper bug class (e.g. ensure_remote_uv.sh,
         # line_search_pose_refinement.py — both were lost when subagent

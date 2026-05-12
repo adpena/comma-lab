@@ -42,6 +42,28 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
+DEFAULT_ARCHIVE_DIR = Path(".omx/state/dispatch_claims_archive")
+
+# Default for ``--prune --terminal-age-days``: keep terminal rows newer than
+# this; archive older terminal rows. 7 days mirrors the T1-E state-hygiene
+# spec (2026-05-12 simplification audit).
+DEFAULT_PRUNE_TERMINAL_AGE_DAYS = 7
+
+# Header line stamped onto each monthly archive file. Archives are append-only.
+ARCHIVE_HEADER_FORMAT = (
+    "# Archived dispatch claims — {month_label}\n"
+    "\n"
+    "Append-only monthly archive of terminal dispatch claim rows pruned from "
+    "`.omx/state/active_lane_dispatch_claims.md` by "
+    "`tools/claim_lane_dispatch.py prune`. Per CLAUDE.md \"Operator gates "
+    "must be wired and used\" + the artifact-kind registry, this file is "
+    "HISTORICAL_PROVENANCE — never mutate previously-written rows.\n"
+    "\n"
+    "## Claims (newest first)\n"
+    "\n"
+    "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+    "|---|---|---|---|---|---|---|---|\n"
+)
 
 HEADER = (
     "# Active lane dispatch claims — cross-agent coordination ledger\n"
@@ -296,14 +318,41 @@ def _summarize_claims(
     }
 
 
+def _load_claims_with_archives(
+    claims_path: Path, archive_dir: Path | None
+) -> list[Claim]:
+    """Load claims from the live ledger plus every monthly archive (if any).
+
+    Used by ``summary --live-only=False`` (the default) to preserve forensic
+    visibility into pruned rows.
+    """
+
+    text = claims_path.read_text() if claims_path.exists() else HEADER
+    claims = list(_parse_claims(text))
+    if archive_dir is None or not archive_dir.is_dir():
+        return claims
+    for archive in sorted(archive_dir.glob("dispatch_claims_*.md")):
+        try:
+            archive_text = archive.read_text()
+        except OSError:
+            continue
+        claims.extend(_parse_claims(archive_text))
+    return claims
+
+
 def _summary(args: argparse.Namespace) -> int:
     now_utc = _parse_utc(args.now_utc) if args.now_utc else _utc_now()
     if now_utc is None:
         print(f"VALIDATION_ERROR: --now-utc is not ISO-8601: {args.now_utc!r}", file=sys.stderr)
         return 2
-    text = args.claims_path.read_text() if args.claims_path.exists() else HEADER
+    archive_dir = (
+        None
+        if getattr(args, "live_only", False)
+        else args.archive_dir
+    )
+    claims = _load_claims_with_archives(args.claims_path, archive_dir)
     summary = _summarize_claims(
-        _parse_claims(text), now_utc=now_utc, ttl_hours=args.ttl_hours
+        claims, now_utc=now_utc, ttl_hours=args.ttl_hours
     )
     if args.format == "json":
         print(json.dumps(summary, indent=2, sort_keys=True))
@@ -497,6 +546,277 @@ def _claim(args: argparse.Namespace) -> int:
     return 0
 
 
+def _archive_month_key(claim: Claim) -> str | None:
+    """Return ``YYYY-MM`` derived from the row timestamp, or None if unparsable."""
+
+    ts = _parse_utc(claim.timestamp_utc)
+    if ts is None:
+        return None
+    return ts.strftime("%Y-%m")
+
+
+def _archive_path_for_month(archive_dir: Path, month_key: str) -> Path:
+    return archive_dir / f"dispatch_claims_{month_key}.md"
+
+
+def _read_existing_archive(path: Path) -> tuple[list[Claim], list[str]]:
+    """Return (parsed claims, raw existing-archive lines) for an archive file.
+
+    If the archive does not exist, returns ([], []) — caller is responsible
+    for writing the header.
+    """
+
+    if not path.exists():
+        return [], []
+    text = path.read_text()
+    return _parse_claims(text), text.splitlines(keepends=True)
+
+
+def _plan_prune(
+    claims: list[Claim],
+    *,
+    now_utc: dt.datetime,
+    terminal_age_days: float,
+    ttl_hours: float,
+) -> tuple[list[Claim], list[Claim], list[Claim]]:
+    """Partition ``claims`` into (keep, prune, ambiguous).
+
+    Pruning rule:
+      - Identify (lane_id, job_id) pairs whose LATEST row is terminal AND
+        older than ``terminal_age_days``.
+      - All rows belonging to those pairs are eligible to prune.
+      - Active or stale-nonterminal pairs (including their entire history)
+        are kept on the live ledger — pruning would orphan the active
+        custody trail.
+      - Pairs whose latest row is terminal but recent (<= terminal_age_days)
+        are kept.
+      - Unparsable-timestamp rows are surfaced as ambiguous.
+    """
+
+    cutoff = now_utc - dt.timedelta(days=terminal_age_days)
+    latest = _latest_claims_by_job(claims)
+    prunable_keys: set[tuple[str, str]] = set()
+    ambiguous_keys: set[tuple[str, str]] = set()
+    for key, latest_claim in latest.items():
+        ts = _parse_utc(latest_claim.timestamp_utc)
+        if ts is None:
+            ambiguous_keys.add(key)
+            continue
+        if _is_terminal(latest_claim.status) and ts < cutoff:
+            prunable_keys.add(key)
+
+    keep: list[Claim] = []
+    prune: list[Claim] = []
+    ambiguous: list[Claim] = []
+    for c in claims:
+        key = (c.lane_id, c.instance_job_id)
+        if key in prunable_keys:
+            prune.append(c)
+        elif key in ambiguous_keys:
+            ambiguous.append(c)
+        else:
+            keep.append(c)
+    return keep, prune, ambiguous
+
+
+def _build_archive_text_with_appended(
+    existing_lines: list[str],
+    new_rows: list[Claim],
+    *,
+    month_key: str,
+) -> str:
+    """Append ``new_rows`` to an archive file (newest-first within the month).
+
+    Existing rows are PRESERVED unchanged (append-only). New rows are
+    deduplicated against existing rows by their full row text and sorted
+    newest-first across the merged set.
+    """
+
+    existing_claims_parsed: list[Claim] = []
+    if existing_lines:
+        existing_claims_parsed = _parse_claims("".join(existing_lines))
+
+    # Build deduped set of all rows, keyed by full Claim tuple
+    seen: set[tuple[str, ...]] = set()
+    merged: list[Claim] = []
+    for c in existing_claims_parsed + new_rows:
+        key = (
+            c.timestamp_utc,
+            c.agent,
+            c.lane_id,
+            c.platform,
+            c.instance_job_id,
+            c.predicted_eta_utc,
+            c.status,
+            c.notes,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(c)
+
+    # Sort newest-first; rows with unparseable timestamps land at the end
+    # (after parseable rows, preserving original order among themselves).
+    def _sort_key(claim: Claim) -> tuple[int, dt.datetime, str]:
+        ts = _parse_utc(claim.timestamp_utc)
+        if ts is None:
+            return (1, dt.datetime.min.replace(tzinfo=dt.UTC), claim.timestamp_utc)
+        return (0, ts, claim.timestamp_utc)
+
+    merged.sort(key=_sort_key, reverse=True)
+
+    header = ARCHIVE_HEADER_FORMAT.format(month_label=month_key)
+    rows = "\n".join(_claim_to_row(c) for c in merged) + ("\n" if merged else "")
+    return header + rows
+
+
+def _rebuild_live_ledger(keep: list[Claim], ambiguous: list[Claim]) -> str:
+    """Build the new live-ledger text from ``keep`` rows.
+
+    Ambiguous rows (unparseable timestamps) are preserved in the live ledger
+    so they continue to receive operator scrutiny.
+    """
+
+    seen: set[tuple[str, ...]] = set()
+    merged: list[Claim] = []
+    for c in keep + ambiguous:
+        key = (
+            c.timestamp_utc,
+            c.agent,
+            c.lane_id,
+            c.platform,
+            c.instance_job_id,
+            c.predicted_eta_utc,
+            c.status,
+            c.notes,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(c)
+
+    def _sort_key(claim: Claim) -> tuple[int, dt.datetime, str]:
+        ts = _parse_utc(claim.timestamp_utc)
+        if ts is None:
+            return (1, dt.datetime.min.replace(tzinfo=dt.UTC), claim.timestamp_utc)
+        return (0, ts, claim.timestamp_utc)
+
+    merged.sort(key=_sort_key, reverse=True)
+    rows = "\n".join(_claim_to_row(c) for c in merged) + ("\n" if merged else "")
+    return HEADER + rows
+
+
+def _prune(args: argparse.Namespace) -> int:
+    """Archive old terminal rows into monthly files, rewrite the live ledger.
+
+    Atomicity: load + plan + write are all inside one fcntl-locked window
+    on ``<claims_path>.lock`` — sister processes (other ``claim`` invocations
+    OR another ``prune``) cannot interleave.
+    """
+
+    now_utc = _parse_utc(args.now_utc) if args.now_utc else _utc_now()
+    if now_utc is None:
+        print(
+            f"VALIDATION_ERROR: --now-utc is not ISO-8601: {args.now_utc!r}",
+            file=sys.stderr,
+        )
+        return 2
+    claims_path: Path = args.claims_path
+    archive_dir: Path = args.archive_dir
+    lock_path = claims_path.with_suffix(claims_path.suffix + ".lock")
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    with _file_lock(lock_path):
+        text = claims_path.read_text() if claims_path.exists() else HEADER
+        claims = _parse_claims(text)
+        keep, prune_rows, ambiguous = _plan_prune(
+            claims,
+            now_utc=now_utc,
+            terminal_age_days=args.terminal_age_days,
+            ttl_hours=args.ttl_hours,
+        )
+
+        # Group prune rows by month for archive routing.
+        by_month: dict[str, list[Claim]] = {}
+        unparseable_prune: list[Claim] = []
+        for c in prune_rows:
+            mk = _archive_month_key(c)
+            if mk is None:
+                unparseable_prune.append(c)
+                continue
+            by_month.setdefault(mk, []).append(c)
+
+        # Stats for the report.
+        summary = {
+            "schema": "pact.dispatch_claim_prune.v1",
+            "now_utc": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "terminal_age_days": args.terminal_age_days,
+            "rows_total_before": len(claims),
+            "rows_pruned": len(prune_rows),
+            "rows_kept_active_or_recent": len(keep),
+            "rows_ambiguous_unparseable_timestamp": len(ambiguous) + len(unparseable_prune),
+            "months_archived": sorted(by_month.keys()),
+            "archive_files": {},
+            "archive_dir": str(archive_dir),
+            "claims_path": str(claims_path),
+            "dry_run": bool(args.dry_run),
+        }
+
+        archive_writes: list[tuple[Path, str]] = []
+        for month_key, new_rows in by_month.items():
+            archive_path = _archive_path_for_month(archive_dir, month_key)
+            _, existing_lines = _read_existing_archive(archive_path)
+            archive_text = _build_archive_text_with_appended(
+                existing_lines, new_rows, month_key=month_key
+            )
+            archive_writes.append((archive_path, archive_text))
+            summary["archive_files"][month_key] = {
+                "path": str(archive_path),
+                "rows_appended": len(new_rows),
+            }
+
+        live_text = _rebuild_live_ledger(keep, ambiguous + unparseable_prune)
+        summary["live_ledger_bytes_after"] = len(live_text.encode("utf-8"))
+        summary["live_ledger_bytes_before"] = len(text.encode("utf-8"))
+
+        if args.dry_run:
+            if args.format == "json":
+                print(json.dumps(summary, indent=2, sort_keys=True))
+            else:
+                print(
+                    "DRY_RUN_PRUNE "
+                    f"total_before={summary['rows_total_before']} "
+                    f"rows_pruned={summary['rows_pruned']} "
+                    f"rows_kept={summary['rows_kept_active_or_recent']} "
+                    f"months={summary['months_archived']}"
+                )
+            return 0
+
+        # Write archives first (append-only is safe if interrupted before live
+        # rewrite — the live ledger still has the rows so they aren't lost).
+        for archive_path, archive_text in archive_writes:
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_text(archive_text, encoding="utf-8")
+
+        # Now rewrite the live ledger.
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(live_text, encoding="utf-8")
+
+    if args.format == "json":
+        print(json.dumps(summary, indent=2, sort_keys=True))
+    else:
+        print(
+            "PRUNE_APPLIED "
+            f"total_before={summary['rows_total_before']} "
+            f"rows_pruned={summary['rows_pruned']} "
+            f"rows_kept={summary['rows_kept_active_or_recent']} "
+            f"months={summary['months_archived']} "
+            f"live_bytes_before={summary['live_ledger_bytes_before']} "
+            f"live_bytes_after={summary['live_ledger_bytes_after']}"
+        )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -534,10 +854,50 @@ def build_parser() -> argparse.ArgumentParser:
         help="Read-only summary of active and stale nonterminal claim rows",
     )
     summary_p.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
+    summary_p.add_argument(
+        "--archive-dir",
+        type=Path,
+        default=DEFAULT_ARCHIVE_DIR,
+        help="Monthly archive dir (default: .omx/state/dispatch_claims_archive)",
+    )
+    summary_p.add_argument(
+        "--live-only",
+        action="store_true",
+        help="Scan only the live ledger; ignore monthly archives (default: include archives)",
+    )
     summary_p.add_argument("--ttl-hours", type=float, default=24.0)
     summary_p.add_argument("--now-utc", default="")
     summary_p.add_argument("--format", choices=["text", "json"], default="text")
     summary_p.set_defaults(func=_summary)
+    prune_p = sub.add_parser(
+        "prune",
+        help=(
+            "Archive terminal rows older than --terminal-age-days into "
+            "monthly archive files and rewrite the live ledger"
+        ),
+    )
+    prune_p.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
+    prune_p.add_argument(
+        "--archive-dir",
+        type=Path,
+        default=DEFAULT_ARCHIVE_DIR,
+        help="Monthly archive dir (default: .omx/state/dispatch_claims_archive)",
+    )
+    prune_p.add_argument(
+        "--terminal-age-days",
+        type=float,
+        default=DEFAULT_PRUNE_TERMINAL_AGE_DAYS,
+        help=f"Terminal rows older than this go to archive (default: {DEFAULT_PRUNE_TERMINAL_AGE_DAYS}d)",
+    )
+    prune_p.add_argument("--ttl-hours", type=float, default=24.0)
+    prune_p.add_argument("--now-utc", default="")
+    prune_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the prune plan without rewriting the ledger or archives",
+    )
+    prune_p.add_argument("--format", choices=["text", "json"], default="text")
+    prune_p.set_defaults(func=_prune)
     return parser
 
 
