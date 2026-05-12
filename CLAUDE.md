@@ -861,7 +861,30 @@ The wrapper acquires `fcntl.flock(LOCK_EX)` on `.omx/state/.commit-lock`, runs `
 - Operators running a single shell can use the wrapper too — overhead is negligible (<10ms when uncontended).
 - The lock is fcntl-advisory: bypassing it (running `git commit` directly) re-introduces the bug class. Don't.
 
-Cross-ref: `feedback_check_64_smoke_proofs_resolved_AND_subagent_serializer_landed_20260429.md`.
+**`--expected-content-sha256` discipline (NON-NEGOTIABLE, post-92aba3ca)**: Before editing any file the subagent intends to commit, compute the sha256 of the file's CURRENT (HEAD) content. Pass it to the serializer via `--expected-content-sha256 <file>=<sha>` per Catalog #157 (`check_commit_serializer_pre_lock_hash_against_head`). The serializer hashes the working-tree content at lock-acquire time and refuses with rc=4 if it differs from the declared sha — catching the pre-pre-lock race where TWO subagents have ALREADY edited the same file in the working tree BEFORE either takes its pre-lock snapshot (the bug class CLAUDE.md diagnosed at commit `92aba3ca` on 2026-05-12, which the prior `FIX-1 --no-concurrent-edit-check` flag cannot detect because it only covers the lock-WAIT window). Compute the sha BEFORE editing, NOT after — the flag's purpose is to prove the subagent's intent matches the COMMITTED state, not just temporal consistency between snapshot-and-commit.
+
+Worked example:
+
+```bash
+# Step 1: BEFORE any edits, capture the HEAD content sha of every file you plan to commit.
+PREFLIGHT_SHA=$(sha256sum src/tac/preflight.py | awk '{print $1}')
+# (macOS: shasum -a 256 src/tac/preflight.py | awk '{print $1}')
+
+# Step 2: now edit the file freely (one or many edits — the sha was captured pre-edit).
+# ... your edits ...
+
+# Step 3: commit through the canonical serializer with the captured sha:
+.venv/bin/python tools/subagent_commit_serializer.py \
+    --message "preflight: add new strict gate" \
+    --files src/tac/preflight.py \
+    --expected-content-sha256 "src/tac/preflight.py=${PREFLIGHT_SHA}"
+```
+
+If a sibling subagent edits the SAME file in the gap between your edit-start and your serializer call, your `--expected-content-sha256` declaration will no longer match the working-tree content the serializer hashes, the serializer refuses with rc=4, and YOU re-base on the sibling's landed work instead of silently swallowing it under your commit body. Multiple files: repeat the flag (`--expected-content-sha256 a.py=<sha_a> --expected-content-sha256 b.py=<sha_b>`).
+
+Without this discipline, Catalog #157's static gate still refuses bare `git commit` outside the serializer, but the pre-pre-lock race remains observable. WITH this discipline, both the static and dynamic surfaces of the commit-swap bug class are extincted.
+
+Cross-ref: `feedback_check_64_smoke_proofs_resolved_AND_subagent_serializer_landed_20260429.md` (the canonical bug-class incident report) + Catalog #157 (the static gate + dynamic `--expected-content-sha256` check) + Catalog #117 (`check_subagent_commit_serializer_uses_lock`, the sister gate that enforces last-50-commit usage) + `feedback_concurrent_subagent_commit_message_swap_20260429.md` (the 2026-04-29 PM incident that originated the rule).
 
 ## Review gate — non-negotiable
 
