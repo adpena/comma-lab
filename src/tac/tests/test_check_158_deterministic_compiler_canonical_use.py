@@ -179,6 +179,30 @@ def test_submission_in_name_caught(tmp_path: Path) -> None:
     assert len(violations) == 1
 
 
+def test_materialize_archive_surface_caught(tmp_path: Path) -> None:
+    repo = _make_tools_repo(tmp_path)
+    (repo / "tools" / "materialize_new_archive_candidate.py").write_text(
+        _OFFENDING_BUILDER,
+    )
+    violations = check_deterministic_compiler_canonical_use(
+        repo_root=repo, strict=False,
+    )
+    assert len(violations) == 1
+    assert "materialize_new_archive_candidate.py" in violations[0]
+
+
+def test_materialize_packet_surface_caught(tmp_path: Path) -> None:
+    repo = _make_tools_repo(tmp_path)
+    (repo / "tools" / "materialize_new_packet_candidate.py").write_text(
+        _OFFENDING_BUILDER,
+    )
+    violations = check_deterministic_compiler_canonical_use(
+        repo_root=repo, strict=False,
+    )
+    assert len(violations) == 1
+    assert "materialize_new_packet_candidate.py" in violations[0]
+
+
 # ---------------------------------------------------------------------------
 # Pre-existing allowlist surfaces are grandfathered
 # ---------------------------------------------------------------------------

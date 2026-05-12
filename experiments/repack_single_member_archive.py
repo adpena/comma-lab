@@ -9,6 +9,7 @@ import json
 import zipfile
 from pathlib import Path
 
+from tac.optimization.proxy_candidate_contract import apply_proxy_evidence_boundary
 
 FIXED_DATE_TIME = (1980, 1, 1, 0, 0, 0)
 
@@ -75,23 +76,32 @@ def main(argv: list[str] | None = None) -> int:
         compress_type=compress_type,
         compresslevel=compresslevel,
     )
-    record = {
-        "input": str(args.input),
-        "input_bytes": args.input.stat().st_size,
-        "input_sha256": sha256_file(args.input),
-        "output": str(args.output),
-        "output_bytes": args.output.stat().st_size,
-        "output_sha256": sha256_file(args.output),
-        "source_member_name": source_info.filename,
-        "source_member_bytes": len(payload),
-        "source_member_sha256": hashlib.sha256(payload).hexdigest(),
-        "target_member_name": args.member_name,
-        "compression": args.compression,
-        "compress_type": compress_type,
-        "byte_delta": args.output.stat().st_size - args.input.stat().st_size,
-        "score_claim": False,
-        "evidence_grade": "byte_repack_only",
-    }
+    record = apply_proxy_evidence_boundary(
+        {
+            "input": str(args.input),
+            "input_bytes": args.input.stat().st_size,
+            "input_sha256": sha256_file(args.input),
+            "output": str(args.output),
+            "output_bytes": args.output.stat().st_size,
+            "output_sha256": sha256_file(args.output),
+            "source_member_name": source_info.filename,
+            "source_member_bytes": len(payload),
+            "source_member_sha256": hashlib.sha256(payload).hexdigest(),
+            "target_member_name": args.member_name,
+            "compression": args.compression,
+            "compress_type": compress_type,
+            "byte_delta": args.output.stat().st_size - args.input.stat().st_size,
+            "evidence_grade": "byte_repack_only",
+            "runtime_consumption_proof": False,
+            "full_frame_inflate_output_parity_missing": True,
+            "byte_repack_only": True,
+        },
+        dispatch_blockers=(
+            "byte_repack_only",
+            "runtime_consumption_proof_missing",
+            "full_frame_inflate_output_parity_missing",
+        ),
+    )
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")

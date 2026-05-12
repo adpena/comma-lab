@@ -849,7 +849,8 @@ def _preflight_parallel_worker_count() -> int:
 def _preflight_source_index_prewarm_enabled() -> bool:
     """Return true when source-index facts should be warmed before fan-out."""
 
-    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "").strip().lower()
+    default = "1" if os.environ.get("GITHUB_ACTIONS") == "true" else ""
+    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", default).strip().lower()
     return value in {"1", "true", "yes", "on"}
 
 
@@ -31735,9 +31736,9 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
 #: Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
 #: the gate lands STRICT at 0 live violations by allowlisting every
 #: pre-existing surface and refusing new surfaces that bypass the canonical
-#: deterministic compiler. The allowlist is intentionally narrow: only the
-#: legacy ``tools/build_*packet*.py`` builders observed at 2026-05-12 are
-#: exempt; any subsequent surface must route through the canonical compiler.
+#: deterministic compiler. The allowlist is intentionally narrow: only legacy
+#: packet/archive materializers observed at 2026-05-12 are exempt; any
+#: subsequent surface must route through the canonical compiler.
 _DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST: frozenset[str] = frozenset({
     "tools/build_a1_frame_conditional_codec_variant.py",
     "tools/build_a1_per_pair_latent_correction_sidecar.py",
@@ -31765,11 +31766,33 @@ _DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST: frozenset[str] = frozenset({
     "tools/build_track2_identity_packet.py",
     "tools/build_uniward_stc_hessian_a1_v1.py",
     "tools/build_wr01_exact_eval_packet.py",
+    "tools/materialize_film_pose_x_magic_codec_archive.py",
+    "tools/materialize_magic_codec_archive.py",
 })
 
 #: Token that, when present in a packet-builder source file, waives the gate
 #: with an explicit rationale.
 _DETERMINISTIC_COMPILER_WAIVER_TOKEN = "DETERMINISTIC_COMPILER_OK"
+
+
+def _deterministic_compiler_candidate_paths(tools_dir: Path) -> tuple[Path, ...]:
+    """Return build/materialize surfaces that can emit contest packets.
+
+    Catalog #158 originally scanned only ``tools/build_*.py``. That missed
+    newer ``tools/materialize_*archive*.py`` and ``tools/materialize_*packet*.py``
+    surfaces, which are semantically packet compilers even when they do not use
+    the ``build_`` prefix.
+    """
+
+    candidates: dict[str, Path] = {}
+    for pattern in (
+        "build_*.py",
+        "materialize_*archive*.py",
+        "materialize_*packet*.py",
+    ):
+        for path in tools_dir.glob(pattern):
+            candidates[path.as_posix()] = path
+    return tuple(candidates[key] for key in sorted(candidates))
 
 
 def check_deterministic_compiler_canonical_use(
@@ -31781,8 +31804,9 @@ def check_deterministic_compiler_canonical_use(
     """Catalog #158 — new packet-compilation surfaces MUST route through the
     canonical ``tac.packet_compiler.deterministic_compiler``.
 
-    Refuses any **new** ``tools/build_*.py`` script whose filename mentions
-    ``packet`` / ``deterministic`` / ``submission`` AND that
+    Refuses any **new** ``tools/build_*.py`` or
+    ``tools/materialize_*{archive,packet}*.py`` script whose filename marks it
+    as a packet/archive compiler AND that
     (1) writes an archive.zip via ``zipfile.ZipFile`` AND
     (2) emits an ``inflate.sh`` / ``inflate.py`` runtime
     but does NOT import from ``tac.packet_compiler.deterministic_compiler``
@@ -31810,18 +31834,23 @@ def check_deterministic_compiler_canonical_use(
         return []
 
     violations: list[str] = []
-    for path in sorted(tools_dir.glob("build_*.py")):
+    for path in _deterministic_compiler_candidate_paths(tools_dir):
         rel = path.relative_to(root).as_posix()
         if rel in _DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST:
             continue
         name = path.name
         # The gate applies only to surfaces whose name marks them as
         # packet-builders / packet-compilers / submission-packet tooling.
-        if not (
+        marked_packet_surface = (
             "packet" in name
             or "deterministic" in name
             or "submission" in name
-        ):
+            or (
+                name.startswith("materialize_")
+                and ("archive" in name or "packet" in name)
+            )
+        )
+        if not marked_packet_surface:
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="replace")

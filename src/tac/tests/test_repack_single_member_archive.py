@@ -5,6 +5,7 @@ import json
 import zipfile
 from pathlib import Path
 
+from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "experiments" / "repack_single_member_archive.py"
@@ -57,6 +58,19 @@ def test_repack_preserves_payload_and_renames_single_member(tmp_path: Path) -> N
     assert record["target_member_name"] == "x"
     assert record["source_member_bytes"] == len(payload)
     assert record["score_claim"] is False
+    assert record["score_claim_eligible"] is False
+    assert record["promotion_eligible"] is False
+    assert record["rank_or_kill_eligible"] is False
+    assert record["ready_for_exact_eval_dispatch"] is False
+    assert record["runtime_consumption_proof"] is False
+    assert record["full_frame_inflate_output_parity_missing"] is True
+    assert record["byte_repack_only"] is True
+    assert validate_proxy_candidate(record) == []
+    assert "byte_repack_only" in record["dispatch_blockers"]
+    assert "runtime_consumption_proof_missing" in record["dispatch_blockers"]
+    assert (
+        "full_frame_inflate_output_parity_missing" in record["dispatch_blockers"]
+    )
     assert record["evidence_grade"] == "byte_repack_only"
 
 

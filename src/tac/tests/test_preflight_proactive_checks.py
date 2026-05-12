@@ -16,7 +16,6 @@ from tac.preflight import (
     check_shell_scripts_syntax_clean,
 )
 
-
 # ---------------- Check 67 (python-files-compile) ----------------
 
 def _py_repo(tmp_path: Path) -> Path:
@@ -107,10 +106,18 @@ def test_preflight_parallel_worker_count_is_bounded(monkeypatch):
 
 def test_preflight_source_index_prewarm_is_opt_in(monkeypatch):
     monkeypatch.delenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     assert preflight._preflight_source_index_prewarm_enabled() is False
 
     monkeypatch.setenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "1")
     assert preflight._preflight_source_index_prewarm_enabled() is True
+
+    monkeypatch.delenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    assert preflight._preflight_source_index_prewarm_enabled() is True
+
+    monkeypatch.setenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "0")
+    assert preflight._preflight_source_index_prewarm_enabled() is False
 
 
 def test_gate5_runtime_closure_runs_in_fast_fail_block():
