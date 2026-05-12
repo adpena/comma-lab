@@ -46,7 +46,9 @@ def test_pr106_sidecar_runtime_decode_consumption_proof_is_nonpromotable(
     assert manifest["inner_pr106_payload_sha256_unchanged"] is True
     assert manifest["sidecar_payload_sha256_changed"] is True
     assert manifest["runtime_semantic_digest_changed"] is True
+    assert manifest["runtime_corrected_latents_digest_changed"] is True
     assert manifest["runtime_sidecar_decode_consumption_claim"] is True
+    assert manifest["runtime_sidecar_apply_consumption_claim"] is True
     assert manifest["full_frame_inflate_output_parity_claim"] is False
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
@@ -61,6 +63,12 @@ def test_pr106_sidecar_runtime_decode_consumption_proof_is_nonpromotable(
     assert source_digest["n_pairs"] == 600
     assert mutated_digest["n_pairs"] == 600
     assert source_digest["combined_sha256"] != mutated_digest["combined_sha256"]
+    assert source_digest["source_latents_sha256"] == mutated_digest["source_latents_sha256"]
+    assert source_digest["corrected_latents_sha256"] != mutated_digest[
+        "corrected_latents_sha256"
+    ]
+    assert source_digest["latents_changed_by_sidecar"] is True
+    assert mutated_digest["latents_changed_by_sidecar"] is True
     assert "score_claim" in dumps_runtime_consumption_manifest(manifest)
 
 
@@ -103,3 +111,6 @@ def test_pr106_pr101_runtime_accepts_legacy_brotli_format_for_same_runtime_pairi
     assert grammar_digest["format_id"] == "0x02"
     assert digest["n_pairs"] == 600
     assert digest["combined_sha256"] == grammar_digest["combined_sha256"]
+    assert digest["corrected_latents_sha256"] == grammar_digest[
+        "corrected_latents_sha256"
+    ]

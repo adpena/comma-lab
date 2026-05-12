@@ -10,8 +10,9 @@ The prior PR106/R2 PacketIR proof accounted for every emitted `0.bin` byte at
 parser level but explicitly did **not** claim runtime consumption. This pass
 adds a reusable no-score proof that imports the paired submission `inflate.py`,
 decodes the sidecar through the runtime's own sidecar parser/decoder, applies a
-valid one-correction PacketIR mutation, and verifies that the runtime-visible
-correction-array digest changes.
+valid one-correction PacketIR mutation through the runtime's
+`apply_sidecar_corrections(...)`, and verifies that both the runtime-visible
+correction-array digest and corrected-latent digest change.
 
 This is **not** full-frame inflate parity and **not** a score claim.
 
@@ -36,14 +37,14 @@ Raw manifests are intentionally under ignored `experiments/results/`:
 
 Tracked custody summary:
 
-| archive | format | archive SHA-256 | runtime `inflate.py` SHA-256 | source correction digest | mutated correction digest | runtime decode consumed? | score claim? |
-|---|---:|---|---|---|---|---:|---:|
-| `submissions/pr106_latent_sidecar_r2/archive.zip` | `0x01` | `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f` | `093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db` | `7d2ff1afa765a94966d73573e57429f58522a0d324979b796f3fb05f148e78d2` | `e1baa5d1be6980d23cdd12aac5454dc9fe33574feb81ae30c418a31043f909c7` | yes | no |
-| `submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip` | `0x02` | `c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383` | `60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3` | `7d2ff1afa765a94966d73573e57429f58522a0d324979b796f3fb05f148e78d2` | `637441f9b0518e0649c7b630ef9607c4623ea1514468a56f95467b6c6ef721fa` | yes | no |
+| archive | format | archive SHA-256 | runtime `inflate.py` SHA-256 | source correction digest | mutated correction digest | source corrected-latents digest | mutated corrected-latents digest | runtime decode+apply consumed? | score claim? |
+|---|---:|---|---|---|---|---|---|---:|---:|
+| `submissions/pr106_latent_sidecar_r2/archive.zip` | `0x01` | `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f` | `093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db` | `7d2ff1afa765a94966d73573e57429f58522a0d324979b796f3fb05f148e78d2` | `e1baa5d1be6980d23cdd12aac5454dc9fe33574feb81ae30c418a31043f909c7` | `1eaf8b72f9125b0ea507919341be082eab0ef9e8e3d9c391231472d3398b8481` | `218fdd7df19e037ca63a00aa9efc03edcfedaed5ccd2850c6d3cb5ba622888da` | yes | no |
+| `submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip` | `0x02` | `c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383` | `60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3` | `7d2ff1afa765a94966d73573e57429f58522a0d324979b796f3fb05f148e78d2` | `637441f9b0518e0649c7b630ef9607c4623ea1514468a56f95467b6c6ef721fa` | `1eaf8b72f9125b0ea507919341be082eab0ef9e8e3d9c391231472d3398b8481` | `b0e237fe5230aa639aa1b3e4712760654ea7425dada8b72c80bbf88f0c3cf709` | yes | no |
 
-The shared source correction digest across `0x01` and `0x02` is a same-runtime
-decode-equivalence signal only. It does not substitute for full-frame parity or
-exact same-runtime auth eval.
+The shared source correction and corrected-latent digests across `0x01` and
+`0x02` are same-runtime decode/apply equivalence signals only. They do not
+substitute for full-frame parity or exact same-runtime auth eval.
 
 ## Adversarial constraints preserved
 

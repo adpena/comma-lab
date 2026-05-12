@@ -79,6 +79,12 @@ def _array_bytes(array: Any, dtype_name: str) -> bytes:
     return array.astype(dtype_name, copy=False).tobytes()
 
 
+def _tensor_sha256(tensor: Any) -> str:
+    if not all(hasattr(tensor, name) for name in ("detach", "cpu", "numpy")):
+        raise TypeError(f"expected tensor-like latents; got {type(tensor)!r}")
+    return sha256_hex(tensor.detach().cpu().contiguous().numpy().tobytes())
+
+
 def runtime_sidecar_correction_digest(
     runtime_module: ModuleType,
     member_payload: bytes,
@@ -87,11 +93,11 @@ def runtime_sidecar_correction_digest(
 
     parsed = runtime_module.parse_sidecar_archive(member_payload)
     if isinstance(parsed, tuple) and len(parsed) == 2:
-        _, sidecar_blob = parsed
+        pr106_bytes, sidecar_blob = parsed
         dim_arr, delta_q_arr = runtime_module.decode_sidecar_corrections(sidecar_blob)
         format_id = PR106_SIDECAR_FORMAT_BROTLI
     elif isinstance(parsed, tuple) and len(parsed) == 4:
-        format_id, _, sidecar_blob, framing_meta = parsed
+        format_id, pr106_bytes, sidecar_blob, framing_meta = parsed
         if format_id == PR106_SIDECAR_FORMAT_BROTLI:
             dim_arr, delta_q_arr = runtime_module.decode_brotli_sidecar(sidecar_blob)
         elif format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
@@ -111,6 +117,14 @@ def runtime_sidecar_correction_digest(
 
     dim_bytes = _array_bytes(dim_arr, "uint8")
     delta_bytes = _array_bytes(delta_q_arr, "int8")
+    _, latents, _ = runtime_module.parse_packed_archive(pr106_bytes)
+    source_latents_sha256 = _tensor_sha256(latents)
+    corrected_latents = runtime_module.apply_sidecar_corrections(
+        latents.clone(),
+        dim_arr,
+        delta_q_arr,
+    )
+    corrected_latents_sha256 = _tensor_sha256(corrected_latents)
     return {
         "format_id": f"0x{int(format_id):02X}",
         "n_pairs": len(dim_arr),
@@ -118,6 +132,9 @@ def runtime_sidecar_correction_digest(
         "dim_sha256": sha256_hex(dim_bytes),
         "delta_q_sha256": sha256_hex(delta_bytes),
         "combined_sha256": sha256_hex(dim_bytes + delta_bytes),
+        "source_latents_sha256": source_latents_sha256,
+        "corrected_latents_sha256": corrected_latents_sha256,
+        "latents_changed_by_sidecar": source_latents_sha256 != corrected_latents_sha256,
     }
 
 
@@ -155,6 +172,10 @@ def prove_pr106_sidecar_runtime_decode_consumption(
     semantic_changed = (
         source_digest["combined_sha256"] != mutated_digest["combined_sha256"]
     )
+    corrected_latents_changed = (
+        source_digest["corrected_latents_sha256"]
+        != mutated_digest["corrected_latents_sha256"]
+    )
     manifest = pr106_sidecar_mutation_manifest(
         source_packet,
         mutated_packet,
@@ -166,14 +187,18 @@ def prove_pr106_sidecar_runtime_decode_consumption(
         {
             "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
             "proof_scope": (
-                "actual_submission_inflate_py_sidecar_decode_semantics_not_full_frame"
+                "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame"
             ),
             "runtime_dir": runtime_dir.as_posix(),
             "runtime_inflate_py_sha256": sha256_hex((runtime_dir / "inflate.py").read_bytes()),
             "source_runtime_correction_digest": source_digest,
             "mutated_runtime_correction_digest": mutated_digest,
             "runtime_semantic_digest_changed": semantic_changed,
+            "runtime_corrected_latents_digest_changed": corrected_latents_changed,
             "runtime_sidecar_decode_consumption_claim": semantic_changed,
+            "runtime_sidecar_apply_consumption_claim": (
+                semantic_changed and corrected_latents_changed
+            ),
             "full_frame_inflate_output_parity_claim": False,
             "score_claim": False,
             "promotion_eligible": False,
