@@ -611,3 +611,112 @@ def test_verbose_mode_clean_lane_prints_ok(tmp_path: Path, capsys) -> None:
     )
     captured = capsys.readouterr()
     assert "OK" in captured.out
+
+
+# ── FIX-A 2026-05-12: ZZZZZ Medium fix — `<=`/`>=` operator acceptance ────
+#
+# The original `_lane_has_field` matcher only accepted `<field>=` /
+# `<field>:` separators. Two in-flight substrates (`cool_chic`, `wavelet`)
+# declare `inflate_runtime_loc_budget<=100 LOC` and would false-positive
+# bomb the gate on L1 promotion. The hardened matcher now accepts
+# `<=` / `>=` / `=` / `:`.
+
+
+def test_le_operator_in_notes_counts_as_declared() -> None:
+    """`<field><=value>` form (e.g. `inflate_runtime_loc_budget<=100`) is
+    accepted as a declaration. Regression for the ZZZZZ Medium gap."""
+    lane = {
+        "id": "lane_test_nerv",
+        "notes": "inflate_runtime_loc_budget<=100 LOC",
+    }
+    assert _lane_has_field(lane, "inflate_runtime_loc_budget"), (
+        "`<=` operator in notes must count as a declaration"
+    )
+
+
+def test_ge_operator_in_notes_counts_as_declared() -> None:
+    """`<field>>=<value>` form is also accepted."""
+    lane = {
+        "id": "lane_test_nerv",
+        "notes": "bolt_on_loc_budget>=350 LOC",
+    }
+    assert _lane_has_field(lane, "bolt_on_loc_budget"), (
+        "`>=` operator in notes must count as a declaration"
+    )
+
+
+def test_le_operator_in_gate_evidence_counts_as_declared() -> None:
+    """`<field><=<value>` in a gate's evidence string is accepted."""
+    lane = {
+        "id": "lane_test_nerv",
+        "gates": {
+            "impl_complete": {
+                "status": True,
+                "evidence": "inflate_runtime_loc_budget<=100 LOC",
+            },
+        },
+    }
+    assert _lane_has_field(lane, "inflate_runtime_loc_budget"), (
+        "`<=` operator in gate evidence must count as a declaration"
+    )
+
+
+def test_le_operator_full_lane_passes_check(tmp_path: Path) -> None:
+    """End-to-end: representation lane declaring all 8 fields using
+    `<=` operators throughout passes the gate (no violation)."""
+    lane = _representation_lane(extra={
+        "notes": (
+            "archive_grammar=monolithic_0_bin "
+            "parser_section_manifest=parser.json "
+            "inflate_runtime_loc_budget<=100 "
+            "runtime_dep_closure=brotli "
+            "export_format=fp4a "
+            "score_aware_loss=score-domain "
+            "bolt_on_loc_budget<=350 "
+            "no_op_detector_planned=true"
+        ),
+    })
+    repo = _make_repo(tmp_path, [lane])
+    violations = check_representation_lane_has_archive_grammar_at_design_time(
+        repo_root=repo, strict=False, verbose=False,
+    )
+    assert violations == [], (
+        "Lane declaring all 8 fields with mix of `=` and `<=` separators "
+        "must not violate Catalog #124."
+    )
+
+
+def test_cool_chic_wavelet_style_notes_no_false_positive(tmp_path: Path) -> None:
+    """Cool-Chic / wavelet substrate-style notes (with `<=`) must pass
+    when all 8 fields are declared. This is the exact ZZZZZ scenario:
+    `inflate_runtime_loc_budget<=100 LOC` was previously rejected."""
+    cool_chic_notes = (
+        "research_only=true; substrate_engineering exception per HNeRV L7; "
+        "archive_grammar=CCV1 monolithic single-file 0.bin fixed offsets; "
+        "parser_section_manifest=parse_archive() returns 5 tuple; "
+        "inflate_runtime_loc_budget<=100 LOC; "
+        "runtime_dep_closure=torch+brotli; "
+        "export_format=brotli(state_dicts)+int16(latents); "
+        "score_aware_loss=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose); "
+        "bolt_on_loc_budget=~530 LOC (substrate_engineering tag); "
+        "no_op_detector_planned=Catalog #139 byte-mutation smoke"
+    )
+    lane = _representation_lane(
+        lid="lane_substrate_cool_chic_20260512",
+        name="Cool-Chic substrate scaffold",
+        extra={"notes": cool_chic_notes},
+    )
+    # Note: lane is research_only=true in the live registry which exempts
+    # it via _NON_REPRESENTATION_LANE_CLASSES or research_only check. Here
+    # we simulate the post-promotion case (research_only stripped) to
+    # confirm the matcher accepts the `<=` declaration.
+    repo = _make_repo(tmp_path, [lane])
+    violations = check_representation_lane_has_archive_grammar_at_design_time(
+        repo_root=repo, strict=False, verbose=False,
+    )
+    assert violations == [], (
+        "Cool-Chic style notes with `inflate_runtime_loc_budget<=100 LOC` "
+        "must pass; the original matcher would have flagged this lane "
+        "as missing `inflate_runtime_loc_budget` because it only matched "
+        "`=` / `:` separators."
+    )

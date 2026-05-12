@@ -2229,13 +2229,15 @@ def preflight_all(
         check_commit_serializer_pre_lock_hash_against_head(
             strict=True, verbose=verbose,
         )
-        # 2026-05-12 Catalog #160 (FFFF Bug 1 self-protection): substrate
+        # 2026-05-12 Catalog #161 (FFFF Bug 1 self-protection): substrate
         # archive `_quantize_intN` degenerate-range branch must fill `q`
         # with `-(MAX_LEVELS // 2)` so dequant recovers `lo` exactly. The
         # buggy zero-fill pattern produced an off-by-32767-scale error.
         # NNN's same-day fix on block_nerv + FFFF's sister-bug fix on
         # 8 other substrate archives extincted the bug class. This META
         # gate refuses re-introduction at any substrate archive.
+        # Originally landed as #160 then collided with DDDD's #158 claim
+        # via ZZZZZ audit; FIX-A renumbered to #161 per claim_catalog_number.
         # STRICT-FLIPPED 2026-05-12 — live count at landing: 0.
         check_quantize_degenerate_range_clamped_correctly(
             strict=True, verbose=verbose,
@@ -32621,6 +32623,37 @@ def _lane_is_representation_lane(lane: dict) -> bool:
     return False
 
 
+# FIX-A 2026-05-12 (ZZZZZ Medium fix): Catalog #124 _lane_has_field
+# inline-string matcher must accept `<=` / `>=` operators in addition to
+# `=` / `:`. Two in-flight substrates (`lane_substrate_cool_chic_20260512`,
+# `lane_substrate_wavelet_20260512`) declare
+# `inflate_runtime_loc_budget<=100 LOC` — with `<=` — and a 3rd
+# (`lane_packet_compiler_5_pr63_64_65_105_primitives`) uses
+# `bolt_on_loc_budget<=300`. Both are currently `research_only=true` so
+# the gate exempts them, but if either promotes to L1 the original
+# matcher would false-positive bomb. Accept all 4 separators here so
+# `inflate_runtime_loc_budget<=100`, `bolt_on_loc_budget<=300`,
+# `inflate_runtime_loc_budget>=200`, etc. all count as declared.
+_LANE_FIELD_SEPARATORS: tuple[str, ...] = ("<=", ">=", "=", ":")
+
+
+def _field_declared_in_text(field: str, text: str) -> bool:
+    """Return True iff `text` contains `<field><sep>` where sep is in
+    `_LANE_FIELD_SEPARATORS`. Order matters: check 2-char operators
+    (`<=` / `>=`) BEFORE 1-char (`=` / `:`) so `inflate_runtime_loc_budget<=100`
+    matches `<=` first instead of letting the bare `=` (which is also
+    present in `<=`) succeed via the suffix path. Both behaviors yield
+    True in the current call sites, so the ordering is documentation
+    rather than correctness — but it keeps the intent explicit.
+    """
+    if not isinstance(text, str) or not text:
+        return False
+    for sep in _LANE_FIELD_SEPARATORS:
+        if (field + sep) in text:
+            return True
+    return False
+
+
 def _lane_has_field(lane: dict, field: str) -> bool:
     """Return True iff `field` is declared on the lane.
 
@@ -32628,14 +32661,17 @@ def _lane_has_field(lane: dict, field: str) -> bool:
       - lane[field] (top-level)
       - lane["evidence"][field] (under an 'evidence' dict)
       - lane["design_evidence"][field] (under a 'design_evidence' dict)
-      - any gate's "evidence" string contains ``<field>=`` or ``<field>:``
-      - lane["notes"] string contains ``<field>=`` or ``<field>:``
+      - any gate's "evidence" string contains ``<field>=``, ``<field>:``,
+        ``<field><=``, or ``<field>>=``
+      - lane["notes"] string contains the same forms
 
     The latter forms exist so subagents can declare design-time evidence
     either as structured top-level fields OR as an inline note inside an
     existing gate's evidence string OR inside the lane's notes blob. Per
     CLAUDE.md "Beauty, simplicity, and developer experience": accept either
-    ergonomic.
+    ergonomic. `<=` / `>=` are accepted in addition to `=` / `:` per
+    FIX-A 2026-05-12 (ZZZZZ audit Medium) so budget declarations like
+    `inflate_runtime_loc_budget<=100 LOC` count as declared.
     """
     # Top-level
     if field in lane and lane[field] not in (None, ""):
@@ -32650,20 +32686,17 @@ def _lane_has_field(lane: dict, field: str) -> bool:
         return True
     # Inline-string declaration in notes (sister of gate-evidence scan)
     notes = lane.get("notes", "")
-    if isinstance(notes, str):
-        if (field + "=") in notes or (field + ":") in notes:
-            return True
-    # Gate evidence-string scan: look for `<field>=` or `<field>:`
+    if _field_declared_in_text(field, notes):
+        return True
+    # Gate evidence-string scan: look for `<field>=`, `<field>:`,
+    # `<field><=`, or `<field>>=` as a substring.
     gates = lane.get("gates", {})
     if isinstance(gates, dict):
         for g in gates.values():
             if not isinstance(g, dict):
                 continue
             ev_str = g.get("evidence", "")
-            if not isinstance(ev_str, str):
-                continue
-            # Match `archive_grammar=` or `archive_grammar:` as a substring.
-            if (field + "=") in ev_str or (field + ":") in ev_str:
+            if _field_declared_in_text(field, ev_str):
                 return True
     return False
 
@@ -40004,9 +40037,10 @@ def check_commit_serializer_pre_lock_hash_against_head(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #160 — substrate archive _quantize_intN degenerate-range fill
+# Catalog #161 — substrate archive _quantize_intN degenerate-range fill
 # must be -(MAX_LEVELS // 2) so that dequant recovers `lo` exactly.
-# (FFFF Bug 1 self-protection, 2026-05-12)
+# (FFFF Bug 1 self-protection, 2026-05-12; renumbered from #160 by FIX-A
+# 2026-05-12 after ZZZZZ collision audit against DDDD's #158 reservation.)
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (NNN flagged 2026-05-12 sister bug class FFFF fix):
@@ -40039,14 +40073,14 @@ def check_commit_serializer_pre_lock_hash_against_head(
 # `torch.full_like(..., -<sentinel>, dtype=torch.intN)` OR a same-line
 # `# QUANTIZE_DEGENERATE_OK:<reason>` waiver.
 
-_CHECK_160_QUANTIZE_FN_NAME_PATTERNS: tuple[re.Pattern, ...] = (
+_CHECK_161_QUANTIZE_FN_NAME_PATTERNS: tuple[re.Pattern, ...] = (
     re.compile(r"_quantize_int(\d+)\b"),
     re.compile(r"_quantize_[a-z_]*to_int(\d+)\b"),
     re.compile(r"_quantize_latents_to_int(\d+)\b"),
 )
-_CHECK_160_WAIVER_TOKEN = "QUANTIZE_DEGENERATE_OK:"
+_CHECK_161_WAIVER_TOKEN = "QUANTIZE_DEGENERATE_OK:"
 # Allowed sentinels keyed by intN bit-width
-_CHECK_160_EXPECTED_SENTINELS: dict[int, int] = {
+_CHECK_161_EXPECTED_SENTINELS: dict[int, int] = {
     8: -127,    # int8 maps to [-127, 127] via (q + 127) * scale + lo
     16: -32767,  # int16 maps to [-32767, 32767] via (q + 32767) * scale + lo
     32: -2147483647,  # int32, same pattern (rare)
@@ -40059,7 +40093,7 @@ def check_quantize_degenerate_range_clamped_correctly(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #160 — refuse substrate archive `_quantize_intN` functions
+    """Catalog #161 — refuse substrate archive `_quantize_intN` functions
     whose degenerate (``hi <= lo``) branch fills `q` with zeros instead of
     `-(MAX_LEVELS // 2)`.
 
@@ -40101,16 +40135,16 @@ def check_quantize_degenerate_range_clamped_correctly(
                 continue
             # Match function name against quantize patterns; extract bit width.
             bit_width: int | None = None
-            for pat in _CHECK_160_QUANTIZE_FN_NAME_PATTERNS:
+            for pat in _CHECK_161_QUANTIZE_FN_NAME_PATTERNS:
                 m = pat.match(node.name)
                 if m:
                     bit_width = int(m.group(1))
                     break
             if bit_width is None:
                 continue
-            if bit_width not in _CHECK_160_EXPECTED_SENTINELS:
+            if bit_width not in _CHECK_161_EXPECTED_SENTINELS:
                 continue  # exotic bit-widths not yet covered
-            expected_sentinel = _CHECK_160_EXPECTED_SENTINELS[bit_width]
+            expected_sentinel = _CHECK_161_EXPECTED_SENTINELS[bit_width]
             # Find the degenerate-range If statement inside the function.
             for sub in ast.walk(node):
                 if not isinstance(sub, ast.If):
@@ -40149,8 +40183,8 @@ def check_quantize_degenerate_range_clamped_correctly(
                     lines[if_lineno - 1] if 0 <= if_lineno - 1 < len(lines) else ""
                 )
                 if (
-                    _CHECK_160_WAIVER_TOKEN in ret_line_text
-                    or _CHECK_160_WAIVER_TOKEN in if_line_text
+                    _CHECK_161_WAIVER_TOKEN in ret_line_text
+                    or _CHECK_161_WAIVER_TOKEN in if_line_text
                 ):
                     continue
                 # Multi-line return: scan a small window around the return
@@ -40180,7 +40214,7 @@ def check_quantize_degenerate_range_clamped_correctly(
                         f"dtype=torch.int{bit_width})` so dequant recovers "
                         f"`lo` exactly. Sister bugs fixed in block_nerv + "
                         f"sane_hnerv + 7 others 2026-05-12 (NNN+FFFF). "
-                        f"Add same-line `# {_CHECK_160_WAIVER_TOKEN}<reason>` "
+                        f"Add same-line `# {_CHECK_161_WAIVER_TOKEN}<reason>` "
                         f"waiver if intentional."
                     )
                 break  # one violation per quantize function is enough
