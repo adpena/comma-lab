@@ -67,6 +67,20 @@ from tac.packet_compiler.pr105_packed_state_schema import (
     PackedStateSchemaEntry,
     pack_state_schema_size_sorted,
 )
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_DEFAULT_MEMBER_NAME,
+    PR106_SIDECAR_FORMAT_BROTLI,
+    PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_MAGIC,
+    PR106_SUPPORTED_SIDECAR_FORMATS,
+    PR106SidecarPacket,
+    StoredZipMember,
+    emit_pr106_sidecar_packet,
+    emit_single_stored_member_archive,
+    parse_pr106_sidecar_packet,
+    pr106_sidecar_manifest,
+    read_single_stored_member_archive,
+)
 from tac.packet_compiler.pr97_h3_grammar import (
     LengthPrefixedSectionPayload,
     TileBandStreamPayload,
@@ -228,6 +242,19 @@ __all__ = [
     # PR105 — kitchen_sink packed-state-schema size-sorted helper
     "PackedStateSchemaEntry",
     "pack_state_schema_size_sorted",
+    # PR106 — sidecar wrapper PacketIR identity parser/emitter
+    "PR106_DEFAULT_MEMBER_NAME",
+    "PR106_SIDECAR_FORMAT_BROTLI",
+    "PR106_SIDECAR_FORMAT_PR101_GRAMMAR",
+    "PR106_SIDECAR_MAGIC",
+    "PR106_SUPPORTED_SIDECAR_FORMATS",
+    "PR106SidecarPacket",
+    "StoredZipMember",
+    "emit_pr106_sidecar_packet",
+    "emit_single_stored_member_archive",
+    "parse_pr106_sidecar_packet",
+    "pr106_sidecar_manifest",
+    "read_single_stored_member_archive",
     # PR93 — delta-varint pose codec + QZMB1 grammar
     "DeltaVarintPoseStream",
     "MAGIC_MODEL_COMPACT",

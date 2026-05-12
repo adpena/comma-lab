@@ -25,3 +25,48 @@ def test_modal_env_sh_also_fails_closed_for_sourced_lane_scripts() -> None:
     assert "export T1_RUN_CONTEST_CUDA_AUTH_EVAL=0" in text
     assert "export SCPP_RUN_CONTEST_CUDA_AUTH_EVAL=0" in text
     assert "export RUN_CONTEST_EVAL=0" in text
+
+
+def test_modal_train_lane_copies_dispatch_claim_ledger_to_remote_workspace() -> None:
+    text = SOURCE.read_text()
+    assert "claim_ledger_bytes: bytes" in text
+    assert 'workspace / ".omx/state/active_lane_dispatch_claims.md"' in text
+    assert "claim_path.parent.mkdir(parents=True, exist_ok=True)" in text
+    assert "claim_path.write_bytes(claim_ledger_bytes)" in text
+    assert '"T1_DISPATCH_CLAIMS_PATH": str(claim_path)' in text
+    assert '"SCPP_DISPATCH_CLAIMS_PATH": str(claim_path)' in text
+    assert "claims_path = repo_root / \".omx/state/active_lane_dispatch_claims.md\"" in text
+    assert "claim_ledger_bytes = claims_path.read_bytes()" in text
+    assert "fn.spawn(" in text
+
+
+def test_modal_train_lane_claims_before_spawn_and_records_lane_id() -> None:
+    text = SOURCE.read_text()
+    main_src = text[text.index("@app.local_entrypoint()"):]
+
+    assert '"scripts/remote_lane_t1_balle_endtoend.sh": "t1_balle_128k_endtoend"' in text
+    assert '"scripts/remote_lane_scpp_stage1.sh": "lane_scpp_stage1_smoke_anchor"' in text
+    assert "def _ensure_dispatch_claim(" in text
+    assert "tools/claim_lane_dispatch.py" in text
+    assert "--status" in text
+    assert "active_dispatching" in text
+    assert "aborting before Modal GPU spawn" in text
+    assert main_src.index("_ensure_dispatch_claim(") < main_src.index("fn.spawn(")
+    assert '"lane_id": resolved_lane_id' in text
+
+
+def test_modal_train_lane_passes_mounted_git_custody_to_remote_scripts() -> None:
+    text = SOURCE.read_text()
+
+    assert "mounted_code_git_head: str" in text
+    assert "mounted_code_git_branch: str" in text
+    assert '"T1_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head' in text
+    assert '"T1_MOUNTED_CODE_GIT_BRANCH": mounted_code_git_branch' in text
+    assert '"SCPP_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head' in text
+    assert '"SCPP_MOUNTED_CODE_GIT_BRANCH": mounted_code_git_branch' in text
+    assert 'mounted_code_git_head = _git_value(repo_root, "rev-parse", "HEAD")' in text
+    assert (
+        'mounted_code_git_branch = _git_value(repo_root, "branch", "--show-current")'
+        in text
+    )
+    assert "unable to resolve mounted git custody for Modal training" in text

@@ -66,7 +66,10 @@ def auth_score_summary_lines(payload: dict, *, label: str, source: str) -> list[
     is_cuda = device_label == "cuda"
 
     if is_cuda:
-        header = f"\n=== AUTH SCORE [contest-CUDA candidate]: {score} (label={label}) ==="
+        header = (
+            "\n=== CUDA AUTH SCORE "
+            f"(UNADJUDICATED, NON-PROMOTABLE): {score} (label={label}) ==="
+        )
     else:
         header = (
             "\n=== ADVISORY AUTH SCORE "
@@ -81,6 +84,12 @@ def auth_score_summary_lines(payload: dict, *, label: str, source: str) -> list[
         lines.append(
             "  CUDA required: rerun the exact archive via contest_auth_eval.py "
             "--device cuda before promotion, ranking, retirement, or stack claims."
+        )
+    else:
+        lines.append(
+            "  Adjudication required: verify archive SHA, runtime tree SHA, sample "
+            "count, exact evaluator schema, component recomputation, and terminal "
+            "dispatch claim before promotion, ranking, retirement, or stack claims."
         )
 
     pose = _first_present(payload, ("avg_posenet_dist", "pose", "pose_dist", "posenet_dist"))

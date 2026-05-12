@@ -42,6 +42,10 @@ app = modal.App("comma-train-lane")
 RESULTS_VOL = "comma-train-lane-results"
 REMOTE_PYTHONPATH = "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact"
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
+KNOWN_LANE_IDS = {
+    "scripts/remote_lane_t1_balle_endtoend.sh": "t1_balle_128k_endtoend",
+    "scripts/remote_lane_scpp_stage1.sh": "lane_scpp_stage1_smoke_anchor",
+}
 
 # Image with all deps. ffmpeg-master (with in_primaries support) is pulled
 # at build time via the same BtbN nightly that setup_full.sh uses on Vast.ai.
@@ -126,8 +130,15 @@ training_image = (
 )
 
 
-def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
-                    max_seconds: int = 14 * 3600) -> dict:
+def _run_lane_inner(
+    lane_script: str,
+    label: str,
+    env_overrides: dict,
+    claim_ledger_bytes: bytes,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+    max_seconds: int = 14 * 3600,
+) -> dict:
     """Container-side execution. Imports MUST be local (Modal serialization)."""
     import json
     import os
@@ -157,6 +168,9 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     pp = image_workspace / "pyproject.toml"
     if pp.exists():
         shutil.copy2(pp, workspace / "pyproject.toml")
+    claim_path = workspace / ".omx/state/active_lane_dispatch_claims.md"
+    claim_path.parent.mkdir(parents=True, exist_ok=True)
+    claim_path.write_bytes(claim_ledger_bytes)  # BARE_WRITE_OK: single-writer Modal worker copies immutable local claim snapshot
 
     os.chdir(workspace)
 
@@ -187,6 +201,12 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
         f"export TAC_UPSTREAM_DIR={workspace}/upstream\n"
         f"export PYBIN={sys.executable}\n"
         f"export WORKSPACE={workspace}\n"
+        f"export T1_DISPATCH_CLAIMS_PATH={claim_path}\n"
+        f"export SCPP_DISPATCH_CLAIMS_PATH={claim_path}\n"
+        f"export T1_MOUNTED_CODE_GIT_HEAD={mounted_code_git_head}\n"
+        f"export T1_MOUNTED_CODE_GIT_BRANCH={mounted_code_git_branch}\n"
+        f"export SCPP_MOUNTED_CODE_GIT_HEAD={mounted_code_git_head}\n"
+        f"export SCPP_MOUNTED_CODE_GIT_BRANCH={mounted_code_git_branch}\n"
         "export AUTH_EVAL_DEVICE=cpu\n"
         "export MODAL_AUTH_EVAL_ADVISORY_ONLY=1\n"
         "export SCORE_CLAIM=false\n"
@@ -268,6 +288,12 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
         "MODAL_AUTH_EVAL_ADVISORY_ONLY": "1",
         "SCORE_CLAIM": "false",
         "PROMOTION_ELIGIBLE": "false",
+        "T1_DISPATCH_CLAIMS_PATH": str(claim_path),
+        "SCPP_DISPATCH_CLAIMS_PATH": str(claim_path),
+        "T1_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head,
+        "T1_MOUNTED_CODE_GIT_BRANCH": mounted_code_git_branch,
+        "SCPP_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head,
+        "SCPP_MOUNTED_CODE_GIT_BRANCH": mounted_code_git_branch,
         "T1_RUN_CONTEST_CUDA_AUTH_EVAL": "0",
         "SCPP_RUN_CONTEST_CUDA_AUTH_EVAL": "0",
         "RUN_CONTEST_EVAL": "0",
@@ -466,9 +492,24 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     timeout=14 * 3600,  # 14h max — covers MAE-V (estimate)
     volumes={"/modal_results": results_vol},
 )
-def run_lane_training_t4(lane_script: str, label: str, env_overrides: dict,
-                          max_seconds: int = 14 * 3600) -> dict:
-    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
+def run_lane_training_t4(
+    lane_script: str,
+    label: str,
+    env_overrides: dict,
+    claim_ledger_bytes: bytes,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+    max_seconds: int = 14 * 3600,
+) -> dict:
+    return _run_lane_inner(
+        lane_script,
+        label,
+        env_overrides,
+        claim_ledger_bytes,
+        mounted_code_git_head,
+        mounted_code_git_branch,
+        max_seconds=max_seconds,
+    )
 
 
 @app.function(
@@ -477,9 +518,24 @@ def run_lane_training_t4(lane_script: str, label: str, env_overrides: dict,
     timeout=14 * 3600,
     volumes={"/modal_results": results_vol},
 )
-def run_lane_training_a10g(lane_script: str, label: str, env_overrides: dict,
-                            max_seconds: int = 14 * 3600) -> dict:
-    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
+def run_lane_training_a10g(
+    lane_script: str,
+    label: str,
+    env_overrides: dict,
+    claim_ledger_bytes: bytes,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+    max_seconds: int = 14 * 3600,
+) -> dict:
+    return _run_lane_inner(
+        lane_script,
+        label,
+        env_overrides,
+        claim_ledger_bytes,
+        mounted_code_git_head,
+        mounted_code_git_branch,
+        max_seconds=max_seconds,
+    )
 
 
 @app.function(
@@ -488,9 +544,24 @@ def run_lane_training_a10g(lane_script: str, label: str, env_overrides: dict,
     timeout=14 * 3600,
     volumes={"/modal_results": results_vol},
 )
-def run_lane_training_a100(lane_script: str, label: str, env_overrides: dict,
-                            max_seconds: int = 14 * 3600) -> dict:
-    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
+def run_lane_training_a100(
+    lane_script: str,
+    label: str,
+    env_overrides: dict,
+    claim_ledger_bytes: bytes,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+    max_seconds: int = 14 * 3600,
+) -> dict:
+    return _run_lane_inner(
+        lane_script,
+        label,
+        env_overrides,
+        claim_ledger_bytes,
+        mounted_code_git_head,
+        mounted_code_git_branch,
+        max_seconds=max_seconds,
+    )
 
 
 @app.function(
@@ -499,9 +570,129 @@ def run_lane_training_a100(lane_script: str, label: str, env_overrides: dict,
     timeout=14 * 3600,
     volumes={"/modal_results": results_vol},
 )
-def run_lane_training_h100(lane_script: str, label: str, env_overrides: dict,
-                            max_seconds: int = 14 * 3600) -> dict:
-    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
+def run_lane_training_h100(
+    lane_script: str,
+    label: str,
+    env_overrides: dict,
+    claim_ledger_bytes: bytes,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+    max_seconds: int = 14 * 3600,
+) -> dict:
+    return _run_lane_inner(
+        lane_script,
+        label,
+        env_overrides,
+        claim_ledger_bytes,
+        mounted_code_git_head,
+        mounted_code_git_branch,
+        max_seconds=max_seconds,
+    )
+
+
+def _compact_stamp() -> str:
+    import datetime as dt
+
+    return dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _git_value(repo_root, *args: str) -> str:
+    import subprocess
+
+    proc = subprocess.run(
+        ["git", *args],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    value = proc.stdout.strip()
+    return value if proc.returncode == 0 and value else "unknown"
+
+
+def _infer_lane_id(lane_script: str, explicit_lane_id: str = "") -> str:
+    from pathlib import Path
+
+    normalized = Path(lane_script).as_posix()
+    if explicit_lane_id.strip():
+        return explicit_lane_id.strip()
+    return KNOWN_LANE_IDS.get(normalized, Path(normalized).stem)
+
+
+def _active_claim_exists(repo_root, *, lane_id: str, instance_job_id: str) -> bool:
+    import json
+    import subprocess
+    import sys
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "tools/claim_lane_dispatch.py",
+            "summary",
+            "--claims-path",
+            ".omx/state/active_lane_dispatch_claims.md",
+            "--format",
+            "json",
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return False
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return False
+    for row in payload.get("active", []):
+        if (
+            isinstance(row, dict)
+            and row.get("lane_id") == lane_id
+            and row.get("instance_job_id") == instance_job_id
+        ):
+            return True
+    return False
+
+
+def _ensure_dispatch_claim(repo_root, *, lane_id: str, label: str, gpu: str) -> None:
+    import subprocess
+    import sys
+
+    if _active_claim_exists(repo_root, lane_id=lane_id, instance_job_id=label):
+        return
+    cmd = [
+        sys.executable,
+        "tools/claim_lane_dispatch.py",
+        "claim",
+        "--lane-id",
+        lane_id,
+        "--platform",
+        "modal",
+        "--instance-job-id",
+        label,
+        "--agent",
+        "codex:modal_train_lane",
+        "--predicted-eta-utc",
+        _compact_stamp(),
+        "--status",
+        "active_dispatching",
+        "--notes",
+        (
+            "modal_train_lane.py direct claim before GPU spawn; "
+            f"gpu={gpu}; score_claim=false; exact eval disabled"
+        ),
+    ]
+    proc = subprocess.run(cmd, cwd=repo_root, text=True, capture_output=True, check=False)
+    if proc.stdout:
+        print(proc.stdout, end="")
+    if proc.returncode != 0:
+        if proc.stderr:
+            print(proc.stderr, file=sys.stderr, end="")
+        raise SystemExit(
+            f"FATAL: lane claim failed for lane_id={lane_id} label={label}; "
+            "aborting before Modal GPU spawn."
+        )
 
 
 @app.local_entrypoint()
@@ -511,6 +702,7 @@ def main(
     gpu: str = "T4",
     timeout_hours: float = 10.0,
     env_overrides: str = "",
+    lane_id: str = "",
 ):
     """Dispatch a lane training run on Modal.
 
@@ -532,6 +724,7 @@ def main(
     if not (repo_root / lane_script).exists():
         print(f"FATAL: lane script not found: {lane_script}", file=sys.stderr)
         sys.exit(2)
+    resolved_lane_id = _infer_lane_id(lane_script, lane_id)
 
     overrides = {}
     if env_overrides:
@@ -559,6 +752,29 @@ def main(
     if max_seconds > 14 * 3600:
         max_seconds = 14 * 3600
     print(f"  per-lane timeout: {max_seconds}s ({timeout_hours:.1f}h)")
+    _ensure_dispatch_claim(
+        repo_root,
+        lane_id=resolved_lane_id,
+        label=label,
+        gpu=gpu,
+    )
+    claims_path = repo_root / ".omx/state/active_lane_dispatch_claims.md"
+    if not claims_path.is_file():
+        print(
+            f"FATAL: dispatch claims ledger missing: {claims_path}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    claim_ledger_bytes = claims_path.read_bytes()
+    mounted_code_git_head = _git_value(repo_root, "rev-parse", "HEAD")
+    mounted_code_git_branch = _git_value(repo_root, "branch", "--show-current")
+    if mounted_code_git_head == "unknown" or mounted_code_git_branch == "unknown":
+        print(
+            "FATAL: unable to resolve mounted git custody for Modal training "
+            f"(head={mounted_code_git_head!r}, branch={mounted_code_git_branch!r})",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     # CRITICAL: use .spawn() not .remote() for detached runs.
     # `.remote()` is cancelled when the local CLI disconnects, even with
@@ -570,7 +786,15 @@ def main(
     # .spawn() returns a FunctionCall handle. We save it so the recovery script
     # can poll later through Modal's Python API. Modal 1.4 no longer exposes a
     # direct FunctionCall result CLI for this path.
-    fn_call = fn.spawn(lane_script, label, overrides, max_seconds)
+    fn_call = fn.spawn(
+        lane_script,
+        label,
+        overrides,
+        claim_ledger_bytes,
+        mounted_code_git_head,
+        mounted_code_git_branch,
+        max_seconds,
+    )
     call_id = fn_call.object_id
 
     print(f"\n✓ DISPATCHED via .spawn() — call_id={call_id}")
@@ -593,6 +817,7 @@ def main(
     (sentinel_dir / "modal_call_id.txt").write_text(call_id + "\n")
     (sentinel_dir / "modal_metadata.json").write_text(json.dumps({
         "lane_script": lane_script,
+        "lane_id": resolved_lane_id,
         "label": label,
         "gpu": gpu,
         "max_seconds": max_seconds,

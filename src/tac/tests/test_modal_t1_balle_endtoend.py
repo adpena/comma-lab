@@ -241,6 +241,58 @@ def test_modal_t1_spawn_exception_path_does_not_terminal_close_claim() -> None:
     assert "Lane claim left open" in main_src
 
 
+def test_modal_t1_recover_resolves_legacy_lane_modal_metadata_dir(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "RESULT_ROOT", tmp_path)
+    label = "unit-t1-recover"
+    legacy_dir = tmp_path / f"lane_{label}_modal"
+    legacy_dir.mkdir(parents=True)
+    (legacy_dir / "modal_metadata.json").write_text(
+        json.dumps({"label": label, "call_id": "fc-unit"})
+    )
+
+    assert module._recover_result_dir(label) == legacy_dir
+
+
+def test_modal_t1_recover_accepts_explicit_legacy_dir_label(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "RESULT_ROOT", tmp_path)
+    legacy_label = "lane_unit-t1-recover_modal"
+    legacy_dir = tmp_path / legacy_label
+    legacy_dir.mkdir(parents=True)
+    (legacy_dir / "modal_metadata.json").write_text(
+        json.dumps({"label": "unit-t1-recover", "call_id": "fc-unit"})
+    )
+
+    assert module._recover_result_dir(legacy_label) == legacy_dir
+
+
+def test_modal_t1_recover_metadata_gate_refuses_scpp_metadata() -> None:
+    module = _load_module()
+
+    assert module._metadata_is_t1_recoverable(
+        {"lane_id": module.LANE_ID, "call_id": "fc-unit"}
+    )
+    assert module._metadata_is_t1_recoverable(
+        {
+            "lane_script": "scripts/remote_lane_t1_balle_endtoend.sh",
+            "call_id": "fc-unit",
+        }
+    )
+    assert not module._metadata_is_t1_recoverable(
+        {
+            "lane_script": "scripts/remote_lane_scpp_stage1.sh",
+            "call_id": "fc-unit",
+        }
+    )
+
+
 def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env() -> None:
     text = _source()
     remote_src = text[text.index("def run_t1_balle_modal("):text.index("def _write_dispatch_metadata")]

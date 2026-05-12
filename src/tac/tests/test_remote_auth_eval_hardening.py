@@ -1319,7 +1319,7 @@ def test_modal_recover_labels_non_cuda_scores_advisory() -> None:
     assert "--device cuda" in text
 
 
-def test_modal_recover_labels_cuda_scores_as_candidate() -> None:
+def test_modal_recover_labels_cuda_scores_as_unadjudicated_non_promotable() -> None:
     path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
     spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)
     assert spec and spec.loader
@@ -1337,9 +1337,10 @@ def test_modal_recover_labels_cuda_scores_as_candidate() -> None:
 
     assert lines is not None
     text = "\n".join(lines)
-    assert "AUTH SCORE [contest-CUDA candidate]" in text
+    assert "CUDA AUTH SCORE" in text
+    assert "UNADJUDICATED, NON-PROMOTABLE" in text
+    assert "Adjudication required" in text
     assert "ADVISORY AUTH SCORE" not in text
-    assert "NON-PROMOTABLE" not in text
 
 
 def test_modal_recover_running_guidance_uses_supported_commands(capsys) -> None:

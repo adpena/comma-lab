@@ -389,6 +389,52 @@ def _result_dir(instance_job_id: str) -> Path:
     return RESULT_ROOT / _safe_label(instance_job_id)
 
 
+def _recover_result_dir(instance_job_id: str) -> Path:
+    """Return the result directory containing Modal recovery metadata.
+
+    New T1 dispatches write :func:`_result_dir` plus a
+    ``lane_<label>_modal`` compatibility symlink for generic Modal harvesters.
+    Historical/partner dispatches sometimes left only the compatibility
+    directory. Recovery must accept the label printed at dispatch time without
+    requiring an operator to know which convention produced it.
+    """
+
+    safe_id = _safe_label(instance_job_id)
+    candidates: list[Path] = []
+    if safe_id.startswith("lane_") and safe_id.endswith("_modal"):
+        candidates.append(RESULT_ROOT / safe_id)
+    candidates.extend(
+        [
+            _result_dir(safe_id),
+            RESULT_ROOT / f"lane_{safe_id}_modal",
+        ]
+    )
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            key = candidate.resolve()
+        except OSError:
+            key = candidate
+        if key in seen:
+            continue
+        seen.add(key)
+        if (candidate / "modal_metadata.json").is_file():
+            return candidate
+    return _result_dir(safe_id)
+
+
+def _metadata_is_t1_recoverable(metadata: dict[str, Any]) -> bool:
+    """Return whether ``metadata`` belongs to this T1 recovery tool."""
+
+    if metadata.get("lane_id") == LANE_ID:
+        return True
+    lane_script = metadata.get("lane_script")
+    return (
+        isinstance(lane_script, str)
+        and Path(lane_script).as_posix() == "scripts/remote_lane_t1_balle_endtoend.sh"
+    )
+
+
 def _estimated_cost(timeout_hours: float) -> float:
     return HOURLY_RATE_T4_USD * float(timeout_hours)
 
@@ -1544,12 +1590,20 @@ def _eval_data_terminal_claim_facts(eval_data: Any, metrics: dict[str, Any]) -> 
 
 def recover(label: str) -> int:
     instance_job_id = _safe_label(label)
-    out_dir = _result_dir(instance_job_id)
+    out_dir = _recover_result_dir(instance_job_id)
     metadata_path = out_dir / "modal_metadata.json"
     if not metadata_path.is_file():
         print(f"FATAL: missing {metadata_path}", file=sys.stderr)
         return 2
     metadata = json.loads(metadata_path.read_text())
+    if not isinstance(metadata, dict) or not _metadata_is_t1_recoverable(metadata):
+        print(
+            "FATAL: refusing T1 recovery for non-T1 Modal metadata at "
+            f"{metadata_path}; use the lane-specific or generic Modal recovery "
+            "tool instead.",
+            file=sys.stderr,
+        )
+        return 2
     call_id = metadata.get("call_id")
     if not isinstance(call_id, str) or not call_id:
         print(f"FATAL: {metadata_path} has no call_id", file=sys.stderr)
