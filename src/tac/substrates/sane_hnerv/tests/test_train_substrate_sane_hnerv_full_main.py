@@ -30,7 +30,6 @@ from pathlib import Path
 
 import pytest
 
-
 # Lazy import (importing the trainer triggers torch import via the smoke path,
 # which is fine but expensive — keep the import in a fixture so tests that only
 # need argparse don't pay the cost twice).
@@ -112,9 +111,8 @@ def test_argparse_help_runs(trainer_module):
     """``--help`` must print and exit 0 (no SystemExit traceback)."""
     parser = trainer_module._build_parser()
     buf = io.StringIO()
-    with redirect_stdout(buf):
-        with pytest.raises(SystemExit) as exc:
-            parser.parse_args(["--help"])
+    with redirect_stdout(buf), pytest.raises(SystemExit) as exc:
+        parser.parse_args(["--help"])
     assert exc.value.code == 0
     out = buf.getvalue()
     assert "--video-path" in out
@@ -185,6 +183,7 @@ def test_device_or_die_refuses_unknown_device(trainer_module):
 def test_pin_seeds_is_deterministic(trainer_module):
     """Calling _pin_seeds with the same seed produces same random draws."""
     import random as _r
+
     import torch
 
     trainer_module._pin_seeds(42)
@@ -364,7 +363,12 @@ def test_smoke_checkpoint_carries_config_and_state(trainer_module, tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_score_aware_loss_runs_on_dummy_scorers():
-    """Lagrangian computes a scalar on a tiny dummy-scorer setup."""
+    """Lagrangian computes a scalar on a tiny dummy-scorer setup.
+
+    The dummies expose the upstream contract: ``preprocess_input`` (5D→4D)
+    + ``forward`` (4D→logits/pose). Without ``preprocess_input``, the loss
+    would crash at the scorer's stem (WWW4 dispatch bug fixed 2026-05-12).
+    """
     import torch
     import torch.nn as nn
 
@@ -374,15 +378,39 @@ def test_score_aware_loss_runs_on_dummy_scorers():
     )
 
     class DummySeg(nn.Module):
-        def forward(self, x_bt: torch.Tensor) -> torch.Tensor:
-            # x: (B, 1, 3, H, W) -> (B, 5, h, w)
-            b, _t, c, h, w = x_bt.shape
-            return torch.zeros(b, 5, h // 4, w // 4, requires_grad=True) + x_bt.sum() * 0.0
+        """Mimics upstream SegNet: 5D in, slice last frame, return 4D logits."""
+
+        def preprocess_input(self, x_btchw: torch.Tensor) -> torch.Tensor:
+            # (B, T, C, H, W) -> (B, C, H, W) using last frame, per upstream
+            return x_btchw[:, -1, ...]
+
+        def forward(self, x_bchw: torch.Tensor) -> torch.Tensor:
+            # (B, C, H, W) -> (B, 5, h, w)
+            b, _c, h, w = x_bchw.shape
+            # Connect to the input so autograd has a path through the dummy
+            return (
+                torch.zeros(b, 5, h // 2, w // 2, dtype=x_bchw.dtype)
+                + x_bchw.mean()
+            )
 
     class DummyPose(nn.Module):
-        def forward(self, x_bc: torch.Tensor) -> torch.Tensor:
-            # x: (B, 6, H, W) -> (B, 12)
-            return x_bc.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
+        """Mimics upstream PoseNet: 5D in, return 4D 12-channel after yuv6."""
+
+        def preprocess_input(self, x_btchw: torch.Tensor) -> torch.Tensor:
+            # (B, T, C, H, W) -> (B, T*6, H/2, W/2). Tiny analogue of upstream
+            # rgb_to_yuv6 4:2:0 chroma subsample (mean-pool to halve spatial),
+            # 6 channels per frame.
+            b, t, _c, h, w = x_btchw.shape
+            flat = x_btchw.reshape(b * t, 3, h, w).mean(dim=1, keepdim=True)
+            # 6 channels per frame: repeat the mean across 6 (pretend yuv6)
+            flat6 = flat.expand(-1, 6, -1, -1)
+            # 4:2:0: avg_pool kernel=2
+            flat6_sub = flat6.reshape(b * t, 6, h // 2, 2, w // 2, 2).mean(dim=(3, 5))
+            return flat6_sub.reshape(b, t * 6, h // 2, w // 2)
+
+        def forward(self, x_bchw: torch.Tensor) -> torch.Tensor:
+            # (B, 12, H, W) -> (B, 12)
+            return x_bchw.flatten(2).mean(dim=2)
 
     weights = ScoreAwareLossWeights(
         alpha_rate=25.0, beta_seg=100.0, gamma_pose=1.0,
@@ -419,6 +447,10 @@ def test_score_aware_loss_refuses_eval_roundtrip_false():
     )
 
     class _Dummy(nn.Module):
+        def preprocess_input(self, x):
+            # (B, T, C, H, W) -> (B, C, H, W) — slice last frame like SegNet
+            return x[:, -1, ...]
+
         def forward(self, x):
             return x.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
 
@@ -447,6 +479,10 @@ def test_score_aware_loss_refuses_negative_noise_std():
     )
 
     class _Dummy(nn.Module):
+        def preprocess_input(self, x):
+            # (B, T, C, H, W) -> (B, C, H, W) — slice last frame like SegNet
+            return x[:, -1, ...]
+
         def forward(self, x):
             return x.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
 
