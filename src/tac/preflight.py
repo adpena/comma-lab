@@ -33680,10 +33680,18 @@ def check_lane_pre_registered_before_work_starts(
       feedback_unified_lagrangian_action_principle_GR_style_20260509.md
       CLAUDE.md "Lane maturity registry" lifecycle discipline section
     """
+    repo_root_provided = repo_root is not None
     root = Path(repo_root or REPO_ROOT)
     registry_path = root / ".omx" / "state" / "lane_registry.json"
     if not registry_path.is_file():
         msg = f"lane registry not found: {registry_path}"
+        if not repo_root_provided and os.environ.get("GITHUB_ACTIONS") == "true":
+            if verbose:
+                print(
+                    "  [lane-pre-registered] SKIP: local lane registry state "
+                    f"unavailable on GitHub Actions ({registry_path})"
+                )
+            return []
         if verbose:
             print(f"  [lane-pre-registered] WARN: {msg}")
         if strict:

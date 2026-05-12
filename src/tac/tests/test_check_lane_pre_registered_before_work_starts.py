@@ -45,6 +45,7 @@ from pathlib import Path
 
 import pytest
 
+import tac.preflight as preflight
 from tac.preflight import (
     PreflightError,
     _LANE_ID_REFERENCE_BLOCKLIST,
@@ -399,6 +400,23 @@ def test_missing_registry_strict_raises(tmp_path: Path) -> None:
         check_lane_pre_registered_before_work_starts(
             repo_root=tmp_path, n_commits=10, strict=True, verbose=False,
         )
+
+
+def test_auto_missing_registry_skips_on_github_actions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A fresh GitHub checkout has no ignored local lane-registry state."""
+    (tmp_path / "src" / "tac").mkdir(parents=True, exist_ok=True)
+    _git(tmp_path, "init", "--initial-branch=main")
+    (tmp_path / "src" / "tac" / "noop.py").write_text("# noop\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "initial")
+    monkeypatch.setattr(preflight, "REPO_ROOT", tmp_path)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+
+    assert preflight.check_lane_pre_registered_before_work_starts(
+        n_commits=10, strict=True, verbose=False,
+    ) == []
 
 
 # ── Test 12: aliases on a registered lane are accepted ──────────────────
