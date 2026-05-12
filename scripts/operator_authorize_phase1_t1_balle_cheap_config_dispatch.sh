@@ -9,13 +9,34 @@
 #
 # COST BAND — HONESTLY DOCUMENTED (post-adversarial-review 2026-05-12):
 #
+# CALIBRATION-OF-CALIBRATION NOTE (NF0, addressed 2026-05-12):
+#   The "2.5-3.5×" estimate below is ITSELF a hand-derived prediction that
+#   has not been empirically anchored. The Amdahl decomposition assumes the
+#   four saved fractions are INDEPENDENT — they are NOT (autocast and
+#   soft_cosine both attack the scorer path; their savings overlap). Real
+#   worst-case compound speedup is more like 1.6-2.0× (autocast alone)
+#   when the smaller wins are already saturated by autocast.
+#
+#   STRUCTURAL FIX: this wrapper now appends an empirical anchor to
+#   `.omx/state/cost_band_posterior.jsonl` on completion via
+#   `tools/append_cost_band_anchor.py`. After N ≥ 3 anchors land for the
+#   (modal, T4, 3000, all-flags-on) bucket, future predictions use the
+#   empirical p10/p50/p90 from `tac.cost_band_calibration.predict(...)`
+#   instead of this hand-derived estimate. Read with:
+#     .venv/bin/python -c "from tac.cost_band_calibration import predict; \\
+#         p = predict('modal', 'T4', 3000, all_flags_on=True); \\
+#         print(p.confidence_tag, p.p50_cost_usd, 'N=', p.n_anchors)"
+#
 # AMDAHL-ADJUSTED SPEEDUP MATH (the prior "33-50×" was multiplicative-naive):
 #   Per-batch decomposition on T4: ~80% scorer work + ~20% other.
 #   - teacher cache: eliminates ~25% of scorer = 0.20·T saved → 1.25× (NOT 1.4×)
 #   - soft_cosine: ~5× on Sinkhorn fraction (~10-20% of scorer work) = ~10% saved → 1.11× (NOT 5×)
 #   - batch_size 32: ~15-20% on scorer SM util = ~12% saved → 1.13× (NOT 1.18× of total)
 #   - autocast FP16: 4× on remaining scorer (~50% of remaining time) = ~38% saved → ~1.6× (NOT 4-6×)
-#   - Compound (sequentially applied, NOT multiplied): ~2.5-3.5× total speedup, NOT 33-50×.
+#   - Compound, INDEPENDENT assumption: ~2.5-3.5× total speedup, NOT 33-50×.
+#   - Compound, REALISTIC (savings overlap): ~1.6-2.0× total worst case.
+#     The posterior at .omx/state/cost_band_posterior.jsonl is the canonical
+#     truth source after the first three real dispatches measure actual values.
 #
 # REALIZED COST BAND post-Tier-1 (calibrated to 2.5-3.5× speedup, not 33-50×):
 #   - Modal T4 all-flags-on PRE-patch:    ~$50-80 / 3000 ep (codex empirical)

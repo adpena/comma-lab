@@ -1,0 +1,293 @@
+"""Tests for `tac.cost_band_calibration` (the calibration-of-calibration posterior).
+
+Covers:
+- Append + read roundtrip
+- p10/p50/p90 percentile correctness
+- Confidence-tag transitions (hand_calibrated_fallback → weak_posterior → empirical_posterior)
+- fcntl-locked concurrent appends preserve every record
+- Epochs-bucket matching
+- Hand-calibrated fallback used when N=0
+- JSON conformance (no NaN/Infinity emission)
+"""
+from __future__ import annotations
+
+import json
+import multiprocessing
+import re
+from pathlib import Path
+
+import pytest
+
+from tac.cost_band_calibration import (
+    SCHEMA_VERSION,
+    CostBandAnchor,
+    CostBandPrediction,
+    _epochs_bucket,
+    _percentile,
+    append_anchor,
+    load_anchors,
+    predict,
+    summary_by_bucket,
+)
+
+
+# -- Anchor roundtrip --------------------------------------------------------
+
+def _make_anchor(
+    *,
+    label: str = "test",
+    platform: str = "modal",
+    gpu: str = "T4",
+    epochs: int = 3000,
+    batch: int = 32,
+    flags: bool = True,
+    wallclock_sec: float = 5400.0,
+    cost: float = 8.0,
+) -> CostBandAnchor:
+    return CostBandAnchor(
+        logged_at_utc="2026-05-12T18:00:00+00:00",
+        dispatch_label=label,
+        trainer="experiments/train_x.py",
+        platform=platform,
+        gpu=gpu,
+        epochs=epochs,
+        batch_size=batch,
+        all_flags_on=flags,
+        actual_wall_clock_sec=wallclock_sec,
+        actual_cost_usd=cost,
+    )
+
+
+def test_append_and_load_roundtrip(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    append_anchor(_make_anchor(label="A", cost=8.0), posterior_path=pp, lock_path=lp)
+    append_anchor(_make_anchor(label="B", cost=10.0), posterior_path=pp, lock_path=lp)
+    out = load_anchors(pp)
+    assert [a.dispatch_label for a in out] == ["A", "B"]
+    assert [a.actual_cost_usd for a in out] == [8.0, 10.0]
+
+
+def test_load_handles_missing_file(tmp_path: Path) -> None:
+    pp = tmp_path / "nonexistent.jsonl"
+    assert load_anchors(pp) == []
+
+
+def test_load_skips_malformed_lines(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    pp.parent.mkdir(parents=True, exist_ok=True)
+    pp.write_text(
+        json.dumps({"schema": SCHEMA_VERSION, "logged_at_utc": "2026-05-12T00:00:00+00:00",
+                    "dispatch_label": "A", "trainer": "x", "platform": "modal",
+                    "gpu": "T4", "epochs": 3000, "batch_size": 32,
+                    "all_flags_on": True, "actual_wall_clock_sec": 100.0,
+                    "actual_cost_usd": 1.0}) + "\n"
+        + "not valid json\n"
+        + json.dumps({"schema": "wrong_schema_v999"}) + "\n"
+    )
+    out = load_anchors(pp)
+    assert len(out) == 1 and out[0].dispatch_label == "A"
+
+
+# -- Percentile + epochs-bucket ----------------------------------------------
+
+def test_percentile_basic() -> None:
+    vals = [1.0, 2.0, 3.0, 4.0, 5.0]
+    assert _percentile(vals, 0) == 1.0
+    assert _percentile(vals, 50) == 3.0
+    assert _percentile(vals, 100) == 5.0
+
+
+def test_percentile_single_value() -> None:
+    assert _percentile([7.5], 50) == 7.5
+    assert _percentile([7.5], 90) == 7.5
+
+
+def test_percentile_empty() -> None:
+    assert _percentile([], 50) == 0.0
+
+
+def test_epochs_bucket_boundaries() -> None:
+    assert _epochs_bucket(1) == 50
+    assert _epochs_bucket(50) == 50
+    assert _epochs_bucket(150) == 100
+    assert _epochs_bucket(600) == 500
+    assert _epochs_bucket(3000) == 3000
+    assert _epochs_bucket(3500) == 3000  # 3500 ≤ 4500 → bucket 3000
+    assert _epochs_bucket(5000) == 6000  # 5000 > 4500 → next 3k bucket
+    assert _epochs_bucket(10_000) == 12_000
+
+
+# -- predict() confidence-tag transitions ------------------------------------
+
+def test_predict_no_anchors_uses_hand_calibrated_fallback(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    p = predict("modal", "T4", 3000, all_flags_on=True, posterior_path=pp)
+    assert p.confidence_tag == "hand_calibrated_fallback"
+    assert p.n_anchors == 0
+    assert p.p50_cost_usd > 0  # hand-calibrated stub for (modal, T4, 3000, True) exists
+
+
+def test_predict_no_anchors_no_stub_returns_zero_band(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    p = predict("kaggle", "K80", 99999, all_flags_on=False, posterior_path=pp)
+    assert p.confidence_tag == "hand_calibrated_fallback"
+    assert p.p50_cost_usd == 0.0
+    assert "no anchors AND no hand-calibrated stub" in p.fallback_rationale
+
+
+def test_predict_weak_posterior_with_one_anchor(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    append_anchor(_make_anchor(label="A", cost=6.0), posterior_path=pp, lock_path=lp)
+    p = predict("modal", "T4", 3000, all_flags_on=True, posterior_path=pp)
+    assert p.confidence_tag == "weak_posterior"
+    assert p.n_anchors == 1
+    # Single-value percentile = that value; widened by 1.5 on either side.
+    assert p.p50_cost_usd == 6.0
+    assert p.p10_cost_usd < p.p50_cost_usd
+    assert p.p90_cost_usd > p.p50_cost_usd
+
+
+def test_predict_empirical_posterior_with_three_anchors(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    for i, c in enumerate([4.0, 6.0, 8.0]):
+        append_anchor(_make_anchor(label=f"A{i}", cost=c), posterior_path=pp, lock_path=lp)
+    p = predict("modal", "T4", 3000, all_flags_on=True, posterior_path=pp)
+    assert p.confidence_tag == "empirical_posterior"
+    assert p.n_anchors == 3
+    assert p.p50_cost_usd == 6.0
+
+
+def test_predict_matches_only_same_bucket(tmp_path: Path) -> None:
+    """Anchors with different (platform, gpu, epochs_bucket, flags) are ignored."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    # 3 anchors at T4 + 2 anchors at A100 with different costs.
+    for i in range(3):
+        append_anchor(
+            _make_anchor(label=f"T4{i}", gpu="T4", cost=5.0),
+            posterior_path=pp, lock_path=lp,
+        )
+    for i in range(2):
+        append_anchor(
+            _make_anchor(label=f"A100{i}", gpu="A100", cost=20.0),
+            posterior_path=pp, lock_path=lp,
+        )
+    p_t4 = predict("modal", "T4", 3000, all_flags_on=True, posterior_path=pp)
+    p_a100 = predict("modal", "A100", 3000, all_flags_on=True, posterior_path=pp)
+    assert p_t4.n_anchors == 3 and p_t4.confidence_tag == "empirical_posterior"
+    assert p_t4.p50_cost_usd == 5.0
+    assert p_a100.n_anchors == 2 and p_a100.confidence_tag == "weak_posterior"
+    assert p_a100.p50_cost_usd == 20.0
+
+
+def test_predict_flags_off_separate_bucket(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    for i in range(3):
+        append_anchor(_make_anchor(label=f"on{i}", flags=True, cost=8.0),
+                       posterior_path=pp, lock_path=lp)
+    p_on = predict("modal", "T4", 3000, all_flags_on=True, posterior_path=pp)
+    p_off = predict("modal", "T4", 3000, all_flags_on=False, posterior_path=pp)
+    assert p_on.n_anchors == 3
+    assert p_off.n_anchors == 0
+    assert p_off.confidence_tag == "hand_calibrated_fallback"
+
+
+# -- fcntl-locked concurrent appends -----------------------------------------
+
+def _spawn_appender(args: tuple[str, str, str, int, float]) -> None:
+    pp_str, lp_str, label, epochs, cost = args
+    from tac.cost_band_calibration import (
+        CostBandAnchor as _CBA, append_anchor as _ap,
+    )
+    anchor = _CBA(
+        logged_at_utc="2026-05-12T19:00:00+00:00",
+        dispatch_label=label,
+        trainer="experiments/train_x.py",
+        platform="modal", gpu="T4",
+        epochs=epochs, batch_size=32, all_flags_on=True,
+        actual_wall_clock_sec=3600.0, actual_cost_usd=cost,
+    )
+    _ap(anchor, posterior_path=Path(pp_str), lock_path=Path(lp_str))
+
+
+def test_concurrent_appenders_preserve_all_records(tmp_path: Path) -> None:
+    """4-process spawn pool simultaneously appends 5 records each;
+    fcntl LOCK_EX serializes; all 20 records survive."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    ctx = multiprocessing.get_context("spawn")
+    args = [
+        (str(pp), str(lp), f"P{p}-A{i}", 3000, 5.0 + i * 0.1)
+        for p in range(4) for i in range(5)
+    ]
+    with ctx.Pool(4) as pool:
+        pool.map(_spawn_appender, args)
+    out = load_anchors(pp)
+    assert len(out) == 20
+    assert len({a.dispatch_label for a in out}) == 20
+
+
+# -- summary_by_bucket --
+
+def test_summary_by_bucket_aggregates(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    for c in [5.0, 7.0, 9.0]:
+        append_anchor(_make_anchor(cost=c), posterior_path=pp, lock_path=lp)
+    out = summary_by_bucket(pp)
+    assert len(out) == 1
+    row = out[0]
+    assert row["platform"] == "modal" and row["gpu"] == "T4"
+    assert row["n_anchors"] == 3
+    assert row["p50_cost_usd"] == 7.0
+    assert row["min_cost_usd"] == 5.0
+    assert row["max_cost_usd"] == 9.0
+
+
+# -- JSON conformance --
+
+def test_appended_lines_are_rfc8259_conformant(tmp_path: Path) -> None:
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    append_anchor(_make_anchor(cost=8.0), posterior_path=pp, lock_path=lp)
+    text = pp.read_text(encoding="utf-8")
+    # No Infinity / NaN tokens per RFC 8259.
+    assert "Infinity" not in text
+    assert "NaN" not in text
+    # And each line is valid JSON.
+    for line in text.splitlines():
+        json.loads(line)
+
+
+# -- Sister Catalog #128 atomicity invariant --
+
+def test_lock_path_distinct_from_posterior_path(tmp_path: Path) -> None:
+    """Lock file is a sibling, NOT the posterior itself. Required so a
+    reader of the posterior doesn't take a lock while an appender holds it."""
+    pp = tmp_path / "p.jsonl"
+    lp = tmp_path / "p.lock"
+    append_anchor(_make_anchor(), posterior_path=pp, lock_path=lp)
+    assert pp.exists() and lp.exists()
+    assert pp != lp
+
+
+# -- CostBandPrediction.as_dict shape --
+
+def test_prediction_as_dict_round_trip() -> None:
+    p = CostBandPrediction(
+        platform="modal", gpu="T4", epochs=3000, all_flags_on=True,
+        n_anchors=0, p10_cost_usd=1.0, p50_cost_usd=2.0, p90_cost_usd=3.0,
+        p10_wall_clock_hr=0.5, p50_wall_clock_hr=1.0, p90_wall_clock_hr=2.0,
+        confidence_tag="hand_calibrated_fallback", freshness_seconds=None,
+        fallback_rationale="test",
+    )
+    d = p.as_dict()
+    assert d["platform"] == "modal"
+    assert d["confidence_tag"] == "hand_calibrated_fallback"
+    # No NaN/Infinity creeping in.
+    s = json.dumps(d, allow_nan=False)
+    assert "Infinity" not in s and "NaN" not in s
