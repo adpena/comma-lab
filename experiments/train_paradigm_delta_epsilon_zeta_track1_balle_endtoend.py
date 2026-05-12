@@ -1636,6 +1636,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--enable-autocast-fp16",
+        action="store_true",
+        default=False,
+        help=(
+            "Wrap heavy forward block (balle + decoder + scorer surrogates) in "
+            "torch.autocast('cuda', dtype=torch.float16) and use GradScaler for "
+            "backward. T4 FP16 throughput is 8× FP32 (65 TFLOPS vs 8 TFLOPS); "
+            "A100 FP16 throughput is 5× FP32. Losses are explicitly cast back "
+            "to FP32 before the Lagrangian step to avoid dual-update fp16 "
+            "overflow. Per engineering audit 2026-05-12 'exploit hardware'. "
+            "OFF by default for backward-compat; enable for new dispatches."
+        ),
+    )
+    parser.add_argument(
         "--pixel-l1-anchor-weight",
         type=float,
         default=0.0,
@@ -2307,6 +2321,19 @@ def main() -> int:
     t22_loss_running: float = 0.0
     t20_t22_n_batches: int = 0
 
+    # Autocast FP16 / GradScaler — per engineering audit 2026-05-12 "exploit
+    # hardware". T4 has 8× FP16 throughput vs FP32; A100 has 5×. Heavy forward
+    # block (balle + decoder + scorer surrogates) runs in autocast; losses
+    # cast to FP32 before Lagrangian dual update to avoid fp16 overflow.
+    autocast_enabled = bool(getattr(args, 'enable_autocast_fp16', False)) and device.type == 'cuda'
+    scaler = torch.cuda.amp.GradScaler(enabled=autocast_enabled)
+    aux_scaler = torch.cuda.amp.GradScaler(enabled=autocast_enabled) if optim_aux is not None else None
+    if autocast_enabled:
+        print(
+            f"[t1] autocast FP16 enabled: forward block wraps balle+decoder+scorers; "
+            f"losses cast to FP32 for Lagrangian dual; GradScaler ON"
+        )
+
     for epoch in range(epochs):
         decoder.train()
         balle.train()
@@ -2319,46 +2346,55 @@ def main() -> int:
             y = latents[idx]
             tgt = target_pixels[idx]
 
-            balle_out = balle(y)
-            decoded = decoder(balle_out["y_hat"])
-            if args.enable_scorer_domain_loss:
-                if posenet is None or segnet is None:  # pragma: no cover - defensive
-                    raise RuntimeError("scorer-domain loss requested without loaded scorers")
-                decoded_rt = eval_roundtrip_decoded(
-                    decoded,
-                    noise_std=args.noise_std,
-                    enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
-                )
-                scorer_distortion, pose_loss, seg_loss = scorer_loss_terms_btchw(
-                    decoded_rt,
-                    tgt,
-                    posenet,
-                    segnet,
-                    segmentation_surrogate=args.segmentation_surrogate,
-                    segmentation_temperature=args.segmentation_temperature,
-                    fisher_rao_eps=args.fisher_rao_eps,
-                    sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
-                )
-                if args.pixel_l1_anchor_weight > 0:
-                    pixel_anchor = F.l1_loss(decoded_rt, tgt)
-                    distortion = scorer_distortion + args.pixel_l1_anchor_weight * pixel_anchor
+            with torch.autocast('cuda', dtype=torch.float16, enabled=autocast_enabled):
+                balle_out = balle(y)
+                decoded = decoder(balle_out["y_hat"])
+                if args.enable_scorer_domain_loss:
+                    if posenet is None or segnet is None:  # pragma: no cover - defensive
+                        raise RuntimeError("scorer-domain loss requested without loaded scorers")
+                    decoded_rt = eval_roundtrip_decoded(
+                        decoded,
+                        noise_std=args.noise_std,
+                        enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
+                    )
+                    scorer_distortion, pose_loss, seg_loss = scorer_loss_terms_btchw(
+                        decoded_rt,
+                        tgt,
+                        posenet,
+                        segnet,
+                        segmentation_surrogate=args.segmentation_surrogate,
+                        segmentation_temperature=args.segmentation_temperature,
+                        fisher_rao_eps=args.fisher_rao_eps,
+                        sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
+                    )
+                    if args.pixel_l1_anchor_weight > 0:
+                        pixel_anchor = F.l1_loss(decoded_rt, tgt)
+                        distortion = scorer_distortion + args.pixel_l1_anchor_weight * pixel_anchor
+                    else:
+                        distortion = scorer_distortion
                 else:
-                    distortion = scorer_distortion
-            else:
-                distortion = eval_roundtrip_pixel_l1(
-                    decoded,
-                    tgt,
-                    noise_std=args.noise_std,
-                    enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
-                )
-                # Scaffold/debug mode only. Real score-lowering non-smoke runs
-                # must use --enable-scorer-domain-loss so these ADMM residuals
-                # are actual PoseNet/SegNet tensors, not constants.
-                seg_loss = torch.tensor(args.seg_target, device=device)
-                pose_loss = torch.tensor(args.pose_target, device=device)
+                    distortion = eval_roundtrip_pixel_l1(
+                        decoded,
+                        tgt,
+                        noise_std=args.noise_std,
+                        enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
+                    )
+                    # Scaffold/debug mode only. Real score-lowering non-smoke runs
+                    # must use --enable-scorer-domain-loss so these ADMM residuals
+                    # are actual PoseNet/SegNet tensors, not constants.
+                    seg_loss = torch.tensor(args.seg_target, device=device)
+                    pose_loss = torch.tensor(args.pose_target, device=device)
+            # Cast losses to FP32 BEFORE Lagrangian dual update — fp16 overflow
+            # in coord.step() ρ-rescaling causes non-finite augmented_lagrangian.
+            distortion = distortion.float() if autocast_enabled else distortion
+            seg_loss = seg_loss.float() if autocast_enabled else seg_loss
+            pose_loss = pose_loss.float() if autocast_enabled else pose_loss
+            rate_bits = balle_out["rate_total_bits"]
+            if autocast_enabled and hasattr(rate_bits, 'float'):
+                rate_bits = rate_bits.float()
             res = coord.step(
                 distortion=distortion,
-                rate_bits=balle_out["rate_total_bits"],
+                rate_bits=rate_bits,
                 seg_loss=seg_loss,
                 pose_loss=pose_loss,
             )
@@ -2448,29 +2484,59 @@ def main() -> int:
             t20_loss_running += t20_loss_value
             t22_loss_running += t22_loss_value
             optim_main.zero_grad()
-            total_loss.backward()
-            if args.grad_clip_norm > 0:
-                if args.enable_scorer_domain_loss and score_domain_gradcheck is None:
+            # Backward + step with GradScaler when autocast enabled. GradScaler
+            # handles fp16 dynamic loss scaling to prevent gradient underflow.
+            if autocast_enabled:
+                scaler.scale(total_loss).backward()
+                if args.grad_clip_norm > 0:
+                    scaler.unscale_(optim_main)
+                    if args.enable_scorer_domain_loss and score_domain_gradcheck is None:
+                        score_domain_gradcheck = assert_score_domain_gradient_reachability(
+                            decoder_params=decoder_trainable_params,
+                            balle_main_params=balle_main_trainable_params,
+                        )
+                    torch.nn.utils.clip_grad_norm_(
+                        [p for p in main_params if p.requires_grad],
+                        max_norm=float(args.grad_clip_norm),
+                    )
+                elif args.enable_scorer_domain_loss and score_domain_gradcheck is None:
                     score_domain_gradcheck = assert_score_domain_gradient_reachability(
                         decoder_params=decoder_trainable_params,
                         balle_main_params=balle_main_trainable_params,
                     )
-                torch.nn.utils.clip_grad_norm_(
-                    [p for p in main_params if p.requires_grad],
-                    max_norm=float(args.grad_clip_norm),
-                )
-            elif args.enable_scorer_domain_loss and score_domain_gradcheck is None:
-                score_domain_gradcheck = assert_score_domain_gradient_reachability(
-                    decoder_params=decoder_trainable_params,
-                    balle_main_params=balle_main_trainable_params,
-                )
-            optim_main.step()
+                scaler.step(optim_main)
+                scaler.update()
+            else:
+                total_loss.backward()
+                if args.grad_clip_norm > 0:
+                    if args.enable_scorer_domain_loss and score_domain_gradcheck is None:
+                        score_domain_gradcheck = assert_score_domain_gradient_reachability(
+                            decoder_params=decoder_trainable_params,
+                            balle_main_params=balle_main_trainable_params,
+                        )
+                    torch.nn.utils.clip_grad_norm_(
+                        [p for p in main_params if p.requires_grad],
+                        max_norm=float(args.grad_clip_norm),
+                    )
+                elif args.enable_scorer_domain_loss and score_domain_gradcheck is None:
+                    score_domain_gradcheck = assert_score_domain_gradient_reachability(
+                        decoder_params=decoder_trainable_params,
+                        balle_main_params=balle_main_trainable_params,
+                    )
+                optim_main.step()
 
             if optim_aux is not None:
                 optim_aux.zero_grad()
-                aux = balle.aux_loss()
-                aux.backward()
-                optim_aux.step()
+                if autocast_enabled:
+                    with torch.autocast('cuda', dtype=torch.float16, enabled=True):
+                        aux = balle.aux_loss()
+                    aux_scaler.scale(aux).backward()
+                    aux_scaler.step(optim_aux)
+                    aux_scaler.update()
+                else:
+                    aux = balle.aux_loss()
+                    aux.backward()
+                    optim_aux.step()
 
             ema_decoder.update(decoder)
             ema_balle.update(balle)
