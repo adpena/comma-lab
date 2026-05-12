@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import gc
 import json
-import math
 import os
 import sys
 import time
@@ -120,7 +119,7 @@ class LBFGSConfig:
 
 def _load_scorers(device: str) -> tuple[nn.Module, nn.Module]:
     if WEIGHTS_DIR is None:
-        raise FileNotFoundError(f"Scorer weights not found")
+        raise FileNotFoundError("Scorer weights not found")
     from tac.scorer import load_scorers
     return load_scorers(
         WEIGHTS_DIR / "posenet.safetensors",
@@ -132,7 +131,7 @@ def _load_scorers(device: str) -> tuple[nn.Module, nn.Module]:
 
 def _load_gt_frames(n_frames: int, target_h: int = 384, target_w: int = 512) -> list[torch.Tensor]:
     if GT_VIDEO is None:
-        raise FileNotFoundError(f"GT video not found")
+        raise FileNotFoundError("GT video not found")
     from tac.data import decode_video
     frames = decode_video(str(GT_VIDEO), target_h=target_h, target_w=target_w)
     return frames[:n_frames]
@@ -255,7 +254,7 @@ def run_lbfgs_refinement(cfg: LBFGSConfig) -> dict[str, Any]:
     t0 = time.time()
 
     # --- Load ---
-    print(f"\n[1/4] Loading frames and scorers...")
+    print("\n[1/4] Loading frames and scorers...")
     gt_frames_hwc = _load_gt_frames(cfg.n_frames, cfg.target_h, cfg.target_w)
     gt_chw = torch.stack([f.permute(2, 0, 1).float() for f in gt_frames_hwc]).to(device)
     posenet, segnet = _load_scorers(device)
@@ -269,7 +268,7 @@ def run_lbfgs_refinement(cfg: LBFGSConfig) -> dict[str, Any]:
         input_chw = input_data["frames_chw"].to(device)
 
     # --- Score BEFORE refinement ---
-    print(f"\n[2/4] Scoring input frames (before L-BFGS)...")
+    print("\n[2/4] Scoring input frames (before L-BFGS)...")
     before_scores = _score_all_pairs(input_chw, gt_chw, posenet, segnet)
     est_rate = 2000 / (cfg.n_frames * cfg.target_h * cfg.target_w * 1.5)
     from tac.scorer import comma_score
@@ -304,7 +303,7 @@ def run_lbfgs_refinement(cfg: LBFGSConfig) -> dict[str, Any]:
         np.random.shuffle(all_pairs)
         pair_indices = all_pairs[:cfg.pairs_per_step]
 
-        def closure():
+        def closure(lbfgs=lbfgs, delta=delta, pair_indices=pair_indices):
             lbfgs.zero_grad()
             current = (original + delta).clamp(0.0, 255.0)
             loss = _compute_scorer_loss(
@@ -330,7 +329,7 @@ def run_lbfgs_refinement(cfg: LBFGSConfig) -> dict[str, Any]:
         print(f"  step {step}: loss={record['loss']:.6f} delta={record['delta_mean']:.4f} ({step_elapsed:.1f}s)")
 
     # --- Score AFTER refinement ---
-    print(f"\n[4/4] Scoring refined frames (after L-BFGS)...")
+    print("\n[4/4] Scoring refined frames (after L-BFGS)...")
     with torch.no_grad():
         refined = (original + delta).clamp(0.0, 255.0)
 
@@ -368,7 +367,7 @@ def run_lbfgs_refinement(cfg: LBFGSConfig) -> dict[str, Any]:
         results["verdict"] = "KILLED_NO_IMPROVEMENT"
         verdict = f"KILLED: No improvement ({improvement_pct:.1f}%)."
 
-    print(f"\n  --- L-BFGS VERDICT ---")
+    print("\n  --- L-BFGS VERDICT ---")
     print(f"  Before: {before_score:.4f}")
     print(f"  After:  {after_score:.4f}")
     print(f"  Improvement: {improvement_pct:.1f}%")

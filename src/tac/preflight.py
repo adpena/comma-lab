@@ -813,7 +813,12 @@ class _ParallelPreflightRunner:
 def _preflight_parallel_enabled() -> bool:
     """Return true when independent preflight scanners should run in parallel."""
 
-    value = os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL", "1").strip().lower()
+    # GitHub's small runners are slower under cross-check fan-out because the
+    # broad custody checks contend on the shared SourceIndex. Keep per-file
+    # SourceIndex extraction parallel, but run the developer checks in the
+    # one-pass cached order unless an operator explicitly overrides it.
+    default = "0" if os.environ.get("GITHUB_ACTIONS") == "true" else "1"
+    value = os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL", default).strip().lower()
     return value in {"1", "true", "yes", "on"}
 
 
@@ -2366,6 +2371,7 @@ def preflight_all(
         _parallel.submit("check_no_pipefail_tee_pipestatus_loss", lambda: check_no_pipefail_tee_pipestatus_loss(strict=True, verbose=False))
         _parallel.submit("check_no_eval_roundtrip_false", lambda: check_no_eval_roundtrip_false(strict=True, verbose=False))
         _parallel.submit("check_no_scorer_load_at_inflate", lambda: check_no_scorer_load_at_inflate(strict=True, verbose=False))
+        _parallel.submit("check_substrate_score_aware_losses_use_canonical_scorer_contract", lambda: check_substrate_score_aware_losses_use_canonical_scorer_contract(strict=True, verbose=False))
         _parallel.submit("check_no_disable_eval_roundtrip_flag", lambda: check_no_disable_eval_roundtrip_flag(strict=True, verbose=False))
         _parallel.submit("check_no_pack_sparse_delta_approved_outside_promotion_tool", lambda: check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=False))
         _parallel.submit("check_remote_scripts_have_nvdec_probe", lambda: check_remote_scripts_have_nvdec_probe(strict=True, verbose=False))
@@ -2440,6 +2446,13 @@ def preflight_all(
             "check_no_scorer_load_at_inflate",
             "[no-scorer-at-inflate]",
             lambda: check_no_scorer_load_at_inflate(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_substrate_score_aware_losses_use_canonical_scorer_contract",
+            "[substrate-score-aware-scorer-contract]",
+            lambda: check_substrate_score_aware_losses_use_canonical_scorer_contract(
+                strict=True, verbose=verbose
+            ),
         )
         _parallel.run(
             "check_training_scripts_have_auth_eval",
@@ -4065,6 +4078,13 @@ def preflight_developer(
                 "check_no_scorer_load_at_inflate",
                 "[no-scorer-load-at-inflate]",
                 lambda: check_no_scorer_load_at_inflate(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_substrate_score_aware_losses_use_canonical_scorer_contract",
+                "[substrate-score-aware-scorer-contract]",
+                lambda: check_substrate_score_aware_losses_use_canonical_scorer_contract(
                     strict=True, verbose=False
                 ),
             ),
@@ -10193,6 +10213,92 @@ def _scan_inflate_for_scorer_load_with_waivers(
                 else:
                     unwaived.append(msg)
     return unwaived, waived
+
+
+_SUBSTRATE_SCORER_DIRECT_CALL_RE = re.compile(
+    r"\bself\.(?:seg_scorer|pose_scorer)\s*\("
+)
+
+
+def check_substrate_score_aware_losses_use_canonical_scorer_contract(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Require substrate score-aware losses to use the shared scorer contract.
+
+    Bug class: a SaneHNeRV dispatch passed 5D RGB directly into SegNet and a
+    6-channel concatenated pair directly into PoseNet. The canonical helper
+    stages ``(B, T=2, C=3, H, W)`` pairs and calls each scorer's
+    ``preprocess_input`` before forward; lane-local score-aware losses must
+    delegate to it instead of duplicating scorer-shape logic.
+    """
+
+    root = Path(repo_root or REPO_ROOT)
+    scan_root = root / "src" / "tac" / "substrates"
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        paths = source_index.files(["src/tac/substrates"], pattern="score_aware_loss.py")
+    elif scan_root.exists():
+        paths = tuple(sorted(scan_root.rglob("score_aware_loss.py")))
+    else:
+        paths = ()
+
+    violations: list[str] = []
+    scanned = 0
+    for path in paths:
+        try:
+            text = (
+                source_index.read_text(path, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else path.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        if "ScoreAwareLoss" not in text:
+            continue
+        scanned += 1
+        rel = path.relative_to(root) if path.is_relative_to(root) else path
+        if "score_pair_components(" not in text:
+            violations.append(
+                f"{rel}: missing canonical score_pair_components(...) scorer "
+                "contract; direct lane-local scorer wiring is forbidden"
+            )
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            if _SUBSTRATE_SCORER_DIRECT_CALL_RE.search(line):
+                violations.append(
+                    f"{rel}:{lineno}: direct self.seg_scorer/self.pose_scorer "
+                    "forward call in score-aware loss; use "
+                    "tac.substrates.score_aware_common.score_pair_components "
+                    "so preprocess_input is enforced"
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-score-aware-scorer-contract] "
+                f"{len(violations)} violation(s) across {scanned} file(s)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [substrate-score-aware-scorer-contract] OK "
+                f"({scanned} file(s) scanned)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_score_aware_losses_use_canonical_scorer_contract: "
+            f"{len(violations)} violation(s); first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
 
 
 def check_no_scorer_load_at_inflate(

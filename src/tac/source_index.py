@@ -26,7 +26,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v22"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v23"
 _DEFAULT_FACT_WORKERS = 8
 
 
@@ -141,6 +141,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "compliance_status",
         "reconstruct_poses",
         "score_claim",
+        "score_pair_components(",
         "dispatch_attempted",
         "sha256",
         "torch",
@@ -194,6 +195,8 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "read ",
         "rsync",
         "save_posterior",
+        "self.pose_scorer(",
+        "self.seg_scorer(",
         "scp",
         "-printf",
         "Standing instruction",

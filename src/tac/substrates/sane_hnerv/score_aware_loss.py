@@ -29,6 +29,8 @@ from dataclasses import dataclass
 
 import torch
 
+from tac.substrates.score_aware_common import score_pair_components
+
 # Import lazily inside functions to avoid hot-path penalty when only the
 # class is being type-checked.
 
@@ -124,43 +126,14 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        # Stage the pair into the upstream-contract shape (B, T=2, C, H, W) so
-        # each scorer's ``preprocess_input`` method can run its canonical
-        # dimension reduction:
-        #   - SegNet.preprocess_input slices ``x[:, -1, ...]`` (last frame) →
-        #     4D (B, C, H, W) and interpolates to (384, 512).
-        #   - PoseNet.preprocess_input rearranges (b, t, c, h, w) → (b*t, c, h, w),
-        #     interpolates, runs differentiable rgb_to_yuv6 (after
-        #     ``make_scorers_differentiable`` patch), and re-rearranges to
-        #     (b, t*6, h, w) → 4D 12-channel.
-        # See upstream/modules.py::SegNet.preprocess_input + PoseNet.preprocess_input.
-        # The previous bug: the loss passed 5D directly to ``seg_scorer(...)`` and
-        # 4D 6-channel to ``pose_scorer(...)`` without ``preprocess_input``,
-        # which raised a shape mismatch at the smp.Unet stem (WWW4 dispatch
-        # crash 2026-05-12 fc-01KREXK209TRX7ED5ZRVXHY1VT).
-        pair_pred = torch.stack([rgb_0_rt, rgb_1_rt], dim=1)  # (B, T=2, C, H, W)
-        pair_gt = torch.stack([gt_rgb_0, gt_rgb_1], dim=1)  # (B, T=2, C, H, W)
-
-        # SegNet path — preprocess_input first, then forward on 4D
-        seg_in_pred = self.seg_scorer.preprocess_input(pair_pred)
-        seg_in_gt = self.seg_scorer.preprocess_input(pair_gt)
-        seg_out = self.seg_scorer(seg_in_pred)
-        seg_gt = self.seg_scorer(seg_in_gt)
-        # Cross-entropy proxy on argmax-disagreement: convert to soft via softmax KL
-        seg_term = _seg_distortion_proxy(seg_out, seg_gt)
-
-        # PoseNet path — preprocess_input first, then forward on 4D 12-channel
-        pose_in = self.pose_scorer.preprocess_input(pair_pred)
-        pose_target_in = self.pose_scorer.preprocess_input(pair_gt)
-        pose_out = self.pose_scorer(pose_in)
-        pose_target = self.pose_scorer(pose_target_in)
-        # PoseNet returns either a Tensor (B, 12) or a dict {'pose': (B, 12)};
-        # support both for the upstream Hydra-head case.
-        pose_out_t = pose_out["pose"] if isinstance(pose_out, dict) else pose_out
-        pose_target_t = (
-            pose_target["pose"] if isinstance(pose_target, dict) else pose_target
+        seg_term, pose_term = score_pair_components(
+            seg_scorer=self.seg_scorer,
+            pose_scorer=self.pose_scorer,
+            rgb_0_rt=rgb_0_rt,
+            rgb_1_rt=rgb_1_rt,
+            gt_rgb_0=gt_rgb_0,
+            gt_rgb_1=gt_rgb_1,
         )
-        pose_term = ((pose_out_t[:, :6] - pose_target_t[:, :6]) ** 2).mean()
 
         rate_term = self.weights.alpha_rate * archive_bytes_proxy / self.weights.contest_normalizer
 
@@ -179,16 +152,3 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
             "loss_total": loss.detach(),
         }
         return loss, parts
-
-
-def _seg_distortion_proxy(
-    seg_logits_pred: torch.Tensor, seg_logits_gt: torch.Tensor
-) -> torch.Tensor:
-    """Soft cross-entropy between predicted seg logits and gt seg logits.
-
-    Direct argmax-disagreement isn't differentiable; soft KL on softmaxed
-    logits is the canonical surrogate (T=2.0 ablation flag in trainer).
-    """
-    log_p = torch.log_softmax(seg_logits_pred, dim=1)
-    q = torch.softmax(seg_logits_gt, dim=1)
-    return -(q * log_p).sum(dim=1).mean()

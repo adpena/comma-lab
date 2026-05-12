@@ -286,6 +286,29 @@ def test_source_index_tag_grade_bypass_patterns_are_indexed(tmp_path):
     assert stats["text_hits"] == 0
 
 
+def test_source_index_score_aware_scorer_contract_patterns_are_indexed(tmp_path):
+    _write(
+        tmp_path / "src/tac/substrates/a/score_aware_loss.py",
+        "self.seg_scorer(x)\nscore_pair_components(seg_scorer=s)\n",
+    )
+    _write(tmp_path / "src/tac/substrates/b/score_aware_loss.py", "VALUE = 1\n")
+    index = SourceIndex(tmp_path)
+
+    matched = index.files_containing_substrings(
+        ["src/tac/substrates"],
+        pattern="score_aware_loss.py",
+        substrings=("self.seg_scorer(", "score_pair_components("),
+        require_all=False,
+    )
+
+    assert [index.repo_relative(path) for path in matched] == [
+        "src/tac/substrates/a/score_aware_loss.py",
+    ]
+    stats = index.stats()
+    assert stats["substring_index_misses"] == 0
+    assert stats["text_hits"] == 0
+
+
 def test_source_index_comment_contract_prefilter_does_not_self_trigger():
     import tac.source_index as source_index
 

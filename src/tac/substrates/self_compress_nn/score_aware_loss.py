@@ -35,6 +35,8 @@ from dataclasses import dataclass
 
 import torch
 
+from tac.substrates.score_aware_common import score_pair_components
+
 
 @dataclass(frozen=True)
 class SelfCompressNnScoreAwareLossWeights:
@@ -138,17 +140,14 @@ class SelfCompressNnScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        # SegNet on LAST frame of pair (rgb_1); upstream contract is (B, T=1, C, H, W).
-        seg_out = self.seg_scorer(rgb_1_rt.unsqueeze(1))
-        seg_gt = self.seg_scorer(gt_rgb_1.unsqueeze(1))
-        seg_term = _seg_distortion_proxy(seg_out, seg_gt)
-
-        # PoseNet on the (rgb_0, rgb_1) pair concatenated.
-        pose_in = torch.cat([rgb_0_rt, rgb_1_rt], dim=1)
-        pose_gt = torch.cat([gt_rgb_0, gt_rgb_1], dim=1)
-        pose_out = self.pose_scorer(pose_in)
-        pose_target = self.pose_scorer(pose_gt)
-        pose_term = ((pose_out[:, :6] - pose_target[:, :6]) ** 2).mean()
+        seg_term, pose_term = score_pair_components(
+            seg_scorer=self.seg_scorer,
+            pose_scorer=self.pose_scorer,
+            rgb_0_rt=rgb_0_rt,
+            rgb_1_rt=rgb_1_rt,
+            gt_rgb_0=gt_rgb_0,
+            gt_rgb_1=gt_rgb_1,
+        )
 
         rate_term = (
             self.weights.alpha_rate * archive_bytes_proxy / self.weights.contest_normalizer
@@ -174,17 +173,3 @@ class SelfCompressNnScoreAwareLoss(torch.nn.Module):
             "loss_total": loss.detach(),
         }
         return loss, parts
-
-
-def _seg_distortion_proxy(
-    seg_logits_pred: torch.Tensor, seg_logits_gt: torch.Tensor
-) -> torch.Tensor:
-    """Soft cross-entropy between predicted seg logits and gt seg logits.
-
-    Direct argmax-disagreement isn't differentiable; soft KL on softmaxed
-    logits is the canonical surrogate (T=2.0 ablation flag is the trainer's
-    follow-up).
-    """
-    log_p = torch.log_softmax(seg_logits_pred, dim=1)
-    q = torch.softmax(seg_logits_gt, dim=1)
-    return -(q * log_p).sum(dim=1).mean()

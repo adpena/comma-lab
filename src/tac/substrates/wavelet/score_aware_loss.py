@@ -24,6 +24,8 @@ from dataclasses import dataclass, field
 
 import torch
 
+from tac.substrates.score_aware_common import score_pair_components
+
 
 @dataclass(frozen=True)
 class ScoreAwareLossWeights:
@@ -101,17 +103,14 @@ class WaveletScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        # SegNet on rgb_1 per upstream contract
-        seg_out = self.seg_scorer(rgb_1_rt.unsqueeze(1))
-        seg_gt = self.seg_scorer(gt_rgb_1.unsqueeze(1))
-        seg_term = _seg_distortion_proxy(seg_out, seg_gt)
-
-        # PoseNet on (rgb_0, rgb_1) pair
-        pose_in = torch.cat([rgb_0_rt, rgb_1_rt], dim=1)
-        pose_gt = torch.cat([gt_rgb_0, gt_rgb_1], dim=1)
-        pose_out = self.pose_scorer(pose_in)
-        pose_target = self.pose_scorer(pose_gt)
-        pose_term = ((pose_out[:, :6] - pose_target[:, :6]) ** 2).mean()
+        seg_term, pose_term = score_pair_components(
+            seg_scorer=self.seg_scorer,
+            pose_scorer=self.pose_scorer,
+            rgb_0_rt=rgb_0_rt,
+            rgb_1_rt=rgb_1_rt,
+            gt_rgb_0=gt_rgb_0,
+            gt_rgb_1=gt_rgb_1,
+        )
 
         # Base archive-bytes proxy
         rate_archive = (
@@ -144,12 +143,3 @@ class WaveletScoreAwareLoss(torch.nn.Module):
             "loss_total": loss.detach(),
         }
         return loss, parts
-
-
-def _seg_distortion_proxy(
-    seg_logits_pred: torch.Tensor, seg_logits_gt: torch.Tensor
-) -> torch.Tensor:
-    """Soft cross-entropy between predicted and gt seg logits."""
-    log_p = torch.log_softmax(seg_logits_pred, dim=1)
-    q = torch.softmax(seg_logits_gt, dim=1)
-    return -(q * log_p).sum(dim=1).mean()

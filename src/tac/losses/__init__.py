@@ -20,6 +20,10 @@ is missing from a caller's import line.
 """
 from __future__ import annotations
 
+from .cat_entropy_v2 import (
+    CatEntropyV2Config,
+    cat_entropy_v2,
+)
 from .core import (
     DEFAULT_SEGNET_NUM_CLASSES,
     DEFAULT_SINKHORN_BLUR,
@@ -31,6 +35,8 @@ from .core import (
     SINKHORN_MAX_BLUR,
     SINKHORN_MIN_BLUR,
     ScorerProxyDiscriminator,
+    _apply_class_weights,
+    _default_categorical_cost_matrix,
     _hwc_to_chw,
     band_orthogonality_loss,
     bhattacharyya_distance,
@@ -70,13 +76,8 @@ from .core import (
     train_scorer_proxy,
     uniward_quant_noise_loss,
 )
-from .cat_entropy_v2 import (
-    CatEntropyV2Config,
-    cat_entropy_v2,
-)
 
 __all__ = [
-    "CatEntropyV2Config",
     "DEFAULT_SEGNET_NUM_CLASSES",
     "DEFAULT_SINKHORN_BLUR",
     "DEFAULT_SINKHORN_ITERS",
@@ -86,7 +87,10 @@ __all__ = [
     "SEGMENTATION_SURROGATE_SOFT_COSINE",
     "SINKHORN_MAX_BLUR",
     "SINKHORN_MIN_BLUR",
+    "CatEntropyV2Config",
     "ScorerProxyDiscriminator",
+    "_apply_class_weights",
+    "_default_categorical_cost_matrix",
     "_hwc_to_chw",
     "band_orthogonality_loss",
     "bhattacharyya_distance",
