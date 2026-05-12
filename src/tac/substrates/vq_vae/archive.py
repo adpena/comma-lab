@@ -1,0 +1,264 @@
+"""vq_vae archive grammar VQV1 — monolithic single-file ``0.bin``.
+
+Catalog #124 STRICT archive-grammar 8 fields are declared in the package
+``__init__``. This file IS the export-first grammar (HNeRV parity discipline
+lesson L2):
+
+::
+
+    MAGIC(4)             b"VQV1"   VQ-VAE Variant 1
+    VERSION(1)           u8        schema version (currently 1)
+    CODEBOOK_SIZE(2)     u16       K (number of codebook entries; e.g. 512)
+    EMBEDDING_DIM(2)     u16       D (per-entry dim; e.g. 8)
+    NUM_PAIRS(2)         u16       cfg.num_pairs (e.g. 600)
+    H_GRID(2)            u16       index grid height (= H/grid_downsample)
+    W_GRID(2)            u16       index grid width (= W/grid_downsample)
+    DECODER_BLOB_LEN(4)  u32       brotli(state_dict bytes) of encoder + decoder + codebook
+    INDICES_BLOB_LEN(4)  u32       packed int16 codebook indices bytes len
+    META_BLOB_LEN(4)     u32       utf-8 json meta bytes len
+    DECODER_BLOB         ...       brotli(pickled runtime state_dict, fp16 cpu)
+    INDICES_BLOB         ...       int16 indices row-major (num_pairs, 2, H_GRID, W_GRID)
+    META_BLOB            ...       json: {encoder_hidden, decoder_hidden, grid_downsample, ...}
+
+VQV1 = "VQ-VAE Variant 1". Codebook indices are stored as int16 (signed
+2's-complement) because K=512 fits in 9 bits but we use 16-bit aligned storage
+for trivial parser correctness. A K=65536-and-beyond variant would need a u32
+storage type and a new schema VERSION.
+
+The runtime state_dict must contain only inflate-time tensors: ``codebook`` and
+``decoder.*``. Encoder weights and per-pair feature grids are training-only once
+the index grid has been exported; packing them would pay bytes that the runtime
+never consumes.
+
+CLAUDE.md compliance:
+- Deterministic (sorted-keys JSON, fp16 CPU state_dict, fixed brotli quality)
+- No /tmp paths
+- No scorer load
+"""
+
+from __future__ import annotations
+
+import io
+import json
+import pickle
+import struct
+from dataclasses import dataclass
+
+import brotli  # type: ignore[import-not-found]
+import torch
+
+VQV1_MAGIC: bytes = b"VQV1"
+"""vq_vae variant 1 archive magic."""
+
+VQV1_SCHEMA_VERSION: int = 1
+"""Schema version byte. Bump when grammar changes."""
+
+# Header layout: MAGIC(4) + VERSION(1) + 5 u16 (10) + 3 u32 (12) = 27 bytes
+VQV1_HEADER_FMT: str = "<4sBHHHHHIII"
+VQV1_HEADER_SIZE: int = struct.calcsize(VQV1_HEADER_FMT)
+assert VQV1_HEADER_SIZE == 27, "VQV1 header size invariant (4+1+10+12 = 27)"
+
+# Brotli quality
+BROTLI_QUALITY: int = 9
+
+_VQV1_REQUIRED_RUNTIME_KEYS: tuple[str, ...] = ("codebook",)
+_VQV1_ALLOWED_RUNTIME_PREFIXES: tuple[str, ...] = ("decoder.",)
+_VQV1_FORBIDDEN_TRAINING_PREFIXES: tuple[str, ...] = (
+    "per_pair_features",
+    "encoder_refine.",
+)
+
+
+@dataclass(frozen=True)
+class VqVaeArchive:
+    """Parsed archive structure — the inflate-time data contract."""
+
+    decoder_state_dict: dict[str, torch.Tensor]
+    """Encoder + decoder + codebook state_dict (all model weights)."""
+
+    indices: torch.Tensor
+    """``(num_pairs, 2, H_GRID, W_GRID)`` int64 codebook indices."""
+
+    meta: dict[str, object]
+    """Sidecar JSON meta with arch hparams."""
+
+    schema_version: int
+    codebook_size: int
+    embedding_dim: int
+
+
+def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
+    """Pickle + brotli a state_dict deterministically (fp16 cpu)."""
+    _validate_runtime_state_dict(sd)
+    buf = io.BytesIO()
+    sd_cpu = {k: v.detach().to("cpu", dtype=torch.float16).contiguous() for k, v in sd.items()}
+    pickle.dump(sd_cpu, buf, protocol=4)
+    return bytes(brotli.compress(buf.getvalue(), quality=BROTLI_QUALITY))
+
+
+def _is_runtime_key(key: str) -> bool:
+    return key in _VQV1_REQUIRED_RUNTIME_KEYS or key.startswith(
+        _VQV1_ALLOWED_RUNTIME_PREFIXES
+    )
+
+
+def _validate_runtime_state_dict(sd: dict[str, torch.Tensor]) -> None:
+    """Refuse training-only tensors in the VQV1 archive payload."""
+
+    missing = [key for key in _VQV1_REQUIRED_RUNTIME_KEYS if key not in sd]
+    if missing:
+        raise ValueError(f"VQV1 runtime state_dict missing required keys: {missing}")
+    forbidden = [
+        key
+        for key in sd
+        if key.startswith(_VQV1_FORBIDDEN_TRAINING_PREFIXES) or not _is_runtime_key(key)
+    ]
+    if forbidden:
+        sample = ", ".join(sorted(forbidden)[:5])
+        raise ValueError(
+            "VQV1 archive state_dict contains training-only or unknown keys: "
+            f"{sample}. Use VqVaeSubstrate.runtime_state_dict_for_archive()."
+        )
+
+
+def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+    raw = brotli.decompress(blob)
+    sd = pickle.loads(raw)
+    if not isinstance(sd, dict):
+        raise ValueError("state_dict blob did not unpickle to a dict")
+    return sd
+
+
+def _pack_indices_int16(indices: torch.Tensor, codebook_size: int) -> bytes:
+    """Pack int64 codebook indices into int16 bytes.
+
+    Indices in [0, K) where K <= 65536. We store them as signed int16 by
+    offsetting: ``raw_int16 = idx - 32768`` so the int16 range [-32768, 32767]
+    can represent the full [0, 65535] range. Unpack via inverse offset.
+    """
+    if indices.dtype not in (torch.int64, torch.int32):
+        raise ValueError(f"indices must be int; got {indices.dtype}")
+    if codebook_size <= 0 or codebook_size > 65536:
+        raise ValueError(f"codebook_size {codebook_size} not in (0, 65536]")
+    if int(indices.min()) < 0 or int(indices.max()) >= codebook_size:
+        raise ValueError(
+            f"indices range [{int(indices.min())}, {int(indices.max())}] "
+            f"out of [0, {codebook_size})"
+        )
+    # Offset and cast to int16
+    shifted = (indices.to(torch.int64) - 32768).to(torch.int16)
+    return shifted.contiguous().cpu().numpy().tobytes()
+
+
+def _unpack_indices_int16(blob: bytes, shape: tuple[int, ...]) -> torch.Tensor:
+    """Unpack int16 bytes back to int64 codebook indices (inverse offset)."""
+    import numpy as np  # local
+
+    arr = np.frombuffer(blob, dtype=np.int16).copy()
+    t = torch.from_numpy(arr).view(*shape).to(torch.int64) + 32768
+    return t
+
+
+def pack_archive(
+    decoder_state_dict: dict[str, torch.Tensor],
+    indices: torch.Tensor,
+    meta: dict[str, object],
+    *,
+    codebook_size: int,
+    embedding_dim: int,
+    schema_version: int = VQV1_SCHEMA_VERSION,
+) -> bytes:
+    """Serialize trained vq_vae state into monolithic 0.bin bytes."""
+    if schema_version != VQV1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {schema_version}")
+    if indices.dim() != 4:
+        raise ValueError(
+            f"indices must be 4-D (num_pairs, 2, H_GRID, W_GRID); got {tuple(indices.shape)}"
+        )
+    if indices.shape[1] != 2:
+        raise ValueError(f"indices.shape[1] must be 2 (frame_0, frame_1); got {indices.shape[1]}")
+
+    num_pairs = int(indices.shape[0])
+    h_grid = int(indices.shape[2])
+    w_grid = int(indices.shape[3])
+
+    for name, v in (
+        ("codebook_size", codebook_size),
+        ("embedding_dim", embedding_dim),
+        ("num_pairs", num_pairs),
+        ("h_grid", h_grid),
+        ("w_grid", w_grid),
+    ):
+        if v <= 0 or v > 0xFFFF:
+            raise ValueError(f"{name}={v} out of u16 range")
+
+    decoder_blob = _serialize_state_dict(decoder_state_dict)
+    indices_bytes = _pack_indices_int16(indices, codebook_size)
+
+    meta_bytes = json.dumps(meta, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+    header = struct.pack(
+        VQV1_HEADER_FMT,
+        VQV1_MAGIC,
+        schema_version,
+        codebook_size,
+        embedding_dim,
+        num_pairs,
+        h_grid,
+        w_grid,
+        len(decoder_blob),
+        len(indices_bytes),
+        len(meta_bytes),
+    )
+    return header + decoder_blob + indices_bytes + meta_bytes
+
+
+def parse_archive(blob: bytes) -> VqVaeArchive:
+    """Parse 0.bin bytes back into typed VqVaeArchive."""
+    if len(blob) < VQV1_HEADER_SIZE:
+        raise ValueError(f"archive too short ({len(blob)} bytes; need >= {VQV1_HEADER_SIZE})")
+    (
+        magic,
+        version,
+        codebook_size,
+        embedding_dim,
+        num_pairs,
+        h_grid,
+        w_grid,
+        decoder_len,
+        indices_len,
+        meta_len,
+    ) = struct.unpack(VQV1_HEADER_FMT, blob[:VQV1_HEADER_SIZE])
+    if magic != VQV1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {VQV1_MAGIC!r})")
+    if version != VQV1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+
+    expected_indices_bytes = num_pairs * 2 * h_grid * w_grid * 2  # int16 = 2 bytes
+    if indices_len != expected_indices_bytes:
+        raise ValueError(
+            f"indices_len {indices_len} != expected {expected_indices_bytes}"
+        )
+
+    pos = VQV1_HEADER_SIZE
+    decoder_blob = blob[pos : pos + decoder_len]
+    pos += decoder_len
+    indices_blob = blob[pos : pos + indices_len]
+    pos += indices_len
+    meta_blob = blob[pos : pos + meta_len]
+    pos += meta_len
+    if pos != len(blob):
+        raise ValueError(f"archive size {len(blob)} != expected {pos} from header")
+
+    sd = _deserialize_state_dict(decoder_blob)
+    indices = _unpack_indices_int16(indices_blob, (num_pairs, 2, h_grid, w_grid))
+    meta = json.loads(meta_blob.decode("utf-8"))
+
+    return VqVaeArchive(
+        decoder_state_dict=sd,
+        indices=indices,
+        meta=meta,
+        schema_version=int(version),
+        codebook_size=int(codebook_size),
+        embedding_dim=int(embedding_dim),
+    )
