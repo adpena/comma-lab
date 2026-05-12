@@ -12,6 +12,7 @@ import ast
 import contextlib
 import contextvars
 import fnmatch
+import functools
 import hashlib
 import json
 import os
@@ -30,7 +31,16 @@ _TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v24"
 _DEFAULT_FACT_WORKERS = 8
 
 
+@functools.lru_cache(maxsize=131_072)
 def _safe_resolve(path: Path) -> Path:
+    """Resolve ``path`` once per process for source-tree scanner keying.
+
+    Preflight scanners repeatedly ask about the same few thousand source paths.
+    `Path.resolve()` walks every path component and performs many `lstat` calls;
+    caching keeps cold hosted-runner preflight bounded without changing the
+    scanner contract.
+    """
+
     try:
         return path.resolve()
     except OSError:
@@ -60,6 +70,17 @@ def _source_index_fact_workers() -> int:
     else:
         value = _DEFAULT_FACT_WORKERS
     return max(1, min(value, 32))
+
+
+def _persistent_text_facts_enabled() -> bool:
+    """Return whether this process should read/write persistent text facts."""
+
+    raw = os.environ.get("PACT_SOURCE_INDEX_PERSISTENT_TEXT_FACTS", "").strip().lower()
+    if raw:
+        return raw in {"1", "true", "yes", "on"}
+    # Hosted CI starts from a cold checkout and discards `.omx/cache` after the
+    # job, so serializing thousands of SourceTextFacts rows is pure overhead.
+    return os.environ.get("GITHUB_ACTIONS", "").strip().lower() != "true"
 
 
 _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
@@ -377,6 +398,7 @@ class SourceIndex:
     _scanner_query_cache: dict[str, tuple[SourceTextFacts, ...]] = field(default_factory=dict, init=False)
     _persistent_text_facts: dict[str, dict[str, object]] = field(default_factory=dict, init=False)
     _persistent_text_facts_dirty: bool = field(default=False, init=False)
+    _persistent_text_facts_enabled: bool = field(default=True, init=False)
     _lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _key_locks: dict[tuple[object, ...], threading.Lock] = field(default_factory=dict, init=False, repr=False)
     _stats: dict[str, int] = field(
@@ -404,7 +426,9 @@ class SourceIndex:
 
     def __post_init__(self) -> None:
         self.root = _safe_resolve(Path(self.root))
-        self._persistent_text_facts = self._load_persistent_text_facts()
+        self._persistent_text_facts_enabled = _persistent_text_facts_enabled()
+        if self._persistent_text_facts_enabled:
+            self._persistent_text_facts = self._load_persistent_text_facts()
 
     def files(self, dirs: Sequence[str | Path], *, pattern: str) -> tuple[Path, ...]:
         """Return sorted files under ``dirs`` matching ``pattern``.
@@ -561,7 +585,11 @@ class SourceIndex:
                 self._stats["text_facts_misses"] += 1
 
             stat = target.stat()
-            persistent = self._persistent_text_facts.get(key)
+            persistent = (
+                self._persistent_text_facts.get(key)
+                if self._persistent_text_facts_enabled
+                else None
+            )
             if self._persistent_row_matches(target, stat, persistent):
                 facts = self._facts_from_persistent_row(target, stat, persistent)
                 with self._lock:
@@ -588,13 +616,16 @@ class SourceIndex:
             )
             with self._lock:
                 self._text_facts_cache[key] = facts
-                self._persistent_text_facts[key] = self._facts_to_persistent_row(facts)
-                self._persistent_text_facts_dirty = True
+                if self._persistent_text_facts_enabled:
+                    self._persistent_text_facts[key] = self._facts_to_persistent_row(facts)
+                    self._persistent_text_facts_dirty = True
             return facts
 
     def save_persistent_text_facts(self) -> None:
         """Persist valid text facts for future preflight processes."""
 
+        if not self._persistent_text_facts_enabled:
+            return
         with self._lock:
             if not self._persistent_text_facts_dirty:
                 return
@@ -892,6 +923,7 @@ class SourceIndex:
             "substring_index_entries": len(self._substring_index),
             "scanner_query_cache_entries": len(self._scanner_query_cache),
             "persistent_text_facts_entries": len(self._persistent_text_facts),
+            "persistent_text_facts_enabled": int(self._persistent_text_facts_enabled),
         }
 
     def _dir_key(self, item: str | Path) -> str:

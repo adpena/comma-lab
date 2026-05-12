@@ -22,6 +22,13 @@ wide-casefold rows do not silently carry forward.
 - Limited casefold computation to that set and cached folded needle pairs.
 - Replaced `len(text.splitlines())` with `_source_line_count(text)` to avoid a
   full line-list allocation on every file.
+- Added process-local `Path.resolve()` memoization for SourceIndex keying after
+  true-cold profiling showed repeated path resolution dominated hosted-runner
+  scanner cost.
+- Disabled persistent text-facts read/write by default on GitHub Actions,
+  because hosted CI starts from a cold checkout and discards `.omx/cache`; the
+  persistent serializer is useful for local dev loops but pure first-run
+  overhead in CI.
 - Kept exact-match `_DEFAULT_TEXT_FACT_NEEDLES` unchanged, so strict scanner
   coverage is preserved.
 

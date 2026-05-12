@@ -136,6 +136,19 @@ def test_source_index_builds_shared_text_facts_once(tmp_path):
     assert stats["text_misses"] == 1
 
 
+def test_source_index_skips_persistent_text_facts_on_github_actions(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    module = tmp_path / "src/tac/module.py"
+    _write(module, "VALUE = 'kl_div batchmean'\n")
+
+    with source_index_context(tmp_path) as index:
+        facts = index.text_facts(module)
+        assert facts.contains_all(("kl_div", "batchmean"))
+        assert index.stats()["persistent_text_facts_enabled"] == 0
+
+    assert not (tmp_path / ".omx/cache/source_text_facts.json").exists()
+
+
 def test_source_index_parallel_facts_for_files_reuses_file_inventory(tmp_path):
     for idx in range(48):
         _write(tmp_path / f"src/tac/mod_{idx:02d}.py", f"VALUE_{idx} = 'kl_div batchmean'\n")
