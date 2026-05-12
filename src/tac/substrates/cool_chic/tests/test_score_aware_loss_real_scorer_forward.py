@@ -6,8 +6,6 @@ See ``src/tac/substrates/_shared/score_aware_loss_real_scorer_test_kit.py``.
 
 from __future__ import annotations
 
-import pytest
-
 from tac.substrates._shared.score_aware_loss_real_scorer_test_kit import (
     assert_loss_runs_on_pyav_decoded_pair,
     assert_loss_runs_on_real_segnet,

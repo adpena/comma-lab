@@ -38,11 +38,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from tac.optimization.substrate_composition_matrix import (
     DISPATCH_COST_USD_MIDPOINT,
-    ScoreAxis,
     SubstrateClass,
     build_composition_matrix,
     canonical_substrate_inventory,

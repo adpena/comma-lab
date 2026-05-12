@@ -26,7 +26,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v23"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v24"
 _DEFAULT_FACT_WORKERS = 8
 
 
@@ -236,6 +236,33 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "/home/adpena/",
     }
 )
+_DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES = frozenset(
+    {
+        # Only case-insensitive scanner prefilters belong here. Keeping this
+        # intentionally tiny avoids copying and rescanning every source file for
+        # hundreds of exact-match needles during cold preflight.
+        "No additional approval needed",
+        "READY-TO-LAUNCH",
+        "Standing instruction",
+        "caller is responsible",
+        "deploy",
+        "launch",
+        "overrides " "this stub",
+        "production",
+        "wrapper",
+    }
+)
+
+
+def _source_line_count(text: str) -> int:
+    """Return ``str.splitlines()`` line count without allocating all lines."""
+
+    if not text:
+        return 0
+    count = text.count("\n")
+    if not text.endswith(("\n", "\r")):
+        count += 1
+    return count
 
 
 @dataclass(frozen=True)
@@ -527,7 +554,7 @@ class SourceIndex:
                 return facts
 
             text = self.read_text(target)
-            folded_text = text.casefold()
+            folded_text: str | None = None
             facts = SourceTextFacts(
                 path=target,
                 rel_path=self.repo_relative(target),
@@ -537,15 +564,20 @@ class SourceIndex:
                 ctime_ns=stat.st_ctime_ns,
                 inode=stat.st_ino,
                 device=stat.st_dev,
-                line_count=len(text.splitlines()),
+                line_count=_source_line_count(text),
                 tokens=frozenset(),
                 substrings=frozenset(
                     needle for needle in _DEFAULT_TEXT_FACT_NEEDLES if needle in text
                 ),
                 casefold_substrings=frozenset(
-                    needle.casefold()
-                    for needle in _DEFAULT_TEXT_FACT_NEEDLES
-                    if needle.casefold() in folded_text
+                    folded
+                    for needle in _DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES
+                    for folded in (needle.casefold(),)
+                    if folded in (
+                        folded_text
+                        if folded_text is not None
+                        else (folded_text := text.casefold())
+                    )
                 ),
             )
             with self._lock:
@@ -803,7 +835,9 @@ class SourceIndex:
         facts_rows = self.facts_for_files(dirs, pattern=pattern)
         buckets: dict[str, set[Path]] = {substring.casefold(): set() for substring in substrings}
         unknown: list[str] = []
-        known_needles = {needle.casefold() for needle in _DEFAULT_TEXT_FACT_NEEDLES}
+        known_needles = {
+            needle.casefold() for needle in _DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES
+        }
         for substring in substrings:
             folded = substring.casefold()
             if folded in known_needles:

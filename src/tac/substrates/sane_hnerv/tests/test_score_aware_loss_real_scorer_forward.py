@@ -89,8 +89,7 @@ def test_loss_runs_on_real_segnet_smp_unet_random_init():
     # Lazy-import the upstream module *after* the skip gate
     if str(UPSTREAM_DIR) not in sys.path:
         sys.path.insert(0, str(UPSTREAM_DIR))
-    import upstream.modules as um  # noqa: F401  (used via getattr below)
-
+    import upstream.modules as um
     from tac.substrates.sane_hnerv.score_aware_loss import (
         SaneHnervScoreAwareLoss,
         ScoreAwareLossWeights,
@@ -177,7 +176,7 @@ def test_loss_without_preprocess_input_would_have_failed_on_real_segnet():
 
     if str(UPSTREAM_DIR) not in sys.path:
         sys.path.insert(0, str(UPSTREAM_DIR))
-    import upstream.modules as um  # noqa: F401
+    import upstream.modules as um
 
     seg_scorer = um.SegNet().eval()
     rgb_5d = torch.rand(1, 1, 3, 64, 96)  # (B, T=1, C, H, W)
@@ -198,7 +197,7 @@ def test_segnet_preprocess_input_then_forward_works_on_4d():
 
     if str(UPSTREAM_DIR) not in sys.path:
         sys.path.insert(0, str(UPSTREAM_DIR))
-    import upstream.modules as um  # noqa: F401
+    import upstream.modules as um
 
     seg_scorer = um.SegNet().eval()
     rgb_5d = torch.rand(1, 2, 3, 64, 96)
@@ -226,7 +225,7 @@ def test_pair_pred_and_gt_carry_same_shape_into_preprocess_input():
 
     if str(UPSTREAM_DIR) not in sys.path:
         sys.path.insert(0, str(UPSTREAM_DIR))
-    import upstream.modules as um  # noqa: F401
+    import upstream.modules as um
 
     seg_scorer = um.SegNet().eval()
 
@@ -259,8 +258,7 @@ def test_loss_backward_produces_nonzero_grad_through_both_scorer_paths():
 
     if str(UPSTREAM_DIR) not in sys.path:
         sys.path.insert(0, str(UPSTREAM_DIR))
-    import upstream.modules as um  # noqa: F401
-
+    import upstream.modules as um
     from tac.substrates.sane_hnerv.score_aware_loss import (
         SaneHnervScoreAwareLoss,
         ScoreAwareLossWeights,
@@ -333,8 +331,7 @@ def test_loss_runs_on_real_pyav_decoded_frame_pair():
 
     if str(UPSTREAM_DIR) not in sys.path:
         sys.path.insert(0, str(UPSTREAM_DIR))
-    import upstream.modules as um  # noqa: F401
-
+    import upstream.modules as um
     from tac.substrates.sane_hnerv.score_aware_loss import (
         SaneHnervScoreAwareLoss,
         ScoreAwareLossWeights,

@@ -318,6 +318,34 @@ def test_source_index_comment_contract_prefilter_does_not_self_trigger():
     assert needle not in Path(source_index.__file__).read_text(encoding="utf-8")
 
 
+def test_source_index_casefold_prefilter_needles_stay_tiny():
+    import tac.source_index as source_index
+
+    casefold_needles = source_index._DEFAULT_CASEFOLD_TEXT_FACT_NEEDLES
+
+    assert len(casefold_needles) <= 16
+    assert "READY-TO-LAUNCH" in casefold_needles
+    assert "mps" not in casefold_needles
+    assert "score_claim" not in casefold_needles
+
+
+def test_source_index_casefold_query_uses_narrow_prefilter(tmp_path):
+    _write(tmp_path / "docs/a.md", "ready-to-launch\n")
+    _write(tmp_path / "docs/b.md", "ordinary launch note\n")
+    index = SourceIndex(tmp_path)
+
+    matched = index.files_containing_casefold_substrings(
+        ["docs"],
+        pattern="*.md",
+        substrings=("READY-TO-LAUNCH",),
+        require_all=True,
+    )
+
+    assert [index.repo_relative(path) for path in matched] == ["docs/a.md"]
+    stats = index.stats()
+    assert stats["text_hits"] == 0
+
+
 def test_source_index_unknown_substring_queries_still_scan_text(tmp_path):
     _write(tmp_path / "src/tac/a.py", "VALUE = 'custom_runtime_contract'\n")
     _write(tmp_path / "src/tac/b.py", "VALUE = 'other'\n")
