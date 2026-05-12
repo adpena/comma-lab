@@ -112,33 +112,34 @@ eval_image = (
             "PYTHONPATH": REMOTE_PYTHONPATH,
         }
     )
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))
-    .add_local_dir(
+    # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; mounts public-PR intake clones + robust_current + contest_auth_eval; trainer-discovery N/A
+    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; submissions subset
         "submissions/robust_current",
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
     )
-    .add_local_dir(
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR runtime adapters
         "experiments/public_runtime_adapters",
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
     )
-    .add_local_dir(
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR95 intake clone
         "experiments/results/public_pr95_intake_20260504_codex",
         remote_path=str(REMOTE_REPO / "experiments/results/public_pr95_intake_20260504_codex"),
     )
-    .add_local_dir(
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR106 intake clone
         "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source",
         remote_path=str(
             REMOTE_REPO
             / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source"
         ),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; contest_auth_eval entry script
         "experiments/contest_auth_eval.py",
         remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
     )
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
+    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
 )
 
 

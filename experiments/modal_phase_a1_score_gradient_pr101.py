@@ -226,46 +226,46 @@ run_image = (
     # Workspace mounts — only the bare minimum needed by the A1 chain.
     # Full src/tac is needed because train_score_gradient_pr101_finetune.py +
     # build_pr101_finetuned_archive.py + contest_auth_eval.py all import from tac.
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_dir("upstream/models", remote_path=str(REMOTE_REPO / "upstream/models"))
-    .add_local_dir("upstream/videos", remote_path=str(REMOTE_REPO / "upstream/videos"))
-    .add_local_file("upstream/evaluate.py", remote_path=str(REMOTE_REPO / "upstream/evaluate.py"))
-    .add_local_file("upstream/frame_utils.py", remote_path=str(REMOTE_REPO / "upstream/frame_utils.py"))
-    .add_local_file("upstream/modules.py", remote_path=str(REMOTE_REPO / "upstream/modules.py"))
-    .add_local_file(
+    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_dir("upstream/models", remote_path=str(REMOTE_REPO / "upstream/models"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_dir("upstream/videos", remote_path=str(REMOTE_REPO / "upstream/videos"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file("upstream/evaluate.py", remote_path=str(REMOTE_REPO / "upstream/evaluate.py"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file("upstream/frame_utils.py", remote_path=str(REMOTE_REPO / "upstream/frame_utils.py"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file("upstream/modules.py", remote_path=str(REMOTE_REPO / "upstream/modules.py"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
         "upstream/public_test_video_names.txt",
         remote_path=str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
     )
-    .add_local_file("upstream/pyproject.toml", remote_path=str(REMOTE_REPO / "upstream/pyproject.toml"))
-    .add_local_file("upstream/uv.lock", remote_path=str(REMOTE_REPO / "upstream/uv.lock"))
-    .add_local_file("experiments/__init__.py", remote_path=str(REMOTE_REPO / "experiments/__init__.py"))
-    .add_local_file(
+    .add_local_file("upstream/pyproject.toml", remote_path=str(REMOTE_REPO / "upstream/pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file("upstream/uv.lock", remote_path=str(REMOTE_REPO / "upstream/uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file("experiments/__init__.py", remote_path=str(REMOTE_REPO / "experiments/__init__.py"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
         "experiments/train_score_gradient_pr101_finetune.py",
         remote_path=str(REMOTE_REPO / "experiments/train_score_gradient_pr101_finetune.py"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
         "experiments/contest_auth_eval.py",
         remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
         "scripts/probe_nvdec.sh",
         remote_path=str(REMOTE_REPO / "scripts/probe_nvdec.sh"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
         "scripts/adjudicate_contest_auth_eval.py",
         remote_path=str(REMOTE_REPO / "scripts/adjudicate_contest_auth_eval.py"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
         "tools/build_pr101_finetuned_archive.py",
         remote_path=str(REMOTE_REPO / "tools/build_pr101_finetuned_archive.py"),
     )
     # factorized_hnerv_v1 supplies HNeRVDecoder for the trainer.
-    .add_local_dir(
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
         "submissions/factorized_hnerv_v1",
         remote_path=str(REMOTE_REPO / "submissions/factorized_hnerv_v1"),
     )
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
+    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
+    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A1 score-gradient dispatcher; targeted upstream + PR101 intake; trainer-discovery N/A
 )
 
 

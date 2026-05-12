@@ -7,8 +7,8 @@ image = (
     .apt_install("ffmpeg")
     .pip_install("torch==2.5.1", "torchvision", "safetensors", "einops",
                  "segmentation-models-pytorch", "av", "click", "tqdm")
-    .add_local_dir("src/tac", remote_path="/root/tac")
-    .add_local_dir("upstream", remote_path="/root/upstream")
+    .add_local_dir("src/tac", remote_path="/root/tac")  # MODAL_MANUAL_MOUNT_OK:timing-only test rig, narrow /root prefix not /workspace/pact contract
+    .add_local_dir("upstream", remote_path="/root/upstream")  # MODAL_MANUAL_MOUNT_OK:timing-only test rig, narrow /root prefix not /workspace/pact contract
 )
 
 

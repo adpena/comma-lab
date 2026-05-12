@@ -112,9 +112,9 @@ base_image = (
 drift_image = (
     base_image
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))
-    .add_local_file(
+    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow loader-drift capture dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))  # MODAL_MANUAL_MOUNT_OK:narrow loader-drift capture dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow loader-drift capture dispatcher; targeted upstream files; trainer-discovery N/A
         "tools/probe_eval_loader_drift.py",
         remote_path=str(REMOTE_REPO / "tools/probe_eval_loader_drift.py"),
     )

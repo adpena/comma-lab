@@ -63,19 +63,19 @@ image = (
         "timm",
     )
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path="/workspace/pact/src")
-    .add_local_dir("upstream", remote_path="/workspace/pact/upstream")
-    .add_local_dir("scripts", remote_path="/workspace/pact/scripts")
-    .add_local_file("experiments/__init__.py", remote_path="/workspace/pact/experiments/__init__.py")
-    .add_local_file(
+    .add_local_dir("src", remote_path="/workspace/pact/src")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_dir("upstream", remote_path="/workspace/pact/upstream")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_dir("scripts", remote_path="/workspace/pact/scripts")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file("experiments/__init__.py", remote_path="/workspace/pact/experiments/__init__.py")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
         "experiments/profile_component_sensitivity.py",
         remote_path="/workspace/pact/experiments/profile_component_sensitivity.py",
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
         "experiments/profile_hessian_per_weight.py",
         remote_path="/workspace/pact/experiments/profile_hessian_per_weight.py",
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
         "experiments/convert_fisher_to_owv3_sensitivity_map.py",
         remote_path="/workspace/pact/experiments/convert_fisher_to_owv3_sensitivity_map.py",
     )

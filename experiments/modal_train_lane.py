@@ -38,6 +38,8 @@ from __future__ import annotations
 
 import modal
 
+from tac.deploy.modal.mount_manifest import build_training_image
+
 app = modal.App("comma-train-lane")
 RESULTS_VOL = "comma-train-lane-results"
 REMOTE_PYTHONPATH = "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact"
@@ -98,52 +100,34 @@ image = (
 )
 
 
-# Mount the entire pact source tree at /workspace/pact (matches Vast.ai
-# convention so lane scripts work without modification).
-training_image = (
-    image
-    .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path="/workspace/pact/src")
-    .add_local_dir("scripts", remote_path="/workspace/pact/scripts")
-    # Mount entire submissions/ — lanes anchor on different baselines
-    # (UNIWARD uses submissions/baseline_dilated_h64_0_90/, etc.)
-    .add_local_dir("submissions", remote_path="/workspace/pact/submissions")
-    .add_local_dir("upstream", remote_path="/workspace/pact/upstream")
-    .add_local_dir("experiments", remote_path="/workspace/pact/experiments", ignore=["results/**"])
+# T1-A simplification 2026-05-12: discovery-based mount manifest replaces the
+# hand-curated list. The canonical builder ALWAYS mounts the structural
+# minimum (src / scripts / upstream / submissions / experiments / tools /
+# pyproject.toml) and discovers `required_input_file=True` flags from any
+# trainer module the caller names. modal_train_lane.py does NOT name a single
+# trainer module (it dispatches arbitrary `scripts/remote_lane_*.sh`), so we
+# pass `trainer_module_path=None` and let lane scripts mount any required
+# inputs through their own bootstrap.
+#
+# Per Catalog #153 (`check_modal_dispatcher_uses_canonical_mount_builder`),
+# this is the ONLY supported mount pattern for experiments/modal_*.py going
+# forward. Previously the bug class was "list is missing entry X" — adding
+# entries to hand-curated lists IS the bug class (see 2026-05-12 Modal A100
+# dispatch fc-01KREJST89QHFRWJXHAKXD850C that crashed for exactly this
+# reason).
+#
+# T2-C absorption: the previous `_RESULTS_MOUNTS` conditional (8 LOC of
+# dead-conditional mount paths for `public_pr95_intake_20260504_codex` +
+# `c067_fixed_renderer_burn_prep_20260503` that no longer exist on the
+# working tree) is now correctly omitted by construction — operator-extra
+# mounts must be declared, not silently absorbed from disk.
+training_image = build_training_image(
+    image.env({"PYTHONPATH": REMOTE_PYTHONPATH}),
+    trainer_module_path=None,
+    optional_files=(
+        ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json",
+    ),
 )
-
-import os as _os
-
-_RESULTS_MOUNTS = (
-    ("experiments/results/public_pr95_intake_20260504_codex",
-     "/workspace/pact/experiments/results/public_pr95_intake_20260504_codex"),
-    ("experiments/results/c067_fixed_renderer_burn_prep_20260503",
-     "/workspace/pact/experiments/results/c067_fixed_renderer_burn_prep_20260503"),
-)
-for _local, _remote in _RESULTS_MOUNTS:
-    if _os.path.isdir(_local):
-        training_image = training_image.add_local_dir(_local, remote_path=_remote)
-
-training_image = (
-    training_image
-    .add_local_dir("tools", remote_path="/workspace/pact/tools")
-    .add_local_file("pyproject.toml", remote_path="/workspace/pact/pyproject.toml")
-)
-
-# Root-cause fix 2026-05-12: trainer defaults point at .omx/research/pr95_*.json
-# but .omx/ is NOT in the mount list above. T1 Ballé dispatch 2026-05-12T17:12
-# crashed at 15s rc=1 because the parity profile file didn't exist on the
-# container. Add the specific durable .omx/research artifacts the trainer
-# defaults consume. Per CLAUDE.md "Track small durable .omx/research ledgers"
-# — these are committed, deterministic, dispatch-relevant inputs (NOT
-# transient state like .omx/state/* which stays local).
-_OMX_RESEARCH_MOUNTS = (
-    (".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json",
-     "/workspace/pact/.omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"),
-)
-for _local, _remote in _OMX_RESEARCH_MOUNTS:
-    if _os.path.isfile(_local):
-        training_image = training_image.add_local_file(_local, remote_path=_remote)
 
 
 def _run_lane_inner(

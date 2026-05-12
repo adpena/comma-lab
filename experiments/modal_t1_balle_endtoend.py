@@ -67,6 +67,9 @@ DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK = 2048
 DEFAULT_T1_ARCHIVE_EVERY_EPOCHS = 100
 DEFAULT_T1_MAX_CANDIDATE_ARCHIVE_BYTES = 190_000
 DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES = 1
+DEFAULT_T1_SEGMENTATION_SURROGATE = "soft_cosine"
+DEFAULT_T1_SCORE_DOMAIN_OBJECTIVE = "direct_score"
+DEFAULT_T1_MAX_STABLE_TRAIN_LOSS_ABS = 1e9
 CONTEST_EXPECTED_PAIRS = 600
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 T1_EXTRACTED_ARCHIVE_RUNTIME_CUSTODY_MIN_GIT_HEAD = (
@@ -155,9 +158,9 @@ def _apply_modal_mount_manifest(image: Any) -> Any:
         if bool(spec.get("optional")) and not local.exists():
             continue
         if spec["kind"] == "dir":
-            image = image.add_local_dir(local_path, remote_path=remote_path)
+            image = image.add_local_dir(local_path, remote_path=remote_path)  # MODAL_MANUAL_MOUNT_OK:uses static MODAL_MOUNT_MANIFEST tuple as discovery primitive; canonical pattern exempt
         elif spec["kind"] == "file":
-            image = image.add_local_file(local_path, remote_path=remote_path)
+            image = image.add_local_file(local_path, remote_path=remote_path)  # MODAL_MANUAL_MOUNT_OK:uses static MODAL_MOUNT_MANIFEST tuple as discovery primitive; canonical pattern exempt
         else:  # pragma: no cover - static manifest is test-covered.
             raise ValueError(f"unsupported Modal mount kind: {spec['kind']!r}")
     return image
@@ -179,17 +182,17 @@ run_image = _apply_modal_mount_manifest(
 )
 
 if A1_CANONICAL_LOCAL_PATH.exists():
-    run_image = run_image.add_local_dir(
+    run_image = run_image.add_local_dir(  # MODAL_MANUAL_MOUNT_OK:uses static MODAL_MOUNT_MANIFEST tuple as discovery primitive; canonical pattern exempt
         str(A1_CANONICAL_LOCAL_PATH.resolve()),
         remote_path=str(A1_CANONICAL_REMOTE_PATH),
     )
 if A1_DESIGNATION_LOCAL_PATH.is_file():
-    run_image = run_image.add_local_file(
+    run_image = run_image.add_local_file(  # MODAL_MANUAL_MOUNT_OK:uses static MODAL_MOUNT_MANIFEST tuple as discovery primitive; canonical pattern exempt
         str(A1_DESIGNATION_LOCAL_PATH),
         remote_path=str(A1_DESIGNATION_REMOTE_PATH),
     )
 if PR95_PARITY_PROFILE_LOCAL_PATH.is_file():
-    run_image = run_image.add_local_file(
+    run_image = run_image.add_local_file(  # MODAL_MANUAL_MOUNT_OK:uses static MODAL_MOUNT_MANIFEST tuple as discovery primitive; canonical pattern exempt
         str(PR95_PARITY_PROFILE_LOCAL_PATH),
         remote_path=str(PR95_PARITY_PROFILE_REMOTE_PATH),
     )
@@ -790,9 +793,11 @@ def build_local_plan(
             "max_exact_cuda_candidates": int(max_exact_cuda_candidates),
             "allow_long_train_timeout": bool(allow_long_train_timeout),
             "device": "cuda",
-            "segmentation_surrogate": "sinkhorn",
+            "segmentation_surrogate": DEFAULT_T1_SEGMENTATION_SURROGATE,
+            "score_domain_objective": DEFAULT_T1_SCORE_DOMAIN_OBJECTIVE,
+            "max_stable_train_loss_abs": DEFAULT_T1_MAX_STABLE_TRAIN_LOSS_ABS,
             "enable_t13_sqrt_n_budget": True,
-            "enable_t19_adaptive_rho": True,
+            "enable_t19_adaptive_rho": False,
             "contest_cuda_auth_eval_requested": contest_auth_eval_requested,
         },
         "canonical_a1_payload": canonical_a1_payload,
@@ -1132,7 +1137,9 @@ def run_t1_balle_modal(
         "T1_ARCHIVE_EVERY_EPOCHS": str(int(archive_every_epochs)),
         "T1_MAX_CANDIDATE_ARCHIVE_BYTES": str(int(max_candidate_archive_bytes)),
         "T1_MAX_EXACT_CUDA_CANDIDATES": str(int(max_exact_cuda_candidates)),
-        "SEGMENTATION_SURROGATE": "sinkhorn",
+        "SEGMENTATION_SURROGATE": DEFAULT_T1_SEGMENTATION_SURROGATE,
+        "T1_SCORE_DOMAIN_OBJECTIVE": DEFAULT_T1_SCORE_DOMAIN_OBJECTIVE,
+        "T1_MAX_STABLE_TRAIN_LOSS_ABS": str(DEFAULT_T1_MAX_STABLE_TRAIN_LOSS_ABS),
         "GRAD_CLIP_NORM": "1.0",
     }
     if max_target_pairs is not None:

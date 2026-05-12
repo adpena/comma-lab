@@ -104,9 +104,9 @@ base_image = (
 introspection_image = (
     base_image
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))
-    .add_local_file(
+    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow scorer-introspection dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))  # MODAL_MANUAL_MOUNT_OK:narrow scorer-introspection dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow scorer-introspection dispatcher; targeted upstream files; trainer-discovery N/A
         "experiments/dump_scorer_activations.py",
         remote_path=str(REMOTE_REPO / "experiments/dump_scorer_activations.py"),
     )

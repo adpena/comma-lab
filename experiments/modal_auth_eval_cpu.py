@@ -135,13 +135,13 @@ base_image = (
 eval_image = (
     base_image
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))
-    .add_local_dir(
+    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "submissions/robust_current",
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
     )
-    .add_local_dir(
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/public_runtime_adapters",
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
     )
@@ -149,26 +149,26 @@ eval_image = (
     # the per-PR source trees we exercise (PR107 apogee, PR102 hnerv_lc_v2)
     # are mounted; other intakes are intentionally excluded to keep image
     # builds fast. To run a different PR, add its intake source here.
-    .add_local_dir(
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee",
         remote_path=str(
             REMOTE_REPO
             / "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee"
         ),
     )
-    .add_local_dir(
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/source/submissions/hnerv_lc_v2_scale095_rplus1",
         remote_path=str(
             REMOTE_REPO
             / "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/source/submissions/hnerv_lc_v2_scale095_rplus1"
         ),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/contest_auth_eval.py",
         remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
     )
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
+    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
 )
 
 

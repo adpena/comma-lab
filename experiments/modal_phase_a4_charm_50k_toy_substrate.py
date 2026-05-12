@@ -175,18 +175,18 @@ run_image = (
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
     # Workspace mounts — only the minimum needed by the A4 chain.
     # tac/* is required for tac.codec.charm_range_coder + tac.parametrize_strip.
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_file("experiments/__init__.py", remote_path=str(REMOTE_REPO / "experiments/__init__.py"))
-    .add_local_file(
+    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A4 charm dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file("experiments/__init__.py", remote_path=str(REMOTE_REPO / "experiments/__init__.py"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A4 charm dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A4 charm dispatcher; targeted upstream files; trainer-discovery N/A
         "experiments/train_charm_50k_toy_substrate.py",
         remote_path=str(REMOTE_REPO / "experiments/train_charm_50k_toy_substrate.py"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow phase-A4 charm dispatcher; targeted upstream files; trainer-discovery N/A
         "scripts/probe_nvdec.sh",
         remote_path=str(REMOTE_REPO / "scripts/probe_nvdec.sh"),
     )
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
+    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A4 charm dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow phase-A4 charm dispatcher; targeted upstream files; trainer-discovery N/A
 )
 
 

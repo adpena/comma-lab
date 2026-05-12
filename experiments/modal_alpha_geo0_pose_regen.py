@@ -109,50 +109,50 @@ base_image = (
 run_image = (
     base_image
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_dir("upstream/models", remote_path=str(REMOTE_REPO / "upstream/models"))
-    .add_local_dir("upstream/videos", remote_path=str(REMOTE_REPO / "upstream/videos"))
-    .add_local_file("upstream/evaluate.py", remote_path=str(REMOTE_REPO / "upstream/evaluate.py"))
-    .add_local_file("upstream/frame_utils.py", remote_path=str(REMOTE_REPO / "upstream/frame_utils.py"))
-    .add_local_file("upstream/modules.py", remote_path=str(REMOTE_REPO / "upstream/modules.py"))
-    .add_local_file(
+    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_dir("upstream/models", remote_path=str(REMOTE_REPO / "upstream/models"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_dir("upstream/videos", remote_path=str(REMOTE_REPO / "upstream/videos"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file("upstream/evaluate.py", remote_path=str(REMOTE_REPO / "upstream/evaluate.py"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file("upstream/frame_utils.py", remote_path=str(REMOTE_REPO / "upstream/frame_utils.py"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file("upstream/modules.py", remote_path=str(REMOTE_REPO / "upstream/modules.py"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "upstream/public_test_video_names.txt",
         remote_path=str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
     )
-    .add_local_file("upstream/pyproject.toml", remote_path=str(REMOTE_REPO / "upstream/pyproject.toml"))
-    .add_local_file("upstream/uv.lock", remote_path=str(REMOTE_REPO / "upstream/uv.lock"))
-    .add_local_file("experiments/__init__.py", remote_path=str(REMOTE_REPO / "experiments/__init__.py"))
-    .add_local_file(
+    .add_local_file("upstream/pyproject.toml", remote_path=str(REMOTE_REPO / "upstream/pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file("upstream/uv.lock", remote_path=str(REMOTE_REPO / "upstream/uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file("experiments/__init__.py", remote_path=str(REMOTE_REPO / "experiments/__init__.py"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "experiments/diagnose_nerv_geometry.py",
         remote_path=str(REMOTE_REPO / "experiments/diagnose_nerv_geometry.py"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "experiments/optimize_poses.py",
         remote_path=str(REMOTE_REPO / "experiments/optimize_poses.py"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "experiments/contest_auth_eval.py",
         remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "scripts/adjudicate_contest_auth_eval.py",
         remote_path=str(REMOTE_REPO / "scripts/adjudicate_contest_auth_eval.py"),
     )
-    .add_local_file("scripts/probe_nvdec.sh", remote_path=str(REMOTE_REPO / "scripts/probe_nvdec.sh"))
-    .add_local_file(
+    .add_local_file("scripts/probe_nvdec.sh", remote_path=str(REMOTE_REPO / "scripts/probe_nvdec.sh"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "submissions/robust_current/inflate.sh",
         remote_path=str(REMOTE_REPO / "submissions/robust_current/inflate.sh"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "submissions/robust_current/config.env",
         remote_path=str(REMOTE_REPO / "submissions/robust_current/config.env"),
     )
-    .add_local_file(
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
         "submissions/robust_current/inflate_renderer.py",
         remote_path=str(REMOTE_REPO / "submissions/robust_current/inflate_renderer.py"),
     )
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
+    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
+    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow pose-regen dispatcher; targeted upstream files + warm-pose inputs; trainer-discovery N/A
 )
 
 
