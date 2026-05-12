@@ -94,9 +94,22 @@ EOM
     exit 3
 fi
 
-SCPP_DISPATCH_INSTANCE_JOB_ID="$INSTANCE_JOB_ID" \
-    DISPATCH_PLATFORM="$PLATFORM" \
-    bash "$REMOTE_DRIVER"
+# Delegate to canonical Modal launcher (modal_train_lane.py); the remote
+# script runs INSIDE the Modal container which mounts /workspace/pact.
+# Per CLAUDE.md "Remote code parity" + Modal `.spawn()` harvest-or-lose,
+# this writes modal_metadata.json with the call_id for harvest within 24h.
+ENV_OVERRIDES="SCPP_DISPATCH_INSTANCE_JOB_ID=${INSTANCE_JOB_ID}"
+ENV_OVERRIDES="${ENV_OVERRIDES},SCPP_ALLOW_SCORE_DOMAIN_TRAINING=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},SCPP_STAGE_1_EPOCHS=3"
+ENV_OVERRIDES="${ENV_OVERRIDES},SCPP_RUN_CONTEST_CUDA_AUTH_EVAL=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},LOCAL_CUDA_WORKER=1"
+
+.venv/bin/modal run --detach experiments/modal_train_lane.py \
+    --lane-script "$REMOTE_DRIVER" \
+    --label "${INSTANCE_JOB_ID}" \
+    --gpu T4 \
+    --timeout-hours 3.0 \
+    --env-overrides "${ENV_OVERRIDES}"
 
 echo "[scpp-stage1] complete; review active dispatch claims ledger:"
 echo "  .omx/state/active_lane_dispatch_claims.md"

@@ -95,15 +95,47 @@ INSTANCE_JOB_ID="t1_balle_cheap_config_$(date -u +%Y%m%dT%H%M%SZ)"
     --status "active_dispatch" \
     --notes "operator-authorized Phase 1 T1 Ballé T13+T19+T20+T22 all-on dispatch via scripts/operator_authorize_phase1_t1_balle_cheap_config_dispatch.sh; expected cost \$${EXPECTED_COST_BAND_USD} on ${PLATFORM}"
 
-# Delegate to canonical remote driver with the cheap-config env-vars.
-T1_DISPATCH_INSTANCE_JOB_ID="$INSTANCE_JOB_ID" \
-    T1_ALLOW_SCORE_DOMAIN_TRAINING=1 \
-    T1_ENABLE_T13_SQRT_N_BUDGET=1 \
-    T1_ENABLE_T19_ADAPTIVE_RHO=1 \
-    T1_ENABLE_T20_KL_POSE_DISTILL=1 \
-    T1_ENABLE_T22_TEMPORAL_CONSISTENCY=1 \
-    DISPATCH_PLATFORM="$PLATFORM" \
-    bash scripts/remote_lane_t1_balle_endtoend.sh
+# Delegate to canonical Modal launcher (modal_train_lane.py) which mounts
+# the workspace at /workspace/pact + runs the remote-side script inside the
+# Modal container. Per CLAUDE.md "Remote code parity" + Modal `.spawn()`
+# harvest-or-lose discipline, this writes modal_metadata.json with the
+# call_id; harvest via tools/harvest_modal_calls.py within 24h.
+ENV_OVERRIDES="T1_DISPATCH_INSTANCE_JOB_ID=${INSTANCE_JOB_ID}"
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_ALLOW_SCORE_DOMAIN_TRAINING=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T13_SQRT_N_BUDGET=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T19_ADAPTIVE_RHO=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T20_KL_POSE_DISTILL=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T22_TEMPORAL_CONSISTENCY=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},LOCAL_CUDA_WORKER=1"
+
+case "$PLATFORM" in
+    modal)
+        # Cheap-config Modal T4 ~$0.59 cost band (~1h on T4). modal_train_lane.py
+        # uses .spawn() for detached runs — harvest via tools/harvest_modal_calls.py.
+        .venv/bin/modal run --detach experiments/modal_train_lane.py \
+            --lane-script scripts/remote_lane_t1_balle_endtoend.sh \
+            --label "${INSTANCE_JOB_ID}" \
+            --gpu T4 \
+            --timeout-hours 2.0 \
+            --env-overrides "${ENV_OVERRIDES}"
+        ;;
+    vastai|vast)
+        # Vast.ai 4090 path: delegate to canonical launch script.
+        LAUNCHER=""
+        [ -f "scripts/launch_lane_on_vastai.py" ] && LAUNCHER="scripts/launch_lane_on_vastai.py"
+        [ -f "tools/launch_lane_on_vastai.py" ] && LAUNCHER="tools/launch_lane_on_vastai.py"
+        if [ -z "$LAUNCHER" ]; then
+            echo "[phase1-t1-cheap-config] FATAL: Vast.ai launcher missing; pick PHASE1_PLATFORM=modal" >&2
+            exit 5
+        fi
+        .venv/bin/python "$LAUNCHER" \
+            --lane-script scripts/remote_lane_t1_balle_endtoend.sh \
+            --label "${INSTANCE_JOB_ID}" \
+            --gpu RTX_4090 \
+            --timeout-hours 2.0 \
+            --env-overrides "${ENV_OVERRIDES}"
+        ;;
+esac
 
 echo "[phase1-t1-cheap-config] complete; review active dispatch claims ledger:"
 echo "  .omx/state/active_lane_dispatch_claims.md"
