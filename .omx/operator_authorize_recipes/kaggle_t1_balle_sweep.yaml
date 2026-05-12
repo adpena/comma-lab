@@ -51,11 +51,13 @@ notes: |
     - Hard cap: 9h Kaggle kernel timeout
     - P100 retry: up to 5 attempts per variant via new slug suffix
 
-  Submission auth eval rule per CLAUDE.md: Kaggle T4 on Linux x86_64 IS a
-  1:1 contest-compliant CUDA substrate (the contest's bot scores CUDA on
-  T4-class GPUs). Anchors produced here are tagged [contest-CUDA] per
-  Catalog #127. Kaggle CPU is NOT used for ranking (GHA Linux x86_64
-  required for [contest-CPU] axis).
+  Evidence rule per AGENTS.md Provider Runtime Architecture: Kaggle T4 is a
+  free proxy/sweep substrate, not an exact-eval authority by default. Anchors
+  produced here MUST carry score_claim=false, promotion_eligible=false, and
+  ready_for_exact_eval_dispatch=false unless a future exact target contract
+  adds the full lifecycle, runtime closure, claim, harvest, and adjudication
+  path. Kaggle CPU is NOT used for ranking (GHA Linux x86_64 required for the
+  [contest-CPU] axis).
 
   Tier-1 wins all-on (per 2026-05-12 engineering audit):
     --enable-autocast-fp16 (~1.6× Amdahl)

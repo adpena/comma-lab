@@ -18,7 +18,6 @@ from tac.optimization.substrate_composition_matrix import (
     Composability,
     CompositionMatrix,
     CompositionResult,
-    ParetoRow,
     ScoreAxis,
     SubstrateClass,
     SubstrateRow,
@@ -34,19 +33,27 @@ from tac.optimization.substrate_composition_matrix import (
     write_matrix_json,
 )
 
-
 # ── Inventory invariants ──────────────────────────────────────────────────
 
 
 def test_inventory_has_expected_count():
-    """16 non-HNeRV substrates + 2 bolt-ons + 1 magic codec + 3 self-comp + 3
-    pose + 5 NeRV-family + 3 HH-NeRV/MNeRV/VQVAE + 2 ANR/categorical = 24
-    total. Per the task: 16 non-HNeRV substrates is the headline figure.
-    The 24-row inventory below covers EVERY substrate landed in the session
-    (residual basis 5 + pose-axis 3 + self-compression 3 + NeRV-family 5 +
-    NeRV/MNeRV/VQVAE 3 + ANR/categorical 2 + magic codec 1 + bolt-ons 2)."""
+    """39-row inventory: 24 legacy rows + 15 FIX-J substrate-scaffold rows.
+
+    Legacy 24 = residual basis 5 + pose-axis 3 + self-compression 3 +
+    NeRV-family 5 + NeRV/MNeRV/VQVAE 3 + ANR/categorical 2 + magic codec 1 +
+    bolt-ons 2.
+
+    FIX-J wire-in 2026-05-12 (LOOPCLOSE) added 15 substrate-scaffold rows
+    for the Fields-medal-council subpackages under ``src/tac/substrates/``
+    (sane_hnerv, balle_renderer, hybrid_renderer_residual, self_compress_nn,
+    pr101_lc_v2_clone, cool_chic_full_renderer, wavelet_full_renderer,
+    grayscale_lut, vq_vae_substrate, siren_substrate, block_nerv_substrate,
+    tc_nerv_substrate, ff_nerv_substrate, ds_nerv_substrate,
+    hi_nerv_substrate). See
+    ``feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512.md``.
+    """
     rows = canonical_substrate_inventory()
-    assert len(rows) == 24, f"expected 24 substrate rows, got {len(rows)}"
+    assert len(rows) == 39, f"expected 39 substrate rows (24 legacy + 15 FIX-J), got {len(rows)}"
 
 
 def test_inventory_substrate_ids_unique():
@@ -120,7 +127,7 @@ def test_build_composition_matrix_default():
     matrix = build_composition_matrix()
     assert isinstance(matrix, CompositionMatrix)
     n = matrix.n_substrates()
-    assert n == 24
+    assert n == len(canonical_substrate_inventory())
     assert matrix.n_cells() == n * n
     assert matrix.schema_version == SCHEMA_VERSION
     assert matrix.score_claim is False
@@ -134,9 +141,9 @@ def test_build_composition_matrix_refuses_empty():
 
 
 def test_build_composition_matrix_refuses_duplicate_ids():
-    rows = canonical_substrate_inventory()
+    rows = list(canonical_substrate_inventory())
     # Inject a duplicate.
-    rows = list(rows) + [rows[0]]
+    rows.append(rows[0])
     with pytest.raises(ValueError, match="duplicate"):
         build_composition_matrix(substrates=rows)
 
@@ -310,7 +317,7 @@ def test_format_id_collision_detected_when_injected():
 
 def test_per_substrate_pareto_rows_count():
     rows = per_substrate_pareto_rows()
-    assert len(rows) == 24
+    assert len(rows) == len(canonical_substrate_inventory())
 
 
 def test_pareto_rows_score_claim_invariants():
@@ -327,15 +334,25 @@ def test_rank_substrates_by_ev_per_dollar_descending():
         assert ranked[i].eig_per_dollar >= ranked[i + 1].eig_per_dollar
 
 
-def test_zero_cost_with_nonzero_eig_ranks_to_top():
+def test_zero_cost_with_nonzero_eig_is_cost_unknown_not_free():
     """Hessian-block-FP has cost $0.50 and predicted delta band; bolt-ons
-    have cost $0; magic codec has cost $0.10.
+    have cost $0; magic codec has cost $0.10. Cost-zero is an unknown-cost
+    blocker, not a free dispatch signal.
 
-    The TOP-ranked entries should include zero-cost-or-low-cost substrates."""
+    Cost-unknown rows must rank last and carry cost-estimation notes instead
+    of surfacing +inf EV/$.
+    """
     ranked = rank_substrates_by_ev_per_dollar()
-    top_5 = [r.substrate_id for r in ranked[:5]]
-    # The two bolt-ons have cost=0; with non-zero eig they rank as +inf.
-    assert "nerv_enc_dec_separated" in top_5 or "film_pose_conditioning" in top_5
+    cost_unknown = [
+        r
+        for r in ranked
+        if r.substrate_id in {"nerv_enc_dec_separated", "film_pose_conditioning"}
+    ]
+
+    assert cost_unknown
+    assert all(r.eig_per_dollar == 0.0 for r in cost_unknown)
+    assert all("cost_estimation_required" in r.notes for r in cost_unknown)
+    assert all(r not in ranked[:5] for r in cost_unknown)
 
 
 def test_filter_pareto_dominated_drops_redundant_lower_ev_sibling():
@@ -442,7 +459,7 @@ def test_serialize_matrix_jsonable():
     serialized = json.dumps(payload, sort_keys=True)
     parsed = json.loads(serialized)
     assert parsed["schema"] == SCHEMA_VERSION
-    assert parsed["n_substrates"] == 24
+    assert parsed["n_substrates"] == len(canonical_substrate_inventory())
     assert parsed["score_claim"] is False
     assert parsed["promotion_eligible"] is False
     assert parsed["ready_for_exact_eval_dispatch"] is False
@@ -453,7 +470,7 @@ def test_serialize_pareto_rows_jsonable():
     rows = per_substrate_pareto_rows()
     payload = serialize_pareto_rows(rows)
     json.dumps(payload, sort_keys=True)  # Must not raise.
-    assert len(payload) == 24
+    assert len(payload) == len(canonical_substrate_inventory())
     for r in payload:
         assert r["score_claim"] is False
         assert "substrate_class" in r

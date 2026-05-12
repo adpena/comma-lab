@@ -374,7 +374,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         stackability="medium-high after HNeRV source archive identity is locked",
         replacement_potential="low-medium: quantization policy, not representation replacement",
         code_paths=(
-            "src/tac/sensitivity_map.py",
+            "src/tac/sensitivity_map/__init__.py",
             "src/tac/component_sensitivity_artifact.py",
             "src/tac/neural_weight_codec_sensitivity.py",
             "src/tac/owv3_sensitivity_weighted.py",

@@ -160,7 +160,7 @@ PHASE_A_DISPATCHES: dict[str, DispatchSpec] = {
         estimated_cost_usd=4.0,
         lane_id="track1_phase_a3alt_wavelet_importance",
         description="Mallat lane: wavelet-coefficient importance for higher-resolution allocation",
-        pre_check_required=["src/tac/sensitivity_map.py"],
+        pre_check_required=["src/tac/sensitivity_map/__init__.py"],
         output_relpath="experiments/results/track1_phase_a3alt_wavelet",
         run_args=[],
     ),

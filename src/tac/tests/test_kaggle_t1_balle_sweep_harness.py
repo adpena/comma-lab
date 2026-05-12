@@ -16,10 +16,8 @@ Covers per-harness invariants:
 from __future__ import annotations
 
 import importlib.util
-import json
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -80,6 +78,29 @@ class TestP100FatalExit(unittest.TestCase):
         info = self.kernel.assert_cuda_t4_or_better(_torch_module=fake_torch)
         self.assertEqual(info["gpu_name"], "Tesla T4")
         self.assertEqual(info["major"], 7)
+
+
+class TestFalseAuthorityContract(unittest.TestCase):
+    """Kaggle is a sweep/proxy substrate unless exact adjudication is wired."""
+
+    def test_kernel_docstring_carries_proxy_only_contract(self):
+        text = (REPO_ROOT / "experiments/kaggle_t1_balle_sweep.py").read_text()
+
+        self.assertIn("score_claim=false", text)
+        self.assertIn("promotion_eligible=false", text)
+        self.assertIn("ready_for_exact_eval_dispatch=false", text)
+        self.assertNotIn("this anchor is\n   ``[contest-CUDA]``", text)
+
+    def test_recipe_notes_carry_proxy_only_contract(self):
+        text = (
+            REPO_ROOT
+            / ".omx/operator_authorize_recipes/kaggle_t1_balle_sweep.yaml"
+        ).read_text()
+
+        self.assertIn("score_claim=false", text)
+        self.assertIn("promotion_eligible=false", text)
+        self.assertIn("ready_for_exact_eval_dispatch=false", text)
+        self.assertNotIn("Anchors produced here are tagged [contest-CUDA]", text)
 
 
 class TestTier1ManifestExtraction(unittest.TestCase):
@@ -293,36 +314,34 @@ class TestHarvesterCostBandAnchor(unittest.TestCase):
             "wall_clock_sec": 7200.0,
             "trainer_returncode": 0,
         }
-        with tempfile.TemporaryDirectory() as td:
-            posterior = Path(td) / "cost_band_posterior.jsonl"
-            # We use mock.patch on subprocess.run so the real CLI is NOT invoked
-            # against the real posterior file under .omx/state — we just verify
-            # the harvester emits the correct command shape.
-            with mock.patch.object(
-                self.harv.subprocess, "run",
-                return_value=mock.Mock(returncode=0, stdout="ok", stderr=""),
-            ) as mock_run:
-                result = self.harv.append_cost_band_anchor_from_summary(
-                    summary=summary,
-                    dispatch_label="kaggle_t1_balle_a_20260512T000000Z",
-                    anchor_tool=anchor_tool,
-                )
-                self.assertTrue(result["appended"])
-                emitted_argv = mock_run.call_args.args[0]
-                self.assertIn("--platform", emitted_argv)
-                self.assertEqual(
-                    emitted_argv[emitted_argv.index("--platform") + 1],
-                    "kaggle",
-                )
-                self.assertEqual(
-                    emitted_argv[emitted_argv.index("--gpu") + 1],
-                    "Tesla_T4",
-                )
-                # Free tier: cost must be 0.00.
-                self.assertEqual(
-                    emitted_argv[emitted_argv.index("--actual-cost-usd") + 1],
-                    "0.00",
-                )
+        # We use mock.patch on subprocess.run so the real CLI is NOT invoked
+        # against the real posterior file under .omx/state — we just verify
+        # the harvester emits the correct command shape.
+        with mock.patch.object(
+            self.harv.subprocess, "run",
+            return_value=mock.Mock(returncode=0, stdout="ok", stderr=""),
+        ) as mock_run:
+            result = self.harv.append_cost_band_anchor_from_summary(
+                summary=summary,
+                dispatch_label="kaggle_t1_balle_a_20260512T000000Z",
+                anchor_tool=anchor_tool,
+            )
+            self.assertTrue(result["appended"])
+            emitted_argv = mock_run.call_args.args[0]
+            self.assertIn("--platform", emitted_argv)
+            self.assertEqual(
+                emitted_argv[emitted_argv.index("--platform") + 1],
+                "kaggle",
+            )
+            self.assertEqual(
+                emitted_argv[emitted_argv.index("--gpu") + 1],
+                "Tesla_T4",
+            )
+            # Free tier: cost must be 0.00.
+            self.assertEqual(
+                emitted_argv[emitted_argv.index("--actual-cost-usd") + 1],
+                "0.00",
+            )
 
     def test_missing_anchor_tool_returns_skip(self):
         result = self.harv.append_cost_band_anchor_from_summary(

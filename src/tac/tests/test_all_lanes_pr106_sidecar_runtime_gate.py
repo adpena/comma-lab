@@ -26,7 +26,9 @@ def test_pr106_sidecar_runtime_consumption_gate_passes_current_archives() -> Non
 
     assert passed is True
     assert "format_ids=0x01,0x02" in output
+    assert "PacketIR identity parse-emit accounts for every payload byte" in output
     assert "runtime decodes/applies sidecar bytes" in output
+    assert "full-frame inflate parity not claimed" in output
     assert "score_claim=false" in output
     assert "ready_for_exact_eval_dispatch=false" in output
 
@@ -77,3 +79,21 @@ def test_pr106_sidecar_runtime_consumption_gate_rejects_promotable_manifest(monk
 
     assert passed is False
     assert "score_claim_drift" in output
+
+
+def test_pr106_sidecar_runtime_consumption_gate_rejects_packet_ir_identity_drift(
+    monkeypatch,
+) -> None:
+    module = _load_all_lanes_module()
+    packet_compiler = module.sys.modules["tac.packet_compiler"]
+    original_emit = packet_compiler.emit_pr106_sidecar_packet
+
+    def fake_emit(packet: object) -> bytes:
+        return original_emit(packet) + b"\x00"
+
+    monkeypatch.setattr(packet_compiler, "emit_pr106_sidecar_packet", fake_emit)
+
+    passed, output = module._run_pr106_sidecar_runtime_consumption_gate()
+
+    assert passed is False
+    assert "packet_ir_emit_payload_not_identity" in output

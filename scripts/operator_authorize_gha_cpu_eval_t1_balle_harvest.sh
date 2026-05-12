@@ -113,7 +113,7 @@ gh release create "$RELEASE_TAG" \
 ASSET_URL=$(gh release view "$RELEASE_TAG" \
     -R "$T1_BALLE_FORK_REPO" \
     --json assets \
-    --jq '.assets[] | select(.name | endswith(".zip")) | .url')
+    --jq '.assets[] | select(.name | endswith(".zip")) | .browser_download_url')
 
 if [ -z "$ASSET_URL" ]; then
     echo "[gha-cpu-eval-t1-balle] FATAL: could not read release asset URL" >&2

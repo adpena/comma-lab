@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import tools.operator_authorize as op
 
 
@@ -68,11 +70,73 @@ def test_operator_authorize_modal_recipe_claims_before_dispatch(monkeypatch) -> 
     monkeypatch.setattr(op, "_predict_cost_band", lambda **_: _band())
     monkeypatch.setattr(op, "_validate_required_input_files", lambda *_: None)
     monkeypatch.setattr(op, "_confirm", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(op, "_native_dispatch_preflight", lambda *_: events.append("preflight"))
     monkeypatch.setattr(op, "_claim_lane", lambda **_: events.append("claim"))
     monkeypatch.setattr(op, "_run_dispatch", lambda *_: events.append("dispatch") or 0)
 
     rc = op.main(["--recipe", "phase1_t1_balle_cheap_config_dispatch"])
 
     assert rc == 0
-    assert events == ["claim", "dispatch"]
+    assert events == ["preflight", "claim", "dispatch"]
 
+
+def test_operator_authorize_prevalidates_before_claim(monkeypatch) -> None:
+    events: list[str] = []
+    monkeypatch.setattr(op, "_predict_cost_band", lambda **_: _band())
+    monkeypatch.setattr(op, "_validate_required_input_files", lambda *_: None)
+    monkeypatch.setattr(op, "_confirm", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        op,
+        "_native_dispatch_preflight",
+        lambda *_: (_ for _ in ()).throw(SystemExit("missing provider driver")),
+    )
+    monkeypatch.setattr(op, "_claim_lane", lambda **_: events.append("claim"))
+    monkeypatch.setattr(op, "_run_dispatch", lambda *_: events.append("dispatch") or 0)
+
+    with pytest.raises(SystemExit, match="missing provider driver"):
+        op.main(["--recipe", "phase1_t1_balle_cheap_config_dispatch"])
+
+    assert events == []
+
+
+def test_operator_authorize_closes_claim_on_dispatch_rc(monkeypatch) -> None:
+    events: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(op, "_predict_cost_band", lambda **_: _band())
+    monkeypatch.setattr(op, "_validate_required_input_files", lambda *_: None)
+    monkeypatch.setattr(op, "_confirm", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(op, "_native_dispatch_preflight", lambda *_: events.append(("preflight", None)))
+    monkeypatch.setattr(op, "_claim_lane", lambda **_: events.append(("claim", None)))
+    monkeypatch.setattr(op, "_run_dispatch", lambda *_: events.append(("dispatch", None)) or 7)
+    monkeypatch.setattr(
+        op,
+        "_terminal_claim",
+        lambda **kwargs: events.append(("terminal", str(kwargs["status"]))),
+    )
+
+    rc = op.main(["--recipe", "phase1_t1_balle_cheap_config_dispatch"])
+
+    assert rc == 7
+    assert events == [
+        ("preflight", None),
+        ("claim", None),
+        ("dispatch", None),
+        ("terminal", "failed_dispatch_rc_7"),
+    ]
+
+
+def test_operator_authorize_phase1_platform_env_reaches_vastai(
+    monkeypatch,
+) -> None:
+    events: list[str] = []
+    monkeypatch.setenv("PHASE1_PLATFORM", "vastai")
+    monkeypatch.setattr(op, "_predict_cost_band", lambda **kwargs: events.append(kwargs["platform_key"]) or _band())
+    monkeypatch.setattr(op, "_validate_required_input_files", lambda *_: None)
+    monkeypatch.setattr(op, "_confirm", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(op, "_native_dispatch_preflight", lambda recipe: events.append(recipe.platform))
+    monkeypatch.setattr(op, "_claim_lane", lambda **kwargs: events.append(str(kwargs["platform"])))
+    monkeypatch.setattr(op, "_run_dispatch", lambda recipe, *_: events.append(f"dispatch:{recipe.platform}") or 0)
+
+    rc = op.main(["--recipe", "phase1_t1_balle_cheap_config_dispatch"])
+
+    assert rc == 0
+    assert events == ["vastai", "vastai", "vastai", "dispatch:vastai"]

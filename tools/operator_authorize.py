@@ -277,6 +277,54 @@ def _claim_lane(
         )
 
 
+def _terminal_claim(
+    *,
+    lane_id: str,
+    platform: str,
+    instance_job_id: str,
+    agent: str,
+    status: str,
+    notes: str,
+) -> None:
+    """Append a terminal claim row after a failed native dispatch."""
+    helper = REPO_ROOT / "tools/claim_lane_dispatch.py"
+    if not helper.exists():
+        print(
+            "[operator-authorize] WARN: lane-claim helper missing while trying "
+            f"to close failed claim at {helper}",
+            file=sys.stderr,
+        )
+        return
+    result = subprocess.run(
+        [
+            _python_bin(),
+            str(helper),
+            "claim",
+            "--force",
+            "--lane-id",
+            lane_id,
+            "--platform",
+            platform,
+            "--instance-job-id",
+            instance_job_id,
+            "--agent",
+            agent,
+            "--status",
+            status,
+            "--notes",
+            notes,
+        ],
+        cwd=str(REPO_ROOT),
+    )
+    if result.returncode != 0:
+        print(
+            "[operator-authorize] WARN: failed to append terminal lane-claim "
+            f"row (returncode={result.returncode}); investigate "
+            ".omx/state/active_lane_dispatch_claims.md",
+            file=sys.stderr,
+        )
+
+
 def _confirm(prompt: str, *, default_yes: bool = False) -> bool:
     """Read a y/N from stdin. Returns True only on explicit yes."""
     suffix = " [Y/n] " if default_yes else " [y/N] "
@@ -321,7 +369,7 @@ class Recipe:
 
     @property
     def platform(self) -> str:
-        return str(self.raw.get("platform", "none")).lower()
+        return str(_resolve_env_var(self.raw.get("platform", "none"), "none")).lower()
 
     @property
     def summary(self) -> str:
@@ -329,7 +377,7 @@ class Recipe:
 
     @property
     def gpu(self) -> str:
-        return _resolve_env_var(self.raw.get("gpu", "none"), "none")
+        return str(_resolve_env_var(self.raw.get("gpu", "none"), "none"))
 
     @property
     def predicted_delta(self) -> str:
@@ -580,6 +628,58 @@ def _dispatch_noop(recipe: Recipe, instance_job_id: str, env_overrides: str) -> 
     return 0
 
 
+def _native_dispatch_preflight(recipe: Recipe) -> None:
+    """Validate native provider prerequisites before claiming a lane."""
+    platform = recipe.platform
+    if platform == "modal":
+        modal_cfg = recipe.raw.get("modal", {}) or {}
+        lane_script = modal_cfg.get("lane_script") or recipe.remote_driver
+        if not lane_script:
+            raise SystemExit(
+                "[operator-authorize] FATAL: modal recipe missing 'modal.lane_script' "
+                "and 'remote_driver'"
+            )
+        if not (REPO_ROOT / str(lane_script)).exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: canonical remote driver missing at "
+                f"{lane_script}"
+            )
+        if not (REPO_ROOT / ".venv/bin/modal").exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: Modal CLI missing at .venv/bin/modal; "
+                "install/sync dependencies before creating a dispatch claim"
+            )
+    elif platform in {"vastai", "vast"}:
+        vastai_cfg = recipe.raw.get("vastai", {}) or {}
+        launcher = vastai_cfg.get("launcher")
+        if not launcher:
+            for candidate in (
+                "scripts/launch_lane_on_vastai.py",
+                "tools/launch_lane_on_vastai.py",
+            ):
+                if (REPO_ROOT / candidate).exists():
+                    launcher = candidate
+                    break
+        if not launcher or not (REPO_ROOT / str(launcher)).exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: Vast.ai launcher not found before "
+                "claim; declare vastai.launcher or install the canonical launcher"
+            )
+        lane_script = vastai_cfg.get("lane_script") or recipe.remote_driver
+        if not lane_script or not (REPO_ROOT / str(lane_script)).exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: Vast.ai lane script missing before "
+                f"claim: {lane_script}"
+            )
+    elif platform == "local":
+        lane_script = recipe.remote_driver
+        if not lane_script or not (REPO_ROOT / str(lane_script)).exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: local remote_driver missing before "
+                f"claim: {lane_script}"
+            )
+
+
 def _run_dispatch(recipe: Recipe, instance_job_id: str) -> int:
     """Route to the appropriate platform dispatcher."""
     env_overrides = _build_env_overrides(recipe, instance_job_id)
@@ -605,6 +705,10 @@ def _platform_has_native_dispatch(platform: str) -> bool:
     """Return True when this tool will actually start provider/local work."""
 
     return platform in {"modal", "vastai", "vast", "local"}
+
+
+def _sanitize_terminal_status(status: str) -> str:
+    return "".join(c if c.isalnum() or c in {"_", "-"} else "_" for c in status)[:80]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -649,8 +753,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # Cost-band prediction.
     cost_cfg = recipe.raw.get("cost_band", {}) or {}
-    platform_key = cost_cfg.get("platform_key") or recipe.platform
-    gpu_key = cost_cfg.get("gpu_key") or recipe.gpu or "T4"
+    platform_key = str(_resolve_env_var(cost_cfg.get("platform_key"), recipe.platform))
+    gpu_key = str(_resolve_env_var(cost_cfg.get("gpu_key"), recipe.gpu or "T4"))
     epochs = int(cost_cfg.get("epochs", 1000))
     all_flags_on = bool(cost_cfg.get("all_flags_on", True))
     fallback_p50 = float(cost_cfg.get("hand_calibrated_fallback_p50_usd", 1.00))
@@ -695,10 +799,15 @@ def main(argv: list[str] | None = None) -> int:
         print("[operator-authorize] aborted — no dispatch fired")
         return 0
 
+    native_dispatch = _platform_has_native_dispatch(recipe.platform)
+    if native_dispatch:
+        _native_dispatch_preflight(recipe)
+
     # Lane claim. Do not create an active claim for recipe-only/no-op platforms:
     # their legacy shims still own the real action and should own any claim.
     instance_job_id = f"{recipe.name}_{_resolve_utc_label()}"
-    if not args.no_claim and _platform_has_native_dispatch(recipe.platform):
+    claim_created = False
+    if not args.no_claim and native_dispatch:
         notes = (
             f"operator-authorized via tools/operator_authorize.py --recipe "
             f"{recipe.name}; expected p50 cost ${band.p50_cost_usd:.2f} "
@@ -711,6 +820,7 @@ def main(argv: list[str] | None = None) -> int:
             agent=args.agent,
             notes=notes,
         )
+        claim_created = True
     elif not args.no_claim:
         print(
             "[operator-authorize] no native dispatch for platform="
@@ -719,8 +829,52 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     # Dispatch.
-    rc = _run_dispatch(recipe, instance_job_id)
+    try:
+        rc = _run_dispatch(recipe, instance_job_id)
+    except SystemExit as exc:
+        code = exc.code if isinstance(exc.code, int) else 1
+        if claim_created:
+            _terminal_claim(
+                lane_id=recipe.lane_id,
+                platform=recipe.platform,
+                instance_job_id=instance_job_id,
+                agent=args.agent,
+                status=_sanitize_terminal_status(f"failed_dispatch_exception_{code}"),
+                notes=(
+                    "operator-authorize native dispatch raised SystemExit after "
+                    f"claim: {exc}"
+                ),
+            )
+        raise
+    except Exception as exc:
+        if claim_created:
+            _terminal_claim(
+                lane_id=recipe.lane_id,
+                platform=recipe.platform,
+                instance_job_id=instance_job_id,
+                agent=args.agent,
+                status=_sanitize_terminal_status(
+                    f"failed_dispatch_exception_{type(exc).__name__}"
+                ),
+                notes=(
+                    "operator-authorize native dispatch raised after claim: "
+                    f"{type(exc).__name__}: {exc}"
+                ),
+            )
+        raise
     if rc != 0:
+        if claim_created:
+            _terminal_claim(
+                lane_id=recipe.lane_id,
+                platform=recipe.platform,
+                instance_job_id=instance_job_id,
+                agent=args.agent,
+                status=_sanitize_terminal_status(f"failed_dispatch_rc_{rc}"),
+                notes=(
+                    "operator-authorize native dispatch returned non-zero "
+                    f"rc={rc}; terminal row closes active claim"
+                ),
+            )
         print(
             f"[operator-authorize] WARN: dispatch returned rc={rc}; review "
             "the dispatch logs + .omx/state/active_lane_dispatch_claims.md",

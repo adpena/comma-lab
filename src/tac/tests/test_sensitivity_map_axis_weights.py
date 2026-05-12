@@ -21,6 +21,8 @@ consume the SAME canonical anchors.
 """
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from tac.score_geometry import score_gradient
@@ -40,7 +42,6 @@ from tac.sensitivity_map.axis_weights import (
     validate_axis_weights_mapping,
 )
 
-
 # ──────────────────────────────────────────────────────────────────────────
 # Anchor sanity
 # ──────────────────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ def test_pr106_r2_frontier_anchor_fields():
     assert w.rate == 1.00
     assert w.mixed == 1.50
     assert w.operating_point_tag == "pr106_r2_frontier"
-    assert "closed-form gradient per src/tac/score_geometry.py:253-257" == w.basis
+    assert w.basis == "closed-form gradient per src/tac/score_geometry.py:253-257"
 
 
 def test_old_1x_anchor_fields():
@@ -81,7 +82,7 @@ def test_pr102_cuda_anchor_fields():
 
 
 def test_pr106_r2_marginal_ratio_constant():
-    assert PR106_R2_POSE_PER_SEG_MARGINAL_RATIO == pytest.approx(2.7116, abs=1e-4)
+    assert pytest.approx(2.7116, abs=1e-4) == PR106_R2_POSE_PER_SEG_MARGINAL_RATIO
 
 
 def test_operating_point_anchors_lookup_table():
@@ -288,7 +289,7 @@ def test_axis_weights_evidence_tag_includes_provenance():
 
 
 def test_axis_weights_is_frozen():
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         PR106_R2_FRONTIER_AXIS_WEIGHTS.pose = 99.0  # type: ignore[misc]
 
 
@@ -433,7 +434,7 @@ def test_bridge_default_axis_weights_sourced_from_canonical():
     finally:
         sys.path.pop(0)
 
-    assert bridge.DEFAULT_AXIS_WEIGHTS == PR106_R2_FRONTIER_AXIS_WEIGHTS.as_mapping()
+    assert PR106_R2_FRONTIER_AXIS_WEIGHTS.as_mapping() == bridge.DEFAULT_AXIS_WEIGHTS
     # ALSO verify the dict has the 4 canonical axes.
     assert set(bridge.DEFAULT_AXIS_WEIGHTS) == set(AXIS_NAMES)
 

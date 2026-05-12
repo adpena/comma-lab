@@ -62,9 +62,9 @@ from __future__ import annotations
 import dataclasses
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Optional
+from dataclasses import dataclass
+from enum import StrEnum
+from typing import Any
 
 # Schema constants pinned to v1 so downstream consumers (autopilot ranker,
 # theoretical floor refresh) detect schema drift loudly.
@@ -80,7 +80,7 @@ READY_FOR_EXACT_EVAL_DISPATCH = False
 # ── Substrate taxonomy ────────────────────────────────────────────────────
 
 
-class SubstrateClass(str, Enum):
+class SubstrateClass(StrEnum):
     """Top-level taxonomy class.
 
     The class governs composability with siblings. Two ``RENDERER_REPLACEMENT``
@@ -97,7 +97,7 @@ class SubstrateClass(str, Enum):
     BOLT_ON = "bolt_on"  # Composes with a host substrate (e.g., FiLM modulator).
 
 
-class ScoreAxis(str, Enum):
+class ScoreAxis(StrEnum):
     """Which score-axis term the substrate primarily targets.
 
     Per CLAUDE.md "SegNet vs PoseNet importance — operating-point dependent",
@@ -111,7 +111,7 @@ class ScoreAxis(str, Enum):
     MIXED = "mixed"  # Affects multiple axes simultaneously.
 
 
-class Composability(str, Enum):
+class Composability(StrEnum):
     """Pairwise composability verdict.
 
     The 8 classes are:
@@ -208,7 +208,7 @@ class CompositionResult:
 
 
 def canonical_substrate_inventory() -> list[SubstrateRow]:
-    """Return the 16 non-HNeRV substrates + 2 bolt-ons inventory.
+    """Return the 39-row substrate inventory (24 legacy + 15 FIX-J scaffolds).
 
     Order is stable (alphabetical by substrate_class then substrate_id) to
     preserve deterministic matrix construction across runs.
@@ -225,6 +225,13 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
     - Bolt-ons (2 rows): NeRV-Enc/Dec separated + FiLM pose conditioning
       from ``feedback_nerv_family_expansion_blocknerv_ffnerv_dsnerv_hinerv_tcnerv_landed_20260511.md``
     - Magic codec (1 row): ``feedback_magic_codec_auto_selector_landed_20260511.md``
+    - FIX-J substrate-scaffold packages (15 rows, 2026-05-12 Fields-medal council):
+      ``feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512.md``
+      Covers sane_hnerv (alpha), balle_renderer (beta), hybrid_renderer_residual
+      (gamma), self_compress_nn (delta), pr101_lc_v2_clone (forensic), cool_chic_full_renderer,
+      wavelet_full_renderer, grayscale_lut, vq_vae_substrate, siren_substrate,
+      block_nerv_substrate, tc_nerv_substrate, ff_nerv_substrate,
+      ds_nerv_substrate, hi_nerv_substrate.
     """
     rows: list[SubstrateRow] = [
         # ── 5 RESIDUAL basis substrates ──
@@ -571,6 +578,226 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             landed_at="2026-05-11",
             landing_memo="feedback_magic_codec_auto_selector_landed_20260511",
         ),
+        # ── 15 FIX-J substrate-scaffold packages (Catalog #124 fields-medal) ──
+        # Per LOOPCLOSE finding 2026-05-12: the substrate-scaffold subpackages
+        # under ``src/tac/substrates/`` (Fields-medal grand council 2026-05-12
+        # design) were absent from the canonical inventory. Each has an
+        # archive grammar with a 4-byte magic and a Catalog #124-compliant
+        # 8-fields-at-design-time declaration. Cross-references:
+        # ``feedback_grand_council_fields_medal_substrate_design_20260512.md``
+        # + ``feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512.md``.
+        # Format-id band 0x90-0x9E reserved for FIX-J scaffolds; 0x43 reserved
+        # for self_compress_nn (SELF_COMPRESSION class extension).
+        SubstrateRow(
+            substrate_id="sane_hnerv",
+            name="Sane HNeRV (Score-Aware HNeRV-extended, alpha primary)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x90,
+            magic_bytes="SHV1",
+            runtime_dep_closure=("torch", "brotli", "numpy"),
+            byte_budget_band=(150_000, 220_000),
+            predicted_delta_alone_band=(-0.0080, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="balle_renderer",
+            name="Ballé hyperprior-as-renderer (beta parallel scaffold)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.RATE,
+            format_id=0x91,
+            magic_bytes="BRV1",
+            runtime_dep_closure=("torch", "brotli", "compressai"),
+            byte_budget_band=(150_000, 220_000),
+            predicted_delta_alone_band=(-0.0060, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="hybrid_renderer_residual",
+            name="Hybrid renderer+residual basis (gamma deferred scaffold)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x92,
+            magic_bytes="HRR1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(150_000, 220_000),
+            predicted_delta_alone_band=(-0.0060, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="self_compress_nn",
+            name="Self-Compress NN (delta MDL weight clustering scaffold)",
+            substrate_class=SubstrateClass.SELF_COMPRESSION,
+            target_axis=ScoreAxis.RATE,
+            format_id=0x43,
+            magic_bytes="SCV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(40_000, 90_000),
+            predicted_delta_alone_band=(-0.0040, 0.0040),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="pr101_lc_v2_clone",
+            name="PR101 lc_v2 forensic apples-to-apples clone (research_only)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x93,
+            magic_bytes="PR12",  # PR101 v2; no archive magic on disk yet.
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(175_000, 195_000),
+            predicted_delta_alone_band=(-0.0010, 0.0010),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="cool_chic_full_renderer",
+            name="Cool-Chic full per-frame AR-latent renderer (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.RATE,
+            format_id=0x94,
+            magic_bytes="CCV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0050, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="wavelet_full_renderer",
+            name="Wavelet (Mallat scattering) full renderer (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.RATE,
+            format_id=0x95,
+            magic_bytes="WLV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0050, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="grayscale_lut",
+            name="Grayscale-LUT (Selfcomp analog mask paradigm, L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x96,
+            magic_bytes="GLV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(100_000, 180_000),
+            predicted_delta_alone_band=(-0.0040, 0.0080),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="vq_vae_substrate",
+            name="VQ-VAE per-frame discrete-token substrate (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x97,
+            magic_bytes="VQV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 180_000),
+            predicted_delta_alone_band=(-0.0070, 0.0060),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="siren_substrate",
+            name="SIREN sinusoidal coordinate-MLP renderer (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.RATE,
+            format_id=0x98,
+            magic_bytes="SRV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(80_000, 160_000),
+            predicted_delta_alone_band=(-0.0040, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="block_nerv_substrate",
+            name="Per-pair block-decoder NeRV substrate scaffold (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x99,
+            magic_bytes="BNV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(150_000, 220_000),
+            predicted_delta_alone_band=(-0.0060, 0.0080),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="tc_nerv_substrate",
+            name="Temporal-consistency NeRV substrate scaffold (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.POSE,
+            format_id=0x9A,
+            magic_bytes="TCV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0050, 0.0070),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="ff_nerv_substrate",
+            name="Frequency-domain (DCT) NeRV substrate scaffold (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.RATE,
+            format_id=0x9B,
+            magic_bytes="FFV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(120_000, 200_000),
+            predicted_delta_alone_band=(-0.0050, 0.0060),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="ds_nerv_substrate",
+            name="Depth-separable NeRV substrate scaffold (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x9C,
+            magic_bytes="DSV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(80_000, 150_000),
+            predicted_delta_alone_band=(-0.0040, 0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
+        SubstrateRow(
+            substrate_id="hi_nerv_substrate",
+            name="Hierarchical NeRV substrate scaffold (L0 SKETCH)",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0x9D,
+            magic_bytes="HIV1",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(140_000, 210_000),
+            predicted_delta_alone_band=(-0.0060, 0.0070),
+            requires_score_aware_training=True,
+            landed_at="2026-05-12",
+            landing_memo="feedback_fix_j_substrate_compressai_inventory_wire_in_landed_20260512",
+        ),
     ]
     # Stable sort: by class then id.
     rows.sort(key=lambda r: (r.substrate_class.value, r.substrate_id))
@@ -904,7 +1131,7 @@ class CompositionMatrix:
 
 
 def build_composition_matrix(
-    substrates: Optional[list[SubstrateRow]] = None,
+    substrates: list[SubstrateRow] | None = None,
 ) -> CompositionMatrix:
     """Build the full pairwise matrix.
 
@@ -995,11 +1222,31 @@ DISPATCH_COST_USD_MIDPOINT: dict[str, float] = {
     "film_pose_conditioning": 0.0,
     # Magic codec: planning-only until runtime is byte-closed/vendored.
     "magic_codec": 0.0,
+    # ── FIX-J substrate-scaffold packages (2026-05-12) ──
+    # Per LOOPCLOSE wire-in. Banded as full-trainer NeRV-family analogs;
+    # research_only scaffolds use lower band midpoints reflecting L0 SKETCH
+    # status (council design memo + 13 HNeRV-parity-discipline lessons but
+    # no L1+ trainer cost yet).
+    "sane_hnerv": 50.0,  # alpha primary; full Sane-HNeRV trainer ~5-12h T4.
+    "balle_renderer": 50.0,  # beta parallel; hyperprior trainer ~5-12h T4.
+    "hybrid_renderer_residual": 45.0,  # gamma deferred; full trainer + residual basis.
+    "self_compress_nn": 30.0,  # delta deferred; MDL clustering full trainer.
+    "pr101_lc_v2_clone": 25.0,  # Forensic apples-to-apples replay.
+    "cool_chic_full_renderer": 40.0,  # L0 SKETCH; full Cool-Chic AR trainer.
+    "wavelet_full_renderer": 40.0,  # L0 SKETCH; Mallat scattering trainer.
+    "grayscale_lut": 35.0,  # Selfcomp grayscale-LUT full trainer.
+    "vq_vae_substrate": 45.0,  # L0 SKETCH; VQ-VAE codebook training.
+    "siren_substrate": 35.0,  # L0 SKETCH; SIREN coord-MLP training.
+    "block_nerv_substrate": 45.0,  # L0 SKETCH; per-pair LoRA training.
+    "tc_nerv_substrate": 40.0,  # L0 SKETCH; temporal-conv NeRV training.
+    "ff_nerv_substrate": 40.0,  # L0 SKETCH; DCT-frequency NeRV training.
+    "ds_nerv_substrate": 35.0,  # L0 SKETCH; depth-separable NeRV training.
+    "hi_nerv_substrate": 50.0,  # L0 SKETCH; hierarchical NeRV training.
 }
 
 
 def per_substrate_pareto_rows(
-    matrix: Optional[CompositionMatrix] = None,
+    matrix: CompositionMatrix | None = None,
 ) -> list[ParetoRow]:
     """Compute per-substrate Pareto rows ranked by EV/$.
 
@@ -1026,10 +1273,7 @@ def per_substrate_pareto_rows(
         # RFC 8259 when JSON-serialized and (b) falsely promoted cost-unknown
         # rows to the top of the ranking, masking real signal.
         cost_estimation_pending = cost <= 0.0
-        if cost_estimation_pending:
-            eig_per_dollar = 0.0
-        else:
-            eig_per_dollar = eig / cost
+        eig_per_dollar = 0.0 if cost_estimation_pending else eig / cost
         notes = (
             f"[predicted; substrate composition matrix v1] "
             f"target_axis={s.target_axis.value}, class={s.substrate_class.value}"
@@ -1053,7 +1297,7 @@ def per_substrate_pareto_rows(
 
 
 def rank_substrates_by_ev_per_dollar(
-    matrix: Optional[CompositionMatrix] = None,
+    matrix: CompositionMatrix | None = None,
     *,
     descending: bool = True,
 ) -> list[ParetoRow]:
@@ -1073,7 +1317,7 @@ def rank_substrates_by_ev_per_dollar(
 
 def filter_pareto_dominated(
     rows: list[ParetoRow],
-    matrix: Optional[CompositionMatrix] = None,
+    matrix: CompositionMatrix | None = None,
 ) -> list[ParetoRow]:
     """Drop substrates dominated by a redundant sibling already in the list.
 
@@ -1111,7 +1355,7 @@ def filter_pareto_dominated(
 
 def predicted_composite_delta(
     substrate_ids: Iterable[str],
-    matrix: Optional[CompositionMatrix] = None,
+    matrix: CompositionMatrix | None = None,
 ) -> dict[str, Any]:
     """Predict composite score delta for a multi-substrate dispatch.
 
@@ -1281,22 +1525,22 @@ def write_matrix_json(matrix: CompositionMatrix, path: str) -> None:
 
 
 __all__ = [
-    "SCHEMA_VERSION",
-    "SubstrateClass",
-    "ScoreAxis",
-    "Composability",
-    "SubstrateRow",
-    "CompositionResult",
-    "CompositionMatrix",
-    "ParetoRow",
     "DISPATCH_COST_USD_MIDPOINT",
+    "SCHEMA_VERSION",
+    "Composability",
+    "CompositionMatrix",
+    "CompositionResult",
+    "ParetoRow",
+    "ScoreAxis",
+    "SubstrateClass",
+    "SubstrateRow",
+    "build_composition_matrix",
     "canonical_substrate_inventory",
     "classify_pairwise_composability",
-    "build_composition_matrix",
-    "per_substrate_pareto_rows",
-    "rank_substrates_by_ev_per_dollar",
     "filter_pareto_dominated",
+    "per_substrate_pareto_rows",
     "predicted_composite_delta",
+    "rank_substrates_by_ev_per_dollar",
     "serialize_matrix",
     "serialize_pareto_rows",
     "write_matrix_json",

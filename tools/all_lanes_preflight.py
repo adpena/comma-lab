@@ -76,9 +76,10 @@ Currently runs:
   Gate #25: tools/audit_modal_image_build_order.py --strict
            (Modal image build/env steps must happen before add_local_* mounts,
             otherwise dispatch fails locally before remote execution)
-  Gate #26: PR106/R2 sidecar runtime-consumption proof
-           (runtime decodes and applies changed sidecar bytes for both packet
-            grammars, while remaining non-promotable without full-frame parity)
+  Gate #26: PR106/R2 sidecar PacketIR + runtime-consumption proof
+           (PacketIR parse/emit identity accounts for every payload byte, and
+            runtime decodes/applies changed sidecar bytes for both grammars,
+            while remaining non-promotable without full-frame parity)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -1804,6 +1805,75 @@ def _pr106_sidecar_runtime_consumption_failures(
     return failures
 
 
+def _pr106_sidecar_packet_ir_identity_failures(
+    label: str,
+    archive_path: Path,
+    *,
+    expected_format_id: str,
+) -> list[str]:
+    from tac.packet_compiler import (
+        emit_pr106_sidecar_packet,
+        emit_single_stored_member_archive,
+        parse_pr106_sidecar_packet,
+        pr106_sidecar_manifest,
+        read_single_stored_member_archive,
+    )
+
+    failures: list[str] = []
+    archive_bytes = archive_path.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    emitted_payload = emit_pr106_sidecar_packet(packet)
+    emitted_archive = emit_single_stored_member_archive(member)
+    manifest = pr106_sidecar_manifest(
+        packet,
+        archive_sha256=sha256_bytes(archive_bytes),
+    )
+
+    if manifest.get("format_id") != expected_format_id:
+        failures.append(
+            f"{label}:packet_ir_format_id_drift expected {expected_format_id!r}, "
+            f"got {manifest.get('format_id')!r}"
+        )
+    if emitted_payload != member.payload:
+        failures.append(f"{label}:packet_ir_emit_payload_not_identity")
+    if emitted_archive != archive_bytes:
+        failures.append(f"{label}:stored_zip_reemit_not_identity")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if manifest.get(field) is not False:
+            failures.append(f"{label}:packet_ir_manifest_{field}_drift")
+
+    proof = manifest.get("packet_ir_consumed_byte_proof")
+    if not isinstance(proof, dict):
+        failures.append(f"{label}:packet_ir_consumed_byte_proof_missing")
+        return failures
+
+    expected_score_sections = ["pr106_payload", "sidecar_payload"]
+    if expected_format_id == "0x02":
+        expected_score_sections.append("framing_meta")
+    expected_proof_fields = {
+        "runtime_consumption_claim": False,
+        "all_payload_bytes_accounted": True,
+        "unconsumed_trailing_bytes": 0,
+        "section_gaps": [],
+        "score_affecting_section_names": expected_score_sections,
+        "emitted_payload_bytes": len(emitted_payload),
+        "emitted_payload_sha256": sha256_bytes(emitted_payload),
+        "accounted_payload_bytes": len(emitted_payload),
+    }
+    for field, expected in expected_proof_fields.items():
+        if proof.get(field) != expected:
+            failures.append(
+                f"{label}:packet_ir_proof_{field}_drift "
+                f"expected {expected!r}, got {proof.get(field)!r}"
+            )
+    return failures
+
+
 def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
     from tac.packet_compiler import prove_pr106_sidecar_runtime_decode_consumption
 
@@ -1813,6 +1883,18 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
         ("r2_brotli", PR106_R2_ARCHIVE, PR106_R2_RUNTIME, "0x01"),
         ("r2_pr101_grammar", PR106_R2_PR101_ARCHIVE, PR106_R2_PR101_RUNTIME, "0x02"),
     ):
+        try:
+            failures.extend(
+                _pr106_sidecar_packet_ir_identity_failures(
+                    label,
+                    archive_path,
+                    expected_format_id=expected_format_id,
+                )
+            )
+        except Exception as exc:
+            failures.append(
+                f"{label}: packet-ir proof raised {type(exc).__name__}: {exc}"
+            )
         try:
             manifest = prove_pr106_sidecar_runtime_decode_consumption(
                 archive_path=archive_path,
@@ -1834,7 +1916,9 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
         return False, "PR106 sidecar runtime-consumption proof failed: " + "; ".join(failures)
     return True, (
         "PR106 sidecar runtime-consumption proof: PASS "
-        f"(format_ids={','.join(observed_formats)}; runtime decodes/applies sidecar bytes; "
+        f"(format_ids={','.join(observed_formats)}; PacketIR identity parse-emit "
+        "accounts for every payload byte; runtime decodes/applies sidecar bytes; "
+        "full-frame inflate parity not claimed; "
         "score_claim=false; ready_for_exact_eval_dispatch=false)"
     )
 

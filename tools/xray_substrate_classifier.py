@@ -113,6 +113,30 @@ _SUBSTRATE_CLASSES: tuple[str, ...] = (
     "e_nerv_substrate",
     "hinerv_substrate",
     "blocknerv_substrate",
+    # ── FIX-J substrate-scaffold packages (2026-05-12 Fields-medal council) ──
+    # The new scaffold packages have distinct archive grammars (4-byte
+    # magic header per substrate) and distinct substrate_ids vs the older
+    # NeRV-family / residual-basis rows above.
+    "hybrid_renderer_residual_substrate",
+    "self_compress_nn_substrate",
+    "pr101_lc_v2_clone_substrate",
+    "cool_chic_full_renderer_substrate",
+    "wavelet_full_renderer_substrate",
+    "grayscale_lut_substrate",
+    "vq_vae_substrate",
+    "siren_substrate",
+    "block_nerv_substrate",
+    "tc_nerv_substrate",
+    "ff_nerv_substrate",
+    "ds_nerv_substrate",
+    "hi_nerv_substrate",
+    # ── CompressAI codec adapter packets (EEEE 2026-05-12 + FIX-J wire-in) ──
+    # These are latent-stream codecs that ship inside a host substrate's
+    # archive; classifier flags them when the magic-byte appears at byte 0
+    # of a packet member.
+    "compressai_factorized_prior_packet",
+    "compressai_balle_hyperprior_packet",
+    "compressai_cheng2020_packet",
     "unknown_substrate_unclassifiable",
 )
 
@@ -131,6 +155,30 @@ _SECTION_MAGIC_SIGNATURES: tuple[tuple[bytes, str], ...] = (
     (b"QZMB1\x00\x00\x00", "pr93_model_compact"),
     (b"PQ12", "pr65_pq12_pose"),
     (b"\xfe", "pr106_sidecar_v1"),  # PR106 sidecar packet (1-byte magic 0xFE)
+    # ── FIX-J substrate-scaffold magic bytes (Fields-medal 2026-05-12) ──
+    # Each substrate-scaffold package under src/tac/substrates/<name>/
+    # declares a 4-byte ASCII magic in its archive.py. These signatures
+    # let the classifier disambiguate the substrate at xray time without
+    # cracking open the trained-weights blob.
+    (b"SHV1", "sane_hnerv_v1"),  # alpha primary
+    (b"BRV1", "balle_renderer_v1"),  # beta parallel
+    (b"HRR1", "hybrid_renderer_residual_v1"),  # gamma deferred
+    (b"SCV1", "self_compress_nn_v1"),  # delta deferred
+    (b"PR12", "pr101_lc_v2_clone_v1"),  # forensic
+    (b"CCV1", "cool_chic_full_renderer_v1"),
+    (b"WLV1", "wavelet_full_renderer_v1"),
+    (b"GLV1", "grayscale_lut_v1"),
+    (b"VQV1", "vq_vae_substrate_v1"),
+    (b"SRV1", "siren_substrate_v1"),
+    (b"BNV1", "block_nerv_substrate_v1"),
+    (b"TCV1", "tc_nerv_substrate_v1"),
+    (b"FFV1", "ff_nerv_substrate_v1"),
+    (b"DSV1", "ds_nerv_substrate_v1"),
+    (b"HIV1", "hi_nerv_substrate_v1"),
+    # ── CompressAI codec adapter magic bytes (EEEE 2026-05-12) ──
+    (b"CAFP", "compressai_factorized_prior"),
+    (b"CABH", "compressai_balle_hyperprior"),
+    (b"CACG", "compressai_cheng2020"),
 )
 
 
@@ -182,6 +230,102 @@ _SUBSTRATE_RULES: tuple[_SubstrateRule, ...] = (
     _SubstrateRule(
         substrate_class="hnerv_lc_family",
         required_member_prefixes=frozenset({"decoder.bin", "latent"}),
+    ),
+    # ── FIX-J substrate-scaffold magic-byte rules (2026-05-12) ──
+    # Each rule fires when the substrate's 4-byte ASCII magic appears at
+    # the first 4 bytes of a ZIP member; the substrate-scaffold archive
+    # is monolithic-single-file ``0.bin`` per Catalog #124, so the magic
+    # appears at offset 0 of the canonical packet member.
+    _SubstrateRule(
+        substrate_class="sane_hnerv",
+        required_section_magics=frozenset({b"SHV1"}),
+        archive_version="sane_hnerv_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="balle_renderer",
+        required_section_magics=frozenset({b"BRV1"}),
+        archive_version="balle_renderer_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="hybrid_renderer_residual_substrate",
+        required_section_magics=frozenset({b"HRR1"}),
+        archive_version="hybrid_renderer_residual_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="self_compress_nn_substrate",
+        required_section_magics=frozenset({b"SCV1"}),
+        archive_version="self_compress_nn_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="pr101_lc_v2_clone_substrate",
+        required_section_magics=frozenset({b"PR12"}),
+        archive_version="pr101_lc_v2_clone_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="cool_chic_full_renderer_substrate",
+        required_section_magics=frozenset({b"CCV1"}),
+        archive_version="cool_chic_full_renderer_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="wavelet_full_renderer_substrate",
+        required_section_magics=frozenset({b"WLV1"}),
+        archive_version="wavelet_full_renderer_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="grayscale_lut_substrate",
+        required_section_magics=frozenset({b"GLV1"}),
+        archive_version="grayscale_lut_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="vq_vae_substrate",
+        required_section_magics=frozenset({b"VQV1"}),
+        archive_version="vq_vae_substrate_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="siren_substrate",
+        required_section_magics=frozenset({b"SRV1"}),
+        archive_version="siren_substrate_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="block_nerv_substrate",
+        required_section_magics=frozenset({b"BNV1"}),
+        archive_version="block_nerv_substrate_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="tc_nerv_substrate",
+        required_section_magics=frozenset({b"TCV1"}),
+        archive_version="tc_nerv_substrate_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="ff_nerv_substrate",
+        required_section_magics=frozenset({b"FFV1"}),
+        archive_version="ff_nerv_substrate_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="ds_nerv_substrate",
+        required_section_magics=frozenset({b"DSV1"}),
+        archive_version="ds_nerv_substrate_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="hi_nerv_substrate",
+        required_section_magics=frozenset({b"HIV1"}),
+        archive_version="hi_nerv_substrate_v1",
+    ),
+    # ── CompressAI codec adapter rules (EEEE 2026-05-12) ──
+    _SubstrateRule(
+        substrate_class="compressai_factorized_prior_packet",
+        required_section_magics=frozenset({b"CAFP"}),
+        archive_version="compressai_factorized_prior_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="compressai_balle_hyperprior_packet",
+        required_section_magics=frozenset({b"CABH"}),
+        archive_version="compressai_balle_hyperprior_v1",
+    ),
+    _SubstrateRule(
+        substrate_class="compressai_cheng2020_packet",
+        required_section_magics=frozenset({b"CACG"}),
+        archive_version="compressai_cheng2020_v1",
     ),
 )
 
@@ -283,9 +427,10 @@ def _classify_substrate(
             )
             if not ok:
                 continue
-        if rule.required_section_magics:
-            if not rule.required_section_magics.issubset(detected_magics):
-                continue
+        if rule.required_section_magics and not rule.required_section_magics.issubset(
+            detected_magics
+        ):
+            continue
         if rule.forbidden_members and rule.forbidden_members.issubset(
             member_name_set
         ):

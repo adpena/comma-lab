@@ -3,7 +3,7 @@
 Per operator directive 2026-05-12 ("stacking and composition on
 everything"), this test file pins:
 
-1. The 14-primitive canonical inventory shape + integrity.
+1. The 17-primitive canonical inventory shape + integrity.
 2. The substrate x primitive compatibility matrix (every entry checked).
 3. The pipeline-ordering / mutually-exclusive validator.
 4. The enumerator's compatibility-matrix gate.
@@ -58,9 +58,10 @@ from tac.composition.registry import (
 # ── 1. Primitive inventory shape ──────────────────────────────────────────
 
 
-def test_primitive_inventory_has_14_rows():
+def test_primitive_inventory_has_17_rows():
     prims = canonical_primitive_inventory()
-    assert len(prims) == 14, f"expected 14 primitives, got {len(prims)}"
+    # 17 = 14 legacy + 3 CompressAI codecs (FIX-J wire-in 2026-05-12).
+    assert len(prims) == 17, f"expected 17 primitives, got {len(prims)}"
 
 
 def test_primitive_inventory_ids_unique():
@@ -85,6 +86,8 @@ def test_primitive_inventory_categories():
     # Brotli x1, LZMA x1:
     assert len(by_cat[PrimitiveCategory.BROTLI]) == 1
     assert len(by_cat[PrimitiveCategory.LZMA]) == 1
+    # CompressAI codec adapters x3:
+    assert len(by_cat[PrimitiveCategory.COMPRESSAI_CODEC]) == 3
 
 
 def test_primitive_score_claim_invariants_planning_only():
@@ -520,7 +523,7 @@ def test_serialize_enumeration_schema_keys():
 def test_serialize_primitive_inventory_returns_list_of_dicts():
     out = serialize_primitive_inventory()
     assert isinstance(out, list)
-    assert len(out) == 14
+    assert len(out) == len(canonical_primitive_inventory())
     for d in out:
         assert isinstance(d, dict)
         assert "primitive_id" in d
@@ -888,11 +891,19 @@ def test_enumerate_cells_mutual_exclusion_refused_reason():
             "pr100_schema_driven_decoder",
             "pr105_packed_state_schema",
         }
+        # CompressAI codec adapters x3 (FIX-J wire-in 2026-05-12). One
+        # primitive per latent-stream slot; mutually exclusive within slot.
+        compressai_ids = {
+            "compressai_factorized_prior",
+            "compressai_balle_hyperprior",
+            "compressai_cheng2020",
+        }
         cell_ids = {pid for pid, _ in c.primitives}
-        # Either >=2 sign-encodings or >=2 schema-elisions.
+        # >=2 from any MX category (sign-encoding / schema-elision / CompressAI).
         n_sign = len(cell_ids & sign_ids)
         n_schema = len(cell_ids & schema_ids)
-        assert n_sign >= 2 or n_schema >= 2, c.primitives
+        n_compressai = len(cell_ids & compressai_ids)
+        assert n_sign >= 2 or n_schema >= 2 or n_compressai >= 2, c.primitives
 
 
 def test_enumerate_cells_dependency_missing_refused_reason():

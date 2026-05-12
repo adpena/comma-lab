@@ -28,6 +28,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.continual_learning import contest_result_from_auth_eval_payload  # noqa: E402
 from tac.frontier_rows import (  # noqa: E402
     FRONTIER_ROW_FIELDS,
     FRONTIER_ROW_SCHEMA,
@@ -40,7 +41,6 @@ from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
     RATE_ONLY_FLOOR_BLOCKER_PREFIX,
     build_rate_only_floor_proof,
 )
-from tac.continual_learning import contest_result_from_auth_eval_payload  # noqa: E402
 from tac.optimization.meta_lagrangian_allocator import rate_score_delta  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
@@ -2736,7 +2736,7 @@ def _normalize_beta_sensitivity_substrate_manifest(
         "code_paths",
         [
             "src/tac/codec_pipeline_sensitivity.py",
-            "src/tac/sensitivity_map.py",
+            "src/tac/sensitivity_map/__init__.py",
             "src/tac/owv3_sensitivity_weighted.py",
             "src/tac/neural_weight_codec_sensitivity.py",
         ],

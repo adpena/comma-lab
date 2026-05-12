@@ -60,7 +60,7 @@ INFLATE_PY = REPO / "submissions" / "apogee_v2" / "inflate.py"
 INFLATE_SH = REPO / "submissions" / "apogee_v2" / "inflate.sh"
 INFLATE_SRC = INFLATE_PY.parent / "src"
 WATER_FILLING_CODEC = REPO / "src" / "tac" / "water_filling_codec_v2.py"
-SENSITIVITY_MAP = REPO / "src" / "tac" / "sensitivity_map.py"
+SENSITIVITY_MAP = REPO / "src" / "tac" / "sensitivity_map" / "__init__.py"
 CACHE_NAME = "dispatch_dryrun_omega_w_v3"
 
 EXPECTED_APOGEE_V2_BYTES = 164087

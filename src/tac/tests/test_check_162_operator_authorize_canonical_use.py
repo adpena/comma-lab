@@ -49,6 +49,23 @@ read -r -p "Proceed? [y/N] " confirm
     assert "tools/operator_authorize.py" in violations[0]
 
 
+def test_check_162_ignores_comment_only_canonical_mentions(tmp_path: Path) -> None:
+    _write_wrapper(
+        tmp_path,
+        "operator_authorize_comment_only.sh",
+        """#!/bin/bash
+# TODO: migrate to tools/operator_authorize.py --recipe example
+set -euo pipefail
+echo "still bespoke"
+""",
+    )
+
+    violations = check_operator_authorize_canonical_use(repo_root=tmp_path)
+
+    assert len(violations) == 1
+    assert "operator_authorize_comment_only.sh" in violations[0]
+
+
 def test_check_162_honors_header_legacy_waiver(tmp_path: Path) -> None:
     _write_wrapper(
         tmp_path,

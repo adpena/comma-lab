@@ -10,17 +10,15 @@ from tac.optimization.substrate_composition_matrix import (
     ScoreAxis,
     SubstrateClass,
     build_composition_matrix,
+    canonical_substrate_inventory,
 )
 from tac.optimization.theoretical_floor_substrate_refresh import (
     HINTON_DISTILLED_FLOOR_ADJUSTMENT,
     N_PACKET_COMPILER_PRIMITIVES,
     PACKET_COMPILER_BYTE_SAVINGS_CAP,
     PER_CLASS_FLOOR_PRIOR,
-    PR106_R2_SCORE_CONTEST_CUDA,
     SCHEMA_VERSION,
     V2_FLOOR_MEDIAN,
-    ParetoFrontierPoint,
-    PerSubstrateFloor,
     RefreshedFloorEstimate,
     minimum_marginal_byte_ev_threshold,
     packet_compiler_max_score_savings,
@@ -32,13 +30,12 @@ from tac.optimization.theoretical_floor_substrate_refresh import (
     write_refresh_report,
 )
 
-
 # ── Per-substrate floor ──────────────────────────────────────────────────
 
 
-def test_per_substrate_floor_returns_24_rows():
+def test_per_substrate_floor_returns_canonical_substrate_count():
     rows = per_substrate_predicted_floor()
-    assert len(rows) == 24
+    assert len(rows) == len(canonical_substrate_inventory())
 
 
 def test_per_substrate_floor_score_claim_invariants():
@@ -156,9 +153,9 @@ def test_packet_compiler_constants_consistent():
 # ── Pareto frontier ──────────────────────────────────────────────────────
 
 
-def test_refreshed_pareto_frontier_returns_24_points():
+def test_refreshed_pareto_frontier_returns_canonical_substrate_count():
     points = refreshed_pareto_frontier()
-    assert len(points) == 24
+    assert len(points) == len(canonical_substrate_inventory())
 
 
 def test_refreshed_pareto_frontier_sorted_by_bytes():
@@ -176,10 +173,6 @@ def test_refreshed_pareto_frontier_score_claim_invariants():
 def test_refreshed_pareto_zero_byte_substrates_inherit_pr106_bytes():
     """Bolt-ons (byte_budget=(0,0)) inherit PR106_R2_BYTES as midpoint."""
     points = refreshed_pareto_frontier()
-    bolt_on_points = [
-        p for p in points
-        if p.substrate_id in {"film_pose_conditioning", "nerv_enc_dec_separated"}
-    ]
     # film_pose_conditioning has byte budget (2000, 8000); only nerv_enc_dec has (0,0).
     enc_dec = next((p for p in points if p.substrate_id == "nerv_enc_dec_separated"), None)
     assert enc_dec is not None
@@ -276,8 +269,9 @@ def test_write_refresh_report_writes_durable_path(tmp_path):
     assert "per_substrate_predicted_floor" in parsed
     assert "pareto_frontier" in parsed
     assert "minimum_marginal_byte_ev_thresholds" in parsed
-    assert len(parsed["per_substrate_predicted_floor"]) == 24
-    assert len(parsed["pareto_frontier"]) == 24
+    expected_count = len(canonical_substrate_inventory())
+    assert len(parsed["per_substrate_predicted_floor"]) == expected_count
+    assert len(parsed["pareto_frontier"]) == expected_count
 
 
 # ── Cross-substrate sanity ──────────────────────────────────────────────

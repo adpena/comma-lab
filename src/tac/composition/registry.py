@@ -134,6 +134,13 @@ class PrimitiveCategory(StrEnum):
     BROTLI = "brotli"
     LZMA = "lzma"
 
+    # CompressAI codec adapters — Ballé / Cheng-2020 neural-compression
+    # entropy-coded latent-stream replacements for the renderer's bit-
+    # accounted latents. Mutually exclusive at the latent-stream slot
+    # (choose one of factorized_prior / balle_hyperprior / cheng2020).
+    # Per EEEE landing 2026-05-12 + FIX-J wire-in 2026-05-12.
+    COMPRESSAI_CODEC = "compressai_codec"
+
 
 class PrimitiveOrderSensitivity(StrEnum):
     """How the primitive composes with siblings in its category.
@@ -282,9 +289,9 @@ class PrimitiveRow:
 
 
 def canonical_primitive_inventory() -> list[PrimitiveRow]:
-    """Return the 13 packet-compiler primitives composition registry covers.
+    """Return the 17 packet-compiler primitives composition registry covers.
 
-    Inventory (13 primitives, alphabetical-by-category-then-id for stable
+    Inventory (17 primitives, alphabetical-by-category-then-id for stable
     matrix construction):
 
     PR101 GOLD x3 (HNeRV-family substrates only, ordered pipeline):
@@ -312,8 +319,16 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
       13. ``brotli`` (contest baseline)
       14. ``lzma`` (universal-density alternative)
 
-    Total: 14 primitives. (PR101 GOLD x3 + sign-encoding x5 + schema-
-    elision x3 + magic-codec-dense x1 + brotli + lzma = 14.)
+    CompressAI codec adapters x3 (FIX-J wire-in 2026-05-12 — neural-
+    compression entropy-coded latent-stream replacements; MX within the
+    latent-stream slot):
+      15. ``compressai_factorized_prior`` (Ballé 2018 baseline)
+      16. ``compressai_balle_hyperprior`` (Ballé 2018 scale hyperprior
+          family — Scale / MeanScale / JointAR variants)
+      17. ``compressai_cheng2020`` (Cheng 2020 anchor + attention)
+
+    Total: 17 primitives. (PR101 GOLD x3 + sign-encoding x5 + schema-
+    elision x3 + magic-codec-dense x1 + brotli + lzma + CompressAI x3 = 17.)
 
     Cross-references for each row are in the ``notes`` field.
     """
@@ -668,6 +683,98 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
                 "brotli on small dense streams but at higher decode cost"
             ),
         ),
+        # ── CompressAI codec adapters x3 (FIX-J wire-in 2026-05-12) ──
+        # Neural-compression entropy-coded latent-stream replacements for
+        # renderer latents. Mutually exclusive at the latent-stream slot.
+        # Per EEEE landing 2026-05-12 + ``feedback_fix_j_substrate_compressai_
+        # inventory_wire_in_landed_20260512.md``.
+        PrimitiveRow(
+            primitive_id="compressai_factorized_prior",
+            name="CompressAI: FactorizedPrior (Ballé 2018 baseline)",
+            category=PrimitiveCategory.COMPRESSAI_CODEC,
+            order_sensitivity=PrimitiveOrderSensitivity.MUTUALLY_EXCLUSIVE,
+            order_index=3,  # Sits at latent-stream slot (post sign-encoding).
+            target_axis=ScoreAxis.RATE,
+            predicted_bytes_delta_band=(-3_500, -800),
+            predicted_score_delta_band=(-0.0030, -0.0007),
+            canonical_module="tac.packet_compiler.factorized_prior",
+            canonical_symbol="encode_factorized_prior",
+            applicable_substrate_classes=(
+                SubstrateClass.RENDERER_REPLACEMENT,
+                SubstrateClass.RESIDUAL,
+            ),
+            semantic_constraint=SemanticConstraint(
+                # Substrates that already ship a learned hyperprior / AR
+                # density (cool_chic_residual, c3_residual) inherently
+                # match-or-exceed the factorized prior's entropy savings.
+                redundant_with_substrate_ids=(
+                    "cool_chic_residual",
+                    "c3_residual",
+                    "balle_renderer",
+                ),
+                expects_substrate_property=("continuous_latent_stream",),
+            ),
+            notes=(
+                "Ballé 2018 baseline factorized-prior entropy bottleneck; "
+                "magic CAFP; canonical neural-compression rate-axis primitive"
+            ),
+        ),
+        PrimitiveRow(
+            primitive_id="compressai_balle_hyperprior",
+            name="CompressAI: Ballé hyperprior (Scale/MeanScale/JointAR)",
+            category=PrimitiveCategory.COMPRESSAI_CODEC,
+            order_sensitivity=PrimitiveOrderSensitivity.MUTUALLY_EXCLUSIVE,
+            order_index=3,
+            target_axis=ScoreAxis.RATE,
+            predicted_bytes_delta_band=(-5_000, -1_500),
+            predicted_score_delta_band=(-0.0040, -0.0012),
+            canonical_module="tac.packet_compiler.balle_hyperprior",
+            canonical_symbol="encode_balle_hyperprior",
+            applicable_substrate_classes=(
+                SubstrateClass.RENDERER_REPLACEMENT,
+                SubstrateClass.RESIDUAL,
+            ),
+            semantic_constraint=SemanticConstraint(
+                # The balle_renderer substrate IS this codec already; applying
+                # it as a primitive on top is structurally a no-op.
+                redundant_with_substrate_ids=(
+                    "balle_renderer",
+                    "c3_residual",
+                ),
+                expects_substrate_property=("continuous_latent_stream",),
+            ),
+            notes=(
+                "Ballé 2018 scale-hyperprior family (Scale/MeanScale/JointAR); "
+                "magic CABH; SOTA-frontier neural-compression rate primitive"
+            ),
+        ),
+        PrimitiveRow(
+            primitive_id="compressai_cheng2020",
+            name="CompressAI: Cheng-2020 anchor+attention",
+            category=PrimitiveCategory.COMPRESSAI_CODEC,
+            order_sensitivity=PrimitiveOrderSensitivity.MUTUALLY_EXCLUSIVE,
+            order_index=3,
+            target_axis=ScoreAxis.RATE,
+            predicted_bytes_delta_band=(-6_000, -2_000),
+            predicted_score_delta_band=(-0.0050, -0.0016),
+            canonical_module="tac.packet_compiler.cheng2020",
+            canonical_symbol="encode_cheng2020",
+            applicable_substrate_classes=(
+                SubstrateClass.RENDERER_REPLACEMENT,
+                SubstrateClass.RESIDUAL,
+            ),
+            semantic_constraint=SemanticConstraint(
+                redundant_with_substrate_ids=(
+                    "balle_renderer",
+                    "c3_residual",
+                ),
+                expects_substrate_property=("continuous_latent_stream",),
+            ),
+            notes=(
+                "Cheng 2020 anchor+attention residual-block codec; "
+                "magic CACG; strongest CompressAI primitive at higher decode cost"
+            ),
+        ),
     ]
 
 
@@ -727,6 +834,19 @@ _COMPATIBILITY_MATRIX_V1: dict[
     (SubstrateClass.SELF_COMPRESSION, PrimitiveCategory.LZMA): True,
     (SubstrateClass.BOLT_ON, PrimitiveCategory.LZMA): True,
     (SubstrateClass.META_CODEC, PrimitiveCategory.LZMA): True,
+    # CompressAI codec adapters: continuous-latent neural-compression
+    # entropy coders. Apply to RENDERER_REPLACEMENT (the latent stream
+    # of the renderer) and RESIDUAL (residual-substrate latents). Do
+    # NOT apply to POSE_AXIS_SIDECHANNEL (discrete pose payloads),
+    # SELF_COMPRESSION (acts on weights, not latents), BOLT_ON (modulators
+    # don't ship a latent stream), or META_CODEC (wrapping a wrapper).
+    # FIX-J wire-in 2026-05-12.
+    (SubstrateClass.RENDERER_REPLACEMENT, PrimitiveCategory.COMPRESSAI_CODEC): True,
+    (SubstrateClass.RESIDUAL, PrimitiveCategory.COMPRESSAI_CODEC): True,
+    (SubstrateClass.POSE_AXIS_SIDECHANNEL, PrimitiveCategory.COMPRESSAI_CODEC): False,
+    (SubstrateClass.SELF_COMPRESSION, PrimitiveCategory.COMPRESSAI_CODEC): False,
+    (SubstrateClass.BOLT_ON, PrimitiveCategory.COMPRESSAI_CODEC): False,
+    (SubstrateClass.META_CODEC, PrimitiveCategory.COMPRESSAI_CODEC): False,
 }
 
 

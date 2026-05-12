@@ -58,7 +58,7 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
         repo_root=REPO,
         dirty_paths=[
             "src/tac/hnerv_wavelet_apply_transform.py",
-            "src/tac/sensitivity_map.py",
+            "src/tac/sensitivity_map/__init__.py",
         ],
     )
     rows = {row["key"]: row for row in payload["rows"]}
@@ -103,7 +103,7 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     sensitivity = rows["sensitivity_omega_w_v3"]
     assert sensitivity["readiness_stage"] == "blocked_by_dirty_worktree"
     assert sensitivity["safe_to_touch_now"] is False
-    assert sensitivity["dirty_path_blockers"] == ["src/tac/sensitivity_map.py"]
+    assert sensitivity["dirty_path_blockers"] == ["src/tac/sensitivity_map/__init__.py"]
 
     categorical = rows["categorical_qma9_clade_spade_openpilot"]
     assert categorical["safe_to_touch_now"] is True

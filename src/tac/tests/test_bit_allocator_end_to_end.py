@@ -27,14 +27,10 @@ from pathlib import Path
 import pytest
 
 from tac.optimization.bit_allocator_end_to_end import (
-    DEFAULT_CUMULATIVE_BUDGET_USD,
     DEFAULT_GLOBAL_BYTE_BUDGET,
-    DEFAULT_PER_DISPATCH_BUDGET_USD,
     PR106_R2_POSE_MARGINAL_MULTIPLIER,
     SCHEMA_VERSION,
-    AllocationPlan,
     EndToEndBitAllocator,
-    SubstrateAllocation,
     serialize_allocation_plan,
     write_allocation_plan_json,
 )
@@ -42,17 +38,16 @@ from tac.optimization.substrate_composition_matrix import (
     Composability,
     ScoreAxis,
     SubstrateClass,
-    build_composition_matrix,
     canonical_substrate_inventory,
 )
-
 
 # ── Construction + invariants ─────────────────────────────────────────────
 
 
 def test_default_constructor():
     allocator = EndToEndBitAllocator()
-    assert allocator.matrix.n_substrates() == 24
+    # 39 = 24 legacy + 15 FIX-J substrate-scaffold rows (LOOPCLOSE 2026-05-12).
+    assert allocator.matrix.n_substrates() == 39
     assert allocator.operating_point == "pr106_r2_frontier"
 
 

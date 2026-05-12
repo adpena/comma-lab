@@ -258,6 +258,14 @@ def test_t10_dispatch_aborts_on_no_input():
     assert "operator confirmation" in result.stdout.lower()
 
 
+def test_gha_cpu_eval_uses_public_release_asset_download_url() -> None:
+    """The GHA evaluator needs a public /releases/download/ asset URL."""
+    body = _script_body("operator_authorize_gha_cpu_eval_t1_balle_harvest.sh")
+
+    assert ".browser_download_url" in body
+    assert "| .url" not in body
+
+
 def test_phase1_cheap_config_aborts_on_no_input():
     """Confirmation prompt with empty stdin should abort cleanly."""
     p = _SCRIPTS_DIR / "operator_authorize_phase1_t1_balle_cheap_config_dispatch.sh"

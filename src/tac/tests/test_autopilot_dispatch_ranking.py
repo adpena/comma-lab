@@ -25,7 +25,6 @@ from tac.optimization.autopilot_dispatch_ranking import (
     write_ranking_json,
 )
 
-
 # ── Smoke test the ranker on the canonical inventory ────────────────────
 
 
@@ -33,7 +32,8 @@ def test_rank_dispatches_smoke():
     result = rank_dispatches()
     assert isinstance(result, RankingResult)
     assert result.schema == SCHEMA_VERSION
-    assert result.n_substrates_considered == 24
+    # 39 = 24 legacy + 15 FIX-J substrate-scaffold rows (LOOPCLOSE 2026-05-12).
+    assert result.n_substrates_considered == 39
     assert len(result.ranked_dispatches) > 0
     # Score-claim invariants.
     assert result.score_claim is False

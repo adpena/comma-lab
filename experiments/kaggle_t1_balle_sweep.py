@@ -33,12 +33,14 @@ Operating contract:
    3000-epoch-half data point that supersedes the ``hand_calibrated_fallback``
    in ``tac.cost_band_calibration.predict('kaggle', 'T4', ...)``.
 
-5. **Auth eval on best.** Per CLAUDE.md "Auth eval EVERYWHERE" the kernel
-   ends with a CUDA auth eval. On Kaggle T4 (Linux x86_64) this anchor is
-   ``[contest-CUDA]`` per Catalog #127 (T4 is a contest-CI-compliant CUDA
-   substrate). Note: the leaderboard ranks by CPU, so Kaggle CPU is NOT a
-   substitute for the GHA Linux x86_64 ``[contest-CPU]`` axis — this kernel
-   produces ONLY the CUDA axis. A separate GHA workflow handles the CPU axis.
+5. **Proxy auth-eval harvest.** The kernel can run CUDA auth eval to decide
+   what deserves exact dispatch, but Kaggle is a proxy/sweep substrate unless
+   a future exact target contract wires the full lifecycle, runtime closure,
+   claim, harvest, and adjudication path. Metadata emitted from this harness
+   must stay ``score_claim=false``, ``promotion_eligible=false``, and
+   ``ready_for_exact_eval_dispatch=false``. GHA Linux x86_64 remains the
+   ``[contest-CPU]`` axis; exact ``[contest-CUDA]`` requires the canonical
+   exact-eval path, not this sweep harness by itself.
 
 6. **Cost-band anchor.** End-of-run appends an anchor to
    ``.omx/state/cost_band_posterior.jsonl`` via
@@ -78,7 +80,6 @@ from __future__ import annotations
 import argparse
 import ast
 import json
-import os
 import shlex
 import subprocess
 import sys
@@ -105,7 +106,7 @@ def assert_cuda_t4_or_better(*, _torch_module: Any | None = None) -> dict[str, A
     Exits with ``P100_FATAL_RC`` on P100; ``NO_CUDA_RC`` on no CUDA.
     """
     if _torch_module is None:
-        import torch as _torch_module  # noqa: PLC0415
+        import torch as _torch_module
     if not _torch_module.cuda.is_available():
         print(
             "[kaggle-t1-balle-sweep] FATAL: torch.cuda.is_available() == False; "
@@ -164,10 +165,14 @@ def extract_tier1_flags(trainer_source_path: Path) -> dict[str, dict[str, Any]]:
                     # In that case extract the keys via AST inspection.
                     keys: dict[str, dict[str, Any]] = {}
                     if isinstance(node.value, ast.Dict):
-                        for k_node, v_node in zip(node.value.keys, node.value.values):
+                        for k_node, v_node in zip(
+                            node.value.keys, node.value.values, strict=True
+                        ):
                             if isinstance(k_node, ast.Constant) and isinstance(v_node, ast.Dict):
                                 entry: dict[str, Any] = {}
-                                for ek, ev in zip(v_node.keys, v_node.values):
+                                for ek, ev in zip(
+                                    v_node.keys, v_node.values, strict=True
+                                ):
                                     if isinstance(ek, ast.Constant) and isinstance(ev, ast.Constant):
                                         entry[ek.value] = ev.value
                                 keys[k_node.value] = entry
@@ -429,15 +434,19 @@ def main(argv: list[str] | None = None) -> int:
     # claims more epochs than physics permits (≥ 50 ms per epoch is a very
     # loose lower bound; a real T4 batched train_renderer epoch is seconds).
     MIN_SEC_PER_EPOCH = 0.05
-    if args.epochs > 0 and wall_clock_sec is not None and wall_clock_sec >= 0:
-        if wall_clock_sec < args.epochs * MIN_SEC_PER_EPOCH:
-            raise RuntimeError(
-                f"stats internal-consistency violation (PCC3): "
-                f"epochs={args.epochs} but wall_clock_sec={wall_clock_sec:.3f} "
-                f"< epochs * {MIN_SEC_PER_EPOCH} = "
-                f"{args.epochs * MIN_SEC_PER_EPOCH:.3f}. "
-                f"Stub-loop suspected; refusing to write summary."
-            )
+    if (
+        args.epochs > 0
+        and wall_clock_sec is not None
+        and wall_clock_sec >= 0
+        and wall_clock_sec < args.epochs * MIN_SEC_PER_EPOCH
+    ):
+        raise RuntimeError(
+            f"stats internal-consistency violation (PCC3): "
+            f"epochs={args.epochs} but wall_clock_sec={wall_clock_sec:.3f} "
+            f"< epochs * {MIN_SEC_PER_EPOCH} = "
+            f"{args.epochs * MIN_SEC_PER_EPOCH:.3f}. "
+            f"Stub-loop suspected; refusing to write summary."
+        )
     summary_path = output_dir / "kaggle_kernel_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2))
     print(f"[kaggle-t1-balle-sweep] wrote summary to {summary_path}")

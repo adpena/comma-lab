@@ -2,14 +2,6 @@
 
 Inventory-only orchestration artifact. It does not claim scores or unlock dispatch.
 
-## 2026-05-08 Supersession Note
-
-The `hnerv_pr103_pr106_ac_repack_runtime_closure` row is the active local A++
-HNeRV rate anchor. The `hnerv_lowlevel_brotli_repack` / PR106x row is retained
-as predecessor/control evidence only, not as the current anchor. Any PR106x
-rate-only follow-up must beat the PR103-on-PR106 `185578`-byte floor or stack
-with a scorer-changing packet before exact CUDA spend.
-
 - row_count: `13`
 - missing_code_path_count: `0`
 - missing_evidence_path_count: `0`

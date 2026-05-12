@@ -30,6 +30,67 @@ Lane registration::
 Designed by the Fields-medal grand council 2026-05-12; see::
 
     .omx/research/grand_council_fields_medal_substrate_design_20260512.md
+
+FIX-J 2026-05-12 wire-in — Canonical scaffold inventory
+-------------------------------------------------------
+Per LOOPCLOSE 2026-05-12, every substrate-scaffold subpackage under
+``src/tac/substrates/`` MUST appear in ``SUBSTRATE_SCAFFOLDS`` AND in
+``canonical_substrate_inventory()`` (in
+:mod:`tac.optimization.substrate_composition_matrix`) so the autopilot,
+Pareto solver, sensitivity-map, and bit-allocator see it.
+
+The ``SUBSTRATE_SCAFFOLDS`` mapping below is the package-level registry;
+it maps the substrate-scaffold subpackage name to the canonical
+``substrate_id`` used in the canonical inventory. Forensic / sketch
+scaffolds whose archive grammar diverges from the matrix row name
+(``cool_chic`` -> ``cool_chic_full_renderer``, ``wavelet`` ->
+``wavelet_full_renderer``, ``vq_vae`` -> ``vq_vae_substrate``,
+``siren`` -> ``siren_substrate``, ``block_nerv`` -> ``block_nerv_substrate``,
+``tc_nerv`` -> ``tc_nerv_substrate``, ``ff_nerv`` -> ``ff_nerv_substrate``,
+``ds_nerv`` -> ``ds_nerv_substrate``, ``hi_nerv`` -> ``hi_nerv_substrate``)
+exist because the older inventory rows ``cool_chic_residual``,
+``vqvae_as_full_renderer``, ``siren_residual``, ``blocknerv``,
+``tcnerv``, ``ffnerv``, ``dsnerv``, ``hinerv`` denote DIFFERENT
+substrates (residual basis / KK-NeRV-family rows) that pre-existed the
+Fields-medal council scaffolds and have distinct format_ids + magic
+bytes. The new ``*_full_renderer`` / ``*_substrate`` rows denote the
+FIELDS-MEDAL-COUNCIL standalone scaffold packages.
 """
 
-__all__ = ["sane_hnerv"]
+SUBSTRATE_SCAFFOLDS: dict[str, str] = {
+    # subpackage name -> canonical substrate_id in canonical_substrate_inventory()
+    "sane_hnerv": "sane_hnerv",
+    "balle_renderer": "balle_renderer",
+    "hybrid_renderer_residual": "hybrid_renderer_residual",
+    "self_compress_nn": "self_compress_nn",
+    "pr101_lc_v2_clone": "pr101_lc_v2_clone",
+    "cool_chic": "cool_chic_full_renderer",
+    "wavelet": "wavelet_full_renderer",
+    "grayscale_lut": "grayscale_lut",
+    "vq_vae": "vq_vae_substrate",
+    "siren": "siren_substrate",
+    "block_nerv": "block_nerv_substrate",
+    "tc_nerv": "tc_nerv_substrate",
+    "ff_nerv": "ff_nerv_substrate",
+    "ds_nerv": "ds_nerv_substrate",
+    "hi_nerv": "hi_nerv_substrate",
+}
+
+__all__ = [
+    "SUBSTRATE_SCAFFOLDS",
+    "balle_renderer",
+    "block_nerv",
+    "cool_chic",
+    "ds_nerv",
+    "ff_nerv",
+    "grayscale_lut",
+    "hi_nerv",
+    "hybrid_renderer_residual",
+    "pr101_lc_v2_clone",
+    "sane_hnerv",
+    "self_compress_nn",
+    "siren",
+    "tc_nerv",
+    "vq_vae",
+    "wavelet",
+]

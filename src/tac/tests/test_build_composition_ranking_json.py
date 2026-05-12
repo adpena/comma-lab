@@ -33,7 +33,6 @@ from pathlib import Path
 
 import pytest
 
-
 # Repo-root import of the tools/ module.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _BRIDGE_PATH = _REPO_ROOT / "tools" / "build_composition_ranking_json.py"
@@ -86,18 +85,26 @@ def test_composition_notes_carry_predicted_tag(bridge):
         )
 
 
-def test_ranking_is_eig_per_dollar_descending_not_alpha(bridge):
-    """Contrarian's binding challenge: verify EV/$ — not alphabetical — drives the sort."""
+def test_ranking_is_clean_first_then_eig_per_dollar_descending_not_alpha(bridge):
+    """Contrarian challenge: clean rows rank first; each partition sorts by EV/$."""
     payload = bridge.build_payload(max_primitives_per_cell=1)
     rows = payload["ranked_dispatches"]
     assert len(rows) >= 2
-    for i in range(len(rows) - 1):
-        a = rows[i]["eig_per_dollar"]
-        b = rows[i + 1]["eig_per_dollar"]
-        assert a >= b, (
-            f"rows not EV/$-descending at index {i}: "
-            f"{rows[i]['candidate_id']}({a}) < {rows[i+1]['candidate_id']}({b})"
-        )
+    first_review = next(
+        (i for i, row in enumerate(rows) if row["operator_review_required"]),
+        len(rows),
+    )
+    assert all(not row["operator_review_required"] for row in rows[:first_review])
+    assert all(row["operator_review_required"] for row in rows[first_review:])
+    for partition in (rows[:first_review], rows[first_review:]):
+        for i in range(len(partition) - 1):
+            a = partition[i]["eig_per_dollar"]
+            b = partition[i + 1]["eig_per_dollar"]
+            assert a >= b, (
+                f"rows not EV/$-descending inside partition at index {i}: "
+                f"{partition[i]['candidate_id']}({a}) < "
+                f"{partition[i + 1]['candidate_id']}({b})"
+            )
     # If the sort were alphabetical, candidate_ids would be lexicographically
     # ascending. Verify the actual output is NOT alphabetical (catches a
     # silent regression where someone replaces the EV/$ key with str).
@@ -233,6 +240,25 @@ def test_blockers_propagate_from_cell(bridge):
     assert any_blocked, (
         "expected at least one row to carry a propagated cell blocker "
         "(PR101 GOLD soft-blocker or cost_estimation_required)"
+    )
+
+
+def test_semantic_warning_requires_operator_review(bridge):
+    payload = bridge.build_payload(max_primitives_per_cell=4)
+    warned = [
+        r
+        for r in payload["ranked_dispatches"]
+        if r["semantic_compatibility_warning"] is not None
+    ]
+
+    assert warned
+    for row in warned:
+        assert row["operator_review_required"] is True
+        assert any("semantic_compatibility_warning" in b for b in row["blockers"])
+        assert "semantic_compatibility_warning:" in row["composition_notes"]
+    assert payload["n_operator_review_rows"] >= len(warned)
+    assert payload["n_clean_dispatch_rows"] + payload["n_operator_review_rows"] == len(
+        payload["ranked_dispatches"]
     )
 
 
