@@ -1889,6 +1889,9 @@ def simulate_eval_roundtrip(
     # Adding noise with std ~0.5 (half a quantization level) during training makes the
     # renderer robust to roundtrip perturbation. This closes the proxy-auth PoseNet gap
     # which grew from 2.1x (ep300) to 11.1x (ep3560) without this fix.
+    # noise_std=0.5 default in callers — [empirical: Hotz STE 2026-04-21 fix;
+    # half-quantization-level rule; feedback_proxy_auth_math_useless + CLAUDE.md
+    # "eval_roundtrip — non-negotiable"]
     if noise_std > 0.0 and up_quantized.requires_grad:
         up_quantized = up_quantized + torch.randn_like(up_quantized) * noise_std
 

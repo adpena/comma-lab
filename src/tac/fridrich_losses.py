@@ -359,8 +359,16 @@ def linf_penalty(
 def boundary_sensitive_hinge(
     logits: torch.Tensor,
     gt_masks: torch.Tensor,
+    # [derived: Fridrich-style hinge-margin convention (0.5/1.0/2.0 standard);
+    # 0.5 reflects ~half-class-logit-spread; sister rationale in fridrich.py
+    # docstring; arbitrariness_audit_20260512.md A-4]
     margin: float = 0.5,
+    # [derived: 5× boundary-pixel emphasis is half of the kl_distill_scorer_loss
+    # boundary_weight=10.0 because hinge here is a per-pixel SECONDARY signal
+    # not the primary KL distillation]
     boundary_weight: float = 5.0,
+    # [derived: 3-pixel dilation matches contest scorer's class-boundary
+    # resolution at 384x512]
     boundary_dilation: int = 3,
 ) -> torch.Tensor:
     """Hinge loss with extra weight on class boundaries.

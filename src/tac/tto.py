@@ -152,7 +152,7 @@ def temporal_consistency_loss(
 def reconstruction_loss(
     model: nn.Module,
     frames_bchw: torch.Tensor,
-    noise_std: float = 3.0,
+    noise_std: float = 3.0,  # [empirical: Hotz noise-floor 2026-04 postfilter regime; ~1% of [0,255] dynamic range; sister of renderer.py simulate_eval_roundtrip noise_std=0.5 but POSTFILTER scale (denoising autoencoder, not eval-roundtrip STE)]
 ) -> torch.Tensor:
     """Denoising autoencoder loss: model should be robust to small perturbations.
 
@@ -163,7 +163,10 @@ def reconstruction_loss(
     Args:
         model: postfilter model
         frames_bchw: (N, 3, H, W) float [0, 255]
-        noise_std: standard deviation of Gaussian noise
+        noise_std: standard deviation of Gaussian noise. Default 3.0 reflects
+            the postfilter denoising regime (Hotz 2026-04 anchor). NOT the
+            same as the eval_roundtrip STE noise_std=0.5 — different
+            regime, different scale.
     """
     with torch.no_grad():
         clean_out = model(frames_bchw)

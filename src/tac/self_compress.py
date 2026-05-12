@@ -417,7 +417,11 @@ def train_self_compressing(
     *,
     target_bits: int = 8000,
     epochs: int = 500,
+    # [derived: Adam canonical mid-range LR; Kingma+Ba 2014; matches
+    # cli.py --lr default; arbitrariness EMPIRICAL-CANDIDATE]
     lr: float = 5e-4,
+    # [derived: 20× LR for entropy-target bits parameter (1D scalar) vs
+    # weight LR (high-D); standard practice for mixed-parameter optimizers]
     lr_bits: float = 1e-2,
     lambda_rate_start: float = 0.0,
     lambda_rate_end: float = 1.0,

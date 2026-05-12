@@ -837,8 +837,17 @@ def constrained_generate(
     segnet: torch.nn.Module,
     noise_seed: int = 42,
     num_steps: int = 1000,
+    # [empirical: high-LR analytical-step regime per constrained_gen family;
+    # arbitrariness_audit_20260512.md A-3 flagged as DEFERRED-pending-council
+    # rederivation against current optimizer + step-scheduler]
     lr: float = 0.1,
+    # [DEFERRED-pending-council: arbitrariness_audit_20260512.md A-1; chosen
+    # at old 1.x score operating point; at PR106 r2 frontier the marginal
+    # value FLIPS per CLAUDE.md "SegNet vs PoseNet importance —
+    # operating-point dependent". Council deliberation required to
+    # re-derive from current frontier marginals. DO NOT silently change.]
     seg_weight: float = 50.0,
+    # [DEFERRED-pending-council: sister of seg_weight per A-1; same caveat]
     pose_weight: float = 50.0,
     compress_weight: float = 1.0,
     device: torch.device | str = "cpu",
@@ -1075,6 +1084,9 @@ def inflate_constrained(
     posenet: torch.nn.Module,
     segnet: torch.nn.Module,
     num_steps: int = 1000,
+    # [empirical: constrained-gen family canonical LR; same regime as
+    # constrained_generate() above; arbitrariness_audit A-3 DEFERRED for
+    # operator-conditioned rederivation]
     lr: float = 0.1,
     device: torch.device | str = "cpu",
     log_every: int = 100,
@@ -1300,7 +1312,10 @@ class ConstrainedFrameGenerator:
         masks: torch.Tensor,
         noise_seed: int = 42,
         num_steps: int = 1000,
+        # [empirical: constrained-gen family canonical LR; arbitrariness A-3]
         lr: float = 0.1,
+        # [empirical: 100/10 seg/pose split matches "old 1.x SegNet 77×" regime;
+        # arbitrariness A-1 DEFERRED-pending-council for PR106 r2 frontier]
         seg_weight: float = 100.0,
         pose_weight: float = 10.0,
         compress_weight: float = 1.0,
@@ -1380,6 +1395,7 @@ class ConstrainedFrameGenerator:
         archive_dir: str | Path,
         output_dir: str | Path,
         num_steps: int = 1000,
+        # [empirical: constrained-gen family canonical LR; arbitrariness A-3]
         lr: float = 0.1,
         log_every: int = 100,
     ) -> Path:
@@ -2379,8 +2395,12 @@ def alternating_projections_optimize(
     segnet: torch.nn.Module,
     num_outer_iterations: int = 100,
     num_inner_steps: int = 10,
+    # [empirical: alternating-projections regime LR; arbitrariness A-3;
+    # half of constrained_generate canonical 0.1 because alternating-projection
+    # uses smaller per-inner-step updates]
     lr: float = 0.05,
     noise_seed: int = 42,
+    # [empirical: 100/10 split per A-1 DEFERRED context; same caveat]
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     tv_weight: float = 1.0,

@@ -97,9 +97,17 @@ def _add_lossy_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--kernel", type=int, default=3)
     parser.add_argument("--epochs", type=int, default=2500)
+    # [empirical: Hinton-Vinyals-Dean 2014 distillation regime + Quantizr UCLA
+    # 0.33 deploy; alpha=20 magnitude empirical; documented as TRULY-ARBITRARY
+    # in arbitrariness_audit_20260512.md A-5 — DEFERRED-pending-council for
+    # operating-point-conditional rederivation]
     parser.add_argument("--alpha", type=float, default=20.0)
     parser.add_argument("--sal-lambda", type=float, default=1.0)
+    # [empirical: Adam canonical; Kingma+Ba 2014; lr=5e-4 also matches
+    # self_compress / scorer_distill family in src/tac/]
     parser.add_argument("--lr", type=float, default=5e-4)
+    # [empirical: Quantizr UCLA 0.33 deploy + cross-codebase consistency per
+    # CLAUDE.md "EMA — non-negotiable"; Quantizr decay=0.997 is the canon]
     parser.add_argument("--ema-decay", type=float, default=0.997)
     parser.add_argument("--accum-steps", type=int, default=4)
     parser.add_argument("--subsample", type=int, default=8)

@@ -239,7 +239,18 @@ class AuxiliaryScorerConfig:
     def council_canonical(
         cls, *, distill_label: str, smoke_mode: bool = False, cuda_required: bool = True
     ) -> "AuxiliaryScorerConfig":
-        """Return the council-canonical config (T=2.0, λ_GT=0.5, EMA=0.997)."""
+        """Return the council-canonical config (T=2.0, λ_GT=0.5, EMA=0.997).
+
+        Canonical values:
+        - distill_temperature=2.0 — [empirical: Hinton-Vinyals-Dean 2014 KL
+          distillation + Quantizr deploy 0.33; Catalog #88 EMA non-negotiable
+          requires T=2.0 for SegNet KL distillation specifically]
+        - lambda_gt=0.5 — [derived: 50/50 GT vs distilled balance; council canon]
+        - ema_decay=0.997 — [empirical: Quantizr UCLA 0.33 deploy + CLAUDE.md
+          "EMA — non-negotiable"; Quantizr canon for weight EMAs]
+        - seg_class_count=5 — [contest spec: SegNet 5-class output]
+        - pose_dim=6 — [contest spec: first 6 of PoseNet 12-dim output]
+        """
         return cls(
             distill_temperature=2.0,
             lambda_gt=0.5,

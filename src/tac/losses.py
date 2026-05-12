@@ -754,6 +754,72 @@ def scorer_loss_terms_btchw(
     return loss, pose_dist, seg_dist
 
 
+def scorer_loss_terms_cached_btchw(
+    filtered_pair_btchw: torch.Tensor,
+    gt_pose: torch.Tensor,
+    gt_seg_logits_or_probs: torch.Tensor,
+    posenet,
+    segnet,
+    class_weights: torch.Tensor | None = None,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
+    gt_seg_already_probs: bool = False,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Tensor-valued scorer-domain loss using cached frozen-target outputs.
+
+    The target video and scorer weights are fixed during training, so the
+    ``gt_pair -> PoseNet/SegNet`` forward is invariant. This helper is the
+    canonical hot-loop path for score-domain trainers: it preserves gradients
+    through the predicted frame scorer pass while replacing repeated target
+    scorer forwards with indexed cache reads.
+
+    Args:
+        filtered_pair_btchw: predicted pair in ``(B, T, C, H, W)``.
+        gt_pose: cached PoseNet output for the matching target pairs. The
+            first six pose dimensions are used for the contest pose distance;
+            callers may pass a full 12-dim cache so T20 can share it.
+        gt_seg_logits_or_probs: cached SegNet logits or probabilities.
+        gt_seg_already_probs: set ``True`` when the cache stores
+            ``softmax(logits)`` at temperature 1.
+
+    Returns:
+        ``(loss, pose_dist, seg_dist)`` as tensors, matching
+        :func:`scorer_loss_terms_btchw` without recomputing target scorers.
+    """
+    fp_out, fs_out = scorer_forward_pair(filtered_pair_btchw, posenet, segnet)
+    gt_pose_on_device = gt_pose[..., :6].to(
+        device=fp_out["pose"].device,
+        dtype=fp_out["pose"].dtype,
+    )
+    gt_seg_on_device = gt_seg_logits_or_probs.to(
+        device=fs_out.device,
+        dtype=fs_out.dtype,
+    )
+    pose_dist = (fp_out["pose"][..., :6] - gt_pose_on_device).pow(2).mean()
+    seg_per_pixel = segnet_surrogate_per_pixel(
+        fs_out,
+        gt_seg_on_device,
+        surrogate=segmentation_surrogate,
+        temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
+        gt_already_probs=gt_seg_already_probs,
+        num_classes=gt_seg_logits_or_probs.shape[1],
+    )
+    if class_weights is not None:
+        seg_per_pixel = _apply_class_weights(
+            seg_per_pixel,
+            gt_seg_on_device,
+            class_weights,
+            gt_already_probs=gt_seg_already_probs,
+        )
+    seg_dist = seg_per_pixel.mean()
+    loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist, seg_dist
+
+
 def scorer_loss_cached(
     filtered_pair_hwc: torch.Tensor,
     gt_pose_6: torch.Tensor,
@@ -1353,9 +1419,18 @@ def kl_distill_scorer_loss(
     gt_pair_hwc: torch.Tensor,
     posenet,
     segnet,
+    # [empirical: Hinton-Vinyals-Dean 2014 KL distillation T=2.0 + Quantizr
+    # deploy 0.33 cross-codebase consistency; per CLAUDE.md "Quantizr
+    # intelligence" section]
     temperature: float = 2.0,
     boundary_mask: torch.Tensor | None = None,
+    # [derived: 10× weight on boundary pixels per Yousfi steganalysis +
+    # Fridrich inverse-steganalysis ("CNN blind spots at texture boundaries"
+    # in CLAUDE.md "Fridrich inverse steganalysis")]
     boundary_weight: float = 10.0,
+    # [empirical: Quantizr SegNet attack 88K-param FiLM-conditioned regime;
+    # 100× anchors the seg-attack-vs-pose-bound balance documented in
+    # CLAUDE.md "Do NOT use segnet_loss_weight > 100"]
     segnet_weight: float = 100.0,
 ) -> tuple[torch.Tensor, float, float]:
     """Hinton-style KL distillation loss for SegNet + standard PoseNet MSE.
@@ -1443,6 +1518,8 @@ def kl_distill_segnet_only(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,
     segnet,
+    # [empirical: Hinton-Vinyals-Dean 2014 + Quantizr 0.33 deploy; sister of
+    # kl_distill_scorer_loss above with same T=2.0 canon]
     temperature: float = 2.0,
     class_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, float]:
@@ -1782,6 +1859,10 @@ def segnet_kl_divergence_loss(
     filtered_frames_hwc: torch.Tensor,
     segnet,
     posenet=None,
+    # [DEFERRED-pending-council: arbitrariness_audit_20260512.md A-1; chosen
+    # at old 1.x operating point; at PR106 r2 frontier the marginal value
+    # FLIPS per CLAUDE.md "SegNet vs PoseNet importance — operating-point
+    # dependent". Council deliberation required to re-derive.]
     seg_weight: float = 50.0,
 ) -> tuple[torch.Tensor, float, float]:
     """Direct semantic preservation via KL divergence on SegNet logits.
@@ -1846,6 +1927,10 @@ def saliency_reconstruction_loss_alpha(
     filtered_bchw: torch.Tensor,
     original_bchw: torch.Tensor,
     saliency_map: torch.Tensor,
+    # [empirical: postfilter saliency sweep 2026-04 anchor; alpha=20 in cli
+    # surface matches; arbitrariness_audit_20260512.md A-5 — unusual magnitude
+    # vs typical α∈[0.1,10] but justified by SegNet-critical-region emphasis
+    # in the postfilter regime]
     alpha: float = 20.0,
 ) -> torch.Tensor:
     """Per-pixel inverse saliency weighting with explicit alpha parameter.
