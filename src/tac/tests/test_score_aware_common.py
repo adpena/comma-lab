@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 import torch
 
+from tac.losses import scorer_loss_terms_btchw
 from tac.substrates.score_aware_common import (
+    CONTEST_POSE_SQRT_WEIGHT,
     ScoreAwareScorerContractError,
     score_pair_components,
     stage_frame_pair,
@@ -29,9 +31,8 @@ class _SegScorer(torch.nn.Module):
 
 
 class _PoseScorer(torch.nn.Module):
-    def __init__(self, *, as_dict: bool = True) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.as_dict = as_dict
         self.preprocess_shapes: list[tuple[int, ...]] = []
         self.forward_shapes: list[tuple[int, ...]] = []
 
@@ -47,7 +48,7 @@ class _PoseScorer(torch.nn.Module):
         self.forward_shapes.append(tuple(x.shape))
         assert x.dim() == 4
         pose = x.flatten(2).mean(dim=2)
-        return {"pose": pose} if self.as_dict else pose
+        return {"pose": pose}
 
 
 def test_stage_frame_pair_requires_matching_4d_rgb():
@@ -63,14 +64,17 @@ def test_stage_frame_pair_requires_matching_4d_rgb():
         stage_frame_pair(torch.zeros(2, 1, 4, 5), torch.zeros(2, 1, 4, 5))
 
 
-@pytest.mark.parametrize("pose_as_dict", [True, False])
-def test_score_pair_components_enforces_preprocess_shapes_and_grad(pose_as_dict):
+def test_contest_pose_weight_matches_score_formula():
+    assert pytest.approx(10.0**0.5) == CONTEST_POSE_SQRT_WEIGHT
+
+
+def test_score_pair_components_enforces_preprocess_shapes_and_grad():
     rgb_0 = torch.randn(2, 3, 4, 6, requires_grad=True)
     rgb_1 = torch.randn(2, 3, 4, 6, requires_grad=True)
     gt_0 = torch.randn(2, 3, 4, 6)
     gt_1 = torch.randn(2, 3, 4, 6)
     seg = _SegScorer()
-    pose = _PoseScorer(as_dict=pose_as_dict)
+    pose = _PoseScorer()
 
     seg_term, pose_term = score_pair_components(
         seg_scorer=seg,
@@ -89,6 +93,33 @@ def test_score_pair_components_enforces_preprocess_shapes_and_grad(pose_as_dict)
     assert pose.forward_shapes == [(2, 12, 4, 6), (2, 12, 4, 6)]
     assert rgb_0.grad is not None
     assert rgb_1.grad is not None
+
+
+def test_score_pair_components_matches_canonical_scorer_loss_terms():
+    rgb_0 = torch.randn(2, 3, 4, 6, requires_grad=True)
+    rgb_1 = torch.randn(2, 3, 4, 6, requires_grad=True)
+    gt_0 = torch.randn(2, 3, 4, 6)
+    gt_1 = torch.randn(2, 3, 4, 6)
+    seg = _SegScorer()
+    pose = _PoseScorer()
+
+    seg_term, pose_term = score_pair_components(
+        seg_scorer=seg,
+        pose_scorer=pose,
+        rgb_0_rt=rgb_0,
+        rgb_1_rt=rgb_1,
+        gt_rgb_0=gt_0,
+        gt_rgb_1=gt_1,
+    )
+    _, canonical_pose, canonical_seg = scorer_loss_terms_btchw(
+        stage_frame_pair(rgb_0, rgb_1),
+        stage_frame_pair(gt_0, gt_1),
+        pose,
+        seg,
+    )
+
+    assert torch.allclose(seg_term, canonical_seg)
+    assert torch.allclose(pose_term, canonical_pose)
 
 
 def test_score_pair_components_rejects_missing_preprocess():

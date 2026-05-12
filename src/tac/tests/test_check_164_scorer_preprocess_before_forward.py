@@ -229,6 +229,34 @@ def test_strict_mode_raises_on_violation(tmp_path):
         )
 
 
+def test_alias_to_scorer_forward_is_caught(tmp_path):
+    """Aliases such as ``scorer = self.seg_scorer`` cannot bypass the AST gate."""
+    repo = _make_repo_with_substrate(
+        "test_substrate",
+        "score_aware_loss.py",
+        """
+        import torch
+
+        class Loss(torch.nn.Module):
+            def __init__(self, seg_scorer):
+                super().__init__()
+                self.seg_scorer = seg_scorer
+
+            def forward(self, x):
+                scorer = self.seg_scorer
+                return scorer(x)
+        """,
+        tmp_path,
+    )
+    vlist = (
+        check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
+            repo_root=repo, strict=False, verbose=False
+        )
+    )
+    assert len(vlist) == 1
+    assert "seg_scorer alias `scorer`" in vlist[0]
+
+
 def test_multiple_function_bodies_each_checked(tmp_path):
     """A class with multiple methods — each method's body is its own scope."""
     repo = _make_repo_with_substrate(

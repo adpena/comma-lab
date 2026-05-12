@@ -14,9 +14,19 @@ which crashed Modal A100 dispatches and made sibling lanes incomparable.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import math
 
 import torch
+
+from tac.losses import (
+    DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
+    SEGMENTATION_SURROGATE_SOFT_COSINE,
+    scorer_loss_terms_btchw,
+)
+
+CONTEST_RATE_WEIGHT = 25.0
+CONTEST_SEG_WEIGHT = 100.0
+CONTEST_POSE_SQRT_WEIGHT = math.sqrt(10.0)
 
 
 class ScoreAwareScorerContractError(ValueError):
@@ -52,77 +62,45 @@ def score_pair_components(
     rgb_1_rt: torch.Tensor,
     gt_rgb_0: torch.Tensor,
     gt_rgb_1: torch.Tensor,
+    class_weights: torch.Tensor | None = None,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return ``(seg_term, pose_term)`` through contest scorer preprocessing."""
+    """Return ``(seg_dist, pose_dist)`` through the canonical scorer loss path."""
 
+    _require_preprocess(seg_scorer, scorer_name="SegNet")
+    _require_preprocess(pose_scorer, scorer_name="PoseNet")
     pair_pred = stage_frame_pair(rgb_0_rt, rgb_1_rt)
     pair_gt = stage_frame_pair(gt_rgb_0, gt_rgb_1)
-
-    seg_in_pred = _preprocess(seg_scorer, pair_pred, scorer_name="SegNet")
-    seg_in_gt = _preprocess(seg_scorer, pair_gt, scorer_name="SegNet")
-    seg_term = seg_distortion_proxy(seg_scorer(seg_in_pred), seg_scorer(seg_in_gt))
-
-    pose_in = _preprocess(pose_scorer, pair_pred, scorer_name="PoseNet")
-    pose_target_in = _preprocess(pose_scorer, pair_gt, scorer_name="PoseNet")
-    pose_out = _pose_tensor(pose_scorer(pose_in), scorer_name="PoseNet")
-    pose_target = _pose_tensor(pose_scorer(pose_target_in), scorer_name="PoseNet")
-    if pose_out.dim() != 2 or pose_target.dim() != 2:
-        raise ScoreAwareScorerContractError(
-            "PoseNet outputs must be 2D tensors shaped (B, >=6); got "
-            f"{tuple(pose_out.shape)} and {tuple(pose_target.shape)}"
-        )
-    if pose_out.shape[1] < 6 or pose_target.shape[1] < 6:
-        raise ScoreAwareScorerContractError(
-            "PoseNet outputs must include at least six pose coordinates; got "
-            f"{pose_out.shape[1]} and {pose_target.shape[1]}"
-        )
-    pose_term = ((pose_out[:, :6] - pose_target[:, :6]) ** 2).mean()
+    _, pose_term, seg_term = scorer_loss_terms_btchw(
+        pair_pred,
+        pair_gt,
+        pose_scorer,
+        seg_scorer,
+        class_weights=class_weights,
+        segmentation_surrogate=segmentation_surrogate,
+        segmentation_temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
+    )
     return seg_term, pose_term
 
 
-def seg_distortion_proxy(
-    seg_logits_pred: torch.Tensor, seg_logits_gt: torch.Tensor
-) -> torch.Tensor:
-    """Soft cross-entropy between predicted and target SegNet logits."""
-
-    log_p = torch.log_softmax(seg_logits_pred, dim=1)
-    q = torch.softmax(seg_logits_gt, dim=1)
-    return -(q * log_p).sum(dim=1).mean()
-
-
-def _preprocess(
-    scorer: torch.nn.Module,
-    pair: torch.Tensor,
-    *,
-    scorer_name: str,
-) -> torch.Tensor:
-    preprocess = getattr(scorer, "preprocess_input", None)
-    if not callable(preprocess):
+def _require_preprocess(scorer: torch.nn.Module, *, scorer_name: str) -> None:
+    if not callable(getattr(scorer, "preprocess_input", None)):
         raise ScoreAwareScorerContractError(
             f"{scorer_name} scorer must expose preprocess_input(pair_btchw); "
             "direct scorer calls bypass the contest contract"
         )
-    return preprocess(pair)
-
-
-def _pose_tensor(output: object, *, scorer_name: str) -> torch.Tensor:
-    if isinstance(output, Mapping):
-        if "pose" not in output:
-            raise ScoreAwareScorerContractError(
-                f"{scorer_name} mapping output must contain a 'pose' tensor"
-            )
-        output = output["pose"]
-    if not isinstance(output, torch.Tensor):
-        raise ScoreAwareScorerContractError(
-            f"{scorer_name} output must be a Tensor or mapping with 'pose'; "
-            f"got {type(output).__name__}"
-        )
-    return output
 
 
 __all__ = [
+    "CONTEST_POSE_SQRT_WEIGHT",
+    "CONTEST_RATE_WEIGHT",
+    "CONTEST_SEG_WEIGHT",
     "ScoreAwareScorerContractError",
     "score_pair_components",
-    "seg_distortion_proxy",
     "stage_frame_pair",
 ]

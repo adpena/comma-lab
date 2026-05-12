@@ -25,7 +25,10 @@ from dataclasses import dataclass
 
 import torch
 
-from tac.substrates.score_aware_common import score_pair_components
+from tac.substrates.score_aware_common import (
+    CONTEST_POSE_SQRT_WEIGHT,
+    score_pair_components,
+)
 
 
 @dataclass(frozen=True)
@@ -37,7 +40,7 @@ class BlockScoreAwareLossWeights:
 
     alpha_rate: float = 25.0
     beta_seg: float = 100.0
-    gamma_pose: float = 1.0
+    gamma_pose: float = CONTEST_POSE_SQRT_WEIGHT
     pose_weight_scale: float = 1.0
     """Set to 2.71 at PR106-r2 operating point (pose_avg < 2.5e-4)."""
 

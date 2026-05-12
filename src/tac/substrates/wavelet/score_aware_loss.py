@@ -24,7 +24,10 @@ from dataclasses import dataclass, field
 
 import torch
 
-from tac.substrates.score_aware_common import score_pair_components
+from tac.substrates.score_aware_common import (
+    CONTEST_POSE_SQRT_WEIGHT,
+    score_pair_components,
+)
 
 
 @dataclass(frozen=True)
@@ -33,7 +36,7 @@ class ScoreAwareLossWeights:
 
     alpha_rate: float = 25.0
     beta_seg: float = 100.0
-    gamma_pose: float = 1.0
+    gamma_pose: float = CONTEST_POSE_SQRT_WEIGHT
     pose_weight_scale: float = 1.0
     contest_normalizer: float = 37_545_489.0
 

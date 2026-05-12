@@ -2302,7 +2302,7 @@ def preflight_all(
         # vq_vae / wavelet / etc.). Strict-flip once sister substrates land
         # the same preprocess_input fix (operator-routable follow-up lane).
         check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #159 (FFFF Bug 4, UUU Path B): CLAUDE.md
         # catalog table is the canonical strictness ledger. When a
@@ -10215,11 +10215,6 @@ def _scan_inflate_for_scorer_load_with_waivers(
     return unwaived, waived
 
 
-_SUBSTRATE_SCORER_DIRECT_CALL_RE = re.compile(
-    r"\bself\.(?:seg_scorer|pose_scorer)\s*\("
-)
-
-
 def check_substrate_score_aware_losses_use_canonical_scorer_contract(
     repo_root: Path | None = None,
     strict: bool = True,
@@ -10230,8 +10225,9 @@ def check_substrate_score_aware_losses_use_canonical_scorer_contract(
     Bug class: a SaneHNeRV dispatch passed 5D RGB directly into SegNet and a
     6-channel concatenated pair directly into PoseNet. The canonical helper
     stages ``(B, T=2, C=3, H, W)`` pairs and calls each scorer's
-    ``preprocess_input`` before forward; lane-local score-aware losses must
-    delegate to it instead of duplicating scorer-shape logic.
+    ``preprocess_input`` through ``tac.losses.scorer_loss_terms_btchw`` before
+    forward; lane-local score-aware losses must delegate to it instead of
+    duplicating scorer-shape or loss-weight semantics.
     """
 
     root = Path(repo_root or REPO_ROOT)
@@ -10259,21 +10255,46 @@ def check_substrate_score_aware_losses_use_canonical_scorer_contract(
             continue
         scanned += 1
         rel = path.relative_to(root) if path.is_relative_to(root) else path
-        if "score_pair_components(" not in text:
-            violations.append(
-                f"{rel}: missing canonical score_pair_components(...) scorer "
-                "contract; direct lane-local scorer wiring is forbidden"
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError as exc:
+            violations.append(f"{rel}:{exc.lineno or 1}: cannot parse score-aware loss")
+            continue
+        has_canonical_call = any(
+            isinstance(node, ast.Call)
+            and (
+                (
+                    isinstance(node.func, ast.Name)
+                    and node.func.id == "score_pair_components"
+                )
+                or (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "score_pair_components"
+                )
             )
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            stripped = line.lstrip()
-            if stripped.startswith("#"):
+            for node in ast.walk(tree)
+        )
+        if not has_canonical_call:
+            violations.append(
+                f"{rel}: missing AST call to canonical score_pair_components(...); "
+                "comments/strings do not satisfy the scorer contract"
+            )
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
                 continue
-            if _SUBSTRATE_SCORER_DIRECT_CALL_RE.search(line):
+            forward_calls, _preprocess_calls = _check_164_collect_scorer_calls_and_preprocess(
+                node
+            )
+            for scorer_attr, lineno in forward_calls:
+                call_line = lines[lineno - 1] if 0 <= lineno - 1 < len(lines) else ""
+                if _CHECK_164_WAIVER_TOKEN in call_line:
+                    continue
                 violations.append(
-                    f"{rel}:{lineno}: direct self.seg_scorer/self.pose_scorer "
-                    "forward call in score-aware loss; use "
+                    f"{rel}:{lineno}: direct {scorer_attr} scorer forward in "
+                    "score-aware loss; use "
                     "tac.substrates.score_aware_common.score_pair_components "
-                    "so preprocess_input is enforced"
+                    "so preprocess_input and canonical scorer-loss semantics are enforced"
                 )
 
     if verbose:
@@ -40772,6 +40793,28 @@ _CHECK_164_KNOWN_SCORER_ATTR_NAMES = (
 )
 
 
+def _check_164_self_scorer_attr(node: ast.AST) -> str | None:
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "self"
+        and node.attr in _CHECK_164_KNOWN_SCORER_ATTR_NAMES
+    ):
+        return node.attr
+    return None
+
+
+def _check_164_target_names(target: ast.AST) -> list[str]:
+    if isinstance(target, ast.Name):
+        return [target.id]
+    if isinstance(target, (ast.Tuple, ast.List)):
+        names: list[str] = []
+        for elt in target.elts:
+            names.extend(_check_164_target_names(elt))
+        return names
+    return []
+
+
 def _check_164_collect_scorer_calls_and_preprocess(
     func_node: ast.FunctionDef,
 ) -> tuple[list[tuple[str, int]], dict[str, int]]:
@@ -40790,10 +40833,29 @@ def _check_164_collect_scorer_calls_and_preprocess(
     """
     forward_calls: list[tuple[str, int]] = []
     preprocess_calls: dict[str, int] = {}
+    aliases: dict[str, str] = {}
     for node in ast.walk(func_node):
+        if isinstance(node, ast.Assign):
+            scorer_attr = _check_164_self_scorer_attr(node.value)
+            if scorer_attr is not None:
+                for target in node.targets:
+                    for name in _check_164_target_names(target):
+                        aliases[name] = scorer_attr
+        elif isinstance(node, ast.AnnAssign):
+            scorer_attr = _check_164_self_scorer_attr(node.value) if node.value else None
+            if scorer_attr is not None:
+                for name in _check_164_target_names(node.target):
+                    aliases[name] = scorer_attr
         if not isinstance(node, ast.Call):
             continue
         func = node.func
+        if isinstance(func, ast.Name):
+            if func.id in aliases:
+                forward_calls.append((f"{aliases[func.id]} alias `{func.id}`", node.lineno))
+                continue
+            if func.id in _CHECK_164_KNOWN_SCORER_ATTR_NAMES:
+                forward_calls.append((func.id, node.lineno))
+                continue
         if not isinstance(func, ast.Attribute):
             continue
         # Case A: BARE forward call — ``self.<scorer>(...)``.
