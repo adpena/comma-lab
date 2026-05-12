@@ -885,8 +885,8 @@ def sensitivity_cv_distance(
 
 __all__ = [
     "CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT",
-    "SENSITIVITY_PAIR_MANIFEST_FORMAT",
     "SENSITIVITY_MAP_FORMAT",
+    "SENSITIVITY_PAIR_MANIFEST_FORMAT",
     "SensitivityMapError",
     "SensitivityMapStats",
     "build_contiguous_pair_manifest",
@@ -905,3 +905,50 @@ __all__ = [
     "validate_sensitivity_map_for_model",
     "validate_sensitivity_vector",
 ]
+
+
+# COUNCIL-A1 axis-level reweighting API (2026-05-12).
+#
+# Re-export the operating-point-aware per-axis EV multipliers from
+# the canonical :mod:`tac.sensitivity_map.axis_weights` submodule so
+# downstream consumers (the FIX-C composition bridge + the GGGG A-1
+# probe-disambiguator) can ``from tac.sensitivity_map import AxisWeights``.
+# Per CLAUDE.md "Subagent coherence-by-default": ONE canonical surface,
+# every consumer plugs into the same module. Memory:
+# feedback_council_a1_sensitivity_map_axis_api_landed_20260512.md.
+from tac.sensitivity_map import axis_weights as _axis_weights  # noqa: E402
+from tac.sensitivity_map.axis_weights import (  # noqa: E402
+    AXIS_NAMES,
+    OLD_1X_OPERATING_POINT_AXIS_WEIGHTS,
+    OPERATING_POINT_ANCHORS,
+    PR102_CUDA_AXIS_WEIGHTS,
+    PR106_R2_FRONTIER_AXIS_WEIGHTS,
+    PR106_R2_POSE_PER_SEG_MARGINAL_RATIO,
+    AxisWeights,
+    AxisWeightsError,
+    axis_weights_for_named_operating_point,
+    compute_axis_weights,
+    default_axis_weights,
+    validate_axis_weights_mapping,
+)
+
+__all__ += [
+    "AXIS_NAMES",
+    "OLD_1X_OPERATING_POINT_AXIS_WEIGHTS",
+    "OPERATING_POINT_ANCHORS",
+    "PR102_CUDA_AXIS_WEIGHTS",
+    "PR106_R2_FRONTIER_AXIS_WEIGHTS",
+    "PR106_R2_POSE_PER_SEG_MARGINAL_RATIO",
+    "AxisWeights",
+    "AxisWeightsError",
+    "axis_weights",
+    "axis_weights_for_named_operating_point",
+    "compute_axis_weights",
+    "default_axis_weights",
+    "validate_axis_weights_mapping",
+]
+
+# Expose submodule under its package attribute name for
+# ``tac.sensitivity_map.axis_weights`` dotted access without explicit
+# import in the consumer.
+axis_weights = _axis_weights

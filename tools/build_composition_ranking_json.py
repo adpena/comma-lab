@@ -63,10 +63,9 @@ import argparse
 import dataclasses
 import datetime as dt
 import json
-import math
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any
 
 # Repo-root import shim.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -74,22 +73,31 @@ _SRC = _REPO_ROOT / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from tac.composition.enumerate import enumerate_cells
-from tac.composition.registry import CompositionCell, SubstrateRow
-from tac.optimization.substrate_composition_matrix import (
-    DISPATCH_COST_USD_MIDPOINT,
-    canonical_substrate_inventory,
-)
-from tac.optimization.autopilot_dispatch_ranking import (
-    DEFAULT_CUMULATIVE_CAP_USD,
-    DEFAULT_PER_DISPATCH_CAP_USD,
-    SCHEMA_VERSION as AUTOPILOT_SCHEMA_VERSION,
-)
-from tac.continual_learning import (
+from tac import cost_band_calibration  # noqa: E402
+from tac.composition.enumerate import enumerate_cells  # noqa: E402
+from tac.continual_learning import (  # noqa: E402
     load_posterior,
     posterior_query_track_correction,
 )
-from tac import cost_band_calibration
+from tac.optimization.autopilot_dispatch_ranking import (  # noqa: E402
+    DEFAULT_CUMULATIVE_CAP_USD,
+    DEFAULT_PER_DISPATCH_CAP_USD,
+)
+from tac.optimization.autopilot_dispatch_ranking import (  # noqa: E402
+    SCHEMA_VERSION as AUTOPILOT_SCHEMA_VERSION,
+)
+from tac.optimization.substrate_composition_matrix import (  # noqa: E402
+    DISPATCH_COST_USD_MIDPOINT,
+    canonical_substrate_inventory,
+)
+from tac.sensitivity_map.axis_weights import (  # noqa: E402
+    PR106_R2_FRONTIER_AXIS_WEIGHTS,
+    AxisWeightsError,
+    validate_axis_weights_mapping,
+)
+
+if TYPE_CHECKING:
+    from tac.composition.registry import CompositionCell, SubstrateRow
 
 # Internal bridge schema marker (lives INSIDE the autopilot schema payload).
 BRIDGE_SCHEMA = "tac_composition_cell_to_autopilot_bridge_v1"
@@ -98,14 +106,15 @@ BRIDGE_SCHEMA = "tac_composition_cell_to_autopilot_bridge_v1"
 # ──────────────────────────────────────────────────────────────────────────
 # Axis-weight rule (CLAUDE.md "SegNet vs PoseNet importance — operating-
 # point dependent"). Defaults match the PR106 frontier where pose marginal
-# = 2.71× seg marginal. Operators can override on the CLI.
+# = 2.71x seg marginal. Operators can override on the CLI.
+#
+# The canonical source-of-truth is :mod:`tac.sensitivity_map.axis_weights`
+# (COUNCIL-A1 landing 2026-05-12). ``DEFAULT_AXIS_WEIGHTS`` is preserved as a
+# plain ``dict[str, float]`` for backward compatibility with consumers that
+# already imported it, BUT it is now sourced from the canonical AxisWeights
+# typed dataclass so the bridge and the probe-disambiguator stay coherent.
 # ──────────────────────────────────────────────────────────────────────────
-DEFAULT_AXIS_WEIGHTS: dict[str, float] = {
-    "pose": 2.71,   # PR106 frontier marginal multiplier.
-    "seg": 1.00,    # Baseline.
-    "rate": 1.00,   # Rate primitives ranked by EV/$ directly.
-    "mixed": 1.50,  # Conservative midpoint.
-}
+DEFAULT_AXIS_WEIGHTS: dict[str, float] = PR106_R2_FRONTIER_AXIS_WEIGHTS.as_mapping()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -131,7 +140,7 @@ def _substrate_index() -> dict[str, SubstrateRow]:
 def _estimate_dispatch_cost(
     substrate_id: str,
     *,
-    posterior_path: Optional[Path] = None,
+    posterior_path: Path | None = None,
 ) -> tuple[float, str]:
     """Estimate dispatch cost for a substrate.
 
@@ -180,7 +189,7 @@ def _posterior_correction_for_cell(
 def _build_cell_plans(
     cells: list[CompositionCell],
     *,
-    posterior_path: Optional[Path] = None,
+    posterior_path: Path | None = None,
     axis_weights: dict[str, float] = DEFAULT_AXIS_WEIGHTS,
     apply_posterior: bool = True,
     apply_cost_band: bool = True,
@@ -239,6 +248,10 @@ def _build_cell_plans(
         # Propagate the cell's own blockers AND add a cost-estimation blocker
         # when we couldn't get a real number.
         blockers = list(cell.blockers)
+        if cell.semantic_compatibility_warning is not None:
+            blockers.append(
+                f"semantic_compatibility_warning: {cell.semantic_compatibility_warning}"
+            )
         if cost_usd <= 0.0:
             blockers.append(
                 f"cost_estimation_required: substrate {cell.substrate_id!r} "
@@ -278,9 +291,11 @@ def _enforce_envelope(
     sorted_plans = sorted(
         plans, key=lambda p: p.eig_per_dollar, reverse=True
     )
+    clean_plans = [p for p in sorted_plans if not p.blockers]
+    review_plans = [p for p in sorted_plans if p.blockers]
     rows: list[dict[str, Any]] = []
     cumulative = 0.0
-    for plan in sorted_plans:
+    for plan in clean_plans + review_plans:
         fits_per = plan.estimated_dispatch_cost_usd <= per_dispatch_cap_usd
         prospective = cumulative + plan.estimated_dispatch_cost_usd
         fits_envelope = prospective <= cumulative_cap_usd
@@ -289,7 +304,7 @@ def _enforce_envelope(
         cell = plan.cell
         substrate = plan.substrate
         composition_notes_lines = [
-            "[predicted; substrate × primitive composition matrix v1]",
+            "[predicted; substrate x primitive composition matrix v1]",
             f"substrate_id: {cell.substrate_id}",
             f"substrate_class: {substrate.substrate_class.value}",
             f"target_axis: {substrate.target_axis.value}",
@@ -306,6 +321,10 @@ def _enforce_envelope(
         ]
         if cell.notes:
             composition_notes_lines.append(f"notes: {cell.notes}")
+        if cell.semantic_compatibility_warning is not None:
+            composition_notes_lines.append(
+                f"semantic_compatibility_warning: {cell.semantic_compatibility_warning}"
+            )
         rows.append(
             {
                 "candidate_id": cell.cell_id,
@@ -319,6 +338,8 @@ def _enforce_envelope(
                 "eig_per_dollar": plan.eig_per_dollar,
                 "composition_notes": "\n".join(composition_notes_lines),
                 "blockers": list(plan.blockers),
+                "semantic_compatibility_warning": cell.semantic_compatibility_warning,
+                "operator_review_required": bool(plan.blockers),
                 "fits_per_dispatch_cap": bool(fits_per),
                 "fits_cumulative_envelope": bool(fits_envelope),
                 "score_claim": False,
@@ -339,8 +360,8 @@ def build_payload(
     axis_weights: dict[str, float] = DEFAULT_AXIS_WEIGHTS,
     apply_posterior: bool = True,
     apply_cost_band: bool = True,
-    posterior_path: Optional[Path] = None,
-    max_total: Optional[int] = None,
+    posterior_path: Path | None = None,
+    max_total: int | None = None,
 ) -> dict[str, Any]:
     """Construct the autopilot-consumable ranking payload.
 
@@ -375,6 +396,9 @@ def build_payload(
         rows = rows[: max(0, int(max_total))]
 
     n_substrates_considered = len({c.substrate_id for c in cells})
+    n_operator_review_rows = sum(
+        1 for row in rows if row.get("operator_review_required") is True
+    )
 
     payload: dict[str, Any] = {
         # Mirror the autopilot's canonical schema so the loader accepts us.
@@ -386,7 +410,9 @@ def build_payload(
         "per_dispatch_cap_usd": float(per_dispatch_cap_usd),
         "cumulative_cap_usd": float(cumulative_cap_usd),
         "cumulative_estimated_spend_usd": float(cumulative_spend),
-        "n_ranked_dispatches": int(len(rows)),
+        "n_ranked_dispatches": len(rows),
+        "n_operator_review_rows": int(n_operator_review_rows),
+        "n_clean_dispatch_rows": int(len(rows) - n_operator_review_rows),
         "n_filtered_dropped": 0,
         "score_claim": False,
         "promotion_eligible": False,
@@ -445,7 +471,7 @@ def write_payload(payload: dict[str, Any], path: Path) -> None:
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -550,11 +576,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         "rate": float(args.rate_axis_weight),
         "mixed": float(args.mixed_axis_weight),
     }
-    for k, v in axis_weights.items():
-        if v < 0.0 or math.isnan(v) or math.isinf(v):
-            print(f"axis_weight {k!r} must be finite and non-negative; got {v}",
-                  file=sys.stderr)
-            return 2
+    # Delegate validation to the canonical axis_weights API. Per
+    # COUNCIL-A1 landing 2026-05-12, the validator lives in
+    # tac.sensitivity_map.axis_weights so the bridge and the probe stay
+    # coherent on what counts as a valid axis weight.
+    try:
+        validate_axis_weights_mapping(axis_weights)
+    except AxisWeightsError as exc:
+        print(f"build_composition_ranking_json: {exc}", file=sys.stderr)
+        return 2
 
     payload = build_payload(
         only_compatible=True,

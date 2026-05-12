@@ -59,10 +59,18 @@ from tac.score_geometry import (  # noqa: E402
     importance_flip_threshold,
     score_gradient,
 )
+from tac.sensitivity_map.axis_weights import (  # noqa: E402
+    OPERATING_POINT_ANCHORS as _CANONICAL_AXIS_WEIGHT_ANCHORS,  # noqa: F401
+)
 
-
-# Operating-point anchors documented in CLAUDE.md "SegNet vs PoseNet importance
-# — operating-point dependent" table.
+# Operating-point d_pose / d_seg coordinates (DISTINCT from the canonical
+# :data:`tac.sensitivity_map.axis_weights.OPERATING_POINT_ANCHORS`, which
+# stores the COMPUTED :class:`AxisWeights` instances). This probe deals
+# with the raw (d_pose, d_seg) coordinates the operator passes in and
+# returns the score-gradient-balanced loss-weight ratio, so it needs the
+# raw distortions, not the precomputed multipliers. The canonical
+# AxisWeights table is re-exported above for any future caller that
+# wants to consume the multiplier directly.
 OPERATING_POINT_ANCHORS = {
     "old_1x": {"d_pose": 0.18, "d_seg": 0.001},  # 1.x scoreband
     "pr106_r2": {"d_pose": 3.4e-5, "d_seg": 6.7e-4},  # PR106 r2 frontier
