@@ -207,6 +207,10 @@ def test_known_transform_tokens_match_packet_compiler_module() -> None:
         "pr65_pq12_pose",
         # PR105 — kitchen_sink packed-state-schema size-sorted helper (2026-05-12)
         "pr105_packed_state_schema_size_sorted",
+        # PR101 GOLD — 3 newly-ported primitives (2026-05-12)
+        "pr101_decoder_storage_order",
+        "pr101_conv4_storage_perms",
+        "pr101_decoder_byte_maps",
         # PR93 — lowpass-luma residual codec (2026-05-11 punchlist cleanup)
         "pr93_lowpass_luma_residual",
         # PR97 — H3 wire-format grammar (2026-05-11 punchlist cleanup)

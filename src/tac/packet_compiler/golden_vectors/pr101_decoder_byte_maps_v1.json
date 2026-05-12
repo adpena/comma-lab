@@ -1,0 +1,7 @@
+{
+  "input_length": 256,
+  "n_anchor_entries": 4,
+  "n_strategies": 4,
+  "schema": "pr101_decoder_byte_maps.v1",
+  "sha256": "56c94e0dc98ce003899ce916258b6c4d6a07ada5243539cfffab7a2297094dea"
+}

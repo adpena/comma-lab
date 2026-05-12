@@ -138,6 +138,30 @@ from tac.packet_compiler.pr101_sidecar_grammar import (
     parse_split_brotli_self_delimiting,
     split_brotli_self_delimiting,
 )
+from tac.packet_compiler.pr101_decoder_storage_order import (
+    PR101_DECODER_STORAGE_ORDER,
+    PR101_DECODER_STREAM_ENDS,
+    DecoderStorageOrderSchema,
+    partition_buffer_by_stream_ends,
+    reorder_tensors_for_storage,
+    restore_tensor_order_from_storage,
+)
+from tac.packet_compiler.pr101_conv4_storage_perms import (
+    PR101_CONV4_STORAGE_PERMS,
+    Conv4StoragePermSchema,
+    apply_inverse_perm,
+    apply_storage_perm,
+    compute_inverse_perm,
+    compute_inverse_perms,
+)
+from tac.packet_compiler.pr101_decoder_byte_maps import (
+    PR101_DECODER_BYTE_MAPS,
+    VALID_BYTE_MAP_STRATEGIES,
+    ByteMapStrategy,
+    DecoderByteMapsSchema,
+    decode_byte_map,
+    encode_byte_map,
+)
 from tac.packet_compiler.pr103_arithmetic_coding import (
     AdaptiveBrotliResult,
     MergedRangeStream,
@@ -314,6 +338,27 @@ __all__ = [
     "encode_ranked_no_op_sidecar",
     "parse_split_brotli_self_delimiting",
     "split_brotli_self_delimiting",
+    # PR101 GOLD — decoder storage order + stream boundaries (2026-05-12)
+    "DecoderStorageOrderSchema",
+    "PR101_DECODER_STORAGE_ORDER",
+    "PR101_DECODER_STREAM_ENDS",
+    "partition_buffer_by_stream_ends",
+    "reorder_tensors_for_storage",
+    "restore_tensor_order_from_storage",
+    # PR101 GOLD — conv4 storage perms (2026-05-12)
+    "Conv4StoragePermSchema",
+    "PR101_CONV4_STORAGE_PERMS",
+    "apply_inverse_perm",
+    "apply_storage_perm",
+    "compute_inverse_perm",
+    "compute_inverse_perms",
+    # PR101 GOLD — decoder byte maps (sign-encoding strategy) (2026-05-12)
+    "ByteMapStrategy",
+    "DecoderByteMapsSchema",
+    "PR101_DECODER_BYTE_MAPS",
+    "VALID_BYTE_MAP_STRATEGIES",
+    "decode_byte_map",
+    "encode_byte_map",
     # PR103 — arithmetic coding
     "AdaptiveBrotliResult",
     "MergedRangeStream",

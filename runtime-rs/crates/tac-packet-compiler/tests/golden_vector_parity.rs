@@ -794,6 +794,39 @@ fn pr105_packed_state_schema_parity() {
     try_load_only("pr105_packed_state_schema_v1");
 }
 
+// ── PR101 GOLD primitive parity stubs (2026-05-12) ──────────────────────────
+//
+// Three NEW PR101 GOLD-medal primitives ported to `tac.packet_compiler` from
+// the PR101 source (`submissions/hnerv_ft_microcodec/src/codec.py`):
+//
+// * `pr101_decoder_storage_order` — 28-tensor permutation + 7 split-brotli
+//   stream boundaries.
+// * `pr101_conv4_storage_perms` — per-tensor 4D-axis permutation table for
+//   the 13 conv weight tensors.
+// * `pr101_decoder_byte_maps` — per-tensor sign-encoding strategy selector
+//   (negzig / zig / twos / off).
+//
+// Each is `try_load_only` until a Rust source module under
+// `src/tac-packet-compiler/src/pr101_gold_*/` lands. The Python tests at
+// `src/tac/tests/test_packet_compiler_pr101_gold_primitives.py` produce the
+// pinned SHA-256 against deterministic fixtures so Rust ports can verify
+// byte parity once they land.
+
+#[test]
+fn pr101_decoder_storage_order_parity() {
+    try_load_only("pr101_decoder_storage_order_v1");
+}
+
+#[test]
+fn pr101_conv4_storage_perms_parity() {
+    try_load_only("pr101_conv4_storage_perms_v1");
+}
+
+#[test]
+fn pr101_decoder_byte_maps_parity() {
+    try_load_only("pr101_decoder_byte_maps_v1");
+}
+
 // ── Magic codec auto-selector parity stub (2026-05-11) ──────────────────────
 //
 // The magic codec is a per-stream auto-selector over the existing
@@ -869,6 +902,10 @@ fn every_golden_vector_has_paired_parity_test() {
         "pr65_pq12_pose_v1",
         // PR105 — kitchen_sink packed-state-schema size-sorted helper (2026-05-12)
         "pr105_packed_state_schema_v1",
+        // PR101 GOLD — 3 newly-ported primitives (2026-05-12)
+        "pr101_decoder_storage_order_v1",
+        "pr101_conv4_storage_perms_v1",
+        "pr101_decoder_byte_maps_v1",
     ]
     .into_iter()
     .collect();
