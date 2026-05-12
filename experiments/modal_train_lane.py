@@ -137,6 +137,7 @@ def _run_lane_inner(
     claim_ledger_bytes: bytes,
     mounted_code_git_head: str,
     mounted_code_git_branch: str,
+    sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
 ) -> dict:
     """Container-side execution. Imports MUST be local (Modal serialization)."""
@@ -259,9 +260,86 @@ def _run_lane_inner(
     # Sentinel that this is Modal (skip Vast.ai-specific paths)
     (workspace / ".MODAL_RUNTIME").write_text("1\n")
 
+    # Catalog #166: worker-side HEAD parity assertion. The local
+    # entrypoint reads ``git rev-parse HEAD`` at dispatch time and threads
+    # the SHA via env. The worker re-reads ``git rev-parse HEAD`` against
+    # the mounted ``/workspace/pact`` and asserts they match. A divergence
+    # surfaces "Modal worker mounted a snapshot from a different SHA than
+    # the operator believed" (H3 of the diagnostic taxonomy) BEFORE the
+    # training inner loop starts — saving $5-15 of crash-on-startup cost.
+    expected_head = mounted_code_git_head if mounted_code_git_head else ""
+    worker_head = ""
+    worker_sentinel_sha256: dict = {}
+    sentinel_mismatches: list[str] = []
+    if expected_head and expected_head != "unknown":
+        try:
+            git_proc = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=workspace,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            worker_head = git_proc.stdout.strip()
+        except (FileNotFoundError, OSError):
+            worker_head = ""
+        if worker_head and worker_head != expected_head:
+            print(
+                "[modal-train-lane][CATALOG_166] WARN: worker git HEAD "
+                f"({worker_head[:12]}) != env-injected HEAD "
+                f"({expected_head[:12]}). The mount may be stale OR the "
+                "worker /workspace/pact has its own .git. Refer to "
+                "`tools/diagnose_modal_worker_source_staleness.py` for "
+                "verdict-class diagnosis. NOT fail-closed (mount is the "
+                "source of truth on Modal); recording for post-mortem only."
+            )
+        # Record into a small ledger we can harvest along with artifacts.
+        head_ledger = workspace / "modal_worker_head_ledger.json"
+        for rel, expected_sha in sentinel_sha256_local.items():
+            p = workspace / rel
+            if not p.is_file():
+                worker_sha = "MISSING_WORKER"
+            else:
+                import hashlib as _hashlib
+
+                worker_sha = _hashlib.sha256(p.read_bytes()).hexdigest()
+            worker_sentinel_sha256[rel] = worker_sha
+            if expected_sha != worker_sha:
+                sentinel_mismatches.append(
+                    f"{rel}: local={expected_sha[:12]} worker={worker_sha[:12]}"
+                )
+        head_ledger.write_text(json.dumps({
+            "schema": "modal_worker_head_ledger_v1_catalog166",
+            "env_injected_head": expected_head,
+            "env_injected_branch": mounted_code_git_branch or "",
+            "worker_git_head_at_start": worker_head,
+            "sentinel_files_local_sha256": sentinel_sha256_local,
+            "worker_sentinel_sha256": worker_sentinel_sha256,
+            "sentinel_mismatches": sentinel_mismatches,
+        }, indent=2, sort_keys=True))
+
     # Heartbeat tracking
     log_dir = workspace / f"results/{label}"
     log_dir.mkdir(parents=True, exist_ok=True)
+    root_head_ledger = workspace / "modal_worker_head_ledger.json"
+    if root_head_ledger.is_file():
+        shutil.copy2(root_head_ledger, log_dir / "modal_worker_head_ledger.json")
+    if sentinel_mismatches:
+        return {
+            "returncode": 13,
+            "error": (
+                "Catalog #166 worker sentinel hash mismatch before training: "
+                + "; ".join(sentinel_mismatches[:5])
+            ),
+            "artifacts": {
+                f"results/{label}/modal_worker_head_ledger.json":
+                    (log_dir / "modal_worker_head_ledger.json").read_bytes()
+            },
+            "stdout_tail": "",
+            "stderr_tail": "",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
     volume_dir = Path("/modal_results") / label
     volume_dir.mkdir(parents=True, exist_ok=True)
 
@@ -349,6 +427,7 @@ def _run_lane_inner(
             workspace / "experiments" / "results",
             workspace / "results",
             log_path,
+            workspace / "modal_worker_head_ledger.json",
         ]
         while not stop_sync.is_set():
             try:
@@ -425,6 +504,7 @@ def _run_lane_inner(
     # Top-level dirs to scan (avoid scanning src/ scripts/ etc.)
     scan_roots = [
         workspace / "results",
+        workspace / "modal_worker_head_ledger.json",
     ]
     # Also any */_results/ siblings of workspace root
     for child in workspace.iterdir():
@@ -495,6 +575,7 @@ def run_lane_training_t4(
     claim_ledger_bytes: bytes,
     mounted_code_git_head: str,
     mounted_code_git_branch: str,
+    sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
 ) -> dict:
     return _run_lane_inner(
@@ -504,6 +585,7 @@ def run_lane_training_t4(
         claim_ledger_bytes,
         mounted_code_git_head,
         mounted_code_git_branch,
+        sentinel_sha256_local,
         max_seconds=max_seconds,
     )
 
@@ -521,6 +603,7 @@ def run_lane_training_a10g(
     claim_ledger_bytes: bytes,
     mounted_code_git_head: str,
     mounted_code_git_branch: str,
+    sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
 ) -> dict:
     return _run_lane_inner(
@@ -530,6 +613,7 @@ def run_lane_training_a10g(
         claim_ledger_bytes,
         mounted_code_git_head,
         mounted_code_git_branch,
+        sentinel_sha256_local,
         max_seconds=max_seconds,
     )
 
@@ -547,6 +631,7 @@ def run_lane_training_a100(
     claim_ledger_bytes: bytes,
     mounted_code_git_head: str,
     mounted_code_git_branch: str,
+    sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
 ) -> dict:
     return _run_lane_inner(
@@ -556,6 +641,7 @@ def run_lane_training_a100(
         claim_ledger_bytes,
         mounted_code_git_head,
         mounted_code_git_branch,
+        sentinel_sha256_local,
         max_seconds=max_seconds,
     )
 
@@ -573,6 +659,7 @@ def run_lane_training_h100(
     claim_ledger_bytes: bytes,
     mounted_code_git_head: str,
     mounted_code_git_branch: str,
+    sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
 ) -> dict:
     return _run_lane_inner(
@@ -582,6 +669,7 @@ def run_lane_training_h100(
         claim_ledger_bytes,
         mounted_code_git_head,
         mounted_code_git_branch,
+        sentinel_sha256_local,
         max_seconds=max_seconds,
     )
 
@@ -604,6 +692,41 @@ def _git_value(repo_root, *args: str) -> str:
     )
     value = proc.stdout.strip()
     return value if proc.returncode == 0 and value else "unknown"
+
+
+def _git_dirty_tree_summary(repo_root) -> dict:
+    """Return ``{"dirty": bool, "dirty_paths_count": int, "summary": str}``.
+
+    Captures whether the working tree has uncommitted edits AT DISPATCH TIME.
+    Catalog #166 (PHASE-B1-PIVOT 2026-05-12): a stale fix on disk silently
+    ships to the Modal worker because ``add_local_dir`` snapshots the working
+    tree, not the HEAD blob. Recording this in ``modal_metadata.json`` lets
+    post-mortem distinguish "operator dispatched before fix landed" (clean
+    tree, HEAD before fix-commit) from "Modal worker mounted stale snapshot"
+    (clean tree, HEAD AT fix-commit, but worker hash differs from HEAD blob).
+    """
+
+    import subprocess
+
+    proc = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return {
+            "dirty": False,
+            "dirty_paths_count": 0,
+            "summary": "unknown:git-status-failed",
+        }
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    return {
+        "dirty": bool(lines),
+        "dirty_paths_count": len(lines),
+        "summary": "; ".join(line.strip() for line in lines[:10]),
+    }
 
 
 def _infer_lane_id(lane_script: str, explicit_lane_id: str = "") -> str:
@@ -703,6 +826,8 @@ def main(
     cost_band_epochs: int = 0,
     cost_band_batch_size: int = 0,
     cost_band_all_flags_on: bool = False,
+    require_clean_head: bool = False,
+    sentinel_files: str = "",
 ):
     """Dispatch a lane training run on Modal.
 
@@ -716,6 +841,15 @@ def main(
         cost_band_epochs: epoch count for the cost posterior bucket
         cost_band_batch_size: batch size for the cost posterior bucket
         cost_band_all_flags_on: whether all required flags were threaded
+        require_clean_head: refuse dispatch if working tree has uncommitted
+            edits. Catalog #166 (PHASE-B1-PIVOT 2026-05-12): mid-edit
+            dispatches silently ship pre-fix code to the Modal worker
+            because ``add_local_dir`` snapshots the working tree, not HEAD.
+        sentinel_files: comma-separated relative paths whose worker-side
+            sha256 will be written into ``modal_metadata.json`` on dispatch
+            so post-mortem can verify the worker mounted the bytes the
+            operator believed they were shipping. Defaults empty (no
+            sentinel guard).
     """
     import json
     import os
@@ -781,6 +915,36 @@ def main(
     if max_seconds > 14 * 3600:
         max_seconds = 14 * 3600
     print(f"  per-lane timeout: {max_seconds}s ({timeout_hours:.1f}h)")
+    mounted_code_git_head = _git_value(repo_root, "rev-parse", "HEAD")
+    mounted_code_git_branch = _git_value(repo_root, "branch", "--show-current")
+    if mounted_code_git_head == "unknown" or mounted_code_git_branch == "unknown":
+        print(
+            "FATAL: unable to resolve mounted git custody for Modal training "
+            f"(head={mounted_code_git_head!r}, branch={mounted_code_git_branch!r})",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    # Catalog #166: working-tree dirty-tree summary + optional fail-closed.
+    dirty_tree = _git_dirty_tree_summary(repo_root)
+    if require_clean_head and dirty_tree["dirty"]:
+        print(
+            "FATAL: --require-clean-head is set and working tree has "
+            f"{dirty_tree['dirty_paths_count']} uncommitted edit(s):\n"
+            f"  {dirty_tree['summary']}\n"
+            "Commit the pending edits or pass --require-clean-head=False to "
+            "ship them to the Modal worker (Catalog #166).",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if dirty_tree["dirty"]:
+        print(
+            f"WARN [Catalog #166]: working tree has {dirty_tree['dirty_paths_count']} "
+            "uncommitted edit(s); Modal will mount the dirty snapshot, NOT "
+            f"HEAD ({mounted_code_git_head[:12]}). Pass --require-clean-head "
+            "to fail-closed instead."
+        )
+
     _ensure_dispatch_claim(
         repo_root,
         lane_id=resolved_lane_id,
@@ -795,15 +959,20 @@ def main(
         )
         sys.exit(2)
     claim_ledger_bytes = claims_path.read_bytes()
-    mounted_code_git_head = _git_value(repo_root, "rev-parse", "HEAD")
-    mounted_code_git_branch = _git_value(repo_root, "branch", "--show-current")
-    if mounted_code_git_head == "unknown" or mounted_code_git_branch == "unknown":
-        print(
-            "FATAL: unable to resolve mounted git custody for Modal training "
-            f"(head={mounted_code_git_head!r}, branch={mounted_code_git_branch!r})",
-            file=sys.stderr,
-        )
-        sys.exit(2)
+
+    # Catalog #166: sentinel-file SHA-256 ledger so post-mortem can prove the
+    # worker mounted the bytes the operator believed were being shipped.
+    sentinel_relpaths = [
+        s.strip() for s in sentinel_files.split(",") if s.strip()
+    ]
+    sentinel_sha256_local: dict = {}
+    for rel in sentinel_relpaths:
+        p = repo_root / rel
+        if not p.is_file():
+            sentinel_sha256_local[rel] = "MISSING_LOCAL"
+            continue
+        import hashlib as _hashlib
+        sentinel_sha256_local[rel] = _hashlib.sha256(p.read_bytes()).hexdigest()
 
     # CRITICAL: use .spawn() not .remote() for detached runs.
     # `.remote()` is cancelled when the local CLI disconnects, even with
@@ -822,6 +991,7 @@ def main(
         claim_ledger_bytes,
         mounted_code_git_head,
         mounted_code_git_branch,
+        sentinel_sha256_local,
         max_seconds,
     )
     call_id = function_call_id(fn_call)
@@ -858,6 +1028,20 @@ def main(
         "live_volume": RESULTS_VOL,
         "live_volume_prefix": f"{label}/",
         "dispatched_at": __import__("datetime").datetime.now().isoformat(),
+        # Catalog #166: HEAD parity ledger so post-mortem can prove the worker
+        # mounted the bytes the operator believed were being shipped (and so
+        # the canary subagent doesn't have to GUESS via traceback line numbers
+        # whether the failure was stale-mount or pre-fix-dispatch).
+        "mounted_code_git_head": mounted_code_git_head,
+        "mounted_code_git_branch": mounted_code_git_branch,
+        "working_tree_dirty": dirty_tree["dirty"],
+        "working_tree_dirty_paths_count": dirty_tree["dirty_paths_count"],
+        "working_tree_dirty_summary": dirty_tree["summary"],
+        "require_clean_head": bool(require_clean_head),
+        "sentinel_files_local_sha256": sentinel_sha256_local,
+        # Schema marker so consumers (recovery / harvest / cost-band anchor)
+        # can detect Catalog #166 metadata version.
+        "metadata_schema": "modal_train_lane_dispatch_metadata_v2_catalog166",
     }
     if cost_band_anchor is not None:
         metadata["cost_band_anchor"] = cost_band_anchor

@@ -2214,6 +2214,23 @@ def preflight_all(
         check_modal_mount_builder_uses_mtime_stability_check(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #166 (PHASE-B1-PIVOT): the canonical Modal
+        # dispatcher (`experiments/modal_train_lane.py`) MUST record the
+        # dispatch-time HEAD SHA + working-tree-dirty summary + sentinel-
+        # file SHA-256 ledger into ``modal_metadata.json`` (schema marker
+        # ``modal_train_lane_dispatch_metadata_v2_catalog166``) AND the
+        # worker MUST write ``modal_worker_head_ledger.json`` so harvest
+        # can reconstruct mount-vs-HEAD parity post-mortem. Two
+        # consecutive sane_hnerv crashes (fc-01KREXK209TRX7ED5ZRVXHY1VT
+        # 14.77s + fc-01KREXXSKGTDCF61QXQNBF6SX3 72.03s) burned $0.30 of
+        # GPU spend with no way to distinguish "stale-mount" from
+        # "pre-fix-dispatch" — Catalog #166 closes that ambiguity.
+        # Strict-from-byte-one per CLAUDE.md "Bugs must be permanently
+        # fixed AND self-protected against" non-negotiable. Live count at
+        # landing: 0.
+        check_modal_dispatch_verifies_worker_source_matches_head(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -41382,6 +41399,133 @@ def check_modal_mount_builder_uses_mtime_stability_check(
             "upload-race policy (Catalog #165, FIX-I D2) cannot be "
             "dropped from the canonical builder without re-exposing "
             "the bug class:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #166 — check_modal_dispatch_verifies_worker_source_matches_head
+#
+# PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive Modal A100
+# dispatches of ``experiments/train_substrate_sane_hnerv.py`` crashed rc=1
+# because the operator dispatched at 20:26:47Z BEFORE the FIX-H Part 1
+# (commit 6048d690) landed at 20:44:00Z. The Modal worker faithfully ran the
+# pre-fix code that was on local disk at dispatch time. Post-mortem could
+# not distinguish "Modal worker mounted stale code" from "operator dispatched
+# before fix landed" because ``modal_metadata.json`` did not record the
+# dispatch-time HEAD SHA OR the working-tree-dirty state.
+#
+# Fix surface: ``experiments/modal_train_lane.py::main`` records the
+# dispatch-time HEAD SHA + working-tree-dirty summary + sentinel-file
+# sha256 ledger into ``modal_metadata.json`` (schema marker
+# ``modal_train_lane_dispatch_metadata_v2_catalog166``); ``_run_lane_inner``
+# writes a ``modal_worker_head_ledger.json`` on the worker so harvest can
+# reconstruct mount-vs-HEAD parity post-mortem.
+#
+# This STRICT gate refuses any state of ``experiments/modal_train_lane.py``
+# that drops the contract surfaces:
+#
+#   1. ``_git_dirty_tree_summary`` helper exists.
+#   2. ``mounted_code_git_head`` / ``working_tree_dirty`` /
+#      ``working_tree_dirty_summary`` keys appear in the metadata dict.
+#   3. ``metadata_schema`` carrying the ``catalog166`` marker.
+#   4. ``modal_worker_head_ledger.json`` write inside ``_run_lane_inner``.
+#   5. ``CATALOG_166`` worker-side warn path.
+#
+# Same-line waiver: there is no waiver. The Catalog #166 surface IS the
+# contract; a waiver would re-enable the bug class.
+#
+# Sister of Catalog #153 (canonical mount builder) + Catalog #165 (mtime
+# stability). Together they close the three failure modes of "Modal worker
+# mounted bytes the operator did not believe were being shipped":
+#   * #153: caller bypassed the canonical builder
+#   * #165: caller used the canonical builder but a sibling subagent raced
+#           the upload mid-file-edit
+#   * #166: operator dispatched before the local fix landed (or with a
+#           dirty tree containing a stale fix)
+# ----------------------------------------------------------------------------
+
+_CHECK_166_DISPATCHER_PATH = "experiments/modal_train_lane.py"
+_CHECK_166_REQUIRED_SURFACES: tuple[str, ...] = (
+    "def _git_dirty_tree_summary",
+    "modal_train_lane_dispatch_metadata_v2_catalog166",
+    "mounted_code_git_head",
+    "working_tree_dirty",
+    "working_tree_dirty_summary",
+    "sentinel_files_local_sha256",
+    "worker_sentinel_sha256",
+    "sentinel_mismatches",
+    "modal_worker_head_ledger.json",
+    "CATALOG_166",
+    "require_clean_head",
+)
+
+
+def check_modal_dispatch_verifies_worker_source_matches_head(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #166. Refuse any state of ``experiments/modal_train_lane.py``
+    that drops the dispatch-time HEAD parity ledger or the worker-side HEAD
+    parity assertion.
+
+    The check verifies the file exists and contains every required
+    contract surface enumerated in ``_CHECK_166_REQUIRED_SURFACES``. There
+    is no waiver. Removing the parity ledger re-introduces the
+    "operator dispatched before fix landed" + "Modal worker mounted stale
+    snapshot" ambiguity that cost two crashed dispatches on 2026-05-12.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    path = root / _CHECK_166_DISPATCHER_PATH
+
+    violations: list[str] = []
+
+    if not path.is_file():
+        violations.append(
+            f"{_CHECK_166_DISPATCHER_PATH}: missing — the canonical Modal "
+            "dispatcher is gone; the HEAD-parity ledger contract is "
+            "re-exposed."
+        )
+    else:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(
+                f"{_CHECK_166_DISPATCHER_PATH}: read error {exc!s}"
+            )
+            text = ""
+
+        for surface in _CHECK_166_REQUIRED_SURFACES:
+            if surface not in text:
+                violations.append(
+                    f"{_CHECK_166_DISPATCHER_PATH}: missing required "
+                    f"contract surface `{surface}` — Catalog #166 requires "
+                    "the dispatch-time HEAD-parity ledger to remain wired."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [modal-head-parity] {len(violations)} violation(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:240]}")
+        else:
+            print(
+                "  [modal-head-parity] OK "
+                "(canonical dispatcher still records HEAD parity ledger)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_dispatch_verifies_worker_source_matches_head found "
+            f"{len(violations)} contract violation(s). The Modal HEAD-parity "
+            "ledger (Catalog #166, PHASE-B1-PIVOT) cannot be dropped from "
+            "the canonical dispatcher without re-exposing the bug class:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
