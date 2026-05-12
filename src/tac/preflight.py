@@ -822,7 +822,9 @@ def _preflight_parallel_worker_count() -> int:
 
     Broad preflight checks share a SourceIndex and several still parse or scan
     overlapping candidate files. Unbounded fan-out increases lock contention
-    and I/O pressure, so the default is deliberately smaller than CPU count.
+    and I/O pressure, so the default is a small fixed worker pool. Four workers
+    keeps cold CI under the 30s DX budget by overlapping the slow full-tree
+    policy scanners without turning normal local edits into an I/O storm.
     """
 
     raw = os.environ.get("PACT_PREFLIGHT_PARALLEL_WORKERS", "").strip()
@@ -830,9 +832,9 @@ def _preflight_parallel_worker_count() -> int:
         try:
             value = int(raw)
         except ValueError:
-            value = 2
+            value = 4
     else:
-        value = 2
+        value = 4
     return max(1, min(value, 16))
 
 

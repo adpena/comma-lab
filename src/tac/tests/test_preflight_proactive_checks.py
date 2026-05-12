@@ -85,7 +85,7 @@ def test_preflight_parallel_runner_can_be_disabled(monkeypatch):
 
 def test_preflight_parallel_worker_count_is_bounded(monkeypatch):
     monkeypatch.delenv("PACT_PREFLIGHT_PARALLEL_WORKERS", raising=False)
-    assert preflight._preflight_parallel_worker_count() == 2
+    assert preflight._preflight_parallel_worker_count() == 4
 
     monkeypatch.setenv("PACT_PREFLIGHT_PARALLEL_WORKERS", "2")
     assert preflight._preflight_parallel_worker_count() == 2
@@ -94,7 +94,7 @@ def test_preflight_parallel_worker_count_is_bounded(monkeypatch):
     assert preflight._preflight_parallel_worker_count() == 16
 
     monkeypatch.setenv("PACT_PREFLIGHT_PARALLEL_WORKERS", "bad")
-    assert preflight._preflight_parallel_worker_count() == 2
+    assert preflight._preflight_parallel_worker_count() == 4
 
 
 def test_gate5_runtime_closure_runs_in_fast_fail_block():
