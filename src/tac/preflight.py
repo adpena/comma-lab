@@ -2190,6 +2190,21 @@ def preflight_all(
         check_modal_dispatcher_uses_canonical_mount_builder(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #165 (FIX-I, D2): the canonical Modal
+        # mount builder must honor an mtime-stability check across the
+        # full mount set BEFORE firing any ``add_local_*`` call. WWW4
+        # surfaced that FIX-D's concurrent writes to
+        # ``src/tac/composition/registry.py`` (46257B → 52539B over 30s)
+        # produced torn Modal uploads that crashed v2/v3 dispatches.
+        # The static gate refuses any state of
+        # ``src/tac/deploy/modal/mount_manifest.py`` that drops the
+        # ``verify_mount_set_mtime_stability`` call from
+        # ``build_training_image``. STRICT-from-byte-one per CLAUDE.md
+        # "Bugs must be permanently fixed AND self-protected against"
+        # non-negotiable — live count at landing: 0.
+        check_modal_mount_builder_uses_mtime_stability_check(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -2254,6 +2269,33 @@ def preflight_all(
         # fixed AND self-protected against" non-negotiable.
         check_operator_authorize_canonical_use(
             strict=True, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #163 (FIX-H self-protection): remote_lane_*.sh
+        # scripts that ``source`` the canonical ``remote_archive_only_eval.sh``
+        # MUST prepend ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` sentinel.
+        # Without it the sourced main flow runs and exits "FATAL: archive
+        # missing" before the calling lane's stages can start. WWW4 dispatch
+        # crash 2026-05-12 (fc-01KREXK209TRX7ED5ZRVXHY1VT). Same-line waiver
+        # ``# REMOTE_LANE_FULL_PIPELINE_OK:<reason>`` for explicit opt-in to
+        # full main flow. STRICT @ 0 per CLAUDE.md "Bugs must be permanently
+        # fixed AND self-protected against" non-negotiable.
+        check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #164 (FIX-H self-protection): substrate
+        # score-aware loss code MUST call ``<scorer>.preprocess_input(...)``
+        # before invoking ``<scorer>(...)`` forward. Upstream SegNet expects
+        # 5D-then-preprocess-to-4D; PoseNet expects 5D-then-preprocess-to-4D-
+        # 12-channel via differentiable rgb_to_yuv6. WWW4 dispatch crashed at
+        # smp.Unet stem when score_aware_loss.py passed 5D directly to
+        # forward. Same-line waiver ``# SCORER_PREPROCESS_HANDLED_OK:<reason>``
+        # for intentional direct-call patterns. Held WARN-ONLY initially:
+        # FIX-H Part 1 fixed sane_hnerv; the META gate exposes 56+ sister
+        # bugs across other substrates (balle_renderer / siren / tc_nerv /
+        # vq_vae / wavelet / etc.). Strict-flip once sister substrates land
+        # the same preprocess_input fix (operator-routable follow-up lane).
+        check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
+            strict=False, verbose=verbose,
         )
         # 2026-05-12 Catalog #159 (FFFF Bug 4, UUU Path B): CLAUDE.md
         # catalog table is the canonical strictness ledger. When a
@@ -40293,6 +40335,17 @@ _CHECK_162_CANONICAL_ENTRY_POINT_TOKENS = (
 )
 
 
+def _check_162_command_text(text: str) -> str:
+    """Return non-comment command text for operator-authorize wrapper scanning."""
+    lines: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        lines.append(stripped)
+    return "\n".join(lines)
+
+
 def check_operator_authorize_canonical_use(
     *,
     repo_root: Path | None = None,
@@ -40332,8 +40385,12 @@ def check_operator_authorize_canonical_use(
         head_lines = text.splitlines()[:10]
         if any(_CHECK_162_WAIVER_TOKEN in line for line in head_lines):
             continue
-        # Canonical entry-point invocation anywhere in the body.
-        if any(tok in text for tok in _CHECK_162_CANONICAL_ENTRY_POINT_TOKENS):
+        # Canonical entry-point invocation in executable command text. Comments
+        # documenting the desired tool are not enough to satisfy the gate.
+        command_text = _check_162_command_text(text)
+        if all(
+            tok in command_text for tok in _CHECK_162_CANONICAL_ENTRY_POINT_TOKENS
+        ) and "--recipe" in command_text:
             continue
         violations.append(
             f"{rel}: operator_authorize_*.sh wrapper must delegate to "
@@ -40367,6 +40424,370 @@ def check_operator_authorize_canonical_use(
             "`tools/operator_authorize.py --recipe <name>`. Acceptable "
             "alternative: same-line `# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>` "
             "on a header line for explicit legacy preservation:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #163 — `scripts/remote_lane_*.sh` that ``source`` the canonical
+# ``scripts/remote_archive_only_eval.sh`` MUST prepend the
+# ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` sentinel.
+# ============================================================================
+#
+# Bug class (WWW4 dispatch 2026-05-12, fc-01KREXK209TRX7ED5ZRVXHY1VT):
+# When a remote lane script does ``source "$WORKSPACE/scripts/remote_archive_only_eval.sh"``
+# WITHOUT the sentinel, the sourced file's main flow runs to completion
+# inside the calling shell. The main flow expects a pre-built ``archive.zip``
+# at ``/workspace/pact/iter_0/`` and exits ``FATAL: archive missing`` before
+# the calling lane's stages can even start.
+#
+# WWW4's same-day fix at ``scripts/remote_lane_substrate_sane_hnerv.sh:81``
+# (commit 02d7fc3f) prepended ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1``;
+# the sentinel block in ``scripts/remote_archive_only_eval.sh:273-275``
+# returns/exits before the main flow runs, so only the helper functions
+# (e.g. ``bootstrap_runtime_deps``) become available to the caller.
+#
+# Acceptance: a remote_lane_*.sh script passes if EITHER (a) every line
+# containing ``source ... remote_archive_only_eval.sh`` (with the path as a
+# direct argument — NOT via ``<(grep ...)`` / ``<(awk ...)`` substitution,
+# which extract only specific function bodies and never include the main
+# flow) ALSO contains ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` either as
+# an inline env-var assignment or anywhere in the 5 preceding lines as an
+# ``export``-style assignment, OR (b) the source line carries a same-line
+# ``# REMOTE_LANE_FULL_PIPELINE_OK:<reason>`` waiver explicitly opting
+# into the full main flow.
+#
+# Scope: ``scripts/remote_lane_*.sh``. The check explicitly skips
+# process-substitution forms (``source <(...)``) and child-shell
+# invocations (``bash ... remote_archive_only_eval.sh``) because those
+# either extract only function definitions or run in a child process
+# context where main-flow exit doesn't impact the caller.
+#
+# Live count at landing: 0 (WWW4's same-day fix at 02d7fc3f already
+# remediated the only known violation). STRICT @ 0 per CLAUDE.md
+# "Bugs must be permanently fixed AND self-protected against".
+#
+# Cross-ref:
+#   feedback_fix_h_trainer_shape_fix_landed_20260512.md
+#   scripts/remote_archive_only_eval.sh:273-275 (sentinel block)
+#   commit 02d7fc3f (WWW4's same-day fix on remote_lane_substrate_sane_hnerv.sh)
+
+_CHECK_163_REMOTE_LANE_GLOB = "remote_lane_*.sh"
+_CHECK_163_SENTINEL_TOKEN = "REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1"
+_CHECK_163_WAIVER_TOKEN = "REMOTE_LANE_FULL_PIPELINE_OK:"
+_CHECK_163_TARGET_FILENAME = "remote_archive_only_eval.sh"
+_CHECK_163_PROCESS_SUB_PATTERN = re.compile(r"source\s*<\s*\(")
+_CHECK_163_SOURCE_DIRECT_PATTERN = re.compile(
+    r"(?:^|\s|;)(?:source\s+|\.\s+)([^<\n]*?remote_archive_only_eval\.sh)"
+)
+
+
+def check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #163. Refuses ``scripts/remote_lane_*.sh`` that source the
+    canonical ``remote_archive_only_eval.sh`` without prepending the
+    ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` sentinel.
+
+    WWW4 dispatch (Modal A100, 2026-05-12 fc-01KREXK209TRX7ED5ZRVXHY1VT)
+    crashed at sourced main-flow exit before the calling lane's stages
+    started. The sentinel block at ``scripts/remote_archive_only_eval.sh:273-275``
+    returns early when the env var is set, exposing only the helper
+    functions (``bootstrap_runtime_deps`` et al.).
+
+    Detection: scan every ``scripts/remote_lane_*.sh`` for a ``source`` /
+    ``.`` line whose direct argument is a path ending in
+    ``remote_archive_only_eval.sh``. Such a line passes if the line itself
+    OR any of the previous 5 non-blank/non-comment lines contains
+    ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1``, OR the source line carries
+    a same-line ``# REMOTE_LANE_FULL_PIPELINE_OK:<reason>`` waiver.
+
+    Lines using process substitution (``source <(grep ...)`` /
+    ``source <(awk ...)``) are explicitly skipped because they extract
+    only specific function bodies and never include the file's main flow.
+    Lines running the file as a child shell (``bash ... script.sh``) are
+    also skipped because main-flow exit in a child shell does not affect
+    the calling lane.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    scanned = 0
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(
+                "  [remote-lane-sentinel] OK "
+                "(no scripts/ directory; 0 wrapper(s) scanned)"
+            )
+        return violations
+
+    for wrapper in sorted(scripts_dir.glob(_CHECK_163_REMOTE_LANE_GLOB)):
+        rel = str(wrapper.relative_to(root))
+        try:
+            text = wrapper.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines, start=1):
+            # Skip process-substitution patterns explicitly: they extract
+            # only specific function bodies and don't include main flow.
+            if _CHECK_163_PROCESS_SUB_PATTERN.search(line):
+                continue
+            # Look for direct source-of-canonical-bootstrap pattern.
+            if _CHECK_163_TARGET_FILENAME not in line:
+                continue
+            m = _CHECK_163_SOURCE_DIRECT_PATTERN.search(line)
+            if m is None:
+                continue
+            # Same-line waiver — explicit opt-in to full main flow.
+            if _CHECK_163_WAIVER_TOKEN in line:
+                continue
+            # Same-line sentinel (e.g. ``VAR=1 source ...``).
+            if _CHECK_163_SENTINEL_TOKEN in line:
+                continue
+            # Preceding-5-line sentinel (export VAR=1; then source ...).
+            preceding = lines[max(0, lineno - 6) : lineno - 1]
+            preceding_text = "\n".join(preceding)
+            if _CHECK_163_SENTINEL_TOKEN in preceding_text:
+                continue
+            violations.append(
+                f"{rel}:{lineno}: ``source remote_archive_only_eval.sh`` "
+                "without ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` sentinel. "
+                "Without the sentinel the sourced main flow runs and exits "
+                "``FATAL: archive missing`` before this lane's stages start. "
+                "Prepend the env var inline (``VAR=1 source ...``) OR export "
+                "it in the preceding 5 lines, OR add a same-line "
+                "``# REMOTE_LANE_FULL_PIPELINE_OK:<reason>`` waiver to "
+                "explicitly opt into the full main flow. See WWW4 dispatch "
+                "fix commit 02d7fc3f."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [remote-lane-sentinel] {len(violations)} "
+                f"violation(s) across {scanned} remote_lane_*.sh file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+        else:
+            print(
+                f"  [remote-lane-sentinel] OK "
+                f"({scanned} remote_lane_*.sh file(s) scanned; 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap "
+            f"found {len(violations)} remote_lane_*.sh file(s) that ``source`` "
+            "the canonical ``scripts/remote_archive_only_eval.sh`` without "
+            "the ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` sentinel. "
+            "Per CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
+            "against' non-negotiable, this protects against the WWW4 "
+            "dispatch failure class (fc-01KREXK209TRX7ED5ZRVXHY1VT, "
+            "2026-05-12):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #164 — substrate score-aware loss code MUST call
+# ``<scorer>.preprocess_input(...)`` before invoking ``<scorer>(...)`` on
+# any code path that passes a tensor to the scorer's forward.
+# ============================================================================
+#
+# Bug class (WWW4 dispatch 2026-05-12, fc-01KREXK209TRX7ED5ZRVXHY1VT):
+# ``src/tac/substrates/sane_hnerv/score_aware_loss.py:129`` passed 5D
+# ``(B, T=1, C, H, W)`` directly into ``self.seg_scorer(...)`` which is
+# an ``smp.Unet`` that expects 4D ``(B, C, H, W)``. The upstream
+# ``SegNet.preprocess_input`` slices the last frame and interpolates to
+# (384, 512) — that's the dimension reduction the loss skipped.
+#
+# Sibling bug at the same call-site fed 4D 6-channel RGB to
+# ``self.pose_scorer(...)`` instead of the 4D 12-channel post-yuv6
+# shape that ``PoseNet.preprocess_input`` produces.
+#
+# Acceptance: scan every ``src/tac/substrates/*/score_aware_loss.py``
+# (and sibling ``score_aware_*.py``) for AST ``Call`` nodes of the form
+# ``self.<scorer>(...)`` or ``self.scorer(...)``. The function body
+# containing the call must ALSO contain a preceding (textually) call to
+# ``<scorer>.preprocess_input(...)`` (matching the same scorer name),
+# OR the line carrying the bare-call must have a same-line
+# ``# SCORER_PREPROCESS_HANDLED_OK:<reason>`` waiver.
+#
+# The check considers a function body as one preprocessing scope: if
+# ``preprocess_input`` is called once on the scorer at the top of the
+# function, every subsequent ``self.<scorer>(...)`` in the same function
+# body is accepted (consumes the pre-processed tensor).
+#
+# Live count at landing: 0 (FIX-H Part 1 already remediated
+# ``score_aware_loss.py``). STRICT @ 0 per CLAUDE.md "Bugs must be
+# permanently fixed AND self-protected against".
+#
+# Cross-ref:
+#   feedback_fix_h_trainer_shape_fix_landed_20260512.md
+#   upstream/modules.py::SegNet.preprocess_input + PoseNet.preprocess_input
+#   commit 6048d690 (FIX-H Part 1)
+
+_CHECK_164_GLOB_SCORE_AWARE = "score_aware*.py"
+_CHECK_164_WAIVER_TOKEN = "SCORER_PREPROCESS_HANDLED_OK:"
+_CHECK_164_KNOWN_SCORER_ATTR_NAMES = (
+    "seg_scorer",
+    "pose_scorer",
+    "scorer",
+    "segnet",
+    "posenet",
+    "distortion_net",
+)
+
+
+def _check_164_collect_scorer_calls_and_preprocess(
+    func_node: ast.FunctionDef,
+) -> tuple[list[tuple[str, int]], dict[str, int]]:
+    """Walk a function body's AST and return:
+
+    * a list of (scorer_attr, lineno) for every ``self.<scorer>(...)`` BARE
+      forward-pass call (the call's func is Attribute(self, <scorer>)).
+    * a dict of {scorer_attr: first_lineno} for every
+      ``self.<scorer>.preprocess_input(...)`` (or other non-forward method)
+      pre-processing call observed in the body — anything that's a chained
+      ``self.<scorer>.<method>(...)`` registers <scorer> as having been
+      preprocessed-by-the-body.
+
+    A scorer is considered "known" if its attribute name appears in
+    ``_CHECK_164_KNOWN_SCORER_ATTR_NAMES``.
+    """
+    forward_calls: list[tuple[str, int]] = []
+    preprocess_calls: dict[str, int] = {}
+    for node in ast.walk(func_node):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not isinstance(func, ast.Attribute):
+            continue
+        # Case A: BARE forward call — ``self.<scorer>(...)``.
+        # node.func is Attribute(value=Name('self'), attr=<scorer>).
+        if (
+            isinstance(func.value, ast.Name)
+            and func.value.id == "self"
+            and func.attr in _CHECK_164_KNOWN_SCORER_ATTR_NAMES
+        ):
+            forward_calls.append((func.attr, node.lineno))
+            continue
+        # Case B: chained call — ``self.<scorer>.<method>(...)``.
+        # node.func is Attribute(value=Attribute(value=Name('self'), attr=<scorer>), attr=<method>).
+        # Only ``preprocess_input`` registers the scorer as preprocessed;
+        # other methods (e.g. compute_distortion) don't count.
+        if (
+            isinstance(func.value, ast.Attribute)
+            and isinstance(func.value.value, ast.Name)
+            and func.value.value.id == "self"
+            and func.value.attr in _CHECK_164_KNOWN_SCORER_ATTR_NAMES
+            and func.attr == "preprocess_input"
+        ):
+            preprocess_calls.setdefault(func.value.attr, node.lineno)
+            continue
+    return forward_calls, preprocess_calls
+
+
+def check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #164. Refuses ``src/tac/substrates/*/score_aware*.py`` whose
+    function bodies call ``self.<scorer>(...)`` without also calling
+    ``self.<scorer>.preprocess_input(...)`` in the same body.
+
+    WWW4 dispatch (Modal A100, 2026-05-12 fc-01KREXK209TRX7ED5ZRVXHY1VT)
+    crashed at the SegNet stem because the loss passed 5D
+    ``(B, T=1, C, H, W)`` directly to ``self.seg_scorer(...)`` instead of
+    going through ``seg_scorer.preprocess_input(...)`` first (which slices
+    the last frame and interpolates to scorer-input size).
+
+    Detection: AST-walk every ``src/tac/substrates/*/score_aware*.py``.
+    For each ``FunctionDef`` body, collect (a) every ``self.<scorer>(...)``
+    forward-call and (b) every ``self.<scorer>.preprocess_input(...)``
+    pre-processing call. Refuse forward calls whose scorer attribute does
+    NOT appear in the preprocess-input set, UNLESS the line carries a
+    same-line ``# SCORER_PREPROCESS_HANDLED_OK:<reason>`` waiver.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    substrates_dir = root / "src" / "tac" / "substrates"
+    violations: list[str] = []
+    scanned = 0
+    if not substrates_dir.is_dir():
+        if verbose:
+            print(
+                "  [scorer-preprocess-before-forward] OK "
+                "(no substrates dir; 0 file(s) scanned)"
+            )
+        return violations
+    for path in sorted(substrates_dir.glob(f"*/{_CHECK_164_GLOB_SCORE_AWARE}")):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        lines = text.splitlines()
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            forward_calls, preprocess_calls = (
+                _check_164_collect_scorer_calls_and_preprocess(node)
+            )
+            for scorer_attr, lineno in forward_calls:
+                if scorer_attr in preprocess_calls:
+                    continue  # body has a pre-processing call for this scorer
+                # Same-line waiver check.
+                call_line = lines[lineno - 1] if 0 <= lineno - 1 < len(lines) else ""
+                if _CHECK_164_WAIVER_TOKEN in call_line:
+                    continue
+                violations.append(
+                    f"{rel}:{lineno}: function `{node.name}` calls "
+                    f"``self.{scorer_attr}(...)`` without a sibling "
+                    f"``self.{scorer_attr}.preprocess_input(...)`` in the "
+                    "same body. Upstream scorers require ``preprocess_input`` "
+                    "for dimension reduction (5D→4D for SegNet, "
+                    "5D→4D-12-channel for PoseNet via differentiable "
+                    "rgb_to_yuv6). WWW4 dispatch crashed at this exact "
+                    "shape mismatch. Add the preprocess call OR a same-line "
+                    "``# SCORER_PREPROCESS_HANDLED_OK:<reason>`` waiver."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [scorer-preprocess-before-forward] {len(violations)} "
+                f"violation(s) across {scanned} score_aware*.py file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+        else:
+            print(
+                f"  [scorer-preprocess-before-forward] OK "
+                f"({scanned} score_aware*.py file(s) scanned; 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_score_aware_loss_calls_preprocess_input_before_scorer "
+            f"found {len(violations)} substrate score-aware-loss function(s) "
+            "that invoke ``self.<scorer>(...)`` without "
+            "``self.<scorer>.preprocess_input(...)``. Per CLAUDE.md 'Bugs "
+            "must be permanently fixed AND self-protected against' "
+            "non-negotiable, this protects against the WWW4 dispatch "
+            "shape-mismatch failure class (fc-01KREXK209TRX7ED5ZRVXHY1VT, "
+            "2026-05-12):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
@@ -40581,6 +41002,164 @@ def check_claude_md_catalog_text_matches_preflight_strict_value(
             "must be permanently fixed AND self-protected against' "
             "non-negotiable, the catalog table is the canonical "
             "strictness ledger:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #165 — check_modal_mount_builder_uses_mtime_stability_check
+# (FIX-I, D2 — 2026-05-12, STRICT @ 0)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (WWW4 audit, 2026-05-12): Modal v2/v3 dispatches failed because
+# FIX-D's concurrent writes to ``src/tac/composition/registry.py`` (46257B
+# → 52539B over 30s) hit Modal's ``add_local_dir`` mid-upload. Modal walks
+# the filesystem at upload time; a sibling subagent editing a file in the
+# mount set produces a torn read, the GPU container runs the partial code,
+# and the dispatch crashes or silently corrupts.
+#
+# Fix (D2a): before any ``add_local_*`` call, hash the (mtime, size) tuple
+# of every file in the mount set, sleep N seconds, recompute. If unchanged
+# proceed; if changed retry; after max retries fail-closed with
+# ``MountUploadRaceError``.
+#
+# This static check refuses any change to ``mount_manifest.py`` that drops
+# the stability check from ``build_training_image`` (e.g. a future
+# refactor that removes the kwarg, the call, or the helper function).
+#
+# The check is intentionally narrow:
+#   * Scans ONLY ``src/tac/deploy/modal/mount_manifest.py`` (the canonical
+#     builder home).
+#   * Asserts the module defines ``verify_mount_set_mtime_stability``,
+#     ``MountUploadRaceError``, and ``DEFAULT_MTIME_STABILITY_WINDOW_SECONDS``
+#     (the contract surface).
+#   * Asserts ``build_training_image`` contains both the ``mtime_stability_check``
+#     kwarg AND a call to ``verify_mount_set_mtime_stability(`` in its body.
+# Same-line waiver on the assertion line: there is no waiver for this gate
+# (the policy IS the contract; a waiver would re-enable the bug class).
+#
+# Sister of Catalog #153 (which ensures the canonical builder is used at
+# all). Together they close the upload-race bug class at both the wire-up
+# layer (#153) and the policy layer (#165).
+
+_CHECK_165_MOUNT_MANIFEST_PATH = "src/tac/deploy/modal/mount_manifest.py"
+_CHECK_165_REQUIRED_SURFACES: tuple[str, ...] = (
+    "class MountUploadRaceError",
+    "def verify_mount_set_mtime_stability",
+    "DEFAULT_MTIME_STABILITY_WINDOW_SECONDS",
+)
+_CHECK_165_BUILDER_FN_TOKEN = "def build_training_image"
+_CHECK_165_KWARG_TOKEN = "mtime_stability_check"
+_CHECK_165_VERIFY_CALL_TOKEN = "verify_mount_set_mtime_stability("
+
+
+def check_modal_mount_builder_uses_mtime_stability_check(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #165. Refuse any state of
+    ``src/tac/deploy/modal/mount_manifest.py`` that drops the
+    mtime-stability check from ``build_training_image``.
+
+    The check verifies:
+      1. The file exists.
+      2. The contract surfaces (``MountUploadRaceError``,
+         ``verify_mount_set_mtime_stability``,
+         ``DEFAULT_MTIME_STABILITY_WINDOW_SECONDS``) are defined.
+      3. ``build_training_image`` accepts the ``mtime_stability_check`` kwarg.
+      4. ``build_training_image`` body contains a call to
+         ``verify_mount_set_mtime_stability(`` (the active wire-in).
+
+    There is no waiver. Removing the stability check re-introduces the
+    upload-race bug class.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    path = root / _CHECK_165_MOUNT_MANIFEST_PATH
+
+    violations: list[str] = []
+
+    if not path.is_file():
+        violations.append(
+            f"{_CHECK_165_MOUNT_MANIFEST_PATH}: missing — the canonical "
+            "Modal mount-builder is gone; the upload-race bug class is "
+            "re-exposed."
+        )
+    else:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(
+                f"{_CHECK_165_MOUNT_MANIFEST_PATH}: read error {exc!s}"
+            )
+            text = ""
+
+        for surface in _CHECK_165_REQUIRED_SURFACES:
+            if surface not in text:
+                violations.append(
+                    f"{_CHECK_165_MOUNT_MANIFEST_PATH}: missing required "
+                    f"contract surface `{surface}` — Catalog #165 (FIX-I, "
+                    "D2) requires the mtime-stability surface."
+                )
+
+        # Locate ``def build_training_image`` and check its body for the
+        # kwarg + the verify call. We slice from the def header to the
+        # next top-level ``def`` / ``class`` (or EOF) for robustness.
+        builder_idx = text.find(_CHECK_165_BUILDER_FN_TOKEN)
+        if builder_idx < 0:
+            violations.append(
+                f"{_CHECK_165_MOUNT_MANIFEST_PATH}: `def build_training_image`"
+                " missing — the canonical builder API is gone."
+            )
+        else:
+            # Find end of this function. Look for next top-level def/class.
+            tail = text[builder_idx:]
+            # Skip the def line itself, then find the next top-level def/class.
+            next_top = -1
+            for marker in ("\ndef ", "\nclass "):
+                m = tail.find(marker, len(_CHECK_165_BUILDER_FN_TOKEN))
+                if m >= 0 and (next_top < 0 or m < next_top):
+                    next_top = m
+            body = tail if next_top < 0 else tail[:next_top]
+            if _CHECK_165_KWARG_TOKEN not in body:
+                violations.append(
+                    f"{_CHECK_165_MOUNT_MANIFEST_PATH}: "
+                    "`build_training_image` no longer accepts the "
+                    "`mtime_stability_check` kwarg — Catalog #165 (FIX-I, "
+                    "D2) requires the opt-out kwarg on the canonical builder."
+                )
+            if _CHECK_165_VERIFY_CALL_TOKEN not in body:
+                violations.append(
+                    f"{_CHECK_165_MOUNT_MANIFEST_PATH}: "
+                    "`build_training_image` body does not call "
+                    "`verify_mount_set_mtime_stability(` — Catalog #165 "
+                    "(FIX-I, D2) requires the stability check to fire "
+                    "before any add_local_* call."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [modal-mtime-stability] {len(violations)} violation(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:240]}")
+        else:
+            print(
+                "  [modal-mtime-stability] OK "
+                "(canonical builder still wires the stability check)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_mount_builder_uses_mtime_stability_check found "
+            f"{len(violations)} contract violation(s). The Modal "
+            "upload-race policy (Catalog #165, FIX-I D2) cannot be "
+            "dropped from the canonical builder without re-exposing "
+            "the bug class:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

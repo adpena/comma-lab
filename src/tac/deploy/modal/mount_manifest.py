@@ -43,15 +43,53 @@ Cross-references:
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import importlib.util
 import os
+import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_REMOTE_REPO = "/workspace/pact"
 DEFAULT_RESULTS_IGNORE: tuple[str, ...] = ("results/**",)
+
+# ----------------------------------------------------------------------------
+# Catalog #165 (FIX-I, D2): Modal upload-race policy via mtime-stability check.
+#
+# Bug-class anchor: WWW4 (2026-05-12) surfaced that Modal v2/v3 dispatches
+# failed because FIX-D's concurrent writes to ``src/tac/composition/registry.py``
+# (46257B -> 52539B over 30s) hit Modal's ``add_local_dir`` mid-upload. Modal
+# captures a partial file snapshot of an actively-being-written source tree,
+# the GPU container runs the partial code, and the dispatch crashes or silently
+# corrupts. The bug is structural: ``add_local_dir`` walks the filesystem at
+# upload time and any file the operator (or a sibling subagent) is currently
+# editing produces a torn read.
+#
+# Fix design (D2a in the WWW4 enumeration): before ``add_local_*`` calls fire,
+# hash the (mtime, size) tuple of every file in the mount set, sleep N seconds,
+# recompute. If unchanged, proceed. If changed (=> someone is writing inside
+# our window), retry up to MAX_RETRIES. After exhaustion fail-closed with a
+# ``MountUploadRaceError`` so the operator can pause and rerun.
+#
+# Same-line ``# MODAL_UPLOAD_RACE_OK:<reason>`` waiver is honored at the
+# preflight Catalog #165 layer (for callsites that bypass the canonical
+# builder); the in-process knob is the ``TAC_MODAL_MTIME_STABILITY_DISABLED``
+# env var (tests + emergency operator override only).
+#
+# Sister gates:
+#   * Catalog #153 (check_modal_dispatcher_uses_canonical_mount_builder) —
+#     ensures the canonical builder is used at all.
+#   * Catalog #165 (check_modal_mount_builder_uses_mtime_stability_check) —
+#     ensures the canonical builder honors the mtime-stability invariant.
+# Together they close the upload-race bug class at both the wire-up layer
+# and the policy layer.
+# ----------------------------------------------------------------------------
+DEFAULT_MTIME_STABILITY_WINDOW_SECONDS: float = 2.0
+DEFAULT_MTIME_STABILITY_MAX_RETRIES: int = 3
+_MTIME_STABILITY_DISABLE_ENV = "TAC_MODAL_MTIME_STABILITY_DISABLED"
 
 # The structural minimum mount set. Every Modal training/eval dispatch needs
 # these. Adding/removing entries here is a design decision that should be
@@ -78,6 +116,152 @@ class MountManifestError(RuntimeError):
     - trainer-module-not-importable
     - declared-extra-mount-not-on-disk
     """
+
+
+class MountUploadRaceError(MountManifestError):
+    """Raised when the mount set's (mtime, size) fingerprint changes during
+    the stability window, indicating a sibling writer is racing the Modal
+    upload.
+
+    Catalog #165 (FIX-I, D2). The fix-class is "fail-closed and let the
+    operator pause"; silently retrying forever masks runaway writers.
+    """
+
+
+def _hash_mount_set_fingerprint(paths: Iterable[Path]) -> tuple[str, list[Path]]:
+    """Return ``(sha256_hex, missing_paths)`` for the (mtime, size) tuple of
+    every path in ``paths``.
+
+    Directories are walked recursively. Symlinks are stat'd, not followed,
+    because Modal copies the symlink contents (not target) by default. Missing
+    paths are returned in ``missing_paths`` but do NOT short-circuit the hash
+    (they are absorbed into the hash via a sentinel marker so callers can see
+    "the missing-path set changed too" as instability).
+    """
+
+    hasher = hashlib.sha256()
+    missing: list[Path] = []
+    # Deterministic ordering: caller's order is preserved, then each
+    # directory walked in sorted order.
+    for p in paths:
+        try:
+            st = p.lstat()
+        except FileNotFoundError:
+            hasher.update(f"\x00MISSING\x00{p!s}\x00".encode())
+            missing.append(p)
+            continue
+        except OSError:
+            hasher.update(f"\x00OSERR\x00{p!s}\x00".encode())
+            continue
+        if p.is_dir() and not p.is_symlink():
+            # Walk the dir deterministically.
+            for sub in sorted(p.rglob("*")):
+                try:
+                    sub_st = sub.lstat()
+                except FileNotFoundError:
+                    hasher.update(f"\x00MISSING\x00{sub!s}\x00".encode())
+                    continue
+                except OSError:
+                    continue
+                hasher.update(
+                    f"{sub!s}\x00{sub_st.st_mtime_ns}\x00{sub_st.st_size}\x00".encode()
+                )
+        else:
+            hasher.update(
+                f"{p!s}\x00{st.st_mtime_ns}\x00{st.st_size}\x00".encode()
+            )
+    return hasher.hexdigest(), missing
+
+
+def verify_mount_set_mtime_stability(
+    paths: Iterable[Path],
+    *,
+    window_seconds: float = DEFAULT_MTIME_STABILITY_WINDOW_SECONDS,
+    max_retries: int = DEFAULT_MTIME_STABILITY_MAX_RETRIES,
+    sleep_fn: Any = time.sleep,
+) -> None:
+    """Verify the (mtime, size) fingerprint of ``paths`` is stable for
+    ``window_seconds``.
+
+    Procedure:
+      1. Hash the fingerprint.
+      2. Sleep ``window_seconds``.
+      3. Recompute the fingerprint.
+      4. If unchanged -> return.
+      5. If changed -> retry up to ``max_retries`` times.
+      6. If still changing after ``max_retries`` -> raise
+         ``MountUploadRaceError`` with a diagnostic message identifying the
+         instability window and retry count.
+
+    The opt-out env var ``TAC_MODAL_MTIME_STABILITY_DISABLED=1`` skips the
+    check entirely; use only for tests / emergency operator override (and
+    leave a note in the dispatch log).
+
+    Catalog #165. Sister of Catalog #153.
+    """
+
+    if os.environ.get(_MTIME_STABILITY_DISABLE_ENV, "").strip() == "1":
+        return
+
+    path_list = list(paths)
+    if not path_list:
+        return
+
+    for _attempt in range(1, max_retries + 1):
+        fp_before, _ = _hash_mount_set_fingerprint(path_list)
+        sleep_fn(window_seconds)
+        fp_after, _ = _hash_mount_set_fingerprint(path_list)
+        if fp_before == fp_after:
+            return
+
+    raise MountUploadRaceError(
+        "Modal mount set (mtime, size) fingerprint is unstable after "
+        f"{max_retries} retries (window={window_seconds}s each). A sibling "
+        "writer is racing the Modal upload. Pause concurrent writers and "
+        "re-run, or set TAC_MODAL_MTIME_STABILITY_DISABLED=1 to bypass "
+        "(NOT recommended — bytes Modal uploads will be torn). Catalog #165 "
+        "(FIX-I, D2)."
+    )
+
+
+def _collect_paths_for_stability_check(
+    *,
+    root: Path,
+    skip_structural: bool,
+    extra_dirs: Iterable[tuple[str, tuple[str, ...] | None]],
+    extra_files: Iterable[str],
+    optional_dirs: Iterable[str],
+    optional_files: Iterable[str],
+    trainer_required_files: Iterable[Path] = (),
+    trainer_extra_paths: Iterable[Path] = (),
+) -> list[Path]:
+    """Return the unioned list of local on-disk paths that ``build_training_image``
+    will hand to Modal for upload. Used by ``verify_mount_set_mtime_stability``.
+    """
+
+    paths: list[Path] = []
+    if not skip_structural:
+        for rel, _ in STRUCTURAL_MINIMUM_DIRS:
+            paths.append(root / rel)
+        for rel in STRUCTURAL_MINIMUM_FILES:
+            paths.append(root / rel)
+    for rel, _ in extra_dirs:
+        paths.append(root / rel)
+    for rel in extra_files:
+        paths.append(root / rel)
+    for rel in optional_dirs:
+        p = root / rel
+        if p.is_dir():
+            paths.append(p)
+    for rel in optional_files:
+        p = root / rel
+        if p.is_file():
+            paths.append(p)
+    for default_path in trainer_required_files:
+        paths.append(_resolve_repo_path(default_path, repo_root=root))
+    for extra in trainer_extra_paths:
+        paths.append(_resolve_repo_path(extra, repo_root=root))
+    return paths
 
 
 def _resolve_repo_path(rel_or_abs: str | Path, *, repo_root: Path) -> Path:
@@ -201,6 +385,10 @@ def build_training_image(
     optional_dirs: Iterable[str] = (),
     optional_files: Iterable[str] = (),
     skip_structural: bool = False,
+    mtime_stability_check: bool = True,
+    mtime_stability_window_seconds: float = DEFAULT_MTIME_STABILITY_WINDOW_SECONDS,
+    mtime_stability_max_retries: int = DEFAULT_MTIME_STABILITY_MAX_RETRIES,
+    mtime_stability_sleep_fn: Any = time.sleep,
 ) -> Any:
     """Build a Modal Image with canonical structural mounts + trainer discovery.
 
@@ -253,6 +441,45 @@ def build_training_image(
     remote = Path(remote_repo)
     image = base_image
 
+    # 0. Catalog #165 (FIX-I, D2): mtime-stability check across the unioned
+    # mount set BEFORE any ``add_local_*`` call. Sibling subagents writing
+    # to files Modal is about to upload would otherwise produce torn reads.
+    #
+    # We pre-import the trainer module + pre-collect the required-input /
+    # extra-mount paths here so the stability check covers the full mount
+    # set Modal will see. The downstream code re-uses these via
+    # ``_trainer_module_cached`` / ``_trainer_required_files_cached`` /
+    # ``_trainer_extra_paths_cached`` to avoid double-import.
+    _trainer_module_cached: Any = None
+    _trainer_required_files_cached: list[tuple[str, Path]] = []
+    _trainer_extra_paths_cached: list[Path] = []
+    if trainer_module_path is not None:
+        _trainer_module_cached = _import_trainer_module(trainer_module_path)
+        _trainer_required_files_cached = collect_tier_required_input_files(
+            _trainer_module_cached
+        )
+        _trainer_extra_paths_cached = collect_extra_mount_paths(_trainer_module_cached)
+
+    if mtime_stability_check:
+        all_mount_paths = _collect_paths_for_stability_check(
+            root=root,
+            skip_structural=skip_structural,
+            extra_dirs=extra_dirs,
+            extra_files=extra_files,
+            optional_dirs=optional_dirs,
+            optional_files=optional_files,
+            trainer_required_files=[
+                path for _flag, path in _trainer_required_files_cached
+            ],
+            trainer_extra_paths=_trainer_extra_paths_cached,
+        )
+        verify_mount_set_mtime_stability(
+            all_mount_paths,
+            window_seconds=mtime_stability_window_seconds,
+            max_retries=mtime_stability_max_retries,
+            sleep_fn=mtime_stability_sleep_fn,
+        )
+
     # 1. Structural minimum.
     if not skip_structural:
         for rel, ignore in STRUCTURAL_MINIMUM_DIRS:
@@ -299,9 +526,10 @@ def build_training_image(
 
     # 4. Trainer-introspected required-input-files + extra-mount-paths.
     if trainer_module_path is not None:
-        trainer_module = _import_trainer_module(trainer_module_path)
+        # Use the trainer module + lists pre-cached above (step 0) so we do
+        # not double-import.
         missing_required: list[tuple[str, Path]] = []
-        for flag, default_path in collect_tier_required_input_files(trainer_module):
+        for flag, default_path in _trainer_required_files_cached:
             local = _resolve_repo_path(default_path, repo_root=root)
             if not local.is_file():
                 missing_required.append((flag, local))
@@ -323,7 +551,7 @@ def build_training_image(
             )
 
         missing_extras: list[Path] = []
-        for extra in collect_extra_mount_paths(trainer_module):
+        for extra in _trainer_extra_paths_cached:
             local = _resolve_repo_path(extra, repo_root=root)
             if not local.exists():
                 missing_extras.append(local)
@@ -347,11 +575,15 @@ def build_training_image(
 
 
 __all__ = [
+    "DEFAULT_MTIME_STABILITY_MAX_RETRIES",
+    "DEFAULT_MTIME_STABILITY_WINDOW_SECONDS",
     "DEFAULT_REMOTE_REPO",
     "STRUCTURAL_MINIMUM_DIRS",
     "STRUCTURAL_MINIMUM_FILES",
     "MountManifestError",
+    "MountUploadRaceError",
     "build_training_image",
     "collect_extra_mount_paths",
     "collect_tier_required_input_files",
+    "verify_mount_set_mtime_stability",
 ]

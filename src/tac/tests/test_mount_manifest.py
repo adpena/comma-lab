@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
+from typing import ClassVar
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,10 +28,22 @@ import pytest
 from tac.deploy.modal.mount_manifest import (
     DEFAULT_REMOTE_REPO,
     MountManifestError,
+    MountUploadRaceError,
     build_training_image,
     collect_extra_mount_paths,
     collect_tier_required_input_files,
+    verify_mount_set_mtime_stability,
 )
+
+
+@pytest.fixture(autouse=True)
+def _disable_mtime_stability(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The mtime-stability check (Catalog #165) sleeps 2s per call. Disable
+    it for the existing mount-manifest test module; the new
+    ``test_check_165_modal_mount_mtime_stability.py`` module tests it
+    explicitly."""
+
+    monkeypatch.setenv("TAC_MODAL_MTIME_STABILITY_DISABLED", "1")
 
 
 class FakeImage:
@@ -43,13 +55,19 @@ class FakeImage:
 
     def add_local_dir(
         self, local: str, *, remote_path: str, ignore: list[str] | None = None
-    ) -> "FakeImage":
+    ) -> FakeImage:
         self.dirs.append((local, remote_path, ignore))
         return self
 
-    def add_local_file(self, local: str, *, remote_path: str) -> "FakeImage":
+    def add_local_file(self, local: str, *, remote_path: str) -> FakeImage:
         self.files.append((local, remote_path))
         return self
+
+
+@pytest.fixture(autouse=True)
+def _disable_mtime_stability_wait_for_unit_tests(monkeypatch: pytest.MonkeyPatch):
+    """Unit tests use fake Modal images; avoid production upload-race sleeps."""
+    monkeypatch.setenv("TAC_MODAL_MTIME_STABILITY_DISABLED", "1")
 
 
 def _make_fake_repo(tmp_path: Path) -> Path:
@@ -494,7 +512,7 @@ def test_trainer_introspection_does_not_pollute_sys_modules(tmp_path: Path) -> N
 
 def test_collect_required_input_files_empty_default_skipped() -> None:
     class NS:
-        TIER_1_OPERATOR_REQUIRED_FLAGS = {
+        TIER_1_OPERATOR_REQUIRED_FLAGS: ClassVar[dict[str, dict[str, object]]] = {
             "--p": {"required_input_file": True, "default": "   "},
             "--q": {"required_input_file": True, "default": 42},
             "--r": {"required_input_file": True, "default": None},
@@ -555,3 +573,44 @@ def test_absolute_default_path_resolves(tmp_path: Path) -> None:
     image = FakeImage()
     # Should not raise.
     build_training_image(image, repo_root=root, trainer_module_path=trainer)
+
+
+# ---------------------------------------------------------------------------
+# Catalog #165: Modal mount upload-race protection
+# ---------------------------------------------------------------------------
+
+
+def test_verify_mount_set_mtime_stability_passes_for_stable_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("TAC_MODAL_MTIME_STABILITY_DISABLED", raising=False)
+    f = tmp_path / "stable.py"
+    f.write_text("x = 1\n")
+
+    verify_mount_set_mtime_stability(
+        [f],
+        window_seconds=0.0,
+        max_retries=1,
+        sleep_fn=lambda _seconds: None,
+    )
+
+
+def test_verify_mount_set_mtime_stability_fails_on_active_writer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("TAC_MODAL_MTIME_STABILITY_DISABLED", raising=False)
+    f = tmp_path / "racing.py"
+    f.write_text("x = 1\n")
+
+    def mutate(_seconds: float) -> None:
+        f.write_text(f.read_text() + "x += 1\n")
+
+    with pytest.raises(MountUploadRaceError, match="fingerprint is unstable"):
+        verify_mount_set_mtime_stability(
+            [f],
+            window_seconds=0.0,
+            max_retries=2,
+            sleep_fn=mutate,
+        )
