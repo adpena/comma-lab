@@ -1046,6 +1046,22 @@ fn magic_codec_v1_parity() {
     try_load_only("magic_codec_v1");
 }
 
+// ── Magic codec dense streams parity stub (2026-05-12) ──────────────────────
+//
+// The dense-streams variant extends the magic_codec auto-selector from per-
+// stream selection over a single dense array to a typed BUNDLE of dense
+// streams (residual / latent / hyperprior / etc.), where each stream gets
+// its OWN codec choice (one of: `brotli` | `lzma` | `magic_codec_classic`).
+// Wire format declared in
+// `src/tac/packet_compiler/magic_codec_dense_streams.py`. The Rust scaffold
+// is `try_load_only` until the brotli / lzma / magic_codec_classic Rust
+// implementations land — flip to `assert_sha256_parity(...)` then.
+
+#[test]
+fn magic_codec_dense_streams_v1_parity() {
+    try_load_only("magic_codec_dense_streams_v1");
+}
+
 // ── Coverage gate — every golden vector must have a parity test ─────────────
 
 /// This test exists to fail-loud if a new golden vector is committed without
@@ -1098,6 +1114,8 @@ fn every_golden_vector_has_paired_parity_test() {
         "sparse_temporal_subsampled_v1",
         // Magic codec auto-selector (2026-05-11)
         "magic_codec_v1",
+        // Magic codec dense streams — multi-stream bundle (2026-05-12)
+        "magic_codec_dense_streams_v1",
         // PR63 — qpose14 uint16-view int16 codec + packed-payload (2026-05-12)
         "pr63_qpose14_uint16_int16_v1",
         "pr63_qpose14_single_zip_member_v1",

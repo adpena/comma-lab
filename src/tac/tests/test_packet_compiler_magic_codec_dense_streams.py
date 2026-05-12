@@ -15,7 +15,10 @@ decoder dequantisation roundtrip tested) this module covers:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import struct
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -26,13 +29,16 @@ from tac.packet_compiler.magic_codec_dense_streams import (
     CODEC_LZMA,
     CODEC_MAGIC_CLASSIC,
     DENSE_STREAMS_VERSION,
-    DenseStreamInput,
-    DenseStreamsResult,
     MAGIC_DENSE_STREAMS,
+    DenseStreamInput,
     MagicCodecDenseStreamsError,
     decode_magic_codec_dense_streams,
     encode_magic_codec_dense_streams,
     parse_magic_codec_dense_streams_envelope,
+)
+
+_GOLDEN_DIR = (
+    Path(__file__).resolve().parents[1] / "packet_compiler" / "golden_vectors"
 )
 
 
@@ -394,3 +400,101 @@ class TestIntrospection:
         version, n_streams = struct.unpack_from("<BB", result.payload, 4)
         assert version == DENSE_STREAMS_VERSION
         assert n_streams == 1
+
+
+# ── Golden vector ───────────────────────────────────────────────────────────
+
+
+class TestGoldenVector:
+    """Pin canonical 3-stream bundle → expected envelope SHA-256.
+
+    Recipe (canonical 3-stream bundle covering brotli / lzma / magic_classic
+    candidates per stream-type):
+
+        rng = np.random.default_rng(20260512)
+
+        # Stream 1: sparse int32 residual (1..15) — magic_classic candidate.
+        residual = np.zeros(512, dtype=np.int32)
+        positions = rng.choice(512, 48, replace=False)
+        residual[positions] = rng.integers(1, 16, 48, dtype=np.int32)
+
+        # Stream 2: dense float32 latent (16x8) — brotli-only candidate.
+        latent = rng.standard_normal((16, 8)).astype(np.float32)
+
+        # Stream 3: int32 repeating pattern — lzma- / brotli-friendly.
+        hyperprior = np.tile(
+            np.array([0, 0, 5, 0, 0, 3, 0, 0, 0, 1], dtype=np.int32), 30
+        )
+
+        streams = [
+            DenseStreamInput("residual", residual, hint=StreamHint("weight_tensor")),
+            DenseStreamInput("latent", latent, hint=None),
+            DenseStreamInput("hyperprior", hyperprior, hint=StreamHint("weight_tensor")),
+        ]
+        result = encode_magic_codec_dense_streams(
+            streams, selection_strategy="smallest_byte_count"
+        )
+
+    The pinned SHA-256 of ``result.payload`` is committed at
+    ``src/tac/packet_compiler/golden_vectors/magic_codec_dense_streams_v1.json``.
+    SHA drift indicates either the canonical input changed or the wire format
+    of one of the inner codecs changed — both require explicit operator-gated
+    intent.
+    """
+
+    GOLDEN_NAME = "magic_codec_dense_streams_v1"
+
+    def _build_canonical_bundle(self) -> list[DenseStreamInput]:
+        rng = np.random.default_rng(20260512)
+        residual = np.zeros(512, dtype=np.int32)
+        positions = rng.choice(512, 48, replace=False)
+        residual[positions] = rng.integers(1, 16, 48, dtype=np.int32)
+        latent = rng.standard_normal((16, 8)).astype(np.float32)
+        hyperprior = np.tile(
+            np.array([0, 0, 5, 0, 0, 3, 0, 0, 0, 1], dtype=np.int32), 30
+        )
+        return [
+            DenseStreamInput(
+                "residual", residual, hint=StreamHint("weight_tensor")
+            ),
+            DenseStreamInput("latent", latent, hint=None),
+            DenseStreamInput(
+                "hyperprior", hyperprior, hint=StreamHint("weight_tensor")
+            ),
+        ]
+
+    def test_canonical_bundle_produces_pinned_sha(self):
+        streams = self._build_canonical_bundle()
+        result = encode_magic_codec_dense_streams(
+            streams, selection_strategy="smallest_byte_count"
+        )
+        digest = hashlib.sha256(result.payload).hexdigest()
+        manifest_path = _GOLDEN_DIR / f"{self.GOLDEN_NAME}.json"
+        assert manifest_path.exists(), (
+            f"{manifest_path} must be committed; golden-vector tests must "
+            "not write fixtures during normal test execution"
+        )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert digest == manifest["sha256"], (
+            f"{self.GOLDEN_NAME} SHA drift: produced={digest} "
+            f"pinned={manifest['sha256']}; either the canonical input "
+            "changed or a primitive's wire format changed"
+        )
+        assert len(result.payload) == manifest["payload_len"]
+        assert result.total_inner_byte_count == manifest["total_inner_byte_count"]
+        assert len(result.selections) == manifest["n_streams"]
+        # Per-stream selection pinning (codec choice + byte count).
+        pinned_by_name = {s["name"]: s for s in manifest["selections"]}
+        for selection in result.selections:
+            pinned = pinned_by_name[selection.name]
+            assert selection.selected_codec_id == pinned["selected_codec_id"]
+            assert selection.selected_codec_name == pinned["selected_codec_name"]
+            assert selection.selected_byte_count == pinned["selected_byte_count"]
+
+    def test_canonical_bundle_roundtrips_exact(self):
+        streams = self._build_canonical_bundle()
+        result = encode_magic_codec_dense_streams(streams)
+        decoded = decode_magic_codec_dense_streams(result.payload)
+        assert list(decoded.keys()) == ["residual", "latent", "hyperprior"]
+        for stream in streams:
+            np.testing.assert_array_equal(decoded[stream.name], stream.values)

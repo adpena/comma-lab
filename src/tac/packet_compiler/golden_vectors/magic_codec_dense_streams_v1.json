@@ -1,0 +1,59 @@
+{
+  "n_streams": 3,
+  "payload_len": 708,
+  "recipe": {
+    "rng_seed": 20260512,
+    "selection_strategy": "smallest_byte_count",
+    "streams": [
+      {
+        "dtype": "int32",
+        "hint_stream_type": "weight_tensor",
+        "length": 512,
+        "n_nonzero": 48,
+        "name": "residual",
+        "value_range": [
+          1,
+          15
+        ]
+      },
+      {
+        "dtype": "float32",
+        "hint_stream_type": null,
+        "name": "latent",
+        "shape": [
+          16,
+          8
+        ]
+      },
+      {
+        "dtype": "int32",
+        "hint_stream_type": "weight_tensor",
+        "name": "hyperprior",
+        "pattern": "tile([0,0,5,0,0,3,0,0,0,1], 30)"
+      }
+    ]
+  },
+  "schema": "magic_codec_dense_streams.v1",
+  "selections": [
+    {
+      "name": "residual",
+      "selected_byte_count": 127,
+      "selected_codec_id": 96,
+      "selected_codec_name": "brotli"
+    },
+    {
+      "name": "latent",
+      "selected_byte_count": 504,
+      "selected_codec_id": 96,
+      "selected_codec_name": "brotli"
+    },
+    {
+      "name": "hyperprior",
+      "selected_byte_count": 29,
+      "selected_codec_id": 96,
+      "selected_codec_name": "brotli"
+    }
+  ],
+  "sha256": "964cc4c8188a7551bc49752c84bc537e87a63e635acbe23d8143a59a3a6d3448",
+  "total_inner_byte_count": 660
+}
