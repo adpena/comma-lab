@@ -705,6 +705,19 @@ def _full_main(args: argparse.Namespace) -> int:
     # 1. Pin seeds
     _pin_seeds(args.seed)
     device = _device_or_die(args.device, smoke=False)
+    planned_pairs = N_PAIRS_FULL if args.max_pairs is None else min(N_PAIRS_FULL, args.max_pairs)
+    if not args.allow_oversize_research:
+        _enforce_wavelet_byte_floor(
+            args,
+            WaveletConfig(
+                coeff_channels=args.coeff_channels,
+                synthesis_hidden=args.synthesis_hidden,
+                synthesis_layers=args.synthesis_layers,
+                num_pairs=planned_pairs,
+                output_height=EVAL_HW[0],
+                output_width=EVAL_HW[1],
+            ),
+        )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stage_log: list[dict[str, Any]] = []
