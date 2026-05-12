@@ -21,6 +21,7 @@ Install:
 Environment overrides:
     PREFLIGHT_HOOK_ENABLED=0   Skip preflight (review gate still runs)
     PREFLIGHT_FULL=1           Run full whole-repo preflight instead of fast mode
+    PREFLIGHT_ALLOW_SLOW=1     Explicitly allow slow release/custody preflight
     PREFLIGHT_TIMEOUT_SECONDS  Override preflight subprocess timeout
     REVIEW_GATE_ENABLED=0      Skip review gate
     REVIEW_GATE_OVERRIDE=1     Override review gate (still runs preflight)
@@ -98,7 +99,9 @@ def run_preflight() -> int:
     `tac.preflight --no-codebase` catches artifact/profile wiring without
     scanning every recovered public-PR source tree and reverse-engineering
     custody mirror on each commit. Operators can still request the full
-    whole-repo scan with `PREFLIGHT_FULL=1`.
+    whole-repo scan with `PREFLIGHT_FULL=1`, but it keeps the normal 30s DX
+    budget unless `PREFLIGHT_ALLOW_SLOW=1` is set for a deliberate release or
+    custody sweep.
     """
     if os.environ.get("PREFLIGHT_HOOK_ENABLED", "1") == "0":
         return 0
@@ -125,9 +128,9 @@ def run_preflight() -> int:
             print(str(exc.stdout)[-4000:], file=sys.stderr)
         if exc.stderr:
             print(str(exc.stderr)[-4000:], file=sys.stderr)
+        print(f"\n{RED}The hook must stay bounded during normal development.{RST}", file=sys.stderr)
         print(
-            f"\n{RED}The hook must be bounded. Use PREFLIGHT_FULL=1 only when "
-            f"you intentionally want the slower whole-repo scan.{RST}",
+            "  Use PREFLIGHT_ALLOW_SLOW=1 only for deliberate release/custody sweeps.",
             file=sys.stderr,
         )
         return 1
@@ -149,7 +152,9 @@ def _preflight_command() -> list[str]:
     """Return the preflight command for the current hook mode."""
     cmd = [".venv/bin/python", "-m", "tac.preflight"]
     if os.environ.get("PREFLIGHT_FULL", "0") == "1":
-        cmd.extend(["--scope", "all", "--allow-slow-preflight"])
+        cmd.extend(["--scope", "all"])
+        if os.environ.get("PREFLIGHT_ALLOW_SLOW", "0") == "1":
+            cmd.append("--allow-slow-preflight")
     else:
         cmd.append("--no-codebase")
     return cmd
@@ -164,7 +169,10 @@ def _preflight_timeout_seconds() -> int:
         except ValueError:
             value = 0
         return value if value > 0 else 30
-    if os.environ.get("PREFLIGHT_FULL", "0") == "1":
+    if (
+        os.environ.get("PREFLIGHT_FULL", "0") == "1"
+        and os.environ.get("PREFLIGHT_ALLOW_SLOW", "0") == "1"
+    ):
         return 600
     return 30
 

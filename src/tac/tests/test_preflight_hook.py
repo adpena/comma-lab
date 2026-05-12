@@ -19,6 +19,21 @@ def test_preflight_hook_defaults_to_no_codebase(monkeypatch) -> None:
 
 def test_preflight_hook_full_mode_is_explicit(monkeypatch) -> None:
     monkeypatch.setenv("PREFLIGHT_FULL", "1")
+    monkeypatch.delenv("PREFLIGHT_ALLOW_SLOW", raising=False)
+
+    assert preflight_hook._preflight_command() == [
+        ".venv/bin/python",
+        "-m",
+        "tac.preflight",
+        "--scope",
+        "all",
+    ]
+    assert preflight_hook._preflight_timeout_seconds() == 30
+
+
+def test_preflight_hook_slow_release_mode_requires_separate_env(monkeypatch) -> None:
+    monkeypatch.setenv("PREFLIGHT_FULL", "1")
+    monkeypatch.setenv("PREFLIGHT_ALLOW_SLOW", "1")
 
     assert preflight_hook._preflight_command() == [
         ".venv/bin/python",

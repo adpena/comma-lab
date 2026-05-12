@@ -76,6 +76,10 @@ def decode_c3_residual_sparse(blob: bytes, n_frames: int) -> np.ndarray:
         if raw is None or t >= n_frames:
             continue
         raw_bytes = raw.tobytes()
+        if len(raw_bytes) >= 4:
+            (payload_len,) = struct.unpack_from("<I", raw_bytes, 0)
+            if 4 <= 4 + payload_len <= len(raw_bytes):
+                raw_bytes = raw_bytes[4 : 4 + payload_len]
         if len(raw_bytes) < 4:
             raise ValueError(f"sparse c3 frame {t}: missing scale")
         (scale,) = struct.unpack_from("<f", raw_bytes, 0)

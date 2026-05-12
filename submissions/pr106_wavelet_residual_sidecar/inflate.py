@@ -96,6 +96,10 @@ def decode_wavelet_residual_sparse(blob: bytes, n_frames: int) -> np.ndarray:
         if raw is None or t >= n_frames:
             continue
         raw_bytes = raw.tobytes()
+        if len(raw_bytes) >= 4:
+            (payload_len,) = struct.unpack_from("<I", raw_bytes, 0)
+            if 4 <= 4 + payload_len <= len(raw_bytes):
+                raw_bytes = raw_bytes[4 : 4 + payload_len]
         if len(raw_bytes) < 16:
             raise ValueError(f"sparse wavelet frame {t}: payload < 16 (scales)")
         scales = struct.unpack_from("<4f", raw_bytes, 0)

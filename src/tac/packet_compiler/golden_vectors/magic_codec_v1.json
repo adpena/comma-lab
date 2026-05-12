@@ -1,0 +1,20 @@
+{
+  "inner_primitive_byte_count": 228,
+  "payload_len": 238,
+  "recipe": {
+    "dtype": "int8",
+    "n_nonzero": 64,
+    "n_total": 1024,
+    "rng_seed": 20260511,
+    "selection_strategy": "smallest_byte_count",
+    "stream_type": "residual_basis",
+    "value_range": [
+      1,
+      32
+    ]
+  },
+  "schema": "magic_codec.v1",
+  "selected_primitive": "sparse_arithmetic_coefficients",
+  "selected_primitive_id": 241,
+  "sha256": "f24f7ad71b7ab5c3706bb50fbf6757c2746737564eb299ac00f5640a893778b7"
+}

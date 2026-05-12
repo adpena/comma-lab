@@ -32,6 +32,7 @@ import pytest
 from tac.residual_basis.pr106_materializer_helpers import (
     PR106_BIN_MEMBER_NAME,
     repack_dense_as_sparse,
+    truncate_wavelet_dense_to_top_k,
 )
 from tac.residual_basis.pr106_sidecar_packing import (
     PR106_RESIDUAL_FORMAT_IDS,
@@ -321,6 +322,60 @@ def test_sparse_repack_decodes_to_same_residual_as_dense(family: str) -> None:
     )
 
 
+def test_sparse_repack_handles_nonuniform_wavelet_frame_payloads() -> None:
+    """Real L2 frames have variable RLE sizes; temporal sparse wire must handle that."""
+    n_frames = 2
+    camera_h, camera_w, rgb = 874, 1164, 3
+    half_h, half_w = camera_h // 2, camera_w // 2
+    band_size = half_h * half_w
+    bands0 = np.zeros(4 * rgb * band_size, dtype=np.int8)
+    bands1 = np.zeros(4 * rgb * band_size, dtype=np.int8)
+    bands0[0] = 3
+    bands1[0] = 3
+    bands1[12345] = -2
+    frame0 = struct.pack("<4f", 0.25, 0.125, 0.0625, 0.03125) + bands0.tobytes()
+    frame1 = struct.pack("<4f", 0.25, 0.125, 0.0625, 0.03125) + bands1.tobytes()
+    dense = frame0 + frame1
+
+    sparse = repack_dense_as_sparse(
+        family="wavelet",
+        dense_residual_bytes=dense,
+        n_frames=n_frames,
+    )
+
+    inflate = _load_inflate_module("wavelet")
+    np.testing.assert_allclose(
+        inflate.decode_wavelet_residual_sparse(sparse, n_frames=n_frames),
+        inflate.decode_wavelet_residual(dense, n_frames=n_frames),
+        rtol=0,
+        atol=0,
+    )
+
+
+def test_wavelet_sparse_top_k_truncation_preserves_largest_coefficients() -> None:
+    n_frames = 1
+    camera_h, camera_w, rgb = 874, 1164, 3
+    half_h, half_w = camera_h // 2, camera_w // 2
+    coeff_count = 4 * rgb * half_h * half_w
+    coeffs = np.zeros(coeff_count, dtype=np.int8)
+    coeffs[3] = 1
+    coeffs[7] = -9
+    coeffs[11] = 4
+    dense = struct.pack("<4f", 0.25, 0.125, 0.0625, 0.03125) + coeffs.tobytes()
+
+    truncated = truncate_wavelet_dense_to_top_k(
+        dense_residual_bytes=dense,
+        n_frames=n_frames,
+        top_k_per_frame=2,
+    )
+
+    kept = np.frombuffer(truncated[16:], dtype=np.int8)
+    assert int(np.count_nonzero(kept)) == 2
+    assert kept[7] == -9
+    assert kept[11] == 4
+    assert kept[3] == 0
+
+
 # ── Negative invocations ─────────────────────────────────────────────────────
 
 
@@ -404,6 +459,56 @@ def test_l2_encoded_materializer_does_not_silently_raise_sub_dense_budget(
     )
     assert result.returncode == 2
     assert "dense" in result.stderr
+
+
+@pytest.mark.parametrize("family", ("wavelet", "cool_chic", "c3"))
+def test_l2_encoded_sparse_materializer_enforces_sparse_not_dense_budget(
+    family: str, fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / f"{family}_decoded.raw"
+    gt_raw = tmp_path / f"{family}_gt.raw"
+    _write_raw_frames(decoded_raw, n_frames=2)
+    _write_raw_frames(gt_raw, n_frames=2)
+    out = tmp_path / f"{family}_l2_sparse"
+    budget = 100_000
+    extra_args: list[str] = []
+    if family in {"wavelet", "c3"}:
+        extra_args = ["--l2-iterations", "1"]
+    if family == "cool_chic":
+        extra_args = ["--l2-candidate-n-levels", "1"]
+    result = _run_materializer(
+        MATERIALIZERS[family],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(out),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "2",
+            "--byte-budget",
+            str(budget),
+            "--encoding",
+            "sparse",
+            *extra_args,
+        ],
+    )
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    archive_zip = out / f"{family}_sparse_pr106_residual_sidecar_archive.zip"
+    with zipfile.ZipFile(archive_zip, mode="r") as zf:
+        parsed = parse_archive(zf.read(PR106_BIN_MEMBER_NAME))
+    assert parsed.family == f"{family}_sparse"
+    assert 0 < len(parsed.residual_bytes) <= budget
+    manifest = json.loads((out / "materialization_manifest.json").read_text())
+    diagnostics = manifest["extra"]["l2_encoder_diagnostics"]
+    assert diagnostics["requested_sparse_byte_budget"] == float(budget)
+    assert diagnostics["dense_oracle_byte_budget"] > budget
+    assert diagnostics["sparse_residual_blob_bytes"] == float(len(parsed.residual_bytes))
 
 
 # ── Deterministic bytes ──────────────────────────────────────────────────────
