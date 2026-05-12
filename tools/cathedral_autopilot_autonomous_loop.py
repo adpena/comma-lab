@@ -715,12 +715,224 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     return rows
 
 
+# ── Substrate composition matrix ranking integration ──────────────────────
+
+
+SUBSTRATE_COMPOSITION_RANKING_SCHEMA = "tac_autopilot_dispatch_ranking_v1"
+
+
+def load_candidates_from_substrate_composition_ranking(
+    path: Path,
+    *,
+    only_in_envelope: bool = True,
+    only_fits_per_dispatch_cap: bool = True,
+) -> list[CandidateRow]:
+    """Load candidates from QQ's substrate composition ranking JSON.
+
+    Per CLAUDE.md "race-mode + parallel-dispatch first" + the substrate
+    composition matrix landing memo (`feedback_substrate_composition_
+    matrix_autopilot_ranking_theoretical_floor_v2_landed_20260511.md`),
+    QQ's ranker emits an artifact with schema
+    ``tac_autopilot_dispatch_ranking_v1`` containing ``ranked_dispatches``
+    each carrying ``candidate_id``, ``family``, ``predicted_score_delta``,
+    ``expected_information_gain``, ``estimated_dispatch_cost_usd``,
+    ``substrate_ids`` (the substrates participating in this dispatch),
+    ``composition_notes`` (the rationale), ``fits_per_dispatch_cap``,
+    and ``fits_cumulative_envelope`` flags.
+
+    This loader converts each ``ranked_dispatch`` into a ``CandidateRow``
+    that the autopilot loop consumes via the existing HALT-and-ASK gate.
+    Per CLAUDE.md "Forbidden score claims" the loaded rows carry
+    ``predicted_score_delta`` tagged ``[predicted; substrate composition
+    matrix v1]`` in their ``notes`` field.
+
+    Filtering rules (defaults match QQ's envelope discipline):
+
+    - ``only_in_envelope=True`` drops dispatches that QQ marked as
+      out-of-cumulative-envelope (``fits_cumulative_envelope=False``).
+    - ``only_fits_per_dispatch_cap=True`` drops dispatches that QQ marked
+      as out-of-per-dispatch-cap (``fits_per_dispatch_cap=False``).
+
+    The loader REFUSES to load rows whose ``score_claim`` field is True or
+    whose ``ready_for_exact_eval_dispatch`` field is True — those would
+    violate the planning-only invariant.
+    """
+    if not path.is_file():
+        raise FileNotFoundError(f"substrate composition ranking JSON not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    schema = payload.get("schema") or payload.get("matrix_schema")
+    if "ranked_dispatches" not in payload:
+        raise ValueError(
+            f"substrate composition ranking JSON missing 'ranked_dispatches' "
+            f"key (schema={schema!r}); got top-level keys: "
+            f"{sorted(payload.keys())}"
+        )
+    if payload.get("score_claim", False):
+        raise ValueError(
+            "substrate composition ranking JSON has score_claim=True; "
+            "the autopilot ranker must remain planning-only "
+            "(per CLAUDE.md 'Forbidden score claims')"
+        )
+    rows: list[CandidateRow] = []
+    for raw in payload["ranked_dispatches"]:
+        if raw.get("score_claim", False):
+            raise ValueError(
+                f"ranked dispatch {raw.get('candidate_id')!r} has score_claim=True; "
+                "refuse to consume score-claimed planning rows"
+            )
+        if raw.get("ready_for_exact_eval_dispatch", False):
+            raise ValueError(
+                f"ranked dispatch {raw.get('candidate_id')!r} has "
+                "ready_for_exact_eval_dispatch=True; refuse to consume in autopilot "
+                "(operator-gated promotion path required)"
+            )
+        if only_fits_per_dispatch_cap and not raw.get("fits_per_dispatch_cap", True):
+            continue
+        if only_in_envelope and not raw.get("fits_cumulative_envelope", True):
+            continue
+        notes_lines = [
+            "[predicted; substrate composition matrix v1]",
+            f"composition_notes: {raw.get('composition_notes', '')}",
+            f"substrate_ids: {raw.get('substrate_ids', [])!r}",
+        ]
+        rows.append(CandidateRow(
+            candidate_id=str(raw["candidate_id"]),
+            family=str(raw["family"]),
+            predicted_score_delta=float(raw["predicted_score_delta"]),
+            expected_information_gain=float(raw["expected_information_gain"]),
+            estimated_dispatch_cost_usd=float(raw["estimated_dispatch_cost_usd"]),
+            blockers=list(raw.get("blockers", [])),
+            notes="\n".join(notes_lines),
+        ))
+    return rows
+
+
+def candidate_substrate_ids_from_ranking(path: Path) -> dict[str, tuple[str, ...]]:
+    """Map ``candidate_id`` -> tuple of substrate ids participating in the dispatch.
+
+    Used by the composition-constraint enforcer to reason about which
+    substrates a candidate touches without re-parsing the full ranking JSON.
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if "ranked_dispatches" not in payload:
+        raise ValueError(
+            f"substrate composition ranking JSON missing 'ranked_dispatches'"
+        )
+    out: dict[str, tuple[str, ...]] = {}
+    for raw in payload["ranked_dispatches"]:
+        cid = str(raw["candidate_id"])
+        substrates = tuple(str(s) for s in raw.get("substrate_ids", ()))
+        out[cid] = substrates
+    return out
+
+
+def filter_composition_incompatible_dispatches(
+    candidates: list[CandidateRow],
+    *,
+    candidate_substrate_ids: dict[str, tuple[str, ...]],
+) -> tuple[list[CandidateRow], list[tuple[str, str]]]:
+    """Walk candidates in order; refuse any whose substrates conflict with
+    a substrate already chosen by an earlier candidate in the SAME loop
+    iteration (per QQ matrix's REPLACEMENT/INCOMPATIBLE classes).
+
+    Returns ``(kept, dropped_with_reasons)``. ``dropped_with_reasons`` is a
+    list of ``(candidate_id, reason)`` pairs.
+
+    Per QQ matrix lesson 5 (HNeRV parity discipline) and the
+    `substrate vs codec composition meta-pattern` memo: two
+    RENDERER_REPLACEMENT substrates cannot coexist in the same archive,
+    and two REPLACEMENT-classed cells anywhere produce an
+    archive-grammar conflict at byte-level. Composition matrix is
+    consulted ONLY through the participating-substrate sets; the loader
+    does not need to import the full matrix here (kept lightweight).
+
+    The composition constraint enforced here is a SAME-DISPATCH-CHAIN
+    constraint: it does NOT prevent the operator from running two separate
+    autopilot iterations each picking ONE renderer-replacement candidate.
+    The matrix governs which substrates can be in the same archive bytes,
+    not which substrates can be considered across runs.
+    """
+    try:
+        from tac.optimization.substrate_composition_matrix import (
+            Composability,
+            build_composition_matrix,
+        )
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError(
+            "filter_composition_incompatible_dispatches requires "
+            "tac.optimization.substrate_composition_matrix; install or "
+            "import path setup before calling."
+        ) from exc
+
+    matrix = build_composition_matrix()
+    kept: list[CandidateRow] = []
+    chosen_substrates: set[str] = set()
+    dropped: list[tuple[str, str]] = []
+    incompatible_classes = {
+        Composability.REPLACEMENT,
+        Composability.INCOMPATIBLE,
+        Composability.ANTAGONISTIC,
+    }
+    for cand in candidates:
+        substrates = candidate_substrate_ids.get(cand.candidate_id, ())
+        conflict_reason: str | None = None
+        for s in substrates:
+            for prior in chosen_substrates:
+                if s == prior:
+                    continue
+                try:
+                    cell = matrix.get(s, prior)
+                except (KeyError, ValueError):
+                    continue
+                if cell.composability in incompatible_classes:
+                    conflict_reason = (
+                        f"substrate {s!r} composes as "
+                        f"{cell.composability.value} with already-chosen "
+                        f"substrate {prior!r}; refuse same-iteration "
+                        "dispatch (per substrate composition matrix v1)"
+                    )
+                    break
+            if conflict_reason is not None:
+                break
+        if conflict_reason is not None:
+            dropped.append((cand.candidate_id, conflict_reason))
+            continue
+        kept.append(cand)
+        for s in substrates:
+            chosen_substrates.add(s)
+    return kept, dropped
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--candidates-jsonl", type=Path, required=True,
-                        help="Path to JSONL file of CandidateRow rows")
+    parser.add_argument("--candidates-jsonl", type=Path, default=None,
+                        help="Path to JSONL file of CandidateRow rows. Mutually "
+                             "exclusive with --use-substrate-composition-matrix-ranking.")
+    parser.add_argument(
+        "--use-substrate-composition-matrix-ranking",
+        type=Path,
+        default=None,
+        help=(
+            "Path to QQ's substrate composition matrix ranking JSON "
+            "(schema=tac_autopilot_dispatch_ranking_v1, e.g. "
+            "experiments/results/cathedral_autopilot_dispatch_ranking_*/ranking.json). "
+            "When set, candidates are loaded from the ranking and "
+            "filter_composition_incompatible_dispatches enforces the matrix's "
+            "REPLACEMENT/INCOMPATIBLE/ANTAGONISTIC constraints across the dispatch "
+            "queue. Mutually exclusive with --candidates-jsonl."
+        ),
+    )
+    parser.add_argument(
+        "--include-out-of-envelope-ranking-candidates",
+        action="store_true",
+        help=(
+            "When --use-substrate-composition-matrix-ranking is set, also load "
+            "ranking rows that QQ marked as out-of-envelope. Default OFF — "
+            "the autopilot honors QQ's envelope discipline."
+        ),
+    )
     parser.add_argument("--iterations", type=int, default=1,
                         help="Number of loop iterations to run")
     parser.add_argument("--rank-axis",
@@ -785,8 +997,27 @@ def main(argv: Optional[list[str]] = None) -> int:
     try:
         if args.iterations <= 0:
             raise ValueError("--iterations must be > 0")
-        if not args.candidates_jsonl.is_file():
+        # Exactly one of --candidates-jsonl OR --use-substrate-composition-matrix-ranking
+        # must be supplied. They are mutually exclusive.
+        sources_supplied = sum(
+            1 for x in (
+                args.candidates_jsonl,
+                args.use_substrate_composition_matrix_ranking,
+            ) if x is not None
+        )
+        if sources_supplied != 1:
+            raise ValueError(
+                "exactly one of --candidates-jsonl or "
+                "--use-substrate-composition-matrix-ranking must be supplied "
+                f"(got {sources_supplied})"
+            )
+        if args.candidates_jsonl is not None and not args.candidates_jsonl.is_file():
             raise FileNotFoundError(args.candidates_jsonl)
+        if (
+            args.use_substrate_composition_matrix_ranking is not None
+            and not args.use_substrate_composition_matrix_ranking.is_file()
+        ):
+            raise FileNotFoundError(args.use_substrate_composition_matrix_ranking)
         approval_set = _parse_approval_flags(
             args.require_operator_approval_on or ["dispatch"]
         )
@@ -822,8 +1053,29 @@ def main(argv: Optional[list[str]] = None) -> int:
                 file=sys.stderr,
             )
 
-    def _source() -> list[CandidateRow]:
-        return load_candidates_from_jsonl(args.candidates_jsonl)
+    composition_substrate_map: dict[str, tuple[str, ...]] = {}
+    composition_dropped: list[tuple[str, str]] = []
+
+    if args.use_substrate_composition_matrix_ranking is not None:
+        composition_substrate_map = candidate_substrate_ids_from_ranking(
+            args.use_substrate_composition_matrix_ranking
+        )
+
+        def _source() -> list[CandidateRow]:
+            base = load_candidates_from_substrate_composition_ranking(
+                args.use_substrate_composition_matrix_ranking,
+                only_in_envelope=not args.include_out_of_envelope_ranking_candidates,
+                only_fits_per_dispatch_cap=not args.include_out_of_envelope_ranking_candidates,
+            )
+            kept, dropped = filter_composition_incompatible_dispatches(
+                base, candidate_substrate_ids=composition_substrate_map,
+            )
+            composition_dropped.clear()
+            composition_dropped.extend(dropped)
+            return kept
+    else:
+        def _source() -> list[CandidateRow]:
+            return load_candidates_from_jsonl(args.candidates_jsonl)
 
     reports = run_continuous_loop(
         _source,
@@ -846,6 +1098,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             "no_kill_verdict_in_loop",
             "race_mode_explicit_opt_in_only",
             "operator_authorized_le_5_dollar_mode_dual_gated",
+            "substrate_composition_matrix_constraints_enforced"
+                if args.use_substrate_composition_matrix_ranking is not None
+                else "candidates_jsonl_source",
         ],
         "iterations_run": len(reports),
         "race_mode": args.race_mode,
@@ -857,6 +1112,21 @@ def main(argv: Optional[list[str]] = None) -> int:
             "env_authorized": _env_authorizes_mode(),
             "journal_path": str(auth_mode.journal_path) if auth_mode and auth_mode.journal_path else None,
         },
+        "substrate_composition_ranking": (
+            {
+                "ranking_path": str(args.use_substrate_composition_matrix_ranking),
+                "include_out_of_envelope": bool(
+                    args.include_out_of_envelope_ranking_candidates
+                ),
+                "n_dropped_by_composition_constraint": len(composition_dropped),
+                "dropped_with_reasons": [
+                    {"candidate_id": cid, "reason": reason}
+                    for (cid, reason) in composition_dropped
+                ],
+            }
+            if args.use_substrate_composition_matrix_ranking is not None
+            else None
+        ),
         "reports": [serialize_report(r) for r in reports],
     }
     if args.output is not None:

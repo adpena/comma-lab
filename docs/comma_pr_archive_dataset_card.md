@@ -18,6 +18,9 @@ pretty_name: comma video compression challenge - PR archive corpus
 
 # comma video compression challenge - PR archive corpus
 
+_Card last refreshed: 2026-05-11 (companion research artifacts section
+added)._
+
 This dataset captures every scored Pull Request submitted to
 [commaai/comma_video_compression_challenge](https://github.com/commaai/comma_video_compression_challenge),
 the public 2026 contest to compress comma's `0.mkv` reference dashcam video
@@ -178,6 +181,86 @@ If you use this dataset in published work, please cite:
   submission that defined the final winning paradigm
 - SajayR (PR #101), rem2 (PR #103), EthanYangTW (PR #102)
   for the medal-winning bolt-ons
+
+## Companion research artifacts (refreshed 2026-05-11)
+
+This section indexes companion artifacts that this repository's research
+tooling has produced from the dataset. None of the numbers below are
+contest-final scores — every empirical value is tagged with its provenance
+axis. Promotion-eligible scores are gated on dual `[contest-CUDA]` AND
+`[contest-CPU]` (Linux x86_64) runs of `upstream/evaluate.py` against the
+exact archive bytes.
+
+### Empirical anchors (today, public artifact-grounded)
+
+| Anchor | Axis | Score | Provenance |
+|---|---|---:|---|
+| PR101 grammar paired runtime | `[contest-CUDA T4]` | 0.20662 | exact replay; archive sha checked against this dataset row |
+| Residual basis L1 (5 scaffolds) | `[contest-CUDA T4]` | 0.20663 | bolt-ons on PR101 grammar |
+| Family paired CPU (5 anchors) | `[contest-CPU GHA Linux x86_64]` | 0.22810 | sister CPU eval on the CUDA-anchored archive set |
+| A1 (this repo's apogee submission) | `[contest-CPU GHA Linux x86_64]` | 0.19284 | dual-eval pair landed 2026-05-09 |
+| A1 (this repo's apogee submission) | `[contest-CUDA Tesla T4]` | 0.22635 | dual-eval pair landed 2026-05-09 |
+
+The CPU score for A1 rounds to 0.19, matching the gold-tier display band
+of PR #101 (0.193 CPU).
+
+### Substrate composition matrix v1
+
+The repository's analysis tooling now classifies every public-PR substrate
+plus 16 in-house substrate scaffolds against an 8-class composability
+taxonomy (orthogonal / redundant / antagonistic / replacement /
+stackable_serial / stackable_parallel / stackable_cascade / incompatible).
+The matrix surfaces format-ID collisions, Pareto-dominated rows, and
+expected composition coefficients for stacked dispatches.
+
+The classifier output is serialized to a typed JSON schema
+(`tac_substrate_composition_matrix_v1`) and consumed by the cathedral
+autopilot's dispatch ranker (`tac_autopilot_dispatch_ranking_v1`). Both
+schemas are committed to the analysis tooling and are regenerated on
+demand from the in-repo lane registry.
+
+### Theoretical floor v2 (refreshed 2026-05-11)
+
+| Quantity | v2 (2026-05-09) | Refreshed (2026-05-11) |
+|---|---:|---:|
+| median estimate | 0.140 | 0.13867 |
+| CI95 | [0.128, 0.152] | [0.12847, 0.14887] |
+| std | 0.012 | 0.0052 |
+
+The refresh integrates a Hinton-distilled scorer-saliency surrogate with
+24 in-repo substrate priors plus a 19-primitive packet-compiler savings
+cap. Three substrates predict per-class floors below v2 (`hessian_block_fp`
+≈ 0.133, `mdl_fp4_tto` ≈ 0.134, `scpp_substrate` ≈ 0.135) — the
+self-compression family dominates the predicted low end because it shifts
+the rate-distortion curve at the parameter level rather than the
+representation level.
+
+### Pose-axis dominance at the PR106 frontier
+
+At PR106's operating point (pose_avg ≈ 3.4e-5) the marginal-value-per-byte
+of pose-axis improvements is approximately 2.71x SegNet's. This flips the
+older 77x SegNet-greater-than-pose heuristic that was true at the 1.x
+operating point. Operationally, dispatches targeting the pose axis rank
+above SegNet-axis dispatches at the current frontier — but every numeric
+prediction must still be confirmed by exact CUDA + exact CPU eval before
+any contest claim.
+
+### Provenance tags
+
+Every numeric in this section carries one of:
+
+- `[contest-CUDA <hardware>]` — exact `upstream/evaluate.py --device cuda`
+  on the archive bytes, on contest-compliant NVIDIA hardware.
+- `[contest-CPU GHA Linux x86_64]` — exact `upstream/evaluate.py --device cpu`
+  on the contest's GitHub Actions CI runner family.
+- `[predicted; <source>]` — derived from a model, surrogate, or
+  composition rule; never a measurement.
+- `[empirical:<artifact>]` — measurement against a checked-in artifact
+  whose bytes are reproducible.
+
+Other axis labels (`[macOS-CPU advisory only]`, `[MPS-PROXY]`,
+`[MPS-research-signal]`) appear only in this repository's internal research
+ledgers and are NOT promotion-eligible.
 
 ## Mirrors
 
