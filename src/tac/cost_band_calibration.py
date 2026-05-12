@@ -30,8 +30,22 @@ Schema (cost_band_posterior_v1):
         "predicted_cost_usd_low": <float | null>,
         "predicted_cost_usd_high": <float | null>,
         "prediction_in_band": <bool | null>,
+        "outcome": "successful_dispatch" | "failed_dispatch" | "timed_out" | "harvested_partial",
+        "returncode": <int | null>,       # subprocess returncode (informational; outcome is authoritative)
         "notes": "<optional free-text>"
     }
+
+NV7 anchor-outcome discipline (review-omni 2026-05-12):
+    `predict()` excludes anchors with ``outcome != "successful_dispatch"`` by
+    default. A failed dispatch (e.g. fc-01KREXK209TRX7ED5ZRVXHY1VT 14.77-sec
+    rc=1 from WWW4) measures the CRASH wall-clock, not the training wall-clock;
+    folding it into the percentile band underestimates real cost by 400-750x.
+    Failed anchors are still retained in the posterior for forensic audit but
+    callers must pass ``include_failed=True`` to opt them in. Anchors without
+    an explicit ``outcome`` field default to ``"successful_dispatch"`` for
+    backward compatibility with pre-NV7 rows; the migration tool
+    ``tools/migrate_cost_band_posterior_failed_anchors.py`` tags historical
+    failed rows by inspecting ``notes`` for ``returncode=<nonzero>`` markers.
 
 Wrapper integration (canonical pattern):
     # At end of dispatch script, after wall-clock + cost are known:
@@ -98,6 +112,9 @@ PLATFORM_RATES_USD_PER_HOUR: dict[str, dict[str, float]] = {
     "kaggle": {
         "T4": 0.0,  # free tier
         "P100": 0.0,
+    },
+    "github": {
+        "CPU": 0.0,  # public-repo GHA minutes used for contest-CPU harvests
     },
 }
 
@@ -184,6 +201,19 @@ class CostBandPrediction:
         }
 
 
+SUCCESSFUL_DISPATCH = "successful_dispatch"
+FAILED_DISPATCH = "failed_dispatch"
+TIMED_OUT = "timed_out"
+HARVESTED_PARTIAL = "harvested_partial"
+
+VALID_OUTCOMES = frozenset({
+    SUCCESSFUL_DISPATCH,
+    FAILED_DISPATCH,
+    TIMED_OUT,
+    HARVESTED_PARTIAL,
+})
+
+
 @dataclass(frozen=True)
 class CostBandAnchor:
     """One empirical anchor: a completed dispatch's measured wall-clock + cost.
@@ -191,6 +221,11 @@ class CostBandAnchor:
     ``actual_cost_usd`` is invoice-actual when a provider invoice is available.
     Recovery paths may otherwise append a provider-table estimate; those rows
     must say so in ``notes`` via ``cost_estimate_source=...``.
+
+    NV7 (2026-05-12): ``outcome`` MUST be one of :data:`VALID_OUTCOMES`. Failed
+    or timed-out anchors are retained for forensic audit but excluded from
+    ``predict()`` by default. ``returncode`` is informational; the outcome
+    field is the authoritative include/exclude key.
     """
 
     logged_at_utc: str
@@ -206,6 +241,8 @@ class CostBandAnchor:
     predicted_cost_usd_low: float | None = None
     predicted_cost_usd_high: float | None = None
     prediction_in_band: bool | None = None
+    outcome: str = SUCCESSFUL_DISPATCH
+    returncode: int | None = None
     notes: str = ""
     schema: str = SCHEMA_VERSION
 
@@ -233,6 +270,11 @@ def append_anchor(
     lock = lock_path or LOCK_PATH
     _ensure_state_dir(posterior)
     _ensure_state_dir(lock)
+    if anchor.outcome not in VALID_OUTCOMES:
+        raise ValueError(
+            f"CostBandAnchor.outcome={anchor.outcome!r} not in "
+            f"{sorted(VALID_OUTCOMES)} (NV7 anchor-outcome discipline)"
+        )
     line = json.dumps(
         {
             "schema": anchor.schema,
@@ -249,6 +291,8 @@ def append_anchor(
             "predicted_cost_usd_low": anchor.predicted_cost_usd_low,
             "predicted_cost_usd_high": anchor.predicted_cost_usd_high,
             "prediction_in_band": anchor.prediction_in_band,
+            "outcome": anchor.outcome,
+            "returncode": anchor.returncode,
             "notes": anchor.notes,
         },
         sort_keys=True,
@@ -282,6 +326,17 @@ def load_anchors(
         if d.get("schema") != SCHEMA_VERSION:
             continue
         try:
+            # NV7: missing outcome defaults to SUCCESSFUL_DISPATCH for
+            # backward compat with pre-NV7 anchors. The migration tool
+            # tags historical failed rows by inspecting `notes` for
+            # `returncode=<nonzero>` markers.
+            outcome_raw = d.get("outcome", SUCCESSFUL_DISPATCH)
+            if outcome_raw not in VALID_OUTCOMES:
+                # Refuse to materialize anchors with an unknown outcome string;
+                # treat as malformed line (skip, do NOT default-coerce).
+                continue
+            returncode_raw = d.get("returncode")
+            returncode_val: int | None = None if returncode_raw is None else int(returncode_raw)
             out.append(
                 CostBandAnchor(
                     logged_at_utc=d["logged_at_utc"],
@@ -297,6 +352,8 @@ def load_anchors(
                     predicted_cost_usd_low=d.get("predicted_cost_usd_low"),
                     predicted_cost_usd_high=d.get("predicted_cost_usd_high"),
                     prediction_in_band=d.get("prediction_in_band"),
+                    outcome=outcome_raw,
+                    returncode=returncode_val,
                     notes=d.get("notes", ""),
                 )
             )
@@ -396,11 +453,19 @@ def predict(
     all_flags_on: bool = True,
     posterior_path: Path | None = None,
     matching_anchors_min: int = _WEAK_MIN_ANCHORS,
+    include_failed: bool = False,
 ) -> CostBandPrediction:
     """Predict cost-band for one (platform, gpu, epochs, flags) bucket.
 
     Returns confidence-tagged p10/p50/p90 estimate. Falls back to a
     hand-calibrated stub when N < ``matching_anchors_min``.
+
+    NV7 (2026-05-12): only ``outcome=successful_dispatch`` anchors contribute
+    to the percentile band by default. Failed/timed-out/partially-harvested
+    anchors stay in the posterior for forensic audit but are excluded so a
+    crash-in-72-seconds doesn't underestimate the real training cost. Pass
+    ``include_failed=True`` to override (e.g. for "what's the median wall-
+    clock-to-crash" diagnostics).
     """
     anchors = load_anchors(posterior_path)
     bucket = _epochs_bucket(epochs)
@@ -410,6 +475,7 @@ def predict(
         and a.gpu == gpu
         and _epochs_bucket(a.epochs) == bucket
         and a.all_flags_on == all_flags_on
+        and (include_failed or a.outcome == SUCCESSFUL_DISPATCH)
     ]
     if len(matching) >= _EMPIRICAL_MIN_ANCHORS:
         confidence = "empirical_posterior"
@@ -525,9 +591,8 @@ def normalize_gpu(platform: str, gpu: str) -> str:
         if value == "T4":
             return "T4"
         return value
-    if platform_norm == "vastai":
-        if value in {"4090", "RTX_4090"}:
-            return "4090"
+    if platform_norm == "vastai" and value in {"4090", "RTX_4090"}:
+        return "4090"
     return value
 
 
@@ -653,6 +718,24 @@ def append_platform_training_anchor(
     if cost_meta.get("notes"):
         notes += f"; {cost_meta['notes']}"
 
+    # NV7: derive outcome from the dispatch rc + timed_out signal so future
+    # predict() calls correctly exclude failed dispatches by default. Caller
+    # can override via cost_meta["outcome"] for harvested partial recoveries.
+    outcome_override = cost_meta.get("outcome")
+    if outcome_override is not None and outcome_override in VALID_OUTCOMES:
+        outcome_value = str(outcome_override)
+    elif timed_out:
+        outcome_value = TIMED_OUT
+    elif isinstance(rc, (int, float)) and int(rc) == 0:
+        outcome_value = SUCCESSFUL_DISPATCH
+    elif rc is None:
+        # rc absent => caller did not record subprocess exit; conservatively
+        # tag as harvested_partial so the anchor doesn't poison the band.
+        outcome_value = HARVESTED_PARTIAL
+    else:
+        outcome_value = FAILED_DISPATCH
+    returncode_value: int | None = int(rc) if isinstance(rc, (int, float)) else None
+
     pred_low = _numeric_field(cost_meta.get("predicted_cost_usd_low"))
     pred_high = _numeric_field(cost_meta.get("predicted_cost_usd_high"))
     prediction_in_band: bool | None
@@ -675,6 +758,8 @@ def append_platform_training_anchor(
         predicted_cost_usd_low=pred_low,
         predicted_cost_usd_high=pred_high,
         prediction_in_band=prediction_in_band,
+        outcome=outcome_value,
+        returncode=returncode_value,
         notes=notes,
     )
     append_anchor(anchor, posterior_path=posterior_path, lock_path=lock_path)
@@ -696,6 +781,8 @@ def append_platform_training_anchor(
         "elapsed_seconds": float(elapsed),
         "estimated_cost_usd": estimated_cost,
         "hourly_rate_usd": hourly_rate,
+        "outcome": outcome_value,
+        "returncode": returncode_value,
         "posterior_path": str(posterior_path) if posterior_path is not None else None,
         "notes": notes,
     }
@@ -704,16 +791,26 @@ def append_platform_training_anchor(
     # epochs and elapsed_seconds are present, refuse to write a manifest that
     # claims more epochs than physics permits (≥ 50 ms per epoch is a very
     # loose lower bound for a real training loop).
+    #
+    # NV7 (2026-05-12): PCC3 only fires on successful_dispatch outcomes. A
+    # failed dispatch that crashed in 14.77 seconds is NOT a stub-loop — it
+    # is a real crash anchor we want to retain for predict() to exclude.
+    # PCC3 catches stub-loops that claim success; the outcome field is the
+    # authoritative success signal.
     _MIN_SEC_PER_EPOCH = 0.05
-    if epochs > 0 and elapsed >= 0:
-        if elapsed < epochs * _MIN_SEC_PER_EPOCH:
-            raise RuntimeError(
-                f"stats internal-consistency violation (PCC3): "
-                f"epochs={epochs} but elapsed_seconds={elapsed:.3f} "
-                f"< epochs * {_MIN_SEC_PER_EPOCH} = "
-                f"{epochs * _MIN_SEC_PER_EPOCH:.3f}. "
-                f"Stub-loop suspected; refusing to write platform training anchor manifest."
-            )
+    if (
+        outcome_value == SUCCESSFUL_DISPATCH
+        and epochs > 0
+        and elapsed >= 0
+        and elapsed < epochs * _MIN_SEC_PER_EPOCH
+    ):
+        raise RuntimeError(
+            f"stats internal-consistency violation (PCC3): "
+            f"epochs={epochs} but elapsed_seconds={elapsed:.3f} "
+            f"< epochs * {_MIN_SEC_PER_EPOCH} = "
+            f"{epochs * _MIN_SEC_PER_EPOCH:.3f}. "
+            f"Stub-loop suspected; refusing to write platform training anchor manifest."
+        )
     # The marker file's JSON payload must match what an idempotent re-run
     # returns. Serialize stably to keep byte-identical output across runs.
     marker.write_text(
@@ -724,16 +821,31 @@ def append_platform_training_anchor(
 
 def summary_by_bucket(
     posterior_path: Path | None = None,
+    *,
+    include_failed: bool = False,
 ) -> list[dict]:
     """Aggregate every bucket present in the posterior with N + median cost.
 
     Used by ``tools/cost_band_calibration_summary.py`` for the operator-facing
     table. Read-only; does NOT modify the posterior.
+
+    NV7 (2026-05-12): mirrors :func:`predict` — only successful-dispatch
+    anchors contribute to the summary by default; failed/timed-out anchor
+    counts are surfaced in ``n_failed`` for transparency. Pass
+    ``include_failed=True`` to fold them into ``p50_cost_usd``.
     """
     anchors = load_anchors(posterior_path)
     buckets: dict[tuple, list[CostBandAnchor]] = {}
+    failed_buckets: dict[tuple, int] = {}
     for a in anchors:
         key = (a.platform, a.gpu, _epochs_bucket(a.epochs), a.all_flags_on)
+        if a.outcome != SUCCESSFUL_DISPATCH:
+            failed_buckets[key] = failed_buckets.get(key, 0) + 1
+            if not include_failed:
+                # Ensure failed-only buckets still surface (with n_anchors=0)
+                # so operators see them in the summary report. NV7 transparency.
+                buckets.setdefault(key, [])
+                continue
         buckets.setdefault(key, []).append(a)
     out = []
     for (platform, gpu, ep, flags), rows in sorted(buckets.items()):
@@ -745,9 +857,10 @@ def summary_by_bucket(
                 "epochs_bucket": ep,
                 "all_flags_on": flags,
                 "n_anchors": len(rows),
-                "p50_cost_usd": _percentile(costs, 50),
-                "min_cost_usd": min(costs),
-                "max_cost_usd": max(costs),
+                "n_failed": failed_buckets.get((platform, gpu, ep, flags), 0),
+                "p50_cost_usd": _percentile(costs, 50) if costs else 0.0,
+                "min_cost_usd": min(costs) if costs else 0.0,
+                "max_cost_usd": max(costs) if costs else 0.0,
             }
         )
     return out

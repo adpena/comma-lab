@@ -352,8 +352,434 @@ def test_append_cost_band_anchor_cli_uses_canonical_tool_bootstrap(tmp_path: Pat
     assert [anchor.dispatch_label for anchor in anchors] == ["cli_smoke"]
 
 
+def test_append_cost_band_anchor_cli_accepts_github_cpu_and_failed_outcome(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    posterior = tmp_path / "posterior.jsonl"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "append_cost_band_anchor.py"),
+            "--dispatch-label",
+            "gha_failed_smoke",
+            "--trainer",
+            "upstream/.github/workflows/eval.yml",
+            "--platform",
+            "github",
+            "--gpu",
+            "cpu",
+            "--epochs",
+            "0",
+            "--batch-size",
+            "16",
+            "--actual-wall-clock-sec",
+            "60",
+            "--actual-cost-usd",
+            "0.00",
+            "--outcome",
+            FAILED_DISPATCH,
+            "--returncode",
+            "1",
+            "--posterior-path",
+            str(posterior),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    anchors = load_anchors(posterior)
+    assert len(anchors) == 1
+    assert anchors[0].platform == "github"
+    assert anchors[0].gpu == "cpu"
+    assert anchors[0].outcome == FAILED_DISPATCH
+    assert anchors[0].returncode == 1
+
+
 def test_append_cost_band_anchor_cli_has_no_manual_sys_path_mutation() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     text = (repo_root / "tools" / "append_cost_band_anchor.py").read_text()
     assert "tools.tool_bootstrap" in text
     assert "sys.path.insert" not in text
+
+
+# -- NV7: anchor-outcome discipline (review-omni 2026-05-12) -------------------
+#
+# Bug class: failed-dispatch anchors (returncode=1 in 14-72 seconds) were
+# folded into the percentile band, underestimating real cost by 400-750x.
+# The Modal A100 anchor `fc-01KREXK209TRX7ED5ZRVXHY1VT` (14.77 sec rc=1 from
+# WWW4) made the band predict "weak_posterior $0.016" instead of the
+# hand-calibrated stub $3-8. predict() now excludes outcome != successful_dispatch
+# by default; include_failed=True opt-in restores the legacy behavior.
+
+import pytest  # noqa: E402
+
+from tac.cost_band_calibration import (  # noqa: E402
+    FAILED_DISPATCH,
+    HARVESTED_PARTIAL,
+    SUCCESSFUL_DISPATCH,
+    TIMED_OUT,
+    VALID_OUTCOMES,
+    append_platform_training_anchor,
+)
+
+
+def _failed_anchor(*, label: str = "F", cost: float = 0.016, rc: int = 1) -> CostBandAnchor:
+    """A failed-dispatch anchor mirroring the WWW4 fc-01KREXK209... shape."""
+    return CostBandAnchor(
+        logged_at_utc="2026-05-12T17:15:30+00:00",
+        dispatch_label=label,
+        trainer="experiments/train_substrate_sane_hnerv.py",
+        platform="modal",
+        gpu="A100",
+        epochs=2000,
+        batch_size=32,
+        all_flags_on=True,
+        actual_wall_clock_sec=14.77,  # the WWW4 crash wall-clock
+        actual_cost_usd=cost,
+        outcome=FAILED_DISPATCH,
+        returncode=rc,
+        notes="WWW4 fc-01KREXK209TRX7ED5ZRVXHY1VT regression fixture",
+    )
+
+
+def test_nv7_failed_anchors_default_excluded_from_predict(tmp_path: Path) -> None:
+    """Posterior with ONLY failed anchors → falls back to hand-calibrated stub."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    append_anchor(_failed_anchor(label="F1"), posterior_path=pp, lock_path=lp)
+    append_anchor(_failed_anchor(label="F2"), posterior_path=pp, lock_path=lp)
+    append_anchor(_failed_anchor(label="F3"), posterior_path=pp, lock_path=lp)
+    # 3 anchors total in file BUT all failed -> predict ignores them.
+    p = predict("modal", "A100", 2000, all_flags_on=True, posterior_path=pp)
+    assert p.confidence_tag == "hand_calibrated_fallback"
+    assert p.n_anchors == 0
+    # And the hand-calibrated stub at (modal, A100, 3000, True) returns ~$5 p50.
+    assert p.p50_cost_usd > 0.5  # NOT $0.016 from the failed anchors
+
+
+def test_nv7_predict_include_failed_true_folds_them_in(tmp_path: Path) -> None:
+    """Explicit include_failed=True opt-in reproduces the legacy behavior."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    for i in range(3):
+        append_anchor(_failed_anchor(label=f"F{i}", cost=0.016), posterior_path=pp, lock_path=lp)
+    p = predict(
+        "modal", "A100", 2000,
+        all_flags_on=True,
+        posterior_path=pp,
+        include_failed=True,
+    )
+    assert p.confidence_tag == "empirical_posterior"
+    assert p.n_anchors == 3
+    assert p.p50_cost_usd == 0.016  # legacy poisoning visible when opt-in
+
+
+def test_nv7_predict_mixes_successful_and_failed(tmp_path: Path) -> None:
+    """3 successful at $5 + 2 failed at $0.016 -> predict uses only the 3 successful."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    for i in range(3):
+        append_anchor(
+            CostBandAnchor(
+                logged_at_utc=f"2026-05-12T18:0{i}:00+00:00",
+                dispatch_label=f"S{i}",
+                trainer="experiments/train_substrate_sane_hnerv.py",
+                platform="modal", gpu="A100", epochs=2000, batch_size=32,
+                all_flags_on=True,
+                actual_wall_clock_sec=4500.0,
+                actual_cost_usd=5.0,
+                outcome=SUCCESSFUL_DISPATCH,
+                returncode=0,
+            ),
+            posterior_path=pp, lock_path=lp,
+        )
+    for i in range(2):
+        append_anchor(_failed_anchor(label=f"F{i}", cost=0.016), posterior_path=pp, lock_path=lp)
+    p = predict("modal", "A100", 2000, all_flags_on=True, posterior_path=pp)
+    assert p.confidence_tag == "empirical_posterior"
+    assert p.n_anchors == 3
+    assert p.p50_cost_usd == 5.0  # NOT poisoned by the 2 failed at $0.016
+
+
+def test_nv7_anchor_with_no_outcome_field_defaults_to_successful(tmp_path: Path) -> None:
+    """Pre-NV7 anchors (no outcome field) load as successful_dispatch."""
+    pp = tmp_path / "posterior.jsonl"
+    pp.parent.mkdir(parents=True, exist_ok=True)
+    pp.write_text(
+        json.dumps({
+            "schema": SCHEMA_VERSION,
+            "logged_at_utc": "2026-05-12T18:00:00+00:00",
+            "dispatch_label": "pre_nv7_legacy",
+            "trainer": "experiments/x.py", "platform": "modal", "gpu": "T4",
+            "epochs": 3000, "batch_size": 32, "all_flags_on": True,
+            "actual_wall_clock_sec": 100.0, "actual_cost_usd": 5.0,
+            # NO "outcome" field
+        }) + "\n",
+        encoding="utf-8",
+    )
+    anchors = load_anchors(pp)
+    assert len(anchors) == 1
+    assert anchors[0].outcome == SUCCESSFUL_DISPATCH
+    assert anchors[0].returncode is None
+
+
+def test_nv7_migration_tool_is_dry_run_by_default_and_apply_tags_failed(tmp_path: Path) -> None:
+    """Historical rows with returncode=1 are migrated only under explicit --apply."""
+    repo_root = Path(__file__).resolve().parents[3]
+    posterior = tmp_path / "posterior.jsonl"
+    lock = tmp_path / "posterior.lock"
+    legacy_row = {
+        "schema": SCHEMA_VERSION,
+        "logged_at_utc": "2026-05-12T18:00:00+00:00",
+        "dispatch_label": "legacy_failed",
+        "trainer": "experiments/x.py",
+        "platform": "modal",
+        "gpu": "A100",
+        "epochs": 2000,
+        "batch_size": 32,
+        "all_flags_on": True,
+        "actual_wall_clock_sec": 14.77,
+        "actual_cost_usd": 0.016,
+        "notes": "cost_estimate_source=modal; returncode=1; timed_out=False",
+    }
+    posterior.write_text(json.dumps(legacy_row, sort_keys=True) + "\n", encoding="utf-8")
+    before = posterior.read_text(encoding="utf-8")
+    tool = repo_root / "tools" / "migrate_cost_band_posterior_failed_anchors.py"
+
+    dry = subprocess.run(
+        [
+            sys.executable,
+            str(tool),
+            "--posterior-path",
+            str(posterior),
+            "--lock-path",
+            str(lock),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert dry.returncode == 0, dry.stderr
+    dry_summary = json.loads(dry.stdout)
+    assert dry_summary["dry_run"] is True
+    assert dry_summary["migrated"] == 1
+    assert posterior.read_text(encoding="utf-8") == before
+
+    applied = subprocess.run(
+        [
+            sys.executable,
+            str(tool),
+            "--apply",
+            "--posterior-path",
+            str(posterior),
+            "--lock-path",
+            str(lock),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert applied.returncode == 0, applied.stderr
+    applied_summary = json.loads(applied.stdout)
+    assert applied_summary["migrated"] == 1
+    assert Path(applied_summary["backup_path"]).is_file()
+    migrated = json.loads(posterior.read_text(encoding="utf-8"))
+    assert migrated["outcome"] == FAILED_DISPATCH
+    assert migrated["returncode"] == 1
+
+
+def test_nv7_anchor_with_unknown_outcome_skipped_as_malformed(tmp_path: Path) -> None:
+    """A row with outcome='something_weird' is skipped, not silent-coerced."""
+    pp = tmp_path / "posterior.jsonl"
+    pp.parent.mkdir(parents=True, exist_ok=True)
+    pp.write_text(
+        json.dumps({
+            "schema": SCHEMA_VERSION,
+            "logged_at_utc": "2026-05-12T18:00:00+00:00",
+            "dispatch_label": "bad", "trainer": "x", "platform": "modal", "gpu": "T4",
+            "epochs": 3000, "batch_size": 32, "all_flags_on": True,
+            "actual_wall_clock_sec": 100.0, "actual_cost_usd": 5.0,
+            "outcome": "definitely_not_a_valid_outcome",
+        }) + "\n",
+        encoding="utf-8",
+    )
+    assert load_anchors(pp) == []
+
+
+def test_nv7_append_rejects_invalid_outcome() -> None:
+    """append_anchor() refuses CostBandAnchor with outcome not in VALID_OUTCOMES."""
+    bad_anchor = CostBandAnchor(
+        logged_at_utc="2026-05-12T18:00:00+00:00",
+        dispatch_label="bad", trainer="x", platform="modal", gpu="T4",
+        epochs=3000, batch_size=32, all_flags_on=True,
+        actual_wall_clock_sec=100.0, actual_cost_usd=5.0,
+        outcome="not_in_the_enum",
+    )
+    with pytest.raises(ValueError, match="NV7"):
+        append_anchor(bad_anchor)
+
+
+def test_nv7_outcome_field_serialized_to_jsonl(tmp_path: Path) -> None:
+    """Round-trip preserves outcome + returncode on the JSONL line."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    append_anchor(_failed_anchor(label="F", cost=0.016, rc=137), posterior_path=pp, lock_path=lp)
+    text = pp.read_text(encoding="utf-8")
+    parsed = json.loads(text.splitlines()[0])
+    assert parsed["outcome"] == FAILED_DISPATCH
+    assert parsed["returncode"] == 137
+    # And it loads back faithfully.
+    loaded = load_anchors(pp)
+    assert loaded[0].outcome == FAILED_DISPATCH
+    assert loaded[0].returncode == 137
+
+
+def test_nv7_valid_outcomes_constant_is_frozen_set() -> None:
+    """VALID_OUTCOMES is the source of truth — must contain the four canonical values."""
+    assert SUCCESSFUL_DISPATCH in VALID_OUTCOMES
+    assert FAILED_DISPATCH in VALID_OUTCOMES
+    assert TIMED_OUT in VALID_OUTCOMES
+    assert HARVESTED_PARTIAL in VALID_OUTCOMES
+    assert isinstance(VALID_OUTCOMES, frozenset)
+
+
+def test_nv7_append_platform_training_anchor_derives_outcome_from_rc(tmp_path: Path) -> None:
+    """append_platform_training_anchor() now derives outcome from result['returncode']."""
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    metadata = {
+        "label": "rc0_smoke",
+        "gpu": "A100",
+        "cost_band_anchor": {
+            "trainer": "experiments/train_substrate_sane_hnerv.py",
+            "epochs": 2000,
+            "batch_size": 32,
+            "all_flags_on": True,
+        },
+    }
+    # Success case: rc=0 -> successful_dispatch
+    manifest = append_platform_training_anchor(
+        "modal",
+        out_dir=out_dir,
+        metadata=metadata,
+        result={"returncode": 0, "elapsed_seconds": 3600.0, "timed_out": False},
+        posterior_path=pp,
+        lock_path=lp,
+    )
+    assert manifest["outcome"] == SUCCESSFUL_DISPATCH
+    assert manifest["returncode"] == 0
+    loaded = load_anchors(pp)
+    assert loaded[0].outcome == SUCCESSFUL_DISPATCH
+
+
+def test_nv7_append_platform_training_anchor_rc_nonzero_is_failed(tmp_path: Path) -> None:
+    """rc=1 -> failed_dispatch (mirrors the WWW4 fc-01KREXK209... rc=1 case)."""
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    metadata = {
+        "label": "www4_regression_fixture",
+        "gpu": "A100",
+        "cost_band_anchor": {
+            "trainer": "experiments/train_substrate_sane_hnerv.py",
+            "epochs": 2000,
+            "batch_size": 32,
+            "all_flags_on": True,
+        },
+    }
+    manifest = append_platform_training_anchor(
+        "modal",
+        out_dir=out_dir,
+        metadata=metadata,
+        result={"returncode": 1, "elapsed_seconds": 14.77, "timed_out": False},
+        posterior_path=pp,
+        lock_path=lp,
+    )
+    assert manifest["outcome"] == FAILED_DISPATCH
+    assert manifest["returncode"] == 1
+    # And predict() ignores it.
+    p = predict("modal", "A100", 2000, all_flags_on=True, posterior_path=pp)
+    assert p.confidence_tag == "hand_calibrated_fallback"
+    assert p.n_anchors == 0
+
+
+def test_nv7_append_platform_training_anchor_timed_out_is_distinct(tmp_path: Path) -> None:
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    metadata = {
+        "label": "timeout_fixture",
+        "gpu": "A100",
+        "cost_band_anchor": {
+            "trainer": "experiments/train_x.py",
+            "epochs": 2000,
+            "batch_size": 32,
+            "all_flags_on": True,
+        },
+    }
+    manifest = append_platform_training_anchor(
+        "modal",
+        out_dir=out_dir,
+        metadata=metadata,
+        result={"returncode": -9, "elapsed_seconds": 14400.0, "timed_out": True},
+        posterior_path=pp,
+        lock_path=lp,
+    )
+    assert manifest["outcome"] == TIMED_OUT
+    assert manifest["returncode"] == -9
+
+
+def test_nv7_summary_by_bucket_excludes_failed_by_default(tmp_path: Path) -> None:
+    """summary_by_bucket() mirrors predict() — failed anchors are surfaced as n_failed."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    # 2 successful + 1 failed in the same bucket.
+    for c in [5.0, 7.0]:
+        append_anchor(_make_anchor(cost=c), posterior_path=pp, lock_path=lp)
+    append_anchor(
+        CostBandAnchor(
+            logged_at_utc="2026-05-12T18:00:00+00:00",
+            dispatch_label="F", trainer="experiments/train_x.py",
+            platform="modal", gpu="T4", epochs=3000, batch_size=32,
+            all_flags_on=True, actual_wall_clock_sec=14.0, actual_cost_usd=0.01,
+            outcome=FAILED_DISPATCH, returncode=1,
+        ),
+        posterior_path=pp, lock_path=lp,
+    )
+    out = summary_by_bucket(pp)
+    assert len(out) == 1
+    row = out[0]
+    assert row["n_anchors"] == 2  # only successful
+    assert row["n_failed"] == 1
+    assert row["p50_cost_usd"] == 6.0  # (5+7)/2
+    assert row["min_cost_usd"] == 5.0
+
+
+def test_nv7_weak_posterior_warning_when_only_two_successful(tmp_path: Path) -> None:
+    """The Phase B-1 canary case: 2 successful + 1 failed = weak_posterior on 2 successful."""
+    pp = tmp_path / "posterior.jsonl"
+    lp = tmp_path / "lock"
+    for c in [4.0, 6.0]:
+        append_anchor(
+            CostBandAnchor(
+                logged_at_utc="2026-05-12T18:00:00+00:00",
+                dispatch_label=f"S{c}", trainer="experiments/x.py",
+                platform="modal", gpu="A100", epochs=2000, batch_size=32,
+                all_flags_on=True, actual_wall_clock_sec=3600.0, actual_cost_usd=c,
+                outcome=SUCCESSFUL_DISPATCH, returncode=0,
+            ),
+            posterior_path=pp, lock_path=lp,
+        )
+    append_anchor(_failed_anchor(label="F", cost=0.016), posterior_path=pp, lock_path=lp)
+    p = predict("modal", "A100", 2000, all_flags_on=True, posterior_path=pp)
+    assert p.confidence_tag == "weak_posterior"
+    assert p.n_anchors == 2  # 2 successful, 1 failed-excluded
+    # p50 of [4.0, 6.0] = 5.0
+    assert p.p50_cost_usd == 5.0

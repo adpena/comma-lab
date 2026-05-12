@@ -33,6 +33,8 @@ ensure_repo_imports(_REPO_ROOT)
 
 from tac.cost_band_calibration import (  # noqa: E402
     POSTERIOR_PATH,
+    SUCCESSFUL_DISPATCH,
+    VALID_OUTCOMES,
     CostBandAnchor,
     _now_utc_iso,
     append_anchor,
@@ -48,7 +50,7 @@ def main() -> int:
     parser.add_argument("--trainer", required=True,
                         help="Trainer script path, e.g. experiments/train_x.py")
     parser.add_argument("--platform", required=True,
-                        choices=["modal", "vastai", "lightning", "azure", "kaggle", "local"],
+                        choices=["modal", "vastai", "lightning", "azure", "kaggle", "github", "local"],
                         help="Dispatch platform")
     parser.add_argument("--gpu", required=True,
                         help="GPU class: T4 | A10G | A100 | H100 | 4090 | etc.")
@@ -60,6 +62,13 @@ def main() -> int:
     parser.add_argument("--actual-cost-usd", type=float, required=True)
     parser.add_argument("--predicted-cost-usd-low", type=float, default=None)
     parser.add_argument("--predicted-cost-usd-high", type=float, default=None)
+    parser.add_argument(
+        "--outcome",
+        choices=sorted(VALID_OUTCOMES),
+        default=SUCCESSFUL_DISPATCH,
+        help="Dispatch outcome; failed/timed-out rows are retained but excluded from predictions by default.",
+    )
+    parser.add_argument("--returncode", type=int, default=None)
     parser.add_argument("--notes", default="",
                         help="Optional free-text annotation")
     parser.add_argument("--posterior-path", type=Path, default=None,
@@ -86,6 +95,8 @@ def main() -> int:
         predicted_cost_usd_low=args.predicted_cost_usd_low,
         predicted_cost_usd_high=args.predicted_cost_usd_high,
         prediction_in_band=prediction_in_band,
+        outcome=args.outcome,
+        returncode=args.returncode,
         notes=args.notes,
     )
     append_anchor(anchor, posterior_path=args.posterior_path)
