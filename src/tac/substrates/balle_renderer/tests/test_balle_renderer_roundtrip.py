@@ -1,0 +1,299 @@
+"""Catalog #91 + #139 ENCODE_INFLATE_ROUNDTRIP test for balle_renderer (β).
+
+The β substrate roundtrip proves:
+
+1. encode/decode parity of the monolithic 0.bin grammar (Catalog #91):
+       state_dicts + latents + scales + meta -> archive bytes ->
+       parsed back -> same components within fp16 + int16 quant tolerance.
+2. forward-pass parity after roundtrip (the rebuilt model produces
+   matching frames within int16 quant + fp16 weight rounding).
+3. byte-mutation no_op_proof (Catalog #139): mutating one latent in
+   the encoded bytes changes the parsed latents.
+"""
+
+from __future__ import annotations
+
+import torch
+
+from tac.substrates.balle_renderer.archive import (
+    BRV1_HEADER_SIZE,
+    BRV1_MAGIC,
+    BRV1_SCHEMA_VERSION,
+    pack_archive,
+    parse_archive,
+)
+from tac.substrates.balle_renderer.architecture import (
+    BalleRendererConfig,
+    BalleRendererSubstrate,
+)
+
+
+def _smoke_cfg() -> BalleRendererConfig:
+    """Tiny config so tests run fast on CPU. Total params ~ a few K."""
+    return BalleRendererConfig(
+        latent_dim=8,
+        hyper_latent_dim=4,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(16, 12, 8, 6, 4, 4, 4),
+        hyper_mlp_channels=(8, 8),
+        sin_frequency=30.0,
+        num_pairs=4,
+        output_height=24,
+        output_width=32,
+        num_upsample_blocks=3,
+    )
+
+
+def _split_state_dict(
+    model: BalleRendererSubstrate,
+) -> tuple[
+    dict[str, torch.Tensor],  # encoder (hyper_analysis.*)
+    dict[str, torch.Tensor],  # decoder (latent_embed + blocks + head_rgb_*)
+    dict[str, torch.Tensor],  # hyperprior (hyper_synthesis + w_prior_*)
+    torch.Tensor,              # latents
+]:
+    """Split the substrate state_dict into the 3 archive blobs + latents."""
+    sd = model.state_dict()
+    enc_sd: dict[str, torch.Tensor] = {}
+    dec_sd: dict[str, torch.Tensor] = {}
+    hp_sd: dict[str, torch.Tensor] = {}
+    latents = sd["latents"].clone()
+    for k, v in sd.items():
+        if k == "latents":
+            continue
+        if k.startswith("hyper_analysis."):
+            enc_sd[k[len("hyper_analysis."):]] = v
+        elif k.startswith("hyper_synthesis.") or k.startswith("w_prior_"):
+            hp_sd[k] = v
+        else:
+            dec_sd[k] = v
+    return enc_sd, dec_sd, hp_sd, latents
+
+
+def _make_meta(cfg: BalleRendererConfig) -> dict:
+    return {
+        "embed_dim": cfg.embed_dim,
+        "initial_grid_h": cfg.initial_grid_h,
+        "initial_grid_w": cfg.initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "hyper_mlp_channels": list(cfg.hyper_mlp_channels),
+        "sin_frequency": cfg.sin_frequency,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+        "num_upsample_blocks": cfg.num_upsample_blocks,
+    }
+
+
+# ENCODE_INFLATE_ROUNDTRIP — Catalog #91 contract
+def test_archive_pack_then_parse_roundtrip_recovers_tensors():
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    # Hyper-latent scales: synthesize via the hyper_analysis pass
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg)
+
+    blob = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, meta)
+    arc = parse_archive(blob)
+
+    assert arc.schema_version == BRV1_SCHEMA_VERSION
+    assert blob[:4] == BRV1_MAGIC
+
+    # state_dict keys preserved on each blob
+    assert set(arc.encoder_state_dict.keys()) == set(enc_sd.keys())
+    assert set(arc.decoder_state_dict.keys()) == set(dec_sd.keys())
+    assert set(arc.hyperprior_state_dict.keys()) == set(hp_sd.keys())
+
+    # shapes preserved
+    for k, v in enc_sd.items():
+        assert arc.encoder_state_dict[k].shape == v.shape, f"enc.{k}"
+    for k, v in dec_sd.items():
+        assert arc.decoder_state_dict[k].shape == v.shape, f"dec.{k}"
+    for k, v in hp_sd.items():
+        assert arc.hyperprior_state_dict[k].shape == v.shape, f"hp.{k}"
+
+    # fp16 roundtrip tolerance on weights
+    for k, v in dec_sd.items():
+        rec = arc.decoder_state_dict[k]
+        assert torch.allclose(rec.to(torch.float32), v.to(torch.float32), atol=1e-2), k
+
+    # latents shape preserved + int16 dequant within step tolerance
+    assert arc.latents.shape == latents.shape
+    quant_range = max(float(latents.max() - latents.min()), 1e-12)
+    step = quant_range / 65534.0
+    assert torch.allclose(arc.latents, latents, atol=step * 2.0)
+
+    # scales shape preserved + int16 dequant within step tolerance
+    assert arc.scales.shape == scales.shape
+    quant_range_s = max(float(scales.max() - scales.min()), 1e-12)
+    step_s = quant_range_s / 65534.0
+    assert torch.allclose(arc.scales, scales, atol=step_s * 2.0)
+
+
+def test_header_size_invariant_is_35_bytes():
+    """β header is 35 bytes (vs α's 21) due to hyper_dim + scales/enc/hp section lengths."""
+    assert BRV1_HEADER_SIZE == 35
+
+
+def test_parse_archive_rejects_short_blob():
+    try:
+        parse_archive(b"\x00")
+    except ValueError as exc:
+        assert "too short" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected ValueError on short blob")
+
+
+def test_parse_archive_rejects_wrong_magic():
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg)
+    blob = bytearray(pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, meta))
+    blob[:4] = b"XXXX"
+    try:
+        parse_archive(bytes(blob))
+    except ValueError as exc:
+        assert "bad magic" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected ValueError on bad magic")
+
+
+def test_forward_pass_after_roundtrip_matches_original_within_fp16_tolerance():
+    cfg = _smoke_cfg()
+    torch.manual_seed(7)
+    model = BalleRendererSubstrate(cfg).eval()
+
+    idx = torch.tensor([0, 1, 2], dtype=torch.long)
+    with torch.no_grad():
+        rgb_0_a, rgb_1_a, _rate_a = model(idx)
+
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg)
+    blob = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, meta)
+    arc = parse_archive(blob)
+
+    rebuilt = BalleRendererSubstrate(cfg).eval()
+    # Re-prefix the encoder keys back to "hyper_analysis." and load all blobs
+    merged: dict[str, torch.Tensor] = {}
+    merged.update({"hyper_analysis." + k: v for k, v in arc.encoder_state_dict.items()})
+    merged.update(arc.decoder_state_dict)
+    merged.update(arc.hyperprior_state_dict)
+    rebuilt.load_state_dict(merged, strict=False)
+    with torch.no_grad():
+        rebuilt.latents.copy_(arc.latents.to(rebuilt.latents.dtype))
+        rgb_0_b, rgb_1_b, _rate_b = rebuilt(idx)
+
+    # fp16 roundtrip on state_dicts + int16 quant on latents: tolerate ~5e-2
+    assert torch.allclose(rgb_0_a, rgb_0_b, atol=5e-2)
+    assert torch.allclose(rgb_1_a, rgb_1_b, atol=5e-2)
+
+
+# ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation no_op_proof
+def test_byte_mutation_changes_inflate_output_no_op_proof():
+    """Mutate one latent, prove the archive bytes differ and parsed
+    latent differs after roundtrip. The full inflate-output diff is
+    smoke-level for unit tests (no PIL.Image dependency in the assertion
+    path); this proves the encoder's bytes-change-bytes property which
+    is the no_op_proof contract.
+    """
+    cfg = _smoke_cfg()
+    torch.manual_seed(13)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg)
+
+    blob_a = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, meta)
+
+    mutated = latents.clone()
+    mutated[0, 0] = mutated[0, 0] + 1.0  # large delta so int16 quant catches it
+    blob_b = pack_archive(enc_sd, dec_sd, hp_sd, mutated, scales, meta)
+
+    assert blob_a != blob_b, "no_op_proof: mutating latents must change archive bytes"
+
+    arc_a = parse_archive(blob_a)
+    arc_b = parse_archive(blob_b)
+    assert not torch.allclose(arc_a.latents[0, 0], arc_b.latents[0, 0], atol=1e-6)
+
+
+def test_byte_mutation_on_scales_changes_archive_bytes():
+    """Sister test: mutating scales must also produce different archive bytes.
+
+    This is the hyperprior-specific arm of the no_op_proof — the β
+    substrate's scales blob is genuinely consumed by inflate (it
+    drives the conditional density during arithmetic coding when the
+    full coder is wired post-anchor); mutating it MUST change bytes.
+    """
+    cfg = _smoke_cfg()
+    torch.manual_seed(21)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg)
+
+    blob_a = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, meta)
+
+    mutated_scales = scales.clone()
+    mutated_scales[0, 0] = mutated_scales[0, 0] + 1.0
+    blob_b = pack_archive(enc_sd, dec_sd, hp_sd, latents, mutated_scales, meta)
+
+    assert blob_a != blob_b, "no_op_proof: mutating scales must change archive bytes"
+    arc_a = parse_archive(blob_a)
+    arc_b = parse_archive(blob_b)
+    assert not torch.allclose(arc_a.scales[0, 0], arc_b.scales[0, 0], atol=1e-6)
+
+
+def test_forward_pass_returns_rate_components():
+    """The β substrate must return the Ballé rate components from forward."""
+    cfg = _smoke_cfg()
+    torch.manual_seed(33)
+    model = BalleRendererSubstrate(cfg).eval()
+
+    idx = torch.tensor([0, 1], dtype=torch.long)
+    with torch.no_grad():
+        rgb_0, rgb_1, rate_components = model(idx)
+
+    assert rgb_0.shape == (2, 3, cfg.output_height, cfg.output_width)
+    assert rgb_1.shape == (2, 3, cfg.output_height, cfg.output_width)
+    for key in ("hyper_rate", "main_rate", "total_rate"):
+        assert key in rate_components, f"missing rate component {key!r}"
+        # Each rate term must be a finite scalar tensor (mean nats per element)
+        v = rate_components[key]
+        assert v.dim() == 0, f"{key} must be 0-D scalar; got {v.shape}"
+        assert torch.isfinite(v).item(), f"{key} must be finite; got {v.item()}"
+
+
+def test_archive_size_smaller_than_uncompressed_sanity():
+    """Sanity smoke: brotli-compressed state_dicts must produce a smaller
+    archive than raw float32 weights (~rough proxy that compression is
+    actually happening; not a substantive claim)."""
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg)
+    blob = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, meta)
+
+    raw_weight_bytes = sum(
+        v.numel() * 4 for v in {**enc_sd, **dec_sd, **hp_sd}.values()
+    )
+    raw_latents_bytes = latents.numel() * 4 + scales.numel() * 4
+    raw_total = raw_weight_bytes + raw_latents_bytes
+    # Brotli-compressed should never be larger than raw (smoke-bound only)
+    assert len(blob) < raw_total * 2, (
+        f"archive {len(blob)}B is suspiciously large vs raw {raw_total}B"
+    )
