@@ -102,6 +102,30 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+# W/I/A I-1 wire-in (2026-05-12, decision I-1): the autonomous loop's
+# rank_candidates step now optionally consumes the continual-learning posterior
+# AND the cost-band-calibration posterior so empirical anchors reweight
+# predicted score deltas (continual-learning) and refresh cost-band envelope
+# decisions (cost-band). The wire-in mirrors `tools/cathedral_autopilot.py`'s
+# `_posterior_correction_for_technique` pattern: a posterior-derived factor
+# multiplies predicted_score_delta to produce an `adjusted_predicted_delta`
+# that drives the ranking sort. The autopilot ranks are then surfaced as
+# halt events for operator decision. Per CLAUDE.md "Subagent
+# coherence-by-default" the wire-in is the structural fix; the per-candidate
+# correction never auto-promotes nor auto-kills.
+try:  # pragma: no cover - exercised by integration tests
+    from tac.continual_learning import (
+        load_posterior as load_continual_learning_posterior,
+        posterior_query_track_correction,
+    )
+    from tac.cost_band_calibration import predict as predict_cost_band
+    _POSTERIOR_IMPORTS_OK = True
+except Exception:  # pragma: no cover - tests can stub these
+    load_continual_learning_posterior = None  # type: ignore[assignment]
+    posterior_query_track_correction = None  # type: ignore[assignment]
+    predict_cost_band = None  # type: ignore[assignment]
+    _POSTERIOR_IMPORTS_OK = False
+
 
 AUTONOMOUS_LOOP_SCHEMA = "tac_cathedral_autopilot_autonomous_loop_v1"
 
@@ -283,10 +307,42 @@ class LoopIterationReport:
 # ── Pure ranking + halt-event construction ─────────────────────────────────
 
 
+def _posterior_correction_factor(
+    candidate: CandidateRow,
+    posterior: Any | None,
+) -> tuple[float, int, str]:
+    """Return ``(correction_factor, n_observations, key)`` for a candidate.
+
+    W/I/A I-1 wire-in (2026-05-12): query the continual-learning posterior
+    using the candidate's ``family`` field as the track-correction key. The
+    factor multiplies the candidate's predicted_score_delta; ``n>0`` means
+    empirical anchors exist for this family.
+
+    Returns ``(1.0, 0, "")`` when the posterior is absent or no matching
+    anchors are available. Per CLAUDE.md "Forbidden score claims": the
+    correction is a non-authoritative planning prior; it never auto-promotes
+    nor auto-kills a candidate.
+    """
+    if posterior is None or posterior_query_track_correction is None:
+        return 1.0, 0, ""
+    family = candidate.family
+    if not family:
+        return 1.0, 0, ""
+    try:
+        factor, n = posterior_query_track_correction(posterior, family)
+    except Exception:  # pragma: no cover - defensive
+        return 1.0, 0, family
+    import math
+    if n > 0 and math.isfinite(factor) and factor > 0.0:
+        return float(factor), int(n), family
+    return 1.0, 0, family
+
+
 def rank_candidates(
     candidates: list[CandidateRow],
     *,
     rank_axis: str = "eig_per_dollar",
+    continual_posterior: Any | None = None,
 ) -> list[CandidateRow]:
     """Rank candidates by the chosen axis (descending best-first).
 
@@ -294,16 +350,125 @@ def rank_candidates(
       - ``eig_per_dollar`` — expected information gain per dollar (default)
       - ``predicted_score_delta`` — most-negative-first (greatest improvement)
 
+    When ``continual_posterior`` is provided (W/I/A I-1 wire-in, 2026-05-12),
+    each candidate's predicted_score_delta is scaled by the continual-learning
+    family-keyed correction factor BEFORE sorting. The original
+    predicted_score_delta on the CandidateRow is preserved (the correction
+    is applied transiently for sort-key purposes only) so halt events still
+    report the raw prediction. Per CLAUDE.md "Subagent coherence-by-default"
+    this exercises wire-in hook 5 (continual-learning posterior).
+
     Per CLAUDE.md "Forbidden /tmp paths": no temp paths used; pure in-memory.
     """
     if rank_axis == "eig_per_dollar":
-        return sorted(candidates, key=lambda c: c.eig_per_dollar(), reverse=True)
+        if continual_posterior is None:
+            return sorted(candidates, key=lambda c: c.eig_per_dollar(), reverse=True)
+        # Reweight EIG/$ by posterior correction. EIG itself is unchanged; the
+        # cost-effective dispatch ordering still reflects empirical bias.
+        def _eig_key(c: CandidateRow) -> float:
+            factor, _, _ = _posterior_correction_factor(c, continual_posterior)
+            return c.eig_per_dollar() * factor
+        return sorted(candidates, key=_eig_key, reverse=True)
     if rank_axis == "predicted_score_delta":
-        return sorted(candidates, key=lambda c: c.predicted_score_delta)
+        if continual_posterior is None:
+            return sorted(candidates, key=lambda c: c.predicted_score_delta)
+        # Reweight predicted_score_delta by posterior correction. Most-negative
+        # first ordering preserved.
+        def _delta_key(c: CandidateRow) -> float:
+            factor, _, _ = _posterior_correction_factor(c, continual_posterior)
+            return c.predicted_score_delta * factor
+        return sorted(candidates, key=_delta_key)
     raise ValueError(
         f"unknown rank_axis {rank_axis!r}; must be 'eig_per_dollar' or "
         "'predicted_score_delta'"
     )
+
+
+def load_planner_posterior_for_loop(
+    continual_posterior_path: Path | None = None,
+) -> tuple[Any | None, dict[str, Any]]:
+    """Load read-only continual-learning posterior context for the loop.
+
+    Returns ``(posterior_or_none, context_payload)``. The payload is a small
+    JSON-serializable dict reporting load status / anchor counts so iteration
+    notes can surface ``loaded N=X anchors`` for operator visibility.
+
+    Per CLAUDE.md "Operator gates must be wired and used": failure to load
+    falls back to ``(None, {"loaded": False, "reason": ...})`` — the loop
+    keeps ranking without posterior context rather than crashing. The
+    operator sees the load_error in iteration notes.
+    """
+    if not _POSTERIOR_IMPORTS_OK or load_continual_learning_posterior is None:
+        return None, {"loaded": False, "reason": "tac.continual_learning import unavailable"}
+    try:
+        posterior = load_continual_learning_posterior(continual_posterior_path)
+    except Exception as exc:  # pragma: no cover - exercised by load_error test
+        return None, {"loaded": False, "reason": f"load_error:{type(exc).__name__}", "message": str(exc)}
+    return posterior, {
+        "loaded": True,
+        "schema": getattr(posterior, "schema", "unknown"),
+        "accepted_anchor_count": getattr(posterior, "accepted_anchor_count", 0),
+        "refused_anchor_count": getattr(posterior, "refused_anchor_count", 0),
+        "track_correction_count": len(getattr(posterior, "track_correction_posteriors", {})),
+    }
+
+
+def cost_band_envelope_check(
+    candidate: CandidateRow,
+    *,
+    platform: str | None = None,
+    gpu: str | None = None,
+    epochs: int | None = None,
+    all_flags_on: bool = True,
+    posterior_path: Path | None = None,
+) -> tuple[float | None, str, dict[str, Any]]:
+    """Query the cost-band posterior for an envelope-vs-estimate sanity check.
+
+    W/I/A I-1 wire-in (2026-05-12, sister of continual-learning wire-in).
+    Returns ``(p50_cost_usd_or_none, confidence_tag, payload)``. The payload
+    captures p10/p50/p90 + anchor count so loop notes can surface a
+    "candidate cost $X vs posterior p50 $Y (n=Z, tag=...)" comparison.
+
+    Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" the cost band
+    is itself non-authoritative; it is a planning prior derived from prior
+    dispatches' invoice-actuals. Returns ``(None, "unavailable", {})`` when
+    inputs are missing or the predict() call raises.
+    """
+    if predict_cost_band is None or not platform or not gpu or epochs is None:
+        return None, "unavailable", {
+            "cost_band_available": False,
+            "reason": (
+                "predict_cost_band unavailable"
+                if predict_cost_band is None
+                else "platform/gpu/epochs not provided by candidate"
+            ),
+        }
+    try:
+        prediction = predict_cost_band(
+            str(platform), str(gpu), int(epochs),
+            all_flags_on=bool(all_flags_on), posterior_path=posterior_path,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        return None, f"load_error:{type(exc).__name__}", {
+            "cost_band_available": False,
+            "reason": str(exc),
+        }
+    payload = {
+        "cost_band_available": True,
+        "cost_band_platform": prediction.platform,
+        "cost_band_gpu": prediction.gpu,
+        "cost_band_epochs": prediction.epochs,
+        "cost_band_n_anchors": prediction.n_anchors,
+        "cost_band_confidence_tag": prediction.confidence_tag,
+        "cost_band_p10_cost_usd": prediction.p10_cost_usd,
+        "cost_band_p50_cost_usd": prediction.p50_cost_usd,
+        "cost_band_p90_cost_usd": prediction.p90_cost_usd,
+        "candidate_cost_vs_p50_ratio": (
+            candidate.estimated_dispatch_cost_usd / prediction.p50_cost_usd
+            if prediction.p50_cost_usd > 0 else None
+        ),
+    }
+    return prediction.p50_cost_usd, prediction.confidence_tag, payload
 
 
 def make_dispatch_halt_event(
@@ -505,6 +670,9 @@ def run_one_loop_iteration(
     max_dispatch_recommendations: int | None = None,
     auth_mode: OperatorAuthorizedModeConfig | None = None,
     env_authorized: bool | None = None,
+    continual_posterior: Any | None = None,
+    continual_posterior_path: Path | None = None,
+    auto_load_continual_posterior: bool = False,
 ) -> LoopIterationReport:
     """Run one cycle: rank → dispatch-claim check → halt-event emission.
 
@@ -516,9 +684,35 @@ def run_one_loop_iteration(
     loop trims the candidate set to the ones with smallest predicted cost
     AND non-trivial predicted_score_delta (the "smallest credible bolt-on"
     pattern from the May 4 race postmortem).
+
+    W/I/A I-1 wire-in (2026-05-12): when ``continual_posterior`` is provided
+    (or ``auto_load_continual_posterior=True``) the rank step applies the
+    family-keyed correction factor from :mod:`tac.continual_learning`. The
+    raw predicted_score_delta on each CandidateRow is unchanged; the
+    correction biases ranking order only. Iteration notes record the loaded
+    posterior anchor counts for operator visibility.
     """
     started = dt.datetime.now(dt.UTC).isoformat()
     notes: list[str] = []
+
+    # W/I/A I-1: optionally auto-load continual-learning posterior so the
+    # loop's rank step applies empirical-anchor reweighting. Tests inject
+    # ``continual_posterior=`` directly to skip the file load.
+    if continual_posterior is None and auto_load_continual_posterior:
+        continual_posterior, posterior_context = load_planner_posterior_for_loop(
+            continual_posterior_path=continual_posterior_path,
+        )
+        if posterior_context.get("loaded"):
+            notes.append(
+                f"continual-learning posterior loaded "
+                f"(accepted_anchors={posterior_context.get('accepted_anchor_count', 0)}, "
+                f"track_corrections={posterior_context.get('track_correction_count', 0)})"
+            )
+        else:
+            notes.append(
+                f"continual-learning posterior unavailable: "
+                f"{posterior_context.get('reason', 'unknown')}"
+            )
 
     if race_mode:
         notes.append(
@@ -532,7 +726,14 @@ def run_one_loop_iteration(
         )
 
     n_seen = len(candidates)
-    ranked = rank_candidates(candidates, rank_axis=rank_axis) if candidates else []
+    ranked = (
+        rank_candidates(
+            candidates,
+            rank_axis=rank_axis,
+            continual_posterior=continual_posterior,
+        )
+        if candidates else []
+    )
 
     halt_events: list[HaltEvent] = []
     n_blocked = 0
@@ -604,6 +805,9 @@ def run_continuous_loop(
     max_dispatch_recommendations: int | None = None,
     auth_mode: OperatorAuthorizedModeConfig | None = None,
     env_authorized: bool | None = None,
+    continual_posterior: Any | None = None,
+    continual_posterior_path: Path | None = None,
+    auto_load_continual_posterior: bool = False,
 ) -> list[LoopIterationReport]:
     """Run the continuous loop for ``iterations`` cycles.
 
@@ -612,6 +816,15 @@ def run_continuous_loop(
     ``requires_approval=True``; if no callback is supplied, decisions are
     DEFER by default (the safe choice).
 
+    W/I/A I-1 wire-in (2026-05-12): when ``auto_load_continual_posterior``
+    is True, the continual-learning posterior is loaded ONCE at the start
+    of the loop and passed to every iteration. This is the canonical
+    "newly-appended anchor changes next ranking pass" path — the loop's
+    candidate_source produces fresh rows each iteration; the posterior is
+    re-read implicitly if the candidate_source itself appends to the
+    posterior between calls (the load is fast / cached in memory by
+    ``tac.continual_learning``).
+
     Returns the list of per-iteration reports.
     """
     if iterations <= 0:
@@ -619,6 +832,11 @@ def run_continuous_loop(
     reports: list[LoopIterationReport] = []
     for i in range(1, iterations + 1):
         candidates = candidate_source()
+        # Per-iteration posterior reload: each iteration sees the most recent
+        # anchor state. The explicit ``continual_posterior`` arg lets callers
+        # inject a stable posterior for deterministic testing.
+        iter_posterior = continual_posterior
+        iter_auto_load = auto_load_continual_posterior and continual_posterior is None
         report = run_one_loop_iteration(
             candidates,
             iteration=i,
@@ -629,6 +847,9 @@ def run_continuous_loop(
             max_dispatch_recommendations=max_dispatch_recommendations,
             auth_mode=auth_mode,
             env_authorized=env_authorized,
+            continual_posterior=iter_posterior,
+            continual_posterior_path=continual_posterior_path,
+            auto_load_continual_posterior=iter_auto_load,
         )
         # Operator-decision injection — DEFER when no callback supplied.
         for event in report.halt_events:
@@ -992,6 +1213,28 @@ def main(argv: Optional[list[str]] = None) -> int:
             "--operator-authorized-le-5-dollar-mode is set."
         ),
     )
+    # W/I/A I-1 wire-in (2026-05-12): continual-learning posterior knobs.
+    parser.add_argument(
+        "--continual-posterior-path",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to the continual-learning posterior JSONL. Default "
+            "uses tac.continual_learning.DEFAULT_POSTERIOR_PATH. Loaded when "
+            "--load-continual-posterior is set."
+        ),
+    )
+    parser.add_argument(
+        "--load-continual-posterior",
+        action="store_true",
+        help=(
+            "OPT-IN: load tac.continual_learning posterior and reweight "
+            "predicted_score_delta by family-keyed correction factor before "
+            "ranking. Per CLAUDE.md 'Subagent coherence-by-default' the "
+            "wire-in is the structural fix; the per-candidate correction "
+            "never auto-promotes nor auto-kills."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -1086,6 +1329,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         race_mode=args.race_mode,
         max_dispatch_recommendations=args.max_dispatch_recommendations,
         auth_mode=auth_mode,
+        continual_posterior_path=args.continual_posterior_path,
+        auto_load_continual_posterior=args.load_continual_posterior,
     )
 
     output_payload = {
