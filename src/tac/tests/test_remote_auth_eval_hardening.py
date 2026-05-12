@@ -1284,11 +1284,16 @@ def test_modal_result_dir_label_parser_preserves_lane_prefix() -> None:
 
     assert (
         mod.label_from_modal_result_dir(
-            "lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal"
+            "lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal"  # FAKE_LANE_OK:test fixture for Modal label parsing
         )
-        == "lane_g_v3_owv3_fisher_smoke_20260430_codex"
+        == "lane_g_v3_owv3_fisher_smoke_20260430_codex"  # FAKE_LANE_OK:test fixture for Modal label parsing
     )
-    assert mod.label_from_modal_result_dir("lane_uniward_v8_modal") == "uniward_v8"
+    assert (
+        mod.label_from_modal_result_dir(
+            "lane_uniward_v8_modal"  # FAKE_LANE_OK:test fixture for Modal label parsing
+        )
+        == "uniward_v8"
+    )
 
 
 def test_modal_recover_labels_non_cuda_scores_advisory() -> None:

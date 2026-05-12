@@ -8,16 +8,18 @@ scorer work.
 """
 from __future__ import annotations
 
-import gzip
 import json
 import shutil
-import tarfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from tac.deploy.claims import active_claim_row
 from tac.deploy.kaggle.kaggle_kernel_builder import build_kernel_metadata
-from tac.deploy.kaggle.source_bundle import add_path_to_tar, dataset_sources
+from tac.deploy.kaggle.source_bundle import (
+    add_path_to_tar,
+    dataset_sources,
+    open_deterministic_tar_gz,
+)
 from tac.deploy.pr106_yshift import (
     REMOTE_SCRIPT,
     Pr106YshiftScoreTableSpec,
@@ -103,9 +105,7 @@ def write_source_bundle(
     if output_path.exists():
         output_path.unlink()
 
-    with gzip.GzipFile(filename=str(output_path), mode="wb", mtime=0) as gz, tarfile.open(
-        fileobj=gz, mode="w"
-    ) as tar:
+    with open_deterministic_tar_gz(output_path) as tar:
         for rel_path in REQUIRED_REPO_PATHS:
             source = repo_root / rel_path
             if not source.exists():

@@ -1,7 +1,10 @@
 """Shared Kaggle source-bundle helpers for score-table kernels."""
 from __future__ import annotations
 
+import gzip
 import tarfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
 
@@ -64,10 +67,29 @@ def add_path_to_tar(
         tar.add(source, arcname=str(arcname), recursive=False, filter=deterministic_tar_filter)
 
 
+@contextmanager
+def open_deterministic_tar_gz(output_path: Path) -> Iterator[tarfile.TarFile]:
+    """Open a reproducible gzip-compressed tar writer.
+
+    ``gzip.GzipFile(filename=...)`` writes the output file name into the gzip
+    header.  Kaggle source bundles must be byte-reproducible across staging
+    directories and file names, so the original-name header is deliberately
+    empty while tar member metadata is normalized by ``add_path_to_tar``.
+    """
+
+    with (
+        output_path.open("wb") as fh,
+        gzip.GzipFile(filename="", mode="wb", fileobj=fh, mtime=0) as gz,
+        tarfile.open(fileobj=gz, mode="w") as tar,
+    ):
+        yield tar
+
+
 __all__ = [
     "DatasetSourceSpec",
     "add_path_to_tar",
     "dataset_sources",
     "deterministic_tar_filter",
     "include_in_source_bundle",
+    "open_deterministic_tar_gz",
 ]

@@ -97,6 +97,38 @@ def test_write_source_bundle_contains_latent_runtime_contract_and_claim_ledger(t
     assert "submissions/pr106_latent_sidecar/inflate.py" in names
 
 
+def test_write_source_bundle_is_byte_reproducible_across_output_paths(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    _claim_ledger(claims)
+    spec = KagglePr106LatentBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_latent_test",
+        dataset_ref="alice/comma-lab-private-assets",
+        source_dataset_ref="alice/comma-lab-pr106-latent-source",
+    )
+    first = tmp_path / "a" / DEFAULT_SOURCE_BUNDLE_NAME
+    second = tmp_path / "b" / "renamed-latent-source.tar.gz"
+
+    write_source_bundle(
+        repo_root=REPO_ROOT,
+        output_path=first,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+    write_source_bundle(
+        repo_root=REPO_ROOT,
+        output_path=second,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+
+    assert first.read_bytes() == second.read_bytes()
+
+
 def test_write_bundle_declares_latent_source_dataset_and_inlines_fresh_source_bundle(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"archive")

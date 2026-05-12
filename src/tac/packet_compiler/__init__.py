@@ -78,6 +78,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
     parse_pr106_sidecar_packet,
+    pr106_sidecar_consumed_byte_proof,
     pr106_sidecar_manifest,
     read_single_stored_member_archive,
 )
@@ -253,6 +254,7 @@ __all__ = [
     "emit_pr106_sidecar_packet",
     "emit_single_stored_member_archive",
     "parse_pr106_sidecar_packet",
+    "pr106_sidecar_consumed_byte_proof",
     "pr106_sidecar_manifest",
     "read_single_stored_member_archive",
     # PR93 — delta-varint pose codec + QZMB1 grammar

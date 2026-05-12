@@ -27,6 +27,15 @@ def _load_tool():
     )
 
 
+def _claim_ledger(path: Path, *, job_name: str = "kaggle_pr106_yshift_test") -> None:
+    path.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
+        "| 2026-05-11T00:00:00Z | codex:test | lane_pr106_yshift_score_table | kaggle | "
+        f"{job_name} | 2026-05-11T03:00:00Z | active_dispatching | test |\n",
+        encoding="utf-8",
+    )
+
+
 def test_render_launcher_uses_canonical_score_table_env() -> None:
     spec = KagglePr106YshiftBundleSpec(
         username="alice",
@@ -63,12 +72,7 @@ def test_write_source_bundle_contains_runtime_contract_and_claim_ledger(tmp_path
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"archive")
     claims = tmp_path / "active_lane_dispatch_claims.md"
-    claims.write_text(
-        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
-        "| 2026-05-11T00:00:00Z | codex:test | lane_pr106_yshift_score_table | kaggle | "
-        "kaggle_pr106_yshift_test | 2026-05-11T03:00:00Z | active_dispatching | test |\n",
-        encoding="utf-8",
-    )
+    _claim_ledger(claims)
     bundle = tmp_path / "bundle"
     spec = KagglePr106YshiftBundleSpec(
         username="alice",
@@ -97,16 +101,43 @@ def test_write_source_bundle_contains_runtime_contract_and_claim_ledger(tmp_path
     assert "submissions/pr106_yshift_sidechannel/inflate.py" in names
 
 
+def test_write_source_bundle_is_byte_reproducible_across_output_paths(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    _claim_ledger(claims)
+    spec = KagglePr106YshiftBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_yshift_test",
+        dataset_ref="alice/comma-lab-private-assets",
+        source_dataset_ref="alice/comma-lab-pr106-yshift-source",
+    )
+    first = tmp_path / "a" / DEFAULT_SOURCE_BUNDLE_NAME
+    second = tmp_path / "b" / "renamed-yshift-source.tar.gz"
+
+    write_source_bundle(
+        repo_root=REPO_ROOT,
+        output_path=first,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+    write_source_bundle(
+        repo_root=REPO_ROOT,
+        output_path=second,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+
+    assert first.read_bytes() == second.read_bytes()
+
+
 def test_write_bundle_declares_source_dataset_and_inlines_fresh_source_bundle(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"archive")
     claims = tmp_path / "active_lane_dispatch_claims.md"
-    claims.write_text(
-        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
-        "| 2026-05-11T00:00:00Z | codex:test | lane_pr106_yshift_score_table | kaggle | "
-        "kaggle_pr106_yshift_test | 2026-05-11T03:00:00Z | active_dispatching | test |\n",
-        encoding="utf-8",
-    )
+    _claim_ledger(claims)
     bundle = tmp_path / "bundle"
     spec = KagglePr106YshiftBundleSpec(
         username="alice",
@@ -168,12 +199,7 @@ def test_write_bundle_requires_matching_active_claim(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"archive")
     claims = tmp_path / "active_lane_dispatch_claims.md"
-    claims.write_text(
-        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
-        "| 2026-05-11T00:00:00Z | codex:test | lane_pr106_yshift_score_table | kaggle | "
-        "wrong_job | 2026-05-11T03:00:00Z | active_dispatching | test |\n",
-        encoding="utf-8",
-    )
+    _claim_ledger(claims, job_name="wrong_job")
     spec = KagglePr106YshiftBundleSpec(
         username="alice",
         job_name="kaggle_pr106_yshift_test",

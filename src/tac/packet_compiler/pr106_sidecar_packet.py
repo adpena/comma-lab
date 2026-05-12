@@ -17,7 +17,6 @@ import struct
 import zipfile
 from dataclasses import dataclass
 
-
 PR106_SIDECAR_MAGIC = 0xFE
 PR106_SIDECAR_FORMAT_BROTLI = 0x01
 PR106_SIDECAR_FORMAT_PR101_GRAMMAR = 0x02
@@ -226,6 +225,100 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
     return out.getvalue()
 
 
+def _consumed_section_row(
+    name: str,
+    *,
+    offset: int,
+    payload: bytes,
+    score_affecting: bool,
+) -> dict[str, object]:
+    return {
+        "name": name,
+        "offset": offset,
+        "bytes": len(payload),
+        "end_offset": offset + len(payload),
+        "sha256": sha256_hex(payload),
+        "score_affecting": score_affecting,
+    }
+
+
+def pr106_sidecar_consumed_byte_proof(
+    packet: PR106SidecarPacket,
+) -> dict[str, object]:
+    """Return parser-level proof that every emitted payload byte is accounted for.
+
+    This is intentionally narrower than a runtime-inflate proof. It proves the
+    PacketIR grammar consumes the emitted ``0.bin`` payload without gaps or
+    trailing bytes; exact runtime consumption still needs an inflate mutation
+    smoke or same-runtime eval artifact.
+    """
+
+    if packet.format_id not in PR106_SUPPORTED_SIDECAR_FORMATS:
+        raise ValueError(
+            f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}"
+        )
+
+    sections: list[dict[str, object]] = []
+    offset = 0
+
+    def add(name: str, payload: bytes, *, score_affecting: bool) -> None:
+        nonlocal offset
+        sections.append(
+            _consumed_section_row(
+                name,
+                offset=offset,
+                payload=payload,
+                score_affecting=score_affecting,
+            )
+        )
+        offset += len(payload)
+
+    add("magic", bytes([PR106_SIDECAR_MAGIC]), score_affecting=False)
+    add("format_id", bytes([packet.format_id]), score_affecting=False)
+    add(
+        "pr106_len_le_u32",
+        struct.pack("<I", len(packet.pr106_bytes)),
+        score_affecting=False,
+    )
+    add("pr106_payload", packet.pr106_bytes, score_affecting=True)
+    add(
+        "sidecar_len_le_u16",
+        struct.pack("<H", len(packet.sidecar_payload)),
+        score_affecting=False,
+    )
+    add("sidecar_payload", packet.sidecar_payload, score_affecting=True)
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+        if packet.framing_meta is None:
+            raise ValueError("format_id=0x02 requires framing_meta")
+        add("framing_meta", packet.framing_meta, score_affecting=True)
+
+    emitted = emit_pr106_sidecar_packet(packet)
+    accounted = sum(int(row["bytes"]) for row in sections)
+    cursor = 0
+    gaps: list[dict[str, object]] = []
+    for row in sections:
+        row_offset = int(row["offset"])
+        if row_offset != cursor:
+            gaps.append({"expected_offset": cursor, "observed_offset": row_offset})
+        cursor = int(row["end_offset"])
+
+    return {
+        "schema": "pr106_sidecar_packet_ir_consumed_byte_proof_v1",
+        "proof_scope": "packet_ir_parser_accounting_not_runtime_inflate_consumption",
+        "runtime_consumption_claim": False,
+        "emitted_payload_bytes": len(emitted),
+        "emitted_payload_sha256": sha256_hex(emitted),
+        "accounted_payload_bytes": accounted,
+        "all_payload_bytes_accounted": accounted == len(emitted) and not gaps,
+        "unconsumed_trailing_bytes": max(0, len(emitted) - accounted),
+        "section_gaps": gaps,
+        "score_affecting_section_names": [
+            str(row["name"]) for row in sections if bool(row["score_affecting"])
+        ],
+        "sections": sections,
+    }
+
+
 def pr106_sidecar_manifest(
     packet: PR106SidecarPacket,
     *,
@@ -248,6 +341,7 @@ def pr106_sidecar_manifest(
         else sha256_hex(packet.framing_meta),
         "emitted_payload_bytes": len(emitted),
         "emitted_payload_sha256": sha256_hex(emitted),
+        "packet_ir_consumed_byte_proof": pr106_sidecar_consumed_byte_proof(packet),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
