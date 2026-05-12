@@ -113,6 +113,7 @@ training_image = (
 )
 
 import os as _os
+
 _RESULTS_MOUNTS = (
     ("experiments/results/public_pr95_intake_20260504_codex",
      "/workspace/pact/experiments/results/public_pr95_intake_20260504_codex"),
@@ -145,7 +146,6 @@ def _run_lane_inner(
     import shutil
     import subprocess
     import sys
-    import tempfile
     import threading
     import time
     from pathlib import Path
@@ -440,12 +440,9 @@ def _run_lane_inner(
     for root in scan_roots:
         if not root.exists():
             continue
-        if root.is_file():
-            files = [root]
-        else:
-            files = [p for p in root.rglob("*") if p.is_file()]
+        files = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
         for fp in files:
-            if not fp.is_file() or not fp.suffix.lower() in extensions:
+            if not fp.is_file() or fp.suffix.lower() not in extensions:
                 continue
             try:
                 rel = fp.relative_to(workspace)
@@ -703,6 +700,10 @@ def main(
     timeout_hours: float = 10.0,
     env_overrides: str = "",
     lane_id: str = "",
+    cost_band_trainer: str = "",
+    cost_band_epochs: int = 0,
+    cost_band_batch_size: int = 0,
+    cost_band_all_flags_on: bool = False,
 ):
     """Dispatch a lane training run on Modal.
 
@@ -712,6 +713,10 @@ def main(
         gpu: 'T4', 'A10G', 'A100', or 'H100'
         timeout_hours: max runtime (Modal hard kills at this)
         env_overrides: 'KEY1=val1,KEY2=val2' optional env to pass to lane
+        cost_band_trainer: trainer path for cost posterior anchoring
+        cost_band_epochs: epoch count for the cost posterior bucket
+        cost_band_batch_size: batch size for the cost posterior bucket
+        cost_band_all_flags_on: whether all required flags were threaded
     """
     import json
     import os
@@ -719,6 +724,9 @@ def main(
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(repo_root / "src"))
+    from tac.deploy.modal.auth_eval import function_call_id
+
     os.chdir(repo_root)
 
     if not (repo_root / lane_script).exists():
@@ -744,6 +752,28 @@ def main(
     else:
         print(f"FATAL: unsupported gpu '{gpu}'. Use T4, A10G, A100, or H100.", file=sys.stderr)
         sys.exit(2)
+
+    cost_band_anchor = None
+    if cost_band_trainer or cost_band_epochs or cost_band_batch_size or cost_band_all_flags_on:
+        if not cost_band_trainer:
+            print("FATAL: --cost-band-trainer is required when recording a cost-band anchor.", file=sys.stderr)
+            sys.exit(2)
+        if cost_band_epochs <= 0:
+            print("FATAL: --cost-band-epochs must be positive when recording a cost-band anchor.", file=sys.stderr)
+            sys.exit(2)
+        if cost_band_batch_size <= 0:
+            print("FATAL: --cost-band-batch-size must be positive when recording a cost-band anchor.", file=sys.stderr)
+            sys.exit(2)
+        cost_band_anchor = {
+            "schema": "modal_training_cost_anchor_metadata_v1",
+            "trainer": cost_band_trainer,
+            "epochs": int(cost_band_epochs),
+            "batch_size": int(cost_band_batch_size),
+            "all_flags_on": bool(cost_band_all_flags_on),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "notes": "metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+        }
 
     print(f"=== modal_train_lane: {lane_script} → {label} on {gpu} ===")
     max_seconds = int(timeout_hours * 3600)
@@ -795,7 +825,7 @@ def main(
         mounted_code_git_branch,
         max_seconds,
     )
-    call_id = fn_call.object_id
+    call_id = function_call_id(fn_call)
 
     print(f"\n✓ DISPATCHED via .spawn() — call_id={call_id}")
     print(
@@ -815,7 +845,7 @@ def main(
     sentinel_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal"
     sentinel_dir.mkdir(parents=True, exist_ok=True)
     (sentinel_dir / "modal_call_id.txt").write_text(call_id + "\n")
-    (sentinel_dir / "modal_metadata.json").write_text(json.dumps({
+    metadata = {
         "lane_script": lane_script,
         "lane_id": resolved_lane_id,
         "label": label,
@@ -829,6 +859,9 @@ def main(
         "live_volume": RESULTS_VOL,
         "live_volume_prefix": f"{label}/",
         "dispatched_at": __import__("datetime").datetime.now().isoformat(),
-    }, indent=2))
+    }
+    if cost_band_anchor is not None:
+        metadata["cost_band_anchor"] = cost_band_anchor
+    (sentinel_dir / "modal_metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     print(f"  call_id saved:  {sentinel_dir}/modal_call_id.txt")
-    print(f"\n  Use experiments/modal_recover_lane.py to fetch artifacts when complete.")
+    print("\n  Use experiments/modal_recover_lane.py to fetch artifacts when complete.")

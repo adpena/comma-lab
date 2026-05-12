@@ -21,16 +21,19 @@ this measurement into its p10/p50/p90 estimate.
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
-# Make the script runnable directly from a wrapper without setting PYTHONPATH.
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+_REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(_REPO_ROOT)
 
 from tac.cost_band_calibration import (  # noqa: E402
-    CostBandAnchor,
     POSTERIOR_PATH,
+    CostBandAnchor,
     _now_utc_iso,
     append_anchor,
 )
@@ -102,4 +105,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -172,7 +172,7 @@ INSTANCE_JOB_ID="t1_balle_cheap_config_$(date -u +%Y%m%dT%H%M%SZ)"
     --instance-job-id "$INSTANCE_JOB_ID" \
     --agent "claude:operator_authorize_phase1_t1_balle_cheap_config_dispatch" \
     --status "active_dispatch" \
-    --notes "operator-authorized Phase 1 T1 Ballé T13+T19+T20+T22 all-on dispatch via scripts/operator_authorize_phase1_t1_balle_cheap_config_dispatch.sh; expected cost \$${EXPECTED_COST_BAND_USD} on ${PLATFORM}"
+    --notes "operator-authorized Phase 1 T1 Ballé T13+T19+T20+T22 all-on dispatch via scripts/operator_authorize_phase1_t1_balle_cheap_config_dispatch.sh; expected p50 cost \$${EXPECTED_P50_USD} on ${PLATFORM} (${CONFIDENCE_TAG})"
 
 # Delegate to canonical Modal launcher (modal_train_lane.py) which mounts
 # the workspace at /workspace/pact + runs the remote-side script inside the
@@ -199,10 +199,11 @@ case "$PLATFORM" in
         # Modal GPU selection — per engineering audit 2026-05-12:
         # T4    $0.59/hr   65 TFLOPS FP16   baseline
         # A10G  $1.10/hr  125 TFLOPS FP16   0.97× $/TFLOP-hr (same value, 2× speed)
-        # A100  $2.10/hr  312 TFLOPS FP16   0.74× $/TFLOP-hr (cheaper per work, 5× speed)
+        # A100  configured at $4.00/hr until live billing anchors supersede table estimates.
         # H100  $3.90/hr  900 TFLOPS FP16   0.47× $/TFLOP-hr (cheapest per work)
-        # For scorer-bound T1 Balle training, A100 is the optimal price/perf
-        # at $/TFLOP-hr; T4 is the budget default; H100 is for time-critical.
+        # For scorer-bound T1 Balle training, use live posterior anchors over
+        # static $/TFLOP comments; T4 is the budget default, H100 is for
+        # time-critical, and A100 remains table-estimated until measured.
         # Override via MODAL_GPU=A100|H100|A10G|T4 env-var.
         MODAL_GPU="${MODAL_GPU:-T4}"
         # Default bumped 2.0h → 4.0h per fresh-eyes adversarial NF3:
@@ -216,7 +217,11 @@ case "$PLATFORM" in
             --label "${INSTANCE_JOB_ID}" \
             --gpu "${MODAL_GPU}" \
             --timeout-hours "${TIMEOUT_HOURS}" \
-            --env-overrides "${ENV_OVERRIDES}"
+            --env-overrides "${ENV_OVERRIDES}" \
+            --cost-band-trainer experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py \
+            --cost-band-epochs 3000 \
+            --cost-band-batch-size 16 \
+            --cost-band-all-flags-on
         ;;
     vastai|vast)
         # Vast.ai 4090 path: delegate to canonical launch script.

@@ -314,6 +314,17 @@ def test_phase1_cheap_config_supports_modal_and_vastai():
     assert "vastai" in body.lower() or "vast.ai" in body.lower()
 
 
+def test_phase1_cheap_config_wires_cost_band_metadata_to_modal_launcher():
+    p = _SCRIPTS_DIR / "operator_authorize_phase1_t1_balle_cheap_config_dispatch.sh"
+    body = p.read_text()
+    assert "EXPECTED_COST_BAND_USD" not in body
+    assert "EXPECTED_P50_USD" in body
+    assert "--cost-band-trainer experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py" in body
+    assert "--cost-band-epochs 3000" in body
+    assert "--cost-band-batch-size 16" in body
+    assert "--cost-band-all-flags-on" in body
+
+
 def test_scpp_dispatch_carries_substrate_engineering_tag():
     p = _SCRIPTS_DIR / "operator_authorize_scpp_stage1_anchor_dispatch.sh"
     body = p.read_text()

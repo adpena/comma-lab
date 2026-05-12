@@ -26,6 +26,10 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from tac.deploy.modal.training_claims import append_modal_training_terminal_claim
+from tac.deploy.modal.training_cost import append_modal_training_cost_anchor
 
 
 def label_from_modal_result_dir(dirname: str) -> str:
@@ -116,6 +120,95 @@ def print_still_running_guidance(call_id: str, label: str | None = None) -> None
     print("    .venv/bin/modal app logs <app-id>")
 
 
+def _append_cost_band_anchor_if_requested(
+    *,
+    out_dir: Path,
+    result: dict,
+) -> dict | None:
+    metadata_path = out_dir / "modal_metadata.json"
+    if not metadata_path.is_file():
+        return None
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if not isinstance(metadata, dict):
+            return None
+        manifest = append_modal_training_cost_anchor(
+            out_dir=out_dir,
+            metadata=metadata,
+            result=result,
+        )
+    except Exception as exc:
+        manifest = {
+            "schema": "modal_training_cost_anchor_append_v1",
+            "appended": False,
+            "reason": f"append_failed:{type(exc).__name__}:{exc}",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+        try:
+            (out_dir / "cost_band_anchor_append_error.json").write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+    return manifest
+
+
+def _append_terminal_claim_if_requested(
+    *,
+    out_dir: Path,
+    result: dict | None,
+    status: str | None = None,
+) -> dict | None:
+    metadata_path = out_dir / "modal_metadata.json"
+    if not metadata_path.is_file():
+        return None
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if not isinstance(metadata, dict):
+            return None
+        manifest = append_modal_training_terminal_claim(
+            repo_root=REPO_ROOT,
+            out_dir=out_dir,
+            metadata=metadata,
+            result=result,
+            status=status,
+            agent="codex:modal_recover_lane",
+        )
+    except Exception as exc:
+        manifest = {
+            "schema": "modal_training_terminal_claim_v1",
+            "appended": False,
+            "reason": f"append_failed:{type(exc).__name__}:{exc}",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+        try:
+            (out_dir / "modal_training_terminal_claim_error.json").write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+    return manifest
+
+
+def _print_terminal_claim_summary(manifest: dict | None) -> None:
+    if manifest is None:
+        return
+    if manifest.get("appended"):
+        print(
+            "  terminal claim appended: "
+            f"status={manifest.get('status')} lane_id={manifest.get('lane_id')}"
+        )
+    else:
+        print(
+            "  terminal claim skipped: "
+            f"{manifest.get('reason', 'unknown')}"
+        )
+
+
 def recover_one(label: str | None, call_id: str | None) -> int:
     import modal
 
@@ -139,7 +232,16 @@ def recover_one(label: str | None, call_id: str | None) -> int:
         print_still_running_guidance(call_id, label=label)
         return 0
     except modal.exception.OutputExpiredError:
-        print(f"  OUTPUT EXPIRED (Modal expires output after 7 days). Lane logs may still be available.", file=sys.stderr)
+        if label:
+            expired_out_dir = REPO_ROOT / "experiments" / "results" / f"lane_{label}_modal"
+            _print_terminal_claim_summary(
+                _append_terminal_claim_if_requested(
+                    out_dir=expired_out_dir,
+                    result=None,
+                    status="failed_modal_training_result_cache_expired",
+                )
+            )
+        print("  OUTPUT EXPIRED (Modal expires output after 7 days). Lane logs may still be available.", file=sys.stderr)
         return 3
 
     if not isinstance(result, dict):
@@ -170,6 +272,28 @@ def recover_one(label: str | None, call_id: str | None) -> int:
     timed_out = result.get("timed_out", False)
     elapsed = result.get("elapsed_seconds")
     print(f"  returncode={rc}  timed_out={timed_out}  elapsed={elapsed:.0f}s" if elapsed else f"  returncode={rc}")
+    cost_anchor_manifest = _append_cost_band_anchor_if_requested(
+        out_dir=out_dir,
+        result=result,
+    )
+    if cost_anchor_manifest is not None:
+        if cost_anchor_manifest.get("appended"):
+            print(
+                "  cost-band anchor appended: "
+                f"estimated_cost_usd={cost_anchor_manifest.get('estimated_cost_usd')} "
+                f"gpu={cost_anchor_manifest.get('gpu')}"
+            )
+        else:
+            print(
+                "  cost-band anchor skipped: "
+                f"{cost_anchor_manifest.get('reason', 'unknown')}"
+            )
+    _print_terminal_claim_summary(
+        _append_terminal_claim_if_requested(
+            out_dir=out_dir,
+            result=result,
+        )
+    )
 
     # Extract score from artifacts
     score_found = False

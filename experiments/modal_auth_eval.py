@@ -745,7 +745,7 @@ def run_auth_eval_a100(
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    """Run the canonical CUDA auth eval on Modal A100."""
+    """Run CUDA auth eval on Modal A100 as a diagnostic axis."""
 
     return _run_auth_eval_fail_closed(
         archive_bytes=archive_bytes,
@@ -782,7 +782,7 @@ def run_auth_eval_h100(
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    """Run the canonical CUDA auth eval on Modal H100."""
+    """Run CUDA auth eval on Modal H100 as a diagnostic axis."""
 
     return _run_auth_eval_fail_closed(
         archive_bytes=archive_bytes,
@@ -861,10 +861,13 @@ def main(
             "experiments/modal_auth_eval_cpu.py for pure contest-CPU host eval."
         )
     inflate_env_overrides = (inflate_env,) if inflate_env else ()
+    gpu_key = gpu.upper()
+    non_t4_gpu_diagnostic = gpu_key not in {"T4"}
     diagnostic_only = (
         bool(inflate_env_overrides)
         or inflate_device_policy != "auto"
         or scorer_device_policy != "cuda"
+        or non_t4_gpu_diagnostic
     )
     axis_label = f"diagnostic_{scorer_device_policy}" if diagnostic_only else "contest_cuda"
 
@@ -885,6 +888,7 @@ def main(
         "inflate_device_policy": inflate_device_policy,
         "inflate_env_overrides": list(inflate_env_overrides),
         "diagnostic_only": diagnostic_only,
+        "non_t4_gpu_diagnostic": non_t4_gpu_diagnostic,
         "score_claim": False,
         "promotion_eligible": False,
         "adjudication_required": True,
@@ -909,7 +913,6 @@ def main(
         f"Uploading {archive_size_bytes:,} bytes to Modal {gpu} for CUDA auth eval "
         f"(sha256={archive_sha256})..."
     )
-    gpu_key = gpu.upper()
     if gpu_key == "T4":
         auth_eval_fn = run_auth_eval
     elif gpu_key in {"A100", "A100-40GB", "A100-80GB"}:
@@ -969,6 +972,7 @@ def main(
             extra={
                 "gpu": gpu_key,
                 "diagnostic_only": diagnostic_only,
+                "non_t4_gpu_diagnostic": non_t4_gpu_diagnostic,
                 "scorer_device": scorer_device_policy,
                 "inflate_device_policy": inflate_device_policy,
                 "inflate_env_overrides": list(inflate_env_overrides),
@@ -1028,6 +1032,7 @@ def main(
     result["inflate_env_overrides"] = list(inflate_env_overrides)
     if diagnostic_only:
         result["diagnostic_only"] = True
+        result["non_t4_gpu_diagnostic"] = non_t4_gpu_diagnostic
         result["score_claim"] = False
         result["promotion_eligible"] = False
     write_json(out_dir / "modal_cuda_auth_eval_result.json", result)

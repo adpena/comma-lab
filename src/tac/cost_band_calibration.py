@@ -59,7 +59,6 @@ import fcntl
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 SCHEMA_VERSION = "cost_band_posterior_v1"
 POSTERIOR_PATH = Path(".omx/state/cost_band_posterior.jsonl")
@@ -69,7 +68,7 @@ LOCK_PATH = Path(".omx/state/.cost_band_posterior.lock")
 #
 # F3 derivation (non-arbitrariness sweep 2026-05-12 — replaces hand-asserted N=3):
 #   N=1: p10/p50/p90 collapse to the single observed value; no spread signal.
-#         → "weak_posterior" tag with ×1.5 band-widening reflects this honestly.
+#         → "weak_posterior" tag with x1.5 band-widening reflects this honestly.
 #   N=2: p10 ≈ p_low, p90 ≈ p_high; spread observable but Wilson 95% CI is
 #         ~0.55 wide at p=0.5, so any percentile is dominated by sampling noise.
 #         → still "weak_posterior".
@@ -108,7 +107,7 @@ class CostBandPrediction:
     p50_wall_clock_hr: float
     p90_wall_clock_hr: float
     confidence_tag: str  # "empirical_posterior" | "weak_posterior" | "hand_calibrated_fallback"
-    freshness_seconds: Optional[float]  # how old the most-recent matching anchor is
+    freshness_seconds: float | None  # how old the most-recent matching anchor is
     fallback_rationale: str = ""
 
     def as_dict(self) -> dict:
@@ -132,7 +131,12 @@ class CostBandPrediction:
 
 @dataclass(frozen=True)
 class CostBandAnchor:
-    """One empirical anchor: a completed dispatch's measured wall-clock + cost."""
+    """One empirical anchor: a completed dispatch's measured wall-clock + cost.
+
+    ``actual_cost_usd`` is invoice-actual when a provider invoice is available.
+    Recovery paths may otherwise append a provider-table estimate; those rows
+    must say so in ``notes`` via ``cost_estimate_source=...``.
+    """
 
     logged_at_utc: str
     dispatch_label: str
@@ -144,15 +148,15 @@ class CostBandAnchor:
     all_flags_on: bool
     actual_wall_clock_sec: float
     actual_cost_usd: float
-    predicted_cost_usd_low: Optional[float] = None
-    predicted_cost_usd_high: Optional[float] = None
-    prediction_in_band: Optional[bool] = None
+    predicted_cost_usd_low: float | None = None
+    predicted_cost_usd_high: float | None = None
+    prediction_in_band: bool | None = None
     notes: str = ""
     schema: str = SCHEMA_VERSION
 
 
 def _now_utc_iso() -> str:
-    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    return datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
 
 
 def _ensure_state_dir(path: Path) -> None:
@@ -162,8 +166,8 @@ def _ensure_state_dir(path: Path) -> None:
 def append_anchor(
     anchor: CostBandAnchor,
     *,
-    posterior_path: Optional[Path] = None,
-    lock_path: Optional[Path] = None,
+    posterior_path: Path | None = None,
+    lock_path: Path | None = None,
 ) -> None:
     """Append an anchor to the JSONL posterior under fcntl LOCK_EX.
 
@@ -205,7 +209,7 @@ def append_anchor(
 
 
 def load_anchors(
-    posterior_path: Optional[Path] = None,
+    posterior_path: Path | None = None,
 ) -> list[CostBandAnchor]:
     """Read every anchor from the JSONL posterior. Skips malformed lines."""
     posterior = posterior_path or POSTERIOR_PATH
@@ -271,23 +275,23 @@ def _percentile(values: list[float], q: float) -> float:
 # justification basis below; the spread (p10..p90) is the highest-uncertainty
 # component and should converge fastest once real dispatches land.
 #
-# Modal T4 p50=$8 anchored to codex's ~14-min/epoch baseline (3000ep × 14min/60 ×
-# $0.59/hr × 1.05 overhead ≈ $8.7); spread ±$3 reflects auth-eval-on-best
-# tail variance. Modal A10G/A100/H100 scaled by $/TFLOP-hr table (lines 171-176
-# of operator_authorize_phase1_*.sh). Vast.ai 4090 anchored to codex empirical
-# $0.10-0.50/dispatch range × 1.5 margin for post-Tier-1 4090 slowdown
+# Modal T4 p50=$8 anchored to codex's ~14-min/epoch baseline (3000ep x 14min/60 x
+# $0.59/hr x 1.05 overhead ≈ $8.7); spread ±$3 reflects auth-eval-on-best
+# tail variance. Modal A10G/A100/H100 scaled by the configured Modal hourly
+# estimate table in tac.deploy.modal.training_cost. Vast.ai 4090 anchored to codex empirical
+# $0.10-0.50/dispatch range x 1.5 margin for post-Tier-1 4090 slowdown
 # observations. Lightning T4 free-tier confirmed by Lightning pricing page.
 _HAND_CALIBRATED_FALLBACKS = {
     # (platform, gpu, epochs_bucket, all_flags_on): (p10, p50, p90) USD
-    ("modal", "T4", 3000, True): (5.0, 8.0, 12.0),  # ARBITRARY_OK:codex_14min_per_epoch_baseline_×_$0.59hr
-    ("modal", "A10G", 3000, True): (4.0, 6.0, 10.0),  # ARBITRARY_OK:scaled_from_T4_×_$1.10/$0.59_×_0.97_TFLOP_hr_ratio
-    ("modal", "A100", 3000, True): (3.0, 5.0, 8.0),  # ARBITRARY_OK:scaled_from_T4_×_$2.10/$0.59_×_0.74_TFLOP_hr_ratio
-    ("modal", "H100", 3000, True): (3.0, 4.5, 7.0),  # ARBITRARY_OK:scaled_from_T4_×_$3.90/$0.59_×_0.47_TFLOP_hr_ratio
-    ("vastai", "4090", 3000, True): (0.50, 0.80, 1.20),  # ARBITRARY_OK:codex_empirical_$0.10-0.50_×_1.5_post_tier1_margin
+    ("modal", "T4", 3000, True): (5.0, 8.0, 12.0),  # ARBITRARY_OK:codex_14min_per_epoch_baseline_x_$0.59hr
+    ("modal", "A10G", 3000, True): (4.0, 6.0, 10.0),  # ARBITRARY_OK:scaled_from_T4_x_$1.10/$0.59_x_0.97_TFLOP_hr_ratio
+    ("modal", "A100", 3000, True): (3.0, 5.0, 8.0),  # ARBITRARY_OK:scaled_from_T4_x_$4.00/$0.59_x_0.74_TFLOP_hr_ratio
+    ("modal", "H100", 3000, True): (3.0, 4.5, 7.0),  # ARBITRARY_OK:scaled_from_T4_x_$3.90/$0.59_x_0.47_TFLOP_hr_ratio
+    ("vastai", "4090", 3000, True): (0.50, 0.80, 1.20),  # ARBITRARY_OK:codex_empirical_$0.10-0.50_x_1.5_post_tier1_margin
     ("lightning", "T4", 3000, True): (0.0, 0.0, 0.0),  # ARBITRARY_OK:lightning_free_tier_per_pricing_page
     ("modal", "T4", 3000, False): (3.5, 5.5, 8.0),  # ARBITRARY_OK:T4_all_flags_on_minus_30pct_for_non_optimal_config
-    ("modal", "T4", 1000, True): (1.5, 2.5, 4.0),  # ARBITRARY_OK:T4_all_flags_on_×_1000/3000_×_1.05_amortization
-    ("modal", "T4", 100, True): (0.20, 0.30, 0.50),  # ARBITRARY_OK:T4_all_flags_on_×_100/3000_×_1.5_warmup_overhead
+    ("modal", "T4", 1000, True): (1.5, 2.5, 4.0),  # ARBITRARY_OK:T4_all_flags_on_x_1000/3000_x_1.05_amortization
+    ("modal", "T4", 100, True): (0.20, 0.30, 0.50),  # ARBITRARY_OK:T4_all_flags_on_x_100/3000_x_1.5_warmup_overhead
 }
 
 
@@ -335,7 +339,7 @@ def predict(
     epochs: int,
     *,
     all_flags_on: bool = True,
-    posterior_path: Optional[Path] = None,
+    posterior_path: Path | None = None,
     matching_anchors_min: int = _WEAK_MIN_ANCHORS,
 ) -> CostBandPrediction:
     """Predict cost-band for one (platform, gpu, epochs, flags) bucket.
@@ -411,8 +415,8 @@ def predict(
     )
     try:
         dt_anchor = datetime.datetime.fromisoformat(most_recent.logged_at_utc)
-        dt_now = datetime.datetime.now(datetime.timezone.utc)
-        freshness_seconds: Optional[float] = (dt_now - dt_anchor).total_seconds()
+        dt_now = datetime.datetime.now(datetime.UTC)
+        freshness_seconds: float | None = (dt_now - dt_anchor).total_seconds()
     except (ValueError, TypeError):
         freshness_seconds = None
     return CostBandPrediction(
@@ -434,7 +438,7 @@ def predict(
 
 
 def summary_by_bucket(
-    posterior_path: Optional[Path] = None,
+    posterior_path: Path | None = None,
 ) -> list[dict]:
     """Aggregate every bucket present in the posterior with N + median cost.
 

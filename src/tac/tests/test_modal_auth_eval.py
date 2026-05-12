@@ -8,9 +8,9 @@ context, and a live T4. We verify:
 """
 from __future__ import annotations
 
+import importlib.util
 import io
 import json
-import importlib.util
 import sys
 import zipfile
 from pathlib import Path
@@ -677,6 +677,35 @@ def test_detached_modal_auth_eval_marks_inflate_env_as_diagnostic_axis(mod, tmp_
     assert metadata["diagnostic_only"] is True
     assert metadata["inflate_device_policy"] == "cpu"
     assert metadata["inflate_env_overrides"] == ["CUDA_VISIBLE_DEVICES="]
+
+
+def test_detached_modal_auth_eval_marks_non_t4_gpu_as_diagnostic_axis(mod, tmp_path, monkeypatch):
+    archive = tmp_path / "point_004_eps_p2.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+
+    class FakeSpawn:
+        @staticmethod
+        def spawn(*_args):
+            return type("Call", (), {"object_id": "fc-test-modal-auth-a100"})()
+
+    monkeypatch.setattr(mod, "run_auth_eval_a100", FakeSpawn)
+    monkeypatch.setattr(mod, "claim_modal_auth_eval_dispatch", lambda **_kwargs: None)
+
+    mod.main(
+        str(archive),
+        str(out_dir),
+        gpu="A100",
+        detach=True,
+        provider_detach_ack=True,
+        lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
+        instance_job_id="job_unit_modal_auth_eval_a100_detached",
+    )
+
+    metadata = json.loads((out_dir / "modal_auth_eval_spawn.json").read_text())
+    assert metadata["axis"] == "diagnostic_cuda"
+    assert metadata["diagnostic_only"] is True
+    assert metadata["non_t4_gpu_diagnostic"] is True
 
 
 def test_detached_modal_auth_eval_marks_cpu_scorer_as_diagnostic_axis(

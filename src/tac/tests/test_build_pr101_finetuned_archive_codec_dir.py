@@ -12,13 +12,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import sys
 import zipfile
 from pathlib import Path
 
 import pytest
 import torch
-
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _BUILD_SCRIPT_PATH = _REPO_ROOT / "tools" / "build_pr101_finetuned_archive.py"
@@ -181,3 +179,7 @@ def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:
     assert "elapsed_raw = result.get(\"elapsed_seconds\")" in text
     assert "isinstance(elapsed_raw, (int, float))" in text
     assert "result.get(\"stdout_tail\", \"\") or \"\"" in text
+    assert "append_modal_training_cost_anchor" in text
+    assert "append_modal_training_terminal_claim" in text
+    assert '"cost_band_anchor": cost_anchor' in text
+    assert '"terminal_claim": terminal_claim' in text

@@ -23,6 +23,7 @@ from tac.preflight import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+MODAL_RECOVER = REPO_ROOT / "experiments" / "modal_recover_lane.py"
 
 
 def _load_adjudicator():
@@ -32,6 +33,21 @@ def _load_adjudicator():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def test_modal_recover_preserves_artifacts_while_wiring_cost_band_anchor() -> None:
+    text = MODAL_RECOVER.read_text()
+
+    assert "append_modal_training_cost_anchor" in text
+    assert "append_modal_training_terminal_claim" in text
+    assert "cost_band_anchor_append_error.json" in text
+    assert "modal_training_terminal_claim_error.json" in text
+    assert "cost-band anchor appended" in text
+    assert "cost-band anchor skipped" in text
+    assert "terminal claim appended" in text
+    assert "failed_modal_training_result_cache_expired" in text
+    assert "score_claim" in text
+    assert "promotion_eligible" in text
 
 
 def _source_manifest_payload(files: list[dict[str, object]]) -> dict[str, object]:

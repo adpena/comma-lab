@@ -53,6 +53,9 @@ def test_modal_train_lane_claims_before_spawn_and_records_lane_id() -> None:
     assert "aborting before Modal GPU spawn" in text
     assert main_src.index("_ensure_dispatch_claim(") < main_src.index("fn.spawn(")
     assert '"lane_id": resolved_lane_id' in text
+    assert "from tac.deploy.modal.auth_eval import function_call_id" in text
+    assert "call_id = function_call_id(fn_call)" in text
+    assert "fn_call.object_id" not in text
 
 
 def test_modal_train_lane_passes_mounted_git_custody_to_remote_scripts() -> None:
@@ -70,3 +73,18 @@ def test_modal_train_lane_passes_mounted_git_custody_to_remote_scripts() -> None
         in text
     )
     assert "unable to resolve mounted git custody for Modal training" in text
+
+
+def test_modal_train_lane_records_cost_band_metadata_without_score_authority() -> None:
+    text = SOURCE.read_text()
+
+    assert "cost_band_trainer: str = \"\"" in text
+    assert "cost_band_epochs: int = 0" in text
+    assert "cost_band_batch_size: int = 0" in text
+    assert "FATAL: --cost-band-trainer is required" in text
+    assert "FATAL: --cost-band-epochs must be positive" in text
+    assert "FATAL: --cost-band-batch-size must be positive" in text
+    assert '"schema": "modal_training_cost_anchor_metadata_v1"' in text
+    assert '"score_claim": False' in text
+    assert '"promotion_eligible": False' in text
+    assert 'metadata["cost_band_anchor"] = cost_band_anchor' in text

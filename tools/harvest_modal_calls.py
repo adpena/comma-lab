@@ -1,9 +1,19 @@
 """Harvest all dispatched Modal call_ids before their result cache expires (~24h)."""
 import json
-from pathlib import Path
+
 import modal
 
-REPO = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
+
+from tac.deploy.modal.training_claims import append_modal_training_terminal_claim  # noqa: E402
+from tac.deploy.modal.training_cost import append_modal_training_cost_anchor  # noqa: E402
+
 result_dirs = list((REPO / "experiments" / "results").glob("lane_*_modal"))
 metadata_files = [d / "modal_metadata.json" for d in result_dirs if (d / "modal_metadata.json").exists()]
 
@@ -22,7 +32,60 @@ for mfile in sorted(metadata_files):
     artifacts_dir = out_dir / "harvested_artifacts"
     if artifacts_dir.exists() and any(artifacts_dir.iterdir()):
         print(f"[SKIP-already-harvested] {label:30s} call_id={call_id[:30]}")
-        summary.append({"label": label, "status": "already_harvested", "call_id": call_id})
+        cost_marker = out_dir / "cost_band_anchor_appended.json"
+        cost_anchor = None
+        if cost_marker.is_file():
+            try:
+                cost_anchor = json.loads(cost_marker.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                cost_anchor = {"appended": False, "reason": "invalid_existing_cost_anchor_marker"}
+        else:
+            harvest_summary = artifacts_dir / "_harvest_summary.json"
+            if harvest_summary.is_file():
+                try:
+                    harvested = json.loads(harvest_summary.read_text(encoding="utf-8"))
+                    if isinstance(harvested, dict):
+                        cost_anchor = append_modal_training_cost_anchor(
+                            out_dir=out_dir,
+                            metadata=meta,
+                            result=harvested,
+                        )
+                except Exception as exc:
+                    cost_anchor = {
+                        "appended": False,
+                        "reason": f"already_harvested_append_failed:{type(exc).__name__}:{exc}",
+                    }
+        terminal_claim = None
+        terminal_marker = out_dir / "modal_training_terminal_claim.json"
+        if terminal_marker.is_file():
+            try:
+                terminal_claim = json.loads(terminal_marker.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                terminal_claim = {"appended": False, "reason": "invalid_existing_terminal_claim_marker"}
+        else:
+            harvest_summary = artifacts_dir / "_harvest_summary.json"
+            if harvest_summary.is_file():
+                try:
+                    harvested = json.loads(harvest_summary.read_text(encoding="utf-8"))
+                    terminal_claim = append_modal_training_terminal_claim(
+                        repo_root=REPO,
+                        out_dir=out_dir,
+                        metadata=meta,
+                        result=harvested if isinstance(harvested, dict) else None,
+                        agent="codex:harvest_modal_calls",
+                    )
+                except Exception as exc:
+                    terminal_claim = {
+                        "appended": False,
+                        "reason": f"already_harvested_terminal_claim_failed:{type(exc).__name__}:{exc}",
+                    }
+        summary.append({
+            "label": label,
+            "status": "already_harvested",
+            "call_id": call_id,
+            "cost_band_anchor": cost_anchor,
+            "terminal_claim": terminal_claim,
+        })
         continue
 
     print(f"\n=== {label} ({call_id[:30]}, dispatched {dispatched}) ===")
@@ -62,24 +125,53 @@ for mfile in sorted(metadata_files):
 
         # Save full stdout tail too
         (artifacts_dir / "_stdout_tail.txt").write_text(result.get("stdout_tail", "") or "")
+        cost_anchor = append_modal_training_cost_anchor(
+            out_dir=out_dir,
+            metadata=meta,
+            result=result,
+        )
+        terminal_claim = append_modal_training_terminal_claim(
+            repo_root=REPO,
+            out_dir=out_dir,
+            metadata=meta,
+            result=result,
+            agent="codex:harvest_modal_calls",
+        )
         (artifacts_dir / "_harvest_summary.json").write_text(json.dumps({
             "rc": rc, "elapsed_seconds": elapsed, "timed_out": timed_out,
             "n_artifacts": n_artifacts, "crash_kind": crash_kind,
+            "cost_band_anchor": cost_anchor,
+            "terminal_claim": terminal_claim,
         }, indent=2))
 
         summary.append({
             "label": label, "call_id": call_id, "rc": rc, "elapsed_seconds": elapsed,
             "n_artifacts": n_artifacts, "crash_kind": crash_kind,
+            "cost_band_anchor": cost_anchor,
+            "terminal_claim": terminal_claim,
         })
 
     except modal.exception.OutputExpiredError:
-        print(f"  EXPIRED (>24h old, GC'd)")
-        summary.append({"label": label, "status": "expired", "call_id": call_id})
+        print("  EXPIRED (>24h old, GC'd)")
+        terminal_claim = append_modal_training_terminal_claim(
+            repo_root=REPO,
+            out_dir=out_dir,
+            metadata=meta,
+            result=None,
+            status="failed_modal_training_result_cache_expired",
+            agent="codex:harvest_modal_calls",
+        )
+        summary.append({
+            "label": label,
+            "status": "expired",
+            "call_id": call_id,
+            "terminal_claim": terminal_claim,
+        })
     except modal.exception.FunctionTimeoutError as e:
         print(f"  FUNCTION TIMEOUT: {e}")
         summary.append({"label": label, "status": "function_timeout", "call_id": call_id})
     except TimeoutError:
-        print(f"  NOT READY (still queued or running)")
+        print("  NOT READY (still queued or running)")
         summary.append({"label": label, "status": "not_ready", "call_id": call_id})
     except Exception as e:
         print(f"  ERROR: {type(e).__name__}: {str(e)[:200]}")

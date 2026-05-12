@@ -13,10 +13,9 @@ from __future__ import annotations
 
 import json
 import multiprocessing
-import re
+import subprocess
+import sys
 from pathlib import Path
-
-import pytest
 
 from tac.cost_band_calibration import (
     SCHEMA_VERSION,
@@ -29,7 +28,6 @@ from tac.cost_band_calibration import (
     predict,
     summary_by_bucket,
 )
-
 
 # -- Anchor roundtrip --------------------------------------------------------
 
@@ -201,7 +199,10 @@ def test_predict_flags_off_separate_bucket(tmp_path: Path) -> None:
 def _spawn_appender(args: tuple[str, str, str, int, float]) -> None:
     pp_str, lp_str, label, epochs, cost = args
     from tac.cost_band_calibration import (
-        CostBandAnchor as _CBA, append_anchor as _ap,
+        CostBandAnchor as _CBA,
+    )
+    from tac.cost_band_calibration import (
+        append_anchor as _ap,
     )
     anchor = _CBA(
         logged_at_utc="2026-05-12T19:00:00+00:00",
@@ -291,3 +292,48 @@ def test_prediction_as_dict_round_trip() -> None:
     # No NaN/Infinity creeping in.
     s = json.dumps(d, allow_nan=False)
     assert "Infinity" not in s and "NaN" not in s
+
+
+def test_append_cost_band_anchor_cli_uses_canonical_tool_bootstrap(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    posterior = tmp_path / "posterior.jsonl"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "append_cost_band_anchor.py"),
+            "--dispatch-label",
+            "cli_smoke",
+            "--trainer",
+            "experiments/train_x.py",
+            "--platform",
+            "modal",
+            "--gpu",
+            "T4",
+            "--epochs",
+            "3000",
+            "--batch-size",
+            "16",
+            "--all-flags-on",
+            "--actual-wall-clock-sec",
+            "60",
+            "--actual-cost-usd",
+            "0.01",
+            "--posterior-path",
+            str(posterior),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "appended cli_smoke" in proc.stdout
+    anchors = load_anchors(posterior)
+    assert [anchor.dispatch_label for anchor in anchors] == ["cli_smoke"]
+
+
+def test_append_cost_band_anchor_cli_has_no_manual_sys_path_mutation() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    text = (repo_root / "tools" / "append_cost_band_anchor.py").read_text()
+    assert "tools.tool_bootstrap" in text
+    assert "sys.path.insert" not in text
