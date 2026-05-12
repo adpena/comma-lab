@@ -38695,6 +38695,7 @@ def check_operator_wrapper_threads_trainer_tier_required_flags(
         candidates.extend(sorted(scripts_dir.glob("*.sh")))
     for top in (root / "tools", root / "experiments"):
         if top.is_dir():
+            # preflight-mirror-skip-ok: _CHECK_151_EXCLUDED_PATH_MARKERS includes ".omx/oss_export/"
             for p in sorted(top.rglob("*.py")):
                 # Skip vendored / DERIVED_OUTPUT trees per R6.
                 rel = str(p.relative_to(root))
@@ -38955,6 +38956,7 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
         candidates.extend(sorted(scripts_dir.glob("*.sh")))
     for top in (root / "tools", root / "experiments"):
         if top.is_dir():
+            # preflight-mirror-skip-ok: _CHECK_152_EXCLUDED_PATH_MARKERS includes ".omx/oss_export/"
             for p in sorted(top.rglob("*.py")):
                 rel = str(p.relative_to(root))
                 if any(m in rel for m in _CHECK_152_EXCLUDED_PATH_MARKERS):
@@ -39492,6 +39494,7 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
         top = root / d
         if not top.is_dir():
             continue
+        # preflight-mirror-skip-ok: inline filter below excludes ".omx/oss_export/"
         for p in top.rglob("*.py"):
             rel = str(p.relative_to(root))
             # Skip vendored / test-fixture trees.
