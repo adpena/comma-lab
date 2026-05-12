@@ -85,14 +85,14 @@ LANE_ID="t1_balle_128k_endtoend"
 PLATFORM="${PHASE1_PLATFORM:-modal}"
 case "$PLATFORM" in
     modal)
-        EXPECTED_COST_USD="0.75"
-        EXPECTED_COST_BAND_USD="0.59"
-        HARDWARE="Modal T4 (16 GB VRAM)"
+        GPU_CLASS="${MODAL_GPU:-T4}"
+        HARDWARE="Modal ${GPU_CLASS}"
+        PLATFORM_KEY="modal"
         ;;
     vastai|vast)
-        EXPECTED_COST_USD="0.10"
-        EXPECTED_COST_BAND_USD="0.06"
+        GPU_CLASS="4090"
         HARDWARE="Vast.ai RTX 4090 (24 GB VRAM)"
+        PLATFORM_KEY="vastai"
         ;;
     *)
         echo "[phase1-t1-cheap-config] FATAL: PHASE1_PLATFORM=${PLATFORM} not supported (modal|vastai)" >&2
@@ -100,28 +100,57 @@ case "$PLATFORM" in
         ;;
 esac
 
+# F1 fix (non-arbitrariness sweep 2026-05-12): replace stale literal
+# EXPECTED_COST_USD constants with runtime call to the cost-band posterior.
+# The previous literal $0.59 contradicted this same file's docstring band
+# of $15-25 by ~25× — exactly the "fix-landed-in-module-callsite-stale"
+# pattern CLAUDE.md forbids. The posterior at .omx/state/cost_band_posterior.jsonl
+# is the canonical truth source; hand_calibrated_fallback emits an
+# acknowledged-uncalibrated estimate until the first real dispatch lands.
+COST_BAND_TEXT=$(.venv/bin/python -c "
+from tac.cost_band_calibration import predict
+p = predict('${PLATFORM_KEY}', '${GPU_CLASS}', 3000, all_flags_on=True)
+print(f'\${p.p10_cost_usd:.2f}/\${p.p50_cost_usd:.2f}/\${p.p90_cost_usd:.2f}'
+      f'  (N={p.n_anchors}, {p.confidence_tag})')
+" 2>/dev/null || echo "predict() failed — fallback to legacy literal")
+EXPECTED_P50_USD=$(.venv/bin/python -c "
+from tac.cost_band_calibration import predict
+p = predict('${PLATFORM_KEY}', '${GPU_CLASS}', 3000, all_flags_on=True)
+print(f'{p.p50_cost_usd:.2f}')
+" 2>/dev/null || echo "8.00")
+CONFIDENCE_TAG=$(.venv/bin/python -c "
+from tac.cost_band_calibration import predict
+print(predict('${PLATFORM_KEY}', '${GPU_CLASS}', 3000, all_flags_on=True).confidence_tag)
+" 2>/dev/null || echo "hand_calibrated_fallback")
+
 cat <<EOF
 
 === Phase 1 T1 Ballé cheap-config dispatch operator confirmation ===
 
 lane_id:                 ${LANE_ID}
 platform:                ${PLATFORM} (${HARDWARE})
-expected cost band:      \$${EXPECTED_COST_BAND_USD} USD (cap: \$${EXPECTED_COST_USD})
-config:                  T13+T19+T20+T22 all-on, 3000 epochs, batch_size=16
+cost band p10/p50/p90:   ${COST_BAND_TEXT}
+                         Source: tac.cost_band_calibration.predict()
+                         Posterior: .omx/state/cost_band_posterior.jsonl
+                         Confidence: ${CONFIDENCE_TAG}
+config:                  T13+T19+T20+T22 + T1-Tier wins all-on, 3000 epochs
+                         autocast FP16 + mp4 codec sim + soft_cosine
 predicted Δ:             -0.012 ± 0.007 [predicted; TT cost refinement]
 risk:                    Phase 1 trainer is contest-compliant per Catalog #146
                          (write_runtime fix); archive grammar 8/8 declared
                          per Catalog #124. Empirical-validation risk is LOW.
-envelope status:         FITS \$5/individual cap with ~6.6× (Modal) /
-                         ~50× (Vast.ai) headroom.
 
 pre-flight check:
   - scripts/remote_lane_t1_balle_endtoend.sh present
   - tools/claim_lane_dispatch.py present
   - .omx/state/active_lane_dispatch_claims.md present
 
+NOTE: cost band is hand_calibrated_fallback until N≥3 empirical anchors
+land in the posterior. Each completed dispatch appends an anchor via
+tools/append_cost_band_anchor.py — calibration converges from data.
+
 EOF
-read -r -p "Proceed with Phase 1 T1 Ballé dispatch (~\$${EXPECTED_COST_BAND_USD} ${PLATFORM})? [y/N] " confirm
+read -r -p "Proceed with Phase 1 T1 Ballé dispatch (p50≈\$${EXPECTED_P50_USD} ${PLATFORM}, ${CONFIDENCE_TAG})? [y/N] " confirm
 case "$confirm" in
     [yY]|[yY][eE][sS])
         ;;
@@ -198,11 +227,17 @@ case "$PLATFORM" in
             echo "[phase1-t1-cheap-config] FATAL: Vast.ai launcher missing; pick PHASE1_PLATFORM=modal" >&2
             exit 5
         fi
+        # F6 fix (non-arbitrariness sweep 2026-05-12): Vast.ai 4090 timeout
+        # bumped 2.0h → 4.0h to match Modal default. 4090 is ~3× faster than T4
+        # so 1.2-1.5h is the typical wall-clock; 4.0h cap is ~2.7-3.3× margin
+        # for auth-eval-on-best and rare slow runs. Symmetry with Modal removes
+        # the platform-conditional failure-semantics asymmetry the sweep flagged.
+        VASTAI_TIMEOUT_HOURS="${VASTAI_TIMEOUT_HOURS:-4.0}"
         .venv/bin/python "$LAUNCHER" \
             --lane-script scripts/remote_lane_t1_balle_endtoend.sh \
             --label "${INSTANCE_JOB_ID}" \
             --gpu RTX_4090 \
-            --timeout-hours 2.0 \
+            --timeout-hours "${VASTAI_TIMEOUT_HOURS}" \
             --env-overrides "${ENV_OVERRIDES}"
         ;;
 esac

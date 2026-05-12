@@ -223,23 +223,30 @@ from tac.temporal_consistency_regularizer import (  # noqa: E402
 TIER_1_OPERATOR_REQUIRED_FLAGS = {
     "--enable-autocast-fp16": {
         "env": "T1_ENABLE_AUTOCAST_FP16",
+        # F5 fix (non-arbitrariness sweep 2026-05-12): replace stale pre-Amdahl
+        # multiplier "4-6x T4" with Amdahl-corrected single-component figure.
         "rationale": (
-            "fp16 forward + GradScaler + fp32-Lagrangian cast; 4-6x T4 / 5x A100 "
-            "throughput on scorer-bound training (audit 2026-05-12)"
+            "fp16 forward + GradScaler + fp32-Lagrangian cast; Amdahl-component "
+            "~1.6x contribution to ~2.5-3.5x compound speedup "
+            "(see feedback_adversarial_review_fixup_pass_1_landed_20260512.md "
+            "for Amdahl decomposition; savings overlap with soft_cosine)"
         ),
         "default": None,
         "satisfied_by_profile": (),
         "requires": (),
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
     "--enable-mp4-codec-sim": {
         "env": "T1_ENABLE_MP4_CODEC_SIM",
         "rationale": (
             "differentiable BT.601 chroma 4:2:0 + optional DCT-quant noise STE; "
-            "shrinks pixels->bytes->pixels proxy-auth gap ~0.5-2% at PR106 r2"
+            "captures ~30% of real mp4 codec losses (chroma + Gaussian noise); "
+            "does NOT simulate DCT quant tables, motion comp, deblocking, loop filter"
         ),
         "default": None,
         "satisfied_by_profile": (),
         "requires": (),
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
     "--mp4-codec-sim-noise-std": {
         "env": "T1_MP4_CODEC_SIM_NOISE_STD",
@@ -247,44 +254,63 @@ TIER_1_OPERATOR_REQUIRED_FLAGS = {
         "default": "0.0",
         "satisfied_by_profile": (),
         "requires": ("--enable-mp4-codec-sim",),  # MacKay: dependency edge
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
     "--enable-t20-kl-pose-distill": {
         "env": "T1_ENABLE_T20_KL_POSE_DISTILL",
-        "rationale": "T20 KL-distill on pose axis; teacher_pose_cache eliminates 1 of 4 scorer forwards per batch",
+        "rationale": (
+            "T20 KL-distill on pose axis; teacher_pose_cache eliminates 1 of 4 "
+            "scorer forwards per batch (~25% scorer-time reduction, ~1.25x Amdahl)"
+        ),
         "default": None,
         "satisfied_by_profile": (),
         "requires": (),
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
     "--enable-t22-temporal-consistency": {
         "env": "T1_ENABLE_T22_TEMPORAL_CONSISTENCY",
-        "rationale": "T22 temporal-consistency regularizer; pose-axis stabilizer",
+        "rationale": (
+            "T22 temporal-consistency regularizer; pose-axis stabilizer; "
+            "marginal Δ-score not yet empirically anchored ([predicted])"
+        ),
         "default": None,
         "satisfied_by_profile": (),
         "requires": (),
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
     "--segmentation-surrogate": {
         "env": "SEGMENTATION_SURROGATE",
         "rationale": (
             "O(N) soft_cosine vs O(N^2) sinkhorn at 384x512 per-pixel positions; "
-            "default flipped per engineering audit 2026-05-12"
+            "Amdahl-component ~10% scorer fraction reduction → ~1.11x compound "
+            "(NOT the 5x speedup of the underlying surrogate kernel)"
         ),
         "default": "soft_cosine",
         "satisfied_by_profile": (),
         "requires": (),
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
     "--enable-t13-sqrt-n-budget": {
         "env": "T1_ENABLE_T13_SQRT_N_BUDGET",
-        "rationale": "Fridrich sqrt(n) latent-rate budget; T13 free $0 lateral-leap",
+        "rationale": (
+            "Fridrich sqrt(n) latent-rate budget per Ker-Pevný-Fridrich 2008; "
+            "rate-allocation reshape; T13 free $0 lateral-leap"
+        ),
         "default": None,
         "satisfied_by_profile": (),
         "requires": (),
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
     "--enable-t19-adaptive-rho": {
         "env": "T1_ENABLE_T19_ADAPTIVE_RHO",
-        "rationale": "Boyd adaptive ρ; T19 free $0 2-3x convergence speedup",
+        "rationale": (
+            "Boyd adaptive ρ-step per Boyd §3.4.1 / He-Yang 2000; "
+            "predicted 2-3x ADMM-convergence speedup [predicted; not direct score]"
+        ),
         "default": None,
         "satisfied_by_profile": (),
         "requires": (),
+        "rationale_audit": ".omx/research/non_arbitrariness_sweep_20260512.md#f5",
     },
 }
 

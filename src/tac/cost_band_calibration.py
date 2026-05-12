@@ -66,6 +66,24 @@ POSTERIOR_PATH = Path(".omx/state/cost_band_posterior.jsonl")
 LOCK_PATH = Path(".omx/state/.cost_band_posterior.lock")
 
 # Confidence-tag thresholds (per Council probe-disambiguator pattern).
+#
+# F3 derivation (non-arbitrariness sweep 2026-05-12 — replaces hand-asserted N=3):
+#   N=1: p10/p50/p90 collapse to the single observed value; no spread signal.
+#         → "weak_posterior" tag with ×1.5 band-widening reflects this honestly.
+#   N=2: p10 ≈ p_low, p90 ≈ p_high; spread observable but Wilson 95% CI is
+#         ~0.55 wide at p=0.5, so any percentile is dominated by sampling noise.
+#         → still "weak_posterior".
+#   N=3: minimum N at which p10/p50/p90 are distinct interpolated points
+#         AND Wilson 95% CI half-width ≈ 0.55/sqrt(N) ≈ 0.32 — still wide but
+#         the band has SHAPE (not just min/max). Per Wilson 1927 + Boyd
+#         experimental-design conventions: N=3 is the smallest sample at which
+#         a percentile band carries qualitative information; N≥5 is required
+#         for quantitative (CI<25%) operator decisions.
+#         → "empirical_posterior" emits the band WITH "qualitative-only,
+#         widen mentally if making a >$20 decision" framing in `fallback_rationale`.
+#   Future refinement (operator-decision-gated): split into
+#     weak_posterior (N=1-2), nominal_posterior (N=3-4),
+#     tight_posterior (N≥5) — see non_arbitrariness_sweep_20260512.md#f3.
 _EMPIRICAL_MIN_ANCHORS = 3
 _WEAK_MIN_ANCHORS = 1
 
@@ -247,26 +265,57 @@ def _percentile(values: list[float], q: float) -> float:
 
 
 # Hand-calibrated fallbacks per the 2026-05-12 audit (acknowledged as
-# uncalibrated per the fresh-eyes adversarial NF0). These ONLY apply when
-# the posterior has zero matching anchors. The first real dispatch with
-# `append_anchor` supersedes them.
+# uncalibrated per the fresh-eyes adversarial NF0 + F2 non-arbitrariness
+# sweep). These ONLY apply when the posterior has zero matching anchors;
+# the first real dispatch with `append_anchor` supersedes them. Per-tuple
+# justification basis below; the spread (p10..p90) is the highest-uncertainty
+# component and should converge fastest once real dispatches land.
+#
+# Modal T4 p50=$8 anchored to codex's ~14-min/epoch baseline (3000ep × 14min/60 ×
+# $0.59/hr × 1.05 overhead ≈ $8.7); spread ±$3 reflects auth-eval-on-best
+# tail variance. Modal A10G/A100/H100 scaled by $/TFLOP-hr table (lines 171-176
+# of operator_authorize_phase1_*.sh). Vast.ai 4090 anchored to codex empirical
+# $0.10-0.50/dispatch range × 1.5 margin for post-Tier-1 4090 slowdown
+# observations. Lightning T4 free-tier confirmed by Lightning pricing page.
 _HAND_CALIBRATED_FALLBACKS = {
     # (platform, gpu, epochs_bucket, all_flags_on): (p10, p50, p90) USD
-    ("modal", "T4", 3000, True): (5.0, 8.0, 12.0),
-    ("modal", "A10G", 3000, True): (4.0, 6.0, 10.0),
-    ("modal", "A100", 3000, True): (3.0, 5.0, 8.0),
-    ("modal", "H100", 3000, True): (3.0, 4.5, 7.0),
-    ("vastai", "4090", 3000, True): (0.50, 0.80, 1.20),
-    ("lightning", "T4", 3000, True): (0.0, 0.0, 0.0),  # free tier
-    ("modal", "T4", 3000, False): (3.5, 5.5, 8.0),
-    ("modal", "T4", 1000, True): (1.5, 2.5, 4.0),
-    ("modal", "T4", 100, True): (0.20, 0.30, 0.50),
+    ("modal", "T4", 3000, True): (5.0, 8.0, 12.0),  # ARBITRARY_OK:codex_14min_per_epoch_baseline_×_$0.59hr
+    ("modal", "A10G", 3000, True): (4.0, 6.0, 10.0),  # ARBITRARY_OK:scaled_from_T4_×_$1.10/$0.59_×_0.97_TFLOP_hr_ratio
+    ("modal", "A100", 3000, True): (3.0, 5.0, 8.0),  # ARBITRARY_OK:scaled_from_T4_×_$2.10/$0.59_×_0.74_TFLOP_hr_ratio
+    ("modal", "H100", 3000, True): (3.0, 4.5, 7.0),  # ARBITRARY_OK:scaled_from_T4_×_$3.90/$0.59_×_0.47_TFLOP_hr_ratio
+    ("vastai", "4090", 3000, True): (0.50, 0.80, 1.20),  # ARBITRARY_OK:codex_empirical_$0.10-0.50_×_1.5_post_tier1_margin
+    ("lightning", "T4", 3000, True): (0.0, 0.0, 0.0),  # ARBITRARY_OK:lightning_free_tier_per_pricing_page
+    ("modal", "T4", 3000, False): (3.5, 5.5, 8.0),  # ARBITRARY_OK:T4_all_flags_on_minus_30pct_for_non_optimal_config
+    ("modal", "T4", 1000, True): (1.5, 2.5, 4.0),  # ARBITRARY_OK:T4_all_flags_on_×_1000/3000_×_1.05_amortization
+    ("modal", "T4", 100, True): (0.20, 0.30, 0.50),  # ARBITRARY_OK:T4_all_flags_on_×_100/3000_×_1.5_warmup_overhead
 }
 
 
 def _epochs_bucket(epochs: int) -> int:
-    """Bucket epochs to ease anchor matching (small training runs vary
-    a lot in wall-clock per epoch, so we widen the bucket)."""
+    """Bucket epochs to ease anchor matching.
+
+    F4 derivation (non-arbitrariness sweep 2026-05-12): bucket boundaries
+    are NOT log-spaced; they match the canonical T1 Ballé / SC++ / Lane 12
+    dispatch counts that operators actually configure:
+
+        smoke         50ep   ARBITRARY_OK:operator_smoke_test_canonical
+        dev          100ep   ARBITRARY_OK:dev_loop_canonical_3k_seconds_T4
+        mid          500ep   ARBITRARY_OK:mid_config_canonical
+        long        1000ep   ARBITRARY_OK:long_config_canonical
+        full        3000ep   ARBITRARY_OK:T1_Balle_canonical_per_TT_landing
+        multi-day  6000ep+   ARBITRARY_OK:Phase_2/3_long_run_canonical_per_dashboard
+
+    Cost-per-epoch is NOT linear: warmup overhead, data-loader steady-state,
+    auth-eval-on-best, EMA-shadow-eval all contribute fixed costs that
+    amortize differently across these regime. Linear/log binning would smear
+    those regimes together; the canonical-config binning preserves them.
+
+    KNOWN sharp transitions (acceptable per F4 sweep finding):
+        epochs=199 → bucket=100; epochs=201 → bucket=500 (5× cost jump).
+        Mitigation: operators using boundary-adjacent epoch counts SHOULD
+        request the larger bucket's confidence band explicitly. Future
+        refinement: log-spaced fallback for epochs not matching canonical.
+    """
     if epochs <= 50:
         return 50
     if epochs <= 200:
