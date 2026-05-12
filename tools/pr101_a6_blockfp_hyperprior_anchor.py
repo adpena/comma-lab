@@ -98,7 +98,7 @@ def collect_pr101_int8_stream(state_dict_path: Path) -> tuple[np.ndarray, int]:
 
     Returns ``(stream, n_real_symbols)`` where ``stream`` is 1-D int8.
     """
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     chunks: list[np.ndarray] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         qt = _quantize_tensor(name, sd[name], n_quant=N_QUANT)

@@ -184,7 +184,7 @@ class TensorChunked:
 def collect_per_tensor_chunked(
     state_dict_path: Path, chunk_T: int,
 ) -> list[TensorChunked]:
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     out: list[TensorChunked] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         qt = _quantize_tensor(name, sd[name], n_quant=N_QUANT)

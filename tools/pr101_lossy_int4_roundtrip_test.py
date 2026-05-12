@@ -114,7 +114,7 @@ def rel_err_stats(orig: np.ndarray, recon: np.ndarray) -> dict:
 def measure_full_roundtrip(state_dict_path: Path, block_size: int) -> dict:
     """Roundtrip-test every tensor in PR101's state_dict at one block_size."""
     import torch
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
 

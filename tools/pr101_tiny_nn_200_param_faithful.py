@@ -124,7 +124,7 @@ def gaussian_log_pmf(symbol: torch.Tensor, mean: torch.Tensor, log_scale: torch.
 
 
 def collect_symbols(state_dict_path: Path) -> tuple[list[np.ndarray], list[float]]:
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     sym_per_tensor: list[np.ndarray] = []
     scales: list[float] = []
     for name, _shape in FIXED_STATE_SCHEMA:

@@ -180,7 +180,7 @@ def measure_multi_pass(
 
 def run_experiment(state_dict_path: Path, final_alphas: list[float], pass_counts: list[int]) -> dict:
     import torch
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     quantized: list[tuple[str, np.ndarray, float]] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         qt = _quantize_tensor(name, sd[name], n_quant=N_QUANT)

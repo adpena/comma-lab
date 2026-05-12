@@ -269,7 +269,7 @@ def decode_archive_markov1(archive: bytes) -> tuple[dict[str, np.ndarray], list[
 # ---------------------------------------------------------------------------
 
 def _cmd_encode(args) -> int:
-    state_dict = torch.load(args.state_dict_path, map_location="cpu", weights_only=False)
+    state_dict = torch.load(args.state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(state_dict, dict):
         raise SystemExit("loaded path is not a dict")
     t0 = time.time()
@@ -284,7 +284,7 @@ def _cmd_encode(args) -> int:
 
 
 def _cmd_round_trip(args) -> int:
-    state_dict = torch.load(args.state_dict_path, map_location="cpu", weights_only=False)
+    state_dict = torch.load(args.state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(state_dict, dict):
         raise SystemExit("loaded path is not a dict")
     t0 = time.time()

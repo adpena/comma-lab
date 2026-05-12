@@ -100,7 +100,7 @@ def truncate_to_top_channels(tensor: np.ndarray, n_keep: int) -> np.ndarray:
 def sweep_arch_shrink(state_dict_path: Path, ratios: list[float]) -> dict:
     """Truncate each tensor's channels by ratio, brotli, measure."""
     import torch
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
 

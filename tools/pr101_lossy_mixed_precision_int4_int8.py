@@ -278,7 +278,7 @@ def assign_per_tensor_bits(
 
 def measure_full(state_dict_path: Path, target_rel_err_pct: float) -> dict:
     import torch
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
 

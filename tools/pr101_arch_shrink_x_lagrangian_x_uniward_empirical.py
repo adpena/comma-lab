@@ -362,7 +362,7 @@ def run_experiment(
     """Run arch_shrink × Lagrangian × UNIWARD sweep over (ratio, rms_target)."""
     import torch
 
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
 

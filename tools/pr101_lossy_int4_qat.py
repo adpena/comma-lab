@@ -652,7 +652,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[QAT] device: {device}")
 
     # Load fp32 originals.
-    sd = torch.load(args.state_dict, map_location="cpu", weights_only=False)
+    sd = torch.load(args.state_dict, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {args.state_dict} is not a dict")
 

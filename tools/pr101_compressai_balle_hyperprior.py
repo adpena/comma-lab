@@ -115,7 +115,7 @@ def gaussian_log_pmf(symbol: torch.Tensor, mean: torch.Tensor, log_scale: torch.
 
 def collect_symbols(state_dict_path: Path) -> tuple[list[np.ndarray], list[float]]:
     """Quantize each tensor; return list of symbol arrays + per-tensor scales."""
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
     sym_per_tensor: list[np.ndarray] = []

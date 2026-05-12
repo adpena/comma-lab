@@ -249,7 +249,7 @@ def _build_dequantized_substrate_via_admm(
     """
     if not state_dict_path.is_file():
         raise SystemExit(f"FATAL: PR101 state_dict not found: {state_dict_path}")
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
 
     n_tensors = len(FIXED_STATE_SCHEMA)
     if len(Ks) != n_tensors:

@@ -296,7 +296,7 @@ def _build_dequantized_substrate_uniward(
         raise SystemExit(f"FATAL: PR101 state_dict not found: {state_dict_path}")
     # weights_only=False here mirrors the cross-paradigm tool (PR101 state dict
     # is a plain dict[str, Tensor]; safe to load). REVIEW-ENG B8 allowlist.
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
 
     n_tensors = len(FIXED_STATE_SCHEMA)
     if len(Ks) != n_tensors:

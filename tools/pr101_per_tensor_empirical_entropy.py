@@ -71,7 +71,7 @@ def compute_per_tensor_entropy(
     """
     import torch
 
-    state_dict = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    state_dict = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(state_dict, dict):
         raise SystemExit(f"loaded {state_dict_path} is not a dict")
 

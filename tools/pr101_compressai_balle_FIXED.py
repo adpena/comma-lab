@@ -146,7 +146,7 @@ class TensorSlot:
 
 
 def collect_per_tensor_substrate(state_dict_path: Path) -> list[TensorSlot]:
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
 
@@ -186,7 +186,7 @@ class JointSubstrate:
 
 
 def collect_joint_substrate(state_dict_path: Path) -> JointSubstrate:
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact
     chunks: list[np.ndarray] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         qt = _quantize_tensor(name, sd[name], n_quant=N_QUANT)
