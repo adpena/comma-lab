@@ -77,10 +77,12 @@ def _patched_apply_saliency_weighted_compression(
     texture_quantile: float = 0.5,
 ) -> bytes:
     if mode is None:
-        # _UNIWARD_ORIGINAL_APPLY is injected into tac.saliency_inversion's
-        # globals by _patch_saliency_inversion() before this function's
-        # __code__ is swapped onto saliency_inversion.apply_saliency_weighted_compression.
-        return _UNIWARD_ORIGINAL_APPLY(  # noqa: F821 (late-bound via __globals__ swap)
+        # The code object is swapped onto tac.saliency_inversion's function, so
+        # globals() resolves through tac.saliency_inversion rather than this module.
+        original_apply = globals().get("_UNIWARD_ORIGINAL_APPLY")
+        if not callable(original_apply):
+            raise RuntimeError("UNIWARD patch missing original saliency compressor")
+        return original_apply(
             masks,
             saliency_inv,
             high_crf,
@@ -119,12 +121,14 @@ def _patched_apply_saliency_weighted_compression(
     tex = texture_probability.detach().float().cpu()
     threshold = torch.quantile(tex.flatten(), float(texture_quantile))
     aggressive_region = (tex >= threshold).bool()
-    # _default_zlib_encoder and _encode_with_inv are resolved through the
-    # patched function's __globals__ (tac.saliency_inversion module dict),
-    # not this module — see _patch_saliency_inversion() below.
     if encoder is None:
-        encoder = _default_zlib_encoder  # noqa: F821 (late-bound via __globals__ swap)
-    return _encode_with_inv(  # noqa: F821 (late-bound via __globals__ swap)
+        encoder = globals().get("_default_zlib_encoder")
+        if not callable(encoder):
+            raise RuntimeError("UNIWARD patch missing default saliency encoder")
+    encode_with_inv = globals().get("_encode_with_inv")
+    if not callable(encode_with_inv):
+        raise RuntimeError("UNIWARD patch missing saliency inverse encoder")
+    return encode_with_inv(
         masks=masks,
         saliency_inv=aggressive_region,
         high_crf=high_crf,
