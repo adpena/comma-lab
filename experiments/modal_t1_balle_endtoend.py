@@ -8,6 +8,8 @@ without weakening custody:
 * lane claim is opened before ``.spawn()``;
 * the Modal worker runs the existing T1 remote script with a copied claim
   ledger, so the remote script can fail closed on missing dispatch custody;
+* the default training window is a short fail-fast tranche, not the 24h Modal
+  function cap;
 * recover closes the local claim and only treats the result as contest-CUDA
   evidence when ``auth_eval_schema`` reports zero blockers for 600 samples.
 
@@ -55,7 +57,8 @@ DEFAULT_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS = "ambiguous_modal_spawn_submission_recovery_required"
 HOURLY_RATE_T4_USD = 0.59
 DEFAULT_TIMEOUT_HOURS = 24.0
-DEFAULT_TRAIN_TIMEOUT_HOURS = 22.5
+DEFAULT_TRAIN_TIMEOUT_HOURS = 2.0
+MAX_TRAIN_TIMEOUT_HOURS_WITHOUT_LONG_OVERRIDE = 3.0
 DEFAULT_T4_SCORE_DOMAIN_BATCH_SIZE = 1
 REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS = 1.0
 REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS = 0.25
@@ -390,6 +393,17 @@ def _estimated_cost(timeout_hours: float) -> float:
     return HOURLY_RATE_T4_USD * float(timeout_hours)
 
 
+def _estimated_billable_timeout_hours(train_timeout_hours: float) -> float:
+    """Estimate the billed wall-clock for the fail-fast training tranche."""
+
+    remote_finish_budget = (
+        float(train_timeout_hours)
+        + REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS
+        + REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS
+    )
+    return min(DEFAULT_TIMEOUT_HOURS, remote_finish_budget)
+
+
 def _contest_auth_eval_requested(max_target_pairs: int | None) -> bool:
     """Return whether this run can emit the full contest video for auth eval."""
 
@@ -530,6 +544,7 @@ def _dispatch_command(
     archive_every_epochs: int,
     max_candidate_archive_bytes: int,
     max_exact_cuda_candidates: int,
+    allow_long_train_timeout: bool,
 ) -> list[str]:
     cmd = [
         "PYTHONPATH=src:upstream:$PWD",
@@ -561,6 +576,8 @@ def _dispatch_command(
     ]
     if max_target_pairs is not None:
         cmd.extend(["--max-target-pairs", str(int(max_target_pairs))])
+    if allow_long_train_timeout:
+        cmd.append("--allow-long-train-timeout")
     return cmd
 
 
@@ -577,13 +594,21 @@ def build_local_plan(
     archive_every_epochs: int = DEFAULT_T1_ARCHIVE_EVERY_EPOCHS,
     max_candidate_archive_bytes: int = DEFAULT_T1_MAX_CANDIDATE_ARCHIVE_BYTES,
     max_exact_cuda_candidates: int = DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES,
+    allow_long_train_timeout: bool = False,
     claims_path: Path = DEFAULT_CLAIMS_PATH,
 ) -> tuple[dict[str, Any], int]:
     instance_job_id = _safe_label(label or f"t1_balle_modal_{_compact_stamp()}")
     modal_function_timeout_hours = DEFAULT_TIMEOUT_HOURS
-    estimated_cost = _estimated_cost(modal_function_timeout_hours)
+    estimated_billable_timeout_hours = _estimated_billable_timeout_hours(
+        train_timeout_hours
+    )
+    estimated_cost = _estimated_cost(estimated_billable_timeout_hours)
+    now_utc = dt.datetime.now(dt.UTC)
     predicted_eta_utc = (
-        dt.datetime.now(dt.UTC) + dt.timedelta(hours=modal_function_timeout_hours)
+        now_utc + dt.timedelta(hours=estimated_billable_timeout_hours)
+    ).isoformat(timespec="seconds").replace("+00:00", "Z")
+    modal_function_deadline_utc = (
+        now_utc + dt.timedelta(hours=modal_function_timeout_hours)
     ).isoformat(timespec="seconds").replace("+00:00", "Z")
     validation_errors: list[str] = []
     if abs(float(timeout_hours) - modal_function_timeout_hours) > 1e-9:
@@ -607,6 +632,15 @@ def build_local_plan(
             "train_timeout_leaves_no_modal_artifact_buffer:"
             f"train_plus_eval_plus_artifact_buffer={remote_finish_budget:.2f}>"
             f"{modal_function_timeout_hours:.2f}"
+        )
+    if (
+        float(train_timeout_hours) > MAX_TRAIN_TIMEOUT_HOURS_WITHOUT_LONG_OVERRIDE
+        and not allow_long_train_timeout
+    ):
+        validation_errors.append(
+            "train_timeout_requires_explicit_long_override:"
+            f"train_timeout_hours={float(train_timeout_hours):.2f}>"
+            f"{MAX_TRAIN_TIMEOUT_HOURS_WITHOUT_LONG_OVERRIDE:.2f}"
         )
     if "guard" in instance_job_id.lower():
         if epochs > 100:
@@ -691,7 +725,9 @@ def build_local_plan(
         "instance_job_id": instance_job_id,
         "created_at_utc": _utc_now(),
         "predicted_eta_utc": predicted_eta_utc,
+        "modal_function_deadline_utc": modal_function_deadline_utc,
         "estimated_cost_usd": estimated_cost,
+        "estimated_billable_timeout_hours": estimated_billable_timeout_hours,
         "modal_function_timeout_hours": modal_function_timeout_hours,
         "requested_timeout_hours": float(timeout_hours),
         "cost_cap_usd": float(cost_cap_usd),
@@ -706,6 +742,7 @@ def build_local_plan(
             "archive_every_epochs": int(archive_every_epochs),
             "max_candidate_archive_bytes": int(max_candidate_archive_bytes),
             "max_exact_cuda_candidates": int(max_exact_cuda_candidates),
+            "allow_long_train_timeout": bool(allow_long_train_timeout),
             "device": "cuda",
             "segmentation_surrogate": "sinkhorn",
             "enable_t13_sqrt_n_budget": True,
@@ -748,6 +785,7 @@ def build_local_plan(
             archive_every_epochs=archive_every_epochs,
             max_candidate_archive_bytes=max_candidate_archive_bytes,
             max_exact_cuda_candidates=max_exact_cuda_candidates,
+            allow_long_train_timeout=allow_long_train_timeout,
         ),
         "recover_command_after_dispatch": (
             ".venv/bin/python experiments/modal_t1_balle_endtoend.py recover "
@@ -794,6 +832,14 @@ def plan_cli(argv: list[str] | None = None) -> int:
         type=int,
         default=DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES,
     )
+    parser.add_argument(
+        "--allow-long-train-timeout",
+        action="store_true",
+        help=(
+            "Allow train-timeout-hours above the default fail-fast cap. "
+            "Use only with an explicit throughput justification."
+        ),
+    )
     parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
     parser.add_argument("--json-out", default=None)
     args = parser.parse_args(argv)
@@ -809,6 +855,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
         archive_every_epochs=args.archive_every_epochs,
         max_candidate_archive_bytes=args.max_candidate_archive_bytes,
         max_exact_cuda_candidates=args.max_exact_cuda_candidates,
+        allow_long_train_timeout=args.allow_long_train_timeout,
         claims_path=args.claims_path,
     )
     if args.json_out:
@@ -1243,6 +1290,7 @@ def main(
     archive_every_epochs: int = DEFAULT_T1_ARCHIVE_EVERY_EPOCHS,
     max_candidate_archive_bytes: int = DEFAULT_T1_MAX_CANDIDATE_ARCHIVE_BYTES,
     max_exact_cuda_candidates: int = DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES,
+    allow_long_train_timeout: bool = False,
     execute: bool = False,
     force_claim: bool = False,
 ) -> None:
@@ -1259,6 +1307,7 @@ def main(
         archive_every_epochs=archive_every_epochs,
         max_candidate_archive_bytes=max_candidate_archive_bytes,
         max_exact_cuda_candidates=max_exact_cuda_candidates,
+        allow_long_train_timeout=allow_long_train_timeout,
     )
     if not execute:
         print(json.dumps(plan, indent=2, sort_keys=True))

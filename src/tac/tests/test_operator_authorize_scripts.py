@@ -320,6 +320,23 @@ def test_scpp_dispatch_carries_substrate_engineering_tag():
     assert "substrate_engineering" in body or "substrate engineering" in body
 
 
+def test_scpp_dispatch_is_training_build_only_until_exact_eval_lands():
+    p = _SCRIPTS_DIR / "operator_authorize_scpp_stage1_anchor_dispatch.sh"
+    body = p.read_text()
+    assert "SCPP_RUN_CONTEST_CUDA_AUTH_EVAL=0" in body
+    assert "no score claim" in body
+    assert "separate exact-eval dispatch" in body
+
+
+def test_scpp_remote_script_defaults_training_build_only():
+    p = _SCRIPTS_DIR / "remote_lane_scpp_stage1.sh"
+    body = p.read_text()
+    assert 'RUN_CONTEST_CUDA_AUTH_EVAL="${SCPP_RUN_CONTEST_CUDA_AUTH_EVAL:-0}"' in body
+    assert 'RUN_CONTEST_CUDA_AUTH_EVAL="1"' not in body
+    assert "refused exact-eval request" in body
+    assert "Stage 4: training command" in body
+
+
 def test_v020rc1_push_carries_tag_immutability_warning():
     p = _SCRIPTS_DIR / "operator_authorize_v0_2_0_rc1_github_push.sh"
     body = p.read_text()

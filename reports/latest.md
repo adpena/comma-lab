@@ -52,7 +52,7 @@ remote, GPU, or exact-eval dispatch was launched for this reconciliation.
 
 - Lane: `track1_phase_a1_score_gradient`
 - Job: `track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
-- Modal call id: `fc-01KR553TPH27G73HMHH56MDZH0`
+- Modal call id: redacted in public report; private custody ledger retains the call id.
 - Terminal status: `failed_modal_recover_exception`
 - Cost estimate: `$1.47`
 - Recovery command used: `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
@@ -69,7 +69,7 @@ remote repo import roots at import time and closes active claims on recover
 exceptions.
 
 **Fixed relaunch harvested:** `track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal`
-completed training/build on Modal as call `fc-01KR55GH98QW3J3QDGQB1EG4CR`.
+completed training/build on Modal; the private custody ledger retains the call id.
 CUDA auth eval was skipped because the T4 DALI/NVDEC preflight failed with
 NVML error `999`, so the Modal result remains `cuda-training-build-only` until
 paired CUDA exact eval is repaired.
@@ -122,7 +122,7 @@ follow-up regressed to `0.19359165212458496` macOS CPU advisory, a short
 guarded schedule was launched on Modal T4:
 
 - Job: `track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal`
-- Modal call id: `fc-01KR5K3V8VT735P73ZV881ZQA2`
+- Modal call id: redacted in public report; private custody ledger retains the call id.
 - Claim status: `active_dispatching`
 - Config: `epochs=40`, `steps_per_epoch=8`, `lr=2e-6`,
   `aux_kl_weight=0.5`, `aux_pixel_l1_weight=0.02`
@@ -174,7 +174,7 @@ early-stopping test instead of another blind final-epoch refire. Focused tests:
 `pixel_l1=0.01`, `40x8` basin completed and recovered cleanly.
 
 - Job: `track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex`
-- Modal call id: `fc-01KR5MQ0WYS8TQWDN7HCYBZZ3B`
+- Modal call id: redacted in public report; private custody ledger retains the call id.
 - Recovery: `completed`, `31` artifacts, `335.703398914 s`
 - Exact CUDA: `0.2263520234784395` (`seg=0.00066299`,
   `pose=0.00017103`, `rate=0.11869725`)

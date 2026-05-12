@@ -38,8 +38,9 @@ TAG_SHA=$(git rev-list -n 1 "refs/tags/${TAG}")
 
 # Pre-flight: remote tag must NOT exist (or operator wants to skip if it does).
 REMOTE_TAG_SHA=""
-if git ls-remote --tags "$REMOTE" "refs/tags/${TAG}" 2>/dev/null | grep -q "${TAG}"; then
-    REMOTE_TAG_SHA=$(git ls-remote --tags "$REMOTE" "refs/tags/${TAG}" | awk '{print $1}')
+REMOTE_TAGS=$(git ls-remote --tags "$REMOTE" "refs/tags/${TAG}" 2>/dev/null || true)
+if echo "$REMOTE_TAGS" | grep -q "${TAG}"; then
+    REMOTE_TAG_SHA=$(echo "$REMOTE_TAGS" | awk '{print $1}')
 fi
 
 cat <<EOF

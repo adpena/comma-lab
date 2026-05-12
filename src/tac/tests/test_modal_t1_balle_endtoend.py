@@ -75,7 +75,8 @@ def test_plan_cli_is_default_safe_and_writes_no_claim(tmp_path: Path) -> None:
     assert payload["requires_execute_for_dispatch"] is True
     assert payload["modal_function_timeout_hours"] == 24.0
     assert payload["requested_timeout_hours"] == 24.0
-    assert payload["estimated_cost_usd"] == 14.16
+    assert payload["estimated_billable_timeout_hours"] == 3.25
+    assert payload["estimated_cost_usd"] == 1.9175
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert "--execute" in payload["dispatch_command"]
@@ -128,7 +129,7 @@ def test_plan_cli_cost_cap_failure_still_opens_no_claim(tmp_path: Path) -> None:
     payload = json.loads(json_out.read_text())
     assert payload["ready_for_modal_dispatch_command"] is False
     assert payload["score_claim"] is False
-    assert payload["validation_errors"] == ["estimated_cost_exceeds_cap:14.16>1.00"]
+    assert payload["validation_errors"] == ["estimated_cost_exceeds_cap:1.92>1.00"]
     assert claim_file.read_text() == before_claims
 
 
@@ -164,7 +165,7 @@ def test_plan_cli_rejects_timeout_that_does_not_match_modal_function(tmp_path: P
     assert result.returncode == 2
     payload = json.loads(json_out.read_text())
     assert payload["ready_for_modal_dispatch_command"] is False
-    assert payload["estimated_cost_usd"] == 14.16
+    assert payload["estimated_cost_usd"] == 1.3275
     assert payload["modal_function_timeout_hours"] == 24.0
     assert payload["validation_errors"] == [
         "timeout_hours_must_match_modal_function_timeout:requested=1.50:actual=24.00"
@@ -384,9 +385,9 @@ def test_modal_t1_guard_labels_require_bounded_guard_params() -> None:
         "guard_label_requires_max_target_pairs_lte_8:max_target_pairs=None"
         in payload["validation_errors"]
     )
-    assert (
-        "guard_label_requires_train_timeout_lte_3h:train_timeout_hours=22.50"
-        in payload["validation_errors"]
+    assert not any(
+        err.startswith("guard_label_requires_train_timeout_lte_3h")
+        for err in payload["validation_errors"]
     )
 
 
@@ -592,6 +593,54 @@ def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer(tmp_pa
         err.startswith("train_timeout_leaves_no_modal_artifact_buffer")
         for err in payload["validation_errors"]
     )
+
+
+def test_modal_t1_rejects_long_train_timeout_without_explicit_override(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-full-run",
+        epochs=3000,
+        batch_size=1,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=4,
+        max_target_pairs=None,
+        claims_path=_empty_claims_path(tmp_path),
+    )
+
+    assert rc == 2
+    assert payload["ready_for_modal_dispatch_command"] is False
+    assert (
+        "train_timeout_requires_explicit_long_override:"
+        "train_timeout_hours=4.00>3.00"
+    ) in payload["validation_errors"]
+
+
+def test_modal_t1_allows_long_train_timeout_with_explicit_override(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-full-run",
+        epochs=3000,
+        batch_size=1,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=4,
+        max_target_pairs=None,
+        allow_long_train_timeout=True,
+        claims_path=_empty_claims_path(tmp_path),
+    )
+
+    assert rc == 0
+    assert payload["ready_for_modal_dispatch_command"] is True
+    assert payload["estimated_billable_timeout_hours"] == 5.25
+    assert payload["params"]["allow_long_train_timeout"] is True
+    assert "--allow-long-train-timeout" in payload["dispatch_command"]
 
 
 def test_modal_t1_rejects_train_timeout_without_artifact_collection_buffer() -> None:

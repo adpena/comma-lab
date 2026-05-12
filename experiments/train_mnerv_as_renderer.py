@@ -52,6 +52,8 @@ from pathlib import Path
 
 import torch
 
+from tac.output_path_policy import assert_not_temporary_output_dir
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -171,6 +173,10 @@ def _make_synthetic_mnerv_smoke_batch(
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     _refuse_auth_eval_without_authorization(args)
+    try:
+        assert_not_temporary_output_dir(args.output_dir, tool_name="mnerv")
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

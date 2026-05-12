@@ -74,6 +74,8 @@ from pathlib import Path
 
 import torch
 
+from tac.output_path_policy import assert_not_temporary_output_dir
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -192,6 +194,10 @@ def _activate_differentiable_yuv6():
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    try:
+        assert_not_temporary_output_dir(args.output_dir, tool_name="lane_12_v2")
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     # CLAUDE.md "Operator gates must be wired and used": refuse --auth-eval
     # without explicit Phase B operator authorization memo (Catalog #150).

@@ -136,13 +136,17 @@ def inflate(src_bin: Path, dst_raw: Path) -> None:
     if data[:4] != MAGIC:
         raise ValueError(f"bad magic: {data[:4]!r} != {MAGIC!r}")
     version = struct.unpack_from("<H", data, 4)[0]
+    if version != 1:
+        raise ValueError(f"version={version} != 1")
     format_id = struct.unpack_from("<H", data, 6)[0]
     if format_id != FORMAT_ID:
         raise ValueError(f"format_id={format_id} != {FORMAT_ID}")
     latent_dim = struct.unpack_from("<H", data, 8)[0]
     n_pairs = struct.unpack_from("<H", data, 10)[0]
     base_channels = struct.unpack_from("<H", data, 12)[0]
-    # reserved at offset 14
+    reserved = struct.unpack_from("<H", data, 14)[0]
+    if reserved != 0:
+        raise ValueError(f"reserved={reserved} != 0")
     off = 16
     dec_len = struct.unpack_from("<I", data, off)[0]; off += 4
     dec_blob = data[off:off + dec_len]; off += dec_len

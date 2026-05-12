@@ -236,6 +236,20 @@ def test_meta_codec_with_anything_orthogonal():
     assert cell3.composability == Composability.ORTHOGONAL
 
 
+def test_magic_codec_is_zero_ev_until_byte_closed_runtime_lands():
+    row = next(
+        r for r in canonical_substrate_inventory()
+        if r.substrate_id == "magic_codec"
+    )
+    assert row.predicted_delta_alone_band == (0.0, 0.0)
+    assert "repo_tac_required_until_vendored" in row.runtime_dep_closure
+    pareto = {
+        r.substrate_id: r for r in per_substrate_pareto_rows()
+    }["magic_codec"]
+    assert pareto.predicted_delta_alone_midpoint == 0.0
+    assert pareto.estimated_dispatch_cost_usd == 0.0
+
+
 def test_self_with_self_redundant_alpha_zero():
     matrix = build_composition_matrix()
     cell = matrix.get("wavelet_residual", "wavelet_residual")

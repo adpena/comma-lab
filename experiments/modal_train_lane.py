@@ -3,9 +3,10 @@
 Why: 2026-04-29 night session showed Vast.ai 4090 NVDEC bad-host rate ≈ 85%.
 ~$5 burned across 5 dispatch rounds for 0 trained lanes. Modal is useful for
 build/training work after repeated Vast.ai NVDEC host failures.
-This wrapper forces Modal auth-eval to CPU to avoid NVDEC, so any score it
-prints is advisory only and non-promotable until the exact archive is rerun
-through CUDA auth eval.
+This wrapper is a training/build substrate only. It disables lane-local exact
+CUDA auth-eval paths because Modal training containers do not provide a
+promotion-grade NVDEC gate here. Any score must be produced later by the
+canonical exact-eval dispatch/recovery stack.
 
 Pattern mirrors `experiments/modal_auth_eval.py` (commit 11d56896).
 
@@ -186,6 +187,13 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
         f"export TAC_UPSTREAM_DIR={workspace}/upstream\n"
         f"export PYBIN={sys.executable}\n"
         f"export WORKSPACE={workspace}\n"
+        "export AUTH_EVAL_DEVICE=cpu\n"
+        "export MODAL_AUTH_EVAL_ADVISORY_ONLY=1\n"
+        "export SCORE_CLAIM=false\n"
+        "export PROMOTION_ELIGIBLE=false\n"
+        "export T1_RUN_CONTEST_CUDA_AUTH_EVAL=0\n"
+        "export SCPP_RUN_CONTEST_CUDA_AUTH_EVAL=0\n"
+        "export RUN_CONTEST_EVAL=0\n"
     )
 
     # Stub probe_nvdec.sh so Stage 0 of every lane passes. Modal containers
@@ -241,10 +249,9 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     # Build env. PATH/LD_LIBRARY_PATH point to the actual extracted ffmpeg dir
     # (not a phantom /opt/ffmpeg-master). PYBIN is propagated to bash + child
     # python invocations so probe_nvdec.sh + lane scripts inherit it.
-    # AUTH_EVAL_DEVICE=cpu forces lane Stage 5 contest_auth_eval to use
-    # AVVideoDataset (PyAV) instead of DaliVideoDataset (which needs NVDEC).
-    # Mark the path non-promotable in the child environment so harvested
-    # metadata cannot be mistaken for exact CUDA evidence.
+    # Modal training wrappers are not an exact-eval surface. Force all known
+    # lane-local auth-eval switches off; exact CUDA eval must use the canonical
+    # claimed auth-eval dispatch path with a real NVDEC/CUDA gate.
     env = {
         **os.environ,
         "WORKSPACE": str(workspace),
@@ -261,11 +268,38 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
         "MODAL_AUTH_EVAL_ADVISORY_ONLY": "1",
         "SCORE_CLAIM": "false",
         "PROMOTION_ELIGIBLE": "false",
+        "T1_RUN_CONTEST_CUDA_AUTH_EVAL": "0",
+        "SCPP_RUN_CONTEST_CUDA_AUTH_EVAL": "0",
+        "RUN_CONTEST_EVAL": "0",
         # Lanes test for AUTO_DESTROY_VAST + VAST_INSTANCE_ID; on Modal these
         # are no-ops since Modal manages instance lifecycle.
         "AUTO_DESTROY_VAST": "0",
     }
     env.update(env_overrides)
+    exact_eval_switches = (
+        "T1_RUN_CONTEST_CUDA_AUTH_EVAL",
+        "SCPP_RUN_CONTEST_CUDA_AUTH_EVAL",
+        "RUN_CONTEST_EVAL",
+    )
+    truthy = {"1", "true", "yes", "on"}
+    requested = [
+        key for key in exact_eval_switches
+        if env.get(key, "").strip().lower() in truthy
+    ]
+    if requested:
+        return {
+            "returncode": 12,
+            "error": (
+                "refusing exact CUDA auth-eval from modal_train_lane.py; "
+                f"requested switches={requested}. "
+                "Use the canonical claimed exact-eval dispatcher instead."
+            ),
+            "artifacts": {},
+            "stdout_tail": "",
+            "stderr_tail": "",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
 
     # Run the lane script
     lane_path = workspace / lane_script

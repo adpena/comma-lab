@@ -29,15 +29,7 @@ PROVENANCE="$LOG_DIR/provenance.json"
 RUN_RECORD="$LOG_DIR/run_record.json"
 ALLOW_REMOTE_SCAFFOLD_SMOKE="${SCPP_ALLOW_REMOTE_SCAFFOLD_SMOKE:-0}"
 ALLOW_SCORE_DOMAIN_TRAINING="${SCPP_ALLOW_SCORE_DOMAIN_TRAINING:-0}"
-if [ -z "${SCPP_RUN_CONTEST_CUDA_AUTH_EVAL+x}" ]; then
-    if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
-        RUN_CONTEST_CUDA_AUTH_EVAL="1"
-    else
-        RUN_CONTEST_CUDA_AUTH_EVAL="0"
-    fi
-else
-    RUN_CONTEST_CUDA_AUTH_EVAL="$SCPP_RUN_CONTEST_CUDA_AUTH_EVAL"
-fi
+RUN_CONTEST_CUDA_AUTH_EVAL="${SCPP_RUN_CONTEST_CUDA_AUTH_EVAL:-0}"
 DISPATCH_INSTANCE_JOB_ID="${SCPP_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${SCPP_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
@@ -232,7 +224,7 @@ cat > "$PROVENANCE" <<EOF
   "base_channels": ${BASE_CHANNELS},
   "n_pairs": ${N_PAIRS},
   "predicted_band": [-0.010, -0.005],
-  "prediction_scope": "SC++ Stage 1 smoke anchor; HNeRV parity discipline lesson 7 substrate engineering; no score claim until contest_auth_eval custody",
+  "prediction_scope": "SC++ Stage 1 smoke anchor; HNeRV parity discipline lesson 7 substrate engineering; no score claim until [contest-CUDA] contest_auth_eval custody",
   "score_claim": false
 }
 EOF
@@ -317,12 +309,16 @@ if [ "$ALLOW_REMOTE_SCAFFOLD_SMOKE" = "1" ] && [ "$ALLOW_SCORE_DOMAIN_TRAINING" 
 fi
 
 if [ "$RUN_CONTEST_CUDA_AUTH_EVAL" = "1" ]; then
-    TRAIN_CMD+=(--auth-eval-on-best)
+    log "FATAL: SCPP_RUN_CONTEST_CUDA_AUTH_EVAL=1 requested, but SC++ Stage 1 currently emits training/build custody only. Run exact contest-CUDA auth eval via the canonical claimed dispatcher after a byte-closed packet exists."
+    close_dispatch_claim "refused_dispatch_scpp_exact_eval_not_implemented" "SC++ Stage 1 refused exact-eval request; trainer emits build artifact only"
+    exit 12
 fi
 
 log "Stage 4: training command: ${TRAIN_CMD[*]}"
+set +e
 "${TRAIN_CMD[@]}" 2>&1 | tee "$LOG_DIR/train.log"
 TRAIN_RC=${PIPESTATUS[0]}
+set -e
 if [ "$TRAIN_RC" -ne 0 ]; then
     log "FATAL: SC++ Stage 1 training failed (rc=$TRAIN_RC)"
     close_dispatch_claim "failed_training_rc_${TRAIN_RC}" "SC++ Stage 1 trainer exited rc=$TRAIN_RC"
@@ -333,7 +329,7 @@ log "Stage 4: SC++ Stage 1 training OK"
 
 # Stage 5: terminal claim close
 log "Stage 5: closing dispatch claim"
-close_dispatch_claim "completed_stage_1_anchor_smoke" "SC++ Stage 1 smoke anchor completed; stage_1_epochs=${STAGE_1_EPOCHS}; eval_roundtrip=true; auth_eval_on_best=${RUN_CONTEST_CUDA_AUTH_EVAL}; output_dir=${OUTPUT_DIR}; no score claim until exact contest_auth_eval custody artifact lands separately"
+close_dispatch_claim "completed_stage_1_anchor_smoke" "SC++ Stage 1 smoke anchor completed; stage_1_epochs=${STAGE_1_EPOCHS}; eval_roundtrip=true; auth_eval_on_best=${RUN_CONTEST_CUDA_AUTH_EVAL}; output_dir=${OUTPUT_DIR}; no score claim until exact [contest-CUDA] contest_auth_eval custody artifact lands separately"
 
 # Update run record on success.
 cat > "$RUN_RECORD" <<EOF

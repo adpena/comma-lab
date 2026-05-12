@@ -495,31 +495,10 @@ class TestGoldenVector:
         )
         digest = hashlib.sha256(result.payload).hexdigest()
         manifest_path = _GOLDEN_DIR / f"{self.GOLDEN_NAME}.json"
-        if not manifest_path.exists():
-            # First run — write the manifest. Subsequent runs assert against
-            # this pinned SHA.
-            _GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
-            manifest = {
-                "schema": "magic_codec.v1",
-                "selected_primitive": result.selected_primitive,
-                "selected_primitive_id": result.selected_primitive_id,
-                "inner_primitive_byte_count": result.inner_primitive_byte_count,
-                "payload_len": len(result.payload),
-                "sha256": digest,
-                "recipe": {
-                    "rng_seed": 20260511,
-                    "n_total": 1024,
-                    "n_nonzero": 64,
-                    "value_range": [1, 32],
-                    "dtype": "int8",
-                    "stream_type": "residual_basis",
-                    "selection_strategy": "smallest_byte_count",
-                },
-            }
-            manifest_path.write_text(
-                json.dumps(manifest, indent=2, sort_keys=True) + "\n"
-            )
-            return  # first-run write — subsequent runs assert
+        assert manifest_path.exists(), (
+            f"{manifest_path} must be committed; golden-vector tests must not "
+            "write fixtures during normal test execution"
+        )
         manifest = json.loads(manifest_path.read_text())
         assert digest == manifest["sha256"], (
             f"magic_codec_v1 SHA drift: produced={digest} "

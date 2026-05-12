@@ -1,11 +1,19 @@
-"""Magic-codec inflate dispatcher (≤200 LOC, substrate-engineering waiver).
+"""Magic-codec inflate dispatcher (research adapter, ≤200 LOC).
 
 Reads a ``<base>.bin`` archive member that may be (a) a raw PR106 r2 binary
 or (b) a magic-codec envelope wrapping a PR106 r2 binary. Dispatches by the
 4-byte envelope magic (``MAGC``) and falls through to PR106's canonical
 inflate decoder for the actual scene reconstruction.
 
-This file is INTENTIONALLY narrow:
+This file is INTENTIONALLY narrow and deliberately **not** a promotion-grade
+contest runtime yet. It is a provenance-preserving adapter for magic-codec
+research artifacts. Non-raw envelopes still require the repository ``tac``
+package for primitive decoding, so outputs produced through this wrapper must
+keep ``ready_for_exact_eval_dispatch=False`` until a byte-closed runtime packet
+copies or vendors the exact primitive decoders and proves full-frame inflate
+parity against the source runtime.
+
+Design scope:
 
 * the magic-codec dispatch is ~80 LOC;
 * the PR106 inflate decoder is delegated via stdlib ``importlib`` to keep
@@ -16,7 +24,7 @@ CLAUDE.md compliance:
 
 * strict-scorer-rule: no scorer-network load at inflate time;
 * eval_roundtrip-irrelevant: this is the inflate path, not training;
-* ≤200 LOC, ≤3 external deps (numpy + sibling PR106 runtime + stdlib);
+* ≤200 LOC, research-runtime deps are numpy + repo tac + sibling PR106 runtime;
 * deterministic-bytes: identical archive input → identical RGB output.
 """
 

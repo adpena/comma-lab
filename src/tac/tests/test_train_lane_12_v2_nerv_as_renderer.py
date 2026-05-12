@@ -24,6 +24,7 @@ Tests run CPU-only, smoke mode, latent_dim=8, n_pairs=4.
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -45,6 +46,19 @@ def _import_trainer():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture()
+def repo_output_dir(tmp_path):
+    root = REPO_ROOT / "experiments" / "results" / ".pytest_tmp_outputs" / tmp_path.name
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+
+    def make(name: str) -> Path:
+        return root / name
+
+    yield make
+    shutil.rmtree(root, ignore_errors=True)
 
 
 # ── CLI / argparse ────────────────────────────────────────────────────────
@@ -79,11 +93,11 @@ def test_parse_args_defaults_match_claude_md_canonicals():
 # ── --auth-eval gate (Catalog #150) ───────────────────────────────────────
 
 
-def test_auth_eval_without_memo_refused(tmp_path):
+def test_auth_eval_without_memo_refused(tmp_path, repo_output_dir):
     """--auth-eval without --phase-b-auth-memo refused per Catalog #150."""
     trainer = _import_trainer()
     args = [
-        "--output-dir", str(tmp_path / "out"),
+        "--output-dir", str(repo_output_dir("out")),
         "--device", "cpu",
         "--auth-eval",
         "--smoke",
@@ -93,12 +107,12 @@ def test_auth_eval_without_memo_refused(tmp_path):
     assert "phase-b-auth-memo" in str(exc_info.value).lower() or "150" in str(exc_info.value)
 
 
-def test_auth_eval_with_invalid_memo_refused(tmp_path):
+def test_auth_eval_with_invalid_memo_refused(tmp_path, repo_output_dir):
     """--auth-eval with non-existent memo PENDING → refused."""
     trainer = _import_trainer()
     memo_path = tmp_path / "fake_memo.md"  # doesn't exist
     args = [
-        "--output-dir", str(tmp_path / "out"),
+        "--output-dir", str(repo_output_dir("out")),
         "--device", "cpu",
         "--auth-eval",
         "--phase-b-auth-memo", str(memo_path),
@@ -143,10 +157,10 @@ def test_resolve_device_cpu_works():
 # ── Smoke end-to-end (CPU; no scorers; synthetic pairs) ──────────────────
 
 
-def test_smoke_runs_end_to_end_on_cpu(tmp_path):
+def test_smoke_runs_end_to_end_on_cpu(repo_output_dir):
     """Smoke mode runs end-to-end on CPU without CUDA / scorers."""
     trainer = _import_trainer()
-    out_dir = tmp_path / "smoke_out"
+    out_dir = repo_output_dir("smoke_out")
     # Smoke disables score-aware loss path (no scorer load) for speed.
     rc = trainer.main([
         "--output-dir", str(out_dir),
@@ -162,10 +176,10 @@ def test_smoke_runs_end_to_end_on_cpu(tmp_path):
     assert (out_dir / "provenance.json").exists()
 
 
-def test_smoke_provenance_contains_compliance_tags(tmp_path):
+def test_smoke_provenance_contains_compliance_tags(repo_output_dir):
     """Provenance manifest must declare all CLAUDE.md compliance tags."""
     trainer = _import_trainer()
-    out_dir = tmp_path / "smoke_prov"
+    out_dir = repo_output_dir("smoke_prov")
     trainer.main([
         "--output-dir", str(out_dir),
         "--device", "cpu",
@@ -190,10 +204,10 @@ def test_smoke_provenance_contains_compliance_tags(tmp_path):
     assert required.issubset(tags), f"missing: {required - tags}"
 
 
-def test_smoke_provenance_score_claim_false(tmp_path):
+def test_smoke_provenance_score_claim_false(repo_output_dir):
     """Provenance MUST have score_claim=False (no anchor yet)."""
     trainer = _import_trainer()
-    out_dir = tmp_path / "smoke_no_claim"
+    out_dir = repo_output_dir("smoke_no_claim")
     trainer.main([
         "--output-dir", str(out_dir),
         "--device", "cpu",
@@ -208,10 +222,10 @@ def test_smoke_provenance_score_claim_false(tmp_path):
     assert prov["ready_for_exact_eval_dispatch"] is False
 
 
-def test_smoke_provenance_predicted_delta_score_tagged(tmp_path):
+def test_smoke_provenance_predicted_delta_score_tagged(repo_output_dir):
     """Predicted Δ score must carry ``[predicted; ...]`` tag."""
     trainer = _import_trainer()
-    out_dir = tmp_path / "smoke_pred"
+    out_dir = repo_output_dir("smoke_pred")
     trainer.main([
         "--output-dir", str(out_dir),
         "--device", "cpu",
@@ -224,10 +238,10 @@ def test_smoke_provenance_predicted_delta_score_tagged(tmp_path):
     assert "[predicted;" in prov["predicted_delta_score"]
 
 
-def test_smoke_archive_bytes_nontrivial(tmp_path):
+def test_smoke_archive_bytes_nontrivial(repo_output_dir):
     """Archive must have >12 bytes (header + sections)."""
     trainer = _import_trainer()
-    out_dir = tmp_path / "smoke_arch"
+    out_dir = repo_output_dir("smoke_arch")
     trainer.main([
         "--output-dir", str(out_dir),
         "--device", "cpu",
@@ -241,10 +255,10 @@ def test_smoke_archive_bytes_nontrivial(tmp_path):
     assert archive_bytes > 28
 
 
-def test_smoke_history_non_empty(tmp_path):
+def test_smoke_history_non_empty(repo_output_dir):
     """Provenance history must have at least 1 entry."""
     trainer = _import_trainer()
-    out_dir = tmp_path / "smoke_hist"
+    out_dir = repo_output_dir("smoke_hist")
     trainer.main([
         "--output-dir", str(out_dir),
         "--device", "cpu",
@@ -261,10 +275,10 @@ def test_smoke_history_non_empty(tmp_path):
 # ── Non-smoke gating + no-/tmp ───────────────────────────────────────────
 
 
-def test_non_smoke_without_video_raises(tmp_path):
+def test_non_smoke_without_video_raises(tmp_path, repo_output_dir):
     """Non-smoke training without contest video raises (synthetic-in-non-smoke forbidden)."""
     trainer = _import_trainer()
-    out_dir = tmp_path / "no_video"
+    out_dir = repo_output_dir("no_video")
     fake_video = tmp_path / "missing.mkv"
     args = [
         "--output-dir", str(out_dir),
@@ -290,6 +304,8 @@ def test_trainer_source_has_no_tmp_durable_paths():
         assert "/tmp/" not in line, (
             f"trainer must not write durable /tmp paths (CLAUDE.md FORBIDDEN_PATTERNS): {line!r}"
         )
+    assert "assert_not_temporary_output_dir" in src
+    assert "def _refuse_tmp_output_dir" not in src
 
 
 def test_trainer_source_no_make_synthetic_outside_smoke():

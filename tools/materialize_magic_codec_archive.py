@@ -16,7 +16,7 @@ Per ``tac.phase1_packet_compiler.compile_phase1_packet`` discipline:
   inflate-parity verifier passes byte-for-byte against the source
   archive's runtime;
 * every emitted byte change is tagged with a manifest row that names
-  the source stream + the magic codec primitive selected + the
+  the source stream + the output member name + the magic codec primitive selected + the
   predicted byte savings + the actual byte savings.
 
 CLAUDE.md compliance:
@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import sys
 import zipfile
@@ -56,6 +57,7 @@ from typing import Sequence
 
 import numpy as np
 
+from tac.output_path_policy import assert_not_temporary_output_dir
 from tac.packet_compiler.magic_codec import (
     MagicCodecError,
     MagicCodecResult,
@@ -65,6 +67,13 @@ from tac.packet_compiler.magic_codec import (
     candidate_primitives_for,
     encode_magic_codec,
     recommendation_for,
+)
+
+
+_SUBMISSION_RUNTIME_SUPPORTED_PRIMITIVE_IDS = frozenset({0xF0, 0xF1, 0xF2})
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_SUBMISSION_RUNTIME_PATH = (
+    _REPO_ROOT / "submissions" / "magic_codec_pr106_r2" / "inflate.py"
 )
 
 
@@ -168,17 +177,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def _validate_output_dir(output_dir: Path) -> None:
     """Refuse forbidden /tmp paths per CLAUDE.md non-negotiable."""
-    parts = output_dir.resolve().parts
-    if parts and parts[0] in ("/", "/tmp", "/var", "/private"):
-        # Accept absolute paths in general; only refuse /tmp prefix.
-        forbidden_anchors = ("/tmp/", "/var/tmp/", "/private/tmp/")
-        as_str = str(output_dir.resolve())
-        for anchor in forbidden_anchors:
-            if as_str.startswith(anchor):
-                raise SystemExit(
-                    f"refusing to write to forbidden /tmp path {output_dir!s} "
-                    "per CLAUDE.md `forbidden_/tmp_paths_in_any_persisted_artifact`"
-                )
+    try:
+        assert_not_temporary_output_dir(
+            output_dir,
+            tool_name="materialize_magic_codec_archive",
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def _decode_dense_from_member_bytes(
@@ -203,9 +208,15 @@ def _decode_dense_from_member_bytes(
             f"--quantize-bits must be 8 / 16 / 32; got {quantize_bits}"
         )
 
-    # Truncate trailing bytes that don't form a complete element.
-    n_elements = len(member_bytes) // np.dtype(dtype).itemsize
-    usable_bytes = member_bytes[: n_elements * np.dtype(dtype).itemsize]
+    itemsize = np.dtype(dtype).itemsize
+    if len(member_bytes) % itemsize != 0:
+        raise SystemExit(
+            f"member byte count {len(member_bytes)} is not divisible by "
+            f"{itemsize} for --quantize-bits={quantize_bits}; refusing to "
+            "truncate tail bytes"
+        )
+    n_elements = len(member_bytes) // itemsize
+    usable_bytes = member_bytes
     arr = np.frombuffer(usable_bytes, dtype=dtype).astype(dtype, copy=True)
 
     # Pose / centered-delta require 2D; reshape if a reasonable factor.
@@ -233,6 +244,41 @@ def _decode_dense_from_member_bytes(
     return arr
 
 
+def _assert_submission_runtime_can_roundtrip_member(
+    member_name: str,
+    member_bytes: bytes,
+    result: MagicCodecResult,
+) -> None:
+    """Fail closed unless the current submission adapter decodes exact bytes."""
+
+    if result.selected_primitive_id not in _SUBMISSION_RUNTIME_SUPPORTED_PRIMITIVE_IDS:
+        raise MagicCodecError(
+            f"{member_name}: selected primitive_id "
+            f"0x{result.selected_primitive_id:02X} is not supported by "
+            "submissions/magic_codec_pr106_r2/inflate.py"
+        )
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_magic_codec_pr106_r2_inflate",
+            _SUBMISSION_RUNTIME_PATH,
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"cannot load runtime at {_SUBMISSION_RUNTIME_PATH}")
+        runtime_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runtime_module)
+        decoded = runtime_module._decode_envelope_to_inner_bytes(result.payload)
+    except Exception as exc:
+        raise MagicCodecError(
+            f"{member_name}: submission runtime refused selected magic-codec "
+            f"payload: {exc}"
+        ) from exc
+    if decoded != member_bytes:
+        raise MagicCodecError(
+            f"{member_name}: submission runtime decode is not byte-identical "
+            "to the source member; refusing non-parity materialization"
+        )
+
+
 def _process_member(
     member_name: str,
     member_bytes: bytes,
@@ -248,8 +294,10 @@ def _process_member(
     result = encode_magic_codec(
         dense, hint=StreamHint(stream_type), selection_strategy=selection_strategy
     )
+    _assert_submission_runtime_can_roundtrip_member(member_name, member_bytes, result)
     member_row = {
         "member_name": member_name,
+        "output_member_name": member_name,
         "source_bytes": len(member_bytes),
         "dense_shape": list(dense.shape),
         "dense_dtype": str(dense.dtype),
@@ -277,11 +325,23 @@ def _build_runtime_manifest() -> dict[str, object]:
     """Emit a runtime-closure manifest per CLAUDE.md `Runtime closure` rule."""
     return {
         "schema": "magic_codec_runtime_manifest.v1",
-        "runtime_dep_closure": ["numpy", "brotli", "lzma", "constriction"],
+        "runtime_dep_closure": [
+            "numpy",
+            "brotli",
+            "lzma",
+            "constriction",
+            "repo_tac_required_until_vendored",
+            "sibling_pr106_latent_sidecar_r2_required",
+        ],
         "inflate_runtime_loc_budget": 200,
         "decoder_module": "tac.packet_compiler.magic_codec",
         "magic_envelope": "MAGC",
         "primitive_id_namespace": "0xF0-0xFF",
+        "submission_supported_primitive_ids": [
+            f"0x{pid:02X}"
+            for pid in sorted(_SUBMISSION_RUNTIME_SUPPORTED_PRIMITIVE_IDS)
+        ],
+        "runtime_tree_byte_closed": False,
         "score_aware_loss": False,
         "score_claim": False,
         "promotion_eligible": False,
@@ -327,19 +387,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                     quantize_bits=quantize_bits,
                 )
             except MagicCodecError as exc:
-                # Record the refusal but do not raise — operators may want
-                # to see which members the selector refused so they can
-                # split + retry with different stream_type hints.
-                row = {
-                    "member_name": member,
-                    "source_bytes": len(member_bytes),
-                    "magic_codec_refused": True,
-                    "refusal_reason": str(exc),
-                }
-                member_rows.append(row)
-                continue
+                raise SystemExit(
+                    f"refusing to materialize {member!r}: {exc}"
+                ) from exc
             member_rows.append(row)
-            materialized_members[member + ".magic_codec"] = result.payload
+            # Preserve the original member name so contest-style inflate.sh
+            # can consume the emitted archive via `${base}.bin` from file_list.
+            materialized_members[member] = result.payload
 
     # Compute aggregate byte savings.
     total_source_bytes = sum(int(r.get("source_bytes", 0)) for r in member_rows)
@@ -383,6 +437,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "blockers": [
             "magic_codec_inflate_parity_not_run",
             "no_byte_closed_runtime_packet_built",
+            "research_adapter_runtime_depends_on_repo_tac_until_vendored",
         ],
     }
 

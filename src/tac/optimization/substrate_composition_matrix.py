@@ -35,7 +35,9 @@ encode the **composability classes** the council has empirically validated:
 - **Categorical/ANR** is a substrate-replacement at the renderer slot.
 - The **magic codec** (sister analysis at
   ``src/tac/packet_compiler/magic_codec.py``) composes orthogonally with
-  every substrate because it is a META-codec on byte streams.
+  every substrate because it is a META-codec on byte streams, but its
+  row is deliberately zero-EV until a vendored byte-closed runtime and
+  full-frame inflate-parity proof land.
 
 Cross-references
 ----------------
@@ -557,14 +559,14 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
         # ── 1 META_CODEC substrate (composes with everything) ──
         SubstrateRow(
             substrate_id="magic_codec",
-            name="Magic codec auto-selector (meta-codec)",
+            name="Magic codec auto-selector (meta-codec, planning-only)",
             substrate_class=SubstrateClass.META_CODEC,
             target_axis=ScoreAxis.RATE,
             format_id=0xF0,
             magic_bytes="MGIC",
-            runtime_dep_closure=("torch", "brotli"),
+            runtime_dep_closure=("repo_tac_required_until_vendored", "brotli"),
             byte_budget_band=(0, 1_000),  # Wrapper overhead.
-            predicted_delta_alone_band=(-0.0008, -0.0001),
+            predicted_delta_alone_band=(0.0, 0.0),
             requires_score_aware_training=False,
             landed_at="2026-05-11",
             landing_memo="feedback_magic_codec_auto_selector_landed_20260511",
@@ -991,8 +993,8 @@ DISPATCH_COST_USD_MIDPOINT: dict[str, float] = {
     # Bolt-ons: compose with host substrates; no separate trainer cost.
     "nerv_enc_dec_separated": 0.0,
     "film_pose_conditioning": 0.0,
-    # Magic codec: byte-stream wrapper; no GPU.
-    "magic_codec": 0.10,
+    # Magic codec: planning-only until runtime is byte-closed/vendored.
+    "magic_codec": 0.0,
 }
 
 

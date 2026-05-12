@@ -30,6 +30,7 @@ Coverage (substrate + trainer):
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -50,6 +51,19 @@ def _import_trainer():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture()
+def repo_output_dir(tmp_path):
+    root = REPO_ROOT / "experiments" / "results" / ".pytest_tmp_outputs" / tmp_path.name
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+
+    def make(name: str) -> Path:
+        return root / name
+
+    yield make
+    shutil.rmtree(root, ignore_errors=True)
 
 
 # ── Substrate config validation ──────────────────────────────────────────
@@ -350,21 +364,21 @@ def test_parse_args_canonical_defaults():
 # ── Auth-eval gate (Catalog #150) ─────────────────────────────────────────
 
 
-def test_auth_eval_without_memo_refused(tmp_path):
+def test_auth_eval_without_memo_refused(repo_output_dir):
     trainer = _import_trainer()
     with pytest.raises(SystemExit) as exc_info:
         trainer.main([
-            "--output-dir", str(tmp_path / "out"),
+            "--output-dir", str(repo_output_dir("out")),
             "--device", "cpu", "--auth-eval", "--smoke",
         ])
     assert "phase-b-auth-memo" in str(exc_info.value).lower() or "150" in str(exc_info.value)
 
 
-def test_auth_eval_with_non_repo_path_refused(tmp_path):
+def test_auth_eval_with_non_repo_path_refused(tmp_path, repo_output_dir):
     trainer = _import_trainer()
     with pytest.raises((SystemExit, ValueError)):
         trainer.main([
-            "--output-dir", str(tmp_path / "out"),
+            "--output-dir", str(repo_output_dir("out")),
             "--device", "cpu", "--auth-eval", "--smoke",
             "--phase-b-auth-memo", str(tmp_path / "fake.md"),
         ])
@@ -382,9 +396,9 @@ def test_resolve_device_mps_refused():
 # ── Smoke end-to-end ──────────────────────────────────────────────────────
 
 
-def test_smoke_runs_end_to_end(tmp_path):
+def test_smoke_runs_end_to_end(repo_output_dir):
     trainer = _import_trainer()
-    out = tmp_path / "smoke_out"
+    out = repo_output_dir("smoke_out")
     rc = trainer.main([
         "--output-dir", str(out),
         "--device", "cpu", "--smoke",
@@ -398,9 +412,9 @@ def test_smoke_runs_end_to_end(tmp_path):
     assert (out / "provenance.json").exists()
 
 
-def test_smoke_provenance_compliance_tags(tmp_path):
+def test_smoke_provenance_compliance_tags(repo_output_dir):
     trainer = _import_trainer()
-    out = tmp_path / "smoke_prov"
+    out = repo_output_dir("smoke_prov")
     trainer.main([
         "--output-dir", str(out),
         "--device", "cpu", "--smoke",
@@ -428,9 +442,9 @@ def test_smoke_provenance_compliance_tags(tmp_path):
     assert required.issubset(tags), f"missing: {required - tags}"
 
 
-def test_smoke_provenance_score_claim_false(tmp_path):
+def test_smoke_provenance_score_claim_false(repo_output_dir):
     trainer = _import_trainer()
-    out = tmp_path / "smoke_no_claim"
+    out = repo_output_dir("smoke_no_claim")
     trainer.main([
         "--output-dir", str(out),
         "--device", "cpu", "--smoke",
@@ -453,6 +467,8 @@ def test_trainer_source_no_tmp_durable_paths():
         if stripped.startswith("#") or stripped.startswith('"""') or stripped.startswith("'''"):
             continue
         assert "/tmp/" not in line, f"durable /tmp forbidden: {line!r}"
+    assert "assert_not_temporary_output_dir" in src
+    assert "def _refuse_tmp_output_dir" not in src
 
 
 def test_trainer_source_no_make_synthetic_outside_smoke():
