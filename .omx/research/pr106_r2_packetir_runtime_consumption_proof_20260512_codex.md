@@ -46,6 +46,35 @@ The shared source correction and corrected-latent digests across `0x01` and
 `0x02` are same-runtime decode/apply equivalence signals only. They do not
 substitute for full-frame parity or exact same-runtime auth eval.
 
+## Full-frame same-runtime streaming parity
+
+After the decode/apply proof landed, the proof was extended to render through
+the paired runtime's HNeRV forward loop and hash frame bytes in memory without
+writing `.raw` files. This is still **not** a contest-axis score and does not
+replace exact auth eval, but it closes the full-frame parity gap between the
+legacy `0x01` sidecar archive and the PR101-grammar `0x02` archive under one
+runtime.
+
+Raw manifest:
+
+- `experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json`
+
+Tracked custody summary:
+
+| source archive | candidate archive | runtime | device axis | frames | streamed bytes | source raw SHA-256 | candidate raw SHA-256 | full-frame parity? | score claim? | contest-axis claim? |
+|---|---|---|---|---:|---:|---|---|---:|---:|---:|
+| `submissions/pr106_latent_sidecar_r2/archive.zip` | `submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip` | `submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py` | `local-cpu-streaming-runtime` | 1200 | 3662409600 | `e6d9170b92997db1e6211eeb665187a3ac6a23c743dd3659c46633e509af329f` | `e6d9170b92997db1e6211eeb665187a3ac6a23c743dd3659c46633e509af329f` | yes | no | no |
+
+Timing on local CPU:
+
+- source `0x01`: 35.44378870911896 seconds
+- candidate `0x02`: 35.817809416912496 seconds
+
+The streaming digest is full-frame because `n_pairs_hashed=600`,
+`n_pairs_total=600`, and `total_frames=1200` for both archives. It is not an
+`inflate.sh archive_dir output_dir file_list` shell probe; it is the same
+runtime decode/render math with hash streaming instead of raw-file writes.
+
 ## Adversarial constraints preserved
 
 - `score_claim=false`.
@@ -87,12 +116,8 @@ Focused tests: `15 passed`.
 
 ## Remaining blocker before score or promotion language
 
-Need one of:
-
-1. Full-frame source-vs-candidate `inflate.sh archive_dir output_dir file_list`
-   raw-output parity under the paired runtime, with output aggregate SHA; or
-2. Exact same-runtime auth eval with archive/runtime custody and explicit
-   `[contest-CUDA]` / `[contest-CPU]` axis labels.
-
-Until then, PR106/R2 PacketIR sidecar work is runtime-decode-consumed but not
-promotion-ready.
+Need exact same-runtime auth eval with archive/runtime custody and explicit
+`[contest-CUDA]` / `[contest-CPU]` axis labels before any score or promotion
+language. The full-frame streaming parity proof is enough to classify the
+`0x02` archive as frame-equivalent to `0x01` under the paired local CPU runtime,
+but it is still not a contest-axis score.

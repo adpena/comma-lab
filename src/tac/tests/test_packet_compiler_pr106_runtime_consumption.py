@@ -7,8 +7,11 @@ import pytest
 from tac.packet_compiler import (
     dumps_runtime_consumption_manifest,
     emit_pr106_sidecar_packet,
+    emit_single_stored_member_archive,
     load_pr106_sidecar_runtime,
+    mutate_pr106_sidecar_semantic_correction,
     parse_pr106_sidecar_packet,
+    prove_pr106_same_runtime_full_frame_parity,
     prove_pr106_sidecar_runtime_decode_consumption,
     read_single_stored_member_archive,
     runtime_sidecar_correction_digest,
@@ -114,3 +117,69 @@ def test_pr106_pr101_runtime_accepts_legacy_brotli_format_for_same_runtime_pairi
     assert digest["corrected_latents_sha256"] == grammar_digest[
         "corrected_latents_sha256"
     ]
+
+
+def test_pr106_same_runtime_streaming_prefix_parity_is_nonpromotable() -> None:
+    manifest = prove_pr106_same_runtime_full_frame_parity(
+        source_archive_path=PR106_R2_ARCHIVE,
+        candidate_archive_path=PR106_R2_PR101_ARCHIVE,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+        device="cpu",
+        batch_pairs=1,
+        max_pairs=1,
+    )
+
+    assert manifest["schema"] == "pr106_same_runtime_streaming_frame_parity_v1"
+    assert manifest["proof_scope"] == "same_runtime_streaming_prefix_hash"
+    assert manifest["streaming_output_sha256_equal"] is True
+    assert manifest["streaming_output_total_bytes_equal"] is True
+    assert manifest["prefix_parity_claim"] is True
+    assert manifest["full_frame_inflate_output_parity_claim"] is False
+    assert manifest["contest_axis_claim"] is False
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    source = manifest["source"]
+    candidate = manifest["candidate"]
+    assert isinstance(source, dict)
+    assert isinstance(candidate, dict)
+    assert source["full_frame_digest"] is False
+    assert candidate["full_frame_digest"] is False
+    assert source["total_frames"] == candidate["total_frames"] == 2
+    assert source["streaming_raw_sha256"] == candidate["streaming_raw_sha256"]
+
+
+def test_pr106_same_runtime_streaming_prefix_detects_semantic_sidecar_change(
+    tmp_path: Path,
+) -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    mutated_packet, _ = mutate_pr106_sidecar_semantic_correction(packet, pair_index=0)
+    mutated_payload = emit_pr106_sidecar_packet(mutated_packet)
+    mutated_archive = tmp_path / "mutated.zip"
+    mutated_archive.write_bytes(
+        emit_single_stored_member_archive(type(member)(
+            name=member.name,
+            payload=mutated_payload,
+            date_time=member.date_time,
+            external_attr=member.external_attr,
+            create_system=member.create_system,
+            flag_bits=member.flag_bits,
+            comment=member.comment,
+            extra=member.extra,
+        ))
+    )
+    manifest = prove_pr106_same_runtime_full_frame_parity(
+        source_archive_path=PR106_R2_PR101_ARCHIVE,
+        candidate_archive_path=mutated_archive,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+        device="cpu",
+        batch_pairs=1,
+        max_pairs=1,
+    )
+
+    assert manifest["streaming_output_sha256_equal"] is False
+    assert manifest["streaming_output_total_bytes_equal"] is True
+    assert manifest["prefix_parity_claim"] is False
+    assert manifest["full_frame_inflate_output_parity_claim"] is False

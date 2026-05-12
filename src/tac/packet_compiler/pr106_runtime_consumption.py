@@ -9,9 +9,11 @@ runtime decode path without turning the result into a score claim.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import replace
@@ -85,18 +87,18 @@ def _tensor_sha256(tensor: Any) -> str:
     return sha256_hex(tensor.detach().cpu().contiguous().numpy().tobytes())
 
 
-def runtime_sidecar_correction_digest(
+def _decode_runtime_sidecar_payload(
     runtime_module: ModuleType,
     member_payload: bytes,
-) -> dict[str, object]:
-    """Return a stable digest of corrections visible to runtime ``inflate.py``."""
+) -> tuple[int, bytes, Any, Any]:
+    """Decode a PR106 sidecar packet through the selected runtime parser."""
 
     parsed = runtime_module.parse_sidecar_archive(member_payload)
     if isinstance(parsed, tuple) and len(parsed) == 2:
         pr106_bytes, sidecar_blob = parsed
         dim_arr, delta_q_arr = runtime_module.decode_sidecar_corrections(sidecar_blob)
-        format_id = PR106_SIDECAR_FORMAT_BROTLI
-    elif isinstance(parsed, tuple) and len(parsed) == 4:
+        return PR106_SIDECAR_FORMAT_BROTLI, pr106_bytes, dim_arr, delta_q_arr
+    if isinstance(parsed, tuple) and len(parsed) == 4:
         format_id, pr106_bytes, sidecar_blob, framing_meta = parsed
         if format_id == PR106_SIDECAR_FORMAT_BROTLI:
             dim_arr, delta_q_arr = runtime_module.decode_brotli_sidecar(sidecar_blob)
@@ -109,12 +111,23 @@ def runtime_sidecar_correction_digest(
             )
         else:
             raise ValueError(f"runtime returned unsupported format_id=0x{format_id:02X}")
-    else:
-        raise TypeError(
-            "runtime parse_sidecar_archive returned unexpected shape: "
-            f"{type(parsed)!r} {parsed!r}"
-        )
+        return int(format_id), pr106_bytes, dim_arr, delta_q_arr
+    raise TypeError(
+        "runtime parse_sidecar_archive returned unexpected shape: "
+        f"{type(parsed)!r} {parsed!r}"
+    )
 
+
+def runtime_sidecar_correction_digest(
+    runtime_module: ModuleType,
+    member_payload: bytes,
+) -> dict[str, object]:
+    """Return a stable digest of corrections visible to runtime ``inflate.py``."""
+
+    format_id, pr106_bytes, dim_arr, delta_q_arr = _decode_runtime_sidecar_payload(
+        runtime_module,
+        member_payload,
+    )
     dim_bytes = _array_bytes(dim_arr, "uint8")
     delta_bytes = _array_bytes(delta_q_arr, "int8")
     _, latents, _ = runtime_module.parse_packed_archive(pr106_bytes)
@@ -135,6 +148,189 @@ def runtime_sidecar_correction_digest(
         "source_latents_sha256": source_latents_sha256,
         "corrected_latents_sha256": corrected_latents_sha256,
         "latents_changed_by_sidecar": source_latents_sha256 != corrected_latents_sha256,
+    }
+
+
+def runtime_full_frame_streaming_digest(
+    runtime_module: ModuleType,
+    member_payload: bytes,
+    *,
+    device: str = "cpu",
+    batch_pairs: int | None = None,
+    max_pairs: int | None = None,
+) -> dict[str, object]:
+    """Hash runtime-rendered frames without materializing a ``.raw`` file.
+
+    This follows the paired submission runtime's HNeRV decode loop: parse
+    sidecar, parse inner PR106 payload, apply corrections, instantiate
+    ``HNeRVDecoder``, bicubic-upsample to camera resolution, round to uint8,
+    and stream the exact bytes into SHA-256.
+
+    ``max_pairs`` is for cheap prefix tests only. Full-frame parity may only
+    be claimed when it is ``None`` and every pair is rendered.
+    """
+
+    if device not in {"cpu", "cuda"}:
+        raise ValueError(f"device must be cpu or cuda; got {device!r}")
+    if max_pairs is not None and max_pairs <= 0:
+        raise ValueError(f"max_pairs must be positive when set; got {max_pairs}")
+    if batch_pairs is not None and batch_pairs <= 0:
+        raise ValueError(f"batch_pairs must be positive when set; got {batch_pairs}")
+
+    format_id, pr106_bytes, dim_arr, delta_q_arr = _decode_runtime_sidecar_payload(
+        runtime_module,
+        member_payload,
+    )
+    if device == "cuda" and not runtime_module.torch.cuda.is_available():
+        raise RuntimeError("device='cuda' requested but CUDA is unavailable")
+
+    decoder_sd, latents, meta = runtime_module.parse_packed_archive(pr106_bytes)
+    runtime_module.apply_sidecar_corrections(latents, dim_arr, delta_q_arr)
+    torch_device = runtime_module.torch.device(device)
+    decoder = runtime_module.HNeRVDecoder(
+        latent_dim=meta["latent_dim"],
+        base_channels=meta["base_channels"],
+        eval_size=tuple(meta["eval_size"]),
+    ).to(torch_device)
+    decoder.load_state_dict(decoder_sd)
+    decoder.eval()
+    latents = latents.to(torch_device)
+
+    n_pairs_total = int(meta["n_pairs"])
+    n_pairs_hashed = min(n_pairs_total, max_pairs) if max_pairs is not None else n_pairs_total
+    eval_h, eval_w = meta["eval_size"]
+    camera_h = int(getattr(runtime_module, "CAMERA_H", 874))
+    camera_w = int(getattr(runtime_module, "CAMERA_W", 1164))
+    pair_batch = batch_pairs or int(getattr(runtime_module, "DEFAULT_BATCH_PAIRS", 16))
+
+    sha = hashlib.sha256()
+
+    total_frames = 0
+    total_bytes = 0
+    start = time.monotonic()
+    with runtime_module.torch.inference_mode():
+        for i in range(0, n_pairs_hashed, pair_batch):
+            j = min(i + pair_batch, n_pairs_hashed)
+            decoded = decoder(latents[i:j])
+            flat = decoded.reshape((j - i) * 2, 3, eval_h, eval_w)
+            up = runtime_module.F.interpolate(
+                flat,
+                size=(camera_h, camera_w),
+                mode="bicubic",
+                align_corners=False,
+            )
+            frames = (
+                up.clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(runtime_module.torch.uint8)
+                .cpu()
+                .numpy()
+            )
+            payload = frames.tobytes()
+            sha.update(payload)
+            total_frames += int(frames.shape[0])
+            total_bytes += len(payload)
+
+    full_frame = max_pairs is None and n_pairs_hashed == n_pairs_total
+    return {
+        "schema": "pr106_runtime_full_frame_streaming_digest_v1",
+        "format_id": f"0x{int(format_id):02X}",
+        "device": device,
+        "batch_pairs": pair_batch,
+        "max_pairs": max_pairs,
+        "n_pairs_total": n_pairs_total,
+        "n_pairs_hashed": n_pairs_hashed,
+        "total_frames": total_frames,
+        "total_bytes": total_bytes,
+        "eval_size": [int(eval_h), int(eval_w)],
+        "camera_size": [camera_h, camera_w],
+        "full_frame_digest": full_frame,
+        "streaming_raw_sha256": sha.hexdigest(),
+        "elapsed_seconds": time.monotonic() - start,
+        "score_claim": False,
+    }
+
+
+def prove_pr106_same_runtime_full_frame_parity(
+    *,
+    source_archive_path: Path,
+    candidate_archive_path: Path,
+    runtime_dir: Path,
+    expected_member_name: str = "0.bin",
+    device: str = "cpu",
+    batch_pairs: int | None = None,
+    max_pairs: int | None = None,
+) -> dict[str, object]:
+    """Compare two PR106 sidecar archives through one runtime render loop."""
+
+    source_archive_path = Path(source_archive_path)
+    candidate_archive_path = Path(candidate_archive_path)
+    runtime_dir = Path(runtime_dir)
+    source_archive_bytes = source_archive_path.read_bytes()
+    candidate_archive_bytes = candidate_archive_path.read_bytes()
+    source_member = read_single_stored_member_archive(
+        source_archive_bytes,
+        expected_member_name=expected_member_name,
+    )
+    candidate_member = read_single_stored_member_archive(
+        candidate_archive_bytes,
+        expected_member_name=expected_member_name,
+    )
+    runtime = load_pr106_sidecar_runtime(runtime_dir)
+    source = runtime_full_frame_streaming_digest(
+        runtime,
+        source_member.payload,
+        device=device,
+        batch_pairs=batch_pairs,
+        max_pairs=max_pairs,
+    )
+    candidate = runtime_full_frame_streaming_digest(
+        runtime,
+        candidate_member.payload,
+        device=device,
+        batch_pairs=batch_pairs,
+        max_pairs=max_pairs,
+    )
+    same_hash = source["streaming_raw_sha256"] == candidate["streaming_raw_sha256"]
+    same_bytes = source["total_bytes"] == candidate["total_bytes"]
+    full_scope = bool(source["full_frame_digest"] and candidate["full_frame_digest"])
+    return {
+        "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+        "proof_scope": (
+            "same_runtime_streaming_full_frame_hash"
+            if full_scope
+            else "same_runtime_streaming_prefix_hash"
+        ),
+        "runtime_dir": runtime_dir.as_posix(),
+        "runtime_inflate_py_sha256": sha256_hex((runtime_dir / "inflate.py").read_bytes()),
+        "source_archive": {
+            "path": source_archive_path.as_posix(),
+            "bytes": source_archive_path.stat().st_size,
+            "sha256": sha256_hex(source_archive_bytes),
+        },
+        "candidate_archive": {
+            "path": candidate_archive_path.as_posix(),
+            "bytes": candidate_archive_path.stat().st_size,
+            "sha256": sha256_hex(candidate_archive_bytes),
+        },
+        "source": source,
+        "candidate": candidate,
+        "streaming_output_sha256_equal": same_hash,
+        "streaming_output_total_bytes_equal": same_bytes,
+        "full_frame_inflate_output_parity_claim": full_scope and same_hash and same_bytes,
+        "prefix_parity_claim": (not full_scope) and same_hash and same_bytes,
+        "device_axis_label": f"local-{device}-streaming-runtime",
+        "contest_axis_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "required_next_proof": (
+            "exact contest auth eval with archive/runtime custody and explicit "
+            "[contest-CUDA]/[contest-CPU] axis labels"
+            if full_scope and same_hash and same_bytes
+            else "rerun without --max-pairs for full-frame parity before using parity language"
+        ),
     }
 
 

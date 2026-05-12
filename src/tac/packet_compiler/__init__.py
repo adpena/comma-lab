@@ -90,7 +90,9 @@ from tac.packet_compiler.pr106_sidecar_packet import (
 from tac.packet_compiler.pr106_runtime_consumption import (
     dumps_runtime_consumption_manifest,
     load_pr106_sidecar_runtime,
+    prove_pr106_same_runtime_full_frame_parity,
     prove_pr106_sidecar_runtime_decode_consumption,
+    runtime_full_frame_streaming_digest,
     runtime_sidecar_correction_digest,
 )
 from tac.packet_compiler.pr97_h3_grammar import (
@@ -271,11 +273,13 @@ __all__ = [
     "load_pr106_sidecar_runtime",
     "mutate_pr106_sidecar_semantic_correction",
     "parse_pr106_sidecar_packet",
+    "prove_pr106_same_runtime_full_frame_parity",
     "prove_pr106_sidecar_runtime_decode_consumption",
     "pr106_sidecar_consumed_byte_proof",
     "pr106_sidecar_manifest",
     "pr106_sidecar_mutation_manifest",
     "read_single_stored_member_archive",
+    "runtime_full_frame_streaming_digest",
     "runtime_sidecar_correction_digest",
     # PR93 — delta-varint pose codec + QZMB1 grammar
     "DeltaVarintPoseStream",
