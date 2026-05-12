@@ -1,0 +1,42 @@
+schema_version: 1
+name: v0_2_0_rc1_github_push
+lane_id: lane_operator_one_command_authorize_scripts
+summary: Push v0.2.0-rc1 LOCAL git tag to GitHub remote (F-2 from operator dashboard).
+
+platform: none
+gpu: none
+
+cost_band:
+  epochs: 0
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.00
+  platform_key: none
+  gpu_key: none
+
+predicted_delta: "n/a (OSS publication act, not GPU spend)"
+predicted_delta_basis: "operator F-2"
+risk: |
+  Public-facing release; once pushed, the tag is permanent. Force-delete
+  requires admin access + violates immutable-tag conventions. Verify no
+  credentials in tagged commit, no private infrastructure URLs, LICENSE
+  unchanged from approved baseline.
+envelope_status: "FREE — OSS publication act"
+
+required_input_files: []
+dependencies:
+  - git
+  - check_public_release_hygiene STRICT preflight (run before authorizing)
+
+notes: |
+  Per operator F-2 in operator decision dashboard 2026-05-11: FROZEN-OPERATOR
+  pending "don't submit PR yet" + Q5 council verdict on tac-packet-compiler
+  publication ecosystem timing.
+
+  Per CLAUDE.md "Public Disclosure Hygiene" + "Submission PR gate", does NOT
+  auto-push — requires explicit operator confirmation.
+
+  The legacy shim ``scripts/operator_authorize_v0_2_0_rc1_github_push.sh``
+  retains the actual ``git push <remote> <tag>`` invocation. This recipe
+  drives the cost-band banner + lane-claim coordination.
+
+  Cross-ref: project_operator_decision_dashboard_20260511.md F-2

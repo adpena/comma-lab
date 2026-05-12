@@ -1,0 +1,60 @@
+schema_version: 1
+name: t10_ib_lagrangian_dispatch
+lane_id: lane_t10_ib_lagrangian_aux_scorer
+summary: T10 IB Lagrangian aux scorer GPU dispatch (~$40 Modal T4).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+
+cost_band:
+  epochs: 8000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 40.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_delta: "Phase 3 readiness gate — direct score Δ unknown until empirical eval; unblocks 4 DEFERRED lanes (-0.005 to -0.030 sub-floor)"
+predicted_delta_basis: "WW T10 unique unlock analysis 2026-05-11"
+risk: |
+  Novel architecture; first dispatch carries empirical-validation risk
+  (council 2026-05-09 verdict B-4). T10 IB Lagrangian aux scorer.
+envelope_status: "EXCEEDS $20 cumulative envelope — requires fresh operator approval"
+
+remote_driver: scripts/remote_lane_t10_ib_lagrangian_aux_scorer.sh
+timeout_hours: 8.0
+
+required_input_files: []
+
+modal:
+  lane_script: scripts/remote_lane_t10_ib_lagrangian_aux_scorer.sh
+
+env_overrides:
+  T10_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py
+  - scripts/remote_lane_t10_ib_lagrangian_aux_scorer.sh (remote driver)
+  - .omx/state/active_lane_dispatch_claims.md
+
+notes: |
+  Per WW's "T10 unique unlock" analysis: T10 (IB Lagrangian co-trained aux
+  scorer) is the canonical unblock for W's DEFERRED criteria #1-#4 (Phase 3
+  joint-scorer-renderer-codec readiness gates).
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
+  CONTEST-COMPLIANT HARDWARE": this dispatch produces a CUDA-axis anchor;
+  the CPU pair is a separate dispatch.
+
+  W/I/A I-2 backport: cost-band sourced from tac.cost_band_calibration.predict().
+  At this scale (8h Modal T4) the posterior is COLD-START with no matching
+  anchors yet — fallback $40 literal kept informative while posterior accumulates.
+
+  PRE-FLIGHT (operator-side):
+    [ ] T10 trainer module exists under src/tac (or experiments/)
+    [ ] Phase 2 anchor saturation evidence per W's DEFERRED criteria #1-#4
+    [ ] Fresh operator approval (exceeds standing $20 envelope)
+
+  Cross-ref:
+    project_operator_decision_dashboard_20260511.md B-4 / B-9
+    feedback_grand_council_fields_medal_phase2_floor_refinement_20260509.md

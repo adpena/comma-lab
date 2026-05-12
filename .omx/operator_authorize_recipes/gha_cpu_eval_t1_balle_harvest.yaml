@@ -1,0 +1,76 @@
+schema_version: 1
+name: gha_cpu_eval_t1_balle_harvest
+lane_id: gha_cpu_eval_t1_balle
+summary: GHA [contest-CPU] eval of T1 Ballé Modal harvest (Linux x86_64 contest-compliant CI runner).
+
+platform: gha
+gpu: cpu
+
+cost_band:
+  epochs: 0
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.00
+  platform_key: gha
+  gpu_key: cpu
+
+predicted_delta: "n/a (auth-eval-only; produces [contest-CPU] anchor on existing archive)"
+predicted_delta_basis: "operator directive 2026-05-12 'use modal/lightning/kaggle/github'"
+risk: |
+  GitHub release tag is permanent once created; force-deletion violates
+  immutable-tag conventions. Per CLAUDE.md "Public Disclosure Hygiene",
+  release notes contain only archive sha256, size, and dispatch_at_utc —
+  no credentials, no private infrastructure URLs.
+envelope_status: "FREE — GHA public-repo minutes are free"
+
+timeout_hours: 0.7
+
+required_input_files: []
+
+gha:
+  trigger_command: tools/trigger_gha_cpu_eval.py
+  runner: ubuntu-latest
+  default_fork_repo: adpena/comma_video_compression_challenge
+
+dependencies:
+  - gh CLI
+  - tools/trigger_gha_cpu_eval.py
+  - tools/harvest_gha_cpu_eval.py
+  - submissions/<label>/contest_auth_eval.cpu.json target schema
+
+notes: |
+  Per operator directive 2026-05-12 "use modal for everything lightning is
+  exhausted, also use kaggle and github" — the "github" axis is GitHub Actions
+  CPU eval per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
+  CONTEST-COMPLIANT HARDWARE". ubuntu-latest IS the literal contest leaderboard
+  CI runner (Linux x86_64).
+
+  Per CLAUDE.md "Operator gates must be wired and used" + "Public Disclosure
+  Hygiene": this wrapper runs preflight_all() BEFORE any GHA dispatch and
+  verifies the archive URL is a public GH release-asset URL.
+
+  Three plans surfaced by the legacy shim:
+
+    PLAN A (RECOMMENDED) — Fully orchestrated end-to-end:
+      Wait for Modal T1 Ballé harvest, upload as GH Release asset, trigger
+      workflow_dispatch, poll for harvest. ~20-40 min wall-clock. Cost $0.
+
+    PLAN B (MANUAL) — Skip Modal-poll, dispatch immediately:
+      Operator supplies T1_BALLE_ARCHIVE_PATH=<path>.
+
+    PLAN C (DRY-RUN) — Validate only:
+      T1_BALLE_DRY_RUN=1 — preflight + URL validation only; no claim or dispatch.
+
+  Required env-vars passed to the legacy shim:
+    T1_BALLE_LABEL=<modal_harvest_label>
+    [optional] T1_BALLE_ARCHIVE_PATH=<path>
+    [optional] T1_BALLE_FORK_REPO=<repo>
+    [optional] T1_BALLE_DRY_RUN=1
+
+  The legacy shim ``scripts/operator_authorize_gha_cpu_eval_t1_balle_harvest.sh``
+  retains the Modal-poll + release-create + workflow_dispatch + lane-claim
+  sequence. This recipe drives the cost-band banner.
+
+  Cross-ref:
+    tools/trigger_gha_cpu_eval.py + tools/harvest_gha_cpu_eval.py
+    submissions/a1/contest_auth_eval.cpu.json (A1 reference schema)
+    Catalog #127 check_authoritative_tag_requires_custody_metadata

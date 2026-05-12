@@ -1,0 +1,93 @@
+schema_version: 1
+name: phase1_t1_balle_cheap_config_dispatch
+lane_id: t1_balle_128k_endtoend
+summary: Phase 1 T1 Ballé end-to-end trainer (T13+T19+T20+T22 all-on) cheap-config dispatch.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+
+cost_band:
+  epochs: 3000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 8.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_delta: "-0.012 ± 0.007 [predicted; TT cost refinement]"
+predicted_delta_basis: "feedback_autopilot_end_to_end_hf_refresh_phase1_cost_refinement_landed_20260511.md"
+risk: |
+  Phase 1 trainer is contest-compliant per Catalog #146 (write_runtime fix);
+  archive grammar 8/8 declared per Catalog #124. Empirical-validation risk
+  is LOW. Realized-cost band at 2.5-3.5× compound speedup: Modal T4 ~$15-25,
+  Modal A100 ~$8-15, Vast.ai 4090 ~$3-8 / 3000 epochs all-flags-on.
+envelope_status: "fits $20 envelope at p50 fallback; Modal A100 or Vast.ai 4090 preferred"
+
+remote_driver: scripts/remote_lane_t1_balle_endtoend.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --pr95-parity-profile
+    default_path: docs/pr95_parity_profile_council_20260512.json
+
+required_input_files_trainer: experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py
+
+modal:
+  lane_script: scripts/remote_lane_t1_balle_endtoend.sh
+  cost_band_trainer: experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py
+  cost_band_epochs: 3000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+vastai:
+  lane_script: scripts/remote_lane_t1_balle_endtoend.sh
+
+env_overrides:
+  T1_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  T1_ALLOW_SCORE_DOMAIN_TRAINING: "1"
+  T1_ENABLE_T13_SQRT_N_BUDGET: "1"
+  T1_ENABLE_T19_ADAPTIVE_RHO: "1"
+  T1_ENABLE_T20_KL_POSE_DISTILL: "1"
+  T1_ENABLE_T22_TEMPORAL_CONSISTENCY: "1"
+  T1_ENABLE_AUTOCAST_FP16: "1"
+  T1_ENABLE_MP4_CODEC_SIM: "1"
+  T1_MP4_CODEC_SIM_NOISE_STD: "0.0"
+  SEGMENTATION_SURROGATE: soft_cosine
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_t1_balle_endtoend.sh
+  - tools/claim_lane_dispatch.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py
+
+notes: |
+  Per TT cost refinement landing 2026-05-11 + 2026-05-12 engineering audit:
+
+  AMDAHL-ADJUSTED SPEEDUP MATH (Amdahl decomposition, NOT multiplicative-naive):
+    Per-batch decomposition on T4: ~80% scorer work + ~20% other.
+    - teacher cache: 1.25× (NOT 1.4×)
+    - soft_cosine: 1.11× (NOT 5×)
+    - batch_size 32: 1.13× of total (NOT 1.18×)
+    - autocast FP16: ~1.6× (NOT 4-6×)
+    - Compound, INDEPENDENT assumption: ~2.5-3.5× total speedup, NOT 33-50×.
+    - Compound, REALISTIC (savings overlap): ~1.6-2.0× total worst case.
+
+  REALIZED COST BAND post-Tier-1:
+    - Modal T4 all-flags-on PRE-patch:    ~$50-80 / 3000 ep (codex empirical)
+    - Modal T4 all-flags-on POST-patch:   ~$15-25 / 3000 ep
+    - Modal A100 all-flags-on POST-patch: ~$8-15 / 3000 ep
+    - Vast.ai 4090 all-flags-on POST-patch: ~$3-8 / 3000 ep
+
+  WORKABLE COST FRAME FOR $5-INDIVIDUAL CAP:
+    At 3000 epochs only platform within $5 is Vast.ai 4090; for sub-$5 dispatches
+    on Modal, use REDUCED epoch counts (500-1000ep).
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA": Modal T4 training
+  does NOT produce promotion-grade contest-CUDA anchor. A real [contest-CUDA]
+  anchor requires a separate Vast.ai 4090 / Lightning T4 exact-eval dispatch
+  on the trained checkpoint AFTER harvest.
+
+  Cross-ref:
+    project_operator_decision_dashboard_20260511.md A-1 / A-2
+    feedback_phase1_trainer_write_runtime_fix_landed_20260509.md (Catalog #146)
+    feedback_council_t1_balle_engineering_audit_pixels_bytes_pixels_20260512.md

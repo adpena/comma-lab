@@ -1,0 +1,51 @@
+schema_version: 1
+name: autopilot_le_5_dollar_mode
+lane_id: lane_operator_one_command_authorize_scripts
+summary: Activate cathedral autopilot le-$5/individual + le-$20-cumulative mode for ONE loop iteration.
+
+platform: none
+gpu: none
+
+cost_band:
+  epochs: 1
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 5.00
+  platform_key: none
+  gpu_key: none
+
+predicted_delta: "up to $20 cumulative GPU across all auto-approved dispatches"
+predicted_delta_basis: "operator OD-3 + N-3 from decision dashboard 2026-05-11"
+risk: |
+  Up to $20 cumulative GPU spend across all approved dispatches in this run;
+  each individual dispatch $5 max; HALT-and-ASK still fires for any candidate
+  exceeding either cap. KILL auto-authorized: NO — operator-only per CLAUDE.md.
+envelope_status: "$5/individual cap; $20 cumulative envelope hard cap"
+
+required_input_files: []
+dependencies:
+  - tools/cathedral_autopilot_autonomous_loop.py
+  - tools/claim_lane_dispatch.py
+  - ranking JSON (default: latest under experiments/results/cathedral_autopilot_dispatch_ranking_*/)
+
+notes: |
+  Per CLAUDE.md "Operator gates must be wired and used" + MM autopilot
+  activation landing (2026-05-11): autopilot mode is DUAL-GATED:
+    1. CLI flag --operator-authorized-le-5-dollar-mode (default OFF)
+    2. env-var CATHEDRAL_AUTOPILOT_OPERATOR_AUTHORIZED_MODE=1
+    3. --journal-path (required when authorized mode is on)
+
+  Per CLAUDE.md FORBIDDEN /tmp paths: journal lives under
+  experiments/results/autopilot_authorized_journal_<UTC>/.
+
+  Legacy shim ``scripts/operator_authorize_autopilot_le_5_dollar_mode.sh``
+  resolves the ranking JSON, prepares the journal dir, sets the env-var,
+  and invokes the loop. This recipe drives the cost-band banner.
+
+  Operator decisions surfaced:
+    - which ranking JSON to consume (default: most recent)
+    - max dispatch recommendations per iteration (default: 8)
+    - include out-of-envelope ranking candidates (default: NO)
+
+  Cross-ref:
+    project_operator_decision_dashboard_20260511.md N-3 + OD-3
+    feedback_cathedral_autopilot_activation_phase2_probes_integration_audit_v2_landed_20260511.md

@@ -1,0 +1,57 @@
+schema_version: 1
+name: scpp_stage1_anchor_dispatch
+lane_id: lane_scpp_stage1_smoke_anchor
+summary: SC++ Stage 1 anchor smoke dispatch (Modal T4, 3-epoch substrate engineering smoke).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+
+cost_band:
+  epochs: 3
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 3.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_delta: "-0.005 to -0.010 [predicted; SC++ block-FP; HNeRV parity lesson 7]"
+predicted_delta_basis: "VV+QQ substrate composition matrix analysis 2026-05-11"
+risk: |
+  Stage 1 smoke is the first empirical SC++ anchor; falsification risk per
+  the SCPP family (operator dashboard B-10). Substrate engineering lane
+  (>350 LOC budget OK).
+envelope_status: "FITS $5/individual cap with ~1.67× headroom"
+
+remote_driver: scripts/remote_lane_scpp_stage1.sh
+timeout_hours: 3.0
+
+required_input_files: []
+
+modal:
+  lane_script: scripts/remote_lane_scpp_stage1.sh
+
+env_overrides:
+  SCPP_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SCPP_ALLOW_SCORE_DOMAIN_TRAINING: "1"
+  SCPP_STAGE_1_EPOCHS: "3"
+  SCPP_RUN_CONTEST_CUDA_AUTH_EVAL: "0"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - SC++ trainer module (src/tac/selfcomp_block_fp.py or similar)
+  - scripts/remote_lane_scpp_stage1.sh (remote driver; build if missing)
+  - tools/claim_lane_dispatch.py
+  - .omx/state/active_lane_dispatch_claims.md
+
+notes: |
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lesson 7:
+  substrate engineering may exceed the 350-LOC bolt-on budget (tagged
+  lane_class=substrate_engineering).
+
+  Per CLAUDE.md evidence discipline: this Modal training wrapper does not
+  produce a promotion-grade score. CUDA-axis anchors require a separate
+  claimed exact-eval dispatch.
+
+  W/I/A I-2 backport: cost-band sourced from tac.cost_band_calibration.predict()
+  at .omx/state/cost_band_posterior.jsonl. Hand-calibrated fallback $3.00.
+
+  Cross-ref: project_operator_decision_dashboard_20260511.md B-10

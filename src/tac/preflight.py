@@ -2242,6 +2242,19 @@ def preflight_all(
         check_quantize_degenerate_range_clamped_correctly(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #162 (FIX-G T1-C wrapper unification):
+        # operator_authorize_*.sh wrappers MUST be thin shims delegating to
+        # ``tools/operator_authorize.py --recipe <name>``. Per simplification
+        # audit `a2a901c4f43d66a74` the 10 legacy .sh wrappers (~1,497 LOC,
+        # ~70% structurally duplicate) collapse to one canonical Python entry
+        # point + N YAML recipes; the .sh files remain as thin shims for one
+        # release cycle of back-compat. Same-line waiver
+        # `# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>` for explicit legacy
+        # preservation. STRICT @ 0 per CLAUDE.md "Bugs must be permanently
+        # fixed AND self-protected against" non-negotiable.
+        check_operator_authorize_canonical_use(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #159 (FFFF Bug 4, UUU Path B): CLAUDE.md
         # catalog table is the canonical strictness ledger. When a
         # strict-flip happens in code without updating the entry text,
@@ -40239,6 +40252,121 @@ def check_quantize_degenerate_range_clamped_correctly(
             "be permanently fixed AND self-protected against' "
             "non-negotiable, fill must be `-(MAX_LEVELS // 2)` so "
             "dequant recovers `lo` exactly:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #162 — operator_authorize_*.sh wrappers must be thin shims that
+# delegate to tools/operator_authorize.py --recipe <name>.
+# ============================================================================
+# Per FIX-G T1-C wrapper unification (simplification audit a2a901c4f43d66a74,
+# operator approved 2026-05-12): the 10 legacy `scripts/operator_authorize_*.sh`
+# wrappers (~1,497 LOC, ~70% structurally duplicate — set -euo pipefail +
+# cost-band-prompt + lane-claim + platform case) collapse to ONE canonical
+# Python entry point (`tools/operator_authorize.py`) + N small YAML recipes
+# under `.omx/operator_authorize_recipes/`.
+#
+# The .sh files remain as thin shims for one release cycle of back-compat,
+# but every NEW operator_authorize_*.sh MUST invoke the canonical entry
+# point. This META gate refuses any wrapper that does not.
+#
+# Acceptance: a wrapper passes if EITHER (a) the body contains a call to
+# `tools/operator_authorize.py` (typically via `.venv/bin/python tools/...`
+# or `python tools/...`), OR (b) it carries a same-line
+# `# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>` waiver on the shebang or first
+# 10 lines for explicit legacy preservation.
+#
+# Live count at landing: 0 (all 10 legacy wrappers refactored in the same
+# commit batch as this gate).
+#
+# Cross-ref:
+#   feedback_fix_g_t1c_wrapper_unification_landed_20260512.md
+#   tools/operator_authorize.py
+#   .omx/operator_authorize_recipes/
+
+_CHECK_162_OPERATOR_AUTHORIZE_GLOB = "operator_authorize_*.sh"
+_CHECK_162_WAIVER_TOKEN = "OPERATOR_AUTHORIZE_LEGACY_OK:"
+_CHECK_162_CANONICAL_ENTRY_POINT_TOKENS = (
+    "tools/operator_authorize.py",
+)
+
+
+def check_operator_authorize_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #162. Refuses operator_authorize_*.sh wrappers that don't
+    delegate to the canonical entry point.
+
+    Scan scope: `scripts/operator_authorize_*.sh`.
+
+    Acceptance: wrapper body invokes ``tools/operator_authorize.py``, OR the
+    wrapper's first 10 lines carry a ``# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>``
+    waiver.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    scanned = 0
+
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(
+                "  [operator-authorize-canonical] OK "
+                "(no scripts/ directory; 0 wrapper(s) scanned)"
+            )
+        return violations
+
+    for wrapper in sorted(scripts_dir.glob(_CHECK_162_OPERATOR_AUTHORIZE_GLOB)):
+        rel = str(wrapper.relative_to(root))
+        try:
+            text = wrapper.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        # Waiver in first 10 lines (header / docstring region).
+        head_lines = text.splitlines()[:10]
+        if any(_CHECK_162_WAIVER_TOKEN in line for line in head_lines):
+            continue
+        # Canonical entry-point invocation anywhere in the body.
+        if any(tok in text for tok in _CHECK_162_CANONICAL_ENTRY_POINT_TOKENS):
+            continue
+        violations.append(
+            f"{rel}: operator_authorize_*.sh wrapper must delegate to "
+            "`tools/operator_authorize.py --recipe <name>`. Convert to a "
+            "thin shim OR add `# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>` to "
+            "the header. Recipe location: "
+            ".omx/operator_authorize_recipes/<name>.yaml"
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [operator-authorize-canonical] {len(violations)} "
+                f"violation(s) across {scanned} wrapper(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+        else:
+            print(
+                f"  [operator-authorize-canonical] OK "
+                f"({scanned} wrapper(s) scanned; 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_operator_authorize_canonical_use found "
+            f"{len(violations)} operator_authorize_*.sh wrapper(s) that do "
+            "NOT delegate to the canonical entry point "
+            "`tools/operator_authorize.py`. Per FIX-G T1-C wrapper "
+            "unification (simplification audit a2a901c4f43d66a74), every "
+            "wrapper MUST be a thin shim delegating to "
+            "`tools/operator_authorize.py --recipe <name>`. Acceptable "
+            "alternative: same-line `# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>` "
+            "on a header line for explicit legacy preservation:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

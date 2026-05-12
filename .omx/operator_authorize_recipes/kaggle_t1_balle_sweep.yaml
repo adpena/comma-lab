@@ -1,0 +1,75 @@
+schema_version: 1
+name: kaggle_t1_balle_sweep
+lane_id: t1_balle_kaggle_sweep
+summary: Kaggle parallel-sweep dispatch for T1 Ballé trainer (free-tier T4 Linux x86_64).
+
+platform: kaggle
+gpu: T4
+
+cost_band:
+  epochs: 1500
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.00
+  platform_key: kaggle
+  gpu_key: T4
+
+predicted_delta: "-0.012 ± 0.007 [predicted; parity with Modal path]"
+predicted_delta_basis: "TT cost refinement + 2026-05-12 engineering audit"
+risk: |
+  P100 random assignment (~30-40% per CLAUDE.md "Kaggle API/CLI"); harness
+  exits rc=2 on P100; the legacy shim detects + re-pushes with new slug
+  (max 5 attempts per variant). Free tier (no monetary cost) but 9h kernel
+  timeout is the hard cap.
+envelope_status: "FREE — Kaggle free tier; 2-session concurrent cap"
+
+timeout_hours: 9.0
+
+required_input_files: []
+
+kaggle:
+  kernel_script: experiments/kaggle_t1_balle_sweep.py
+  default_slug_prefix: comma-lab-t1-balle
+  max_push_retries: 5
+
+dependencies:
+  - kaggle CLI on PATH
+  - experiments/kaggle_t1_balle_sweep.py
+  - tools/claim_lane_dispatch.py
+
+notes: |
+  Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first": this
+  wrapper is the actuator that turns one operator decision into N concurrent
+  Kaggle T4 free-tier dispatches.
+
+  Operator directive 2026-05-12: "use modal for everything lightning is
+  exhausted, also use kaggle and github". This is the Kaggle leg. Lightning
+  is exhausted; Kaggle's free tier provides the parallel-sweep capacity.
+
+  COST BAND — Kaggle free tier:
+    - Hard cost: $0.00 / dispatch (free tier; 2 concurrent kernels max)
+    - Wall clock: ~6-8h on T4 for 1500 epochs all-flags-on
+    - Hard cap: 9h Kaggle kernel timeout
+    - P100 retry: up to 5 attempts per variant via new slug suffix
+
+  Submission auth eval rule per CLAUDE.md: Kaggle T4 on Linux x86_64 IS a
+  1:1 contest-compliant CUDA substrate (the contest's bot scores CUDA on
+  T4-class GPUs). Anchors produced here are tagged [contest-CUDA] per
+  Catalog #127. Kaggle CPU is NOT used for ranking (GHA Linux x86_64
+  required for [contest-CPU] axis).
+
+  Tier-1 wins all-on (per 2026-05-12 engineering audit):
+    --enable-autocast-fp16 (~1.6× Amdahl)
+    --enable-mp4-codec-sim (proxy-auth gap closure)
+    --enable-t20-kl-pose-distill (~1.25× Amdahl)
+    --enable-t22-temporal-consistency
+    --segmentation-surrogate soft_cosine (~1.11× Amdahl)
+    --enable-t13-sqrt-n-budget
+    --enable-t19-adaptive-rho
+
+  The legacy shim ``scripts/operator_authorize_kaggle_t1_balle_sweep.sh``
+  retains the kernel-metadata.json materialization + push + P100 retry
+  loop. This recipe drives the cost-band banner.
+
+  Cross-ref:
+    feedback_council_t1_balle_engineering_audit_pixels_bytes_pixels_20260512.md
+    feedback_modal_strategy_reevaluation_post_tier1_engineering_20260512.md

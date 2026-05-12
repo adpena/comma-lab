@@ -1,0 +1,40 @@
+schema_version: 1
+name: hf_dataset_card_push
+lane_id: lane_operator_one_command_authorize_scripts
+summary: Push refreshed HF dataset card to adpena/comma_video_compression_challenge_pr_archive.
+
+platform: none
+gpu: none
+
+cost_band:
+  epochs: 0
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.00
+  platform_key: none
+  gpu_key: none
+
+predicted_delta: "n/a (OSS publication act, not GPU spend)"
+predicted_delta_basis: "operator F-3"
+risk: |
+  Public-facing release. Visible at huggingface.co/datasets/<HF_DATASET>.
+  Public mirrors may cache it.
+envelope_status: "FREE — OSS publication act"
+
+required_input_files: []
+dependencies:
+  - hf CLI or huggingface-cli on PATH
+  - docs/comma_pr_archive_dataset_card.md (local card)
+  - check_public_release_hygiene STRICT preflight
+
+notes: |
+  Per operator F-3: FROZEN-OPERATOR pending "don't submit PR yet". The local
+  card update is staged for operator review before remote push.
+
+  Per CLAUDE.md "Public Disclosure Hygiene": legacy shim
+  ``scripts/operator_authorize_hf_dataset_card_push.sh`` runs the STRICT
+  preflight gate on the card BEFORE the network push, and falls back to
+  huggingface-cli if hf is not on PATH.
+
+  Cross-ref:
+    project_operator_decision_dashboard_20260511.md F-3
+    feedback_autopilot_end_to_end_hf_refresh_phase1_cost_refinement_landed_20260511.md

@@ -1,0 +1,42 @@
+schema_version: 1
+name: bulk_anchor_backfill
+lane_id: lane_bulk_anchor_backfill_tool
+summary: Bulk back-fill custody-OK orphaned authoritative anchors into the continual-learning posterior.
+
+platform: none
+gpu: none
+
+cost_band:
+  epochs: 0
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.00
+  platform_key: none
+  gpu_key: none
+
+predicted_delta: "posterior n_anchors shift (6 → 6 + accepted-orphan count)"
+predicted_delta_basis: "operator OD-A from decision dashboard 2026-05-11"
+risk: |
+  Pure file-update on .omx/state/continual_learning_posterior.json via
+  posterior_update_locked() inside fcntl LOCK_EX. Idempotent re-run is
+  safe (duplicate-sha refusal built in). Custody-refused anchors (e.g.
+  Modal CPU on [contest-CPU] short-form tag) are correctly REFUSED.
+envelope_status: "FREE — file-update only"
+
+required_input_files: []
+dependencies:
+  - tools/bulk_backfill_anchors_into_posterior.py
+  - .omx/state/continual_learning_posterior.json (target)
+
+notes: |
+  Per CLAUDE.md "Continual-learning posterior — non-negotiable" + Catalog
+  #128 (check_continual_learning_writes_use_lock) + Catalog #127 (custody
+  validator): the back-fill is transactional via posterior_update_locked.
+
+  Per CLAUDE.md FORBIDDEN /tmp paths: audit log lives under
+  experiments/results/bulk_backfill_<UTC>/.
+
+  Legacy shim ``scripts/operator_authorize_bulk_anchor_backfill.sh`` runs
+  the dry-run discovery step + the commit step interactively. This recipe
+  drives the cost-band banner + lane-claim coordination.
+
+  Cross-ref: project_operator_decision_dashboard_20260511.md OD-A

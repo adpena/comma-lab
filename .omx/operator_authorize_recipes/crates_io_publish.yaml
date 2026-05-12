@@ -1,0 +1,50 @@
+schema_version: 1
+name: crates_io_publish
+lane_id: lane_operator_one_command_authorize_scripts
+summary: Publish tac-packet-compiler v0.2.0-rc1 to crates.io (F-2 dependent).
+
+platform: none
+gpu: none
+
+cost_band:
+  epochs: 0
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.00
+  platform_key: none
+  gpu_key: none
+
+predicted_delta: "n/a (OSS publication act, not GPU spend)"
+predicted_delta_basis: "operator F-2"
+risk: |
+  crates.io versions are IMMUTABLE once published. The only remediation is
+  to yank (still visible) + publish a new version. Verify license + repository
+  URL + no leaked credentials BEFORE confirming.
+envelope_status: "FREE — OSS publication act"
+
+required_input_files: []
+dependencies:
+  - cargo (Rust toolchain)
+  - LICENSE + THIRD_PARTY_NOTICES.md at repo root
+  - GitHub tag v0.2.0-rc1 pushed (F-2 prerequisite)
+  - cargo login (~/.cargo/credentials.toml exists)
+  - check_public_release_hygiene STRICT preflight
+
+notes: |
+  Per operator F-2: FROZEN-OPERATOR pending "don't submit PR yet" + Q5 council
+  verdict on tac-packet-compiler publication ecosystem timing.
+
+  Per CLAUDE.md "Public Disclosure Hygiene": this recipe does NOT auto-publish.
+  The legacy shim ``scripts/operator_authorize_crates_io_publish.sh`` retains
+  the ``cargo publish --dry-run`` + ``cargo publish`` interactive sequence.
+
+  Pre-flight verification (operator-side):
+    [ ] F-2 GitHub tag pushed (v0.2.0-rc1 visible on remote)
+    [ ] LICENSE file present at repo root
+    [ ] THIRD_PARTY_NOTICES.md present + current
+    [ ] Cargo.toml repository URL matches GitHub remote
+    [ ] cargo test passes locally
+    [ ] No private infrastructure references in src/
+    [ ] check_public_release_hygiene STRICT preflight has been run
+    [ ] cargo login has been performed
+
+  Cross-ref: project_operator_decision_dashboard_20260511.md F-2
