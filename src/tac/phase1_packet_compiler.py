@@ -1798,6 +1798,8 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     "sparse_temporal_subsampled",
     # Magic codec — per-stream auto-selector + meta-codec dispatch (2026-05-11)
     "magic_codec_auto_select",
+    # Magic codec dense streams — per-stream brotli/lzma/magic_classic bundle (2026-05-12)
+    "magic_codec_dense_streams",
     # Sign-encoding 5-strategy unified taxonomy (2026-05-12)
     # Unifies PR96 / PR101 / PR103 sign-encoding strategies into one typed
     # API. Each token tags one of the 5 strategies; encoders/decoders are
