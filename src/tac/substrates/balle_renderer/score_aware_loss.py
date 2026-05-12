@@ -140,8 +140,13 @@ class BalleRendererScoreAwareLoss(torch.nn.Module):
         # Lazy import to keep this module's import-time cheap
         from tac.differentiable_eval_roundtrip import apply_eval_roundtrip_during_training
 
-        rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0, noise_std=noise_std)
-        rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1, noise_std=noise_std)
+        # ``noise_std`` is reserved for a future variant of the eval-roundtrip
+        # (currently the canonical ``apply_eval_roundtrip_during_training``
+        # uses ``Uint8STE`` deterministically — no additive noise). Kept as a
+        # kwarg for forward-compat so the trainer's CLI surface remains stable.
+        del noise_std  # unused at this revision; STE is deterministic
+        rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
+        rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
         # SegNet on LAST frame of pair (rgb_1); upstream contract is (B, T=1, C, H, W).
         seg_out = self.seg_scorer(rgb_1_rt.unsqueeze(1))
