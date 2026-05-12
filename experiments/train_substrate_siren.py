@@ -71,15 +71,15 @@ import json
 import math
 import os
 import random
+import shutil
 import subprocess
 import sys
 import time
 import zipfile
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -204,8 +204,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--batch-size",
         type=int,
-        default=32,
-        help="Number of pair indices per batch (council default 32).",
+        default=1,
+        help=(
+            "Number of pair indices per batch. Full-resolution coordinate-MLP "
+            "renders are memory-heavy, so the dispatch default is 1."
+        ),
     )
     p.add_argument(
         "--lr",
@@ -475,6 +478,19 @@ def _write_runtime(submission_dir: Path) -> None:
     * Per-video loop in ``inflate.py``
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
+    runtime_pkg = submission_dir / "src" / "tac" / "substrates" / "siren"
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    # Vendor only the inflate-time SIREN package surface. Do not copy
+    # score-aware training modules or scorer imports into the runtime tree.
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+        runtime_pkg / "__init__.py",
+    ):
+        pkg_init.write_text("", encoding="utf-8")
+    substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "siren"
+    for name in ("architecture.py", "archive.py", "inflate.py"):
+        shutil.copy2(substrate_src / name, runtime_pkg / name)
 
     inflate_sh = (
         "#!/usr/bin/env bash\n"
@@ -550,6 +566,13 @@ def _build_archive_zip(
             zi = zipfile.ZipInfo(name, date_time=fixed_ts)
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, src.read_bytes())
+        runtime_root = submission_dir / "src"
+        if runtime_root.is_dir():
+            for src in sorted(runtime_root.rglob("*.py")):
+                rel = src.relative_to(submission_dir).as_posix()
+                zi = zipfile.ZipInfo(rel, date_time=fixed_ts)
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                zf.writestr(zi, src.read_bytes())
 
 
 # ---------------------------------------------------------------------------
@@ -557,7 +580,7 @@ def _build_archive_zip(
 # ---------------------------------------------------------------------------
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -1007,7 +1030,7 @@ def _full_main(args: argparse.Namespace) -> int:
                                     f"(source={parsed_score.source_key}, "
                                     f"archive_sha256={archive_sha})"
                                 )
-                        except Exception as exc:  # noqa: BLE001
+                        except Exception as exc:
                             print(f"[full] could not parse auth eval JSON: {exc}", file=sys.stderr)
             except subprocess.TimeoutExpired:
                 print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
@@ -1034,7 +1057,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     f"[full] posterior_update: accepted={update.accepted} "
                     f"reason={update.reason!r}"
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 print(f"[full] posterior_update_locked failed: {exc}", file=sys.stderr)
 
         # 14. Cost-band anchor (best-effort; never fail the run on this).
@@ -1074,7 +1097,7 @@ def _full_main(args: argparse.Namespace) -> int:
                         f"append_failed_rc_{proc.returncode}:"
                         f"{(proc.stderr or proc.stdout)[-500:]}"
                     )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 cost_band_anchor_skip_reason = f"append_failed:{exc}"
                 print(f"[full] cost-band anchor append failed (non-fatal): {exc}", file=sys.stderr)
         else:

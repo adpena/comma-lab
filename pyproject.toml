@@ -97,10 +97,12 @@ notebooks = ["marimo>=0.3"]
 # runtime dep means editing ONE file (this one), not every bootstrap.
 # `brotli` was missed when --brotli was added to pipeline.py compress;
 # `av` is required for video decode in optimize_poses + auth_eval;
-# `timm`/`einops`/`segmentation_models_pytorch` are upstream scorer
-# direct deps via tac.scorers; `opencv-python` for frame-level utils.
+# `safetensors`/`timm`/`einops`/`segmentation_models_pytorch` are upstream
+# scorer direct deps via upstream/modules.py and tac.scorer; `opencv-python`
+# for frame-level utils.
 runtime = [
     "av>=10.0",
+    "safetensors>=0.4,<1.0",
     "opencv-python>=4.5",
     "timm>=0.9",
     "einops>=0.7",
@@ -115,12 +117,18 @@ dev = [
     "pytest-timeout>=2.0",
     "hypothesis>=6.0",
     "ruff>=0.4",
+    "ty>=0.0.1a8",
+    "mypy>=1.0",
+    "pytest-subtests>=0.12",
     # Round 14 finding 1 (R15): src/tac/tests/test_se3.py uses
     # scipy.spatial.transform.Rotation as the golden Rodrigues reference.
     # Without it test collection hard-crashes on every remote (Vast.ai,
     # Kaggle, Modal, CI). Pinning scipy>=1.10 because earlier versions
     # have a Rotation API that differs subtly from what the test asserts.
     "scipy>=1.10",
+    # Wavelet residual tests use PyWavelets as the oracle; contest runtimes use
+    # the committed numpy inverse-DWT implementation instead.
+    "PyWavelets>=1.6,<2.0",
 ]
 cloud = [
     # Lightning AI Batch Jobs/Studio automation. Do not install the PyPI

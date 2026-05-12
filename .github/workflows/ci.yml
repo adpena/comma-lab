@@ -36,13 +36,14 @@ jobs:
       - name: Create venv + install deps
         run: |
           uv venv
-          # Install only what the lint + preflight + non-GPU tests need.
-          # Skipping torch's GPU wheels to keep CI fast; CPU torch is enough.
-          uv pip install -e '.[dev]' || uv pip install -e .
-          uv pip install ruff ty mypy hypothesis pytest pytest-timeout pytest-subtests pydantic numpy
-          # CPU torch only — avoids 1+ GB CUDA download in CI.
+          # CPU torch first — avoids pulling CUDA wheels while still satisfying
+          # the package/runtime dependency contract below.
           uv pip install --index-url https://download.pytorch.org/whl/cpu \
-            'torch>=2.0,<3.0' || true
+            --extra-index-url https://pypi.org/simple \
+            'torch>=2.0,<3.0'
+          # CI collects runtime-backed unit tests, so install both the tooling
+          # extra and the scorer/video runtime closure from pyproject.toml.
+          uv pip install -e '.[dev,runtime]'
 
       - name: Ruff lint (F821 critical, full rule set warnings)
         run: |

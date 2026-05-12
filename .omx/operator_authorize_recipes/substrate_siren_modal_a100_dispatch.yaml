@@ -42,7 +42,7 @@ modal:
   lane_script: scripts/remote_lane_substrate_siren.sh
   cost_band_trainer: experiments/train_substrate_siren.py
   cost_band_epochs: 2000
-  cost_band_batch_size: 32
+  cost_band_batch_size: 1
   cost_band_all_flags_on: true
 
 required_input_files_trainer: experiments/train_substrate_siren.py
@@ -52,6 +52,7 @@ env_overrides:
   SIREN_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
   SIREN_OUTPUT_DIR: /workspace/pact/lane_substrate_siren_results/output
   SIREN_EPOCHS: "2000"
+  SIREN_BATCH_SIZE: "1"
   SIREN_UPSTREAM_DIR: /workspace/pact/upstream
   SIREN_DEVICE: cuda
   LOCAL_CUDA_WORKER: "1"

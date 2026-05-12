@@ -37,6 +37,7 @@ PROVENANCE="$LOG_DIR/provenance.json"
 SIREN_VIDEO_PATH="${SIREN_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 SIREN_OUTPUT_DIR="${SIREN_OUTPUT_DIR:-$OUTPUT_DIR}"
 SIREN_EPOCHS="${SIREN_EPOCHS:-2000}"
+SIREN_BATCH_SIZE="${SIREN_BATCH_SIZE:-1}"
 SIREN_UPSTREAM_DIR="${SIREN_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 SIREN_DEVICE="${SIREN_DEVICE:-cuda}"
 
@@ -128,6 +129,7 @@ prov = {
     'video_path': '$SIREN_VIDEO_PATH',
     'upstream_dir': '$SIREN_UPSTREAM_DIR',
     'epochs': $SIREN_EPOCHS,
+    'batch_size': $SIREN_BATCH_SIZE,
     'device': '$SIREN_DEVICE',
     # Council Phase 5 prediction: 0.145 [contest-CUDA].
     # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
@@ -160,6 +162,7 @@ set +e
     --video-path "$SIREN_VIDEO_PATH" \
     --output-dir "$SIREN_OUTPUT_DIR" \
     --epochs "$SIREN_EPOCHS" \
+    --batch-size "$SIREN_BATCH_SIZE" \
     --upstream-dir "$SIREN_UPSTREAM_DIR" \
     --device "$SIREN_DEVICE" \
     2>&1 | tee -a "$LOG_DIR/run.log"
