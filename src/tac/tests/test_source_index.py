@@ -264,6 +264,28 @@ def test_source_index_dispatch_attempted_is_indexed_for_audit_scans(tmp_path):
     assert stats["text_hits"] == 0
 
 
+def test_source_index_tag_grade_bypass_patterns_are_indexed(tmp_path):
+    _write(tmp_path / "src/tac/a.py", "if evidence_grade in {'contest-cuda'}:\n    pass\n")
+    _write(tmp_path / "src/tac/b.py", "if tag.startswith(\"[contest-CUDA\"):\n    pass\n")
+    _write(tmp_path / "src/tac/c.py", "if other:\n    pass\n")
+    index = SourceIndex(tmp_path)
+
+    matched = index.files_containing_substrings(
+        ["src/tac"],
+        pattern="*.py",
+        substrings=("evidence_grade in {", 'tag.startswith("[contest-CUDA")'),
+        require_all=False,
+    )
+
+    assert [index.repo_relative(path) for path in matched] == [
+        "src/tac/a.py",
+        "src/tac/b.py",
+    ]
+    stats = index.stats()
+    assert stats["substring_index_misses"] == 0
+    assert stats["text_hits"] == 0
+
+
 def test_source_index_comment_contract_prefilter_does_not_self_trigger():
     import tac.source_index as source_index
 

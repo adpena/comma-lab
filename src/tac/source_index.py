@@ -26,7 +26,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v21"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v22"
 _DEFAULT_FACT_WORKERS = 8
 
 
@@ -166,6 +166,14 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "promoted",
         "FALSIFIED",
         "FALSIFICATION",
+        "evidence_grade in {",  # CUSTODY_VALIDATOR_OK: source-index needle only
+        "evidence_grade.lower() in {",  # CUSTODY_VALIDATOR_OK: source-index needle only
+        "evidence_grade not in {",  # CUSTODY_VALIDATOR_OK: source-index needle only
+        "evidence_grade.lower() not in {",  # CUSTODY_VALIDATOR_OK: source-index needle only
+        'tag.startswith("[contest-CUDA")',  # CUSTODY_VALIDATOR_OK: source-index needle only
+        'tag.startswith("[contest-CPU")',  # CUSTODY_VALIDATOR_OK: source-index needle only
+        'evidence_tag.startswith("[contest-CUDA")',  # CUSTODY_VALIDATOR_OK: source-index needle only
+        'evidence_tag.startswith("[contest-CPU")',  # CUSTODY_VALIDATOR_OK: source-index needle only
         "/tmp/",
         "_partial",
         "auth_eval",
