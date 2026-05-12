@@ -65,6 +65,8 @@ Exit codes:
   2 — validation error (missing/malformed --operator-approved on --apply)
   3 — refusal (apply attempted without dry-run-first / without operator
         handle)
+  4 — refusal (execute_plan detected a git-tracked path in would_delete;
+        Part 2 defense-in-depth, 2026-05-12 subagent F GC-fix wave)
 
 The helper NEVER deletes a path that ``git ls-files`` knows. The helper
 NEVER deletes ``recovery_metadata.json``. The helper NEVER deletes
@@ -284,6 +286,70 @@ def _classify_dir(
             has_recovery_metadata=has_rm,
         )
 
+    # 2026-05-12 BUG FIX (subagent F, Wave 1): tracked-by-git check MUST
+    # short-circuit BEFORE smoke-token / recovered_* heuristics. Per the
+    # module docstring contract ("The helper NEVER deletes a path that
+    # ``git ls-files`` knows"), the tracked-precedence is non-negotiable.
+    # Prior ordering allowed a smoke-named-but-tracked dir (e.g. a
+    # deliberately-committed `frontend_smoke_demo/` reference scaffold) to
+    # be classified DELETE-NOW because the smoke-token branch fired before
+    # the tracked-check at the bottom. The execute_plan(...) defense-in-
+    # depth (Part 2) would catch this at deletion time, but a robust
+    # contract puts the tracked-check FIRST so the JSON plan is itself
+    # correct. Memory: feedback_gc_fix_and_commit_swap_class_protect_landed_20260512.md.
+    if is_tracked:
+        custody = _read_build_manifest_custody(entry)
+        if custody in CUSTODY_PIN_STATUSES:
+            return Classification(
+                path=rel,
+                verdict=VERDICT_KEEP,
+                rationale=(
+                    f"git-tracked + build_manifest.json::custody_status="
+                    f"{custody!r} (pinned)"
+                ),
+                age_days=age_days,
+                bytes_estimate=bytes_estimate,
+                tracked=True,
+                has_build_manifest=has_bm,
+                has_recovery_metadata=has_rm,
+            )
+        if has_bm:
+            return Classification(
+                path=rel,
+                verdict=VERDICT_KEEP,
+                rationale=(
+                    "git-tracked + build_manifest.json present (HISTORICAL_PROVENANCE)"
+                ),
+                age_days=age_days,
+                bytes_estimate=bytes_estimate,
+                tracked=True,
+                has_build_manifest=True,
+                has_recovery_metadata=has_rm,
+            )
+        if has_rm:
+            return Classification(
+                path=rel,
+                verdict=VERDICT_KEEP,
+                rationale=(
+                    "git-tracked + recovery_metadata.json (HISTORICAL_PROVENANCE)"
+                ),
+                age_days=age_days,
+                bytes_estimate=bytes_estimate,
+                tracked=True,
+                has_build_manifest=has_bm,
+                has_recovery_metadata=True,
+            )
+        return Classification(
+            path=rel,
+            verdict=VERDICT_KEEP,
+            rationale="git-tracked (never auto-delete tracked paths)",
+            age_days=age_days,
+            bytes_estimate=bytes_estimate,
+            tracked=True,
+            has_build_manifest=has_bm,
+            has_recovery_metadata=has_rm,
+        )
+
     # Recovered_*/ — preserve metadata, surface for review
     if name.startswith("recovered_") and has_rm:
         return Classification(
@@ -331,7 +397,9 @@ def _classify_dir(
             has_recovery_metadata=has_rm,
         )
 
-    # Tracked-by-git → NEVER auto-delete. Sub-classify based on custody.
+    # Tracked-by-git → already handled above (moved to first-class precedence
+    # 2026-05-12). Defense-in-depth: if any new control-flow path reaches
+    # here AND is_tracked is True, KEEP it as a fail-safe.
     if is_tracked:
         custody = _read_build_manifest_custody(entry)
         if custody in CUSTODY_PIN_STATUSES:
@@ -545,6 +613,65 @@ def build_gc_plan(
     }
 
 
+class TrackedDeleteRefusedError(RuntimeError):
+    """Raised when ``execute_plan`` detects a would-delete path is git-tracked.
+
+    Part 2 of the 2026-05-12 GC fix (subagent F, Wave 1): defense-in-depth
+    re-verification at EXECUTION time. Even after Part 1's _classify_dir
+    smoke-vs-tracked precedence fix, the executor MUST independently re-run
+    ``git ls-files`` over every would_delete path BEFORE any shutil.rmtree
+    call. If any path is tracked, abort the entire plan with rc!=0 before
+    any deletion. This protects against:
+      (1) stale plans (re-running an old --output JSON after the repo state
+          changed and a previously-untracked path is now tracked);
+      (2) classifier regressions (any future bug in _classify_dir that
+          re-introduces the smoke-token-before-tracked-check ordering);
+      (3) operator-staged-but-not-committed files (git ls-files includes
+          the index, so freshly `git add`-ed files become tracked even
+          pre-commit).
+    """
+
+
+def _git_ls_files_batch(
+    paths: list[str], *, repo_root: Path, timeout_seconds: int = 30,
+) -> set[str]:
+    """Return the subset of ``paths`` that ``git ls-files --cached`` knows.
+
+    Uses recursive listing under each path prefix so a path is considered
+    tracked if ANY file inside it is tracked. Returns an empty set if the
+    git invocation fails (defense-in-depth: if git is unavailable, the
+    caller decides whether to proceed).
+    """
+
+    if not paths:
+        return set()
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--cached", "--", *paths],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return set()
+    if result.returncode != 0:
+        return set()
+    tracked_prefixes: set[str] = set()
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # A file foo/bar/baz under one of our DELETE-NOW prefixes means the
+        # prefix is tracked. Match each candidate prefix against this output.
+        for p in paths:
+            normalized = p.rstrip("/")
+            if line == normalized or line.startswith(normalized + "/"):
+                tracked_prefixes.add(p)
+                break
+    return tracked_prefixes
+
+
 def execute_plan(
     plan: dict,
     *,
@@ -556,9 +683,49 @@ def execute_plan(
 
     NEVER deletes anything outside ``experiments/results/``. NEVER deletes
     tracked paths (the plan itself classifies them as KEEP).
+
+    2026-05-12 (Part 2 of subagent F GC-fix wave): runtime ``git ls-files``
+    re-verification BEFORE any deletion. If any would_delete path is
+    git-tracked at execution time, abort the entire plan with
+    ``TrackedDeleteRefusedError`` (rc!=0 from the CLI) before any
+    shutil.rmtree call. This is defense-in-depth on top of Part 1's
+    _classify_dir tracked-precedence fix.
     """
 
     rows = plan.get("would_delete", [])
+
+    # Part 2: runtime git ls-files re-verification BEFORE any deletion.
+    # If any would_delete path is tracked at execution time, refuse the
+    # entire plan. This is defense-in-depth against stale plans, classifier
+    # regressions, or operator-staged-but-not-committed files.
+    candidate_paths = [row["path"] for row in rows if isinstance(row.get("path"), str)]
+    tracked_at_exec = _git_ls_files_batch(
+        candidate_paths, repo_root=Path(repo_root).resolve()
+    )
+    if tracked_at_exec:
+        # Emit diagnostic to stderr for operator audit, then raise.
+        sorted_tracked = sorted(tracked_at_exec)
+        if verbose:
+            print(
+                "[gc_experiments_results] EXECUTION ABORTED: the following "
+                f"would_delete path(s) are git-tracked at execution time "
+                f"(count={len(sorted_tracked)}):",
+                file=sys.stderr,
+            )
+            for p in sorted_tracked[:20]:
+                print(f"  • TRACKED-AT-EXEC: {p}", file=sys.stderr)
+            if len(sorted_tracked) > 20:
+                print(f"  ... ({len(sorted_tracked) - 20} more)", file=sys.stderr)
+        raise TrackedDeleteRefusedError(
+            "execute_plan refuses to delete git-tracked path(s) "
+            f"({len(sorted_tracked)} found at execution time). The plan was "
+            "either generated against a stale repo state OR the classifier "
+            "incorrectly classified a tracked path as DELETE-NOW. Re-run "
+            "the helper with --dry-run to regenerate the plan. Affected "
+            "paths (first 5): "
+            + ", ".join(sorted_tracked[:5])
+        )
+
     deleted: list[str] = []
     skipped: list[dict] = []
     deleted_bytes = 0
@@ -730,12 +897,22 @@ def main(argv: list[str] | None = None) -> int:
     plan = build_gc_plan(classifications, now_seconds=now_s)
 
     if args.apply:
-        plan["executed"] = execute_plan(
-            plan,
-            repo_root=Path(args.repo_root).resolve(),
-            operator_approved=args.operator_approved,
-            verbose=args.verbose,
-        )
+        try:
+            plan["executed"] = execute_plan(
+                plan,
+                repo_root=Path(args.repo_root).resolve(),
+                operator_approved=args.operator_approved,
+                verbose=args.verbose,
+            )
+        except TrackedDeleteRefusedError as exc:
+            # Part 2 defense-in-depth: a would_delete path is git-tracked.
+            # Refuse the entire apply with rc=4 (distinct from rc=3 for
+            # missing operator handle and rc=2 for validation errors).
+            print(
+                f"REFUSING_APPLY: {exc}",
+                file=sys.stderr,
+            )
+            return 4
 
     out_json = json.dumps(plan, indent=2, sort_keys=True)
     if args.output is not None:

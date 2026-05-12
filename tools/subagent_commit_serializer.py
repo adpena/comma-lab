@@ -127,6 +127,70 @@ def _hash_working_tree_files(files: list[str]) -> dict[str, str]:
     return out
 
 
+def _parse_expected_content_sha256(arg_values: list[str]) -> dict[str, str]:
+    """Parse ``--expected-content-sha256 <file>=<sha>`` flag values.
+
+    Each value must be ``<relpath>=<64-hex>``. Returns a dict mapping
+    relpath -> expected SHA-256. Empty list -> empty dict.
+
+    Raises ValueError on malformed input.
+    """
+    out: dict[str, str] = {}
+    for v in arg_values or []:
+        if "=" not in v:
+            raise ValueError(
+                f"--expected-content-sha256 must be '<relpath>=<sha256>'; "
+                f"got {v!r}"
+            )
+        path, _, sha = v.partition("=")
+        path = path.strip()
+        sha = sha.strip().lower()
+        if not path or not sha:
+            raise ValueError(
+                f"--expected-content-sha256 has empty path or sha in {v!r}"
+            )
+        if len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha):
+            raise ValueError(
+                f"--expected-content-sha256 sha must be 64 hex chars; "
+                f"got {sha!r} for path {path!r}"
+            )
+        out[path] = sha
+    return out
+
+
+def _expected_content_sha256_check(
+    expected: dict[str, str],
+) -> dict[str, tuple[str, str]]:
+    """FIX-92aba3ca (2026-05-12): pre-lock-vs-EXPECTED-content-sha256 check.
+
+    The 92aba3ca commit-swap incident showed that the FIX-1 pre-lock vs
+    post-lock check only catches edits during the lock-wait window. If
+    TWO subagents have ALREADY edited the same file in the working tree
+    BEFORE either takes its pre-lock snapshot, both subagents observe
+    the merged content; both `pre==post` checks pass; the winning
+    subagent's `git add <file>` packages BOTH edits.
+
+    The structural fix: callers may pass ``--expected-content-sha256
+    <file>=<sha>`` declaring what the file's content SHOULD be at the
+    moment the subagent started its work. The serializer hashes the
+    current working-tree content and refuses if it differs.
+
+    Returns a dict of mismatches: ``{relpath: (expected_sha, actual_sha)}``.
+    Returns an empty dict if every declared expectation matches. Callers
+    that don't pass ``--expected-content-sha256`` get an empty expected
+    dict and an empty mismatch dict (backward-compatible).
+    """
+    if not expected:
+        return {}
+    actual = _hash_working_tree_files(list(expected.keys()))
+    diffs: dict[str, tuple[str, str]] = {}
+    for path, want in expected.items():
+        got = actual.get(path, "MISSING")
+        if got != want:
+            diffs[path] = (want, got)
+    return diffs
+
+
 def _append_co_author_trailer(message: str) -> str:
     """Auto-append the canonical Co-Authored-By trailer (FIX-3 2026-05-08).
 
@@ -349,6 +413,21 @@ def main() -> int:
              "check. Use ONLY when intentionally racing edits with a known "
              "sister subagent (rare); default: check enabled.",
     )
+    parser.add_argument(
+        "--expected-content-sha256",
+        action="append",
+        default=None,
+        help=(
+            "FIX-92aba3ca (2026-05-12 Catalog #157): declare the expected "
+            "working-tree SHA-256 of a file as observed at the START of "
+            "the subagent's work, BEFORE any sister subagent may have "
+            "edited the same file. Repeatable per-file as "
+            "'<relpath>=<sha256>'. The serializer refuses (rc=4) if the "
+            "actual content differs from the declared expectation. "
+            "Catches the commit-swap class where both subagents edited "
+            "the same file before either took its pre-lock snapshot."
+        ),
+    )
     args = parser.parse_args()
 
     # Resolve file list
@@ -378,6 +457,43 @@ def main() -> int:
         "message_head": args.message.splitlines()[0][:160],
         "no_stage": bool(args.no_stage),
     }
+
+    # FIX-92aba3ca (2026-05-12 Catalog #157): pre-lock-vs-EXPECTED check.
+    # If the caller declared --expected-content-sha256 <file>=<sha>, verify
+    # the working-tree content matches BEFORE doing anything else. This
+    # catches the commit-swap class where both subagents have ALREADY
+    # edited the same file in the working tree before either took its
+    # pre-lock snapshot. The FIX-1 pre-vs-post-lock check would NOT catch
+    # that race (both pre and post hashes would match the merged content).
+    try:
+        expected_content_shas = _parse_expected_content_sha256(
+            args.expected_content_sha256 or []
+        )
+    except ValueError as exc:
+        print(f"[subagent-commit-serializer] FATAL: {exc!s}", file=sys.stderr)
+        return 2
+    if expected_content_shas:
+        diffs = _expected_content_sha256_check(expected_content_shas)
+        if diffs:
+            _append_log({
+                **base_record,
+                "outcome": "expected_content_sha_mismatch",
+                "expected_content_sha_diffs": {
+                    f: {"expected": want, "actual": got}
+                    for f, (want, got) in diffs.items()
+                },
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED: "
+                "--expected-content-sha256 mismatch. Working-tree content "
+                "differs from the SHA the caller declared at the START of "
+                "its work. A sister subagent likely edited these files "
+                "BEFORE the caller could take its pre-lock snapshot — the "
+                "commit-swap class (FIX-92aba3ca / Catalog #157). "
+                f"Files affected: {list(diffs.keys())!r}",
+                file=sys.stderr,
+            )
+            return 4
 
     # FIX-1: snapshot working-tree content hashes BEFORE acquiring lock.
     # If any file's content changes between this moment and post-lock, a

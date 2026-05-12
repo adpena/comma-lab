@@ -7,6 +7,12 @@
 # Usage:
 #   ./tools/auto_commit.sh              # commit everything changed
 #   ./tools/auto_commit.sh --dry-run    # show what would be committed
+#
+# COMMIT_SERIALIZER_BYPASS_OK_FILE: operator-side housekeeping helper
+# (single-user invocation, not a subagent surface). Per CLAUDE.md
+# "Subagent commits MUST use serializer" — this script is the SOLE
+# operator-facing cleanup path; subagents must use
+# tools/subagent_commit_serializer.py instead. 2026-05-12 Catalog #157.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"

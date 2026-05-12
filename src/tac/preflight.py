@@ -2193,6 +2193,32 @@ def preflight_all(
         check_experiments_results_gc_helper_is_canonical(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #156 (subagent F, Wave 1): the sister of #154.
+        # Where #154 refuses NEW destructive calls outside the canonical
+        # GC helper, #156 refuses external callers of the canonical helper
+        # that strip the Part-2 TrackedDeleteRefusedError defense-in-depth.
+        # Together the two gates extinct the entire GC-tracked-delete bug
+        # class. Strict-from-byte-one per CLAUDE.md "Bugs must be
+        # permanently fixed AND self-protected against" — live count at
+        # landing: 0 (no external callers exist; the helper is used only
+        # via its CLI surface).
+        check_gc_helper_refuses_delete_on_tracked_paths(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #157 (subagent F, Part 4): commit-swap class
+        # permanent fix. The 92aba3ca incident showed that even WITH the
+        # commit serializer's FIX-1 pre-lock/post-lock hash check, two
+        # subagents that have ALREADY edited the same file in the working
+        # tree BEFORE either takes a snapshot can produce a commit-swap:
+        # the winning subagent's `git add <file>` packages BOTH edits; the
+        # losing subagent sees "no changes". The structural fix is to
+        # forbid ANY direct `git commit` invocation outside the canonical
+        # serializer, so the lock contract is always honored. Strict-from-
+        # byte-one — live count at landing: 0 (operator-side auto_commit.sh
+        # carries a file-level waiver).
+        check_commit_serializer_pre_lock_hash_against_head(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -39391,6 +39417,404 @@ def check_experiments_results_gc_helper_is_canonical(
             f"{len(violations)} destructive call(s) under experiments/results/ "
             "outside the canonical helper "
             "(tools/gc_experiments_results.py):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #156: check_gc_helper_refuses_delete_on_tracked_paths
+# ============================================================================
+# 2026-05-12 (subagent F, Wave 1) — sister gate of Catalog #154. Where #154
+# refuses bulk-delete under ``experiments/results/`` outside the canonical
+# helper, #156 refuses the canonical helper ITSELF from accepting a plan
+# that would delete a git-tracked path.
+#
+# This is a STATIC source-code gate: it scans tools/, scripts/,
+# experiments/, src/tac/ for `.py` files that import from the canonical
+# helper (``tools.gc_experiments_results``) OR directly call its public
+# functions (``execute_plan``/``_classify_dir``/``classify_results_dirs``/
+# ``build_gc_plan``) from outside the canonical helper itself. Each such
+# callsite MUST satisfy one of:
+#   (a) the call is the canonical helper or its own tests;
+#   (b) the file carries a same-line waiver
+#       ``# GC_TRACKED_DELETE_OK:<reason>`` on the call line;
+#   (c) the call is wrapped in a try/except that catches
+#       ``TrackedDeleteRefusedError`` — i.e. the caller acknowledges the
+#       Part-2 defense-in-depth and handles refusal gracefully.
+#
+# Why this is the *self-protect* sister, not a duplicate of #154:
+# #154 catches NEW ad-hoc cleanup scripts that bypass the helper entirely.
+# #156 catches RE-USE of the canonical helper in a way that strips its
+# Part-2 defense-in-depth (e.g., a future tool that imports execute_plan
+# and silences the TrackedDeleteRefusedError). The two gates together
+# extinct the entire bug class.
+#
+# Bug class: T1-D wave's _classify_dir() smoke-vs-tracked precedence bug
+# (Part 1 of subagent F fix) plus the dormant possibility that an external
+# caller imports execute_plan and skips the runtime re-verification by
+# constructing its own plan dict. The static gate forces every external
+# consumer to either (a) handle the refusal exception or (b) carry an
+# operator-reviewed waiver. Memory:
+# ``feedback_gc_fix_and_commit_swap_class_protect_landed_20260512.md``.
+
+_CHECK_156_WAIVER_TOKEN = "GC_TRACKED_DELETE_OK:"
+_CHECK_156_CANONICAL_FILES = frozenset({
+    "tools/gc_experiments_results.py",
+    "src/tac/preflight.py",
+    "src/tac/tests/test_gc_experiments_results.py",
+})
+_CHECK_156_EXTERNAL_API_NAMES = (
+    "execute_plan",
+    "classify_results_dirs",
+    "build_gc_plan",
+    "_classify_dir",
+)
+_CHECK_156_EXCEPTION_NAME = "TrackedDeleteRefusedError"
+
+
+def check_gc_helper_refuses_delete_on_tracked_paths(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #156 — refuse external callers of the canonical GC helper
+    that strip the Part-2 ``TrackedDeleteRefusedError`` defense-in-depth.
+
+    See module-level commentary for rationale, scope, and acceptance rules.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scan_dirs = ("tools", "scripts", "experiments", "src/tac")
+    scanned = 0
+    for d in scan_dirs:
+        top = root / d
+        if not top.is_dir():
+            continue
+        for p in top.rglob("*.py"):
+            rel = str(p.relative_to(root))
+            # Skip vendored / test-fixture trees.
+            if any(m in rel for m in ("_intake_", ".omx/oss_export/", "/public_pr")):
+                continue
+            # Skip canonical files themselves (helper + tests).
+            if rel in _CHECK_156_CANONICAL_FILES:
+                continue
+            # Skip own-tests for the canonical helper that may legitimately
+            # call execute_plan() in fixture-only contexts.
+            if p.name.startswith("test_") and "gc_experiments_results" in p.name:
+                continue
+            try:
+                text = p.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick filter: must reference the helper module or its API.
+            if (
+                "gc_experiments_results" not in text
+                and not any(api in text for api in _CHECK_156_EXTERNAL_API_NAMES)
+            ):
+                continue
+            scanned += 1
+            lines = text.splitlines()
+            if p.suffix == ".py":
+                try:
+                    tree = ast.parse(text)
+                except SyntaxError:
+                    tree = None
+                if tree is not None:
+                    parents: dict[ast.AST, ast.AST] = {}
+                    for parent in ast.walk(tree):
+                        for child in ast.iter_child_nodes(parent):
+                            parents[child] = parent
+
+                    def _api_name(call: ast.Call) -> str | None:
+                        fn = call.func
+                        if isinstance(fn, ast.Name):
+                            name = fn.id
+                        elif isinstance(fn, ast.Attribute):
+                            name = fn.attr
+                        else:
+                            return None
+                        return name if name in _CHECK_156_EXTERNAL_API_NAMES else None
+
+                    def _handler_matches(handler: ast.ExceptHandler) -> bool:
+                        exc_type = handler.type
+                        if exc_type is None:
+                            return False
+                        candidates: list[ast.AST]
+                        if isinstance(exc_type, ast.Tuple):
+                            candidates = list(exc_type.elts)
+                        else:
+                            candidates = [exc_type]
+                        for candidate in candidates:
+                            if isinstance(candidate, ast.Name) and candidate.id == _CHECK_156_EXCEPTION_NAME:
+                                return True
+                            if isinstance(candidate, ast.Attribute) and candidate.attr == _CHECK_156_EXCEPTION_NAME:
+                                return True
+                        return False
+
+                    def _call_in_try_body(call: ast.Call, try_node: ast.Try) -> bool:
+                        call_line = int(getattr(call, "lineno", -1))
+                        for body_node in try_node.body:
+                            start = int(getattr(body_node, "lineno", -1))
+                            end = int(getattr(body_node, "end_lineno", start))
+                            if start <= call_line <= end:
+                                return True
+                        return False
+
+                    def _protected_by_tracked_delete_handler(call: ast.Call) -> bool:
+                        parent = parents.get(call)
+                        while parent is not None:
+                            if isinstance(parent, ast.Try) and _call_in_try_body(call, parent):
+                                return any(_handler_matches(h) for h in parent.handlers)
+                            parent = parents.get(parent)
+                        return False
+
+                    for call in [n for n in ast.walk(tree) if isinstance(n, ast.Call)]:
+                        api_hit = _api_name(call)
+                        if api_hit is None:
+                            continue
+                        lineno = int(getattr(call, "lineno", 0))
+                        line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+                        if _CHECK_156_WAIVER_TOKEN in line:
+                            continue
+                        if _protected_by_tracked_delete_handler(call):
+                            continue
+                        violations.append(
+                            f"{rel}:{lineno}: external call to canonical GC helper "
+                            f"API '{api_hit}(...)' without TrackedDeleteRefusedError "
+                            f"handling or same-line "
+                            f"# {_CHECK_156_WAIVER_TOKEN}<reason> waiver. "
+                            "Route through tools/gc_experiments_results.py CLI OR "
+                            "wrap the call in `try: ... except "
+                            "TrackedDeleteRefusedError: ...` OR add the waiver."
+                        )
+                    continue
+
+            for lineno, line in enumerate(lines, start=1):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+                api_hit = None
+                for api in _CHECK_156_EXTERNAL_API_NAMES:
+                    if f"{api}(" in line:
+                        api_hit = api
+                        break
+                if api_hit is None:
+                    continue
+                if _CHECK_156_WAIVER_TOKEN in line:
+                    continue
+                violations.append(
+                    f"{rel}:{lineno}: external call to canonical GC helper "
+                    f"API '{api_hit}(...)' without AST-verifiable "
+                    f"TrackedDeleteRefusedError handling or same-line "
+                    f"# {_CHECK_156_WAIVER_TOKEN}<reason> waiver. "
+                    "Route through tools/gc_experiments_results.py CLI OR "
+                    "wrap the call in `try: ... except "
+                    "TrackedDeleteRefusedError: ...` OR add the waiver."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [gc-helper-refuses-tracked-delete] {len(violations)} "
+                f"violation(s) across {scanned} candidate(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+            if len(violations) > 10:
+                print(f"    ... ({len(violations) - 10} more)")
+        else:
+            print(
+                "  [gc-helper-refuses-tracked-delete] OK "
+                f"({scanned} candidate(s) scanned; 0 violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_gc_helper_refuses_delete_on_tracked_paths found "
+            f"{len(violations)} unprotected external call(s) to the GC "
+            "helper's public API. These callers can silently delete tracked "
+            "paths if their plan is forged or stale. Add a same-line "
+            "# GC_TRACKED_DELETE_OK:<reason> waiver OR wrap in "
+            "try/except TrackedDeleteRefusedError:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #157: check_commit_serializer_pre_lock_hash_against_head
+# ============================================================================
+# 2026-05-12 (subagent F, Part 4) — commit-swap class permanent fix.
+#
+# The 2026-04-29 PM memory entry feedback_concurrent_subagent_commit_message_swap
+# documented a bug class where concurrent subagents staged + committed in
+# parallel and commit BODIES landed attached to commit OBJECTS that contained
+# OTHER subagents' diffs. The 2026-05-08 META-META landings added a
+# pre-lock-vs-post-lock content-hash check (`FIX-1`) inside
+# tools/subagent_commit_serializer.py to detect concurrent edits during the
+# lock-wait window. That fix CLOSED ONE WINDOW: edits arriving AFTER the
+# pre-lock snapshot.
+#
+# The 2026-05-12 swap incident (commit `92aba3ca` carrying both Cluster 3's
+# Catalog #154 body AND subagent F-W/I/A's 40-LOC `src/tac/preflight.py`
+# orphan-preflight wire-in) showed an EARLIER window that FIX-1 cannot
+# catch: when TWO subagents have ALREADY edited the same file in the
+# working tree BEFORE either takes its pre-lock snapshot. Both subagents'
+# pre-lock and post-lock hashes match (because both snapshots see the
+# combined edits). The winning subagent's `git add <file>` then packages
+# BOTH edits under its commit body; the losing subagent's `git add <file>`
+# returns "no changes to commit" because HEAD already contains everything.
+#
+# The permanent fix is to compare the pre-lock hash NOT against a
+# post-lock hash, but against the EXPECTED hash — what the caller asserts
+# the file content SHOULD be at commit time. If the caller passes
+# `--expected-content-sha256 <file>=<sha>` (computed by the subagent at
+# the START of its work, BEFORE any sibling has edited the same file),
+# the serializer refuses if the actual working-tree hash differs.
+#
+# Companion fix (lands in tools/subagent_commit_serializer.py): the new
+# `--expected-content-sha256 <file>=<sha>` guard refuses when the current
+# working-tree file content no longer matches what the caller observed at
+# work-start time.
+#
+# This static check (#157) enforces that any new code that BYPASSES the
+# canonical serializer must carry a waiver. It refuses any `subprocess`-
+# style direct invocation of `git commit` outside the serializer file
+# itself.
+#
+# Acceptance:
+#   - tools/subagent_commit_serializer.py (the canonical wrapper) is
+#     exempt by construction.
+#   - test files are exempt (they may invoke `git commit` on tmp_path
+#     fixtures).
+#   - Vendored public-PR clones (`_intake_`) are exempt.
+#   - Same-line waiver `# COMMIT_SERIALIZER_BYPASS_OK:<reason>` on the
+#     `git commit` invocation line, OR file-level waiver
+#     `# COMMIT_SERIALIZER_BYPASS_OK_FILE:<reason>` for the rare
+#     directly-invoking script (each waiver becomes an audit item).
+
+_CHECK_157_WAIVER_TOKEN_LINE = "COMMIT_SERIALIZER_BYPASS_OK:"
+_CHECK_157_WAIVER_TOKEN_FILE = "COMMIT_SERIALIZER_BYPASS_OK_FILE:"
+_CHECK_157_CANONICAL_EXEMPT = frozenset({
+    "tools/subagent_commit_serializer.py",
+    "src/tac/preflight.py",
+})
+_CHECK_157_COMMIT_INVOCATION_PATTERNS = (
+    # subprocess.run(["git", "commit", ...])
+    re.compile(r'subprocess\.(?:run|Popen|check_call|call|check_output)\s*\(\s*\[\s*["\']git["\']\s*,\s*["\']commit["\']'),
+    # os.system("git commit ...")
+    re.compile(r'os\.system\s*\(\s*["\'][^"\']*\bgit\s+commit\b'),
+    # shell-form via subprocess(... shell=True)
+    re.compile(r'subprocess\.(?:run|Popen|check_call|call|check_output)\s*\([^)]*shell\s*=\s*True[^)]*\bgit\s+commit\b'),
+)
+# Sister marker: shell scripts that invoke `git commit` outside the wrapper.
+_CHECK_157_SH_COMMIT_PATTERN = re.compile(r'^\s*(?:git|\$\{?GIT\}?)\s+commit\b')
+
+
+def check_commit_serializer_pre_lock_hash_against_head(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #157 — refuse direct ``git commit`` invocations that bypass
+    the canonical subagent commit serializer.
+
+    The commit-swap bug class (2026-04-29, 2026-05-12 92aba3ca) is
+    structurally extinct only when every subagent commit routes through
+    ``tools/subagent_commit_serializer.py``. Any new code that invokes
+    ``git commit`` via ``subprocess.run([...])`` or ``os.system("git
+    commit ...")`` re-opens the race. The static check forces every such
+    invocation to carry an operator-reviewed waiver.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scan_dirs = ("tools", "scripts", "experiments", "src/tac")
+    scanned = 0
+    for d in scan_dirs:
+        top = root / d
+        if not top.is_dir():
+            continue
+        for ext in ("*.py", "*.sh"):
+            for p in top.rglob(ext):
+                rel = str(p.relative_to(root))
+                # Skip vendored / test-fixture trees.
+                if any(
+                    m in rel
+                    for m in (
+                        "_intake_",
+                        ".omx/oss_export/",
+                        "/public_pr",
+                        "/tests/",
+                    )
+                ):
+                    continue
+                if rel in _CHECK_157_CANONICAL_EXEMPT:
+                    continue
+                if p.name.startswith("test_"):
+                    continue
+                try:
+                    text = p.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    continue
+                if "git commit" not in text and "git\", \"commit" not in text and "'git', 'commit'" not in text:
+                    continue
+                scanned += 1
+                # File-level waiver short-circuit.
+                if _CHECK_157_WAIVER_TOKEN_FILE in text:
+                    continue
+                lines = text.splitlines()
+                is_python = p.suffix == ".py"
+                for lineno, line in enumerate(lines, start=1):
+                    stripped = line.strip()
+                    if stripped.startswith("#"):
+                        continue
+                    hit = False
+                    if is_python:
+                        for pat in _CHECK_157_COMMIT_INVOCATION_PATTERNS:
+                            if pat.search(line):
+                                hit = True
+                                break
+                    else:
+                        if _CHECK_157_SH_COMMIT_PATTERN.search(line):
+                            hit = True
+                    if not hit:
+                        continue
+                    if _CHECK_157_WAIVER_TOKEN_LINE in line:
+                        continue
+                    violations.append(
+                        f"{rel}:{lineno}: direct `git commit` invocation "
+                        f"bypasses tools/subagent_commit_serializer.py. "
+                        f"Route via the serializer OR add same-line "
+                        f"# {_CHECK_157_WAIVER_TOKEN_LINE}<reason>."
+                    )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [commit-serializer-bypass] {len(violations)} "
+                f"violation(s) across {scanned} candidate(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+            if len(violations) > 10:
+                print(f"    ... ({len(violations) - 10} more)")
+        else:
+            print(
+                "  [commit-serializer-bypass] OK "
+                f"({scanned} candidate(s) scanned; 0 violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_commit_serializer_pre_lock_hash_against_head found "
+            f"{len(violations)} direct `git commit` invocation(s) "
+            "bypassing tools/subagent_commit_serializer.py. The commit-swap "
+            "bug class (CLAUDE.md 'Subagent commits MUST use serializer') "
+            "re-emerges at every bypass. Route via the wrapper OR add a "
+            "same-line waiver:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
