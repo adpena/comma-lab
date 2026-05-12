@@ -1,0 +1,7 @@
+{
+  "body_blob_length_bytes": 127,
+  "n_tensors": 4,
+  "scales_blob_length_bytes": 8,
+  "schema": "pr100_schema_driven_decoder.v1",
+  "sha256": "3c9df2e84b1a06de0a4fb1eabda4006690c2d582ccf0d753e459c7df494dd172"
+}
