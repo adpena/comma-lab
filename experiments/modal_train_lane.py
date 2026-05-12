@@ -130,6 +130,21 @@ training_image = (
     .add_local_file("pyproject.toml", remote_path="/workspace/pact/pyproject.toml")
 )
 
+# Root-cause fix 2026-05-12: trainer defaults point at .omx/research/pr95_*.json
+# but .omx/ is NOT in the mount list above. T1 Ballé dispatch 2026-05-12T17:12
+# crashed at 15s rc=1 because the parity profile file didn't exist on the
+# container. Add the specific durable .omx/research artifacts the trainer
+# defaults consume. Per CLAUDE.md "Track small durable .omx/research ledgers"
+# — these are committed, deterministic, dispatch-relevant inputs (NOT
+# transient state like .omx/state/* which stays local).
+_OMX_RESEARCH_MOUNTS = (
+    (".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json",
+     "/workspace/pact/.omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"),
+)
+for _local, _remote in _OMX_RESEARCH_MOUNTS:
+    if _os.path.isfile(_local):
+        training_image = training_image.add_local_file(_local, remote_path=_remote)
+
 
 def _run_lane_inner(
     lane_script: str,
