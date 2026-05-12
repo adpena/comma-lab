@@ -196,3 +196,85 @@ def test_byte_mutation_changes_inflate_output_no_op_proof():
     arc_b = parse_archive(blob_b)
     # Latent at (0, 0) must differ between A and B after roundtrip
     assert not torch.allclose(arc_a.latents[0, 0], arc_b.latents[0, 0], atol=1e-6)
+
+
+# Catalog #158 degenerate-range tests (NNN sister-bug FFFF fix)
+# ─────────────────────────────────────────────────────────────────────────
+# Prior pattern was zeros_like(f, dtype=int16) which dequant'd to
+# (0 + 32767) * 1.0 + lo = 32767 + lo (off by 32767). Correct pattern is
+# full_like(f, -32767, dtype=int16) which dequant'd to
+# (-32767 + 32767) * 1.0 + lo = lo. These tests pin the correct behavior.
+
+
+def test_degenerate_all_zeros_quantize_dequantize_returns_zero():
+    """All-zero tensor: lo = hi = 0. After roundtrip latents must == 0."""
+    from tac.substrates.sane_hnerv.archive import (
+        _dequantize_latents,
+        _quantize_latents_to_int16,
+    )
+
+    latents = torch.zeros(4, 8, dtype=torch.float32)
+    q, scale, zp = _quantize_latents_to_int16(latents)
+    # Q is filled with -32767 (degenerate sentinel)
+    assert q.dtype == torch.int16
+    assert torch.all(q == -32767), "degenerate fill must be -32767, not 0"
+    assert zp == 0.0
+    assert scale == 1.0
+
+    deq = _dequantize_latents(q, scale, zp)
+    assert torch.allclose(deq, latents, atol=1e-12), (
+        f"degenerate dequant must recover lo exactly; got max-abs="
+        f"{float(deq.abs().max())}"
+    )
+
+
+def test_degenerate_all_equal_nonzero_value_quantize_dequantize_recovers_value():
+    """All-equal-to-c tensor: lo = hi = c. After roundtrip latents must == c."""
+    from tac.substrates.sane_hnerv.archive import (
+        _dequantize_latents,
+        _quantize_latents_to_int16,
+    )
+
+    c = 0.42
+    latents = torch.full((4, 8), c, dtype=torch.float32)
+    q, scale, zp = _quantize_latents_to_int16(latents)
+    assert torch.all(q == -32767)
+    # zp is stored at float32 precision; allow tiny roundoff
+    assert abs(zp - c) < 1e-6
+    assert scale == 1.0
+
+    deq = _dequantize_latents(q, scale, zp)
+    assert torch.allclose(deq, latents, atol=1e-6), (
+        f"degenerate-nonzero dequant must recover c={c}; got max-abs-err="
+        f"{float((deq - latents).abs().max())}"
+    )
+
+
+def test_degenerate_full_archive_roundtrip_recovers_latents():
+    """End-to-end: pack_archive + parse_archive on all-equal latents."""
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = SaneHnervSubstrate(cfg)
+    decoder_sd = {k: v for k, v in model.state_dict().items() if k != "latents"}
+    # Force latents to constant value (degenerate range)
+    constant = 0.137
+    latents = torch.full_like(model.state_dict()["latents"], constant)
+    meta = {
+        "embed_dim": cfg.embed_dim,
+        "initial_grid_h": cfg.initial_grid_h,
+        "initial_grid_w": cfg.initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "sin_frequency": cfg.sin_frequency,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+        "num_upsample_blocks": cfg.num_upsample_blocks,
+    }
+
+    blob = pack_archive(decoder_sd, latents, meta)
+    arc = parse_archive(blob)
+
+    # Latents must recover the constant exactly (within float roundtrip)
+    assert torch.allclose(arc.latents, latents, atol=1e-6), (
+        f"degenerate full-archive roundtrip must recover constant {constant}; "
+        f"got max-abs-err={float((arc.latents - latents).abs().max())}"
+    )

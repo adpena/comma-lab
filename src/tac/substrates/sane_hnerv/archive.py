@@ -111,14 +111,26 @@ def _quantize_latents_to_int16(latents: torch.Tensor) -> tuple[torch.Tensor, flo
     Quantization: ``q_int16 = round((f - zero_point) / scale) - 32767``
     such that ``f = (q_int16 + 32767) * scale + zero_point``. This gives
     the full 65535 levels of int16 storage.
+
+    Degenerate (all-equal) case: ``hi <= lo`` (single unique value or
+    NaN/inf). q is filled with ``-32767`` so that
+    ``dequant(q) = (q + 32767) * scale + zero_point = 0 * scale + lo = lo``.
+    The earlier ``zeros_like`` fill produced
+    ``(0 + 32767) * 1.0 + lo = 32767 + lo``, off by 32767. Sister bug
+    NNN flagged: same pattern was fixed in
+    ``src/tac/substrates/block_nerv/archive.py``; Catalog #158 STRICT
+    preflight refuses re-introduction of this class.
     """
     if latents.dtype not in (torch.float32, torch.float16):
         raise ValueError(f"latents must be float; got {latents.dtype}")
     f = latents.detach().to(dtype=torch.float32, device="cpu")
     lo, hi = float(f.min()), float(f.max())
     if hi <= lo:
-        # Degenerate (all-equal) — encode as zero-scale
-        return (torch.zeros_like(f, dtype=torch.int16), 1.0, lo)
+        return (
+            torch.full_like(f, -32767, dtype=torch.int16),
+            1.0,
+            lo,
+        )
     # Map [lo, hi] -> [0, 65534] -> [-32767, 32767]
     scale = (hi - lo) / 65534.0
     q_unsigned = ((f - lo) / scale).round().clamp(0.0, 65534.0)

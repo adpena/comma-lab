@@ -114,7 +114,8 @@ def _quantize_latents_to_int16(
     f = latents.detach().to(dtype=torch.float32, device="cpu")
     lo, hi = float(f.min()), float(f.max())
     if hi <= lo:
-        return (torch.zeros_like(f, dtype=torch.int16), 1.0, lo)
+        # FFFF Catalog #158 fix: -32767 fill so dequant = 0*scale + lo = lo
+        return (torch.full_like(f, -32767, dtype=torch.int16), 1.0, lo)
     scale = (hi - lo) / 65534.0
     q_unsigned = ((f - lo) / scale).round().clamp(0.0, 65534.0)
     q = (q_unsigned - 32767.0).to(torch.int16)
