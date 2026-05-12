@@ -1829,6 +1829,16 @@ def preflight_all(
         check_phase1_trainer_runtime_emits_contest_compliant_inflate(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #158 — deterministic-compiler canonical use.
+        # STRICT @ 0 because the canonical compiler + CLI ship in the same
+        # commit-batch and every pre-existing packet-builder is grandfathered
+        # via _DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST. Any NEW packet-
+        # compilation surface that bypasses the canonical compiler is
+        # refused. Sister to Catalog #146. Memory:
+        # feedback_deterministic_packet_compiler_landed_20260512.md
+        check_deterministic_compiler_canonical_use(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-08 council Round 1 action items #5/#6. These are
         # warn-only on first landing because legacy research ledgers still
         # contain superseded FastViT/attention phrasing, and existing
@@ -31500,6 +31510,157 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
             print(
                 f"  [check_phase1_trainer_runtime] OK "
                 f"({trainer.relative_to(root)})"
+            )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# 2026-05-12 Catalog #158 — canonical deterministic-packet-compiler use
+# Memory: feedback_deterministic_packet_compiler_landed_20260512.md
+# ---------------------------------------------------------------------------
+
+
+#: Pre-existing packet-compilation surfaces grandfathered in at landing time.
+#: Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+#: the gate lands STRICT at 0 live violations by allowlisting every
+#: pre-existing surface and refusing new surfaces that bypass the canonical
+#: deterministic compiler. The allowlist is intentionally narrow: only the
+#: legacy ``tools/build_*packet*.py`` builders observed at 2026-05-12 are
+#: exempt; any subsequent surface must route through the canonical compiler.
+_DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST: frozenset[str] = frozenset({
+    "tools/build_a1_frame_conditional_codec_variant.py",
+    "tools/build_a1_per_pair_latent_correction_sidecar.py",
+    "tools/build_a2_sensitivity_weighted_pr101_packet.py",
+    "tools/build_categorical_candidate_fixture.py",
+    "tools/build_cross_archive_substrate_composition.py",
+    "tools/build_deterministic_packet.py",  # The canonical CLI itself.
+    "tools/build_factorized_hnerv_archive.py",
+    "tools/build_hnerv_entropy_candidate_packet.py",
+    "tools/build_hnerv_generated_schema_candidate.py",
+    "tools/build_hnerv_lowlevel_exact_eval_packet.py",
+    "tools/build_hnerv_packet_section_manifest.py",
+    "tools/build_hnerv_packet_section_transform_candidate.py",
+    "tools/build_packet_compiler_golden_vectors.py",
+    "tools/build_phase1_packet_compiler.py",
+    "tools/build_pr101_finetuned_archive.py",
+    "tools/build_pr101_frame_conditional_packet_readiness.py",
+    "tools/build_pr101_frame_conditional_runtime_packet.py",
+    "tools/build_pr101_kaggle_proxy_runtime_packet.py",
+    "tools/build_pr101_runtime_packet.py",
+    "tools/build_pr103_lc_ac_candidate_packet.py",
+    "tools/build_pr106_uniward_runtime_packet.py",
+    "tools/build_result_review_packet.py",
+    "tools/build_tac_oss_release_packet.py",
+    "tools/build_track2_identity_packet.py",
+    "tools/build_uniward_stc_hessian_a1_v1.py",
+    "tools/build_wr01_exact_eval_packet.py",
+})
+
+#: Token that, when present in a packet-builder source file, waives the gate
+#: with an explicit rationale.
+_DETERMINISTIC_COMPILER_WAIVER_TOKEN = "DETERMINISTIC_COMPILER_OK"
+
+
+def check_deterministic_compiler_canonical_use(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #158 — new packet-compilation surfaces MUST route through the
+    canonical ``tac.packet_compiler.deterministic_compiler``.
+
+    Refuses any **new** ``tools/build_*.py`` script whose filename mentions
+    ``packet`` / ``deterministic`` / ``submission`` AND that
+    (1) writes an archive.zip via ``zipfile.ZipFile`` AND
+    (2) emits an ``inflate.sh`` / ``inflate.py`` runtime
+    but does NOT import from ``tac.packet_compiler.deterministic_compiler``
+    AND does NOT carry a ``# DETERMINISTIC_COMPILER_OK:<reason>`` waiver
+    anywhere in the file.
+
+    Pre-existing surfaces are grandfathered in
+    (``_DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST``). The allowlist is
+    intentionally narrow + version-locked at 2026-05-12: any surface added
+    later MUST either route through the canonical compiler OR add itself to
+    the allowlist with an explicit rationale, OR carry an inline waiver.
+
+    Per CLAUDE.md "Deterministic packet compiler" non-negotiable, the
+    canonical compiler is the bridge from Python deconstruction to
+    Rust/Zig/C/ASM ports. Sister rule of Catalog #146
+    (Phase 1 trainer must emit contest-compliant inflate.sh).
+
+    Live count target: 0 violations on the post-landing repo state.
+    Memory: feedback_deterministic_packet_compiler_landed_20260512.md.
+    """
+
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    tools_dir = root / "tools"
+    if not tools_dir.is_dir():
+        return []
+
+    violations: list[str] = []
+    for path in sorted(tools_dir.glob("build_*.py")):
+        rel = path.relative_to(root).as_posix()
+        if rel in _DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST:
+            continue
+        name = path.name
+        # The gate applies only to surfaces whose name marks them as
+        # packet-builders / packet-compilers / submission-packet tooling.
+        if not (
+            "packet" in name
+            or "deterministic" in name
+            or "submission" in name
+        ):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # Waiver anywhere in the file exempts it (operator-acknowledged).
+        if _DETERMINISTIC_COMPILER_WAIVER_TOKEN in text:
+            continue
+        # Heuristic: the file must (a) write a ZIP archive AND (b) emit a
+        # runtime entry point. Pure read-only inspectors are exempt.
+        writes_zip = (
+            "zipfile.ZipFile" in text
+            and ('"w"' in text or "'w'" in text)
+        )
+        emits_inflate = (
+            "inflate.sh" in text
+            or "inflate.py" in text
+            or "inflate_sh" in text
+        )
+        if not (writes_zip and emits_inflate):
+            continue
+        canonical_import = (
+            "tac.packet_compiler.deterministic_compiler" in text
+        )
+        if not canonical_import:
+            violations.append(
+                f"{rel}: new packet-builder writes archive.zip + emits "
+                "inflate runtime without importing "
+                "'tac.packet_compiler.deterministic_compiler'. Either route "
+                "through `compile_packet(...)` or add the path to "
+                "_DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST with a rationale, "
+                "or add a `# DETERMINISTIC_COMPILER_OK:<reason>` waiver."
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "DETERMINISTIC_COMPILER_CANONICAL_USE_VIOLATIONS (Catalog #158):\n"
+            + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [check_deterministic_compiler_canonical_use] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_deterministic_compiler_canonical_use] OK "
+                f"({len(_DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST)} legacy "
+                "surfaces grandfathered)"
             )
     return violations
 

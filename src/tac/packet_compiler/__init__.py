@@ -292,8 +292,25 @@ from tac.packet_compiler.magic_codec import (
     recommendation_for,
     shannon_entropy_estimate_bits,
 )
+from tac.packet_compiler.deterministic_compiler import (
+    COMPILER_MODES as DETERMINISTIC_COMPILER_MODES,
+    TARGET_PROFILE_POLICIES as DETERMINISTIC_TARGET_PROFILE_POLICIES,
+    TARGET_PROFILES as DETERMINISTIC_TARGET_PROFILES,
+    DeterministicPacketCompilerError,
+    DeterministicPacketResult,
+    compile_packet as compile_deterministic_packet,
+    inspect_packet_oracle as inspect_deterministic_packet,
+)
 
 __all__ = [
+    # Canonical deterministic submission-packet compiler (2026-05-12, Catalog #158)
+    "DETERMINISTIC_COMPILER_MODES",
+    "DETERMINISTIC_TARGET_PROFILES",
+    "DETERMINISTIC_TARGET_PROFILE_POLICIES",
+    "DeterministicPacketCompilerError",
+    "DeterministicPacketResult",
+    "compile_deterministic_packet",
+    "inspect_deterministic_packet",
     # PR81 — FP4 codebook + ROUTER_ACTION packing
     "FP4Codebook",
     "PR81_POS_LEVELS",
