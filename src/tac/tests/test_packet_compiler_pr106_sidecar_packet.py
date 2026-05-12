@@ -10,9 +10,11 @@ from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
+    mutate_pr106_sidecar_semantic_correction,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
     pr106_sidecar_manifest,
+    pr106_sidecar_mutation_manifest,
     read_single_stored_member_archive,
 )
 
@@ -192,6 +194,54 @@ def test_pr106_sidecar_consumed_byte_proof_sha_tracks_sidecar_mutation() -> None
     }["sidecar_payload"]
     assert mutated_sidecar_row["sha256"] != baseline_sidecar["sha256"]
     assert mutated_proof["all_payload_bytes_accounted"] is True
+
+
+@pytest.mark.parametrize(
+    "archive_path",
+    [PR106_R2_ARCHIVE, PR106_R2_PR101_ARCHIVE],
+)
+def test_pr106_sidecar_semantic_mutation_is_valid_and_nonpromotable(
+    archive_path: Path,
+) -> None:
+    archive_bytes = archive_path.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    mutated_packet, mutation = mutate_pr106_sidecar_semantic_correction(source_packet)
+    mutated_payload = emit_pr106_sidecar_packet(mutated_packet)
+    reparsed = parse_pr106_sidecar_packet(mutated_payload)
+    manifest = pr106_sidecar_mutation_manifest(
+        source_packet,
+        reparsed,
+        mutation,
+        source_archive_sha256=_sha(archive_bytes),
+        mutated_archive_sha256=_sha(
+            emit_single_stored_member_archive(
+                type(member)(
+                    name=member.name,
+                    payload=mutated_payload,
+                    date_time=member.date_time,
+                    external_attr=member.external_attr,
+                    create_system=member.create_system,
+                    flag_bits=member.flag_bits,
+                    comment=member.comment,
+                    extra=member.extra,
+                )
+            )
+        ),
+    )
+
+    assert mutation.section_name == "sidecar_payload"
+    assert mutation.old_delta_q != mutation.new_delta_q
+    assert reparsed.pr106_bytes == source_packet.pr106_bytes
+    assert reparsed.sidecar_payload != source_packet.sidecar_payload
+    assert manifest["payload_sha256_changed"] is True
+    assert manifest["inner_pr106_payload_sha256_unchanged"] is True
+    assert manifest["sidecar_payload_sha256_changed"] is True
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is False
+    assert manifest["full_frame_inflate_output_parity_claim"] is False
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
 
 
 def test_pr106_sidecar_packet_rejects_pr101_missing_framing_meta() -> None:

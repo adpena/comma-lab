@@ -15,7 +15,16 @@ import hashlib
 import io
 import struct
 import zipfile
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+
+import brotli  # type: ignore[import-not-found]
+import numpy as np
+
+from tac.packet_compiler.pr101_sidecar_grammar import (
+    RankedSidecarSchema,
+    decode_ranked_no_op_sidecar,
+    encode_ranked_no_op_sidecar,
+)
 
 PR106_SIDECAR_MAGIC = 0xFE
 PR106_SIDECAR_FORMAT_BROTLI = 0x01
@@ -25,6 +34,15 @@ PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
 )
 PR106_DEFAULT_MEMBER_NAME = "0.bin"
+PR106_NO_OP_DIM = 255
+PR106_PR101_RANKED_SCHEMA = RankedSidecarSchema(
+    n_pairs=600,
+    n_dims=28,
+    deltas=(-2, -1, 1, 2),
+    huff_min_len=2,
+    huff_max_len=8,
+    no_op_sentinel=PR106_NO_OP_DIM,
+)
 
 
 @dataclass(frozen=True)
@@ -62,6 +80,27 @@ class PR106SidecarPacket:
         if self.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
             return "pr101_ranked_no_op"
         return f"unknown_0x{self.format_id:02x}"
+
+
+@dataclass(frozen=True)
+class PR106SidecarMutation:
+    """Description of a valid semantic sidecar mutation.
+
+    The mutation is intentionally limited to the correction sidecar. It keeps
+    the inner PR106 payload byte-identical and changes one per-pair correction
+    in a way the runtime sidecar decoder can consume. This is a no-op-proof
+    tool, not a score candidate generator.
+    """
+
+    section_name: str
+    pair_index: int
+    format_id: int
+    old_dim: int
+    new_dim: int
+    old_delta_q: int
+    new_delta_q: int
+    old_delta_index: int | None = None
+    new_delta_index: int | None = None
 
 
 def sha256_hex(data: bytes) -> str:
@@ -192,6 +231,169 @@ def parse_pr106_sidecar_packet(
         sidecar_payload=sidecar,
         framing_meta=framing_meta,
     )
+
+
+def _decode_brotli_sidecar_payload(payload: bytes) -> tuple[np.ndarray, np.ndarray]:
+    raw = brotli.decompress(payload)
+    if len(raw) < 2:
+        raise ValueError("brotli sidecar decompressed payload too short")
+    n_pairs = struct.unpack_from("<H", raw, 0)[0]
+    expected = 2 + 2 * n_pairs
+    if len(raw) != expected:
+        raise ValueError(
+            f"brotli sidecar decompressed payload has trailing/truncated bytes: "
+            f"got={len(raw)} expected={expected}"
+        )
+    arr = np.frombuffer(raw[2:], dtype=np.uint8).reshape(n_pairs, 2)
+    return arr[:, 0].copy(), arr[:, 1].copy().view(np.int8)
+
+
+def _encode_brotli_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+) -> bytes:
+    dims = np.asarray(dim_arr, dtype=np.uint8)
+    deltas = np.asarray(delta_q_arr, dtype=np.int8)
+    if dims.shape != deltas.shape:
+        raise ValueError(f"dim/delta shapes differ: {dims.shape} vs {deltas.shape}")
+    payload = struct.pack("<H", int(dims.size)) + np.stack(
+        [dims, deltas.view(np.uint8)], axis=1
+    ).tobytes()
+    return brotli.compress(payload, quality=11)
+
+
+def _decode_pr101_ranked_sidecar_payload(
+    payload: bytes,
+    framing_meta: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[np.ndarray, np.ndarray]:
+    if len(framing_meta) != 6:
+        raise ValueError(f"PR101 framing_meta must be 6 bytes; got {len(framing_meta)}")
+    noop_count, dim_bytes, rank_bytes, noop_rank_bytes = struct.unpack(
+        "<HHBB", framing_meta
+    )
+    dims, delta_indices = decode_ranked_no_op_sidecar(
+        payload,
+        schema=schema,
+        dim_bytes=int(dim_bytes),
+        rank_bytes=int(rank_bytes),
+        noop_rank_bytes=int(noop_rank_bytes),
+        noop_count=int(noop_count),
+    )
+    return dims.astype(np.int64), delta_indices.astype(np.int64)
+
+
+def _first_corrected_pair(dim_arr: np.ndarray, *, no_op_dim: int) -> int:
+    corrected = np.where(np.asarray(dim_arr, dtype=np.int64) != int(no_op_dim))[0]
+    if corrected.size == 0:
+        raise ValueError("cannot mutate sidecar with zero corrected pairs")
+    return int(corrected[0])
+
+
+def _next_nonzero_int8(value: int) -> int:
+    if value >= 127:
+        return value - 1
+    candidate = value + 1
+    if candidate == 0:
+        candidate = 1
+    if not (-128 <= candidate <= 127):
+        raise ValueError(f"int8 mutation out of range: {candidate}")
+    return candidate
+
+
+def mutate_pr106_sidecar_semantic_correction(
+    packet: PR106SidecarPacket,
+    *,
+    pair_index: int | None = None,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[PR106SidecarPacket, PR106SidecarMutation]:
+    """Return a valid packet with one runtime-visible sidecar correction changed.
+
+    This helper is the deterministic mutation primitive for no-op/runtime
+    consumption tests. It preserves the inner PR106 payload and only mutates
+    ``sidecar_payload`` bytes through the sidecar's own grammar, so downstream
+    tools can prove that the submission runtime's sidecar decoder sees the
+    change before any exact-eval score is claimed.
+    """
+
+    if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI:
+        dim_arr, delta_q_arr = _decode_brotli_sidecar_payload(packet.sidecar_payload)
+        idx = (
+            _first_corrected_pair(dim_arr, no_op_dim=PR106_NO_OP_DIM)
+            if pair_index is None
+            else int(pair_index)
+        )
+        if not (0 <= idx < dim_arr.size):
+            raise ValueError(f"pair_index out of range: {idx} not in [0, {dim_arr.size})")
+        if int(dim_arr[idx]) == PR106_NO_OP_DIM:
+            raise ValueError(f"pair_index {idx} is a no-op correction")
+        old_delta = int(delta_q_arr[idx])
+        new_delta = _next_nonzero_int8(old_delta)
+        mutated_delta = delta_q_arr.copy()
+        mutated_delta[idx] = np.int8(new_delta)
+        mutated_payload = _encode_brotli_sidecar_payload(dim_arr, mutated_delta)
+        mutated_packet = PR106SidecarPacket(
+            format_id=packet.format_id,
+            pr106_bytes=packet.pr106_bytes,
+            sidecar_payload=mutated_payload,
+            framing_meta=packet.framing_meta,
+        )
+        return mutated_packet, PR106SidecarMutation(
+            section_name="sidecar_payload",
+            pair_index=idx,
+            format_id=packet.format_id,
+            old_dim=int(dim_arr[idx]),
+            new_dim=int(dim_arr[idx]),
+            old_delta_q=old_delta,
+            new_delta_q=new_delta,
+        )
+
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+        if packet.framing_meta is None:
+            raise ValueError("format_id=0x02 requires framing_meta")
+        dims, delta_indices = _decode_pr101_ranked_sidecar_payload(
+            packet.sidecar_payload,
+            packet.framing_meta,
+            schema=schema,
+        )
+        idx = (
+            _first_corrected_pair(dims, no_op_dim=schema.no_op_sentinel)
+            if pair_index is None
+            else int(pair_index)
+        )
+        if not (0 <= idx < dims.size):
+            raise ValueError(f"pair_index out of range: {idx} not in [0, {dims.size})")
+        if int(dims[idx]) == schema.no_op_sentinel:
+            raise ValueError(f"pair_index {idx} is a no-op correction")
+        old_delta_index = int(delta_indices[idx])
+        new_delta_index = (old_delta_index + 1) % len(schema.deltas)
+        mutated_delta_indices = delta_indices.copy()
+        mutated_delta_indices[idx] = new_delta_index
+        mutated_payload = encode_ranked_no_op_sidecar(
+            dims=dims,
+            delta_indices=mutated_delta_indices,
+            schema=schema,
+        )
+        mutated_packet = PR106SidecarPacket(
+            format_id=packet.format_id,
+            pr106_bytes=packet.pr106_bytes,
+            sidecar_payload=mutated_payload,
+            framing_meta=packet.framing_meta,
+        )
+        return mutated_packet, PR106SidecarMutation(
+            section_name="sidecar_payload",
+            pair_index=idx,
+            format_id=packet.format_id,
+            old_dim=int(dims[idx]),
+            new_dim=int(dims[idx]),
+            old_delta_q=int(schema.deltas[old_delta_index]),
+            new_delta_q=int(schema.deltas[new_delta_index]),
+            old_delta_index=old_delta_index,
+            new_delta_index=new_delta_index,
+        )
+
+    raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
 
 
 def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
@@ -349,3 +551,47 @@ def pr106_sidecar_manifest(
     if archive_sha256 is not None:
         manifest["archive_sha256"] = archive_sha256
     return manifest
+
+
+def pr106_sidecar_mutation_manifest(
+    source_packet: PR106SidecarPacket,
+    mutated_packet: PR106SidecarPacket,
+    mutation: PR106SidecarMutation,
+    *,
+    source_archive_sha256: str | None = None,
+    mutated_archive_sha256: str | None = None,
+) -> dict[str, object]:
+    """Return a no-score manifest for a runtime-consumption mutation smoke."""
+
+    source_payload = emit_pr106_sidecar_packet(source_packet)
+    mutated_payload = emit_pr106_sidecar_packet(mutated_packet)
+    proof = pr106_sidecar_consumed_byte_proof(mutated_packet)
+    return {
+        "schema": "pr106_sidecar_runtime_decode_mutation_manifest_v1",
+        "proof_scope": "packet_ir_valid_mutation_for_runtime_decode_smoke_not_score",
+        "format_id": f"0x{source_packet.format_id:02X}",
+        "sidecar_kind": source_packet.sidecar_kind,
+        "mutation": asdict(mutation),
+        "source_archive_sha256": source_archive_sha256,
+        "mutated_archive_sha256": mutated_archive_sha256,
+        "source_payload_bytes": len(source_payload),
+        "source_payload_sha256": sha256_hex(source_payload),
+        "mutated_payload_bytes": len(mutated_payload),
+        "mutated_payload_sha256": sha256_hex(mutated_payload),
+        "payload_sha256_changed": sha256_hex(source_payload) != sha256_hex(mutated_payload),
+        "inner_pr106_payload_sha256_unchanged": sha256_hex(source_packet.pr106_bytes)
+        == sha256_hex(mutated_packet.pr106_bytes),
+        "sidecar_payload_sha256_changed": sha256_hex(source_packet.sidecar_payload)
+        != sha256_hex(mutated_packet.sidecar_payload),
+        "mutated_packet_ir_consumed_byte_proof": proof,
+        "runtime_sidecar_decode_consumption_claim": False,
+        "full_frame_inflate_output_parity_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "required_next_proof": (
+            "run actual submission runtime sidecar decoder smoke; full-frame "
+            "inflate parity or exact same-runtime eval still required before "
+            "promotion language"
+        ),
+    }

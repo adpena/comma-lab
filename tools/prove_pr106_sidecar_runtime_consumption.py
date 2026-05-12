@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Prove PR106/R2 sidecar bytes are consumed by the submission runtime decoder.
+
+This is a no-score, no-promotion proof. It imports the selected submission
+``inflate.py`` and runs only its sidecar parser/decoder on the source archive
+and on a valid one-correction mutation. It does not run full HNeRV inflate and
+does not evaluate a score.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from tac.packet_compiler import (  # noqa: E402
+    dumps_runtime_consumption_manifest,
+    prove_pr106_sidecar_runtime_decode_consumption,
+)
+from tac.repo_io import json_text  # noqa: E402
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--archive",
+        type=Path,
+        required=True,
+        help="Path to archive.zip containing single stored 0.bin member.",
+    )
+    parser.add_argument(
+        "--runtime-dir",
+        type=Path,
+        required=True,
+        help="Submission directory containing inflate.py and src/.",
+    )
+    parser.add_argument(
+        "--member-name",
+        default="0.bin",
+        help="Expected ZIP member name (default: 0.bin).",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        help="Optional path for the proof manifest.",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=args.archive,
+        runtime_dir=args.runtime_dir,
+        expected_member_name=args.member_name,
+    )
+    text = dumps_runtime_consumption_manifest(manifest)
+    if args.output_json is not None:
+        args.output_json.parent.mkdir(parents=True, exist_ok=True)
+        args.output_json.write_text(json_text(manifest), encoding="utf-8")
+    sys.stdout.write(text)
+    if not manifest.get("runtime_sidecar_decode_consumption_claim"):
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
