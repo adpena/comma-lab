@@ -59,7 +59,7 @@ Usage (full; CUDA-required; threads from operator wrapper)::
     .venv/bin/python experiments/train_substrate_cool_chic.py \\
         --video-path upstream/videos/0.mkv \\
         --output-dir experiments/results/cool_chic_<utc> \\
-        --epochs 2000 --batch-size 32 --lr 5e-4 --grad-clip 1.0 \\
+        --epochs 2000 --batch-size 8 --lr 5e-4 --grad-clip 1.0 \\
         --device cuda
 """
 

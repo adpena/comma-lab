@@ -59,7 +59,7 @@ Usage (full; CUDA-required; threads from operator wrapper)::
     .venv/bin/python experiments/train_substrate_siren.py \\
         --video-path upstream/videos/0.mkv \\
         --output-dir experiments/results/siren_<utc> \\
-        --epochs 2000 --batch-size 32 --lr 5e-4 --grad-clip 1.0 \\
+        --epochs 2000 --batch-size 1 --lr 5e-4 --grad-clip 1.0 \\
         --device cuda
 """
 
@@ -138,6 +138,16 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
             "(council target: 2000)"
         ),
         "default": "2000",
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--batch-size": {
+        "env": "SIREN_BATCH_SIZE",
+        "rationale": (
+            "full-resolution coordinate-MLP renders are memory-heavy; batch=1 is "
+            "the dispatch-safe default and must be explicit in operator recipes"
+        ),
+        "default": "1",
         "satisfied_by_profile": (),
         "requires": (),
     },
