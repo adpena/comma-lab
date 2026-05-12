@@ -40,9 +40,9 @@ from pathlib import Path
 import pytest
 
 from tac.preflight import (
-    PreflightError,
     _LANDING_MEMO_HOOK_CUTOVER_YYYYMMDD,
     _UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS,
+    PreflightError,
     _landing_memo_date,
     _memo_declares_hook,
     _memo_declares_research_only,
@@ -301,6 +301,30 @@ def test_missing_memory_dir_strict_raises(tmp_path: Path) -> None:
         check_subagent_landing_has_solver_wire_in(
             memory_dir=nonexistent, strict=True, verbose=False,
         )
+
+
+def test_auto_missing_memory_dir_skips_on_github_actions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Repo CI must not fail on an operator-local Claude memory path."""
+    monkeypatch.delenv("PACT_MEMORY_DIR", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    assert check_subagent_landing_has_solver_wire_in(
+        strict=True, verbose=False,
+    ) == []
+
+
+def test_env_missing_memory_dir_still_strict_raises_on_github_actions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An explicit memory-dir contract remains enforceable in CI."""
+    monkeypatch.setenv("PACT_MEMORY_DIR", str(tmp_path / "missing"))
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+
+    with pytest.raises(PreflightError, match="memory dir not present"):
+        check_subagent_landing_has_solver_wire_in(strict=True, verbose=False)
 
 
 # ── Test 10: empty memo body warns on all 6 ──────────────────────────────

@@ -33183,18 +33183,28 @@ def check_subagent_landing_has_solver_wire_in(
     # Resolve the memory directory. Prefer explicit configuration. The fallback
     # derives Claude's project slug from the repo path instead of hardcoding an
     # operator-specific absolute path in reusable tac code.
+    memory_dir_source = "explicit"
     if memory_dir is None:
         env_dir = os.environ.get("PACT_MEMORY_DIR")
         if env_dir:
             memory_dir = Path(env_dir)
+            memory_dir_source = "env"
         else:
             root = Path(REPO_ROOT).resolve()
             slug_parts = [p.strip("/") for p in root.parts if p.strip("/")]
             slug = "-" + "-".join(slug_parts)
             memory_dir = Path(os.path.expanduser("~")) / ".claude" / "projects" / slug / "memory"
+            memory_dir_source = "auto"
     memory_dir = Path(memory_dir)
     if not memory_dir.is_dir():
         msg = f"memory dir not present: {memory_dir}"
+        if memory_dir_source == "auto" and os.environ.get("GITHUB_ACTIONS") == "true":
+            if verbose:
+                print(
+                    "  [subagent-landing-wire-in] SKIP: auto-derived external "
+                    f"memory dir unavailable on GitHub Actions ({memory_dir})"
+                )
+            return []
         if verbose:
             print(f"  [subagent-landing-wire-in] WARN: {msg}")
         if strict:
