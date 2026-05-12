@@ -70,7 +70,7 @@ env GITHUB_ACTIONS=true HOME=/tmp/pact-ci-home-scheduled \
   PYTHONPATH=src:upstream:$PWD \
   .venv/bin/python -m tac.preflight \
   --timings-json /tmp/pact_preflight_ci_scheduled_cold.json
-# PREFLIGHT PASSED; wall_elapsed_s = 8.026546
+# PREFLIGHT PASSED; wall_elapsed_s = 8.192850
 ```
 
 ## Adversarial fixes before landing
