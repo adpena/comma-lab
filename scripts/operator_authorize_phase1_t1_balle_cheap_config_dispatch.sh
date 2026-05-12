@@ -135,6 +135,13 @@ ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T13_SQRT_N_BUDGET=1"
 ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T19_ADAPTIVE_RHO=1"
 ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T20_KL_POSE_DISTILL=1"
 ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_T22_TEMPORAL_CONSISTENCY=1"
+# Tier-1 engineering wins per 2026-05-12 audit (autocast FP16 +
+# mp4 codec sim + O(N) soft_cosine surrogate). Wired into the
+# remote driver's score-domain training block.
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_AUTOCAST_FP16=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_ENABLE_MP4_CODEC_SIM=1"
+ENV_OVERRIDES="${ENV_OVERRIDES},T1_MP4_CODEC_SIM_NOISE_STD=0.0"
+ENV_OVERRIDES="${ENV_OVERRIDES},SEGMENTATION_SURROGATE=soft_cosine"
 ENV_OVERRIDES="${ENV_OVERRIDES},LOCAL_CUDA_WORKER=1"
 
 case "$PLATFORM" in
@@ -148,7 +155,10 @@ case "$PLATFORM" in
         # at $/TFLOP-hr; T4 is the budget default; H100 is for time-critical.
         # Override via MODAL_GPU=A100|H100|A10G|T4 env-var.
         MODAL_GPU="${MODAL_GPU:-T4}"
-        TIMEOUT_HOURS="${MODAL_TIMEOUT_HOURS:-2.0}"
+        # Default bumped 2.0h → 4.0h per fresh-eyes adversarial NF3:
+        # 3000 epochs × batch=32 on T4 can exceed 2h once auth-eval-on-best
+        # runs; H100 still finishes well under 4h. Override via env-var.
+        TIMEOUT_HOURS="${MODAL_TIMEOUT_HOURS:-4.0}"
         # modal_train_lane.py uses .spawn() for detached runs — harvest via
         # tools/harvest_modal_calls.py or experiments/modal_recover_lane.py within 24h.
         .venv/bin/modal run --detach experiments/modal_train_lane.py \

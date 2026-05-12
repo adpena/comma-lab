@@ -389,10 +389,38 @@ if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
     log "Stage 5: score-domain training (epochs=${EPOCHS:-3000})"
     TRAIN_CMD+=(
         --enable-scorer-domain-loss
-        --segmentation-surrogate "${SEGMENTATION_SURROGATE:-sinkhorn}"
+        # Default aligned with trainer argparse default (soft_cosine, line 1610).
+        # The previous hardcoded `sinkhorn` default silently nullified the
+        # trainer-side switch to O(N) soft_cosine landed in commit 3aecb9b8.
+        --segmentation-surrogate "${SEGMENTATION_SURROGATE:-soft_cosine}"
         --sinkhorn-max-positions-per-chunk "${SINKHORN_MAX_POSITIONS_PER_CHUNK:-2048}"
         --pixel-l1-anchor-weight "${PIXEL_L1_ANCHOR_WEIGHT:-0.0}"
     )
+    # Tier-1 env→CLI wiring (per 2026-05-12 fresh-eyes adversarial NF1):
+    # Without these branches the Tier-1 wins landed in the trainer but the
+    # operator wrapper that sets T1_ENABLE_* never reached the trainer flags.
+    if [ "${T1_ENABLE_AUTOCAST_FP16:-0}" = "1" ]; then
+        TRAIN_CMD+=(--enable-autocast-fp16)
+    fi
+    if [ "${T1_ENABLE_MP4_CODEC_SIM:-0}" = "1" ]; then
+        TRAIN_CMD+=(--enable-mp4-codec-sim)
+        TRAIN_CMD+=(--mp4-codec-sim-noise-std "${T1_MP4_CODEC_SIM_NOISE_STD:-0.0}")
+    fi
+    if [ "${T1_ENABLE_T20_KL_POSE_DISTILL:-0}" = "1" ]; then
+        TRAIN_CMD+=(--enable-t20-kl-pose-distill)
+        if [ -n "${T1_T20_MODE:-}" ]; then
+            TRAIN_CMD+=(--t20-mode "$T1_T20_MODE")
+        fi
+        if [ -n "${T1_T20_WEIGHT_POSE:-}" ]; then
+            TRAIN_CMD+=(--t20-weight-pose "$T1_T20_WEIGHT_POSE")
+        fi
+    fi
+    if [ "${T1_ENABLE_T22_TEMPORAL_CONSISTENCY:-0}" = "1" ]; then
+        TRAIN_CMD+=(--enable-t22-temporal-consistency)
+        if [ -n "${T1_T22_LAMBDA_WEIGHT:-}" ]; then
+            TRAIN_CMD+=(--t22-lambda-weight "$T1_T22_LAMBDA_WEIGHT")
+        fi
+    fi
     if [ -n "${MAX_TARGET_PAIRS:-}" ]; then
         TRAIN_CMD+=(--max-target-pairs "$MAX_TARGET_PAIRS")
     fi
