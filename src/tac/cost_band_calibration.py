@@ -682,6 +682,20 @@ def append_platform_training_anchor(
         "notes": notes,
     }
     out_dir.mkdir(parents=True, exist_ok=True)
+    # PCC3 internal-consistency check (CLAUDE.md non-negotiable): when both
+    # epochs and elapsed_seconds are present, refuse to write a manifest that
+    # claims more epochs than physics permits (≥ 50 ms per epoch is a very
+    # loose lower bound for a real training loop).
+    _MIN_SEC_PER_EPOCH = 0.05
+    if epochs > 0 and elapsed >= 0:
+        if elapsed < epochs * _MIN_SEC_PER_EPOCH:
+            raise RuntimeError(
+                f"stats internal-consistency violation (PCC3): "
+                f"epochs={epochs} but elapsed_seconds={elapsed:.3f} "
+                f"< epochs * {_MIN_SEC_PER_EPOCH} = "
+                f"{epochs * _MIN_SEC_PER_EPOCH:.3f}. "
+                f"Stub-loop suspected; refusing to write platform training anchor manifest."
+            )
     # The marker file's JSON payload must match what an idempotent re-run
     # returns. Serialize stably to keep byte-identical output across runs.
     marker.write_text(

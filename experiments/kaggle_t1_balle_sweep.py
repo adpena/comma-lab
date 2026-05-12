@@ -424,6 +424,20 @@ def main(argv: list[str] | None = None) -> int:
         "smoke": args.smoke,
         "output_dir": str(output_dir),
     }
+    # PCC3 internal-consistency check (CLAUDE.md non-negotiable): when both
+    # epochs and wall_clock_sec are present, refuse to write a summary that
+    # claims more epochs than physics permits (≥ 50 ms per epoch is a very
+    # loose lower bound; a real T4 batched train_renderer epoch is seconds).
+    MIN_SEC_PER_EPOCH = 0.05
+    if args.epochs > 0 and wall_clock_sec is not None and wall_clock_sec >= 0:
+        if wall_clock_sec < args.epochs * MIN_SEC_PER_EPOCH:
+            raise RuntimeError(
+                f"stats internal-consistency violation (PCC3): "
+                f"epochs={args.epochs} but wall_clock_sec={wall_clock_sec:.3f} "
+                f"< epochs * {MIN_SEC_PER_EPOCH} = "
+                f"{args.epochs * MIN_SEC_PER_EPOCH:.3f}. "
+                f"Stub-loop suspected; refusing to write summary."
+            )
     summary_path = output_dir / "kaggle_kernel_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2))
     print(f"[kaggle-t1-balle-sweep] wrote summary to {summary_path}")
