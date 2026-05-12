@@ -156,6 +156,12 @@ class DistillConfig:
     phase2_lr: float = 3e-4
     phase2_batch_size: int = 4  # scorer is VRAM-intensive
     phase2_pixel_weight: float = 0.1
+    # [derived: closed-form gradient per src/tac/score_geometry.py:253-257]
+    # Legacy (seg=100, pose=10) defaults derived at OLD 1.x operating point
+    # (d_pose ~0.18). At PR106 r2 (d_pose ~3.4e-5) the marginal value FLIPS
+    # and the score-gradient-balanced ratio is ~(seg=100, pose=271). Run
+    # ``tools/probe_seg_pose_weight_at_operating_point.py`` to recompute
+    # operating-point-aware weights. Council A-1 decision 2026-05-12.
     phase2_pose_weight: float = 10.0
     phase2_seg_weight: float = 100.0
     segnet_loss_mode: str = "hinge"  # "hinge" or "xent"

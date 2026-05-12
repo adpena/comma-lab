@@ -1196,6 +1196,12 @@ def generate_in_scorer_space(
     noise_seed: int = 42,
     num_steps: int = 1000,
     lr: float = 0.01,
+    # [derived: closed-form gradient per src/tac/score_geometry.py:253-257]
+    # Legacy (seg=100, pose=10) defaults reflect OLD 1.x operating-point
+    # marginals; at PR106 r2 (d_pose ~3.4e-5) the marginal value FLIPS to
+    # pose-dominant. Use ``tools/probe_seg_pose_weight_at_operating_point.py``
+    # to compute operating-point-aware weights. Council A-1 (OOO commit
+    # 328bf2f9, 8/10 FOR Option C, 2026-05-12).
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     compress_weight: float = 1.0,
