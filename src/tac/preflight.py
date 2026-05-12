@@ -2151,6 +2151,48 @@ def preflight_all(
         check_operator_wrapper_threads_trainer_tier_required_flags(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #152: sister of #151. Refuses dispatch wrappers
+        # that don't VALIDATE `required_input_file=True` flags BEFORE the GPU
+        # meter starts. Bug-class anchor: 2026-05-12T17:12 Modal A100 dispatch
+        # burned $0.016 in 15s crashing on missing --pr95-parity-profile that
+        # a local 100ms validation would have caught. Strict-from-byte-one per
+        # CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+        # — T1 Ballé operator-authorize wrapper invokes the canonical validator
+        # tool (`tools/validate_dispatch_required_inputs.py`) in same commit
+        # batch as this gate, driving live count to 0.
+        check_operator_wrapper_validates_required_input_files_pre_dispatch(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #153: sister of #151 + #152. Refuses Modal
+        # dispatchers under ``experiments/modal_*.py`` that hand-curate mount
+        # lists instead of routing through
+        # ``tac.deploy.modal.mount_manifest.build_training_image``. Bug-class
+        # anchor: 2026-05-12T17:12 Modal A100 dispatch
+        # fc-01KREJST89QHFRWJXHAKXD850C burned $0.016 in 15s because a new
+        # ``required_input_file=True`` trainer flag default wasn't in the
+        # hand-curated list. Adding entries to hand-curated lists IS the bug
+        # class. Strict-from-byte-one per CLAUDE.md "Bugs must be permanently
+        # fixed AND self-protected against" — modal_train_lane.py is
+        # refactored in the same commit-batch, the other 10 dispatchers carry
+        # per-line ``# MODAL_MANUAL_MOUNT_OK:<reason>`` waivers explaining
+        # they are narrow file-by-file dispatchers (not trainer-discovery
+        # surfaces). Live count: 0 at landing.
+        check_modal_dispatcher_uses_canonical_mount_builder(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
+        # GC helper for `experiments/results/` is
+        # `tools/gc_experiments_results.py`. Any new tool/script that
+        # hard-deletes (shutil.rmtree, os.removedirs, shell `rm -rf`)
+        # under `experiments/results/` WITHOUT routing through that
+        # helper bypasses the dry-run-first / git-tracked-protect /
+        # HISTORICAL_PROVENANCE-protect contract per Catalog #110 / #113.
+        # Strict-from-byte-one per CLAUDE.md "Bugs must be permanently
+        # fixed AND self-protected against" — live count at landing: 0
+        # (self-exempts: this file + the canonical helper).
+        check_experiments_results_gc_helper_is_canonical(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -3460,10 +3502,10 @@ def preflight_all(
             "check_pr101_tools_torch_load_allowlist",
             "[pr101-tools-torch-load-allowlist]",
             lambda: check_pr101_tools_torch_load_allowlist(
-                strict=False,
+                strict=True,
                 verbose=verbose,
             ),
-            strict=False,
+            strict=True,
         )
         # B9 — rel_err canonical-definition discipline (codex adversarial
         # review #1, 2026-05-08). Live count on landing: 0. Held warn-only
@@ -30093,12 +30135,25 @@ def check_pr101_tools_torch_load_allowlist(
       * ``tools/pr101_cross_paradigm_hstack_vstack_empirical.py:212``
       * ``tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py:143``
 
-    Memory ref: ``feedback_codex_adversarial_review_4_landings_20260508.md``.
+    Memory ref: ``feedback_codex_adversarial_review_4_landings_20260508.md``
+    (origin), ``feedback_catalog_98_retire_and_historical_tool_audit_landed_20260512.md``
+    (strict-flip + cluster 4 audit verdict).
 
-    Promotion plan: starts ``strict=False`` (~32 known violations).
-    Annotate each call with ``# WEIGHTS_ONLY_FALSE_OK:<reason>`` or add
-    a sha256/magic-byte preceding-30-line validation. Flip to STRICT
-    once cleanup lands.
+    Promotion status (2026-05-12): STRICT @ 0 live violations.
+    Catalog #98 audit (T2-D cluster 4) found the 61 candidate files
+    (``tools/pr101_*.py`` + ``tools/build_admm_*.py`` +
+    ``tools/build_cross_paradigm_*.py``) are all STILL-ACTIVE infrastructure
+    (~36 dedicated tests, 9 lane-registry entries, 2 preflight constants
+    requiring file existence — including ``_ADMM_BISECTION_TOOLS`` for
+    ``check_admm_lagrangian_bisection_convergent``). DELETE-OK count: 0.
+    All 31 known violations annotated with the canonical waiver
+    ``# WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact``
+    (the torch.load sites all consume a PR101 substrate state_dict produced
+    or fetched as a trusted local artifact by the same process, NOT untrusted
+    network input). Catalog #14 ``preflight_loader_format_safety`` only scans
+    ``experiments/``/``src/tac/``/``submissions/robust_current/`` and does
+    NOT cover the ``tools/`` surface, so #98 remains the dedicated cluster
+    gate and was NOT retired.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_pr101_tools_torch_load_allowlist.py",
@@ -38644,6 +38699,659 @@ def check_operator_wrapper_threads_trainer_tier_required_flags(
             "check_operator_wrapper_threads_trainer_tier_required_flags found "
             f"{len(violations)} wrapper(s) missing trainer-declared "
             f"tier-required flags:\n  " + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #152: check_operator_wrapper_validates_required_input_files_pre_dispatch
+# ============================================================================
+# Sister of Catalog #151. While #151 catches TARGET-required CLI flags not
+# threaded by caller (env→CLI ladder), #152 catches `required_input_file=True`
+# flags whose VALUE must be an EXISTING FILE PATH at wrapper-dispatch time but
+# whose wrapper does NOT pre-validate the file exists BEFORE the GPU dispatch.
+#
+# Bug-class anchor: 2026-05-12T17:12 Modal A100 dispatch
+# (call_id fc-01KREJST89QHFRWJXHAKXD850C) burned $0.016 in 15s before crashing
+# with rc=1 because `--pr95-parity-profile` pointed to a non-existent file on
+# the Modal worker. A local 100ms validation would have caught it before the
+# GPU meter started.
+#
+# Acceptance (per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+# against"): a wrapper that dispatches a trainer with `required_input_file=True`
+# entries in its TIER_N_OPERATOR_REQUIRED_FLAGS manifest MUST contain one of:
+#   (a) literal `[ -f "$<env_var>" ]` shell test OR `if not Path(...).is_file()`
+#       Python equivalent for each required-input env-var, OR
+#   (b) `tools/validate_dispatch_required_inputs.py --trainer <path>` invocation
+#       (the canonical validator landed in same commit batch), OR
+#   (c) same-line `# REQUIRED_INPUT_VALIDATION_OK:<reason>` waiver on the
+#       dispatch-command line (e.g. `modal run`, `python tools/launch_lane...`).
+#
+# Strict-from-byte-one: the T1 Ballé wrapper (the bug-class anchor) is patched
+# in the same commit batch to invoke the validator before the Modal dispatch,
+# driving live count to 0.
+
+_CHECK_152_WAIVER_RE = re.compile(
+    r"#\s*REQUIRED_INPUT_VALIDATION_OK:([^\n]+)"
+)
+# Canonical validator-tool invocation token; if any wrapper line contains this,
+# the trainer-required input validation is considered satisfied.
+_CHECK_152_VALIDATOR_TOOL_TOKEN = "tools/validate_dispatch_required_inputs.py"
+# Shell-level dispatch tokens — if a wrapper contains one of these, it is
+# considered a "dispatch wrapper" that must validate before firing. Scoping by
+# dispatch token (not by filename glob) so the check also covers future
+# operator_authorize_*.sh / remote_lane_*.sh / experiments/launch_*.py shapes.
+_CHECK_152_DISPATCH_TOKENS = (
+    "modal run",
+    "modal.run",
+    "modal_train_lane",
+    "launch_lane_on_vastai",
+    "launch_lane_lightning",
+    "vastai create instance",
+    "lightning run",
+    "lightning.ai run",
+    "kaggle kernels push",
+)
+# Mirror Catalog #151 excluded path markers.
+_CHECK_152_EXCLUDED_PATH_MARKERS = (
+    "experiments/results/public_pr",
+    "experiments/results/",
+    ".omx/oss_export/",
+    "_intake_",
+)
+
+
+def _check_152_collect_required_input_flags(
+    trainer_path: Path,
+) -> dict[str, dict]:
+    """Return {flag: meta} for each TIER_N_OPERATOR_REQUIRED_FLAGS entry whose
+    metadata declares `required_input_file=True`.
+
+    Reuses Catalog #151's `_check_151_extract_tier_manifests` AST walker. The
+    `required_input_file` boolean is read directly from the manifest metadata
+    dict; if absent or falsy, the entry is NOT a required-input-file entry and
+    is ignored by this check (Catalog #151 covers it as a generic tier-required
+    flag).
+    """
+    manifest = _check_151_extract_tier_manifests(trainer_path)
+    out: dict[str, dict] = {}
+    for flag, meta in manifest.items():
+        if meta.get("required_input_file") is True:
+            out[flag] = meta
+    return out
+
+
+def _check_152_wrapper_has_dispatch(wrapper_text: str) -> bool:
+    """A wrapper is in-scope for Catalog #152 only if it actually DISPATCHES
+    a GPU job (vs. e.g. a local-only utility that happens to import a trainer)."""
+    return any(tok in wrapper_text for tok in _CHECK_152_DISPATCH_TOKENS)
+
+
+def _check_152_wrapper_validates_required_input(
+    wrapper_text: str,
+    env_var: str,
+) -> bool:
+    """Acceptance rule for a single required-input flag:
+      (a) `[ -f "$ENV" ]` or `[ -f "${ENV}" ]` or `[ -f "${ENV:-...}" ]` shell
+          test referencing the env-var (covers POSIX shell wrappers).
+      (b) `tools/validate_dispatch_required_inputs.py` invocation in the body
+          (the canonical validator delegates to the same trainer-manifest read).
+      (c) Same-line `# REQUIRED_INPUT_VALIDATION_OK:<reason>` waiver — handled
+          at the caller-level (per-flag granularity) so the waiver list comes
+          back as a set of waived env-vars from `_check_152_collect_waivers`.
+    """
+    if _CHECK_152_VALIDATOR_TOOL_TOKEN in wrapper_text:
+        return True
+    if not env_var:
+        return False
+    # Match any of the canonical existence-test shapes referencing the env-var.
+    # Be conservative: require BOTH `-f` AND the env-var token in the same
+    # 200-char window to avoid false-accepts when the env-var appears in an
+    # unrelated context (e.g. echo statement).
+    existence_patterns = (
+        re.escape(f'[ -f "${env_var}"'),
+        re.escape(f'[ -f "${{{env_var}'),
+        re.escape(f'[ ! -f "${env_var}"'),
+        re.escape(f'[ ! -f "${{{env_var}'),
+        # Bracket-free POSIX form: `test -f "$ENV"`
+        re.escape(f'test -f "${env_var}"'),
+        re.escape(f'test -f "${{{env_var}'),
+        # Python form: `Path(os.environ["ENV"]).is_file()` / `.exists()`
+        re.escape(f'os.environ["{env_var}"]') + r".{0,80}(\.is_file|\.exists)",
+        re.escape(f"os.environ['{env_var}']") + r".{0,80}(\.is_file|\.exists)",
+        re.escape(f'os.environ.get("{env_var}"') + r".{0,80}(\.is_file|\.exists)",
+        re.escape(f"os.environ.get('{env_var}'") + r".{0,80}(\.is_file|\.exists)",
+    )
+    for pat in existence_patterns:
+        if re.search(pat, wrapper_text):
+            return True
+    return False
+
+
+def _check_152_collect_waivers(wrapper_text: str) -> set[str]:
+    """Return the set of waiver tokens (e.g. env-var names or trainer paths)
+    from same-line `# REQUIRED_INPUT_VALIDATION_OK:<token>` markers.
+
+    A waiver applies broadly: any token after the marker excuses ALL required
+    inputs on that line (because the operator has explicitly declared the
+    dispatch is safe-by-construction — e.g. smoke-only, no required-input gate).
+    """
+    return {m.group(1).strip() for m in _CHECK_152_WAIVER_RE.finditer(wrapper_text)}
+
+
+def _check_152_extract_indirect_trainer_paths(wrapper_text: str) -> list[str]:
+    """Find trainer paths invoked INDIRECTLY via `--lane-script scripts/X.sh`.
+
+    Operator-authorize wrappers (e.g. `operator_authorize_phase1_*.sh`)
+    typically don't invoke the trainer directly; they pass
+    `--lane-script scripts/remote_lane_X.sh` to a Modal/Lightning/Vast launcher.
+    For Catalog #152 we want to validate inputs at the OUTERMOST dispatch layer,
+    so we follow the `--lane-script` reference to the inner script and read its
+    trainer manifest.
+    """
+    lane_script_paths: list[str] = []
+    # Match `--lane-script scripts/remote_lane_X.sh` (or `=path` form).
+    lane_script_re = re.compile(
+        r"--lane-script[=\s]+([A-Za-z0-9_./-]+\.sh)"
+    )
+    for m in lane_script_re.finditer(wrapper_text):
+        lane_script_paths.append(m.group(1).strip())
+    return lane_script_paths
+
+
+def check_operator_wrapper_validates_required_input_files_pre_dispatch(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #152. Refuses dispatch wrappers that don't validate
+    `required_input_file=True` flags BEFORE the GPU meter starts.
+
+    Scan scope:
+      - `scripts/*.sh` (operator_authorize_*, remote_lane_*, etc.)
+      - `tools/*.py` AND `experiments/*.py` containing a dispatch token
+        (`modal run`, `vastai create`, etc.) AND an `experiments/train_*.py`
+        reference (direct or via `--lane-script`).
+
+    Excludes (mirrors Catalog #151 R6):
+      - `experiments/results/public_pr*_intake_*/**` (vendored)
+      - `experiments/results/**` build artifacts
+      - `.omx/oss_export/**` mirrors
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned = 0
+
+    candidates: list[Path] = []
+    scripts_dir = root / "scripts"
+    if scripts_dir.is_dir():
+        candidates.extend(sorted(scripts_dir.glob("*.sh")))
+    for top in (root / "tools", root / "experiments"):
+        if top.is_dir():
+            for p in sorted(top.rglob("*.py")):
+                rel = str(p.relative_to(root))
+                if any(m in rel for m in _CHECK_152_EXCLUDED_PATH_MARKERS):
+                    continue
+                candidates.append(p)
+
+    # Cache trainer-manifest reads (one AST parse per trainer).
+    trainer_cache: dict[str, dict[str, dict]] = {}
+    # Cache inner-script trainer-path extraction.
+    inner_script_cache: dict[str, list[str]] = {}
+
+    for wrapper in candidates:
+        rel = str(wrapper.relative_to(root))
+        if any(m in rel for m in _CHECK_152_EXCLUDED_PATH_MARKERS):
+            continue
+        try:
+            text = wrapper.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # Only scan wrappers that actually DISPATCH (cost-bearing call).
+        if not _check_152_wrapper_has_dispatch(text):
+            continue
+        # Find trainers invoked DIRECTLY by this wrapper.
+        direct_trainers = _check_151_extract_trainer_paths(text)
+        # Find inner lane scripts (e.g. `--lane-script scripts/remote_lane_X.sh`),
+        # follow them to their trainer paths.
+        indirect_lane_scripts = _check_152_extract_indirect_trainer_paths(text)
+        all_trainer_paths: set[str] = set(direct_trainers)
+        for inner_rel in indirect_lane_scripts:
+            inner_path = root / inner_rel
+            if not inner_path.is_file():
+                continue
+            if inner_rel not in inner_script_cache:
+                try:
+                    inner_text = inner_path.read_text(
+                        encoding="utf-8", errors="replace"
+                    )
+                except OSError:
+                    inner_script_cache[inner_rel] = []
+                else:
+                    inner_script_cache[inner_rel] = (
+                        _check_151_extract_trainer_paths(inner_text)
+                    )
+            all_trainer_paths.update(inner_script_cache[inner_rel])
+        if not all_trainer_paths:
+            continue
+        scanned += 1
+        # Union the required-input-file flags across every trainer.
+        union_required: dict[str, dict] = {}
+        for tp in sorted(all_trainer_paths):
+            if tp not in trainer_cache:
+                trainer_cache[tp] = _check_152_collect_required_input_flags(
+                    root / tp
+                )
+            for flag, meta in trainer_cache[tp].items():
+                if flag not in union_required:
+                    union_required[flag] = meta
+        if not union_required:
+            # No required-input-file flags declared → wrapper is safe-by-design.
+            continue
+        waivers = _check_152_collect_waivers(text)
+        # Acceptance: a waiver token MUST explicitly name the flag, the env-var,
+        # or the literal "ALL" sentinel. This mirrors Catalog #151's per-flag
+        # waiver discipline so an operator can't accidentally over-waive (e.g.
+        # `# REQUIRED_INPUT_VALIDATION_OK:smoke-only` does NOT waive
+        # `--pr95-parity-profile`; the operator must write
+        # `# REQUIRED_INPUT_VALIDATION_OK:--pr95-parity-profile:smoke-only` or
+        # `# REQUIRED_INPUT_VALIDATION_OK:ALL:smoke-only`).
+        def _is_waived(env_var: str, flag: str) -> bool:
+            for w in waivers:
+                # `--flag:reason` or `ENV_VAR:reason` or `ALL:reason` shapes
+                token = w.split(":", 1)[0].strip()
+                if token in (env_var, flag, "ALL", "all"):
+                    return True
+            return False
+        for flag, meta in union_required.items():
+            env_var = meta.get("env", "") or ""
+            if _is_waived(env_var, flag):
+                continue
+            if _check_152_wrapper_validates_required_input(text, env_var):
+                continue
+            rationale = (meta.get("rationale", "") or "")[:120]
+            generator = (meta.get("generator_command", "") or "")[:160]
+            msg = (
+                f"{rel}: missing pre-dispatch input-file validation for "
+                f"{flag} (env={env_var or '<none>'}; rationale: {rationale}); "
+                f"add `{_CHECK_152_VALIDATOR_TOOL_TOKEN} --trainer <path>` OR "
+                f"`[ -f \"${env_var}\" ]` test before the dispatch line"
+            )
+            if generator:
+                msg += f"; generate via: {generator}"
+            violations.append(msg)
+
+    if verbose:
+        if violations:
+            print(
+                f"  [required-input-validation] {len(violations)} violation(s) "
+                f"across {scanned} dispatch wrapper(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 10:
+                print(f"    ... ({len(violations) - 10} more)")
+        else:
+            print(
+                "  [required-input-validation] OK "
+                f"({scanned} dispatch wrapper(s) scanned; 0 unvalidated "
+                "required-input-file violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_operator_wrapper_validates_required_input_files_pre_dispatch "
+            f"found {len(violations)} dispatch wrapper(s) missing pre-dispatch "
+            f"input-file validation:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #153: check_modal_dispatcher_uses_canonical_mount_builder
+# (2026-05-12, STRICT @ 0)
+# ---------------------------------------------------------------------------
+# Refuses any ``experiments/modal_*.py`` file that calls
+# ``Image.debian_slim(...).add_local_dir(...)`` or ``.add_local_file(...)``
+# directly without routing through
+# ``tac.deploy.modal.mount_manifest.build_training_image``.
+#
+# Bug class: hand-curated mount lists are an "N+1 entry" failure mode — every
+# new trainer-default path the operator adds is one place the mount list can
+# be stale. The 2026-05-12 Modal A100 dispatch ``fc-01KREJST89QHFRWJXHAKXD850C``
+# burned $0.016 in 15s because the operator added a new
+# ``required_input_file=True`` flag to the trainer manifest without updating
+# the 11 Modal dispatcher mount lists. Adding entries to hand-curated lists
+# IS the bug class. ``tac.deploy.modal.mount_manifest.build_training_image``
+# resolves the same problem by INTROSPECTING the trainer's
+# ``TIER_<N>_OPERATOR_REQUIRED_FLAGS`` at image-build time — adding a new
+# required-input flag automatically propagates to the mount list.
+#
+# Same-line waiver: ``# MODAL_MANUAL_MOUNT_OK:<reason>`` exempts intentional
+# narrow specialised mounts (e.g. test fixtures, niche file-by-file paths
+# the canonical builder cannot express).
+#
+# Sister of Catalog #151 (operator-wrapper-threads-trainer-flags) +
+# Catalog #152 (operator-wrapper-validates-required-input-files): together
+# they close the trainer-manifest → wrapper → image-build wire-up loop.
+_CHECK_153_MANUAL_MOUNT_TOKENS = (
+    ".add_local_dir(",
+    ".add_local_file(",
+)
+_CHECK_153_CANONICAL_BUILDER_TOKEN = "build_training_image"
+_CHECK_153_WAIVER_MARKER = "MODAL_MANUAL_MOUNT_OK"
+# Files exempt from the gate by construction (the canonical builder itself,
+# its tests, and modal-only-shim files that are not real dispatchers).
+_CHECK_153_EXEMPT_PATH_SUFFIXES = (
+    "src/tac/deploy/modal/mount_manifest.py",
+    "src/tac/tests/test_mount_manifest.py",
+    # ``experiments/modal_t1_balle_endtoend.py`` ships its own static
+    # MODAL_MOUNT_MANIFEST tuple (a different but compatible pattern that
+    # snapshots mount provenance for custody review). The check accepts it
+    # because the manifest tuple is itself a discovery primitive — operator
+    # extras get appended via ``_apply_modal_mount_manifest``, not hand-curated
+    # at every dispatcher.
+)
+
+
+def check_modal_dispatcher_uses_canonical_mount_builder(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #153. Refuse ``experiments/modal_*.py`` dispatchers that
+    hand-curate Modal mounts instead of routing through
+    ``tac.deploy.modal.mount_manifest.build_training_image``.
+
+    Acceptance:
+      (a) The file imports ``build_training_image`` from
+          ``tac.deploy.modal.mount_manifest`` AND uses it at least once.
+      (b) Every ``.add_local_dir(`` / ``.add_local_file(`` callsite carries a
+          same-line ``# MODAL_MANUAL_MOUNT_OK:<reason>`` waiver. The waiver
+          marker is the per-callsite escape hatch (vs file-level which would
+          be over-broad).
+      (c) The file is on the exempt list (e.g. the canonical builder module
+          itself, its tests).
+
+    A dispatcher that mixes ``build_training_image(...)`` with additional
+    ``.add_local_dir(...)`` chained calls (e.g. for an A1 canonical payload
+    that's runtime-discovered) is still in scope: each ``.add_local_dir``
+    line needs an inline waiver. Mixing is allowed but visible.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    experiments_dir = root / "experiments"
+    if not experiments_dir.is_dir():
+        return []
+
+    violations: list[str] = []
+    scanned = 0
+
+    for path in sorted(experiments_dir.glob("modal_*.py")):
+        rel = str(path.relative_to(root))
+        if any(rel.endswith(suf) for suf in _CHECK_153_EXEMPT_PATH_SUFFIXES):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        uses_canonical = _CHECK_153_CANONICAL_BUILDER_TOKEN in text
+        # Per-line scan for manual mount calls. Same-line waiver respected.
+        manual_lines: list[tuple[int, str]] = []
+        for ln_no, line in enumerate(text.splitlines(), start=1):
+            if not any(tok in line for tok in _CHECK_153_MANUAL_MOUNT_TOKENS):
+                continue
+            if _CHECK_153_WAIVER_MARKER in line:
+                continue
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            manual_lines.append((ln_no, stripped[:160]))
+        if not manual_lines:
+            continue
+        if uses_canonical:
+            # File mixes the canonical builder + extra mounts. Each extra
+            # line needs an inline waiver.
+            for ln_no, snippet in manual_lines:
+                violations.append(
+                    f"{rel}:{ln_no}: manual mount call alongside canonical "
+                    f"build_training_image — add `# MODAL_MANUAL_MOUNT_OK:"
+                    f"<reason>` same-line waiver if intentional. line: "
+                    f"{snippet}"
+                )
+            continue
+        # File never calls the canonical builder → all manual lines are
+        # violations.
+        for ln_no, snippet in manual_lines:
+            violations.append(
+                f"{rel}:{ln_no}: manual mount call without canonical "
+                f"build_training_image — route through "
+                f"tac.deploy.modal.mount_manifest.build_training_image, OR add "
+                f"`# MODAL_MANUAL_MOUNT_OK:<reason>` same-line waiver. line: "
+                f"{snippet}"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [modal-mount-builder] {len(violations)} violation(s) "
+                f"across {scanned} modal dispatcher(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 10:
+                print(f"    ... ({len(violations) - 10} more)")
+        else:
+            print(
+                "  [modal-mount-builder] OK "
+                f"({scanned} modal dispatcher(s) scanned; 0 manual-mount violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_dispatcher_uses_canonical_mount_builder found "
+            f"{len(violations)} manual Modal mount call(s) outside the "
+            f"canonical builder:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #154: check_experiments_results_gc_helper_is_canonical
+# ============================================================================
+# T1-D state-hygiene wave (2026-05-12). The canonical GC helper for
+# `experiments/results/` is `tools/gc_experiments_results.py`. Any new
+# tool/script that hard-deletes (shutil.rmtree, os.removedirs, shell
+# `rm -rf`) under `experiments/results/` WITHOUT routing through that
+# canonical helper bypasses the dry-run-first / git-tracked-protect /
+# HISTORICAL_PROVENANCE-protect contract.
+#
+# Bug class: ad-hoc cleanup scripts that crawl `experiments/results/` and
+# delete what "looks unused" (a) silently destroying HISTORICAL_PROVENANCE
+# artifacts (recovery_metadata.json, contest_auth_eval.json,
+# build_manifest.json) per Catalog #110 / #113; (b) deleting git-tracked
+# paths the operator wanted preserved; (c) bypassing the
+# `--operator-approved <handle>:<UTC>` consent gate.
+#
+# Acceptance:
+#   - The canonical helper file itself (tools/gc_experiments_results.py)
+#     is exempt by construction.
+#   - Tests under */tests/* and test_*.py are exempt — they legitimately
+#     exercise rmtree on tmp_path fixtures that happen to embed
+#     `experiments/results` substrings.
+#   - Vendored public-PR clones (`experiments/results/public_pr*_intake_*`)
+#     are out of scope.
+#   - Same-line waiver `# GC_EXPERIMENTS_RESULTS_BYPASS_OK:<reason>` on
+#     the destructive call line for the rare operator-reviewed
+#     forensic-cleanup case (each waiver becomes an audit item).
+#
+# This check is INTENTIONALLY narrow: it scans Python and shell files for
+# textual destructive-call signatures that name `experiments/results/`
+# explicitly. The dotted-attribute lookups (e.g. `shutil.rmtree`) and the
+# shell `rm -rf` family are textually unmistakable. Variables that hold
+# `experiments/results/` paths and are later passed to a destructive call
+# are not caught by this textual signature — and that's acceptable
+# because the bug class we extinct is the literal-path-in-script class
+# (the "ad-hoc one-off cleanup script someone wrote in 5 minutes").
+
+_CHECK_154_CANONICAL_HELPER_PATH = "tools/gc_experiments_results.py"
+_CHECK_154_WAIVER_TOKEN = "GC_EXPERIMENTS_RESULTS_BYPASS_OK:"
+_CHECK_154_EXCLUDED_PATH_MARKERS = (
+    "experiments/results/public_pr",
+    "experiments/results/comma_lab_public_export",
+    "_intake_",
+    ".omx/oss_export/",
+    "/tests/",
+)
+# Files exempt by construction: their textual contents legitimately contain
+# destructive-call patterns (e.g. the check itself defines regex patterns
+# that match its own signature; the canonical GC helper performs the
+# destructive call we license).
+_CHECK_154_SELF_EXEMPT_PATHS = frozenset({
+    "src/tac/preflight.py",  # this file — defines the patterns
+    "tools/gc_experiments_results.py",  # the canonical helper
+})
+_CHECK_154_DESTRUCTIVE_PY_PATTERNS = (
+    # shutil.rmtree(... "experiments/results/...")
+    re.compile(
+        r"\bshutil\.rmtree\s*\([^)]*['\"][^'\"]*experiments/results/[^'\"]*['\"]",
+        re.DOTALL,
+    ),
+    # os.remove(... "experiments/results/...") / os.removedirs(...) / os.unlink(...)
+    re.compile(
+        r"\bos\.(?:remove|removedirs|unlink)\s*\([^)]*['\"][^'\"]*experiments/results/[^'\"]*['\"]",
+        re.DOTALL,
+    ),
+    # Path(...).unlink() / .rmdir() pattern with the literal in the same line
+    re.compile(
+        r"experiments/results/[^'\"]*['\"][^\n]*\.(?:unlink|rmdir)\s*\(",
+        re.DOTALL,
+    ),
+)
+_CHECK_154_DESTRUCTIVE_SH_PATTERNS = (
+    # rm -rf experiments/results/... (with or without leading slash)
+    re.compile(
+        r"\brm\s+(?:-[rRf]+\s+|--recursive\s+|--force\s+)+[^\n]*experiments/results/",
+    ),
+    # find experiments/results ... -delete
+    re.compile(
+        r"\bfind\s+[^\n]*experiments/results[^\n]*-delete\b",
+    ),
+)
+
+
+def _check_154_line_has_waiver(line: str) -> bool:
+    return _CHECK_154_WAIVER_TOKEN in line
+
+
+def _check_154_extract_destructive_lines(text: str, *, is_python: bool) -> list[tuple[int, str]]:
+    """Return [(lineno_1based, line_text), ...] for each destructive call."""
+
+    patterns = (
+        _CHECK_154_DESTRUCTIVE_PY_PATTERNS
+        if is_python
+        else _CHECK_154_DESTRUCTIVE_SH_PATTERNS
+    )
+    matches: list[tuple[int, str]] = []
+    lines = text.splitlines()
+    for pat in patterns:
+        for m in pat.finditer(text):
+            # Find the line where the match starts.
+            start = m.start()
+            lineno = text.count("\n", 0, start) + 1
+            line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+            matches.append((lineno, line))
+    return matches
+
+
+def check_experiments_results_gc_helper_is_canonical(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #154 — refuse bulk-delete under ``experiments/results/`` outside
+    the canonical helper (``tools/gc_experiments_results.py``).
+
+    See module-level commentary above for rationale, scope, and acceptance
+    rules. Bug class: T1-D state-hygiene wave (2026-05-12). Memory:
+    ``feedback_state_hygiene_gc_and_prune_landed_20260512.md``.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+
+    scan_dirs = ("tools", "scripts", "experiments", "src/tac")
+    candidates: list[Path] = []
+    for d in scan_dirs:
+        top = root / d
+        if not top.is_dir():
+            continue
+        for ext in ("*.py", "*.sh"):
+            for p in top.rglob(ext):
+                rel = str(p.relative_to(root))
+                if any(m in rel for m in _CHECK_154_EXCLUDED_PATH_MARKERS):
+                    continue
+                # Skip self-exempt files (canonical helper + this check's
+                # own pattern definitions).
+                if rel in _CHECK_154_SELF_EXEMPT_PATHS:
+                    continue
+                # Skip test files (they exercise rmtree on tmp_path fixtures).
+                if p.name.startswith("test_"):
+                    continue
+                candidates.append(p)
+
+    scanned = 0
+    for path in candidates:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if "experiments/results" not in text:
+            continue
+        scanned += 1
+        is_python = path.suffix == ".py"
+        destructive_lines = _check_154_extract_destructive_lines(text, is_python=is_python)
+        if not destructive_lines:
+            continue
+        for lineno, line in destructive_lines:
+            if _check_154_line_has_waiver(line):
+                continue
+            rel = str(path.relative_to(root))
+            violations.append(
+                f"{rel}:{lineno}: destructive call under experiments/results/ "
+                f"outside canonical helper (tools/gc_experiments_results.py). "
+                f"Route through it OR add same-line "
+                f"# GC_EXPERIMENTS_RESULTS_BYPASS_OK:<reason>"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [gc-experiments-results-canonical] {len(violations)} "
+                f"violation(s) across {scanned} candidate(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:220]}")
+            if len(violations) > 10:
+                print(f"    ... ({len(violations) - 10} more)")
+        else:
+            print(
+                "  [gc-experiments-results-canonical] OK "
+                f"({scanned} candidate(s) scanned; 0 violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_experiments_results_gc_helper_is_canonical found "
+            f"{len(violations)} destructive call(s) under experiments/results/ "
+            "outside the canonical helper "
+            "(tools/gc_experiments_results.py):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
 

@@ -179,6 +179,7 @@ from tac.losses import (  # noqa: E402
     SEGMENTATION_SURROGATE_SOFT_COSINE,
     scorer_forward_pair,
     scorer_loss_terms_btchw,
+    scorer_loss_terms_cached_btchw,
 )
 # T20 / T22 wire-in (memo
 # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509). Both
@@ -357,12 +358,19 @@ A1_BASELINE_ARCHIVE_SHA256 = (
     "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5"
 )
 A1_BASELINE_ARCHIVE_SIZE_BYTES = 178_262
+CONTEST_UNCOMPRESSED_BYTES = 37_545_489
 ARCHIVE_IN_LOOP_MANIFEST_SCHEMA = "t1_archive_in_loop_manifest_v1"
 DEFAULT_PR95_PARITY_PROFILE = (
     REPO_ROOT
     / ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
 )
 PR95_TRAINER_PARITY_SCHEMA = "pr95_hnerv_muon_t1_trainer_parity_v1"
+SCORE_DOMAIN_OBJECTIVE_DIRECT = "direct_score"
+SCORE_DOMAIN_OBJECTIVE_AUGMENTED = "augmented_lagrangian"
+SCORE_DOMAIN_OBJECTIVE_CHOICES = (
+    SCORE_DOMAIN_OBJECTIVE_DIRECT,
+    SCORE_DOMAIN_OBJECTIVE_AUGMENTED,
+)
 
 
 def phase1_scaffold_blockers() -> list[str]:
@@ -551,6 +559,58 @@ def assert_score_domain_gradient_reachability(
         "decoder_grad_l2": float(decoder_norm),
         "balle_main_grad_l2": float(balle_norm),
     }
+
+
+def assert_stable_train_loss(
+    loss: torch.Tensor,
+    *,
+    max_abs: float,
+    epoch: int,
+    batch_index: int,
+    objective: str,
+) -> None:
+    """Fail closed before a remote run burns hours in a numerically bad basin."""
+    if max_abs <= 0:
+        return
+    detached = loss.detach()
+    if not torch.isfinite(detached).all():
+        raise RuntimeError(
+            "[t1] non-finite training loss; refusing to update weights "
+            f"(epoch={epoch + 1}, batch={batch_index + 1}, objective={objective})"
+        )
+    value = float(detached.abs().max().item())
+    if value > float(max_abs):
+        raise RuntimeError(
+            "[t1] unstable training loss; refusing to continue remote work "
+            f"(abs_loss={value:.6e} > max_abs={float(max_abs):.6e}, "
+            f"epoch={epoch + 1}, batch={batch_index + 1}, objective={objective}). "
+            "Use --score-domain-objective direct_score for warm-starts, or "
+            "explicitly raise --max-stable-train-loss-abs only with a documented "
+            "loss-scale justification."
+        )
+
+
+def _cache_tensor_on_cpu(tensor: torch.Tensor, *, pin_for_cuda: bool) -> torch.Tensor:
+    """Store frozen scorer targets once, outside the hot scorer loop."""
+    cached = tensor.detach().to(device="cpu", dtype=torch.float32).contiguous()
+    if pin_for_cuda:
+        try:
+            cached = cached.pin_memory()
+        except RuntimeError:
+            pass
+    return cached
+
+
+def _cached_batch_to_device(
+    cache: torch.Tensor,
+    idx: torch.Tensor,
+    *,
+    device: torch.device,
+) -> torch.Tensor:
+    """Return indexed cached scorer targets on the active training device."""
+    idx_cpu = idx.detach().to(device="cpu", dtype=torch.long)
+    batch = cache.index_select(0, idx_cpu)
+    return batch.to(device=device, non_blocking=bool(cache.is_pinned()))
 
 
 # ---------------------------------------------------------------------------
@@ -1530,6 +1590,12 @@ def write_provenance(
         ),
         "score_domain_loss": {
             "enabled": bool(getattr(args, "enable_scorer_domain_loss", False)),
+            "objective": getattr(args, "score_domain_objective", None),
+            "max_stable_train_loss_abs": getattr(
+                args,
+                "max_stable_train_loss_abs",
+                None,
+            ),
             "segmentation_surrogate": getattr(args, "segmentation_surrogate", None),
             "segmentation_temperature": getattr(args, "segmentation_temperature", None),
             "fisher_rao_eps": getattr(args, "fisher_rao_eps", None),
@@ -1541,7 +1607,16 @@ def write_provenance(
             "pixel_l1_anchor_weight": getattr(args, "pixel_l1_anchor_weight", None),
             "first_batch_gradcheck": score_domain_gradcheck,
             "trainable_signal": (
-                "PoseNet/SegNet tensor losses are wired into the ADMM residuals"
+                (
+                    "PoseNet/SegNet tensor losses optimize the direct "
+                    "contest-score surrogate"
+                )
+                if getattr(args, "score_domain_objective", None)
+                == SCORE_DOMAIN_OBJECTIVE_DIRECT
+                else (
+                    "PoseNet/SegNet tensor losses are wired into the ADMM "
+                    "constraint residuals"
+                )
                 if getattr(args, "enable_scorer_domain_loss", False)
                 else "pixel-L1 scaffold; seg/pose residuals are constants"
             ),
@@ -1827,6 +1902,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Optional auxiliary pixel-L1 anchor added to scorer-domain loss. "
             "Default 0.0 so score-domain terms are primary."
+        ),
+    )
+    parser.add_argument(
+        "--score-domain-objective",
+        choices=SCORE_DOMAIN_OBJECTIVE_CHOICES,
+        default=SCORE_DOMAIN_OBJECTIVE_DIRECT,
+        help=(
+            "Objective used when --enable-scorer-domain-loss is set. "
+            "direct_score optimizes the differentiable contest-score surrogate "
+            "plus optional T20/T22/anchor terms and is the stable warm-start "
+            "default. augmented_lagrangian routes scorer residuals through the "
+            "JointLagrangianADMM/T19 constraint coordinator and is opt-in after "
+            "a direct-score basin exists."
+        ),
+    )
+    parser.add_argument(
+        "--max-stable-train-loss-abs",
+        type=float,
+        default=1e9,
+        help=(
+            "Fail closed if abs(training loss) exceeds this finite threshold. "
+            "Prevents remote GPU jobs from burning hours after an ADMM/loss-scale "
+            "configuration error. Set <=0 only for a documented diagnostic run."
         ),
     )
     parser.add_argument(
@@ -2191,6 +2289,18 @@ def main() -> int:
             "[t1] --enable-scorer-domain-loss requires --epochs > 0 so the "
             "first-batch score-domain gradient reachability guard can run."
         )
+    if (
+        args.enable_scorer_domain_loss
+        and args.enable_t19_adaptive_rho
+        and args.score_domain_objective != SCORE_DOMAIN_OBJECTIVE_AUGMENTED
+    ):
+        raise SystemExit(
+            "[t1] --enable-t19-adaptive-rho is only wired when "
+            "--score-domain-objective augmented_lagrangian is selected. "
+            "The stable default direct_score objective intentionally bypasses "
+            "the ADMM/T19 coordinator until a direct-score warm-start basin "
+            "exists."
+        )
     pr95_trainer_parity = load_pr95_trainer_parity_contract(args.pr95_parity_profile)
     if (
         args.enable_scorer_domain_loss
@@ -2208,6 +2318,8 @@ def main() -> int:
         raise SystemExit("[t1] --pixel-l1-anchor-weight must be non-negative")
     if args.grad_clip_norm < 0:
         raise SystemExit("[t1] --grad-clip-norm must be non-negative")
+    if not math.isfinite(float(args.max_stable_train_loss_abs)):
+        raise SystemExit("[t1] --max-stable-train-loss-abs must be finite")
     if args.segmentation_temperature <= 0:
         raise SystemExit("[t1] --segmentation-temperature must be positive")
     if not (0.0 < args.fisher_rao_eps < 1e-3):
@@ -2345,30 +2457,56 @@ def main() -> int:
             f"{args.pixel_l1_anchor_weight}"
         )
 
-    # T20 teacher PoseNet output cache. The teacher path tgt → PoseNet is
-    # gradient-free and DETERMINISTIC on frozen scorer weights — recomputing
-    # it every batch wastes 1 of 4 scorer forwards per step. Per "exploit
-    # auth scorer eval" 2026-05-12: precompute once, cache as a tensor
-    # indexed by pair id, look up per-batch. ~25-40% wall-clock saving on
-    # T4 with T20 enabled, $0 fidelity cost.
-    # Skipped when T20 disabled (no teacher forward needed).
-    teacher_pose_cache: torch.Tensor | None = None
-    if args.enable_scorer_domain_loss and getattr(args, 'enable_t20_kl_pose_distill', False):
+    # Frozen scorer-target cache. The target path tgt → PoseNet/SegNet is
+    # gradient-free and deterministic for the whole run. Precomputing it once
+    # turns every hot-loop batch from two scorer passes (predicted + target)
+    # into one scorer pass (predicted only), while preserving the exact target
+    # tensors used by the canonical scorer-domain loss.
+    gt_pose_cache: torch.Tensor | None = None
+    gt_seg_cache: torch.Tensor | None = None
+    gt_seg_already_probs = False
+    if args.enable_scorer_domain_loss:
         with torch.no_grad():
-            cache_chunks: list[torch.Tensor] = []
+            pose_chunks: list[torch.Tensor] = []
+            seg_chunks: list[torch.Tensor] = []
             cache_chunk_size = max(1, int(getattr(args, 'batch_size', 16)))
             for cstart in range(0, target_pixels.shape[0], cache_chunk_size):
                 cend = min(cstart + cache_chunk_size, target_pixels.shape[0])
                 tgt_chunk = target_pixels[cstart:cend].contiguous()
-                pose_out_chunk, _ = scorer_forward_pair(tgt_chunk, posenet, segnet)
-                cache_chunks.append(pose_out_chunk["pose"].detach())
-            teacher_pose_cache = torch.cat(cache_chunks, dim=0)
-            cache_n = teacher_pose_cache.shape[0]
-            cache_bytes = teacher_pose_cache.element_size() * teacher_pose_cache.numel()
+                pose_out_chunk, seg_logits_chunk = scorer_forward_pair(
+                    tgt_chunk,
+                    posenet,
+                    segnet,
+                )
+                pose_chunks.append(pose_out_chunk["pose"].detach())
+                if float(args.segmentation_temperature) == 1.0:
+                    seg_chunks.append(F.softmax(seg_logits_chunk, dim=1).detach())
+                    gt_seg_already_probs = True
+                else:
+                    seg_chunks.append(seg_logits_chunk.detach())
+                    gt_seg_already_probs = False
+            pin_cache = device.type == "cuda"
+            gt_pose_cache = _cache_tensor_on_cpu(
+                torch.cat(pose_chunks, dim=0),
+                pin_for_cuda=pin_cache,
+            )
+            gt_seg_cache = _cache_tensor_on_cpu(
+                torch.cat(seg_chunks, dim=0),
+                pin_for_cuda=pin_cache,
+            )
+            cache_n = gt_pose_cache.shape[0]
+            cache_bytes = (
+                gt_pose_cache.element_size() * gt_pose_cache.numel()
+                + gt_seg_cache.element_size() * gt_seg_cache.numel()
+            )
             print(
-                f"[t1] T20 teacher_pose_cache built: {cache_n} pairs × "
-                f"{teacher_pose_cache.shape[1:]}; {cache_bytes/1024:.1f}KB on device; "
-                f"saves 1 PoseNet forward per batch (was {cache_n // max(1, int(getattr(args, 'batch_size', 16)))} per epoch)"
+                f"[t1] scorer_target_cache built: {cache_n} pairs; "
+                f"pose_shape={tuple(gt_pose_cache.shape[1:])}; "
+                f"seg_shape={tuple(gt_seg_cache.shape[1:])}; "
+                f"seg_cache={'probs' if gt_seg_already_probs else 'logits'}; "
+                f"{cache_bytes / (1024 * 1024):.1f}MB CPU"
+                f"{' pinned' if gt_pose_cache.is_pinned() else ''}; "
+                "saves one frozen PoseNet+SegNet target forward per batch"
             )
 
     # Build modules.
@@ -2537,16 +2675,42 @@ def main() -> int:
                             chroma_subsample=True,
                             block_quant_noise_std=float(getattr(args, 'mp4_codec_sim_noise_std', 0.0)),
                         )
-                    scorer_distortion, pose_loss, seg_loss = scorer_loss_terms_btchw(
-                        decoded_rt,
-                        tgt,
-                        posenet,
-                        segnet,
-                        segmentation_surrogate=args.segmentation_surrogate,
-                        segmentation_temperature=args.segmentation_temperature,
-                        fisher_rao_eps=args.fisher_rao_eps,
-                        sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
-                    )
+                    if gt_pose_cache is not None and gt_seg_cache is not None:
+                        gt_pose_batch = _cached_batch_to_device(
+                            gt_pose_cache,
+                            idx,
+                            device=device,
+                        )
+                        gt_seg_batch = _cached_batch_to_device(
+                            gt_seg_cache,
+                            idx,
+                            device=device,
+                        )
+                        scorer_distortion, pose_loss, seg_loss = (
+                            scorer_loss_terms_cached_btchw(
+                                decoded_rt,
+                                gt_pose_batch,
+                                gt_seg_batch,
+                                posenet,
+                                segnet,
+                                segmentation_surrogate=args.segmentation_surrogate,
+                                segmentation_temperature=args.segmentation_temperature,
+                                fisher_rao_eps=args.fisher_rao_eps,
+                                sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
+                                gt_seg_already_probs=gt_seg_already_probs,
+                            )
+                        )
+                    else:
+                        scorer_distortion, pose_loss, seg_loss = scorer_loss_terms_btchw(
+                            decoded_rt,
+                            tgt,
+                            posenet,
+                            segnet,
+                            segmentation_surrogate=args.segmentation_surrogate,
+                            segmentation_temperature=args.segmentation_temperature,
+                            fisher_rao_eps=args.fisher_rao_eps,
+                            sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
+                        )
                     if args.pixel_l1_anchor_weight > 0:
                         pixel_anchor = F.l1_loss(decoded_rt, tgt)
                         distortion = scorer_distortion + args.pixel_l1_anchor_weight * pixel_anchor
@@ -2572,22 +2736,30 @@ def main() -> int:
             rate_bits = balle_out["rate_total_bits"]
             if autocast_enabled and hasattr(rate_bits, 'float'):
                 rate_bits = rate_bits.float()
-            res = coord.step(
-                distortion=distortion,
-                rate_bits=rate_bits,
-                seg_loss=seg_loss,
-                pose_loss=pose_loss,
+            use_direct_score = (
+                args.enable_scorer_domain_loss
+                and args.score_domain_objective == SCORE_DOMAIN_OBJECTIVE_DIRECT
             )
-            if not torch.isfinite(res.augmented_lagrangian).all():
-                raise RuntimeError(
-                    "[t1] non-finite augmented Lagrangian; refusing to update weights"
+            if use_direct_score:
+                rate_penalty = 25.0 * (rate_bits / 8.0) / CONTEST_UNCOMPRESSED_BYTES
+                total_loss = distortion + rate_penalty
+            else:
+                res = coord.step(
+                    distortion=distortion,
+                    rate_bits=rate_bits,
+                    seg_loss=seg_loss,
+                    pose_loss=pose_loss,
                 )
+                if not torch.isfinite(res.augmented_lagrangian).all():
+                    raise RuntimeError(
+                        "[t1] non-finite augmented Lagrangian; refusing to update weights"
+                    )
+                total_loss = res.augmented_lagrangian
             # T20 — KL pose-axis distillation (memo
             # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509).
             # Adds Hinton-Vinyals-Dean 2014 KL on PoseNet 12-dim head logits.
             # Requires --enable-scorer-domain-loss (needs posenet loaded).
-            # When OFF, the augmented Lagrangian is unchanged (backward-compat).
-            total_loss = res.augmented_lagrangian
+            # When OFF, the base objective is unchanged (backward-compat).
             t20_loss_value: float = 0.0
             t22_loss_value: float = 0.0
             if args.enable_t20_kl_pose_distill:
@@ -2607,9 +2779,13 @@ def main() -> int:
                 student_pose_out, _ = scorer_forward_pair(
                     decoded_rt, posenet, segnet
                 )
-                if teacher_pose_cache is not None:
+                if gt_pose_cache is not None:
                     teacher_pose_out = {
-                        "pose": teacher_pose_cache[idx].detach()
+                        "pose": _cached_batch_to_device(
+                            gt_pose_cache,
+                            idx,
+                            device=device,
+                        ).detach()
                     }
                 else:
                     # Defensive fallback if cache wasn't built (e.g., T20
@@ -2663,6 +2839,13 @@ def main() -> int:
             # Track per-batch contributions for provenance summary.
             t20_loss_running += t20_loss_value
             t22_loss_running += t22_loss_value
+            assert_stable_train_loss(
+                total_loss,
+                max_abs=float(args.max_stable_train_loss_abs),
+                epoch=epoch,
+                batch_index=n_batches,
+                objective=str(args.score_domain_objective),
+            )
             optim_main.zero_grad()
             # Backward + step with GradScaler when autocast enabled. GradScaler
             # handles fp16 dynamic loss scaling to prevent gradient underflow.
@@ -2721,7 +2904,7 @@ def main() -> int:
             ema_decoder.update(decoder)
             ema_balle.update(balle)
 
-            epoch_loss += float(res.augmented_lagrangian.detach())
+            epoch_loss += float(total_loss.detach())
             n_batches += 1
             t20_t22_n_batches += 1
 

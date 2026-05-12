@@ -165,6 +165,14 @@ if [ ! -f "scripts/remote_lane_t1_balle_endtoend.sh" ]; then
     exit 1
 fi
 
+# Catalog #152 (2026-05-12): validate required-input-file flags BEFORE GPU
+# dispatch. Bug-class anchor: fc-01KREJST89QHFRWJXHAKXD850C burned $0.016 in
+# 15s on Modal A100 because --pr95-parity-profile pointed to a missing file.
+# This local 100ms check catches the same class BEFORE the meter starts.
+.venv/bin/python tools/validate_dispatch_required_inputs.py \
+    --trainer experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py \
+    || { echo "[phase1-t1-cheap-config] FATAL: required input missing; aborting before GPU dispatch (Catalog #152)" >&2; exit 7; }
+
 INSTANCE_JOB_ID="t1_balle_cheap_config_$(date -u +%Y%m%dT%H%M%SZ)"
 .venv/bin/python tools/claim_lane_dispatch.py claim \
     --lane-id "$LANE_ID" \
