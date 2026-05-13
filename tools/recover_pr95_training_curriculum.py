@@ -83,6 +83,119 @@ STOP_GATES = [
     },
 ]
 
+CURRICULUM_MUTATIONS = [
+    {
+        "id": "control_pr95_exact_replay",
+        "priority": "P0",
+        "kind": "control",
+        "target_stage": "stages_1_8",
+        "hypothesis": "The public eight-stage schedule is the control arm; no mutation is interpretable until the source-faithful path has timing, manifests, and archive custody.",
+        "implementation": "Port architecture, staged losses, QAT, C1a, differentiable YUV6, eval roundtrip, EMA selection, Muon partition, and archive parse/build without changing stage semantics.",
+        "exact_gate": "Full source-faithful stage manifests plus byte-closed archive/runtime exact CUDA and CPU eval.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Defines the baseline distribution and prevents mutation wins from being harness, parser, or export drift.",
+    },
+    {
+        "id": "timing_smoke_epoch_budget",
+        "priority": "P0",
+        "kind": "measurement",
+        "target_stage": "smoke",
+        "hypothesis": "Real seconds per epoch, scorer import cost, and archive parse cost determine whether the full burn should use H100, A100, L40S, or T4.",
+        "implementation": "Run 1-2 batches with gradient-reachable scorer preprocess, eval roundtrip, archive parser smoke, and dependency/import probes.",
+        "exact_gate": "smoke_manifest.json with hardware, seconds_per_epoch, source tree SHA, grad reachability, and no score claim.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Replaces stale cost priors with measured throughput before any long paid run.",
+    },
+    {
+        "id": "score_domain_stage_boundary_controller",
+        "priority": "P1",
+        "kind": "curriculum_control",
+        "target_stage": "stages_1_8",
+        "hypothesis": "Fixed epoch counts are likely suboptimal; transitions should depend on exported-archive component deltas, entropy trend, and plateau detection.",
+        "implementation": "Keep PR95 losses but allow CE->softplus->smooth->QAT->C1a->Muon transitions when component plateau and archive-byte entropy conditions are met.",
+        "exact_gate": "For every transition, emit candidate archive bytes/SHA, seg/pose/rate components, plateau window, and the counterfactual fixed-stage checkpoint.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "The contest objective, not calendar epoch count, chooses stage boundaries.",
+    },
+    {
+        "id": "earlier_muon_partition_sweep",
+        "priority": "P1",
+        "kind": "optimizer",
+        "target_stage": "stage5_to_stage8",
+        "hypothesis": "Muon only in Stage 8 may leave curvature-aligned improvement unused during the long C1a phase.",
+        "implementation": "Sweep Muon start at Stage 5, Stage 6, Stage 7, and Stage 8 while preserving the PR95 hidden-2D+ vs AdamW parameter partition as a controlled variable.",
+        "exact_gate": "Per-arm Muon/AdamW partition manifest, optimizer state hash, Stage 7 and Stage 8 archive component deltas, NaN/instability checks.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Tests a single optimizer-timing variable against the same architecture, losses, and export path.",
+    },
+    {
+        "id": "dual_ema_archive_selector",
+        "priority": "P1",
+        "kind": "selection",
+        "target_stage": "all_eval_points",
+        "hypothesis": "A single EMA decay can be wrong for rate, pose, and segmentation simultaneously; archive selection should compare raw, fast EMA, and slow EMA.",
+        "implementation": "Maintain raw weights plus at least two EMA shadows and build scored archive candidates at the same eval cadence.",
+        "exact_gate": "Candidate archive manifest for each shadow, byte term, seg/pose components, selected winner reason, and no hidden evaluator state.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Selection is based on byte-closed archive components instead of proxy loss smoothness.",
+    },
+    {
+        "id": "hard_pair_waterfill_sampler",
+        "priority": "P1",
+        "kind": "data_schedule",
+        "target_stage": "stages_2_8",
+        "hypothesis": "Uniform pair sampling under-spends training on high-marginal-value pose/seg pairs near the frontier.",
+        "implementation": "Use component-response and score-gradient maps to oversample hard pairs with a floor probability for all pairs; record pair weights per epoch.",
+        "exact_gate": "Pair-weight manifest, before/after component deltas by pair/category, and exported archive score on the full fixed video.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "The water-fill weights are derived from measured marginal score contribution, not handpicked frames.",
+    },
+    {
+        "id": "c1a_rate_schedule_grid",
+        "priority": "P1",
+        "kind": "rate_regularization",
+        "target_stage": "stages_5_7",
+        "hypothesis": "PR95's lambda/sigma choices are sparse; a smoother schedule can reduce entropy without crossing pose/seg cliffs.",
+        "implementation": "Grid or bandit-search C1a lambda and sigma schedules, with per-section entropy and decoded-component guardrails.",
+        "exact_gate": "Section-byte manifest, entropy trend, component cliff report, and exact archive parse/build roundtrip.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Rate pressure is accepted only when exact byte savings exceed measured component loss.",
+    },
+    {
+        "id": "quantization_native_training",
+        "priority": "P1",
+        "kind": "quantization",
+        "target_stage": "stages_3_8",
+        "hypothesis": "Late QAT may learn float features that are brittle under the PR101-style microcodec; quantization-native training can improve final bytes at the same distortion.",
+        "implementation": "Introduce fake-quant earlier, sweep per-tensor/per-channel routes, and keep apply/restore tests for every QAT step.",
+        "exact_gate": "QAT delta report, quantized export roundtrip, archive-byte comparison, and scorer component preservation.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Optimizes the representation actually consumed by the archive rather than a float proxy.",
+    },
+    {
+        "id": "pr101_microcodec_export_over_pr95_weights",
+        "priority": "P1",
+        "kind": "archive_export",
+        "target_stage": "post_stage8",
+        "hypothesis": "PR101's score came from codec/runtime polish over PR95-family weights; improved PR95 weights should be exported through that byte discipline.",
+        "implementation": "Emit PR101-style schema-driven sections, split Brotli streams, compact latent packing, and sidecar/no-op table selection over each improved checkpoint.",
+        "exact_gate": "Byte-identical no-op control, member SHA manifest, parser consumption proof, inflate runtime SHA, and exact CUDA/CPU eval.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Separates representation gains from microcodec gains while preserving apples-to-apples archive custody.",
+    },
+    {
+        "id": "score_aware_residual_atom_stack",
+        "priority": "P2",
+        "kind": "composition",
+        "target_stage": "post_base_anchor",
+        "hypothesis": "The best sub-0.17 route is likely PR95/PR101 as a base plus small typed residual atoms for scorer-sensitive errors.",
+        "implementation": "Attach byte-closed SABOR, S2SBS, SIREN/FINER/WIRE, wavelet, LA-pose/telescope foveation, or scorer-inverse atoms only after a verified base archive anchor.",
+        "exact_gate": "Each atom carries typed input/output contract, bytes/SHA, parser proof, consumed-byte proof, component deltas, and no proxy score authority.",
+        "dispatch_eligible": False,
+        "why_non_arbitrary": "Composition is gated on measured residual value per byte, not on paper novelty.",
+    },
+]
+
 
 @dataclass(frozen=True)
 class StageRecord:
@@ -202,6 +315,10 @@ def estimate_campaign(total_epochs: int) -> dict[str, Any]:
     }
 
 
+def curriculum_mutation_matrix() -> list[dict[str, Any]]:
+    return [dict(row) for row in CURRICULUM_MUTATIONS]
+
+
 def build_payload(source_dir: Path, pr_metadata: Path | None) -> dict[str, Any]:
     curriculum = recover_curriculum(source_dir)
     metadata = None
@@ -215,6 +332,7 @@ def build_payload(source_dir: Path, pr_metadata: Path | None) -> dict[str, Any]:
         "source": curriculum,
         "pr_metadata": metadata,
         "campaign": estimate_campaign(int(curriculum["total_epochs"])),
+        "mutation_matrix": curriculum_mutation_matrix(),
     }
 
 
@@ -258,8 +376,19 @@ def render_markdown(payload: dict[str, Any]) -> str:
             "",
             "Rate assumptions are planning-only and must be verified live before dispatch.",
             "",
+            "## Curriculum Mutation Matrix",
+            "",
+            "| priority | id | kind | target stage | exact gate |",
+            "|---|---|---|---|---|",
         ]
     )
+    for row in payload["mutation_matrix"]:
+        lines.append(
+            "| {priority} | `{id}` | `{kind}` | `{target_stage}` | {exact_gate} |".format(
+                **row
+            )
+        )
+    lines.append("")
     return "\n".join(lines)
 
 

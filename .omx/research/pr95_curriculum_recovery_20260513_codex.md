@@ -233,6 +233,34 @@ Full reproduction vs Stage-8-only finetune:
   cheap engineering smoke of Muon partition, C1a, QAT, export, and exact-eval
   wiring, but it cannot claim PR95 curriculum reproduction.
 
+## Curriculum Mutation Matrix
+
+Curriculum means the whole staged optimization protocol: loss family, optimizer
+partition, pair sampling, quantization exposure, entropy pressure, EMA/archive
+selection, export grammar, exact-eval cadence, and stop rules. PR95's
+author-provided public source is the control arm. Improvements are valid only
+when they preserve the source-faithful control and emit byte-closed archives or
+stage artifacts that can be compared against that control.
+
+Priority mutations to wire after the control path exists:
+
+| priority | mutation | target | hypothesis | exact gate |
+|---|---|---|---|---|
+| P0 | source-faithful PR95 replay | stages 1-8 | establish the author-provided control under our provider/runtime custody | full stage manifests plus exact CUDA/CPU archive eval |
+| P0 | timing smoke | smoke | replace stale cost priors with measured seconds/epoch and scorer/import overhead | `smoke_manifest.json`, grad reachability, source tree SHA |
+| P1 | score-domain stage-boundary controller | stages 1-8 | fixed epoch counts are probably not optimal for the contest objective | transition chosen by exported-archive component plateau and byte entropy, with fixed-stage counterfactual |
+| P1 | earlier Muon partition sweep | stages 5-8 | Muon only in Stage 8 may leave curvature-aligned improvement unused during long C1a phases | per-arm optimizer partition manifest, Stage 7/8 archive deltas, instability checks |
+| P1 | dual EMA archive selector | all eval points | one EMA decay may be wrong across rate, pose, and seg | raw/fast-EMA/slow-EMA archives scored at same cadence |
+| P1 | hard-pair water-fill sampler | stages 2-8 | uniform pair sampling under-spends high-marginal score pairs | pair-weight manifest and per-pair/category component deltas |
+| P1 | C1a rate schedule grid | stages 5-7 | PR95's lambda/sigma grid is sparse | section-byte manifest, entropy trend, component cliff report |
+| P1 | quantization-native training | stages 3-8 | late QAT learns float features that may be brittle under PR101 export | QAT delta report, quantized export roundtrip, archive-byte comparison |
+| P1 | PR101 microcodec export | post Stage 8 | PR101's codec discipline should wrap improved PR95 weights | no-op control, parser-consumption proof, runtime SHA, exact CUDA/CPU eval |
+| P2 | score-aware residual atom stack | post base anchor | sub-0.17 likely needs PR95/PR101 base plus typed residual atoms | each atom has typed contract, consumed-byte proof, and component deltas |
+
+The deterministic helper `tools/recover_pr95_training_curriculum.py` now emits
+this matrix under `mutation_matrix` so downstream orchestrators can consume the
+same control-vs-mutation contract instead of re-creating a hand-curated plan.
+
 ## Wiring Required Before Any Paid Run
 
 Minimum exact prerequisites:

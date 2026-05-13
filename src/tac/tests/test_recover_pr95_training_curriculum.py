@@ -64,3 +64,28 @@ def test_campaign_estimates_are_planning_only_and_cover_required_gpus() -> None:
     assert estimates["H100"]["gpu_hours_high"] == 70
     assert campaign["stop_gates"][0]["gate"] == "smoke"
     assert campaign["stop_gates"][-1]["gate"] == "exact_cuda_cpu_eval"
+
+
+def test_curriculum_mutation_matrix_keeps_pr95_as_control_arm() -> None:
+    helper = _load_helper()
+
+    matrix = helper.curriculum_mutation_matrix()
+
+    mutation_ids = {row["id"] for row in matrix}
+    assert "control_pr95_exact_replay" in mutation_ids
+    assert "score_domain_stage_boundary_controller" in mutation_ids
+    assert "pr101_microcodec_export_over_pr95_weights" in mutation_ids
+    assert "score_aware_residual_atom_stack" in mutation_ids
+    assert all(row["dispatch_eligible"] is False for row in matrix)
+    assert all(row["exact_gate"] for row in matrix)
+
+
+def test_render_markdown_includes_curriculum_mutation_matrix() -> None:
+    helper = _load_helper()
+
+    payload = helper.build_payload(helper.DEFAULT_SOURCE_DIR, None)
+    markdown = helper.render_markdown(payload)
+
+    assert "## Curriculum Mutation Matrix" in markdown
+    assert "`earlier_muon_partition_sweep`" in markdown
+    assert "`hard_pair_waterfill_sampler`" in markdown
