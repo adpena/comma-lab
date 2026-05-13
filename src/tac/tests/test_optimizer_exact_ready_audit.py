@@ -6,7 +6,9 @@ import zipfile
 from pathlib import Path
 
 from tac.optimizer.exact_ready_audit import (
+    apply_suppression_manifest,
     audit_exact_ready_queues,
+    build_suppression_manifest,
     discover_exact_ready_queues,
 )
 from tac.optimizer.exact_readiness import runtime_dependency_manifest
@@ -113,6 +115,56 @@ def test_audit_flags_ready_queue_after_cuda_score_not_below_floor(
         )
         for blocker in blockers
     )
+
+
+def test_suppression_manifest_matches_terminal_score_floor_drift(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "8" * 64
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_pr101",  # FAKE_LANE_OK: synthetic terminal-evidence fixture.
+        archive_sha=archive_sha,
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [
+            f"| 2026-05-10T00:00:00Z | test | lane_pr101 | modal | job1 |  | completed_contest_cuda_auth_eval | archive_sha={archive_sha}; score_recomputed=0.22650343150032118 |"
+        ],
+    )
+    original_payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+        active_floor_score=0.2089810755823297,
+    )
+    manifest = build_suppression_manifest(original_payload)
+    refreshed_payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+        active_floor_score=0.206618135457,
+    )
+
+    assert original_payload["stale_ready_row_count"] == 1
+    assert refreshed_payload["stale_ready_row_count"] == 1
+    assert (
+        original_payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+        != refreshed_payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+    )
+
+    suppressed = apply_suppression_manifest(
+        refreshed_payload,
+        manifest=manifest,
+        manifest_path=tmp_path / ".omx/research/exact_ready_queue_retraction_manifest.json",
+        repo_root=tmp_path,
+    )
+
+    assert suppressed["passed"] is True
+    assert suppressed["stale_ready_row_count"] == 0
+    assert suppressed["suppressed_ready_row_count"] == 1
+    suppressed_row = suppressed["queues"][0]["suppressed_ready_rows"][0]
+    assert suppressed_row["suppression"]["match_basis"] == "terminal_score_semantic"
 
 
 def test_audit_flags_active_same_lane_claim_before_dispatch(

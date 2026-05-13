@@ -435,6 +435,19 @@ def _row_key(queue_path: object, row: Mapping[str, object]) -> tuple[str, str, s
     )
 
 
+def _base_suppression_key(
+    queue_path: object,
+    row: Mapping[str, object],
+) -> tuple[str, str, str, str, str]:
+    return (
+        _norm(queue_path),
+        _norm(row.get("candidate_id")),
+        _norm(row.get("lane_id")),
+        _norm(row.get("archive_sha256")),
+        _norm(row.get("runtime_tree_sha256")),
+    )
+
+
 def _manifest_entry_key(entry: Mapping[str, object]) -> tuple[str, str, str, str, str, tuple[str, ...]]:
     blockers = entry.get("blockers", [])
     blocker_values = tuple(str(blocker) for blocker in blockers) if isinstance(blockers, list) else ()
@@ -446,6 +459,52 @@ def _manifest_entry_key(entry: Mapping[str, object]) -> tuple[str, str, str, str
         _norm(entry.get("runtime_tree_sha256")),
         blocker_values,
     )
+
+
+def _terminal_score_blocker_key(blocker: str) -> tuple[str, str, str, str] | None:
+    parts = blocker.split(":")
+    if (
+        blocker.startswith("same_lane_terminal_score_not_below_active_floor_for_same_archive:")
+        and len(parts) >= 5
+    ):
+        return ("score_not_below_active_floor", parts[2], parts[3], parts[4])
+    if (
+        blocker.startswith("same_lane_terminal_score_already_below_active_floor_for_same_archive:")
+        and len(parts) >= 5
+    ):
+        return ("score_already_below_active_floor", parts[2], parts[3], parts[4])
+    return None
+
+
+def _terminal_score_blocker_keys(blockers: object) -> tuple[tuple[str, str, str, str], ...]:
+    if not isinstance(blockers, list):
+        return ()
+    return tuple(
+        sorted(
+            key
+            for blocker in blockers
+            if (key := _terminal_score_blocker_key(str(blocker))) is not None
+        )
+    )
+
+
+def _semantic_terminal_score_key(
+    queue_path: object,
+    row_or_entry: Mapping[str, object],
+) -> tuple[str, str, str, str, str, tuple[tuple[str, str, str, str], ...]] | None:
+    """Return a suppression key that ignores active-floor numeric drift.
+
+    Terminal score blockers embed the active floor in text such as
+    ``0.2265>=0.2089``.  That floor changes as the frontier improves, but the
+    stale-row identity remains the same terminal same-lane/same-archive
+    evaluation.  Suppression manifests must therefore match the terminal
+    evidence tuple rather than the full blocker string for these blockers.
+    """
+
+    terminal_keys = _terminal_score_blocker_keys(row_or_entry.get("blockers", []))
+    if not terminal_keys:
+        return None
+    return (*_base_suppression_key(queue_path, row_or_entry), terminal_keys)
 
 
 def _terminal_evidence_from_blocker(blocker: str) -> dict[str, object] | None:
@@ -624,6 +683,13 @@ def apply_suppression_manifest(
         for entry in entries
         if isinstance(entry, Mapping) and entry.get("dispatch_allowed") is False
     }
+    terminal_score_suppression_index = {
+        key: entry
+        for entry in entries
+        if isinstance(entry, Mapping)
+        and entry.get("dispatch_allowed") is False
+        and (key := _semantic_terminal_score_key(entry.get("queue_path"), entry)) is not None
+    }
     raw_stale_count = int(payload.get("stale_ready_row_count") or 0)
     unresolved_count = 0
     suppressed_count = 0
@@ -639,13 +705,20 @@ def apply_suppression_manifest(
         for row in original_rows:
             if not isinstance(row, dict):
                 continue
+            match_basis = "exact_blockers"
             entry = suppression_index.get(_row_key(queue_path, row))
+            if entry is None:
+                semantic_key = _semantic_terminal_score_key(queue_path, row)
+                if semantic_key is not None:
+                    entry = terminal_score_suppression_index.get(semantic_key)
+                    match_basis = "terminal_score_semantic"
             if entry is None:
                 unresolved_rows.append(row)
                 continue
             suppressed_row = dict(row)
             suppressed_row["suppression"] = {
                 "manifest_path": repo_rel(manifest_path, repo_root),
+                "match_basis": match_basis,
                 "classification": entry.get("classification"),
                 "operator_action": entry.get("operator_action"),
                 "dispatch_allowed": entry.get("dispatch_allowed"),
