@@ -85,6 +85,32 @@ the PoseNet drift. The shared archive and shared runtime content tree rule out a
 payload-byte difference; the remaining mechanism is device/runtime numerical
 behavior inside inflate or scorer preprocessing.
 
+## Exact-Pair Mechanism Xray
+
+Canonical diagnostic artifact:
+`.omx/research/artifacts/hdm4_hlm1_cpu_cuda_exact_pair_20260513_codex/analysis.json`
+
+- schema: `cpu_cuda_exact_pair_mechanism_analysis.v1`
+- evidence grade: `paired_exact_auth_eval_mechanism_diagnostic`
+- valid individual axis scores: `true`
+- valid same-archive axis score pair: `true`
+- valid mechanism analysis: `true`
+- same archive SHA-256: `true`
+- same archive bytes: `true`
+- same runtime content tree SHA-256: `true`
+- same inflated raw aggregate SHA-256: `false`
+- raw-output pairing status: `different_inflated_outputs`
+- mechanism class: `different_raw_outputs_runtime_or_inflate_drift`
+- score claim: `false`
+- promotion eligible: `false`
+- rank/kill eligible: `false`
+
+This proves the HLM1 CPU/CUDA gap is not a payload-byte gap and not a runtime
+content gap. It localizes the mechanism to device/runtime behavior that changes
+the inflated raw output before the scorer consumes it. The next mechanism pass
+should compare the two 3.66 GB raw tensors in streaming chunks, then project the
+largest drift regions through PoseNet/SegNet component traces.
+
 ## Cleanup Note
 
 An earlier CPU closure attempt at
