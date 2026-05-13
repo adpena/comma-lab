@@ -340,6 +340,7 @@ def _run_auth_eval_inner(
     inflate_sh_rel: str,
     submission_dir_zip_bytes: bytes | None,
     submission_dir_zip_sha256: str | None,
+    source_repo_commit: str,
     inflate_timeout: int,
     evaluate_timeout: int,
     expected_runtime_tree_sha256: str = "",
@@ -368,6 +369,7 @@ def _run_auth_eval_inner(
             "archive_size_bytes": archive_size_bytes,
             "inflate_sh_rel": inflate_sh_rel,
             "submission_dir_zip_sha256": submission_dir_zip_sha256,
+            "source_repo_commit": source_repo_commit,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
             "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         }
@@ -527,6 +529,7 @@ def _run_auth_eval_inner(
         "PYTHON": sys.executable,
         # Defensive: hide GPUs even if Modal accidentally exposes one.
         "CUDA_VISIBLE_DEVICES": "",
+        "PACT_SOURCE_COMMIT": source_repo_commit,
     }
 
     started = time.monotonic()
@@ -609,6 +612,7 @@ def _run_auth_eval_inner(
         "expected_archive_size_bytes": archive_size_bytes,
         "inflate_sh_rel": inflate_sh_rel,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
+        "source_repo_commit": source_repo_commit,
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "validation_errors": validation_errors,
         "score_claim": payload_score_claim,
@@ -663,6 +667,7 @@ def _run_auth_eval_cpu_fail_closed(
     inflate_sh_rel: str,
     submission_dir_zip_bytes: bytes | None,
     submission_dir_zip_sha256: str | None,
+    source_repo_commit: str,
     inflate_timeout: int,
     evaluate_timeout: int,
     expected_runtime_tree_sha256: str = "",
@@ -675,6 +680,7 @@ def _run_auth_eval_cpu_fail_closed(
             inflate_sh_rel=inflate_sh_rel,
             submission_dir_zip_bytes=submission_dir_zip_bytes,
             submission_dir_zip_sha256=submission_dir_zip_sha256,
+            source_repo_commit=source_repo_commit,
             inflate_timeout=inflate_timeout,
             evaluate_timeout=evaluate_timeout,
             expected_runtime_tree_sha256=expected_runtime_tree_sha256,
@@ -708,6 +714,7 @@ def run_auth_eval_cpu(
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
     submission_dir_zip_bytes: bytes | None = None,
     submission_dir_zip_sha256: str | None = None,
+    source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
     expected_runtime_tree_sha256: str = "",
@@ -721,6 +728,7 @@ def run_auth_eval_cpu(
         inflate_sh_rel=inflate_sh_rel,
         submission_dir_zip_bytes=submission_dir_zip_bytes,
         submission_dir_zip_sha256=submission_dir_zip_sha256,
+        source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
@@ -771,6 +779,7 @@ def main(
     submission_dir_zip = prepared.submission_dir_zip
     submission_dir_zip_sha256 = prepared.submission_dir_zip_sha256
     out_dir = prepared.output_dir
+    source_repo_commit = _local_git_commit()
 
     local_summary = {
         "schema_version": 1,
@@ -782,6 +791,7 @@ def main(
         "inflate_sh": inflate_sh_rel,
         "submission_dir": str(submission_dir_path) if submission_dir_path else None,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
+        "source_repo_commit": source_repo_commit,
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
         "modal_dispatch_mode": "detached_spawn" if detach else "blocking_remote",
@@ -818,6 +828,7 @@ def main(
         inflate_sh_rel,
         submission_dir_zip,
         submission_dir_zip_sha256,
+        source_repo_commit,
         int(inflate_timeout),
         int(evaluate_timeout),
         expected_runtime_tree_sha256,
@@ -906,6 +917,7 @@ def main(
     result["archive_sha256"] = archive_sha256
     result["archive_size_bytes"] = archive_size_bytes
     result["inflate_sh"] = inflate_sh_rel
+    result["source_repo_commit"] = source_repo_commit
     result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
     write_json(out_dir / "modal_cpu_auth_eval_result.json", result)
 
@@ -941,3 +953,17 @@ def main(
         status="completed_modal_cpu_auth_eval_recovered",
         notes=f"Modal CPU auth eval passed path validation; output_dir={out_dir}",
     )
+
+
+def _local_git_commit() -> str:
+    import subprocess
+
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            text=True,
+            stderr=subprocess.STDOUT,
+            timeout=10,
+        ).strip()
+    except Exception as exc:  # pragma: no cover - local diagnostic fallback
+        return f"<error obtaining local git commit: {exc!r}>"

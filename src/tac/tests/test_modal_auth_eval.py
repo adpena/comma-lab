@@ -137,6 +137,69 @@ def test_cpu_remote_unexpected_exception_returns_fail_closed_result(tmp_path, mo
     assert "modal_cpu_auth_eval_validation.json" in result["artifacts"]
 
 
+def test_cpu_run_auth_eval_signature_and_source_commit_flow(tmp_path, monkeypatch):
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
+
+    import inspect
+
+    raw = (
+        cpu_mod.run_auth_eval_cpu.get_raw_f()
+        if hasattr(cpu_mod.run_auth_eval_cpu, "get_raw_f")
+        else cpu_mod.run_auth_eval_cpu
+    )
+    sig = inspect.signature(raw)
+    assert "source_repo_commit" in sig.parameters
+    assert "expected_runtime_tree_sha256" in sig.parameters
+
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+    expected_hash = "9" * 64
+    captured_args = []
+
+    class FakeRemote:
+        @staticmethod
+        def remote(*args):
+            captured_args.append(args)
+            return {
+                "passed": True,
+                "returncode": 0,
+                "score_recomputed_from_components": 1.23,
+                "avg_posenet_dist": 0.01,
+                "avg_segnet_dist": 0.002,
+                "archive_size_bytes": archive.stat().st_size,
+                "score_axis": "contest_cpu",
+                "promotion_eligible": False,
+                "score_claim": True,
+                "artifacts": {
+                    "contest_auth_eval.json": b"{}\n",
+                    "modal_cpu_auth_eval_validation.json": b"{}\n",
+                },
+            }
+
+    monkeypatch.setattr(cpu_mod, "run_auth_eval_cpu", FakeRemote)
+    monkeypatch.setattr(cpu_mod, "claim_modal_auth_eval_dispatch", lambda **_kwargs: None)
+    monkeypatch.setattr(cpu_mod, "terminal_modal_auth_eval_claim", lambda **_kwargs: None)
+
+    cpu_mod.main(
+        str(archive),
+        str(out_dir),
+        expected_runtime_tree_sha256=expected_hash,
+        lane_id="lane_unit_modal_cpu_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
+        instance_job_id="job_unit_modal_cpu_auth_eval",
+    )
+
+    request = json.loads((out_dir / "modal_cpu_auth_eval_local_request.json").read_text())
+    result = json.loads((out_dir / "modal_cpu_auth_eval_result.json").read_text())
+    assert request["source_repo_commit"]
+    assert request["expected_runtime_tree_sha256"] == expected_hash
+    assert result["source_repo_commit"] == request["source_repo_commit"]
+    assert result["expected_runtime_tree_sha256"] == expected_hash
+    assert captured_args[0][-4] == request["source_repo_commit"]
+    assert captured_args[0][-1] == expected_hash
+
+
 def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     text = TOOL_PATH.read_text()
 
@@ -179,6 +242,8 @@ def test_modal_auth_eval_images_include_hard_runtime_entropy_deps() -> None:
         assert 'work_dir / "inflated_outputs_manifest.json"' in text
         assert '"--expected-runtime-tree-sha256"' in text
         assert "expected_runtime_tree_sha256" in text
+    assert '"PACT_SOURCE_COMMIT": source_repo_commit' in cuda_text
+    assert '"PACT_SOURCE_COMMIT": source_repo_commit' in cpu_text
     assert 'REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")' in cuda_text
     assert 'REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_cpu_work")' in cpu_text
     assert 'work_dir = out_dir / "eval_work"' not in cuda_text
