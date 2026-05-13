@@ -84,10 +84,30 @@ configuration. The result is in predicted band and adjudicates as A++ contest
 T4, but remains a candidate packet pending any operator submission decision and
 does not resolve the separate `[contest-CPU]` axis.
 
+## Durable Review Packet
+
+- machine-readable result review:
+  `.omx/research/hdm4_hlm1_exact_cuda_result_review_20260513_codex.json`
+- autopilot evidence row:
+  `reports/hdm4_hlm1_exact_cuda_evidence_row_20260513_codex.json`
+- continual-learning append:
+  `reports/cathedral_autopilot_evidence.jsonl`
+- review status: `exact_cuda_result_reviewed`
+- failure class: `not_negative_against_supplied_baseline`
+- dispatch-claim status:
+  `completed_contest_cuda_modal_auth_eval_recovered`
+- promotion flags remain fail-closed:
+  `score_claim=false`, `promotion_eligible=false`,
+  `ready_for_exact_eval_dispatch=false`
+
+This closes the signal-preservation loop for the exact HLM1 CUDA result without
+turning the candidate into a submission or score-promotion claim.
+
 ## Next Work
 
-1. Run the `[contest-CPU]` closure for the same HLM1 archive if CPU-axis
-   placement or public leaderboard reproduction is needed.
+1. Run true `[contest-CPU]` closure on the GHA Linux x86_64 path if public
+   leaderboard reproduction is needed. Modal CPU already measured the archive,
+   but the posterior rejected it as a non-1:1 `[contest-CPU]` substrate.
 2. Continue HDM5 semantic/structured recode work on the remaining high-byte
    sections; generic Brotli is near saturation.
 3. Generalize the enforced-runtime-hash pattern to every provider exact-eval
