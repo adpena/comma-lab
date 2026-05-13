@@ -221,3 +221,59 @@ Per CLAUDE.md "KILL is LAST RESORT" — every CANON-1 decision preserves the ret
 ## Operator decision question
 
 > **Approve Wave A** (CANON-1.B canonical scorer-loss helper + sister-substrate migration + CANON-1.A taxonomy declaration) **post-cap-reset @ 5:30pm Chicago**? Estimated wave cost: 2-3 subagents, ~$0 GPU, ~1.5-2.5 hours wall-clock once cap clears.
+
+## Wave B + C status update 2026-05-12
+
+**Author**: WAVE-CANON-B-C subagent (post-Wave-A landings + sister-subagent
+WAVE-8 landings).
+
+| ID | Status | Commit | Closure ref |
+|---|---|---|---|
+| CANON-1.A | LANDED | d7574355 (WAVE-A-2) | feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512.md |
+| CANON-1.B | LANDED | 4f6896ad (WAVE-A-1) | feedback_wave_a_1_canonical_scorer_helper_14_substrate_migration_landed_20260512.md |
+| CANON-1.C | CLOSED | (docstrings already in place) | canon_1_b_c_closures_consolidated_20260512.md §1 |
+| CANON-1.D | LANDED | 1f188d75 (this wave) | canon_1_d_hand_curated_list_audit_20260512.md |
+| CANON-1.E | LANDED | 6d15a46c (this wave) | tools/claim_catalog_number.py + 4 new tests |
+| CANON-1.F | CLOSED | (already-addressed) | canon_1_f_lexical_scanner_closure_20260512.md |
+| CANON-1.G | LANDED | 71f8ffa9 (FIX-I, prior session) | Catalog #165 STRICT @ 0 |
+| CANON-1.H | LANDED | 48ee9201 (COUNCIL-A1) | src/tac/sensitivity_map/axis_weights.py |
+| CANON-1.I | LANDED-WORKFLOW-pending-trigger | 31854ecc (WAVE-8-GHA) | feedback_wave8_gha_contest_cpu_workflow_LANDED_20260512.md |
+| CANON-1.J | LANDED | d7574355 (WAVE-A-2) | (same as CANON-1.A) |
+| CANON-1.K | CLOSED-at-0 | (Catalog #159 STRICT @ 0) | canon_1_b_c_closures_consolidated_20260512.md §2 |
+| CANON-1.L | LANDED | (WAVE-8-VASTAI-CLEAN) | feedback_wave8_vastai_phantom_cleanup_LANDED_20260512.md |
+| CANON-1.M | DEFERRED-pending-operator | eddf4fd0 (WAVE-8-RECOVERED-CLEANUP) | feedback_wave8_recovered_cleanup_DEFERRED_pending_operator_decision_20260512.md |
+| CANON-1.N | CLOSED-NO-ACTION | (Wave 2/H NO-ACTION recommendation) | canon_1_b_c_closures_consolidated_20260512.md §3 |
+| CANON-1.O | DEFERRED-operator-discretion | (Subagent 7 prior PR81-104 mining) | canon_1_b_c_closures_consolidated_20260512.md §4 |
+
+**Status counts**: 9 LANDED + 4 CLOSED + 2 DEFERRED = 15/15 (100% routed).
+
+### WAVE-CANON-B-C operator decisions surfaced (5)
+
+1. **CANON-1.I**: trigger the GHA workflow at
+   `.github/workflows/contest_cpu_eval.yml` to produce the
+   `[contest-CPU GHA Linux x86_64]` empirical anchor and flip
+   `lane_g_v3.contest_cpu` gate. Would make first L3 lane in 490-lane
+   registry.
+2. **CANON-1.M**: per WAVE-8-RECOVERED-CLEANUP's deferral, operator decides
+   whether to (a) apply GC plan with manual per-instance review, (b) keep
+   the 106 MB indefinitely, or (c) explicitly waive HISTORICAL_PROVENANCE
+   artifacts for cleavage.
+3. **CANON-1.D follow-ups (HCL-1/2/3/4)**: 4 HIGH-leverage hand-curated-list
+   canonicalization candidates remain DEFERRED-pending-operator-approval per
+   the audit memo. HCL-1 (catalog table generator) is the highest-leverage
+   single follow-up.
+4. **CANON-1.O**: explicitly request PR110-115 mining if the operator wants
+   the un-mined corpus closed. Default is NO-ACTION.
+5. **CANON-1.N**: keep NO-ACTION (default) or override with explicit
+   "complete the tagging" directive.
+
+### Cumulative WAVE-CANON-B-C metadata
+
+- **Subagents this wave**: 1 (this WAVE-CANON-B-C)
+- **GPU spend**: $0
+- **Commits via subagent_commit_serializer.py**: 3
+  - 6d15a46c — CANON-1.E git-transactional claim
+  - 1f188d75 — CANON-1.D META audit
+  - 66abfa91 — CANON-1.F + CANON-1.B/C closures consolidated
+- **New tests**: 4 (CANON-1.E coverage)
+- **Lane registry**: lane_canon_b_c_remaining_decisions_20260512 (L1)
