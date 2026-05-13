@@ -27,6 +27,7 @@ without adding a `constriction` dependency to the inflate runtime.
 - Candidate archive SHA-256: `8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0`
 - PacketIR identity proof: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/packetir_identity.json`
 - Runtime decode/sidecar consumption proof: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_decode_consumption.json`
+- Same-runtime streaming prefix parity: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/same_runtime_prefix_parity.json`
 - Entropy floor refresh: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/entropy_floor.json`
 - Static release surface: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/`
 - Static compliance: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.json`
@@ -65,6 +66,9 @@ are complete.
 - Static nonfinal pre-submission compliance passed on the clean release surface.
   The only failed check is the expected warning `auth_eval_optional_missing`;
   therefore the packet remains non-promotable until exact auth eval lands.
+- Same-runtime CPU streaming prefix parity between HDM4 source and HDM4+HLM1
+  candidate passed for `max_pairs=1`: `prefix_parity_claim=true`,
+  `streaming_output_sha256_equal=true`, `score_claim=false`.
 
 ## Next Steps
 
