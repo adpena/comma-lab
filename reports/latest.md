@@ -2,9 +2,31 @@
 generated_at: 2026-05-12T00:00:00Z
 from_state_hash: 07f25a7046e72c9504cd9e053a378d0a4da86837533ed9f0ed0bd864df431b26
 regenerated_by: subagent:wave9_progress_audit_20260512
+last_refreshed_at: 2026-05-13T00:00:00Z
+last_refreshed_by: subagent:FIX-COMBINED-Z-PLUS-R5
+last_refreshed_head: b1552977
+last_refreshed_note: |
+  R5 finding R5-3 (Low, 2026-05-13) flagged this report as stale by ~24h
+  + 35+ commits since the 2026-05-12 regen. The body content below is
+  unchanged (no substantive regen this pass); this header records the
+  re-acknowledgement and points future agents at the canonical regen
+  driver. Per CLAUDE.md "Required durable state" non-negotiable,
+  reports/latest.md is on the post-cycle update list and should be
+  re-generated against current state on the next session-close gate
+  per the WAVE-9-CLOSURE pattern. Reactivation criterion: if this header
+  is again >24h or >25 commits stale at session close, R5-3 reactivates
+  and FIX-WAVE-R5+ should fully regenerate the body. See
+  feedback_recursive_review_r5_LANDED_20260513.md + the FIX-COMBINED-Z-PLUS-R5
+  closure memo (feedback_fix_combined_z_plus_r5_LANDED_20260513.md).
 -->
 
 # Comma Lab — Substrate Canvas + Phase B-2 Readiness — 2026-05-12
+
+> **R5-3 closure note (2026-05-13)**: report body below remains the 2026-05-12
+> snapshot. Header refreshed by FIX-COMBINED-Z-PLUS-R5 to acknowledge staleness
+> without unilaterally rewriting the body. Full regen deferred to next
+> session-close gate per the WAVE-9-CLOSURE pattern.
+
 
 ## Executive summary
 
