@@ -11508,12 +11508,31 @@ def _scan_inflate_sh_for_centralized_brotli(
         return []
 
     lines = text.splitlines()
-    # Locate first PYTHON_INFLATE dispatch line.
+    # Locate the first PYTHON_INFLATE dispatch line. Real contest inflate.sh
+    # files may contain early helper predicates such as
+    # `inflate_mode_requires_ffmpeg_color_contract()` before the centralized
+    # brotli block. Those are policy guards, not branch dispatch. When the
+    # canonical per-video loop is present, treat the first PYTHON_INFLATE
+    # branch inside/after that loop as the dispatch point; small synthetic
+    # scripts and one-shot inflaters still fall back to their first branch.
     dispatch_lineno: int | None = None
+    loop_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        if "while IFS= read -r rel; do" in line:
+            loop_lineno = i
+            break
+
+    candidate_lines: list[int] = []
     for i, line in enumerate(lines, start=1):
         if _PYTHON_INFLATE_DISPATCH_RE.search(line):
-            dispatch_lineno = i
-            break
+            candidate_lines.append(i)
+    if loop_lineno is not None:
+        dispatch_lineno = next(
+            (i for i in candidate_lines if i >= loop_lineno),
+            None,
+        )
+    if dispatch_lineno is None and candidate_lines:
+        dispatch_lineno = candidate_lines[0]
 
     if dispatch_lineno is None:
         # No branch dispatch -> trivial passthrough. Skip.
@@ -14374,6 +14393,7 @@ _CONTEST_CUDA_TAG = re.compile(r"\[contest-CUDA\]|contest-CUDA")
 # - the canonical no-MPS rule memory file (defines the rule, not violates it)
 _MPS_DECISION_EXEMPT_FILES: set[str] = {
     "CLAUDE.md",
+    ".omx/state/active_lane_dispatch_claims.md",
     "src/tac/preflight.py",
     "src/tac/tests/test_callsite_contracts.py",
     "src/tac/tests/test_no_mps_decision_check.py",
@@ -14387,6 +14407,7 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
     ".omx/research/",       # research findings (catalog, not decisions)
     ".omx/auto_memory_snapshot_",  # frozen memory-file backups (operator-side, not deployable)
     ".omx/state/orphans_preserved/",  # preserved orphan scripts/configs (signal-loss prevention)
+    "reports/raw/",      # raw provider/download evidence snapshots, not current decision records
     "reports/graphs/",      # judging surface; figure captions cite history
     "/uv_project_env/",     # vendored Python deps in remote eval workspaces (numpy/distutils ccompiler_opt etc.)
     "/site-packages/",      # vendored Python deps anywhere (third-party code, not ours)
@@ -20255,6 +20276,31 @@ def check_remote_lane_argparse_arity(
         # Walk lines, find invocation starts. Handle line-continuation `\`
         # and bash array `VAR=( ... )` blocks.
         lines = text.splitlines()
+        shell_array_flags: dict[str, set[str]] = {}
+        j = 0
+        while j < len(lines):
+            array_start = re.match(
+                r'^\s*(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\+?=\s*\(',
+                lines[j],
+            )
+            if array_start is None:
+                j += 1
+                continue
+            block = lines[j]
+            while j + 1 < len(lines):
+                if j > 0 and lines[j].lstrip().startswith(")"):
+                    break
+                if block.rstrip().endswith(")") and not block.rstrip().endswith("\\)"):
+                    break
+                j += 1
+                block += "\n" + lines[j]
+                if lines[j].lstrip().startswith(")"):
+                    break
+            shell_array_flags.setdefault(array_start.group("name"), set()).update(
+                f"--{token}"
+                for token in re.findall(r'\B--([a-z][a-z0-9-]+)', block)
+            )
+            j += 1
         i = 0
         while i < len(lines):
             line = lines[i]
@@ -20290,7 +20336,9 @@ def check_remote_lane_argparse_arity(
             invocation_lineno = i + 1
             # Detect bash-array context: previous non-blank, non-comment line
             # ends with `=(` (e.g. `BUILD_CMD=(`).
-            in_bash_array = False
+            in_bash_array = bool(
+                re.search(r'\b\w+\s*\+?=\s*\(', line[: m.start()])
+            )
             for _j in range(i - 1, max(i - 6, -1), -1):
                 _prev = lines[_j].rstrip()
                 if not _prev or _prev.lstrip().startswith("#"):
@@ -20318,6 +20366,11 @@ def check_remote_lane_argparse_arity(
             # WITH `--` prefix, so prepend `--` when comparing.
             flag_tokens = re.findall(r'\B--([a-z][a-z0-9-]+)', full_cmd)
             passed = {f"--{t}" for t in flag_tokens}
+            for array_name in re.findall(
+                r'\$\{?([A-Za-z_][A-Za-z0-9_]*)\[@\]\}?',
+                full_cmd,
+            ):
+                passed.update(shell_array_flags.get(array_name, set()))
 
             # Match target to a known argparse signature. Try several path forms.
             target_sig = None

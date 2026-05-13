@@ -534,6 +534,64 @@ def test_remote_lane_argparse_arity_parses_only_invoked_targets(
     assert parsed == ["experiments/invoked.py"]
 
 
+def test_remote_lane_argparse_arity_resolves_bash_array_expansion(
+    tmp_path: Path,
+) -> None:
+    """Required flags may be carried by a reusable bash args array."""
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/invoked.py", """
+        import argparse
+        p = argparse.ArgumentParser()
+        p.add_argument("--output-dir", required=True)
+        p.add_argument("--epochs", required=True)
+        args = p.parse_args()
+    """)
+    _write(repo / "scripts/remote_lane_test.sh", """
+        TRAIN_ARGS=(
+          --output-dir "$OUTPUT_DIR"
+          --epochs "$EPOCHS"
+        )
+        "$PYBIN" experiments/invoked.py "${TRAIN_ARGS[@]}"
+    """)
+
+    violations = check_remote_lane_argparse_arity(
+        repo_root=repo,
+        strict=True,
+        verbose=False,
+    )
+
+    assert violations == []
+
+
+def test_remote_lane_argparse_arity_resolves_same_line_command_array(
+    tmp_path: Path,
+) -> None:
+    """A command array may start on the same line as the python invocation."""
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/invoked.py", """
+        import argparse
+        p = argparse.ArgumentParser()
+        p.add_argument("--output-dir", required=True)
+        p.add_argument("--epochs", required=True)
+        args = p.parse_args()
+    """)
+    _write(repo / "scripts/remote_lane_test.sh", """
+        TRAIN_CMD=("$PYBIN" experiments/invoked.py
+          --output-dir "$OUTPUT_DIR"
+          --epochs "$EPOCHS"
+        )
+        "${TRAIN_CMD[@]}"
+    """)
+
+    violations = check_remote_lane_argparse_arity(
+        repo_root=repo,
+        strict=True,
+        verbose=False,
+    )
+
+    assert violations == []
+
+
 def test_profiles_validator_fails_on_missing_experiment_type(monkeypatch) -> None:
     """Round 23: profile without experiment_type silently skipped → must fail."""
     import tac.profiles as profiles_mod

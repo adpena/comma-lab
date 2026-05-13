@@ -66,6 +66,9 @@ log() { echo "[lane-hybrid-res] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.lo
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
 
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
+
 # Stage 0: dispatch claim verification (mirrors remote_lane_substrate_sane_hnerv.sh).
 if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
     log "FATAL: HYBRID_RES_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"

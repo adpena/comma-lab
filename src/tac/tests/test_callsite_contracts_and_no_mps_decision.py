@@ -260,6 +260,40 @@ def test_repo_no_proxy_decision_violations_clean() -> None:
     )
 
 
+def test_no_mps_decision_ignores_raw_provider_and_claim_ledgers(
+    tmp_path: Path,
+) -> None:
+    """Raw snapshots and dispatch claims are custody evidence, not decisions.
+
+    The proxy-score rule must still scan current docs/source, but it should not
+    reinterpret ignored provider workspaces or the active claim log as live
+    promotion/kill records.
+    """
+    raw = tmp_path / "reports" / "raw" / "kaggle" / "workspace.py"
+    raw.parent.mkdir(parents=True)
+    raw.write_text(
+        'note = "unable to promote proxy/MPS score truth on CPU"\n',
+        encoding="utf-8",
+    )
+    claims = tmp_path / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| lane | status | notes |\n"
+        "| x | failed_cpu_eval_archive_custody_missing | "
+        "failed before scoring on [contest-CPU]; no CPU-CUDA extrapolation |\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        check_no_proxy_metric_drives_decision(
+            strict=False,
+            verbose=False,
+            repo_root=tmp_path,
+        )
+        == []
+    )
+
+
 def test_no_mps_decision_strict_mode_raises(tmp_path: Path) -> None:
     """A planted bad doc should raise in strict mode."""
     docs = tmp_path / "docs"

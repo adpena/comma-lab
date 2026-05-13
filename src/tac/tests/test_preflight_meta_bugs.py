@@ -2704,6 +2704,45 @@ class TestInflateShHandlesBrCentrally:
         v = _scan_inflate_sh_for_centralized_brotli(sh, root)
         assert v == [], v
 
+    def test_helper_predicate_before_stage0_is_not_dispatch(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Early policy predicates may mention PYTHON_INFLATE before Stage 0.
+
+        The dispatch contract is about the branch that actually inflates video
+        outputs. For canonical contest scripts, that branch lives inside the
+        per-video loop, so a helper guard before Stage 0 must not mask the real
+        centralized brotli block.
+        """
+        root = _stub_repo(tmp_path)
+        sub = root / "submissions" / "ok_helper_before_stage0"
+        sub.mkdir(parents=True, exist_ok=True)
+        sh = sub / "inflate.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            ARCHIVE_DIR="$1"
+            helper_guard() {
+              if [ "$PYTHON_INFLATE" = "0" ]; then
+                return 0
+              fi
+              return 1
+            }
+            # Stage 0: brotli decompression
+            if compgen -G "$ARCHIVE_DIR"/*.br > /dev/null 2>&1; then
+              uv run --with brotli python -c 'import brotli'
+            fi
+            while IFS= read -r rel; do
+              if [ "$PYTHON_INFLATE" = "renderer" ]; then
+                echo do work
+              fi
+            done < "$3"
+        """)
+
+        v = _scan_inflate_sh_for_centralized_brotli(sh, root)
+        assert v == [], v
+
     def test_missing_brotli_block_is_caught(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         sub = root / "submissions" / "bad_missing"

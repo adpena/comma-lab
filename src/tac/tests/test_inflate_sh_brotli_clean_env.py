@@ -294,12 +294,17 @@ def test_inflate_sh_stage0_runs_for_all_branches_not_just_renderer(tmp_path: Pat
     text = INFLATE_SH.read_text()
     stage0_marker = text.find("Stage 0: brotli decompression")
     assert stage0_marker != -1
-    # Find all PYTHON_INFLATE branch openings (the if/elif chain inside
-    # the per-video loop). All of them must come AFTER Stage 0.
+    # Find PYTHON_INFLATE branch openings in the per-video loop. Earlier
+    # helper predicates may mention PYTHON_INFLATE to decide whether ffmpeg
+    # color-contract checks apply; those are not inflate branch dispatch.
+    while_marker = text.find("while IFS= read -r rel; do")
+    assert while_marker != -1, "per-video dispatch loop not found"
     branch_offsets = [
-        m.start() for m in re.finditer(r'\$PYTHON_INFLATE"\s*=\s*"', text)
+        m.start()
+        for m in re.finditer(r'\$PYTHON_INFLATE"\s*=\s*"', text)
+        if m.start() >= while_marker
     ]
-    assert branch_offsets, "PYTHON_INFLATE branch dispatch not found"
+    assert branch_offsets, "PYTHON_INFLATE branch dispatch not found in per-video loop"
     for offset in branch_offsets:
         assert offset > stage0_marker, (
             "Stage 0 must precede every PYTHON_INFLATE branch check. Found "

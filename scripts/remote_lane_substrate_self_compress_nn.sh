@@ -56,6 +56,9 @@ log() { echo "[lane-self-compress-nn] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
 
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
+
 # Stage 0: dispatch claim verification (mirrors remote_lane_substrate_sane_hnerv.sh).
 if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
     log "FATAL: SELF_COMPRESS_NN_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"
