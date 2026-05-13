@@ -162,6 +162,54 @@ class KaggleOutputIngestTests(unittest.TestCase):
         self.assertEqual(report["latest_checkpoint"]["scorer"], 3.96)
         self.assertEqual(report["latest_checkpoint"]["variant"], "dilated")
 
+    def test_ingest_uses_download_manifest_as_stale_file_allowlist(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            downloaded = root / "downloaded"
+            downloaded.mkdir()
+            manifest_path = downloaded / "kaggle-run.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "slug": "kaggle-demo",
+                        "run_id": "kaggle-demo-v1",
+                        "kernel_ref": "adpena/comma-lab-demo",
+                    }
+                )
+            )
+            kept = downloaded / "run/eval/contest_auth_eval.json"
+            kept.parent.mkdir(parents=True)
+            kept.write_text('{"score_claim": false}')
+            stale = downloaded / "stale_workspace/src/tac/preflight.py"
+            stale.parent.mkdir(parents=True)
+            stale.write_text("stale")
+            (downloaded / "kaggle_output_download_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "downloaded": [
+                            {
+                                "file_name": "run/eval/contest_auth_eval.json",
+                                "local_path": str(kept),
+                                "bytes": kept.stat().st_size,
+                                "sha256": "a" * 64,
+                            }
+                        ]
+                    }
+                )
+            )
+            out_root = root / "reports"
+
+            report = mod.ingest_downloaded_outputs(
+                manifest_path=manifest_path,
+                download_dir=downloaded,
+                output_root=out_root,
+            )
+
+            evidence_dir = Path(report["evidence_dir"])
+            self.assertTrue((evidence_dir / "run/eval/contest_auth_eval.json").is_file())
+            self.assertTrue((evidence_dir / "kaggle_output_download_manifest.json").is_file())
+            self.assertFalse((evidence_dir / "stale_workspace/src/tac/preflight.py").exists())
+
     def test_ingest_summary_surfaces_completed_latent_score_table(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -221,6 +269,61 @@ class KaggleOutputIngestTests(unittest.TestCase):
         self.assertEqual(score_table["strict_improvement_pair_count"], 600)
         self.assertEqual(score_table["score_claim"], False)
         self.assertEqual(score_table["ready_for_builder"], True)
+
+    def test_ingest_summary_surfaces_completed_yshift_score_table(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            manifest_path = root / "kaggle-run.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "slug": "kaggle-demo",
+                        "run_id": "kaggle-demo-v1",
+                        "kernel_ref": "adpena/comma-lab-demo",
+                    }
+                )
+            )
+            downloaded = root / "downloaded"
+            score_dir = downloaded / "pr106_yshift_score_table/yshift_run/score_table"
+            score_dir.mkdir(parents=True)
+            (score_dir / "score_table_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "manifest_schema": "pr106_yshift_score_table_manifest_v1",
+                        "producer": "experiments/build_pr106_yshift_score_table.py",
+                        "device": "cuda:0",
+                        "elapsed_seconds": 8206.3,
+                        "source_archive_sha256": "a" * 64,
+                        "source_zero_bin_sha256": "b" * 64,
+                        "score_table_npy_path": "/kaggle/working/score_table.npy",
+                        "score_table_npy_bytes": 4116088,
+                        "score_table_npy_sha256": "c" * 64,
+                        "score_table_shape": [1200, 343],
+                        "candidate_count": 343,
+                        "strict_improvement_frame_count": 420,
+                        "best_improvement_min": 0.0,
+                        "best_improvement_mean": 0.001,
+                        "best_improvement_max": 0.006,
+                        "ready_for_builder": True,
+                        "score_claim": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                )
+            )
+            out_root = root / "reports"
+
+            report = mod.ingest_downloaded_outputs(
+                manifest_path=manifest_path,
+                download_dir=downloaded,
+                output_root=out_root,
+            )
+
+        score_table = report["latest_score_table"]
+        self.assertEqual(score_table["manifest_schema"], "pr106_yshift_score_table_manifest_v1")
+        self.assertEqual(score_table["score_table_shape"], [1200, 343])
+        self.assertEqual(score_table["strict_improvement_count"], 420)
+        self.assertEqual(score_table["strict_improvement_frame_count"], 420)
+        self.assertEqual(score_table["score_claim"], False)
 
     def test_ingest_summary_finds_checkpoint_meta_in_nested_output_dirs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

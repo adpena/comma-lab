@@ -230,6 +230,18 @@ def test_pr106_latent_operator_oneliner_uses_score_table_env() -> None:
     assert rows["lane_pr106_latent_sidecar"]["kaggle_kernel_slug"] == "adpena/comma-lab-pr106-latent-score-table"
 
 
+def test_pr106_yshift_operator_row_surfaces_kaggle_score_table_tools() -> None:
+    mod = _load_briefing_module()
+    rows = {
+        row["lane_id"]: row
+        for row in mod.PHASE_4_GATED_LANES
+    }
+
+    assert rows["lane_pr106_yshift_sidechannel"]["kaggle_bundle_tool"] == "tools/kaggle_build_pr106_yshift_score_table.py"
+    assert rows["lane_pr106_yshift_sidechannel"]["kaggle_harvest_tool"] == "tools/harvest_kaggle_pr106_yshift_score_table.py"
+    assert rows["lane_pr106_yshift_sidechannel"]["kaggle_kernel_slug"] == "adpena/comma-lab-pr106-yshift-score-table"
+
+
 def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
     mod = _load_briefing_module()
     manifest = {"canonical_payload_without_tool_manifest_sha256": "not-recomputed-in-this-test"}

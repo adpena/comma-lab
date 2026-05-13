@@ -209,13 +209,13 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_private",
-      "note": "prefix: raw reports may contain provider/local custody; promote sanitized summaries into reports or .omx/research only.",
+      "note": "prefix: raw reports may contain provider/local custody; promote sanitized summaries into reports or .omx/research only. Runtime-source baseline refreshed after clean paginated Kaggle PR106 latent/yshift score-table harvests and source-archive custody inclusion on 2026-05-13; durable signal is summarized in .omx/research/kaggle_pr106_score_table_harvest_and_materialization_20260513_codex.md.",
       "path": "reports/raw/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 55,
-        "sha256": "df570e92f6f92f657fd4448dc0ce2a9b22d91cf727b760370f575a1d5382c74b"
+        "count": 59,
+        "sha256": "aba3ba8d40105c569b7d06652c43a20d7c538ab8edb06d3d75ee09bae90c9590"
       }
     },
     {

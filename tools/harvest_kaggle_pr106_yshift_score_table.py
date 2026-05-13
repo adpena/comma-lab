@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Harvest the PR106 latent score-table Kaggle kernel through canonical ingest."""
+"""Harvest the PR106 y-shift score-table Kaggle kernel through canonical ingest."""
 from __future__ import annotations
 
 import argparse
@@ -21,17 +21,17 @@ from tac.deploy.kaggle.kaggle_output_ingest import (  # noqa: E402
 )
 from tac.repo_io import json_text, write_json  # noqa: E402
 
-DEFAULT_KERNEL_REF = "adpena/comma-lab-pr106-latent-score-table"
-DEFAULT_DOWNLOAD_DIR = REPO_ROOT / "reports/raw/kaggle_pr106_latent_score_table_latest"
+DEFAULT_KERNEL_REF = "adpena/comma-lab-pr106-yshift-score-table"
+DEFAULT_DOWNLOAD_DIR = REPO_ROOT / "reports/raw/kaggle_pr106_yshift_score_table_latest"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "reports/raw/kaggle_ingested"
 DEFAULT_INCLUDE_PATTERNS = (
-    r"^pr106_latent_score_table/",
-    r"^pact_pr106_latent_workspace/inputs/pr106_archive\.zip$",
+    r"^pr106_yshift_score_table/",
+    r"^pact_pr106_yshift_workspace/inputs/pr106_archive\.zip$",
 )
 
 
 def default_run_id() -> str:
-    return "kaggle_pr106_latent_score_table_" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    return "kaggle_pr106_yshift_score_table_" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
 
 
 def write_ingest_manifest(
@@ -41,9 +41,9 @@ def write_ingest_manifest(
     kernel_ref: str,
 ) -> dict[str, object]:
     payload = {
-        "schema": "kaggle_pr106_latent_score_table_harvest_manifest_v1",
+        "schema": "kaggle_pr106_yshift_score_table_harvest_manifest_v1",
         "run_id": run_id,
-        "slug": "pr106_latent_score_table",
+        "slug": "pr106_yshift_score_table",
         "kernel_ref": kernel_ref,
         "score_claim": False,
         "promotion_eligible": False,
@@ -66,7 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--include-output-pattern",
         action="append",
         default=list(DEFAULT_INCLUDE_PATTERNS),
-        help="Regex for Kaggle output paths to keep. Defaults to the latent run prefix.",
+        help="Regex for Kaggle output paths to keep. Defaults to the y-shift run prefix.",
     )
     parser.add_argument(
         "--exclude-output-pattern",
@@ -80,7 +80,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     run_id = args.run_id or default_run_id()
-    manifest_path = args.manifest_output or args.download_dir / "kaggle_pr106_latent_score_table_manifest.json"
+    manifest_path = args.manifest_output or args.download_dir / "kaggle_pr106_yshift_score_table_manifest.json"
     manifest = write_ingest_manifest(
         manifest_path=manifest_path,
         run_id=run_id,

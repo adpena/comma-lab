@@ -11,24 +11,24 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def _load_tool():
     return load_repo_tool(
         REPO_ROOT,
-        "tools/harvest_kaggle_pr106_latent_score_table.py",
-        "harvest_kaggle_pr106_latent_score_table_test",
+        "tools/harvest_kaggle_pr106_yshift_score_table.py",
+        "harvest_kaggle_pr106_yshift_score_table_test",
     )
 
 
-def test_harvester_writes_manifest_and_uses_latent_prefix(monkeypatch, tmp_path: Path, capsys) -> None:
+def test_harvester_writes_manifest_and_uses_yshift_prefix(monkeypatch, tmp_path: Path, capsys) -> None:
     module = _load_tool()
     calls: dict[str, object] = {}
 
     def fake_download(**kwargs):
         calls["download"] = kwargs
         download_dir = Path(kwargs["download_dir"])
-        (download_dir / "pr106_latent_score_table/latent_run/score_table/score_table_manifest.json").parent.mkdir(
+        (download_dir / "pr106_yshift_score_table/yshift_run/score_table/score_table_manifest.json").parent.mkdir(
             parents=True,
             exist_ok=True,
         )
         write_json(
-            download_dir / "pr106_latent_score_table/latent_run/score_table/score_table_manifest.json",
+            download_dir / "pr106_yshift_score_table/yshift_run/score_table/score_table_manifest.json",
             {"score_claim": False},
         )
         return {"downloaded": []}
@@ -52,14 +52,14 @@ def test_harvester_writes_manifest_and_uses_latent_prefix(monkeypatch, tmp_path:
     )
 
     assert rc == 0
-    manifest_path = tmp_path / "download/kaggle_pr106_latent_score_table_manifest.json"
+    manifest_path = tmp_path / "download/kaggle_pr106_yshift_score_table_manifest.json"
     manifest = read_json(manifest_path)
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
     assert manifest["kernel_ref"] == module.DEFAULT_KERNEL_REF
     assert calls["download"]["include_patterns"] == [
-        r"^pr106_latent_score_table/",
-        r"^pact_pr106_latent_workspace/inputs/pr106_archive\.zip$",
+        r"^pr106_yshift_score_table/",
+        r"^pact_pr106_yshift_workspace/inputs/pr106_archive\.zip$",
     ]
     assert calls["ingest"]["manifest_path"] == manifest_path
     assert "run-test" in capsys.readouterr().out

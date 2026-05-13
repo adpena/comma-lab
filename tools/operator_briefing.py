@@ -153,6 +153,9 @@ PHASE_4_GATED_LANES = [
             "  --estimated-cost 0.40 --council-priority 2 --max-dph 0.30 \\\n"
             "  --env PR106_YSHIFT_MODE=brute_force"
         ),
+        "kaggle_bundle_tool": "tools/kaggle_build_pr106_yshift_score_table.py",
+        "kaggle_harvest_tool": "tools/harvest_kaggle_pr106_yshift_score_table.py",
+        "kaggle_kernel_slug": "adpena/comma-lab-pr106-yshift-score-table",
     },
     {
         "lane_id": "lane_pr106_lrl1_sidechannel",

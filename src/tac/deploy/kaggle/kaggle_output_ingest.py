@@ -62,6 +62,43 @@ def _read_manifest(path: Path) -> dict[str, object]:
     return payload
 
 
+def _ingestable_files(
+    *,
+    download_dir: Path,
+    manifest_path: Path,
+) -> list[Path]:
+    """Return files belonging to the current download.
+
+    Operators often reuse a ``latest`` directory. When a paginated download
+    manifest exists, use it as the custody allowlist so stale files from an
+    older harvest cannot silently enter the new evidence directory.
+    """
+
+    download_manifest_path = download_dir / "kaggle_output_download_manifest.json"
+    if not download_manifest_path.is_file():
+        return sorted(path for path in download_dir.rglob("*") if path.is_file())
+
+    payload = _read_manifest(download_manifest_path)
+    allowed = {"kaggle_output_download_manifest.json"}
+    try:
+        allowed.add(manifest_path.relative_to(download_dir).as_posix())
+    except ValueError:
+        pass
+
+    downloaded = payload.get("downloaded", [])
+    if isinstance(downloaded, list):
+        for row in downloaded:
+            if isinstance(row, dict) and isinstance(row.get("file_name"), str):
+                allowed.add(row["file_name"])
+
+    files: list[Path] = []
+    for rel in sorted(allowed):
+        candidate = download_dir / rel
+        if candidate.is_file():
+            files.append(candidate)
+    return files
+
+
 def _compile_patterns(patterns: Iterable[str] | None) -> tuple[re.Pattern[str], ...]:
     return tuple(re.compile(pattern) for pattern in patterns or ())
 
@@ -172,59 +209,67 @@ def ingest_downloaded_outputs(
     latest_failure: dict[str, object] | None = None
     latest_checkpoint: dict[str, object] | None = None
     latest_score_table: dict[str, object] | None = None
-    for path in sorted(download_dir.rglob("*")):
-        if path.is_file():
-            rel = path.relative_to(download_dir)
-            dest = evidence_dir / rel
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, dest)
-            if path.suffix == ".log":
-                signals = extract_training_signals(dest)
-                failure = signals.get("failure")
-                if isinstance(failure, dict):
-                    latest_failure = failure
-                logs.append({
-                    "file": rel.as_posix(),
-                    "signals": signals,
-                })
-            if path.name.endswith("_best_meta.json"):
-                payload = _read_manifest(dest)
-                meta = payload.get("meta", {})
-                latest_checkpoint = {
-                    "epoch": payload.get("epoch"),
-                    "scorer": payload.get("scorer"),
-                    "int8_size": payload.get("int8_size"),
-                    "variant": meta.get("variant"),
-                    "hidden": meta.get("hidden"),
-                    "meta_path": str(dest),
+    for path in _ingestable_files(download_dir=download_dir, manifest_path=manifest_path):
+        rel = path.relative_to(download_dir)
+        dest = evidence_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+        if path.suffix == ".log":
+            signals = extract_training_signals(dest)
+            failure = signals.get("failure")
+            if isinstance(failure, dict):
+                latest_failure = failure
+            logs.append({
+                "file": rel.as_posix(),
+                "signals": signals,
+            })
+        if path.name.endswith("_best_meta.json"):
+            payload = _read_manifest(dest)
+            meta = payload.get("meta", {})
+            latest_checkpoint = {
+                "epoch": payload.get("epoch"),
+                "scorer": payload.get("scorer"),
+                "int8_size": payload.get("int8_size"),
+                "variant": meta.get("variant"),
+                "hidden": meta.get("hidden"),
+                "meta_path": str(dest),
+            }
+        if path.name == "score_table_manifest.json":
+            payload = _read_manifest(dest)
+            manifest_schema = payload.get("manifest_schema")
+            if manifest_schema in {
+                "pr106_latent_score_table_manifest_v1",
+                "pr106_yshift_score_table_manifest_v1",
+            }:
+                improvement_key = (
+                    "strict_improvement_pair_count"
+                    if manifest_schema == "pr106_latent_score_table_manifest_v1"
+                    else "strict_improvement_frame_count"
+                )
+                latest_score_table = {
+                    "manifest_schema": manifest_schema,
+                    "manifest_path": str(dest),
+                    "producer": payload.get("producer"),
+                    "device": payload.get("device"),
+                    "elapsed_seconds": payload.get("elapsed_seconds"),
+                    "source_archive_sha256": payload.get("source_archive_sha256"),
+                    "source_zero_bin_sha256": payload.get("source_zero_bin_sha256"),
+                    "score_table_npy_path": payload.get("score_table_npy_path"),
+                    "score_table_npy_bytes": payload.get("score_table_npy_bytes"),
+                    "score_table_npy_sha256": payload.get("score_table_npy_sha256"),
+                    "score_table_shape": payload.get("score_table_shape"),
+                    "candidate_count": payload.get("candidate_count"),
+                    "strict_improvement_count": payload.get(improvement_key),
+                    improvement_key: payload.get(improvement_key),
+                    "best_improvement_min": payload.get("best_improvement_min"),
+                    "best_improvement_mean": payload.get("best_improvement_mean"),
+                    "best_improvement_max": payload.get("best_improvement_max"),
+                    "ready_for_builder": payload.get("ready_for_builder"),
+                    "score_claim": payload.get("score_claim"),
+                    "ready_for_exact_eval_dispatch": payload.get(
+                        "ready_for_exact_eval_dispatch"
+                    ),
                 }
-            if path.name == "score_table_manifest.json":
-                payload = _read_manifest(dest)
-                if payload.get("manifest_schema") == "pr106_latent_score_table_manifest_v1":
-                    latest_score_table = {
-                        "manifest_path": str(dest),
-                        "producer": payload.get("producer"),
-                        "device": payload.get("device"),
-                        "elapsed_seconds": payload.get("elapsed_seconds"),
-                        "source_archive_sha256": payload.get("source_archive_sha256"),
-                        "source_zero_bin_sha256": payload.get("source_zero_bin_sha256"),
-                        "score_table_npy_path": payload.get("score_table_npy_path"),
-                        "score_table_npy_bytes": payload.get("score_table_npy_bytes"),
-                        "score_table_npy_sha256": payload.get("score_table_npy_sha256"),
-                        "score_table_shape": payload.get("score_table_shape"),
-                        "candidate_count": payload.get("candidate_count"),
-                        "strict_improvement_pair_count": payload.get(
-                            "strict_improvement_pair_count"
-                        ),
-                        "best_improvement_min": payload.get("best_improvement_min"),
-                        "best_improvement_mean": payload.get("best_improvement_mean"),
-                        "best_improvement_max": payload.get("best_improvement_max"),
-                        "ready_for_builder": payload.get("ready_for_builder"),
-                        "score_claim": payload.get("score_claim"),
-                        "ready_for_exact_eval_dispatch": payload.get(
-                            "ready_for_exact_eval_dispatch"
-                        ),
-                    }
 
     summary = {
         "run_id": run_id,
