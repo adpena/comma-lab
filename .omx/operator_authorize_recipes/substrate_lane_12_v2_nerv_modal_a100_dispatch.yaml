@@ -1,0 +1,165 @@
+schema_version: 1
+name: substrate_lane_12_v2_nerv_modal_a100_dispatch
+lane_id: lane_substrate_lane_12_v2_nerv_20260512
+summary: Lane 12 v2 NeRV-as-renderer TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — remote driver missing + Phase B auth gate).
+
+dispatch_enabled: false
+research_only: false
+substrate_tradition: TRADITION_2
+defer_reason: |
+  TWO blockers:
+
+  (1) scripts/remote_lane_substrate_lane_12_v2_nerv_as_renderer.sh does NOT
+      exist (Catalog #163-pattern gap). The trainer experiments/train_lane_12_v2_nerv_as_renderer.py
+      (479 LOC, 20 dedicated tests) is production-ready with full argparse
+      including Phase B Option C `--phase-b-auth-memo` (Catalog #150), but
+      the canonical Modal/Vast.ai remote driver is missing.
+
+  (2) Per .omx/research/lane_12_v2_nerv_as_renderer_phase_a_design_20260509.md
+      and lane registry notes: Phase B (the $40 CUDA dispatch on score-aware
+      loss) is gated behind 5 reactivation preconditions. `--auth-eval`
+      requires `--phase-b-auth-memo` (Catalog #150 STRICT) — the auth memo
+      must live in .omx/research/operator_authorizations/ and be committed.
+
+  Per Catalog #146/#163, dispatch is REFUSED until the remote driver lands
+  AND the Phase B preconditions are met.
+
+dispatch_blockers:
+  - remote_driver_missing
+  - phase_b_preconditions_not_met
+  - operator_phase_b_authorization_memo_required_per_catalog_150
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: "Phase B target: <0.21 sub-Quantizr-band [predicted; council Phase A design]"
+predicted_delta: "Phase B prediction: -0.020 to -0.080 vs PR101 0.193 [predicted; design memo $9]"
+predicted_delta_basis: ".omx/research/lane_12_v2_nerv_as_renderer_phase_a_design_20260509.md"
+literature_anchor: "Lane 12 v2 — NeRV-as-renderer rescope per HNeRV retrospective lesson 5 (paradigm_alpha clarification 2026-05-06; replaces mask-only Lane 12)"
+
+risk: |
+  TRADITION 2 substrate. Trainer is the most production-mature in the
+  TRADITION 2 set (479 LOC + 20 tests + ALL CLAUDE.md non-negotiables wired:
+  eval_roundtrip True + EMA 0.997 snapshot+restore + differentiable YUV6 +
+  score-aware Lagrangian + CUDA-required default + no MPS + no /tmp + Phase B
+  Option C auth_memo_path Catalog #150).
+
+  Phase B authorization gate: `--auth-eval` is REFUSED unless
+  `--phase-b-auth-memo` points to a committed repo-relative file under
+  .omx/research/operator_authorizations/ that contains
+  `operator_phase_b_authorization=true` outside any code-fence. This is
+  STRICT per Catalog #150.
+
+  Architectural note: 8-archive-grammar-fields declared at design time per
+  Catalog #124 (archive_grammar=L12V_monolithic_single_file_0_bin
+  parser_section_manifest=ARCHIVE_GRAMMAR_constant_in_module
+  inflate_runtime_loc_budget=100 runtime_dep_closure=torch+brotli
+  export_format=monolithic_single_file_0_bin_with_int8_per_tensor_fp16_scales
+  score_aware_loss=gradient_through_FastViT-T12_PoseNet_and_EfficientNet-B2_SegNet_on_upstream_videos_0_mkv
+  bolt_on_loc_budget=350 no_op_detector_planned=true_via_test_archive_roundtrip_via_inflate_module).
+
+  TIER manifest gap: trainer has `--enable-differentiable-yuv6` and
+  `--enable-score-aware-loss` flags but no formal TIER_<N>_OPERATOR_REQUIRED_FLAGS
+  manifest yet. Catalog #151 STRICT will require the manifest before wrapper
+  unification.
+envelope_status: "DEFERRED: remote driver gap + Phase B auth gate"
+
+remote_driver: scripts/remote_lane_substrate_lane_12_v2_nerv_as_renderer.sh  # MISSING
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default); operator must thread"
+  - flag: --phase-b-auth-memo
+    note: "REQUIRED to enable --auth-eval (Catalog #150); points to committed memo under .omx/research/operator_authorizations/"
+
+argparse_inventory:
+  trainer: experiments/train_lane_12_v2_nerv_as_renderer.py
+  flags:
+    - --output-dir (Path, required)
+    - --device (cuda|cpu, default=cuda; mps REFUSED at argparse level)
+    - --epochs (int, default=200)
+    - --batch-size (int, default=8)
+    - --learning-rate (float, default=1e-3)
+    - --ema-decay (float, default=0.997)
+    - --latent-dim (int, default=16)
+    - --base-channels (int, default=36)
+    - --n-pairs (int, default=600)
+    - --lambda-seg (float, default=100.0)
+    - --lambda-pose (float, default=288.6751345948129)
+    - --grad-clip-norm (float, default=1.0)
+    - --video-path (Path, default=upstream/videos/0.mkv)
+    - --max-pairs (int, default=None)
+    - --enable-differentiable-yuv6 (bool, default=True)
+    - --enable-score-aware-loss (bool, default=True)
+    - --seed (int, default=20260511)
+    - --smoke (bool, default=False)
+    - --auth-eval (bool, default=False; REFUSED unless --phase-b-auth-memo)
+    - --phase-b-auth-memo (str, default=None; Catalog #150 gate)
+    - --eval-every-epochs (int, default=25)
+
+env_overrides:
+  LANE_12_V2_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  LANE_12_V2_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  LANE_12_V2_OUTPUT_DIR: /workspace/pact/lane_substrate_lane_12_v2_nerv_results/output
+  LANE_12_V2_EPOCHS: "2000"
+  LANE_12_V2_BATCH_SIZE: "8"
+  LANE_12_V2_UPSTREAM_DIR: /workspace/pact/upstream
+  LANE_12_V2_DEVICE: cuda
+  LANE_12_V2_PHASE_B_AUTH_MEMO: ""  # operator must populate with committed repo path
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py
+  - tools/append_cost_band_anchor.py
+  - upstream/videos/0.mkv
+  - experiments/train_lane_12_v2_nerv_as_renderer.py
+  - src/tac/lane_12_v2_nerv_as_renderer.py (1250 LOC; canonical module)
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - "[MISSING] scripts/remote_lane_substrate_lane_12_v2_nerv_as_renderer.sh"
+  - "[MISSING] .omx/research/operator_authorizations/phase_b_auth_lane_12_v2_<YYYYMMDD>.md"
+
+reactivation_criteria: |
+  1. scripts/remote_lane_substrate_lane_12_v2_nerv_as_renderer.sh built per
+     the canonical pattern (Catalog #163 sentinel-source; Catalog #146
+     inflate contract; Catalog #152 input validation).
+  2. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed in the trainer
+     (council review required).
+  3. Operator-Phase-B-authorization memo committed at .omx/research/
+     operator_authorizations/phase_b_auth_lane_12_v2_<YYYYMMDD>.md with
+     line-level `operator_phase_b_authorization=true` outside any code-fence.
+  4. Phase B 5 reactivation preconditions per Phase A design memo $6 met.
+  5. Local smoke verifies inflate.sh emits a contest-compliant 0.bin.
+  6. Catalog #152 validates --video-path resolves before dispatch.
+
+notes: |
+  TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
+  Lane id `lane_12_v2_nerv_as_renderer` registered at L1 with full
+  Catalog #124 8-field declaration. The trainer is the most production-mature
+  in TRADITION 2.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when remote driver lands,
+  must register harvest hook within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": first anchor must be
+  tagged [contest-CUDA] (NVIDIA GPU on Linux; never MPS); CPU axis required
+  separately on Linux x86_64 before any submission claim.
+
+  Per CLAUDE.md "KILL is LAST RESORT": Phase B has not been falsified;
+  deferral is for missing infrastructure (remote driver + auth memo), not a
+  research-path-exhaustion verdict.
+
+  Cross-ref:
+    .omx/research/substrate_tradition_taxonomy_20260512.md
+    .omx/research/lane_12_v2_nerv_as_renderer_phase_a_design_20260509.md
+    feedback_phase_b_option_c_landed_20260509.md
+    .omx/state/lane_registry.json#lane_12_v2_nerv_as_renderer
