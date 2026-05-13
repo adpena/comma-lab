@@ -259,9 +259,13 @@ def _evaluate_one_archive(
     archive_sha256 = _sha256_of(archive)
     started = time.perf_counter()
     if dry_run:
-        score = None
-        d_seg = None
-        d_pose = None
+        # Dry-run: emit a sentinel score=0.0 so the manifest builder can
+        # construct a row. The row is still tagged non-promotable advisory;
+        # callers parse the manifest and observe ``score_macos_cpu`` is the
+        # sentinel value (paired with the dry_run=True eval payload).
+        score: float | None = 0.0
+        d_seg: float | None = 0.0
+        d_pose: float | None = 0.0
         eval_payload: dict[str, Any] = {"dry_run": True}
     else:
         import tempfile
@@ -329,8 +333,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.archive is not None:
         archives = [args.archive]
     else:
-        # Glob mode.
-        archives = sorted(Path().glob(args.archives))
+        # Glob mode. Use Python's glob module to support both relative and
+        # absolute patterns.
+        import glob as _glob
+
+        archives = sorted(Path(p) for p in _glob.glob(args.archives))
         if not archives:
             print(
                 f"[macos-cpu-advisory-proxy] no archives matched glob: {args.archives!r}",
