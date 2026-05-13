@@ -4,13 +4,12 @@ import os
 from pathlib import Path
 
 import tac.preflight as preflight
-
 from tac.preflight import (
     _ParallelPreflightRunner,
     _preflight_all_clean_cache_hit,
     _preflight_developer_clean_cache_hit,
-    _store_preflight_developer_clean_cache,
     _store_preflight_all_clean_cache,
+    _store_preflight_developer_clean_cache,
 )
 
 
@@ -187,7 +186,7 @@ def test_prewarm_preflight_source_index_populates_common_fact_groups(
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
 
-    from tac.source_index import SourceIndex, source_index_context
+    from tac.source_index import source_index_context
 
     monkeypatch.setattr(preflight, "REPO_ROOT", tmp_path)
     with source_index_context(tmp_path) as index:
@@ -363,6 +362,40 @@ def test_preflight_all_clean_cache_ignores_rebuildable_research_artifacts(tmp_pa
     )
     assert hit is True
     assert all(".omx/research/artifacts" not in path.as_posix() for path in paths_after)
+
+
+def test_preflight_all_clean_cache_ignores_generated_timing_profiles(tmp_path):
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")
+    reports = tmp_path / "reports"
+    reports.mkdir()
+
+    hit, token, paths = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+    _store_preflight_all_clean_cache(tmp_path, cache_token=token, paths=paths)
+
+    timing_profile = reports / "preflight_all_timing_current_codex.json"
+    timing_profile.write_text('{"wall_elapsed_s": 47.4}\n')
+
+    hit, _, paths_after = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is True
+    assert timing_profile not in paths_after
 
 
 def test_preflight_all_clean_cache_misses_after_source_change(tmp_path):

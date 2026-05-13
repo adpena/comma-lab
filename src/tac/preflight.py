@@ -332,6 +332,7 @@ def _preflight_all_fingerprint_paths(
         ".omx/research/artifacts/**",
         "__pycache__/**",
         "experiments/results/**",
+        "reports/preflight*_timing*.json",
         "reports/raw/**",
         "reports/private/**",
     )
