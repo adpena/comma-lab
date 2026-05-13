@@ -155,11 +155,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--runtime-consumption-proof",
-        action="store_true",
+        nargs="?",
+        const="__BARE_BOOLEAN_FORBIDDEN__",
+        default=None,
+        metavar="JSON",
         help=(
-            "REQUIRED for optimize mode. Asserts the caller has independently "
-            "proved the new archive bytes are consumed by inflate.sh / "
-            "inflate.py (e.g. via byte-mutation smoke or full-frame parity)."
+            "REQUIRED for optimize mode. Path to a typed JSON proof that "
+            "binds the candidate archive SHA, runtime content SHA, and "
+            "consumed byte/section evidence. A bare boolean flag is refused."
         ),
     )
     parser.add_argument(
@@ -189,6 +192,19 @@ def main(argv: list[str] | None = None) -> int:
     input_packet = args.input_packet
     if not input_packet.is_absolute():
         input_packet = REPO_ROOT / input_packet
+    runtime_proof = args.runtime_consumption_proof
+    if runtime_proof == "__BARE_BOOLEAN_FORBIDDEN__":
+        print(
+            "[deterministic-packet-compiler] FAIL: "
+            "--runtime-consumption-proof now requires a JSON proof path; "
+            "bare boolean acknowledgement is forbidden",
+            file=sys.stderr,
+        )
+        return 2
+    if runtime_proof is not None:
+        runtime_proof = Path(runtime_proof)
+        if not runtime_proof.is_absolute():
+            runtime_proof = REPO_ROOT / runtime_proof
 
     try:
         result: DeterministicPacketResult = compile_packet(
@@ -199,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
             baseline_archive_sha256=args.baseline_archive_sha256,
             baseline_archive_size_bytes=args.baseline_archive_size_bytes,
             score_affecting_payload_changed=args.score_affecting_payload_changed,
-            runtime_consumption_proof=args.runtime_consumption_proof,
+            runtime_consumption_proof=runtime_proof,
             allow_existing_output_dir=args.allow_existing_output_dir,
         )
     except DeterministicPacketCompilerError as exc:

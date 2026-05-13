@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 
+import tac.packet_compiler.deterministic_compiler as compiler
 from tac.packet_compiler.deterministic_compiler import (
     COMPILER_MODES,
     DETERMINISTIC_ZIP_DATE_TIME,
@@ -150,6 +151,20 @@ def _write_packet_with_hidden_sidecar(root: Path) -> Path:
     _write_canonical_packet(root)
     (root / "secret_sidecar.bin").write_bytes(b"hidden")
     return root
+
+
+def _runtime_consumption_proof_for_packet(packet: Path) -> dict[str, object]:
+    """Return a minimal typed proof bound to the fixture packet."""
+
+    return {
+        "schema": "deterministic_compiler_test_runtime_consumption_proof_v1",
+        "mutated_archive_sha256": sha256_file(packet / "archive.zip"),
+        "runtime_inflate_py_sha256": sha256_file(packet / "inflate.py"),
+        "runtime_sidecar_decode_consumption_claim": True,
+        "runtime_sidecar_apply_consumption_claim": True,
+        "score_affecting_section_names": ["renderer.bin"],
+        "sections": [{"name": "renderer.bin", "bytes": 22}],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +338,7 @@ def test_optimize_mode_requires_baseline(tmp_path: Path) -> None:
             mode="optimize",
             target_profile="contest_one_video_replay",
             score_affecting_payload_changed=True,
-            runtime_consumption_proof=True,
+            runtime_consumption_proof=_runtime_consumption_proof_for_packet(packet),
         )
 
 
@@ -344,6 +359,26 @@ def test_optimize_mode_requires_runtime_consumption_proof(
         )
 
 
+def test_optimize_mode_refuses_bare_boolean_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    packet = _write_canonical_packet(tmp_path / "packet")
+    with pytest.raises(
+        DeterministicPacketCompilerError,
+        match="bare booleans are forbidden",
+    ):
+        compile_packet(
+            input_packet=packet,
+            output_dir=tmp_path / "out",
+            mode="optimize",
+            target_profile="contest_one_video_replay",
+            score_affecting_payload_changed=True,
+            baseline_archive_sha256="0" * 64,
+            baseline_archive_size_bytes=100,
+            runtime_consumption_proof=True,
+        )
+
+
 def test_optimize_mode_writes_no_op_proof_with_byte_delta(tmp_path: Path) -> None:
     packet = _write_canonical_packet(tmp_path / "packet")
     result = compile_packet(
@@ -354,12 +389,64 @@ def test_optimize_mode_writes_no_op_proof_with_byte_delta(tmp_path: Path) -> Non
         score_affecting_payload_changed=True,
         baseline_archive_sha256="0" * 64,
         baseline_archive_size_bytes=100,
-        runtime_consumption_proof=True,
+        runtime_consumption_proof=_runtime_consumption_proof_for_packet(packet),
     )
     assert result.no_op_proof["score_affecting_payload_changed"] is True
     assert result.no_op_proof["sha_changed"] is True
     assert result.no_op_proof["runtime_consumption_proof"] is True
+    assert result.no_op_proof["runtime_consumption_proof_source"] == "<mapping>"
     assert result.no_op_proof["no_op_detector_passed"] is True
+
+
+def test_optimize_mode_blocks_runtime_proof_archive_mismatch(
+    tmp_path: Path,
+) -> None:
+    packet = _write_canonical_packet(tmp_path / "packet")
+    proof = _runtime_consumption_proof_for_packet(packet)
+    proof["mutated_archive_sha256"] = "f" * 64
+
+    result = compile_packet(
+        input_packet=packet,
+        output_dir=tmp_path / "out",
+        mode="optimize",
+        target_profile="contest_one_video_replay",
+        score_affecting_payload_changed=True,
+        baseline_archive_sha256="0" * 64,
+        baseline_archive_size_bytes=100,
+        runtime_consumption_proof=proof,
+    )
+
+    assert any(
+        b.startswith("runtime_consumption_proof_archive_sha256_mismatch")
+        for b in result.blockers
+    )
+    assert result.no_op_proof["runtime_consumption_proof"] is False
+    assert result.no_op_proof["no_op_detector_passed"] is False
+
+
+def test_oracle_inspection_failure_is_blocker(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _write_canonical_packet(tmp_path / "packet")
+
+    def _raise_oracle(*args, **kwargs):
+        raise compiler._OraclePacketCompilerError("fixture oracle failure")
+
+    monkeypatch.setattr(compiler, "_oracle_inspect_packet", _raise_oracle)
+
+    result = compile_packet(
+        input_packet=packet,
+        output_dir=tmp_path / "out",
+        mode="identity",
+        target_profile="contest_one_video_replay",
+    )
+
+    assert "packet_oracle_inspect_failed:fixture oracle failure" in result.blockers
+    manifest = json.loads(
+        (Path(result.output_dir) / MANIFEST_NAME).read_text(encoding="utf-8")
+    )
+    assert "packet_oracle_inspect_failed:fixture oracle failure" in manifest["blockers"]
 
 
 # ---------------------------------------------------------------------------

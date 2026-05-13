@@ -81,6 +81,7 @@ from tac.packet_compiler.pr105_packed_state_schema import (
     pack_state_schema_size_sorted,
 )
 from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_ALLOWED_SINGLE_MEMBER_NAMES,
     PR106_DEFAULT_MEMBER_NAME,
     PR106_NO_OP_DIM,
     PR106_PR101_RANKED_SCHEMA,
@@ -381,6 +382,7 @@ __all__ = [
     "PackedStateSchemaEntry",
     "pack_state_schema_size_sorted",
     # PR106 — sidecar wrapper PacketIR identity parser/emitter
+    "PR106_ALLOWED_SINGLE_MEMBER_NAMES",
     "PR106_DEFAULT_MEMBER_NAME",
     "PR106_NO_OP_DIM",
     "PR106_PR101_RANKED_SCHEMA",

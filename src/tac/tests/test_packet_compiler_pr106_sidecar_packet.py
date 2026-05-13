@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import io
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -27,6 +29,17 @@ PR106_R2_PR101_ARCHIVE = (
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _single_member_zip(name: str, payload: bytes) -> bytes:
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        info.external_attr = 0o644 << 16
+        info.create_system = 3
+        zf.writestr(info, payload, compress_type=zipfile.ZIP_STORED)
+    return out.getvalue()
 
 
 @pytest.mark.parametrize(
@@ -70,6 +83,28 @@ def test_pr106_sidecar_packet_ir_identity_on_release_archives(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["archive_sha256"] == expected_archive_sha
     assert manifest["emitted_payload_sha256"] == _sha(member.payload)
+
+
+def test_single_member_archive_autodetects_x_member_and_preserves_name() -> None:
+    payload = b"\xfe\x01\x00\x00\x00\x00\x00\x00"
+    archive_bytes = _single_member_zip("x", payload)
+
+    member = read_single_stored_member_archive(archive_bytes)
+    emitted = emit_single_stored_member_archive(member)
+
+    assert member.name == "x"
+    assert member.payload == payload
+    assert emitted == archive_bytes
+
+
+def test_single_member_archive_explicit_expected_name_still_fails_closed() -> None:
+    archive_bytes = _single_member_zip("x", b"payload")
+
+    with pytest.raises(ValueError, match="expected ZIP member"):
+        read_single_stored_member_archive(
+            archive_bytes,
+            expected_member_name="0.bin",
+        )
 
 
 def test_pr106_sidecar_packet_rejects_unknown_format_id() -> None:

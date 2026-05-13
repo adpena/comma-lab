@@ -62,9 +62,11 @@ from __future__ import annotations
 import dataclasses
 import datetime as _dt
 import hashlib
+import json
 import shutil
 import stat
 import zipfile
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
 
@@ -234,6 +236,26 @@ class DeterministicPacketResult:
     blockers: tuple[str, ...]
 
 
+@dataclasses.dataclass(frozen=True)
+class RuntimeConsumptionProof:
+    """Typed runtime-consumption proof bound to candidate packet custody.
+
+    Optimize mode can change score-affecting bytes only when the caller
+    supplies structured evidence. A bare boolean is not evidence: the proof
+    must tie the candidate archive SHA, runtime content SHA, and consumed
+    byte/section evidence to this packet.
+    """
+
+    payload: dict[str, Any]
+    source: str
+    proof_sha256: str | None = None
+
+
+RuntimeConsumptionProofInput = (
+    RuntimeConsumptionProof | Mapping[str, Any] | Path | str | None
+)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -386,6 +408,180 @@ def _parser_section_manifest(
     }
 
 
+_ARCHIVE_SHA_KEYS = frozenset(
+    {
+        "archive_sha256",
+        "candidate_archive_sha256",
+        "new_archive_sha256",
+        "mutated_archive_sha256",
+        "output_archive_sha256",
+    }
+)
+_RUNTIME_TREE_SHA_KEYS = frozenset(
+    {
+        "runtime_tree_sha256",
+        "candidate_runtime_tree_sha256",
+        "runtime_content_sha256",
+    }
+)
+_RUNTIME_FILE_SHA_KEYS = frozenset(
+    {
+        "runtime_inflate_py_sha256",
+        "inflate_py_sha256",
+        "candidate_inflate_py_sha256",
+    }
+)
+_SECTION_EVIDENCE_KEYS = frozenset(
+    {
+        "consumed_sections",
+        "consumed_section_names",
+        "runtime_consumed_sections",
+        "consumed_member_names",
+        "changed_sections_consumed",
+        "consumed_byte_ranges",
+        "consumed_streams",
+        "read_members",
+        "score_affecting_section_names",
+        "sections",
+    }
+)
+_RUNTIME_CONSUMPTION_TRUE_KEYS = frozenset(
+    {
+        "runtime_consumption_claim",
+        "runtime_consumes_payload_bytes",
+        "runtime_sidecar_apply_consumption_claim",
+        "runtime_sidecar_decode_consumption_claim",
+        "full_frame_inflate_output_parity_claim",
+    }
+)
+
+
+def _is_sha256_hex(value: Any) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(c in "0123456789abcdefABCDEF" for c in value)
+
+
+def _collect_values_by_key(obj: Any, keys: frozenset[str]) -> list[Any]:
+    values: list[Any] = []
+    if isinstance(obj, Mapping):
+        for key, value in obj.items():
+            if str(key) in keys:
+                values.append(value)
+            values.extend(_collect_values_by_key(value, keys))
+    elif isinstance(obj, list):
+        for item in obj:
+            values.extend(_collect_values_by_key(item, keys))
+    return values
+
+
+def _collect_sha_values(obj: Any, keys: frozenset[str]) -> list[str]:
+    return [
+        str(value).lower()
+        for value in _collect_values_by_key(obj, keys)
+        if _is_sha256_hex(value)
+    ]
+
+
+def _has_runtime_consumption_evidence(payload: Mapping[str, Any]) -> bool:
+    section_values = _collect_values_by_key(payload, _SECTION_EVIDENCE_KEYS)
+    has_sections = any(
+        isinstance(value, list) and len(value) > 0 for value in section_values
+    )
+    truth_values = _collect_values_by_key(
+        payload, _RUNTIME_CONSUMPTION_TRUE_KEYS,
+    )
+    has_runtime_claim = any(value is True for value in truth_values)
+    return has_sections and has_runtime_claim
+
+
+def _load_runtime_consumption_proof(
+    proof: RuntimeConsumptionProofInput,
+) -> RuntimeConsumptionProof | None:
+    if proof is None:
+        return None
+    if isinstance(proof, bool):
+        raise DeterministicPacketCompilerError(
+            "runtime_consumption_proof must be a typed proof mapping or JSON "
+            "path; bare booleans are forbidden"
+        )
+    if isinstance(proof, RuntimeConsumptionProof):
+        return proof
+    if isinstance(proof, Mapping):
+        return RuntimeConsumptionProof(payload=dict(proof), source="<mapping>")
+
+    path = Path(proof)
+    if not path.is_file():
+        raise DeterministicPacketCompilerError(
+            f"runtime_consumption_proof path does not exist: {path}"
+        )
+    raw = path.read_bytes()
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise DeterministicPacketCompilerError(
+            f"runtime_consumption_proof is not valid JSON: {path}: {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise DeterministicPacketCompilerError(
+            f"runtime_consumption_proof must decode to a JSON object: {path}"
+        )
+    return RuntimeConsumptionProof(
+        payload=payload,
+        source=str(path),
+        proof_sha256=sha256_bytes(raw),
+    )
+
+
+def _validate_runtime_consumption_proof(
+    proof: RuntimeConsumptionProof,
+    *,
+    new_archive_sha256: str,
+    runtime_tree_sha256: str,
+    packet_dir: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    payload = proof.payload
+
+    archive_shas = _collect_sha_values(payload, _ARCHIVE_SHA_KEYS)
+    if not archive_shas:
+        blockers.append("runtime_consumption_proof_archive_sha256_missing")
+    elif new_archive_sha256.lower() not in archive_shas:
+        blockers.append(
+            "runtime_consumption_proof_archive_sha256_mismatch:"
+            f"expected={new_archive_sha256},found={','.join(sorted(set(archive_shas)))}"
+        )
+
+    runtime_tree_shas = _collect_sha_values(payload, _RUNTIME_TREE_SHA_KEYS)
+    runtime_file_shas = _collect_sha_values(payload, _RUNTIME_FILE_SHA_KEYS)
+    if runtime_tree_shas:
+        if runtime_tree_sha256.lower() not in runtime_tree_shas:
+            blockers.append(
+                "runtime_consumption_proof_runtime_tree_sha256_mismatch:"
+                f"expected={runtime_tree_sha256},"
+                f"found={','.join(sorted(set(runtime_tree_shas)))}"
+            )
+    elif runtime_file_shas:
+        inflate_py = packet_dir / "inflate.py"
+        if not inflate_py.is_file():
+            blockers.append("runtime_consumption_proof_inflate_py_missing")
+        else:
+            actual = sha256_file(inflate_py).lower()
+            if actual not in runtime_file_shas:
+                blockers.append(
+                    "runtime_consumption_proof_inflate_py_sha256_mismatch:"
+                    f"expected={actual},"
+                    f"found={','.join(sorted(set(runtime_file_shas)))}"
+                )
+    else:
+        blockers.append("runtime_consumption_proof_runtime_sha256_missing")
+
+    if not _has_runtime_consumption_evidence(payload):
+        blockers.append("runtime_consumption_proof_consumed_sections_missing")
+
+    return blockers
+
+
 def _no_op_proof(
     *,
     mode: str,
@@ -394,7 +590,8 @@ def _no_op_proof(
     baseline_sha: str | None,
     baseline_size: int | None,
     score_affecting_payload_changed: bool,
-    runtime_consumption_proof: bool,
+    runtime_consumption_proof: RuntimeConsumptionProof | None,
+    runtime_consumption_proof_valid: bool,
 ) -> dict[str, Any]:
     proof: dict[str, Any] = {
         "schema_version": "deterministic_no_op_proof.v1",
@@ -410,7 +607,17 @@ def _no_op_proof(
         "sha_changed": (
             new_sha != baseline_sha if baseline_sha is not None else None
         ),
-        "runtime_consumption_proof": runtime_consumption_proof,
+        "runtime_consumption_proof": runtime_consumption_proof_valid,
+        "runtime_consumption_proof_source": (
+            runtime_consumption_proof.source
+            if runtime_consumption_proof is not None
+            else None
+        ),
+        "runtime_consumption_proof_sha256": (
+            runtime_consumption_proof.proof_sha256
+            if runtime_consumption_proof is not None
+            else None
+        ),
     }
     # For identity mode the contract is byte-for-byte parity. For
     # canonicalize mode score-affecting payload is unchanged by definition.
@@ -429,7 +636,7 @@ def _no_op_proof(
         proof["no_op_detector_passed"] = (
             score_affecting_payload_changed
             and (baseline_sha is None or new_sha != baseline_sha)
-            and runtime_consumption_proof
+            and runtime_consumption_proof_valid
         )
     else:
         proof["no_op_detector_passed"] = None
@@ -600,7 +807,7 @@ def compile_packet(
     baseline_archive_sha256: str | None = None,
     baseline_archive_size_bytes: int | None = None,
     score_affecting_payload_changed: bool = False,
-    runtime_consumption_proof: bool = False,
+    runtime_consumption_proof: RuntimeConsumptionProofInput = None,
     allow_existing_output_dir: bool = False,
 ) -> DeterministicPacketResult:
     """Compile a packet under the deterministic-compiler contract.
@@ -613,6 +820,9 @@ def compile_packet(
     if mode not in COMPILER_MODES:
         raise DeterministicPacketCompilerError(f"unknown mode: {mode}")
     policy = _profile_policy(target_profile)
+    typed_runtime_proof = _load_runtime_consumption_proof(
+        runtime_consumption_proof,
+    )
 
     input_path = Path(input_packet)
     if not input_path.exists():
@@ -649,11 +859,11 @@ def compile_packet(
                 "optimize mode requires baseline_archive_sha256 + "
                 "baseline_archive_size_bytes"
             )
-        if not runtime_consumption_proof:
+        if typed_runtime_proof is None:
             raise DeterministicPacketCompilerError(
-                "optimize mode requires runtime_consumption_proof=True; "
-                "byte-changing packets must prove the runtime reads the "
-                "new bytes (no-op detector)"
+                "optimize mode requires a typed runtime_consumption_proof "
+                "mapping or JSON path; byte-changing packets must prove the "
+                "runtime reads the new bytes (no-op detector)"
             )
     elif mode == "canonicalize":
         if score_affecting_payload_changed:
@@ -708,12 +918,16 @@ def compile_packet(
     blockers.extend(_scan_archive_zip_methods(new_archive))
 
     # Hidden sidecars.
+    oracle_error: str | None = None
     try:
         oracle_manifest = _oracle_inspect_packet(
             out_dir, target_profile="contest_one_video_replay",
         )
     except _OraclePacketCompilerError as exc:
+        oracle_error = str(exc)
         oracle_manifest = {"error": str(exc), "archive": {"members": []}}
+    if oracle_error is not None:
+        blockers.append(f"packet_oracle_inspect_failed:{oracle_error}")
     blockers.extend(_scan_hidden_sidecars(out_dir))
 
     # Identity-mode parser-divergence gate: archive SHA must match input.
@@ -738,6 +952,18 @@ def compile_packet(
         oracle_manifest.get("runtime_tree_manifest", {}).get("tree_sha256")
         or hashlib.sha256(b"").hexdigest()
     )
+    runtime_proof_blockers: list[str] = []
+    if mode == "optimize" and typed_runtime_proof is not None:
+        runtime_proof_blockers = _validate_runtime_consumption_proof(
+            typed_runtime_proof,
+            new_archive_sha256=new_sha,
+            runtime_tree_sha256=runtime_tree_sha,
+            packet_dir=out_dir,
+        )
+        blockers.extend(runtime_proof_blockers)
+    runtime_consumption_proof_valid = (
+        typed_runtime_proof is not None and not runtime_proof_blockers
+    )
     no_op_proof = _no_op_proof(
         mode=mode,
         new_sha=new_sha,
@@ -745,7 +971,8 @@ def compile_packet(
         baseline_sha=baseline_archive_sha256,
         baseline_size=baseline_archive_size_bytes,
         score_affecting_payload_changed=score_affecting_payload_changed,
-        runtime_consumption_proof=runtime_consumption_proof,
+        runtime_consumption_proof=typed_runtime_proof,
+        runtime_consumption_proof_valid=runtime_consumption_proof_valid,
     )
     parser_section_manifest = _parser_section_manifest(oracle_manifest)
     golden_vectors = _golden_vectors(
@@ -867,6 +1094,7 @@ __all__ = [
     "CompilerMode",
     "DeterministicPacketCompilerError",
     "DeterministicPacketResult",
+    "RuntimeConsumptionProof",
     "TargetProfile",
     "compile_packet",
     "inspect_packet_oracle",

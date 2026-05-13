@@ -34,6 +34,7 @@ PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
 )
 PR106_DEFAULT_MEMBER_NAME = "0.bin"
+PR106_ALLOWED_SINGLE_MEMBER_NAMES = (PR106_DEFAULT_MEMBER_NAME, "x")
 PR106_NO_OP_DIM = 255
 PR106_PR101_RANKED_SCHEMA = RankedSidecarSchema(
     n_pairs=600,
@@ -110,18 +111,28 @@ def sha256_hex(data: bytes) -> str:
 def read_single_stored_member_archive(
     archive_bytes: bytes,
     *,
-    expected_member_name: str = PR106_DEFAULT_MEMBER_NAME,
+    expected_member_name: str | None = None,
 ) -> StoredZipMember:
-    """Return the only stored member from a PR106-style archive ZIP."""
+    """Return the only stored member from a PR106-style archive ZIP.
+
+    Public HNeRV replay artifacts use both ``0.bin`` and single-member ``x``
+    packets. When no explicit member name is provided, accept the known
+    single-member packet names and preserve the original name on re-emit.
+    """
 
     with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as zf:
         infos = zf.infolist()
         if len(infos) != 1:
             raise ValueError(f"expected one ZIP member; got {len(infos)}")
         info = infos[0]
-        if info.filename != expected_member_name:
+        allowed_names = (
+            (expected_member_name,)
+            if expected_member_name is not None
+            else PR106_ALLOWED_SINGLE_MEMBER_NAMES
+        )
+        if info.filename not in allowed_names:
             raise ValueError(
-                f"expected ZIP member {expected_member_name!r}; got {info.filename!r}"
+                f"expected ZIP member in {allowed_names!r}; got {info.filename!r}"
             )
         if info.compress_type != zipfile.ZIP_STORED:
             raise ValueError(f"expected stored ZIP member; got method={info.compress_type}")

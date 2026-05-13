@@ -364,3 +364,51 @@ Adversarial verdict:
 Next exact action: retry lane_g_v3 GHA CPU eval from the CPU-torch-fixed
 workflow commit. This should spend the same free GHA runner minutes and remove
 the CUDA-wheel disk pressure from the prior attempt.
+
+## Follow-up: lane_g_v3 Retry7 launched + PacketIR proof hardening (2026-05-13)
+
+- Retry7 GHA run:
+  `https://github.com/adpena/comma-lab/actions/runs/25772267506`
+- Dispatch claim:
+  `lane_g_v3_gha_cpu_eval_l3_promotion_20260512_retry7` /
+  `gha_run_25772267506`.
+- HEAD:
+  `7b8f7db0e9620b45ce9ab36f345f377a46570593`.
+- Status at launch review:
+  setup passed through the inner `uv` environment and reached
+  `Run [contest-CPU] auth eval (canonical contest_auth_eval.py)`. That
+  confirms the CPU torch wheel fix cleared the prior disk-pressure setup
+  failure. No score claim exists until the uploaded artifact is harvested.
+
+Parallel hardening landed while the auth eval runs:
+
+- `tac.packet_compiler.deterministic_compiler.compile_packet(..., mode="optimize")`
+  now refuses bare boolean `runtime_consumption_proof=True`. Optimize mode
+  requires a typed proof mapping or JSON path tied to candidate archive SHA,
+  runtime content SHA, and consumed byte/section evidence.
+- Oracle inspection failures now become explicit
+  `packet_oracle_inspect_failed:<reason>` blockers instead of silently
+  producing an empty-manifest runtime hash.
+- PR106 PacketIR archive helpers now auto-detect both known single-member
+  packet names, `0.bin` and `x`, while still preserving explicit
+  `expected_member_name` fail-closed behavior. This keeps public HNeRV
+  replay/repack artifacts on the same canonical parser surface instead of
+  creating `0.bin`-only one-offs.
+- Verification:
+  - `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_packet_compiler_pr106_sidecar_packet.py src/tac/tests/test_deterministic_compiler.py -q`
+    -> `49 passed`.
+  - `.venv/bin/ruff check src/tac/packet_compiler/deterministic_compiler.py src/tac/packet_compiler/pr106_sidecar_packet.py src/tac/packet_compiler/__init__.py src/tac/tests/test_deterministic_compiler.py src/tac/tests/test_packet_compiler_pr106_sidecar_packet.py tools/build_deterministic_packet.py`
+    -> pass.
+  - `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_materialize_residual_pr106_sidecars.py -q`
+    -> `48 passed`.
+  - `GITHUB_ACTIONS=true PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 PACT_PREFLIGHT_PARALLEL_WORKERS=8 PYTHONPATH=src:upstream:$PWD /usr/bin/time -p .venv/bin/python -m tac.preflight`
+    -> `PREFLIGHT PASSED`, `real 9.53`.
+
+Score-lowering implication:
+
+- PacketIR/sidecar byte transforms can still be pursued aggressively, but the
+  compiler no longer lets a candidate cross from byte-changing planning into
+  exact-eval staging on a boolean assertion. The shortest safe next PacketIR
+  path remains: identity parse/re-emit -> typed runtime-consumption proof ->
+  same-runtime/full-frame parity or exact auth eval -> score claim only from
+  harvested `[contest-CUDA]` / `[contest-CPU]` artifacts.
