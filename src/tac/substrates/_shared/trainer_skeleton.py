@@ -44,6 +44,7 @@ import hashlib
 import json
 import os
 import random
+import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -130,6 +131,29 @@ def git_head_sha(repo_root: Path | None = None) -> str:
 def utc_now_iso() -> str:
     """UTC ISO-8601 timestamp suitable for provenance/stage logs."""
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def vendor_shared_inflate_runtime(
+    submission_dir: Path,
+    *,
+    repo_root: Path | None = None,
+) -> None:
+    """Copy the shared raw-output inflate helper into a submission runtime tree.
+
+    Substrate archives vendor only the minimal inflate-time package. Any
+    substrate runtime importing ``tac.substrates._shared.inflate_runtime`` must
+    call this helper from its trainer ``_write_runtime`` path, otherwise local
+    source-tree tests pass while contest auth eval fails with an import error.
+    """
+
+    root = repo_root if repo_root is not None else REPO_ROOT
+    shared_src = root / "src" / "tac" / "substrates" / "_shared" / "inflate_runtime.py"
+    if not shared_src.is_file():
+        raise FileNotFoundError(f"shared inflate runtime helper missing: {shared_src}")
+    shared_dst = submission_dir / "src" / "tac" / "substrates" / "_shared"
+    shared_dst.mkdir(parents=True, exist_ok=True)
+    (shared_dst / "__init__.py").write_text("", encoding="utf-8")
+    shutil.copy2(shared_src, shared_dst / "inflate_runtime.py")
 
 
 def detect_hardware_substrate(

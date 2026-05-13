@@ -70,6 +70,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -92,6 +93,9 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
 
 _SUBSTRATE_TAG = "sane_hnerv"
@@ -451,6 +455,18 @@ def _write_runtime(submission_dir: Path) -> None:
       the documented ≤ 200 LOC waiver for substrate engineering).
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
+    runtime_pkg = submission_dir / "src" / "tac" / "substrates" / "sane_hnerv"
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+        runtime_pkg / "__init__.py",
+    ):
+        pkg_init.write_text("", encoding="utf-8")
+    substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "sane_hnerv"
+    for name in ("architecture.py", "archive.py", "inflate.py"):
+        shutil.copy2(substrate_src / name, runtime_pkg / name)
+    _canon_vendor_shared_inflate_runtime(submission_dir, repo_root=REPO_ROOT)
 
     inflate_sh = (
         "#!/usr/bin/env bash\n"
@@ -476,8 +492,8 @@ def _write_runtime(submission_dir: Path) -> None:
         "#!/usr/bin/env python\n"
         "\"\"\"sane_hnerv contest-compliant inflate runtime.\n"
         "\n"
-        "Reads archive_dir/0.bin via the packaged substrate parser, then for\n"
-        "each base in file_list writes per-frame .png under output_dir/<base>/.\n"
+        "Reads archive_dir/0.bin via the packaged substrate parser, then writes\n"
+        "one contest .raw tensor stream per file_list entry.\n"
         "No scorer-network imports (strict-scorer-rule contract).\n"
         "\"\"\"\n"
         "import sys\n"
@@ -485,7 +501,7 @@ def _write_runtime(submission_dir: Path) -> None:
         "\n"
         "HERE = Path(__file__).resolve().parent\n"
         "sys.path.insert(0, str(HERE / 'src'))\n"
-        "from tac.substrates.sane_hnerv.inflate import inflate_one_video\n"
+        "from tac.substrates.sane_hnerv.inflate import inflate_one_video, raw_output_path, select_inflate_device\n"
         "\n"
         "def main() -> int:\n"
         "    if len(sys.argv) != 4:\n"
@@ -496,12 +512,12 @@ def _write_runtime(submission_dir: Path) -> None:
         "    output_dir = Path(sys.argv[2])\n"
         "    file_list_path = Path(sys.argv[3])\n"
         "    archive_bytes = (archive_dir / '0.bin').read_bytes()\n"
+        "    device = select_inflate_device()\n"
         "    for line in file_list_path.read_text(encoding='utf-8').splitlines():\n"
         "        line = line.strip()\n"
         "        if not line:\n"
         "            continue\n"
-        "        base = line.rsplit('.', 1)[0]\n"
-        "        inflate_one_video(archive_bytes, output_dir / base, device='cpu')\n"
+        "        inflate_one_video(archive_bytes, raw_output_path(output_dir, line), device=device)\n"
         "    return 0\n"
         "\n"
         "if __name__ == '__main__':\n"
@@ -535,6 +551,13 @@ def _build_archive_zip(
             zi = zipfile.ZipInfo(name, date_time=fixed_ts)
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, src.read_bytes())
+        runtime_root = submission_dir / "src"
+        if runtime_root.is_dir():
+            for src in sorted(runtime_root.rglob("*.py")):
+                rel = src.relative_to(submission_dir).as_posix()
+                zi = zipfile.ZipInfo(rel, date_time=fixed_ts)
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                zf.writestr(zi, src.read_bytes())
 
 
 # ---------------------------------------------------------------------------

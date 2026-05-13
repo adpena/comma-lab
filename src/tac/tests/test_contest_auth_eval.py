@@ -362,7 +362,11 @@ def test_evidence_contract_keeps_cuda_t4_exact_eval_non_promotional(cae) -> None
     contract = cae._auth_eval_evidence_contract(
         "cuda",
         600,
-        {"gpu_t4_match": True},
+        {
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "gpu_t4_match": True,
+        },
     )
 
     assert contract["evidence_grade"] == "contest-CUDA"
@@ -645,6 +649,42 @@ def test_auth_eval_evidence_contract_marks_non_t4_cuda_as_diagnostic_axis(cae) -
             "platform_system": "Linux",
             "platform_machine": "x86_64",
             "gpu_t4_match": False,
+        },
+    )
+
+    assert contract["evidence_grade"] == "B"
+    assert contract["lane_tag"] == "[diagnostic-auth-eval]"
+    assert contract["score_axis"] == "diagnostic_cuda"
+    assert contract["score_claim"] is False
+
+
+def test_auth_eval_evidence_contract_accepts_linux_a100_cuda_axis(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cuda",
+        600,
+        {
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "gpu_t4_match": False,
+            "gpu_model": "NVIDIA A100-SXM4-40GB",
+        },
+    )
+
+    assert contract["evidence_grade"] == "contest-CUDA"
+    assert contract["score_axis"] == "contest_cuda"
+    assert contract["score_claim"] is True
+    assert contract["exact_cuda_eval_complete"] is True
+
+
+def test_auth_eval_evidence_contract_requires_linux_for_cuda_axis(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cuda",
+        600,
+        {
+            "platform_system": "Windows",
+            "platform_machine": "AMD64",
+            "gpu_t4_match": False,
+            "gpu_model": "NVIDIA A100-SXM4-40GB",
         },
     )
 

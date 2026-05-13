@@ -1394,6 +1394,7 @@ def _auth_eval_evidence_contract(
     is_cuda_contest_full = (
         device == "cuda"
         and n_samples == 600
+        and is_linux_x86_64
         and _gpu_contest_faithful_cuda
     )
     # Kept as alias for backward-compat with any external consumers that

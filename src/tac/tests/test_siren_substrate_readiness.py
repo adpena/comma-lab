@@ -77,13 +77,12 @@ def parse_archive(): pass
     _write(
         repo / "src/tac/substrates/siren/inflate.py",
         """
-import zlib
-def _write_png_rgb(path, rgb_uint8):
-    return zlib.compress(b"x")
+from tac.substrates._shared.inflate_runtime import write_rgb_pair_to_raw
 def inflate_one_video(): pass
 def main_cli(): pass
 parse_archive = object()
 SirenSubstrate = object
+# contest .raw output contract
 """,
     )
     _write(
@@ -155,3 +154,12 @@ def test_live_cli_json_is_fail_closed_but_locally_ready() -> None:
     assert payload["ready_for_remote_dispatch"] is False
     assert "active_lane_dispatch_claim_required_before_gpu_spend" in payload["dispatch_blockers"]
     assert payload["score_claim"] is False
+
+
+def test_live_trainer_requires_contest_cuda_auth_eval_claim() -> None:
+    text = (REPO / "experiments/train_substrate_siren.py").read_text(encoding="utf-8")
+
+    assert "parse_auth_eval_score_claim" in text
+    assert 'required_score_axis="contest_cuda"' in text
+    assert "No [contest-CUDA] score claim" in text
+    assert "raise RuntimeError(diagnostic)" in text

@@ -7,7 +7,8 @@ will be a one-line passthrough to ``main_cli`` at packet-build time. Forward pat
 2. ``parse_archive(bytes)`` -> (synth_sd, ar_prior_sd, latents_coarse, latents_fine, meta).
 3. Build the substrate from ``meta`` (deterministic, no training).
 4. Load state_dicts; copy latents.
-5. For each pair index, render (rgb_0, rgb_1); save PNGs.
+5. For each pair index, render (rgb_0, rgb_1); append to one contest ``.raw``
+   tensor file.
 
 L4 budget: <= 100 LOC, <= 2 external deps (torch, brotli; numpy is torch transitive).
 """
@@ -19,19 +20,25 @@ from pathlib import Path
 
 import torch
 
+from tac.substrates._shared.inflate_runtime import (
+    raw_output_path,
+    select_inflate_device,
+    write_rgb_pair_to_raw,
+)
 from .archive import parse_archive
 from .architecture import CoolChicConfig, CoolChicSubstrate
 
 
 def inflate_one_video(
     archive_bytes: bytes,
-    output_dir: Path,
+    output_raw_path: Path,
     *,
-    device: str = "cpu",
-) -> None:
-    """Inflate one archive's bytes into ``output_dir/<frame_idx>.png`` files."""
+    device: str | None = None,
+) -> int:
+    """Inflate one archive's bytes into one contest ``.raw`` file."""
     arc = parse_archive(archive_bytes)
     meta = arc.meta
+    render_device = select_inflate_device(device)
 
     cfg = CoolChicConfig(
         latent_channels_coarse=int(arc.latents_coarse.shape[1]),
@@ -46,7 +53,7 @@ def inflate_one_video(
         output_width=int(meta["output_width"]),
     )
 
-    model = CoolChicSubstrate(cfg).to(device).eval()
+    model = CoolChicSubstrate(cfg).to(render_device).eval()
     model.synthesis.load_state_dict(arc.synthesis_state_dict, strict=False)
     model.ar_prior_coarse.load_state_dict(
         {k.replace("coarse.", ""): v for k, v in arc.ar_prior_state_dict.items() if k.startswith("coarse.")},
@@ -57,22 +64,18 @@ def inflate_one_video(
         strict=False,
     )
     with torch.no_grad():
-        model.latents_coarse.copy_(arc.latents_coarse.to(device=device, dtype=model.latents_coarse.dtype))
-        model.latents_fine.copy_(arc.latents_fine.to(device=device, dtype=model.latents_fine.dtype))
+        model.latents_coarse.copy_(arc.latents_coarse.to(device=render_device, dtype=model.latents_coarse.dtype))
+        model.latents_fine.copy_(arc.latents_fine.to(device=render_device, dtype=model.latents_fine.dtype))
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    from PIL import Image  # type: ignore[import-not-found]
-
+    output_raw_path.parent.mkdir(parents=True, exist_ok=True)
+    frames_written = 0
     with torch.no_grad():
-        for pair_idx in range(cfg.num_pairs):
-            idx_tensor = torch.tensor([pair_idx], device=device, dtype=torch.long)
-            rgb_0, rgb_1 = model(idx_tensor)
-            for off, rgb in ((0, rgb_0), (1, rgb_1)):
-                frame_idx = 2 * pair_idx + off
-                arr = (rgb[0].clamp(0.0, 1.0).permute(1, 2, 0).cpu().numpy() * 255.0)
-                arr = arr.round().clip(0, 255).astype("uint8")
-                Image.fromarray(arr).save(output_dir / f"{frame_idx}.png")
+        with output_raw_path.open("wb") as fh:
+            for pair_idx in range(cfg.num_pairs):
+                idx_tensor = torch.tensor([pair_idx], device=render_device, dtype=torch.long)
+                rgb_0, rgb_1 = model(idx_tensor)
+                frames_written += write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
+    return frames_written
 
 
 def main_cli() -> int:
@@ -88,10 +91,12 @@ def main_cli() -> int:
     file_list_path = Path(sys.argv[3])
 
     file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
+    archive_bytes = (archive_dir / "0.bin").read_bytes()
+    device = select_inflate_device()
     for fname in file_list:
-        base = Path(fname).stem
-        archive_bytes = (archive_dir / "0.bin").read_bytes()
-        inflate_one_video(archive_bytes, output_dir / base, device="cpu")
+        if not fname.strip():
+            continue
+        inflate_one_video(archive_bytes, raw_output_path(output_dir, fname), device=device)
     return 0
 
 

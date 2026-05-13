@@ -17,6 +17,7 @@ from tac.substrates.siren.archive import (
     pack_archive,
     parse_archive,
 )
+from tac.substrates._shared.inflate_runtime import CAMERA_HW
 from tac.substrates.siren.inflate import inflate_one_video
 
 
@@ -229,7 +230,7 @@ def test_byte_mutation_changes_archive_no_op_proof():
     )
 
 
-def test_inflate_one_video_writes_png_without_pil(tmp_path):
+def test_inflate_one_video_writes_contest_raw(tmp_path, monkeypatch):
     cfg, _, sd, meta = _build_smoke_inputs()
     blob = pack_archive(
         sd,
@@ -241,11 +242,15 @@ def test_inflate_one_video_writes_png_without_pil(tmp_path):
         output_width=cfg.output_width,
     )
 
-    inflate_one_video(blob, tmp_path, device="cpu")
+    monkeypatch.setenv("PACT_INFLATE_DEVICE", "cpu")
+    raw_path = tmp_path / "0.raw"
+    frames_written = inflate_one_video(blob, raw_path, device="cpu")
 
-    frames = sorted(tmp_path.glob("*.png"))
-    assert len(frames) == cfg.num_pairs * 2
-    assert frames[0].read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    assert frames_written == cfg.num_pairs * 2
+    assert raw_path.is_file()
+    expected_bytes = cfg.num_pairs * 2 * CAMERA_HW[0] * CAMERA_HW[1] * 3
+    assert raw_path.stat().st_size == expected_bytes
+    assert not list(tmp_path.glob("*.png"))
 
 
 def test_substrate_forward_shape():

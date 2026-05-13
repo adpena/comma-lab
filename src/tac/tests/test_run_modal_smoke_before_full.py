@@ -53,4 +53,22 @@ def test_smoke_validation_rejects_diagnostic_cuda_score() -> None:
     )
 
     assert green is False
-    assert "not a finite component-coherent contest-CUDA" in diagnostic
+    assert "did not contain any finite component-coherent contest-CUDA" in diagnostic
+
+
+def test_smoke_validation_scans_all_auth_eval_artifacts() -> None:
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "a_diagnostic_auth_eval_cuda.json": json.dumps(
+                    _auth_payload(score_axis="diagnostic_cuda")
+                ),
+                "z_contest_auth_eval_cuda.json": json.dumps(_auth_payload()),
+            },
+        }
+    )
+
+    assert green is True
+    assert "z_contest_auth_eval_cuda.json" in diagnostic

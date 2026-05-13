@@ -365,44 +365,58 @@ def _validate_smoke_result(
             "SMOKE artifacts missing auth_eval_*.json - did the trainer "
             "reach the auth-eval stage?"
         )
-    raw = artifacts[auth_keys[0]]
-    try:
-        if isinstance(raw, bytes):
-            payload = json.loads(raw.decode())
-        elif isinstance(raw, str):
-            payload = json.loads(raw)
-        else:
-            payload = raw
-    except json.JSONDecodeError as exc:
-        return False, f"SMOKE auth_eval JSON parse failed: {exc!r}"
-    parsed = parse_auth_eval_score_claim(
-        payload,
-        required_score_axis="contest_cuda",
-        require_component_recompute=True,
-    )
-    if parsed is None:
-        return False, (
-            "SMOKE auth_eval is not a finite component-coherent contest-CUDA "
-            "score claim: "
-            f"score_axis={payload.get('score_axis')!r}, "
-            f"lane_tag={payload.get('lane_tag')!r}, "
-            f"score_claim={payload.get('score_claim')!r}, "
-            f"score_claim_valid={payload.get('score_claim_valid')!r}, "
-            f"exact_cuda_eval_complete={payload.get('exact_cuda_eval_complete')!r}, "
-            f"keys={list(payload.keys())}"
-        )
-    score_f = parsed.score
     lo, hi = plausible_band
-    if not (lo <= score_f <= hi):
-        return False, (
-            f"SMOKE auth_eval score {score_f} OUT OF PLAUSIBLE BAND "
-            f"[{lo}, {hi}] - likely indicates a math/wiring bug, not a "
-            "research result; refusing to fire full canary"
+    diagnostics: list[str] = []
+    out_of_band: list[str] = []
+    for key in sorted(auth_keys):
+        raw = artifacts[key]
+        try:
+            if isinstance(raw, bytes):
+                payload = json.loads(raw.decode())
+            elif isinstance(raw, str):
+                payload = json.loads(raw)
+            else:
+                payload = raw
+        except json.JSONDecodeError as exc:
+            diagnostics.append(f"{key}:json_parse_failed:{exc!r}")
+            continue
+        if not isinstance(payload, dict):
+            diagnostics.append(f"{key}:json_payload_not_object:{type(payload).__name__}")
+            continue
+        parsed = parse_auth_eval_score_claim(
+            payload,
+            required_score_axis="contest_cuda",
+            require_component_recompute=True,
         )
-    return True, (
-        "SMOKE GREEN: rc=0, "
-        f"{parsed.lane_tag or '[contest-CUDA]'} auth_eval score={score_f:.4f} "
-        f"in band [{lo}, {hi}]"
+        if parsed is None:
+            diagnostics.append(
+                f"{key}:not_contest_cuda_claim("
+                f"score_axis={payload.get('score_axis')!r}, "
+                f"lane_tag={payload.get('lane_tag')!r}, "
+                f"score_claim={payload.get('score_claim')!r}, "
+                f"score_claim_valid={payload.get('score_claim_valid')!r}, "
+                f"exact_cuda_eval_complete={payload.get('exact_cuda_eval_complete')!r})"
+            )
+            continue
+        score_f = parsed.score
+        if lo <= score_f <= hi:
+            return True, (
+                "SMOKE GREEN: rc=0, "
+                f"{parsed.lane_tag or '[contest-CUDA]'} auth_eval score={score_f:.4f} "
+                f"in band [{lo}, {hi}] from {key}"
+            )
+        out_of_band.append(f"{key}:score={score_f}")
+
+    if out_of_band:
+        return False, (
+            "SMOKE auth_eval contest-CUDA score OUT OF PLAUSIBLE BAND "
+            f"[{lo}, {hi}]: {', '.join(out_of_band)}. "
+            "Likely math/wiring bug; refusing to fire full canary."
+        )
+    return False, (
+        "SMOKE artifacts did not contain any finite component-coherent "
+        "contest-CUDA score claim; diagnostics="
+        + "; ".join(diagnostics[:8])
     )
 
 

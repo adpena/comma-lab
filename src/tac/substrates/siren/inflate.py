@@ -1,4 +1,4 @@
-"""siren inflate runtime — <= 100 LOC; mirrors sane_hnerv style.
+"""siren inflate runtime — contest raw-output contract.
 
 Contest-runtime image of the substrate. ``submissions/siren/inflate.py`` will
 be a one-line passthrough to ``main_cli`` at packet-build time. Forward path:
@@ -8,7 +8,7 @@ be a one-line passthrough to ``main_cli`` at packet-build time. Forward path:
 3. Build the substrate from header + ``meta`` (deterministic, no training).
 4. Load state_dict.
 5. For each pair index, evaluate MLP at all (x, y, t) coordinates -> RGB pair;
-   save PNGs.
+   append to one contest ``.raw`` tensor file.
 
 L4 budget: <= 100 LOC, <= 2 external deps (torch, brotli; numpy is torch transitive).
 """
@@ -16,49 +16,29 @@ L4 budget: <= 100 LOC, <= 2 external deps (torch, brotli; numpy is torch transit
 from __future__ import annotations
 
 import sys
-import struct
-import zlib
 from pathlib import Path
 
 import torch
 
+from tac.substrates._shared.inflate_runtime import (
+    raw_output_path,
+    select_inflate_device,
+    write_rgb_pair_to_raw,
+)
 from .architecture import SirenConfig, SirenSubstrate
 from .archive import parse_archive
 
 
-def _png_chunk(tag: bytes, data: bytes) -> bytes:
-    body = tag + data
-    return (
-        struct.pack(">I", len(data))
-        + body
-        + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
-    )
-
-
-def _write_png_rgb(path: Path, rgb_uint8) -> None:
-    """Write an HWC uint8 RGB array as PNG using only the standard library."""
-    h, w, c = rgb_uint8.shape
-    if c != 3:
-        raise ValueError(f"expected RGB array with 3 channels, got {c}")
-    raw = b"".join(b"\x00" + rgb_uint8[row].tobytes() for row in range(h))
-    payload = (
-        b"\x89PNG\r\n\x1a\n"
-        + _png_chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
-        + _png_chunk(b"IDAT", zlib.compress(raw, level=6))
-        + _png_chunk(b"IEND", b"")
-    )
-    path.write_bytes(payload)
-
-
 def inflate_one_video(
     archive_bytes: bytes,
-    output_dir: Path,
+    output_raw_path: Path,
     *,
-    device: str = "cpu",
-) -> None:
-    """Inflate one archive's bytes into ``output_dir/<frame_idx>.png`` files."""
+    device: str | None = None,
+) -> int:
+    """Inflate one archive's bytes into one contest ``.raw`` file."""
     arc = parse_archive(archive_bytes)
     meta = arc.meta
+    render_device = select_inflate_device(device)
 
     cfg = SirenConfig(
         hidden_dim=arc.hidden_dim,
@@ -72,20 +52,19 @@ def inflate_one_video(
         output_dim=int(meta["output_dim"]),
     )
 
-    model = SirenSubstrate(cfg).to(device).eval()
+    model = SirenSubstrate(cfg).to(render_device).eval()
     model.load_state_dict(arc.decoder_state_dict, strict=False)
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_raw_path.parent.mkdir(parents=True, exist_ok=True)
 
+    frames_written = 0
     with torch.no_grad():
-        for pair_idx in range(cfg.num_pairs):
-            idx_tensor = torch.tensor([pair_idx], device=device, dtype=torch.long)
-            rgb_0, rgb_1 = model(idx_tensor)
-            for off, rgb in ((0, rgb_0), (1, rgb_1)):
-                frame_idx = 2 * pair_idx + off
-                arr = (rgb[0].clamp(0.0, 1.0).permute(1, 2, 0).cpu().numpy() * 255.0)
-                arr = arr.round().clip(0, 255).astype("uint8")
-                _write_png_rgb(output_dir / f"{frame_idx}.png", arr)
+        with output_raw_path.open("wb") as fh:
+            for pair_idx in range(cfg.num_pairs):
+                idx_tensor = torch.tensor([pair_idx], device=render_device, dtype=torch.long)
+                rgb_0, rgb_1 = model(idx_tensor)
+                frames_written += write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
+    return frames_written
 
 
 def main_cli() -> int:
@@ -101,10 +80,12 @@ def main_cli() -> int:
     file_list_path = Path(sys.argv[3])
 
     file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
+    archive_bytes = (archive_dir / "0.bin").read_bytes()
+    device = select_inflate_device()
     for fname in file_list:
-        base = Path(fname).stem
-        archive_bytes = (archive_dir / "0.bin").read_bytes()
-        inflate_one_video(archive_bytes, output_dir / base, device="cpu")
+        if not fname.strip():
+            continue
+        inflate_one_video(archive_bytes, raw_output_path(output_dir, fname), device=device)
     return 0
 
 

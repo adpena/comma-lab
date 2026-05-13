@@ -202,7 +202,8 @@ def _audit_inflate(
         "loads_siren_model": "SirenSubstrate" in text,
         "no_scorer_imports": "tac.scorer" not in text and "load_differentiable_scorers" not in text,
         "no_pil_dependency": "PIL" not in text and "Image" not in text,
-        "stdlib_png_writer": "def _write_png_rgb" in text and "zlib.compress" in text,
+        "writes_contest_raw": ".raw" in text and "write_rgb_pair_to_raw" in text,
+        "no_png_writer": "_write_png_rgb" not in text and "zlib.compress" not in text,
     }
     evidence.update({f"inflate_{k}": v for k, v in checks.items()})
     for name, passed in checks.items():
