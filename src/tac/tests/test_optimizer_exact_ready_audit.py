@@ -5,13 +5,13 @@ import json
 import zipfile
 from pathlib import Path
 
+from tac.optimizer.exact_readiness import runtime_dependency_manifest
 from tac.optimizer.exact_ready_audit import (
     apply_suppression_manifest,
     audit_exact_ready_queues,
     build_suppression_manifest,
     discover_exact_ready_queues,
 )
-from tac.optimizer.exact_readiness import runtime_dependency_manifest
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -461,6 +461,54 @@ def test_audit_allows_ready_row_with_current_live_runtime_tree_sha(
 
     assert payload["passed"] is True
     assert payload["stale_ready_row_count"] == 0
+
+
+def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_packetir_closure",  # FAKE_LANE_OK: synthetic closure fixture.
+        archive_sha="d" * 64,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    _write_json(
+        tmp_path / "experiments/results/packetir_closed/closure.json",
+        {
+            "schema": "packetir_exact_eval_closure_v1",
+            "lane_id": "lane_packetir_closure",
+            "classification": "exact_measured_not_current_frontier",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "archive": {"candidate_archive_sha256": archive_sha},
+            "duplicate_dispatch_blockers": [
+                "same_candidate_archive_already_exact_evaluated",
+                "candidate_not_current_frontier_on_contest_cuda",
+            ],
+        },
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    result = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["passed"] is False
+    row = result["queues"][0]["stale_ready_rows"][0]
+    assert row["live_custody"]["packetir_exact_closure_records"][0]["classification"] == (
+        "exact_measured_not_current_frontier"
+    )
+    assert any(
+        blocker.startswith("packetir_exact_closure_duplicate_dispatch")
+        for blocker in row["blockers"]
+    )
 
 
 def test_audit_allows_ready_queue_after_infra_failure_same_archive(

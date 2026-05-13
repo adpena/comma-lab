@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import os
 import json
+import os
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -75,6 +75,65 @@ def _row_submission_dir(row: Mapping[str, Any], *, repo_root: Path, queue_dir: P
 
 def _row_inflate_sh_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
     return resolve_path(row.get("inflate_sh_path"), repo_root=repo_root, queue_dir=queue_dir)
+
+
+def _discover_packetir_exact_closure_records(repo_root: Path) -> dict[str, list[dict[str, Any]]]:
+    """Return closure records keyed by candidate archive SHA.
+
+    Closure manifests are generated after exact eval has already happened. They
+    are not lane claims, so they need an archive-SHA guard here to keep a stale
+    exact-ready queue from redispatching the same measured packet.
+    """
+
+    records: dict[str, list[dict[str, Any]]] = {}
+    for path in sorted((repo_root / "experiments" / "results").glob("**/closure.json")):
+        try:
+            payload = read_json(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        if payload.get("schema") != "packetir_exact_eval_closure_v1":
+            continue
+        archive = payload.get("archive")
+        if not isinstance(archive, Mapping):
+            continue
+        archive_sha = archive.get("candidate_archive_sha256")
+        if not is_sha256(archive_sha):
+            continue
+        blockers = payload.get("duplicate_dispatch_blockers")
+        if not isinstance(blockers, list) or not blockers:
+            continue
+        records.setdefault(str(archive_sha).lower(), []).append(
+            {
+                "closure_path": repo_rel(path, repo_root),
+                "classification": payload.get("classification"),
+                "lane_id": payload.get("lane_id"),
+                "duplicate_dispatch_blockers": [str(blocker) for blocker in blockers],
+                "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch"),
+                "score_claim": payload.get("score_claim"),
+            }
+        )
+    return records
+
+
+def _packetir_exact_closure_blockers(
+    archive_sha: str | None,
+    closure_records: Mapping[str, list[dict[str, Any]]],
+) -> tuple[list[str], list[dict[str, Any]]]:
+    if archive_sha is None:
+        return [], []
+    records = list(closure_records.get(archive_sha.lower(), []))
+    blockers: list[str] = []
+    for record in records:
+        classification = str(record.get("classification") or "unknown")
+        closure_path = str(record.get("closure_path") or "<unknown>")
+        for duplicate_blocker in record.get("duplicate_dispatch_blockers", []):
+            blockers.append(
+                "packetir_exact_closure_duplicate_dispatch:"
+                f"{classification}:{duplicate_blocker}:{closure_path}"
+            )
+    return blockers, records
 
 
 def _same_resolved_path(left: Path, right: Path) -> bool:
@@ -252,6 +311,7 @@ def audit_exact_ready_queue(
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
     candidate_ids: Iterable[str] | None = None,
     claim_ttl_hours: float = 24.0,
+    packetir_closure_records: Mapping[str, list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     """Return stale-row findings for one generated exact-ready queue."""
 
@@ -279,6 +339,11 @@ def audit_exact_ready_queue(
         {str(candidate_id) for candidate_id in candidate_ids}
         if candidate_ids is not None
         else None
+    )
+    closure_records = (
+        packetir_closure_records
+        if packetir_closure_records is not None
+        else _discover_packetir_exact_closure_records(repo_root)
     )
     row_count = 0
     queue_dir = queue_path.parent
@@ -318,6 +383,13 @@ def audit_exact_ready_queue(
                 blockers.append("archive_sha256_missing_or_invalid")
             else:
                 blockers.extend(custody_blockers)
+                closure_blockers, closure_evidence = _packetir_exact_closure_blockers(
+                    archive_sha,
+                    closure_records,
+                )
+                if closure_evidence:
+                    custody_facts["packetir_exact_closure_records"] = closure_evidence
+                blockers.extend(closure_blockers)
                 for claim_lane_id in lane_aliases:
                     blockers.extend(
                         terminal_claim_result_conflicts(
@@ -396,6 +468,7 @@ def audit_exact_ready_queues(
     candidate_ids: Iterable[str] | None = None,
     claim_ttl_hours: float = 24.0,
 ) -> dict[str, Any]:
+    packetir_closure_records = _discover_packetir_exact_closure_records(repo_root)
     queues = [
         audit_exact_ready_queue(
             path,
@@ -404,6 +477,7 @@ def audit_exact_ready_queues(
             active_floor_score=active_floor_score,
             candidate_ids=candidate_ids,
             claim_ttl_hours=claim_ttl_hours,
+            packetir_closure_records=packetir_closure_records,
         )
         for path in queue_paths
     ]
