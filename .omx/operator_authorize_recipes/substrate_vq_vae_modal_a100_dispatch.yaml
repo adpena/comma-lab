@@ -1,0 +1,106 @@
+schema_version: 1
+name: substrate_vq_vae_modal_a100_dispatch
+lane_id: lane_substrate_vq_vae_20260512
+summary: VQ-VAE persistent-codebook substrate first-anchor dispatch on Modal A100 (WAVE-1-A HIGH-target attack on 0.193).
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 6.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: 0.17
+predicted_delta: "-0.023 vs PR101 0.193 [predicted; council Phase 5]"
+predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md#vq_vae"
+literature_anchor: "van den Oord, Vinyals, Kavukcuoglu — 'Neural Discrete Representation Learning' NeurIPS 2017"
+council_phase_5_prediction: 0.17
+
+risk: |
+  WAVE-1-A HIGH-target dispatch on Modal A100. VQ-VAE pays log2(K) bits per
+  spatial cell rather than 16 bits per float-latent, which is the discrete
+  counterpart to cool_chic's continuous-AR latents. Architectural risks:
+  (a) codebook COLLAPSE — too few codes get used; van den Oord 2017 reports
+      this is the dominant failure mode; mitigated via persistent EMA codebook
+      (decay=0.99) inside _quantize STE path; per-batch commitment loss
+      (weight=0.25) pulls encoder output toward chosen codebook entries.
+  (b) GRADIENT INTERRUPTION at quantizer — the straight-through estimator
+      (Bengio 2013) bypasses the argmin; deeper substrates can suffer from
+      bias near the codebook boundary; council default decoder_hidden=24 keeps
+      the post-quantizer decoder simple enough that STE bias stays bounded.
+  (c) CODEBOOK LR sensitivity — cosine annealing on weights, but codebook
+      uses an EMA buffer so it does not see the LR schedule; this is the van
+      den Oord prescription and has been stable in our smoke tests.
+  Trainer _full_main wires 16 stages including auth eval at stage 12.
+  Single-axis [contest-CUDA] acceptable for first anchor; CPU axis required
+  separately before promotion.
+envelope_status: "FITS $20 envelope at p50 fallback"
+
+remote_driver: scripts/remote_lane_substrate_vq_vae.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_vq_vae.sh
+  cost_band_trainer: experiments/train_substrate_vq_vae.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_vq_vae.py
+
+env_overrides:
+  VQ_VAE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  VQ_VAE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  VQ_VAE_OUTPUT_DIR: /workspace/pact/lane_substrate_vq_vae_results/output
+  VQ_VAE_EPOCHS: "2000"
+  VQ_VAE_BATCH_SIZE: "16"
+  VQ_VAE_UPSTREAM_DIR: /workspace/pact/upstream
+  VQ_VAE_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_vq_vae.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_vq_vae.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+
+notes: |
+  WAVE-1-A HIGH-target attack on PR101's 0.193 [contest-CUDA] gold via the
+  discrete-rate-axis substrate distinction.
+
+  VQ-VAE architectural distinction vs sane_hnerv (continuous latents) /
+  cool_chic (continuous AR-coded latents) / siren (zero latents, all-MLP):
+    Per-cell rate = log2(K) bits. With K=512, D=8, grid 48x64 (downsample=8):
+      per-pair index bytes  = 48 * 64 * 2 frames * 9 bits / 8 = 6912 B
+      codebook bytes        = 512 * 8 * 2 (fp16)             = 8192 B
+      decoder bytes         = ~10K params * 2 (fp16)         = ~20000 B
+      total per video       ≈ 35K B (ignoring brotli savings)
+    By comparison sane_hnerv carries continuous fp16 latents at 28 dim per
+    pair * 600 pairs * 2 = 33600 B for latents alone. VQ-VAE compresses the
+    SAME information through a much smaller per-cell bit budget, freeing
+    bytes for codebook expressivity OR for a deeper decoder.
+
+  van den Oord persistent codebook EMA (decay=0.99, NOT the weight EMA 0.997)
+  is the established prescription from the NeurIPS 2017 paper. It is wired in
+  the substrate's _quantize STE path; the trainer's tac.training.EMA(0.997)
+  applies to ENCODER + DECODER + CODEBOOK weight tensors, while van den Oord's
+  faster-decay 0.99 applies INSIDE the codebook update via the persistent
+  N_c / m_c buffers (CLAUDE.md "EMA — non-negotiable" codebook exception).
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    feedback_wave1_vq_vae_trainer_build_LANDED_20260512.md
+    feedback_phase_b2_build_3_high_target_trainers_LANDED_20260512.md
+    feedback_modal_strategy_reevaluation_post_tier1_engineering_20260512.md
+    feedback_substrate_sane_hnerv_full_main_wired_landed_20260512.md
+    .omx/research/grand_council_fields_medal_substrate_design_20260512.md
