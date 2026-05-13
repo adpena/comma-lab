@@ -13318,7 +13318,7 @@ _KL_DISTILL_FORBIDDEN_FIRST_ARGS = frozenset({"pairs", "rendered_pair", "rendere
 
 
 def _scan_python_for_kl_distill_raw_pairs(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, *, source_index=None,
 ) -> list[str]:
     """Detect call sites of kl_distill_segnet_only(...) whose FIRST positional
     arg is a raw renderer-output variable (one of `pairs`, `rendered_pair`,
@@ -13332,10 +13332,14 @@ def _scan_python_for_kl_distill_raw_pairs(
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
         if "kl_distill_segnet_only" not in text:
             return []
-        tree = ast.parse(text, filename=str(path))
+        tree = (
+            source_index.python_ast(path)
+            if source_index is not None
+            else ast.parse(text, filename=str(path))
+        )
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
         return []
     lines = text.splitlines()
@@ -13387,17 +13391,52 @@ def check_kl_distill_uses_roundtripped_frames(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for sub in ("experiments", "src/tac/experiments"):
-        for p in _iter_python_files(root, [sub]):
-            n_scanned += 1
-            violations.extend(_scan_python_for_kl_distill_raw_pairs(p, root))
+    scan_dirs = ("experiments", "src/tac/experiments")
+    source_index = _current_source_index(root)
+    rg_candidates = _rg_python_files_matching_regex(
+        root,
+        scan_dirs,
+        r"kl_distill_segnet_only",
+    )
+    if rg_candidates is not None:
+        py_paths = rg_candidates
+    elif source_index is not None:
+        py_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("kl_distill_segnet_only",),
+            require_all=True,
+        )
+    else:
+        py_paths = tuple(
+            p
+            for sub in scan_dirs
+            for p in _iter_python_files(root, [sub])
+        )
+    for p in py_paths:
+        if _is_oss_export_mirror_path(p):
+            continue
+        n_scanned += 1
+        violations.extend(
+            _scan_python_for_kl_distill_raw_pairs(
+                p,
+                root,
+                source_index=source_index,
+            )
+        )
     # SegMapTrainer is a library-side KL caller, not an experiment script.
     # Keep it in this guard so trainer refactors cannot silently pass raw
     # renderer pairs while experiments stay clean.
     segmap_renderer = root / "src/tac/segmap_renderer.py"
     if segmap_renderer.exists():
         n_scanned += 1
-        violations.extend(_scan_python_for_kl_distill_raw_pairs(segmap_renderer, root))
+        violations.extend(
+            _scan_python_for_kl_distill_raw_pairs(
+                segmap_renderer,
+                root,
+                source_index=source_index,
+            )
+        )
 
     if verbose and violations:
         print(
@@ -42266,65 +42305,105 @@ def check_ast_walker_handles_both_assign_and_annassign(
     root = (repo_root or Path.cwd()).resolve()
     violations: list[str] = []
     scanned = 0
+    source_index = _current_source_index(root)
+    rg_candidates = _rg_python_files_matching_regex(
+        root,
+        _CHECK_168_SCAN_DIRS,
+        r"ast\.Assign",
+    )
+    if rg_candidates is not None:
+        py_files = rg_candidates
+    elif source_index is not None:
+        py_files = source_index.files_containing_substrings(
+            _CHECK_168_SCAN_DIRS,
+            pattern="*.py",
+            substrings=("isinstance", "ast.Assign"),
+            require_all=True,
+        )
+    else:
+        py_file_list: list[Path] = []
+        for scan_dir in _CHECK_168_SCAN_DIRS:
+            scan_root = root / scan_dir
+            if scan_root.is_dir():
+                py_file_list.extend(scan_root.rglob("*.py"))
+        py_files = tuple(sorted(py_file_list, key=lambda item: item.as_posix()))
 
-    for scan_dir in _CHECK_168_SCAN_DIRS:
-        scan_root = root / scan_dir
-        if not scan_root.is_dir():
+    for py_file in py_files:
+        try:
+            rel = py_file.relative_to(root).as_posix()
+        except ValueError:
             continue
-        for py_file in scan_root.rglob("*.py"):
+        if rel in _CHECK_168_EXEMPT_FILES:
+            continue
+        if any(marker in rel for marker in _CHECK_168_EXCLUDED_PATH_MARKERS):
+            continue
+        try:
+            text = (
+                source_index.read_text(py_file)
+                if source_index is not None
+                else py_file.read_text(encoding="utf-8", errors="replace")
+            )
+        except (UnicodeDecodeError, OSError):
+            if source_index is None:
+                continue
             try:
-                rel = py_file.relative_to(root).as_posix()
-            except ValueError:
-                continue
-            if rel in _CHECK_168_EXEMPT_FILES:
-                continue
-            if any(marker in rel for marker in _CHECK_168_EXCLUDED_PATH_MARKERS):
-                continue
-            try:
-                text = py_file.read_text(encoding="utf-8", errors="replace")
+                text = source_index.read_text(
+                    py_file,
+                    encoding="utf-8",
+                    errors="replace",
+                )
             except OSError:
                 continue
-            scanned += 1
-            if _check_168_file_has_waiver(text):
-                continue
+        if "isinstance" not in text or "ast.Assign" not in text:
+            continue
+        scanned += 1
+        if _check_168_file_has_waiver(text):
+            continue
+        try:
+            tree = (
+                source_index.python_ast(py_file)
+                if source_index is not None
+                else ast.parse(text, filename=str(py_file))
+            )
+        except (SyntaxError, UnicodeDecodeError, OSError):
             try:
-                tree = ast.parse(text)
+                tree = ast.parse(text, filename=str(py_file))
             except SyntaxError:
                 continue
-            lines = text.splitlines()
-            for node in ast.walk(tree):
-                if not _check_168_isinstance_filters_assign_only(node):
-                    continue
-                lineno = getattr(node, "lineno", 0)
-                if lineno <= 0 or lineno > len(lines):
-                    continue
-                # Same-line waiver respects either the isinstance line OR
-                # the immediately preceding line (multi-line isinstance
-                # callsite indent style).
-                line_idx = lineno - 1
-                target_lines = [lines[line_idx]]
-                if line_idx > 0:
-                    target_lines.append(lines[line_idx - 1])
-                if any(_check_168_line_has_waiver(L) for L in target_lines):
-                    continue
-                # Scope-aware accept: if the enclosing function/method ALSO
-                # contains an `isinstance(_, ast.AnnAssign)` call, the
-                # if/elif chain pattern handles AnnAssign separately and
-                # the Assign-only branch is correct by design.
-                scope = _check_168_enclosing_scope(node, tree)
-                if _check_168_scope_handles_annassign(scope):
-                    continue
-                snippet = lines[line_idx].strip()[:200]
-                violations.append(
-                    f"{rel}:{lineno}: AST extractor walks `ast.Assign` only "
-                    f"without `ast.AnnAssign`; annotated assignments will be "
-                    f"silently skipped. Update to "
-                    f"`isinstance(x, (ast.Assign, ast.AnnAssign))` and handle "
-                    f"the AnnAssign branch (single `node.target` not `node.targets`, "
-                    f"check `node.value is not None`). Same-line waiver "
-                    f"`# ASSIGN_ONLY_OK:<reason>` if annotated assign is genuinely "
-                    f"irrelevant for this surface.\n    Code: {snippet}"
-                )
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not _check_168_isinstance_filters_assign_only(node):
+                continue
+            lineno = getattr(node, "lineno", 0)
+            if lineno <= 0 or lineno > len(lines):
+                continue
+            # Same-line waiver respects either the isinstance line OR
+            # the immediately preceding line (multi-line isinstance
+            # callsite indent style).
+            line_idx = lineno - 1
+            target_lines = [lines[line_idx]]
+            if line_idx > 0:
+                target_lines.append(lines[line_idx - 1])
+            if any(_check_168_line_has_waiver(L) for L in target_lines):
+                continue
+            # Scope-aware accept: if the enclosing function/method ALSO
+            # contains an `isinstance(_, ast.AnnAssign)` call, the
+            # if/elif chain pattern handles AnnAssign separately and
+            # the Assign-only branch is correct by design.
+            scope = _check_168_enclosing_scope(node, tree)
+            if _check_168_scope_handles_annassign(scope):
+                continue
+            snippet = lines[line_idx].strip()[:200]
+            violations.append(
+                f"{rel}:{lineno}: AST extractor walks `ast.Assign` only "
+                f"without `ast.AnnAssign`; annotated assignments will be "
+                f"silently skipped. Update to "
+                f"`isinstance(x, (ast.Assign, ast.AnnAssign))` and handle "
+                f"the AnnAssign branch (single `node.target` not `node.targets`, "
+                f"check `node.value is not None`). Same-line waiver "
+                f"`# ASSIGN_ONLY_OK:<reason>` if annotated assign is genuinely "
+                f"irrelevant for this surface.\n    Code: {snippet}"
+            )
 
     if verbose:
         if violations:

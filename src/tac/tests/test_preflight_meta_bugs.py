@@ -3784,6 +3784,38 @@ class TestKlDistillUsesRoundtrippedFrames:
         )
         assert v == [], v
 
+    def test_source_index_candidate_prefilter_preserves_detection(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from tac.preflight import check_kl_distill_uses_roundtripped_frames
+        from tac.source_index import source_index_context
+
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "bad_kl_indexed.py"
+        _write(bad, """
+            from tac.losses import kl_distill_segnet_only
+            def step(pairs, gt, segnet):
+                kl, _ = kl_distill_segnet_only(pairs, gt, segnet, temperature=2.0)
+                return kl
+        """)
+        irrelevant = root / "experiments" / "irrelevant.py"
+        _write(irrelevant, """
+            def no_kl_here(x):
+                return x
+        """)
+
+        with source_index_context(root):
+            violations = check_kl_distill_uses_roundtripped_frames(
+                repo_root=root,
+                strict=False,
+                verbose=False,
+            )
+
+        assert len(violations) == 1
+        assert "bad_kl_indexed.py" in violations[0]
+        assert "irrelevant.py" not in violations[0]
+
 
 # ─── codex R5-r6 #3: gate ordering preflight ────────────────────────────────
 

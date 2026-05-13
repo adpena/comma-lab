@@ -200,6 +200,31 @@ def test_test_import_resolves_package_init(tmp_path):
     assert violations == []
 
 
+def test_test_import_resolves_namespace_package_dir(tmp_path):
+    """`from submissions.robust_current import inflate_renderer` is valid when
+    robust_current is a package/namespace directory containing the child
+    module, even without a sibling `robust_current.py` file."""
+    test_dir = tmp_path / "src" / "tac" / "tests"
+    test_dir.mkdir(parents=True)
+    runtime_dir = tmp_path / "submissions" / "robust_current"
+    runtime_dir.mkdir(parents=True)
+    (tmp_path / "submissions" / "__init__.py").write_text(
+        '"""Submission packages."""\n'
+    )
+    (runtime_dir / "inflate_renderer.py").write_text("X = 1\n")
+    (test_dir / "test_runtime.py").write_text(
+        "from submissions.robust_current import inflate_renderer\n"
+    )
+
+    violations = check_test_imports_resolve_to_disk(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+
+    assert violations == []
+
+
 def test_test_import_ignores_stdlib_and_third_party(tmp_path):
     """stdlib + third-party imports must NOT be flagged."""
     test_dir = tmp_path / "src" / "tac" / "tests"
@@ -229,16 +254,9 @@ def test_test_import_live_codebase_under_known_threshold():
     + build_renderer_packed_payload_archive stubs) there are 0 known
     violations. Threshold is loose so future small drift doesn't break.
 
-    2026-05-12 bump 3 → 5: bug-sweep observed 4 ``submissions.robust_current``
-    imports that resolve at runtime via sys.path but are flagged by the
-    static check (submissions/robust_current has no ``__init__.py``).
-    These are intentional contest-runtime imports (the directory is the
-    contest-faithful runtime tree); raising the threshold preserves the
-    regression-alarm semantics while accepting the known-good imports.
+    2026-05-13: the static resolver now accepts package/namespace
+    directories, matching Python's import behavior for
+    ``submissions.robust_current`` contest-runtime imports.
     """
     violations = check_test_imports_resolve_to_disk(strict=False, verbose=False)
-    assert len(violations) <= 5, (
-        f"test-imports check violations climbed to {len(violations)} "
-        f"(was 0 at introduction; bumped 3 → 5 on 2026-05-12 for "
-        f"submissions/robust_current contest-runtime imports): {violations}"
-    )
+    assert violations == []

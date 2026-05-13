@@ -457,6 +457,30 @@ def test_tools_dir_scanned(tmp_path: Path) -> None:
     assert "tools/in_tools.py" in violations[0]
 
 
+def test_source_index_candidate_prefilter_preserves_detection(
+    tmp_path: Path,
+) -> None:
+    """The fast SourceIndex path must still catch Assign-only walkers."""
+    root = _make_repo(tmp_path)
+    (root / "src/tac/indexed_bug.py").write_text(
+        "import ast\n"
+        "def f(node):\n"
+        "    if isinstance(node, ast.Assign):\n"
+        "        pass\n"
+    )
+
+    from tac.source_index import source_index_context
+
+    with source_index_context(root):
+        violations = check_ast_walker_handles_both_assign_and_annassign(
+            repo_root=root,
+            strict=False,
+        )
+
+    assert len(violations) == 1
+    assert "src/tac/indexed_bug.py" in violations[0]
+
+
 def test_experiments_dir_scanned(tmp_path: Path) -> None:
     root = _make_repo(tmp_path)
     (root / "experiments/in_exp.py").write_text(

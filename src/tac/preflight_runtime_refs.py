@@ -223,6 +223,14 @@ def _resolve_dotted_to_file(dotted: str, repo_root: Path) -> Path:
     as_pkg = repo_root.joinpath(*parts, "__init__.py")
     if as_pkg.is_file():
         return as_pkg
+    # PEP 420 namespace/package portion. This covers contest-runtime trees
+    # such as `submissions/robust_current/`, where tests import child modules
+    # with `from submissions.robust_current import inflate_renderer`. Requiring
+    # `robust_current.py` would be stricter than Python's import machinery and
+    # turns valid contest-runtime imports into noisy release-sweep warnings.
+    as_namespace_pkg = repo_root.joinpath(*parts)
+    if as_namespace_pkg.is_dir():
+        return as_namespace_pkg
     # Return the file path that "should have existed" (caller treats as missing)
     return as_file
 
