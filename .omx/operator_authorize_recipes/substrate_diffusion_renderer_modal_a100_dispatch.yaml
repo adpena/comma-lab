@@ -1,0 +1,176 @@
+schema_version: 1
+name: substrate_diffusion_renderer_modal_a100_dispatch
+lane_id: lane_substrate_diffusion_renderer_20260512
+summary: Diffusion teacher-distillation TRADITION 2 substrate research-only dispatch on Modal A100 (DEFERRED — research-only by construction; diffusion at inflate-time violates strict-scorer rule).
+
+dispatch_enabled: false
+research_only: true
+substrate_tradition: TRADITION_2
+defer_reason: |
+  THREE structural blockers:
+
+  (1) src/tac/contrib/diffusion_renderer.py is a TEACHER module for
+      distillation, not a deployable inflate-time substrate. Per the module
+      docstring (verbatim):
+
+      "The diffusion teacher produces high-quality semantic image synthesis
+      but is too slow for contest deployment (50-100 denoising steps per
+      frame). The solution is a three-stage pipeline:
+        1. Train a diffusion teacher (DiffusionRenderer) on mask→frame
+           with scorer loss
+        2. Distill the teacher into a fast CNN student (our existing
+           MaskRenderer)
+        3. Deploy the student only (single forward pass, small, fast)"
+
+      The diffusion model itself NEVER ships in the contest archive. Only
+      the distilled CNN student ships. The diffusion teacher is upstream
+      research-only infrastructure.
+
+  (2) Library-only entry-point (no argparse, no `if __name__ == "__main__"`).
+      Exposes DiffusionRenderer, ConditionalUNet, DistillationTrainer,
+      ProgressiveDistiller, ConsistencyModel, ConsistencyDistiller. No
+      trainer script bundles a complete dispatch path.
+
+  (3) NO scripts/remote_lane_substrate_diffusion_renderer.sh canonical
+      driver.
+
+  Per CLAUDE.md "Strict scorer rule — non-negotiable": NO loading PoseNet
+  or SegNet at inflate time. A diffusion model would similarly be a
+  prohibitive inflate-time dependency (50-100 denoising steps per frame
+  × 600 pairs = catastrophic inflate runtime + cost).
+
+dispatch_blockers:
+  - diffusion_is_teacher_only_never_ships_in_archive
+  - canonical_trainer_script_missing
+  - remote_driver_missing
+  - inflate_time_diffusion_violates_strict_scorer_rule_non_negotiable
+  - distillation_target_is_separate_student_lane
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: "diffusion training: 2000-5000; distillation: 500-1000"
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 12.00  # Diffusion training is expensive
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: "research_only=true; never produces a contest archive directly"
+predicted_delta: "research_only=true; the DISTILLED STUDENT lane produces the score, not this lane"
+literature_anchor: "DDPM — Ho et al. 2020; Progressive distillation — Salimans & Ho 2022; Consistency models — Song et al. 2023; SPADE — Park et al. CVPR 2019"
+
+risk: |
+  TRADITION 2 substrate. This is teacher-distillation infrastructure,
+  not a deployable substrate.
+
+  Structural constraint: even if trained successfully, the diffusion model
+  CANNOT ship in the contest archive (50-100 denoising steps per frame ×
+  600 pairs would blow contest runtime budget by 1000x+). The pipeline
+  always requires a distillation step to a small CNN student.
+
+  If this lane is to produce contest evidence, the operator_authorize
+  ladder must split into TWO recipes:
+  (a) teacher training (this recipe; research_only=true)
+  (b) student distillation (a separate recipe that consumes the teacher
+      checkpoint and produces the contest archive)
+
+  TIER manifest gap: as a library, no manifest exists.
+
+  Council review required before any dispatch: the architecture is a
+  significant departure from NeRV-family / SPADE substrates; distillation
+  strategy choice (Direct vs Progressive vs Consistency) is a design
+  decision per CLAUDE.md non-negotiable.
+envelope_status: "RESEARCH-ONLY: teacher training; never produces a contest archive directly"
+
+remote_driver: scripts/remote_lane_substrate_diffusion_renderer.sh  # MISSING
+timeout_hours: 8.0  # Diffusion training takes longer
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+    note: "consumed by canonical trainer; not by library module directly"
+
+argparse_inventory:
+  trainer: "[MISSING] experiments/train_diffusion_renderer.py"
+  library_module: src/tac/contrib/diffusion_renderer.py
+  library_exports:
+    - sinusoidal_embedding
+    - SPADEBlock
+    - DiffusionResBlock
+    - ConditionalUNet
+    - DiffusionRenderer
+    - DistillationTrainer
+    - ProgressiveDistiller
+    - ConsistencyModel
+    - ConsistencyDistiller
+    - build_diffusion_teacher
+    - build_consistency_model
+
+env_overrides:
+  DIFFUSION_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  DIFFUSION_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  DIFFUSION_OUTPUT_DIR: /workspace/pact/lane_substrate_diffusion_renderer_results/output
+  DIFFUSION_RESEARCH_ONLY: "1"
+  DIFFUSION_NEVER_SHIPS_IN_CONTEST_ARCHIVE: "1"  # per strict-scorer-rule non-negotiable
+  DIFFUSION_UPSTREAM_DIR: /workspace/pact/upstream
+  DIFFUSION_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py
+  - tools/append_cost_band_anchor.py
+  - upstream/videos/0.mkv
+  - src/tac/contrib/diffusion_renderer.py (library)
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - "[MISSING] experiments/train_diffusion_renderer.py (teacher trainer)"
+  - "[MISSING] scripts/remote_lane_substrate_diffusion_renderer.sh"
+  - "[FUTURE] distillation lane recipe that consumes the trained teacher"
+
+reactivation_criteria: |
+  This recipe stays `research_only: true` PERMANENTLY because the diffusion
+  teacher itself never produces a contest archive. Reactivation moves it from
+  research_only=true → research_only=true with `dispatch_enabled: true` only
+  AFTER:
+
+  1. Council review of distillation strategy (Direct vs Progressive vs
+     Consistency) per CLAUDE.md "Design decisions" non-negotiable.
+  2. Canonical trainer experiments/train_diffusion_renderer.py built.
+  3. Canonical driver scripts/remote_lane_substrate_diffusion_renderer.sh
+     built per Catalog #163 sentinel-source pattern.
+  4. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed.
+  5. Companion student-distillation recipe authored (the path to a
+     contest archive).
+  6. Catalog #152 validates --video-path resolves before dispatch.
+
+notes: |
+  TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
+  Per the taxonomy table, this substrate is recorded under inventory id
+  `diffusion_renderer` with lineage "Diffusion-based renderer". File path
+  is src/tac/contrib/diffusion_renderer.py (under contrib/ NOT directly
+  under tac/).
+
+  Architectural distinction: DDPM denoising diffusion conditioned on
+  segmentation masks. Three distillation strategies offered: Direct,
+  Progressive (Salimans & Ho 2022 — halve steps iteratively), Consistency
+  (Song et al. 2023 — map any noisy state to clean).
+
+  CRITICAL: per CLAUDE.md "Strict scorer rule — non-negotiable" + the
+  module's own docstring, the diffusion teacher NEVER ships in the contest
+  archive. Only the distilled CNN student ships. This recipe is for the
+  TEACHER ONLY; the STUDENT lives on a separate distilled-student lane.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when canonical driver
+  lands, must register harvest hook within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": even teacher training
+  output should be tagged `[macOS-MLX advisory]` if local or
+  `[research-only — non-promotable teacher]` if Modal CUDA — never
+  `[contest-CUDA]` because the teacher never ships.
+
+  Cross-ref:
+    .omx/research/substrate_tradition_taxonomy_20260512.md
+    DDPM — Ho et al. 2020
+    Progressive distillation — Salimans & Ho 2022
+    Consistency models — Song et al. 2023
+    CLAUDE.md "Strict scorer rule — non-negotiable"
