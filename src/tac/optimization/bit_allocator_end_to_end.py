@@ -79,23 +79,18 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import json
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from tac.optimization.substrate_composition_matrix import (
     Composability,
     CompositionMatrix,
     DISPATCH_COST_USD_MIDPOINT,
-    ParetoRow,
     ScoreAxis,
     SubstrateClass,
     SubstrateRow,
     build_composition_matrix,
-    canonical_substrate_inventory,
-    filter_pareto_dominated,
-    per_substrate_pareto_rows,
-    predicted_composite_delta,
 )
 
 SCHEMA_VERSION = "tac_bit_allocator_end_to_end_v1"

@@ -7,7 +7,6 @@ a no-op implementation cannot pass.
 from __future__ import annotations
 
 import io
-import math
 
 import pytest
 import torch

@@ -224,12 +224,12 @@ def run_faithful_proxy(weights_path: str, archive_zip: Path | None = None,
         print(f"[proxy-faithful] Inflated {n_frames} frames")
 
         submission_dir = prepare_submission_dir(tmp_root, archive_zip, raw_path, video_stem=mkv.stem)
-        print(f"[proxy-faithful] Running upstream evaluate.py...")
+        print("[proxy-faithful] Running upstream evaluate.py...")
         report_path = run_upstream_evaluate(submission_dir, device=device,
                                             upstream=upstream, videos_dir=videos_dir)
         parsed = parse_upstream_report(report_path)
 
-    print(f"\n[proxy-faithful] Results:")
+    print("\n[proxy-faithful] Results:")
     print(f"  PoseNet distortion: {parsed['pose_distortion']:.8f}")
     print(f"  SegNet distortion:  {parsed['seg_distortion']:.8f}")
     print(f"  Compression rate:   {parsed['rate']:.8f}")

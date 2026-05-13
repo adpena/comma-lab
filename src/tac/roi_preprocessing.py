@@ -428,7 +428,7 @@ def preprocess(
     writer_proc = subprocess.Popen(writer_cmd, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     if adaptive_mask:
-        print(f"Adaptive masking ENABLED (gradient + temporal + spatial prior)", file=sys.stderr)
+        print("Adaptive masking ENABLED (gradient + temporal + spatial prior)", file=sys.stderr)
 
     frame_idx = 0
     prev_frame: np.ndarray | None = None
@@ -637,7 +637,6 @@ def masks_to_roi_map(
         List of ROI map lines in SVT-AV1 format.
     """
     import math
-    import numpy as np
 
     cols = math.ceil(encode_w / 64)
     rows = math.ceil(encode_h / 64)

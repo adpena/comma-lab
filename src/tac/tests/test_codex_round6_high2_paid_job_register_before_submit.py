@@ -11,9 +11,7 @@ feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
 from __future__ import annotations
 
 import json
-import os
 import tempfile
-import unittest.mock as _mock
 from pathlib import Path
 
 import pytest
@@ -24,7 +22,6 @@ from tac.deploy.lightning.active_jobs_state import (
     ActiveJobsCorruptError,
     PendingJobNotFoundError,
     cancel_pending_job_locked,
-    load_active_jobs,
     register_pending_job_locked,
     update_pending_to_active_locked,
 )

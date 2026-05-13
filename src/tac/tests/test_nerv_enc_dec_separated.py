@@ -1,12 +1,9 @@
 """Tests for NeRV-Enc/Dec separated bolt-on."""
 from __future__ import annotations
 
-import functools
 
 import pytest
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 from tac.nerv_enc_dec_separated import (
     NeRVEncoder,

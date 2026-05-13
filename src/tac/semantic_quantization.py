@@ -31,7 +31,6 @@ from __future__ import annotations
 from typing import Any
 
 import torch
-import torch.nn as nn
 
 from tac.semantic_label_contract import (
     CONTEST_SEGNET_CLASS_NAMES,

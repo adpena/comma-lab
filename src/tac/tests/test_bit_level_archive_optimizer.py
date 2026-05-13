@@ -22,7 +22,6 @@ from tac.bit_level_archive_optimizer import (
     BLPS_VERSION,
     ArchiveByteComposition,
     BitLevelArchiveOptimizer,
-    PerDimQuantizer,
     audit_archive_byte_composition,
     build_shared_brotli_dictionary,
     decode_blps,

@@ -40,9 +40,7 @@ CLAUDE.md compliance:
 """
 from __future__ import annotations
 
-import math
 from pathlib import Path
-from typing import Iterable
 
 import torch
 import torch.nn as nn

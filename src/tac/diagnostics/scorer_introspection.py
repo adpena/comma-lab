@@ -47,7 +47,7 @@ import weakref
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Mapping
+from typing import Any, Callable, Iterable, Iterator
 
 import torch
 import torch.nn as nn

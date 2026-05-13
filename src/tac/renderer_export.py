@@ -1378,7 +1378,6 @@ def load_asymmetric_checkpoint_fp4(
         AsymmetricPairGenerator in eval mode with restored weights.
     """
     from tac.fp4_quantize import (
-        DEFAULT_CODEBOOK,
         _unpack_indices_signs,
         _dequantize_block,
     )
@@ -1973,8 +1972,8 @@ def load_any_renderer_checkpoint(
         return model.eval().to(device)
     else:
         raise ValueError(
-            f"Raw PyTorch checkpoint detected — use _load_renderer() in "
-            f"inflate_renderer.py for .pt format support."
+            "Raw PyTorch checkpoint detected — use _load_renderer() in "
+            "inflate_renderer.py for .pt format support."
         )
 
 

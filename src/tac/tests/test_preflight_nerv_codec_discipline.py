@@ -24,8 +24,6 @@ if str(SRC) not in sys.path:
 
 from tac.preflight import (  # noqa: E402
     MetaBugViolation,
-    _scan_nerv_mask_codec_for_canonical_discipline,
-    _scan_nerv_trainer_script_for_auth_eval_delegation,
     check_nerv_codec_uses_ema_and_no_mps_and_auth_eval,
 )
 

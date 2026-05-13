@@ -25,7 +25,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import torch
-from src.tac.quantization import save_int8
 
 
 def find_checkpoints(weights_dir: str, tag_pattern: str) -> list[dict]:

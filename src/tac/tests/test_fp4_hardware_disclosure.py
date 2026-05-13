@@ -16,7 +16,6 @@ import pytest
 from tac.preflight import (
     MetaBugViolation,
     check_fp4_production_paths_disclose_hardware,
-    _scan_for_fp4_production_paths,
 )
 
 

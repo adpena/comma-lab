@@ -90,11 +90,6 @@ print("Upstream repo ready")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import math
-import gc
-import argparse
-from pathlib import Path
 
 # Device selection — CUDA-required, no MPS fallback.
 #
@@ -189,6 +184,6 @@ class PSDPostFilter(nn.Module):
 # [Full training loop would go here — abbreviated for readability]
 
 print("PSD architecture defined")
-print(f"To train: use the full training loop from train_postfilter_qat_ema.py")
-print(f"Key args: --hidden 128 --epochs 1500 --alpha 20")
+print("To train: use the full training loop from train_postfilter_qat_ema.py")
+print("Key args: --hidden 128 --epochs 1500 --alpha 20")
 print(f"Persist weights to: {PERSIST}")

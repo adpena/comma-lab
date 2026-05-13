@@ -6,7 +6,7 @@ whether a provider surface is safe to wire into score-moving work.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
 

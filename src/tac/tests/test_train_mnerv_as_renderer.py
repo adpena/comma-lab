@@ -159,7 +159,6 @@ def test_archive_grammar_internal_consistency():
 
 def test_export_archive_returns_sha256(tmp_path):
     """export_mnerv_to_archive returns hex sha256 + writes file."""
-    import torch
     from tac.mnerv_as_renderer import (
         MNeRVConfig, MNeRVRenderer, MNeRVLatentTable, export_mnerv_to_archive,
     )

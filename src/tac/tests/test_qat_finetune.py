@@ -446,7 +446,6 @@ def test_real_dilated_h64_baseline_fp4_roundtrip():
 # explicit --poses arg + raise. This is the test gate that prevents regression.
 
 
-import argparse
 import subprocess
 import sys
 
@@ -537,7 +536,7 @@ def test_qat_finetune_no_silent_auto_discovery_pattern():
     qat_path = REPO_ROOT / "experiments" / "qat_finetune.py"
     v = _scan_python_for_silent_auto_discovery(qat_path, REPO_ROOT)
     assert v == [], (
-        f"qat_finetune.py has silent-auto-discovery violation(s). "
-        f"Bug 1 fix regressed. Findings:\n"
+        "qat_finetune.py has silent-auto-discovery violation(s). "
+        "Bug 1 fix regressed. Findings:\n"
         + "\n".join(f"  • {x}" for x in v)
     )

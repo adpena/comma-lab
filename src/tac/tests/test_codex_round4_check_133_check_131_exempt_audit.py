@@ -19,7 +19,6 @@ Memory: feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 

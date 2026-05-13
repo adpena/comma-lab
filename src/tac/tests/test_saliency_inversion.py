@@ -8,8 +8,6 @@ remote bootstrap on CUDA.
 """
 from __future__ import annotations
 
-import io
-import struct
 
 import pytest
 import torch

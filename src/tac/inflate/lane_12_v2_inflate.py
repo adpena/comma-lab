@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 
 from tac.lane_12_v2_nerv_as_renderer import (
-    LANE_12_V2_MAGIC, Lane12V2NeRVConfig, Lane12V2NeRVRenderer, Lane12V2LatentTable,
+    LANE_12_V2_MAGIC, Lane12V2NeRVConfig, Lane12V2NeRVRenderer,
 )
 
 CAMERA_H, CAMERA_W = 874, 1164

@@ -40,7 +40,7 @@ from tac.segmap_renderer import (
     SegMap,
     SegMapTrainer,
 )
-from tac.training import EMA, TrainConfig
+from tac.training import TrainConfig
 
 
 # ─── Mock scorers (mirror tests/test_segmap_renderer.py fixtures) ──────

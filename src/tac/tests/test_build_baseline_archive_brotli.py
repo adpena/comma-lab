@@ -11,13 +11,11 @@ auto-decompresses .br files via decompress_brotli_files_in_dir.
 """
 from __future__ import annotations
 
-import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "experiments" / "build_baseline_archive.py"

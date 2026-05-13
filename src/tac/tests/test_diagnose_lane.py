@@ -12,7 +12,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "tools" / "diagnose_lane.py"

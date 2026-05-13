@@ -149,7 +149,7 @@ class MultiModelInflater:
                 hard_frames = json.load(f)
 
             if not isinstance(hard_frames, list):
-                _log(f"WARNING: hard_frames.json is not a list, ignoring Model B", verbose)
+                _log("WARNING: hard_frames.json is not a list, ignoring Model B", verbose)
             else:
                 models.append((model_b, hard_frames))
                 if verbose:

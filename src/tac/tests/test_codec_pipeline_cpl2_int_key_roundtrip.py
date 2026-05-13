@@ -31,7 +31,6 @@ Coverage
 from __future__ import annotations
 
 import json
-import struct
 from dataclasses import dataclass
 from typing import Any
 

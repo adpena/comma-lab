@@ -57,8 +57,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
-from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np

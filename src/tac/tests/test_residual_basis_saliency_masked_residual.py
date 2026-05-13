@@ -7,7 +7,6 @@ CLAUDE.md "Bugs must be permanently fixed AND self-protected against".
 
 from __future__ import annotations
 
-import math
 
 import pytest
 import torch

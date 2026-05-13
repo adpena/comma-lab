@@ -10,9 +10,6 @@ Each test asserts SIGN/VALUE per Round 26 finding (anti-arbitrariness):
 """
 from __future__ import annotations
 
-import struct
-import tempfile
-from pathlib import Path
 
 import pytest
 import torch

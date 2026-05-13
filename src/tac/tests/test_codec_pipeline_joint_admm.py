@@ -349,7 +349,6 @@ def test_gamma_substrate_aware_init_emits_warn_log(caplog) -> None:
 
 def test_gamma_substrate_aware_init_default_off_silent() -> None:
     """Default ``substrate_aware_init=False`` must not WARN (silent inert)."""
-    import logging
 
     sd = _small_state_dict()
     op = Op_GammaJointADMM(max_admm_iters=2)

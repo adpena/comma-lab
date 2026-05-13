@@ -21,12 +21,9 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-import tempfile
 from pathlib import Path
 
-import pytest
 import torch
-import torch.nn as nn
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 INFLATE_PATH = REPO_ROOT / "submissions" / "robust_current" / "inflate_renderer.py"
@@ -107,8 +104,7 @@ class TestSwapRendererConvsWithSelfCompress:
 
     def test_protected_layers_stay_fp32(self):
         from tac.self_compress import (
-            swap_renderer_convs_with_self_compress, SelfCompressingConv2d,
-            SC_PROTECTED_NAME_PATTERNS,
+            swap_renderer_convs_with_self_compress,
         )
         m = self._build()
         diag = swap_renderer_convs_with_self_compress(m, init_bits=8.0)
@@ -153,7 +149,6 @@ class TestSwapRendererConvsWithSelfCompress:
 
     def test_swap_preserves_forward_at_init(self):
         """At init_bits=8 the SC quantization barely affects the output."""
-        import torch.nn.functional as F
         from tac.self_compress import swap_renderer_convs_with_self_compress
         m = self._build()
         m.eval()

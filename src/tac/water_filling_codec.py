@@ -30,14 +30,12 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Iterable
 
 import torch
 import torch.nn as nn
 
 from tac.block_fp_codec import (
     pack_payload_tar_xz,
-    unpack_payload_tar_xz,
     verify_roundtrip,
 )
 from tac.learnable_bit_quant import iter_eligible_conv_names

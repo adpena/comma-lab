@@ -39,7 +39,6 @@ from __future__ import annotations
 import gc
 import json
 import math
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -47,7 +46,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tac.data import build_pairs, decode_archive, decode_video
-from tac.losses import scorer_forward_pair
 from tac.scorer import detect_device, load_scorers
 from tac.proxy_eval import _default_paths
 
@@ -169,10 +167,10 @@ def train_mine(
 
 def main():
     print(f"[rd-bound] device={DEVICE}")
-    print(f"[rd-bound] Loading PoseNet...")
+    print("[rd-bound] Loading PoseNet...")
     posenet, _ = load_scorers(DEVICE)
 
-    print(f"[rd-bound] Decoding archive + GT...")
+    print("[rd-bound] Decoding archive + GT...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     n = min(len(comp_frames), len(gt_frames))
@@ -184,7 +182,7 @@ def main():
     gc.collect()
 
     # Collect (x_feat, p) samples from all 600 pairs on both comp and gt
-    print(f"[rd-bound] Collecting features and pose outputs...")
+    print("[rd-bound] Collecting features and pose outputs...")
     all_x_feats = []
     all_p_comp = []
     all_p_gt = []
@@ -217,13 +215,13 @@ def main():
     print(f"[rd-bound] p_gt variance (per dim, averaged): {p_gt_var:.6f}")
 
     # Train MINE on (x_comp, p_comp) to estimate I(X_comp; P_comp)
-    print(f"\n[rd-bound] Training MINE estimator for I(X_comp; P_comp)...")
+    print("\n[rd-bound] Training MINE estimator for I(X_comp; P_comp)...")
     mi_comp, _ = train_mine(x_feats, p_comp, epochs=800, device=str(DEVICE))
     print(f"[rd-bound] I(X_comp; P_comp) >= {mi_comp:.4f} nats = {mi_comp / math.log(2):.4f} bits")
 
     # Also train on (x_comp, p_gt) to see how much info our compressed frames
     # carry about the GT pose
-    print(f"\n[rd-bound] Training MINE estimator for I(X_comp; P_gt)...")
+    print("\n[rd-bound] Training MINE estimator for I(X_comp; P_gt)...")
     mi_comp_gt, _ = train_mine(x_feats, p_gt, epochs=800, device=str(DEVICE))
     print(f"[rd-bound] I(X_comp; P_gt) >= {mi_comp_gt:.4f} nats = {mi_comp_gt / math.log(2):.4f} bits")
 
@@ -239,12 +237,12 @@ def main():
     D_min = sigma2 * (2 ** (-2 * R_bits / k))
 
     print(f"\n{'=' * 78}")
-    print(f"RATE-DISTORTION BOUND")
+    print("RATE-DISTORTION BOUND")
     print(f"{'=' * 78}")
     print(f"Pose variance (sigma^2):               {sigma2:.6f}")
     print(f"I(X_comp; P_gt) lower bound:           {R_bits:.4f} bits/pair")
     print(f"Rate-distortion D_min(R):              {D_min:.6f}")
-    print(f"")
+    print("")
     print(f"Current CNN achieves: {0.04809:.6f}")
     print(f"Theoretical lower bound: {D_min:.6f}")
     if D_min < 0.04809:
@@ -253,7 +251,7 @@ def main():
         score_at_dmin = 100 * 0.00576 + math.sqrt(10 * D_min) + 0.5754
         print(f"Score at D_min:       {score_at_dmin:.4f} (vs our 1.8453)")
     else:
-        print(f"We are at or above the theoretical bound — CNN scaling is saturating.")
+        print("We are at or above the theoretical bound — CNN scaling is saturating.")
 
     # Caveat: MINE lower bound is an estimate, actual I could be higher, so
     # the bound is a LOOSE lower bound. The real minimum D is at most

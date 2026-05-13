@@ -16,9 +16,7 @@ from tac.preflight import (
     MetaBugViolation,
     check_undeployed_archive_artifact_producers,
     _producer_has_main_entry,
-    _producer_is_deployed,
     _scan_repo_for_archive_artifact_producers,
-    _scan_repo_for_artifact_producers,
 )
 from tac.source_index import source_index_context
 

@@ -234,6 +234,6 @@ def test_real_repo_has_no_violations() -> None:
         repo_root=REPO, strict=False, verbose=False,
     )
     assert violations == [], (
-        f"Check 64 has live violations on the real repo:\n"
+        "Check 64 has live violations on the real repo:\n"
         + "\n".join(f"  • {v}" for v in violations[:10])
     )

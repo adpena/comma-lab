@@ -6,7 +6,6 @@ import json
 import sys
 import zipfile
 from pathlib import Path
-from typing import Any
 
 import pytest
 import torch

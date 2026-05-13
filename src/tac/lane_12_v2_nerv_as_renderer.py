@@ -63,9 +63,9 @@ from __future__ import annotations
 import hashlib
 import io
 import struct
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator, Sequence
+from typing import Callable, Iterator
 
 import torch
 import torch.nn as nn

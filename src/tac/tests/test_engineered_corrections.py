@@ -44,7 +44,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-import torch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 EXPERIMENTS_DIR = REPO_ROOT / "experiments"
@@ -206,8 +205,8 @@ def test_engineered_corrections_runs_end_to_end(tmp_path):
     # round-tripped — the rate budget is enforced separately by the
     # max_artifact_bytes guardrail (see engineered_quant_noise.py).
     assert size > 0, (
-        f"gradient_corrections.bin is zero bytes — encoder ran but produced "
-        f"no payload. Suspect serialization regression."
+        "gradient_corrections.bin is zero bytes — encoder ran but produced "
+        "no payload. Suspect serialization regression."
     )
     # 20 frames × 384 × 512 × 3 = ~12MB ceiling on raw uncompressed; even
     # at 100% disagreement zlib should bring this well under 8MB.

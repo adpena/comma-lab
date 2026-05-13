@@ -116,7 +116,6 @@ def extract_supercombo_features(
         try:
             from tac.openpilot_seeding import (
                 OPENPILOT_SUPERCOMBO_DEFAULT_PATH,
-                SupercomboUnavailable,
                 load_supercombo_model,
             )
 

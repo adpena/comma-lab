@@ -335,7 +335,6 @@ def encode_c3_residual_l2(
         from tac.residual_basis.saliency_masked_residual import (
             SaliencyMaskingConfig,
             compute_score_aware_saliency,
-            mask_residual_by_saliency,
         )
 
         sal_config = saliency_masking_config or SaliencyMaskingConfig.council_canonical()

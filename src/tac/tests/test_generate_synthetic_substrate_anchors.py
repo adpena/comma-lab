@@ -33,7 +33,6 @@ import pytest
 from tools.generate_synthetic_substrate_anchors import (
     DEFAULT_SEED,
     SCHEMA_VERSION,
-    SubstrateSyntheticSpec,
     build_synthetic_anchor,
     canonical_synthetic_substrate_specs,
     emit_anchors,

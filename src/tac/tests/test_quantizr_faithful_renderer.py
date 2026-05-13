@@ -17,9 +17,6 @@ from tac.quantizr_faithful_renderer import (
     Frame2StaticHead,
     FrameHead,
     JointFrameGenerator,
-    SepConvGNAct,
-    SepResBlock,
-    SharedMaskDecoder,
     build_quantizr_faithful_renderer,
     make_coord_grid,
 )

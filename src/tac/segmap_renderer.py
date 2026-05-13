@@ -505,9 +505,9 @@ class SegMapTrainer:
         if mask_pairs.dim() == 4:
             if self.learnable_class_targets is None:
                 raise ValueError(
-                    f"mask_pairs has 4 dims (B, T, H, W) — "
-                    f"requires learnable_class_targets to project via LUT. "
-                    f"Otherwise pass (B, T, NUM_CLASSES, H, W) one-hot."
+                    "mask_pairs has 4 dims (B, T, H, W) — "
+                    "requires learnable_class_targets to project via LUT. "
+                    "Otherwise pass (B, T, NUM_CLASSES, H, W) one-hot."
                 )
             from tac.mask_grayscale_lut import NUM_CLASSES as _NC
             b, t, h, w = mask_pairs.shape

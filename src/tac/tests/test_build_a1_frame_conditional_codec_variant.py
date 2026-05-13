@@ -13,7 +13,6 @@ import importlib.util
 import io
 import json
 import sys
-import tempfile
 import zipfile
 from pathlib import Path
 

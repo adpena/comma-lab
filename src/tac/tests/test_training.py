@@ -459,7 +459,6 @@ class TestWallClockTimeout:
         assert trainer._wall_clock_remaining() == float("inf")
 
     def test_timeout_exceeded(self):
-        import time
         config = TrainConfig(tag="test-wc-exceed", wall_clock_timeout=1, hidden=8, epochs=100)
         model = build_postfilter("standard", hidden=8)
         trainer = Trainer(model, config, device="cpu")

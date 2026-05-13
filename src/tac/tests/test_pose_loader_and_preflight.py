@@ -17,9 +17,6 @@ These tests pin the permanent prevention so the bugs never come back.
 """
 from __future__ import annotations
 
-import io
-import re
-import tempfile
 from pathlib import Path
 
 import pytest

@@ -271,7 +271,6 @@ def test_assert_perplexity_raises_on_collapse():
 
 
 def test_export_returns_sha256(tmp_path):
-    import torch
     from tac.vqvae_as_full_renderer import (
         VQVAEFullConfig, VQVAEFullRenderer, VQVAEFullLatentTable,
         export_vqvae_to_archive,

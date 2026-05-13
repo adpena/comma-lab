@@ -16,7 +16,6 @@ These tests verify the R3 fix actually:
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -36,7 +35,7 @@ def auth_eval_argparse() -> set[str]:
     src = (REPO / "experiments" / "auth_eval_renderer.py").read_text()
     # Match `parser.add_argument("--name", ...)` and `parser.add_argument( "--name", ...)`
     flags = set(re.findall(r'parser\.add_argument\(\s*"(--[a-z0-9_-]+)"', src))
-    assert flags, f"no flags found in auth_eval_renderer.py — regex bug"
+    assert flags, "no flags found in auth_eval_renderer.py — regex bug"
     return flags
 
 

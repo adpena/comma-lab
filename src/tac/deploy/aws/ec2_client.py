@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tac.deploy.base import ExperimentConfig, InstanceSpec
+from tac.deploy.base import InstanceSpec
 
 
 # ── AWS-specific constants ────────────────────────────────────────────────────

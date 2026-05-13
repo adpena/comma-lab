@@ -48,7 +48,7 @@ from __future__ import annotations
 
 import struct
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Literal
 
 import numpy as np

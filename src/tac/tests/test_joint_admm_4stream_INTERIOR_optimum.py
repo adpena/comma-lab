@@ -95,7 +95,6 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import pytest
 
 from tac.joint_admm_coordinator import (
     AdmmResult,

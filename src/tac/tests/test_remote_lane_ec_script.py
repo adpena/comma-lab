@@ -19,12 +19,9 @@ Python).
 """
 from __future__ import annotations
 
-import argparse
-import importlib.util
 import os
 import re
 import stat
-import sys
 from pathlib import Path
 
 import pytest

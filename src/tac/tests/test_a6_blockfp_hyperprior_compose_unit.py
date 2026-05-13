@@ -22,7 +22,6 @@ import pytest
 from tac.codec import a6_selfcomp_blockfp_hyperprior_compose as a6
 
 from tac.codec.a6_selfcomp_blockfp_hyperprior_compose import (
-    ALPHA_DEFAULT,
     SCALE_QUANT_FP16,
     SCALE_QUANT_FP32,
     SCALE_QUANT_UINT8,

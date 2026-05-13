@@ -33,7 +33,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from tac.versioned_output import versioned_write, versioned_copy
+from tac.versioned_output import versioned_write
 
 # SegNet class colors (5 classes)
 SEGNET_COLORS = np.array(

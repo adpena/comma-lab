@@ -3,7 +3,6 @@ from __future__ import annotations
 import bz2
 import hashlib
 import importlib.util
-import json
 import struct
 import sys
 import zipfile

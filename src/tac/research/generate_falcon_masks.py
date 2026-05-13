@@ -8,7 +8,6 @@ Output: reports/masks/falcon_keyframes.npy  shape (60, 874, 1164) float32
 """
 
 import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -209,20 +208,20 @@ def main():
     fg_arr = np.array(frame_fg_coverage)
     bg_arr = np.array(frame_bg_coverage)
 
-    print(f"\n  Foreground coverage (protected regions):")
+    print("\n  Foreground coverage (protected regions):")
     print(f"    Mean:   {fg_arr.mean():.1f}%")
     print(f"    Median: {np.median(fg_arr):.1f}%")
     print(f"    Min:    {fg_arr.min():.1f}%")
     print(f"    Max:    {fg_arr.max():.1f}%")
     print(f"    Std:    {fg_arr.std():.1f}%")
 
-    print(f"\n  Background coverage (deprioritized):")
+    print("\n  Background coverage (deprioritized):")
     print(f"    Mean:   {bg_arr.mean():.1f}%")
     print(f"    Median: {np.median(bg_arr):.1f}%")
     print(f"    Min:    {bg_arr.min():.1f}%")
     print(f"    Max:    {bg_arr.max():.1f}%")
 
-    print(f"\n  Static trapezoid comparison: 44% coverage")
+    print("\n  Static trapezoid comparison: 44% coverage")
     diff = fg_arr.mean() - 44.0
     print(f"    Falcon fg vs trapezoid: {diff:+.1f}% ({'more' if diff > 0 else 'less'} coverage)")
 
@@ -230,12 +229,12 @@ def main():
     protected = (importance > 0.5).mean() * 100
     deprioritized = (importance < 0.3).mean() * 100
     neutral = 100 - protected - deprioritized
-    print(f"\n  Importance map distribution:")
+    print("\n  Importance map distribution:")
     print(f"    Protected (>0.5):     {protected:.1f}%")
     print(f"    Neutral (0.3-0.5):    {neutral:.1f}%")
     print(f"    Deprioritized (<0.3): {deprioritized:.1f}%")
 
-    print(f"\n  Per-prompt mean coverage:")
+    print("\n  Per-prompt mean coverage:")
     for prompt, covs in prompt_coverage.items():
         if covs:
             arr = np.array(covs)
@@ -243,7 +242,7 @@ def main():
             print(f"    [{label}] {prompt:40s}: {arr.mean():.1f}% (std {arr.std():.1f}%)")
 
     # Quality checks
-    print(f"\n  Quality checks:")
+    print("\n  Quality checks:")
     empty_fg = np.sum(fg_arr < 5.0)
     print(f"    Frames with <5% fg coverage: {empty_fg}/{N_KEYFRAMES}")
     saturated_fg = np.sum(fg_arr > 80.0)

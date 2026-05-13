@@ -16,7 +16,6 @@ import pytest
 from tac.packet_compiler import (
     MAGIC_PQ12,
     PQ12_MAX_QUANTUM,
-    PQ12PoseStream,
     decode_pq12_pose,
     encode_pq12_pose,
 )

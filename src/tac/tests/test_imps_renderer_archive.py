@@ -20,7 +20,6 @@ from __future__ import annotations
 import json
 import pytest
 import torch
-import torch.nn as nn
 
 from tac.imps_renderer_archive import (
     IMPS_ARCHIVE_MAGIC,
@@ -35,7 +34,6 @@ from tac.imps_renderer_archive import (
 from tac.iterative_magnitude_pruning import (
     apply_mask_to_model,
     iter_prunable_parameters,
-    prune_lowest_magnitude,
 )
 
 

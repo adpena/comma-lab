@@ -13,9 +13,7 @@ import math
 import pytest
 
 from tac.joint_source_rd_bound import (
-    JointSourceFloorReport,
     JointSourceStream,
-    SqrtNBudgetReport,
     compute_joint_source_floor,
     gauss_markov_bit_savings_per_symbol,
     joint_floor_from_shannon_report,

@@ -27,14 +27,11 @@ CLAUDE.md non-negotiable.
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-import tools.test_magic_codec_on_dense_streams as mod
 from tools.test_magic_codec_on_dense_streams import (
     DenseStreamSpec,
     _DENSE_STREAM_SPECS,

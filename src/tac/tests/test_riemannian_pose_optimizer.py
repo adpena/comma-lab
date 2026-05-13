@@ -25,7 +25,7 @@ import pytest
 import torch
 
 from tac.riemannian_pose_optimizer import RiemannianSGD
-from tac.se3 import exp_map_so3, log_map_so3
+from tac.se3 import exp_map_so3
 
 
 # ──────────────────────────────────────────────────────────────────────────

@@ -14,13 +14,12 @@ broke it (hypothesis shrinks failures to minimal counter-examples).
 """
 from __future__ import annotations
 
-import struct
 import tempfile
 from pathlib import Path
 
 import numpy as np
 import pytest
-from hypothesis import HealthCheck, assume, given, settings, strategies as st
+from hypothesis import HealthCheck, given, settings, strategies as st
 
 from tac.lossless.frequency_coder import (
     decode_uint16_frequency_stream,

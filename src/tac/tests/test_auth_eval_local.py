@@ -7,7 +7,6 @@ end-to-end with byte-level assertions.
 from __future__ import annotations
 
 import importlib.util
-import io
 import sys
 import zipfile
 from pathlib import Path

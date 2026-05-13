@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import gc
 import time
-from pathlib import Path
 
 import numpy as np
 
@@ -27,9 +26,6 @@ import mlx.nn as nn
 import mlx.optimizers as optim
 
 from tac.mlx_renderer import (
-    MaskRenderer,
-    MotionPredictor,
-    PairGenerator,
     build_mlx_renderer,
     pretrain_loss_fn,
     haar_dwt2d,
@@ -487,7 +483,7 @@ def bench_cpu_lane():
 
     print(f"\n  GPU/CPU ratio: {t_cpu / t_gpu:.1f}x (GPU faster)")
     print(f"  Verdict: {'GPU always wins' if t_gpu < t_cpu else 'CPU competitive'}")
-    print(f"  CPU lane verdict: Use GPU for ALL training. CPU only for data prep/IO.")
+    print("  CPU lane verdict: Use GPU for ALL training. CPU only for data prep/IO.")
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -644,7 +640,7 @@ def bench_combined_best():
 
     # Estimate epoch time with 120 pairs
     n_pairs = 120  # 480/4 subsample
-    print(f"\n  Estimated epoch time (120 pairs):")
+    print("\n  Estimated epoch time (120 pairs):")
     print(f"    Baseline: {n_pairs * t_base / 1000:.1f}s")
     print(f"    Optimized: {n_pairs * t_best / 1000:.1f}s")
 

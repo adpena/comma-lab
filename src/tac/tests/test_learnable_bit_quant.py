@@ -20,18 +20,15 @@ from __future__ import annotations
 import pytest
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from tac.learnable_bit_quant import (
     LagrangianRateController,
     LearnableBitConv2d,
     LearnablePerElementBitDepth,
     _PerElementSTEQuantize,
-    _ste_per_element_quantize,
     _zero_on_device,
     compute_learnable_bit_rate_penalty,
     renderer_total_learnable_weight_bits,
-    swap_renderer_convs_with_learnable_bits,
 )
 
 

@@ -80,7 +80,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    import torch
+    pass
 
 
 __all__ = [

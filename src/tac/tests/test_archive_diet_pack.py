@@ -7,8 +7,6 @@ they reflect archive-byte changes, not a fresh contest-CUDA authoritative eval.
 
 from __future__ import annotations
 
-import io
-import struct
 import zipfile
 from pathlib import Path
 

@@ -26,7 +26,6 @@ from tac.vastai_tracker import (
     load_active_instances_strict,
     register_instance,
     remove_instance,
-    tracker_path,
 )
 
 

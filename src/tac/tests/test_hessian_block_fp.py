@@ -8,7 +8,6 @@ import torch
 
 from tac.hessian_block_fp import (
     HessianAllocationConfig,
-    HessianAllocationResult,
     allocate_bits_by_hessian,
     compute_hessian_diagonal_proxy,
     expected_distortion_under_allocation,

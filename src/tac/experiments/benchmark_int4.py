@@ -325,7 +325,7 @@ def main():
     # Theoretical sizes
     int8_theoretical = total_params * 1  # 1 byte per param
     int4_theoretical = total_params * 0.5  # 0.5 bytes per param (nibble packing)
-    print(f"\nTheoretical sizes (weights only):")
+    print("\nTheoretical sizes (weights only):")
     print(f"  INT8: {int8_theoretical:,} bytes ({int8_theoretical/1024:.1f} KB)")
     print(f"  INT4: {int4_theoretical:,} bytes ({int4_theoretical/1024:.1f} KB)")
 

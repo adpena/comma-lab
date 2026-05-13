@@ -941,7 +941,6 @@ def test_repack_dense_as_sparse_wavelet_round_trip() -> None:
     """Wavelet dense → sparse repack + inline decode reproduces original bytes."""
     from tac.residual_basis.pr106_materializer_helpers import repack_dense_as_sparse
     import struct as _struct
-    import sys as _sys
 
     inline_path = (
         Path(__file__).resolve().parents[3]

@@ -13,7 +13,6 @@ runnable on the dev machine.
 from __future__ import annotations
 
 import math
-import os
 import struct
 from pathlib import Path
 
@@ -22,11 +21,7 @@ import pytest
 import torch
 
 from tac.lossless.argmax_codec import (
-    DELTA_ALPHABET_SIZE,
-    MAGIC,
-    NUM_BUCKETS,
     NUM_CLASSES,
-    SAME_AS_PREV_SYMBOL,
     VERSION,
     decode_argmax_masks,
     encode_argmax_masks,

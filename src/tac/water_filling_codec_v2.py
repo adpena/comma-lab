@@ -58,7 +58,6 @@ import io
 import math
 import struct
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 import torch
@@ -71,7 +70,6 @@ from tac.block_fp_codec import _EXP_MAX, _EXP_MIN
 from tac.water_filling_codec import (
     QINT_LEVELS,
     WaterFillError,
-    bits_for_qint,
     water_fill_bit_budget,
 )
 
@@ -145,7 +143,7 @@ def _check_block_fp_eligible(weights_block_fp: torch.Tensor) -> None:
         )
     if weights_block_fp.numel() == 0:
         raise BlockFPIneligible(
-            f"encode_omega_w_v2: empty tensor (numel=0); nothing to allocate."
+            "encode_omega_w_v2: empty tensor (numel=0); nothing to allocate."
         )
     if weights_block_fp.shape[0] < 1:
         raise BlockFPIneligible(

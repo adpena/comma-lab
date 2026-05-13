@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tac.pr85_bundle import FIXED_V5_LENGTHS, SEGMENT_ORDER, pack_pr85_bundle
+from tac.pr85_bundle import FIXED_V5_LENGTHS, pack_pr85_bundle
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

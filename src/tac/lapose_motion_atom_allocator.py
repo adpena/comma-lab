@@ -93,11 +93,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass, field as dataclass_field
 from enum import IntEnum
-from typing import Any
 
-import brotli  # type: ignore[import-not-found]
-import numpy as np
-import torch
 
 PR106_RESIDUAL_MAGIC = 0xFD
 LAPOSE_MOTION_ATOM_FORMAT_ID = 0x32

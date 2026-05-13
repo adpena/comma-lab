@@ -437,10 +437,10 @@ def test_omega_w_v2_real_overhead_gate_fires_on_tiny_layer() -> None:
     # update the assertion message but keep the test (it still documents
     # the behaviour).
     assert n_gated >= 1, (
-        f"expected >=1 tiny tensor to trigger GateRegression on Lane G v3 "
-        f"renderer.bin; got 0. Either the architecture changed (no tiny "
-        f"layers anymore) or the overhead-gate threshold drifted. "
-        f"Investigate before promoting."
+        "expected >=1 tiny tensor to trigger GateRegression on Lane G v3 "
+        "renderer.bin; got 0. Either the architecture changed (no tiny "
+        "layers anymore) or the overhead-gate threshold drifted. "
+        "Investigate before promoting."
     )
     print(f"  [empirical] overhead-gate fired on {n_gated} tiny tensor(s)")
 

@@ -90,7 +90,7 @@ def _run_with_periodic_commits(cmd: list[str], env: dict, commit_interval: int =
     finally:
         training_done.set()
         results_vol.commit()
-        print(f"  [volume] Final commit done")
+        print("  [volume] Final commit done")
 
     return result
 
@@ -105,7 +105,6 @@ def _run_with_periodic_commits(cmd: list[str], env: dict, commit_interval: int =
 def train_renderer(profile: str, tag: str, extra_args: list[str] | None = None):
     """Run renderer training via canonical CLI on A10G."""
     import os
-    import subprocess
     import sys
 
     os.makedirs(f"/results/{tag}", exist_ok=True)
@@ -115,7 +114,7 @@ def train_renderer(profile: str, tag: str, extra_args: list[str] | None = None):
     has_precomputed = os.path.exists(f"{precomputed}/comp_frames.pt")
 
     print(f"=== tac renderer training: {profile} | tag: {tag} ===")
-    print(f"  GPU: CUDA")
+    print("  GPU: CUDA")
     print(f"  Precomputed: {'YES' if has_precomputed else 'NO'}")
 
     cmd = [
@@ -153,7 +152,7 @@ def train_postfilter(profile: str, tag: str, extra_args: list[str] | None = None
     has_precomputed = os.path.exists(f"{precomputed}/comp_frames.pt")
 
     print(f"=== tac postfilter training: {profile} | tag: {tag} ===")
-    print(f"  GPU: CUDA")
+    print("  GPU: CUDA")
     print(f"  Precomputed: {'YES' if has_precomputed else 'NO'}")
 
     cmd = [
@@ -199,7 +198,7 @@ def main(
             ("dp_sims_smoke", "dp_sims_smoke_a10g"),
             ("wavelet_renderer_smoke", "wavelet_smoke_a10g"),
         ]
-        print(f"Launching all 3 GPU renderer smoke tests on Modal A10G...")
+        print("Launching all 3 GPU renderer smoke tests on Modal A10G...")
         handles = []
         for p, t in profiles:
             print(f"  {p} -> {t}")

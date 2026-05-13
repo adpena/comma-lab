@@ -18,11 +18,10 @@ Tests verify:
 """
 from __future__ import annotations
 
-import math
 
 import pytest
 
-from tac.joint_admm_coordinator import AdaptiveRhoStep, adaptive_rho_step
+from tac.joint_admm_coordinator import adaptive_rho_step
 
 
 # ---------------------------------------------------------------------------

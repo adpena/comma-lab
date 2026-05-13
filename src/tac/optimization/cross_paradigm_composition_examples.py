@@ -57,20 +57,17 @@ import datetime as dt
 import hashlib
 import json
 import struct
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
 from tac.optimization.substrate_composition_matrix import (
     Composability,
     CompositionMatrix,
-    DISPATCH_COST_USD_MIDPOINT,
     ScoreAxis,
     SubstrateClass,
     SubstrateRow,
     build_composition_matrix,
-    canonical_substrate_inventory,
     predicted_composite_delta,
 )
 

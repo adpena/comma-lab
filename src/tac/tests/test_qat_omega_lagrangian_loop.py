@@ -100,8 +100,6 @@ def _build_tiny_model_with_swap():
     without needing a full renderer + scorer."""
     from tac.learnable_bit_quant import (
         LearnableBitConv2d,
-        compute_learnable_bit_rate_penalty,
-        renderer_average_learnable_bits_per_weight,
     )
 
     model = nn.Sequential(

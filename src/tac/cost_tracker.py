@@ -170,7 +170,7 @@ def print_cost_estimate(gpu: str, estimated_hours: float, platform: str = "modal
     print(f"  Est. runtime: {estimated_hours:.1f} hours")
     print(f"  Est. cost: ${est.estimated_cost:.2f}")
     if est.is_free_tier:
-        print(f"  (free tier — no charge)")
+        print("  (free tier — no charge)")
 
 
 def collect_replicability_metadata(device: str = "cpu") -> dict[str, Any]:

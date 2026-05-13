@@ -104,12 +104,11 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
 if TYPE_CHECKING:
-    import torch
-    from torch import nn
+    pass
 
 logger = logging.getLogger(__name__)
 

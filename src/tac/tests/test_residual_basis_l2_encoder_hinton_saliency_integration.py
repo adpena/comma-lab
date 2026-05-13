@@ -33,10 +33,8 @@ from tac.residual_basis.hinton_distilled_scorer_surrogate import (
 )
 from tac.residual_basis.l2_score_aware_loss import (
     L2ScoreAwareLossError,
-    ScoreAwareLagrangian,
     compute_score_aware_proxy_loss,
 )
-from tac.residual_basis.saliency_masked_residual import SaliencyMaskingConfig
 from tac.residual_basis.wavelet_encoder_l2 import (
     dense_wavelet_residual_blob_bytes,
     encode_wavelet_residual_l2,

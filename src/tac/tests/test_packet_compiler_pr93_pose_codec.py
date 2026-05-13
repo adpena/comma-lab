@@ -16,8 +16,6 @@ import pytest
 from tac.packet_compiler import (
     MAGIC_MODEL_COMPACT,
     MAGIC_POSE_DV,
-    DeltaVarintPoseStream,
-    QZMB1Block,
     decode_delta_varint_pose,
     encode_delta_varint_pose,
     pack_qzmb1_block,

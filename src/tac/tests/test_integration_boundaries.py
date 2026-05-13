@@ -7,7 +7,6 @@ These tests verify that data flows correctly BETWEEN components:
   - Archive construction and validation
   - CRF mask encode/decode roundtrip
 """
-import struct
 import tempfile
 import unittest
 from pathlib import Path

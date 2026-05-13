@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import socket
 import subprocess
 import sys

@@ -10,7 +10,6 @@ Memory: feedback_codex_round78_findings_fix_with_self_protection_landed_20260509
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest

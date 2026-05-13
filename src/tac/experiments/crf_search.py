@@ -135,7 +135,7 @@ def sweep(
                 archive_bytes = archive_path.stat().st_size
                 print(f"  Encoded in {encode_secs:.1f}s, archive={archive_bytes:,} bytes")
 
-                print(f"  Running smoke proxy...")
+                print("  Running smoke proxy...")
                 smoke_data, smoke_secs = run_smoke()
                 video_result = smoke_data["results"][0]
                 mae_mean = video_result["semantic_mae_mean"]
@@ -195,7 +195,7 @@ def sweep(
         scored = [r for r in top_n if r.full_score is not None]
         if scored:
             scored.sort(key=lambda r: r.full_score)
-            print(f"\n=== FULL SCORER RESULTS ===")
+            print("\n=== FULL SCORER RESULTS ===")
             for r in scored:
                 print(f"  CRF {r.crf}: score={r.full_score:.4f}")
             print(f"\nBest scored CRF: {scored[0].crf} (score={scored[0].full_score:.4f})")

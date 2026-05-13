@@ -22,8 +22,6 @@ These tests pin the permanent prevention so the bug never returns:
 """
 from __future__ import annotations
 
-import io
-import struct
 import sys
 import tempfile
 import textwrap
@@ -125,7 +123,6 @@ def test_load_renderer_dispatches_fp4_correctly(monkeypatch) -> None:
     test_fp4_robustness). We monkey-patch the FP4 loader to a sentinel and
     assert it gets called when the magic is FP4A.
     """
-    import experiments.precompute_gradient_corrections as pgc
 
     called = {"with_path": None}
 

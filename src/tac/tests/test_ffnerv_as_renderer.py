@@ -1,7 +1,6 @@
 """Tests for FFNeRV-as-renderer substrate."""
 from __future__ import annotations
 
-import math
 import struct
 
 import pytest

@@ -154,7 +154,6 @@ def test_newton_raphson_coord_invert_100_random_points() -> None:
     """Stronger N-R inversion check: round-trip 100 random coords through
     Φ and Φ⁻¹ in coordinate space (no grid_sample bilinear floor)."""
     from tac.hyperbolic_foveation import (
-        _identity_coordinates,
         _inverse_coordinates,
         _map_coordinates,
     )

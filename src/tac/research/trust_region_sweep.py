@@ -29,11 +29,9 @@ from __future__ import annotations
 import gc
 import json
 import math
-from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from tac.data import build_pairs, decode_archive, decode_video
 from tac.scorer import detect_device, load_scorers
@@ -48,7 +46,7 @@ def main():
     print(f"[trust-region] device={DEVICE}")
     posenet, _ = load_scorers(DEVICE)
 
-    print(f"[trust-region] Decoding archive + GT...")
+    print("[trust-region] Decoding archive + GT...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     n = min(len(comp_frames), len(gt_frames))
@@ -64,7 +62,7 @@ def main():
 
     print(f"[trust-region] Measuring linearization error at {len(test_indices)} pairs "
           f"across {len(alphas)} alpha values")
-    print(f"[trust-region] Alpha units are pixel RMS (direction is random unit vector)")
+    print("[trust-region] Alpha units are pixel RMS (direction is random unit vector)")
 
     # For each pair and each alpha, compute:
     #   exact_delta = pose(x + alpha*d) - pose(x)
@@ -122,7 +120,7 @@ def main():
 
     # Summarize
     print(f"\n{'=' * 78}")
-    print(f"TRUST REGION SWEEP RESULTS")
+    print("TRUST REGION SWEEP RESULTS")
     print(f"{'=' * 78}")
     print(f"{'alpha (px)':>12} {'mean_abs_err':>14} {'mean_exact':>14} "
           f"{'rel_err':>10} {'samples':>8}")
@@ -152,29 +150,29 @@ def main():
             break
 
     print(f"\n{'=' * 78}")
-    print(f"INTERPRETATION")
+    print("INTERPRETATION")
     print(f"{'=' * 78}")
     if knee_alpha is None:
         print(f"⚠ Relative error never exceeded 50% even at alpha={alphas[-1]} pixels.")
-        print(f"  PoseNet is remarkably linear at this scale. Single-step methods")
-        print(f"  could actually work — the Jacobian failure may have been due to")
-        print(f"  something else (conditioning, numerical precision).")
+        print("  PoseNet is remarkably linear at this scale. Single-step methods")
+        print("  could actually work — the Jacobian failure may have been due to")
+        print("  something else (conditioning, numerical precision).")
     else:
         print(f"⚑ Trust radius knee: alpha ≈ {knee_alpha:.4g} pixels")
         if knee_alpha < 0.01:
-            print(f"  VERY SMALL. Karpathy's prediction CONFIRMED.")
-            print(f"  Single-step methods are dead on arrival. Only iterative")
-            print(f"  small-step descent (i.e., SGD) works. The CNN is the right tool.")
-            print(f"  Test-time Newton is NOT viable — step size would be too small")
-            print(f"  to make progress within inflate time budget.")
+            print("  VERY SMALL. Karpathy's prediction CONFIRMED.")
+            print("  Single-step methods are dead on arrival. Only iterative")
+            print("  small-step descent (i.e., SGD) works. The CNN is the right tool.")
+            print("  Test-time Newton is NOT viable — step size would be too small")
+            print("  to make progress within inflate time budget.")
         elif knee_alpha < 0.1:
-            print(f"  SMALL but workable. Iterative Newton at inflate time is")
-            print(f"  possible if we can fit ~50 steps per frame in the budget.")
+            print("  SMALL but workable. Iterative Newton at inflate time is")
+            print("  possible if we can fit ~50 steps per frame in the budget.")
         else:
-            print(f"  WORKABLE. Newton at inflate time is viable with ~5-10 steps.")
+            print("  WORKABLE. Newton at inflate time is viable with ~5-10 steps.")
 
-    print(f"\nFor comparison, the Jacobian experiment's delta was 0.012 RMS")
-    print(f"with max 3.07 pixels — way outside the linear region.")
+    print("\nFor comparison, the Jacobian experiment's delta was 0.012 RMS")
+    print("with max 3.07 pixels — way outside the linear region.")
 
     result = {
         "summary": summary,

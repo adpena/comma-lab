@@ -80,8 +80,7 @@ import json
 import logging
 import time
 import zipfile
-from dataclasses import asdict, dataclass, field
-from io import BytesIO
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
 

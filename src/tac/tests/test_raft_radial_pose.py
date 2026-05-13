@@ -20,7 +20,6 @@ from tac.raft_radial_pose import (
     MODE_INFLATE_RECOMPUTE,
     RAFT_RADIAL_VERSION,
     NormalizedFlowCalibration,
-    PoseCalibration,
     RaftRadialPoseConfig,
     VALID_MODES,
     build_radial_basis,

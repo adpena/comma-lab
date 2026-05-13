@@ -52,16 +52,11 @@ from __future__ import annotations
 import gc
 import json
 import math
-import os
-from pathlib import Path
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from tac.data import build_pairs, decode_archive, decode_video
-from tac.losses import scorer_forward_pair
 from tac.scorer import detect_device, load_scorers
 from tac.proxy_eval import _default_paths
 
@@ -131,10 +126,10 @@ def optimal_correction(J: torch.Tensor, residual: torch.Tensor) -> torch.Tensor:
 
 def main():
     print(f"[jacobian] device={DEVICE}")
-    print(f"[jacobian] Loading PoseNet (only — we don't need SegNet here)...")
+    print("[jacobian] Loading PoseNet (only — we don't need SegNet here)...")
     posenet, segnet = load_scorers(DEVICE)
 
-    print(f"[jacobian] Decoding archive + GT...")
+    print("[jacobian] Decoding archive + GT...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     n = min(len(comp_frames), len(gt_frames))
@@ -157,7 +152,7 @@ def main():
     print(f"[jacobian] Analyzing {len(indices)}/{n_pairs} pairs (stride={subsample})")
 
     # Baseline: pose distortion without any correction
-    print(f"\n[jacobian] Baseline (no correction):")
+    print("\n[jacobian] Baseline (no correction):")
     total_baseline_dist = 0.0
     total_optimal_dist = 0.0
     total_delta_norm = 0.0
@@ -217,26 +212,26 @@ def main():
     avg_frac_changed = delta_mean_pixel_change / n_eval
 
     print(f"\n{'=' * 70}")
-    print(f"RESULTS: Closed-form Jacobian-optimal correction")
+    print("RESULTS: Closed-form Jacobian-optimal correction")
     print(f"{'=' * 70}")
     print(f"Baseline PoseNet distortion (uncorrected): {avg_baseline:.6f}")
     print(f"Optimal PoseNet distortion (J pseudoinv):  {avg_optimal:.6f}")
     print(f"Reduction: {(avg_baseline - avg_optimal) / avg_baseline * 100:.1f}%")
-    print(f"")
-    print(f"Correction statistics:")
+    print("")
+    print("Correction statistics:")
     print(f"  Mean RMS delta: {avg_delta_norm:.3f}")
     print(f"  Max delta seen: {total_delta_max:.2f}")
     print(f"  Mean fraction of pixels changed (>0.5 LSB): {avg_frac_changed:.4f}")
-    print(f"")
-    print(f"Comparison with our current winner (h=32 long1000):")
-    print(f"  CNN-based PoseNet:   0.048092")
+    print("")
+    print("Comparison with our current winner (h=32 long1000):")
+    print("  CNN-based PoseNet:   0.048092")
     print(f"  Closed-form optimal: {avg_optimal:.6f}")
     print(f"  Gap:                 {0.048092 - avg_optimal:.6f}")
-    print(f"")
-    print(f"Score projection (holding SegNet=0.00576, rate=0.5754):")
+    print("")
+    print("Score projection (holding SegNet=0.00576, rate=0.5754):")
     est_score = 100 * 0.00576 + math.sqrt(10 * avg_optimal) + 0.5754
     print(f"  Score if this PoseNet is achievable: {est_score:.4f}")
-    print(f"  Current best (CNN):                  1.8453")
+    print("  Current best (CNN):                  1.8453")
     print(f"  Implied headroom:                    {1.8453 - est_score:.4f}")
 
     result = {

@@ -1,7 +1,6 @@
 """Unit tests for ``tac.balle_nonlinear_transform`` (T18 scaffold)."""
 from __future__ import annotations
 
-import math
 
 import pytest
 

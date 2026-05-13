@@ -7,7 +7,6 @@ prove the encoded stream actually changes when bit budgets change.
 """
 from __future__ import annotations
 
-import struct
 
 import numpy as np
 import pytest

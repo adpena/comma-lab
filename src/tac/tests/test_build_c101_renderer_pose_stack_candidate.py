@@ -5,7 +5,6 @@ import struct
 import zipfile
 from pathlib import Path
 
-import pytest
 
 from experiments import build_c101_renderer_pose_stack_candidate as builder
 

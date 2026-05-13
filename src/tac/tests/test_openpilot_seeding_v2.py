@@ -13,9 +13,7 @@ V2 fixes 8 issues identified in the V1 audit:
 """
 from __future__ import annotations
 
-import importlib.util
 import logging
-import re
 import subprocess
 import sys
 from pathlib import Path

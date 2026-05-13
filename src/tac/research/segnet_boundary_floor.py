@@ -30,8 +30,6 @@ from __future__ import annotations
 
 import gc
 import json
-import math
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -99,7 +97,7 @@ def main():
     print(f"[segnet-floor] device={DEVICE}")
     posenet, segnet = load_scorers(DEVICE)
 
-    print(f"[segnet-floor] Loading GT video...")
+    print("[segnet-floor] Loading GT video...")
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     n = len(gt_frames)
     gt_pairs = build_pairs(gt_frames)
@@ -130,7 +128,7 @@ def main():
           f"median={boundary_frac_median:.4f}")
 
     # ── Pass 2: self-disagreement under small jitter ───────────────────
-    print(f"\n[segnet-floor] Measuring self-disagreement under pixel jitter...")
+    print("\n[segnet-floor] Measuring self-disagreement under pixel jitter...")
     jitter_levels = [0.1, 0.5, 1.0, 2.0, 5.0]
     jitter_results = {}
     for jitter in jitter_levels:
@@ -146,22 +144,22 @@ def main():
 
     # ── Interpretation ────────────────────────────────────────────────
     print(f"\n{'=' * 78}")
-    print(f"INTERPRETATION")
+    print("INTERPRETATION")
     print(f"{'=' * 78}")
-    print(f"Current promoted SegNet distortion: 0.005764")
+    print("Current promoted SegNet distortion: 0.005764")
     print(f"Boundary-band fraction of GT labels: {boundary_frac_mean:.4f}")
     print(f"Self-disagreement at jitter=0.5 LSB: {jitter_results[0.5]['mean']:.6f}")
     print(f"Self-disagreement at jitter=1.0 LSB: {jitter_results[1.0]['mean']:.6f}")
-    print(f"")
-    print(f"A reasonable SegNet floor is the self-disagreement at the LSB scale")
-    print(f"corresponding to the compressor's quantization noise (~0.5-1.0 LSB).")
+    print("")
+    print("A reasonable SegNet floor is the self-disagreement at the LSB scale")
+    print("corresponding to the compressor's quantization noise (~0.5-1.0 LSB).")
 
     # Tao's hypothesis: boundary fraction * intrinsic flip rate = floor
     tao_floor = boundary_frac_mean * 0.05  # 5% intrinsic boundary noise
-    print(f"")
+    print("")
     print(f"Tao's closed-form floor (5% boundary noise): {tao_floor:.6f}")
     print(f"Empirical jitter-based floor (jitter=0.5):   {jitter_results[0.5]['mean']:.6f}")
-    print(f"")
+    print("")
 
     current = 0.005764
     empirical_floor = jitter_results[0.5]['mean']
@@ -170,13 +168,13 @@ def main():
     print(f"Current SegNet:  {current:.6f}")
     print(f"Empirical floor: {empirical_floor:.6f}")
     print(f"Headroom:        {headroom:.6f}  ({headroom_frac * 100:.1f}% of current)")
-    print(f"")
+    print("")
     if headroom_frac > 0.3:
-        print(f"✓ Plenty of SegNet headroom. The SegNet-attack lane should continue.")
+        print("✓ Plenty of SegNet headroom. The SegNet-attack lane should continue.")
     elif headroom_frac > 0.1:
-        print(f"○ Moderate SegNet headroom. Worth pushing but with diminishing returns.")
+        print("○ Moderate SegNet headroom. Worth pushing but with diminishing returns.")
     else:
-        print(f"⚠ SegNet is near its empirical floor. Pivot compute elsewhere.")
+        print("⚠ SegNet is near its empirical floor. Pivot compute elsewhere.")
 
     result = {
         "current_seg_distortion": current,

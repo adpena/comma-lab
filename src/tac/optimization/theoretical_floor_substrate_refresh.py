@@ -49,18 +49,16 @@ import dataclasses
 import datetime as dt
 import json
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
 from tac.optimization.substrate_composition_matrix import (
     CompositionMatrix,
-    DISPATCH_COST_USD_MIDPOINT,
     ScoreAxis,
     SubstrateClass,
     SubstrateRow,
     build_composition_matrix,
-    canonical_substrate_inventory,
 )
 
 # Schema constants (pinned).

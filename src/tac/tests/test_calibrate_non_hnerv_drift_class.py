@@ -32,7 +32,6 @@ if str(TOOLS_DIR) not in sys.path:
 import calibrate_non_hnerv_drift_class as calib  # noqa: E402
 
 from tac.optimization.cuda_cpu_axis_profile_registry import (  # noqa: E402
-    ARCHITECTURE_CLASSES,
     ArchitectureProfile,
     write_registry,
 )

@@ -18,22 +18,18 @@ Verifies:
 
 from __future__ import annotations
 
-import math
 
 import pytest
 import torch
-import torch.nn as nn
 
 from tac.contrib.ghost_darts import (
     GHOST_RATIO_CANDIDATES,
     GhostConvVariant,
     GhostRatioDARTSCell,
-    GhostRatioSupernet,
     build_ghost_arch_optimizer,
     build_ghost_ratio_supernet,
     make_trajectory,
 )
-from tac.darts import DARTSAnnealSchedule
 
 
 # ── GhostConvVariant ────────────────────────────────────────────────────

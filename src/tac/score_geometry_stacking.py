@@ -65,7 +65,6 @@ from dataclasses import dataclass
 from tac.score_geometry import (
     POSE_COEFFICIENT_INSIDE_SQRT,
     contest_score,
-    score_decomposition,
 )
 
 

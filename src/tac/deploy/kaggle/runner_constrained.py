@@ -498,7 +498,7 @@ def main(
     print(f"  proxy: {kill_scores['score']:.4f}  (kill if > {KILL_THRESHOLD})")
     if kill_scores["score"] > KILL_THRESHOLD:
         print(f"  KILLED — proxy {kill_scores['score']:.4f} exceeds threshold {KILL_THRESHOLD}.")
-        print(f"  Hypothesis: constrained gen from noise does not converge fast enough.")
+        print("  Hypothesis: constrained gen from noise does not converge fast enough.")
         return 1
 
     print(f"  Passed kill check — continuing to {num_steps} steps ...")
@@ -592,7 +592,7 @@ def main(
         archive_size_bytes=archive_path.stat().st_size,
     )
     del gt_small_proxy
-    print(f"\n  === RESULT ===")
+    print("\n  === RESULT ===")
     print(f"  score:     {scores['score']:.4f}")
     print(f"  seg_dist:  {scores['seg_dist']:.6f}")
     print(f"  pose_dist: {scores['pose_dist']:.6f}")

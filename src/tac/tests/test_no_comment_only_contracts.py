@@ -388,7 +388,7 @@ def test_real_codebase_live_count_zero() -> None:
         strict=False, verbose=False,
     )
     assert violations == [], (
-        f"NEW COMMENT-ONLY CONTRACT INTRODUCED:\n"
+        "NEW COMMENT-ONLY CONTRACT INTRODUCED:\n"
         + "\n".join(f"  • {v}" for v in violations)
         + "\n\nFix: add a backing assertion (assert/raise/check_*) within "
         "±50 lines of the comment OR inside the enclosing function body. "

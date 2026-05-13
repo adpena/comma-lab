@@ -14,13 +14,11 @@ from __future__ import annotations
 
 import pytest
 import torch
-import torch.nn as nn
 
 from tac.contrib.dsconv_darts import (
     DSCONV_BASE_CHANNELS,
     DSCONV_MID_CHANNELS,
     DSConvChannelDARTSCell,
-    DSConvChannelSupernet,
     DSConvVariant,
     PARAM_BUDGET,
     build_dsconv_arch_optimizer,

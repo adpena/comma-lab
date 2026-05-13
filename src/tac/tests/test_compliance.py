@@ -4,7 +4,6 @@ These tests compare our implementations against the upstream reference
 to catch any divergence that would make proxy scores unreliable.
 """
 import sys
-import unittest
 from pathlib import Path
 
 import pytest

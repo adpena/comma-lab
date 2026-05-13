@@ -9,17 +9,14 @@ Asserts:
 """
 from __future__ import annotations
 
-import importlib.util
 import struct
 from pathlib import Path
 
 import brotli
 import numpy as np
 import pytest
-import torch
 
 from tac.qp1_pose_codec import (
-    POSE_SCALE,
     QP1_MAGIC,
     QP2_MAGIC,
     QPV1DimensionStream,

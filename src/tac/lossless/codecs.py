@@ -15,7 +15,6 @@ from .data import TokenRecord, build_token_records, load_commavq_dataset
 from .evaluate import compression_rate, evaluate_local_submission_contract
 from .frequency_coder import decode_uint16_prev_symbol_stream, encode_uint16_prev_symbol_stream
 from .global_prev_symbol import (
-    decode_corpus_global_prev_symbol_position_major,
     encode_corpus_global_prev_symbol_position_major,
 )
 from .profiles import PROFILES

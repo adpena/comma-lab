@@ -22,11 +22,9 @@ return wrong masks. The production path uses the Rust bridge
 """
 from __future__ import annotations
 
-import bz2
 import hashlib
 import os
 import struct
-import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any

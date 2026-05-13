@@ -26,11 +26,7 @@ from pathlib import Path
 import pytest
 
 from tac.optimization.cross_paradigm_composition_examples import (
-    PR106_R2_REFERENCE_ARCHIVE_BYTES,
     SCHEMA_VERSION,
-    CompositionExample,
-    CompositionExampleSet,
-    CompositionExampleSubstrateRow,
     build_composition_example,
     build_top_k_composition_examples,
     materialize_composition_example_bytes,
@@ -43,7 +39,6 @@ from tac.optimization.cross_paradigm_composition_examples import (
 )
 from tac.optimization.substrate_composition_matrix import (
     Composability,
-    ScoreAxis,
     SubstrateClass,
     build_composition_matrix,
     canonical_substrate_inventory,

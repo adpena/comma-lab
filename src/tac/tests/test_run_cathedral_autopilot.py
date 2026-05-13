@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 
-import pytest
 
 
 def _load_autopilot_module():

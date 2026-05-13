@@ -26,7 +26,6 @@ from pathlib import Path
 
 import pytest
 import torch
-import torch.nn as nn
 
 from tac.learnable_pair_weights import (
     LearnablePairWeights,

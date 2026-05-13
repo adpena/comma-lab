@@ -370,7 +370,6 @@ def test_endgame_archive_decision_main_fails_closed_on_invalid_zip(tmp_path) -> 
 def test_hpac_probability_variants_registry() -> None:
     from tac.pr86_hpac_codec import (
         DEFAULT_HPAC_PROBABILITY_VARIANT,
-        HPAC_PROBABILITY_VARIANTS,
         Pr86HpacReplayError,
         resolve_hpac_probability_variant,
         supported_hpac_probability_variant_names,

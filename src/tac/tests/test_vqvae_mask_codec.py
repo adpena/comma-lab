@@ -6,7 +6,6 @@ import torch
 
 from tac.vqvae_mask_codec import (
     VQVAE_MAGIC,
-    VQVAE_VERSION,
     VQVAEConfig,
     build_codebook_top_k,
     decode_indices_to_patches,

@@ -235,7 +235,7 @@ def _from_bit_planes_msb_first(planes: np.ndarray) -> np.ndarray:
         bit_idx = n_planes - 1 - p
         out |= (planes[p].astype(np.uint16) & 1) << bit_idx
     if out.max(initial=0) > 127:
-        raise ValueError(f"_from_bit_planes_msb_first: reconstructed value > 127")
+        raise ValueError("_from_bit_planes_msb_first: reconstructed value > 127")
     return out.astype(np.uint8)
 
 

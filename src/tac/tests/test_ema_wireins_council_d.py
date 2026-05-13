@@ -21,7 +21,6 @@ Per CLAUDE.md "EMA — NON-NEGOTIABLE" + the audit's recommended fix list
 from __future__ import annotations
 
 import ast
-import importlib
 import inspect
 from pathlib import Path
 
@@ -172,7 +171,6 @@ def test_check_88_detects_missing_ema_in_synthetic_script(tmp_path: Path) -> Non
     """Negative test: a fresh training script with optimizer.step() but no
     EMA must be flagged by Check 88."""
     from tac.preflight import (
-        MetaBugViolation,
         check_training_paths_use_ema_correctly,
     )
     # Build a synthetic repo with one offender.
@@ -431,7 +429,7 @@ def test_ema_update_called_after_optimizer_step_via_ast() -> None:
         if not ok:
             failures.append(f"{rel}: {msg}")
     assert not failures, (
-        f"EMA ordering violations (must be optimizer.step → ema.update):\n  "
+        "EMA ordering violations (must be optimizer.step → ema.update):\n  "
         + "\n  ".join(failures)
     )
 
@@ -473,7 +471,6 @@ def _find_ema_constructor_decay_arg(tree: "ast.Module") -> list[tuple[int, str]]
 
 def _decay_repr(decay_kw) -> str:
     """Reduce an AST keyword node to a string we can pattern-match against."""
-    import ast
 
     if decay_kw is None:
         return "<missing>"
@@ -540,7 +537,7 @@ def test_ema_decay_is_quantizr_canonical_via_ast() -> None:
                     f"named .ema_decay."
                 )
     assert not failures, (
-        f"EMA decay constructor violations:\n  " + "\n  ".join(failures)
+        "EMA decay constructor violations:\n  " + "\n  ".join(failures)
     )
 
 

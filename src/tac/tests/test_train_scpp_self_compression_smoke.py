@@ -15,7 +15,6 @@ The trainer is imported as a module; main() is invoked with argv.
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 

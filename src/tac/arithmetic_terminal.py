@@ -63,7 +63,6 @@ from __future__ import annotations
 
 import io
 import struct
-from dataclasses import dataclass
 
 import numpy as np
 

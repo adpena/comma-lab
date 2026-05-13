@@ -43,7 +43,6 @@ loss functions (e.g. boundary-weighted L∞) without circular imports.
 
 from __future__ import annotations
 
-import math
 from typing import Tuple
 
 import torch

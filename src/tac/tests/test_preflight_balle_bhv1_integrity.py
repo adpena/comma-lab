@@ -27,7 +27,6 @@ if str(SRC) not in sys.path:
 
 from tac.preflight import (  # noqa: E402
     MetaBugViolation,
-    _scan_balle_codec_for_side_info_inclusion,
     check_balle_hyperprior_includes_side_info_in_archive,
 )
 

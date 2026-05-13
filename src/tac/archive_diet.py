@@ -49,7 +49,6 @@ Public API
 from __future__ import annotations
 
 import io
-import struct
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path

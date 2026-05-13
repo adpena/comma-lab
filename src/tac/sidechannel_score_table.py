@@ -17,7 +17,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from tac.deploy.claims import active_claim_row, is_terminal_status
+from tac.deploy.claims import active_claim_row
 
 
 def repo_root_from_tac() -> Path:

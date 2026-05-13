@@ -66,10 +66,9 @@ References
 from __future__ import annotations
 
 import logging
-import math
 import struct
 from dataclasses import dataclass, field
-from typing import Iterable, Sequence
+from typing import Iterable
 
 import brotli
 import numpy as np

@@ -10,7 +10,6 @@ import torch
 
 from tac.diagnostics.decoder_drift_introspection import (
     DecoderDriftIntrospector,
-    DriftReport,
     FrameByteFingerprint,
     lipschitz_pose_drift_prediction,
     quantify_drift,

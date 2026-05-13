@@ -27,8 +27,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from tools.xray_substrate_classifier import (
-    ClassificationResult,
-    SectionInfo,
     XraySubstrateClassifierError,
     _detect_magic,
     _shannon_entropy_bits_per_byte,

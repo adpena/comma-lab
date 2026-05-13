@@ -34,7 +34,6 @@ from typing import Any, Iterable, Mapping, Sequence
 from tac.archive_byte_profile import contest_rate_term
 from tac.pr85_bundle import (
     HPM1_MAGIC,
-    PR85_HEADERLESS_RANDMULTI_SPECS,
     Pr85BundleError,
     SEGMENT_ORDER,
     parse_hpm1_mask_segment,

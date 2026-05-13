@@ -87,13 +87,13 @@ def main():
         print(f"[visual] Saliency loaded: {saliency.shape}")
 
     # Decode frames
-    print(f"[visual] Decoding...")
+    print("[visual] Decoding...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     n = min(len(comp_frames), len(gt_frames))
 
     # Load SegNet for boundary overlay
-    print(f"[visual] Loading SegNet...")
+    print("[visual] Loading SegNet...")
     _, segnet = load_scorers(DEVICE)
 
     # Select representative frames (beginning, middle, end)

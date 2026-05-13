@@ -53,17 +53,14 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
 from tac.optimization.substrate_composition_matrix import (
     Composability,
     CompositionMatrix,
-    DISPATCH_COST_USD_MIDPOINT,
     ParetoRow,
-    ScoreAxis,
-    SubstrateClass,
     build_composition_matrix,
     filter_pareto_dominated,
     per_substrate_pareto_rows,

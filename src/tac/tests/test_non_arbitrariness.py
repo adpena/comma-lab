@@ -5,13 +5,10 @@ KEEP / PRUNE / ENSEMBLE / DEFER paths + edge cases + threshold validation.
 """
 from __future__ import annotations
 
-import math
 
 import pytest
 
 from tac.non_arbitrariness import (
-    DEFAULT_COS_KEEP_THRESHOLD,
-    DEFAULT_COS_PRUNE_THRESHOLD,
     DEFAULT_REGIME_VAR_DEFER_THRESHOLD,
     PROBE_EVIDENCE_GRADE,
     PROBE_SCHEMA_VERSION,

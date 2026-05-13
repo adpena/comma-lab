@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 import torch
-import torch.nn.functional as F
 
 
 # Load the script as a module via spec (it's a tools/ script, not a package).

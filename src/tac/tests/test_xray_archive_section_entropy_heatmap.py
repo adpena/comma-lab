@@ -4,9 +4,7 @@ Per CLAUDE.md test discipline: 15-25 tests, all pass.
 """
 from __future__ import annotations
 
-import io
 import json
-import math
 import sys
 import zipfile
 from pathlib import Path

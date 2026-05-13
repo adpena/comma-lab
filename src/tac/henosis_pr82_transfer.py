@@ -19,7 +19,7 @@ import hashlib
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 _QUARANTINE_SPEC = (
     ".recovery_quarantine_20260505T004735Z/src/tac/henosis_pr82_transfer.recovery_spec.json"

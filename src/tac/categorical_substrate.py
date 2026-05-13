@@ -53,7 +53,6 @@ import hashlib
 import io
 import struct
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Callable
 
 import torch

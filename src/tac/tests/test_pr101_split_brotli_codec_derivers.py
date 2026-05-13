@@ -32,15 +32,11 @@ from __future__ import annotations
 
 import itertools
 
-import brotli
 import numpy as np
 import pytest
 import torch
 
 from tac.pr101_split_brotli_codec import (
-    CONV4_STORAGE_PERMS,
-    DECODER_STORAGE_ORDER,
-    DECODER_STREAM_ENDS,
     FIXED_STATE_SCHEMA,
     LATENT_DIM,
     decode_decoder_compact,

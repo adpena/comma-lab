@@ -40,7 +40,6 @@ import contextlib
 import fcntl
 import json
 import os
-import sys
 import uuid
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field

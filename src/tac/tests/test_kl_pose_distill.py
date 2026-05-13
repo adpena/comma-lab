@@ -31,7 +31,6 @@ import torch
 import torch.nn.functional as F
 
 from tac.kl_pose_distill import (
-    DEFAULT_EPS,
     DEFAULT_POSE_HEAD_OUT_DIM,
     DEFAULT_POSE_SCORED_DIM,
     DEFAULT_TEMPERATURE,

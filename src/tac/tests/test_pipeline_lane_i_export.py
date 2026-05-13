@@ -20,10 +20,9 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import asdict, fields
+from dataclasses import fields
 from pathlib import Path
 
-import pytest
 import torch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent

@@ -33,7 +33,6 @@ Anchor: ``experiments/results/lane_g_v3_landed/iter_0/renderer.bin``
 """
 from __future__ import annotations
 
-import sys
 from importlib import util as importlib_util
 from pathlib import Path
 

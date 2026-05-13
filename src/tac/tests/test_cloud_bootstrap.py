@@ -11,7 +11,6 @@ from tac.deploy.cloud_bootstrap import (
     BOOTSTRAP_STUB,
     DEFAULT_DATASET_HINT,
     WHEEL_GLOBS,
-    _install_wheel,
     _is_importable,
     bootstrap,
     find_wheel,

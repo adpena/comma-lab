@@ -5,8 +5,6 @@ PPMd codec, train_step contract, export/parse roundtrip, archive grammar.
 """
 from __future__ import annotations
 
-import io
-import math
 
 import pytest
 import torch

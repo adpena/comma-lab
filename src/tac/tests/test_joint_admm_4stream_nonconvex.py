@@ -354,11 +354,11 @@ def test_4stream_nonconvex_converges_or_honestly_diverges() -> None:
         # restart (honest divergence detection). Failing to detect
         # divergence is just as bad as silent infeasibility.
         assert result.restarts >= 1, (
-            f"ADMM reported converged=False but restarts=0 — "
-            f"FAILURE-TO-DETECT-DIVERGENCE. The coordinator must fire at "
-            f"least one restart before declaring failure on a non-convex "
-            f"problem. Lane 10 V2 dispatch BLOCKED until coordinator is "
-            f"fixed."
+            "ADMM reported converged=False but restarts=0 — "
+            "FAILURE-TO-DETECT-DIVERGENCE. The coordinator must fire at "
+            "least one restart before declaring failure on a non-convex "
+            "problem. Lane 10 V2 dispatch BLOCKED until coordinator is "
+            "fixed."
         )
         # Honest divergence: test passes here without further KKT assertions.
         return

@@ -35,10 +35,8 @@ These tests pin every claim:
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 PROFILE_KEY = "dilated_h64_half_frame_v3_annealed_kldistill"

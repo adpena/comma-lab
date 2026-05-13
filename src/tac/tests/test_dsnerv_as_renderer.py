@@ -1,7 +1,6 @@
 """Tests for DSNeRV-as-renderer (diffusion-supervised) substrate."""
 from __future__ import annotations
 
-import math
 import struct
 
 import pytest

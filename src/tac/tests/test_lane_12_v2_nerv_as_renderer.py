@@ -21,9 +21,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
-import io
 import struct
-import sys
 from pathlib import Path
 
 import pytest

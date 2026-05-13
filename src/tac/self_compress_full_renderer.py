@@ -84,7 +84,6 @@ References
 from __future__ import annotations
 
 import json
-import math
 import struct
 from dataclasses import dataclass, field
 from typing import Any

@@ -1,7 +1,6 @@
 """Tests for tac.scpp_substrate — SC++ self-compression substrate."""
 from __future__ import annotations
 
-import json
 import struct
 
 import pytest

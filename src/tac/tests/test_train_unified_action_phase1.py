@@ -48,7 +48,7 @@ if str(EXPERIMENTS_DIR) not in sys.path:
 
 import train_unified_action_phase1 as trainer  # noqa: E402
 
-from tac.unified_action import Action, DualVariables  # noqa: E402
+from tac.unified_action import Action  # noqa: E402
 
 
 # ── Loss components & legacy reference ─────────────────────────────────────

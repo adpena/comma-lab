@@ -18,7 +18,6 @@ from tac.contrib.coolchic_darts import (
     COOLCHIC_HIDDEN_CANDIDATES,
     COOLCHIC_LATENT_GRID_CANDIDATES,
     CoolChicDARTSCell,
-    CoolChicSupernet,
     CoolChicVariant,
     build_coolchic_arch_optimizer,
     build_coolchic_supernet,

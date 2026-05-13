@@ -98,7 +98,6 @@ from __future__ import annotations
 
 import json
 import struct
-from typing import Iterable
 
 import numpy as np
 import torch

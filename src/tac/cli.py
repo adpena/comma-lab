@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 from .lossless.arithmetic import (
-    GPTArithmeticEstimate,
     build_gpt_arithmetic_plan,
     estimate_gpt_arithmetic_workload,
     materialize_gpt_arithmetic_stream,
@@ -605,7 +604,7 @@ def _run_lossy(args: argparse.Namespace) -> dict[str, Any]:
         raw_saliency = torch.ones(len(comp_frames), h, w)
         if args.saliency:
             print(f"[tac] WARNING: Saliency file not found: {args.saliency}")
-        print(f"[tac] Using uniform saliency (no weighting)")
+        print("[tac] Using uniform saliency (no weighting)")
 
     models_dir = Path(args.models_dir)
     posenet, segnet = load_scorers(

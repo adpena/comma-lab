@@ -481,7 +481,7 @@ def push_kernels(bundle_dirs: list[Path]) -> None:
             slug = kernel_ref.split("/", 1)[-1] if "/" in kernel_ref else kernel_ref
             print(f"  WARNING: Kernel {kernel_ref} does not exist on Kaggle.")
             print(f"  Create it first at: https://www.kaggle.com/code/{username}/{slug}/edit")
-            print(f"  Then re-run this push command.")
+            print("  Then re-run this push command.")
             continue  # skip this kernel, push the rest
 
         print(f"  Pushing kernel: {bundle_dir.name} ...")

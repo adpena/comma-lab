@@ -259,7 +259,7 @@ def test_build_with_saliency_override_skips_compute() -> None:
     if str(repo / "src") not in _sys.path:
         _sys.path.insert(0, str(repo / "src"))
     from tac.pr101_split_brotli_codec import (  # noqa: E501  WEIGHT_SALIENCY_OK_ON_SCORE_AWARE: test fixture
-        decode_decoder_compact, LATENT_BLOB_LEN,
+        decode_decoder_compact,
     )
 
     with _zipfile.ZipFile(a1_archive) as zf:

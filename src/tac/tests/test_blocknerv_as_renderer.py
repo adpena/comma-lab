@@ -6,9 +6,7 @@ default but the substrate scaffold is CUDA-or-CPU agnostic.
 """
 from __future__ import annotations
 
-import io
 import struct
-from pathlib import Path
 
 import pytest
 import torch

@@ -15,7 +15,6 @@ import torch
 
 from tac.camera import NUM_CLASSES
 from tac.stc_boundary_codec import (
-    _MAX_GAP_ALPHABET,
     _STCB_MAGIC,
     _STCB_VERSION,
     decode_mask_video_stc,

@@ -12,12 +12,9 @@ PoseNet + SegNet safetensors). Instead we verify:
 """
 from __future__ import annotations
 
-import argparse
 import re
 from pathlib import Path
 
-import pytest
-import torch
 
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "experiments" / "profile_scorer_saliency.py"

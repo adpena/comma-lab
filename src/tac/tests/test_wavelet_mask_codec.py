@@ -7,7 +7,6 @@ import torch
 
 from tac.wavelet_mask_codec import (
     WAVELET_MAGIC,
-    WAVELET_VERSION,
     WaveletConfig,
     _decode_static_arithmetic,
     _encode_static_arithmetic,

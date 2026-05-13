@@ -35,16 +35,14 @@ from __future__ import annotations
 import gc
 import json
 import math
-from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from tac.data import build_pairs, decode_archive, decode_video
 from tac.scorer import detect_device, load_scorers
 from tac.proxy_eval import _default_paths
-from tac.research.jacobian_optimal import compute_jacobian, posenet_output_with_grad
+from tac.research.jacobian_optimal import compute_jacobian
 
 _PROJECT, _UPSTREAM, VIDEOS_DIR, _LIVE_ARCHIVE, ARCHIVE_ZIP = _default_paths()
 UPSTREAM = _UPSTREAM
@@ -53,10 +51,10 @@ DEVICE = detect_device()
 
 def main():
     print(f"[svd] device={DEVICE}")
-    print(f"[svd] Loading PoseNet...")
+    print("[svd] Loading PoseNet...")
     posenet, segnet = load_scorers(DEVICE)
 
-    print(f"[svd] Decoding archive + GT...")
+    print("[svd] Decoding archive + GT...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     n = min(len(comp_frames), len(gt_frames))
@@ -110,7 +108,7 @@ def main():
     median_eff_rank = float(np.median(per_pair_effective_rank))
 
     print(f"\n{'=' * 70}")
-    print(f"RESULTS: Per-pair J singular value statistics")
+    print("RESULTS: Per-pair J singular value statistics")
     print(f"{'=' * 70}")
     print(f"Mean singular values  (n={n_analyze}): {mean_svs}")
     print(f"Median singular values:                {median_svs}")
@@ -124,30 +122,30 @@ def main():
 
     # Interpretation
     print(f"\n{'=' * 70}")
-    print(f"INTERPRETATION")
+    print("INTERPRETATION")
     print(f"{'=' * 70}")
     if median_eff_rank < 4:
         print(f"⚠ Effective rank is LOW ({median_eff_rank:.2f} < 4).")
-        print(f"  This means PoseNet's 6-dim pose output is really controlled")
-        print(f"  by fewer than 4 independent pixel-space directions at our operating point.")
-        print(f"  A rank-reduced filter architecture could match full performance")
-        print(f"  with fewer parameters.")
+        print("  This means PoseNet's 6-dim pose output is really controlled")
+        print("  by fewer than 4 independent pixel-space directions at our operating point.")
+        print("  A rank-reduced filter architecture could match full performance")
+        print("  with fewer parameters.")
     elif median_eff_rank > 5.5:
         print(f"✓ Effective rank is HIGH ({median_eff_rank:.2f} > 5.5).")
-        print(f"  All 6 pose dimensions are independently controllable —")
-        print(f"  our h=32 architecture has adequate dimensionality.")
+        print("  All 6 pose dimensions are independently controllable —")
+        print("  our h=32 architecture has adequate dimensionality.")
     else:
         print(f"○ Effective rank is MODERATE ({median_eff_rank:.2f}).")
-        print(f"  Some pose dimensions are coupled. A mild rank reduction")
-        print(f"  (e.g. factorized conv) might save a few params without loss.")
+        print("  Some pose dimensions are coupled. A mild rank reduction")
+        print("  (e.g. factorized conv) might save a few params without loss.")
 
     condition = mean_svs[0] / mean_svs[5]
     if condition > 100:
         print(f"\n⚠ Condition number is LARGE ({condition:.0f}).")
-        print(f"  The linear model is ILL-CONDITIONED — this explains why")
-        print(f"  the single-step pseudoinverse failed: a tiny error in the")
+        print("  The linear model is ILL-CONDITIONED — this explains why")
+        print("  the single-step pseudoinverse failed: a tiny error in the")
         print(f"  estimated residual gets amplified by ~{condition:.0f}x in the")
-        print(f"  direction of the smallest singular value.")
+        print("  direction of the smallest singular value.")
     else:
         print(f"\n○ Condition number is moderate ({condition:.0f}).")
 

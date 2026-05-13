@@ -27,12 +27,10 @@ proxy. If it beats all individual members it is a free improvement.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
 import torch
-import torch.nn as nn
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))

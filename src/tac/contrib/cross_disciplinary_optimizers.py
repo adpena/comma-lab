@@ -1833,7 +1833,6 @@ def _smoke_test():
     3. Return valid output tensors
     4. Reduce loss (at least not crash)
     """
-    import sys
 
     print("Cross-disciplinary optimizers smoke test")
     print("=" * 60)

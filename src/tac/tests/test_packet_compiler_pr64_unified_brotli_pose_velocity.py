@@ -14,7 +14,6 @@ import numpy as np
 import pytest
 
 from tac.packet_compiler import (
-    UnifiedBrotliPoseVelocityStream,
     decode_unified_brotli_pose_velocity,
     encode_unified_brotli_pose_velocity,
 )

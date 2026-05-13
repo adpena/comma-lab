@@ -11,7 +11,6 @@ The end-to-end full-video execution is exercised via the smoke flag in
 from __future__ import annotations
 
 import importlib.util
-import json
 import sys
 from pathlib import Path
 

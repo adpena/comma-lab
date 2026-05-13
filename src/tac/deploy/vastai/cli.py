@@ -79,8 +79,8 @@ def cmd_launch(client: VastClient, args: argparse.Namespace) -> int:
             print(f"  {_GREEN}Experiment launched in background{_RESET}")
             print(f"  Instance ID: {inst.instance_id}")
             print(f"  SSH: ssh -p {inst.ssh_port} root@{inst.ssh_host}")
-            print(f"  Monitor: python scripts/vastai_deploy.py status")
-            print(f"  Results: python scripts/vastai_deploy.py results")
+            print("  Monitor: python scripts/vastai_deploy.py status")
+            print("  Results: python scripts/vastai_deploy.py results")
             print(f"  Timeout: {experiment.timeout_hours}h")
 
             # Record estimated cost

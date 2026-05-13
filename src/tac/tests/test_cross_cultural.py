@@ -86,7 +86,7 @@ class TestINT4Quantization:
     """Test INT4 quantization utilities from benchmark script."""
 
     def test_quantize_int4_per_channel(self):
-        from tac.experiments.benchmark_int4 import quantize_int4_per_channel, dequantize_int4_per_channel
+        from tac.experiments.benchmark_int4 import quantize_int4_per_channel
         w = torch.randn(16, 3, 3, 3)
         q, s = quantize_int4_per_channel(w)
         assert q.shape == w.shape

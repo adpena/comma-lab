@@ -36,7 +36,6 @@ from typing import Iterable, Sequence
 import numpy as np
 
 from .per_tensor_codecs import (
-    REL_ERR_FORM_BROTLI_ONLY,
     REL_ERR_FORM_LOSSY_K,
     REL_ERR_FORM_SPARSITY,
     encode_brotli_only,

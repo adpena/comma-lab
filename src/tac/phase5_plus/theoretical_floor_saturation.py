@@ -30,7 +30,7 @@ on each axis. Convergence requires T19 adaptive-ρ on all 5 axes simultaneously
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 

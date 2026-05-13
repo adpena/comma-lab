@@ -31,10 +31,8 @@ from __future__ import annotations
 import gc
 import json
 import math
-import time
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Callable
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import torch
@@ -42,7 +40,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tac.losses import scorer_forward_pair, _hwc_to_chw
-from tac.scorer import comma_score, detect_device, load_scorers
+from tac.scorer import detect_device, load_scorers
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1236,7 +1234,7 @@ def smoke_test(device: str = "cpu") -> dict[str, Any]:
     assert len(spectrum["eigenvalues"]) > 0, "No eigenvalues computed"
     assert spectrum["effective_rank"] >= 0, "Negative effective rank"
 
-    print(f"\n[smoke_test] PASSED")
+    print("\n[smoke_test] PASSED")
     print(f"  Newton steps: {stats['newton_steps']}")
     print(f"  Initial loss: {stats['initial_loss']:.6f}")
     print(f"  Final loss:   {stats['final_loss']:.6f}")
@@ -1358,7 +1356,7 @@ def main():
     verdict = council_verdict()
     print(f"Verdict: {verdict['verdict']}")
     print(f"Summary: {verdict['summary']}")
-    print(f"\nExpected improvement (optimistic/realistic/pessimistic):")
+    print("\nExpected improvement (optimistic/realistic/pessimistic):")
     ei = verdict["expected_score_improvement"]
     print(f"  {ei['optimistic']:.3f} / {ei['realistic']:.3f} / {ei['pessimistic']:.3f}")
 

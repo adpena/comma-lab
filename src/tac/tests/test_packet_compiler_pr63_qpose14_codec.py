@@ -20,7 +20,6 @@ from tac.packet_compiler import (
     PR63_VEL_BIAS,
     PR63_VEL_SCALE,
     QPose14PackedPayload,
-    QPose14Uint16Int16Stream,
     decode_qpose14_uint16_view_int16,
     encode_qpose14_uint16_view_int16,
     pack_qpose14_packed_payload,

@@ -9,7 +9,6 @@ from __future__ import annotations
 import atexit
 import json
 import signal
-import subprocess
 import sys
 from collections.abc import Callable
 from datetime import datetime, timezone

@@ -28,7 +28,6 @@ Cost paranoia: zero GPU dollars wasted on a misconfigured 12h run.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -405,5 +404,5 @@ def test_build_renderer_returns_pair_generator() -> None:
         f"expected PairGenerator (use_zoom_flow=False), got {type(model).__name__}"
     )
     assert not isinstance(model, AsymmetricPairGenerator), (
-        f"PairGenerator path should NOT route to AsymmetricPairGenerator"
+        "PairGenerator path should NOT route to AsymmetricPairGenerator"
     )

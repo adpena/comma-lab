@@ -12,7 +12,6 @@ import pytest
 from tac.optimization.phase1_t13_t19_t20_t22_cost_refinement import (
     CANONICAL_FLAG_OVERHEADS,
     FlagCombinationCostEstimate,
-    FlagOverheadBand,
     RECOMMENDED_ALL_ON_FLAGS,
     REFERENCE_MODAL_T4,
     REFERENCE_VAST_4090,

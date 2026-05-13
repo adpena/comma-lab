@@ -15,13 +15,11 @@ Each scaffold gets coverage of:
 
 from __future__ import annotations
 
-import math
 
 import numpy as np
 import pytest
 
 from tac.residual_basis.c3_residual import (
-    C3ConditionalStats,
     C3ResidualError,
     C3ResidualResult,
     compute_c3_residual_stats,
@@ -37,12 +35,10 @@ from tac.residual_basis.cool_chic_residual import (
 from tac.residual_basis.coordinate_mlp_residual import (
     CoordinateMlpResidualError,
     CoordinateMlpResidualResult,
-    CoordinateMlpSmoothnessStats,
     compute_coordinate_mlp_residual_stats,
     compute_finite_difference_laplacian,
 )
 from tac.residual_basis.siren_residual import (
-    SirenFrequencyBandStats,
     SirenResidualError,
     SirenResidualResult,
     compute_radial_frequency_buckets,

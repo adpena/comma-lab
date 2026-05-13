@@ -16,20 +16,17 @@ from __future__ import annotations
 
 import struct
 
-import numpy as np
 import pytest
 import torch
 
-from tac.block_fp_codec import _EXP_MAX, _EXP_MIN, encode_conv_weight
+from tac.block_fp_codec import encode_conv_weight
 from tac.codec_magic_registry import (
     all_entries,
     find_by_magic,
     sniff_codec,
 )
 from tac.water_filling_codec_v2 import (
-    OWV2_ARITH_TABLE_VERSION,
     OWV2_MAGIC,
-    OWV2_VERSION,
     BlockFPIneligible,
     GateRegression,
     decode_omega_w_v2,
@@ -209,7 +206,6 @@ def test_v2_score_parity_decode_within_tol() -> None:
 
     from tac.block_fp_codec import (  # noqa: PLC0415
         decode_conv_weight,
-        encode_conv_weight,
     )
     v1_packed = encode_conv_weight(
         weights, qint_max=max(qmax_per_channel_v2),

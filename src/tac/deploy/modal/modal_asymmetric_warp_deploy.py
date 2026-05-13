@@ -286,8 +286,8 @@ def _resolve_eval_candidate(vol_dir: str, strategy: str) -> tuple[str, dict]:
             # (sparse eval_every, no constraints ever met in scored range, etc.)
             # Use best_proxy over all scored entries and select the nearest
             # constraints_met checkpoint if one exists.
-            print(f"  [strategy] best_proxy_constraints_met: no scored entries near _constraints_met "
-                  f"checkpoints; falling back to best_proxy")
+            print("  [strategy] best_proxy_constraints_met: no scored entries near _constraints_met "
+                  "checkpoints; falling back to best_proxy")
             if scored:
                 best_entry = min(scored, key=lambda h: h["_proxy"])
                 target_ep = best_entry["epoch"]
@@ -440,8 +440,8 @@ def train_asymmetric_warp(
         checkpoint = _find_latest_checkpoint(vol_dir)
 
     print(f"=== tac asymmetric warp training | tag: {tag} | variant: {variant} ===")
-    print(f"  GPU: T4 (council decision: iteration budget over speed)")
-    print(f"  Wall-clock budget: 5.5h training / 6h timeout")
+    print("  GPU: T4 (council decision: iteration budget over speed)")
+    print("  Wall-clock budget: 5.5h training / 6h timeout")
     print(f"  Resume: {'YES -> ' + checkpoint if checkpoint else 'NO (fresh start)'}")
     print(f"  Output: {vol_dir}")
     print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -568,7 +568,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
     ckpt_path = os.path.join(vol_dir, checkpoint)
 
     print(f"=== Auth Eval | tag: {tag} | checkpoint: {checkpoint} ===")
-    print(f"  GPU: T4")
+    print("  GPU: T4")
     print(f"  Strategy: {strategy}")
     print(f"  Checkpoint: {ckpt_path}")
     print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -606,8 +606,8 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
     # ── 1. Load upstream SegNet for mask extraction ──
     print("\nStage 1: Loading SegNet ...")
     sys.path.insert(0, UPSTREAM_ROOT)
-    from modules import SegNet, DistortionNet
-    from modules import segnet_sd_path, posenet_sd_path
+    from modules import SegNet
+    from modules import segnet_sd_path
     from safetensors.torch import load_file
 
     segnet = SegNet()
@@ -910,7 +910,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
     if rate is not None:
         print(f"  Compression Rate:           {rate:.8f}")
     if bd:
-        print(f"  Score breakdown:")
+        print("  Score breakdown:")
         print(f"    100*seg  = {bd['seg_contribution']:.4f}")
         print(f"    sqrt(10*pose) = {bd['pose_contribution']:.4f}")
         print(f"    25*rate  = {bd['rate_contribution']:.4f}")
@@ -994,7 +994,7 @@ def auth_eval_entry(
     if checkpoint and strategy == "best_proxy_constraints_met":
         strategy = "single"
 
-    print(f"\n=== Auth Eval -> Modal T4 ===")
+    print("\n=== Auth Eval -> Modal T4 ===")
     print(f"  Tag:      {tag}")
     print(f"  Strategy: {strategy}")
     if checkpoint:
@@ -1008,7 +1008,7 @@ def auth_eval_entry(
     result = auth_eval.remote(tag=tag, checkpoint=checkpoint or "renderer_best.pt", strategy=strategy)
 
     meta = result.get("selection_meta") or {}
-    print(f"\n=== Auth Eval Complete ===")
+    print("\n=== Auth Eval Complete ===")
     print(f"  Checkpoint evaluated: {result['checkpoint']}")
     if meta.get("selection_method"):
         print(f"  Selection method:     {meta['selection_method']}")
@@ -1056,7 +1056,7 @@ def main(
     """
     from tac.cost_tracker import print_cost_estimate
 
-    print(f"\n=== Asymmetric Warp Renderer -> Modal T4 ===")
+    print("\n=== Asymmetric Warp Renderer -> Modal T4 ===")
     print(f"  Tag: {tag}")
     print(f"  Variant: {variant}")
     print(f"  Resume from: {resume_from or '(auto-detect)'}")
@@ -1201,7 +1201,7 @@ def _run_contest_compliant_auth_eval(
             raise FileNotFoundError(f"Contest-compliant eval: {label} not found at {path}")
 
     print(f"{'=' * 60}")
-    print(f"=== Contest-Compliant Auth Eval ===")
+    print("=== Contest-Compliant Auth Eval ===")
     print(f"{'=' * 60}")
     print(f"  submission_dir: {submission_dir}")
     print(f"  archive.zip:    {os.path.getsize(archive_zip):,} bytes")
@@ -1216,7 +1216,7 @@ def _run_contest_compliant_auth_eval(
         shutil.rmtree(archive_dir)
     os.makedirs(archive_dir, exist_ok=True)
 
-    print(f"\nStep 1: Unzipping archive.zip ...")
+    print("\nStep 1: Unzipping archive.zip ...")
     unzip_cmd = ["unzip", "-o", archive_zip, "-d", archive_dir]
     unzip_result = subprocess.run(unzip_cmd, capture_output=True, text=True, timeout=60)
     if unzip_result.returncode != 0:
@@ -1236,7 +1236,7 @@ def _run_contest_compliant_auth_eval(
         shutil.rmtree(inflated_dir)
     os.makedirs(inflated_dir, exist_ok=True)
 
-    print(f"Step 2: Running inflate.sh (30 min budget) ...")
+    print("Step 2: Running inflate.sh (30 min budget) ...")
     t_inflate_start = time.monotonic()
 
     # Set up environment: inflate_renderer.py needs upstream in PYTHONPATH
@@ -1318,7 +1318,7 @@ def _run_contest_compliant_auth_eval(
     # ── Step 3: Run evaluate.py via canonical runner ─────────────────────────
     from tac.eval.auth_eval import run_evaluate_py as _run_eval
 
-    print(f"\nStep 3: Running evaluate.py ...")
+    print("\nStep 3: Running evaluate.py ...")
     t_eval_start = time.monotonic()
 
     metrics = _run_eval(
@@ -1419,7 +1419,7 @@ def contest_compliant_eval(
     UPSTREAM_ROOT = "/root/upstream"
 
     print(f"=== Contest-Compliant Eval | tag: {tag} ===")
-    print(f"  GPU: T4")
+    print("  GPU: T4")
     print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Copy submission files: archive.zip + inflate.sh + supporting scripts
@@ -1475,7 +1475,7 @@ def contest_eval_entry(
     """
     from tac.cost_tracker import print_cost_estimate
 
-    print(f"\n=== Contest-Compliant Eval -> Modal T4 ===")
+    print("\n=== Contest-Compliant Eval -> Modal T4 ===")
     print(f"  Tag:        {tag}")
     print(f"  Submission: {submission_src}")
 
@@ -1485,7 +1485,7 @@ def contest_eval_entry(
     print("\nLaunching contest-compliant eval ...")
     result = contest_compliant_eval.remote(tag=tag, submission_src=submission_src)
 
-    print(f"\n=== Contest-Compliant Eval Complete ===")
+    print("\n=== Contest-Compliant Eval Complete ===")
     print(f"  Final Score: {result.get('final_score', '?')}")
     print(f"  Inflate time: {result.get('inflate_elapsed_seconds', '?'):.1f}s")
     print(f"  Eval time: {result.get('eval_elapsed_seconds', '?'):.1f}s")
@@ -1667,7 +1667,7 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
         print(f"  GT size:                    {gt_size:,} bytes")
         print(f"  Compression Rate:           {rate:.8f}")
         if bd:
-            print(f"  Score breakdown:")
+            print("  Score breakdown:")
             print(f"    100*seg  = {bd['seg_contribution']:.4f}")
             print(f"    sqrt(10*pose) = {bd['pose_contribution']:.4f}")
             print(f"    25*rate  = {bd['rate_contribution']:.4f}")
@@ -1829,7 +1829,7 @@ def tto_eval(
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"=== Renderer + TTO | tag: {tag} ===")
-    print(f"  GPU: T4")
+    print("  GPU: T4")
     print(f"  Checkpoint: {ckpt_path}")
     print(f"  TTO steps: {tto_steps}, lr: {tto_lr}, batch_pairs: {batch_pairs}")
     print(f"  Output: {output_dir}")
@@ -1873,7 +1873,7 @@ def tto_eval(
     # Write start log immediately + commit so we can monitor progress
     log_path = os.path.join(output_dir, "tto_run.log")
     with open(log_path, "w") as f:
-        f.write(f"status: running\n")
+        f.write("status: running\n")
         f.write(f"tag: {tag}\n")
         f.write(f"checkpoint: {checkpoint}\n")
         f.write(f"tto_steps: {tto_steps}\n")
@@ -1881,7 +1881,7 @@ def tto_eval(
         f.write(f"batch_pairs: {batch_pairs}\n")
         f.write(f"started: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n")
     results_vol.commit()
-    print(f"  [volume] Start log committed")
+    print("  [volume] Start log committed")
     print("  ---")
 
     # Run TTO subprocess — pipe stdout to both console AND log file via tee
@@ -1923,7 +1923,7 @@ def tto_eval(
 
     # Commit volume so results survive even if auth eval crashes
     results_vol.commit()
-    print(f"  [volume] Final commit done")
+    print("  [volume] Final commit done")
 
     # List output artifacts
     if os.path.isdir(output_dir):
@@ -1976,7 +1976,7 @@ def tto_entry(
     """
     from tac.cost_tracker import print_cost_estimate
 
-    print(f"=== Renderer + TTO -> Modal T4 ===")
+    print("=== Renderer + TTO -> Modal T4 ===")
     print(f"  Tag: {tag}")
     print(f"  Checkpoint: {checkpoint}")
     print(f"  TTO steps: {tto_steps}, lr: {tto_lr}, batch_pairs: {batch_pairs}")
@@ -2011,14 +2011,14 @@ def tto_entry(
     # Display auth eval results if available
     auth = result.get("auth_eval")
     if auth:
-        print(f"\n=== TTO Auth Eval Results ===")
+        print("\n=== TTO Auth Eval Results ===")
         print(f"  Final Score: {auth['final_score']:.4f}")
         print(f"    SegNet:  {auth['score_seg']:.4f}")
         print(f"    PoseNet: {auth['score_pose']:.4f}")
         print(f"    Rate:    {auth['score_rate']:.4f}")
         print(f"  Time: {auth['elapsed_seconds']:.0f}s")
     elif result["exit_code"] == 0:
-        print(f"\n  Auth eval: not available (tto_frames.pt may not have been produced)")
+        print("\n  Auth eval: not available (tto_frames.pt may not have been produced)")
 
     print(f"\nDownload: .venv/bin/modal volume get {RESULTS_VOL} {tag}/tto_results/ ./tto_results_{tag}/")
 
@@ -2077,7 +2077,7 @@ def gt_sparse_tto_eval(
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"=== GT-Sparse TTO | tag: {tag} ===")
-    print(f"  GPU: T4")
+    print("  GPU: T4")
     print(f"  Config: {n_patches} patches, {n_restarts} restarts x {steps_per_restart} steps")
     print(f"  Output: {output_dir}")
     print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -2107,7 +2107,7 @@ def gt_sparse_tto_eval(
     result = subprocess.run(cmd, env=env)
 
     results_vol.commit()
-    print(f"  [volume] Final commit done")
+    print("  [volume] Final commit done")
 
     # Load results if available
     results_file = os.path.join(output_dir, "results.json")
@@ -2146,7 +2146,7 @@ def gt_sparse_tto_entry(
     """
     from tac.cost_tracker import print_cost_estimate
 
-    print(f"=== GT-Sparse TTO -> Modal T4 ===")
+    print("=== GT-Sparse TTO -> Modal T4 ===")
     print(f"  Tag: {tag}")
     print(f"  Config: {n_patches} patches, {n_restarts} restarts x {steps_per_restart} steps")
     print(f"  Weights: seg={seg_weight}, pose={pose_weight}, rate={rate_weight}")
@@ -2178,7 +2178,7 @@ def gt_sparse_tto_entry(
         r = result["results"]
         if "optimized" in r:
             opt = r["optimized"]
-            print(f"\n=== GT-Sparse TTO Results ===")
+            print("\n=== GT-Sparse TTO Results ===")
             print(f"  Score: {opt['score']:.6f}")
             print(f"    Pose: {opt['pose']:.6f}")
             print(f"    Seg:  {opt['seg']:.6f}")
@@ -2221,7 +2221,6 @@ def joint_pair_train(
         extra_args:  additional CLI arguments (space-separated string)
     """
     import os
-    import subprocess
     import time
 
     vol_dir = f"/results/{tag}"
@@ -2275,7 +2274,7 @@ def joint_pair_train_entry(
     """
     from tac.cost_tracker import print_cost_estimate
 
-    print(f"=== Joint Pair Generator Training -> Modal T4 ===")
+    print("=== Joint Pair Generator Training -> Modal T4 ===")
     print(f"  Tag: {tag}, epochs: {epochs}, base_ch: {base_ch}")
     print(f"  Weights: seg={seg_weight}, pose={pose_weight}, tv={tv_weight}, lr={lr}")
 

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES

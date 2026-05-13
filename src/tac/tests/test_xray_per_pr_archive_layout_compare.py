@@ -6,7 +6,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "tools"))

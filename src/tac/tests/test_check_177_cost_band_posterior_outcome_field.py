@@ -205,7 +205,6 @@ def test_check_177_load_anchors_now_tags_legacy_pre_nv7():
         LEGACY_PRE_NV7,
         SUCCESSFUL_DISPATCH,
         VALID_OUTCOMES,
-        load_anchors,
     )
     # LEGACY_PRE_NV7 must be a member of VALID_OUTCOMES so load_anchors
     # accepts rows tagged with it.
@@ -222,7 +221,6 @@ def test_check_177_legacy_pre_nv7_excluded_from_predict_by_default(tmp_path):
     from tac.cost_band_calibration import (
         LEGACY_PRE_NV7,
         load_anchors,
-        predict,
     )
     posterior = tmp_path / ".omx" / "state" / "cost_band_posterior.jsonl"
     # Pre-NV7 anchor with missing outcome (will be tagged LEGACY_PRE_NV7)

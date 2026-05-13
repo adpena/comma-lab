@@ -97,7 +97,7 @@ def main() -> None:
         sys.exit(1)
 
     # Load PoseNet
-    from tac.scorer import load_scorers, make_scorers_differentiable
+    from tac.scorer import load_scorers
 
     device = torch.device(args.device)
     segnet_path = upstream / "models" / "segnet.safetensors"

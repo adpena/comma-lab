@@ -1152,7 +1152,7 @@ def test_r5_3_3_concurrent_write_attestation_only_one_succeeds(
         try:
             barrier.wait(timeout=5)
             write_attestation(
-                blob=blob, approver=f"yousfi",
+                blob=blob, approver="yousfi",
                 ruling_text="concurrent",
                 signed_by_user="x", git_head="abc",
                 private_key=priv, root=tmp_path,

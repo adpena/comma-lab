@@ -11,14 +11,12 @@ lane script's auth eval, not unit tests.
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 import torch
 import torch.nn as nn
 
 from tac.water_filling_codec import (
-    QINT_BITS,
     QINT_LEVELS,
     WaterFillError,
     bits_for_qint,

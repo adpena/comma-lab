@@ -45,7 +45,6 @@ sys.path.insert(0, str(_repo / "src"))
 _upstream = _repo / "workspace" / "upstream" / "comma_video_compression_challenge"
 
 from tac.mlx_renderer import (  # noqa: E402
-    PairGenerator,
     build_mlx_renderer,
     mlx_to_pytorch,
     pretrain_loss_fn,
@@ -147,7 +146,7 @@ def load_data_as_mlx(precomputed_dir: str) -> tuple[mx.array, mx.array]:
         masks = mx.array(masks_np)
     else:
         # Extract masks via PyTorch SegNet (one-time)
-        print(f"[data] masks.pt not found, extracting via SegNet...")
+        print("[data] masks.pt not found, extracting via SegNet...")
         masks = _extract_and_save_masks(frames_pt, pc)
 
     print(f"[data] Masks: {masks.shape}, dtype={masks.dtype}")
@@ -235,7 +234,7 @@ def get_pair(
 
 
 def train(args: argparse.Namespace):
-    print(f"[mlx_train] Phase 1 MLX pre-training")
+    print("[mlx_train] Phase 1 MLX pre-training")
     print(f"[mlx_train] Architecture: base_ch={args.base_ch}, mid_ch={args.mid_ch}, "
           f"embed_dim={args.embed_dim}, depth={args.depth}")
     print(f"[mlx_train] Training: epochs={args.epochs}, lr={args.lr}, "
@@ -466,7 +465,7 @@ def train(args: argparse.Namespace):
     torch.save(pt_checkpoint, pt_tmp)
     pt_tmp.rename(pt_path)
     print(f"[mlx_train] Saved PyTorch checkpoint: {pt_path}")
-    print(f"[mlx_train] Resume Phase 2 with:")
+    print("[mlx_train] Resume Phase 2 with:")
     print(f"  .venv/bin/python -m tac.experiments.train_renderer "
           f"--resume-from {pt_path} --tag <phase2_tag>")
 

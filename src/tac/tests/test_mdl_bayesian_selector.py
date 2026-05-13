@@ -7,7 +7,6 @@ import pytest
 
 from tac.mdl_bayesian_selector import (
     MDLBayesianSelectorError,
-    PerTensorRanking,
     PerTensorSelectionReport,
     TensorObservation,
     compute_per_tensor_l_total,

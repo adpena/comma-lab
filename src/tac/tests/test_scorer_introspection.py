@@ -29,7 +29,6 @@ from tac.diagnostics.cuda_cpu_drift import (
 )
 from tac.diagnostics.scorer_introspection import (
     AttentionFingerprint,
-    LayerRecord,
     list_attention_like_layers,
     hash_record,
 )

@@ -38,8 +38,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 from tac.data import build_pairs, decode_archive, decode_video
 from tac.scorer import detect_device, load_scorers
@@ -93,17 +91,17 @@ def band_energies(spectrum: torch.Tensor) -> dict:
 
 def main():
     print(f"[karpathy] device={DEVICE}")
-    print(f"[karpathy] Loading winning CNN from submissions/robust_current/")
+    print("[karpathy] Loading winning CNN from submissions/robust_current/")
     cnn_path = PROJECT / "submissions" / "robust_current" / "postfilter_int8.pt"
     print(f"[karpathy] CNN weights: {cnn_path}")
     cnn = load_postfilter_int8(str(cnn_path), device=DEVICE)
     cnn.eval()
     print(f"[karpathy] CNN loaded, params={sum(p.numel() for p in cnn.parameters())}")
 
-    print(f"[karpathy] Loading PoseNet...")
+    print("[karpathy] Loading PoseNet...")
     posenet, _ = load_scorers(DEVICE)
 
-    print(f"[karpathy] Decoding archive + GT...")
+    print("[karpathy] Decoding archive + GT...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     n = min(len(comp_frames), len(gt_frames))
@@ -219,15 +217,15 @@ def main():
     }
 
     print(f"\n{'=' * 78}")
-    print(f"RESULTS: CNN vs Jacobian delta characterization")
+    print("RESULTS: CNN vs Jacobian delta characterization")
     print(f"{'=' * 78}")
-    print(f"\n--- Delta magnitude ---")
+    print("\n--- Delta magnitude ---")
     print(f"  CNN mean |δ|:        {cnn_summary['abs_mean']['mean']:.4f}")
     print(f"  Jacobian mean |δ|:   {jac_summary['abs_mean']['mean']:.6f}")
     print(f"  CNN max |δ|:         {cnn_summary['abs_max']['mean']:.2f}")
     print(f"  Jacobian max |δ|:    {jac_summary['abs_max']['mean']:.3f}")
 
-    print(f"\n--- Spatial density (pixels moved > 0.5 LSB) ---")
+    print("\n--- Spatial density (pixels moved > 0.5 LSB) ---")
     print(f"  CNN frac > 0.5:      {cnn_summary['frac_changed_0_5']['mean']:.4f}  "
           f"({cnn_summary['frac_changed_0_5']['mean']*100:.1f}%)")
     print(f"  Jacobian frac > 0.5: {jac_summary['frac_changed_0_5']['mean']:.6f}  "
@@ -236,7 +234,7 @@ def main():
              max(jac_summary['frac_changed_0_5']['mean'], 1e-9))
     print(f"  CNN is {ratio:.1f}x denser than Jacobian")
 
-    print(f"\n--- Frequency band energy (luma DCT) ---")
+    print("\n--- Frequency band energy (luma DCT) ---")
     print(f"  CNN low:  {cnn_summary['band_low']['mean']:.3f}  "
           f"mid: {cnn_summary['band_mid']['mean']:.3f}  "
           f"high: {cnn_summary['band_high']['mean']:.3f}")
@@ -245,7 +243,7 @@ def main():
           f"high: {jac_summary['band_high']['mean']:.3f}")
 
     print(f"\n{'=' * 78}")
-    print(f"KARPATHY PREDICTION VERIFICATION")
+    print("KARPATHY PREDICTION VERIFICATION")
     print(f"{'=' * 78}")
     pred_dense = cnn_summary['frac_changed_0_5']['mean'] > 0.5
     pred_small_amp = cnn_summary['abs_mean']['mean'] < 2.0
@@ -261,11 +259,11 @@ def main():
 
     all_confirmed = pred_dense and pred_small_amp and pred_mid_bias and pred_jac_sparse and pred_jac_spike
     if all_confirmed:
-        print(f"\n*** Karpathy's inverse-rendering hypothesis CONFIRMED ***")
-        print(f"The CNN spreads corrections while the Jacobian concentrates.")
-        print(f"This is why the linear approach fails and the CNN succeeds.")
+        print("\n*** Karpathy's inverse-rendering hypothesis CONFIRMED ***")
+        print("The CNN spreads corrections while the Jacobian concentrates.")
+        print("This is why the linear approach fails and the CNN succeeds.")
     else:
-        print(f"\n*** PARTIAL confirmation — some predictions missed ***")
+        print("\n*** PARTIAL confirmation — some predictions missed ***")
 
     result = {"cnn": cnn_summary, "jacobian": jac_summary, "karpathy_confirmed": all_confirmed}
     print(f"\nJSON:\n{json.dumps(result, indent=2)}")

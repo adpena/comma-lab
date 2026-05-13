@@ -10,19 +10,14 @@ Usage:
 """
 import gc
 import math
-import os
-import tempfile
-import zipfile
 from pathlib import Path
 
-import av
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 from tac.architectures import PostFilter
-from tac.data import build_pairs, decode_archive, decode_video, load_saliency_weights, SEQ_LEN as seq_len
+from tac.data import build_pairs, decode_archive, decode_video, SEQ_LEN as seq_len
 from tac.losses import scorer_forward_pair
 from tac.scorer import detect_device, load_scorers
 from tac.proxy_eval import _default_paths
@@ -221,14 +216,14 @@ def train_variant(tag, alpha, hidden, comp_pairs, gt_pairs, sal_all,
 
 def main():
     print(f"[sweep] Device: {DEVICE}")
-    print(f"[sweep] Loading scorers...")
+    print("[sweep] Loading scorers...")
     posenet, segnet = load_scorers(DEVICE)
 
-    print(f"[sweep] Decoding compressed archive...")
+    print("[sweep] Decoding compressed archive...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     print(f"[sweep] Compressed frames: {len(comp_frames)}")
 
-    print(f"[sweep] Decoding ground truth...")
+    print("[sweep] Decoding ground truth...")
     gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
     print(f"[sweep] GT frames: {len(gt_frames)}")
 
@@ -237,7 +232,7 @@ def main():
     gt_frames = gt_frames[:n]
 
     # Load raw saliency (without alpha weighting -- each variant applies its own alpha)
-    print(f"[sweep] Loading saliency map...")
+    print("[sweep] Loading saliency map...")
     sal_raw = np.load(str(SALIENCY_PATH))
     sal_t = torch.from_numpy(sal_raw).float()
     if sal_t.shape[0] < n:
@@ -291,7 +286,7 @@ def main():
 
     # Comparison table
     print(f"\n\n{'=' * 90}")
-    print(f"COMPARISON TABLE: Saliency-Weighted Post-Filter Variants")
+    print("COMPARISON TABLE: Saliency-Weighted Post-Filter Variants")
     print(f"{'=' * 90}")
     print(f"{'Variant':<25} {'Loss':>8} {'Delta':>8} {'Pose':>12} {'Seg':>12} "
           f"{'Pose_d':>10} {'Seg_d':>10}")
@@ -305,8 +300,8 @@ def main():
                   f"{r['pose_delta']:>+10.6f} {r['seg_delta']:>+10.6f}")
 
     print(f"\nBaseline (no filter): loss={baseline_loss:.4f}")
-    print(f"Current best (h16 canonical): loss~2.05 (from prior experiments)")
-    print(f"\nWeights saved to: experiments/postfilter_weights/postfilter_saliency_alpha*_int8.pt")
+    print("Current best (h16 canonical): loss~2.05 (from prior experiments)")
+    print("\nWeights saved to: experiments/postfilter_weights/postfilter_saliency_alpha*_int8.pt")
 
 
 if __name__ == "__main__":

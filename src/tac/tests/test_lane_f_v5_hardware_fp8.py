@@ -103,7 +103,6 @@ def test_export_load_roundtrip_fp8h_sentinel(tmp_path) -> None:
     _require_float8()
     from tac.renderer import AsymmetricPairGenerator
     from tac.renderer_export import (
-        export_hardware_fp8_checkpoint,
         load_hardware_fp8_checkpoint,
     )
 
@@ -143,7 +142,6 @@ def test_export_load_roundtrip_fp8h_sentinel(tmp_path) -> None:
 def test_t4_fallback_to_fp16(tmp_path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     _require_float8()
     from tac.renderer import AsymmetricPairGenerator
-    from tac.renderer_export import export_hardware_fp8_checkpoint
 
     inflate = pytest.importorskip("submissions.robust_current.inflate_renderer")
 

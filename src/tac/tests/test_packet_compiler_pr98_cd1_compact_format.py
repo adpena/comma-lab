@@ -12,7 +12,6 @@ import numpy as np
 import pytest
 
 from tac.packet_compiler import (
-    CD1CompactFormat,
     CD1_MAGIC,
     SUPPORTED_SCALE_BITS,
     decode_cd1_compact,

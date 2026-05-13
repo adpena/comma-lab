@@ -87,7 +87,6 @@ from tac.arithmetic_qint_codec import (
     encode_qints_arithmetic,
 )
 from tac.pose_delta_codec import (
-    POSE_DELTA_FORMAT_SENTINEL_V1,
     encode_pose_deltas,
 )
 

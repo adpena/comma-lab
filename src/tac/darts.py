@@ -87,7 +87,6 @@ from typing import Callable, Iterable, Sequence
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 __all__ = [

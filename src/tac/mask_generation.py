@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 import time
@@ -660,7 +659,7 @@ def generate_masks(
 
     Returns the path to the saved .npy file.
     """
-    print(f"=== ML Mask Generator ===", file=sys.stderr)
+    print("=== ML Mask Generator ===", file=sys.stderr)
     print(f"  Input:    {video_path}", file=sys.stderr)
     print(f"  Output:   {output_path}", file=sys.stderr)
     print(f"  Strategy: {strategy}", file=sys.stderr)

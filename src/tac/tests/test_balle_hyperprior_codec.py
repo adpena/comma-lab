@@ -37,7 +37,6 @@ CLAUDE.md non-negotiables verified
 """
 from __future__ import annotations
 
-import io
 import struct
 
 import numpy as np
@@ -49,9 +48,7 @@ from tac.balle_hyperprior_codec import (
     HyperDecoder,
     HyperEncoder,
     MODE_FULL_BALLE,
-    MODE_HOTZ_LITE,
     _BHV1_MAGIC,
-    _BHV1_VERSION,
     decode_qints_balle,
     discretized_gaussian_pmf,
     encode_qints_balle_auto,

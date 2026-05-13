@@ -36,7 +36,6 @@ import io
 import json
 import math
 import struct
-from typing import Any
 
 import torch
 import torch.nn as nn
@@ -1392,7 +1391,7 @@ def _smoke_test() -> None:
         log_every=5, pos_encoding_freqs=3,
     )
     assert trained is not None
-    print(f"  training (10 epochs): OK")
+    print("  training (10 epochs): OK")
 
     # 8. Self-compressing training
     trained_sc = train_network_codec(
@@ -1411,7 +1410,7 @@ def _smoke_test() -> None:
     archive2 = export_network_archive(trained)
     loaded = load_network_codec(archive2)
     assert loaded.param_count() == trained.param_count()
-    print(f"  load_network_codec: OK")
+    print("  load_network_codec: OK")
 
     # 10. PositionalEncoding
     pe = PositionalEncoding(num_frequencies=6, include_input=True)
