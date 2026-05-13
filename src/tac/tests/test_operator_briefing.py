@@ -105,6 +105,21 @@ def test_briefing_json_composite_has_all_three_keys():
     supplementary_rows = {row["lane_id"]: row for row in out["supplementary_lanes"]}
     assert supplementary_rows["lane_pr106_latent_sidecar"]["score_target_routing"]["active"] is False
     assert supplementary_rows["lane_pr106_latent_sidecar"]["score_target_routing"]["status"] == "above_target"
+    assert supplementary_rows["lane_pr106_latent_sidecar"]["dispatch_routing"]["active"] is False
+    assert supplementary_rows["lane_pr106_latent_sidecar"]["dispatch_routing"]["status"] == "score_target_inactive"
+    assert supplementary_rows["lane_pr106_latent_sidecar"]["ready_for_operator_dispatch"] is False
+    assert supplementary_rows["lane_pr106_latent_sidecar"]["ready_for_exact_eval_dispatch"] is False
+    assert out["active_gated_lanes"] == []
+    assert out["active_composition_lanes"] == []
+    composition_rows = {row["lane_id"]: row for row in out["composition_lanes"]}
+    stacked = composition_rows["lane_pr106_stacked"]
+    assert stacked["score_target_routing"]["active"] is True
+    assert stacked["dispatch_routing"]["active"] is False
+    assert stacked["dispatch_routing"]["status"] == "dispatch_gate_blocked"
+    assert stacked["ready_for_operator_dispatch"] is False
+    assert stacked["ready_for_exact_eval_dispatch"] is False
+    assert "gate_condition_not_satisfied" in stacked["dispatch_routing"]["blockers"]
+    assert "operator_one_liner_has_unresolved_placeholders" in stacked["dispatch_routing"]["blockers"]
     row = out["non_dispatchable_readiness_artifacts"][0]
     assert row["kind"] == "pr91_hpm1_readiness_bundle"
     assert row["ready_for_exact_eval_dispatch"] is False
@@ -230,12 +245,55 @@ def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
     proc = _run("--skip-dashboard", "--skip-reconciler", "--top", "3")
     assert "lane_pr106_latent_sidecar —" not in proc.stdout
     assert "lane_pr106_yshift_sidechannel —" not in proc.stdout
-    assert "hidden above target 0.1900" in proc.stdout
-    assert "lane_pr106_stacked —" in proc.stdout
+    assert "hidden inactive/above target 0.1900" in proc.stdout
+    assert "lane_pr106_stacked —" not in proc.stdout
+    assert "lane_pr106_stacked[dispatch_gate_blocked]" in proc.stdout
 
     shown = _run("--skip-dashboard", "--skip-reconciler", "--show-above-target", "--top", "3")
     assert "lane_pr106_latent_sidecar —" in shown.stdout
     assert "target routing: above_target" in shown.stdout
+    assert "lane_pr106_stacked —" in shown.stdout
+    assert "dispatch routing: dispatch_gate_blocked" in shown.stdout
+
+
+def test_phase_worklist_active_rows_require_dispatch_ready_contract():
+    mod = _load_briefing_module()
+    groups = [
+        mod.PHASE_1_SUPPLEMENTARY_LANES,
+        mod.PHASE_4_GATED_LANES,
+        mod.PHASE_5_COMPOSITION_LANES,
+    ]
+
+    for lanes in groups:
+        rows = mod._annotate_score_target_lanes(
+            lanes,
+            target_score=0.19,
+            active_only=False,
+        )
+        active_rows = mod._annotate_score_target_lanes(
+            lanes,
+            target_score=0.19,
+            active_only=True,
+        )
+        for row in rows:
+            dispatch = row["dispatch_routing"]
+            assert row["ready_for_operator_dispatch"] is dispatch["active"]
+            if row["ready_for_exact_eval_dispatch"]:
+                assert row["ready_for_operator_dispatch"] is True
+            if row.get("gate_condition") and row.get("gate_ready") is not True:
+                assert dispatch["active"] is False
+                assert "gate_condition_not_satisfied" in dispatch["blockers"]
+            if "<" in str(row.get("one_liner", "")):
+                assert dispatch["active"] is False
+                assert "operator_one_liner_has_unresolved_placeholders" in dispatch["blockers"]
+        assert {
+            row["lane_id"]
+            for row in active_rows
+        } == {
+            row["lane_id"]
+            for row in rows
+            if row["dispatch_routing"]["active"]
+        }
 
 
 def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():

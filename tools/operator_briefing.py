@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -243,9 +244,61 @@ def _annotate_score_target_lanes(
             keep_unknown=False,
         )
         row["score_target_routing"] = decision.to_dict()
-        if not active_only or decision.active:
+        dispatch_decision = _lane_dispatch_routing(row, decision_active=decision.active)
+        row["dispatch_routing"] = dispatch_decision
+        row["ready_for_operator_dispatch"] = bool(dispatch_decision["active"])
+        row["ready_for_exact_eval_dispatch"] = (
+            bool(row.get("ready_for_exact_eval_dispatch"))
+            and bool(dispatch_decision["active"])
+        )
+        if not active_only or dispatch_decision["active"]:
             rows.append(row)
     return rows
+
+
+_OPERATOR_PLACEHOLDER_RE = re.compile(r"<[^>\n]+>")
+
+
+def _lane_dispatch_routing(
+    lane: dict[str, object],
+    *,
+    decision_active: bool,
+) -> dict[str, object]:
+    """Return whether an operator row is actually dispatch-active.
+
+    Score-target routing is intentionally narrow: it answers whether a predicted
+    band could beat the target. Dispatch routing additionally enforces
+    sequential gates and refuses one-liners with unresolved operator
+    placeholders, so autopilot surfaces cannot present a planning row as an
+    actionable dispatch.
+    """
+
+    blockers: list[str] = []
+    if lane.get("gate_condition") and lane.get("gate_ready") is not True:
+        configured = lane.get("gate_blockers")
+        if isinstance(configured, list) and configured:
+            blockers.extend(str(item) for item in configured)
+        else:
+            blockers.append("gate_condition_not_satisfied")
+    one_liner = lane.get("one_liner")
+    if isinstance(one_liner, str) and _OPERATOR_PLACEHOLDER_RE.search(one_liner):
+        blockers.append("operator_one_liner_has_unresolved_placeholders")
+    active = bool(decision_active) and not blockers
+    if active:
+        status = "dispatch_active"
+        reason = "score target plausible and all operator dispatch gates are satisfied"
+    elif not decision_active:
+        status = "score_target_inactive"
+        reason = "score-target routing is inactive"
+    else:
+        status = "dispatch_gate_blocked"
+        reason = "score target plausible, but operator dispatch gate is blocked"
+    return {
+        "active": active,
+        "status": status,
+        "reason": reason,
+        "blockers": blockers,
+    }
 
 
 def _hidden_above_target_summary(
@@ -260,13 +313,15 @@ def _hidden_above_target_summary(
             target_score=target_score,
             active_only=False,
         )
-        if not bool(row["score_target_routing"]["active"])
+        if not bool(row["dispatch_routing"]["active"])
     ]
     if not hidden:
         return ""
-    lane_ids = ", ".join(str(row["lane_id"]) for row in hidden)
+    lane_ids = ", ".join(
+        f"{row['lane_id']}[{row['dispatch_routing']['status']}]" for row in hidden
+    )
     return (
-        f"\n\n  hidden above target {target_score:.4f}: "
+        f"\n\n  hidden inactive/above target {target_score:.4f}: "
         f"{len(hidden)} row(s): {lane_ids}"
     )
 
@@ -275,7 +330,19 @@ def _score_target_line(lane: dict[str, object]) -> str:
     routing = lane.get("score_target_routing")
     if not isinstance(routing, dict):
         return ""
-    return f"\n    target routing: {routing.get('status')} — {routing.get('reason')}"
+    dispatch = lane.get("dispatch_routing")
+    dispatch_line = ""
+    if isinstance(dispatch, dict):
+        blockers = dispatch.get("blockers") or []
+        blocker_text = f"; blockers={', '.join(str(item) for item in blockers)}" if blockers else ""
+        dispatch_line = (
+            f"\n    dispatch routing: {dispatch.get('status')} — "
+            f"{dispatch.get('reason')}{blocker_text}"
+        )
+    return (
+        f"\n    target routing: {routing.get('status')} — {routing.get('reason')}"
+        f"{dispatch_line}"
+    )
 
 
 def _format_supplementary_lanes(
