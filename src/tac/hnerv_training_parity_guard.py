@@ -10,6 +10,7 @@ checks the source-level contracts that have repeatedly caused false readiness.
 from __future__ import annotations
 
 import ast
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -75,11 +76,40 @@ def _call_name(func: ast.AST) -> str:
     return ""
 
 
+def _walk_executable_function_body(func: ast.FunctionDef | None) -> list[ast.AST]:
+    if func is None:
+        return []
+
+    nodes: list[ast.AST] = []
+
+    class Visitor(ast.NodeVisitor):
+        def generic_visit(self, node: ast.AST) -> None:
+            nodes.append(node)
+            super().generic_visit(node)
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            nodes.append(node)
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            nodes.append(node)
+
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            nodes.append(node)
+
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            nodes.append(node)
+
+    visitor = Visitor()
+    for statement in func.body:
+        visitor.visit(statement)
+    return nodes
+
+
 def _function_calls(func: ast.FunctionDef | None) -> list[tuple[int, str, ast.Call]]:
     if func is None:
         return []
     calls: list[tuple[int, str, ast.Call]] = []
-    for node in ast.walk(func):
+    for node in _walk_executable_function_body(func):
         if isinstance(node, ast.Call):
             calls.append((getattr(node, "lineno", 0), _call_name(node.func), node))
     calls.sort(key=lambda item: item[0])
@@ -110,7 +140,7 @@ def _has_bool_keyword(calls: list[tuple[int, str, ast.Call]], keyword: str, valu
 def _contains_ready_for_exact_eval_true(func: ast.FunctionDef | None) -> bool:
     if func is None:
         return False
-    for node in ast.walk(func):
+    for node in _walk_executable_function_body(func):
         if not isinstance(node, ast.Dict):
             continue
         for key, value in zip(node.keys, node.values, strict=False):
@@ -164,6 +194,275 @@ def _assigned_string_literals(text: str, function_name: str) -> dict[str, str]:
                 values[target] = value
         break
     return values
+
+
+def _shell_tokens_by_line(script: str) -> list[tuple[str, list[str]]]:
+    tokenized: list[tuple[str, list[str]]] = []
+    for raw_line in script.splitlines():
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        try:
+            tokens = shlex.split(raw_line, comments=True, posix=True)
+        except ValueError:
+            tokens = []
+        if tokens:
+            tokenized.append((raw_line, tokens))
+    return tokenized
+
+
+def _shell_assignment_value(tokens: list[str], name: str) -> str | None:
+    prefix = name + "="
+    for token in tokens:
+        if token.startswith(prefix):
+            return token[len(prefix):]
+    return None
+
+
+def _shell_refers_to(token: str, *, positional: str, variable: str) -> bool:
+    return token in {
+        positional,
+        "${" + positional[1:] + "}",
+        variable,
+        "${" + variable[1:] + "}",
+    }
+
+
+def _inspect_inflate_sh_template(inflate_sh: str) -> list[str]:
+    violations: list[str] = []
+    tokenized = _shell_tokens_by_line(inflate_sh)
+    executable_text = "\n".join(line for line, _tokens in tokenized)
+
+    data_arg = output_arg = file_arg = False
+    for _line, tokens in tokenized:
+        data_arg = data_arg or _shell_assignment_value(tokens, "DATA_DIR") in {
+            "$1",
+            "${1}",
+        }
+        output_arg = output_arg or _shell_assignment_value(tokens, "OUTPUT_DIR") in {
+            "$2",
+            "${2}",
+        }
+        file_arg = file_arg or _shell_assignment_value(tokens, "FILE_LIST") in {
+            "$3",
+            "${3}",
+        }
+
+    invokes_inflate_py_with_three_args = False
+    for _line, tokens in tokenized:
+        if "$@" in tokens:
+            violations.append("inflate.sh template uses passthrough \"$@\"")
+        if not any(token.endswith("inflate.py") for token in tokens):
+            continue
+        inflate_index = next(
+            index for index, token in enumerate(tokens) if token.endswith("inflate.py")
+        )
+        args = tokens[inflate_index + 1:]
+        if len(args) < 3:
+            continue
+        if (
+            _shell_refers_to(args[0], positional="$1", variable="$DATA_DIR")
+            and _shell_refers_to(args[1], positional="$2", variable="$OUTPUT_DIR")
+            and _shell_refers_to(args[2], positional="$3", variable="$FILE_LIST")
+        ):
+            invokes_inflate_py_with_three_args = True
+
+    if not (data_arg and output_arg and file_arg and invokes_inflate_py_with_three_args):
+        violations.append(
+            "inflate.sh template missing exact archive_dir/output_dir/file_list args"
+        )
+    if not any(
+        tokens
+        and tokens[0] == "set"
+        and any(token == "-e" or token.startswith("-e") for token in tokens[1:])
+        for _line, tokens in tokenized
+    ):
+        violations.append("inflate.sh template missing set -e/pipefail")
+    for token in FORBIDDEN_NETWORK_TOKENS:
+        if token in executable_text:
+            violations.append(
+                f"inflate.sh template contains runtime network token {token!r}"
+            )
+    return violations
+
+
+def _is_sys_argv_index(node: ast.AST, index: int) -> bool:
+    if not isinstance(node, ast.Subscript):
+        return False
+    if _call_name(node.value) != "sys.argv":
+        return False
+    slice_node = node.slice
+    return isinstance(slice_node, ast.Constant) and slice_node.value == index
+
+
+def _is_len_sys_argv(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and _call_name(node.func) == "len"
+        and len(node.args) == 1
+        and _call_name(node.args[0]) == "sys.argv"
+    )
+
+
+def _is_constant_value(node: ast.AST, value: object) -> bool:
+    return isinstance(node, ast.Constant) and node.value == value
+
+
+def _is_len_sys_argv_not_equal_four(node: ast.Compare) -> bool:
+    """Return True only for an executable exact-arity rejection condition.
+
+    A mere comparison against ``4`` is not enough: ``len(sys.argv) == 4`` in a
+    failure branch is the inverse contract and must not certify a contest
+    runtime signature.
+    """
+    if len(node.ops) != 1 or len(node.comparators) != 1:
+        return False
+    if not isinstance(node.ops[0], ast.NotEq):
+        return False
+    right = node.comparators[0]
+    return (
+        _is_len_sys_argv(node.left)
+        and _is_constant_value(right, 4)
+    ) or (
+        _is_constant_value(node.left, 4)
+        and _is_len_sys_argv(right)
+    )
+
+
+def _main_enforces_three_args(main_fn: ast.FunctionDef | None) -> bool:
+    if main_fn is None:
+        return False
+    for node in _walk_executable_function_body(main_fn):
+        if isinstance(node, ast.Compare) and _is_len_sys_argv_not_equal_four(node):
+            return True
+    return False
+
+
+def _name_assigned_from_sys_argv(main_fn: ast.FunctionDef | None, index: int) -> set[str]:
+    if main_fn is None:
+        return set()
+    names: set[str] = set()
+    for node in _walk_executable_function_body(main_fn):
+        value_node: ast.AST | None = None
+        targets: list[ast.AST] = []
+        if isinstance(node, ast.Assign):
+            value_node = node.value
+            targets = list(node.targets)
+        elif isinstance(node, ast.AnnAssign):
+            value_node = node.value
+            targets = [node.target]
+        if value_node is None:
+            continue
+        source = value_node
+        if isinstance(source, ast.Call) and source.args:
+            source = source.args[0]
+        if not _is_sys_argv_index(source, index):
+            continue
+        for target in targets:
+            if isinstance(target, ast.Name):
+                names.add(target.id)
+    return names
+
+
+def _expr_reads_archive_zero_bin(node: ast.AST, archive_names: set[str]) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    call_name = _call_name(node.func)
+    if call_name != "read_bytes" and not call_name.endswith(".read_bytes"):
+        return False
+    read_target = node.func.value if isinstance(node.func, ast.Attribute) else None
+    if not isinstance(read_target, ast.BinOp) or not isinstance(read_target.op, ast.Div):
+        return False
+    return (
+        isinstance(read_target.left, ast.Name)
+        and read_target.left.id in archive_names
+        and isinstance(read_target.right, ast.Constant)
+        and read_target.right.value == "0.bin"
+    )
+
+
+def _iterates_file_list_lines(
+    main_fn: ast.FunctionDef | None,
+    file_list_names: set[str],
+) -> bool:
+    if main_fn is None:
+        return False
+    for node in _walk_executable_function_body(main_fn):
+        if not isinstance(node, ast.For):
+            continue
+        split_call = node.iter
+        if (
+            not isinstance(split_call, ast.Call)
+            or _call_name(split_call.func) != "splitlines"
+        ):
+            continue
+        read_call = split_call.func.value if isinstance(split_call.func, ast.Attribute) else None
+        if (
+            not isinstance(read_call, ast.Call)
+            or not _call_name(read_call.func).endswith(".read_text")
+        ):
+            continue
+        read_target = read_call.func.value if isinstance(read_call.func, ast.Attribute) else None
+        if isinstance(read_target, ast.Name) and read_target.id in file_list_names:
+            return True
+    return False
+
+
+def _runtime_references_forbidden_scorer_symbol(module: ast.Module) -> str | None:
+    for node in ast.walk(module):
+        if isinstance(node, ast.ImportFrom):
+            module_name = node.module or ""
+            if module_name == "upstream.modules" or module_name.startswith("upstream.modules."):
+                return "from upstream.modules"
+            for alias in node.names:
+                if alias.name in FORBIDDEN_RUNTIME_TOKENS:
+                    return alias.name
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "upstream.modules" or alias.name.startswith("upstream.modules."):
+                    return "import upstream.modules"
+                if alias.name in FORBIDDEN_RUNTIME_TOKENS:
+                    return alias.name
+        elif isinstance(node, ast.Name) and node.id in FORBIDDEN_RUNTIME_TOKENS:
+            return node.id
+        elif isinstance(node, ast.Attribute) and node.attr in FORBIDDEN_RUNTIME_TOKENS:
+            return node.attr
+    return None
+
+
+def _inspect_inflate_py_template(inflate_py: str) -> list[str]:
+    violations: list[str] = []
+    try:
+        module = ast.parse(inflate_py)
+    except SyntaxError:
+        return ["inflate.py template is not parseable Python"]
+
+    main_fn = _top_level_function(module, "main")
+    archive_names = _name_assigned_from_sys_argv(main_fn, 1)
+    output_names = _name_assigned_from_sys_argv(main_fn, 2)
+    file_list_names = _name_assigned_from_sys_argv(main_fn, 3)
+
+    if not _main_enforces_three_args(main_fn):
+        violations.append("inflate.py template does not enforce 3 positional args")
+    if not file_list_names:
+        violations.append("inflate.py template does not consume file_list argv")
+    if not _iterates_file_list_lines(main_fn, file_list_names):
+        violations.append("inflate.py template does not iterate file_list lines")
+    reads_archive = False
+    if main_fn is not None:
+        reads_archive = any(
+            _expr_reads_archive_zero_bin(node, archive_names)
+            for node in _walk_executable_function_body(main_fn)
+        )
+    if not reads_archive:
+        violations.append("inflate.py template does not consume archive_dir/0.bin")
+    if not output_names:
+        violations.append("inflate.py template does not consume output_dir argv")
+
+    forbidden = _runtime_references_forbidden_scorer_symbol(module)
+    if forbidden is not None:
+        violations.append(f"emitted runtime contains forbidden scorer token {forbidden!r}")
+    return violations
 
 
 def inspect_hnerv_training_parity_source(
@@ -235,53 +534,14 @@ def inspect_hnerv_training_parity_source(
         )
 
     if inflate_sh:
-        has_arg1 = (
-            "$1" in inflate_sh or "${1}" in inflate_sh or "$DATA_DIR" in inflate_sh
-        )
-        has_arg2 = (
-            "$2" in inflate_sh or "${2}" in inflate_sh or "$OUTPUT_DIR" in inflate_sh
-        )
-        has_arg3 = (
-            "$3" in inflate_sh or "${3}" in inflate_sh or "$FILE_LIST" in inflate_sh
-        )
-        if not (has_arg1 and has_arg2 and has_arg3):
-            violations.append(
-                "inflate.sh template missing exact archive_dir/output_dir/file_list args"
-            )
-        if "set -euo pipefail" not in inflate_sh and "set -e" not in inflate_sh:
-            violations.append("inflate.sh template missing set -e/pipefail")
-        if '"$@"' in inflate_sh:
-            violations.append("inflate.sh template uses passthrough \"$@\"")
-        for token in FORBIDDEN_NETWORK_TOKENS:
-            if token in inflate_sh:
-                violations.append(
-                    f"inflate.sh template contains runtime network token {token!r}"
-                )
+        violations.extend(_inspect_inflate_sh_template(inflate_sh))
     elif runtime_fn is not None:
         violations.append("_write_runtime missing inflate_sh template")
 
     if inflate_py:
-        has_three_arg_check = (
-            "len(sys.argv) != 4" in inflate_py or "len(sys.argv)!=4" in inflate_py
-        )
-        if not has_three_arg_check:
-            violations.append("inflate.py template does not enforce 3 positional args")
-        if "sys.argv[3]" not in inflate_py:
-            violations.append("inflate.py template does not consume file_list argv")
-        if "splitlines()" not in inflate_py:
-            violations.append("inflate.py template does not iterate file_list lines")
-        consumes_zero_bin = (
-            "archive_dir / '0.bin'" in inflate_py
-            or 'archive_dir / "0.bin"' in inflate_py
-        )
-        if not consumes_zero_bin:
-            violations.append("inflate.py template does not consume archive_dir/0.bin")
+        violations.extend(_inspect_inflate_py_template(inflate_py))
     elif runtime_fn is not None:
         violations.append("_write_runtime missing inflate_py template")
-
-    for token in FORBIDDEN_RUNTIME_TOKENS:
-        if token in emitted_runtime:
-            violations.append(f"emitted runtime contains forbidden scorer token {token!r}")
 
     return HnervTrainingParityReport(path=path_label, violations=tuple(violations))
 
