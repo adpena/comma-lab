@@ -106,10 +106,17 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          # ubuntu-latest already ships ffmpeg with libsvtav1; verify and surface
-          # version so the audit trail captures the decoder used.
-          which ffmpeg
-          ffmpeg -version | head -3
+          # ubuntu-latest/system ffmpeg can lack the explicit scale options
+          # (`in_primaries`, etc.) required by robust_current/inflate.sh. Use
+          # the same BtbN fallback discipline as remote_archive_only_eval.sh
+          # and export the selected FFMPEG_BIN for all later steps.
+          SELECTED_FFMPEG="$(bash scripts/ensure_parity_ffmpeg.sh \
+            --install-root "${RUNNER_TEMP}/ffmpeg-btbn" \
+            --env-file "${GITHUB_ENV}" \
+            --path-file "${GITHUB_PATH}")"
+          export FFMPEG_BIN="${SELECTED_FFMPEG}"
+          "$FFMPEG_BIN" -hide_banner -h filter=scale | grep -q in_primaries
+          "$FFMPEG_BIN" -version | head -3
 
       - name: Create venv + install tac with runtime extras (CPU torch)
         run: |

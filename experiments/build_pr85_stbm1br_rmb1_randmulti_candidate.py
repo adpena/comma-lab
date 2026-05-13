@@ -263,7 +263,7 @@ def _duplicate_builder_coordination_report() -> dict[str, Any]:
         checks.update(
             {
                 "canonical_tool_matches_path": constants.get("TOOL") == CANONICAL_RMB1_BUILDER,
-                "lane_id_matches_canonical_builder": constants.get("LANE_ID") == DEFAULT_DISPATCH_LANE_ID,
+                "canonical_builder_lane_id_matches": constants.get("LANE_ID") == DEFAULT_DISPATCH_LANE_ID,
                 "canonical_schema_is_pr92_rmb1": str(constants.get("SCHEMA", "")).startswith(
                     "pr85_stbm1br_pr92_rmb1_randmulti"
                 ),

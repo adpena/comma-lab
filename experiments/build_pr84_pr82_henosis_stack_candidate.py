@@ -481,7 +481,7 @@ def _build_qpost_candidate(
         "candidate_kind": candidate_kind,
         "dispatch_gate": {
             "dispatch_ready_now": dispatch_ready,
-            "lane_claim_required_before_any_exact_eval": True,
+            "dispatch_claim_required_before_any_exact_eval": True,
             "no_remote_dispatch": True,
             "reason": "ready_for_exact_cuda_eval_after_lane_claim" if dispatch_ready else "; ".join(blockers),
             "remote_dispatch_performed": False,
