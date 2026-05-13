@@ -1,0 +1,94 @@
+schema_version: 1
+name: substrate_ds_nerv_modal_a100_dispatch
+lane_id: lane_substrate_ds_nerv_20260512
+summary: ds_nerv first-anchor dispatch on Modal A100 (DEFERRED - MEDIUM-target HNeRV-family architectural-twist attack).
+
+dispatch_enabled: false
+research_only: false
+defer_reason: |
+  MEDIUM-target HNeRV-family dispatch is intentionally held behind the
+  HIGH-target substrate anchors (SIREN, Cool-Chic, VQ-VAE, self_compress_nn,
+  balle_renderer). The trainer, wrapper, and remote driver exist, but this
+  lane should not consume paid GPU before at least one HIGH-target substrate
+  lands a smoke-green exact-eval path or the operator explicitly reroutes the
+  priority queue. This is a routing defer, not an infrastructure gap.
+dispatch_blockers:
+  - high_target_substrate_anchor_required
+  - modal_smoke_not_yet_green
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 8.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_delta: "-0.030 to -0.050 [predicted; council Phase 5 substrate design memo - MEDIUM-target ~0.18-0.20]"
+predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
+risk: |
+  WAVE-3-HNERV-C MEDIUM-target first-anchor research dispatch on Modal A100.
+  Trainer _full_main wires 16 stages including auth eval at stage 12. Single-axis
+  [contest-CUDA] acceptable for first anchor; CPU axis required separately
+  before promotion. Architectural twist: depthwise-separable decoder (PR101
+  88K-param FiLM CNN heritage); ~150K-param target vs sane_hnerv ~229K. If
+  capacity reduction is too aggressive at PR106-r2 operating point, seg term
+  may regress faster than rate term shrinks (council Round 3 NVIDIA-grade risk).
+envelope_status: "DEFERRED: MEDIUM-target routing holds dispatch until HIGH-target anchors land"
+
+remote_driver: scripts/remote_lane_substrate_ds_nerv.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_ds_nerv.sh
+  cost_band_trainer: experiments/train_substrate_ds_nerv.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_ds_nerv.py
+
+env_overrides:
+  DS_NERV_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  DS_NERV_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  DS_NERV_OUTPUT_DIR: /workspace/pact/lane_substrate_ds_nerv_results/output
+  DS_NERV_EPOCHS: "2000"
+  DS_NERV_UPSTREAM_DIR: /workspace/pact/upstream
+  DS_NERV_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_ds_nerv.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_ds_nerv.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+
+notes: |
+  WAVE-3-HNERV-C MEDIUM-target HNeRV-family substrate dispatch.
+
+  Architectural twist vs sane_hnerv: depthwise-separable convolutions in
+  the decoder (depthwise 3x3 + pointwise 1x1 factorization). Reduces
+  per-conv FLOP/param cost from O(C_in * C_out * 9) to O(C_in * 9 +
+  C_in * C_out). Quantizr-paradigm influence: PR101's 88K-param
+  FiLM-conditioned depthwise-separable CNN is canonical demonstration
+  that depthwise-separable decoders can hit medal-band scores under
+  the rate constraint.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 2000) -
+  current confidence: weak_posterior (N=1 anchor from sane_hnerv).
+  First dispatches bootstrap the calibration system.
+
+  Cross-ref:
+    feedback_wave3_hnerv_c_2_trainers_LANDED_20260512.md (this landing)
+    feedback_substrate_sane_hnerv_first_anchor_dispatch_landed_20260512.md
+    .omx/research/grand_council_fields_medal_substrate_design_20260512.md
