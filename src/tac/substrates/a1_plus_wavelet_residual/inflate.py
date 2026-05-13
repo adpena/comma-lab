@@ -12,7 +12,6 @@ exemption per HNeRV parity lesson L4).
 
 Wire format reference: ``tac.substrates.a1_plus_wavelet_residual.archive``.
 """
-
 from __future__ import annotations
 
 import struct
@@ -196,7 +195,6 @@ def main_cli() -> int:
         inflate_one(src, dst)
         print(f"inflated {base}")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main_cli())

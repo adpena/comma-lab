@@ -18,6 +18,13 @@ target_modes:
   - contest_one_video_replay
   - research_substrate
 canary_status: independent_substrate
+# Adversarial-review descope 2026-05-13: experiments/train_substrate_s2sbs_byte_stuffing.py
+# does NOT yet have a real `_full_main` implementation — the substrate is a research
+# scaffold only. Full-mode dispatch would fire the smoke harness twice. `smoke_only:
+# true` instructs `tools/run_modal_smoke_before_full.py` to skip the full phase and
+# emit a smoke-only anchor; a council-grade `_full_main` implementation is the path
+# to remove this descope flag.
+smoke_only: true
 
 cost_band:
   epochs: 2000

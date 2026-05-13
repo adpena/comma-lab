@@ -38,7 +38,7 @@ cost_band:
 
 predicted_score_target: null
 predicted_band: [0.150, 0.170]
-smoke_score_band: [0.050, 5.000]
+smoke_score_band: [0.10, 0.30]
 predicted_delta: "time-traveler-prediction only; no score claim until paired CPU/CUDA auth eval lands"
 predicted_delta_basis: ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md"
 literature_anchor: |

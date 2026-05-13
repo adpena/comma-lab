@@ -461,8 +461,78 @@ def _terminal_claim(
         )
 
 
+_SESSION_DIRECTIVE_ENV_VAR = "OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE"
+_SESSION_BUDGET_ENV_VAR = "OPERATOR_AUTHORIZE_SESSION_BUDGET_USD"
+
+
+def _session_directive_bypass_active() -> tuple[bool, str | None]:
+    """Catalog #199 — return (bypass_active, error_message).
+
+    The bypass fires only when BOTH env vars are set:
+      * ``OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1`` (or any truthy)
+      * ``OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=<float>`` (parseable as float)
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    forcing a paired budget env var prevents bare ``CONFIRMED=1`` from acting
+    as a blanket auto-approve. STRICT preflight Catalog #199 refuses any
+    caller that toggles the directive flag without declaring the budget.
+    """
+    raw_confirmed = os.environ.get(_SESSION_DIRECTIVE_ENV_VAR, "")
+    if not raw_confirmed or raw_confirmed.strip().lower() in {"", "0", "false", "no"}:
+        return False, None
+    raw_budget = os.environ.get(_SESSION_BUDGET_ENV_VAR, "")
+    if not raw_budget:
+        return False, (
+            f"{_SESSION_DIRECTIVE_ENV_VAR} is set but {_SESSION_BUDGET_ENV_VAR} "
+            "is missing. Catalog #199 requires the paired session-budget env "
+            "var (in USD, e.g. 20.0) so the operator must explicitly "
+            "acknowledge the session-wide envelope."
+        )
+    try:
+        budget_usd = float(raw_budget)
+    except ValueError:
+        return False, (
+            f"{_SESSION_BUDGET_ENV_VAR}={raw_budget!r} is not a parseable "
+            "float (USD). Set e.g. =20.0."
+        )
+    if budget_usd <= 0.0:
+        return False, (
+            f"{_SESSION_BUDGET_ENV_VAR}={budget_usd} must be > 0."
+        )
+    print(
+        "[OPERATOR-AUTHORIZE BYPASS ACTIVE] Session-directive bypass + "
+        f"${budget_usd:.2f} budget cap; HUMAN APPROVAL ASSUMED BY ENV VAR "
+        f"({_SESSION_DIRECTIVE_ENV_VAR}=1 + "
+        f"{_SESSION_BUDGET_ENV_VAR}={budget_usd:.2f}).",
+        file=sys.stderr,
+    )
+    return True, None
+
+
 def _confirm(prompt: str, *, default_yes: bool = False) -> bool:
-    """Read a y/N from stdin. Returns True only on explicit yes."""
+    """Read a y/N from stdin. Returns True only on explicit yes.
+
+    Catalog #199 bypass: when both ``OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE``
+    AND ``OPERATOR_AUTHORIZE_SESSION_BUDGET_USD`` are set, return True without
+    prompting (and log a LOUD banner to stderr). This addresses the orchestrator
+    failure mode where ``run_modal_smoke_before_full.py`` invokes
+    ``operator_authorize.py`` via ``subprocess.run(capture_output=True)`` —
+    stdin is closed, ``input()`` raises EOFError, ``_confirm`` returns False,
+    dispatch is silently aborted.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    a STRICT preflight gate (Catalog #199) refuses any caller of the bypass
+    that does NOT declare the paired budget env var.
+    """
+    bypass_active, err_msg = _session_directive_bypass_active()
+    if bypass_active:
+        return True
+    if err_msg is not None:
+        print(
+            f"[operator-authorize] FATAL: {err_msg}",
+            file=sys.stderr,
+        )
+        raise SystemExit(11)
     suffix = " [Y/n] " if default_yes else " [y/N] "
     try:
         ans = input(prompt + suffix).strip().lower()
@@ -1011,6 +1081,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Skip the operator confirmation + actual dispatch (print plan only)",
     )
     parser.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "Non-interactive confirmation for caller-owned workflows that have "
+            "already recorded operator approval."
+        ),
+    )
+    parser.add_argument(
         "--no-claim",
         action="store_true",
         help="Skip the lane-claim step (for recipes that handle their own coordination)",
@@ -1104,7 +1182,9 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     # Operator confirmation.
-    if not _confirm(
+    if args.yes:
+        print("[operator-authorize] --yes; using caller-owned operator approval")
+    elif not _confirm(
         f"operator confirmation: proceed with {recipe.name} dispatch "
         f"(p50approximately${band.p50_cost_usd:.2f}, {band.confidence_tag})?"
     ):

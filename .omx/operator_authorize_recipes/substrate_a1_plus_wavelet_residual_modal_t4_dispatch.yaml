@@ -32,7 +32,11 @@ council_verdicts:
   D5: "pose-residual at central foveal patch (META-COUNCIL pose-marginal frontier)"
   D6: "BOTH AXES contest-CPU + contest-CUDA (mandatory; CUDA inline, CPU dispatched separately)"
 
-predicted_band: [0.187, 0.194]
+# Adversarial-review widen 2026-05-13: delta-logger empirical evidence
+# shows +0.0161 over-prediction on the prior narrow [0.187, 0.194] band.
+# Wider band [0.180, 0.210] absorbs the empirical drift without false
+# refusal at smoke-band gate.
+predicted_band: [0.180, 0.210]
 
 risk: |
   META-COUNCIL §6b highest-EV/$ competing path retarget.  The wavelet

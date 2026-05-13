@@ -2637,6 +2637,16 @@ def preflight_all(
         check_full_cpu_requires_explicit_advisory_waiver(
             strict=True, verbose=verbose,
         )
+        # Catalog #199 - check_operator_authorize_bypass_requires_session_budget
+        # Operator approved 2026-05-13 (UNBLOCK + REVIEW-FIX + RETRY DISPATCH).
+        # Refuses callers that set OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE
+        # without OPERATOR_AUTHORIZE_SESSION_BUDGET_USD within the same callsite
+        # window. Sister of the operator_authorize._confirm() env-var bypass
+        # landed in the same commit batch. Live count at landing: 0.
+        # STRICT @ 0 per CLAUDE.md "Strict-flip atomicity rule".
+        check_operator_authorize_bypass_requires_session_budget(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -46313,6 +46323,204 @@ def check_full_cpu_requires_explicit_advisory_waiver(
             "coupled --advisory-cpu-explicitly-waived flag and/or coupled-flag "
             "validator invocation. Per CLAUDE.md 'Bugs must be permanently "
             "fixed AND self-protected against' + Catalog #197:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #199 — check_operator_authorize_bypass_requires_session_budget
+#
+# Operator approved 2026-05-13 (UNBLOCK + REVIEW-FIX + RETRY DISPATCH).
+# Sister self-protection for the operator-authorize confirmation-prompt
+# bypass added to `tools/operator_authorize.py::_confirm()` at the same
+# commit batch.
+#
+# The canonical pattern is:
+#
+#   1. tools/operator_authorize.py::_confirm() recognizes a paired env-var
+#      bypass: OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 AND
+#      OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=<float>.
+#   2. Bare CONFIRMED=1 alone is FATAL (the helper raises SystemExit(11)).
+#   3. Any caller that sets only the CONFIRMED env var without the paired
+#      budget env var is a structural Catalog #199 violation — even if the
+#      bypass path is never exercised in practice, the asymmetric env-var
+#      set risks future drift into "auto-approve without budget cap".
+#
+# Bug class: env-var bypasses on safety surfaces are convenient but lossy —
+# CONFIRMED=1 alone would silently approve any dispatch independent of cost.
+# The paired-budget requirement forces the operator to explicitly acknowledge
+# the session-wide envelope. The STRICT preflight check refuses any caller
+# (.sh / .py file under tools/, scripts/, experiments/, src/tac/) that sets
+# CONFIRMED without ALSO setting the budget in the same callsite window.
+#
+# Acceptance:
+#   (a) caller sets BOTH env vars within a small window (30 lines)
+#   (b) same-line `# OPERATOR_AUTHORIZE_BYPASS_OK:<reason>` waiver on the
+#       CONFIRMED-setting line
+#   (c) the canonical operator-authorize file (tools/operator_authorize.py)
+#       and the preflight.py self-reference are exempt
+#   (d) test files are exempt
+#
+# Live count at landing: 0.
+# STRICT @ 0 in same commit batch per CLAUDE.md "Strict-flip atomicity rule".
+# ============================================================================
+
+_CHECK_199_CONFIRMED_ENV_VAR = "OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE"
+_CHECK_199_BUDGET_ENV_VAR = "OPERATOR_AUTHORIZE_SESSION_BUDGET_USD"
+_CHECK_199_SAMELINE_WAIVER_TOKEN = "OPERATOR_AUTHORIZE_BYPASS_OK:"
+_CHECK_199_SCAN_DIRS: tuple[str, ...] = ("tools", "scripts", "experiments", "src/tac")
+_CHECK_199_SCAN_EXTS: tuple[str, ...] = (".py", ".sh")
+_CHECK_199_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "/tests/",
+    "/test_",
+)
+_CHECK_199_EXEMPT_FILES: frozenset[str] = frozenset({
+    "tools/operator_authorize.py",  # the canonical file that defines the bypass
+    "src/tac/preflight.py",  # the gate's own home (contains the regex patterns)
+})
+_CHECK_199_WINDOW_LINES = 30
+
+
+def _check_199_iter_candidate_files(root: Path) -> list[Path]:
+    """Return candidate files (.py/.sh) under the four scan dirs."""
+    out: list[Path] = []
+    for sub in _CHECK_199_SCAN_DIRS:
+        sub_path = root / sub
+        if not sub_path.is_dir():
+            continue
+        for path in sub_path.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix not in _CHECK_199_SCAN_EXTS:
+                continue
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_199_EXEMPT_PATH_MARKERS):
+                continue
+            if rel in _CHECK_199_EXEMPT_FILES:
+                continue
+            # Test files exempt by filename convention (defence-in-depth on
+            # top of the /tests/ + /test_ markers above).
+            if path.name.startswith("test_") or path.name.endswith("_test.py"):
+                continue
+            out.append(path)
+    return sorted(out)
+
+
+def _check_199_line_sets_confirmed_env(line: str) -> bool:
+    """Return True if `line` sets the CONFIRMED env var to a truthy value.
+
+    Detects shell exports/assignments and Python ``os.environ`` writes.
+    """
+    stripped = line.strip()
+    # Same-line waiver opt-out.
+    if _CHECK_199_SAMELINE_WAIVER_TOKEN in stripped:
+        return False
+    if _CHECK_199_CONFIRMED_ENV_VAR not in stripped:
+        return False
+    # Look for assignment patterns (= 1, ="1", : "1", etc.) but exclude
+    # mere mentions in comments or docstrings.
+    # Shell: VAR=value or export VAR=value
+    # Python: os.environ["VAR"] = "1" or env["VAR"] = "1"
+    if "=" not in stripped:
+        return False
+    # Comment-only line: full-line comment / docstring opener
+    if stripped.startswith("#"):
+        return False
+    if stripped.startswith('"""') or stripped.startswith("'''"):
+        return False
+    return True
+
+
+def _check_199_window_sets_budget(lines: list[str], idx: int) -> bool:
+    """Return True if any line within `idx ± _CHECK_199_WINDOW_LINES` sets
+    the BUDGET env var."""
+    lo = max(0, idx - _CHECK_199_WINDOW_LINES)
+    hi = min(len(lines), idx + _CHECK_199_WINDOW_LINES + 1)
+    for j in range(lo, hi):
+        if j == idx:
+            continue
+        candidate = lines[j]
+        if _CHECK_199_BUDGET_ENV_VAR not in candidate:
+            continue
+        if "=" not in candidate:
+            continue
+        cstripped = candidate.strip()
+        if cstripped.startswith("#"):
+            continue
+        return True
+    return False
+
+
+def check_operator_authorize_bypass_requires_session_budget(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Catalog #199 — refuse asymmetric CONFIRMED-without-BUDGET callsites.
+
+    Scans .py/.sh files under tools/, scripts/, experiments/, src/tac/ for
+    callsites that set ``OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE``
+    without ALSO setting ``OPERATOR_AUTHORIZE_SESSION_BUDGET_USD`` within the
+    same 30-line callsite window. Refuses each violating callsite.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+    non-negotiable: the bypass at tools/operator_authorize.py::_confirm() is
+    the immediate fix for the orchestrator stdin-closed failure mode; this
+    preflight gate is the structural self-protection that prevents the
+    asymmetric-env-var bypass class from re-emerging.
+    """
+    root = repo_root or Path.cwd()
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    scanned = 0
+    for path in _check_199_iter_candidate_files(root):
+        scanned += 1
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _CHECK_199_CONFIRMED_ENV_VAR not in text:
+            continue
+        lines = text.splitlines()
+        for idx, line in enumerate(lines):
+            if not _check_199_line_sets_confirmed_env(line):
+                continue
+            if _check_199_window_sets_budget(lines, idx):
+                continue
+            violations.append(
+                f"{path}:{idx + 1}: sets "
+                f"{_CHECK_199_CONFIRMED_ENV_VAR} without setting "
+                f"{_CHECK_199_BUDGET_ENV_VAR} within "
+                f"{_CHECK_199_WINDOW_LINES} lines. Per Catalog #199 the "
+                "bypass requires the paired session-budget env var so the "
+                "operator must explicitly acknowledge the session-wide cap. "
+                f"Add `# {_CHECK_199_SAMELINE_WAIVER_TOKEN}<reason>` on the "
+                f"line, OR set {_CHECK_199_BUDGET_ENV_VAR}=<usd> nearby."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [operator-authorize-bypass-budget] {len(violations)} "
+                f"violation(s) across {scanned} candidate file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                f"  [operator-authorize-bypass-budget] OK "
+                f"({scanned} candidate file(s) scanned, 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_operator_authorize_bypass_requires_session_budget found "
+            f"{len(violations)} callsite(s) setting "
+            f"{_CHECK_199_CONFIRMED_ENV_VAR} without the paired "
+            f"{_CHECK_199_BUDGET_ENV_VAR}. Per CLAUDE.md 'Bugs must be "
+            "permanently fixed AND self-protected against' + Catalog #199:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
