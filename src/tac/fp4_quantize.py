@@ -42,7 +42,7 @@ import torch.nn as nn
 #
 # RESIDUAL_CODEBOOK is denser near zero (geometric-ish spacing). The
 # boundary between 0 and the first nonzero entry drops from 0.25 → 0.0625,
-# preserving 4× more small-magnitude detail. Use this for renderers with a
+# preserving 4x more small-magnitude detail. Use this for renderers with a
 # residual / correction head (e.g., Cool-Chic, C3 residual).
 #
 # (R-FP4-fix 2026-04-25: trend report showed FP4 SegNet plateau at ep5 while
@@ -53,13 +53,166 @@ RESIDUAL_CODEBOOK = torch.tensor([0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 6.0])
 DEFAULT_BLOCK_SIZE = 32
 
 # Percentile used for scale calculation when robust=True. Using max(|w|) is
-# fragile to outliers — a single 5σ weight in a 32-block forces everything
+# fragile to outliers -- a single 5-sigma weight in a 32-block forces everything
 # else to round near zero. p99.5 keeps the same dynamic range while ignoring
 # at most 0-1 outliers per block.
 ROBUST_SCALE_PERCENTILE = 0.995
 
+# ── SOAR DSS: Decoupled Scale Storage (arXiv:2605.12245v1 §4.2) ─────────────
+#
+# Source: Bao et al. 2026 arXiv:2605.12245v1 §4.2 + Algorithm 1.
+#
+# In NVFP4 hardware the per-block dequantization scale Δᵈ is FP8 (E4M3); the
+# *quantization-side* scale Δᵍ used at encode time to choose FP4 levels is
+# not hardware-constrained — it only feeds the encoder's argmin lookup.
+# SOAR DSS exploits this asymmetry: keep Δᵍ in high precision (fp32/fp64)
+# while storing Δᵈ in the hardware FP8 format. A small local search refines
+# the (Δᵍ, Δᵈ) pair per block to minimize reconstruction MSE at fixed
+# storage cost.
+#
+# Our analog:
+#   - Storage scale dtype: float16 (matches existing on-disk format —
+#     `quantize_fp4` writes float16 scales; SOAR's fp8 is contest-irrelevant
+#     since our archive is not run on NVFP4 hardware).
+#   - Encoder scale dtype: float32 internally then projected to float16 at
+#     storage time. SOAR's headline benefit is allowing the encoder-side
+#     scale to be a DIFFERENT value from the storage-side scale.
+#
+# Local-search strategy (matches SOAR Algorithm 1 with grid size K=5):
+#   For each block:
+#     1. Compute candidate stored scales Δᵈ by perturbing the max-rule scale
+#        with K log-spaced multipliers in [delta_lo, delta_hi].
+#     2. For each candidate Δᵈ, search a small set of encoder-side Δᵍ values
+#        around Δᵈ at full fp32/fp64 precision.
+#     3. For each (Δᵍ, Δᵈ) pair compute the reconstruction MSE:
+#          q_i = argmin_c |w_i / Δᵍ - cb[c]|  (encoder uses Δᵍ)
+#          ŵ_i = cb[q_i] * sign(w_i) * Δᵈ     (decoder uses stored Δᵈ)
+#          MSE = mean((w - ŵ)²)
+#     4. Pick the (Δᵍ, Δᵈ) pair with the lowest MSE; store Δᵈ as fp16.
+#
+# IMPORTANT — applicability constraint per PDF research memo + CLAUDE.md
+# Catalog #123:
+#   DSS is a WEIGHT-DOMAIN reconstruction-MSE optimization. On
+#   score-gradient-trained substrates (A1, anything tagged `score_gradient`),
+#   weight-MSE optimal scales are ANTI-CORRELATED with score saliency. DSS is
+#   only safe on score-AGNOSTIC weights (frozen-renderer block-FP transplants).
+#
+# Default OFF per opt-in policy. Use ``quantize_fp4(..., decoupled_scale=True)``.
+
+# Default DSS search grid (SOAR Algorithm 1 uses K_d = 5 storage candidates +
+# K_g = 3 encoder candidates per storage candidate). Small enough that the
+# per-block cost is bounded; larger grids buy diminishing returns per SOAR
+# Figure 6.
+DEFAULT_DSS_STORAGE_GRID = (0.85, 0.925, 1.0, 1.075, 1.15)
+DEFAULT_DSS_ENCODER_GRID = (0.95, 1.0, 1.05)
+
 
 # ── Core quantization ───────────────────────────────────────────────────
+
+
+def _reconstruction_mse_at_scale_pair(
+    block: torch.Tensor,
+    codebook: torch.Tensor,
+    scale_enc: float,
+    scale_dec: float,
+) -> float:
+    """Compute reconstruction MSE for a fixed (encoder_scale, decoder_scale).
+
+    Encoder uses scale_enc (fp32/fp64) to pick codebook indices; decoder
+    reconstructs using scale_dec (which would be stored in fp16 on disk).
+
+    All arithmetic is in float32 / float64 for the search; the projection to
+    fp16 happens when the scale is stored.
+    """
+    if scale_enc <= 0.0 or scale_dec <= 0.0:
+        # Pathological — return +inf so the search rejects this pair.
+        return float("inf")
+    signs = block.sign()
+    magnitudes = block.abs()
+    # Encoder picks the codebook index using scale_enc.
+    normalized = magnitudes / scale_enc
+    dists = (normalized.unsqueeze(1) - codebook.unsqueeze(0).to(block.device)).abs()
+    indices = dists.argmin(dim=1)
+    # Decoder reconstructs using scale_dec.
+    values = codebook.to(block.device)[indices]
+    rec = values * signs * scale_dec
+    return float(((rec - block) ** 2).mean().item())
+
+
+def _quantize_block_dss(
+    block: torch.Tensor,
+    codebook: torch.Tensor,
+    *,
+    robust_scale: bool,
+    storage_grid: tuple[float, ...],
+    encoder_grid: tuple[float, ...],
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """SOAR-DSS variant of ``_quantize_block`` (arXiv:2605.12245v1 §4.2).
+
+    Decouples the encoder-side scale (high-precision) from the stored
+    dequantization scale (fp16 in our archive). Performs a small grid
+    search over (Δᵍ, Δᵈ) pairs centered at the max-rule (or robust)
+    initialization and returns the pair with the lowest reconstruction MSE.
+
+    The returned ``scale`` tensor is the DECODER (stored) scale. The encoder
+    side does NOT need to be stored because the codebook indices already
+    capture the encoder's choices.
+
+    Returns ``(indices, signs, scale_dec)`` exactly matching the contract of
+    ``_quantize_block`` so downstream packing is unchanged.
+    """
+    signs = block.sign()
+    signs[signs == 0] = 1.0
+    magnitudes = block.abs()
+    max_cb = codebook[-1]
+    # Baseline scale (same logic as _quantize_block).
+    ref_mag = (
+        torch.quantile(magnitudes.float(), ROBUST_SCALE_PERCENTILE)
+        if robust_scale
+        else magnitudes.max()
+    )
+    if ref_mag.item() <= 1e-10:
+        # All-zero block: any scale works; pick 1.0 to stay deterministic.
+        return (
+            torch.zeros(block.numel(), dtype=torch.uint8, device=block.device),
+            signs.to(torch.int8),
+            torch.tensor(1.0, device=block.device),
+        )
+    s_base = float((ref_mag / max_cb).item())
+
+    # Grid search over (scale_enc, scale_dec).
+    # SOAR Algorithm 1: outer loop over storage candidates, inner over encoder.
+    best_mse = float("inf")
+    best_enc = s_base
+    best_dec = s_base
+    cb_dev = codebook.to(block.device)
+    block_f32 = block.to(torch.float32)
+    for mul_d in storage_grid:
+        s_dec_candidate = s_base * float(mul_d)
+        # Project to fp16 to match the storage dtype (the lossy projection
+        # is what makes DSS valuable — the encoder optimizes given this
+        # specific fp16-projected decoder scale).
+        s_dec_fp16 = float(torch.tensor(s_dec_candidate, dtype=torch.float16).item())
+        if s_dec_fp16 <= 0.0:
+            continue
+        for mul_e in encoder_grid:
+            s_enc = s_dec_candidate * float(mul_e)
+            if s_enc <= 0.0:
+                continue
+            mse = _reconstruction_mse_at_scale_pair(
+                block_f32, cb_dev, s_enc, s_dec_fp16
+            )
+            if mse < best_mse:
+                best_mse = mse
+                best_enc = s_enc
+                best_dec = s_dec_fp16
+
+    # Final encoding pass at the chosen (best_enc, best_dec).
+    normalized = magnitudes / best_enc
+    dists = (normalized.unsqueeze(1) - cb_dev.unsqueeze(0)).abs()
+    indices = dists.argmin(dim=1).to(torch.uint8)
+    # Return the DECODER scale (this is what gets stored on disk).
+    return indices, signs.to(torch.int8), torch.tensor(best_dec, device=block.device)
 
 
 def _quantize_block(
@@ -67,6 +220,9 @@ def _quantize_block(
     codebook: torch.Tensor,
     *,
     robust_scale: bool = False,
+    decoupled_scale: bool = False,
+    dss_storage_grid: tuple[float, ...] = DEFAULT_DSS_STORAGE_GRID,
+    dss_encoder_grid: tuple[float, ...] = DEFAULT_DSS_ENCODER_GRID,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Quantize a 1D block of weights to FP4.
 
@@ -76,13 +232,32 @@ def _quantize_block(
         robust_scale: use percentile-based scale instead of max(|w|).
             R-FP4-fix: must match the training-time setting on QATRendererFP4
             so round-trip weights are identical to what training saw.
+        decoupled_scale: SOAR §4.2 Decoupled Scale Storage. When True, the
+            encoder runs a small grid search over (encoder_scale, stored_scale)
+            pairs and picks the pair with the lowest reconstruction MSE at
+            fixed storage budget (the stored scale is still fp16). Default
+            False (backward-compat). Mutually compatible with ``robust_scale``
+            because the search is centered on the (robust_scale-or-not)
+            initialization. WARNING: weight-MSE optimization is FALSIFIED on
+            score-gradient-trained substrates per CLAUDE.md Catalog #123.
+        dss_storage_grid, dss_encoder_grid: grid multipliers for the DSS
+            search. Defaults match SOAR Algorithm 1 (K_d=5, K_g=3).
 
     Returns:
         (indices, signs, scale) where:
             indices: (block_size,) uint8 in [0, 7] (3-bit codebook index)
             signs: (block_size,) int8 in {-1, +1}
-            scale: scalar float (per-block scale factor)
+            scale: scalar float (per-block scale factor; this is the
+                DECODER-side scale that will be stored on disk)
     """
+    if decoupled_scale:
+        return _quantize_block_dss(
+            block,
+            codebook,
+            robust_scale=robust_scale,
+            storage_grid=dss_storage_grid,
+            encoder_grid=dss_encoder_grid,
+        )
     # Extract signs and magnitudes
     signs = block.sign()
     signs[signs == 0] = 1.0  # map zero to positive
@@ -90,11 +265,12 @@ def _quantize_block(
 
     # Compute block scale: maps max (or p99.5) magnitude to max codebook value.
     max_cb = codebook[-1]
-    if robust_scale:
-        # Single-block percentile — quantile expects float32 input.
-        ref_mag = torch.quantile(magnitudes.float(), ROBUST_SCALE_PERCENTILE)
-    else:
-        ref_mag = magnitudes.max()
+    # Single-block percentile path expects float32 input.
+    ref_mag = (
+        torch.quantile(magnitudes.float(), ROBUST_SCALE_PERCENTILE)
+        if robust_scale
+        else magnitudes.max()
+    )
     scale = ref_mag / max_cb if ref_mag > 1e-10 else torch.tensor(1.0, device=block.device)
 
     # Normalize magnitudes to codebook range
@@ -191,6 +367,9 @@ def quantize_fp4(
     block_size: int = DEFAULT_BLOCK_SIZE,
     *,
     robust_scale: bool = False,
+    decoupled_scale: bool = False,
+    dss_storage_grid: tuple[float, ...] = DEFAULT_DSS_STORAGE_GRID,
+    dss_encoder_grid: tuple[float, ...] = DEFAULT_DSS_ENCODER_GRID,
 ) -> dict[str, Any]:
     """Quantize a model state dict to FP4 packed format.
 
@@ -202,6 +381,16 @@ def quantize_fp4(
         state_dict: model state dict with float tensors
         codebook: 8-value codebook (default: [0, 0.5, 1, 1.5, 2, 3, 4, 6])
         block_size: weights per scale factor
+        robust_scale: percentile-based per-block scale (default False).
+        decoupled_scale: SOAR §4.2 Decoupled Scale Storage opt-in. When True,
+            the encoder runs a small (encoder_scale, decoder_scale) grid
+            search per block to minimize reconstruction MSE; the stored
+            scale dtype (fp16) is unchanged. Default False (backward-compat).
+            WARNING: weight-MSE optimization is FALSIFIED on score-gradient-
+            trained substrates per CLAUDE.md Catalog #123 — apply to score-
+            AGNOSTIC weights only.
+        dss_storage_grid, dss_encoder_grid: grid multipliers for the DSS
+            search. Defaults match SOAR Algorithm 1 (K_d=5, K_g=3).
 
     Returns:
         Packed dict with keys:
@@ -218,6 +407,11 @@ def quantize_fp4(
         "__codebook__": codebook,
         "__block_size__": block_size,
     }
+    if decoupled_scale:
+        # Stamp provenance for SOAR DSS (decoder is unchanged so this field
+        # is informational only).
+        packed_state["__scale_optimizer__"] = "dss_soar_v1"
+        packed_state["__scale_optimizer_paper__"] = "arXiv:2605.12245v1"
 
     for name, param in state_dict.items():
         if not torch.is_floating_point(param):
@@ -250,7 +444,13 @@ def quantize_fp4(
         all_scales = []
         for start in range(0, p.shape[0], block_size):
             block = p[start : start + block_size]
-            indices, signs, scale = _quantize_block(block, codebook, robust_scale=robust_scale)
+            indices, signs, scale = _quantize_block(
+                block, codebook,
+                robust_scale=robust_scale,
+                decoupled_scale=decoupled_scale,
+                dss_storage_grid=dss_storage_grid,
+                dss_encoder_grid=dss_encoder_grid,
+            )
             packed = _pack_indices_signs(indices, signs)
             all_packed.append(packed)
             all_scales.append(scale)
@@ -580,21 +780,24 @@ class QATRendererFP4(nn.Module):
         called from both Phase 1 and Phase 2 — C1 fix).
         """
         for module in self.base.modules():
-            if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear)):
-                if hasattr(module, "weight") and module.weight.ndim >= 2:
-                    if nn.utils.parametrize.is_parametrized(module, "weight"):
-                        continue  # already wrapped — skip to prevent double quantization
-                    nn.utils.parametrize.register_parametrization(
-                        module,
-                        "weight",
-                        FP4Parametrize(
-                            self.codebook.clone(),
-                            self.block_size,
-                            stochastic=self.stochastic,
-                            robust_scale=self.robust_scale,
-                        ),
-                    )
-                    self._parametrized_modules.append(module)
+            if (
+                isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear))
+                and hasattr(module, "weight")
+                and module.weight.ndim >= 2
+            ):
+                if nn.utils.parametrize.is_parametrized(module, "weight"):
+                    continue  # already wrapped — skip to prevent double quantization
+                nn.utils.parametrize.register_parametrization(
+                    module,
+                    "weight",
+                    FP4Parametrize(
+                        self.codebook.clone(),
+                        self.block_size,
+                        stochastic=self.stochastic,
+                        robust_scale=self.robust_scale,
+                    ),
+                )
+                self._parametrized_modules.append(module)
 
     def remove_hooks(self):
         """Remove all FP4 parametrizations (for eval/export)."""
@@ -674,3 +877,40 @@ def get_fp4_meta(path: str | os.PathLike) -> dict[str, Any]:
     """Read metadata from an FP4 weight file without loading all weights."""
     packed = torch.load(path, map_location="cpu", weights_only=True)
     return dict(packed.get("__meta__", {}))
+
+
+# ── SOAR wrapper API (encoder-side opt-in, decoder-byte-compatible) ──────
+
+
+def quantize_state_dict_fp4_dss(
+    state_dict: dict[str, torch.Tensor],
+    codebook: torch.Tensor | None = None,
+    block_size: int = DEFAULT_BLOCK_SIZE,
+    *,
+    robust_scale: bool = False,
+    dss_storage_grid: tuple[float, ...] = DEFAULT_DSS_STORAGE_GRID,
+    dss_encoder_grid: tuple[float, ...] = DEFAULT_DSS_ENCODER_GRID,
+) -> dict[str, Any]:
+    """Thin wrapper around ``quantize_fp4`` with SOAR DSS enabled.
+
+    Decoupled Scale Storage (arXiv:2605.12245v1 §4.2): the encoder runs a
+    small (encoder_scale, decoder_scale) grid search per block and stores the
+    fp16-projected decoder scale that minimizes reconstruction MSE. The
+    decoder algebra is unchanged — the archive byte format is identical to
+    a non-DSS archive at the same ``block_size`` / ``codebook``.
+
+    WARNING per CLAUDE.md Catalog #123: weight-domain reconstruction-MSE
+    optimization is FALSIFIED on score-gradient-trained substrates. Apply to
+    score-AGNOSTIC weights only (frozen-renderer transplants).
+
+    See ``quantize_fp4(..., decoupled_scale=True)``.
+    """
+    return quantize_fp4(
+        state_dict,
+        codebook=codebook,
+        block_size=block_size,
+        robust_scale=robust_scale,
+        decoupled_scale=True,
+        dss_storage_grid=dss_storage_grid,
+        dss_encoder_grid=dss_encoder_grid,
+    )

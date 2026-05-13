@@ -49,13 +49,14 @@ handled by ``src/tac/szabolcs_archive.py`` (Phase 2).
 """
 from __future__ import annotations
 
+import io
 import math
+import os
 import struct
+import tarfile
 from dataclasses import dataclass
-from typing import Optional
 
 import torch
-
 
 # Encoder defaults (centralized so tests + exporter + decoder agree).
 DEFAULT_BLOCK_SIZE: int = 16
@@ -188,6 +189,149 @@ def _pack_block_fp_arrays(
     return qint, exponents
 
 
+# ── CJSO: Closed-form Joint Scale Optimization (SOAR §4.1 eqs 5+6) ────────
+#
+# Source: Bao et al. 2026 arXiv:2605.12245v1, "SOAR: Scale Optimization for
+# Accurate Reconstruction in NVFP4 Quantization", §4.1, eqs (5) and (6).
+#
+# Under a fixed quantization assignment Q (here Q ∈ {-1, 0, +1} for ternary),
+# the reconstruction objective
+#
+#     L(s) = sum_j (W_j - Q_j * s)^2
+#
+# is quadratic in the scale s. The first-order optimality condition
+# ∂L/∂s = 0 gives the closed-form optimum
+#
+#     s* = Σⱼ(Wⱼ · Qⱼ) / Σⱼ(Qⱼ²)
+#
+# (valid when the denominator is nonzero — i.e. at least one Q is nonzero).
+#
+# SOAR's CJSO alternates closed-form scale updates with Q-recomputation under
+# the current scale. The procedure converges in ~15 iterations (per SOAR Fig.
+# 5). We snap the optimal continuous scale s* back to the integer exponent
+# `e_b = round(log2(s* / clip_threshold))` after each update to stay
+# bytes-compatible with the decoder algebra (`weight ≈ qint * 2 ** exponents`).
+#
+# IMPORTANT — applicability constraint per PDF research memo + CLAUDE.md
+# Catalog #123:
+#   CJSO is a WEIGHT-DOMAIN reconstruction-MSE optimization. On
+#   score-gradient-trained substrates (A1, anything tagged `score_gradient`)
+#   weight-MSE optimal scales are ANTI-CORRELATED with score saliency —
+#   parameters the trainer pushed AWAY from zero are the score-relevant ones,
+#   and CJSO will preferentially preserve THOSE in the int8/ternary
+#   quantization, which is the opposite of what we want there. CJSO is only
+#   safe on score-AGNOSTIC substrates (frozen-renderer block-FP transplants).
+#
+# Default OFF per opt-in policy. Use `pack_block_fp(weight, cjso_init=True)`.
+
+
+def _cjso_optimal_scale(
+    block: torch.Tensor,
+    qint: torch.Tensor,
+) -> float:
+    """SOAR eq (5) closed-form scale for fixed ternary Q.
+
+    s* = Σⱼ(Wⱼ · Qⱼ) / Σⱼ(Qⱼ²)
+
+    Returns 0.0 when the denominator is zero (all-zero Q block).
+    """
+    qf = qint.to(torch.float32)
+    num = float((block.to(torch.float32) * qf).sum().item())
+    den = float((qf * qf).sum().item())
+    if den == 0.0:
+        return 0.0
+    return num / den
+
+
+def _pack_block_fp_arrays_cjso(
+    weight: torch.Tensor,
+    block_size: int,
+    clip_threshold: float,
+    n_iters: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """CJSO variant of ``_pack_block_fp_arrays``.
+
+    Initialize with the max-rule exponent, then alternate
+        (1) recompute Q under current scale (ternary rounding), and
+        (2) update the scale via the closed-form optimum (SOAR eq 5).
+
+    After ``n_iters`` iterations, snap the optimal continuous scale back to
+    the nearest integer exponent so the on-disk format is unchanged.
+
+    Algebraic note: snapping s* → 2^round(log2(s*)) introduces a half-octave
+    rounding error, but the iteration is still strictly non-increasing in the
+    MSE objective relative to the max-rule initialization for any block where
+    the optimal s* lies closer to a non-max-rule integer exponent.
+
+    Returns the same ``(qint, exponents)`` tuple as ``_pack_block_fp_arrays``;
+    callers consume both paths interchangeably.
+    """
+    if weight.numel() == 0:
+        return (
+            torch.zeros_like(weight, dtype=torch.int8),
+            torch.zeros((0,), dtype=torch.float32),
+        )
+    if block_size <= 0:
+        raise ValueError(f"block_size must be > 0, got {block_size}")
+    if clip_threshold <= 0:
+        raise ValueError(f"clip_threshold must be > 0, got {clip_threshold}")
+    if n_iters < 1:
+        raise ValueError(f"n_iters must be >= 1, got {n_iters}")
+
+    # Start from the max-rule init (this is what max-based PTQ uses; SOAR
+    # initializes the same way then improves via closed-form).
+    qint, exponents = _pack_block_fp_arrays(weight, block_size, clip_threshold)
+
+    weight_f = weight.detach().to(torch.float32)
+    axis = _resolve_block_axis(tuple(weight_f.shape))
+    if axis != 0:  # pragma: no cover — defensive; current layout is axis-0 only.
+        weight_f = weight_f.movedim(axis, 0)
+    num_rows = weight_f.shape[0]
+    nb = _num_blocks(num_rows, block_size)
+
+    for b in range(nb):
+        lo = b * block_size
+        hi = min(lo + block_size, num_rows)
+        block = weight_f[lo:hi]
+        if block.abs().max().item() == 0.0:
+            continue
+        # Iterate closed-form scale update + Q-recomputation.
+        # Decoder algebra: reconstruction = q * 2^e (clip_threshold is
+        # encoder-only). So the closed-form target IS the decoder scale 2^e:
+        #   s* = Σ(W·Q) / Σ(Q²) and e* = round(log2(s*)).
+        e = int(exponents[b].item())
+        for _ in range(n_iters):
+            scale = 2.0 ** e
+            # Q-rounding rule (matches _pack_block_fp_arrays):
+            # |w/2^e| >= clip_threshold → ±1, else 0.
+            scaled = block / scale
+            ternary = torch.sign(scaled) * (scaled.abs() >= clip_threshold).to(scaled.dtype)
+            q_b = ternary.to(torch.int8)
+            # Closed-form optimum for the DECODER scale (2^e).
+            s_star = _cjso_optimal_scale(block, q_b)
+            if s_star <= 0.0:
+                break  # degenerate; keep current e.
+            new_e_f = math.log2(s_star)
+            new_e = max(_EXP_MIN, min(_EXP_MAX, round(new_e_f)))
+            if new_e == e:
+                # Converged at the integer-snap grid; record final Q + stop.
+                qint[lo:hi] = q_b
+                break
+            e = new_e
+        # Final Q-recomputation under the converged exponent.
+        final_scale = 2.0 ** e
+        scaled = block / final_scale
+        ternary = torch.sign(scaled) * (scaled.abs() >= clip_threshold).to(scaled.dtype)
+        qint[lo:hi] = ternary.to(torch.int8)
+        exponents[b] = float(e)
+    return qint, exponents
+
+
+# Default CJSO iteration count — SOAR Figure 5 shows convergence within
+# 10-15 iterations on LLM matmul shapes. 15 is the canonical default.
+DEFAULT_CJSO_ITERS: int = 15
+
+
 def _unpack_block_fp_arrays(
     qint: torch.Tensor,
     exponents: torch.Tensor,
@@ -265,7 +409,7 @@ class BlockFPHeader:
         return b"".join(parts)
 
     @classmethod
-    def decode(cls, data: bytes) -> tuple["BlockFPHeader", int]:
+    def decode(cls, data: bytes) -> tuple[BlockFPHeader, int]:
         if data[:4] != _BFP_MAGIC:
             raise ValueError(
                 f"block_fp_codec: expected magic {_BFP_MAGIC!r}, got {data[:4]!r}"
@@ -312,6 +456,9 @@ def pack_block_fp(
     weight: torch.Tensor,
     block_size: int = DEFAULT_BLOCK_SIZE,
     clip_threshold: float = DEFAULT_CLIP_THRESHOLD,
+    *,
+    cjso_init: bool = False,
+    cjso_iters: int = DEFAULT_CJSO_ITERS,
 ) -> bytes:
     """Encode a float weight tensor into the block-FP byte format.
 
@@ -321,10 +468,30 @@ def pack_block_fp(
 
     Pure-Python so it works without numpy on the contest scorer machine.
     Use ``unpack_block_fp`` to round-trip.
+
+    Args:
+        weight: Float tensor (rank >= 1) to pack.
+        block_size: Number of rows in one block along axis 0.
+        clip_threshold: Magnitude (post-scale) at which a weight rounds to ±1.
+        cjso_init: When True, use SOAR-style Closed-form Joint Scale
+            Optimization (arXiv:2605.12245v1 §4.1 eqs 5+6) instead of the
+            max-rule ``e_b = ceil(log2(max_abs))`` initialization. Default
+            False (backward-compatible). The output byte format is identical;
+            only the per-block exponents differ. WARNING: weight-domain MSE
+            optimization is FALSIFIED on score-gradient-trained substrates per
+            CLAUDE.md Catalog #123 — only apply to score-AGNOSTIC weights.
+        cjso_iters: Number of CJSO alternation iterations when ``cjso_init=True``.
+            Default 15 (SOAR Figure 5 empirical convergence). Ignored when
+            ``cjso_init=False``.
     """
     if weight.dim() == 0:
         raise ValueError("pack_block_fp: scalar tensors not supported")
-    qint, exponents = _pack_block_fp_arrays(weight, block_size, clip_threshold)
+    if cjso_init:
+        qint, exponents = _pack_block_fp_arrays_cjso(
+            weight, block_size, clip_threshold, cjso_iters
+        )
+    else:
+        qint, exponents = _pack_block_fp_arrays(weight, block_size, clip_threshold)
     qint_contig = qint.contiguous()
     exp_contig = exponents.contiguous()
     qint_bytes = qint_contig.cpu().numpy().tobytes()
@@ -343,7 +510,7 @@ def pack_block_fp(
 
 def unpack_block_fp(
     data: bytes,
-    shape: Optional[tuple[int, ...]] = None,
+    shape: tuple[int, ...] | None = None,
 ) -> torch.Tensor:
     """Decode a block-FP byte blob back to a float32 tensor.
 
@@ -426,10 +593,6 @@ def measure_bits_per_weight(weight: torch.Tensor, packed: bytes) -> float:
 #   * ``pack_block_fp`` / ``unpack_block_fp``        → Lane SZ ternary path
 #   * ``encode_conv_weight`` / ``decode_conv_weight``→ Lane MM Selfcomp path
 
-import io
-import os
-import tarfile
-
 # HWOI permutation tag — matches Selfcomp inflate.py L170 (``payload.get(
 # "weight_tensor_layout") == "HWOI"``). The decoder permutes back to OIHW
 # via .permute(2, 3, 0, 1) per the reference; our encoder uses
@@ -446,6 +609,9 @@ def encode_conv_weight(
     weight: torch.Tensor,
     qint_max: int = 7,
     per_channel_qint_max: list[int] | torch.Tensor | None = None,
+    *,
+    cjso_init: bool = False,
+    cjso_iters: int = DEFAULT_CJSO_ITERS,
 ) -> dict[str, torch.Tensor | tuple[int, ...] | int]:
     """Per-output-channel block-FP encoder for conv2d weights (Selfcomp layout).
 
@@ -514,6 +680,9 @@ def encode_conv_weight(
     else:
         pc_q = [qint_max] * o
 
+    if cjso_init and cjso_iters < 1:
+        raise ValueError(f"cjso_iters must be >= 1, got {cjso_iters}")
+
     exponents = torch.zeros((o,), dtype=torch.int32)
     qint_oihw = torch.zeros_like(w, dtype=torch.int8)
     for c in range(o):
@@ -528,6 +697,29 @@ def encode_conv_weight(
         # the largest weights to ±Q_c losing information.
         exp_f = math.ceil(math.log2(max_abs / Qc))
         e = max(_EXP_MIN, min(_EXP_MAX, int(exp_f)))
+        if cjso_init:
+            # SOAR §4.1 closed-form alternation. With per-channel int Q in
+            # [-Qc, Qc] (not ternary), the closed-form scale is still
+            # s* = Σ(W·Q) / Σ(Q²), and we snap to the integer exponent
+            # e = round(log2(s*)). Re-round Q under the new scale and iterate.
+            wc_f = wc.to(torch.float32)
+            for _ in range(cjso_iters):
+                scale_curr = 2.0 ** e
+                q_c = (wc_f / scale_curr).round().clamp(-Qc, Qc)
+                qf = q_c.to(torch.float32)
+                num = float((wc_f * qf).sum().item())
+                den = float((qf * qf).sum().item())
+                if den == 0.0:
+                    break  # degenerate; keep current e.
+                s_star = num / den
+                if s_star <= 0.0:
+                    # Sign-flipped optimum (most W align with -Q): leave as-is.
+                    break
+                new_e_f = math.log2(s_star)
+                new_e = max(_EXP_MIN, min(_EXP_MAX, round(new_e_f)))
+                if new_e == e:
+                    break
+                e = new_e
         exponents[c] = e
         scale = 2.0 ** e
         scaled = (wc / scale).round().clamp(-Qc, Qc)
@@ -536,11 +728,11 @@ def encode_conv_weight(
     # Permute to HWOI to match Selfcomp's decoder reshape (.permute(2, 3, 0, 1)
     # at decode time recovers OIHW from HWOI).
     qint_hwoi = qint_oihw.permute(2, 3, 0, 1).contiguous()
-    qint_max_out: int | torch.Tensor
-    if per_channel_qint_max is not None:
-        qint_max_out = torch.tensor(pc_q, dtype=torch.int32)
-    else:
-        qint_max_out = qint_max
+    qint_max_out: int | torch.Tensor = (
+        torch.tensor(pc_q, dtype=torch.int32)
+        if per_channel_qint_max is not None
+        else qint_max
+    )
     return {
         "weight_qint": qint_hwoi,
         "weight_exponents": exponents,
@@ -648,6 +840,9 @@ def pack_payload_tar_xz(
     linear_bits: int = 8,
     per_key_qint_max: dict[str, list[int] | torch.Tensor] | None = None,
     lossy_contract: dict[str, object] | None = None,
+    *,
+    cjso_init: bool = False,
+    cjso_iters: int = DEFAULT_CJSO_ITERS,
 ) -> None:
     """Pack a SegMap state_dict into a tar.xz at ``output_path``.
 
@@ -678,6 +873,12 @@ def pack_payload_tar_xz(
     output_path = str(output_path)
     meta = {"layout_version": 1, "weight_tensor_layout": _SELFCOMP_HWOI_LAYOUT_TAG,
             "qint_max": qint_max, "linear_bits": linear_bits, "keys": {}}
+    if cjso_init:
+        # Provenance for SOAR CJSO encoder-side opt-in (decoder algebra is
+        # unchanged so this field is informational, not consumed at decode).
+        meta["scale_optimizer"] = "cjso_soar_v1"
+        meta["scale_optimizer_iters"] = int(cjso_iters)
+        meta["scale_optimizer_paper"] = "arXiv:2605.12245v1"
     if lossy_contract is not None:
         # Fail before writing if a caller tries to stash non-reproducible
         # objects such as Paths or tensors in the archive contract metadata.
@@ -701,6 +902,7 @@ def pack_payload_tar_xz(
             pcq = pkqm.get(key)
             packed = encode_conv_weight(
                 tensor, qint_max=qint_max, per_channel_qint_max=pcq,
+                cjso_init=cjso_init, cjso_iters=cjso_iters,
             )
             qint_bytes = packed["weight_qint"].cpu().numpy().tobytes()
             exp_bytes = packed["weight_exponents"].cpu().numpy().tobytes()
@@ -834,23 +1036,63 @@ def verify_roundtrip(
     return mse_map
 
 
+# ── SOAR wrapper API (encoder-side opt-in, decoder-byte-compatible) ──────
+
+
+def pack_state_dict_block_fp_cjso(
+    state_dict: dict[str, torch.Tensor],
+    output_path: str | os.PathLike,
+    qint_max: int = 7,
+    linear_bits: int = 8,
+    per_key_qint_max: dict[str, list[int] | torch.Tensor] | None = None,
+    lossy_contract: dict[str, object] | None = None,
+    *,
+    cjso_iters: int = DEFAULT_CJSO_ITERS,
+) -> None:
+    """Thin wrapper around ``pack_payload_tar_xz`` with CJSO encoder enabled.
+
+    SOAR-style Closed-form Joint Scale Optimization (arXiv:2605.12245v1 §4.1
+    eqs 5+6) for the per-channel block-FP encoder used in the Selfcomp layout.
+    Decoder byte format is unchanged from ``pack_payload_tar_xz``; only the
+    per-channel exponents differ.
+
+    See ``encode_conv_weight(..., cjso_init=True, cjso_iters=...)``.
+
+    WARNING per CLAUDE.md Catalog #123: weight-domain reconstruction-MSE
+    optimization is FALSIFIED on score-gradient-trained substrates. Apply to
+    score-AGNOSTIC weights only (frozen-renderer transplants).
+    """
+    pack_payload_tar_xz(
+        state_dict,
+        output_path,
+        qint_max=qint_max,
+        linear_bits=linear_bits,
+        per_key_qint_max=per_key_qint_max,
+        lossy_contract=lossy_contract,
+        cjso_init=True,
+        cjso_iters=cjso_iters,
+    )
+
+
 __all__ = [
     "DEFAULT_BLOCK_SIZE",
+    "DEFAULT_CJSO_ITERS",
     "DEFAULT_CLIP_THRESHOLD",
     "SEGMAP_LOSSY_CONTRACT_ID",
-    "SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL",
     "SEGMAP_LOSSY_EXACT_EVAL_GATE",
+    "SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL",
     "BlockFPHeader",
-    "pack_block_fp",
-    "unpack_block_fp",
-    "measure_bits_per_weight",
+    "decode_conv_weight",
+    "decode_tensor_linear_q_per_tensor_v1",
     # Selfcomp Lane MM additions:
     "encode_conv_weight",
-    "decode_conv_weight",
     "encode_tensor_linear_q_per_tensor_v1",
-    "decode_tensor_linear_q_per_tensor_v1",
+    "measure_bits_per_weight",
+    "pack_block_fp",
     "pack_payload_tar_xz",
+    "pack_state_dict_block_fp_cjso",
+    "segmap_lossy_contract_metadata",
+    "unpack_block_fp",
     "unpack_payload_tar_xz",
     "verify_roundtrip",
-    "segmap_lossy_contract_metadata",
 ]
