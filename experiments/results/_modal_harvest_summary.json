@@ -872,6 +872,33 @@
     }
   },
   {
+    "label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep",
+    "call_id": "fc-01KRHNMT4SEB794HFPH5GNTHFP",
+    "rc": 13,
+    "elapsed_seconds": 0,
+    "n_artifacts": 1,
+    "crash_kind": "RC_13",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "result_missing_numeric_elapsed_seconds",
+      "score_claim": false,
+      "promotion_eligible": false
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": true,
+      "already_appended": false,
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep",
+      "platform": "modal",
+      "status": "failed_modal_training_rc_13",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=13; timed_out=False; elapsed_seconds=None; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep_modal"
+    }
+  },
+  {
     "label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
     "call_id": "fc-01KREXK209TRX7ED5ZRVXHY1VT",
     "status": "already_harvested",
@@ -964,13 +991,15 @@
   {
     "label": "substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep",
     "call_id": "fc-01KRGTEM56EXCV94Q7DC1HF0PB",
+    "status": "already_harvested",
     "rc": 124,
     "elapsed_seconds": 3601.0182130919998,
+    "timed_out": true,
     "n_artifacts": 53,
     "crash_kind": "TIMEOUT",
     "cost_band_anchor": {
       "all_flags_on": true,
-      "already_appended": true,
+      "already_appended": false,
       "appended": true,
       "batch_size": 1,
       "cost_estimate": true,
@@ -987,12 +1016,12 @@
       "posterior_path": null,
       "promotion_eligible": false,
       "returncode": 124,
-      "schema": "modal_training_cost_anchor_append_v1",
+      "schema": "platform_training_cost_anchor_append_v1",
       "score_claim": false,
       "trainer": "experiments/train_substrate_siren.py"
     },
     "terminal_claim": {
-      "already_appended": true,
+      "already_appended": false,
       "appended": true,
       "instance_job_id": "substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep",
       "lane_id": "remote_lane_substrate_siren",

@@ -627,7 +627,7 @@ def main() -> int:
             "(experiments/train_charm_*, train_score_gradient_*, "
             "tools/pr101_sensitivity_*, etc). This rollup represents "
             "DISPATCH INTENT, NOT execution. After per-decision runs land "
-            "their own artifacts, harvest via tools/harvest_modal_calls.py "
+            "their own artifacts, harvest via tools/harvest_modal_calls.py --execute "
             "/ tools/harvest_gha_runs.py + verify each lane's "
             "[contest-CUDA] + [contest-CPU] dual-eval per CLAUDE.md."
         ),

@@ -6,13 +6,15 @@ Tropical-Decomposition LoRA replaces the vanilla LoRA adapter
 
 with a *tropical max-plus* combination over ``k`` rank-(r/k) branches:
 
-    W'(x) = max_i ( W_i·x + b_i )                                       (E2.1)
+    W'(x) = max( W·x, W·x + Δ_1(x), …, W·x + Δ_k(x) )                   (E2.1)
 
-where ``W_0 = W`` (frozen base) and ``W_1 … W_{k-1}`` are the trainable
-adapter branches. Each adapter branch is parameterised in low-rank form
-``W_i = A_i B_i^T`` with rank ``r/k`` so the TOTAL trainable parameter
-count is identical to vanilla LoRA at rank ``r``. The tropical maximum
-captures *piecewise-linear refinements* that vanilla LoRA cannot: by
+where ``W`` is the frozen base and each ``Δ_i`` is a trainable low-rank
+residual branch. This residual form is intentional: a freshly initialized
+adapter must be an exact no-op against the frozen base so score movement is
+apples-to-apples. Each adapter branch is parameterised in low-rank form with
+rank ``r/k`` so the TOTAL trainable parameter count is identical to vanilla
+LoRA at rank ``r``. The tropical maximum captures *piecewise-linear
+refinements* that vanilla LoRA cannot: by
 Zhang-Naitzat-Lim 2018, any continuous PWL function can be written as a
 difference of tropical polynomials, and the minimum tropical
 representation of an empirical fine-tune is typically more compact than
@@ -73,6 +75,7 @@ TD_LORA_SCHEMA_VERSION = 1
 TD_LORA_MAX_BRANCHES = 16
 TD_LORA_MIN_BRANCHES = 1
 TD_LORA_FLAG_BASE_WEIGHTS = 1 << 0
+TD_LORA_TIE_GRAD_TEMPERATURE = 1.0
 
 
 class TropicalLoRAError(ValueError):
@@ -156,8 +159,8 @@ class TropicalLoRAAdapter(nn.Module):
     Forward (with ``include_base=True``):
 
         y_base = (x @ W^T) + b_W                         # frozen
-        y_i    = α · (x @ A_i^T) @ B_i^T + b_i           # branch i ∈ [1, k]
-        y      = max_i y_i                               # broadcast over batch
+        Δ_i    = α · (x @ A_i^T) @ B_i^T + b_i           # branch i ∈ [1, k]
+        y      = max(y_base, y_base + Δ_i, ...)          # broadcast over batch
 
     Note the maximum is *elementwise* over the output feature dimension —
     consistent with the tropical semiring (max as +, + as ·).
@@ -220,21 +223,41 @@ class TropicalLoRAAdapter(nn.Module):
         h = h @ B  # (..., r) @ (r, out) -> (..., out)
         return self.spec.effective_alpha * h + bias
 
+    def _tropical_residual(self, residuals: list[torch.Tensor]) -> torch.Tensor:
+        """Hard tropical max with smooth tie gradients for trainable residuals."""
+
+        stacked = torch.stack(residuals, dim=0)
+        hard = stacked.max(dim=0).values
+        if self.training and self.spec.rank > 0 and stacked.requires_grad:
+            # Forward remains the exact hard tropical max. Backward uses a
+            # centered log-sum-exp surrogate so the all-zero no-op init still
+            # seeds gradients into adapter branches instead of tying to the
+            # frozen base branch only.
+            tau = TD_LORA_TIE_GRAD_TEMPERATURE
+            soft = tau * (
+                torch.logsumexp(stacked / tau, dim=0) - math.log(stacked.shape[0])
+            )
+            return hard + (soft - soft.detach())
+        return hard
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply tropical max-plus over base + k adapter branches."""
+        """Apply tropical max-plus over base plus residual adapter branches."""
         if x.shape[-1] != self.spec.in_features:
             raise TropicalLoRAError(
                 f"input last dim={x.shape[-1]} mismatches in_features="
                 f"{self.spec.in_features}"
             )
-        branch_outputs: list[torch.Tensor] = []
         if self.include_base:
-            branch_outputs.append(self.base(x))
-        for i in range(self.num_branches):
-            branch_outputs.append(self.adapter_branch_output(x, i))
-        # Stack along a new leading branch axis and reduce via max.
-        stacked = torch.stack(branch_outputs, dim=0)  # (B+k, ..., out)
-        return stacked.max(dim=0).values
+            base_out = self.base(x)
+            residuals = [torch.zeros_like(base_out)]
+            for i in range(self.num_branches):
+                residuals.append(self.adapter_branch_output(x, i))
+            return base_out + self._tropical_residual(residuals)
+
+        branch_outputs = [
+            self.adapter_branch_output(x, i) for i in range(self.num_branches)
+        ]
+        return torch.stack(branch_outputs, dim=0).max(dim=0).values
 
     def serialize_state(self, *, include_base_weights: bool | None = None) -> bytes:
         """Deterministic byte serialisation of the spec + adapter weights.

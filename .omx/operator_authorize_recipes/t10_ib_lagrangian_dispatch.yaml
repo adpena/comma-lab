@@ -5,6 +5,12 @@ summary: T10 IB Lagrangian aux scorer GPU dispatch (~$40 Modal T4).
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
+dispatch_enabled: false
+
+dispatch_blockers:
+  - t10_non_smoke_real_frame_dataloader_not_wired
+  - t10_remote_modal_driver_not_landed
+  - t10_operator_gated_phase2_prereq_not_score_candidate
 
 cost_band:
   epochs: 8000
@@ -19,6 +25,7 @@ risk: |
   Novel architecture; first dispatch carries empirical-validation risk
   (council 2026-05-09 verdict B-4). T10 IB Lagrangian aux scorer.
 envelope_status: "EXCEEDS $20 cumulative envelope — requires fresh operator approval"
+defer_reason: "T10 trainer currently supports smoke-only local build verification; non-smoke trainer path raises an operator-gated refusal until real-frame dataloader + contest scorer forward + remote Modal driver land."
 
 remote_driver: scripts/remote_lane_t10_ib_lagrangian_aux_scorer.sh
 timeout_hours: 8.0
@@ -42,16 +49,26 @@ notes: |
   scorer) is the canonical unblock for W's DEFERRED criteria #1-#4 (Phase 3
   joint-scorer-renderer-codec readiness gates).
 
-  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
-  CONTEST-COMPLIANT HARDWARE": this dispatch produces a CUDA-axis anchor;
-  the CPU pair is a separate dispatch.
+  Current status: STAGED / fail-closed. The trainer has a useful smoke-mode
+  auxiliary-scorer build verification path, but its non-smoke real-frame
+  dataloader + contest-scorer forward remains operator-gated and raises a
+  structured refusal. This recipe MUST NOT create a Modal job until the
+  remote driver and non-smoke data path land.
+
+  Per CLAUDE.md evidence discipline: T10 is a Phase 3 prerequisite, not a
+  score-bearing archive. Even after the real dispatch lands, it may produce
+  a CUDA-axis training anchor for ``distillation_gap_estimate.json`` only;
+  promotion-grade scores require a separate byte-closed archive/runtime
+  exact-eval dispatch.
 
   W/I/A I-2 backport: cost-band sourced from tac.cost_band_calibration.predict().
   At this scale (8h Modal T4) the posterior is COLD-START with no matching
   anchors yet — fallback $40 literal kept informative while posterior accumulates.
 
-  PRE-FLIGHT (operator-side):
-    [ ] T10 trainer module exists under src/tac (or experiments/)
+  PRE-FLIGHT (operator-side before re-enabling dispatch):
+    [x] T10 trainer module exists under experiments/
+    [ ] Wire non-smoke real-frame dataloader + contest scorer forward
+    [ ] Land scripts/remote_lane_t10_ib_lagrangian_aux_scorer.sh
     [ ] Phase 2 anchor saturation evidence per W's DEFERRED criteria #1-#4
     [ ] Fresh operator approval (exceeds standing $20 envelope)
 

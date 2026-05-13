@@ -40,9 +40,31 @@ def select_inflate_device(requested: str | None = None) -> str:
 
 
 def raw_output_path(output_dir: Path, video_name: str) -> Path:
-    """Return the contest raw path for one video name, preserving subdirs."""
+    """Return the contest raw path for one safe relative video name.
 
-    return output_dir / Path(video_name).with_suffix(".raw")
+    ``file_list`` content is part of the contest/runtime boundary and must not
+    be able to write outside the output directory. Subdirectories are allowed;
+    absolute paths, empty names, and ``..`` traversal are refused.
+    """
+
+    raw = str(video_name).replace("\\", "/").strip()
+    rel = Path(raw)
+    if (
+        not raw
+        or "//" in raw
+        or rel.is_absolute()
+        or any(part in {"", ".."} for part in rel.parts)
+    ):
+        raise ValueError(f"unsafe file_list video name for raw output: {video_name!r}")
+    root = output_dir.resolve(strict=False)
+    target = (output_dir / rel.with_suffix(".raw")).resolve(strict=False)
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"file_list video name escapes output directory: {video_name!r}"
+        ) from exc
+    return target
 
 
 def write_rgb_pair_to_raw(

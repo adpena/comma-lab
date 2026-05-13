@@ -294,7 +294,7 @@ def test_smoke_before_full_wrappers_dry_run_without_smoke_flags(name: str) -> No
 
 
 def test_t10_dispatch_aborts_on_no_input():
-    """Confirmation prompt with empty stdin should abort cleanly."""
+    """Staged T10 must fail closed before prompting or dispatching."""
     p = _SCRIPTS_DIR / "operator_authorize_t10_ib_lagrangian_dispatch.sh"
     result = subprocess.run(
         ["bash", str(p)],
@@ -304,7 +304,11 @@ def test_t10_dispatch_aborts_on_no_input():
         cwd=_REPO_ROOT,
         timeout=30,
     )
-    assert "operator confirmation" in result.stdout.lower()
+    assert result.returncode != 0
+    combined = result.stdout + result.stderr
+    assert "recipe is not dispatchable" in combined
+    assert "t10_non_smoke_real_frame_dataloader_not_wired" in combined
+    assert "operator confirmation" not in result.stdout.lower()
 
 
 def test_gha_cpu_eval_uses_public_release_asset_download_url() -> None:

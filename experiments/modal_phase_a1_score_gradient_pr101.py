@@ -71,7 +71,7 @@ Recover (within 24h of dispatch — Modal result-cache TTL):
 
 Or use the canonical harvester to sweep all dispatched Modal calls:
 
-    .venv/bin/python tools/harvest_modal_calls.py
+    .venv/bin/python tools/harvest_modal_calls.py --execute
 
 Cross-references:
   - ``.omx/research/grand_council_extreme_rigor_track_1_20260508.md``
@@ -1918,7 +1918,7 @@ def _write_dispatch_metadata(
             ".venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover "
             f"--label {instance_job_id}"
         ),
-        "harvest_command_canonical": ".venv/bin/python tools/harvest_modal_calls.py",
+        "harvest_command_canonical": ".venv/bin/python tools/harvest_modal_calls.py --execute",
         "dispatched_at": dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         # Legacy field name for tools/harvest_modal_calls.py compatibility.
         "dispatched_at_utc": dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
@@ -2186,7 +2186,7 @@ def main(
     )
     print()
     print("  Or sweep all dispatched Modal calls:")
-    print("    .venv/bin/python tools/harvest_modal_calls.py")
+    print("    .venv/bin/python tools/harvest_modal_calls.py --execute")
     print()
     print(
         "  Stream remote logs:  .venv/bin/modal app logs <app-id>  "

@@ -613,7 +613,7 @@ def _build_archive_zip(
     bin_bytes: bytes,
     submission_dir: Path,
 ) -> None:
-    """Deterministic archive.zip containing 0.bin + inflate.sh + inflate.py.
+    """Deterministic charged archive.zip containing only the data packet.
 
     Per Catalog #19 ``check_archive_builders_use_deterministic_zip``: use
     ZipInfo + writestr with fixed timestamp + DEFLATE.
@@ -625,20 +625,8 @@ def _build_archive_zip(
         zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
         zi.compress_type = zipfile.ZIP_DEFLATED
         zf.writestr(zi, bin_bytes)
-        for name in ("inflate.sh", "inflate.py"):
-            src = submission_dir / name
-            if not src.is_file():
-                continue
-            zi = zipfile.ZipInfo(name, date_time=fixed_ts)
-            zi.compress_type = zipfile.ZIP_DEFLATED
-            zf.writestr(zi, src.read_bytes())
-        runtime_root = submission_dir / "src"
-        if runtime_root.is_dir():
-            for src in sorted(runtime_root.rglob("*.py")):
-                rel = src.relative_to(submission_dir).as_posix()
-                zi = zipfile.ZipInfo(rel, date_time=fixed_ts)
-                zi.compress_type = zipfile.ZIP_DEFLATED
-                zf.writestr(zi, src.read_bytes())
+        # archive.zip is the charged data packet. Runtime files live beside it
+        # in submission_dir and are evaluated through --inflate-sh custody.
 
 
 # ---------------------------------------------------------------------------

@@ -28,6 +28,12 @@ required_input_files: []
 
 modal:
   lane_script: scripts/remote_lane_scpp_stage1.sh
+  cost_band_trainer: experiments/train_scpp_self_compression.py
+  cost_band_epochs: 3
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_scpp_self_compression.py
 
 env_overrides:
   SCPP_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
@@ -37,8 +43,9 @@ env_overrides:
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:
-  - SC++ trainer module (src/tac/selfcomp_block_fp.py or similar)
-  - scripts/remote_lane_scpp_stage1.sh (remote driver; build if missing)
+  - experiments/train_scpp_self_compression.py (5-stage trainer; Stage 1 anchor entry point)
+  - scripts/remote_lane_scpp_stage1.sh (remote driver)
+  - src/tac/scpp_substrate.py (SCPPSubstrate architecture)
   - tools/claim_lane_dispatch.py
   - .omx/state/active_lane_dispatch_claims.md
 

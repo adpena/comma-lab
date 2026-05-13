@@ -48,8 +48,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
+from tac.auth_eval_result import parse_auth_eval_score_claim  # noqa: E402
 from tac.optimizer.exact_ready_audit import audit_exact_ready_queue  # noqa: E402
+from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
 
 
 @dataclass
@@ -65,14 +66,16 @@ class DispatchResult:
     stderr_tail: str
     score_json_path: str | None
     contest_cuda_score: float | None
+    score_axis: str | None = None
+    score_claim_source_key: str | None = None
 
 
 _LIGHTNING_DISPATCH = REPO / "tools" / "lightning_dispatch_pr106_stack.py"
 _VASTAI_DISPATCH = REPO / "scripts" / "launch_lane_on_vastai.py"
 DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
 DEFAULT_ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
-DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE = 0.2066181354574151
-DEFAULT_ACTIVE_SCORE_FRONTIER_LABEL = "pr106_latent_sidecar_r2_pr101_grammar_exact_t4_cuda"
+DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE = 0.20638030907530963
+DEFAULT_ACTIVE_SCORE_FRONTIER_LABEL = "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
 # Backward-compatible flag/default name. Score comparisons use the active score
 # frontier; archive-byte comparisons use the separate rate-only byte floor.
 DEFAULT_ACTIVE_FLOOR_SCORE = DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
@@ -746,6 +749,68 @@ def _build_dispatch_cmd(
     raise ValueError(f"unknown provider: {provider} (expected: lightning | vastai)")
 
 
+def _current_run_auth_eval_candidates(label: str, *, started_unix: float) -> list[Path]:
+    """Return label-bound auth-eval JSON files written by this dispatch run."""
+
+    candidates = sorted(REPO.glob(f"experiments/results/*{label}*/contest_auth_eval.json"))
+    out: list[Path] = []
+    for path in candidates:
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            continue
+        # A small slack avoids filesystem timestamp edge cases while still
+        # rejecting stale artifacts from earlier runs with the same label.
+        if mtime >= started_unix - 2.0:
+            out.append(path)
+    return out
+
+
+def _parse_current_contest_cuda_score(path: Path) -> tuple[float, str, str] | None:
+    """Parse a score only when the auth-eval claim contract authorizes CUDA."""
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    claim = parse_auth_eval_score_claim(
+        payload,
+        required_score_axis="contest_cuda",
+        require_component_recompute=True,
+    )
+    if claim is None:
+        return None
+    return claim.score, claim.score_axis, claim.source_key
+
+
+def _harvest_current_contest_cuda_score(
+    label: str,
+    *,
+    started_unix: float,
+) -> tuple[str | None, float | None, str | None, str | None]:
+    """Find a current-run auth-eval artifact and return validated CUDA score."""
+
+    score_json_path: str | None = None
+    for path in _current_run_auth_eval_candidates(label, started_unix=started_unix):
+        score_json_path = str(path)
+        parsed = _parse_current_contest_cuda_score(path)
+        if parsed is None:
+            continue
+        score, score_axis, source_key = parsed
+        return score_json_path, score, score_axis, source_key
+    return score_json_path, None, None, None
+
+
+def _harvest_tag(result: DispatchResult) -> str:
+    if result.returncode != 0:
+        return "[dispatch-failed]"
+    if result.contest_cuda_score is not None and result.score_axis == "contest_cuda":
+        return "[contest-CUDA]"
+    return "[dispatch-completed-no-contest-cuda-score]"
+
+
 def _fire_one(
     candidate: dict,
     *,
@@ -764,7 +829,8 @@ def _fire_one(
         label_prefix=label_prefix,
         estimated_cost=estimated_cost, max_dph=max_dph,
     )
-    started = time.gmtime()
+    started_unix = time.time()
+    started = time.gmtime(started_unix)
     started_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", started)
     t0 = time.monotonic()
     try:
@@ -782,16 +848,14 @@ def _fire_one(
     elapsed = time.monotonic() - t0
 
     # Harvest contest_auth_eval.json from the lane's expected output directory.
-    score_json_path = None
-    contest_cuda_score = None
-    expected_outputs = sorted(REPO.glob(f"experiments/results/*{label}*/contest_auth_eval.json"))
-    if expected_outputs:
-        score_json_path = str(expected_outputs[-1])
-        try:
-            payload = json.loads(Path(score_json_path).read_text())
-            contest_cuda_score = float(payload.get("final_score") or payload.get("contest_score") or payload.get("score"))
-        except (json.JSONDecodeError, KeyError, ValueError, TypeError):
-            contest_cuda_score = None
+    # This is a score-authority boundary: raw finite scores are not enough.
+    # Only the canonical auth-eval claim parser may mint a [contest-CUDA] score.
+    (
+        score_json_path,
+        contest_cuda_score,
+        score_axis,
+        score_claim_source_key,
+    ) = _harvest_current_contest_cuda_score(label, started_unix=started_unix)
 
     return DispatchResult(
         candidate_id=candidate_id,
@@ -805,6 +869,8 @@ def _fire_one(
         stderr_tail=stderr_tail,
         score_json_path=score_json_path,
         contest_cuda_score=contest_cuda_score,
+        score_axis=score_axis,
+        score_claim_source_key=score_claim_source_key,
     )
 
 
@@ -1055,7 +1121,9 @@ def main(argv: list[str] | None = None) -> int:
                     "stderr_tail": r.stderr_tail,
                     "score_json_path": r.score_json_path,
                     "contest_cuda_score": r.contest_cuda_score,
-                    "tag": "[contest-CUDA]" if (r.returncode == 0 and r.contest_cuda_score is not None) else "[dispatch-failed]",
+                    "score_axis": r.score_axis,
+                    "score_claim_source_key": r.score_claim_source_key,
+                    "tag": _harvest_tag(r),
                 }) + "\n")
         print(f"[parallel-dispatch] harvested → {args.harvest_output}")
 

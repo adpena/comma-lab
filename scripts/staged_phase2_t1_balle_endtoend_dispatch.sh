@@ -137,7 +137,7 @@ echo "    --timeout-hours 24 \\"
 echo "    --cost-cap-usd ${STAGED_PHASE_DISPATCH_BUDGET_USD}"
 echo
 echo "[NEXT] On landing, harvest via:"
-echo "  .venv/bin/python tools/harvest_modal_calls.py --lane ${LANE_ID}"
+echo "  .venv/bin/python tools/harvest_modal_calls.py --execute"
 echo
 echo "[NEXT] Dual-eval per CLAUDE.md mandate:"
 echo "  .venv/bin/python tools/plan_dual_device_auth_eval.py --archive ${OUTPUT_DIR}/archive.zip"

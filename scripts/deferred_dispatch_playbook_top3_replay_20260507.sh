@@ -133,6 +133,6 @@ esac
 echo ""
 echo "=== Dispatch fired. Next steps ==="
 echo "  1. Monitor: tools/check_vastai.py / Lightning dashboard"
-echo "  2. Harvest results: tools/harvest_modal_calls.py / parallel-eval result.json"
+echo "  2. Harvest results: tools/harvest_modal_calls.py --execute / parallel-eval result.json"
 echo "  3. Promote: each PR replay should land within ±0.001 of public claim"
 echo "  4. After replays land: stack apogee_int6/int7 + Ω-1/Ω-3 on top of confirmed PR101 substrate"

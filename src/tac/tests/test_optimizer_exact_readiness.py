@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import datetime as dt
-import json
-import stat
-import zipfile
 import importlib.util
+import json
+import os
+import stat
 import sys
+import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_ARCHIVE_BYTES,
@@ -16,14 +18,13 @@ from tac.optimizer.exact_readiness import (
     promote_candidate_for_exact_eval,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_active_floor_score_tracks_score_frontier_not_rate_only_anchor() -> None:
     assert ACTIVE_FLOOR_ARCHIVE_BYTES == 185_578
     assert ACTIVE_RATE_ONLY_FLOOR_SCORE == 0.2089810755823297
-    assert ACTIVE_SCORE_FRONTIER_SCORE == 0.2066181354574151
+    assert ACTIVE_SCORE_FRONTIER_SCORE == 0.20638030907530963
     assert ACTIVE_FLOOR_SCORE == ACTIVE_SCORE_FRONTIER_SCORE
 
 
@@ -259,6 +260,129 @@ def test_promoted_queue_passes_existing_dispatcher_readiness_loader(tmp_path: Pa
     rows = tool._load_top_k(promoted_path, 1, active_floor_archive_bytes=None)
 
     assert [row["candidate_id"] for row in rows] == ["fixture_candidate"]
+
+
+def _valid_contest_cuda_claim(score: float = 0.1) -> dict[str, object]:
+    """Small auth-eval claim whose component recomputation equals ``score``."""
+
+    return {
+        "score_recomputed_from_components": score,
+        "seg_dist": 0.0,
+        "pose_dist": 0.0,
+        "rate_unscaled": score / 25.0,
+        "score_axis": "contest_cuda",
+        "lane_tag": "[contest-CUDA]",
+        "evidence_grade": "contest-CUDA",
+        "score_claim": True,
+        "score_claim_valid": True,
+        "exact_cuda_eval_complete": True,
+    }
+
+
+def test_parallel_dispatch_harvest_requires_valid_contest_cuda_claim(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    tool = _load_parallel_dispatch_tool()
+    monkeypatch.setattr(tool, "REPO", tmp_path)
+    monkeypatch.setattr(tool, "_build_dispatch_cmd", lambda *args, **kwargs: [sys.executable, "-c", "pass"])
+
+    def fake_run(*args, **kwargs):
+        out = tmp_path / "experiments" / "results" / "lane_run_fixture_candidate"
+        _write_json(
+            out / "contest_auth_eval.json",
+            {
+                **_valid_contest_cuda_claim(),
+                "score_axis": "contest_cpu",
+                "exact_cuda_eval_complete": False,
+            },
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    result = tool._fire_one(
+        {"candidate_id": "fixture_candidate"},
+        provider="lightning",
+        lane_script="scripts/remote.sh",
+        label_prefix="run",
+        estimated_cost=0.1,
+        max_dph=0.1,
+        timeout_seconds=30,
+    )
+
+    assert result.returncode == 0
+    assert result.score_json_path is not None
+    assert result.contest_cuda_score is None
+    assert result.score_axis is None
+    assert tool._harvest_tag(result) == "[dispatch-completed-no-contest-cuda-score]"
+
+
+def test_parallel_dispatch_harvest_accepts_current_run_contest_cuda_claim(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    tool = _load_parallel_dispatch_tool()
+    monkeypatch.setattr(tool, "REPO", tmp_path)
+    monkeypatch.setattr(tool, "_build_dispatch_cmd", lambda *args, **kwargs: [sys.executable, "-c", "pass"])
+
+    def fake_run(*args, **kwargs):
+        out = tmp_path / "experiments" / "results" / "lane_run_fixture_candidate"
+        _write_json(out / "contest_auth_eval.json", _valid_contest_cuda_claim(0.08))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    result = tool._fire_one(
+        {"candidate_id": "fixture_candidate"},
+        provider="lightning",
+        lane_script="scripts/remote.sh",
+        label_prefix="run",
+        estimated_cost=0.1,
+        max_dph=0.1,
+        timeout_seconds=30,
+    )
+
+    assert result.contest_cuda_score == 0.08
+    assert result.score_axis == "contest_cuda"
+    assert result.score_claim_source_key == "score_recomputed_from_components"
+    assert tool._harvest_tag(result) == "[contest-CUDA]"
+
+
+def test_parallel_dispatch_harvest_ignores_stale_label_bound_auth_eval(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    tool = _load_parallel_dispatch_tool()
+    monkeypatch.setattr(tool, "REPO", tmp_path)
+    monkeypatch.setattr(tool, "_build_dispatch_cmd", lambda *args, **kwargs: [sys.executable, "-c", "pass"])
+    stale = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "old_run_fixture_candidate"
+        / "contest_auth_eval.json"
+    )
+    _write_json(stale, _valid_contest_cuda_claim(0.07))
+    os.utime(stale, (1, 1))
+    monkeypatch.setattr(
+        tool.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="", stderr=""),
+    )
+
+    result = tool._fire_one(
+        {"candidate_id": "fixture_candidate"},
+        provider="lightning",
+        lane_script="scripts/remote.sh",
+        label_prefix="run",
+        estimated_cost=0.1,
+        max_dph=0.1,
+        timeout_seconds=30,
+    )
+
+    assert result.score_json_path is None
+    assert result.contest_cuda_score is None
 
 
 def test_refuses_kaggle_proxy_row_without_archive(tmp_path: Path) -> None:

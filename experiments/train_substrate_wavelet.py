@@ -100,15 +100,27 @@ from typing import Any
 # it does NOT affect the deferred-status semantics.
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canonical_decode_real_pairs,
-    device_or_die as _canonical_device_or_die,
-    git_head_sha as _canonical_git_head_sha,
-    pin_seeds as _canonical_pin_seeds,
-    sha256_bytes as _canonical_sha256_bytes,
-    torch_version_string as _canonical_torch_version_string,
-    utc_now_iso as _canonical_utc_now_iso,
 )
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    device_or_die as _canonical_device_or_die,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    git_head_sha as _canonical_git_head_sha,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    pin_seeds as _canonical_pin_seeds,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    sha256_bytes as _canonical_sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    torch_version_string as _canonical_torch_version_string,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    utc_now_iso as _canonical_utc_now_iso,
 )
 
 # ---------------------------------------------------------------------------
@@ -524,27 +536,15 @@ def _write_runtime(submission_dir: Path) -> None:
 
 
 def _build_archive_zip(archive_zip_path: Path, *, bin_bytes: bytes, submission_dir: Path) -> None:
-    """Deterministic archive.zip containing 0.bin + inflate.sh + inflate.py."""
+    """Deterministic charged archive.zip containing only the data packet."""
     archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
     fixed_ts = (2026, 1, 1, 0, 0, 0)
     with zipfile.ZipFile(archive_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
         zi.compress_type = zipfile.ZIP_DEFLATED
         zf.writestr(zi, bin_bytes)
-        for name in ("inflate.sh", "inflate.py"):
-            src = submission_dir / name
-            if not src.is_file():
-                continue
-            zi = zipfile.ZipInfo(name, date_time=fixed_ts)
-            zi.compress_type = zipfile.ZIP_DEFLATED
-            zf.writestr(zi, src.read_bytes())
-        runtime_root = submission_dir / "src"
-        if runtime_root.is_dir():
-            for src in sorted(runtime_root.rglob("*.py")):
-                rel = src.relative_to(submission_dir).as_posix()
-                zi = zipfile.ZipInfo(rel, date_time=fixed_ts)
-                zi.compress_type = zipfile.ZIP_DEFLATED
-                zf.writestr(zi, src.read_bytes())
+        # archive.zip is the charged data packet. Runtime files live beside it
+        # in submission_dir and are evaluated through --inflate-sh custody.
 
 
 # ---------------------------------------------------------------------------

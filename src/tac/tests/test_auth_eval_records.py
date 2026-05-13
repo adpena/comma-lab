@@ -152,6 +152,32 @@ def test_parser_requires_explicit_booleans_for_cuda_promotion_authority() -> Non
     assert record.cpu_leaderboard_reproduction_eligible is False
 
 
+def test_parser_demotes_persisted_cuda_promotion_when_blockers_present() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "score_recomputed_from_components": 0.20638030907530963,
+            "archive_size_bytes": 186_423,
+            "archive_sha256": "8" * 64,
+            "device": "cuda",
+            "n_samples": 600,
+            "gpu_t4_match": True,
+            "promotion_eligible": True,
+            "score_claim_valid": True,
+            "rank_or_kill_eligible": True,
+            "promotion_blockers": ["pre_submission_compliance_check_not_recorded"],
+            "rank_or_kill_blockers": ["requires_adjudicated_cuda_cpu_policy_review"],
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "contest_cuda"
+    assert record.score_claim_valid is True
+    assert record.promotion_eligible is False
+    assert record.rank_or_kill_eligible is False
+
+
 def test_parser_demotes_non_t4_cuda_artifact_that_declares_contest_cuda() -> None:
     records = _load_records_module()
 

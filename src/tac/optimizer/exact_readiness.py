@@ -27,8 +27,8 @@ TOOL_NAME = "tools/promote_optimizer_candidate_for_exact_eval.py"
 PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
 ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
 ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
-ACTIVE_SCORE_FRONTIER_SCORE = 0.2066181354574151
-ACTIVE_SCORE_FRONTIER_LABEL = "pr106_latent_sidecar_r2_pr101_grammar_exact_t4_cuda"
+ACTIVE_SCORE_FRONTIER_SCORE = 0.20638030907530963
+ACTIVE_SCORE_FRONTIER_LABEL = "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
 # Backward-compatible name used by dispatch gates for score comparisons.
 # Archive-byte comparisons still use ACTIVE_FLOOR_ARCHIVE_BYTES, which is the
 # separate rate-only PR103-on-PR106 byte floor.

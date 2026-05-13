@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
@@ -26,6 +28,16 @@ _HARVEST_SCRIPT_PATH = _REPO_ROOT / "tools" / "harvest_modal_calls.py"
 def _load_build_module():
     spec = importlib.util.spec_from_file_location(
         "build_pr101_finetuned_archive", _BUILD_SCRIPT_PATH,
+    )
+    assert spec is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
+
+
+def _load_harvest_module():
+    spec = importlib.util.spec_from_file_location(
+        "harvest_modal_calls", _HARVEST_SCRIPT_PATH,
     )
     assert spec is not None
     mod = importlib.util.module_from_spec(spec)
@@ -176,6 +188,7 @@ def test_build_manifest_records_old_new_sha_and_no_op_metadata(
 def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:
     text = _HARVEST_SCRIPT_PATH.read_text()
 
+    assert "PLAN ONLY: pass --execute" in text
     assert "elapsed_raw = result.get(\"elapsed_seconds\")" in text
     assert "isinstance(elapsed_raw, (int, float))" in text
     assert "result.get(\"stdout_tail\", \"\") or \"\"" in text
@@ -183,3 +196,70 @@ def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:
     assert "append_modal_training_terminal_claim" in text
     assert '"cost_band_anchor": cost_anchor' in text
     assert '"terminal_claim": terminal_claim' in text
+    assert "failed_modal_training_function_timeout" in text
+    assert "_safe_harvest_artifact_path" in text
+
+
+def test_harvest_modal_calls_no_execute_is_read_only(tmp_path: Path) -> None:
+    lane_dir = tmp_path / "experiments" / "results" / "lane_demo_modal"
+    lane_dir.mkdir(parents=True)
+    (lane_dir / "modal_metadata.json").write_text(
+        json.dumps(
+            {
+                "label": "demo_modal_lane",
+                "call_id": "fc-demo",
+                "dispatched_at": "2026-05-13T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(_HARVEST_SCRIPT_PATH),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert proc.returncode == 0
+    assert "PLAN ONLY: pass --execute" in proc.stdout
+    assert "demo_modal_lane" in proc.stdout
+    assert not (tmp_path / "experiments" / "results" / "_modal_harvest_summary.json").exists()
+
+
+def test_harvest_modal_calls_rejects_unsafe_artifact_paths(tmp_path: Path) -> None:
+    mod = _load_harvest_module()
+    root = tmp_path / "harvested_artifacts"
+
+    assert mod._safe_harvest_artifact_path(root, "nested/result.json") == (
+        root / "nested" / "result.json"
+    )
+    for unsafe in ("../escape.json", "/tmp/escape.json", "nested/../../escape.json"):
+        with pytest.raises(mod.UnsafeModalArtifactPath):
+            mod._safe_harvest_artifact_path(root, unsafe)
+
+
+def test_harvest_modal_calls_repolls_generated_nonterminal_summary_only(
+    tmp_path: Path,
+) -> None:
+    mod = _load_harvest_module()
+    out_dir = tmp_path / "lane_demo_modal"
+    artifacts = out_dir / "harvested_artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "_harvest_summary.json").write_text(
+        json.dumps({"status": "not_ready"}),
+        encoding="utf-8",
+    )
+
+    assert mod._already_harvested(out_dir, artifacts) is False
+
+    (artifacts / "_harvest_summary.json").write_text(
+        json.dumps({"status": "function_timeout"}),
+        encoding="utf-8",
+    )
+    assert mod._already_harvested(out_dir, artifacts) is True

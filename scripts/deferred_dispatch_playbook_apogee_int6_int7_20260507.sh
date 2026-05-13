@@ -130,6 +130,6 @@ esac
 echo ""
 echo "=== Dispatch fired. Next steps ==="
 echo "  1. Monitor: tools/check_vastai.py  OR  Lightning dashboard"
-echo "  2. Harvest: tools/harvest_modal_calls.py / tools/harvest_and_reseed.py"
+echo "  2. Harvest: tools/harvest_modal_calls.py --execute / tools/harvest_and_reseed.py"
 echo "  3. Update anchors: tools/harvest_and_reseed.py --harvested-jsonl <path> --anchors-path .omx/calibration/anchors_apogee_intN.json"
 echo "  4. Update lane_maturity: tools/lane_maturity.py mark lane_apogee_int{6,7} --gate contest_cuda --evidence <eval_artifact>"

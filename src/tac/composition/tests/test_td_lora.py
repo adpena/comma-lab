@@ -90,11 +90,8 @@ def test_forward_at_init_equals_base_when_include_base_true() -> None:
     module = TropicalLoRAAdapter(spec)
     x = torch.randn(3, 6)
     base_out = module.base(x)
-    # B initialised to 0 → adapter contributions = bias (=0) per branch.
-    # Tropical max of base vs zero-vectors is elementwise max(base, 0).
-    expected = torch.maximum(base_out, torch.zeros_like(base_out))
     out = module(x)
-    assert torch.allclose(out, expected, atol=1e-6)
+    assert torch.allclose(out, base_out, atol=1e-6)
 
 
 def test_forward_shape_preserved_under_batch_axes() -> None:
@@ -150,6 +147,29 @@ def test_gradient_flows_through_adapters_not_base() -> None:
     # At least one adapter should have a non-zero gradient.
     assert any(
         (B.grad is not None and B.grad.abs().sum() > 0)
+        for B in module.adapters_B
+    )
+
+
+def test_noop_init_still_seeds_adapter_gradients() -> None:
+    _seed()
+    spec = TropicalLoRASpec(
+        in_features=6, out_features=4, rank=4, num_branches=2
+    )
+    module = TropicalLoRAAdapter(spec)
+    x = torch.linspace(-1.0, 1.0, steps=18, dtype=torch.float32).reshape(3, 6)
+    base_out = module.base(x)
+    out = module(x)
+    assert torch.allclose(out, base_out, atol=1e-6)
+
+    out.sum().backward()
+    assert module.base.weight.grad is None
+    assert all(
+        bias.grad is not None and bias.grad.abs().sum() > 0
+        for bias in module.adapters_bias
+    )
+    assert any(
+        B.grad is not None and B.grad.abs().sum() > 0
         for B in module.adapters_B
     )
 
@@ -290,7 +310,7 @@ def test_external_base_linear_shape_validated() -> None:
         TropicalLoRAAdapter(spec, base_linear=base)
 
 
-def test_rank_zero_module_is_just_base_max_zero() -> None:
+def test_rank_zero_module_is_just_base() -> None:
     _seed()
     spec = TropicalLoRASpec(
         in_features=6, out_features=4, rank=0, num_branches=2
@@ -299,9 +319,7 @@ def test_rank_zero_module_is_just_base_max_zero() -> None:
     x = torch.randn(3, 6)
     out = module(x)
     base_out = module.base(x)
-    # No adapter contribution; branches contribute only their zero bias.
-    expected = torch.maximum(base_out, torch.zeros_like(base_out))
-    assert torch.allclose(out, expected)
+    assert torch.allclose(out, base_out)
 
 
 def test_serialization_with_zero_rank() -> None:

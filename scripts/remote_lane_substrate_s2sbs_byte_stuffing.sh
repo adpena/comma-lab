@@ -190,5 +190,5 @@ set -e
 TRAIN_END_UTC=$(date -u +%FT%TZ)
 log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
 
-log "LANE_S2SBS_DONE [contest-CUDA] rc=$TRAIN_RC output_dir=$S2SBS_OUTPUT_DIR"
+log "LANE_S2SBS_DONE [smoke-only-no-score-claim] rc=$TRAIN_RC output_dir=$S2SBS_OUTPUT_DIR"
 exit "$TRAIN_RC"

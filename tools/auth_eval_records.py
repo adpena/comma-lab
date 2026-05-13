@@ -433,6 +433,10 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     gpu_t4_match = _strict_bool(gpu_t4_raw)
     promotion_eligible = _strict_bool(payload.get("promotion_eligible"))
     score_claim_valid = _strict_bool(payload.get("score_claim_valid"))
+    promotion_blockers = payload.get("promotion_blockers")
+    rank_or_kill_blockers = payload.get("rank_or_kill_blockers")
+    has_promotion_blockers = isinstance(promotion_blockers, list) and bool(promotion_blockers)
+    has_rank_or_kill_blockers = isinstance(rank_or_kill_blockers, list) and bool(rank_or_kill_blockers)
     axis = _score_axis(
         payload=payload,
         provenance=provenance,
@@ -443,6 +447,8 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     if axis != "contest_cuda":
         promotion_eligible = False
         score_claim_valid = False
+    if has_promotion_blockers:
+        promotion_eligible = False
     cpu_leaderboard_reproduction_eligible = (
         _strict_bool(payload.get("cpu_leaderboard_reproduction_eligible"))
         if "cpu_leaderboard_reproduction_eligible" in payload
@@ -453,6 +459,8 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         if "rank_or_kill_eligible" in payload
         else False
     ) and promotion_eligible and axis == "contest_cuda"
+    if has_rank_or_kill_blockers:
+        rank_or_kill_eligible = False
     evidence_grade = str(payload.get("evidence_grade") or "")
     evidence_grade_norm = evidence_grade.lower()
     if axis == "contest_cuda":

@@ -168,6 +168,25 @@ def test_s2sbs_recipe_is_smoke_only_scaffold_guard() -> None:
     assert _recipe_requests_smoke_only(text) is True
 
 
+def test_pretrained_driving_prior_recipe_is_smoke_only_scaffold_guard() -> None:
+    text = (
+        REPO_ROOT
+        / ".omx/operator_authorize_recipes/substrate_pretrained_driving_prior_modal_t4_dispatch.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert _recipe_requests_smoke_only(text) is True
+    assert "status: scaffold_only_no_full_dispatch" in text
+
+
+def test_s2sbs_remote_script_does_not_emit_contest_cuda_claim() -> None:
+    text = (
+        REPO_ROOT / "scripts/remote_lane_substrate_s2sbs_byte_stuffing.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "LANE_S2SBS_DONE [smoke-only-no-score-claim]" in text
+    assert "LANE_S2SBS_DONE [contest-CUDA]" not in text
+
+
 def test_pr95plus_recipe_is_smoke_only_until_full_trainer_lands() -> None:
     text = (
         REPO_ROOT
