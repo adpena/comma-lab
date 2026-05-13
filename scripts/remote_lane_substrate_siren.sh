@@ -40,6 +40,7 @@ SIREN_EPOCHS="${SIREN_EPOCHS:-2000}"
 SIREN_BATCH_SIZE="${SIREN_BATCH_SIZE:-1}"
 SIREN_UPSTREAM_DIR="${SIREN_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 SIREN_DEVICE="${SIREN_DEVICE:-cuda}"
+SIREN_DISPATCH_CONTRACT="${SIREN_DISPATCH_CONTRACT:-naked_siren_replacement}"
 
 DISPATCH_INSTANCE_JOB_ID="${SIREN_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${SIREN_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -82,20 +83,21 @@ CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
     log "FATAL: claim summary failed for $DISPATCH_CLAIMS_PATH"
     exit 21
 }
-"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY' || {
-    log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
-    exit 21
-}
-import json
-import sys
+set +e
+"$CLAIM_PYTHON" -c 'import json, sys
 summary_path, lane_id, job_id = sys.argv[1:4]
 payload = json.loads(open(summary_path, encoding="utf-8").read())
 for row in payload.get("active", []):
     if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
         raise SystemExit(0)
 print(f"missing active claim lane={lane_id} job={job_id}", file=sys.stderr)
-raise SystemExit(1)
-PY
+raise SystemExit(1)' "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID"
+CLAIM_MATCH_RC=$?
+set -e
+if [ "$CLAIM_MATCH_RC" -ne 0 ]; then
+    log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
+    exit 21
+fi
 log "stage_0_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
 
 # Stage 0b: NVDEC probe (per CLAUDE.md `feedback_vastai_nvdec_host_variation`).
@@ -138,35 +140,56 @@ log "stage_2_provenance_begin"
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")
 DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1 || echo "no-driver")
-"$PYBIN" -c "
-import json, time, torch
+"$PYBIN" - "$PROVENANCE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_PLATFORM" "$GIT_HASH" "$GPU_NAME" "$DRIVER_VER" "$SIREN_VIDEO_PATH" "$SIREN_UPSTREAM_DIR" "$SIREN_EPOCHS" "$SIREN_BATCH_SIZE" "$SIREN_DEVICE" "$SIREN_DISPATCH_CONTRACT" <<'PY'
+import json, sys, time, torch
+(
+    provenance_path,
+    lane_id,
+    dispatch_instance_job_id,
+    dispatch_platform,
+    git_hash,
+    gpu_name,
+    driver_version,
+    video_path,
+    upstream_dir,
+    epochs,
+    batch_size,
+    device,
+    dispatch_contract,
+) = sys.argv[1:14]
 prov = {
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-    'lane_id': '$LANE_ID',
-    'dispatch_instance_job_id': '$DISPATCH_INSTANCE_JOB_ID',
-    'dispatch_platform': '$DISPATCH_PLATFORM',
-    'git_hash': '$GIT_HASH',
-    'gpu_name': '$GPU_NAME',
-    'driver_version': '$DRIVER_VER',
+    'lane_id': lane_id,
+    'dispatch_instance_job_id': dispatch_instance_job_id,
+    'dispatch_platform': dispatch_platform,
+    'git_hash': git_hash,
+    'gpu_name': gpu_name,
+    'driver_version': driver_version,
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
-    'video_path': '$SIREN_VIDEO_PATH',
-    'upstream_dir': '$SIREN_UPSTREAM_DIR',
-    'epochs': $SIREN_EPOCHS,
-    'batch_size': $SIREN_BATCH_SIZE,
-    'device': '$SIREN_DEVICE',
-    # Council Phase 5 prediction: 0.145 [contest-CUDA].
-    # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
-    # + recipe substrate_siren_modal_a100_dispatch.yaml::predicted_score_target.
+    'video_path': video_path,
+    'upstream_dir': upstream_dir,
+    'epochs': int(epochs),
+    'batch_size': int(batch_size),
+    'device': device,
+    'dispatch_contract': dispatch_contract,
+    'dispatch_contracts_distinguished': [
+        'naked_siren_replacement: SIREN/INR replaces the HNeRV/A1 substrate with SRV1 0.bin',
+        'siren_residual_on_hnerv_a1: SIREN/INR residual sidecar over byte-verified HNeRV/A1 base',
+        'hybrid_siren_domain_prior: SIREN/INR plus explicit domain-prior payload in one scored packet',
+    ],
+    # Literature-review prediction only, NOT score evidence.
+    # Source: .omx/research/siren_literature_review_20260513.md
     # Band convention: [LOW, HIGH] in score-space (lower = better contest score).
-    'predicted_band': [0.130, 0.165],
-    'predicted_basis': 'grand_council_fields_medal_substrate_design_20260512',
+    'predicted_band': [0.180, 0.250],
+    'predicted_band_evidence_grade': 'literature_prediction_not_score_evidence',
+    'predicted_basis': 'siren_literature_review_20260513',
 }
 import pathlib
-pathlib.Path('$PROVENANCE').write_text(json.dumps(prov, indent=2, sort_keys=True))
+pathlib.Path(provenance_path).write_text(json.dumps(prov, indent=2, sort_keys=True))
 print('[provenance]', json.dumps(prov, indent=2, sort_keys=True))
-"
+PY
 log "stage_2_provenance_done"
 
 # Stage 3: heartbeat watchdog (every 5 min per CLAUDE.md).
@@ -190,6 +213,7 @@ set +e
     --batch-size "$SIREN_BATCH_SIZE" \
     --upstream-dir "$SIREN_UPSTREAM_DIR" \
     --device "$SIREN_DEVICE" \
+    --dispatch-contract "$SIREN_DISPATCH_CONTRACT" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e
@@ -198,10 +222,12 @@ log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_
 
 # Stage 5: completion record.
 AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
-ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
+ARCHIVE_PATH="$OUTPUT_DIR/archive.zip"
+PAYLOAD_PATH="$OUTPUT_DIR/0.bin"
 if [ -f "$AUTH_EVAL_JSON" ]; then
     log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    AUTH_EVAL_TAG="$("$PYBIN" - "$AUTH_EVAL_JSON" <<'PY' || true
+    AUTH_EVAL_TAG_FILE="$LOG_DIR/auth_eval_tag.txt"
+    if "$PYBIN" - "$AUTH_EVAL_JSON" > "$AUTH_EVAL_TAG_FILE" <<'PY'
 import json, sys
 try:
     payload = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -216,8 +242,12 @@ else:
         )
     )
 PY
-)"
-    log "LANE_SIREN_DONE $AUTH_EVAL_TAG auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    then
+        AUTH_EVAL_TAG="$(cat "$AUTH_EVAL_TAG_FILE")"
+    else
+        AUTH_EVAL_TAG="score_axis=unknown lane_tag=unknown score_claim_valid=false"
+    fi
+    log "LANE_SIREN_DONE $AUTH_EVAL_TAG auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH payload=$PAYLOAD_PATH dispatch_contract=$SIREN_DISPATCH_CONTRACT rc=$TRAIN_RC"
 else
     log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 12)"
 fi

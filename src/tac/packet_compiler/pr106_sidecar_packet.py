@@ -140,6 +140,12 @@ def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _sidecar_charged_bytes(packet: PR106SidecarPacket) -> int:
+    return len(packet.sidecar_payload) + (
+        0 if packet.framing_meta is None else len(packet.framing_meta)
+    )
+
+
 def canonicalize_brotli_dim_delta_sidecar_arrays(
     dim_arr: np.ndarray,
     delta_q_arr: np.ndarray,
@@ -345,6 +351,26 @@ def decode_pr101_ranked_sidecar_payload_to_dim_delta(
         n_dims=schema.n_dims,
         no_op_dim=schema.no_op_sentinel,
     )
+
+
+def decode_pr106_sidecar_packet_dim_delta(
+    packet: PR106SidecarPacket,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode a parsed PR106 sidecar packet into canonical correction arrays."""
+
+    if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI:
+        return decode_brotli_dim_delta_sidecar_payload(packet.sidecar_payload)
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+        if packet.framing_meta is None:
+            raise ValueError("format_id=0x02 requires framing_meta")
+        return decode_pr101_ranked_sidecar_payload_to_dim_delta(
+            packet.sidecar_payload,
+            packet.framing_meta,
+            schema=schema,
+        )
+    raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
 
 
 def _pack_fixed_width_symbols(symbols: np.ndarray, *, bit_width: int) -> bytes:
@@ -1049,8 +1075,11 @@ def _consumed_section_row(
     return {
         "name": name,
         "offset": offset,
+        "offset_start": offset,
         "bytes": len(payload),
+        "byte_count": len(payload),
         "end_offset": offset + len(payload),
+        "offset_end_exclusive": offset + len(payload),
         "sha256": sha256_hex(payload),
         "score_affecting": score_affecting,
     }
@@ -1256,6 +1285,212 @@ def prove_pr106_sidecar_packet_ir_identity(
             "runtime sidecar decode/apply proof, full-frame same-runtime parity, "
             "then exact contest auth eval with axis labels before score language"
         ),
+    }
+
+
+def build_pr106_sidecar_recode_candidate_packet(
+    source_packet: PR106SidecarPacket,
+    candidate: PR106SidecarRecodeCandidate,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> PR106SidecarPacket:
+    """Build a PR106 wrapper packet for a lossless sidecar recode candidate.
+
+    Only candidates with an existing PR106 ``format_id`` can be emitted into the
+    current runtime wrapper. New experimental grammars still appear in profiler
+    reports, but they remain parser-only until a runtime decoder exists.
+    """
+
+    if not candidate.encoded_bytes:
+        raise ValueError(f"candidate {candidate.name!r} has no encoded bytes")
+    if candidate.sidecar_format_id not in PR106_SUPPORTED_SIDECAR_FORMATS:
+        raise ValueError(
+            f"candidate {candidate.name!r} has no supported PR106 sidecar format_id"
+        )
+    source_dims, source_deltas = decode_pr106_sidecar_packet_dim_delta(
+        source_packet,
+        schema=schema,
+    )
+    if not (
+        np.array_equal(candidate.decoded_dims, source_dims)
+        and np.array_equal(candidate.decoded_delta_q, source_deltas)
+    ):
+        raise ValueError(f"candidate {candidate.name!r} is not lossless vs source packet")
+
+    framing_meta: bytes | None = None
+    if candidate.sidecar_format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+        if len(candidate.framing_meta_bytes) != 6:
+            raise ValueError(
+                f"candidate {candidate.name!r} requires six framing_meta bytes"
+            )
+        framing_meta = candidate.framing_meta_bytes
+    elif candidate.framing_meta_bytes:
+        raise ValueError(
+            f"candidate {candidate.name!r} carries framing_meta for non-PR101 format"
+        )
+
+    packet = PR106SidecarPacket(
+        format_id=int(candidate.sidecar_format_id),
+        pr106_bytes=source_packet.pr106_bytes,
+        sidecar_payload=candidate.encoded_bytes,
+        framing_meta=framing_meta,
+    )
+    emitted = emit_pr106_sidecar_packet(packet)
+    reparsed = parse_pr106_sidecar_packet(emitted)
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(
+        reparsed,
+        schema=schema,
+    )
+    if not (
+        np.array_equal(reparsed_dims, source_dims)
+        and np.array_equal(reparsed_deltas, source_deltas)
+    ):
+        raise ValueError(f"candidate {candidate.name!r} failed parse/reemit semantics")
+    if emit_pr106_sidecar_packet(reparsed) != emitted:
+        raise ValueError(f"candidate {candidate.name!r} failed parse/reemit identity")
+    return packet
+
+
+def emit_pr106_sidecar_recode_candidate_archive(
+    source_member: StoredZipMember,
+    source_packet: PR106SidecarPacket,
+    candidate: PR106SidecarRecodeCandidate,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[StoredZipMember, bytes]:
+    """Emit a single-member ZIP archive for an existing-runtime recode candidate."""
+
+    candidate_packet = build_pr106_sidecar_recode_candidate_packet(
+        source_packet,
+        candidate,
+        schema=schema,
+    )
+    candidate_member = replace(
+        source_member,
+        payload=emit_pr106_sidecar_packet(candidate_packet),
+    )
+    return candidate_member, emit_single_stored_member_archive(candidate_member)
+
+
+def pr106_sidecar_recode_candidate_manifest(
+    source_packet: PR106SidecarPacket,
+    candidate: PR106SidecarRecodeCandidate,
+    *,
+    source_archive_sha256: str | None = None,
+    candidate_archive_sha256: str | None = None,
+    candidate_archive_bytes: int | None = None,
+    candidate_member_name: str | None = None,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> dict[str, object]:
+    """Return a no-score manifest for a PR106 sidecar compression candidate."""
+
+    source_dims, source_deltas = decode_pr106_sidecar_packet_dim_delta(
+        source_packet,
+        schema=schema,
+    )
+    applicable = bool(candidate.encoded_bytes)
+    source_charged_bytes = _sidecar_charged_bytes(source_packet)
+    blockers: list[str] = []
+    candidate_packet: PR106SidecarPacket | None = None
+    candidate_proof: dict[str, object] | None = None
+    candidate_payload: bytes | None = None
+
+    if not applicable:
+        blockers.append("candidate_not_applicable_to_source_arrays")
+    if candidate.sidecar_format_id not in PR106_SUPPORTED_SIDECAR_FORMATS:
+        blockers.append("candidate_runtime_decoder_missing")
+    if applicable and candidate.sidecar_format_id in PR106_SUPPORTED_SIDECAR_FORMATS:
+        candidate_packet = build_pr106_sidecar_recode_candidate_packet(
+            source_packet,
+            candidate,
+            schema=schema,
+        )
+        candidate_payload = emit_pr106_sidecar_packet(candidate_packet)
+        candidate_proof = pr106_sidecar_consumed_byte_proof(candidate_packet)
+        if candidate_proof.get("all_payload_bytes_accounted") is not True:
+            blockers.append("candidate_packet_ir_consumed_byte_accounting_failed")
+        if candidate_proof.get("runtime_consumption_claim") is not False:
+            blockers.append("candidate_packet_ir_overclaimed_runtime_consumption")
+    if not candidate.runtime_decoder_implemented:
+        blockers.append("candidate_runtime_decoder_not_implemented")
+
+    source_payload = emit_pr106_sidecar_packet(source_packet)
+    source_proof = pr106_sidecar_consumed_byte_proof(source_packet)
+    lossless_semantic = applicable and (
+        np.array_equal(candidate.decoded_dims, source_dims)
+        and np.array_equal(candidate.decoded_delta_q, source_deltas)
+    )
+    delta_bytes = None
+    if applicable:
+        delta_bytes = candidate.charged_bytes - source_charged_bytes
+    source_corrections = int(((source_dims != PR106_NO_OP_DIM) & (source_deltas != 0)).sum())
+    return {
+        "schema": "pr106_sidecar_recode_candidate_manifest_v1",
+        "proof_scope": (
+            "lossless_sidecar_compression_candidate_packet_ir_consumed_byte_"
+            "accounting_not_runtime_inflate_not_score"
+        ),
+        "candidate_name": candidate.name,
+        "applicable": applicable,
+        "runtime_decoder_implemented": candidate.runtime_decoder_implemented,
+        "lossless_semantic_equivalence_proven": lossless_semantic,
+        "source_archive_sha256": source_archive_sha256,
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "candidate_archive_bytes": candidate_archive_bytes,
+        "candidate_member_name": candidate_member_name,
+        "source_packet": {
+            "format_id": f"0x{source_packet.format_id:02X}",
+            "payload_bytes": len(source_payload),
+            "payload_sha256": sha256_hex(source_payload),
+            "sidecar_charged_bytes": source_charged_bytes,
+            "pr106_payload_sha256": sha256_hex(source_packet.pr106_bytes),
+            "sidecar_payload_sha256": sha256_hex(source_packet.sidecar_payload),
+            "framing_meta_sha256": None
+            if source_packet.framing_meta is None
+            else sha256_hex(source_packet.framing_meta),
+        },
+        "candidate_packet": None
+        if candidate_packet is None or candidate_payload is None
+        else {
+            "format_id": f"0x{candidate_packet.format_id:02X}",
+            "payload_bytes": len(candidate_payload),
+            "payload_sha256": sha256_hex(candidate_payload),
+            "sidecar_charged_bytes": candidate.charged_bytes,
+            "delta_charged_sidecar_bytes_vs_source": delta_bytes,
+            "pr106_payload_sha256": sha256_hex(candidate_packet.pr106_bytes),
+            "sidecar_payload_sha256": sha256_hex(candidate_packet.sidecar_payload),
+            "framing_meta_sha256": None
+            if candidate_packet.framing_meta is None
+            else sha256_hex(candidate_packet.framing_meta),
+        },
+        "semantic_arrays": {
+            "n_pairs": int(source_dims.size),
+            "n_corrections": source_corrections,
+            "dim_sha256": sha256_hex(source_dims.astype(np.uint8).tobytes()),
+            "delta_q_sha256": sha256_hex(source_deltas.astype(np.int8).tobytes()),
+        },
+        "source_packet_ir_consumed_byte_proof": source_proof,
+        "candidate_packet_ir_consumed_byte_proof": candidate_proof,
+        "candidate_packet_ir_identity_passed": (
+            candidate_packet is not None
+            and candidate_payload is not None
+            and emit_pr106_sidecar_packet(parse_pr106_sidecar_packet(candidate_payload))
+            == candidate_payload
+        ),
+        "runtime_consumption_claim": False,
+        "full_frame_inflate_output_parity_claim": False,
+        "contest_axis_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "blockers": blockers,
+        "exact_eval_blockers": [
+            "runtime_decode_apply_proof_required_for_new_candidate_archive",
+            "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_auth_eval_adjudication_missing",
+        ],
     }
 
 

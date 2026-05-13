@@ -25,11 +25,15 @@ CONTEST_AUTH_EVAL_SCRIPT = "experiments/contest_auth_eval.py"
 TIER_1_OPERATOR_REQUIRED_FLAGS = {
     "--video-path": {}, "--output-dir": {}, "--epochs": {},
     "--batch-size": {}, "--upstream-dir": {}, "--device": {},
+    "--dispatch-contract": {},
 }
+SIREN_DISPATCH_CONTRACT = "naked_siren_replacement"
 def _smoke_main(args): pass
 SMOKE_FLAG = "--smoke"
+def require_train_substrate_siren_contract(x): return x
 def _full_main(args):
     from tac.substrates.siren.archive import pack_archive
+    require_train_substrate_siren_contract("naked_siren_replacement")
     pack_archive()
     contest_cuda_score = None
     return {
@@ -51,7 +55,13 @@ def _build_archive_zip(path): print("archive.zip")
         """
 schema_version: 1
 lane_id: lane_substrate_siren_20260512
+active_dispatch_contract: naked_siren_replacement
+dispatch_contracts:
+  - id: naked_siren_replacement
+  - id: siren_residual_on_hnerv_a1
+  - id: hybrid_siren_domain_prior
 target_modes:
+  - contest_exact_eval
   - contest_one_video_replay
   - research_substrate
 remote_driver: scripts/remote_lane_substrate_siren.sh
@@ -60,6 +70,8 @@ required_input_files:
   - flag: --video-path
     default_path: upstream/videos/0.mkv
 required_input_files_trainer: experiments/train_substrate_siren.py
+env_overrides:
+  SIREN_DISPATCH_CONTRACT: naked_siren_replacement
 """,
     )
     _write(repo / "src/tac/substrates/siren/architecture.py", "class SirenSubstrate: pass\n")
@@ -137,6 +149,7 @@ def test_readiness_accepts_minimal_complete_local_surfaces(tmp_path: Path) -> No
     assert payload["ready_for_remote_dispatch"] is False
     assert payload["promotion_eligible"] is False
     assert payload["manifest_hash"].startswith("sha256:")
+    assert payload["evidence"]["recipe_missing_dispatch_contracts"] == []
 
 
 def test_live_cli_json_is_fail_closed_but_locally_ready() -> None:
@@ -164,3 +177,29 @@ def test_live_trainer_requires_contest_cuda_auth_eval_claim() -> None:
     assert 'substrate_tag="siren"' in text
     assert "auth_eval_score_claim_valid = claim.score_claim_valid" in text
     assert "auth_eval_exact_cuda_complete = claim.exact_cuda_eval_complete" in text
+
+
+def test_live_remote_driver_logs_scored_archive_zip_not_payload_bin() -> None:
+    text = (REPO / "scripts/remote_lane_substrate_siren.sh").read_text(encoding="utf-8")
+
+    assert 'SIREN_DISPATCH_CONTRACT="${SIREN_DISPATCH_CONTRACT:-naked_siren_replacement}"' in text
+    assert '--dispatch-contract "$SIREN_DISPATCH_CONTRACT"' in text
+    assert 'ARCHIVE_PATH="$OUTPUT_DIR/archive.zip"' in text
+    assert 'PAYLOAD_PATH="$OUTPUT_DIR/0.bin"' in text
+    assert "archive=$ARCHIVE_PATH payload=$PAYLOAD_PATH" in text
+
+
+def test_readiness_fails_when_recipe_omits_siren_dispatch_contracts(tmp_path: Path) -> None:
+    _write_minimal_ready_repo(tmp_path)
+    recipe = tmp_path / ".omx/operator_authorize_recipes/substrate_siren_modal_a100_dispatch.yaml"
+    text = recipe.read_text(encoding="utf-8")
+    text = text.replace("  - id: siren_residual_on_hnerv_a1\n", "")
+    recipe.write_text(text, encoding="utf-8")
+
+    payload = audit_siren_substrate_readiness(tmp_path)
+
+    assert payload["local_contract_ready"] is False
+    assert any(
+        blocker.startswith("recipe_missing_dispatch_contracts:")
+        for blocker in payload["local_blockers"]
+    )

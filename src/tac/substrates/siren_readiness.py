@@ -23,14 +23,22 @@ REQUIRED_TRAINER_FLAGS = (
     "--batch-size",
     "--upstream-dir",
     "--device",
+    "--dispatch-contract",
 )
 
 VALID_TARGET_MODES = (
+    "contest_exact_eval",
     "contest_one_video_replay",
     "contest_generalized",
     "production_generalized",
     "production_edge_adaptive",
     "research_substrate",
+)
+
+REQUIRED_DISPATCH_CONTRACTS = (
+    "naked_siren_replacement",
+    "siren_residual_on_hnerv_a1",
+    "hybrid_siren_domain_prior",
 )
 
 REQUIRED_PATHS = {
@@ -146,6 +154,9 @@ def _audit_trainer(text: str, blockers: list[str], evidence: dict[str, Any]) -> 
         "proxy_score_authority_false": '"proxy_score_authority": False' in text,
         "score_claim_requires_exact_auth_eval_score": '"score_claim": contest_cuda_score is not None'
         in text,
+        "declares_dispatch_contract": "--dispatch-contract" in text
+        and "SIREN_DISPATCH_CONTRACT" in text
+        and "require_train_substrate_siren_contract" in text,
     }
     evidence.update(checks)
     for name, passed in checks.items():
@@ -160,6 +171,10 @@ def _audit_recipe(text: str, blockers: list[str], evidence: dict[str, Any]) -> N
         "required_video_declared": "upstream/videos/0.mkv" in text,
         "trainer_declared": "experiments/train_substrate_siren.py" in text,
         "readiness_gate_declared": "tools/audit_siren_substrate_readiness.py" in text,
+        "active_contract_is_naked_replacement": (
+            "active_dispatch_contract: naked_siren_replacement" in text
+            and "SIREN_DISPATCH_CONTRACT: naked_siren_replacement" in text
+        ),
     }
     evidence.update({f"recipe_{k}": v for k, v in checks.items()})
     for name, passed in checks.items():
@@ -172,6 +187,14 @@ def _audit_recipe(text: str, blockers: list[str], evidence: dict[str, Any]) -> N
     evidence["recipe_valid_target_modes"] = valid_modes
     if not valid_modes:
         blockers.append("recipe_target_modes_missing_or_invalid")
+
+    missing_contracts = [
+        contract for contract in REQUIRED_DISPATCH_CONTRACTS if contract not in text
+    ]
+    evidence["recipe_required_dispatch_contracts"] = list(REQUIRED_DISPATCH_CONTRACTS)
+    evidence["recipe_missing_dispatch_contracts"] = missing_contracts
+    if missing_contracts:
+        blockers.append("recipe_missing_dispatch_contracts:" + ",".join(missing_contracts))
 
 
 def _audit_archive(text: str, blockers: list[str], evidence: dict[str, Any]) -> None:

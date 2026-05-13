@@ -150,10 +150,11 @@ def _resolve_smoke_band(
 
     Per CLAUDE.md SIREN audit 2026-05-13 DEFECT #8 (predicted_band declared
     in remote driver but never enforced) + DEFECT #2 (global default
-    trivially wide): recipes can declare a council-approved band via
-    ``predicted_band: [lo, hi]`` (the same shape the SIREN remote driver
-    writes to provenance.json). When present, the smoke validator enforces
-    THAT band. When absent, the global default applies.
+    trivially wide): recipes can declare a smoke-specific
+    ``smoke_score_band: [lo, hi]``. If absent, they can declare a
+    council-approved full-run band via ``predicted_band: [lo, hi]`` (the same
+    shape the remote driver writes to provenance.json). When neither is
+    present, the global default applies.
 
     The recipe's band is widened by ~50% on each side because the smoke
     runs at lower epochs (typically 100 vs full's 2000) and may not reach
@@ -165,11 +166,17 @@ def _resolve_smoke_band(
     # We avoid a full YAML import to keep this stdlib-only.
     import re
 
-    m = re.search(
-        r'^predicted_band\s*:\s*\[\s*([-+0-9.eE]+)\s*,\s*([-+0-9.eE]+)\s*\]\s*$',
-        recipe_text,
-        re.MULTILINE,
-    )
+    m = None
+    field_used = ""
+    for field in ("smoke_score_band", "predicted_band"):
+        m = re.search(
+            rf'^{field}\s*:\s*\[\s*([-+0-9.eE]+)\s*,\s*([-+0-9.eE]+)\s*\]\s*$',
+            recipe_text,
+            re.MULTILINE,
+        )
+        if m:
+            field_used = field
+            break
     if not m:
         return default_band
     try:
@@ -179,6 +186,8 @@ def _resolve_smoke_band(
         return default_band
     if not (math.isfinite(lo) and math.isfinite(hi) and lo < hi and lo >= 0):
         return default_band
+    if field_used == "smoke_score_band":
+        return (lo, hi)
     # Widen by 50% on each side; floor at 0.0; cap at 10.0.
     span = hi - lo
     widened_lo = max(0.0, lo - 0.5 * span)

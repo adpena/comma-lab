@@ -1,7 +1,7 @@
 schema_version: 1
 name: substrate_siren_modal_a100_dispatch
 lane_id: lane_substrate_siren_20260512
-summary: SIREN coordinate-MLP first-anchor dispatch on Modal A100 (PHASE-B2-BUILD HIGH-target attack on 0.193).
+summary: SIREN coordinate-MLP naked replacement dispatch on Modal A100; residual/hybrid contracts are named but not fired by this recipe.
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -14,6 +14,23 @@ target_modes:
   - research_substrate
 canary_status: post_canary_dependent
 canary_dependency: sane_hnerv
+active_dispatch_contract: naked_siren_replacement
+dispatch_contracts:
+  - id: naked_siren_replacement
+    archive_role: replaces_hnerv_a1_substrate
+    builder_surface: experiments/train_substrate_siren.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+  - id: siren_residual_on_hnerv_a1
+    archive_role: residual_sidecar_on_hnerv_a1_base
+    builder_surface: future SIREN residual materializer over byte-verified HNeRV/A1 custody
+    status: not_dispatched_by_this_recipe
+    required_custody: old/new archive sha256, base runtime tree sha256, residual payload sha256, no-op proof
+  - id: hybrid_siren_domain_prior
+    archive_role: hybrid_replacement_with_domain_prior
+    builder_surface: future hybrid SIREN+domain-prior packet builder
+    status: not_dispatched_by_this_recipe
+    required_custody: parser manifest for prior payload, one scored archive, no scorer at inflate
 
 cost_band:
   epochs: 2000
@@ -22,17 +39,19 @@ cost_band:
   platform_key: modal
   gpu_key: A100
 
-predicted_score_target: 0.145
-predicted_band: [0.130, 0.165]
-predicted_delta: "-0.048 vs PR101 0.193 [predicted; council Phase 5]"
-predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md#siren"
+predicted_score_target: null
+predicted_band: [0.180, 0.250]
+smoke_score_band: [0.050, 5.000]
+predicted_delta: "naked_siren_replacement literature-prediction only; no score claim"
+predicted_delta_basis: ".omx/research/siren_literature_review_20260513.md#recommendations"
 literature_anchor: "Sitzmann, Martel, Bergman, Lindell, Wetzstein — 'Implicit Neural Representations with Periodic Activation Functions' NeurIPS 2020"
 council_phase_5_prediction: 0.145
 
 risk: |
-  PHASE-B2-BUILD HIGH-target dispatch on Modal A100. SIREN is the
-  purely-coordinate-based counterpart to NeRV/HNeRV with ZERO bytes in latents;
-  all per-frame variation must be encoded in MLP weights via the t-axis input.
+  PHASE-B2-BUILD Modal A100 recipe for the naked_siren_replacement contract.
+  SIREN is the purely-coordinate-based counterpart to NeRV/HNeRV/A1 and
+  replaces that substrate with ZERO bytes in latents; all per-frame variation
+  must be encoded in MLP weights via the t-axis input.
   Architectural risk: first-layer omega=30 (Sitzmann signature) is high-frequency
   by design — gradients can explode if LR is too aggressive. Council default
   lr=5e-4 with cosine annealing is conservative; grad-clip=1.0 enforced.
@@ -84,6 +103,7 @@ env_overrides:
   SIREN_BATCH_SIZE: "1"
   SIREN_UPSTREAM_DIR: /workspace/pact/upstream
   SIREN_DEVICE: cuda
+  SIREN_DISPATCH_CONTRACT: naked_siren_replacement
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:
@@ -94,9 +114,11 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
 
 notes: |
-  PHASE-B2-BUILD HIGH-target attack on PR101's 0.193 frontier. Do not promote
-  an A100 diagnostic score; exact score claims require a claimed contest-CUDA
-  auth-eval artifact plus the usual CPU/CUDA policy review.
+  PHASE-B2-BUILD SIREN/INR naked replacement attack. Do not promote an A100
+  diagnostic score; exact score claims require a claimed contest-CUDA auth-eval
+  artifact plus the usual CPU/CUDA policy review. The recipe also names the
+  residual-on-HNeRV/A1 and hybrid-domain-prior SIREN contracts so they cannot
+  silently reuse this naked replacement archive builder.
 
   SIREN architectural distinction vs HNeRV: ZERO bytes in latents — all per-pair
   variation flows through the (x, y, t) coordinate input where t = pair_idx /

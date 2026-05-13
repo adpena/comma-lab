@@ -34,7 +34,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[5]
 """Repo root, navigated from ``src/tac/substrates/balle_renderer/tests/``."""
 
@@ -133,9 +132,8 @@ def test_argparse_help_runs(trainer_module):
     """``--help`` must print and exit 0 (no SystemExit traceback)."""
     parser = trainer_module._build_parser()
     buf = io.StringIO()
-    with redirect_stdout(buf):
-        with pytest.raises(SystemExit) as exc:
-            parser.parse_args(["--help"])
+    with redirect_stdout(buf), pytest.raises(SystemExit) as exc:
+        parser.parse_args(["--help"])
     assert exc.value.code == 0
     out = buf.getvalue()
     assert "--video-path" in out
@@ -212,6 +210,7 @@ def test_device_or_die_refuses_unknown_device(trainer_module):
 def test_pin_seeds_is_deterministic(trainer_module):
     """Calling _pin_seeds with the same seed produces same random draws."""
     import random as _r
+
     import torch
 
     trainer_module._pin_seeds(42)
@@ -412,7 +411,7 @@ def test_write_runtime_inflate_py_references_balle_renderer_substrate(
     py = (tmp_path / "inflate.py").read_text()
     assert "tac.substrates.balle_renderer.inflate" in py
     assert "tac.substrates.sane_hnerv.inflate" not in py, (
-        "β inflate.py must NOT import α's sane_hnerv inflate"
+        "beta inflate.py must NOT import alpha's sane_hnerv inflate"
     )
 
 
@@ -451,6 +450,27 @@ def test_build_archive_zip_is_deterministic(trainer_module, tmp_path):
     assert "0.bin" in names
     assert "inflate.sh" in names
     assert "inflate.py" in names
+
+
+def test_full_main_custody_uses_archive_zip_sha_not_0bin():
+    """Auth-eval custody must validate the scored archive.zip object.
+
+    Catalog #190-style substrate trainers must not pass the internal ``0.bin``
+    payload SHA to auth-eval claim validation, because contest_auth_eval scores
+    the archive.zip supplied via ``--archive``.
+    """
+    src_path = REPO_ROOT / "experiments" / "train_substrate_balle_renderer.py"
+    src = src_path.read_text(encoding="utf-8")
+    idx = src.find("def _full_main")
+    assert idx >= 0, "_full_main definition not found"
+    body = src[idx:]
+    assert "payload_0bin_sha" in body
+    assert "payload_0bin_bytes" in body
+    assert "archive_bytes = archive_zip_path.stat().st_size" in body
+    assert "archive_sha = _sha256_bytes(archive_zip_path.read_bytes())" in body
+    assert "archive_sha256=archive_sha" in body
+    assert '"payload_0bin_sha256": payload_0bin_sha' in body
+    assert '"payload_0bin_bytes": payload_0bin_bytes' in body
 
 
 # ---------------------------------------------------------------------------
@@ -821,9 +841,9 @@ def test_full_main_references_beta_substrate_not_alpha():
     assert "tac.substrates.balle_renderer.architecture" in src
     assert "tac.substrates.balle_renderer.archive" in src
     assert "tac.substrates.balle_renderer.score_aware_loss" in src
-    # α's modules must NOT be imported anywhere in this trainer
+    # Alpha's modules must NOT be imported anywhere in this trainer.
     assert "from tac.substrates.sane_hnerv" not in src, (
-        "β trainer must not import from α's sane_hnerv package"
+        "beta trainer must not import from alpha's sane_hnerv package"
     )
 
 

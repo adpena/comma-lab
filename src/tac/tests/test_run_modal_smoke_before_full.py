@@ -138,3 +138,12 @@ def test_resolve_smoke_band_reads_siren_recipe_prediction_band() -> None:
 
     assert lo == 0.1125
     assert hi == 0.1825
+
+
+def test_resolve_smoke_band_prefers_explicit_smoke_score_band() -> None:
+    lo, hi = _resolve_smoke_band(
+        "predicted_band: [0.130, 0.165]\nsmoke_score_band: [0.050, 5.000]\n"
+    )
+
+    assert lo == 0.05
+    assert hi == 5.0

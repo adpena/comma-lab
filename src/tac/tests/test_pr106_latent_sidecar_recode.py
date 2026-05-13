@@ -17,13 +17,21 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     decode_brotli_dim_delta_sidecar_payload,
     decode_pr101_ranked_sidecar_payload_to_dim_delta,
     emit_pr106_sidecar_packet,
+    emit_pr106_sidecar_recode_candidate_archive,
     encode_brotli_dim_delta_sidecar_payload,
     encode_pr101_ranked_sidecar_payload,
     lossless_pr106_sidecar_recode_candidates,
+    parse_pr106_sidecar_packet,
+    pr106_sidecar_recode_candidate_manifest,
+    read_single_stored_member_archive,
 )
 
 REPO = Path(__file__).resolve().parents[3]
 TOOL = REPO / "tools" / "profile_pr106_latent_sidecar_recode.py"
+PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
+PR106_R2_PR101_ARCHIVE = (
+    REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
+)
 
 
 def _sample_arrays(n: int = 12) -> tuple[np.ndarray, np.ndarray]:
@@ -152,3 +160,93 @@ def test_recode_profile_tool_reads_sidecar_archive(tmp_path: Path) -> None:
     assert report["source"]["mode"] == "sidecar_archive"
     assert report["source"]["pr106_inner_payload_bytes"] == len(b"\xfffixture-pr106-payload")
     assert report["score_claim"] is False
+
+
+def test_recode_candidate_manifest_carries_packetir_consumed_byte_proof() -> None:
+    archive_bytes = PR106_R2_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_brotli_dim_delta_sidecar_payload(source_packet.sidecar_payload)
+    candidate = next(
+        item
+        for item in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+        if item.name == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
+
+    manifest = pr106_sidecar_recode_candidate_manifest(
+        source_packet,
+        candidate,
+        source_archive_sha256="7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+    )
+
+    assert manifest["schema"] == "pr106_sidecar_recode_candidate_manifest_v1"
+    assert manifest["candidate_name"] == "pr101_ranked_no_op_sidecar_format_0x02"
+    assert manifest["lossless_semantic_equivalence_proven"] is True
+    assert manifest["candidate_packet_ir_identity_passed"] is True
+    assert manifest["runtime_consumption_claim"] is False
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "exact_cuda_auth_eval_missing" in manifest["exact_eval_blockers"]
+    proof = manifest["candidate_packet_ir_consumed_byte_proof"]
+    assert isinstance(proof, dict)
+    assert proof["all_payload_bytes_accounted"] is True
+    assert proof["runtime_consumption_claim"] is False
+    sections = proof["sections"]
+    assert [row["name"] for row in sections][-1] == "framing_meta"
+    for row in sections:
+        assert row["offset_start"] == row["offset"]
+        assert row["byte_count"] == row["bytes"]
+        assert row["offset_end_exclusive"] == row["end_offset"]
+
+    candidate_member, _candidate_archive = emit_pr106_sidecar_recode_candidate_archive(
+        member,
+        source_packet,
+        candidate,
+    )
+    canonical_pr101_member = read_single_stored_member_archive(
+        PR106_R2_PR101_ARCHIVE.read_bytes()
+    )
+    assert candidate_member.payload == canonical_pr101_member.payload
+
+
+def test_recode_profile_tool_emits_runtime_candidate_archives(tmp_path: Path) -> None:
+    out = tmp_path / "profile.json"
+    emitted_dir = tmp_path / "runtime_candidates"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--sidecar-archive",
+            str(PR106_R2_ARCHIVE),
+            "--json-out",
+            str(out),
+            "--emit-runtime-candidates-dir",
+            str(emitted_dir),
+        ],
+        check=True,
+    )
+
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    emitted = report["emitted_runtime_candidate_manifests"]
+    assert emitted
+    assert all(row["score_claim"] is False for row in emitted)
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in emitted)
+    pr101_emitted = next(
+        row
+        for row in emitted
+        if row["candidate_name"] == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
+    archive_path = Path(pr101_emitted["archive_path"])
+    manifest_path = Path(pr101_emitted["manifest_path"])
+    assert archive_path.is_file()
+    assert manifest_path.is_file()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["candidate_packet_ir_identity_passed"] is True
+    assert manifest["candidate_packet_ir_consumed_byte_proof"][
+        "all_payload_bytes_accounted"
+    ] is True
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False

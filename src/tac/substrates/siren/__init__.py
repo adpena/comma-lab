@@ -8,12 +8,23 @@ initialization scheme (Uniform(-sqrt(6/fan_in)/omega, sqrt(6/fan_in)/omega)
 with first-layer omega=30). It maps a continuous spatial-temporal coordinate
 ``(x, y, pair_idx)`` directly to RGB output, with NO per-frame latent state.
 
-This is the **purely-coordinate-based** counterpart to NeRV/HNeRV (which have
-implicit per-frame latents) and Cool-Chic (which has explicit per-frame
-latents). All variation across frames is encoded in the network weights
-themselves; the pair index is a frequency-encoded scalar input. This makes
-SIREN a true ANALYTICAL representation per Hotz's "champion analytical
-shortcuts over learned complexity" charter.
+This package distinguishes three SIREN/INR dispatch contracts:
+
+1. ``naked_siren_replacement``: SIREN replaces the HNeRV/A1 substrate and
+   ships SRV1 ``0.bin`` as the scored renderer payload.
+2. ``siren_residual_on_hnerv_a1``: SIREN contributes residual atoms on a
+   byte-verified HNeRV/A1 base archive.
+3. ``hybrid_siren_domain_prior``: SIREN ships with an explicit domain-prior
+   payload in one scored packet.
+
+This package's current trainer supports only contract 1. Contracts 2 and 3 are
+named so they cannot silently reuse the wrong archive builder.
+
+For the naked replacement contract, SIREN is the **purely-coordinate-based**
+counterpart to NeRV/HNeRV (which have implicit per-frame latents) and
+Cool-Chic (which has explicit per-frame latents). All variation across frames
+is encoded in the network weights themselves; the pair index is a
+frequency-encoded scalar input.
 
 The substrate is score-aware: gradients flow from contest scorers through
 sin-activation MLP to weights, via the differentiable eval-roundtrip + patched
@@ -84,17 +95,35 @@ from .archive import (
     pack_archive,
     parse_archive,
 )
+from .dispatch_contract import (
+    HYBRID_SIREN_DOMAIN_PRIOR,
+    NAKED_SIREN_REPLACEMENT,
+    SIREN_DISPATCH_CONTRACTS,
+    SIREN_RESIDUAL_ON_HNERV_A1,
+    SirenDispatchContract,
+    normalize_siren_dispatch_contract,
+    require_train_substrate_siren_contract,
+    siren_dispatch_contract_manifest,
+)
 from .score_aware_loss import (
     ScoreAwareLossWeights,
     SirenScoreAwareLoss,
 )
 
 __all__ = [
+    "HYBRID_SIREN_DOMAIN_PRIOR",
+    "NAKED_SIREN_REPLACEMENT",
+    "SIREN_DISPATCH_CONTRACTS",
+    "SIREN_RESIDUAL_ON_HNERV_A1",
     "ScoreAwareLossWeights",
     "SirenArchive",
     "SirenConfig",
+    "SirenDispatchContract",
     "SirenScoreAwareLoss",
     "SirenSubstrate",
+    "normalize_siren_dispatch_contract",
     "pack_archive",
     "parse_archive",
+    "require_train_substrate_siren_contract",
+    "siren_dispatch_contract_manifest",
 ]

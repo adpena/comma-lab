@@ -5,11 +5,13 @@ design wave (2026-05-12). PHASE-B2-BUILD wires ``_full_main`` so the trainer
 can produce a first-anchor packet after operator authorization; local training
 losses remain proxy signals until archive auth eval lands.
 
-Council prediction (Sitzmann et al., NeurIPS 2020 + grand council Phase 5):
-target ~0.145 [predicted; not score evidence]. SIREN is the
-purely-coordinate-based counterpart to NeRV/HNeRV: ZERO bytes go to latents —
-all variation across frames is encoded in the MLP weights themselves via the
-sinusoidal activations.
+Dispatch contract default: ``naked_siren_replacement``. In this mode SIREN is
+the purely-coordinate-based counterpart to NeRV/HNeRV/A1 and REPLACES that
+substrate: ZERO bytes go to latents, and all variation across frames is encoded
+in the MLP weights themselves via sinusoidal activations. Residual-on-HNeRV/A1
+and hybrid-domain-prior contracts are named in
+``tac.substrates.siren.dispatch_contract`` but intentionally fail closed here
+until they have their own byte-closed builders.
 
 Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 
@@ -114,6 +116,11 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
+from tac.substrates.siren.dispatch_contract import (
+    NAKED_SIREN_REPLACEMENT,
+    require_train_substrate_siren_contract,
+    siren_dispatch_contract_manifest,
+)
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -202,6 +209,16 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
             "CLAUDE.md MPS-NOISE rule); cpu permitted only with --smoke"
         ),
         "default": "cuda",
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--dispatch-contract": {
+        "env": "SIREN_DISPATCH_CONTRACT",
+        "rationale": (
+            "distinguishes naked SIREN replacement from residual-on-HNeRV/A1 "
+            "and hybrid-domain-prior contracts; wrong contract means wrong archive"
+        ),
+        "default": NAKED_SIREN_REPLACEMENT,
         "satisfied_by_profile": (),
         "requires": (),
     },
@@ -303,6 +320,20 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=1.0,
         help="SIREN downstream omega (Sitzmann standard 1.0).",
+    )
+    p.add_argument(
+        "--dispatch-contract",
+        choices=[
+            "naked_siren_replacement",
+            "siren_residual_on_hnerv_a1",
+            "hybrid_siren_domain_prior",
+        ],
+        default=NAKED_SIREN_REPLACEMENT,
+        help=(
+            "SIREN/INR packet contract. This trainer supports only "
+            "naked_siren_replacement and fails closed for residual/hybrid "
+            "contracts to avoid wrong-archive dispatch."
+        ),
     )
 
     # ---- Lagrangian weights (score-aware) ----
@@ -669,6 +700,9 @@ def _full_main(args: argparse.Namespace) -> int:
     )
     from tac.training import EMA
 
+    dispatch_contract = require_train_substrate_siren_contract(args.dispatch_contract)
+    dispatch_contracts = siren_dispatch_contract_manifest()
+
     # 1. Pin seeds
     _pin_seeds(args.seed)
     device = _device_or_die(args.device, smoke=False)
@@ -927,6 +961,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 "hidden_omega": cfg.hidden_omega,
                 "coord_dim": cfg.coord_dim,
                 "output_dim": cfg.output_dim,
+                "dispatch_contract": dispatch_contract.contract_id,
+                "archive_role": dispatch_contract.archive_role,
+                "hnerv_a1_relationship": dispatch_contract.hnerv_a1_relationship,
             }
             bin_bytes = pack_archive(
                 decoder_sd,
@@ -1107,6 +1144,11 @@ def _full_main(args: argparse.Namespace) -> int:
             "git_head": _git_head_sha(),
             "trainer": "experiments/train_substrate_siren.py",
             "lane_id": "lane_substrate_siren_20260512",
+            "dispatch_contract": dispatch_contract.contract_id,
+            "dispatch_contract_summary": dispatch_contract.summary,
+            "archive_role": dispatch_contract.archive_role,
+            "hnerv_a1_relationship": dispatch_contract.hnerv_a1_relationship,
+            "dispatch_contracts_distinguished": dispatch_contracts,
             "args": {
                 k: (str(v) if isinstance(v, Path) else v)
                 for k, v in vars(args).items()
@@ -1174,6 +1216,8 @@ def _torch_version_string() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    if not args.smoke:
+        require_train_substrate_siren_contract(args.dispatch_contract)
     if args.smoke:
         return _smoke_main(args)
     return _full_main(args)

@@ -66,12 +66,10 @@ Usage (full; CUDA-required; threads from operator wrapper)::
         --epochs 2000 --batch-size 32 --lr 5e-4 --grad-clip 1.0 \\
         --device cuda
 """
-# AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
-
-
-# TORCH_COMPILE_WAIVED:defer-until-per-substrate-canary-validates-Inductor-graph-breaks-and-score-axis-custody
 from __future__ import annotations
 
+# AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
+# TORCH_COMPILE_WAIVED:defer-until-per-substrate-canary-validates-Inductor-graph-breaks-and-score-axis-custody
 import argparse
 import json
 import math
@@ -90,20 +88,31 @@ from typing import Any
 # 2026-05-13 substrate-trainer dedup migration wave.
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
-    device_or_die as _canon_device_or_die,
-    git_head_sha as _canon_git_head_sha,
-    pin_seeds as _canon_pin_seeds,
-    sha256_bytes as _canon_sha256_bytes,
-    torch_version_string as _canon_torch_version_string,
-    utc_now_iso as _canon_utc_now_iso,
 )
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
 from tac.substrates._shared.trainer_skeleton import (
+    device_or_die as _canon_device_or_die,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    git_head_sha as _canon_git_head_sha,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    pin_seeds as _canon_pin_seeds,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    sha256_bytes as _canon_sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    torch_version_string as _canon_torch_version_string,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    utc_now_iso as _canon_utc_now_iso,
+)
+from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
-
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -1037,6 +1046,8 @@ def _full_main(args: argparse.Namespace) -> int:
         # 11. Build the BRV1 archive bytes from the EMA shadow
         archive_sha = ""
         archive_bytes = 0
+        payload_0bin_sha = ""
+        payload_0bin_bytes = 0
         archive_zip_path = args.output_dir / "archive.zip"
         if not args.skip_archive_build:
             print(f"[full] building archive from {ckpt_best_path} ...")
@@ -1074,11 +1085,11 @@ def _full_main(args: argparse.Namespace) -> int:
                 enc_sd, dec_sd, hp_sd, latents, scales, meta,
             )
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
-            archive_sha = _sha256_bytes(bin_bytes)
-            archive_bytes = len(bin_bytes)
+            payload_0bin_sha = _sha256_bytes(bin_bytes)
+            payload_0bin_bytes = len(bin_bytes)
             print(
-                f"[full] wrote 0.bin ({archive_bytes} bytes, "
-                f"sha256={archive_sha})"
+                f"[full] wrote 0.bin ({payload_0bin_bytes} bytes, "
+                f"sha256={payload_0bin_sha})"
             )
 
             # Emit contest-compliant runtime alongside the bin
@@ -1090,7 +1101,12 @@ def _full_main(args: argparse.Namespace) -> int:
                 bin_bytes=bin_bytes,
                 submission_dir=submission_dir,
             )
-            print(f"[full] wrote {archive_zip_path}")
+            archive_bytes = archive_zip_path.stat().st_size
+            archive_sha = _sha256_bytes(archive_zip_path.read_bytes())
+            print(
+                f"[full] wrote {archive_zip_path} "
+                f"({archive_bytes} bytes, sha256={archive_sha})"
+            )
             _stage(f"archive_built_bytes_{archive_bytes}")
 
         # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
@@ -1143,7 +1159,7 @@ def _full_main(args: argparse.Namespace) -> int:
                             f"(source={claim.source_key}, "
                             f"archive_sha256={archive_sha})"
                         )
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:
                         raise RuntimeError(
                             "could not validate balle_renderer contest-CUDA "
                             f"auth eval JSON: {exc}"
@@ -1194,7 +1210,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     f"[full] posterior_update: accepted={update.accepted} "
                     f"reason={update.reason!r}"
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 print(
                     f"[full] posterior_update_locked failed: {exc}",
                     file=sys.stderr,
@@ -1249,7 +1265,7 @@ def _full_main(args: argparse.Namespace) -> int:
                         f"append_failed_rc_{proc.returncode}:"
                         f"{(proc.stderr or proc.stdout)[-500:]}"
                     )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 cost_band_anchor_skip_reason = f"append_failed:{exc}"
                 print(
                     f"[full] cost-band anchor append failed (non-fatal): "
@@ -1288,6 +1304,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "train_elapsed_sec": float(train_elapsed_sec),
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            "payload_0bin_sha256": payload_0bin_sha,
+            "payload_0bin_bytes": payload_0bin_bytes,
             "auth_eval_cuda_score": contest_cuda_score,
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None
