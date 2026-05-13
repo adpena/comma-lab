@@ -1,0 +1,128 @@
+schema_version: 1
+name: substrate_nervdc_modal_a100_dispatch
+lane_id: lane_substrate_nervdc_20260512
+summary: NeRVdc TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — remote driver missing).
+
+dispatch_enabled: false
+research_only: false
+substrate_tradition: TRADITION_2
+defer_reason: |
+  scripts/remote_lane_substrate_nervdc_as_renderer.sh does NOT exist (Catalog
+  #163-pattern gap). The trainer experiments/train_nervdc_as_renderer.py
+  exists and exposes a complete argparse, but the canonical Modal/Vast.ai
+  remote driver script that bootstraps deps + threads required-input files +
+  emits inflate.sh + harvest hooks is missing. Per Catalog #146/#163,
+  dispatch is REFUSED until the remote driver lands.
+
+dispatch_blockers:
+  - remote_driver_missing
+  - tier_manifest_required_for_catalog_151_compliance
+  - hnerv_parity_lesson_4_loc_overage_in_inflate_py
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: "unknown — first empirical anchor needed"
+predicted_delta: "unknown — TRADITION 2 substrate predates Catalog #124 design-time prediction discipline"
+literature_anchor: "NeRVdc — diffusion-conditioned NeRV with conditional summary head (HNeRV-family expansion 2026-05-11)"
+
+risk: |
+  TRADITION 2 substrate. Trainer experiments/train_nervdc_as_renderer.py
+  exists with full argparse (see required_input_files below), but the
+  canonical remote driver scripts/remote_lane_substrate_nervdc_as_renderer.sh
+  has not been built. Same risk profile as cnerv recipe.
+
+  HNeRV parity discipline lesson 4 violation: submissions/nervdc_substrate/
+  inflate.py is 210 LOC vs ≤ 200 budget per .omx/research/
+  full_stack_integration_audit_v4_20260512.md (advisory finding).
+  Reactivation work should resolve this overage.
+
+  TIER manifest gap: trainer predates Catalog #151. Adding the manifest is an
+  architecture decision that needs council review.
+envelope_status: "DEFERRED: remote driver gap blocks dispatch before GPU spend"
+
+remote_driver: scripts/remote_lane_substrate_nervdc_as_renderer.sh  # MISSING
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default); operator must thread"
+
+argparse_inventory:
+  trainer: experiments/train_nervdc_as_renderer.py
+  flags:
+    - --output-dir (Path, required)
+    - --device (cuda|cpu, default=cuda)
+    - --epochs (int, default=200)
+    - --batch-size (int, default=8)
+    - --learning-rate (float, default=1e-3)
+    - --ema-decay (float, default=0.997)
+    - --latent-dim (int, default=16)
+    - --cond-dim (int, default=8)
+    - --base-channels (int, default=36)
+    - --n-pairs (int, default=600)
+    - --lambda-seg (float, default=100.0)
+    - --lambda-pose (float, default=288.6751345948129)
+    - --video-path (Path, default=upstream/videos/0.mkv)
+    - --seed (int, default=20260511)
+    - --smoke (bool, default=False)
+    - --auth-eval (bool, default=False)
+    - --phase-b-auth-memo (str, default=None)
+
+env_overrides:
+  NERVDC_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  NERVDC_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  NERVDC_OUTPUT_DIR: /workspace/pact/lane_substrate_nervdc_results/output
+  NERVDC_EPOCHS: "2000"
+  NERVDC_BATCH_SIZE: "8"
+  NERVDC_UPSTREAM_DIR: /workspace/pact/upstream
+  NERVDC_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py
+  - tools/append_cost_band_anchor.py
+  - upstream/videos/0.mkv
+  - experiments/train_nervdc_as_renderer.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - submissions/nervdc_substrate/inflate.{py,sh} (existing per lane registry evidence)
+  - "[MISSING] scripts/remote_lane_substrate_nervdc_as_renderer.sh"
+
+reactivation_criteria: |
+  1. scripts/remote_lane_substrate_nervdc_as_renderer.sh built per the
+     canonical pattern (Catalog #163 sentinel-source; Catalog #146 inflate
+     contract; Catalog #152 input validation).
+  2. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed in the trainer
+     (council review required).
+  3. submissions/nervdc_substrate/inflate.py reduced from 210 → ≤ 200 LOC
+     OR explicit waiver per HNeRV parity lesson 4.
+  4. Local smoke verifies inflate.sh emits a contest-compliant 0.bin.
+  5. Catalog #152 validates --video-path resolves before dispatch.
+
+notes: |
+  TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
+  Lane id `lane_nervdc_as_renderer` registered at L1 with submissions/
+  nervdc_substrate/inflate.{py,sh} + format_id 0x66. The trainer is
+  production-ready but the Modal remote driver is missing.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when remote driver lands,
+  must register harvest hook within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": first anchor must be
+  tagged [contest-CUDA] (NVIDIA GPU on Linux; never MPS); CPU axis required
+  separately on Linux x86_64 before any submission claim.
+
+  Cross-ref:
+    .omx/research/substrate_tradition_taxonomy_20260512.md
+    .omx/research/full_stack_integration_audit_v4_20260512.md (LOC overage finding)
+    feedback_nerv_family_expansion_blocknerv_ffnerv_dsnerv_hinerv_tcnerv_landed_20260511.md
+    .omx/state/lane_registry.json#lane_nervdc_as_renderer
