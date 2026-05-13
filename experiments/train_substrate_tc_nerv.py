@@ -68,6 +68,8 @@ Usage (full; CUDA-required; threads from operator wrapper)::
         --epochs 2000 --batch-size 32 --lr 5e-4 --grad-clip 1.0 \\
         --device cuda
 """
+# AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
+
 
 from __future__ import annotations
 

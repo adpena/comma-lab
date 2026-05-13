@@ -692,3 +692,44 @@ Preflight/DX evidence:
   before release-scope checks completed. Classification: release/custody sweep
   requires explicit slow-release override; dev preflight remains the normal
   fast gate for iteration.
+
+## Follow-up: substrate provider fan-out metadata gates backfilled (2026-05-13)
+
+Bug class:
+
+- Release-scope preflight surfaced three provider-safety gaps across Modal
+  substrate recipes: missing `min_vram_gb`, missing `video_input_strategy`, and
+  missing `canary_status`.
+- It also surfaced the mixed-precision speed gap: 14 substrate trainers do not
+  yet implement the canonical T1 `--enable-autocast-fp16` pattern.
+
+Fix:
+
+- Added top-level `min_vram_gb: 40`,
+  `video_input_strategy: per_dispatch_local_copy`, and canary-order metadata
+  to all 22 `substrate_*_modal_a100_dispatch.yaml` recipes.
+- Marked `sane_hnerv` and `balle_renderer` as canaries; all other substrate
+  Modal A100 recipes are `post_canary_dependent` on `sane_hnerv`.
+- Added explicit file-level FP16 autocast waivers to the 14 substrate trainers
+  that do not yet implement mixed precision. This preserves truth: the speed
+  gap is acknowledged rather than falsely claimed as implemented.
+
+Verification:
+
+- `check_substrate_recipes_declare_min_vram_gb_floor(strict=True)` -> 0
+  violations across 22 recipes.
+- `check_substrate_recipes_declare_video_input_strategy(strict=True)` -> 0
+  violations across 22 recipes.
+- `check_substrate_dispatch_honors_canary_first_ordering(strict=True)` -> 0
+  violations across 22 recipes.
+- `check_substrate_trainers_declare_autocast_fp16_support(strict=True)` -> 0
+  violations across 14 trainers.
+
+Score-lowering implication:
+
+- Future substrate dispatches now carry enough provider metadata to refuse
+  under-VRAM instances, avoid shared-video contention, and preserve canary-first
+  ordering after the sane_hnerv failure history.
+- The FP16 waiver list is a precise backport queue: replacing each waiver with
+  real canonical autocast support is expected to improve training wall-clock
+  without creating false score authority.

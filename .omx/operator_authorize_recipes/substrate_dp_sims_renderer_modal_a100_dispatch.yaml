@@ -39,6 +39,10 @@ dispatch_blockers:
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 40
+video_input_strategy: per_dispatch_local_copy
+canary_status: post_canary_dependent
+canary_dependency: sane_hnerv
 
 cost_band:
   epochs: 2000

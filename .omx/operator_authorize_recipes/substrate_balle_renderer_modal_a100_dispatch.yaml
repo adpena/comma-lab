@@ -5,6 +5,9 @@ summary: Ballé hyperprior renderer (beta) first-anchor dispatch on Modal A100 (
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 40
+video_input_strategy: per_dispatch_local_copy
+canary_status: canary
 
 cost_band:
   epochs: 2000
