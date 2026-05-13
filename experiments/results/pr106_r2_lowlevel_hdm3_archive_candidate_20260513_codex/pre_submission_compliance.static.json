@@ -158,13 +158,13 @@
       "severity": "error"
     },
     {
-      "details": "runtime_tree_sha256=ad697ee8295cc36c2766e380ed546ef8ed6464cd8eeb2a887ee0e3a93540c0f7",
+      "details": "runtime_tree_sha256=2d5b70d79df3637ffc93ad20c15fb831e57f83f39e9f739c08679cbccee3a6cc",
       "name": "submission_runtime_tree_recorded",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "submission_candidates=['ad697ee8295cc36c2766e380ed546ef8ed6464cd8eeb2a887ee0e3a93540c0f7', 'b1db08fddb3cf63247fb9c7f62409aef68efdedadedc76798d0044db36281dbf'] auth_eval_candidates={}",
+      "details": "submission_candidates=['2d5b70d79df3637ffc93ad20c15fb831e57f83f39e9f739c08679cbccee3a6cc', '96f4ccc8db6f40e21ac46e8998cab1c894334762cffb244a1f4bdf9ac9f1f6df'] auth_eval_candidates={}",
       "name": "submission_runtime_tree_matches_auth_eval",
       "passed": true,
       "severity": "error"
@@ -263,13 +263,13 @@
     "external_dependency_roots": [],
     "files": [
       {
-        "bytes": 644,
+        "bytes": 616,
         "relative_path": "inflate.sh",
         "repo_relative_path": "experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/exact_eval_static_release_surface/inflate.sh",
-        "sha256": "bd37ff9f9ad69e632b554a07f29d4127e8456ab3af0f1a9cf12f6c4f7ea10a15"
+        "sha256": "df7a1241ffe8937cb8c7ae885b3843c4babdafdbcc51a035e2c0c4319449ecc9"
       }
     ],
-    "portable_runtime_tree_sha256_without_custody_files": "b1db08fddb3cf63247fb9c7f62409aef68efdedadedc76798d0044db36281dbf",
+    "portable_runtime_tree_sha256_without_custody_files": "96f4ccc8db6f40e21ac46e8998cab1c894334762cffb244a1f4bdf9ac9f1f6df",
     "repo_local_tac_import_manifest": {
       "discovery": "static_ast_recursive_import_closure",
       "file_count": 0,
@@ -284,7 +284,7 @@
     },
     "runtime_file_count": 1,
     "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/exact_eval_static_release_surface",
-    "runtime_tree_sha256": "ad697ee8295cc36c2766e380ed546ef8ed6464cd8eeb2a887ee0e3a93540c0f7",
+    "runtime_tree_sha256": "2d5b70d79df3637ffc93ad20c15fb831e57f83f39e9f739c08679cbccee3a6cc",
     "schema": "pre_submission_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,

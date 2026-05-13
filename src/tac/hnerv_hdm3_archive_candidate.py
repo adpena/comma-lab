@@ -46,10 +46,7 @@ RUNTIME_ADAPTER_PROOF_FILENAMES = (
 )
 RUNTIME_TREE_CLOSURE_FILENAME = "hdm3_runtime_tree_closure.json"
 HDM3_EXACT_EVAL_LANE_ID = "hnerv_hdm3_q_brotli_split_exact_eval"
-HDM3_RUNTIME_INFLATE = (
-    "experiments/public_runtime_adapters/"
-    "pr106_belt_and_suspenders_adapter/inflate.sh"
-)
+HDM3_RUNTIME_INFLATE = "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh"
 HDM3_UPSTREAM_DIR = "upstream"
 CONTEST_AUTH_EVAL_RUNTIME_MANIFEST_SOURCE = (
     "experiments/contest_auth_eval.py::_runtime_dependency_manifest"
@@ -600,12 +597,14 @@ def build_hdm3_runtime_tree_inflate_output_parity_contract(
         if runtime_manifest
         else 0,
         "runtime_tree_closure_proven": closed,
-        "inflate_output_parity_proof_kind": "adapter_payload_identity_to_public_runtime_input",
+        "inflate_output_parity_proof_kind": (
+            "hdm3_decoder_section_lossless_runtime_support_plus_payload_identity"
+        ),
         "inflate_output_parity_scope": (
             "HDM3 candidate payload normalizes to the exact source legacy "
-            "payload before public PR106 inflate.py consumes it; this is a "
-            "byte identity contract for the runtime input, not a CUDA frame "
-            "or scorer parity result."
+            "payload, and the PR106-R2 PR101-grammar runtime decodes the HDM3 "
+            "decoder section directly. This is a byte identity/runtime decode "
+            "contract, not a CUDA frame or scorer parity result."
         ),
         "inflate_output_parity_proven_by_payload_identity": (
             runtime_adapter_payload_identity.get("payload_identity_proven") is True
@@ -691,10 +690,8 @@ def _runtime_adapter_payload_identity_evidence(
         "schema_version": SCHEMA_VERSION,
         "contract": "hnerv_hdm3_runtime_adapter_payload_identity_evidence_v1",
         "runtime_adapter_module": "tac.hnerv_hdm3_runtime_adapter",
-        "runtime_normalizer_path": (
-            "experiments/public_runtime_adapters/"
-            "pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
-        ),
+        "runtime_decoder_support": "direct_hdm3_decoder_section",
+        "runtime_normalizer_path": "",
         "runtime_inflate_sh": HDM3_RUNTIME_INFLATE,
         "proof_path": repo_relative(proof_path, repo_root) if proof_path is not None else "",
         "proof_sha256": sha256_file(proof_path) if proof_path is not None and proof_path.is_file() else "",
@@ -804,7 +801,7 @@ def _release_surface_inflate_wrapper_text() -> str:
     return (
         "#!/usr/bin/env bash\n"
         "# Static HDM3 exact-eval packet wrapper. Delegates to the reviewed\n"
-        "# PR106 HDM3-normalizing runtime adapter; no score claim is made here.\n"
+        "# PR106-R2 PR101-grammar runtime; no score claim is made here.\n"
         "set -euo pipefail\n"
         'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
         'if REPO_ROOT="$(git -C "$HERE" rev-parse --show-toplevel 2>/dev/null)"; then\n'

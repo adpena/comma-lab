@@ -1,0 +1,22 @@
+{
+  "artifact_names": [
+    "contest_auth_eval.stderr.log",
+    "contest_auth_eval.stdout.log",
+    "modal_cuda_auth_eval_validation.json",
+    "modal_cuda_preflight.json",
+    "provenance.json"
+  ],
+  "avg_posenet_dist": null,
+  "avg_segnet_dist": null,
+  "call_id": "fc-01KRG076Y249V7W7MWT0HHNCH2",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm3_candidate_cuda_20260513_codex",
+  "passed": false,
+  "promotion_eligible": false,
+  "recovered_at_utc": "2026-05-13T06:26:38Z",
+  "result_json": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm3_candidate_cuda_20260513_codex/modal_cuda_auth_eval_result.json",
+  "returncode": 1,
+  "schema_version": "modal_auth_eval_recover_summary_v1",
+  "score_claim": false,
+  "score_recomputed_from_components": null,
+  "status": "recovered"
+}

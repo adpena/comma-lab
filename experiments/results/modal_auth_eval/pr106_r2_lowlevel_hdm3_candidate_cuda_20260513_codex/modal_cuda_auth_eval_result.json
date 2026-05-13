@@ -1,0 +1,49 @@
+{
+  "adjudication_required": true,
+  "allowed_use": [
+    "debug",
+    "no_score_claim",
+    "no_promotion"
+  ],
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "command": [
+    "/usr/local/bin/python",
+    "-u",
+    "/workspace/pact/experiments/contest_auth_eval.py",
+    "--archive",
+    "/tmp/modal_auth_eval/archive.zip",
+    "--inflate-sh",
+    "/workspace/pact/experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+    "--upstream-dir",
+    "/workspace/pact/upstream",
+    "--video-names-file",
+    "/workspace/pact/upstream/public_test_video_names.txt",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/root/modal_auth_eval_work/eval_work",
+    "--inflate-timeout",
+    "1800",
+    "--evaluate-timeout",
+    "1800",
+    "--inflate-device",
+    "auto"
+  ],
+  "diagnostic_only": false,
+  "expected_archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+  "expected_archive_size_bytes": 186615,
+  "inflate_device_policy": "auto",
+  "inflate_sh_rel": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+  "modal_elapsed_seconds": 7.70284555,
+  "passed": false,
+  "promotion_eligible": false,
+  "returncode": 1,
+  "schema_version": 1,
+  "score_claim": false,
+  "scorer_device": "cuda",
+  "submission_dir_zip_sha256": null,
+  "validation_errors": [
+    "contest_auth_eval.json was not produced"
+  ]
+}

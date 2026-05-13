@@ -1,0 +1,22 @@
+{
+  "adjudication_required": true,
+  "app": "comma-auth-eval",
+  "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/pr106_r2_lowlevel_hdm3_archive_candidate.zip",
+  "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+  "archive_size_bytes": 186615,
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "diagnostic_only": false,
+  "inflate_device_policy": "auto",
+  "inflate_env_overrides": [],
+  "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+  "modal_dispatch_mode": "detached_spawn",
+  "non_t4_gpu_diagnostic": false,
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "scorer_device": "cuda",
+  "source_repo_commit": "385e66270f8ced6654c80bfa045a8311baf61634",
+  "submission_dir": null,
+  "submission_dir_zip_sha256": null,
+  "tool": "experiments/modal_auth_eval.py"
+}

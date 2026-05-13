@@ -110,7 +110,10 @@ def decode_packed_decoder(data):
     try:
         raw = brotli.decompress(data)
     except brotli.error as legacy_error:
-        raw = decode_pr101_schema_decoder_raw(data, legacy_error=legacy_error)
+        if data[:4] == b"HDM3":
+            raw = decode_hdm3_decoder_raw(data)
+        else:
+            raw = decode_pr101_schema_decoder_raw(data, legacy_error=legacy_error)
     return decode_packed_decoder_raw(raw)
 
 
@@ -184,6 +187,38 @@ def decode_pr101_schema_decoder_raw(data, *, legacy_error=None):
         raw_parts.append(zigzag_encode_i8(q_original.astype(np.int8)).tobytes())
         scale_parts.append(scale_f32)
     return b"".join(raw_parts + scale_parts)
+
+
+def decode_hdm3_decoder_raw(data):
+    """Decode HDM3 fixed-schema q-Brotli/raw-scale decoder bytes.
+
+    HDM3 is a lossless section recode for the same packed HNeRV decoder
+    contract. It stores the fixed-schema q stream as one Brotli stream and the
+    fp32 scales uncompressed. Unknown or malformed HDM3 bytes fail closed.
+    """
+    if data[:4] != b"HDM3":
+        raise ValueError("invalid HDM3 decoder magic")
+    cursor = 4
+    compressed_len = int.from_bytes(
+        read_exact(data, cursor, 3, "HDM3 q_brotli_len24"),
+        "little",
+    )
+    cursor += 3
+    compressed = read_exact(data, cursor, compressed_len, "HDM3 q_brotli")
+    cursor += compressed_len
+    scale_len = 4 * len(PACKED_STATE_SCHEMA)
+    scale_stream = read_exact(data, cursor, scale_len, "HDM3 scale_stream")
+    cursor += scale_len
+    if cursor != len(data):
+        raise ValueError("HDM3 decoder has trailing bytes")
+    try:
+        q_stream = brotli.decompress(compressed)
+    except brotli.error as exc:
+        raise ValueError(f"HDM3 q stream brotli decode failed: {exc}") from exc
+    expected_q_len = sum(int(np.prod(shape)) for _, shape in PACKED_STATE_SCHEMA)
+    if len(q_stream) != expected_q_len:
+        raise ValueError("HDM3 q stream length mismatch")
+    return q_stream + scale_stream
 
 
 def decompress_concatenated_brotli_streams(payload, n_streams):

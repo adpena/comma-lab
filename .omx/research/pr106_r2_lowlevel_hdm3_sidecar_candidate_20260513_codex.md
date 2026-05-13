@@ -99,3 +99,36 @@ profile.
   - passed
 - `.venv/bin/python scripts/pre_submission_compliance_check.py --submission-dir experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/exact_eval_static_release_surface --archive experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive.zip --archive-manifest-json experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive_manifest.json --expect-single-member 0.bin --expected-archive-sha256 8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093 --expected-archive-size-bytes 186615 --public-scan-path experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/exact_eval_static_release_surface --json-out experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/pre_submission_compliance.static.json --strict`
   - passed
+
+## 2026-05-13 Runtime Mismatch And Fix
+
+An initial Modal T4 dispatch used the wrong runtime:
+
+- Lane id: `pr106_r2_lowlevel_hdm3_sidecar_exact_cuda`
+- Instance/job id: `pr106_r2_lowlevel_hdm3_candidate_cuda_20260513_codex`
+- Modal call id: `fc-01KRG076Y249V7W7MWT0HHNCH2`
+- Archive SHA-256:
+  `8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093`
+- Runtime used:
+  `experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh`
+- Result: failed closed, no score claim, no promotion.
+- Failure class: `archive/runtime grammar mismatch`.
+
+The failure is not a candidate score result. The PR106-R2 lowlevel source
+frontier was evaluated with
+`submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh`, not the public
+PR106 belt-and-suspenders parser. The wrong parser reached
+`brotli.error: decoder failed` while reading the incompatible metadata grammar.
+
+Follow-up fix:
+
+- `submissions/pr106_latent_sidecar_r2_pr101_grammar/src/codec.py` now decodes
+  HDM3 fixed-schema q-Brotli/raw-scale decoder sections directly.
+- The candidate release-surface wrapper now delegates to
+  `submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh`.
+- Regression test:
+  `src/tac/tests/test_submission_pr101_decoder_adapter.py::test_pr106_r2_pr101_runtime_accepts_hdm3_decoder_section`
+  proves legacy Brotli and HDM3 sections reconstruct identical decoder state
+  dictionaries under the exact PR101-grammar runtime.
+- The corrected exact-eval command must use the PR101-grammar runtime via
+  `--submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh`.

@@ -9,7 +9,7 @@
   "dispatch_attempted": false,
   "exact_cuda_auth_eval_required_before_score_claim": true,
   "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
-  "runtime_adapter": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+  "runtime_adapter": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh",
   "runtime_adapter_payload_identity_proof_required": true,
   "schema": "hnerv_hdm3_static_release_surface_archive_manifest_v1",
   "schema_version": 1,

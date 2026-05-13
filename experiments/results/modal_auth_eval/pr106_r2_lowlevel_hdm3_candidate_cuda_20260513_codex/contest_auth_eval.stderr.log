@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/workspace/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.py", line 68, in <module>
+    inflate(sys.argv[1], sys.argv[2])
+  File "/workspace/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.py", line 30, in inflate
+    decoder_sd, latents, meta = parse_archive(archive_bytes)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/codec.py", line 295, in parse_archive
+    meta = json.loads(brotli.decompress(buf.read(meta_len)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+brotli.error: brotli: decoder failed
+Traceback (most recent call last):
+  File "/workspace/pact/experiments/contest_auth_eval.py", line 1729, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/workspace/pact/experiments/contest_auth_eval.py", line 1665, in main
+    inflate_elapsed_seconds = _run_inflate(
+                              ^^^^^^^^^^^^^
+  File "/workspace/pact/experiments/contest_auth_eval.py", line 1024, in _run_inflate
+    raise RuntimeError(f"[inflate] FAILED with returncode={result.returncode}")
+RuntimeError: [inflate] FAILED with returncode=1

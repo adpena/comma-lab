@@ -1,0 +1,10 @@
+[contest_auth_eval] provenance saved: /root/modal_auth_eval_work/eval_work/provenance.json
+[contest_auth_eval] archive sha256: 8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093
+[contest_auth_eval] extracted 1 member(s): ['0.bin']
+[contest_auth_eval] archive members validated against whitelist
+[inflate] cmd: bash /workspace/pact/experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh /root/modal_auth_eval_work/eval_work/extracted /root/modal_auth_eval_work/eval_work/inflated /workspace/pact/upstream/public_test_video_names.txt
+[inflate] timeout: 1800s (30.0 min)
+[pr106-adapter] brotli=1.2.0
+[pr106-adapter] hdm3/legacy bridge proof /root/modal_auth_eval_work/eval_work/inflated/.0.hdm3_legacy_payload.proof.json
+[pr106-adapter] inflating /root/modal_auth_eval_work/eval_work/inflated/.0.hdm3_legacy_payload.bin -> /root/modal_auth_eval_work/eval_work/inflated/0.raw
+[inflate] returncode=1 elapsed=3.4s

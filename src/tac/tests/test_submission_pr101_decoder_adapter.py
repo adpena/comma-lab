@@ -8,7 +8,11 @@ import numpy as np
 import pytest
 import torch
 
-from tac.hnerv_decoder_recode import PACKED_STATE_SCHEMA, parse_packed_decoder_brotli
+from tac.hnerv_decoder_recode import (
+    PACKED_STATE_SCHEMA,
+    encode_hdm3_q_brotli_split_fixture,
+    parse_packed_decoder_brotli,
+)
 from tac.hnerv_pr101_schema_packer import encode_pr101_schema_split_fixture
 
 REPO = Path(__file__).resolve().parents[3]
@@ -61,3 +65,30 @@ def test_submission_decoder_adapter_accepts_legacy_and_pr101_schema(
         codec.decode_packed_decoder(b"not-a-decoder")
     with pytest.raises(ValueError, match="bad packed decoder payload"):
         codec.decode_packed_decoder(brotli.compress(b"bad raw", quality=5))
+
+
+def test_pr106_r2_pr101_runtime_accepts_hdm3_decoder_section() -> None:
+    codec = _load_codec(
+        REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/codec.py",
+        "pr106_r2_pr101_codec_hdm3_adapter",
+    )
+    raw = _synthetic_decoder_raw()
+    legacy_decoder = brotli.compress(raw, quality=5)
+    parsed = parse_packed_decoder_brotli(legacy_decoder)
+    hdm3_decoder, _stats = encode_hdm3_q_brotli_split_fixture(parsed)
+
+    legacy_sd = codec.decode_packed_decoder(legacy_decoder)
+    hdm3_sd = codec.decode_packed_decoder(hdm3_decoder)
+
+    assert set(hdm3_sd) == set(legacy_sd)
+    for name in legacy_sd:
+        assert torch.equal(hdm3_sd[name], legacy_sd[name]), name
+
+    bad_hdm3 = (
+        b"HDM3"
+        + len(brotli.compress(b"x")).to_bytes(3, "little")
+        + brotli.compress(b"x")
+        + bytes(4 * len(PACKED_STATE_SCHEMA))
+    )
+    with pytest.raises(ValueError, match="HDM3 q stream length mismatch"):
+        codec.decode_packed_decoder(bad_hdm3)
