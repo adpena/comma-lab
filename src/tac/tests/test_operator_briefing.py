@@ -82,6 +82,7 @@ def test_briefing_skip_reconciler_omits_phase3():
 def test_briefing_json_composite_has_all_three_keys():
     proc = _run("--json", "--top", "3")
     out = json.loads(proc.stdout)
+    assert out["target_score"] == 0.19
     assert out["dispatch_claim_summary"]["schema"] == "pact.dispatch_claim_summary.v1"
     assert "provider_readiness" in out
     assert out["provider_readiness"].get("score_claim") is False
@@ -89,6 +90,8 @@ def test_briefing_json_composite_has_all_three_keys():
     assert "dashboard" in out
     assert "reconciler" in out
     assert "exact_eval_packets" in out
+    assert "active_supplementary_lanes" in out
+    assert out["active_supplementary_lanes"] == []
     assert "exact_ready_queue_audit" in out
     assert out["exact_ready_queue_audit"]["schema"] == (
         "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
@@ -99,6 +102,9 @@ def test_briefing_json_composite_has_all_three_keys():
         ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
     )
     assert "non_dispatchable_readiness_artifacts" in out
+    supplementary_rows = {row["lane_id"]: row for row in out["supplementary_lanes"]}
+    assert supplementary_rows["lane_pr106_latent_sidecar"]["score_target_routing"]["active"] is False
+    assert supplementary_rows["lane_pr106_latent_sidecar"]["score_target_routing"]["status"] == "above_target"
     row = out["non_dispatchable_readiness_artifacts"][0]
     assert row["kind"] == "pr91_hpm1_readiness_bundle"
     assert row["ready_for_exact_eval_dispatch"] is False
@@ -218,6 +224,18 @@ def test_briefing_json_composite_has_all_three_keys():
         ]
     else:
         assert hlm1["operator_next_steps"]["schema"] == "hnerv_hlm1_operator_next_steps_v1"
+
+
+def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
+    proc = _run("--skip-dashboard", "--skip-reconciler", "--top", "3")
+    assert "lane_pr106_latent_sidecar —" not in proc.stdout
+    assert "lane_pr106_yshift_sidechannel —" not in proc.stdout
+    assert "hidden above target 0.1900" in proc.stdout
+    assert "lane_pr106_stacked —" in proc.stdout
+
+    shown = _run("--skip-dashboard", "--skip-reconciler", "--show-above-target", "--top", "3")
+    assert "lane_pr106_latent_sidecar —" in shown.stdout
+    assert "target routing: above_target" in shown.stdout
 
 
 def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
