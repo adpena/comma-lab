@@ -76,20 +76,36 @@ Usage (full; CUDA-required; threads from operator wrapper)::
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
-import random
 import shutil
 import subprocess
 import sys
 import time
 import zipfile
 from dataclasses import asdict
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+# Canonical substrate-trainer helpers per CANON-DEDUP-1 (commit ac1cfc41).
+# Per CLAUDE.md "Beauty, simplicity, and developer experience" + the
+# 2026-05-13 dedup audit: substrate-agnostic byte-faithful utilities live
+# in tac.substrates._shared.trainer_skeleton.
+#
+# NOTE: this trainer is DEFERRED-research-only per WAVE-PHASE-B2-BUILD
+# landing (dense WLV1 grammar exceeds contest byte floor; sparse subband
+# compiler not yet landed). The helper migration is a pure code cleanup;
+# it does NOT affect the deferred-status semantics.
+from tac.substrates._shared.trainer_skeleton import (
+    decode_real_pairs as _canonical_decode_real_pairs,
+    device_or_die as _canonical_device_or_die,
+    git_head_sha as _canonical_git_head_sha,
+    pin_seeds as _canonical_pin_seeds,
+    sha256_bytes as _canonical_sha256_bytes,
+    torch_version_string as _canonical_torch_version_string,
+    utc_now_iso as _canonical_utc_now_iso,
+)
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -107,6 +123,7 @@ EVAL_HW = (384, 512)
 CAMERA_HW = (874, 1164)
 N_PAIRS_FULL = 600
 CONTEST_NORMALIZER = 37_545_489.0
+SUBSTRATE_TAG = "wavelet"
 
 
 # ---------------------------------------------------------------------------
@@ -315,67 +332,18 @@ def _build_parser() -> argparse.ArgumentParser:
 # Video decode (real frame pairs from upstream/videos/0.mkv)
 # ---------------------------------------------------------------------------
 
-def _load_upstream_yuv420_to_rgb():
-    import importlib.util
-
-    frame_utils_path = REPO_ROOT / "upstream" / "frame_utils.py"
-    if not frame_utils_path.is_file():
-        raise FileNotFoundError(
-            f"upstream/frame_utils.py not found at {frame_utils_path}; "
-            "verify --upstream-dir is correct."
-        )
-    spec = importlib.util.spec_from_file_location(
-        "pact_wavelet_upstream_frame_utils", frame_utils_path
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"unable to load upstream frame_utils.py from {frame_utils_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.yuv420_to_rgb
-
-
 def _decode_real_pairs(video_path: Path, *, n_pairs: int, max_pairs: int | None = None):
-    """Decode real contest pairs at EVAL_HW (384, 512). Returns (N, 2, 3, 384, 512)."""
-    import torch
-    import torch.nn.functional as F
+    """Decode real contest pairs at EVAL_HW (384, 512). Returns (N, 2, 3, 384, 512).
 
-    if not video_path.is_file():
-        raise FileNotFoundError(
-            f"real target video not found: {video_path}. Non-smoke training "
-            "requires upstream/videos/0.mkv."
-        )
-    try:
-        import av  # type: ignore[import-not-found]
-    except Exception as exc:
-        raise RuntimeError(
-            "pyav (`av`) is required for non-smoke wavelet training; "
-            "run `uv pip install av`"
-        ) from exc
-
-    yuv420_to_rgb = _load_upstream_yuv420_to_rgb()
-    target_pairs = n_pairs if max_pairs is None else min(n_pairs, max_pairs)
-    frames_needed = target_pairs * 2
-    frames_chw: list[torch.Tensor] = []
-    container = av.open(str(video_path))
-    try:
-        stream = container.streams.video[0]
-        for frame in container.decode(stream):
-            rgb_hwc = yuv420_to_rgb(frame)
-            rgb_chw = rgb_hwc.permute(2, 0, 1).unsqueeze(0).float()
-            resized = F.interpolate(
-                rgb_chw, size=EVAL_HW, mode="bilinear", align_corners=False
-            )
-            frames_chw.append(resized.squeeze(0).contiguous())
-            if len(frames_chw) >= frames_needed:
-                break
-    finally:
-        container.close()
-    if len(frames_chw) < frames_needed:
-        raise RuntimeError(
-            f"{video_path} yielded {len(frames_chw)} frame(s), need {frames_needed}"
-        )
-    stacked = torch.stack(frames_chw[:frames_needed])
-    return torch.stack([stacked[0::2], stacked[1::2]], dim=1)
+    Thin delegator to the canonical helper landed by CANON-DEDUP-1.
+    """
+    return _canonical_decode_real_pairs(
+        video_path,
+        n_pairs=n_pairs,
+        max_pairs=max_pairs,
+        substrate_tag=SUBSTRATE_TAG,
+        repo_root=REPO_ROOT,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -576,67 +544,27 @@ def _build_archive_zip(archive_zip_path: Path, *, bin_bytes: bytes, submission_d
 
 
 # ---------------------------------------------------------------------------
-# Utilities
+# Utilities (thin delegators to tac.substrates._shared.trainer_skeleton)
 # ---------------------------------------------------------------------------
 
 def _utc_now_iso() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _canonical_utc_now_iso()
 
 
 def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+    return _canonical_sha256_bytes(data)
 
 
 def _git_head_sha() -> str:
-    try:
-        out = subprocess.run(
-            ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
-            capture_output=True, text=True, check=False, timeout=5,
-        )
-        if out.returncode == 0:
-            return out.stdout.strip()
-    except Exception:
-        pass
-    return "<unknown>"
+    return _canonical_git_head_sha(REPO_ROOT)
 
 
 def _pin_seeds(seed: int) -> None:
-    import torch
-
-    random.seed(seed)
-    try:
-        import numpy as np
-
-        np.random.seed(seed)
-    except Exception:
-        pass
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-    try:
-        torch.use_deterministic_algorithms(True, warn_only=True)
-    except Exception:
-        pass
+    _canonical_pin_seeds(seed)
 
 
 def _device_or_die(name: str, *, smoke: bool):
-    import torch
-
-    if name == "cpu":
-        if not smoke:
-            raise SystemExit(
-                "[wavelet] --device cpu is permitted only with --smoke per "
-                "CLAUDE.md 'MPS auth eval is NOISE' + 'EMA — non-negotiable' "
-                "+ full-training-needs-CUDA convention."
-            )
-        return torch.device("cpu")
-    if name == "cuda":
-        if not torch.cuda.is_available():
-            raise SystemExit(
-                "[wavelet] --device cuda requested but cuda not available"
-            )
-        return torch.device("cuda")
-    raise SystemExit(f"[wavelet] unknown --device {name!r}")
+    return _canonical_device_or_die(name, smoke=smoke, substrate_tag=SUBSTRATE_TAG)
 
 
 # ---------------------------------------------------------------------------
@@ -1186,12 +1114,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
 
 def _torch_version_string() -> str:
-    try:
-        import torch
-
-        return f"{torch.__version__}"
-    except Exception:
-        return "<unknown>"
+    return _canonical_torch_version_string()
 
 
 def main(argv: list[str] | None = None) -> int:
