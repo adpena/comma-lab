@@ -17,8 +17,17 @@ if str(REPO / "tools") not in sys.path:
 
 import pr106_entropy_floor_probe as probe  # type: ignore  # noqa: E402
 
-from tac.hnerv_decoder_recode import PACKED_STATE_SCHEMA  # noqa: E402
+from tac.hnerv_decoder_recode import (  # noqa: E402
+    PACKED_STATE_SCHEMA,
+    encode_hdm4_q_brotli_split_fixture,
+    parse_packed_decoder_brotli,
+)
 from tac.hnerv_lowlevel_packer import write_stored_single_member_zip  # noqa: E402
+from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106SidecarPacket,
+    emit_pr106_sidecar_packet,
+)
 
 
 def test_markov_floors_capture_deterministic_alternation() -> None:
@@ -95,6 +104,62 @@ def test_synthetic_pr106_archive_report_has_custody_and_no_score_claim(tmp_path:
     assert claim["verdict"] == (
         "pr101_only_not_transferable_to_pr106_without_pr106_specific_codec_and_exact_eval"
     )
+
+
+def test_pr106_sidecar_wrapper_archive_is_unwrapped_with_outer_custody(tmp_path: Path) -> None:
+    inner_payload = _synthetic_payload()
+    sidecar_payload = b"\x01\x02\x03\x04"
+    framing_meta = b"\x00\x00\x00\x00\x00\x00"
+    wrapper_payload = emit_pr106_sidecar_packet(
+        PR106SidecarPacket(
+            format_id=PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+            pr106_bytes=inner_payload,
+            sidecar_payload=sidecar_payload,
+            framing_meta=framing_meta,
+        )
+    )
+    archive = tmp_path / "archive.zip"
+    write_stored_single_member_zip(archive, member_name="0.bin", payload=wrapper_payload)
+
+    report = probe.build_report_from_archive(
+        archive,
+        pr101_reference_archive_bytes=None,
+        active_floor_archive_bytes=None,
+        active_floor_label=None,
+    )
+
+    assert report["score_claim"] is False
+    assert report["source"]["outer_payload_magic"] == "pr106_sidecar_wrapper"
+    assert report["source"]["payload_magic"] == "ff_packed_hnerv"
+    assert report["source"]["outer_payload_bytes"] == len(wrapper_payload)
+    assert report["source"]["payload_bytes"] == len(inner_payload)
+    assert report["source"]["sidecar_format_id"] == PR106_SIDECAR_FORMAT_PR101_GRAMMAR
+    assert report["source"]["sidecar_payload_bytes"] == len(sidecar_payload)
+    assert report["source"]["framing_meta_bytes"] == len(framing_meta)
+    assert report["source"]["wrapper_unwrapped_for_entropy_model"] is True
+
+
+def test_hdm4_decoder_section_is_decoded_for_entropy_probe(tmp_path: Path) -> None:
+    raw = _synthetic_decoder_raw()
+    decoder_brotli = brotli.compress(raw, quality=5)
+    parsed = parse_packed_decoder_brotli(decoder_brotli)
+    decoder_hdm4, _stats = encode_hdm4_q_brotli_split_fixture(parsed)
+    latents_brotli = brotli.compress(_synthetic_fixed_latents_raw(), quality=5)
+    payload = b"\xff" + len(decoder_hdm4).to_bytes(3, "little") + decoder_hdm4 + latents_brotli
+    archive = tmp_path / "archive.zip"
+    write_stored_single_member_zip(archive, member_name="0.bin", payload=payload)
+
+    report = probe.build_report_from_archive(
+        archive,
+        pr101_reference_archive_bytes=None,
+        active_floor_archive_bytes=None,
+        active_floor_label=None,
+    )
+
+    assert report["source"]["decoder_section_codec"] == "hdm4_q_brotli_split"
+    assert report["source"]["decoder_raw_bytes"] == len(raw)
+    assert report["groups"][0]["current_storage_label"] == "decoder_section_encoded"
+    assert report["score_claim"] is False
 
 
 def test_pr106_entropy_floor_probe_cli_writes_json_and_markdown(tmp_path: Path) -> None:

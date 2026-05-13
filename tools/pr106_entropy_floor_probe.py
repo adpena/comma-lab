@@ -35,6 +35,8 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.hnerv_decoder_recode import (  # noqa: E402
     PACKED_STATE_SCHEMA,
+    decode_hdm3_q_brotli_split_fixture,
+    decode_hdm4_q_brotli_split_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_lowlevel_packer import (  # noqa: E402
@@ -42,6 +44,10 @@ from tac.hnerv_lowlevel_packer import (  # noqa: E402
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
     sha256_bytes,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_SIDECAR_MAGIC,
+    parse_pr106_sidecar_packet,
 )
 
 TOOL = "tools/pr106_entropy_floor_probe.py"
@@ -419,13 +425,15 @@ def build_report_from_payload(
     active_floor_archive_bytes: int | None = None,
     active_floor_label: str | None = None,
 ) -> dict[str, Any]:
+    payload, source = _unwrap_pr106_sidecar_if_present(payload, source)
     try:
         packed = parse_ff_packed_brotli_hnerv(payload)
     except HnervLowlevelPackError as exc:
         raise ValueError(f"payload is not PR106 ff-packed HNeRV: {exc}") from exc
-    decoder_raw = brotli.decompress(packed.decoder_packed_brotli)
+    parsed_decoder, decoder_raw, decoder_section_codec = _decode_decoder_section(
+        packed.decoder_packed_brotli
+    )
     latents_raw = brotli.decompress(packed.latents_and_sidecar_brotli)
-    parsed_decoder = parse_packed_decoder_brotli(packed.decoder_packed_brotli)
 
     decoder_streams = [
         SymbolStream(
@@ -451,7 +459,7 @@ def build_report_from_payload(
             "decoder_q_zz_plus_f32_scales",
             decoder_streams,
             current_storage_bytes=len(packed.decoder_packed_brotli),
-            current_storage_label="decoder_packed_brotli",
+            current_storage_label="decoder_section_encoded",
         ),
         build_group(
             "fixed_latents_delta_zz_plus_fp16_meta",
@@ -476,6 +484,7 @@ def build_report_from_payload(
         "header_sha256": sha256_bytes(packed.header),
         "decoder_section_bytes": len(packed.decoder_packed_brotli),
         "decoder_section_sha256": sha256_bytes(packed.decoder_packed_brotli),
+        "decoder_section_codec": decoder_section_codec,
         "decoder_raw_bytes": len(decoder_raw),
         "decoder_raw_sha256": sha256_bytes(decoder_raw),
         "latents_section_bytes": len(packed.latents_and_sidecar_brotli),
@@ -490,6 +499,47 @@ def build_report_from_payload(
         active_floor_archive_bytes=active_floor_archive_bytes,
         active_floor_label=active_floor_label,
     )
+
+
+def _decode_decoder_section(decoder_section: bytes) -> tuple[Any, bytes, str]:
+    """Decode current frontier decoder-section variants into raw records."""
+
+    if decoder_section.startswith(b"HDM3"):
+        parsed = decode_hdm3_q_brotli_split_fixture(decoder_section)
+        return parsed, parsed.to_raw(), "hdm3_q_brotli_split"
+    if decoder_section.startswith(b"HDM4"):
+        parsed = decode_hdm4_q_brotli_split_fixture(decoder_section)
+        return parsed, parsed.to_raw(), "hdm4_q_brotli_split"
+    parsed = parse_packed_decoder_brotli(decoder_section)
+    return parsed, parsed.to_raw(), "brotli_packed_decoder_raw"
+
+
+def _unwrap_pr106_sidecar_if_present(
+    payload: bytes,
+    source: dict[str, Any],
+) -> tuple[bytes, dict[str, Any]]:
+    """Preserve PR106 wrapper custody while modeling inner HNeRV streams."""
+
+    if not payload or payload[0] != PR106_SIDECAR_MAGIC:
+        return payload, source
+
+    packet = parse_pr106_sidecar_packet(payload)
+    framing_meta = packet.framing_meta or b""
+    return packet.pr106_bytes, {
+        **source,
+        "outer_payload_magic": "pr106_sidecar_wrapper",
+        "outer_payload_bytes": len(payload),
+        "outer_payload_sha256": sha256_bytes(payload),
+        "sidecar_format_id": packet.format_id,
+        "sidecar_kind": packet.sidecar_kind,
+        "sidecar_payload_bytes": len(packet.sidecar_payload),
+        "sidecar_payload_sha256": sha256_bytes(packet.sidecar_payload),
+        "framing_meta_bytes": len(framing_meta),
+        "framing_meta_sha256": sha256_bytes(framing_meta) if framing_meta else None,
+        "pr106_inner_payload_bytes": len(packet.pr106_bytes),
+        "pr106_inner_payload_sha256": sha256_bytes(packet.pr106_bytes),
+        "wrapper_unwrapped_for_entropy_model": True,
+    }
 
 
 def build_report_from_state_dict(
