@@ -36,5 +36,5 @@ exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --smoke-gpu "${GRAYSCALE_LUT_SMOKE_GPU:-T4}" \
     --smoke-timeout-hours "${GRAYSCALE_LUT_SMOKE_TIMEOUT_HOURS:-1.0}" \
     --operator-handle "claude:operator_authorize_substrate_grayscale_lut_modal_a100_dispatch" \
-    "${SMOKE_ARGS[@]}" \
+    ${SMOKE_ARGS[@]+"${SMOKE_ARGS[@]}"} \
     "$@"

@@ -45,5 +45,5 @@ exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --smoke-gpu "${BALLE_RENDERER_SMOKE_GPU:-T4}" \
     --smoke-timeout-hours "${BALLE_RENDERER_SMOKE_TIMEOUT_HOURS:-1.0}" \
     --operator-handle "claude:operator_authorize_substrate_balle_renderer_modal_a100_dispatch" \
-    "${SMOKE_ARGS[@]}" \
+    ${SMOKE_ARGS[@]+"${SMOKE_ARGS[@]}"} \
     "$@"

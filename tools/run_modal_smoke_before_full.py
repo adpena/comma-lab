@@ -406,6 +406,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Skip smoke entirely (operator override; defeats the gate).",
     )
     parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Resolve recipe and print planned smoke/full dispatches without spawning Modal work.",
+    )
+    parser.add_argument(
         "--repo-root",
         type=Path,
         default=_REPO_ROOT,
@@ -417,6 +422,23 @@ def main(argv: list[str] | None = None) -> int:
     recipe_path = _resolve_recipe_path(args.recipe, repo_root)
     recipe_text = recipe_path.read_text()
     epoch_env_var = _epoch_env_var_from_recipe(recipe_text)
+
+    if args.dry_run:
+        print("[smoke-before-full] --dry-run; no Modal dispatch")
+        print(f"[smoke-before-full] recipe={recipe_path}")
+        print(f"[smoke-before-full] epoch_env_var={epoch_env_var or '<none>'}")
+        print(
+            "[smoke-before-full] would dispatch SMOKE: "
+            f"recipe={args.recipe} smoke_epochs={args.smoke_epochs} "
+            f"smoke_gpu={args.smoke_gpu} timeout_hours={args.smoke_timeout_hours}"
+        )
+        if args.smoke_only:
+            print("[smoke-before-full] would stop after SMOKE because --smoke-only is set")
+        elif args.full_only:
+            print("[smoke-before-full] would dispatch FULL only because --full-only is set")
+        else:
+            print("[smoke-before-full] would dispatch FULL only after SMOKE GREEN")
+        return 0
 
     if args.full_only:
         print(

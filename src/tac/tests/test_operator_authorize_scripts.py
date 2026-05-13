@@ -85,6 +85,13 @@ GPU_DISPATCH_SCRIPTS = (
     "operator_authorize_t10_ib_lagrangian_dispatch.sh",
 )
 
+SMOKE_BEFORE_FULL_SCRIPTS = tuple(
+    sorted(
+        p.name
+        for p in _SCRIPTS_DIR.glob("operator_authorize_substrate_*_modal_a100_dispatch.sh")
+    )
+)
+
 
 @pytest.mark.parametrize("name", OPERATOR_AUTHORIZE_SCRIPTS)
 def test_script_exists(name: str):
@@ -250,6 +257,30 @@ def test_github_push_aborts_on_no_input():
         or "FATAL" in result.stdout
         or "FATAL" in result.stderr
     )
+
+
+@pytest.mark.parametrize("name", SMOKE_BEFORE_FULL_SCRIPTS)
+def test_smoke_before_full_wrappers_dry_run_without_smoke_flags(name: str) -> None:
+    """Substrate wrappers must dry-run cleanly even with empty optional flag arrays.
+
+    macOS ships bash 3.2, where expanding an empty array under ``set -u`` raises
+    ``unbound variable``. These wrappers are common score-lowering actuators, so
+    the dry-run path must fail before GPU spend only for real dispatch blockers.
+    """
+    assert SMOKE_BEFORE_FULL_SCRIPTS, "expected at least one substrate wrapper"
+    p = _SCRIPTS_DIR / name
+    result = subprocess.run(
+        ["bash", str(p), "--dry-run"],
+        capture_output=True,
+        text=True,
+        cwd=_REPO_ROOT,
+        timeout=30,
+    )
+    assert result.returncode == 0, (
+        f"{name} dry-run failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    assert "--dry-run; no Modal dispatch" in result.stdout
+    assert "would dispatch" in result.stdout
 
 
 def test_t10_dispatch_aborts_on_no_input():

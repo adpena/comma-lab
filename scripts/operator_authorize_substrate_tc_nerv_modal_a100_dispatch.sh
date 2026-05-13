@@ -35,5 +35,5 @@ exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --smoke-gpu "${TC_NERV_SMOKE_GPU:-T4}" \
     --smoke-timeout-hours "${TC_NERV_SMOKE_TIMEOUT_HOURS:-1.0}" \
     --operator-handle "claude:operator_authorize_substrate_tc_nerv_modal_a100_dispatch" \
-    "${SMOKE_ARGS[@]}" \
+    ${SMOKE_ARGS[@]+"${SMOKE_ARGS[@]}"} \
     "$@"

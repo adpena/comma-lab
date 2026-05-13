@@ -2625,6 +2625,7 @@ def preflight_all(
         # will fail strict here.
         _parallel.submit("check_no_mps_fallback_default", lambda: check_no_mps_fallback_default(strict=True, verbose=False))
         _parallel.submit("check_shell_set_e_present", lambda: check_shell_set_e_present(strict=True, verbose=False))
+        _parallel.submit("check_shell_empty_arrays_guarded_under_set_u", lambda: check_shell_empty_arrays_guarded_under_set_u(strict=True, verbose=False))
         _parallel.submit("check_no_shell_zip_binary", lambda: check_no_shell_zip_binary(strict=True, verbose=False))
         _parallel.submit("check_no_pipefail_grep_q_trap", lambda: check_no_pipefail_grep_q_trap(strict=True, verbose=False))
         _parallel.submit("check_no_pipefail_tee_pipestatus_loss", lambda: check_no_pipefail_tee_pipestatus_loss(strict=True, verbose=False))
@@ -2682,6 +2683,13 @@ def preflight_all(
             "check_shell_set_e_present",
             "[set-e-required]",
             lambda: check_shell_set_e_present(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_shell_empty_arrays_guarded_under_set_u",
+            "[shell-empty-array-guard]",
+            lambda: check_shell_empty_arrays_guarded_under_set_u(
+                strict=True, verbose=verbose,
+            ),
         )
         _parallel.run(
             "check_no_shell_zip_binary",
@@ -9687,6 +9695,108 @@ def check_shell_set_e_present(
             "SHELL `set -e` MISSING violations:\n"
             + "\n".join(f"  - {v}" for v in violations)
             + "\n\nUse `set -euo pipefail` (feedback_zip_dep_bootstrap_trap)."
+        )
+    return violations
+
+
+# ── Catalog #189: empty bash arrays under set -u ─────────────────────────────
+
+_SHELL_ARRAY_EXPANSION_RE = re.compile(
+    r'"\$\{(?P<name>[A-Za-z_][A-Za-z0-9_]*)\[@\]\}"'
+)
+
+
+def _shell_text_enables_nounset(text: str) -> bool:
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if not stripped.startswith("set "):
+            continue
+        no_comment = stripped.split("#", 1)[0].strip()
+        m = re.match(r"set\s+-([a-zA-Z]+)", no_comment)
+        if m and "u" in m.group(1):
+            return True
+        if "nounset" in no_comment:
+            return True
+    return False
+
+
+def _scan_shell_for_unguarded_empty_array_expansion(
+    path: Path,
+    repo_root: Path,
+) -> list[str]:
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    if not _shell_text_enables_nounset(text):
+        return []
+
+    violations: list[str] = []
+    for i, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if "SHELL_EMPTY_ARRAY_OK:" in line:
+            continue
+        for match in _SHELL_ARRAY_EXPANSION_RE.finditer(line):
+            name = match.group("name")
+            # Bash 3.2 on macOS raises "unbound variable" for
+            # `"${ARR[@]}"` when ARR is declared empty and nounset is enabled.
+            # The guarded form `${ARR[@]+"${ARR[@]}"}` expands to zero argv
+            # entries when empty and preserves argv boundaries when populated.
+            if f"{name}[@]+" in line:
+                continue
+            violations.append(
+                f"{rel}:{i}: unguarded empty-array expansion "
+                f"`\"${{{name}[@]}}\"` under `set -u`. macOS bash 3.2 "
+                f"raises `unbound variable` when {name} is empty. Use "
+                f"`${{{name}[@]+\"${{{name}[@]}}\"}}` or add "
+                f"`# SHELL_EMPTY_ARRAY_OK:<reason>` if the array is proven "
+                f"non-empty."
+            )
+    return violations
+
+
+def check_shell_empty_arrays_guarded_under_set_u(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #189: refuse substrate-wrapper empty arrays under nounset.
+
+    The score-lowering substrate wrappers use ``set -euo pipefail`` and build
+    optional flag arrays. On macOS bash 3.2, expanding ``"${ARR[@]}"`` when the
+    array is declared but empty raises ``unbound variable``. ``bash -n`` cannot
+    catch this runtime trap, so preflight scans shell bodies directly.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    scripts_dir = root / "scripts"
+    shell_files = sorted(
+        scripts_dir.glob("operator_authorize_substrate_*_modal_a100_dispatch.sh")
+    ) if scripts_dir.is_dir() else []
+    for sh in shell_files:
+        n_scanned += 1
+        violations.extend(_scan_shell_for_unguarded_empty_array_expansion(sh, root))
+
+    if verbose and violations:
+        print(
+            f"  [shell-empty-array-guard] {len(violations)} violation(s) "
+            f"across {n_scanned} files:"
+        )
+        for v in violations:
+            print(f"    - {v}")
+    elif verbose:
+        print(f"  [shell-empty-array-guard] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SHELL EMPTY ARRAY EXPANSION UNDER `set -u`:\n"
+            + "\n".join(f"  - {v}" for v in violations)
+            + "\n\nGuard optional arrays as `${ARR[@]+\"${ARR[@]}\"}` so "
+            "dry-run paths fail only for real dispatch blockers."
         )
     return violations
 
