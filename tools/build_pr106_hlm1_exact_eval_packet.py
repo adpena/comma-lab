@@ -45,18 +45,18 @@ DEFAULT_PACKETIR_IDENTITY = DEFAULT_RESULT_DIR / "packetir_identity.json"
 DEFAULT_RUNTIME_CONSUMPTION = DEFAULT_RESULT_DIR / "runtime_decode_consumption.json"
 DEFAULT_HLM1_RUNTIME_CONSUMPTION = DEFAULT_RESULT_DIR / "hlm1_runtime_consumption.json"
 DEFAULT_PREFIX_PARITY = DEFAULT_RESULT_DIR / "same_runtime_prefix_parity.json"
-DEFAULT_STATIC_COMPLIANCE = DEFAULT_RESULT_DIR / "pre_submission_compliance.static_clean.json"
 DEFAULT_PUBLIC_STATIC_COMPLIANCE = (
     DEFAULT_RESULT_DIR / "pre_submission_compliance.static_clean.public.json"
 )
+DEFAULT_STATIC_COMPLIANCE = DEFAULT_PUBLIC_STATIC_COMPLIANCE
 DEFAULT_RUNTIME_MANIFEST = DEFAULT_RESULT_DIR / "runtime_tree_manifest.json"
 DEFAULT_MODAL_TRANSPORT = DEFAULT_RESULT_DIR / "modal_submission_dir_transport.json"
 DEFAULT_PACKET = DEFAULT_RESULT_DIR / "hlm1_exact_eval_packet.json"
-DEFAULT_JOB_NAME = "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_20260513"
+DEFAULT_JOB_NAME = "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
 DEFAULT_LANE_ID = "hnerv_hlm1_fixed_latent_recode_exact_eval"
 DEFAULT_OUTPUT_DIR = (
     "experiments/results/modal_auth_eval/"
-    "hnerv_hlm1_fixed_latent_recode_modal_t4_20260513"
+    "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
 )
 REQUIRED_ARTIFACTS = (
     "manifest",
@@ -110,22 +110,57 @@ def _git_bytes(args: list[str]) -> bytes:
 
 
 def _source_tree_custody() -> dict[str, Any]:
-    """Record HEAD plus staged/unstaged diff custody for provider dispatch."""
+    """Record build-time source custody, including untracked content hashes."""
 
-    status = _git_bytes(["git", "status", "--short"]).decode("utf-8", errors="replace")
-    diff = _git_bytes(["git", "diff", "--binary", "HEAD"])
-    untracked = _git_bytes(["git", "ls-files", "--others", "--exclude-standard"]).decode(
+    status = _git_bytes(["git", "status", "--short", "--untracked-files=all"]).decode(
         "utf-8",
         errors="replace",
     )
+    diff = _git_bytes(["git", "diff", "--binary", "HEAD"])
+    untracked_raw = _git_bytes(["git", "ls-files", "--others", "--exclude-standard", "-z"])
+    untracked_files: list[dict[str, Any]] = []
+    for raw_path in [item for item in untracked_raw.split(b"\0") if item]:
+        rel = raw_path.decode("utf-8", errors="surrogateescape")
+        path = REPO_ROOT / rel
+        if not path.is_file() or path.is_symlink():
+            continue
+        blob = path.read_bytes()
+        untracked_files.append(
+            {
+                "path": rel,
+                "bytes": len(blob),
+                "sha256": hashlib.sha256(blob).hexdigest(),
+            }
+        )
+    untracked_files.sort(key=lambda row: row["path"])
+    untracked_hasher = hashlib.sha256()
+    for row in untracked_files:
+        untracked_hasher.update(f"{row['path']}\0{row['bytes']}\0{row['sha256']}\n".encode())
+    status_lines = status.splitlines()
+    custody_hasher = hashlib.sha256()
+    custody_hasher.update(b"provider_dispatch_source_tree_custody_v2\n")
+    custody_hasher.update(_git_commit().encode())
+    custody_hasher.update(b"\n")
+    custody_hasher.update(hashlib.sha256(diff).hexdigest().encode())
+    custody_hasher.update(b"\n")
+    custody_hasher.update(untracked_hasher.hexdigest().encode())
+    custody_hasher.update(b"\n")
+    for line in status_lines:
+        custody_hasher.update(line.encode("utf-8", errors="surrogateescape"))
+        custody_hasher.update(b"\n")
     return {
-        "schema": "provider_dispatch_source_tree_custody_v1",
+        "schema": "provider_dispatch_source_tree_custody_v2",
         "head_commit": _git_commit(),
         "dirty": bool(status.strip()),
-        "status_short": status.splitlines(),
+        "status_short": status_lines,
         "diff_against_head_sha256": hashlib.sha256(diff).hexdigest(),
         "diff_against_head_bytes": len(diff),
-        "untracked_path_count": len([line for line in untracked.splitlines() if line]),
+        "untracked_path_count": len(untracked_files),
+        "untracked_files": untracked_files,
+        "untracked_content_tree_sha256": untracked_hasher.hexdigest(),
+        "source_tree_custody_sha256": custody_hasher.hexdigest(),
+        "custody_scope": "build_time_local_tree_before_remote_dispatch",
+        "provider_wrapper_records_actual_source_repo_commit_at_dispatch": True,
         "score_claim": False,
     }
 
@@ -310,6 +345,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "Absolute local repo paths redacted from raw static compliance output; "
         "pass/fail/check payload preserved."
     )
+    static_compliance_public["static_compliance_scope"] = "static_pre_exact_eval_only"
+    static_compliance_public["exact_eval_required"] = True
     write_json(_repo_path(args.runtime_manifest_out), runtime_manifest)
     write_json(_repo_path(args.modal_transport_out), transport)
     write_json(_repo_path(args.hlm1_runtime_consumption), hlm1_runtime_consumption)
@@ -351,6 +388,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             args.job_name,
             "--claim-agent",
             args.claim_agent,
+            "--expected-runtime-tree-sha256",
+            runtime_manifest.get("runtime_tree_sha256", ""),
             "--claim-notes",
             (
                 f"PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256={archive['sha256']}; "
@@ -420,7 +459,6 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                         "tools/build_pr106_hlm1_exact_eval_packet.py",
                         "--json-out",
                         args.json_out,
-                        "--operator-approved-exact-cuda",
                     ]
                 ),
             },
@@ -457,6 +495,11 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "recorded_at_utc": _now_utc(),
         "source_repo_commit": source_repo_commit,
         "source_tree_custody": source_tree,
+        "source_tree_custody_note": (
+            "Build-time local source custody only; the Modal wrapper records "
+            "the actual source_repo_commit at dispatch and contest_auth_eval "
+            "must enforce the expected runtime-tree hash."
+        ),
         "candidate_id": manifest.get("candidate_id"),
         "lane_id": args.lane_id,
         "job_name": args.job_name,
@@ -512,6 +555,11 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "preflight_ready": bool(static_ready),
         "static_packet_ready": bool(static_ready),
         "static_compliance_ok": payloads["static_compliance"].get("passed") is True,
+        "static_compliance_scope": "static_pre_exact_eval_only",
+        "static_compliance_auth_eval_custody_present": bool(
+            (payloads["static_compliance"].get("auth_eval") or {}).get("exists")
+        ),
+        "exact_eval_required": True,
         "payload_diff_ready": bool(
             manifest.get("candidate_archive_byte_delta", 0) < 0
             and manifest.get("source_archive_sha256") != archive["sha256"]

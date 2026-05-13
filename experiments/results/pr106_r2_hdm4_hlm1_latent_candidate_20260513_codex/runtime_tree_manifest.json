@@ -1,7 +1,7 @@
 {
   "dispatch_runtime": "modal_uploaded_submission_dir",
-  "local_runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
-  "local_runtime_tree_sha256": "580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa",
+  "local_runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+  "local_runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
   "local_static_release_surface_runtime": {
     "external_dependency_roots": [],
     "files": [
@@ -12,10 +12,10 @@
         "sha256": "e2cbb2d50d41f14e2789e3f7f147a00d7c5fa1aa12564e035d6e7190a3a73da5"
       },
       {
-        "bytes": 11038,
+        "bytes": 11014,
         "relative_path": "inflate.py",
         "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.py",
-        "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
       },
       {
         "bytes": 1053,
@@ -60,10 +60,10 @@
       "tac_root_relative_path": "src/tac",
       "unresolved_modules": []
     },
-    "runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
+    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
     "runtime_file_count": 7,
     "runtime_root": "<repo>/experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface",
-    "runtime_tree_sha256": "580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa",
+    "runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,
@@ -81,10 +81,10 @@
         "sha256": "e2cbb2d50d41f14e2789e3f7f147a00d7c5fa1aa12564e035d6e7190a3a73da5"
       },
       {
-        "bytes": 11038,
+        "bytes": 11014,
         "relative_path": "inflate.py",
         "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
-        "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
       },
       {
         "bytes": 1053,
@@ -129,10 +129,10 @@
       "tac_root_relative_path": "src/tac",
       "unresolved_modules": []
     },
-    "runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
+    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
     "runtime_file_count": 7,
     "runtime_root": "/tmp/modal_auth_eval/submission_dir",
-    "runtime_tree_sha256": "4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7",
+    "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,
@@ -141,8 +141,8 @@
     }
   },
   "promotion_eligible": false,
-  "runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
-  "runtime_tree_sha256": "4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7",
+  "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+  "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
   "schema": "pr106_hlm1_runtime_custody_manifest_v1",
   "score_claim": false
 }

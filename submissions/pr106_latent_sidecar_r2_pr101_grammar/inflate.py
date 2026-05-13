@@ -8,9 +8,9 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
   format_id=0x02 — PR101 ranked-Huffman/no-op grammar sidecar (this variant's
                     primary encoding; saves 42 bytes net vs format_id=0x01)
 
-Both format_ids reconstruct the (dims, delta_q) arrays bit-identical → HNeRV
-decoder behavior is unchanged by construction. The byte-rate term moves;
-SegNet + PoseNet distortion does not (operator-approved 2026-05-11).
+Both format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
+parser/decoder-consumption evidence only. Score components require exact
+auth-eval evidence under the scored runtime.
 
 Reads <src>.bin (PR106 wrapper: magic 0xFE + format_id + PR106 bytes verbatim
 + appended sidecar), reconstructs PR106 state_dict + latents, applies the

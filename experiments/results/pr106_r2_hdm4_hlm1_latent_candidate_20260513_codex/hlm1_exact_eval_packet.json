@@ -29,10 +29,10 @@
       "sha256": "d17597fbffcb8113005829201d6a0d484ae9810d9dc248829d2d512d13ade468"
     },
     "pre_submission_compliance": {
-      "bytes": 12499,
+      "bytes": 12589,
       "exists": true,
       "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.public.json",
-      "sha256": "ae3b64f7f5121ea0412038bf21c2cbcad6af3983ca7c2055ff37286d85331721"
+      "sha256": "906e0c076f5228abc19247443f3711bb5cfb686d8b58395b297ccdea76210a63"
     },
     "prefix_parity": {
       "bytes": 2467,
@@ -64,27 +64,28 @@
   "candidate_id": "pr106_hlm1_fixed_latent_recode",
   "commands": {
     "claim": "Modal wrapper records the Level-2 active lane claim before provider spawn; do not pre-claim separately unless using a different provider actuator.",
-    "harvest": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513",
-    "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/contest_auth_eval.cuda.json",
-    "submit": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --claim-agent codex:gpt-5.5 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7; submission_dir_zip_sha256=2f382e0fd7494d00a1d764aaf4e71812708a188f7c8f817397efb43a63343cc8'"
+    "harvest": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513",
+    "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85 --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/contest_auth_eval.cuda.json",
+    "submit": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9; submission_dir_zip_sha256=9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212'"
   },
   "dispatch_attempted": false,
   "dry_run_ready": true,
   "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "exact_eval_required": true,
   "expected_pose_dist_delta": 0.0,
   "expected_seg_dist_delta": 0.0,
   "expected_total_score_delta_rate_only": -4.594426776542982e-05,
   "family": "hnerv_fixed_latent_recode",
   "full_frame_inflate_output_parity_claim": false,
-  "job_name": "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_20260513",
+  "job_name": "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513",
   "lane_id": "hnerv_hlm1_fixed_latent_recode_exact_eval",
-  "local_runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
-  "local_runtime_tree_sha256": "580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa",
+  "local_runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+  "local_runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
   "missing_env": [],
   "modal_submission_dir_transport": {
     "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/modal_submission_dir_transport.json",
-    "transport_zip_bytes": 201783,
-    "transport_zip_sha256": "2f382e0fd7494d00a1d764aaf4e71812708a188f7c8f817397efb43a63343cc8"
+    "transport_zip_bytes": 201752,
+    "transport_zip_sha256": "9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212"
   },
   "name": "PR106 HDM4+HLM1 fixed-latent recode",
   "operator_approved_exact_cuda": true,
@@ -97,7 +98,7 @@
     "schema": "hnerv_hlm1_operator_next_steps_v1",
     "steps": [
       {
-        "copy_safe_command": ".venv/bin/python tools/build_pr106_hlm1_exact_eval_packet.py --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json --operator-approved-exact-cuda",
+        "copy_safe_command": ".venv/bin/python tools/build_pr106_hlm1_exact_eval_packet.py --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json",
         "dispatches_remote_gpu": false,
         "id": "refresh_static_packet_no_dispatch",
         "order": 1,
@@ -105,7 +106,7 @@
         "writes_repo_state": true
       },
       {
-        "copy_safe_command": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/contest_auth_eval.cuda.json",
+        "copy_safe_command": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85 --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/contest_auth_eval.cuda.json",
         "dispatches_remote_gpu": true,
         "id": "optional_local_cuda_exact_eval",
         "order": 2,
@@ -113,7 +114,7 @@
         "writes_repo_state": true
       },
       {
-        "copy_safe_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --claim-agent codex:gpt-5.5 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7; submission_dir_zip_sha256=2f382e0fd7494d00a1d764aaf4e71812708a188f7c8f817397efb43a63343cc8'",
+        "copy_safe_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9; submission_dir_zip_sha256=9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212'",
         "dispatches_remote_gpu": true,
         "id": "submit_modal_exact_cuda",
         "order": 3,
@@ -121,7 +122,7 @@
         "writes_repo_state": true
       },
       {
-        "copy_safe_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513",
+        "copy_safe_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513",
         "dispatches_remote_gpu": false,
         "id": "harvest_modal_exact_cuda",
         "order": 4,
@@ -138,75 +139,62 @@
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch_claim": true,
   "ready_for_submit": true,
-  "recorded_at_utc": "2026-05-13T12:33:24Z",
+  "recorded_at_utc": "2026-05-13T12:51:51Z",
   "remaining_required_for_score_or_promotion": [
     "modal_cuda_auth_eval_dispatch",
     "modal_auth_eval_harvest",
     "contest_auth_eval_adjudication",
     "operator_score_claim_review"
   ],
-  "runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
+  "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
   "runtime_hlm1_decode_consumption_claim": true,
   "runtime_hlm1_valid_mutation_changes_raw": true,
   "runtime_manifest": {
-    "local_runtime_tree_sha256": "580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa",
+    "local_runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
     "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
-    "runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
+    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
     "runtime_file_count": 7,
-    "runtime_tree_sha256": "4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7"
+    "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9"
   },
   "runtime_sidecar_apply_consumption_claim": true,
   "runtime_sidecar_decode_consumption_claim": true,
-  "runtime_tree_sha256": "4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7",
+  "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
   "schema_version": 1,
   "score_affecting_runtime_changed": true,
   "score_claim": false,
   "source_archive_bytes": 186492,
   "source_archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
-  "source_repo_commit": "d21295b41baab2f9027103eac091557eb4470977",
+  "source_repo_commit": "01a9fba31cac4982bf435326683a21627d4aaf1a",
   "source_tree_custody": {
-    "diff_against_head_bytes": 682955,
-    "diff_against_head_sha256": "7d99f3b1f57f1537339b8d81ef66d1e8ff6212f379a9c4f98d42888fcaf00aef",
+    "custody_scope": "build_time_local_tree_before_remote_dispatch",
+    "diff_against_head_bytes": 50672,
+    "diff_against_head_sha256": "8f902c6cf17703434a51ba4f2916c8428044e3fdbda5edf63546d826d43bc300",
     "dirty": true,
-    "head_commit": "d21295b41baab2f9027103eac091557eb4470977",
-    "schema": "provider_dispatch_source_tree_custody_v1",
+    "head_commit": "01a9fba31cac4982bf435326683a21627d4aaf1a",
+    "provider_wrapper_records_actual_source_repo_commit_at_dispatch": true,
+    "schema": "provider_dispatch_source_tree_custody_v2",
     "score_claim": false,
+    "source_tree_custody_sha256": "a908f2925669a84a5fa5919615335c56bcd20c9b0ba016c08418bfb4a5d804ee",
     "status_short": [
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/archive_manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/entropy_floor.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/entropy_floor.md",
-      "AM experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_latent_archive_candidate_manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_runtime_consumption.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/modal_submission_dir_transport.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/packetir_identity.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.public.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_decode_consumption.json",
-      "AM experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/same_runtime_prefix_parity.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive.zip",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive_manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.py",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/codec.py",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/model.py",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/pr101_grammar.py",
-      " M src/tac/deploy/modal/auth_eval.py",
-      " M src/tac/packet_compiler/__init__.py",
-      " M src/tac/packet_compiler/pr106_runtime_consumption.py",
+      " M experiments/modal_auth_eval.py",
+      " M experiments/modal_auth_eval_cpu.py",
+      " M experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json",
+      " M experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/modal_submission_dir_transport.json",
+      " M experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.public.json",
+      " M experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
+      " M experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.py",
       " M src/tac/tests/test_modal_auth_eval.py",
-      "MM src/tac/tests/test_operator_briefing.py",
-      " M src/tac/tests/test_pr106_fixed_latent_recode.py",
-      "AM tools/build_pr106_hlm1_exact_eval_packet.py",
-      "M  tools/operator_briefing.py",
-      "?? src/tac/packet_compiler/pr106_hlm1_runtime_consumption.py",
-      "?? tools/prove_pr106_hlm1_runtime_consumption.py"
+      " M src/tac/tests/test_operator_briefing.py",
+      " M submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py",
+      " M tools/build_pr106_hlm1_exact_eval_packet.py"
     ],
-    "untracked_path_count": 2
+    "untracked_content_tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_files": [],
+    "untracked_path_count": 0
   },
+  "source_tree_custody_note": "Build-time local source custody only; the Modal wrapper records the actual source_repo_commit at dispatch and contest_auth_eval must enforce the expected runtime-tree hash.",
+  "static_compliance_auth_eval_custody_present": false,
   "static_compliance_ok": true,
+  "static_compliance_scope": "static_pre_exact_eval_only",
   "static_packet_ready": true
 }

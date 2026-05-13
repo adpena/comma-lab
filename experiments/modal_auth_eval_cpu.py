@@ -342,6 +342,7 @@ def _run_auth_eval_inner(
     submission_dir_zip_sha256: str | None,
     inflate_timeout: int,
     evaluate_timeout: int,
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -368,6 +369,7 @@ def _run_auth_eval_inner(
             "inflate_sh_rel": inflate_sh_rel,
             "submission_dir_zip_sha256": submission_dir_zip_sha256,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
+            "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         }
     )
     write_json(out_dir / "modal_cpu_preflight.json", preflight)
@@ -509,6 +511,8 @@ def _run_auth_eval_inner(
         "--evaluate-timeout",
         str(int(evaluate_timeout)),
     ]
+    if expected_runtime_tree_sha256:
+        cmd.extend(["--expected-runtime-tree-sha256", expected_runtime_tree_sha256])
     env = {
         **os.environ,
         "PYTHONPATH": REMOTE_PYTHONPATH,
@@ -604,6 +608,8 @@ def _run_auth_eval_inner(
         "expected_archive_sha256": archive_sha256,
         "expected_archive_size_bytes": archive_size_bytes,
         "inflate_sh_rel": inflate_sh_rel,
+        "submission_dir_zip_sha256": submission_dir_zip_sha256,
+        "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "validation_errors": validation_errors,
         "score_claim": payload_score_claim,
         "promotion_eligible": False,  # CPU axis: not promotion-eligible
@@ -659,6 +665,7 @@ def _run_auth_eval_cpu_fail_closed(
     submission_dir_zip_sha256: str | None,
     inflate_timeout: int,
     evaluate_timeout: int,
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
@@ -670,6 +677,7 @@ def _run_auth_eval_cpu_fail_closed(
             submission_dir_zip_sha256=submission_dir_zip_sha256,
             inflate_timeout=inflate_timeout,
             evaluate_timeout=evaluate_timeout,
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
@@ -702,6 +710,7 @@ def run_auth_eval_cpu(
     submission_dir_zip_sha256: str | None = None,
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     """Run the canonical CPU auth eval on Modal Linux x86_64."""
 
@@ -714,6 +723,7 @@ def run_auth_eval_cpu(
         submission_dir_zip_sha256=submission_dir_zip_sha256,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
     )
 
 
@@ -725,6 +735,7 @@ def main(
     submission_dir: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
+    expected_runtime_tree_sha256: str = "",
     detach: bool = False,
     provider_detach_ack: bool = False,
     lane_id: str = "",
@@ -771,6 +782,7 @@ def main(
         "inflate_sh": inflate_sh_rel,
         "submission_dir": str(submission_dir_path) if submission_dir_path else None,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
+        "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
         "modal_dispatch_mode": "detached_spawn" if detach else "blocking_remote",
         "score_claim": False,
@@ -808,6 +820,7 @@ def main(
         submission_dir_zip_sha256,
         int(inflate_timeout),
         int(evaluate_timeout),
+        expected_runtime_tree_sha256,
     )
     claim_modal_auth_eval_dispatch(
         repo_root=Path.cwd(),
@@ -893,6 +906,7 @@ def main(
     result["archive_sha256"] = archive_sha256
     result["archive_size_bytes"] = archive_size_bytes
     result["inflate_sh"] = inflate_sh_rel
+    result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
     write_json(out_dir / "modal_cpu_auth_eval_result.json", result)
 
     print("=" * 60)

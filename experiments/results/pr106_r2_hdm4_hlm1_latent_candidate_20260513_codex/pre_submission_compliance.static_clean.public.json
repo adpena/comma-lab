@@ -251,6 +251,7 @@
   "dispatch_claims": {
     "required": false
   },
+  "exact_eval_required": true,
   "passed": true,
   "public_hygiene": {
     "hits": [],
@@ -264,6 +265,7 @@
     "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt"
   },
   "schema": "pre_submission_compliance_check_v1",
+  "static_compliance_scope": "static_pre_exact_eval_only",
   "submission_dir": {
     "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface",
     "required_files": {

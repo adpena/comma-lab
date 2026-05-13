@@ -279,6 +279,7 @@ def _run_auth_eval_inner(
     scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -352,6 +353,7 @@ def _run_auth_eval_inner(
             "scorer_device": scorer_device,
             "inflate_device_policy": inflate_device_policy,
             "inflate_env_overrides": list(inflate_env_overrides),
+            "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         }
     )
     write_json(out_dir / "modal_cuda_preflight.json", preflight)
@@ -494,6 +496,8 @@ def _run_auth_eval_inner(
         "--inflate-device",
         inflate_device_policy,
     ]
+    if expected_runtime_tree_sha256:
+        cmd.extend(["--expected-runtime-tree-sha256", expected_runtime_tree_sha256])
     for item in inflate_env_overrides:
         cmd.extend(["--inflate-env", item])
     env = {
@@ -599,6 +603,7 @@ def _run_auth_eval_inner(
         "expected_archive_size_bytes": archive_size_bytes,
         "inflate_sh_rel": inflate_sh_rel,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
+        "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "scorer_device": scorer_device,
         "inflate_device_policy": inflate_device_policy,
         "diagnostic_only": diagnostic_only,
@@ -661,6 +666,7 @@ def _run_auth_eval_fail_closed(
     scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
@@ -676,6 +682,7 @@ def _run_auth_eval_fail_closed(
             scorer_device=scorer_device,
             inflate_device_policy=inflate_device_policy,
             inflate_env_overrides=inflate_env_overrides,
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
@@ -708,6 +715,7 @@ def run_auth_eval(
     scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     """Run the canonical CUDA auth eval on Modal T4."""
 
@@ -724,6 +732,7 @@ def run_auth_eval(
         scorer_device=scorer_device,
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
     )
 
 
@@ -745,6 +754,7 @@ def run_auth_eval_a100(
     scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     """Run CUDA auth eval on Modal A100 as a diagnostic axis."""
 
@@ -761,6 +771,7 @@ def run_auth_eval_a100(
         scorer_device=scorer_device,
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
     )
 
 
@@ -782,6 +793,7 @@ def run_auth_eval_h100(
     scorer_device: str = "cuda",
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any]:
     """Run CUDA auth eval on Modal H100 as a diagnostic axis."""
 
@@ -798,6 +810,7 @@ def run_auth_eval_h100(
         scorer_device=scorer_device,
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
     )
 
 
@@ -813,6 +826,7 @@ def main(
     evaluate_timeout: int = 1800,
     inflate_device: str = "auto",
     inflate_env: str = "",
+    expected_runtime_tree_sha256: str = "",
     detach: bool = False,
     provider_detach_ack: bool = False,
     lane_id: str = "",
@@ -888,6 +902,7 @@ def main(
         "scorer_device": scorer_device_policy,
         "inflate_device_policy": inflate_device_policy,
         "inflate_env_overrides": list(inflate_env_overrides),
+        "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "diagnostic_only": diagnostic_only,
         "non_t4_gpu_diagnostic": non_t4_gpu_diagnostic,
         "score_claim": False,
@@ -936,6 +951,7 @@ def main(
         scorer_device_policy,
         inflate_device_policy,
         inflate_env_overrides,
+        expected_runtime_tree_sha256,
     )
     claim_modal_auth_eval_dispatch(
         repo_root=Path.cwd(),
@@ -977,6 +993,7 @@ def main(
                 "scorer_device": scorer_device_policy,
                 "inflate_device_policy": inflate_device_policy,
                 "inflate_env_overrides": list(inflate_env_overrides),
+                "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
                 "lane_id": lane_id,
                 "instance_job_id": instance_job_id,
                 "claim_agent": claim_agent,
@@ -1031,6 +1048,7 @@ def main(
     result["scorer_device"] = scorer_device_policy
     result["inflate_device_policy"] = inflate_device_policy
     result["inflate_env_overrides"] = list(inflate_env_overrides)
+    result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
     if diagnostic_only:
         result["diagnostic_only"] = True
         result["non_t4_gpu_diagnostic"] = non_t4_gpu_diagnostic

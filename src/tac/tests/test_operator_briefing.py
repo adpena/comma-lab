@@ -175,6 +175,13 @@ def test_briefing_json_composite_has_all_three_keys():
     hlm1_packet = json.loads(packet_text)
     assert "/Users/adpena" not in packet_text
     assert hlm1_packet["runtime_tree_sha256"] != hlm1_packet["local_runtime_tree_sha256"]
+    assert (
+        "--expected-runtime-tree-sha256 "
+        + hlm1_packet["runtime_tree_sha256"]
+        in hlm1_packet["commands"]["submit"]
+    )
+    refresh_cmd = hlm1_packet["operator_next_steps"]["steps"][0]["copy_safe_command"]
+    assert "--operator-approved-exact-cuda" not in refresh_cmd
     assert hlm1_packet["runtime_hlm1_decode_consumption_claim"] is True
     assert hlm1_packet["runtime_hlm1_valid_mutation_changes_raw"] is True
     assert hlm1_packet["artifacts"]["pre_submission_compliance"].endswith(
