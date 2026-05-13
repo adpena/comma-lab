@@ -2647,6 +2647,19 @@ def preflight_all(
         check_operator_authorize_bypass_requires_session_budget(
             strict=True, verbose=verbose,
         )
+        # Catalog #201 - check_modal_sentinel_files_are_in_mount_set
+        # Empirical anchor: PR95++ smoke fc-01KRHNMT4SEB794HFPH5GNTHFP
+        # @ 2026-05-13 21:59 UTC returned rc=13 (MISSING_WORKER) after the
+        # recipe YAML at `.omx/operator_authorize_recipes/...yaml` was
+        # appended to `--sentinel-files`. Sister of Catalog #166 (worker
+        # hash check) + Catalog #153 (canonical mount builder). Refuses
+        # string-literal sentinel paths in tools/operator_authorize.py::
+        # _modal_sentinel_files that are outside the canonical mount set.
+        # Live count at landing: 0. STRICT @ 0 per CLAUDE.md "Strict-flip
+        # atomicity rule".
+        check_modal_sentinel_files_are_in_mount_set(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -46521,6 +46534,246 @@ def check_operator_authorize_bypass_requires_session_budget(
             f"{_CHECK_199_CONFIRMED_ENV_VAR} without the paired "
             f"{_CHECK_199_BUDGET_ENV_VAR}. Per CLAUDE.md 'Bugs must be "
             "permanently fixed AND self-protected against' + Catalog #199:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #201 — check_modal_sentinel_files_are_in_mount_set
+#
+# Bug class (empirically confirmed 2026-05-13): the PR95++ enhanced-curriculum
+# Modal smoke fc-01KRHNMT4SEB794HFPH5GNTHFP @ 21:59:30 UTC returned rc=13
+# after `tools/operator_authorize.py::_modal_sentinel_files` appended the
+# recipe YAML path (`.omx/operator_authorize_recipes/<recipe>.yaml`) to the
+# `--sentinel-files` list passed to Modal dispatch. Catalog #166's worker-
+# side hash ledger then refused the dispatch with `MISSING_WORKER` for the
+# `.omx/...` sentinel because `.omx/` is NOT one of the canonical mount-set
+# prefixes declared by `src/tac/deploy/modal/mount_manifest.py::
+# STRUCTURAL_MINIMUM_DIRS`. The dispatch failed BEFORE training started.
+#
+# The bug class is: any sentinel path outside the Modal mount set always
+# produces `MISSING_WORKER` and refuses dispatch rc=13. The fix in
+# `tools/operator_authorize.py` removes the recipe-YAML append AND adds a
+# runtime filter (`_path_under_modal_mount_set`) that drops + WARNs on any
+# raw_paths entry outside the mount set. This STRICT preflight gate is the
+# structural self-protection per CLAUDE.md "Bugs must be permanently fixed
+# AND self-protected against" non-negotiable: it refuses any future state of
+# `tools/operator_authorize.py` that re-introduces a string-literal sentinel
+# (in the seed `raw_paths` list literal OR in a `raw_paths.append("<lit>")`
+# call) outside the mount set.
+#
+# Sister of Catalog #166 (worker-side hash check that surfaces the failure
+# rc=13) and Catalog #153 (canonical Modal mount builder that defines
+# STRUCTURAL_MINIMUM_DIRS). Together the three gates close the mount-vs-
+# sentinel parity bug class at design (#153) -> source (#201) -> dispatch
+# (#166).
+#
+# Acceptance:
+#   (a) string literal under one of the canonical mount-set prefixes
+#       (`src/`, `scripts/`, `upstream/`, `submissions/`, `experiments/`,
+#       `tools/`, or exactly `pyproject.toml`)
+#   (b) same-line `# SENTINEL_OUTSIDE_MOUNT_OK:<reason>` waiver on the
+#       literal's source line (placeholder `<reason>` literal rejected)
+#   (c) dynamic expressions (`recipe.remote_driver`, `str(value)`,
+#       `entry.strip()`, etc.) are NOT statically checkable and are skipped
+#       (only ast.Constant string literals are flagged)
+#
+# Scope: only `tools/operator_authorize.py::_modal_sentinel_files` is
+# scanned. The canonical file and this preflight file are self-exempt.
+#
+# Live count at landing: 0. STRICT @ 0 in same commit batch per CLAUDE.md
+# "Strict-flip atomicity rule".
+# ============================================================================
+
+_CHECK_201_MODAL_MOUNT_SET_PREFIXES: tuple[str, ...] = (
+    "src/",
+    "scripts/",
+    "upstream/",
+    "submissions/",
+    "experiments/",
+    "tools/",
+)
+_CHECK_201_MODAL_MOUNT_SET_EXACT: frozenset[str] = frozenset({
+    "pyproject.toml",
+})
+_CHECK_201_WAIVER_RE = re.compile(
+    r"#\s*SENTINEL_OUTSIDE_MOUNT_OK:\s*(?!<reason>)\S+"
+)
+_CHECK_201_TARGET_REL = "tools/operator_authorize.py"
+_CHECK_201_TARGET_FUNCTION = "_modal_sentinel_files"
+
+
+def _check_201_literal_under_mount_set(value: str) -> bool:
+    """True iff `value` is under one of the canonical mount-set prefixes."""
+    stripped = value.strip().lstrip("./")
+    if stripped in _CHECK_201_MODAL_MOUNT_SET_EXACT:
+        return True
+    for prefix in _CHECK_201_MODAL_MOUNT_SET_PREFIXES:
+        if stripped.startswith(prefix):
+            return True
+    return False
+
+
+def _check_201_line_has_waiver(text_line: str) -> bool:
+    return bool(_CHECK_201_WAIVER_RE.search(text_line))
+
+
+def _check_201_collect_literal_sentinels(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[tuple[int, str]]:
+    """Walk `func` body and return every string-literal sentinel path.
+
+    Returns a list of `(lineno, value)` tuples, one per string literal that
+    appears in either:
+      - a `raw_paths: list[...] = [...]` (or `raw_paths = [...]`) seed
+      - a `raw_paths.append(<str_literal>)` call
+
+    Dynamic expressions (`Name`, `Attribute`, `Call`, `BinOp`, etc.) are
+    silently skipped because they can't be statically resolved.
+    """
+    out: list[tuple[int, str]] = []
+    for node in ast.walk(func):
+        # raw_paths = [...] OR raw_paths: list[str] = [...]
+        targets: list[ast.expr] = []
+        value_expr: ast.expr | None = None
+        if isinstance(node, ast.Assign):
+            targets = list(node.targets)
+            value_expr = node.value
+        elif isinstance(node, ast.AnnAssign):
+            if node.target is not None:
+                targets = [node.target]
+            value_expr = node.value
+        if value_expr is not None and isinstance(value_expr, ast.List):
+            for tgt in targets:
+                if isinstance(tgt, ast.Name) and tgt.id == "raw_paths":
+                    for elt in value_expr.elts:
+                        if isinstance(elt, ast.Constant) and isinstance(
+                            elt.value, str
+                        ):
+                            out.append((elt.lineno, elt.value))
+                    break
+        # raw_paths.append("<lit>")
+        if isinstance(node, ast.Call):
+            func_expr = node.func
+            if (
+                isinstance(func_expr, ast.Attribute)
+                and func_expr.attr == "append"
+                and isinstance(func_expr.value, ast.Name)
+                and func_expr.value.id == "raw_paths"
+                and len(node.args) >= 1
+            ):
+                arg = node.args[0]
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    out.append((arg.lineno, arg.value))
+    return out
+
+
+def check_modal_sentinel_files_are_in_mount_set(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #201 — refuse Modal sentinel-files outside the canonical mount set.
+
+    Scans `tools/operator_authorize.py::_modal_sentinel_files` via AST and
+    refuses any string-literal sentinel path (in the seed `raw_paths` list
+    literal OR in a `raw_paths.append("<lit>")` call) that is NOT under one
+    of the canonical Modal mount-set prefixes declared by
+    `src/tac/deploy/modal/mount_manifest.py::STRUCTURAL_MINIMUM_DIRS`
+    (`src/`, `scripts/`, `upstream/`, `submissions/`, `experiments/`,
+    `tools/`, or exactly `pyproject.toml`).
+
+    Same-line `# SENTINEL_OUTSIDE_MOUNT_OK:<reason>` waiver on the literal's
+    source line is honored (placeholder `<reason>` literal rejected).
+
+    Empirical anchor: PR95++ smoke fc-01KRHNMT4SEB794HFPH5GNTHFP
+    @ 2026-05-13 21:59:30 UTC returned rc=13 with `MISSING_WORKER` because
+    the recipe YAML at `.omx/operator_authorize_recipes/...yaml` was
+    appended to `--sentinel-files`. Sister of Catalog #166 (worker-side
+    hash check) and Catalog #153 (canonical mount builder).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target_path = root / _CHECK_201_TARGET_REL
+    violations: list[str] = []
+    if not target_path.is_file():
+        if verbose:
+            print(
+                f"  [check-201] target file missing: {target_path} "
+                "(skipping)"
+            )
+        return violations
+    try:
+        text = target_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        if verbose:
+            print(f"  [check-201] cannot read {target_path}: {exc}")
+        return violations
+    try:
+        tree = ast.parse(text, filename=str(target_path))
+    except SyntaxError as exc:
+        if verbose:
+            print(f"  [check-201] syntax error in {target_path}: {exc}")
+        return violations
+    source_lines = text.splitlines()
+    # Locate _modal_sentinel_files function(s) at module top level.
+    targets: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name == _CHECK_201_TARGET_FUNCTION:
+                targets.append(node)
+    if not targets:
+        if verbose:
+            print(
+                f"  [check-201] function {_CHECK_201_TARGET_FUNCTION} not "
+                f"found in {target_path}; skipping (the runtime fix removed "
+                "or renamed it)"
+            )
+        return violations
+    for func in targets:
+        for lineno, value in _check_201_collect_literal_sentinels(func):
+            if _check_201_literal_under_mount_set(value):
+                continue
+            # Same-line waiver opt-out.
+            line_idx = lineno - 1
+            if 0 <= line_idx < len(source_lines):
+                line_text = source_lines[line_idx]
+                if _check_201_line_has_waiver(line_text):
+                    continue
+            violations.append(
+                f"{_CHECK_201_TARGET_REL}:{lineno}: sentinel literal "
+                f"{value!r} is outside the canonical Modal mount set "
+                f"(prefixes {list(_CHECK_201_MODAL_MOUNT_SET_PREFIXES)} or "
+                f"exact {sorted(_CHECK_201_MODAL_MOUNT_SET_EXACT)}). Per "
+                "Catalog #201: such sentinels always produce MISSING_WORKER "
+                "in Catalog #166's hash ledger and refuse dispatch rc=13. "
+                "Move the file under one of the mount-set prefixes, drop it "
+                "from the sentinel list, OR add a same-line "
+                "`# SENTINEL_OUTSIDE_MOUNT_OK:<reason>` waiver."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [modal-sentinel-mount-parity] {len(violations)} "
+                f"violation(s) in {_CHECK_201_TARGET_REL}:"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                f"  [modal-sentinel-mount-parity] OK "
+                f"({_CHECK_201_TARGET_REL} scanned, 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_sentinel_files_are_in_mount_set found "
+            f"{len(violations)} sentinel literal(s) outside the canonical "
+            "Modal mount set. Per CLAUDE.md 'Bugs must be permanently fixed "
+            "AND self-protected against' + Catalog #201 (PR95++ smoke "
+            "fc-01KRHNMT4SEB794HFPH5GNTHFP @ 2026-05-13 21:59 UTC):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

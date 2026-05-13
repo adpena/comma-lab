@@ -792,16 +792,51 @@ def _build_env_overrides(recipe: Recipe, instance_job_id: str) -> str:
     return ",".join(parts)
 
 
+# Catalog #201: sentinel-files MUST be under the canonical Modal mount set.
+# Files in `.omx/`, `.ralph/`, `configs/`, `docs/`, `cuda/`, `runtime-rs/`, etc.
+# are operator-side and NEVER mounted onto the Modal worker — so they cannot
+# satisfy Catalog #166's worker-side hash check and dispatch fails rc=13.
+# Keep this list synchronized with mount_manifest.STRUCTURAL_MINIMUM_DIRS.
+_MODAL_MOUNT_SET_PREFIXES: tuple[str, ...] = (
+    "src/",
+    "scripts/",
+    "upstream/",
+    "submissions/",
+    "experiments/",
+    "tools/",
+    "pyproject.toml",
+)
+
+
+def _path_under_modal_mount_set(rel: str) -> bool:
+    """True iff `rel` is mounted by mount_manifest.STRUCTURAL_MINIMUM_DIRS."""
+    rel = rel.strip().lstrip("./")
+    return any(
+        rel.startswith(p) if p.endswith("/") else rel == p
+        for p in _MODAL_MOUNT_SET_PREFIXES
+    )
+
+
 def _modal_sentinel_files(recipe: Recipe) -> str:
     """Return comma-separated source-custody sentinels for Modal uploads.
 
     Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #2 + Catalog #191
     (``check_modal_dispatch_threads_sentinel_files_per_catalog_166``): the
     auto-discovered set (dispatcher / lane_script / cost_band_trainer /
-    trainer / recipe path) is good defense-in-depth, but substrate-specific
-    modules (e.g. ``src/tac/substrates/siren/score_aware_loss.py``) are not
+    trainer) is good defense-in-depth, but substrate-specific modules
+    (e.g. ``src/tac/substrates/siren/score_aware_loss.py``) are not
     captured. Recipes can declare their own ``sentinel_files: [...]`` list
     and those paths are appended to the auto-discovered set.
+
+    Catalog #201 (2026-05-13, PR95++ smoke fc-01KRHNMT4SEB794HFPH5GNTHFP):
+    sentinels MUST be under the canonical Modal mount set. The recipe YAML
+    at ``.omx/operator_authorize_recipes/`` is operator-side metadata that
+    ``operator_authorize.py`` reads to make dispatch decisions; the Modal
+    worker never reads it. Sentinels outside the mount set ALWAYS produce
+    ``MISSING_WORKER`` in Catalog #166's hash ledger and refuse dispatch
+    rc=13 before training starts. Drift detection for operator-side files
+    should be a separate operator-side check (compare sha at dispatch start
+    vs end), not a worker-side Catalog #166 mismatch.
     """
 
     raw_paths: list[str] = [
@@ -810,10 +845,6 @@ def _modal_sentinel_files(recipe: Recipe) -> str:
         "tools/run_modal_smoke_before_full.py",
         "src/tac/deploy/modal/mount_manifest.py",
     ]
-    try:
-        raw_paths.append(str(recipe.path.resolve().relative_to(REPO_ROOT)))
-    except ValueError:
-        pass
     if recipe.remote_driver:
         raw_paths.append(recipe.remote_driver)
     modal_cfg = recipe.raw.get("modal", {}) or {}
@@ -835,13 +866,28 @@ def _modal_sentinel_files(recipe: Recipe) -> str:
 
     seen: set[str] = set()
     out: list[str] = []
+    skipped_outside_mount: list[str] = []
     for rel in raw_paths:
         rel = rel.strip()
         if not rel or rel in seen:
             continue
-        if (REPO_ROOT / rel).is_file():
-            seen.add(rel)
-            out.append(rel)
+        if not (REPO_ROOT / rel).is_file():
+            continue
+        if not _path_under_modal_mount_set(rel):
+            # Catalog #201 runtime filter: silently dropping would mask the
+            # bug; warn loudly so operators see the misconfigured sentinel.
+            skipped_outside_mount.append(rel)
+            continue
+        seen.add(rel)
+        out.append(rel)
+    if skipped_outside_mount:
+        print(
+            "[operator-authorize] Catalog #201 WARN: dropping sentinel(s) "
+            f"outside Modal mount set: {skipped_outside_mount}. Move the file "
+            "under src/scripts/upstream/submissions/experiments/tools/ or "
+            "drop it from `sentinel_files`.",
+            file=sys.stderr,
+        )
     return ",".join(out)
 
 
