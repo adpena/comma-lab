@@ -515,20 +515,30 @@ def test_score_aware_loss_runs_on_dummy_scorers():
     )
 
     class DummySeg(nn.Module):
-        def forward(self, x_bt: torch.Tensor) -> torch.Tensor:
-            # x: (B, 1, 3, H, W) -> (B, 5, h, w)
-            b, _t, _c, h, w = x_bt.shape
+        def preprocess_input(self, x_btchw: torch.Tensor) -> torch.Tensor:
+            # (B, T, C, H, W) -> (B, C, H, W), matching upstream SegNet.
+            return x_btchw[:, -1, ...]
+
+        def forward(self, x_bchw: torch.Tensor) -> torch.Tensor:
+            # x: (B, 3, H, W) -> (B, 5, h, w)
+            b, _c, h, w = x_bchw.shape
             return (
-                torch.zeros(b, 5, h // 4, w // 4, requires_grad=True)
-                + x_bt.sum() * 0.0
+                torch.zeros(b, 5, h // 4, w // 4, dtype=x_bchw.dtype)
+                + x_bchw.mean()
             )
 
     class DummyPose(nn.Module):
+        def preprocess_input(self, x_btchw: torch.Tensor) -> torch.Tensor:
+            # (B, T, C, H, W) -> (B, T*6, H/2, W/2), a tiny yuv6 analogue.
+            b, t, _c, h, w = x_btchw.shape
+            flat = x_btchw.reshape(b * t, 3, h, w).mean(dim=1, keepdim=True)
+            flat6 = flat.expand(-1, 6, -1, -1)
+            flat6_sub = flat6.reshape(b * t, 6, h // 2, 2, w // 2, 2).mean(dim=(3, 5))
+            return flat6_sub.reshape(b, t * 6, h // 2, w // 2)
+
         def forward(self, x_bc: torch.Tensor) -> torch.Tensor:
-            # x: (B, 6, H, W) -> (B, 12)
-            return (
-                x_bc.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
-            )
+            # x: (B, 12, H, W) -> {"pose": (B, 12)}
+            return {"pose": x_bc.flatten(2).mean(dim=2)}
 
     weights = BalleScoreAwareLossWeights(
         alpha_rate=25.0,
@@ -648,12 +658,26 @@ def test_score_aware_loss_hyperprior_term_contributes_to_loss():
         BalleScoreAwareLossWeights,
     )
 
-    class _Dummy(nn.Module):
+    class DummySeg(nn.Module):
+        def preprocess_input(self, x_btchw: torch.Tensor) -> torch.Tensor:
+            return x_btchw[:, -1, ...]
+
+        def forward(self, x_bchw: torch.Tensor) -> torch.Tensor:
+            b, _c, h, w = x_bchw.shape
+            return torch.zeros(b, 5, h, w, dtype=x_bchw.dtype) + x_bchw.mean()
+
+    class DummyPose(nn.Module):
+        def preprocess_input(self, x_btchw: torch.Tensor) -> torch.Tensor:
+            if x_btchw.dim() != 5:
+                raise AssertionError(f"expected 5D scorer input, got {x_btchw.dim()}D")
+            b, t, _c, h, w = x_btchw.shape
+            flat = x_btchw.reshape(b * t, 3, h, w).mean(dim=1, keepdim=True)
+            flat6 = flat.expand(-1, 6, -1, -1)
+            flat6_sub = flat6.reshape(b * t, 6, h // 2, 2, w // 2, 2).mean(dim=(3, 5))
+            return flat6_sub.reshape(b, t * 6, h // 2, w // 2)
+
         def forward(self, x):
-            # Accept (B, 1, C, H, W) or (B, C, H, W); return (B, K)
-            if x.dim() == 5:
-                return x.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
-            return x.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
+            return {"pose": x.flatten(2).mean(dim=2)}
 
     weights = BalleScoreAwareLossWeights(
         alpha_rate=25.0,
@@ -664,7 +688,7 @@ def test_score_aware_loss_hyperprior_term_contributes_to_loss():
         contest_normalizer=37545489.0,
     )
     loss_fn = BalleRendererScoreAwareLoss(
-        seg_scorer=_Dummy(), pose_scorer=_Dummy(), weights=weights,
+        seg_scorer=DummySeg(), pose_scorer=DummyPose(), weights=weights,
     )
     rgb_0 = torch.rand(1, 3, 8, 8, requires_grad=True) * 255.0
     rgb_1 = torch.rand(1, 3, 8, 8, requires_grad=True) * 255.0

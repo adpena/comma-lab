@@ -66,6 +66,30 @@ SCHEMA_VERSION = "pr101_compressai_factorized_prior.v1"
 ARCHIVE_OVERHEAD_BYTES = 16_094
 N_TENSORS = len(FIXED_STATE_SCHEMA)
 PR101_BROTLI_BASELINE_BYTES = 178_144
+EVIDENCE_GRADE = "[MPS-research-signal]"
+EVIDENCE_SEMANTICS = "mps_proxy_factorized_prior_no_score"
+DISPATCH_BLOCKERS = (
+    "mps_proxy_signal_not_score_evidence",
+    "training_device_not_exact_auth_eval",
+    "no_exact_archive_adjudication",
+    "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+)
+
+
+def proxy_evidence_contract() -> dict[str, object]:
+    return {
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_marker": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
+    }
 
 
 # ----------------------------------------------------------------------
@@ -507,7 +531,7 @@ def main(argv: list[str] | None = None) -> int:
     all_results = {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
-        "evidence_grade": "[MPS-research-signal]",
+        **proxy_evidence_contract(),
         "device": args.device,
         "input_state_dict": str(args.state_dict),
         "results": [],
@@ -564,11 +588,7 @@ def main(argv: list[str] | None = None) -> int:
             "technique": "compressai_factorized_prior_1d",
             "empirical_archive_bytes": best["archive_bytes"],
             "empirical_rel_err": best["rel_err"],
-            "evidence_grade": "[MPS-research-signal]",
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **proxy_evidence_contract(),
             "source": (
                 f"[MPS-research-signal] {args.output_dir}/manifest.json "
                 f"(1D FactorizedPrior, no spatial assumption)"

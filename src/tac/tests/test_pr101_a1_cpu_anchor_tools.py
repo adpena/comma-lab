@@ -270,6 +270,7 @@ def test_remaining_cpu_mps_generators_define_proxy_contracts() -> None:
     targets = {
         "tools/pr101_compressai_balle_hyperprior.py": 2,
         "tools/pr101_compressai_balle_hyperprior_full.py": 5,
+        "tools/pr101_compressai_factorized_prior.py": 2,
         "experiments/arch_shrink_quantizr_class_mps_overnight.py": 2,
         "tools/pr101_kalle_fold_8comp_hierarchical_codec.py": 2,
         "tools/pr101_arch_shrink_post_hoc_sweep.py": 3,
