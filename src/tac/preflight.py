@@ -2356,6 +2356,50 @@ def preflight_all(
         check_cost_band_posterior_rows_have_outcome_field(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #178 (WAVE-7-LOW-FIX, REVIEW-OMNI NV1):
+        # Substrate trainers MUST either enable TF32
+        # (`torch.backends.cuda.matmul.allow_tf32 = True`) OR carry a
+        # file-level `# TF32_WAIVED:<reason>` waiver. Initial landing:
+        # warn-only; backport-or-waive sweep is part of the Tier 1
+        # engineering wave (sister of Catalog #172 autocast).
+        check_substrate_trainers_declare_tf32_support(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #179 (WAVE-7-LOW-FIX, REVIEW-OMNI NV3):
+        # Substrate trainers MUST either declare `--enable-torch-compile`,
+        # invoke `torch.compile(...)`, OR carry a file-level
+        # `# TORCH_COMPILE_WAIVED:<reason>` waiver. Initial landing:
+        # warn-only; backport-or-waive sweep is part of Tier 2 engineering.
+        check_substrate_trainers_declare_torch_compile_support(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #180 (WAVE-7-LOW-FIX, REVIEW-OMNI NV4):
+        # Substrate trainers MUST contain at least one `torch.no_grad`
+        # context (or `@torch.no_grad()` or `torch.inference_mode`) OR
+        # carry a file-level `# NO_GRAD_WAIVED:<reason>` waiver.
+        # Strict-from-byte-one (live count at landing: 0; every existing
+        # substrate trainer already wraps eval scorer forwards).
+        check_substrate_trainers_use_no_grad_at_eval(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #181 (WAVE-7-LOW-FIX, REVIEW-OMNI NV8):
+        # Substrate operator-authorize recipes MUST declare
+        # `pyav_decode_strategy` (cpu_thread_async_upload / cuda_nvdec /
+        # cpu_blocking_upload / not_applicable). Initial landing:
+        # warn-only; legacy recipes will be backfilled.
+        check_substrate_recipes_declare_pyav_decode_strategy(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #182 (WAVE-7-LOW-FIX, REVIEW-OMNI NV10):
+        # Substrate operator-authorize recipes MUST declare
+        # `target_modes` (YAML list with at least one of
+        # contest_one_video_replay / contest_generalized /
+        # production_generalized / production_edge_adaptive /
+        # research_substrate). Initial landing: warn-only; legacy
+        # recipes will be backfilled.
+        check_substrate_recipes_declare_target_modes(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -43748,6 +43792,507 @@ def check_cost_band_posterior_rows_have_outcome_field(
             f"found {len(violations)} row(s) missing the outcome field. "
             "Catalog #177 closes FIX-WAVE-2 R2-3 (read-side defense "
             "over cost_band_calibration.py:333 back-compat trap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #178 - check_substrate_trainers_declare_tf32_support
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Low NV1 (Carmack): substrate trainers don't enable TF32
+# (``torch.backends.cuda.matmul.allow_tf32 = True``). On Ampere/Hopper
+# (A100, 4090, H100) TF32 gives ~1.5-2x speedup on matmul-bound
+# workloads with no accuracy regression. Each substrate trainer MUST
+# either (a) enable TF32 explicitly OR (b) carry a file-level
+# ``# TF32_WAIVED:<reason>`` waiver acknowledging the speed gap.
+# Initial landing: warn-only; backport-or-waive sweep is a separate
+# Tier 1 engineering wave (sister of #172 autocast).
+_CHECK_178_TRAINER_GLOB = "train_substrate_*.py"
+_CHECK_178_TF32_TOKENS: tuple[str, ...] = (
+    "torch.backends.cuda.matmul.allow_tf32",
+    "torch.backends.cudnn.allow_tf32",
+)
+_CHECK_178_FILE_WAIVER_RE = re.compile(
+    r"#\s*TF32_WAIVED:\s*(?!<reason>)\S+"
+)
+
+
+def check_substrate_trainers_declare_tf32_support(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #178. REVIEW-OMNI Low NV1. Refuses substrate trainers
+    that neither enable TF32 (`torch.backends.cuda.matmul.allow_tf32 =
+    True`) nor carry a file-level ``# TF32_WAIVED:<reason>`` waiver.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    experiments_dir = root / "experiments"
+    violations: list[str] = []
+    if not experiments_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-trainer-tf32] OK "
+                "(no experiments dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(experiments_dir.glob(_CHECK_178_TRAINER_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_178_FILE_WAIVER_RE.search(text):
+            continue
+        if any(tok in text for tok in _CHECK_178_TF32_TOKENS):
+            continue
+        violations.append(
+            f"{rel}: substrate trainer neither enables TF32 "
+            "(`torch.backends.cuda.matmul.allow_tf32 = True` OR "
+            "`torch.backends.cudnn.allow_tf32 = True`) nor carries a "
+            "file-level `# TF32_WAIVED:<reason>` waiver. ~1.5-2x speedup "
+            "left on table on Ampere/Hopper. Enable TF32 OR explicitly waive."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-trainer-tf32] {len(violations)} "
+                f"violation(s) across {scanned} substrate trainer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-trainer-tf32] OK "
+                f"({scanned} substrate trainer(s); all enable TF32 or waived)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainers_declare_tf32_support found "
+            f"{len(violations)} violation(s). Catalog #178 closes REVIEW-OMNI "
+            "Low NV1 (~1.5-2x Ampere/Hopper TF32 speedup gap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #179 - check_substrate_trainers_declare_torch_compile_support
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Low NV3: substrate trainers don't use ``torch.compile`` /
+# Inductor. The scorer forward (SegNet UNet + PoseNet FastViT) is the
+# dominant cost and would benefit from Inductor compilation. NOT a
+# regression; just unrealized speedup. Each substrate trainer MUST
+# either (a) declare an ``--enable-torch-compile`` argparse flag OR
+# (b) directly invoke ``torch.compile(...)`` OR (c) carry a file-level
+# ``# TORCH_COMPILE_WAIVED:<reason>`` waiver. Initial landing: warn-only;
+# backport-or-waive sweep is part of Tier 2 engineering wave (sister
+# of #172 autocast and #178 TF32).
+_CHECK_179_TRAINER_GLOB = "train_substrate_*.py"
+_CHECK_179_FLAG_TOKEN = "--enable-torch-compile"
+_CHECK_179_API_TOKEN = "torch.compile("
+_CHECK_179_FILE_WAIVER_RE = re.compile(
+    r"#\s*TORCH_COMPILE_WAIVED:\s*(?!<reason>)\S+"
+)
+
+
+def check_substrate_trainers_declare_torch_compile_support(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #179. REVIEW-OMNI Low NV3. Refuses substrate trainers
+    that neither declare ``--enable-torch-compile``, invoke
+    ``torch.compile(...)``, nor carry a file-level
+    ``# TORCH_COMPILE_WAIVED:<reason>`` waiver.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    experiments_dir = root / "experiments"
+    violations: list[str] = []
+    if not experiments_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-trainer-torch-compile] OK "
+                "(no experiments dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(experiments_dir.glob(_CHECK_179_TRAINER_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_179_FILE_WAIVER_RE.search(text):
+            continue
+        if _CHECK_179_FLAG_TOKEN in text:
+            continue
+        if _CHECK_179_API_TOKEN in text:
+            continue
+        violations.append(
+            f"{rel}: substrate trainer neither declares "
+            f"`{_CHECK_179_FLAG_TOKEN}` argparse flag, calls "
+            f"`{_CHECK_179_API_TOKEN}...)`, nor carries a file-level "
+            "`# TORCH_COMPILE_WAIVED:<reason>` waiver. Tier 2 engineering "
+            "speedup (Inductor / torch.compile) left on table. Enable OR "
+            "explicitly waive."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-trainer-torch-compile] {len(violations)} "
+                f"violation(s) across {scanned} substrate trainer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-trainer-torch-compile] OK "
+                f"({scanned} substrate trainer(s); all declared, used, or waived)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainers_declare_torch_compile_support found "
+            f"{len(violations)} violation(s). Catalog #179 closes REVIEW-OMNI "
+            "Low NV3 (Tier 2 torch.compile/Inductor speedup gap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #180 - check_substrate_trainers_use_no_grad_at_eval
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Low NV4 (Carmack): eval-time scorer forwards may not be
+# ``with torch.no_grad():`` wrapped. Activation memory pressure during
+# eval. Each substrate trainer MUST contain at least one
+# ``torch.no_grad`` context (``with torch.no_grad():`` or
+# ``@torch.no_grad()``) OR carry a file-level
+# ``# NO_GRAD_WAIVED:<reason>`` waiver. Strict-from-byte-one because
+# every existing trainer already has at least one `torch.no_grad`
+# context (verified live count = 0 at landing).
+_CHECK_180_TRAINER_GLOB = "train_substrate_*.py"
+_CHECK_180_NO_GRAD_TOKENS: tuple[str, ...] = (
+    "torch.no_grad",
+    "@torch.no_grad",
+    "torch.inference_mode",
+)
+_CHECK_180_FILE_WAIVER_RE = re.compile(
+    r"#\s*NO_GRAD_WAIVED:\s*(?!<reason>)\S+"
+)
+
+
+def check_substrate_trainers_use_no_grad_at_eval(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #180. REVIEW-OMNI Low NV4. Refuses substrate trainers
+    that contain neither a ``torch.no_grad`` context nor a file-level
+    ``# NO_GRAD_WAIVED:<reason>`` waiver. Eval-time scorer forwards
+    should free activation memory via no_grad.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    experiments_dir = root / "experiments"
+    violations: list[str] = []
+    if not experiments_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-trainer-no-grad] OK "
+                "(no experiments dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(experiments_dir.glob(_CHECK_180_TRAINER_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_180_FILE_WAIVER_RE.search(text):
+            continue
+        if any(tok in text for tok in _CHECK_180_NO_GRAD_TOKENS):
+            continue
+        violations.append(
+            f"{rel}: substrate trainer neither uses `torch.no_grad`, "
+            "`@torch.no_grad()`, `torch.inference_mode`, nor carries a "
+            "file-level `# NO_GRAD_WAIVED:<reason>` waiver. Eval-time "
+            "activation memory pressure unfreed. Wrap eval scorer "
+            "forwards in `torch.no_grad` OR explicitly waive."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-trainer-no-grad] {len(violations)} "
+                f"violation(s) across {scanned} substrate trainer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-trainer-no-grad] OK "
+                f"({scanned} substrate trainer(s); all use no_grad or waived)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainers_use_no_grad_at_eval found "
+            f"{len(violations)} violation(s). Catalog #180 closes REVIEW-OMNI "
+            "Low NV4 (eval-time activation-memory gap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #181 - check_substrate_recipes_declare_pyav_decode_strategy
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Low NV8: pyav decode -> CUDA upload synchronicity not
+# profiled. Each substrate operator-authorize recipe MUST declare
+# ``pyav_decode_strategy`` (one of: ``cpu_thread_async_upload``,
+# ``cuda_nvdec``, ``cpu_blocking_upload``, ``not_applicable``).
+# ``not_applicable`` reserved for substrates that do not decode video
+# at training time (e.g. purely cached-latent training).
+# Same-line waiver: ``# PYAV_DECODE_STRATEGY_OK:<reason>``.
+# Initial landing: warn-only; legacy recipes will be backfilled.
+_CHECK_181_RECIPE_DIR = ".omx/operator_authorize_recipes"
+_CHECK_181_RECIPE_GLOB = "substrate_*_modal_*_dispatch.yaml"
+_CHECK_181_FIELD = "pyav_decode_strategy"
+_CHECK_181_VALID_VALUES: tuple[str, ...] = (
+    "cpu_thread_async_upload",
+    "cuda_nvdec",
+    "cpu_blocking_upload",
+    "not_applicable",
+)
+_CHECK_181_WAIVER_RE = re.compile(
+    r"#\s*PYAV_DECODE_STRATEGY_OK:\s*(?!<reason>)\S+"
+)
+_CHECK_181_FIELD_RE = re.compile(
+    rf"^\s*{re.escape(_CHECK_181_FIELD)}\s*:\s*\"?([a-zA-Z_]+)\"?\s*(#.*)?$",
+    re.MULTILINE,
+)
+
+
+def check_substrate_recipes_declare_pyav_decode_strategy(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #181. REVIEW-OMNI Low NV8. Refuses substrate
+    operator-authorize recipes that don't declare
+    ``pyav_decode_strategy`` (one of the valid values) at the top level.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    recipes_dir = root / _CHECK_181_RECIPE_DIR
+    violations: list[str] = []
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-recipe-pyav-decode-strategy] OK "
+                "(no operator_authorize_recipes dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(recipes_dir.glob(_CHECK_181_RECIPE_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_181_WAIVER_RE.search(text):
+            continue
+        m = _CHECK_181_FIELD_RE.search(text)
+        if m is None:
+            violations.append(
+                f"{rel}: missing top-level "
+                f"`{_CHECK_181_FIELD}: <value>` field (one of "
+                f"{list(_CHECK_181_VALID_VALUES)}). Add the field OR a "
+                "`# PYAV_DECODE_STRATEGY_OK:<reason>` waiver."
+            )
+            continue
+        value = m.group(1)
+        if value not in _CHECK_181_VALID_VALUES:
+            violations.append(
+                f"{rel}: `{_CHECK_181_FIELD}: {value}` is not one of "
+                f"{list(_CHECK_181_VALID_VALUES)}"
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-recipe-pyav-decode-strategy] {len(violations)} "
+                f"violation(s) across {scanned} substrate recipe(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-recipe-pyav-decode-strategy] OK "
+                f"({scanned} substrate recipe(s); all declare "
+                f"{_CHECK_181_FIELD})"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_recipes_declare_pyav_decode_strategy found "
+            f"{len(violations)} violation(s). Catalog #181 closes REVIEW-OMNI "
+            "Low NV8 (pyav decode -> CUDA upload synchronicity profiling "
+            "gap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #182 - check_substrate_recipes_declare_target_modes
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Low NV10: per-substrate ``target_modes`` not declared.
+# Production-graduation discipline gap. Each substrate operator-authorize
+# recipe MUST declare ``target_modes`` as a YAML list containing at least
+# one of: ``contest_one_video_replay``, ``contest_generalized``,
+# ``production_generalized``, ``production_edge_adaptive``,
+# ``research_substrate``. Same-line waiver:
+# ``# TARGET_MODES_OK:<reason>``. Initial landing: warn-only; legacy
+# recipes will be backfilled.
+_CHECK_182_RECIPE_DIR = ".omx/operator_authorize_recipes"
+_CHECK_182_RECIPE_GLOB = "substrate_*_modal_*_dispatch.yaml"
+_CHECK_182_FIELD = "target_modes"
+_CHECK_182_VALID_VALUES: tuple[str, ...] = (
+    "contest_one_video_replay",
+    "contest_generalized",
+    "production_generalized",
+    "production_edge_adaptive",
+    "research_substrate",
+)
+_CHECK_182_WAIVER_RE = re.compile(
+    r"#\s*TARGET_MODES_OK:\s*(?!<reason>)\S+"
+)
+# Accept either inline list form `target_modes: [a, b]` OR block form
+# `target_modes:\n  - a\n  - b`. Validation just requires the field
+# header to appear at indent 0 followed by either form.
+_CHECK_182_HEADER_RE = re.compile(
+    rf"^\s*{re.escape(_CHECK_182_FIELD)}\s*:",
+    re.MULTILINE,
+)
+# Token detector pulls EVERY valid-value occurrence inside an inline-list
+# `[...]` OR `- value` block after the header. We only need at least one
+# valid value to consider the field non-empty.
+_CHECK_182_INLINE_VALUE_RE = re.compile(
+    r"[\[,\-\s]\s*\"?([a-z_]+)\"?\s*[,\]]?"
+)
+
+
+def _check_182_extract_target_modes(text: str) -> list[str] | None:
+    """Return the list of declared target_modes values, or None if the
+    field is absent. Accepts both YAML inline-list and YAML block-list
+    forms.
+    """
+    m = _CHECK_182_HEADER_RE.search(text)
+    if m is None:
+        return None
+    # Window from end-of-header to next top-level-key OR EOF.
+    start = m.end()
+    # Find next top-level key: a line at indent=0 that has `key:`.
+    next_top_level = re.search(
+        r"\n[A-Za-z_][A-Za-z0-9_]*\s*:",
+        text[start:],
+    )
+    window_end = start + next_top_level.start() if next_top_level else len(text)
+    window = text[start:window_end]
+    values: list[str] = []
+    # Inline list: `[a, b, c]` on the same line OR next line.
+    inline_match = re.search(r"\[([^\]]*)\]", window, re.MULTILINE)
+    if inline_match is not None:
+        inner = inline_match.group(1)
+        for tok in re.findall(r"\"?([a-z_]+)\"?", inner):
+            if tok and tok in _CHECK_182_VALID_VALUES:
+                values.append(tok)
+        return values
+    # Block list: `- value` lines.
+    for line in window.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            tok = stripped[2:].strip().strip("\"'")
+            if tok and tok in _CHECK_182_VALID_VALUES:
+                values.append(tok)
+    return values
+
+
+def check_substrate_recipes_declare_target_modes(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #182. REVIEW-OMNI Low NV10. Refuses substrate
+    operator-authorize recipes that don't declare a ``target_modes``
+    YAML list with at least one valid value at the top level.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    recipes_dir = root / _CHECK_182_RECIPE_DIR
+    violations: list[str] = []
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-recipe-target-modes] OK "
+                "(no operator_authorize_recipes dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(recipes_dir.glob(_CHECK_182_RECIPE_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_182_WAIVER_RE.search(text):
+            continue
+        values = _check_182_extract_target_modes(text)
+        if values is None:
+            violations.append(
+                f"{rel}: missing top-level `{_CHECK_182_FIELD}: [<value>, "
+                "...]` field. Add a YAML list with at least one of "
+                f"{list(_CHECK_182_VALID_VALUES)} OR a "
+                "`# TARGET_MODES_OK:<reason>` waiver."
+            )
+            continue
+        if not values:
+            violations.append(
+                f"{rel}: `{_CHECK_182_FIELD}` declared but contains no "
+                f"valid value (must include one of "
+                f"{list(_CHECK_182_VALID_VALUES)})"
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-recipe-target-modes] {len(violations)} "
+                f"violation(s) across {scanned} substrate recipe(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-recipe-target-modes] OK "
+                f"({scanned} substrate recipe(s); all declare {_CHECK_182_FIELD})"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_recipes_declare_target_modes found "
+            f"{len(violations)} violation(s). Catalog #182 closes REVIEW-OMNI "
+            "Low NV10 (production-graduation discipline gap):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
