@@ -240,10 +240,15 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Rate-term coefficient (contest evaluate.py: 25.0).")
     p.add_argument("--beta-seg", type=float, default=100.0,
                    help="SegNet distortion coefficient (contest evaluate.py: 100.0).")
-    p.add_argument("--gamma-pose", type=float, default=1.0,
-                   help="PoseNet distortion coefficient (contest evaluate.py: 1.0).")
-    p.add_argument("--pose-weight-scale", type=float, default=2.71,
-                   help="Operating-point-aware pose-marginal multiplier.")
+    p.add_argument("--gamma-pose", type=float, default=math.sqrt(10.0),
+                   help="PoseNet sqrt-term coefficient (contest evaluate.py: sqrt(10)).")
+    p.add_argument(
+        "--pose-weight-scale", type=float, default=1.0,
+        help=(
+            "Optional operating-point multiplier layered on top of the contest "
+            "sqrt(10) pose coefficient; default 1.0."
+        ),
+    )
     p.add_argument(
         "--subband-rate-weight-ll", type=float, default=1.0,
         help="Mallat-hierarchy rate weight for LL subband (low-pass / approximation).",

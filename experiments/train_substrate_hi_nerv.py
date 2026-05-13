@@ -283,17 +283,16 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--gamma-pose",
         type=float,
-        default=1.0,
-        help="PoseNet distortion coefficient (contest evaluate.py: 1.0).",
+        default=math.sqrt(10.0),
+        help="PoseNet sqrt-term coefficient (contest evaluate.py: sqrt(10)).",
     )
     p.add_argument(
         "--pose-weight-scale",
         type=float,
-        default=2.71,
+        default=1.0,
         help=(
-            "Operating-point-aware pose-marginal multiplier. At PR106-r2 "
-            "(pose_avg ~ 3.4e-5) the pose marginal is 2.71x SegNet's (CLAUDE.md "
-            "'SegNet vs PoseNet - operating-point dependent')."
+            "Optional operating-point multiplier layered on top of the contest sqrt(10) "
+            "pose coefficient; default 1.0 keeps trainer losses apples-to-apples."
         ),
     )
     p.add_argument(

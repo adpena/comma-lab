@@ -500,3 +500,77 @@ Score-lowering implication:
   contract. The two recovered Modal failures remain infrastructure/harness
   failures with `score_claim=false`; they do not falsify sane_hnerv as a
   substrate.
+
+## Follow-up: lane_g_v3 GHA [contest-CPU] closure harvested (2026-05-13)
+
+Run:
+
+- GitHub Actions run: `https://github.com/adpena/comma-lab/actions/runs/25772267506`
+- Workflow/job: `contest_cpu_eval` / `contest_cpu_eval`
+- Axis: `[contest-CPU GHA Linux x86_64]`
+- Artifact path: `experiments/results/gha_cpu_eval/lane_g_v3_retry7_25772267506/contest_cpu_eval-lane_g_v3-25772267506/contest_auth_eval.json`
+- Evaluated commit: `7b8f7db0e9620b45ce9ab36f345f377a46570593`
+- Archive SHA-256: `9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b`
+- Archive bytes: `694074`
+- Samples: `600`
+- `avg_segnet_dist`: `0.00400702`
+- `avg_posenet_dist`: `0.0030529`
+- Recomputed formula:
+  - seg term `100 * seg = 0.400702`
+  - pose term `sqrt(10 * pose) = 0.17472549899771356`
+  - rate term `25 * bytes / 37_545_489 = 0.46215538702931797`
+  - total `1.0375828860270315`
+- JSON canonical score: `1.0375828860270313`
+- JSON final score: `1.04`
+- `promotion_eligible=false`
+
+Dispatch claim:
+
+- Closed with terminal status
+  `completed_gha_cpu_eval_score_1_037582886` for
+  `lane_g_v3_gha_cpu_eval_l3_promotion_20260512_retry7` /
+  `gha_run_25772267506`.
+- `tools/claim_lane_dispatch.py summary --ttl-hours 24` reports
+  `active=0`; remaining nonterminal rows are stale staged Phase 2/3 rows, not
+  live provider work.
+
+Classification:
+
+- Legitimate GHA `[contest-CPU]` exact-eval closure for this archive/runtime.
+- It is not score-lowering relative to the current HNeRV/PR106 frontier and is
+  not promotion-eligible.
+- The result is still valuable as an apples-to-apples closure of the previously
+  open `lane_g_v3` CPU claim and removes a phantom active dispatch from the
+  queue.
+
+## Follow-up: substrate trainer pose-default bug class fixed + strict gate (2026-05-13)
+
+Bug class:
+
+- The score-aware substrate loss classes had been moved to the contest pose
+  coefficient (`sqrt(10) * sqrt(d_pose)`), but trainer argparse defaults still
+  overrode that with the older operating-point pair:
+  `--gamma-pose=1.0` and `--pose-weight-scale=2.71`.
+- That made first-anchor training objectives non-apples-to-apples before GPU
+  spend and kept the PR106-specific pose multiplier as default rather than as
+  an explicit sweep knob.
+
+Fix:
+
+- Updated 14 `experiments/train_substrate_*.py` trainer defaults to:
+  `--gamma-pose=math.sqrt(10.0)` and `--pose-weight-scale=1.0`.
+- Kept `--pose-weight-scale` as an explicit optional multiplier for future
+  operating-point sweeps.
+- Added strict preflight check
+  `check_substrate_trainer_pose_defaults_match_contest_formula(...)` in
+  `src/tac/preflight.py` and wired it into `preflight_all()`.
+- Added regression tests in
+  `src/tac/tests/test_substrate_trainer_pose_defaults_preflight.py`.
+
+Verification:
+
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_substrate_trainer_pose_defaults_preflight.py src/tac/substrates/sane_hnerv/tests/test_train_substrate_sane_hnerv_full_main.py::test_argparse_smoke_mode_required_flags_minimal src/tac/substrates/balle_renderer/tests/test_train_substrate_balle_renderer_full_main.py::test_argparse_smoke_mode_required_flags_minimal -q`
+  -> `5 passed`.
+- Direct strict preflight check:
+  `check_substrate_trainer_pose_defaults_match_contest_formula(strict=True)`
+  -> `[]` with `14 trainer(s) scanned`.

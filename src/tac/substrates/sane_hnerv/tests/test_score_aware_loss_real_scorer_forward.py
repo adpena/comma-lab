@@ -28,6 +28,7 @@ end-to-end against the real scorer shape contract.
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -129,8 +130,11 @@ def test_loss_runs_on_real_segnet_smp_unet_random_init():
         p.requires_grad_(False)
 
     weights = ScoreAwareLossWeights(
-        alpha_rate=25.0, beta_seg=100.0, gamma_pose=1.0,
-        pose_weight_scale=2.71, contest_normalizer=37545489.0,
+        alpha_rate=25.0,
+        beta_seg=100.0,
+        gamma_pose=math.sqrt(10.0),
+        pose_weight_scale=1.0,
+        contest_normalizer=37545489.0,
     )
     loss_fn = SaneHnervScoreAwareLoss(
         seg_scorer=seg_scorer, pose_scorer=pose_scorer, weights=weights,

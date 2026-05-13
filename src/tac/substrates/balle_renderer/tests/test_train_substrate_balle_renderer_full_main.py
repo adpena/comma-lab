@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import importlib
 import io
+import math
 import subprocess
 import sys
 import zipfile
@@ -160,8 +161,8 @@ def test_argparse_smoke_mode_required_flags_minimal(trainer_module, tmp_path):
     assert args.ema_decay == 0.997  # CLAUDE.md non-negotiable default
     assert args.alpha_rate == 25.0  # contest evaluate.py default
     assert args.beta_seg == 100.0
-    assert args.gamma_pose == 1.0
-    assert args.pose_weight_scale > 1.0  # PR106-r2 operating-point-aware
+    assert args.gamma_pose == math.sqrt(10.0)
+    assert args.pose_weight_scale == 1.0
     # β-specific defaults
     assert args.balle_hyperprior_channels == 8
     assert args.gdn_eps == 1e-12
@@ -530,8 +531,11 @@ def test_score_aware_loss_runs_on_dummy_scorers():
             )
 
     weights = BalleScoreAwareLossWeights(
-        alpha_rate=25.0, beta_seg=100.0, gamma_pose=1.0,
-        pose_weight_scale=2.71, lambda_hyperprior=0.5,
+        alpha_rate=25.0,
+        beta_seg=100.0,
+        gamma_pose=math.sqrt(10.0),
+        pose_weight_scale=1.0,
+        lambda_hyperprior=0.5,
         contest_normalizer=37545489.0,
     )
     loss_fn = BalleRendererScoreAwareLoss(
@@ -652,8 +656,11 @@ def test_score_aware_loss_hyperprior_term_contributes_to_loss():
             return x.flatten(1).mean(dim=1, keepdim=True).expand(-1, 12)
 
     weights = BalleScoreAwareLossWeights(
-        alpha_rate=25.0, beta_seg=100.0, gamma_pose=1.0,
-        pose_weight_scale=2.71, lambda_hyperprior=2.0,  # bigger to amplify
+        alpha_rate=25.0,
+        beta_seg=100.0,
+        gamma_pose=math.sqrt(10.0),
+        pose_weight_scale=1.0,
+        lambda_hyperprior=2.0,  # bigger to amplify
         contest_normalizer=37545489.0,
     )
     loss_fn = BalleRendererScoreAwareLoss(

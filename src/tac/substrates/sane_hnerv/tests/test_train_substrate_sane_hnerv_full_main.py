@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import importlib
 import io
+import math
 import subprocess
 import sys
 import zipfile
@@ -136,8 +137,8 @@ def test_argparse_smoke_mode_required_flags_minimal(trainer_module, tmp_path):
     assert args.ema_decay == 0.997  # CLAUDE.md non-negotiable default
     assert args.alpha_rate == 25.0  # contest evaluate.py default
     assert args.beta_seg == 100.0
-    assert args.gamma_pose == 1.0
-    assert args.pose_weight_scale > 1.0  # PR106-r2 operating-point-aware
+    assert args.gamma_pose == math.sqrt(10.0)
+    assert args.pose_weight_scale == 1.0
 
 
 def test_argparse_rejects_mps_device(trainer_module, tmp_path):
@@ -413,8 +414,11 @@ def test_score_aware_loss_runs_on_dummy_scorers():
             return {"pose": x_bchw.flatten(2).mean(dim=2)}
 
     weights = ScoreAwareLossWeights(
-        alpha_rate=25.0, beta_seg=100.0, gamma_pose=1.0,
-        pose_weight_scale=2.71, contest_normalizer=37545489.0,
+        alpha_rate=25.0,
+        beta_seg=100.0,
+        gamma_pose=math.sqrt(10.0),
+        pose_weight_scale=1.0,
+        contest_normalizer=37545489.0,
     )
     loss_fn = SaneHnervScoreAwareLoss(
         seg_scorer=DummySeg(), pose_scorer=DummyPose(), weights=weights,

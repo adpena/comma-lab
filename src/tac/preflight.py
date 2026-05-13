@@ -2400,6 +2400,16 @@ def preflight_all(
         check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #174: substrate trainer argparse defaults MUST
+        # match the contest pose contribution ``sqrt(10*d_pose)``. The loss
+        # classes were fixed to default ``gamma_pose=sqrt(10)`` but trainer
+        # parsers still silently overrode that with the older PR106
+        # operating-point pair ``gamma_pose=1.0`` and
+        # ``pose_weight_scale=2.71``. STRICT @ 0 so new first-anchor trainers
+        # cannot launch on a non-apples-to-apples objective by default.
+        check_substrate_trainer_pose_defaults_match_contest_formula(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #159 (FFFF Bug 4, UUU Path B): CLAUDE.md
         # catalog table is the canonical strictness ledger. When a
         # strict-flip happens in code without updating the entry text,
@@ -2468,6 +2478,7 @@ def preflight_all(
         _parallel.submit("check_no_eval_roundtrip_false", lambda: check_no_eval_roundtrip_false(strict=True, verbose=False))
         _parallel.submit("check_no_scorer_load_at_inflate", lambda: check_no_scorer_load_at_inflate(strict=True, verbose=False))
         _parallel.submit("check_substrate_score_aware_losses_use_canonical_scorer_contract", lambda: check_substrate_score_aware_losses_use_canonical_scorer_contract(strict=True, verbose=False))
+        _parallel.submit("check_substrate_trainer_pose_defaults_match_contest_formula", lambda: check_substrate_trainer_pose_defaults_match_contest_formula(strict=True, verbose=False))
         _parallel.submit("check_no_disable_eval_roundtrip_flag", lambda: check_no_disable_eval_roundtrip_flag(strict=True, verbose=False))
         _parallel.submit("check_no_pack_sparse_delta_approved_outside_promotion_tool", lambda: check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=False))
         _parallel.submit("check_remote_scripts_have_nvdec_probe", lambda: check_remote_scripts_have_nvdec_probe(strict=True, verbose=False))
@@ -4185,6 +4196,13 @@ def preflight_developer(
                 "check_substrate_score_aware_losses_use_canonical_scorer_contract",
                 "[substrate-score-aware-scorer-contract]",
                 lambda: check_substrate_score_aware_losses_use_canonical_scorer_contract(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_substrate_trainer_pose_defaults_match_contest_formula",
+                "[substrate-trainer-pose-defaults]",
+                lambda: check_substrate_trainer_pose_defaults_match_contest_formula(
                     strict=True, verbose=False
                 ),
             ),
@@ -10438,6 +10456,152 @@ def check_substrate_score_aware_losses_use_canonical_scorer_contract(
     if violations and strict:
         raise PreflightError(
             "check_substrate_score_aware_losses_use_canonical_scorer_contract: "
+            f"{len(violations)} violation(s); first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+def _check_174_add_argument_flag(call: ast.Call) -> str | None:
+    if not call.args:
+        return None
+    first = call.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        return first.value
+    return None
+
+
+def _check_174_keyword(call: ast.Call, name: str) -> ast.AST | None:
+    for keyword in call.keywords:
+        if keyword.arg == name:
+            return keyword.value
+    return None
+
+
+def _check_174_default_is_sqrt10(node: ast.AST | None) -> bool:
+    if node is None:
+        return False
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return abs(float(node.value) - 10.0**0.5) < 1e-12
+    if not isinstance(node, ast.Call):
+        return False
+    if len(node.args) != 1 or not isinstance(node.args[0], ast.Constant):
+        return False
+    if float(node.args[0].value) != 10.0:
+        return False
+    func = node.func
+    return (
+        (isinstance(func, ast.Attribute) and func.attr == "sqrt")
+        or (isinstance(func, ast.Name) and func.id == "sqrt")
+    )
+
+
+def _check_174_default_is_one(node: ast.AST | None) -> bool:
+    return (
+        isinstance(node, ast.Constant)
+        and isinstance(node.value, (int, float))
+        and float(node.value) == 1.0
+    )
+
+
+def check_substrate_trainer_pose_defaults_match_contest_formula(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Require substrate trainers to default to the contest pose term.
+
+    Score-aware substrate losses already default to
+    ``sqrt(10) * sqrt(d_pose)``. Trainer argparse defaults must not silently
+    reintroduce the older PR106 operating-point multiplier as the default, or
+    canaries become non-apples-to-apples before the first GPU epoch.
+    """
+
+    root = Path(repo_root or REPO_ROOT)
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        paths = source_index.files(["experiments"], pattern="train_substrate_*.py")
+    else:
+        paths = tuple(sorted((root / "experiments").glob("train_substrate_*.py")))
+
+    violations: list[str] = []
+    scanned = 0
+    for path in paths:
+        try:
+            text = (
+                source_index.read_text(path, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else path.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        if "--gamma-pose" not in text and "--pose-weight-scale" not in text:
+            continue
+        scanned += 1
+        rel = path.relative_to(root) if path.is_relative_to(root) else path
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError as exc:
+            violations.append(f"{rel}:{exc.lineno or 1}: cannot parse trainer")
+            continue
+
+        seen_gamma = False
+        seen_scale = False
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            flag = _check_174_add_argument_flag(node)
+            if flag == "--gamma-pose":
+                seen_gamma = True
+                default_node = _check_174_keyword(node, "default")
+                if not _check_174_default_is_sqrt10(default_node):
+                    rendered = (
+                        ast.unparse(default_node)
+                        if default_node is not None and hasattr(ast, "unparse")
+                        else "<missing>"
+                    )
+                    violations.append(
+                        f"{rel}:{node.lineno}: --gamma-pose default must be "
+                        f"math.sqrt(10.0), got {rendered}"
+                    )
+            elif flag == "--pose-weight-scale":
+                seen_scale = True
+                default_node = _check_174_keyword(node, "default")
+                if not _check_174_default_is_one(default_node):
+                    rendered = (
+                        ast.unparse(default_node)
+                        if default_node is not None and hasattr(ast, "unparse")
+                        else "<missing>"
+                    )
+                    violations.append(
+                        f"{rel}:{node.lineno}: --pose-weight-scale default "
+                        f"must be 1.0, got {rendered}"
+                    )
+        if seen_gamma and not seen_scale:
+            violations.append(
+                f"{rel}: declares --gamma-pose without --pose-weight-scale; "
+                "trainer cannot make contest-vs-operating-point weighting explicit"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-trainer-pose-defaults] "
+                f"{len(violations)} violation(s) across {scanned} trainer(s)"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [substrate-trainer-pose-defaults] OK "
+                f"({scanned} trainer(s) scanned)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainer_pose_defaults_match_contest_formula: "
             f"{len(violations)} violation(s); first 3:\n  "
             + "\n  ".join(v[:300] for v in violations[:3])
         )
@@ -23989,7 +24153,6 @@ def check_memory_md_size_under_ceiling(
 
     Returns list of violations. Raises MetaBugViolation if strict and any.
     """
-    import os
     candidates: list[Path] = []
     home_memory = (
         Path.home()
