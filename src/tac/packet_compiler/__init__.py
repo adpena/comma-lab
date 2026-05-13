@@ -119,6 +119,15 @@ from tac.packet_compiler.pr106_latent_sidecar_selection import (
     profile_latent_sidecar_topk_pareto,
     validate_score_table_manifest as validate_pr106_latent_score_table_manifest,
 )
+from tac.packet_compiler.pr106_fixed_latent_recode import (
+    HLM1_MAGIC,
+    PR106FixedLatentRecode,
+    PR106FixedLatentRecodeError,
+    decode_hlm1_fixed_latent_raw,
+    decode_pr106_fixed_latent_raw,
+    encode_hlm1_fixed_latents_from_brotli,
+    split_pr106_fixed_latent_raw,
+)
 from tac.packet_compiler.pr106_runtime_consumption import (
     dumps_runtime_consumption_manifest,
     load_pr106_sidecar_runtime,
@@ -438,6 +447,13 @@ __all__ = [
     "pr106_latent_candidate_grid_npy_sha256",
     "profile_latent_sidecar_topk_pareto",
     "validate_pr106_latent_score_table_manifest",
+    "HLM1_MAGIC",
+    "PR106FixedLatentRecode",
+    "PR106FixedLatentRecodeError",
+    "decode_hlm1_fixed_latent_raw",
+    "decode_pr106_fixed_latent_raw",
+    "encode_hlm1_fixed_latents_from_brotli",
+    "split_pr106_fixed_latent_raw",
     "read_single_stored_member_archive",
     "runtime_full_frame_streaming_digest",
     "runtime_sidecar_correction_digest",

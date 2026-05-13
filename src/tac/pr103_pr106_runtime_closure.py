@@ -24,6 +24,7 @@ import numpy as np
 import torch
 
 from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
+from tac.packet_compiler.pr106_fixed_latent_recode import decode_pr106_fixed_latent_raw
 from tac.pr103_arithmetic_codec import (
     AC_TENSOR_INDICES,
     EncodedAcDecoderBlob,
@@ -220,7 +221,7 @@ def decode_pr106_packed_payload(payload: bytes) -> Pr106DecodedPayload:
 
 def decode_pr106_fixed_latents(data: bytes) -> torch.Tensor:
     """Decode PR106's fixed 600x28 latent section."""
-    raw = brotli.decompress(data)
+    raw = decode_pr106_fixed_latent_raw(data)
     n = int(PR106_PACKED_META["n_pairs"])
     d = int(PR106_PACKED_META["latent_dim"])
     meta_len = d * 4

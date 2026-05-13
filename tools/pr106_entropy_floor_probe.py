@@ -49,6 +49,10 @@ from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_SIDECAR_MAGIC,
     parse_pr106_sidecar_packet,
 )
+from tac.packet_compiler.pr106_fixed_latent_recode import (  # noqa: E402
+    HLM1_MAGIC,
+    decode_pr106_fixed_latent_raw,
+)
 
 TOOL = "tools/pr106_entropy_floor_probe.py"
 SCHEMA_VERSION = 1
@@ -433,7 +437,12 @@ def build_report_from_payload(
     parsed_decoder, decoder_raw, decoder_section_codec = _decode_decoder_section(
         packed.decoder_packed_brotli
     )
-    latents_raw = brotli.decompress(packed.latents_and_sidecar_brotli)
+    latents_raw = decode_pr106_fixed_latent_raw(packed.latents_and_sidecar_brotli)
+    latents_section_codec = (
+        "hlm1_sparse_hi_delta_positions"
+        if packed.latents_and_sidecar_brotli.startswith(HLM1_MAGIC)
+        else "brotli_fixed_latents_raw"
+    )
 
     decoder_streams = [
         SymbolStream(
@@ -489,6 +498,7 @@ def build_report_from_payload(
         "decoder_raw_sha256": sha256_bytes(decoder_raw),
         "latents_section_bytes": len(packed.latents_and_sidecar_brotli),
         "latents_section_sha256": sha256_bytes(packed.latents_and_sidecar_brotli),
+        "latents_section_codec": latents_section_codec,
         "latents_raw_bytes": len(latents_raw),
         "latents_raw_sha256": sha256_bytes(latents_raw),
     }
