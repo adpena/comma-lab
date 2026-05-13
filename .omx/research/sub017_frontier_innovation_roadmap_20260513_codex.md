@@ -26,21 +26,305 @@ is uneven:
 
 | Axis | Covered by this pass | Frontier implication | Immediate implementation gap |
 | --- | --- | --- | --- |
-| NeRV/HNeRV family | PR95/PR100/PR101/PR103/PR106 parity, HNeRV/HiNeRV/FFNeRV/E-NeRV, sane-HNeRV trainer discipline | highest near-term probability because public frontier already proved the family | recover real public training/export recipes and make exact-eval packet selection happen in-loop |
-| Stacking/composition | HNeRV + LAPose, HNeRV + hyperprior, HNeRV + residual atom, PR106 sidecar stacks, A1 + wavelet/LAPose | sub-0.17 likely needs combined component and rate movement | typed stack contracts plus exact stacked archive eval; component positives are not composable until the stacked packet scores |
-| Compiler/PacketIR | HDM5 q-streams, section grammars, PR101/PR103/PR106 PacketIR, arithmetic/range/ANS transforms | generic recompression is saturated; semantic payload lowering remains live | runtime decoder for best q-stream candidate and golden vectors tied to exact archive bytes |
-| Bit-level first principles | byte anatomy, entropy floors, rate term arithmetic, per-section SHA/offset accounting | rate-only from 0.20638 to sub-0.17 would need about 54.6 KiB, so bits must amplify a better model | convert entropy estimates into runtime-consumed packets, not standalone blobs |
+| NeRV/HNeRV family | PR95/PR100/PR101/PR103/PR106 parity, HNeRV/HiNeRV/FFNeRV/E-NeRV, sane-HNeRV trainer discipline; see [NeRV-2021], [HNeRV-2023], [E-NeRV-2022] | highest near-term probability because public frontier already proved the family | recover real public training/export recipes and make exact-eval packet selection happen in-loop |
+| Stacking/composition | HNeRV + LAPose, HNeRV + hyperprior, HNeRV + residual atom, PR106 sidecar stacks, A1 + wavelet/LAPose; see [Balle-2018], [CoolChic-2023], [CTW-1995] | sub-0.17 likely needs combined component and rate movement | typed stack contracts plus exact stacked archive eval; component positives are not composable until the stacked packet scores |
+| Compiler/PacketIR | HDM5 q-streams, section grammars, PR101/PR103/PR106 PacketIR, arithmetic/range/ANS transforms; see [CTW-1995], [EZW-1993], [EBCOT-2000] | generic recompression is saturated; semantic payload lowering remains live | runtime decoder for best q-stream candidate and golden vectors tied to exact archive bytes |
+| Bit-level first principles | byte anatomy, entropy floors, rate term arithmetic, per-section SHA/offset accounting; see [SlepianWolf-1973], [WynerZiv-1976], [MDL-1978] | rate-only from 0.20638 to sub-0.17 would need about 54.6 KiB, so bits must amplify a better model | convert entropy estimates into runtime-consumed packets, not standalone blobs |
 | Mathematical score analysis | score formula, component marginals, CPU/CUDA axis separation, no-proxy authority | target must jointly move SegNet/PoseNet/rate; CPU wins do not rank CUDA | explicit per-candidate KKT/water-fill table tied to exact component traces |
-| SIREN/INR | SIREN, FINER, WIRE, BACON, COIN++, NIF, Fourier-feature MLPs | naked SIREN is lower EV than SIREN-like residual atoms over HNeRV | scorer-sensitivity atom selector and FINER/WIRE modes behind same sidecar schema |
-| Non-NeRV | Ballé/CompressAI, Cool-Chic/C3, VQ-VAE, grayscale LUT, Self-Compress, procedural/ego-motion models | needed as escape routes if HNeRV saturates and as stack stages around HNeRV | real trainers, archive grammar, recipes, and exact packet paths before dispatch |
+| SIREN/INR | SIREN, FINER, WIRE, BACON, COIN++, NIF, Fourier-feature MLPs; see [SIREN-2020], [FINER-2024], [WIRE-2023], [BACON-2021], [COINPP-2022] | naked SIREN is lower EV than SIREN-like residual atoms over HNeRV, but SIREN-family replacement substrates remain high-upside if exact trainers mature | scorer-sensitivity atom selector and FINER/WIRE modes behind same sidecar schema |
+| Non-NeRV | Ballé/CompressAI, Cool-Chic/C3, VQ-VAE, grayscale LUT, Self-Compress, procedural/ego-motion models; see [Balle-2018], [CompressAI-2020], [VQVAE-2017], [CoolChic-2023] | needed as escape routes if HNeRV saturates and as stack stages around HNeRV | real trainers, archive grammar, recipes, and exact packet paths before dispatch |
 | Domain/hardware/scorer exploitation | dashcam ego-motion, road-plane/foveation, LAPose, SegNet stride-2, FastViT/PoseNet, CUDA/CPU drift | model should exploit the known video/scorer/hardware contract, not generic video compression | no-op/consumption proof for pose/foveation trailers and exact CUDA canaries |
-| Proof/non-arbitrariness | kill criteria, no-op controls, exact-eval gates, probe-disambiguator pattern | choices stay empirical and byte-closed instead of preference-driven | ship competing modes behind callable interfaces and let exact packets arbitrate |
+| Proof/non-arbitrariness | kill criteria, no-op controls, exact-eval gates, probe-disambiguator pattern; GEPA/Muon can propose/train candidates but cannot claim score; see [Muon-Repo], [ModdedNanoGPT-Repo], [GEPA-2026], [GEPA-2025] | choices stay empirical and byte-closed instead of preference-driven | ship competing modes behind callable interfaces and let exact packets arbitrate |
 
 The main undercovered item is not theory; it is forensic recovery of the public
 HNeRV training pipeline. The research has enough breadth. The next score-lowering
 work should turn that breadth into one of three concrete packets: a parity
 HNeRV retrain/export, a runtime-consumed HDM5 PacketIR recode, or a scorer-aware
 residual atom sidecar over the current HNeRV frontier.
+
+## Paper and repo citation anchors
+
+These anchors are execution constraints, not score claims. A linked paper or
+repo can justify a model family, optimizer, or byte coder, but the Pact frontier
+changes only after a byte-closed packet scores under the correct auth-eval axis.
+
+### NeRV/HNeRV and replacement-substrate sources
+
+- [NeRV-2021] Hao Chen et al., "NeRV: Neural Representations for Videos",
+  NeurIPS 2021 / arXiv: https://arxiv.org/abs/2110.13903; repo:
+  https://github.com/haochen-rye/NeRV
+- [HNeRV-2023] Hao Chen et al., "HNeRV: A Hybrid Neural Representation for
+  Videos", arXiv: https://arxiv.org/abs/2304.02633; project:
+  https://haochen-rye.github.io/HNeRV; repo:
+  https://github.com/haochen-rye/HNeRV
+- [E-NeRV-2022] Zizhang Li et al., "E-NeRV: Expedite Neural Video
+  Representation with Disentangled Spatial-Temporal Context", arXiv:
+  https://arxiv.org/abs/2207.08132; repo:
+  https://github.com/kyleleey/E-NeRV
+
+### SIREN/INR-family sources
+
+- [SIREN-2020] Vincent Sitzmann et al., "Implicit Neural Representations with
+  Periodic Activation Functions", NeurIPS 2020 / arXiv:
+  https://arxiv.org/abs/2006.09661; repo: https://github.com/vsitzmann/siren
+- [FINER-2024] Zhen Liu et al., "FINER: Flexible Spectral-bias Tuning in
+  Implicit Neural Representation by Variable-periodic Activation Functions",
+  CVPR 2024: https://openaccess.thecvf.com/content/CVPR2024/papers/Liu_FINER_Flexible_Spectral-bias_Tuning_in_Implicit_NEural_Representation_by_Variable-periodic_CVPR_2024_paper.pdf;
+  repo: https://github.com/liuzhen0212/FINER
+- [WIRE-2023] Vishwanath Saragadam et al., "WIRE: Wavelet Implicit Neural
+  Representations", CVPR/arXiv: https://arxiv.org/abs/2301.05187; project:
+  https://vishwa91.github.io/wire
+- [BACON-2021] David B. Lindell et al., "BACON: Band-limited Coordinate
+  Networks for Multiscale Scene Representation", arXiv:
+  https://arxiv.org/abs/2112.04645
+- [COINPP-2022] Emilien Dupont et al., "COIN++: Neural Compression Across
+  Modalities", arXiv: https://arxiv.org/abs/2201.12904
+
+### Learned compression and entropy-model sources
+
+- [Balle-2018] Johannes Balle et al., "Variational image compression with a
+  scale hyperprior", ICLR 2018 / arXiv: https://arxiv.org/abs/1802.01436
+- [CompressAI-2020] Jean Begaint et al., "CompressAI: a PyTorch library and
+  evaluation platform for end-to-end compression research", arXiv:
+  https://arxiv.org/abs/2011.03029; docs:
+  https://interdigitalinc.github.io/CompressAI/
+- [VQVAE-2017] Aaron van den Oord et al., "Neural Discrete Representation
+  Learning", NeurIPS 2017 / arXiv: https://arxiv.org/abs/1711.00937
+- [CoolChic-2023] Theo Ladune et al., "COOL-CHIC: Coordinate-based Low
+  Complexity Hierarchical Image Codec", ICCV 2023:
+  https://openaccess.thecvf.com/content/ICCV2023/html/Ladune_COOL-CHIC_Coordinate-based_Low_Complexity_Hierarchical_Image_Codec_ICCV_2023_paper.html;
+  related overfitted neural codec: https://arxiv.org/abs/2307.12706; project:
+  https://orange-opensource.github.io/Cool-Chic/
+
+### Classical source-coding and bitstream sources
+
+- [SlepianWolf-1973] David Slepian and Jack K. Wolf, "Noiseless Coding of
+  Correlated Information Sources", IEEE Transactions on Information Theory;
+  reference copy: https://www.mit.edu/~6.454/www_fall_2001/kusuma/slepwolf.pdf
+- [WynerZiv-1976] Aaron D. Wyner and Jacob Ziv, "The Rate-Distortion Function
+  for Source Coding with Side Information at the Decoder", IEEE Transactions
+  on Information Theory; reference copy:
+  https://www.mit.edu/~6.454/www_fall_2001/kusuma/wynerziv.pdf
+- [CTW-1995] Frans Willems, Yuri Shtarkov, and Tjalling Tjalkens, "The
+  context-tree weighting method: basic properties", IEEE Transactions on
+  Information Theory, DOI: https://doi.org/10.1109/18.382012
+- [EZW-1993] Jerome M. Shapiro, "Embedded Image Coding Using Zerotrees of
+  Wavelet Coefficients", IEEE Transactions on Signal Processing, DOI:
+  https://doi.org/10.1109/78.258085
+- [EBCOT-2000] David Taubman, "High performance scalable image compression
+  with EBCOT", IEEE Transactions on Image Processing, DOI:
+  https://doi.org/10.1109/83.847830
+- [MDL-1978] Jorma Rissanen, "Modeling by shortest data description", Automatica
+  1978, DOI: https://doi.org/10.1016/0005-1098(78)90005-5
+
+### Optimizer/autoresearch sources
+
+- [Muon-Repo] Keller Jordan, "Muon: An optimizer for the hidden layers of
+  neural networks": https://github.com/KellerJordan/Muon
+- [ModdedNanoGPT-Repo] Keller Jordan et al., "modded-nanogpt" speedrun stack:
+  https://github.com/KellerJordan/modded-nanogpt
+- [GEPA-2025] Agrawal et al., "GEPA: Reflective Prompt Evolution Can Outperform
+  Reinforcement Learning", arXiv: https://arxiv.org/abs/2507.19457
+- [GEPA-2026] GEPA `optimize_anything` API docs:
+  https://gepa-ai.github.io/gepa/api/optimize_anything/optimize_anything/
+
+## Citation-to-packet mapping
+
+- HNeRV parity and HNeRV replacement are separate lanes. [HNeRV-2023] explains
+  why content-adaptive embeddings beat fixed-index INRs for video; [SIREN-2020],
+  [FINER-2024], [WIRE-2023], [BACON-2021], and [COINPP-2022] define replacement
+  substrate candidates that must earn their place through real trainers,
+  archive grammar, and exact packets.
+- Compiler/PacketIR byte work should borrow from [CTW-1995], [EZW-1993], and
+  [EBCOT-2000] only when the decoder overhead and runtime-consumption proof are
+  included in charged bytes.
+- Ballé/CompressAI/Cool-Chic/VQ ideas become Pact-relevant only when the
+  hyperprior/discrete-code/coordinate-decoder path is exported into the
+  contest runtime without sidecar dependency leaks.
+- Muon and GEPA are search/training accelerators, not evaluation authority:
+  Muon can be tested as a hidden-layer optimizer for SIREN/FINER/HNeRV trainers;
+  GEPA can propose text-serializable configs, PacketIR transforms, or atom
+  schedules whose evaluator returns only byte-closed exact-eval or explicit
+  no-claim diagnostics.
+
+## Formal score arithmetic and decision calculus
+
+Contest score:
+
+```text
+S = 100 * d_seg + sqrt(10 * d_pose) + 25 * B / 37,545,489
+```
+
+For a candidate packet `c` against baseline `b` on the same evidence axis:
+
+```text
+Delta S(c,b) =
+    100 * (d_seg_c - d_seg_b)
+  + (sqrt(10 * d_pose_c) - sqrt(10 * d_pose_b))
+  + 25 * (B_c - B_b) / 37,545,489
+```
+
+Rate slope:
+
+```text
+25 / 37,545,489 = 6.658599e-7 score / byte
+                 = 0.000681840 score / KiB
+```
+
+At the PR101/A1 operating point in the macOS advisory sweep
+(`d_pose ~= 3.286e-5`, axis advisory only), the local pose derivative is:
+
+```text
+d/dp sqrt(10p) = 5 / sqrt(10p) ~= 275.8 score / pose-dist unit
+```
+
+This is the quantitative reason blind byte shaving is a local minimum. A
+10 KiB byte win is only about `0.00682` score before component harm. Moving
+from the current public frontier band (`~0.193`) to `0.170` by rate alone
+requires about `33.7 KiB` of net charged-byte savings. Moving to `0.150`
+requires about `63.0 KiB`. Those are not impossible, but they are too large
+for saturated ZIP/Brotli cosmetics. Model/score-component movement must lead,
+and PacketIR/arithmetic work should amplify it.
+
+Non-arbitrary decision rule:
+
+1. Prefer an action if it can create a byte-closed exact packet, exact replay,
+   runtime-consumption proof, or public-training recovery artifact.
+2. Reject an action if it improves a proxy while failing to define how bytes
+   enter `inflate.sh archive_dir output_dir file_list`.
+3. Split any contested design into callable modes and let exact packets or
+   no-op-controlled component traces arbitrate.
+4. Promote only same-axis evidence: `[contest-CUDA]` against `[contest-CUDA]`,
+   `[contest-CPU]` against `[contest-CPU]`; advisory CPU is a routing signal
+   only.
+
+## Testable hypotheses
+
+These are the paper/lab-grade units of work. Each must end in an artifact, not
+only a conclusion.
+
+| ID | Hypothesis | Mechanism | Exact artifact required | Falsification gate |
+| --- | --- | --- | --- | --- |
+| H1 | Public HNeRV won because content-adaptive embeddings plus export discipline match the one-video contest contract | Recover PR95/PR100/PR101/PR103 training/export schedules and score-domain checkpoint selection | trainer parity report, runtime-frame parity, exact packet, auth eval JSON | recovered trainer cannot reproduce a same-axis PR101/PR103 component neighborhood |
+| H2 | HNeRV can be replaced, not only stacked | SIREN/FINER/WIRE/BACON/COIN++ full-renderer trainers with contest archive grammar | `train_substrate_*`, recipe, runtime decoder, archive manifest, exact smoke | full-renderer replacement stays above HNeRV comparator with no byte-floor advantage |
+| H3 | SIREN-family bases are higher EV as sparse scorer-aware atoms than as naked full-video renderers | Select INR atoms by SegNet boundary and PoseNet hard-pair sensitivity per byte | no-op-controlled sidecar packet, raw-output hash delta, component deltas | predicted local component win disappears under exact CUDA |
+| H4 | Semantic PacketIR recoding can beat generic compression | Typed q-streams, CTW/range/ANS coding, deterministic decoder overhead included | parse -> emit identity proof, section SHA/offset ledger, runtime-consumption mutation proof | decoder overhead or metadata consumes the entropy gain |
+| H5 | Dashcam physics gives cheaper pose/scorer satisfaction than generic video reconstruction | FOE, horizon, road-plane, tau/time-to-contact, LAPose foveation/motion atoms | pose/foveation trailer consumed by runtime, component-response memo | no CUDA PoseNet/SegNet improvement after no-op-controlled consumption proof |
+| H6 | Hyperprior/discrete-code stages are useful around an overfit renderer | Ballé/CompressAI/Cool-Chic/VQ style latent grammar around HNeRV/INR output | compressed latent packet with closed decoder and no external sidecar deps | float/proxy gain disappears after integer entropy path export |
+| H7 | Muon improves sample efficiency enough to change dispatch economics | Orthogonalized updates for 2D hidden weights in HNeRV/SIREN/FINER trainers | paired seed/trainer run with identical archive export and exact smoke | same budget produces no score-domain validation gain or destabilizes QAT/export |
+| H8 | GEPA/autoresearch can improve pipeline choices without becoming proxy authority | Text-serializable configs/transforms proposed by LLM search, evaluated by local exact/no-claim evaluator | candidate ledger with evaluator outputs and rejected unsafe proposals | proposed changes cannot pass preflight, exact packet construction, or no-claim discipline |
+
+## Experimental design and artifact schema
+
+Every experiment attached to this roadmap should emit a small manifest with:
+
+- `lane_id`, `hypothesis_id`, git SHA, dirty diff SHA, author/source URL when
+  public work is used, and license/compliance note;
+- baseline archive path, bytes, SHA-256, runtime tree SHA, inflate command, and
+  evaluator command;
+- candidate archive path, bytes, SHA-256, runtime tree SHA, generated-file
+  manifest, and exact packet construction command;
+- evidence axis: one of `[contest-CUDA]`, `[contest-CPU]`,
+  `[macOS-CPU advisory]`, or `proxy/no-score`;
+- `score_claim`, `promotion_eligible`, `ready_for_exact_eval_dispatch`, and
+  explicit reason when any is false;
+- component fields: `seg_dist`, `pose_dist`, byte term, recomputed total, sample
+  count, raw-output aggregate hash if available;
+- no-op or mutation proof for every sidecar/PacketIR/residual path;
+- reactivation criteria for every negative result.
+
+The minimum journal-grade table for a result row is:
+
+```text
+method | baseline | axis | bytes | delta_bytes | seg | delta_seg |
+pose | delta_pose | total | delta_total | packet_sha | runtime_sha |
+claim_grade | failure_or_promotion_reason
+```
+
+The minimum lab-grade directory layout is:
+
+```text
+experiments/results/<lane_id>/
+  manifest.json
+  command.txt
+  logs/
+  archive.zip
+  archive.sha256
+  runtime_tree.sha256
+  contest_auth_eval.json
+  inflated_outputs_manifest.json
+  no_op_or_mutation_proof.json
+  component_delta_review.md
+```
+
+When an experiment is research-only, replace `contest_auth_eval.json` with a
+`no_score_evaluator.json` that explicitly says why no score claim is allowed.
+
+## Replacement-substrate protocol
+
+The operator explicitly wants paths that can replace HNeRV. Treat these as
+first-class lanes, not afterthoughts:
+
+1. Full-renderer SIREN/FINER/WIRE/BACON/COIN++ replacement:
+   coordinates include at least `(frame_index, x, y)`; any domain variables
+   such as FOE, horizon, foveation weight, or pair hardness must be encoded in
+   the charged packet or derived deterministically from runtime-available data.
+2. Overfit neural-codec replacement:
+   Ballé/CompressAI/Cool-Chic/VQ variants must export a closed decoder and
+   entropy model. A library checkpoint is not an archive grammar.
+3. Classical+learned replacement:
+   motion-compensated prediction, wavelet/bitplane residuals, CTW/range coding,
+   and tiny neural correction blocks must share one typed packet contract.
+4. Domain-specific replacement:
+   road-plane/ego-motion/foveation models must prove they change runtime RGB
+   and lower actual components, not only explain the video semantically.
+
+Replacement lanes must include a byte-floor estimate before dispatch:
+
+```text
+estimated_total_bytes =
+    decoder_code_bytes
+  + model_or_latent_bytes
+  + entropy_metadata_bytes
+  + per-frame_or_per-pair_side_info_bytes
+  + ZIP/container overhead
+```
+
+If the estimated byte floor cannot plausibly fit below the HNeRV comparator
+while improving components, the lane stays research-only until a new mechanism
+changes the floor.
+
+## Threats to validity
+
+- Public frontier artifacts may encode undocumented training/export choices.
+  Final archives alone cannot identify the causal mechanism.
+- macOS CPU sweeps are routing signals only; ARM CPU, Linux CPU, T4 CUDA, and
+  Modal A100 CUDA can differ materially.
+- INR papers usually optimize PSNR/L2 or image fitting; Pact optimizes a known
+  SegNet/PoseNet/rate formula. Literature rank is not Pact rank.
+- Optimizer speedrun results are not direct evidence of contest score movement;
+  Muon or nanoGPT-derived tricks must win inside the exact archive exporter.
+- GEPA can overfit the evaluator wrapper or produce noncompliant shortcuts.
+  Every proposal needs deterministic preflight and contest-compliance review.
+- Byte coders can look excellent on isolated streams and lose once decoder
+  overhead, framing, checksums, manifests, and runtime code are charged.
+- Sidecar/residual work is especially vulnerable to no-op illusions. Mutation
+  tests and raw-output hashes are mandatory.
+- A component gain can be total-score negative because pose, segmentation, and
+  rate trade at nonlinear local slopes.
+
+## Review checklist before any sub-0.19 claim
+
+- Same-axis baseline and candidate are named and replayable.
+- Archive bytes and SHA-256 are measured from the scored archive, not a member.
+- Formula score is recomputed from components and bytes.
+- Runtime consumes every claimed payload section.
+- `inflate.sh` does not load scorer models, network resources, or private paths.
+- CPU/CUDA distinction appears next to every frontier, medal-band, or promotion
+  phrase.
+- Exact negative results are classified and preserved.
+- The result changes a lane status only after adversarial engineering, math,
+  scorer-geometry, and compliance review.
 
 ## Unknown-unknown risk register
 
