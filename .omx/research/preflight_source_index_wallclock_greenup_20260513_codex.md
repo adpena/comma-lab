@@ -22,6 +22,10 @@ clock while preserving exact-eval protections. This tranche targeted measured
   package/namespace directories as Python does. This clears false positives for
   valid `submissions.robust_current` contest-runtime imports without weakening
   missing-helper detection.
+- Full/developer preflight clean caches now store strict-passing runs with
+  unchanged advisory counts. Advisory findings are still reported on the first
+  sweep after a fingerprint change; repeat invocations do not re-scan the same
+  warn-only backlog solely to rediscover identical non-blocking findings.
 
 ## Evidence
 
@@ -36,6 +40,9 @@ clock while preserving exact-eval protections. This tranche targeted measured
   `.omx/research/artifacts/preflight_dx_profiles_20260513_codex/preflight_dev_timing_after_index_and_importfix.json`.
 - `tac.preflight --scope all --allow-slow-preflight`: passed; timing artifact
   `.omx/research/artifacts/preflight_dx_profiles_20260513_codex/preflight_all_timing_after_index_and_importfix.json`.
+- A normal `tac.preflight --scope all` before advisory-cache relaxation still
+  failed closed at 30.1s, confirming the timeout guard remains active instead
+  of silently allowing slow runs.
 
 ## Timing Notes
 
@@ -49,6 +56,9 @@ clock while preserving exact-eval protections. This tranche targeted measured
   `check_no_compromised_lightning_supply_chain`, `check_codebase_drift`,
   `check_profile_keys_have_resolvers`, `preflight_loader_format_safety`, and
   `check_pytest_collection_clean`.
+- The advisory-cache relaxation is expected to make repeat full-preflight
+  invocations fast after one explicit slow/custody sweep establishes the current
+  strict-pass fingerprint.
 
 ## Score-Lowering Relevance
 

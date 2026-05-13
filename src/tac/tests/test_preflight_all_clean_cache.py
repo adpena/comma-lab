@@ -83,7 +83,13 @@ def test_preflight_all_clean_cache_misses_same_size_restored_mtime_change(tmp_pa
     assert hit is False
 
 
-def test_preflight_clean_cache_refuses_advisory_rows(tmp_path):
+def test_preflight_clean_cache_accepts_unchanged_advisory_rows(tmp_path):
+    """Warn-only findings are deterministic under the same fingerprint.
+
+    Normal preflight should not re-run a full release sweep solely because the
+    repository has unchanged advisory backlogs. Strict failures still refuse
+    cache storage because the caller never reaches the store path.
+    """
     (tmp_path / "src" / "tac").mkdir(parents=True)
     (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")
     hit, token, paths = _preflight_all_clean_cache_hit(
@@ -112,7 +118,7 @@ def test_preflight_clean_cache_refuses_advisory_rows(tmp_path):
         renderer_path=None,
         archive_path=None,
     )
-    assert hit is False
+    assert hit is True
 
 
 def test_parallel_preflight_runner_counts_warn_only_advisories():

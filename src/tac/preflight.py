@@ -58,8 +58,8 @@ import torch
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 PREFLIGHT_CLI_TIMING_SCHEMA = "pact.tac_preflight_cli_timing.v1"
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
-_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v2"
-_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v2"
+_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v3"
+_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v3"
 _PUBLIC_PR_PRISTINE_CACHE_VERSION = "public_pr_intake_pristine.v1"
 _NO_MPS_FALLBACK_CLEAN_CACHE_VERSION = "no_mps_fallback_default_clean.v2"
 
@@ -379,7 +379,7 @@ def _preflight_codebase_clean_cache_hit(
     renderer_path: str | Path | None,
     archive_path: str | Path | None,
 ) -> tuple[bool, str, tuple[Path, ...]]:
-    """Return whether the current codebase has an unchanged clean preflight."""
+    """Return whether the current codebase has an unchanged strict-passing preflight."""
 
     paths = _preflight_all_fingerprint_paths(
         root,
@@ -407,7 +407,6 @@ def _preflight_codebase_clean_cache_hit(
         isinstance(row, dict)
         and row.get("version") == version
         and row.get("fingerprint") == fingerprint
-        and int(row.get("advisory_count", 0)) == 0
     )
     return hit, cache_key + ":" + fingerprint, paths
 
@@ -421,10 +420,8 @@ def _store_preflight_codebase_clean_cache(
     paths: tuple[Path, ...],
     advisory_count: int = 0,
 ) -> None:
-    """Record a clean preflight for the current source/state fingerprint."""
+    """Record a strict-passing preflight for the current source/state fingerprint."""
 
-    if advisory_count:
-        return
     cache_key, fingerprint = cache_token.split(":", 1)
     rows = _load_preflight_cache(root, cache_name)
     rows[cache_key] = {
@@ -1500,7 +1497,7 @@ def preflight_all(
         if cache_hit:
             if verbose:
                 print(
-                    "  [preflight-all-cache] OK: cached clean full preflight "
+                    "  [preflight-all-cache] OK: cached strict-passing full preflight "
                     f"({len(codebase_cache_paths)} fingerprinted file(s))"
                 )
             check_codebase = False
@@ -4008,7 +4005,7 @@ def preflight_developer(
         if cache_hit:
             if verbose:
                 print(
-                    "  [preflight-developer-cache] OK: cached clean "
+                    "  [preflight-developer-cache] OK: cached strict-passing "
                     f"developer preflight ({len(codebase_cache_paths)} "
                     "fingerprinted file(s))"
                 )
