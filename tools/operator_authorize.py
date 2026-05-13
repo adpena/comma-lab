@@ -10,11 +10,11 @@ The canonical sequence each wrapper executes is:
 
     1. Resolve the cost band via ``tac.cost_band_calibration.predict()``
        (with a hand-calibrated fallback when the posterior is cold-start)
-    2. Run a pre-flight required-input-files validation
+    2. Show the operator confirmation banner (cost band, predicted delta, risk,
+       envelope status) and read y/N
+    3. Run a pre-flight required-input-files validation
        (``tools/validate_dispatch_required_inputs.py``) when the recipe
        declares ``required_input_files``
-    3. Show the operator confirmation banner (cost band, predicted delta, risk,
-       envelope status) and read y/N
     4. Acquire a lane claim via ``tools/claim_lane_dispatch.py claim`` per
        CLAUDE.md "CROSS-AGENT DISPATCH COORDINATION"
     5. Invoke the platform-specific dispatcher (Modal, Vast.ai, Lightning,
@@ -226,7 +226,6 @@ def _required_input_flag_values_from_recipe(recipe: Recipe) -> list[str]:
 
 def _validate_required_input_files(
     trainer_path: str,
-    *,
     recipe: Recipe,
 ) -> None:
     """Run ``tools/validate_dispatch_required_inputs.py`` per Catalog #152.
@@ -917,16 +916,26 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         if dispatch_refusal:
             print(f"[operator-authorize] --dry-run; would refuse: {dispatch_refusal}")
-            return 0
+        print("[operator-authorize] --dry-run; no confirmation prompt, no dispatch")
+        return 0
     elif dispatch_refusal:
         raise SystemExit(
             "[operator-authorize] FATAL: recipe is not dispatchable: "
             f"{dispatch_refusal}"
         )
 
-    # Required-input-files pre-flight (Catalog #152). Deferred recipes return
-    # above so their explicit dispatch blocker is not hidden behind deeper
-    # trainer/env validation.
+    # Operator confirmation.
+    if not _confirm(
+        f"operator confirmation: proceed with {recipe.name} dispatch "
+        f"(p50approximately${band.p50_cost_usd:.2f}, {band.confidence_tag})?"
+    ):
+        print("[operator-authorize] aborted - no dispatch fired")
+        return 0
+
+    # Required-input-files pre-flight (Catalog #152). Run this after the
+    # operator confirms so a missing optional local artifact does not mask the
+    # prompt/no-dispatch contract, but still before native provider preflight,
+    # lane claim creation, or any GPU-metered work.
     required_files = recipe.raw.get("required_input_files", []) or []
     if required_files:
         # Recipe declares a trainer path under modal.cost_band_trainer or
@@ -936,25 +945,13 @@ def main(argv: list[str] | None = None) -> int:
             or recipe.raw.get("required_input_files_trainer")
         )
         if trainer:
-            _validate_required_input_files(str(trainer), recipe=recipe)
+            _validate_required_input_files(str(trainer), recipe)
         else:
             print(
                 "[operator-authorize] WARN: recipe declares required_input_files but "
                 "no trainer path - skipping local validation",
                 file=sys.stderr,
             )
-
-    if args.dry_run:
-        print("[operator-authorize] --dry-run; no confirmation prompt, no dispatch")
-        return 0
-
-    # Operator confirmation.
-    if not _confirm(
-        f"operator confirmation: proceed with {recipe.name} dispatch "
-        f"(p50approximately${band.p50_cost_usd:.2f}, {band.confidence_tag})?"
-    ):
-        print("[operator-authorize] aborted - no dispatch fired")
-        return 0
 
     native_dispatch = _platform_has_native_dispatch(recipe.platform)
     if native_dispatch:
@@ -987,12 +984,18 @@ def main(argv: list[str] | None = None) -> int:
 
     # Dispatch.
     try:
-        rc = _run_dispatch(
-            recipe,
-            instance_job_id,
-            timeout_hours_override=args.timeout_hours_override,
-            cost_band_epochs_override=args.cost_band_epochs_override,
-        )
+        if (
+            args.timeout_hours_override is None
+            and args.cost_band_epochs_override is None
+        ):
+            rc = _run_dispatch(recipe, instance_job_id)
+        else:
+            rc = _run_dispatch(
+                recipe,
+                instance_job_id,
+                timeout_hours_override=args.timeout_hours_override,
+                cost_band_epochs_override=args.cost_band_epochs_override,
+            )
     except SystemExit as exc:
         code = exc.code if isinstance(exc.code, int) else 1
         if claim_created:

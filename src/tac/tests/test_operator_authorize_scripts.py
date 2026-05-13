@@ -153,9 +153,17 @@ def test_script_has_confirmation_prompt(name: str):
     """Per the operator one-touch toolkit design — single confirmation prompt."""
     body = _script_body(name)
     tool = _CANONICAL_TOOL.read_text()
+    smoke_wrapper = (_REPO_ROOT / "tools" / "run_modal_smoke_before_full.py").read_text()
+    delegates_via_smoke_wrapper = (
+        "tools/run_modal_smoke_before_full.py" in body
+        and "tools/operator_authorize.py" in smoke_wrapper
+        and "def _confirm(" in tool
+    )
     assert "read -r -p" in body or (
         "tools/operator_authorize.py" in body and "def _confirm(" in tool
-    ), f"{name} must prompt directly or delegate to the canonical confirmation"
+    ) or delegates_via_smoke_wrapper, (
+        f"{name} must prompt directly or delegate to the canonical confirmation"
+    )
 
 
 @pytest.mark.parametrize("name", OPERATOR_AUTHORIZE_SCRIPTS)
