@@ -75,10 +75,7 @@ CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
     log "FATAL: claim summary failed for $DISPATCH_CLAIMS_PATH"
     exit 21
 }
-"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY' || {
-    log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
-    exit 21
-}
+"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY'
 import json
 import sys
 summary_path, lane_id, job_id = sys.argv[1:4]
@@ -89,6 +86,11 @@ for row in payload.get("active", []):
 print(f"missing active claim lane={lane_id} job={job_id}", file=sys.stderr)
 raise SystemExit(1)
 PY
+CLAIM_RC=$?
+if [ "$CLAIM_RC" -ne 0 ]; then
+    log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
+    exit 21
+fi
 log "stage_0_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
 
 # Stage 0b: NVDEC probe (best-effort).
