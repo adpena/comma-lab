@@ -1,0 +1,127 @@
+schema_version: 1
+name: substrate_cnerv_modal_a100_dispatch
+lane_id: lane_substrate_cnerv_20260512
+summary: CNeRV TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — remote driver missing).
+
+dispatch_enabled: false
+research_only: false
+substrate_tradition: TRADITION_2
+defer_reason: |
+  scripts/remote_lane_substrate_cnerv_as_renderer.sh does NOT exist (Catalog
+  #163-pattern gap). The trainer experiments/train_cnerv_as_renderer.py exists
+  and exposes a complete argparse, but the canonical Modal/Vast.ai remote
+  driver script that bootstraps deps + threads required-input files + emits
+  inflate.sh + harvest hooks is missing. Per Catalog #146/#163, dispatch is
+  REFUSED until the remote driver lands.
+
+dispatch_blockers:
+  - remote_driver_missing
+  - tier_manifest_required_for_catalog_151_compliance
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: "unknown — first empirical anchor needed"
+predicted_delta: "unknown — TRADITION 2 substrate predates Catalog #124 design-time prediction discipline"
+literature_anchor: "CNeRV — content-aware NeRV with conditional latent stem (HNeRV-family expansion 2026-05-11)"
+
+risk: |
+  TRADITION 2 substrate. Trainer experiments/train_cnerv_as_renderer.py exists
+  with full argparse (see required_input_files below), but the canonical
+  remote driver scripts/remote_lane_substrate_cnerv_as_renderer.sh has not
+  been built. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+  against" + Catalog #146 (Phase 1 trainer runtime contract), dispatching
+  without a fail-closed remote driver risks: (a) Modal-container-side path
+  mismatches, (b) missing dep bootstrap, (c) NVDEC-probe-not-run silent CPU
+  fallback, (d) no harvest hook for .spawn() result-cache TTL.
+
+  TIER manifest gap: experiments/train_cnerv_as_renderer.py predates Catalog
+  #151 TIER_<N>_OPERATOR_REQUIRED_FLAGS pattern. Adding the manifest is an
+  architecture decision that needs council review (NOT done unilaterally per
+  CLAUDE.md "Design decisions" non-negotiable).
+envelope_status: "DEFERRED: remote driver gap blocks dispatch before GPU spend"
+
+remote_driver: scripts/remote_lane_substrate_cnerv_as_renderer.sh  # MISSING
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default); operator must thread"
+
+argparse_inventory:
+  # From experiments/train_cnerv_as_renderer.py (no TIER manifest yet).
+  trainer: experiments/train_cnerv_as_renderer.py
+  flags:
+    - --output-dir (Path, required)
+    - --device (cuda|cpu, default=cuda)
+    - --epochs (int, default=200)
+    - --batch-size (int, default=8)
+    - --learning-rate (float, default=1e-3)
+    - --ema-decay (float, default=0.997)
+    - --latent-dim (int, default=16)
+    - --base-channels (int, default=36)
+    - --n-pairs (int, default=600)
+    - --lambda-seg (float, default=100.0)
+    - --lambda-pose (float, default=288.6751345948129)
+    - --video-path (Path, default=upstream/videos/0.mkv)
+    - --seed (int, default=20260511)
+    - --smoke (bool, default=False)
+    - --auth-eval (bool, default=False)
+    - --phase-b-auth-memo (str, default=None)
+
+env_overrides:
+  CNERV_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  CNERV_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  CNERV_OUTPUT_DIR: /workspace/pact/lane_substrate_cnerv_results/output
+  CNERV_EPOCHS: "2000"
+  CNERV_BATCH_SIZE: "8"
+  CNERV_UPSTREAM_DIR: /workspace/pact/upstream
+  CNERV_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py (Catalog #157 cross-agent coordination)
+  - tools/append_cost_band_anchor.py (cost-band posterior update)
+  - upstream/videos/0.mkv
+  - experiments/train_cnerv_as_renderer.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - submissions/cnerv_substrate/inflate.{py,sh} (existing per lane registry evidence)
+  - "[MISSING] scripts/remote_lane_substrate_cnerv_as_renderer.sh"
+
+reactivation_criteria: |
+  1. scripts/remote_lane_substrate_cnerv_as_renderer.sh built per the canonical
+     pattern (sources scripts/remote_archive_only_eval.sh with
+     REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 sentinel per Catalog #163; runs
+     bootstrap_runtime_deps; calls trainer with required inputs validated).
+  2. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed in the trainer (council
+     review required per CLAUDE.md design-decision non-negotiable).
+  3. Local smoke verifies inflate.sh emits a contest-compliant 0.bin per
+     Catalog #146.
+  4. Catalog #152 validates --video-path resolves before dispatch.
+
+notes: |
+  TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
+  Lane id `lane_cnerv_as_renderer` registered at L1 with submissions/cnerv_substrate/
+  inflate.{py,sh} + format_id 0x67. The trainer is production-ready but the
+  Modal remote driver is missing.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when remote driver lands,
+  must register harvest hook within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": first anchor must be
+  tagged [contest-CUDA] (NVIDIA GPU on Linux; never MPS); CPU axis required
+  separately on Linux x86_64 before any submission claim.
+
+  Cross-ref:
+    .omx/research/substrate_tradition_taxonomy_20260512.md
+    feedback_nerv_family_expansion_blocknerv_ffnerv_dsnerv_hinerv_tcnerv_landed_20260511.md
+    .omx/state/lane_registry.json#lane_cnerv_as_renderer
