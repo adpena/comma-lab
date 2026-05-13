@@ -44,6 +44,40 @@ Operator wrappers may carry ``# SMOKE_BEFORE_FULL_OK:<reason>`` if the
 trainer has >=3 successful Modal anchors at the target config (cost band
 is empirically calibrated; smoke would not surface new info).
 
+Scope of protection (R1 Low #5 clarification, 2026-05-13)
+---------------------------------------------------------
+
+This tool's smoke gate CATCHES:
+
+* Infrastructure crashes (rc != 0)
+* Archive-missing failures (the canonical inflate.sh "FATAL: archive
+  missing" class)
+* Scorer-load failures at training-startup time
+* Mount/dependency import failures (e.g. missing wheel, missing video,
+  wrong CUDA driver)
+* Worker source staleness (Catalog #166 ledger landed at startup)
+* Any failure mode that surfaces in the FIRST 100 epochs
+
+This tool's smoke gate does NOT catch:
+
+* Architectural divergence where the 100-epoch smoke score is plausible
+  in-band but the 2000-epoch full run diverges (e.g. an instability that
+  develops slowly, or a regime change as ρ ramps in Lagrangian training)
+* Score regressions that only emerge after EMA stabilization
+* OOM that only triggers at larger-than-smoke batch sizes
+* Late-stage NaN that takes 1000+ epochs to develop
+
+Smoke is NECESSARY but NOT SUFFICIENT. Operators MUST still:
+
+* Read the smoke proxy_score + check it tracks the expected band
+* Watch the first full-run epoch milestones for in-band proxy_score
+* Cancel the full dispatch if smoke score is implausibly high/low even
+  though the run completed rc=0
+
+For architectural-divergence detection at the 2000-epoch scale, see the
+"Operator gates must be wired and used" CLAUDE.md non-negotiable and the
+Phase 2 trainer-flag-manifest gates (Catalog #151 / #152).
+
 Cross-references
 ----------------
 
@@ -51,6 +85,8 @@ Cross-references
 * CLAUDE.md "Auth eval EVERYWHERE" Pose TTO clause (the proxy-auth-gap
   smoke principle this tool generalizes to substrate dispatch)
 * ``feedback_phase_b1_pivot_modal_source_staleness_fix_LANDED_20260512.md``
+* ``feedback_fix_wave_1_r1_findings_LANDED_20260513.md`` (the R1 Low #5
+  clarification this docstring section addresses)
 """
 
 from __future__ import annotations
