@@ -1,1357 +1,240 @@
 <!--
 generated_at: 2026-05-12T00:00:00Z
-from_state_hash: 328bf2f9b493561d11b73a4196e87089d059671c
-regenerated_by: subagent:uuu_reports_runlog_catalog_drift_20260512
+from_state_hash: 07f25a7046e72c9504cd9e053a378d0a4da86837533ed9f0ed0bd864df431b26
+regenerated_by: subagent:wave9_progress_audit_20260512
 -->
 
-# Latest Report - 2026-05-12 Substrate Wave + Catalog Surge + Modal Mount Consolidation
-
-## 2026-05-12 (session) — Substrate scaffolds + Catalog flurry + state hygiene
-
-This section supersedes the 2026-05-09 reconciliation below. Today's session
-landed two new representation substrates wired as `_full_main` ready for
-dispatch, an unusually dense Catalog # surge (#98 strict-flip + #117/118/119
-commit-machinery + #150 phase-B + #151 wrapper-TIER + #152 required-input
-validation + #153 Modal mount + #154 GC helper canonical, with #155 pending
-Wave 2/F), Modal training-image mount manifest consolidation, posterior +
-cost-band canonical wire-up, a T1-D GC run that freed ~82 MB, claim-ledger
-prune from 1338 → 537 rows, and the in-flight MMM PR101 GOLD primitive port
-with sign-encoding + schema-elision.
-
-### Substrate landings
-
-- **α `sane_hnerv` substrate** (commit `c9d5aae7`) — Fields-medal grand-council
-  α primary scaffold landed via GGG wave. `_full_main` wires 16 stages: seed
-  pin → yuv6 patch → differentiable scorers → real pyav pairs → 2-phase
-  training → EMA → archive build → inflate smoke. SCAFFOLD / L1 in lane
-  registry. Dispatch-ready (no GPU dispatched today).
-- **β `balle_renderer` substrate** (commit `d5b69eff`) — Ballé-hyperprior-as-
-  renderer scaffold landed in parallel (commit `dbc77170`). `_full_main`
-  wired matching α's stage contract. Dispatch-ready (no GPU dispatched today).
-  SCAFFOLD / L1 in lane registry.
-
-Both substrates honor CLAUDE.md HNeRV parity discipline (13 inviolable
-lessons), including export-first design, ≤200 LOC `inflate.py`, monolithic
-single-file archive grammar, and score-aware loss with differentiable scorer
-preprocess.
-
-### Catalog # progression
-
-- **Catalog #98** `check_pr101_tools_torch_load_allowlist` — strict-flipped at
-  live count 0 (commit `058517cf`, T2-D cluster 4).
-- **Catalog #117** `check_subagent_commit_serializer_uses_lock` — commit
-  machinery (held warn-only initially per CLAUDE.md table; verify text update).
-- **Catalog #118** `check_claude_md_catalog_no_duplicate_numbers` — extincts
-  the dual-#114 collision class via `tools/claim_catalog_number.py` fcntl-lock.
-- **Catalog #119** `check_subagent_commits_have_co_author_trailer` — held
-  warn-only initially per legacy-commit allowlist baseline.
-- **Catalog #150** `check_phase_b_auth_memo_in_repo` — operator decision C
-  compromise (in-repo `auth_memo_path` argument, forbidden anchors raise at
-  runtime + STRICT preflight at call-site time).
-- **Catalog #151** `check_operator_wrapper_threads_trainer_tier_required_flags`
-  — Option D hybrid landed per grand council 9/10 (R1-R7 stipulations, 25
-  tests, STRICT @ 0).
-- **Catalog #152** `check_operator_wrapper_validates_required_input_files_pre_dispatch`
-  — permanent fix for wrapper-doesn't-validate-required-inputs bug class
-  (commit `527c6ceb`).
-- **Catalog #153** `check_modal_dispatcher_uses_canonical_mount_builder` —
-  STRICT gate for Modal training image (commit `0810fc15`, T1-A + T2-C).
-- **Catalog #154** `check_experiments_results_gc_helper_is_canonical` —
-  GC helper canonical (commit `92aba3ca`, T1-D + T1-E state hygiene).
-- **Catalog #155** — pending Wave 2/F.
-- **Catalog #156** `check_gc_helper_refuses_delete_on_tracked_paths` —
-  strict-from-byte-one (live count 0 at landing). Pairs with #154.
-- **Catalog #157** `check_commit_serializer_pre_lock_hash_against_head` —
-  strict-from-byte-one. Permanent fix for the commit-swap bug class observed
-  in the `92aba3ca` incident.
-
-### Modal mount manifest consolidation
-
-- Commit `0810fc15` — canonical Modal mount manifest builder (T1-A + T2-C).
-- Commit `d049c563` — inline Modal training_cost into canonical
-  `cost_band_calibration` (T1-B).
-- Effect: every Modal training/eval dispatcher now uses a single mount
-  manifest derived from the canonical builder; downstream Catalog #153
-  refuses dispatcher bypass.
-
-### Cost-band canonical + posterior
-
-- Commit `5eb355aa` — self-calibrating posterior: every dispatch APPENDS a
-  measured anchor; `predict()` returns confidence band centered on the
-  posterior median.
-- Commit `62d133b8` — W/I (i-1): wire continual-learning posterior +
-  cost-band into autonomous loop. Closes the predict-and-update feedback loop
-  per CLAUDE.md "the planner becomes self-calibrating" framing.
-
-### State hygiene
-
-- T1-D `--apply` executed (commit `7873bfd6`) — GC freed ~82 MB of
-  `experiments/results/` artifacts; surfaced classifier bug (logged for
-  follow-up).
-- Claim ledger prune: `.omx/state/active_lane_dispatch_claims.md`
-  1338 → 537 rows after TTL-expired and terminal-status row reaping.
-- Modal training recovery custody wired (commit `37e174ed`).
-
-### In-flight (no scoring claim until landed)
-
-- **MMM (PR101 GOLD primitive port)** — 3 primitives ported to
-  `tac.packet_compiler` (commit `bf1d4792`). Sign-encoding + schema-elision
-  unified taxonomy design memos landed (commit `b61e5d28`, covers
-  PR98/PR100/PR105/PR96/PR101/PR103).
-- 12 parallel subagents fanned out this turn. Total GPU spend: ~$0.50-1.00
-  on 1 Wave 3 dispatch in flight. Other 11 subagents ran $0 (research, audits,
-  scaffolds, doc rotations).
-
-### Apples-to-apples discipline
-
-No score claims this section. All score-affecting work is scaffold-only
-(α + β substrates) or research-only (sign-encoding taxonomy, drift audit).
-Every numeric reference above carries its evidence axis tag inline or
-references the upstream landing memo whose tag is canonical.
-
-### Catalog drift audit (this session, deliverable C)
-
-`.omx/research/catalog_drift_documentation_vs_code_audit_20260512.md` —
-read-only audit of all 89 CLAUDE.md catalog entries against `preflight.py`
-wired `strict=` values. **23 drift surface entries identified.** Root causes:
-stale section headers (10 entries: A-L block "NOT YET wired" + R5-r6 block
-"warn-only initially"); "strict-flip after" entries that flipped but kept the
-"warn-only initially" prefix (6 entries: #123, #125, #126, #127, #128, #130,
-#131); stale "Live count: N" rows (8 entries); 1 defined-but-not-invoked
-(#145 `check_preflight_cli_default_scope_is_all`). Operator decision surfaced:
-Path A bulk text-fix, Path B new Catalog #XXX self-protection gate, or Path C
-(recommended) both. No edits applied inline per "Multiple contenders → multiple
-paths" non-negotiable.
-
-## 2026-05-09 (reconciliation) - Current routing state after `aff267e6`
-
-## 2026-05-09 (reconciliation) - Current routing state after `aff267e6`
-
-This section supersedes the stale May 4 title and dispatch queues below. No
-remote, GPU, or exact-eval dispatch was launched for this reconciliation.
-
-- **A1 score-gradient is split-axis evidence, not CUDA-ready frontier.** The
-  same archive `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
-  (`178,262 B`) has `[contest-CPU]` `0.19284757743677347` on GHA Linux
-  x86_64 and `[contest-CUDA]` `0.2263520234784395` on Modal T4. Treat CPU as
-  public-axis evidence and CUDA as non-frontier; do not duplicate the same A1
-  dispatch.
-- **AVVideoDataset discriminator remains active and incomplete.** Current
-  dispatch summary has one active claim:
-  `lane_avvideodataset_cuda_path_mechanism_discriminator` /
-  `discriminator-sweep-20260509T110211Z`, status `eval`. Only the baseline CPU
-  control is harvested; variant CPU rows and CUDA rows are not terminal.
-- **A1 full latent-sidecar search is pending.** The stale sidecar artifact that
-  claimed readiness without `archive.zip` is superseded by the fail-closed
-  builder fix and local smoke/one-pair custody probes. Current status is still
-  `ready_for_exact_eval_dispatch=false`; next score-lowering work must build a
-  full 600-pair byte-different, runtime-consumed packet or a faster
-  score-domain/batched full-search equivalent.
-- **Phase 1 / T1 packet work remains local/blocker-bound.** Phase 1 target
-  generation and A1 EMA smoke are `[empirical_planning; local CPU sanity loop]`
-  only. The packet compiler/runtime guards have improved, but Phase 1 is not a
-  dispatch row until a hermetic, byte-different runtime packet is compiled,
-  smoke-checked, and no-op-proofed.
-
-**Current next queue:**
-
-1. Harvest or explicitly abandon the active AV discriminator claim; do not
-   relaunch a duplicate.
-2. Build the A1 full sidecar candidate locally with full archive/runtime
-   custody, then run local smoke before any GHA or CUDA claim.
-3. Keep Phase 1/T1 and Lane 12-v2 local until they emit runtime-consumed,
-   byte-different packets with exact custody and no-op proof.
-4. Treat the May 4 Omega-W-V3 / int5 / int6 / SJ-KL dispatch matrix as
-   historical only; it is no longer an active queue.
-
-## 2026-05-09 (night) - A1 latent-aligned Modal refire
-
-**Status:** First latent-aligned Modal T4 refire failed before artifacts with
-`ModuleNotFoundError: No module named 'tac'`; no score claim.
-
-- Lane: `track1_phase_a1_score_gradient`
-- Job: `track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
-- Modal call id: redacted in public report; private custody ledger retains the call id.
-- Terminal status: `failed_modal_recover_exception`
-- Cost estimate: `$1.47`
-- Recovery command used: `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
-
-This refire follows commit `133f1286`, which fixed A1's training/deploy
-contract by loading PR101 archive-derived latents instead of random latent
-vectors for non-smoke score-gradient training. The run uses a conservative
-`lr=2e-6`, `epochs=40`, `steps_per_epoch=8`, `batch_size=4`, and
-`continue_after_nvdec_failure=true`. The new failure was an operator/tooling
-bug, not a training result: the Modal worker process needed `/workspace/pact/src`
-on `sys.path` before importing `tac.submission_archive.safe_extract_zip`.
-`experiments/modal_phase_a1_score_gradient_pr101.py` now installs local and
-remote repo import roots at import time and closes active claims on recover
-exceptions.
-
-**Fixed relaunch harvested:** `track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal`
-completed training/build on Modal; the private custody ledger retains the call id.
-CUDA auth eval was skipped because the T4 DALI/NVDEC preflight failed with
-NVML error `999`, so the Modal result remains `cuda-training-build-only` until
-paired CUDA exact eval is repaired.
-
-The rebuilt A1 archive is now a real public-axis CPU anchor:
-
-- Archive bytes: `178,262`
-- Archive SHA-256: `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
-- macOS CPU advisory: `0.19286357743677346`
-- GHA Linux x86_64 `[contest-CPU]`: `0.19284757743677347`
-- GHA workflow run: `25588422622`
-- Fork PR: `#3`
-- Review packet:
-  `.omx/research/artifacts/a1_latentalign_importpathfix_result_review_20260509_codex.json`
-
-The GHA CPU helper rounded-score bug is fixed: `canonical_score` now comes from
-component recomputation, while the rounded report display (`0.19`) is stored as
-`reported_final_score_display_rounded`.
-
-Follow-up CUDA-path hardening landed locally: the A1 Modal dispatcher now sets
-`DALI_DISABLE_NVML=1` in both the Modal image and runtime subprocess/probe env,
-matching the existing Modal eval workaround for NVML-denied containers. Focused
-coverage: `src/tac/tests/test_modal_phase_a1_score_gradient_pr101.py` and
-`tests/test_modal_phase_a1_recover_paths.py`. The existing CPU-positive archive
-still needs a fresh paired `[contest-CUDA]` eval before internal promotion.
-
-The generic Modal CUDA auth-eval wrapper now supports uploaded
-`--submission-dir` runtime trees, extracted fail-closed with
-`safe_extract_zip`, so exact CUDA eval can target candidate-specific
-`inflate.sh` packets like the A1 harvested archive without hard-mounting every
-experiment-result path into the Modal image. Follow-up hardening closed three
-Modal wrapper bug classes permanently: image `.env(...)` after local mounts,
-missing worker `PYTHONPATH`, and temp work-dir custody.
-
-**Paired CUDA eval landed:** `modal:a1-latentalign-importpathfix-cuda-20260509T024114Z`
-completed on Modal T4 (`Tesla T4`, 600 samples):
-
-- `[contest-CUDA]`: `0.2263520234784395`
-- components: SegNet `0.00066299`, PoseNet `0.00017103`, bytes `178,262`
-- archive SHA-256: `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
-- runtime tree SHA-256: `89db4fe14ac2bbffc951f8e89ac2242fa1455e0880bb3fbe963aa48e4890b5eb`
-- artifact dir: `experiments/results/a1_latentalign_importpathfix_modal_cuda_eval_20260509_retry3/`
-
-Classification: exact CUDA anchor, not a CUDA frontier win. It pairs with the
-GHA Linux `[contest-CPU]` score `0.19284757743677347`, giving a CUDA-CPU gap of
-about `0.03350`, consistent with the HNeRV-family drift profile.
-
-**Guarded SegNet-preserving refire dispatched:** after the long `lr=1e-6`
-follow-up regressed to `0.19359165212458496` macOS CPU advisory, a short
-guarded schedule was launched on Modal T4:
-
-- Job: `track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal`
-- Modal call id: redacted in public report; private custody ledger retains the call id.
-- Claim status: `active_dispatching`
-- Config: `epochs=40`, `steps_per_epoch=8`, `lr=2e-6`,
-  `aux_kl_weight=0.5`, `aux_pixel_l1_weight=0.02`
-- Predicted ETA: `2026-05-09T07:54:39Z`
-- Recover command:
-  `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal`
-- Ledger:
-  `.omx/research/phase_a1_segguard_modal_dispatch_20260509_codex.md`
-
-No score claim exists yet. The Modal temp-evidence fix is in place, so the
-remote eval workdir should no longer be rejected as `/tmp` scratch. If DALI/
-NVDEC still fails, the run is build-only and must be screened locally before
-any exact-eval spend.
-
-**Guarded refire result:** harvested and retired as a measured configuration.
-The run produced a valid Modal T4 `[contest-CUDA]` exact result, but it
-regressed slightly versus the current A1 CUDA anchor:
-
-- Archive bytes: `178,279`
-- Archive SHA-256:
-  `f220be0350675eb06399e38a39d5849f9d57b6b0ebdac1c8295845d32e6cf6ca`
-- `[contest-CUDA]`: `0.22655968711150934`
-- CUDA components: SegNet `0.000665`, PoseNet `0.00017099`
-- macOS CPU advisory: `0.19309483549345535`
-- CPU advisory components: SegNet `0.00056256`, PoseNet `0.00003287`
-
-The current A1 anchor remains better on both axes:
-`0.2263520234784395` `[contest-CUDA]` and `0.19284757743677347`
-`[contest-CPU]`. The guarded `kl=0.5`, `pixel_l1=0.02` schedule is retired;
-future A1 work needs true validation selection or a score-domain/SegNet early
-stopping guard.
-
-The Modal harvester schema bug that hid this result as `score=None` is fixed:
-`experiments/modal_phase_a1_score_gradient_pr101.py` now normalizes both
-canonical `contest_auth_eval` fields and legacy `score_components` fields.
-Focused Modal tests: `12 passed`.
-
-**A1 best-proxy checkpoint selection landed:** the training script now saves
-both the historical final EMA checkpoint and a `checkpoint_best_proxy.pt` EMA
-snapshot at the lowest epoch-end `weighted_proxy`. The Modal A1 wrapper exposes
-`--checkpoint-selection {final_ema,best_proxy}`, defaulting to `final_ema` for
-backward compatibility. This turns the next A1 dispatch into a validation/
-early-stopping test instead of another blind final-epoch refire. Focused tests:
-`18 passed`. Ledger:
-`.omx/research/phase_a1_best_proxy_checkpoint_selection_20260509_codex.md`.
-
-**A1 best-proxy dispatch harvested:** the Modal T4 run with
-`--checkpoint-selection best_proxy` in the best measured `lr=2e-6`, `kl=0.2`,
-`pixel_l1=0.01`, `40x8` basin completed and recovered cleanly.
-
-- Job: `track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex`
-- Modal call id: redacted in public report; private custody ledger retains the call id.
-- Recovery: `completed`, `31` artifacts, `335.703398914 s`
-- Exact CUDA: `0.2263520234784395` (`seg=0.00066299`,
-  `pose=0.00017103`, `rate=0.11869725`)
-- Archive: `178,262 B`,
-  SHA-256 `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
-- Runtime tree SHA-256:
-  `6658b5749ccd62adb0d46b70fc02e4e984d3507f463b39f9e95a96971437615c`
-- Best-proxy checkpoint: epoch `29`,
-  `weighted_proxy=2.243459679643235`
-- Ledger:
-  `.omx/research/phase_a1_best_proxy_modal_harvest_20260509_codex.md`
-
-Classification: duplicate confirmation of the existing paired A1 archive, not
-a new score frontier. The archive SHA and CUDA score match the current A1
-paired anchor, whose Linux x86_64 `[contest-CPU]` score remains
-`0.19284757743677347`. No fresh CPU spend is warranted for this duplicate.
-
-## 2026-05-09 (night) - Track4 UNIWARD/Hessian A1 ladder screen
-
-`tools/build_uniward_stc_hessian_a1_v1.py` now emits complete runtime packets
-from the A1 latent-aligned archive and records score-affecting SHA custody.
-The builder bug where a 28-tensor saliency vector was treated like
-228K per-parameter bit allocations is fixed with parameter-count-weighted
-per-tensor allocation. Focused coverage:
-`src/tac/tests/test_build_uniward_stc_hessian_a1_v1.py` plus
-`src/tac/tests/test_contest_auth_eval.py` (`37 passed`).
-
-Byte-closed ladder candidates were built from the A1 archive
-`87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`:
-
-| target | archive bytes | delta vs A1 | macOS CPU advisory |
-|---:|---:|---:|---:|
-| `176000` | `177668` | `-594` | `0.21300500575810702` |
-| `174000` | `177624` | `-638` | `0.22729521075217057` |
-| `164000` | `171109` | `-7153` | `0.2605155145868584` |
-
-Classification: measured-config regression, not a family kill. Even the
-least-aggressive `-594 B` changed-payload step raises SegNet/PoseNet enough
-to lose about `+0.02016` score versus the A1 Linux CPU anchor. Do not
-remote-dispatch this magnitude/Hessian ladder as a score candidate. The next
-real score-lowering allocator should use score-domain sensitivity or
-component-response maps, not another no-data weight-domain proxy.
-
-Follow-up one-tensor probes decomposed the `target176000` miss:
-
-| probe | archive bytes | delta vs A1 | macOS CPU advisory |
-|---|---:|---:|---:|
-| `blocks.4.weight=7` | `177903` | `-359` | `0.19870389522684906` |
-| `blocks.3.weight=7` | `178027` | `-235` | `0.2117346720676015` |
-
-Both one-tensor cuts regress, so the current late-block 7-bit trust region is
-exhausted under this proxy. The manual `--set-bits NAME=BITS` mode remains in
-the builder for future tensor-localized trust-region probes.
-
-Ledger:
-`.omx/research/track4_uniward_hessian_a1_ladder_20260509_codex.md`.
-
-## 2026-05-09 (night) - A5 SegNet-ranked q-bit schedule
-
-`tools/build_a5_score_marginal_qbits_schedule.py` now supports component-ranked
-q-bit schedules via `--marginal-source {score,seg,pose,raw_score}`. The first
-SegNet-ranked A5 q6-low45 packet is byte-closed and runtime-consumed:
-
-- Archive bytes: `178,138`
-- Archive SHA-256:
-  `1ffb328240ccb9a067b1203258274c3edfba9f0a98212f1ce1c0a40b3e016501`
-- q-bit schedule: `q6` for the lowest `270 / 600` SegNet-marginal pairs,
-  `q8` otherwise
-- macOS CPU advisory: `0.21066071006845696`
-- components: PoseNet `0.00004059`, SegNet `0.00071899`
-
-Classification: measured-config regression, but a useful diagnostic. It
-improves scalar q6-low45 (`0.21129939214393487`, SegNet `0.00072565`) at the
-same byte count, proving component ranking moves the right direction, but the
-gain is far too small to be promotable. A5 needs richer SegNet-boundary/local
-component features or lower-distortion `q7/q8` geometry before exact eval.
-
-Ledger:
-`.omx/research/a5_trust_q6_low45_seg_ranked_macos_advisory_negative_20260509_codex.md`.
-
-## 2026-05-09 (night) - A5 q7-all trust-region bracket
-
-A lower-distortion A5 `q7` for all pairs packet is byte-closed and
-runtime-consumed:
-
-- Archive bytes: `177,928`
-- Archive SHA-256:
-  `39dbfd05d4861c6c5ea12e7bfc8fba17e8249dcc761e9c44943eeba8d56c6ade`
-- q-bit schedule: `q7` for all `600 / 600` pairs
-- macOS CPU advisory: `0.2026389105740624`
-- components: PoseNet `0.00003563`, SegNet `0.00065288`
-
-Classification: measured-config regression. This is the best A5 trust-region
-geometry tested so far and it recovers much of the q6 SegNet collapse, but it
-still loses about `0.00979` score points versus the A1 Linux CPU anchor while
-saving only `334 B`. A5 needs local SegNet-boundary allocation or retraining
-with frame-conditional q-bit noise; post-hoc uniform q7 is not an exact-eval
-candidate.
-
-Ledger:
-`.omx/research/a5_trust_q7_all_macos_advisory_negative_20260509_codex.md`.
-
-## 2026-05-09 (night) - A5 mixed q6/q7 dominance screen
-
-No eval was dispatched. Mixed `q6/q7` post-hoc A5 schedules were screened in
-`/tmp/pact_a5_q6q7_screen_20260509` for score/seg/pose marginal sources and
-low fractions `0.05` through `0.30`. The best byte row was `177,298 B`, only
-`630 B` below q7-all, worth about `0.00042` score points before distortion.
-
-Since q7-all is already about `0.00979` worse than the A1 Linux CPU anchor and
-adding q6 can only increase post-hoc distortion, this geometry is dominated.
-Retire post-hoc scalar q6/q7 A5 schedules unless the next implementation
-changes the local distortion geometry through SegNet-boundary allocation or
-training-time q-bit noise.
-
-Ledger:
-`.omx/research/a5_q6q7_mixed_trust_screen_dominance_negative_20260509_codex.md`.
-
-## 2026-05-09 (night) - A5 q7/q8 SegNet-protected scalar negative
-
-The strongest scalar A5 schedule tested so far is SegNet-protected `q7/q8`:
-`q7` for the lowest `510 / 600` SegNet-marginal pairs and `q8` for the top
-`90 / 600`.
-
-- Archive bytes: `178,243`
-- Archive SHA-256:
-  `28f4e0ee3ede86f323b484e36711fd01204ad101517f40ef32000417d2e4a896`
-- macOS CPU advisory: `0.20111041630821824`
-- components: PoseNet `0.00003517`, SegNet `0.00063672`
-
-This improves q7-all by about `0.00153`, proving scalar SegNet ranking has real
-signal, but it remains about `0.00826` worse than A1 while saving only `19 B`.
-Scalar post-hoc A5 q-bit schedules are now exhausted for exact-eval spend; the
-next A5 move needs local boundary-aware allocation or training-time q-bit noise.
-
-Ledger:
-`.omx/research/a5_q7_seg_protected_scalar_negative_20260509_codex.md`.
-
-## 2026-05-09 (night) - A5 SegNet boundary/margin scalar negatives
-
-`tools/build_segnet_boundary_marginals.py` now builds frozen-SegNet GT-frame
-boundary and logit-margin marginals for all `600` PR101 pairs. Full manifest:
-`reports/a5_segnet_boundary_marginals_pr101_20260509.json` (`60,615 B`,
-SHA-256
-`6263b909ad31de56fb26a56e8bb51fd288885edce0a2974ed6703eb20ce06c2c`).
-
-Two runtime-consumed `q7/q8 low0p85` packets were built and screened on macOS
-CPU advisory:
-
-| schedule | archive bytes | archive SHA-256 | macOS CPU advisory |
-|---|---:|---|---:|
-| boundary mass | `178,243` | `7163499abb7475ee937338e9c79f22d3c326b53c34f7dbaa2b8ed1c872d67190` | `0.20115808226406484` |
-| low-margin mass | `178,243` | `5b1f6e190f9051357d4c24b2e87fb4cf5bc6e2dc88b397d2f3c16972e7476536` | `0.20112208325925268` |
-
-Both are measured-config regressions versus the scalar SegNet-protected
-`0.20111041630821824`. This retires global scalar boundary/margin pair sorting
-for exact-eval spend; A5 reactivation now requires local boundary-aware
-allocation within each pair/channel or training-time q-bit noise.
-
-Ledger:
-`.omx/research/a5_segnet_boundary_margin_scalar_negative_20260509_codex.md`.
-
-## 2026-05-09 (night) - A1 long lr1e-6 Modal recovery
-
-The active A1 Modal long run
-`track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal` was
-harvested. Training and archive build completed, but remote CUDA auth eval
-failed before scoring because the Modal runner used a temp workdir rejected by
-`contest_auth_eval.py`'s evidence-custody guard.
-
-The custody bug is fixed: `experiments/modal_phase_a1_score_gradient_pr101.py`
-now writes remote score-bearing output under
-`/workspace/pact/experiments/results/modal_phase_a1_remote/...`, and
-`src/tac/tests/test_modal_phase_a1_score_gradient_pr101.py` forbids temp
-score-evidence output and `--allow-temp-work-dir` in this dispatcher.
-
-The harvested archive was screened locally:
-
-- Archive bytes: `178,276`
-- Archive SHA-256:
-  `55d4a4a0d0ad9915e9b74c679ad8ea31e81f4383f60c132bf017e6df40301111`
-- macOS CPU advisory: `0.19359165212458496`
-- components: PoseNet `0.00003300`, SegNet `0.00056719`
-
-Classification: measured-config regression versus the current A1 Linux
-`[contest-CPU]` anchor `0.19284757743677347`. Preserve as signal; do not
-re-dispatch this exact long `lr=1e-6` schedule without early stopping or a
-SegNet guard.
-
-Ledger:
-`.omx/research/phase_a1_long_lr1e6_modal_failure_and_advisory_20260509_codex.md`.
-
-## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
-
-`tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh
-operator use: `--shannon-json` accepts a quoted glob, exact path, or unquoted
-shell-expanded operands, and the docstring usage now names the real
-`--output-dir` flag. Focused coverage:
-`src/tac/tests/test_build_deltaepszeta_training_targets.py` (`12 passed`).
-`tools/all_lanes_preflight.py` is also hardened for direct shebang execution:
-it re-execs through repo `.venv/bin/python` using `sys.prefix` virtualenv
-detection and propagates stable child `PYTHONPATH`, closing the macOS ambient
-`python3` dependency-loss failure class. The direct entrypoint now passes all
-29 preflight checks.
-
-Local CPU-only artifacts were produced for the next co-design scaffold:
-
-- PR106 conditional-entropy targets:
-  `experiments/results/lane_deltaepszeta_targets_pr106_20260509T_seq_codex/targets.json`
-  (`13,483 B`, SHA-256
-  `bf9b68cd7cb3c0067128c458cd43adffcbf8492b98c657223fb701fc94c116a4`).
-- Planning signal: `78,580 B` H0-H2 conditional-entropy gap, H2/H0 aggregate
-  ratio `0.5310`; top weighted tensors are `blocks.2.weight`,
-  `blocks.1.weight`, and `blocks.0.weight`.
-- A1 EMA sanity loop:
-  `experiments/results/lane_run_deltaepszeta_training_20260509T_seq_codex/run/a1_ema_pr106_targets_smoke_step_log.jsonl`
-  (SHA-256
-  `9dbe0e27c2b18d47540e2d8a43af98ba0d28d9e77478dd8ce4d4fda74e78c90e`);
-  final `rate_bits=6.667497634887695`, `final_lambda=5e-05`.
-
-Classification: `[empirical_planning; local CPU sanity loop]`, no score claim,
-no dispatch, no archive promotion. The durable ledger is
-`.omx/research/deltaepszeta_phase1_targets_and_smoke_20260509_codex.md`.
-
-## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
-
-**Headline:** 11 STRICT/warn preflight gates landed, ~395 violations
-extincted, META-META commit-machinery protections live, 4018 long-lived
-artifacts classified, Strategic Secrecy Rule retired (contest is over),
-Phase A ablations A1–A4 + A3-alt anchored.
-
-**Preflight gates (Catalog #109 → #119):**
-- #109 public PR intake clones pristine — STRICT @ 0
-- #110 recovery_metadata append-only — STRICT @ 0
-- #111 status no-stale-dirty-paths — STRICT @ 0
-- #112 rebuild no-baked-state — STRICT @ 0
-- #113 META artifact_lifecycle umbrella (`enumerate_unregistered=True` strict-flip after 4018-path classification) — STRICT @ 0 on changed-paths scope
-- #114 PR101 synthetic-target gate — STRICT @ 0
-- #115 packet-blocker evidence-matches — STRICT @ 0
-- #117 serializer-uses-lock — warn-only (legacy backlog clearing naturally)
-- #118 catalog-no-duplicate-numbers — STRICT @ 0
-- #119 co-author-trailer — warn-only (legacy backlog)
-
-**META-META commit-machinery (commit `4695d222`):**
-- FIX-1: working-tree pre/post-lock hash check (concurrent-edit-leak detection, refuses rc=3)
-- FIX-2: `tools/claim_catalog_number.py` atomic via fcntl on `.omx/state/next_catalog_number.txt`
-- FIX-3: serializer auto-appends Co-Authored-By trailer (idempotent)
-- FIX-4: `audit_unregistered_long_lived_artifacts()` enumerates `git ls-files` under LONG_LIVED_ARTIFACT_ROOTS
-
-**Strategic Secrecy Rule retired** (commit `e6806fa0`): contest is over.
-Code-level cross-references in `src/tac/deploy/`, `optimal_stack_orchestrator.py`,
-and `tools/oss_publish_staging.py` updated to descriptive language without
-rule citation (commit `648b498c`).
-
-**Auto-fork-PR tooling for GHA CPU eval** (commit `406b4211`):
-- `tools/create_fork_pr_for_submission.py` clones fork, branches, copies
-  submission_dir to `submissions/<name>/`, opens draft PR, returns PR number
-- `tools/dispatch_cpu_eval_via_github_actions.py --auto-create-fork-pr` flag
-  closes the runtime-contract gap from `pr102_cpu_eval_gha_runtime_contract_failure_20260508_codex.md`
-
-**Phase A Pareto (current state, see `reports/phase_a_pareto_20260508.md`):**
-
-| Lane | Archive bytes | Δ vs brotli (178,144 B) | Verdict |
-|---|---:|---:|---|
-| A0 mdl_baseline | — | — | byte_proxy_only_deterministic |
-| A1 score_gradient | 178,262 | +118 | paired exact anchors: `[contest-CPU]` 0.192847577437 and `[contest-CUDA]` 0.226352023478; CPU-positive, CUDA not frontier |
-| A2 xavier_l2 | 156,344 | -21,800 | FALSIFIED proxy (-3,635 B regression vs uniform) |
-| A3-alt mallat_wavelet | 156,344 | -21,800 | incremental_improvement_insufficient (Mallat > Xavier in 2/4 cells; both fail uniform) |
-| A4 charm_hyperprior real PR101 probe | 206,745 | +28,601 | hand-parametric ChARM/range-coder configs retired; learned co-design remains live |
-| ADMM_lossy_coarsening_baseline | 147,285 | -30,859 | Path B baseline; -28 KB savings @ 4-5% rel_err |
-
-**Class-level finding:** TWO weight-domain importance proxies (Xavier-L2 +
-Mallat wavelet) have now failed to beat uniform on PR101's near-iid
-substrate. Future Decision 3 reactivation MUST use score-domain
-(Hessian-trace, score-gradient) or byte-domain (compression-hardness)
-proxies, NOT a third weight-domain proxy. Per CLAUDE.md "KILL is LAST
-RESORT", the lane is `incremental_improvement_insufficient`, not killed —
-reactivation criteria documented per memo.
-
-**A1 + A4 + A3-alt review verdict:**
-- A1 dispatch tooling: 3 CRITICAL fixes applied (`load_differentiable_scorers`
-  signature, canonical `simulate_eval_roundtrip` resize cycle, stale claim
-  closure structural fix), 2 Medium fixes, 1 advisory closed. 2026-05-09
-  follow-up fixed the higher-impact training/deploy mismatch: non-smoke A1 now
-  samples the same PR101 `latent_blob + sidecar_blob` rows that the archive
-  builder preserves at inflate. Re-fire only as a constrained archive-latent
-  fine-tune with collapse screening.
-- A4 ChARM range coder: 4 Medium fixes applied (deterministic ZIP, CARM2
-  framing docs, dead param), 4 Low findings closed. R1-1 entropy caveat
-  documented. NOT a dispatch blocker.
-- A4 real-substrate ChARM probe: `reports/pr101_charm_real_substrate_probe.json`
-  applies the real ChARM/range-coder backend to PR101 quantized symbols. Best
-  hand-parametric model is tensor Gaussian at **206,745 B** (**+28,601 B** vs
-  PR101 brotli), with exact quantized-symbol roundtrip. This retires the
-  static/delta/previous-symbol measured configs only; learned/co-designed
-  ChARM remains live.
-- A3-alt Mallat: see Pareto table above.
-
-**Phase A subagents (LANDED):**
-- A1 score-gradient PR101 fine-tune — the first Modal config produced a
-  `205,879 B` archive and scored **3.721654** on macOS CPU advisory; that
-  measured config is retired. The root cause was a training/deploy mismatch:
-  non-smoke A1 had used random latent rows while the runtime preserves PR101's
-  `latent_blob + sidecar_blob`. After fixing that plus the Modal worker import
-  path, the constrained latent-aligned refire produced a `178,262 B` archive
-  and scored **0.192847577437** on GHA Linux x86_64 `[contest-CPU]`
-  (`pose=0.00003286`, `seg=0.00056023`). This is public-axis evidence only;
-  contest-CUDA is still pending because Modal DALI/NVDEC preflight failed.
-- A4-alt Filler STC pose codec (`75c99b84`) — 559+ LOC + 27 tests pass.
-  Δ vs PD-V2 on smooth-walk fixture: **−400 B (−9.17%)**; idle-dominant
-  +52% (expected — AC exploits qint=0 dominance). Verdict
-  `byte_anchor_landed`. Ledger:
-  `feedback_pr101_pose_filler_stc_byte_anchor_landed_20260508.md`.
-  First empirical anchor at
-  `experiments/results/pr101_pose_filler_stc_20260508T194527Z/`.
-- A5 frame-conditional bit budget — byte-closed runtime packet landed, but
-  the current complexity-only schedule is a measured-config negative:
-  macOS CPU advisory score **1.937884** (`pose=0.078646`,
-  `seg=0.009361`, `172,615 B`). Reactivate with score-domain q-bit
-  allocation, not the η=4 complexity schedule. The packet builder now accepts
-  `--q-bits-json` and records q-bit custody; the score-marginal packet
-  rebuild is locally ready after lane claim, but it reuses the same `cde5...`
-  archive and is not a new score win. A conservative changed schedule
-  (`q6` for the lowest 50% marginal pairs, `q8` otherwise) built a
-  `177,928 B` archive (`83e85a...`) and scored **0.213365** on macOS CPU
-  advisory; this avoids catastrophic collapse but remains a measured-config
-  advisory negative because SegNet rises to `0.00074546`. The tighter
-  q6-low25 schedule validates the schedule-readiness path but fails the byte
-  gate at `178,978 B` (`3056e676...`), larger than PR101 brotli; no scorer
-  eval was run. The tightened q6-low45 boundary is the first tested q6 scalar
-  trust split that beats the byte gate (`178,138 B`, `dd725682...`) and improves
-  the advisory score to **0.211299** (`pose=0.00004048`, `seg=0.00072565`), but
-  it remains SegNet-limited and non-promotable.
-- Cross-paradigm ADMM × Op1 finalizer — byte-closed `153,513 B` archive
-  (`7bbba307...`) now has a local macOS CPU advisory result:
-  **0.328444** (`pose=0.00014180`, `seg=0.00188570`). Rate improves, but
-  SegNet collapse dominates. Retire this measured config unless formal exact
-  negative is needed; reactivation requires scorer-aware/seg-boundary-aware
-  allocation or a lower-distortion trust region.
-- Autopilot evidence integration — A1 and cross-paradigm advisory negatives
-  are now in `reports/cathedral_autopilot_evidence.jsonl` with
-  `score_claim=false`, `rank_or_kill_eligible=false`,
-  `cuda_eval_worth_testing=false`, and scoped reactivation criteria. The
-  reconciled 0.190/0.155 autopilot plans and meta-Lagrangian bridge outputs
-  were regenerated so both measured configs sit in the validation queue, not
-  active ranking.
-- A6 Selfcomp block-FP × Ballé hyperprior compose — measured-config
-  negative. Best compose **B=64, sq=uint8 = 214,035 B**, which loses to
-  PR101 brotli by +35,891 B. Treat this as a scoped proxy retirement for
-  the current max-abs-scale conditional Gaussian range-coder, not as a
-  score-lowering lane and not as a family kill. Real Selfcomp per-channel
-  block-FP, learned ChARM, tensor-aware PMFs, and byte-map-preserving
-  arithmetic rewrites remain valid reactivation paths. Linear σ
-  map cannot match brotli's adaptive context modelling on PR101's
-  near-iid INT8 stream.
-- PHASE 4 INTEGRATION paper harness — landed.
-
-**Phase A in flight:** none. All 7 lanes anchored.
-
-**Inline closure (post-A4-alt push, `0f50b5c5`):**
-After A4-alt landed at `75c99b84`, full-codebase preflight surfaced 2
-pre-existing `check_training_scripts_have_auth_eval` violations on the A1
-+ A4 training scripts (training scripts that save a checkpoint must invoke
-auth_eval OR define an explicit `--no-auth-eval-on-best` opt-out flag).
-The opt-out is now no longer allowed to be default-on; default-on
-exemptions are treated as guard bypasses, and downstream lanes remain
-responsible for exact auth eval. Sister fix: SyntaxWarning escape
-`\|Δ\|` removed from
-`tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py:35`.
-
-**Superseded awaiting-operator note:** A1 no longer needs the old Lightning/Vast
-refire listed here; paired CPU/CUDA anchors now exist. A4 and PARADIGM-δεζ
-remain historical planning items until the current reconciliation queue above
-is cleared and a fresh dispatch claim/preflight path exists.
+# Comma Lab — Substrate Canvas + Phase B-2 Readiness — 2026-05-12
+
+## Executive summary
+
+Substrate canvas grew to 12 wired trainers + 20 operator-authorize recipes
+across HIGH-target / MEDIUM-target / TRADITION 2 / EXPLORATORY traditions
+during the 2026-05-12 session. Phase B-2 dispatch sweep is BUILD-COMPLETE
+for all 6 HIGH-target substrates (sane_hnerv α, balle_renderer β, SIREN,
+Cool-Chic, VQ-VAE, self_compress_nn, hybrid_renderer_residual) but BLOCKED
+on Modal source-staleness investigation (Catalog #166 STRICT @ 0 — HEAD
+parity ledger landed; smoke-before-full pattern Catalog #167 warn-only
+pending strict-flip). The NV7 cost-band posterior fix corrected the Modal
+A100 prediction by 312× (from `weak_posterior $0.016` to
+`hand_calibrated_fallback $5.00`); two failed-dispatch anchors are now
+correctly excluded from successful-dispatch percentile bands. Net session
+GPU spend: $0.10 (5 failed Modal A100 attempts). $19.90 envelope reserved
+for Phase B-2 dispatch wave once the Modal source-staleness verification
+gate clears.
+
+## Substrate canvas state (12 trainers + 20 recipes)
+
+### HIGH-target traditions (sub-PR101-gold attack vectors; predicted ≤ 0.18)
+
+| Substrate | Tradition | Predicted score | Recipe wired | Trainer LOC | Status | First-anchor |
+|---|---|---|---|---|---|---|
+| **siren** | TRADITION 1 (coordinate-MLP) | 0.145 [predicted] | yes | 1085 (45.1K) | L1 SCAFFOLD; dispatch-ready | NOT DISPATCHED |
+| **cool_chic** | TRADITION 1 (multi-scale latent + AR prior) | 0.165 [predicted] | yes | ~1100 (45.1K) | L1 SCAFFOLD; dispatch-ready | NOT DISPATCHED |
+| **vq_vae** | TRADITION 2 (discrete codebook) | 0.17 [predicted] | yes | 870 (47.9K) | L1 SCAFFOLD; dispatch-ready | NOT DISPATCHED |
+| **self_compress_nn** | δ (Selfcomp/Quantizr block-FP) | 0.17 [predicted] | yes | ~1200 (55.0K) | L1 SCAFFOLD; dispatch-ready | NOT DISPATCHED |
+| **hybrid_renderer_residual** | composite (α + β residual) | 0.17 [predicted] | yes | ~1200 (55.1K) | L1 SCAFFOLD; dispatch-ready | NOT DISPATCHED |
+| **wavelet** | TRADITION 1 (Daubechies-4) | 0.175 [predicted, byte-floor blocked] | yes (research_only=true) | ~1100 (49.3K) | L1 DEFERRED-research-only (byte-floor 471M raw subband bytes ≫ N=37,545,489) | DEFERRED |
+| **balle_renderer** β | TRADITION 1 (entropy bottleneck + scale hyperprior) | 0.18 [predicted] | yes | ~52K LOC | L1 SCAFFOLD; full_main wired | DISPATCH HALTED on Modal source-staleness |
+| **sane_hnerv** α | TRADITION 1 (HNeRV substrate engineering) | ~0.19 [predicted] | yes | ~46K LOC | L1 SCAFFOLD; full_main wired | DISPATCH HALTED on Modal source-staleness (operator: "~0.19 not useful") |
+
+### MEDIUM-target HNeRV-family (DEFERRED pending HIGH-target empirical signal)
+
+| Substrate | Predicted score | Recipe wired | Trainer LOC | Status |
+|---|---|---|---|---|
+| **tc_nerv** | 0.19 [predicted] | yes | 47.1K | L0 SCAFFOLD (no full_main wire-in) |
+| **block_nerv** | 0.19 [predicted] | yes | 45.8K | L0 SCAFFOLD |
+| **ff_nerv** | 0.19 [predicted] | yes | 46.3K | L1 SCAFFOLD |
+| **ds_nerv** | unknown — first empirical needed | (pending recipe) | 42.8K | L1 (memory-only entry) |
+
+### TRADITION 2 EXPLORATORY (operator decision pending: production target?)
+
+| Substrate | Predicted score | Recipe wired | Status |
+|---|---|---|---|
+| **lane_12_v2_nerv** | <0.21 sub-Quantizr [predicted] | yes (dispatch_blockers: remote driver missing) | recipe-only |
+| **nervdc** | unknown | yes (dispatch_blockers: remote driver missing) | recipe-only |
+| **e_nerv** | unknown | yes (dispatch_blockers: remote driver missing) | recipe-only |
+| **ego_nerv** | unknown | yes (dispatch_blockers: remote driver missing) | recipe-only |
+| **cnerv** | unknown | yes (dispatch_blockers: remote driver missing) | recipe-only |
+| **quantizr_faithful** | 0.33 [predicted, first-anchor replication target] | yes (dispatch_blockers: trainer not wired) | recipe-only |
+| **mlx_mask_renderer** | [macOS-MLX advisory only — never promotable to contest-CUDA] | yes | local Apple Silicon only |
+| **dp_sims_renderer** | unknown | yes (dispatch_blockers: library deps) | recipe-only |
+| **diffusion_renderer** | research_only=true, never produces contest archive | yes | research-only |
+| **grayscale_lut** | unknown | (pending recipe) | L0 SKETCH |
+
+## Cost-band posterior state (NV7-corrected)
+
+Posterior at `.omx/state/cost_band_posterior.jsonl` — 4 anchors (2 successful_dispatch + 2 failed_dispatch).
+
+| (platform, gpu, epochs_bucket) | n_anchors (success) | n_failed | Confidence | p10 / p50 / p90 USD |
+|---|---|---|---|---|
+| (modal, A100, 2000-3000ep) | 0 | 2 | hand_calibrated_fallback | 3.00 / 5.00 / 8.00 |
+| (local, local_cpu, build-only) | 2 | 0 | weak_posterior | 0.00 / 0.00 / 0.00 (build-only probes) |
+
+**NV7 fix (commit `1e7e1b0d`)**: failed-dispatch anchors NO LONGER poison
+percentile bands. The earlier Modal A100 prediction was
+`weak_posterior $0.016` (treating a 14.77-second crash as a successful
+3000-epoch run); post-fix, `predict('modal', 'A100', 3000)` returns
+`hand_calibrated_fallback p50=$5.00` until a real successful dispatch
+appends an empirical anchor. Migration script
+`tools/migrate_cost_band_posterior_failed_anchors.py` ran under fcntl
+LOCK_EX with `.pre_nv7_migration.<sha>.bak` backup.
+
+**Continual-learning posterior** at `.omx/state/continual_learning_posterior.json`:
+21 accepted anchors, 11 refused. Schema
+`tac_continual_learning_posterior_v1`; evidence_grade
+`[continual-learning posterior; non-authoritative]`.
+
+## Catalog # STRICT preflight inventory (165 numbered gates active)
+
+Numbered catalog entries: **82 distinct check function entries** in CLAUDE.md
+(numerals span 1-166 with intentional gaps for retired/renumbered checks).
+Highest active gates this session:
+
+| Catalog # | Check | Purpose | Status |
+|---|---|---|---|
+| **#166** | `check_modal_dispatch_verifies_worker_source_matches_head` | HEAD-parity ledger + worker-side source-parity ledger in `experiments/modal_train_lane.py` | STRICT @ 0 (this session) |
+| **#167** | `check_smoke_before_full_pattern` | Refuses operator-authorize Modal wrappers that fire `--full` before `--smoke` validation | warn-only initial; strict-flip pending 4 legacy wrapper backfill |
+| **#164** | `check_substrate_score_aware_loss_calls_preprocess_input_before_scorer` | AST-walks substrate score_aware loss; refuses bare `self.<scorer>(...)` forward without paired `preprocess_input(...)` | STRICT @ 0 (FIX-H Part 1) |
+| **#163** | `check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap` | `scripts/remote_lane_*.sh` sourcing `remote_archive_only_eval.sh` MUST prepend `REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1` | STRICT @ 0 |
+| **#161** | `check_quantize_degenerate_range_clamped_correctly` | Substrate archive `_quantize_intN` degenerate-range branch must fill with `-(MAX_LEVELS // 2)` not zero | STRICT @ 0 |
+| **#159** | `check_claude_md_catalog_text_matches_preflight_strict_value` | CLAUDE.md catalog text must match `strict=` value wired in preflight | STRICT @ 0 |
+| **#158** | `check_deterministic_compiler_canonical_use` | Refuses new packet-compilation surfaces bypassing `tac.packet_compiler.deterministic_compiler` | STRICT @ 0 |
+| **#157** | `check_commit_serializer_pre_lock_hash_against_head` | Refuses bare `git commit` outside canonical serializer; sister to `--expected-content-sha256` discipline | STRICT @ 0 |
+| **#156** | `check_gc_helper_refuses_delete_on_tracked_paths` | `tools/gc_experiments_results.py` external callers must accept `TrackedDeleteRefusedError` defense | STRICT @ 0 |
+| **#154** | `check_experiments_results_gc_helper_is_canonical` | Refuses ad-hoc `shutil.rmtree(experiments/results/...)` outside the canonical helper | STRICT @ 0 |
+| **#153** | `check_modal_dispatcher_uses_canonical_mount_builder` | `experiments/modal_*.py` must route through `tac.deploy.modal.mount_manifest.build_training_image` | STRICT @ 0 |
+| **#152** | `check_operator_wrapper_validates_required_input_files_pre_dispatch` | Dispatch wrappers must validate `required_input_file=True` flag values exist BEFORE GPU dispatch | STRICT @ 0 |
+| **#151** | `check_operator_wrapper_threads_trainer_tier_required_flags` | Operator wrappers must thread env→CLI ladder for trainer's `TIER_<N>_OPERATOR_REQUIRED_FLAGS` | STRICT @ 0 |
+| **#150** | `check_phase_b_auth_memo_in_repo` | `phase_b_preconditions_status(auth_memo_path=...)` must point under git repo root | STRICT @ 0 |
+
+Catalogs #1-#149 (sister gates spanning device defaults, eval roundtrip,
+EMA, mount manifests, lifecycle, custody validation, lock discipline,
+trainer manifests) all STRICT @ 0 per session-cumulative landing memo
+ledger.
+
+## Modal source-staleness pivot (Phase B-1)
+
+The 2026-05-12 canary subagent reported "Modal worker mounted stale source"
+after two consecutive Modal A100 dispatches of `train_substrate_sane_hnerv`
+crashed at `score_aware_loss.py:129 unsqueeze(1)`. Investigation of the
+chronology revealed:
+
+| Event | UTC |
+|---|---|
+| Dispatch [redacted-private-custody] (WWW4) fires | 2026-05-12T17:12Z |
+| Dispatch [redacted-private-custody] fires | 2026-05-12T20:26:47Z |
+| Commit `6048d690` (FIX-H Part 1) lands | 2026-05-12T20:44:00Z |
+
+Both dispatches fired BEFORE the fix landed; the Modal worker faithfully ran
+the broken pre-fix code. Post-mortem could not distinguish "stale snapshot"
+from "pre-fix dispatch" because `modal_metadata.json` did not record:
+- `mounted_code_git_head` (dispatch-time HEAD SHA)
+- `working_tree_dirty` state
+- sentinel-file SHA-256 ladder
+
+**Fix landed (commit `4ada3a59`):** Catalog #166 — HEAD parity ledger
+serialized on dispatch + worker-side source-parity ledger written to
+`modal_worker_head_ledger.json`. `--require-clean-head` opt-in fail-closed
+gate added. 6th-class diagnosis (`HOK-at-dispatch-but-fix-needed-after-dispatch`)
+documented; runtime sister tool
+`tools/diagnose_modal_worker_source_staleness.py` provides H1-H5 verdict
+taxonomy (image cache / eval-timing / deploy stale / manifest gap /
+PYTHONPATH ordering).
+
+**Smoke-before-full pattern (commit `5056c70f`)**: Catalog #167 — refuses
+operator-authorize Modal wrappers that fire `--full` before `--smoke`
+validation. Initial warn-only; strict-flip pending 4 legacy wrapper
+backfill.
+
+## Outstanding operator decisions (consolidated from this session)
+
+1. **Vast.ai balance reload OR commit Modal/Lightning-only.** Account at
+   $0 balance; Modal credits exhausted as of 2026-04-15; Lightning T4 free
+   pool is the remaining no-cost option. The Phase B-2 dispatch wave has
+   $19.90 of envelope reserved but no provider with non-zero balance.
+2. **HNeRV-family Wave 3 build (TCNeRV, BlockNeRV, FFNeRV, DSNeRV, HiNeRV,
+   ego_nerv).** DEFER until Wave 2 HIGH-target empirical signal arrives.
+   Operator framing: "sane_hnerv at ~0.19 is not useful — we need to BEAT
+   0.193, not match it."
+3. **TRADITION 2 substrate production targeting.** 8 substrates have
+   recipes but no trainers (lane_12_v2_nerv, nervdc, e_nerv, ego_nerv,
+   cnerv, quantizr_faithful, mlx_mask_renderer, dp_sims_renderer,
+   diffusion_renderer). Are these production-targeted, or research-only?
+   `mlx_mask_renderer` is `[macOS-MLX advisory]` only by construction;
+   `diffusion_renderer` is `research_only=true` permanently.
+4. **`recovered_*/` body-cleavage (~106 MB).** WAVE-8 audit landed but
+   DEFERRED-pending-operator. Per Catalog #110 + #154:
+   PRESERVE-METADATA-DELETE-BODIES verdict eligible but requires explicit
+   operator handle + UTC timestamp.
+5. **Wavelet substrate reactivation criteria.** Dense full-grid WLV1 is
+   byte-floor blocked (471M raw subband bytes ≫ N=37,545,489). Highest-EV
+   future work: sparse-subband compiler (top-k coefficients per subband +
+   run-length entropy coder); OR redesign as residual-over-champion packet;
+   OR coarser quantization (int4 with learned codebook). NO KILL verdict.
+
+## Next dispatch event horizon
+
+Phase B-2 substrate ranking sweep (6 HIGH-target dispatches @ Modal A100
+2000ep, ~$5 each = $30 total — currently EXCEEDS $19.90 envelope):
+
+**Gating events (in dependency order):**
+1. **Modal source-staleness verification** — operator runs
+   `tools/diagnose_modal_worker_source_staleness.py` once; HOK verdict
+   unblocks all future Modal dispatches.
+2. **Smoke-before-full validation** — every HIGH-target substrate runs
+   `--smoke` ($0.30, 100 epochs) before `--full` ($5, 2000 epochs);
+   confirms trainer + Catalog #166 + Catalog #167 chain on real Modal.
+3. **Cost-band first-anchor** — first successful_dispatch anchor lands
+   into `.omx/state/cost_band_posterior.jsonl`, triggering automatic
+   posterior recalibration; subsequent dispatches use the empirical
+   prior instead of `hand_calibrated_fallback`.
+4. **Provider balance** — operator decision required (item #1 above)
+   before ANY paid Modal dispatch. Lightning T4 free pool path is
+   alternative if Modal/Vast.ai both unfunded.
+
+## 2026-05-12 (session) — earlier landings (preserved from prior generations)
+
+[The "Substrate scaffolds + Catalog flurry + state hygiene" generation
+covering α `sane_hnerv`, β `balle_renderer`, Catalog #98 strict-flip,
+#117/118/119 commit-machinery, #150 phase-B, #151 wrapper-TIER, #152
+required-input validation, #153 Modal mount, #154 GC helper canonical,
+T1-D GC, claim-ledger prune, MMM PR101 GOLD primitive port, T1 Balle
+engineering audit landings still applies; this WAVE-9 audit supersedes the
+top-of-file generated-at marker only and adds the Phase B-2 readiness +
+substrate canvas + cost-band NV7 + Modal source-staleness pivot summary.]
+
+## Cumulative session subagent landings
+
+**2026-05-12 LANDED memos:** ~88 distinct `feedback_*_20260512*.md` files
+written this session (mix of `_LANDED_` / `_landed_` / `_DEFERRED_pending_*`
+suffixes). Ten of these match the operator's referenced subset:
+
+- `feedback_phase_b1_nv7_fix_canary_pair_LANDED_20260512.md`
+- `feedback_phase_b2_build_3_high_target_trainers_LANDED_20260512.md`
+- `feedback_wave1_vq_vae_trainer_build_LANDED_20260512.md`
+- `feedback_wave1_self_compress_nn_trainer_build_LANDED_20260512.md`
+- `feedback_wave1_hybrid_renderer_residual_trainer_build_LANDED_20260512.md`
+- `feedback_wave8_gha_contest_cpu_workflow_LANDED_20260512.md`
+- `feedback_wave8_vastai_phantom_cleanup_LANDED_20260512.md`
+- `feedback_wave8_recovered_cleanup_DEFERRED_pending_operator_decision_20260512.md`
+- `feedback_phase_b1_pivot_modal_source_staleness_fix_LANDED_20260512.md`
+
+**Lane registry growth:** 490 lanes total (this WAVE-9-PROGRESS-AUDIT lane
+included; from ~384 baseline before the multi-wave session).
+
+## Disclosure hygiene compliance
+
+Per CLAUDE.md "Public Disclosure Hygiene":
+- No Vast.ai instance IDs published (private-custody artifact only)
+- No Modal FunctionCall IDs published ([redacted-private-custody] used inline)
+- No `~/.claude/projects/...` paths in this report
+- No operator email
+- All score claims tagged `[predicted]` / `[contest-CUDA]` / `[contest-CPU]`
+  / `[macOS-MLX advisory]` / `[empirical:<short-ref>]` per axis discipline
+- Lane IDs, commit SHAs, substrate names included as canonical references
 
 ---
 
-## 2026-05-08 — CUDA vs CPU auth eval split: leaderboard ranks by CPU axis
-
-**Headline:** the contest's `upstream/evaluate.py` produces two distinct
-authoritative score axes for the same archive bytes — `--device cuda` and
-`--device cpu` — and the public leaderboard ranks by the **CPU** score, not
-CUDA. We discovered this 2026-05-08, four days after the deadline closed.
-
-**Empirical content** (5 paired bot comments, no new compute):
-
-| | mean | σ | range |
-|---|---:|---:|---|
-| `R_pose = pose_cuda / pose_cpu` | 5.04 | 0.10 | [4.97, 5.21] |
-| `R_seg  = seg_cuda  / seg_cpu`  | 1.17 | 0.01 | [1.16, 1.18] |
-| `Δscore = score_cuda − score_cpu` | 0.0330 | 0.0004 | [0.0325, 0.0335] |
-
-70% of the gap sits in pose, 30% in seg, 0% in rate (rate term bit-identical).
-
-**Mechanism hypothesis (3-axis additive):** (a) decoder split — `DaliVideoDataset`
-for CUDA hardware NVDEC vs `AVVideoDataset` for CPU libavcodec software decode
-produces different RGB uint8 from the same `.mkv`; (b) PoseNet FP32 conv-stack
-noise floor with `σ²_cuda ≈ K · L · ε² · ||x||²`, predicting R_pose ≈ 5.0 at
-medal-band pose<sub>cpu</sub> = 3.5e-5 — numerically perfect match for observed
-5.04; (c) Hydra-head MLP. The original "FastViT TF32-attention compounding"
-hypothesis was falsified on three independent grounds (RepMixer not attention,
-T4 has no TF32 hardware, PyTorch default `allow_tf32=False`).
-
-**Score-formula amplification:** `sqrt(10·d_pose)` softens the 5× pose ratio
-to 2.24× in absolute pose-term contribution, but pose contribution is *larger*
-in absolute score points on CUDA than on CPU (0.0417 vs 0.0187). At PR106's
-operating point the May 4 race postmortem rule "pose 2.71× more marginal than
-seg" *inverts* on the leaderboard substrate — SegNet becomes ~4× more
-leaderboard-marginal than pose.
-
-**Predicted CPU scores for our existing artifacts:**
-
-| Archive | CUDA score | CPU-axis status | Interpretation |
-|---|---:|---:|---|
-| Our PR #107 apogee | 0.22936 | 0.1966358879 (verified Linux x86_64 CPU) | just outside silver/bronze band |
-| PR103-on-PR106 AC repack | 0.20898 | ~0.176 (model prediction only) | not rankable until exact Linux x86_64 CPU replay of the same archive/runtime |
-| PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified) |
-| PR104 hardened replay | 0.23114 | ~0.198 | non-frontier |
-
-**Operational rule (CLAUDE.md non-negotiable):** every shippable archive gets
-dual-eval — authoritative `[contest-CUDA]` and `[contest-CPU]` axes on
-Linux x86_64 hardware that is 1:1 contest-compliant with the GitHub Actions
-CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never
-`[contest-CPU]`. Tag distinctness enforced by Check D / B7.
-
-**Strategic exploitation prescriptions:**
-
-1. **CPU-axis pose trust-region loss**: ablate a Huber-style pose loss where
-   τ ≈ sqrt(observed HNeRV CPU pose band). This is a training-time hypothesis,
-   not proof that pose below τ is free; paired CPU/CUDA exact eval must decide.
-2. **Leaderboard-aware Lagrangian**: `tac.score_geometry target_axis="cpu_leaderboard"`
-   reweights pose marginal × 0.20, seg marginal × 0.86 before ranking
-   dispatch candidates.
-3. **Training-time SegNet boundary robustness**: make rendered frames more
-   robust around class boundaries. Do not run SegNet or smooth scorer logits in
-   `inflate.py`; submission inflate remains scorer-free.
-4. **Calibrated noise injection in training**: σ ≈ 1.7e-3 per-op-equivalent.
-   Tightens R<sub>pose</sub> from ~5 to ~3.5.
-
-**Documentation surfaces:**
-
-- OSS findings: `docs/findings/cuda_cpu_auth_eval_split_20260508.md`
-- Internal methodology: `docs/writeup/cuda_cpu_drift_methodology.md`
-- Paper: `docs/paper/00_abstract.md` (4th contribution), `docs/paper/04_results.md` §4.8,
-  `docs/paper/06_related_work.md` §6.8, `docs/paper/07_discussion.md` §7.9
-- Site: `reports/graphs/site/cuda_cpu_split_post.md`,
-  `reports/graphs/site/judges_one_pager.md` (post-deadline section)
-- README addendum: project root `README.md`
-- Memory: `feedback_dual_cpu_cuda_auth_eval_mandatory_20260508.md`,
-  `feedback_cuda_cpu_drift_sweep_research_design_20260508.md`,
-  `feedback_cuda_cpu_pose_drift_mechanism_deep_dive_20260508.md`,
-  `project_pr102_replay_drift_0_228_vs_claimed_0_195_20260508.md`,
-  `feedback_substrate_vs_codec_composition_meta_pattern_20260508.md`,
-  `feedback_representation_integration_gates_landed_20260508.md`
-- Research: `.omx/research/cuda_cpu_drift_sweep_design_20260508_claude.md`,
-  `.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`,
-  `.omx/research/representation_integration_gap_audit_20260508_codex.md`,
-  `.omx/research/public_replay_drift_hypothesis_20260508_codex.md`
-
-**Operator next-action menu (P0 → P3):**
-
-1. **P0** — Modal CPU smoke replay of any one HNeRV archive (PR102 ideal:
-   verified 0.19538). $0.12, 90 min. Validates the Modal CPU substrate is
-   1:1 with the contest CI's CPU axis.
-2. **P0** — PR #107 apogee CPU replay is complete via GitHub Actions Linux
-   x86_64: `0.1966358879`. Next work is paired candidate sweeps, not confirming
-   this prediction.
-3. **P1** — 3-PR cross-family smoke (PR106, PR104, PR91). $1.26, 3-6 hours.
-   Decisive between hypotheses H1/H2/H3/H4 in the sweep design.
-4. **P1** — `tac.score_geometry target_axis="cpu_leaderboard"` flag (1 LOC,
-   $0). Reweights cathedral autopilot for leaderboard-targeted dispatch.
-5. **P2** — Decoder-vs-FP32 discriminator microbench: dump PyAV-decoded
-   tensors on CPU, feed those shared tensors through CUDA forward, and compare
-   against CUDA+DALI and CPU+PyAV. Do **not** force `AVVideoDataset` under
-   `--device cuda`; upstream `AVVideoDataset` asserts a non-CUDA device.
-   ~$0.25 / 1-hour T4. Decisive between decoder-mismatch and FP32-floor
-   contribution to the gap.
-6. **P3** — Layer-by-layer PoseNet/Hydra drift profile to falsify / confirm
-   shared-input additive-noise model. This is RepMixer/conv/MLP drift, not a
-   FastViT attention-softmax probe.
-
-## 2026-05-08 — Evidence-grade drift supersession after PR102/PR104/PR106
-
-- PR102 hardened replay is exact T4 CUDA A++ at `0.22839372989108092`, but it confirms public CPU/leaderboard drift and is not a new archive-byte win or local frontier.
-- PR104 is no longer an evidence hole: hardened exact T4 CUDA replay landed at `0.23113446620399658`, non-frontier versus the active PR103-on-PR106 anchor.
-- PR106 UNIWARD-Lagrangian `rms_target=0.05` exact T4 CUDA landed at `0.3371617511972341` and is `A-negative scoped forensic` for that measured runtime packet only: no promotion, no rank-frontier use, no family kill.
-- Treat `0.20454` / `178873` as an unanchored formula projection in older roadmap/autopilot surfaces unless a matching exact CUDA artifact is cited. Prediction, CPU, MPS, proxy, and byte-only rows cannot promote, rank, kill, or dispatch without exact packet custody.
-- Supersession ledger: `.omx/research/evidence_grade_drift_pr102_pr104_pr106_codex_20260508.md`.
-
-## 2026-05-08 — Path B Ω-OPT 6/8 anchored; cross-paradigm 137,531 B figure RETRACTED to byte_proxy_only_NOT_deployable (REVIEW-ENG C1)
-
-### Frontier state
-
-- **Local A++ HNeRV rate anchor (active)**: PR103-on-PR106 = `0.2089810755823297` [contest-CUDA] / `185,578` bytes / SHA256 `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`
-- **Public-leaderboard medal band** `[contest-CPU rounded public bot/leaderboard]` (May 4 race): 0.193 / 0.195 / 0.195 (PR #101 / #103 / #102). These CPU-axis rounded values are not scalar-comparable to local `[contest-CUDA]` anchors without paired eval.
-- **Phase 4 INTEGRATION predicted band** (commit e8ae721c): 0.155-0.175 [predicted-band, NOT contest-CUDA]; 0.140-0.180 conservative
-- **Theoretical Shannon floor target** (per CLAUDE.md "Frontier target"): keep advancing toward 0.155 and below
-
-### CPU-prep empirical anchors (real PR101 substrate, NOT contest-CUDA)
-
-| Composition | Bytes | vs anchor 185,578 | Source |
-|---|---:|---:|---|
-| ~~Path_B_step6_ADMM_x_continuous_K_then_Op1 (cross-paradigm)~~ **RETRACTED** | ~~137,531~~ | n/a | commit 8d33d5c1; per REVIEW-ENG C1 this is `len(blob_op1)` byte-proxy of the Op1 re-encode of the dequantized fp32 substrate, NOT a byte-closed archive. `cuda_eval_worth_testing=False`; dispatch_blocker `137531_byte_proxy_not_byte_closed_archive`. WIRE-DECODER subagent owns the deployable composition. |
-| Path B step 6 ADMM standalone (byte-closed candidate) | 153,699 | -31,879 | commit 82bfc648 [CPU-prep] (rel_err 4.15%); dispatch_blocker `apogee_int6_contest_cuda_anchor_required_first` (REVIEW-ENG C3) |
-| Path B step 5 Joint-ADMM Lagrangian | 150,000 | -35,578 | commit b8aa5c43 [CPU-prep] (rel_err 4.36%) |
-| Path B step 4 HStack codec-CHOICE | 156,344 | -29,234 | commit 4f2cfd55 [CPU-prep] (analytical, rel_err 3.86%) |
-| Op2_alone (canonical 8-stack winner) | 161,942 | -23,636 | [CPU-prep, lossless] |
-| Op1_alone | 162,202 | -23,376 | [CPU-prep, lossless] |
-| Op3_int6 → Op1 (substrate-mismatch BALLOONED) | 309,470 | +123,892 | [CPU-prep, mismatch evidence] |
-
-All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_for_exact_eval_dispatch = False`. The retracted 137,531 B figure is a byte-proxy of the standalone Op1 re-encode on a dequantized fp32 substrate AFTER ADMM coarsening; it does NOT include the K side-info, fp16 scales, or PR101 latent_blob/sidecar that an actual archive must carry, and there is no inflate.py that can read this composition end-to-end. The 153,699 B Path-B-step-6 standalone IS byte-closed (forked inflate.py + matching encoder); REVIEW-ENG C3 attaches `apogee_int6_contest_cuda_anchor_required_first` to the same row because 4.15% rel_err → score mapping is unmeasured.
-
-### Empirical findings
-
-- **Allocation MECHANISM dominates codec-basis on PR101** — Joint-ADMM Lagrangian (step 5) beats greedy by 12-65 KB at rms_target=0.05; step 6 confirms (continuous-K basis at 152,420 B@4.33% within 2,420 B of step 5)
-- **PR101 codec lane saturated at ~150 KB byte-floor at 4-5% rel_err** — remaining headroom requires CUDA distortion validation, not codec cleverness
-- **Substrate-mismatch in BOTH directions** — Op3 designed for HNeRV/PR106 ballooned PR101 archives by +147K-200K B; PR101 byte-maps yield only -241 B on PR106. Codecs are NOT portable across substrates without retuning.
-- **Composability taxonomy** — STACKABLE: Op3, β (transforms_state_dict=True); SUBSTITUTIONAL: Op1, Op2, γ (independent terminal codec choices)
-
-### CUDA-confirmed negative this cycle
-
-- **lossy_coarsening_analytical** Lightning T4 dispatch = `0.3517 [contest-CUDA A-negative]` at 156,404 archive bytes. The byte-anchor 156,344 B @ 3.86% rel_err did NOT translate to predicted 0.189 score. Status: `measured_config_retired` (per-tensor K budget 0.05). Reactivation requires scorer-aware retrain.
-
-### In flight
-
-- **arch_shrink_x0.4 Q-FAITHFUL retrain** Lightning T4 job
-  `arch-shrink-x0-4-lightning-20260508T024304Z` is terminal, but artifact
-  recovery is blocked. A 2026-05-09 single-shot harvest observed SDK status
-  `stopped`, then both canonical rsync paths failed with
-  `Permission denied (publickey)` / rc `255`. Terminal claim status:
-  `failed_artifact_rsync_rc_255`. No `archive.zip`, `contest_auth_eval.json`,
-  or `auth_eval.log` landed locally, so there is no score claim and no model
-  classification. Ledger:
-  `.omx/research/arch_shrink_terminal_rsync_blocker_20260509_codex.md`.
-
-### Adversarial review gate active
-
-4 commits pending clearance: 256d6fe1 (Lightning canonical bootstrap fix), 82bfc648 (ADMM byte-closed candidate), e8ae721c (Phase 4 design memo), 8d33d5c1 (cross-paradigm winner anchor).
-
-### Bug class extincted
-
-- `forbidden_remote_bootstrap_inline` re-violation closed by commit 256d6fe1: 7 sequential dep-discovery failures (uv → ensurepip → cu124 → find → brotli → timm) replaced with one canonical `bash scripts/remote_archive_only_eval.sh` invocation. The wrapper installs full dep closure (uv + ffmpeg + scorer deps) and auto-pins INFLATE_TORCH_SPEC by driver version.
-
-### Historical dispatch notes (superseded by 2026-05-09 reconciliation)
-
-The rows below are preserved as May 8 chronology, not the active
-`.omx/state/next_experiments.md` queue.
-
-1. ~~137,531 B cross-paradigm winner CUDA dispatch~~ **RETRACTED** (REVIEW-ENG C1); WIRE-DECODER subagent in flight to build deployable composition with matching inflate.py
-2. 153,699 B ADMM byte-closed candidate CUDA dispatch — pending review clearance + apogee_int6 [contest-CUDA] anchor (REVIEW-ENG C3)
-3. PARADIGM-δεζ Phase 2 GPU implementation — pending arch_shrink result + apogee_int6 [contest-CUDA] precondition
-
----
-
-## Cross-PR Lineage Finding — 2026-05-07T16:00Z
-
-**The May 4 medal-band entries are bolt-ons on PR #100's substrate, not bespoke codecs.** Bit-level deconstruction of the gold/silver/bronze archives shows each medal entry inherits PR #100's archive layout (BradyMeighan, hnerv_lc_v2, 0.1954) and adds a small focused delta:
-
-- **Gold (PR #101 SajayR, 0.193 `[contest-CPU rounded public]`)**: PR #100 substrate + schema-driven decoder + split-Brotli streams + per-tensor byte-map permutations
-- **Silver (PR #103 rem2, 0.195 `[contest-CPU rounded public]`)**: PR #100 substrate + arithmetic-coding bolt-on (241 LOC in 2 files)
-- **Bronze (PR #102 EthanYangTW, 0.195 `[contest-CPU rounded public]`)**: PR #100 archive bytes + inference-time scale 0.0095 + frame-0 nudges (zero new codec work)
-
-**Strategic implication**: at this score band the contest does not reward from-scratch codec design. Once one team makes its inflate/compress code public, every other team can read it and start bolting on. Engineering velocity wins.
-
-**Substrate-mismatch corollary**: PR101's per-tensor byte-maps were tuned against PR101's fine-tuned weights. On the PR106 substrate they yield only -241 bytes (33× shortfall vs the -7,963 bytes on PR101's own substrate). Codec wins are not portable across substrates without retuning. Surfaced into:
-
-- `.omx/research/findings.md` (top entry, 2026-05-07)
-- `docs/paper/06_related_work.md` (new §6.4 "PR lineage and bolt-on engineering")
-- `.omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md` (full byte-level evidence)
-- `.omx/research/four_way_stack_composition_contract_20260507_claude.md` (canonical reuse pattern via `tac.codec_pipeline.CodecOp`)
-
-**Why now**: per user 2026-05-07: "that finding about the PR submission using another submissions stuff is interesting we should mention that in our writeup and everywhere and findings".
-
-## Supersession — 2026-05-08 Monolithic Layout And Active HNeRV Rate Anchor
-
-The PR106x wording in the 2026-05-07 addenda below is historical. Later exact
-eval and layout work promotes PR103-on-PR106 as the active local A++ HNeRV
-rate anchor: strict formula score `0.2089810755823297`, report-reconstructed
-score `0.20898105277982337`, `185578` bytes, SHA-256
-`ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`.
-PR106/PR106x remains a predecessor substrate/control; rate-only candidates
-must beat `185578` bytes or explicitly stack with a scorer-changing packet.
-
-The monolithic-layout correction also supersedes any member-name-derived
-pose/mask/renderer budget assumption for PR101/PR106-style HNeRV archives.
-Those archives have single ZIP members and parser-proven internal sections;
-there is no separate PR106 pose or mask ZIP member to replace.
-
-## Track A/B/C/D/E/F/G/H Addendum — 2026-05-07T11:00Z
-
-**Superseded historical wording**: this addendum originally treated
-`PR106x-lowlevel-brotli` (`0.20935073680571203`, `186080` bytes) as the
-current frontier. It is now a predecessor exact control below the active
-PR103-on-PR106 anchor above.
-
-### Parallel-track session deliverables
-
-| Track | Artifact | Commit | Status |
-|-------|----------|--------|--------|
-| A | apogee_int6 Lightning T4 dispatch (predicted [0.190, 0.215]) | staging dea0c7a6 / outcome 5c219803 | **BLOCKED** Lightning AWS T4 capacity persistent (3 attempts 10:16-10:49Z); Vast.ai out of credit. Operator decision: reload credits, pivot to Azure $200, or wait. |
-| B | Wave-Ω Ω-1 CUDA scorer wiring | aa6a464d | **DONE** — JFG+SegNet+PoseNet differentiable score_fn at experiments/build_sjkl_residual.py:179; 10 new tests + 60 SJKL suite green |
-| C | scorer_basin_parity_gate tooling + apogee_int6 evidence | e991cdcd, f04b7d5b | **DONE** — int6 PASSED (pose_delta 30× below threshold); reusable for any apogee_intN |
-| D | PARADIGM-δεζ Phase 1 scaffolding (3 modules, lane registry, pipeline.py flags) | 6fe8125b | **DONE** — 3 lanes registered, 53 tests pass, 540+432+493 LOC stub modules |
-| E | Wave-Ω Ω-2 NeRV mask inflate branch | (pre-existing) | **DUPLICATE-OF-EXISTING** — already wired at inflate_renderer.py:1780+; 4th stale-blueprint signal of session |
-| F | Wave-Ω Ω-3 block-FP JFG transplant module | in flight (subagent aca10101ef68a5607) | Predicted -0.035 score (~52KB savings); CPU-only |
-| G | apogee_int5 + int7 basin-parity evidence | (artifact-only) | **DONE** — int7 PASS (rel_err 0.79%, safe), int5 FAIL (rel_err 3.31%, catastrophic regime); int5 DEFERRED-pending-research |
-| H | reports/latest.md + lane registry update | (this commit) | **DONE** — apogee_int6/int7 marked strict_preflight=true (L2) |
-
-### Empirical apogee_intN safety boundary (pinned 2026-05-07)
-
-| Variant | Bytes | rel_err % | basin-parity | Verdict |
-|---------|-------|-----------|--------------|---------|
-| int4 | 109996 | 7.09 | (skipped) | Falsified at 1.4287 [contest-CUDA T4] |
-| int5 | 154555 | 3.31 | **FAIL** (pose_delta 2.26× threshold) | DEFERRED-pending-research |
-| **int6** | **170450** | **1.55** | **PASS** (pose_delta 30× below) | **Safe — primary dispatch candidate** |
-| **int7** | **205158** | **0.79** | **PASS** (pose_delta 18× below) | **Safe — control dispatch candidate** |
-| int8 | 187731 | 0.24 | (lossless-class) | Calibration anchor (0.2112) |
-
-The boundary between safe and catastrophic regimes lies between rel_err 1.55% and 3.31%. Future PTQ schemes should target ≤2.0% rel_err to safely cross.
-
-### Fan-out plan when GPU returns
-
-Per CLAUDE.md race-mode rigor inversion + parallel-dispatch-first non-negotiable: dispatch **{int6, int7}** in parallel via `tools/parallel_dispatch_top_k.py` for double-anchor calibration of the safe regime. Each candidate has its readiness-evidence-json staged; predispatch_sanity ALL 5 GATES PASS (exit 0) for both.
-
-Expected outcomes (from predicted-band, NOT contest-CUDA):
-- int6: [0.190, 0.215] — historical comparison against the superseded 0.20935
-  PR106x frontier; current rate-only anchor is PR103-on-PR106 at
-  `0.2089810755823297`
-- int7: [0.198, 0.208] — control variant (smaller savings, near-lossless distortion)
-
-If both land in their predicted bands, that's two new lossy anchors at rel_err 0.79% and 1.55% — completes the apogee_intN curve calibration in the safe regime (currently only int8 at 0.24% and int4 at 7.09%; the gap between is exactly what int6/int7 fill).
-
-### Operator decisions pending
-
-1. Vast.ai credit reload (~$25) → unblocks immediate dispatch
-2. Azure $200 free-credits pivot (per task #312, wired but unused; needs `az login`)
-3. AWS spot $100 free-credits pivot (per CLAUDE.md memory; less canonical)
-4. Wait for Lightning T4 AWS capacity to return (free; unknown ETA)
-
-## Worker D Addendum - 2026-05-07
-
-Superseded historical scorecard routing treated
-`PR106x-lowlevel-brotli` as the lowest exact CUDA row already in custody:
-score `0.20935073680571203`, bytes `186080`, archive SHA-256
-`b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`,
-eval artifact
-`experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json`.
-This is an existing exact lossless-repack control, not a new family claim, and
-is now below the active PR103-on-PR106 A++ HNeRV rate anchor (`185578` bytes).
-
-The historical next exact-evaluable score-lowering target closest to that
-PR106x predecessor frontier was the same archive's `decoder_packed_brotli`
-section: `170127` charged bytes,
-section SHA-256
-`07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c`.
-Next gate is a byte-different archive with old/new section SHA-256 and charged
-byte proof, followed by exact CUDA auth eval only after the Level 2 lane claim.
-Supersession: current rate-only work must compare against the PR103-on-PR106
-`185578`-byte floor.
-No dispatch was attempted for this update. Durable note:
-`.omx/research/hnerv_frontier_hidden_gem_ranking_20260507_worker_d.md`.
-
-## Superseded May 4 Exact Public Frontier
-
-**Superseded May 4 public-frontier floor**: PR106 `belt_and_suspenders`
-adapter replay = `0.20945673680571203` [A++]. This remains source-substrate
-and predecessor evidence, but the active local HNeRV rate anchor is now
-PR103-on-PR106 at `0.2089810755823297` / `185578` bytes.
-
-- Evidence: `experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json`
-- Adapter: `experiments/results/public_runtime_adapters_20260504_codex/pr106_belt_and_suspenders_adapter/inflate.sh`
-- Archive bytes/SHA: `186239`, `3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58`
-- Components: SegNet `0.067142000` (avg 0.00067142), PoseNet `0.018305737` (avg 0.0000335), Rate `0.124009000`, samples `600`, device Tesla T4 CUDA, gpu_t4_match=true
-- Runtime adapter wraps the public PR106 inflate path through repo-managed `.venv/bin/python` with brotli closure; preserves archive bytes
-- Authority: `.omx/research/public_hnerv_frontier_deconstruction_20260504_codex.md`
-
-**Predecessor (now superseded)**: PR100 HNeRV-LC-v2 adapter replay `0.22826947142244708` [A++].
-
-**Score gap unlocked**: PR106 beats PR100 by `0.01881273461673505` and beats PR101 (the earlier exact best at the time of last report) by `0.01689658`. The dominant driver is PoseNet contribution `0.018306` vs PR101's `0.041355` — a ~2.3× pose-distance reduction in exchange for +5,314 archive bytes (rate cost +0.0053). Supersession after the monolithic-layout finding: this is a score-component comparison, not proof of a separate pose ZIP member or member-level pose budget.
-
-### Cross-validating x-repack confirmation
-
-Two byte-different deterministic ZIP-member-name repacks (changing `0.bin` → `x`, saving 8 ZIP-header bytes) reproduce the predicted `~6.66e-7/byte` rate-only effect within float epsilon:
-
-- PR106 adapter `0.20945673680571203` vs PR106 xrepack `0.20945123680571204` — Δ = `5.500e-6` for 8 bytes saved (matches `25/37545489 × 8 = 5.326e-6`).
-- PR105 adapter `0.23043732986984997` vs PR105 xrepack `0.23043182986984995` — same Δ.
-
-This is decisive evidence the runtime adapter path is byte-faithful and our public-frontier intake gate is calibrated.
-
-The PR100 adapter replay supersedes the PR95 stem-permutation repack
-(`0.23089404465634825`, bytes `178277`, SHA
-`e40c3f2fb3587b12eccb8707e0a1b7831fde149318f3eb212500c674ccbfbf28`) by
-`0.00156292999674471` score points despite adding `115` archive bytes. The
-win comes from improved SegNet distance with a small PoseNet/rate tradeoff.
-The adapter changes the runtime call contract for exact contest replay while
-preserving the PR98 archive bytes; cross-run comparisons must include the
-runtime tree hash above. It also supersedes both the conservative PR95 repack
-(`0.23091954465634829`, bytes `178321`, SHA
-`2b9b471358f5bba97ea809dcca544ecca26b504fde770a9002046830f469368b`) and the
-exact public PR95 replay
-(`0.23098329465634826`, bytes `178417`, SHA
-`e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a`). It
-saves `44` bytes versus the conservative repack and `140` bytes versus the
-public PR95 replay. It also supersedes the previous
-PR85-family exact anchor, `PR85+STBM1BR+PR92/RMB1` at
-`0.2535063602939779`. None of these rows is a Shannon-floor attainment claim;
-the next tranche targets PR98/PR99 HNeRV deconstruction, PR91/HPM1 parity
-recovery, and public-release hygiene.
-
-## Public Context
-
-| Entry | Status | Score signal | Evidence use |
-|---|---:|---:|---|
-| PR #98 HNeRV/Muon adapter replay | Public-source adapter exact T4 | Exact T4 `0.22826947142244708`, bytes `178981` | Superseded exact predecessor; PR100 source attribution required |
-| PR #99 HNeRV/Muon LC adapter replay | Public-source adapter exact T4 | Exact T4 `0.2297226895103603`, bytes `178546` | Superseded exact A++ PR98-family predecessor; PR99 source attribution required |
-| PR95 stem-permutation repack | Internal exact T4 | Exact T4 `0.23089404465634825`, bytes `178277` | Superseded exact predecessor |
-| PR95 conservative repack | Internal exact T4 | Exact T4 `0.23091954465634829`, bytes `178321` | Superseded exact predecessor |
-| PR #95 HNeRV/Muon public archive | Public/open replay | Exact T4 `0.23098329465634826`, bytes `178417`; public body reports `0.1987048012202245` | Superseded exact source anchor; body/CPU score is external only |
-| PR #96 rem2_HNeRV | Open/self-reported | Public body reports `0.20567121179282477`, bytes `186631`; no local exact replay in this packet | External frontier signal only until exact CUDA replay |
-| PR85+STBM1BR+PR92/RMB1 | Internal exact T4 | Exact T4 `0.2535063602939779`, bytes `229480` | Superseded PR85-family exact anchor |
-| PR85 + STBM1BR mask recode | Internal exact T4 | Exact T4 `0.25369011029397787`, bytes `229756` | Superseded exact PR85-family anchor |
-| PR #91 HPM1 hybrid | Open/self-reported | PR reports `0.24879480490416128`; local replay currently fails HPM1 entropy decode | External signal only until parity and exact CUDA replay |
-| PR #85 adaptive masking joint frame model | Public/open replay | Exact T4 `0.25806611029397786`, bytes `236328` | Superseded exact anchor and source for STBM recode |
-| PR #84 QMA9/no-router | Public/open replay | Exact T4 `0.2751401491321396`, bytes `215735` | Superseded public replay frontier; source attribution required |
-| PR #81 QMA9/range-mask | Public/open replay | Exact T4 `0.2812078926981712`, bytes `215960` | Superseded exact frontier; QMA9 mask stream anchor |
-| PR #82 Henosis | Public/open replay | Exact T4 `0.2983246102939779`, bytes `296789` | Non-frontier A++ transfer target |
-| PR #79 `qpose14_r55_segactions_minp` | Official leaderboard top row at rounded `0.31` | Internal exact replay/repack frontier `0.31453355357318635` before PR81 | Superseded by PR81 exact replay |
-| PR #67 `qpose14_qzs3_filmq9g_slsb1_r55` | Open external PR | Reports rounded `0.31`, bytes `276564`, PoseNet `0.00048597`, SegNet `0.00061000` | External target; mask segment used in C-067 with attribution |
-| PR #65 `henosis_qz_n3z_r25_clean` | Open external PR | Reports `284425` bytes, local replay `0.31968`/`0.3600` | Side-channel correction motivation; multi-stage residual paradigm reverse-engineered |
-| PR #63/#64 public-floor lineage | Merged/visible | `0.32`/`0.33` rounded band | Basin anatomy and packer transfer |
-| C-067 | Internal exact A++ superseded | Recomputed `0.31561703078448233`, bytes `276214` | Historical PR67 fixed-slice frontier |
-| C-063 | Internal exact A++ superseded | Recomputed `0.3156230307844823`, bytes `276223` | Predecessor in PR67 comparison chain |
-| C-059 | Internal exact A++ superseded | Recomputed `0.3157055307844823`, bytes `276347` | Predecessor in lossless-repack chain |
-| C-058 | Internal exact A++ superseded | Recomputed `0.3157555307844823`, bytes `276422` | Active-subspace byte micro-frontier predecessor |
-| C-057 | Internal exact A++ superseded | Recomputed `0.3157562807844823`, bytes `276423` | Anisotropic-basis pose comparison anchor |
-| PR #68 `loophole_v2` | Closed external PR | Proof-of-concept moving payload to script | Quarantine as `invalid`/`external_quarantine`; archive-metering loophole risk |
-| PR #69 `houdini` | Open external PR | No maintainer-filled eval report at inspection time | Quarantine as `external_quarantine`; unverified boundary experiment |
-| PR #70 `mask_decoder` | Open external PR | Reports rounded `0.19`, bytes `57329`, author states bytes moved into `inflate.py` | Quarantine as `invalid`/`external_quarantine`; not leaderboard-comparable |
-
-PR #67 remains the most relevant contest-faithful external source. C-067 locally evaluates a charged fixed-slice candidate that uses the PR67 mask segment with C-059 model/pose bytes; the local exact T4 score is A++ evidence for the exact archive bytes and simultaneously requires PR67 source attribution for the mask segment. PR #68/#69/#70 are useful only for compliance hardening: they show why payload closure must meter every score-affecting byte and why our reports must reject script-side payloads, hidden sidecars, malformed ZIP reliance, or uncharged runtime data.
-
-## Frontier Custody (last 24h)
-
-Codex pose-manifold water-fill lineage (C-058 → C-059 → C-063 → C-067) on H100 NVL/SXM with Lightning Tesla T4 promotion. All micro-frontier improvements are pure charged-rate (PoseNet/SegNet identical, byte deltas only), reflecting the C-059-basin packer-and-layout exhaustion. Q-FAITHFUL successor work continues separately as `B`/`A-negative` evidence (zoom-runtime fix verified; measured snapshot still PoseNet-collapsed at `22.1476`); retire only that snapshot/export, not the future QAT++ or geometry-trained architecture.
-
-CMG2 exact T4 wave landed as `A-negative scoped forensic` (plain 2x2: `2.295` at `194020` bytes; top512 AMR1 repair: `2.125` at `248074` bytes; top256 AMR1 repair: `2.223` at `219850` bytes). These retire the measured nearest-neighbor CMG2 base + hand-picked AMR1 repair only; learned/predictive/row-span/geometry-preserving mask grammars remain open. Predictive mask-grammar row-span probe is `empirical_byte_probe_only` (best `63212` charged bytes for `row_span_stride4_class_predictor`+`lzma6` on PR67 mask, `-156260` vs current `219472`-byte segment) and motivates CMG3 closed-archive implementation as the next charged-evidence step.
-
-Current observability tightens the next tranche. C-067 byte accounting is
-control-plane evidence only, but it shows the exact unchanged-distortion
-sub-`0.300` crossing requires `23454` fewer bytes (`23455` buffered), with
-stream pressure concentrated in `masks.mkv` (`219472` bytes) and `renderer.bin`
-(`55965` bytes); `optimized_poses.bin` is only `677` bytes and ZIP overhead is
-`100` bytes. The generated markdown/PNG profiles live at
-`experiments/results/c067_archive_byte_accounting_20260502/archive_byte_accounting.md`
-and `experiments/results/c067_self_compression_profile_20260502/archive_byte_accounting.png`.
-
-PMG atomtop4068 is now an L40S CUDA `A-negative scoped forensic`, not a T4
-frontier row: `experiments/results/lightning_batch/exact_eval_pmg_hotspot_atomtop4068_l40sdiag_20260502T1445Z/contest_auth_eval.json`
-recomputed score `28.41411894150047`, archive `195762` bytes, SHA
-`2567dc04185cf20775f1f6c088395aa8df9e4484daa8b25001e940d62a5d6497`,
-PoseNet `62.34251404`, SegNet `0.03315286`, `600` samples, NVIDIA L40S. It
-retires PMG row-run-only rescue for this implementation and blocks another
-PMG row-run-only T4 promotion; it does not kill learned mask grammar,
-multimask reconciliation, atom planning, or pose-conditioned residuals.
-
-SJ-KL moved from theory toward production integration without becoming score
-evidence. The robust-current runtime can consume charged `sjkl.bin`
-additively with shape checks and no scorer imports, and the target-slot bug is
-closed by using JointFrameGenerator pair slot `0` (`fake1`) consistently. The
-smoke manifest
-`experiments/results/sjkl_tensor_prep_c067_smoke_20260502/sjkl_pair_tensor_prep_manifest.json`
-prepared `4` pairs; the full manifest
-`experiments/results/sjkl_tensor_prep_c067_full_20260502/sjkl_pair_tensor_prep_manifest.json`
-prepared `600` pairs. Both are `build_tensor_prep_only`,
-`score_claim=false`, and `promotion_eligible=false`.
-
-## Submission Pipeline
-
-Historical submission-packet context: the PR100 adapter replay was the May 4
-submission packet champion in this section, but it is not the current local
-HNeRV score/rate anchor. Current local HNeRV anchor remains PR103-on-PR106 as
-listed above. The PR98 packet is:
-
-- packet:
-  `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter`
-- archive:
-  `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive.zip`
-  (`178981` bytes, SHA
-  `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`)
-- inflate:
-  `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/inflate.sh`
-  plus the copied PR100 HNeRV-LC-v2 adapter runtime source tree
-- attribution: PR #98 public HNeRV/Muon archive and runtime source
-- runtime custody:
-  `inflate_runtime_manifest.runtime_tree_sha256=ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832`
-- compliance audit: strict pre-submission gate passed with `78` checks and no
-  failed checks in
-  `experiments/results/submission_packet_pr100_adapter_20260504/pre_submission_compliance.json`
-
-The previous PR95 stem-permutation upload directory is now superseded for score
-wording:
-
-- packet:
-  `experiments/results/submission_packet_pr95_stemperm_20260504/apogee_pr95_stemperm`
-- archive:
-  `experiments/results/submission_packet_pr95_stemperm_20260504/apogee_pr95_stemperm/archive.zip`
-  (`178277` bytes, SHA
-  `e40c3f2fb3587b12eccb8707e0a1b7831fde149318f3eb212500c674ccbfbf28`)
-- inflate:
-  `experiments/results/submission_packet_pr95_stemperm_20260504/apogee_pr95_stemperm/inflate.sh`
-  plus the copied PR95 HNeRV/Muon runtime source tree
-- attribution: PR #95 public HNeRV/Muon archive and runtime source
-- runtime custody:
-  `inflate_runtime_manifest.runtime_tree_sha256=a3f8ab2cfbbdfab53a6d437b0c39f525e0adde2d8bd971765de96aeda4da3dc7`
-- compliance audit: strict pre-submission gate passed with `80` checks and no
-  failed checks in
-  `experiments/results/submission_packet_pr95_stemperm_20260504/pre_submission_compliance.json`
-
-Public Apogee surfaces are prepared but not score authorities:
-
-- PR body template: `docs/submission_template.md`
-- public supplement plan:
-  `docs/runbooks/apogee_public_supplement_20260502.md`
-- Lightning notebook skeleton: `notebooks/apogee_lightning_supplement.ipynb`
-- Cloudflare Pages sanitized bundle/runbook:
-  `reports/graphs/public_site/` from `reports/graphs/build_public_site_bundle.py`
-  and `reports/graphs/deploy_cloudflare_pages.md`
-
-Before publishing, run strict public-release hygiene over those exact surfaces
-and replace only sanitized placeholders such as `${LIGHTNING_SUPPLEMENT_URL}`,
-`${CLOUDFLARE_PAGES_URL}`, `${APOGEE_ARCHIVE_ZIP_URL}`, and
-`${APOGEE_RELEASE_MANIFEST}`. Do not publish private Lightning/Vast job links,
-raw `.omx/state`, local absolute paths, or provider transcripts.
-
-## Report Pipeline Contract
-
-Every public or judge-facing packet should be generated from structured rows with these sections:
-
-1. `frontier_summary` - only Grade `A++`/`A` rows; current default is PR103-on-PR106, with PR106, PR104, PR102, PR100 adapter replay, PR95 stem-permutation repack, PR95 conservative repack, PR95 public exact replay, PR85+STBM/RMB1, PR85, PR84, PR81, and C-067 retained as predecessor/context rows.
-2. `public_external_context` - PR96 unresolved or self-reported claims, PR95 body/CPU score, PR91/PR67/PR65/PR63/PR64 anatomy and claimed scores tagged `external`.
-3. `quarantined_exploit_context` - PR68/PR69/PR70-style sidecar or rule-boundary evidence tagged `invalid` or `external_quarantine`.
-4. `exact_artifact_table` - archive path, SHA, bytes, eval JSON, device, samples, component values, recomputed score, evidence tag, allowed use, and `inflate_runtime_manifest.runtime_tree_sha256` for cross-run comparisons.
-5. `negative_results` - exact scoped regressions only [contest-CUDA]; no broad method kills from proxy, CPU/MPS, byte-only, or exploit evidence (these are `[advisory only]` device classes).
-6. `submission_checklist` - payload closure, deterministic ZIP, no scorer patches, no sidecars, no hidden files, `archive.zip -> inflate.sh -> upstream/evaluate.py`, CUDA/T4/equivalent proof, inflate budget, review signoff.
-7. `next_wave_roadmap` - CMG3 closed row-span archive + exact CUDA gate, predictive/lossy mask grammar atoms, Q-FAITHFUL successor geometry, charged pose-basis atoms, hard-pair temporal windows, payload-efficient residuals, and packer/layout atoms; all blocked from promotion until exact CUDA archive evidence exists.
-
-## Caveats
-
-- Supersession: PR103-on-PR106 is the active local HNeRV rate anchor; PR100 adapter replay, PR95 stem-permutation repack, PR95 conservative repack, PR95 public exact replay, PR85+STBM/RMB1, PR85, PR84, PR81, and C-067 are predecessor rows. None is a Shannon-floor attainment claim.
-- Public PRs and GitHub comments are external design signals unless we have exact archive bytes, SHA, CUDA eval JSON, component recomputation, and custody.
-- PR #70's low reported score is non-comparable under our compliance policy because the public PR text says score-affecting bytes were moved from `archive.zip` into `inflate.py`.
-- C-067 carries an external-source attribution requirement (PR #67 mask segment); the local score claim is A++ evidence for the charged archive bytes, but the mask source remains externally attributed per `docs/paper/EXTERNAL_SOURCE_ATTRIBUTION_C067.md`.
-- The H100 NVL diagnostic of the same C-067 archive bytes scored `0.36295` earlier; this is a runtime-custody warning, not a contradiction. Cross-run comparisons require matching `inflate_runtime_manifest.runtime_tree_sha256`.
-
-## Cross-references
-
-- Paper draft: `docs/paper/04_results.md` (stale PR95 frontier table; update before publication)
-- Codex writeup ledger: `.omx/research/submission_writeup_integration_20260502_codex.md`
-- Working notes: `reports/writeup_working.md` (live operating point)
-- Submission pipeline runbook: `docs/runbooks/contest_submission_pipeline_20260502.md`
-- Reverse-engineering refs: `reports/raw/leaderboard_intel_20260501/` (PR #65/#67 inflate.py + archive.zip + line_search.py)
-- Memory: `reference_pr65_pr67_blob_byte_layouts_proper_reverse_engineering_20260501.md`, `reference_pr67_line_search_R_D_joint_coordinate_descent_20260501.md`
-
-## Deadline
-
-Contest deadline: **May 3 11:59 PM AOE = May 4 06:59 AM CDT (May 4 11:59 UTC)**. This report is now in final handoff mode for the confirmed PR100 adapter champion, not pre-deadline queue planning.
-
-## Internal sub-frontier launch-ready candidate — Lane Ω-W-V3 (post-deadline)
-
-> **Historical / DO NOT DISPATCH from this section.** This May 4 queue is
-> superseded by the 2026-05-09 reconciliation at the top of this report. The
-> current active queue is AV discriminator harvest, A1 sidecar local completion
-> plus legacy recheck, and Phase 1 packet custody. Keep the material below only
-> as historical context.
-
-**Lane Ω-W-V3** (water-filling codec v2 → PR106 HNeRV decoder) is fully scaffolded as of 2026-05-04 and ready for ~$0.30 GPU dispatch on Vast.ai 4090 (or T4-equivalent). Council 8/10 GO; predicted band [0.194, 0.204] [prediction, NOT contest-CUDA].
-
-### Pipeline (5 commits today)
-
-| Stage | File | Commit | Purpose |
-|---|---|---|---|
-| 1 | `experiments/extract_pr106_decoder.py` | `45149f21` | Unpack PR106 0.bin → 28 tensors / 228,958 params + 600×28 latents |
-| 2 | `experiments/build_sensitivity_map_pr106.py` | `5ca67264` | Per-channel β-Fisher (CUDA-required); CPU stub OK |
-| 3 | `experiments/repack_pr106_with_water_filling.py` | `b2f958a4` | Per-Conv2d water-fill OWV2 + brotli-int8 fallback → apogee_v2 0.bin |
-| 4 | `submissions/apogee_v2/inflate.{py,sh}` + src | `c7f237eb` | Inverse parser; **round-trip VERIFIED** on real bytes |
-| 5 | `scripts/remote_lane_omega_w_v3_pr106.sh` | `ac3053ef` | 4-stage GPU dispatch wrapper |
-
-### Stub-mode preview (CPU, all-ones sensitivity) [empirical:experiments/results/apogee_v2_repack_20260504_claude/repack_metadata.json]
-
-| Metric | PR106 (superseded public-frontier replay/control) | Apogee-v2 stub | Δ |
-|---|---:|---:|---:|
-| Archive bytes | 186,239 | 164,087 | **−22,152 (−11.9%)** |
-| Rate-component score | 0.124 | 0.109 | **−0.01475** |
-| Predicted total score (if distortion holds) | 0.20945673 | **~0.1947** | **SUB-0.20** |
-
-Real β-Fisher (CUDA dispatch) could shift bytes among layers and improve further. Distortion delta is UNKNOWN until contest_auth_eval runs on T4 — predicted band [0.194, 0.204] per audit assumes the per-channel water-fill quantization preserves PR106's PoseNet sensitivity (the dominant attack surface at 0.018306).
-
-### Operator one-liner (when GPU dispatch approved)
-
-```bash
-PR106_ARCHIVE=experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip \
-bash scripts/remote_lane_omega_w_v3_pr106.sh
-```
-
-Anchor: `experiments/results/internal_hidden_gem_audit_20260504_claude/revival_plans/revival_plan_01_water_filling_codec_v2_pr106_decoder.md` (Council 8/10 GO).
-
-## Lane #04 intN expansion (NEW 2026-05-04 evening) [empirical:experiments/repack_pr106_with_intN_block_fp.py]
-
-The Lane #04 ternary-block_fp falsification was revived as a Pareto sweep over signed intN block-FP variants (int4..int8). Verified end-to-end byte-decodable locally (CPU stub mode):
-
-| Variant | Magic | Archive bytes | Rate Δ | Rel err per weight | Risk | Predicted band [prediction, NOT contest-CUDA] | Pareto |
-|---|---|---:|---:|---:|---|---|---|
-| int4 | `0xA4` | 109,996 | −0.0508 | 7.1% | HIGH | [0.155, 0.180] | FRONTIER |
-| **int5** | **`0xA5`** | **154,555** | **−0.0211** | **3.3%** | **MEDIUM** | **[0.180, 0.196] — sweet spot** | FRONTIER |
-| int6 | `0xA6` | 170,450 | −0.0105 | 1.55% | LOW | [0.190, 0.204] | FRONTIER |
-| int7 | `0xA7` | 205,158 | +0.0126 | 0.79% | VERY LOW | [0.198, 0.208] | **DOMINATED by int8** |
-| int8 | `0xA8` | 187,731 | +0.0010 | 0.24% | ALMOST LOSSLESS | [0.196, 0.207] | FRONTIER |
-
-**Pareto-domination finding (NEW)**: int7 is +18,919 bytes vs int8 for the *same* VERY-LOW distortion class. Non-byte-aligned int7 packing requires shift/mask boilerplate per block whereas int8 fits cleanly. Reactivation criterion only if a future packer eliminates the bit-aligned overhead (e.g., 2× int7 → 14-bit aligned, or context model on the bit-stream).
-
-**Lane #04 closed-loop chain — all four components landed this session:**
-- Producer: `experiments/repack_pr106_with_intN_block_fp.py` (`82ca9456`) — generic `--bits N`
-- Inflate adapter: `submissions/apogee_intN/inflate.{py,sh}` + vendored `src/intn_codec.py` (`62e3a51c`)
-- Dispatch wrapper: `scripts/remote_lane_apogee_intN.sh` (`5c31755e`) — operator picks bits via `APOGEE_INTN_BITS` env
-- Decision matrix doc: `docs/pr106_stacking_decision_table_20260504.md` (`7b354a1a`)
-
-**Operator one-liners** (Vast.ai 4090 ~$0.30 / 30min each):
-
-```bash
-APOGEE_INTN_BITS=5 bash scripts/remote_lane_apogee_intN.sh   # sweet spot
-APOGEE_INTN_BITS=6 bash scripts/remote_lane_apogee_intN.sh   # safe fallback
-APOGEE_INTN_BITS=4 bash scripts/remote_lane_apogee_intN.sh   # high-risk high-reward
-APOGEE_INTN_BITS=8 bash scripts/remote_lane_apogee_intN.sh   # almost-lossless calibration
-```
-
-For full operator-ready `launch_lane_on_vastai.py full ...` commands per
-Pareto-frontier variant: `.venv/bin/python tools/apogee_intN_pareto.py`.
-
-## Dispatch feedback trio (NEW 2026-05-04 evening)
-
-A complete pre-/in-/post-dispatch tooling stack now lives in `tools/`. Each
-piece reads on-disk artifacts independently — no shared state, no orchestrator.
-
-| Tool | Phase | Reads | Output |
-|---|---|---|---|
-| `tools/apogee_intN_pareto.py` | **pre-dispatch** | `experiments/results/apogee_int*_repack_*/repack_metadata.json` | Pareto-frontier table + `launch_lane_on_vastai.py full ...` one-liners per non-dominated bits config |
-| `tools/score_dashboard.py` | **post-landing (general)** | `experiments/results/**/contest_auth_eval*.json` | Sorted view (best score first) of every contest_auth_eval ever produced; non-CUDA rows marked `*` per CLAUDE.md MPS-auth-eval-is-NOISE |
-| `tools/predicted_vs_actual_reconciler.py` | **post-landing (apogee_intN)** | both of the above | Per-bits in-band/out-of-band check + beats-PR106 verdict |
-
-10 regression tests pass (5 per tool that emits subprocess one-liners), all
-catching dead-flag-wiring (CLAUDE.md NEVER-INVENT-CLI-FLAGS), schema drift,
-band malformation, and stale wrapper-path renames. Smoke-verified on the
-live empirical manifests for all 5 bits configs.
-
-**Lane registry promotions (Check 90 STRICT validates clean)**: 4 apogee_intN
-lanes now at L2 INTEGRATION (impl_complete + real_archive_empirical satisfied).
-int7 also registered at L2 with a `Reactivation: <criteria>` note per the
-"KILLED lanes get registry entries too" discipline. Pre-existing stale-path
-findings on `lane_owv3_0120_stack` and `lane_line_search_pose_refinement`
-also repaired this session.
-
-## Recovery + Lane SJ-KL launchability (NEW 2026-05-04 evening)
-
-A defensive-validation pass uncovered 8 lost helpers from a subagent-worktree-cleanup bug class (subagent built helpers + wrapper, only the wrapper got committed before quota; helpers wiped on cleanup). Full recovery doc: `docs/recovery_report_20260504.md`. Bug class structurally extinct via two new preflight checks (PCC9 + PCC9b, warn-only initially) that scan shell scripts + test files for runtime-executed file references that don't resolve to disk.
-
-**Lane SJ-KL C067 is now end-to-end runtime-decodable** after the 6 lost SJ-KL Python modules were rebuilt from runbook + addendum spec:
-- `src/tac/sjkl_basis.py` — full codec library (basis + alpha-block V1+V2 + full payload + runtime aliases), 26 tests pass
-- `experiments/build_sjkl_residual.py` — Lanczos top-K Fisher-info basis + per-pair alpha quantization → sjkl.bin
-- `experiments/prepare_sjkl_pair_tensors.py` — frame-pair I/O orchestration
-- `experiments/build_sjkl_c067_archive.py` — `top_level_sibling` layout fully implemented (preserves source `p` bytes exactly)
-- Plus the recovered `tools/claim_lane_dispatch.py` (full) + `scripts/ensure_remote_uv.sh` (canonical uv installer)
-
-End-to-end pipeline verified locally: prepare → build_residual → 942-byte sjkl.bin → build_archive → charged ZIP `{p untouched, sjkl.bin charged}` → decode via `tac.sjkl_basis`: byte-faithful basis + alpha extraction.
-
-**Operator one-liner** (Vast.ai 4090, separate base archive from PR106-stacking lanes):
-
-```bash
-bash scripts/remote_lane_sjkl_c067.sh
-```
-
-Follow-up blended-risk support landed for the same scheduler:
-`--blend-sources boundary,low_margin --blend-mode max`. The q7/q8 low0p85
-boundary+low-margin max-risk packet is byte-closed and runtime-consumed, but
-macOS CPU advisory scored `0.2011544130392937` at `178,243 B`, worse than the
-best scalar SegNet-protected q7/q8 point (`0.201110`) and the low-margin scalar
-point (`0.201122`). The q7/q8 low0p75 blended packet failed the byte gate at
-`178,453 B` and was not eval-spent. Ledger:
-`.omx/research/a5_blended_boundary_lowmargin_scalar_negative_20260509_codex.md`.
-
-A compact q-bit side-info compiler pass also landed for one- and two-level A5
-schedules: `--q-bits-sideinfo-encoding binary_low_high_mask`. Applying it to
-the best SegNet-protected q7/q8 schedule reduced side-info from `225 B` to
-`77 B` and produced a runtime-consumed `178,095 B` packet
-(`dd5da6b636266f89768661c758c96355531d8305b2bbd1bbb7063c48b7297876`).
-macOS CPU advisory scored `0.20101191630821824`, a small A5-local improvement
-over `0.201110`, but still not promotable versus A1/PR101. Ledger:
-`.omx/research/a5_binary_qbits_sideinfo_improvement_20260509_codex.md`.
-
-## Strategic findings — late 2026-05-04 dashboard-mining session
-
-After the dashboard log-parser fix (commit dbb0032d, +293 score visibility),
-three cross-PR analyses produced a coherent strategic picture:
-
-1. **PR106 vs PR101 (+0.017 gap) is training-recipe, NOT codec** — PR106 uses
-   an 8-stage training pipeline (`stage1_v328_ce` → `stage8_muon_finetune`)
-   that drops pose distortion 5× to 0.000034. Our codec-side work is correctly
-   anchored on the best-trained decoder. See
-   `docs/pr106_vs_pr101_training_recipe_finding_20260504.md`.
-
-2. **PR97 anti-pattern: pose marginal value > seg at PR106's operating point**
-   — PR97 traded pose for seg (-65% seg, +18× pose) and lost 0.042 net. The
-   marginal sensitivity formula `5/sqrt(10*pose_avg)` evaluates to 271 at
-   PR106's pose_avg=0.000034 vs SegNet's constant 100, so pose marginal value
-   is 2.71× seg. CLAUDE.md's "SegNet 77× more important" heuristic was at the
-   OLD 1.x operating point — at PR106's level the marginal value FLIPS. Our
-   pre-registered sidechannel lanes both target pose, validating direction.
-   See `docs/pr97_anti_pattern_pose_vs_seg_marginal_20260504.md`.
-
-3. **PR family evolution: 4 paradigm-shift eras** —
-   - Era 1 (PR63-64, qpose14): ~287KB / 0.325-0.331
-   - Era 2 (PR81-85, range_mask): ~215-240KB / 0.258-0.298 (-0.05)
-   - Era 3 (PR95-105, HNeRV): ~178KB / 0.226-0.231 (-0.05)
-   - Era 4 (PR106, HNeRV+8-stage): 186KB / 0.2095 (-0.017)
-
-   Within-era variance: ±0.005 (codec polish). Between-era jumps: -0.05 to
-   -0.10 (architecture/training paradigm shifts). Our lanes operate within
-   Era 4 — predicted total post-stacking range 0.180-0.205. Beating PR106 by
-   0.05+ requires Era 5 (multi-week research-grade work). See
-   `docs/pr_family_evolution_timeline_20260504.md`.
-
-**Master INDEX**: `docs/INDEX_score_aware_sidechannel_thread_20260504.md` ties
-together the 9-memo paradigm thread + 6 sidechannel variants + 2 pre-registered
-PR106-stacking lanes (`lane_pr106_latent_sidecar` + `lane_pr106_yshift_sidechannel`).
-
-**Operator handoff snapshot**: `docs/operator_handoff_snapshot_20260504.md`
-captures the 4 actionable choices with recommendation (Choice 1: dispatch
-apogee_int5 at $0.30 — RECOMMENDED).
-
-## Superseded May 4 Queue
-
-The May 4 Omega-W-V3 / int5 / int6 / SJ-KL dispatch matrix is historical and
-must not be used as the active next queue. Later evidence split A1 into
-distinct `[contest-CPU]` and `[contest-CUDA]` axes, left the AV discriminator
-claim active, and moved A1 sidecar work back to local custody/full-search
-preparation. See the reconciliation queue at the top of this report for current
-routing.
-
-## 2026-05-09 A5 Channel-DP Update
-
-A per-channel q-bit deployment path landed for A5: `channel_raw3` side-info,
-per-channel latent packing, packet-builder support, and
-`tools/build_a5_channel_qbits_schedule.py`. The qsum200 exact-DP schedule was
-byte-positive (`178,014 B`, archive SHA
-`efc0466bc38edb9cb57193d5f43e4d4fbf2d993cd41069f2c3700aa4bedbfeae`) and
-runtime-consumed, but macOS CPU advisory scored `0.2016517950045961`
-(`seg=0.00064302`, `pose=0.00003541`), worse than the compact binary A5 point.
-
-Classification: measured-config negative for latent-domain MSE channel
-allocation only; keep the channel-wise compiler primitive for learned or
-score-domain schedules. Ledger:
-`.omx/research/a5_channel_qbits_dp_schedule_negative_20260509_codex.md`.
+*Generated by `subagent:wave9_progress_audit_20260512` per operator-orchestrated
+parallel deployment WAVE-9; META audit + public-publishable summary.*
