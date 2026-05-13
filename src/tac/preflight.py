@@ -2539,6 +2539,17 @@ def preflight_all(
         check_claude_md_catalog_text_matches_preflight_strict_value(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #185 (FIX-CRITICAL R5-4 META-meta-meta):
+        # CLAUDE.md catalog table claims of "Live count: 0" must remain
+        # in lock-step with the gate function's empirical behavior. R5-4
+        # anchor 2026-05-13 showed Catalog #124 description claimed
+        # "Live count: 0 → STRICT" but `preflight --scope all` returned
+        # 4 violations. Sister to Catalog #159 (text-vs-strict-callsite)
+        # and #118 (duplicate-catalog-number). STRICT-FLIPPED 2026-05-13
+        # — live count at landing: 0.
+        check_strict_flipped_catalog_entries_have_live_count_zero(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -34121,6 +34132,26 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_xyz",
     "lane_demo",
     "lane_example",
+    # Stat-key / dict-key / manifest-field names — these are NOT lane_ids,
+    # they are dict keys in manifests, recommendation rows, stats payloads,
+    # or per-pose-dimension stat names. Adding here so Catalog #126 does not
+    # false-positive on bulk-ruff-touched build/manifest scripts.
+    "lane_mm_sigma",  # build_lane_mm_archive: sigma parameter dict key
+    "lane_claim_required_before_any_exact_eval",  # PR build manifest dict key
+    "lane_claim_required_before_exact_eval",  # PR build manifest dict key
+    "lane_a_dim0_mean",  # zero-cost pose archive: per-dim stat keys
+    "lane_a_dim0_std",
+    "lane_a_dim0_min",
+    "lane_a_dim0_max",
+    # Semantic-segmentation class name (NOT a lane_id).
+    "lane_marking",
+    # CLI fallback-mode flag value used in openpilot seeding tests.
+    "lane_mark",
+    # Python module / tool / script names (NOT lane_ids).
+    "lane_watchdog",
+    # Docstring-example codec family name in mdl_bayesian_codec.py
+    # (NOT a registered lane_id; just a generic identifier example).
+    "lane_balle_hyperprior",
 })
 
 
@@ -44559,6 +44590,191 @@ def check_substrate_recipes_declare_target_modes(
             "check_substrate_recipes_declare_target_modes found "
             f"{len(violations)} violation(s). Catalog #182 closes REVIEW-OMNI "
             "Low NV10 (production-graduation discipline gap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #185 — check_strict_flipped_catalog_entries_have_live_count_zero
+# (FIX-CRITICAL R5-4 META-meta-meta, 2026-05-13, STRICT @ 0)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (R5-4 anchor 2026-05-13): CLAUDE.md Catalog #124 description
+# claimed "Live count: 0 → STRICT" but `preflight --scope all` returned
+# 4 violations (lane_wave3_tcnerv_trainer_build_20260512,
+# lane_wave3_blocknerv_trainer_build_20260512,
+# lane_sane_hnerv_archive_fix_catalog_161_20260513,
+# lane_ffnerv_build_20260513). The catalog text was the source-of-truth
+# strictness ledger per CLAUDE.md non-negotiable, but in-flight subagent
+# lanes drifted the gate's actual live-count above 0 without the catalog
+# entry being updated. Sister to Catalog #159
+# (`check_claude_md_catalog_text_matches_preflight_strict_value`) which
+# catches WARN-ONLY-vs-STRICT drift; this gate catches LIVE-COUNT-ZERO
+# drift specifically.
+#
+# Scope: iterate every CLAUDE.md catalog entry that simultaneously claims
+# (a) "Live count: 0" / "live count = 0" / "0 -> STRICT" phrasing AND
+# (b) one of the STRICT-flipped phrases (sister of Catalog #159's
+# _CHECK_159_STRICT_PHRASES). For each matched entry, look up the
+# corresponding `check_*` function via this module's globals(), call it
+# with strict=False+verbose=False, and refuse if the returned list is
+# non-empty.
+#
+# Safety:
+#   * Only entries with BOTH the live-count-zero claim AND a strict
+#     phrase are introspected (skips entries that are warn-only or that
+#     don't explicitly claim count=0).
+#   * Each gate is called with strict=False so it cannot raise; the
+#     returned violation list is what matters.
+#   * Self-reference is rejected (the gate does not call itself).
+#   * Functions in `_CHECK_183_SKIP_FUNCTIONS` are skipped to avoid
+#     expensive or stateful sweeps (e.g. preflight_all callers, gates
+#     that require explicit kwargs).
+#   * Repository-root-relative invocation; no /tmp paths.
+#
+
+_CHECK_185_LIVE_COUNT_ZERO_PHRASES: tuple[str, ...] = (
+    "live count: 0",
+    "live count = 0",
+    "live count of 0",
+    "live count zero",
+    "0 -> strict",
+    "0 → strict",
+    "0 to strict",
+)
+
+# Functions Catalog #185 will NOT invoke directly to keep the runtime
+# bounded. Each entry must have a reason. The skip list is conservative;
+# the goal is to catch entries like #124 where the gate is cheap to call,
+# not to introspect every gate.
+_CHECK_185_SKIP_FUNCTIONS: frozenset[str] = frozenset({
+    # Self-reference (recursion guard).
+    "check_strict_flipped_catalog_entries_have_live_count_zero",
+    # Sister text-vs-callsite gate; calling it from here is redundant
+    # because it is already wired strict in preflight_all().
+    "check_claude_md_catalog_text_matches_preflight_strict_value",
+    # Catalog header / numbering protection gates (text-shape only).
+    "check_claude_md_catalog_no_duplicate_numbers",
+    # Gates that require non-default kwargs (the bare 0-arg call would
+    # produce false-negatives). The full preflight_all() callsite owns
+    # their invocation; this META-meta-meta gate only protects the
+    # zero-shot live-count claim.
+    "preflight_all",
+})
+
+
+def _check_185_extract_strict_zero_entries(
+    claude_md_text: str,
+) -> list[tuple[int, str, str]]:
+    """Extract (catalog_num, check_name, body) tuples for entries that
+    simultaneously claim STRICT @ 0 and Live count: 0.
+    """
+    entries = _check_159_extract_catalog_entries(claude_md_text)
+    matched: list[tuple[int, str, str]] = []
+    for cat_num, check_name, body in entries:
+        body_lower = body.lower()
+        has_zero_claim = any(
+            phrase in body_lower
+            for phrase in _CHECK_185_LIVE_COUNT_ZERO_PHRASES
+        )
+        if not has_zero_claim:
+            continue
+        has_strict = any(
+            phrase in body_lower
+            for phrase in _CHECK_159_STRICT_PHRASES
+        )
+        if not has_strict:
+            continue
+        matched.append((cat_num, check_name, body))
+    return matched
+
+
+def check_strict_flipped_catalog_entries_have_live_count_zero(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #185 — refuse CLAUDE.md catalog entries claiming Live
+    count: 0 + STRICT phrasing when the underlying gate function
+    actually returns a non-empty violation list.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" non-negotiable, the catalog table is the canonical
+    strictness ledger and must remain in lock-step with the gate
+    function's empirical behavior. Sister of Catalog #159
+    (`check_claude_md_catalog_text_matches_preflight_strict_value`).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    claude_md = root / "CLAUDE.md"
+    if not claude_md.is_file():
+        return []
+    try:
+        claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    violations: list[str] = []
+    matched = _check_185_extract_strict_zero_entries(claude_text)
+    scanned = 0
+    not_found: list[str] = []
+    skipped: list[str] = []
+    for cat_num, check_name, _body in matched:
+        if check_name in _CHECK_185_SKIP_FUNCTIONS:
+            skipped.append(check_name)
+            continue
+        fn = globals().get(check_name)
+        if fn is None or not callable(fn):
+            not_found.append(check_name)
+            continue
+        scanned += 1
+        try:
+            result = fn(strict=False, verbose=False)
+        except TypeError:
+            # Function signature does not accept (strict, verbose) kwargs;
+            # skip rather than fail-closed on metadata mismatch.
+            skipped.append(check_name)
+            continue
+        except Exception as exc:  # pragma: no cover - defensive
+            violations.append(
+                f"Catalog #{cat_num} `{check_name}`: "
+                f"raised {type(exc).__name__} when invoked with "
+                f"strict=False - cannot verify Live count: 0 claim. "
+                f"Detail: {str(exc)[:160]}"
+            )
+            continue
+        if isinstance(result, list) and result:
+            sample = "; ".join(str(v)[:120] for v in result[:3])
+            violations.append(
+                f"Catalog #{cat_num} `{check_name}`: CLAUDE.md claims "
+                f"'Live count: 0' + STRICT but gate returned "
+                f"{len(result)} violation(s). Either fix the underlying "
+                f"violations OR update CLAUDE.md to reflect the new "
+                f"non-zero live count. Sample: {sample}"
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-live-count] {len(violations)} drift entries "
+                f"between CLAUDE.md 'Live count: 0' claim and gate empirical "
+                f"result (scanned: {scanned}, skipped: {len(skipped)}, "
+                f"not_found: {len(not_found)})"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                f"  [catalog-live-count] OK ({scanned} STRICT-0 entries "
+                f"verified; 0 drift; {len(skipped)} skipped, "
+                f"{len(not_found)} not found)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_strict_flipped_catalog_entries_have_live_count_zero "
+            f"found {len(violations)} drift entries. Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "non-negotiable, the catalog table is the canonical "
+            "strictness ledger:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
