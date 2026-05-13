@@ -20,11 +20,13 @@ This package distinguishes three SIREN/INR dispatch contracts:
 This package's current trainer supports only contract 1. Contracts 2 and 3 are
 named so they cannot silently reuse the wrong archive builder.
 
-For the naked replacement contract, SIREN is the **purely-coordinate-based**
-counterpart to NeRV/HNeRV (which have implicit per-frame latents) and
-Cool-Chic (which has explicit per-frame latents). All variation across frames
-is encoded in the network weights themselves; the pair index is a
-frequency-encoded scalar input.
+For the naked replacement contract, the SIREN/INR substrate is the
+**purely-coordinate-based** counterpart to NeRV/HNeRV (which have implicit
+per-frame latents) and Cool-Chic (which has explicit per-frame latents). All
+variation across frames is encoded in the network weights themselves; the pair
+index is a frequency-encoded scalar input. The SRV1 metadata now carries an
+explicit activation family so canonical SIREN, FINER-style, WIRE-style, and
+BACON-style probes can be compared under one trainer/archive contract.
 
 The substrate is score-aware: gradients flow from contest scorers through
 sin-activation MLP to weights, via the differentiable eval-roundtrip + patched
@@ -86,6 +88,15 @@ CLAUDE.md compliance:
 - No KILL verdicts in the scaffold (DEFER-pending-anchor only)
 """
 
+from .activation_family import (
+    ACTIVATION_FAMILY_IDS,
+    DEFAULT_ACTIVATION_FAMILY,
+    SIREN_ACTIVATION_FAMILIES,
+    ActivationFamilyId,
+    ActivationFamilySpec,
+    activation_family_manifest,
+    normalize_activation_family,
+)
 from .architecture import (
     SirenConfig,
     SirenSubstrate,
@@ -111,16 +122,23 @@ from .score_aware_loss import (
 )
 
 __all__ = [
+    "ACTIVATION_FAMILY_IDS",
+    "DEFAULT_ACTIVATION_FAMILY",
     "HYBRID_SIREN_DOMAIN_PRIOR",
     "NAKED_SIREN_REPLACEMENT",
+    "SIREN_ACTIVATION_FAMILIES",
     "SIREN_DISPATCH_CONTRACTS",
     "SIREN_RESIDUAL_ON_HNERV_A1",
+    "ActivationFamilyId",
+    "ActivationFamilySpec",
     "ScoreAwareLossWeights",
     "SirenArchive",
     "SirenConfig",
     "SirenDispatchContract",
     "SirenScoreAwareLoss",
     "SirenSubstrate",
+    "activation_family_manifest",
+    "normalize_activation_family",
     "normalize_siren_dispatch_contract",
     "pack_archive",
     "parse_archive",

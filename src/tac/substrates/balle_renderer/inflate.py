@@ -29,8 +29,39 @@ from tac.substrates._shared.inflate_runtime import (
     select_inflate_device,
     write_rgb_pair_to_raw,
 )
-from .archive import parse_archive
+
 from .architecture import BalleRendererConfig, BalleRendererSubstrate
+from .archive import parse_archive
+
+
+def _validate_archived_scales(
+    model: BalleRendererSubstrate,
+    latents: torch.Tensor,
+    archived_scales: torch.Tensor,
+    *,
+    quant_step: float,
+) -> None:
+    """Fail closed if the side-info stream is not consumed by this decoder.
+
+    The BRV1 grammar carries a hyper-latent ``scales`` section. Rendering is
+    driven by the main latents, but the packet is only byte-closed if the
+    hyper-latent side stream is bound to the packaged encoder. A mutated scales
+    section must therefore fail at inflate time instead of becoming dead rate.
+    """
+    with torch.no_grad():
+        expected = model.hyper_analysis(latents)
+    if expected.shape != archived_scales.shape:
+        raise RuntimeError(
+            "balle_renderer archive scales shape mismatch: "
+            f"expected {tuple(expected.shape)} got {tuple(archived_scales.shape)}"
+        )
+    max_abs_err = float((expected - archived_scales).abs().max().item())
+    tolerance = max(5e-2, float(quant_step) * 4.0)
+    if max_abs_err > tolerance:
+        raise RuntimeError(
+            "balle_renderer archive scales stream failed closure check: "
+            f"max_abs_err={max_abs_err:.6g} tolerance={tolerance:.6g}"
+        )
 
 
 def inflate_one_video(
@@ -90,16 +121,23 @@ def inflate_one_video(
         )
 
     with torch.no_grad():
-        model.latents.copy_(arc.latents.to(device=render_device, dtype=model.latents.dtype))
+        latents = arc.latents.to(device=render_device, dtype=model.latents.dtype)
+        scales = arc.scales.to(device=render_device, dtype=model.latents.dtype)
+        _validate_archived_scales(
+            model,
+            latents,
+            scales,
+            quant_step=float(meta.get("_sca_quant_scale", 0.0)),
+        )
+        model.latents.copy_(latents)
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
     frames_written = 0
-    with torch.no_grad():
-        with output_raw_path.open("wb") as fh:
-            for pair_idx in range(cfg.num_pairs):
-                idx_tensor = torch.tensor([pair_idx], device=render_device, dtype=torch.long)
-                rgb_0, rgb_1, _rate = model(idx_tensor)
-                frames_written += write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
+    with torch.no_grad(), output_raw_path.open("wb") as fh:
+        for pair_idx in range(cfg.num_pairs):
+            idx_tensor = torch.tensor([pair_idx], device=render_device, dtype=torch.long)
+            rgb_0, rgb_1, _rate = model(idx_tensor)
+            frames_written += write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
     return frames_written
 
 

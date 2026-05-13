@@ -71,3 +71,26 @@ def test_train_substrate_siren_threads_contract_flag() -> None:
         trainer.TIER_1_OPERATOR_REQUIRED_FLAGS["--dispatch-contract"]["env"]
         == "SIREN_DISPATCH_CONTRACT"
     )
+
+
+def test_train_substrate_siren_threads_activation_family_flag() -> None:
+    from experiments import train_substrate_siren as trainer
+
+    parser = trainer._build_parser()
+    args = parser.parse_args(
+        ["--output-dir", "out", "--epochs", "1", "--activation-family", "wire"]
+    )
+
+    assert args.activation_family == "wire"
+    assert (
+        trainer.TIER_1_OPERATOR_REQUIRED_FLAGS["--activation-family"]["env"]
+        == "SIREN_ACTIVATION_FAMILY"
+    )
+
+
+def test_train_substrate_siren_vendors_activation_family_runtime_module() -> None:
+    from experiments import train_substrate_siren as trainer
+
+    text = trainer.Path(trainer.__file__).read_text(encoding="utf-8")
+
+    assert '"activation_family.py"' in text

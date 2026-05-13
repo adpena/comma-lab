@@ -25,6 +25,7 @@ from tac.substrates._shared.inflate_runtime import (
     select_inflate_device,
     write_rgb_pair_to_raw,
 )
+
 from .architecture import SirenConfig, SirenSubstrate
 from .archive import parse_archive
 
@@ -50,6 +51,9 @@ def inflate_one_video(
         output_width=arc.output_width,
         coord_dim=int(meta["coord_dim"]),
         output_dim=int(meta["output_dim"]),
+        activation_family=str(meta.get("activation_family", "siren")),
+        wire_scale=float(meta.get("wire_scale", 1.0)),
+        bacon_bandwidth_scale=float(meta.get("bacon_bandwidth_scale", 1.0)),
     )
 
     model = SirenSubstrate(cfg).to(render_device).eval()
@@ -65,12 +69,11 @@ def inflate_one_video(
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
 
     frames_written = 0
-    with torch.no_grad():
-        with output_raw_path.open("wb") as fh:
-            for pair_idx in range(cfg.num_pairs):
-                idx_tensor = torch.tensor([pair_idx], device=render_device, dtype=torch.long)
-                rgb_0, rgb_1 = model(idx_tensor)
-                frames_written += write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
+    with torch.no_grad(), output_raw_path.open("wb") as fh:
+        for pair_idx in range(cfg.num_pairs):
+            idx_tensor = torch.tensor([pair_idx], device=render_device, dtype=torch.long)
+            rgb_0, rgb_1 = model(idx_tensor)
+            frames_written += write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
     return frames_written
 
 

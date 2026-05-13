@@ -16,11 +16,15 @@ lesson L2):
     DECODER_BLOB_LEN(4)  u32       brotli(state_dict) of MLP weights
     META_BLOB_LEN(4)     u32       utf-8 json meta bytes len
     DECODER_BLOB         ...       brotli(pickled state_dict, fp16 cpu)
-    META_BLOB            ...       json: {first_omega, hidden_omega, coord_dim, output_dim, ...}
+    META_BLOB            ...       json: {first_omega, hidden_omega, coord_dim,
+                                         output_dim, activation_family, ...}
 
 SRV1 = "SIREN Variant 1". No latents — SIREN is purely a coordinate->RGB MLP.
-All trainable bytes live in the DECODER_BLOB. The grammar is fixed at design-
-time; mutating it changes the schema VERSION and requires a new inflate.py.
+All trainable bytes live in the DECODER_BLOB. The activation family is part of
+the META_BLOB payload so naked SIREN, FINER-style, WIRE-style, and BACON-style
+probes share one trainer/archive contract. The grammar is fixed at design-time;
+mutating header sections changes the schema VERSION and requires a new
+inflate.py.
 
 CLAUDE.md compliance:
 - Deterministic (sorted-keys JSON, fp16 CPU state_dict, fixed brotli quality)
@@ -38,6 +42,8 @@ from dataclasses import dataclass
 
 import brotli  # type: ignore[import-not-found]
 import torch
+
+from .activation_family import DEFAULT_ACTIVATION_FAMILY, normalize_activation_family
 
 SRV1_MAGIC: bytes = b"SRV1"
 """siren variant 1 archive magic."""
@@ -107,6 +113,29 @@ def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     return sd
 
 
+def _positive_meta_float(meta: dict[str, object], key: str, default: float) -> float:
+    raw = meta.get(key, default)
+    value = float(raw)
+    if value <= 0.0:
+        raise ValueError(f"SRV1 meta field {key!r} must be positive")
+    return value
+
+
+def _normalize_meta(meta: dict[str, object]) -> dict[str, object]:
+    normalized = dict(meta)
+    family = normalize_activation_family(
+        str(normalized.get("activation_family", DEFAULT_ACTIVATION_FAMILY))
+    )
+    normalized["activation_family"] = family
+    normalized["wire_scale"] = _positive_meta_float(normalized, "wire_scale", 1.0)
+    normalized["bacon_bandwidth_scale"] = _positive_meta_float(
+        normalized,
+        "bacon_bandwidth_scale",
+        1.0,
+    )
+    return normalized
+
+
 def pack_archive(
     decoder_state_dict: dict[str, torch.Tensor],
     meta: dict[str, object],
@@ -133,6 +162,7 @@ def pack_archive(
             raise ValueError(f"{name}={v} out of u8/u16 range (max {max_v})")
 
     decoder_blob = _serialize_state_dict(decoder_state_dict)
+    meta = _normalize_meta(meta)
     meta_bytes = json.dumps(meta, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
     header = struct.pack(
@@ -179,7 +209,7 @@ def parse_archive(blob: bytes) -> SirenArchive:
         raise ValueError(f"archive size {len(blob)} != expected {pos} from header")
 
     sd = _deserialize_state_dict(decoder_blob)
-    meta = json.loads(meta_blob.decode("utf-8"))
+    meta = _normalize_meta(json.loads(meta_blob.decode("utf-8")))
 
     return SirenArchive(
         decoder_state_dict=sd,

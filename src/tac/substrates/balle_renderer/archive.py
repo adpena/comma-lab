@@ -54,7 +54,6 @@ from dataclasses import dataclass
 import brotli  # type: ignore[import-not-found]
 import torch
 
-
 BRV1_MAGIC: bytes = b"BRV1"
 """balle_renderer variant 1 archive magic."""
 
@@ -285,10 +284,10 @@ def parse_archive(blob: bytes) -> BalleRendererArchive:
     q_sca = torch.from_numpy(
         np.frombuffer(scale_blob, dtype=np.int16).copy()
     ).view(num_pairs, hyper_dim)
-    lat_scale = float(meta.pop("_lat_quant_scale"))
-    lat_zp = float(meta.pop("_lat_quant_zero_point"))
-    sca_scale = float(meta.pop("_sca_quant_scale"))
-    sca_zp = float(meta.pop("_sca_quant_zero_point"))
+    lat_scale = float(meta["_lat_quant_scale"])
+    lat_zp = float(meta["_lat_quant_zero_point"])
+    sca_scale = float(meta["_sca_quant_scale"])
+    sca_zp = float(meta["_sca_quant_zero_point"])
     latents = _dequantize_from_int16(q_lat, lat_scale, lat_zp)
     scales = _dequantize_from_int16(q_sca, sca_scale, sca_zp)
 

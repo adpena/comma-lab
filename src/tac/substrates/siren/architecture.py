@@ -49,6 +49,14 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 
+from .activation_family import (
+    DEFAULT_ACTIVATION_FAMILY,
+    ActivationFamilyId,
+    apply_activation_family,
+    effective_layer_omega,
+    normalize_activation_family,
+)
+
 _CONTEST_H = 384
 _CONTEST_W = 512
 _NUM_FRAMES = 1200
@@ -83,7 +91,21 @@ class SirenConfig:
     output_dim: int = 6
     """Output dim: 6 = (rgb_0, rgb_1) concatenated for the pair."""
 
+    activation_family: ActivationFamilyId = DEFAULT_ACTIVATION_FAMILY
+    """INR activation family serialized in SRV1 metadata."""
+
+    wire_scale: float = 1.0
+    """Positive Gabor/window scale used by the WIRE-style activation."""
+
+    bacon_bandwidth_scale: float = 1.0
+    """Positive multiplier for the BACON-style per-layer omega schedule."""
+
     def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "activation_family",
+            normalize_activation_family(str(self.activation_family)),
+        )
         if self.hidden_dim <= 0:
             raise ValueError("hidden_dim must be positive")
         if self.num_hidden_layers <= 0:
@@ -98,27 +120,55 @@ class SirenConfig:
             raise ValueError("coord_dim must be 3 for (x, y, t)")
         if self.output_dim != 6:
             raise ValueError("output_dim must be 6 for paired RGB output")
+        if self.wire_scale <= 0.0:
+            raise ValueError("wire_scale must be positive")
+        if self.bacon_bandwidth_scale <= 0.0:
+            raise ValueError("bacon_bandwidth_scale must be positive")
 
 
-class _SinLayer(nn.Module):
-    """Linear + sin(omega * x) with SIREN initialization."""
+class _ActivationLayer(nn.Module):
+    """Linear + INR activation with SIREN-compatible initialization."""
 
-    def __init__(self, in_dim: int, out_dim: int, omega: float, is_first: bool = False) -> None:
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        omega: float,
+        *,
+        activation_family: ActivationFamilyId,
+        is_first: bool = False,
+        layer_index: int = 0,
+        wire_scale: float = 1.0,
+        bacon_bandwidth_scale: float = 1.0,
+    ) -> None:
         super().__init__()
         self.linear = nn.Linear(in_dim, out_dim)
-        self.omega = float(omega)
+        self.activation_family = normalize_activation_family(activation_family)
+        self.init_omega = float(omega)
+        self.omega = effective_layer_omega(
+            activation_family=self.activation_family,
+            base_omega=self.init_omega,
+            layer_index=int(layer_index),
+            bacon_bandwidth_scale=float(bacon_bandwidth_scale),
+        )
+        self.wire_scale = float(wire_scale)
         with torch.no_grad():
             if is_first:
                 # First layer: Uniform(-1/fan_in, 1/fan_in) (then scaled by omega in forward)
                 self.linear.weight.uniform_(-1.0 / in_dim, 1.0 / in_dim)
             else:
                 # Downstream: Uniform(-sqrt(6/fan_in)/omega, sqrt(6/fan_in)/omega)
-                bound = math.sqrt(6.0 / in_dim) / max(self.omega, 1.0)
+                bound = math.sqrt(6.0 / in_dim) / max(self.init_omega, 1.0)
                 self.linear.weight.uniform_(-bound, bound)
             self.linear.bias.zero_()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.sin(self.omega * self.linear(x))
+        return apply_activation_family(
+            self.linear(x),
+            activation_family=self.activation_family,
+            omega=self.omega,
+            wire_scale=self.wire_scale,
+        )
 
 
 class SirenSubstrate(nn.Module):
@@ -137,10 +187,31 @@ class SirenSubstrate(nn.Module):
 
         layers: list[nn.Module] = []
         # First layer
-        layers.append(_SinLayer(cfg.coord_dim, cfg.hidden_dim, cfg.first_omega, is_first=True))
+        layers.append(
+            _ActivationLayer(
+                cfg.coord_dim,
+                cfg.hidden_dim,
+                cfg.first_omega,
+                activation_family=cfg.activation_family,
+                is_first=True,
+                layer_index=0,
+                wire_scale=cfg.wire_scale,
+                bacon_bandwidth_scale=cfg.bacon_bandwidth_scale,
+            )
+        )
         # Hidden layers
-        for _ in range(cfg.num_hidden_layers - 1):
-            layers.append(_SinLayer(cfg.hidden_dim, cfg.hidden_dim, cfg.hidden_omega))
+        for layer_index in range(1, cfg.num_hidden_layers):
+            layers.append(
+                _ActivationLayer(
+                    cfg.hidden_dim,
+                    cfg.hidden_dim,
+                    cfg.hidden_omega,
+                    activation_family=cfg.activation_family,
+                    layer_index=layer_index,
+                    wire_scale=cfg.wire_scale,
+                    bacon_bandwidth_scale=cfg.bacon_bandwidth_scale,
+                )
+            )
         self.hidden = nn.Sequential(*layers)
 
         # Output layer (no sin): Linear -> sigmoid in forward

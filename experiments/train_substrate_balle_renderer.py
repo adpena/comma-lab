@@ -1111,12 +1111,14 @@ def _full_main(args: argparse.Namespace) -> int:
 
         # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
         auth_eval_result_path: Path | None = None
+        auth_eval_alias_path: Path | None = None
         contest_cuda_score: float | None = None
         if not args.skip_auth_eval and archive_zip_path.is_file():
             print("[full] launching CUDA auth eval ...")
             auth_eval_result_path = (
                 args.output_dir / "contest_auth_eval_cuda.json"
             )
+            auth_eval_alias_path = args.output_dir / "auth_eval.json"
             cmd = [
                 sys.executable,
                 str(CONTEST_AUTH_EVAL_SCRIPT),
@@ -1159,6 +1161,8 @@ def _full_main(args: argparse.Namespace) -> int:
                             f"(source={claim.source_key}, "
                             f"archive_sha256={archive_sha})"
                         )
+                        if auth_eval_result_path.is_file():
+                            shutil.copy2(auth_eval_result_path, auth_eval_alias_path)
                     except Exception as exc:
                         raise RuntimeError(
                             "could not validate balle_renderer contest-CUDA "
@@ -1310,6 +1314,32 @@ def _full_main(args: argparse.Namespace) -> int:
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None
             ),
+            "auth_eval_alias_path": (
+                str(auth_eval_alias_path) if auth_eval_alias_path else None
+            ),
+            "exact_eval_packet": {
+                "archive_path": (
+                    str(archive_zip_path) if archive_zip_path.is_file() else None
+                ),
+                "archive_sha256": archive_sha,
+                "archive_bytes": archive_bytes,
+                "inflate_sh_path": (
+                    str(args.output_dir / "submission" / "inflate.sh")
+                    if (args.output_dir / "submission" / "inflate.sh").is_file()
+                    else None
+                ),
+                "payload_0bin_path": (
+                    str(args.output_dir / "0.bin")
+                    if (args.output_dir / "0.bin").is_file()
+                    else None
+                ),
+                "payload_0bin_sha256": payload_0bin_sha,
+                "payload_0bin_bytes": payload_0bin_bytes,
+                "score_axis_tag": (
+                    "[contest-CUDA]" if contest_cuda_score is not None else None
+                ),
+                "score_claim": contest_cuda_score is not None,
+            },
             "cost_band_anchor_appended": cost_band_anchor_appended,
             "cost_band_anchor_skip_reason": cost_band_anchor_skip_reason,
             "stage_log": stage_log,

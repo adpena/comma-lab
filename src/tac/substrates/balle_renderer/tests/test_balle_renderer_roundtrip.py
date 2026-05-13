@@ -13,8 +13,14 @@ The β substrate roundtrip proves:
 
 from __future__ import annotations
 
+import pytest
 import torch
 
+from tac.substrates._shared.inflate_runtime import CAMERA_HW
+from tac.substrates.balle_renderer.architecture import (
+    BalleRendererConfig,
+    BalleRendererSubstrate,
+)
 from tac.substrates.balle_renderer.archive import (
     BRV1_HEADER_SIZE,
     BRV1_MAGIC,
@@ -22,10 +28,7 @@ from tac.substrates.balle_renderer.archive import (
     pack_archive,
     parse_archive,
 )
-from tac.substrates.balle_renderer.architecture import (
-    BalleRendererConfig,
-    BalleRendererSubstrate,
-)
+from tac.substrates.balle_renderer.inflate import inflate_one_video
 
 
 def _smoke_cfg() -> BalleRendererConfig:
@@ -135,6 +138,16 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors():
     step_s = quant_range_s / 65534.0
     assert torch.allclose(arc.scales, scales, atol=step_s * 2.0)
 
+    # Quantization metadata stays in the parser contract so inflate can set
+    # byte-closure tolerances without reparsing private side channels.
+    for key in (
+        "_lat_quant_scale",
+        "_lat_quant_zero_point",
+        "_sca_quant_scale",
+        "_sca_quant_zero_point",
+    ):
+        assert key in arc.meta
+
 
 def test_header_size_invariant_is_35_bytes():
     """β header is 35 bytes (vs α's 21) due to hyper_dim + scales/enc/hp section lengths."""
@@ -232,10 +245,10 @@ def test_byte_mutation_changes_inflate_output_no_op_proof():
 def test_byte_mutation_on_scales_changes_archive_bytes():
     """Sister test: mutating scales must also produce different archive bytes.
 
-    This is the hyperprior-specific arm of the no_op_proof — the β
-    substrate's scales blob is genuinely consumed by inflate (it
-    drives the conditional density during arithmetic coding when the
-    full coder is wired post-anchor); mutating it MUST change bytes.
+    This is the hyperprior-specific arm of the no_op_proof. The β substrate's
+    scales blob is now fail-closed by inflate, and mutating it MUST change
+    archive bytes even before the arithmetic coder replaces the raw int16
+    latent streams.
     """
     cfg = _smoke_cfg()
     torch.manual_seed(21)
@@ -255,6 +268,61 @@ def test_byte_mutation_on_scales_changes_archive_bytes():
     arc_a = parse_archive(blob_a)
     arc_b = parse_archive(blob_b)
     assert not torch.allclose(arc_a.scales[0, 0], arc_b.scales[0, 0], atol=1e-6)
+
+
+def test_inflate_accepts_closed_scales_stream(tmp_path):
+    """A valid BRV1 packet should pass the scales-closure check and render."""
+    cfg = BalleRendererConfig(
+        latent_dim=8,
+        hyper_latent_dim=4,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(16, 12, 8, 6, 4, 4, 4),
+        hyper_mlp_channels=(8, 8),
+        sin_frequency=30.0,
+        num_pairs=1,
+        output_height=24,
+        output_width=32,
+        num_upsample_blocks=3,
+    )
+    torch.manual_seed(20)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    blob = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, _make_meta(cfg))
+
+    out_raw = tmp_path / "valid.raw"
+    frames = inflate_one_video(blob, out_raw, device="cpu")
+    assert frames == 2
+    assert out_raw.stat().st_size == 2 * CAMERA_HW[0] * CAMERA_HW[1] * 3
+
+
+def test_inflate_rejects_mutated_scales_stream(tmp_path):
+    """The hyper-latent scales section must not be dead payload.
+
+    A scale-byte mutation changes archive bytes but should also be consumed by
+    inflate. The renderer does not use scales to draw pixels directly, so the
+    runtime binds them by checking they match the packaged hyper-analysis path
+    and fails closed on mismatch.
+    """
+    cfg = _smoke_cfg()
+    torch.manual_seed(22)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg)
+
+    mutated_scales = scales.clone()
+    mutated_scales[0, 0] = mutated_scales[0, 0] + 1.0
+    blob = pack_archive(enc_sd, dec_sd, hp_sd, latents, mutated_scales, meta)
+
+    out_raw = tmp_path / "mutated.raw"
+    with pytest.raises(RuntimeError, match="scales stream failed closure check"):
+        inflate_one_video(blob, out_raw, device="cpu")
+    assert not out_raw.exists()
 
 
 def test_forward_pass_returns_rate_components():

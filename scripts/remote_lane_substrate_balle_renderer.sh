@@ -200,12 +200,13 @@ log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_
 # Stage 5: completion record (the auth-eval JSON was already written by the
 # trainer at stage 12 if reached). We surface the path here for harvest.
 AUTH_EVAL_JSON="$OUTPUT_DIR/auth_eval.json"
-ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
+ARCHIVE_PATH="$OUTPUT_DIR/archive.zip"
+PAYLOAD_PATH="$OUTPUT_DIR/0.bin"
 if [ -f "$AUTH_EVAL_JSON" ]; then
     log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_BALLE_RENDERER_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    log "LANE_BALLE_RENDERER_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH payload=$PAYLOAD_PATH rc=$TRAIN_RC"
 else
-    log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 12)"
+    log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH payload=$PAYLOAD_PATH (trainer may have failed before stage 12)"
 fi
 
 exit "$TRAIN_RC"

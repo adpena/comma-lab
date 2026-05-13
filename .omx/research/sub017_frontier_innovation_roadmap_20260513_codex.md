@@ -19,6 +19,26 @@ adversarial research/review passes. It is intentionally contest-constrained:
 every path must end in a byte-closed archive/runtime packet, exact auth eval,
 and preserved custody before it changes the frontier.
 
+## Online source correction: LA-Pose is not Telescope
+
+Per online source review on 2026-05-13, LA-Pose and Telescope must be kept
+separate. LA-Pose (arXiv:2604.27448, https://arxiv.org/abs/2604.27448) is a
+latent-action camera-pose estimator: inverse/forward dynamics pretraining on
+driving video yields motion-centric latent actions that feed a pose-estimation
+head. Telescope (arXiv:2604.06332,
+https://arxiv.org/abs/2604.06332) is the hyperbolic foveation/resampling paper:
+a two-stage ultra-long-range detector learns a low-overhead foveation transform
+from low-resolution imagery, applies it to full-resolution imagery, and detects
+in a transformed Riemannian coordinate frame.
+
+Implementation consequence: do not call the foveation payload paper-faithful
+LA-Pose. The correct taxonomy is `lapose_motion` for latent-action pose/motion
+priors, `telescope_foveation` for hyperbolic foveation/resampling, and
+`lapose_plus_telescope` only for a composed lane where LA-Pose-like motion
+telemetry selects hard pairs and Telescope-style foveation bytes are consumed
+by the runtime. See
+`.omx/research/lapose_telescope_online_distinction_20260513_codex.md`.
+
 ## Coverage matrix
 
 This research pass did include the requested axes, but the implementation state
@@ -33,7 +53,7 @@ is uneven:
 | Mathematical score analysis | score formula, component marginals, CPU/CUDA axis separation, no-proxy authority | target must jointly move SegNet/PoseNet/rate; CPU wins do not rank CUDA | explicit per-candidate KKT/water-fill table tied to exact component traces |
 | SIREN/INR | SIREN, FINER, WIRE, BACON, COIN++, NIF, Fourier-feature MLPs; see [SIREN-2020], [FINER-2024], [WIRE-2023], [BACON-2021], [COINPP-2022] | naked SIREN is lower EV than SIREN-like residual atoms over HNeRV, but SIREN-family replacement substrates remain high-upside if exact trainers mature | scorer-sensitivity atom selector and FINER/WIRE modes behind same sidecar schema |
 | Non-NeRV | Ballé/CompressAI, Cool-Chic/C3, VQ-VAE, grayscale LUT, Self-Compress, procedural/ego-motion models; see [Balle-2018], [CompressAI-2020], [VQVAE-2017], [CoolChic-2023] | needed as escape routes if HNeRV saturates and as stack stages around HNeRV | real trainers, archive grammar, recipes, and exact packet paths before dispatch |
-| Domain/hardware/scorer exploitation | dashcam ego-motion, road-plane/foveation, LAPose, SegNet stride-2, FastViT/PoseNet, CUDA/CPU drift | model should exploit the known video/scorer/hardware contract, not generic video compression | no-op/consumption proof for pose/foveation trailers and exact CUDA canaries |
+| Domain/hardware/scorer exploitation | dashcam ego-motion, road-plane, LA-Pose latent-action motion priors, Telescope hyperbolic foveation, SegNet stride-2, FastViT/PoseNet, CUDA/CPU drift | model should exploit the known video/scorer/hardware contract, not generic video compression | no-op/consumption proof for pose/foveation trailers and exact CUDA canaries; avoid conflating LA-Pose motion priors with Telescope foveation |
 | Proof/non-arbitrariness | kill criteria, no-op controls, exact-eval gates, probe-disambiguator pattern; GEPA/Muon can propose/train candidates but cannot claim score; see [Muon-Repo], [ModdedNanoGPT-Repo], [GEPA-2026], [GEPA-2025] | choices stay empirical and byte-closed instead of preference-driven | ship competing modes behind callable interfaces and let exact packets arbitrate |
 
 The main undercovered item is not theory; it is forensic recovery of the public
@@ -209,7 +229,7 @@ only a conclusion.
 | H2 | HNeRV can be replaced, not only stacked | SIREN/FINER/WIRE/BACON/COIN++ full-renderer trainers with contest archive grammar | `train_substrate_*`, recipe, runtime decoder, archive manifest, exact smoke | full-renderer replacement stays above HNeRV comparator with no byte-floor advantage |
 | H3 | SIREN-family bases are higher EV as sparse scorer-aware atoms than as naked full-video renderers | Select INR atoms by SegNet boundary and PoseNet hard-pair sensitivity per byte | no-op-controlled sidecar packet, raw-output hash delta, component deltas | predicted local component win disappears under exact CUDA |
 | H4 | Semantic PacketIR recoding can beat generic compression | Typed q-streams, CTW/range/ANS coding, deterministic decoder overhead included | parse -> emit identity proof, section SHA/offset ledger, runtime-consumption mutation proof | decoder overhead or metadata consumes the entropy gain |
-| H5 | Dashcam physics gives cheaper pose/scorer satisfaction than generic video reconstruction | FOE, horizon, road-plane, tau/time-to-contact, LAPose foveation/motion atoms | pose/foveation trailer consumed by runtime, component-response memo | no CUDA PoseNet/SegNet improvement after no-op-controlled consumption proof |
+| H5 | Dashcam physics gives cheaper pose/scorer satisfaction than generic video reconstruction | FOE, horizon, road-plane, tau/time-to-contact, LA-Pose-style latent motion priors plus Telescope-style hyperbolic foveation bytes | pose/foveation trailer consumed by runtime, component-response memo | no CUDA PoseNet/SegNet improvement after no-op-controlled consumption proof |
 | H6 | Hyperprior/discrete-code stages are useful around an overfit renderer | Ballé/CompressAI/Cool-Chic/VQ style latent grammar around HNeRV/INR output | compressed latent packet with closed decoder and no external sidecar deps | float/proxy gain disappears after integer entropy path export |
 | H7 | Muon improves sample efficiency enough to change dispatch economics | Orthogonalized updates for 2D hidden weights in HNeRV/SIREN/FINER trainers | paired seed/trainer run with identical archive export and exact smoke | same budget produces no score-domain validation gain or destabilizes QAT/export |
 | H8 | GEPA/autoresearch can improve pipeline choices without becoming proxy authority | Text-serializable configs/transforms proposed by LLM search, evaluated by local exact/no-claim evaluator | candidate ledger with evaluator outputs and rejected unsafe proposals | proposed changes cannot pass preflight, exact packet construction, or no-claim discipline |

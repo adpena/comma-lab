@@ -471,6 +471,12 @@ def test_full_main_custody_uses_archive_zip_sha_not_0bin():
     assert "archive_sha256=archive_sha" in body
     assert '"payload_0bin_sha256": payload_0bin_sha' in body
     assert '"payload_0bin_bytes": payload_0bin_bytes' in body
+    assert "auth_eval_alias_path = args.output_dir / \"auth_eval.json\"" in body
+    assert "shutil.copy2(auth_eval_result_path, auth_eval_alias_path)" in body
+    assert '"exact_eval_packet": {' in body
+    assert '"archive_path": (' in body
+    assert "str(archive_zip_path) if archive_zip_path.is_file() else None" in body
+    assert '"inflate_sh_path": (' in body
 
 
 # ---------------------------------------------------------------------------

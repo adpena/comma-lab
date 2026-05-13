@@ -50,10 +50,10 @@ Catalog #124 archive-grammar 8 fields:
                                target ~150 LOC
     runtime_dep_closure:       torch, brotli (minimal in-file GDN, NO
                                CompressAI runtime dep)
-    export_format:             brotli-compressed state_dicts + ANS-coded
-                               int16 latents (per Ballé arithmetic coder
-                               in tac.balle_hyperprior_codec) + sidecar
-                               JSON meta
+    export_format:             brotli-compressed state_dicts + raw int16
+                               main/hyper latents + sidecar JSON meta.
+                               Arithmetic/range coding remains a readiness
+                               blocker before exact replacement dispatch.
     score_aware_loss:          L = α·B(θ)/N + β·d_seg(θ) + γ·sqrt(d_pose(θ))
                                + λ_hp·R_hyperprior(θ)
                                where R_hyperprior = E[-log p_z(z)] +
@@ -72,18 +72,20 @@ Reactivation criteria (per CLAUDE.md "KILL is LAST RESORT"):
       and Pareto-feasibility analysis confirms β's hyperprior axis is
       complementary to whatever α explored
 
-This module IS a SKETCH/L0 → SCAFFOLD/L1 landing. The training
-``_full_main`` entry-point is NOT wired here; it's a follow-up subagent.
+This module is the SCAFFOLD/L1 substrate surface. The trainer ``_full_main``
+entry point is wired in ``experiments/train_substrate_balle_renderer.py``;
+exact replacement dispatch is still blocked on byte-floor coding, a clean
+smoke-before-full run, and same-axis exact-eval custody.
 """
 
+from .architecture import (
+    BalleRendererConfig,
+    BalleRendererSubstrate,
+)
 from .archive import (
     BalleRendererArchive,
     pack_archive,
     parse_archive,
-)
-from .architecture import (
-    BalleRendererSubstrate,
-    BalleRendererConfig,
 )
 from .score_aware_loss import (
     BalleRendererScoreAwareLoss,
@@ -92,9 +94,9 @@ from .score_aware_loss import (
 
 __all__ = [
     "BalleRendererArchive",
-    "BalleRendererSubstrate",
     "BalleRendererConfig",
     "BalleRendererScoreAwareLoss",
+    "BalleRendererSubstrate",
     "BalleScoreAwareLossWeights",
     "pack_archive",
     "parse_archive",

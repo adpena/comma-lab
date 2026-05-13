@@ -5,11 +5,12 @@ design wave (2026-05-12). PHASE-B2-BUILD wires ``_full_main`` so the trainer
 can produce a first-anchor packet after operator authorization; local training
 losses remain proxy signals until archive auth eval lands.
 
-Dispatch contract default: ``naked_siren_replacement``. In this mode SIREN is
-the purely-coordinate-based counterpart to NeRV/HNeRV/A1 and REPLACES that
+Dispatch contract default: ``naked_siren_replacement`` with
+``--activation-family siren``. In this mode SIREN is the
+purely-coordinate-based counterpart to NeRV/HNeRV/A1 and REPLACES that
 substrate: ZERO bytes go to latents, and all variation across frames is encoded
-in the MLP weights themselves via sinusoidal activations. Residual-on-HNeRV/A1
-and hybrid-domain-prior contracts are named in
+in the MLP weights themselves via the selected byte-closed INR activation
+family. Residual-on-HNeRV/A1 and hybrid-domain-prior contracts are named in
 ``tac.substrates.siren.dispatch_contract`` but intentionally fail closed here
 until they have their own byte-closed builders.
 
@@ -115,6 +116,11 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
+)
+from tac.substrates.siren.activation_family import (
+    ACTIVATION_FAMILY_IDS,
+    DEFAULT_ACTIVATION_FAMILY,
+    activation_family_manifest,
 )
 from tac.substrates.siren.dispatch_contract import (
     NAKED_SIREN_REPLACEMENT,
@@ -222,6 +228,16 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "satisfied_by_profile": (),
         "requires": (),
     },
+    "--activation-family": {
+        "env": "SIREN_ACTIVATION_FAMILY",
+        "rationale": (
+            "byte-closed INR activation family under SRV1 metadata; default "
+            "siren preserves naked_siren_replacement behavior"
+        ),
+        "default": DEFAULT_ACTIVATION_FAMILY,
+        "satisfied_by_profile": (),
+        "requires": ("--dispatch-contract",),
+    },
 }
 
 
@@ -320,6 +336,31 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=1.0,
         help="SIREN downstream omega (Sitzmann standard 1.0).",
+    )
+    p.add_argument(
+        "--activation-family",
+        choices=list(ACTIVATION_FAMILY_IDS),
+        default=DEFAULT_ACTIVATION_FAMILY,
+        help=(
+            "INR activation family serialized in SRV1 metadata. Default "
+            "'siren' preserves the naked_siren_replacement contract; other "
+            "modes are local activation-family probes, not separate dispatch contracts."
+        ),
+    )
+    p.add_argument(
+        "--wire-scale",
+        type=float,
+        default=1.0,
+        help="Positive Gabor/window scale for --activation-family wire.",
+    )
+    p.add_argument(
+        "--bacon-bandwidth-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "Positive bandwidth multiplier for the BACON-style per-layer "
+            "omega schedule."
+        ),
     )
     p.add_argument(
         "--dispatch-contract",
@@ -510,7 +551,7 @@ def _write_runtime(submission_dir: Path) -> None:
     ):
         pkg_init.write_text("", encoding="utf-8")
     substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "siren"
-    for name in ("architecture.py", "archive.py", "inflate.py"):
+    for name in ("activation_family.py", "architecture.py", "archive.py", "inflate.py"):
         shutil.copy2(substrate_src / name, runtime_pkg / name)
     _canon_vendor_shared_inflate_runtime(submission_dir, repo_root=REPO_ROOT)
 
@@ -646,6 +687,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
         num_pairs=4,
         output_height=24,
         output_width=32,
+        activation_family=args.activation_family,
+        wire_scale=args.wire_scale,
+        bacon_bandwidth_scale=args.bacon_bandwidth_scale,
     )
     device = _device_or_die(args.device, smoke=True)
     model = SirenSubstrate(cfg).to(device)
@@ -757,10 +801,15 @@ def _full_main(args: argparse.Namespace) -> int:
             num_pairs=n_pairs,
             output_height=EVAL_HW[0],
             output_width=EVAL_HW[1],
+            activation_family=args.activation_family,
+            wire_scale=args.wire_scale,
+            bacon_bandwidth_scale=args.bacon_bandwidth_scale,
         )
         model = SirenSubstrate(cfg).to(device)
         print(f"[full] siren params: {model.num_parameters():,}")
+        print(f"[full] activation_family: {cfg.activation_family}")
         _stage("model_built")
+        _stage(f"activation_family_{cfg.activation_family}")
 
         # 6. EMA shadow (CLAUDE.md non-negotiable)
         ema = EMA(model, decay=args.ema_decay)
@@ -961,6 +1010,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 "hidden_omega": cfg.hidden_omega,
                 "coord_dim": cfg.coord_dim,
                 "output_dim": cfg.output_dim,
+                "activation_family": cfg.activation_family,
+                "wire_scale": cfg.wire_scale,
+                "bacon_bandwidth_scale": cfg.bacon_bandwidth_scale,
                 "dispatch_contract": dispatch_contract.contract_id,
                 "archive_role": dispatch_contract.archive_role,
                 "hnerv_a1_relationship": dispatch_contract.hnerv_a1_relationship,
@@ -1149,6 +1201,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "archive_role": dispatch_contract.archive_role,
             "hnerv_a1_relationship": dispatch_contract.hnerv_a1_relationship,
             "dispatch_contracts_distinguished": dispatch_contracts,
+            "activation_family": cfg.activation_family,
+            "activation_family_manifest": activation_family_manifest(),
             "args": {
                 k: (str(v) if isinstance(v, Path) else v)
                 for k, v in vars(args).items()
