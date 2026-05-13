@@ -1,9 +1,9 @@
 """Train the hybrid_renderer_residual substrate end-to-end on contest video.
 
 WAVE-1-C operator-orchestrated parallel deployment subagent (2026-05-12).
-Composite α (HNeRV-family renderer) + β-style sparse residual paradigm:
+Composite alpha (HNeRV-family renderer) + beta-style sparse residual paradigm:
 
-* α path produces a base RGB reconstruction via the γ substrate's renderer
+* alpha path produces a base RGB reconstruction via the gamma substrate's renderer
   (HNeRV-class PixelShuffle decoder; same family as ``sane_hnerv``).
 * The residual basis decoder corrects per-pair score-affecting deltas
   (especially pose-axis at the 2.71× PR106 r2 operating point) by gathering
@@ -12,12 +12,12 @@ Composite α (HNeRV-family renderer) + β-style sparse residual paradigm:
   ``rgb = renderer_out + residual_decoder(coeffs)`` per CLAUDE.md eval-
   roundtrip + EMA + Catalog #146 contract.
 
-CRITICAL — substrate-vs-codec composition risk per CLAUDE.md
+CRITICAL - substrate-vs-codec composition risk per CLAUDE.md
 "HNeRV / leaderboard-implementation parity discipline" + the
 "Substrate vs codec composition meta-pattern" memory:
 
-    Composition substrates (HStack / VStack / cross-paradigm + this γ
-    γ = α-renderer + β-residual) are HIGH-RISK without verified
+    Composition substrates (HStack / VStack / cross-paradigm + this gamma
+    gamma = alpha-renderer + beta-residual) are HIGH-RISK without verified
     single-axis substrate first. The 2026-05-04 leaderboard race showed
     PR105's "kitchen_sink" (1776 LOC, 21 files) lost to PR103's 241-LOC
     silver because composing without first measuring each axis
@@ -26,7 +26,7 @@ CRITICAL — substrate-vs-codec composition risk per CLAUDE.md
     Therefore the hybrid lane CARRIES pre_promotion blockers:
         - sane_hnerv_first_anchor_required
         - balle_renderer_first_anchor_required
-    These blockers MUST clear (i.e., α + β must each have a verified
+    These blockers MUST clear (i.e., alpha + beta must each have a verified
     [contest-CUDA] anchor) BEFORE this trainer dispatches to a paid GPU.
     The trainer can be BUILT and SMOKE-TESTED prior to clearance, but
     the operator-authorize wrapper enforces the pre-promotion blockers
@@ -37,18 +37,18 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 - Train against ``upstream/videos/0.mkv`` decoded via pyav (NOT synthetic
   data; synthetic batches are FORBIDDEN outside ``--smoke`` per Catalog #114).
 - Patch upstream ``rgb_to_yuv6`` via ``patch_upstream_yuv6_globally`` BEFORE
-  scorer construction (PR #95/#106 contract — see CLAUDE.md "eval_roundtrip —
+  scorer construction (PR #95/#106 contract - see CLAUDE.md "eval_roundtrip -
   NON-NEGOTIABLE" section).
 - ``load_differentiable_scorers`` for SegNet/PoseNet (no scorer load at
   inflate; only at training).
 - ``apply_eval_roundtrip_during_training`` inside the per-batch loop
   (eval_roundtrip=True default; never False per Catalog #5).
 - ``tac.training.EMA(decay=0.997)`` update after every ``optimizer.step``;
-  inference checkpoint = EMA shadow, NEVER live weights (CLAUDE.md "EMA —
+  inference checkpoint = EMA shadow, NEVER live weights (CLAUDE.md "EMA -
   NON-NEGOTIABLE").
 - Score-domain Lagrangian
   ``alpha*B(theta)/N + beta*d_seg + gamma*sqrt(d_pose) + lambda_res*||c||_1``
-  per HNeRV parity lesson L6 plus the γ-specific residual sparsity term.
+  per HNeRV parity lesson L6 plus the gamma-specific residual sparsity term.
 - AdamW lr cosine annealing; gradient clip 1.0; NaN watchdog per Council D.
 - End with CUDA auth eval on best EMA checkpoint per CLAUDE.md "Auth eval
   EVERYWHERE"; refuse MPS (Catalog #1); CPU permitted only with ``--smoke``.
@@ -56,7 +56,7 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
   (Catalog #128 atomic fcntl).
 - Cost-band anchor append via ``tools/append_cost_band_anchor.py``.
 - Contest-compliant runtime emission (inflate.sh / inflate.py with 3
-  positional args + ``set -euo pipefail`` + ≤ 200 LOC inflate.py + NO
+  positional args + ``set -euo pipefail`` + <= 200 LOC inflate.py + NO
   scorer imports) per Catalog #146 semantics.
 - TIER_1_OPERATOR_REQUIRED_FLAGS declared per Catalog #151 for wire-up.
 
@@ -64,7 +64,7 @@ Composition-aware additions vs ``train_substrate_sane_hnerv.py``:
 
 * ``--freeze-alpha`` flag (default False): when True the renderer's
   weights are frozen and ONLY the residual basis + decoder train. Useful
-  when α has a strong pre-trained checkpoint we want to layer β-residual
+  when alpha has a strong pre-trained checkpoint we want to layer beta-residual
   onto without disturbing.
 * ``--lambda-residual`` flag wires the sparsity term in the Lagrangian.
 * Archive includes BOTH renderer + residual_decoder state_dicts plus
@@ -100,10 +100,9 @@ import sys
 import time
 import zipfile
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -125,7 +124,7 @@ CONTEST_NORMALIZER = 37_545_489.0  # contest evaluate.py N constant
 
 
 # ---------------------------------------------------------------------------
-# Catalog #151 manifest — every flag below must be threaded by any operator
+# Catalog #151 manifest - every flag below must be threaded by any operator
 # wrapper that subprocess-invokes this trainer. Schema mirrors the canonical
 # Track 1 Ballé manifest per council R1-R7 (see CLAUDE.md catalog #151).
 #
@@ -145,7 +144,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "requires": (),
         "required_input_file": True,
         "generator_command": (
-            "contest-pinned upstream snapshot — never regenerated locally"
+            "contest-pinned upstream snapshot - never regenerated locally"
         ),
         "rationale_audit": (
             ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
@@ -199,8 +198,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="train_substrate_hybrid_renderer_residual",
         description=(
-            "Train hybrid_renderer_residual (γ) substrate end-to-end. "
-            "Composite α-renderer + β-style sparse residual; pre-promotion "
+            "Train hybrid_renderer_residual (gamma) substrate end-to-end. "
+            "Composite alpha-renderer + beta-style sparse residual; pre-promotion "
             "blockers required (sane_hnerv + balle_renderer first anchors)."
         ),
     )
@@ -280,26 +279,26 @@ def _build_parser() -> argparse.ArgumentParser:
         "--residual-basis-dim",
         type=int,
         default=128,
-        help="Residual basis dictionary size (γ-specific; council default 128).",
+        help="Residual basis dictionary size (gamma-specific; council default 128).",
     )
     p.add_argument(
         "--residual-coeffs-per-pair",
         type=int,
         default=12,
         help=(
-            "Sparsity k — number of (index, value) pairs per frame-pair "
-            "(γ-specific; council default 12 — top-k by absolute magnitude)."
+            "Sparsity k - number of (index, value) pairs per frame-pair "
+            "(gamma-specific; council default 12 - top-k by absolute magnitude)."
         ),
     )
 
-    # ---- Composition knobs (γ-specific) ----
+    # ---- Composition knobs (gamma-specific) ----
     p.add_argument(
         "--freeze-alpha",
         action="store_true",
         help=(
-            "Freeze the α renderer (latents + decoder); train ONLY the "
-            "residual basis + residual_decoder. Useful when layering γ-residual "
-            "onto a strong pre-trained α checkpoint without disturbing it."
+            "Freeze the alpha renderer (latents + decoder); train ONLY the "
+            "residual basis + residual_decoder. Useful when layering gamma-residual "
+            "onto a strong pre-trained alpha checkpoint without disturbing it."
         ),
     )
     p.add_argument(
@@ -309,7 +308,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Optional path to a sane_hnerv-style pre-trained checkpoint to "
             "warm-start the renderer. Loaded with strict=False so the "
-            "γ-specific residual decoder is left at random init."
+            "gamma-specific residual decoder is left at random init."
         ),
     )
 
@@ -339,7 +338,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Operating-point-aware pose-marginal multiplier. At PR106-r2 "
             "(pose_avg ~ 3.4e-5) the pose marginal is 2.71x SegNet's (CLAUDE.md "
-            "'SegNet vs PoseNet — operating-point dependent')."
+            "'SegNet vs PoseNet - operating-point dependent')."
         ),
     )
     p.add_argument(
@@ -517,10 +516,10 @@ def _archive_bytes_proxy_closed_form(model):
     """Closed-form upper-bound on archive bytes for the rate term.
 
     Per Ballé 2018 the rate term enters the Lagrangian via the entropy of the
-    quantized latents + the encoded decoder weights + (γ-specific) the per-pair
+    quantized latents + the encoded decoder weights + (gamma-specific) the per-pair
     residual coefficient bytes. We use a non-tight but monotone proxy:
 
-        bytes ≈ (n_decoder_params * 2)                  [fp16 weights]
+        bytes approximately (n_decoder_params * 2)                  [fp16 weights]
               + (num_pairs * latent_dim * 2)            [int16 latents]
               + (num_pairs * residual_coeffs_per_pair * 4)  [u16 idx + i16 val]
 
@@ -529,7 +528,7 @@ def _archive_bytes_proxy_closed_form(model):
     explicit residual L1 sparsity term.
 
     Returns:
-        Scalar tensor (on the same device as ``model``) — the proxy bytes.
+        Scalar tensor (on the same device as ``model``) - the proxy bytes.
     """
     import torch
 
@@ -556,10 +555,10 @@ def _write_runtime(submission_dir: Path) -> None:
 
     The substrate's monolithic ``0.bin`` is the archive grammar; the runtime
     is a thin reader that calls ``parse_archive`` and renders frames (sum of
-    α renderer + γ residual decoder).
+    alpha renderer + gamma residual decoder).
 
-    Per Catalog #146 semantics + HNeRV parity lesson L4 ≤ 200 LOC waiver
-    (council §4.2 NEEDS-WORK note: residual decode adds ~30 LOC over α's
+    Per Catalog #146 semantics + HNeRV parity lesson L4 <= 200 LOC waiver
+    (council §4.2 NEEDS-WORK note: residual decode adds ~30 LOC over alpha's
     ~80 LOC). Substrate's inflate.py is 150 LOC; CLI glue is ~30 LOC; total
     ~180 LOC, under the 200 LOC waiver budget.
 
@@ -659,7 +658,7 @@ def _build_archive_zip(
 # ---------------------------------------------------------------------------
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -705,7 +704,7 @@ def _device_or_die(name: str, *, smoke: bool):
         if not smoke:
             raise SystemExit(
                 "[hybrid_res] --device cpu is permitted only with --smoke per "
-                "CLAUDE.md 'MPS auth eval is NOISE' + 'EMA — non-negotiable' "
+                "CLAUDE.md 'MPS auth eval is NOISE' + 'EMA - non-negotiable' "
                 "+ full-training-needs-CUDA convention. Use --device cuda for "
                 "promotion-grade training."
             )
@@ -787,13 +786,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full training entry point — requires CUDA + score-aware scorers.
+    """Full training entry point - requires CUDA + score-aware scorers.
 
     This path is OPERATOR-GATED + PRE-PROMOTION-BLOCKED. The wrapper (Modal /
     Lightning / Vast.ai) threads all TIER_1 flags + checks the recipe's
     pre_promotion_blockers (sane_hnerv + balle_renderer first anchors must
     have landed) before authorizing dispatch. The wrapper runs the auth-eval
-    afterward per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval —
+    afterward per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval -
     BOTH CPU AND CUDA".
     """
     import torch
@@ -858,7 +857,7 @@ def _full_main(args: argparse.Namespace) -> int:
         train_indices = torch.arange(0, val_idx_start, device=device, dtype=torch.long)
         val_indices = torch.arange(val_idx_start, n_pairs, device=device, dtype=torch.long)
 
-        # 5. Build composite γ model (α renderer + β-style residual basis)
+        # 5. Build composite gamma model (alpha renderer + beta-style residual basis)
         cfg = HybridRendererResidualConfig(
             latent_dim=args.latent_dim,
             sin_frequency=args.sin_frequency,
@@ -874,8 +873,8 @@ def _full_main(args: argparse.Namespace) -> int:
             f"(target ~250K including residual basis + decoder)"
         )
 
-        # 5b. Optional: warm-start from pre-trained α (sane_hnerv-class) checkpoint.
-        # Loaded with strict=False so the γ residual basis + decoder stay at init.
+        # 5b. Optional: warm-start from pre-trained alpha (sane_hnerv-class) checkpoint.
+        # Loaded with strict=False so the gamma residual basis + decoder stay at init.
         # The warm-start covers the substrate-vs-codec composition risk by
         # giving the renderer a strong starting point; the residual then learns
         # the score-affecting delta.
@@ -892,22 +891,22 @@ def _full_main(args: argparse.Namespace) -> int:
                     weights_only=False,  # WEIGHTS_ONLY_FALSE_OK:trusted-alpha-pretrained-warmstart
                 )
                 alpha_sd = alpha_state.get("state_dict", alpha_state)
-                # The α checkpoint has its own renderer state_dict shape;
+                # The alpha checkpoint has its own renderer state_dict shape;
                 # we load whatever keys overlap (renderer-only; residual
                 # decoder + basis stay random).
                 missing, unexpected = model.load_state_dict(alpha_sd, strict=False)
                 print(
-                    f"[full] warm-started from α checkpoint "
+                    f"[full] warm-started from alpha checkpoint "
                     f"{args.alpha_pretrained_checkpoint} "
                     f"(missing={len(missing)} unexpected={len(unexpected)})"
                 )
                 _stage(f"alpha_warmstart_loaded_{len(alpha_sd)}_keys")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 raise SystemExit(
-                    f"[hybrid_res] failed to load α warm-start checkpoint: {exc}"
-                )
+                    f"[hybrid_res] failed to load alpha warm-start checkpoint: {exc}"
+                ) from exc
 
-        # 5c. Optional: freeze α (renderer + latents) — only residual trains.
+        # 5c. Optional: freeze alpha (renderer + latents) - only residual trains.
         if args.freeze_alpha:
             frozen = 0
             for name, p in model.named_parameters():
@@ -931,7 +930,7 @@ def _full_main(args: argparse.Namespace) -> int:
         ema = EMA(model, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
 
-        # 7. Score-aware Lagrangian (γ-specific weights with residual sparsity term)
+        # 7. Score-aware Lagrangian (gamma-specific weights with residual sparsity term)
         weights = HybridResidualScoreAwareLossWeights(
             alpha_rate=args.alpha_rate,
             beta_seg=args.beta_seg,
@@ -947,7 +946,7 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         _stage("lagrangian_built")
 
-        # 8. Optimizer + cosine annealing — operate on TRAINABLE params only
+        # 8. Optimizer + cosine annealing - operate on TRAINABLE params only
         # (so --freeze-alpha is honored at the optimizer layer too).
         trainable_params = [p for p in model.parameters() if p.requires_grad]
         optimizer = torch.optim.AdamW(
@@ -1054,7 +1053,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 if val_lag < best_val_lag and math.isfinite(val_lag):
                     best_val_lag = val_lag
                     best_epoch = epoch
-                    # Save EMA shadow (NOT live weights) — CLAUDE.md EMA rule
+                    # Save EMA shadow (NOT live weights) - CLAUDE.md EMA rule
                     ema_state = ema.state_dict()
                     torch.save(
                         {
@@ -1105,7 +1104,7 @@ def _full_main(args: argparse.Namespace) -> int:
             )
 
         # 11. Build the HRR1 archive bytes from the EMA shadow.
-        # γ archive = renderer_state_dict + residual_decoder_state_dict +
+        # gamma archive = renderer_state_dict + residual_decoder_state_dict +
         #             latents + (top-k sparse residual coeffs) + meta.
         archive_sha = ""
         archive_bytes = 0
@@ -1117,7 +1116,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
             # Split state_dict into renderer-only vs residual_decoder-only.
             # Per the substrate's archive layout, residual_coeff_full is NOT
-            # serialized as a tensor — we extract top-k sparse coeffs at
+            # serialized as a tensor - we extract top-k sparse coeffs at
             # archive-time (the inflate side scatters them back).
             renderer_sd: dict[str, torch.Tensor] = {}
             resdec_sd: dict[str, torch.Tensor] = {}
@@ -1227,7 +1226,7 @@ def _full_main(args: argparse.Namespace) -> int:
                                     f"(source={parsed_score.source_key}, "
                                     f"archive_sha256={archive_sha})"
                                 )
-                        except Exception as exc:  # noqa: BLE001
+                        except Exception as exc:
                             print(f"[full] could not parse auth eval JSON: {exc}", file=sys.stderr)
             except subprocess.TimeoutExpired:
                 print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
@@ -1258,7 +1257,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     f"[full] posterior_update: accepted={update.accepted} "
                     f"reason={update.reason!r}"
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 print(f"[full] posterior_update_locked failed: {exc}", file=sys.stderr)
 
         # 14. Cost-band anchor (best-effort; never fail the run on this).
@@ -1299,7 +1298,7 @@ def _full_main(args: argparse.Namespace) -> int:
                         f"append_failed_rc_{proc.returncode}:"
                         f"{(proc.stderr or proc.stdout)[-500:]}"
                     )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 cost_band_anchor_skip_reason = f"append_failed:{exc}"
                 print(f"[full] cost-band anchor append failed (non-fatal): {exc}", file=sys.stderr)
         else:

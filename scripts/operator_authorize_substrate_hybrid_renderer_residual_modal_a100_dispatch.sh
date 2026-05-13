@@ -1,22 +1,25 @@
 #!/bin/bash
-# Thin shim: delegates to the canonical operator-authorize entry point.
+# Thin shim: delegates to the canonical smoke-before-full entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_hybrid_renderer_residual_modal_a100_dispatch.yaml``
 #
-# Per simplification audit `a2a901c4f43d66a74` (operator approved 2026-05-12)
-# + Catalog #162 ``check_operator_authorize_canonical_use``.
+# Per Catalog #167, this wrapper fires a short Modal smoke through
+# tools/run_modal_smoke_before_full.py before any full canary. The recipe still
+# fails closed while its pre_promotion_blockers remain declared.
 #
 # Env-var overrides honored by the canonical entry point:
 #   MODAL_GPU=T4|A10G|A100|H100   (default A100 per operator directive 2026-05-12)
 #   HYBRID_RES_EPOCHS=2000        (council default; full training)
-#   MODAL_TIMEOUT_HOURS=4.5       (Modal hard-kill wall-clock)
-#   HYBRID_RES_FREEZE_ALPHA=1     (set to freeze α; default trains the full
+#   MODAL_TIMEOUT_HOURS=4.5       (full Modal hard-kill wall-clock)
+#   HYBRID_RES_SMOKE_EPOCHS=100   (smoke epoch override)
+#   HYBRID_RES_SMOKE_GPU=T4       (smoke GPU class)
+#   HYBRID_RES_FREEZE_ALPHA=1     (set to freeze alpha; default trains the full
 #                                  composite end-to-end)
-#   HYBRID_RES_ALPHA_PRETRAINED_CHECKPOINT=<path>  (warm-start from α anchor)
+#   HYBRID_RES_ALPHA_PRETRAINED_CHECKPOINT=<path>  (warm-start from alpha anchor)
 #
 # COMPOSITION-RISK PRE-PROMOTION DISCIPLINE (NON-NEGOTIABLE):
-#   This recipe carries `pre_promotion_blockers` declaring that BOTH α
-#   (lane_substrate_sane_hnerv_20260512) AND β
+#   This recipe carries `pre_promotion_blockers` declaring that BOTH alpha
+#   (lane_substrate_sane_hnerv_20260512) AND beta
 #   (lane_substrate_balle_renderer_20260512) MUST have a verified
 #   [contest-CUDA] anchor BEFORE this dispatch fires. The canonical
 #   tools/operator_authorize.py reads the recipe's pre_promotion_blockers
@@ -37,7 +40,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-exec .venv/bin/python tools/operator_authorize.py \
+SMOKE_ARGS=()
+if [ "${HYBRID_RES_SMOKE_ONLY:-0}" = "1" ]; then
+    SMOKE_ARGS+=(--smoke-only)
+fi
+if [ "${HYBRID_RES_FULL_ONLY:-0}" = "1" ]; then
+    SMOKE_ARGS+=(--full-only)
+fi
+
+exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --recipe substrate_hybrid_renderer_residual_modal_a100_dispatch \
-    --agent "claude:operator_authorize_substrate_hybrid_renderer_residual_modal_a100_dispatch" \
+    --smoke-epochs "${HYBRID_RES_SMOKE_EPOCHS:-100}" \
+    --smoke-gpu "${HYBRID_RES_SMOKE_GPU:-T4}" \
+    --smoke-timeout-hours "${HYBRID_RES_SMOKE_TIMEOUT_HOURS:-1.0}" \
+    --operator-handle "claude:operator_authorize_substrate_hybrid_renderer_residual_modal_a100_dispatch" \
+    "${SMOKE_ARGS[@]}" \
     "$@"

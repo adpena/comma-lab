@@ -2,9 +2,9 @@ schema_version: 1
 name: substrate_hybrid_renderer_residual_modal_a100_dispatch
 lane_id: lane_substrate_hybrid_renderer_residual_20260512
 summary: |
-  WAVE-1-C γ hybrid_renderer_residual first-anchor dispatch on Modal A100
-  (composite α-renderer + β-style sparse residual; PRE-PROMOTION BLOCKED
-  until α and β each have a verified [contest-CUDA] anchor).
+  WAVE-1-C gamma hybrid_renderer_residual first-anchor dispatch on Modal A100
+  (composite alpha-renderer + beta-style sparse residual; PRE-PROMOTION BLOCKED
+  until alpha and beta each have a verified [contest-CUDA] anchor).
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -17,19 +17,19 @@ cost_band:
   gpu_key: A100
 
 # WAVE-1-C HIGH-target prediction per council Phase 5 SUBSTRATE design memo.
-# γ adds a sparse residual basis decoder atop the α HNeRV-class renderer; the
+# gamma adds a sparse residual basis decoder atop the alpha HNeRV-class renderer; the
 # residual targets the score-affecting pose-axis at the PR106 r2 operating
 # point (2.71× pose-marginal). Council estimate ~0.17 [contest-CUDA] HIGH
-# target conditional on (a) α first-anchor scoring as expected and (b) the
+# target conditional on (a) alpha first-anchor scoring as expected and (b) the
 # residual basis dimension/sparsity being well-tuned in this first dispatch.
 predicted_score_target: 0.17
-predicted_delta: "-0.025 vs α (sane_hnerv) standalone [predicted; council Phase 5]"
+predicted_delta: "-0.025 vs alpha (sane_hnerv) standalone [predicted; council Phase 5]"
 predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md#hybrid_renderer_residual"
 literature_anchor: |
   Composite per CLAUDE.md "Substrate vs Codec composition meta-pattern" +
   Ballé 2018 hyperprior (rate-axis side-info) + sparse-coding residual basis
   (analog of OMP / dictionary learning for the residual stream). The
-  γ-specific "sparse residual basis decoder" is the pose-axis attack vector
+  gamma-specific "sparse residual basis decoder" is the pose-axis attack vector
   identified by Dykstra at the PR106 r2 operating point.
 council_phase_5_prediction: 0.17
 
@@ -37,7 +37,7 @@ council_phase_5_prediction: 0.17
 # "HNeRV / leaderboard-implementation parity discipline" + the
 # "Substrate vs codec composition meta-pattern" memory:
 #
-#   The hybrid lane MUST clear these blockers (i.e., α and β each have a
+#   The hybrid lane MUST clear these blockers (i.e., alpha and beta each have a
 #   verified [contest-CUDA] anchor) BEFORE this trainer dispatches to a paid
 #   GPU. The trainer can be BUILT and SMOKE-TESTED prior to clearance.
 #
@@ -50,10 +50,10 @@ pre_promotion_blockers:
   - balle_renderer_first_anchor_required
 
 risk: |
-  PHASE-WAVE-1-C HIGH-target dispatch on Modal A100. Composite γ substrate:
-  α-renderer (HNeRV-class PixelShuffle decoder; mirrors sane_hnerv) +
-  β-style sparse residual basis decoder. Substrate-vs-codec composition
-  RISK CLASS — this dispatch SHOULD NOT FIRE until both base substrate
+  PHASE-WAVE-1-C HIGH-target dispatch on Modal A100. Composite gamma substrate:
+  alpha-renderer (HNeRV-class PixelShuffle decoder; mirrors sane_hnerv) +
+  beta-style sparse residual basis decoder. Substrate-vs-codec composition
+  RISK CLASS - this dispatch SHOULD NOT FIRE until both base substrate
   anchors land. Recipe declares pre_promotion_blockers; operator_authorize
   wrapper enforces.
 
@@ -61,13 +61,13 @@ risk: |
   Single-axis [contest-CUDA] acceptable for first anchor; CPU axis required
   separately before promotion.
 
-  --freeze-alpha flag (default False): when True the α renderer is frozen
-  and only β-style residual trains. Useful for layering γ-residual onto a
-  strong pre-trained α checkpoint without disturbing it. Set
+  --freeze-alpha flag (default False): when True the alpha renderer is frozen
+  and only beta-style residual trains. Useful for layering gamma-residual onto a
+  strong pre-trained alpha checkpoint without disturbing it. Set
   HYBRID_RES_FREEZE_ALPHA=1 in env to flip default to True.
 
   --alpha-pretrained-checkpoint flag (default None): path to a pre-trained
-  α (sane_hnerv-class) checkpoint to warm-start the renderer from. Set
+  alpha (sane_hnerv-class) checkpoint to warm-start the renderer from. Set
   HYBRID_RES_ALPHA_PRETRAINED_CHECKPOINT in env.
 envelope_status: "FITS $20 envelope at p50 fallback"
 
@@ -103,8 +103,8 @@ dependencies:
   - tools/claim_lane_dispatch.py
   - tools/append_cost_band_anchor.py
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
-  - lane_substrate_sane_hnerv_20260512 (PRE-PROMOTION BLOCKER — first anchor required)
-  - lane_substrate_balle_renderer_20260512 (PRE-PROMOTION BLOCKER — first anchor required)
+  - lane_substrate_sane_hnerv_20260512 (PRE-PROMOTION BLOCKER - first anchor required)
+  - lane_substrate_balle_renderer_20260512 (PRE-PROMOTION BLOCKER - first anchor required)
 
 notes: |
   WAVE-1-C parallel deployment subagent landing 2026-05-12.
@@ -114,28 +114,28 @@ notes: |
     * The residual basis decoder corrects per-pair score-affecting deltas;
       at archive-time the top-k coefficients (by absolute magnitude) are
       stored as (u16 index, i16 value) pairs in the HRR1 0.bin section.
-    * Inflate.py is ≤ 200 LOC (≤ 100 LOC waiver per HNeRV parity L4
+    * Inflate.py is <= 200 LOC (<= 100 LOC waiver per HNeRV parity L4
       NEEDS-WORK explicit tag for residual decode).
     * The score-domain Lagrangian wires 4 terms:
-          L = α·B/N + β·d_seg + γ·sqrt(d_pose) + λ_res·||c||_1
+          L = alpha·B/N + beta·d_seg + gamma·sqrt(d_pose) + λ_res·||c||_1
       where ||c||_1 is the sparse residual coefficient magnitudes.
 
   Phase-2 dispatch readiness path:
     1. WAVE-1-A + WAVE-1-B + WAVE-1-C (this) build trainers + recipes + drivers
        at L0 SKETCH (this landing).
-    2. PRIMARY α (sane_hnerv) first anchor lands → operator approves.
-    3. PARALLEL β (balle_renderer) first anchor lands → operator approves.
-    4. Both blockers clear → recipe authorize fires this hybrid dispatch.
+    2. PRIMARY alpha (sane_hnerv) first anchor lands -> operator approves.
+    3. PARALLEL beta (balle_renderer) first anchor lands -> operator approves.
+    4. Both blockers clear -> recipe authorize fires this hybrid dispatch.
     5. Result auth-eval [contest-CUDA] feeds back into council Phase 5.
 
   Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
   .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
   experiments/modal_recover_lane.py.
 
-  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 2000) — current
-  confidence: weak_posterior (γ-specific N=0). p50 fallback $9.50 reflects
-  γ's slightly higher per-batch cost vs α (residual decoder forward pass adds
-  ~5-8% overhead on A100 vs α-only).
+  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 2000) - current
+  confidence: weak_posterior (gamma-specific N=0). p50 fallback $9.50 reflects
+  gamma's slightly higher per-batch cost vs alpha (residual decoder forward pass adds
+  ~5-8% overhead on A100 vs alpha-only).
 
   Cross-ref:
     feedback_wave1_hybrid_renderer_residual_trainer_build_LANDED_20260512.md

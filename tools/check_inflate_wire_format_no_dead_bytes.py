@@ -91,24 +91,35 @@ def _scan_inflate_file(path: Path, repo_root: Path) -> list[Finding]:
         # Unwrap Subscript / Attribute / call-chain: walk inside until we
         # find a Call whose func is .unpack/.unpack_from/.read/.frombuffer.
         for sub in ast.walk(rhs):
-            if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Attribute):
-                if sub.func.attr in (
+            if (
+                isinstance(sub, ast.Call)
+                and isinstance(sub.func, ast.Attribute)
+                and sub.func.attr in (
                     "unpack",
                     "unpack_from",
                     "read",
                     "frombuffer",
-                ):
-                    return True
+                )
+            ):
+                return True
         return False
 
     candidate_targets: list[tuple[str, int]] = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
+        # Catalog #168 fix 2026-05-12: handle both `var = struct.unpack(...)`
+        # (Assign) and `var: bytes = struct.unpack(...)` (AnnAssign) so the
+        # dead-bytes audit doesn't silently miss annotated wire-format reads.
+        if isinstance(node, ast.Assign):
+            rhs = node.value
+            target_iter = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            rhs = node.value
+            target_iter = [node.target]
+        else:
             continue
-        rhs = node.value
         if not _rhs_is_unpack_or_read(rhs):
             continue
-        for tgt in node.targets:
+        for tgt in target_iter:
             if isinstance(tgt, ast.Name):
                 candidate_targets.append((tgt.id, node.lineno))
             elif isinstance(tgt, ast.Tuple):

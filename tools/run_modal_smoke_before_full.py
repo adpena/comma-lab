@@ -151,6 +151,10 @@ def _spawn_smoke_dispatch(
         f"{operator_handle}:run_modal_smoke_before_full",
         "--label-suffix",
         f"__smoke__{smoke_epochs}ep",
+        "--timeout-hours-override",
+        str(smoke_timeout_hours),
+        "--cost-band-epochs-override",
+        str(smoke_epochs),
     ]
     print(f"[smoke-before-full] dispatching SMOKE: {' '.join(cmd)}")
     proc = subprocess.run(

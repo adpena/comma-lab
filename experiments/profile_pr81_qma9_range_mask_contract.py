@@ -21,7 +21,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = "experiments/profile_pr81_qma9_range_mask_contract.py"
 SCHEMA = "pr81_qma9_semantic_range_mask_contract_v1"
@@ -190,14 +189,21 @@ def parse_split_constants(path: Path) -> dict[str, int]:
         "ROUTER_ACTION_BITS",
         "PACKED_PAYLOAD_BYTES",
     }
+    # Catalog #168 fix 2026-05-12: handle both bare Assign and AnnAssign forms.
     for stmt in tree.body:
-        if not isinstance(stmt, ast.Assign) or len(stmt.targets) != 1:
+        if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+            target = stmt.targets[0]
+            value_node = stmt.value
+        elif (isinstance(stmt, ast.AnnAssign)
+              and stmt.value is not None):
+            target = stmt.target
+            value_node = stmt.value
+        else:
             continue
-        target = stmt.targets[0]
         if not isinstance(target, ast.Name):
             continue
         try:
-            env[target.id] = _eval_int_expr(stmt.value, env)
+            env[target.id] = _eval_int_expr(value_node, env)
         except ValueError:
             continue
     mandatory = {
@@ -538,8 +544,7 @@ def optional_cpp_decode_hash(
             compile_proc = subprocess.run(
                 compile_cmd,
                 check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
             )
@@ -553,8 +558,7 @@ def optional_cpp_decode_hash(
             decode_proc = subprocess.run(
                 [str(binary), "decode", str(mask_bin), str(raw_out)],
                 check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
             )

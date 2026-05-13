@@ -1,8 +1,8 @@
 #!/bin/bash
-# Remote lane script: substrate vq_vae first-anchor dispatch.
+# Remote lane script: substrate ff_nerv first-anchor dispatch.
 #
-# Trainer: experiments/train_substrate_vq_vae.py (WAVE-1-A).
-# Lane: lane_substrate_vq_vae_20260512
+# Trainer: experiments/train_substrate_ff_nerv.py (WAVE-3-C).
+# Lane: lane_substrate_ff_nerv_20260512
 #
 # Per CLAUDE.md "Forbidden re-implementing remote bootstrap inline", this
 # script DELEGATES bootstrap to scripts/remote_archive_only_eval.sh's
@@ -14,14 +14,12 @@
 # (which expects a pre-built archive.zip) from running.
 #
 # Council memo refs:
-#   - feedback_wave1_vq_vae_trainer_build_LANDED_20260512.md (this landing)
+#   - feedback_wave3_hnerv_3_trainers_LANDED_20260512.md
 #   - .omx/research/grand_council_fields_medal_substrate_design_20260512.md
-#     (council Phase 5 prediction: 0.17 [contest-CUDA])
-#   - van den Oord, Vinyals, Kavukcuoglu - "Neural Discrete Representation
-#     Learning" NeurIPS 2017 (architectural anchor)
+#     (council Phase 5 prediction: ~0.19 [contest-CUDA] MEDIUM target)
 #
 # Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_VQ_VAE_DONE marker) per the CLAUDE.md
+# the completion-log line (LANE_FF_NERV_DONE marker) per the CLAUDE.md
 # score-tag rule and preflight completion-tag check.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity - non-negotiable".
@@ -29,33 +27,33 @@ set -euo pipefail
 
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-}"
-LANE_ID="lane_substrate_vq_vae_20260512"
-TAG="${TAG:-substrate_vq_vae}"
-LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_vq_vae_results}"
+LANE_ID="lane_substrate_ff_nerv_20260512"
+TAG="${TAG:-substrate_ff_nerv}"
+LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_ff_nerv_results}"
 OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
-VQ_VAE_VIDEO_PATH="${VQ_VAE_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
-VQ_VAE_OUTPUT_DIR="${VQ_VAE_OUTPUT_DIR:-$OUTPUT_DIR}"
-VQ_VAE_EPOCHS="${VQ_VAE_EPOCHS:-2000}"
-VQ_VAE_BATCH_SIZE="${VQ_VAE_BATCH_SIZE:-16}"
-VQ_VAE_UPSTREAM_DIR="${VQ_VAE_UPSTREAM_DIR:-$WORKSPACE/upstream}"
-VQ_VAE_DEVICE="${VQ_VAE_DEVICE:-cuda}"
+FF_NERV_VIDEO_PATH="${FF_NERV_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
+FF_NERV_OUTPUT_DIR="${FF_NERV_OUTPUT_DIR:-$OUTPUT_DIR}"
+FF_NERV_EPOCHS="${FF_NERV_EPOCHS:-2000}"
+FF_NERV_BATCH_SIZE="${FF_NERV_BATCH_SIZE:-16}"
+FF_NERV_UPSTREAM_DIR="${FF_NERV_UPSTREAM_DIR:-$WORKSPACE/upstream}"
+FF_NERV_DEVICE="${FF_NERV_DEVICE:-cuda}"
 
-DISPATCH_INSTANCE_JOB_ID="${VQ_VAE_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
-DISPATCH_CLAIMS_PATH="${VQ_VAE_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
+DISPATCH_INSTANCE_JOB_ID="${FF_NERV_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
+DISPATCH_CLAIMS_PATH="${FF_NERV_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
 HEARTBEAT_PID=""
 
-log() { echo "[lane-vq-vae] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+log() { echo "[lane-ff-nerv] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
 
 # Stage 0: dispatch claim verification.
 if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
-    log "FATAL: VQ_VAE_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"
+    log "FATAL: FF_NERV_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"
     exit 21
 fi
 if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
@@ -128,19 +126,17 @@ prov = {
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
-    'video_path': '$VQ_VAE_VIDEO_PATH',
-    'upstream_dir': '$VQ_VAE_UPSTREAM_DIR',
-    'epochs': $VQ_VAE_EPOCHS,
-    'batch_size': $VQ_VAE_BATCH_SIZE,
-    'device': '$VQ_VAE_DEVICE',
-    # Council Phase 5 prediction: 0.17 [contest-CUDA].
+    'video_path': '$FF_NERV_VIDEO_PATH',
+    'upstream_dir': '$FF_NERV_UPSTREAM_DIR',
+    'epochs': $FF_NERV_EPOCHS,
+    'batch_size': $FF_NERV_BATCH_SIZE,
+    'device': '$FF_NERV_DEVICE',
+    # Council Phase 5 prediction: ~0.19 [contest-CUDA] MEDIUM target.
     # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
-    # + recipe substrate_vq_vae_modal_a100_dispatch.yaml::predicted_score_target.
+    # + recipe substrate_ff_nerv_modal_a100_dispatch.yaml::predicted_score_target.
     # Band convention: [LOW, HIGH] in score-space (lower = better contest score).
-    # Predicted target = 0.17; council 95% CI band [0.155, 0.185].
-    'predicted_band': [0.155, 0.185],
+    'predicted_band': [0.180, 0.200],
     'predicted_basis': 'grand_council_fields_medal_substrate_design_20260512',
-    'literature_anchor': 'van den Oord et al. NeurIPS 2017 - Neural Discrete Representation Learning',
 }
 import pathlib
 pathlib.Path('$PROVENANCE').write_text(json.dumps(prov, indent=2, sort_keys=True))
@@ -159,18 +155,16 @@ HEARTBEAT_PID=$!
 trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
 
 # Stage 4: invoke trainer.
-#
-# All 6 TIER_1_OPERATOR_REQUIRED_FLAGS are threaded explicitly per Catalog #151.
-log "stage_4_trainer_invoke_begin video=$VQ_VAE_VIDEO_PATH epochs=$VQ_VAE_EPOCHS device=$VQ_VAE_DEVICE batch_size=$VQ_VAE_BATCH_SIZE"
+log "stage_4_trainer_invoke_begin video=$FF_NERV_VIDEO_PATH epochs=$FF_NERV_EPOCHS batch=$FF_NERV_BATCH_SIZE device=$FF_NERV_DEVICE"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
-"$PYBIN" experiments/train_substrate_vq_vae.py \
-    --video-path "$VQ_VAE_VIDEO_PATH" \
-    --output-dir "$VQ_VAE_OUTPUT_DIR" \
-    --epochs "$VQ_VAE_EPOCHS" \
-    --batch-size "$VQ_VAE_BATCH_SIZE" \
-    --upstream-dir "$VQ_VAE_UPSTREAM_DIR" \
-    --device "$VQ_VAE_DEVICE" \
+"$PYBIN" experiments/train_substrate_ff_nerv.py \
+    --video-path "$FF_NERV_VIDEO_PATH" \
+    --output-dir "$FF_NERV_OUTPUT_DIR" \
+    --epochs "$FF_NERV_EPOCHS" \
+    --batch-size "$FF_NERV_BATCH_SIZE" \
+    --upstream-dir "$FF_NERV_UPSTREAM_DIR" \
+    --device "$FF_NERV_DEVICE" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e
@@ -182,7 +176,7 @@ AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
 ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
 if [ -f "$AUTH_EVAL_JSON" ]; then
     log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_VQ_VAE_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    log "LANE_FF_NERV_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
 else
     log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 12)"
 fi

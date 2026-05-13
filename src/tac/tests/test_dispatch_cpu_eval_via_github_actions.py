@@ -136,6 +136,14 @@ def test_gha_cpu_dispatch_argparse_exposes_auto_create_fork_pr_flags() -> None:
     assert "create_fork_pr_for_submission.py" in out
 
 
+def test_gha_cpu_release_asset_url_uses_public_browser_download_url() -> None:
+    """The release asset passed to eval.yml must be the public download URL."""
+    body = TOOL.read_text(encoding="utf-8")
+
+    assert ".browser_download_url" in body
+    assert 'select(.name == "archive.zip") | .url' not in body
+
+
 def test_gha_cpu_run_log_matching_rejects_concurrent_wrong_submission(monkeypatch) -> None:
     tool = _load_tool()
 

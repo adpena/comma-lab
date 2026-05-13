@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import ast
+import zipfile
 from pathlib import Path
 from typing import Any
-import zipfile
 
 import torch
 
@@ -282,6 +282,14 @@ def _runtime_consumer_ast_proof(text: str) -> dict[str, Any]:
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     assigned_strings.setdefault(target.id, set()).add(node.value.value)
+        # Catalog #168 fix 2026-05-12: also handle annotated string constants
+        # like `WAIVER_TOKEN: str = "..."`.
+        elif (isinstance(node, ast.AnnAssign)
+              and node.value is not None
+              and isinstance(node.value, ast.Constant)
+              and isinstance(node.value.value, str)
+              and isinstance(node.target, ast.Name)):
+            assigned_strings.setdefault(node.target.id, set()).add(node.value.value)
         if isinstance(node, ast.Call):
             func = node.func
             func_name = ""

@@ -17,7 +17,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INTAKE_DIR = (
     REPO_ROOT / "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex"
@@ -117,7 +116,7 @@ def _read_single_member_archive(archive: Path) -> tuple[dict[str, Any], bytes]:
             "stored": info.compress_type == zipfile.ZIP_STORED,
         }
     zip_container = {
-        "archive_bytes": int(len(archive_bytes)),
+        "archive_bytes": len(archive_bytes),
         "archive_path": _repo_rel(archive),
         "archive_sha256": _sha256_bytes(archive_bytes),
         "member_count": 1,
@@ -135,20 +134,34 @@ def _extract_replay_contract(replay_inflate: Path) -> dict[str, Any]:
         "fixed_region_bytes": None,
         "randmulti_headerless_specs": [],
     }
+    # Catalog #168 fix 2026-05-12: handle both bare Assign and AnnAssign
+    # forms so future PR vendor edits with annotated constants aren't missed.
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
             target = node.targets[0]
-            if isinstance(target, ast.Name) and target.id in {"l_bias", "l_region"}:
-                if isinstance(node.value, ast.Constant) and isinstance(node.value.value, int):
-                    key = "fixed_bias_bytes" if target.id == "l_bias" else "fixed_region_bytes"
-                    constants[key] = int(node.value.value)
-            if isinstance(target, ast.Name) and target.id == "specs_n":
-                try:
-                    constants["randmulti_headerless_specs"] = [
-                        [int(v) for v in row] for row in ast.literal_eval(node.value)
-                    ]
-                except (ValueError, SyntaxError):
-                    constants["randmulti_headerless_specs"] = []
+            value_node = node.value
+        elif (isinstance(node, ast.AnnAssign)
+              and node.value is not None
+              and isinstance(node.target, ast.Name)):
+            target = node.target
+            value_node = node.value
+        else:
+            continue
+        if (
+            isinstance(target, ast.Name)
+            and target.id in {"l_bias", "l_region"}
+            and isinstance(value_node, ast.Constant)
+            and isinstance(value_node.value, int)
+        ):
+            key = "fixed_bias_bytes" if target.id == "l_bias" else "fixed_region_bytes"
+            constants[key] = int(value_node.value)
+        if isinstance(target, ast.Name) and target.id == "specs_n":
+            try:
+                constants["randmulti_headerless_specs"] = [
+                    [int(v) for v in row] for row in ast.literal_eval(value_node)
+                ]
+            except (ValueError, SyntaxError):
+                constants["randmulti_headerless_specs"] = []
     constants["source_path"] = _repo_rel(replay_inflate)
     constants["source_sha256"] = _sha256_file(replay_inflate)
     return constants
@@ -161,7 +174,7 @@ def _u24(data: bytes, offset: int) -> int:
 def _segment_record(name: str, encoded: bytes, offset: int) -> dict[str, Any]:
     decoded, error = _brotli_decompress(encoded)
     record: dict[str, Any] = {
-        "encoded_bytes": int(len(encoded)),
+        "encoded_bytes": len(encoded),
         "encoded_offset": int(offset),
         "encoded_sha256": _sha256_bytes(encoded),
         "encoded_magic8_ascii": _magic_ascii(encoded),
@@ -184,7 +197,7 @@ def _segment_record(name: str, encoded: bytes, offset: int) -> dict[str, Any]:
             {
                 "brotli_decodable": True,
                 "decode_error": None,
-                "decoded_bytes": int(len(decoded)),
+                "decoded_bytes": len(decoded),
                 "decoded_magic8_ascii": _magic_ascii(decoded),
                 "decoded_magic8_hex": decoded[:8].hex(),
                 "decoded_sha256": _sha256_bytes(decoded),
@@ -233,7 +246,7 @@ def _parse_compact_bundle(raw: bytes, replay_contract: dict[str, Any]) -> dict[s
             "bias": int(fixed_bias),
             "region": int(fixed_region),
         },
-        "payload_bytes": int(len(raw)),
+        "payload_bytes": len(raw),
         "segment_total_bytes": int(total_segment_bytes),
         "segments": segments,
     }
@@ -273,7 +286,7 @@ def _parse_pose(decoded: bytes | None) -> dict[str, Any]:
             "available": True,
             "format": "P1D1_delta_varint",
             "valid": pos == len(decoded),
-            "decoded_bytes": int(len(decoded)),
+            "decoded_bytes": len(decoded),
             "dimension_count": int(count),
             "dimensions": [row["dimension"] for row in streams],
             "header_bytes": int(payload_start),
@@ -322,15 +335,15 @@ def _parse_postprocess(decoded: bytes | None) -> dict[str, Any]:
                     "max_choice": max(choices) if choices else None,
                     "nonzero_choices": int(sum(1 for value in choices if value != 0)),
                     "stage_id": stage_id,
-                    "unique_choice_count": int(len(counts)),
+                    "unique_choice_count": len(counts),
                     "valid_choice_range": None if defs is None else max(choices) < defs,
                 }
             )
     return {
         "available": True,
-        "decoded_bytes": int(len(decoded)),
+        "decoded_bytes": len(decoded),
         "format": "headerless_fixed_public_test" if valid_headerless else "unknown",
-        "stage_count": int(len(stages)),
+        "stage_count": len(stages),
         "stages": stages,
         "valid": bool(valid_headerless and all(row["valid_choice_range"] for row in stages)),
     }
@@ -377,7 +390,7 @@ def _parse_control_field(name: str, decoded: bytes | None) -> dict[str, Any]:
     magic = decoded[:3]
     record: dict[str, Any] = {
         "available": True,
-        "decoded_bytes": int(len(decoded)),
+        "decoded_bytes": len(decoded),
         "magic": magic.decode("ascii", errors="replace"),
         "name": name,
     }
@@ -385,10 +398,10 @@ def _parse_control_field(name: str, decoded: bytes | None) -> dict[str, Any]:
         choices = decoded[3:]
         record.update(
             {
-                "choice_count": int(len(choices)),
+                "choice_count": len(choices),
                 "format": "dense_or_delta_choice_array",
                 "nonzero_bytes": int(sum(1 for value in choices if value != 0)),
-                "unique_encoded_byte_count": int(len(set(choices))),
+                "unique_encoded_byte_count": len(set(choices)),
                 "valid_length_600": len(choices) == 600,
             }
         )
@@ -409,7 +422,7 @@ def _parse_randmulti(decoded: bytes | None, replay_contract: dict[str, Any]) -> 
     if decoded[:3] in {b"NM1", b"NM2"}:
         return {
             "available": True,
-            "decoded_bytes": int(len(decoded)),
+            "decoded_bytes": len(decoded),
             "format": decoded[:3].decode("ascii"),
             "headerless": False,
         }
@@ -457,9 +470,9 @@ def _parse_randmulti(decoded: bytes | None, replay_contract: dict[str, Any]) -> 
         )
     return {
         "available": True,
-        "decoded_bytes": int(len(decoded)),
+        "decoded_bytes": len(decoded),
         "format": "headerless_sparse_randmulti",
-        "group_count": int(len(groups)),
+        "group_count": len(groups),
         "groups": groups,
         "headerless": True,
         "parsed_bytes": int(pos),
@@ -648,9 +661,9 @@ def _parse_qh0_model(decoded: bytes | None) -> dict[str, Any]:
             )
     return {
         "available": True,
-        "covered_qconv_or_qembedding_count": int(len(conv_rows)),
-        "decoded_bytes": int(len(decoded)),
-        "dense_state_count": int(len(dense_rows)),
+        "covered_qconv_or_qembedding_count": len(conv_rows),
+        "decoded_bytes": len(decoded),
+        "dense_state_count": len(dense_rows),
         "format": decoded[:3].decode("ascii"),
         "hilo_split": bool(hilosplit),
         "parse_valid": bool(valid and pos == len(decoded)),

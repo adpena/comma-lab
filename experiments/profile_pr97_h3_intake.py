@@ -256,8 +256,16 @@ def parse_pose(blob: bytes) -> dict[str, Any]:
 
 def load_schema(schema_py: Path) -> list[tuple[str, str, tuple[int, ...]]]:
     tree = ast.parse(schema_py.read_text(encoding="utf-8"))
+    # Catalog #168 fix 2026-05-12: handle both `SCHEMA = [...]` (Assign) and
+    # `SCHEMA: list[...] = [...]` (AnnAssign) forms.
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(getattr(target, "id", None) == "SCHEMA" for target in node.targets):
+            value = ast.literal_eval(node.value)
+            return [(str(name), str(kind), tuple(int(x) for x in shape)) for name, kind, shape in value]
+        if (isinstance(node, ast.AnnAssign)
+                and node.value is not None
+                and isinstance(node.target, ast.Name)
+                and node.target.id == "SCHEMA"):
             value = ast.literal_eval(node.value)
             return [(str(name), str(kind), tuple(int(x) for x in shape)) for name, kind, shape in value]
     raise PR97ProfileError(f"SCHEMA assignment not found: {schema_py}")

@@ -20,15 +20,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from tac.qma9_range_mask_contract import (
-    PayloadSegment,
     QMA9_FIRST_ROW_SPECIALIZATION_MODES,
+    PayloadSegment,
     QMA9ContractError,
     QMA9Split,
     analyze_qma9_vertical_block_copy_opportunities,
@@ -49,7 +48,6 @@ from tac.qma9_range_mask_contract import (
     split_qma9_pr81_payload,
     trace_qma9_prefix,
 )
-
 
 TOOL = "experiments/profile_qma9_range_mask_bitstream.py"
 SCHEMA = "qma9_range_mask_bitstream_forensics_v1"
@@ -130,11 +128,21 @@ def parse_split_constants(path: Path) -> dict[str, int]:
 
     tree = ast.parse(path.read_text())
     env: dict[str, int] = {}
+    # Catalog #168 fix 2026-05-12: handle both bare Assign and AnnAssign forms.
     for stmt in tree.body:
-        if not isinstance(stmt, ast.Assign) or len(stmt.targets) != 1 or not isinstance(stmt.targets[0], ast.Name):
+        if (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
+                and isinstance(stmt.targets[0], ast.Name)):
+            target_name = stmt.targets[0].id
+            value_node = stmt.value
+        elif (isinstance(stmt, ast.AnnAssign)
+              and stmt.value is not None
+              and isinstance(stmt.target, ast.Name)):
+            target_name = stmt.target.id
+            value_node = stmt.value
+        else:
             continue
         try:
-            env[stmt.targets[0].id] = _eval_int_expr(stmt.value, env)
+            env[target_name] = _eval_int_expr(value_node, env)
         except ValueError:
             continue
 
@@ -217,7 +225,8 @@ def _split_qma9_public_payload(payload: bytes, constants: dict[str, int]) -> QMA
         model=payload[segments[1].offset:segments[1].offset + segments[1].size_bytes],
         pose=payload[segments[2].offset:segments[2].offset + segments[2].size_bytes],
         router=b"",
-        segments=segments + (
+        segments=(
+            *segments,
             PayloadSegment(
                 name="router_actions.3bit",
                 offset=base_bytes,
@@ -241,7 +250,7 @@ def _compile_cpp_profiler(source: Path, output_dir: Path) -> tuple[Path, list[st
         raise QMA9ContractError("no C++ compiler found on PATH")
     binary = output_dir / "qma9_range_mask_cpp_profiler"
     cmd = [compiler, "-O3", "-std=c++17", str(source), "-o", str(binary)]
-    proc = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
     if proc.returncode != 0:
         raise QMA9ContractError(f"C++ profiler compile failed: {proc.stderr[-2000:]}")
     return binary, cmd
@@ -256,8 +265,7 @@ def _run_cpp_profile(*, source: Path, qma9_path: Path, output_dir: Path, timeout
         proc = subprocess.run(
             run_cmd,
             check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             timeout=timeout_seconds,
         )

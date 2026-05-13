@@ -2,7 +2,7 @@
 
 PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive 2000-epoch
 sane_hnerv Modal A100 dispatches crashed rc=1 within 15s and 72s
-respectively — burned $0.30 + a harvest slot each. A 100-epoch ~$0.30
+respectively - burned $0.30 + a harvest slot each. A 100-epoch ~$0.30
 smoke would have caught the integration failure for the same cost.
 
 Catalog #167 refuses operator-authorize wrappers that fire a "full" canary

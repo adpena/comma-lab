@@ -13,12 +13,12 @@ The canonical sequence each wrapper executes is:
     2. Run a pre-flight required-input-files validation
        (``tools/validate_dispatch_required_inputs.py``) when the recipe
        declares ``required_input_files``
-    3. Show the operator confirmation banner (cost band, predicted Δ, risk,
+    3. Show the operator confirmation banner (cost band, predicted delta, risk,
        envelope status) and read y/N
     4. Acquire a lane claim via ``tools/claim_lane_dispatch.py claim`` per
        CLAUDE.md "CROSS-AGENT DISPATCH COORDINATION"
     5. Invoke the platform-specific dispatcher (Modal, Vast.ai, Lightning,
-       Kaggle, Azure, or GHA) wiring the env→CLI flag ladder from the
+       Kaggle, Azure, or GHA) wiring the env->CLI flag ladder from the
        recipe's ``env_overrides`` block
     6. Print the harvest / next-step instructions
 
@@ -102,9 +102,9 @@ def _python_bin() -> str:
 def _load_yaml(path: Path) -> dict[str, Any]:
     """Parse a recipe YAML file.
 
-    Per CLAUDE.md "Tooling — non-negotiable": prefer the venv-managed PyYAML;
+    Per CLAUDE.md "Tooling - non-negotiable": prefer the venv-managed PyYAML;
     fall back to a minimal hand-parser if PyYAML is unavailable (recipes are
-    intentionally simple — flat scalars + a few nested dicts/lists).
+    intentionally simple - flat scalars + a few nested dicts/lists).
     """
     try:
         import yaml  # type: ignore[import-untyped]
@@ -185,7 +185,7 @@ def _predict_cost_band(
                     confidence_tag=str(payload["confidence_tag"]),
                     source="posterior",
                 )
-            # p50 == 0 → cold-start bucket with no hand stub; use recipe fallback.
+            # p50 == 0 -> cold-start bucket with no hand stub; use recipe fallback.
             return CostBandPrediction(
                 p10_cost_usd=hand_calibrated_fallback_p50_usd * 0.5,
                 p50_cost_usd=hand_calibrated_fallback_p50_usd,
@@ -196,7 +196,7 @@ def _predict_cost_band(
             )
     except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError):
         pass
-    # predict() unavailable or errored — emit explicit hand-calibrated fallback.
+    # predict() unavailable or errored - emit explicit hand-calibrated fallback.
     return CostBandPrediction(
         p10_cost_usd=hand_calibrated_fallback_p50_usd * 0.5,
         p50_cost_usd=hand_calibrated_fallback_p50_usd,
@@ -207,7 +207,28 @@ def _predict_cost_band(
     )
 
 
-def _validate_required_input_files(trainer_path: str) -> None:
+def _required_input_flag_values_from_recipe(recipe: Recipe) -> list[str]:
+    """Return validator ``--flag-value`` args from recipe-required inputs."""
+
+    out: list[str] = []
+    raw = recipe.raw.get("required_input_files", []) or []
+    if not isinstance(raw, list):
+        return out
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        flag = str(entry.get("flag", "")).strip()
+        default_path = entry.get("default_path")
+        if flag and default_path:
+            out.append(f"{flag}={default_path}")
+    return out
+
+
+def _validate_required_input_files(
+    trainer_path: str,
+    *,
+    recipe: Recipe,
+) -> None:
     """Run ``tools/validate_dispatch_required_inputs.py`` per Catalog #152.
 
     Fails closed (non-zero exit) if any ``required_input_file=True`` flag
@@ -224,7 +245,16 @@ def _validate_required_input_files(trainer_path: str) -> None:
         )
         return
     result = subprocess.run(
-        [_python_bin(), str(validator), "--trainer", trainer_path],
+        [
+            _python_bin(),
+            str(validator),
+            "--trainer",
+            trainer_path,
+            *[
+                f"--flag-value={flag_value}"
+                for flag_value in _required_input_flag_values_from_recipe(recipe)
+            ],
+        ],
         cwd=str(REPO_ROOT),
     )
     if result.returncode != 0:
@@ -397,6 +427,38 @@ class Recipe:
         return str(v) if v else None
 
     @property
+    def dispatch_enabled(self) -> bool:
+        """Return whether this recipe is allowed to create provider work."""
+
+        return bool(self.raw.get("dispatch_enabled", True))
+
+    @property
+    def dispatch_blockers(self) -> list[str]:
+        """Return declared recipe blockers, normalized to strings."""
+
+        raw = self.raw.get("dispatch_blockers", []) or []
+        if isinstance(raw, str):
+            return [raw]
+        if isinstance(raw, list):
+            return [str(item) for item in raw]
+        return [str(raw)]
+
+    @property
+    def pre_promotion_blockers(self) -> list[str]:
+        """Return declared pre-promotion blockers, normalized to strings."""
+
+        raw = self.raw.get("pre_promotion_blockers", []) or []
+        if isinstance(raw, str):
+            return [raw]
+        if isinstance(raw, list):
+            return [str(item) for item in raw]
+        return [str(raw)]
+
+    @property
+    def defer_reason(self) -> str:
+        return str(self.raw.get("defer_reason", "")).strip()
+
+    @property
     def timeout_hours(self) -> float:
         return float(self.raw.get("timeout_hours", 4.0))
 
@@ -421,6 +483,34 @@ def _load_recipe(name: str) -> Recipe:
             )
     raw = _load_yaml(path)
     return Recipe(name=name, path=path, raw=raw)
+
+
+def _recipe_dispatch_refusal(recipe: Recipe) -> str | None:
+    """Return a fail-closed refusal reason for non-dispatchable recipes.
+
+    Recipes are the operator-facing source of truth for dispatchability. A
+    recipe that declares ``dispatch_enabled: false`` or still lists
+    ``pre_promotion_blockers`` must not reach confirmation, claim creation, or
+    provider dispatch. This is deliberately independent of provider-specific
+    preflights so deferred research recipes also fail before cost prediction or
+    provider setup can create misleading state.
+    """
+
+    if not recipe.dispatch_enabled:
+        details: list[str] = ["dispatch_enabled=false"]
+        if recipe.dispatch_blockers:
+            details.append("dispatch_blockers=" + ", ".join(recipe.dispatch_blockers))
+        if recipe.defer_reason:
+            details.append("defer_reason=" + recipe.defer_reason.splitlines()[0])
+        return "; ".join(details)
+    if recipe.pre_promotion_blockers:
+        return (
+            "pre_promotion_blockers still declared: "
+            + ", ".join(recipe.pre_promotion_blockers)
+            + ". Clear these in the recipe only after the required exact anchors "
+            "or custody artifacts land."
+        )
+    return None
 
 
 def _list_recipes() -> int:
@@ -460,7 +550,7 @@ def _print_banner(
     print("                           Source: tac.cost_band_calibration.predict()")
     print("                           Posterior: .omx/state/cost_band_posterior.jsonl")
     print(f"                           Confidence: {band.confidence_tag}")
-    print(f"  predicted Δ:             {recipe.predicted_delta}")
+    print(f"  predicted delta:             {recipe.predicted_delta}")
     print(f"  risk:                    {recipe.risk}")
     print(f"  envelope status:         {recipe.envelope_status}")
     if recipe.notes:
@@ -479,7 +569,7 @@ def _build_env_overrides(recipe: Recipe, instance_job_id: str) -> str:
     # correlate the dispatch claim with its INSTANCE_JOB_ID env var.
     if isinstance(raw_env, dict):
         for k, v in raw_env.items():
-            resolved = _resolve_env_var(v, v)
+            resolved = os.environ.get(str(k), _resolve_env_var(v, v))
             # Substitute ${INSTANCE_JOB_ID} sentinel if present.
             if isinstance(resolved, str) and "${INSTANCE_JOB_ID}" in resolved:
                 resolved = resolved.replace("${INSTANCE_JOB_ID}", instance_job_id)
@@ -491,6 +581,9 @@ def _dispatch_modal(
     recipe: Recipe,
     instance_job_id: str,
     env_overrides: str,
+    *,
+    timeout_hours_override: float | None = None,
+    cost_band_epochs_override: int | None = None,
 ) -> int:
     """Invoke ``.venv/bin/modal run --detach experiments/modal_train_lane.py``."""
     modal_cfg = recipe.raw.get("modal", {}) or {}
@@ -508,7 +601,7 @@ def _dispatch_modal(
     gpu = recipe.gpu if recipe.gpu and recipe.gpu != "none" else os.environ.get(
         "MODAL_GPU", "T4"
     )
-    timeout_hours = recipe.timeout_hours
+    timeout_hours = timeout_hours_override or recipe.timeout_hours
     cmd = [
         ".venv/bin/modal",
         "run",
@@ -528,8 +621,9 @@ def _dispatch_modal(
     # Optional cost-band hooks for the modal_train_lane wrapper.
     if modal_cfg.get("cost_band_trainer"):
         cmd.extend(["--cost-band-trainer", str(modal_cfg["cost_band_trainer"])])
-    if modal_cfg.get("cost_band_epochs"):
-        cmd.extend(["--cost-band-epochs", str(modal_cfg["cost_band_epochs"])])
+    cost_band_epochs = cost_band_epochs_override or modal_cfg.get("cost_band_epochs")
+    if cost_band_epochs:
+        cmd.extend(["--cost-band-epochs", str(cost_band_epochs)])
     if modal_cfg.get("cost_band_batch_size"):
         cmd.extend(
             ["--cost-band-batch-size", str(modal_cfg["cost_band_batch_size"])]
@@ -680,19 +774,31 @@ def _native_dispatch_preflight(recipe: Recipe) -> None:
             )
 
 
-def _run_dispatch(recipe: Recipe, instance_job_id: str) -> int:
+def _run_dispatch(
+    recipe: Recipe,
+    instance_job_id: str,
+    *,
+    timeout_hours_override: float | None = None,
+    cost_band_epochs_override: int | None = None,
+) -> int:
     """Route to the appropriate platform dispatcher."""
     env_overrides = _build_env_overrides(recipe, instance_job_id)
     platform = recipe.platform
     if platform == "modal":
-        return _dispatch_modal(recipe, instance_job_id, env_overrides)
+        return _dispatch_modal(
+            recipe,
+            instance_job_id,
+            env_overrides,
+            timeout_hours_override=timeout_hours_override,
+            cost_band_epochs_override=cost_band_epochs_override,
+        )
     if platform in {"vastai", "vast"}:
         return _dispatch_vastai(recipe, instance_job_id, env_overrides)
     if platform == "local":
         return _dispatch_local(recipe, instance_job_id, env_overrides)
     if platform in {"none", "kaggle", "gha", "lightning", "azure"}:
         # These platforms have bespoke dispatch flows (gh release create,
-        # kaggle kernels push, etc.) — for now, the legacy .sh shim handles
+        # kaggle kernels push, etc.) - for now, the legacy .sh shim handles
         # them. A future revision will add native handlers.
         return _dispatch_noop(recipe, instance_job_id, env_overrides)
     raise SystemExit(
@@ -740,6 +846,29 @@ def main(argv: list[str] | None = None) -> int:
         default="claude:operator_authorize",
         help="Agent string for the lane-claim ledger",
     )
+    parser.add_argument(
+        "--label-suffix",
+        default="",
+        help=(
+            "Optional suffix appended to the generated instance_job_id. Used by "
+            "smoke-before-full wrappers to keep smoke and full runs distinct."
+        ),
+    )
+    parser.add_argument(
+        "--timeout-hours-override",
+        type=float,
+        default=None,
+        help="Override recipe timeout_hours for this dispatch.",
+    )
+    parser.add_argument(
+        "--cost-band-epochs-override",
+        type=int,
+        default=None,
+        help=(
+            "Override cost_band.epochs and Modal cost-band metadata for this "
+            "dispatch. Used by smoke-before-full wrappers."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.list:
@@ -750,12 +879,28 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     recipe = _load_recipe(args.recipe)
+    dispatch_refusal = _recipe_dispatch_refusal(recipe)
 
     # Cost-band prediction.
     cost_cfg = recipe.raw.get("cost_band", {}) or {}
     platform_key = str(_resolve_env_var(cost_cfg.get("platform_key"), recipe.platform))
     gpu_key = str(_resolve_env_var(cost_cfg.get("gpu_key"), recipe.gpu or "T4"))
-    epochs = int(cost_cfg.get("epochs", 1000))
+    raw_epochs = (
+        args.cost_band_epochs_override
+        if args.cost_band_epochs_override is not None
+        else cost_cfg.get("epochs", 1000)
+    )
+    try:
+        epochs = int(raw_epochs)
+    except (TypeError, ValueError):
+        if dispatch_refusal:
+            epochs = 0
+        else:
+            raise SystemExit(
+                "[operator-authorize] FATAL: dispatchable recipe has "
+                f"non-numeric cost_band.epochs={raw_epochs!r}; fix the recipe "
+                "before operator authorization"
+            ) from None
     all_flags_on = bool(cost_cfg.get("all_flags_on", True))
     fallback_p50 = float(cost_cfg.get("hand_calibrated_fallback_p50_usd", 1.00))
     band = _predict_cost_band(
@@ -766,7 +911,22 @@ def main(argv: list[str] | None = None) -> int:
         hand_calibrated_fallback_p50_usd=fallback_p50,
     )
 
-    # Required-input-files pre-flight (Catalog #152).
+    # Print banner.
+    _print_banner(recipe, band)
+
+    if args.dry_run:
+        if dispatch_refusal:
+            print(f"[operator-authorize] --dry-run; would refuse: {dispatch_refusal}")
+            return 0
+    elif dispatch_refusal:
+        raise SystemExit(
+            "[operator-authorize] FATAL: recipe is not dispatchable: "
+            f"{dispatch_refusal}"
+        )
+
+    # Required-input-files pre-flight (Catalog #152). Deferred recipes return
+    # above so their explicit dispatch blocker is not hidden behind deeper
+    # trainer/env validation.
     required_files = recipe.raw.get("required_input_files", []) or []
     if required_files:
         # Recipe declares a trainer path under modal.cost_band_trainer or
@@ -776,16 +936,13 @@ def main(argv: list[str] | None = None) -> int:
             or recipe.raw.get("required_input_files_trainer")
         )
         if trainer:
-            _validate_required_input_files(str(trainer))
+            _validate_required_input_files(str(trainer), recipe=recipe)
         else:
             print(
                 "[operator-authorize] WARN: recipe declares required_input_files but "
-                "no trainer path — skipping local validation",
+                "no trainer path - skipping local validation",
                 file=sys.stderr,
             )
-
-    # Print banner.
-    _print_banner(recipe, band)
 
     if args.dry_run:
         print("[operator-authorize] --dry-run; no confirmation prompt, no dispatch")
@@ -794,9 +951,9 @@ def main(argv: list[str] | None = None) -> int:
     # Operator confirmation.
     if not _confirm(
         f"operator confirmation: proceed with {recipe.name} dispatch "
-        f"(p50≈${band.p50_cost_usd:.2f}, {band.confidence_tag})?"
+        f"(p50approximately${band.p50_cost_usd:.2f}, {band.confidence_tag})?"
     ):
-        print("[operator-authorize] aborted — no dispatch fired")
+        print("[operator-authorize] aborted - no dispatch fired")
         return 0
 
     native_dispatch = _platform_has_native_dispatch(recipe.platform)
@@ -805,7 +962,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Lane claim. Do not create an active claim for recipe-only/no-op platforms:
     # their legacy shims still own the real action and should own any claim.
-    instance_job_id = f"{recipe.name}_{_resolve_utc_label()}"
+    instance_job_id = f"{recipe.name}_{_resolve_utc_label()}{args.label_suffix}"
     claim_created = False
     if not args.no_claim and native_dispatch:
         notes = (
@@ -830,7 +987,12 @@ def main(argv: list[str] | None = None) -> int:
 
     # Dispatch.
     try:
-        rc = _run_dispatch(recipe, instance_job_id)
+        rc = _run_dispatch(
+            recipe,
+            instance_job_id,
+            timeout_hours_override=args.timeout_hours_override,
+            cost_band_epochs_override=args.cost_band_epochs_override,
+        )
     except SystemExit as exc:
         code = exc.code if isinstance(exc.code, int) else 1
         if claim_created:

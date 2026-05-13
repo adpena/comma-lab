@@ -14,9 +14,9 @@
 # (which expects a pre-built archive.zip) from running.
 #
 # COMPOSITION RISK NOTE:
-#   The hybrid lane is a COMPOSITE substrate (α renderer + β-style sparse
+#   The hybrid lane is a COMPOSITE substrate (alpha renderer + beta-style sparse
 #   residual) per CLAUDE.md "Substrate vs codec composition meta-pattern".
-#   The recipe carries pre_promotion_blockers requiring α and β each have
+#   The recipe carries pre_promotion_blockers requiring alpha and beta each have
 #   a verified [contest-CUDA] anchor BEFORE this dispatches. The
 #   operator_authorize.py wrapper enforces those blockers; this remote
 #   driver assumes the wrapper has cleared them.
@@ -32,7 +32,7 @@
 # the completion-log line (LANE_HYBRID_RES_DONE marker) per the CLAUDE.md
 # score-tag rule and preflight completion-tag check.
 #
-# Heartbeat: every 5 min per CLAUDE.md "Remote code parity — non-negotiable".
+# Heartbeat: every 5 min per CLAUDE.md "Remote code parity - non-negotiable".
 set -euo pipefail
 
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
@@ -43,16 +43,16 @@ LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_hybrid_renderer_residual_results}"
 OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
-# Trainer flags — Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
+# Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 HYBRID_RES_VIDEO_PATH="${HYBRID_RES_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 HYBRID_RES_OUTPUT_DIR="${HYBRID_RES_OUTPUT_DIR:-$OUTPUT_DIR}"
 HYBRID_RES_EPOCHS="${HYBRID_RES_EPOCHS:-2000}"
 HYBRID_RES_UPSTREAM_DIR="${HYBRID_RES_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 HYBRID_RES_DEVICE="${HYBRID_RES_DEVICE:-cuda}"
 
-# Composition-specific env (γ-only). Both default to "do nothing"; the
-# wrapper / operator decides whether to freeze α or warm-start from a
-# pre-trained α checkpoint.
+# Composition-specific env (gamma-only). Both default to "do nothing"; the
+# wrapper / operator decides whether to freeze alpha or warm-start from a
+# pre-trained alpha checkpoint.
 HYBRID_RES_FREEZE_ALPHA="${HYBRID_RES_FREEZE_ALPHA:-}"
 HYBRID_RES_ALPHA_PRETRAINED_CHECKPOINT="${HYBRID_RES_ALPHA_PRETRAINED_CHECKPOINT:-}"
 
@@ -99,7 +99,7 @@ if [ -x "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
     }
     log "stage_0b_nvdec_probe_done"
 else
-    log "WARN: scripts/probe_nvdec.sh missing — skipping NVDEC early-fail probe"
+    log "WARN: scripts/probe_nvdec.sh missing - skipping NVDEC early-fail probe"
 fi
 
 # Stage 1: bootstrap runtime deps (canonical, per CLAUDE.md).
@@ -157,7 +157,7 @@ prov = {
     # predicted_band per council Phase 5 substrate design memo.
     # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
     # + recipe substrate_hybrid_renderer_residual_modal_a100_dispatch.yaml::predicted_score_target
-    # = 0.17 HIGH-target with -0.025 vs α standalone.
+    # = 0.17 HIGH-target with -0.025 vs alpha standalone.
     # Band convention: [LOW, HIGH] in score-space (lower = better contest score).
     'predicted_band': [0.155, 0.185],
     'predicted_basis': 'grand_council_fields_medal_substrate_design_20260512',
@@ -196,7 +196,7 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # based on env-var presence so the trainer's defaults (no freeze, no warm
 # start) hold unless the operator explicitly sets them.
 #
-# Per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval — BOTH CPU
+# Per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval - BOTH CPU
 # AND CUDA": this is a FIRST-ANCHOR research dispatch on CUDA only; the
 # resulting tag is [contest-CUDA] single-axis (CPU axis required separately
 # before promotion-grade status).

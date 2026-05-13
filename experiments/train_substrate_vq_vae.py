@@ -3,7 +3,7 @@
 Operator-callable training script per the WAVE-1-A operator-orchestrated
 parallel deployment (2026-05-12). Mirrors the canonical sane_hnerv + siren
 trainer scaffold and binds the 13 HNeRV parity-discipline lessons to the
-VQ-VAE persistent-codebook substrate (van den Oord, Vinyals, Kavukcuoglu —
+VQ-VAE persistent-codebook substrate (van den Oord, Vinyals, Kavukcuoglu -
 "Neural Discrete Representation Learning", NeurIPS 2017).
 
 Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
@@ -11,7 +11,7 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 - Train against ``upstream/videos/0.mkv`` decoded via pyav (NOT synthetic data;
   synthetic batches are FORBIDDEN outside ``--smoke`` per Catalog #114).
 - Patch upstream ``rgb_to_yuv6`` via ``patch_upstream_yuv6_globally`` BEFORE
-  scorer construction (PR #95/#106 contract — see CLAUDE.md "eval_roundtrip —
+  scorer construction (PR #95/#106 contract - see CLAUDE.md "eval_roundtrip -
   NON-NEGOTIABLE" section).
 - ``load_differentiable_scorers`` for SegNet/PoseNet (no scorer load at
   inflate; only at training).
@@ -19,10 +19,10 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
   (eval_roundtrip=True default; never False per Catalog #5).
 - ``tac.training.EMA(decay=0.997)`` weight EMA update after every
   ``optimizer.step``; inference checkpoint = EMA shadow, NEVER live weights
-  (CLAUDE.md "EMA — NON-NEGOTIABLE").
+  (CLAUDE.md "EMA - NON-NEGOTIABLE").
 - Codebook EMA decay 0.99 (van den Oord persistent N_c/m_c form per CLAUDE.md
-  "EMA — non-negotiable" codebook exception); applied via the substrate's
-  ``_quantize`` STE path — codebook entries adapt faster than weights by
+  "EMA - non-negotiable" codebook exception); applied via the substrate's
+  ``_quantize`` STE path - codebook entries adapt faster than weights by
   design.
 - Score-domain Lagrangian
   ``alpha*B(theta)/N + beta*d_seg + gamma*sqrt(d_pose) + lambda*commitment``
@@ -89,10 +89,9 @@ import sys
 import time
 import zipfile
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -115,7 +114,7 @@ CONTEST_NORMALIZER = 37_545_489.0  # contest evaluate.py N constant
 
 
 # ---------------------------------------------------------------------------
-# Catalog #151 manifest — every flag below must be threaded by any operator
+# Catalog #151 manifest - every flag below must be threaded by any operator
 # wrapper that subprocess-invokes this trainer. Schema mirrors the canonical
 # sane_hnerv / siren manifests per council R1-R7 (see CLAUDE.md catalog #151).
 # ---------------------------------------------------------------------------
@@ -131,7 +130,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "requires": (),
         "required_input_file": True,
         "generator_command": (
-            "contest-pinned upstream snapshot — never regenerated locally"
+            "contest-pinned upstream snapshot - never regenerated locally"
         ),
         "rationale_audit": (
             ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
@@ -323,7 +322,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Operating-point-aware pose-marginal multiplier. At PR106-r2 "
             "(pose_avg ~ 3.4e-5) the pose marginal is 2.71x SegNet's (CLAUDE.md "
-            "'SegNet vs PoseNet — operating-point dependent')."
+            "'SegNet vs PoseNet - operating-point dependent')."
         ),
     )
     p.add_argument(
@@ -544,7 +543,7 @@ def _write_runtime(submission_dir: Path) -> None:
     * No runtime network/dep fetches
     * No scorer code imports in ``inflate.py``
     * Per-video loop in ``inflate.py``
-    * ``inflate.py`` ≤ 200 LOC (substrate-engineering waiver per HNeRV
+    * ``inflate.py`` <= 200 LOC (substrate-engineering waiver per HNeRV
       parity lesson L4); the substrate's own inflate runtime is ~94 LOC.
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
@@ -636,7 +635,7 @@ def _build_archive_zip(
 # ---------------------------------------------------------------------------
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -682,7 +681,7 @@ def _device_or_die(name: str, *, smoke: bool):
         if not smoke:
             raise SystemExit(
                 "[vq_vae] --device cpu is permitted only with --smoke per "
-                "CLAUDE.md 'MPS auth eval is NOISE' + 'EMA — non-negotiable' "
+                "CLAUDE.md 'MPS auth eval is NOISE' + 'EMA - non-negotiable' "
                 "+ full-training-needs-CUDA convention. Use --device cuda for "
                 "promotion-grade training."
             )
@@ -754,7 +753,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full training entry point — requires CUDA + score-aware scorers."""
+    """Full training entry point - requires CUDA + score-aware scorers."""
     import torch
 
     from tac.differentiable_eval_roundtrip import (
@@ -961,7 +960,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 if val_lag < best_val_lag and math.isfinite(val_lag):
                     best_val_lag = val_lag
                     best_epoch = epoch
-                    # Save EMA shadow (NOT live weights) — CLAUDE.md EMA rule
+                    # Save EMA shadow (NOT live weights) - CLAUDE.md EMA rule
                     ema_state = ema.state_dict()
                     torch.save(
                         {

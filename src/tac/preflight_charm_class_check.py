@@ -78,7 +78,8 @@ def _walk_class_methods_for_context_call(class_node: ast.ClassDef) -> bool:
 
 
 def _walk_class_init_for_context_attr(class_node: ast.ClassDef) -> bool:
-    """Return True if __init__ assigns self.context = SomeNet(...)."""
+    """Return True if __init__ assigns self.context = SomeNet(...) or
+    self.context: Module = SomeNet(...) (Catalog #168 fix 2026-05-12)."""
     for method in class_node.body:
         if isinstance(method, ast.FunctionDef) and method.name == "__init__":
             for node in ast.walk(method):
@@ -95,6 +96,19 @@ def _walk_class_init_for_context_attr(class_node: ast.ClassDef) -> bool:
                             )
                         ):
                             return True
+                elif isinstance(node, ast.AnnAssign):
+                    target = node.target
+                    if (
+                        isinstance(target, ast.Attribute)
+                        and isinstance(target.value, ast.Name)
+                        and target.value.id == "self"
+                        and (
+                            target.attr == "context"
+                            or "context" in target.attr.lower()
+                            or "ar_predictor" in target.attr.lower()
+                        )
+                    ):
+                        return True
     return False
 
 

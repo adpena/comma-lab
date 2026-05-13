@@ -1,0 +1,125 @@
+schema_version: 1
+name: scpp_stage1_modal_a100_dispatch
+lane_id: lane_scpp_stage1_modal_a100_full
+summary: SC++ Stage 1 anchor production dispatch on Modal A100 (full-training first contest-CUDA empirical anchor).
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 100
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 8.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_delta: "-0.005 to -0.020 [predicted; SC++ block-FP Stage 1 production; HNeRV parity discipline lesson 7]"
+predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md + lane_self_compression_scpp_full_trainer L1 evidence"
+
+risk: |
+  Stage 1 production-hardened first-anchor dispatch. SC++ family had canonical
+  0.38 archive anchor (Selfcomp/Quantizr-faithful pre-Phase-2). This Stage 1
+  anchor is the first contest-CUDA empirical anchor for the production-hardened
+  composition pattern (block-FP self-compression base; KL distill + Hessian-
+  block-FP composition layers added in Stage 2-5 follow-up dispatches).
+
+  Substrate engineering lane (>350 LOC budget OK once per architecture class
+  per CLAUDE.md HNeRV parity discipline lesson 7).
+
+  Composition risk: Stage 1 is ANCHOR ONLY (no KL distill, no Hessian layer).
+  Stage 1 establishes block-FP weight self-compression baseline that subsequent
+  stages compose against. Falsification risk if Stage 1 anchor underperforms;
+  reactivation criteria documented at lane_self_compression_scpp_full_trainer.
+
+envelope_status: "FITS $20 envelope at p50 fallback ($8 hand-calibrated)"
+
+remote_driver: scripts/remote_lane_scpp_stage1.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_scpp_stage1.sh
+  cost_band_trainer: experiments/train_scpp_self_compression.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_scpp_self_compression.py
+
+env_overrides:
+  SCPP_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SCPP_ALLOW_SCORE_DOMAIN_TRAINING: "1"
+  SCPP_ALLOW_REMOTE_SCAFFOLD_SMOKE: "0"
+  SCPP_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  SCPP_OUTPUT_DIR: /workspace/pact/lane_scpp_stage1_results/output
+  SCPP_STAGE_1_EPOCHS: "100"
+  SCPP_DEVICE: cuda
+  SCPP_TARGET_ARCHIVE_BYTES: "180000"
+  SCPP_SEED: "42"
+  SCPP_LATENT_DIM: "32"
+  SCPP_BASE_CHANNELS: "32"
+  SCPP_N_PAIRS: "600"
+  SCPP_RUN_CONTEST_CUDA_AUTH_EVAL: "0"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_scpp_stage1.sh (canonical remote driver; lands at WAVE-B + sister 5096c246)
+  - experiments/train_scpp_self_compression.py (5-stage trainer; Stage 1 anchor entry point)
+  - src/tac/scpp_substrate.py (SCPPSubstrate architecture)
+  - src/tac/hessian_block_fp.py (Hessian water-filling bit allocator; Stage 5 composition layer)
+  - src/tac/kl_pose_distill.py (Hinton T=2.0 KL distillation; Stage 2 composition layer)
+  - upstream/videos/0.mkv (contest-pinned video; Catalog #152 required-input validation)
+  - tools/claim_lane_dispatch.py (lane-claim helper; remote-driver Stage 0 verification)
+  - tools/validate_dispatch_required_inputs.py (Catalog #152 pre-dispatch existence check)
+  - .omx/state/active_lane_dispatch_claims.md (dispatch-claims ledger; copied to remote)
+
+pre_promotion_blockers:
+  - scpp_first_anchor_required (Stage 1 must complete + emit archive before any composition-stage promotion)
+  - cuda_axis_only_first_anchor_acceptable (CPU axis required separately before promotion-grade per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA")
+  - composition_layer_evaluation_deferred (Stages 2-5 KL distill + Hessian-block-FP + MDL-FP4 TTO require separate dispatches; Stage 1 ANCHOR ONLY in this recipe)
+
+literature_anchor: |
+  - Selfcomp PR #56 (block-FP weight self-compression; canonical 0.38 archive)
+  - Quantizr 0.33 architecture (88K-param FiLM-conditioned depthwise CNN; FP4+Brotli; KL distill T=2.0)
+  - Hinton/Vinyals/Dean 2014 (knowledge distillation; T=2.0 default per Quantizr-faithful)
+  - Hessian-block-FP composition (CLAUDE.md "Selfcomp's specific contributions" + Boyd ADMM water-filling)
+  - HNeRV parity discipline lesson 7 (substrate engineering >350 LOC budget OK once per architecture class)
+
+substrate_tradition: TRADITION_1
+lane_class: substrate_engineering
+
+notes: |
+  Per operator directive Wave 5 ITEM 2 (orchestrator queue): SC++ Stage 1
+  Modal A100 production dispatch infrastructure. Sister of T4-smoke recipe
+  (scpp_stage1_anchor_dispatch.yaml; 3-epoch smoke for ~$3) — this A100
+  variant is the FULL Stage 1 anchor (100 epochs for ~$8) producing the
+  first contest-CUDA empirical anchor.
+
+  Composition pattern (Stage 1 = anchor, then sister recipes for Stage 2-5):
+    Stage 1 (this recipe): full-precision weights, score-domain Lagrangian
+    Stage 2 (TBD): + Hinton T=2.0 KL distillation on SegNet logits
+    Stage 3 (TBD): + joint latent + decoder co-training with eval-roundtrip
+    Stage 4 (TBD): + FakeQuantFP4 + LSQ-learnable step size
+    Stage 5 (TBD): + MDL/FP4 TTO with rate-distortion Lagrangian
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": ``modal_train_lane.py``
+  uses ``.spawn()``; harvest within 24h via ``tools/harvest_modal_calls.py``
+  or ``experiments/modal_recover_lane.py``.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE": Stage 1 dispatch produces training
+  artifacts only. Exact contest-CUDA auth eval is a SEPARATE claimed dispatch
+  via the canonical ``experiments/contest_auth_eval.py`` path on the byte-
+  closed archive at ``submissions/scpp_substrate/inflate.sh`` consumption.
+
+  W/I/A I-2: cost-band sourced from ``tac.cost_band_calibration.predict()``
+  at ``.omx/state/cost_band_posterior.jsonl``. Hand-calibrated fallback $8.00
+  (Modal A100 100-epoch full Stage 1 with all flags on).
+
+  Cross-ref:
+    feedback_wave_b_substrate_ranking_sweep_DEFERRED_pending_trainer_recipe_balance_fixes_20260512.md
+    feedback_category_a_b_operator_authorize_execution_landed_20260512.md
+    feedback_modal_strategy_reevaluation_post_tier1_engineering_20260512.md
+    project_lane_self_compression_scpp_substrate_landed_*.md

@@ -153,20 +153,32 @@ def extract_tier1_flags(trainer_source_path: Path) -> dict[str, dict[str, Any]]:
     if the constant is not found.
     """
     tree = ast.parse(trainer_source_path.read_text(encoding="utf-8"))
+    # META-CATALOG-152-FIX 2026-05-12: substrate trainers declare the
+    # manifest as `TIER_1: dict[...] = {...}` (AnnAssign), not `TIER_1 = {...}`
+    # (Assign). The previous Assign-only walk silently returned KeyError on
+    # every substrate trainer in the canvas. Catalog #168 enforces this
+    # bug class extinction repo-wide.
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
+        if isinstance(node, ast.Assign):
+            target_iter = list(node.targets)
+            value_node = node.value
+        elif (isinstance(node, ast.AnnAssign)
+              and node.value is not None):
+            target_iter = [node.target]
+            value_node = node.value
+        else:
             continue
-        for target in node.targets:
+        for target in target_iter:
             if isinstance(target, ast.Name) and target.id == "TIER_1_OPERATOR_REQUIRED_FLAGS":
                 try:
-                    return ast.literal_eval(node.value)
+                    return ast.literal_eval(value_node)
                 except (ValueError, SyntaxError):
                     # Fall through; literal_eval rejects tuples-with-names.
                     # In that case extract the keys via AST inspection.
                     keys: dict[str, dict[str, Any]] = {}
-                    if isinstance(node.value, ast.Dict):
+                    if isinstance(value_node, ast.Dict):
                         for k_node, v_node in zip(
-                            node.value.keys, node.value.values, strict=True
+                            value_node.keys, value_node.values, strict=True
                         ):
                             if isinstance(k_node, ast.Constant) and isinstance(v_node, ast.Dict):
                                 entry: dict[str, Any] = {}

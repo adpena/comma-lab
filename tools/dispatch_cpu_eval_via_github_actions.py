@@ -352,7 +352,7 @@ def create_release_with_asset(
             "--json",
             "assets",
             "--jq",
-            ".assets[] | select(.name == \"archive.zip\") | .url",
+            ".assets[] | select(.name == \"archive.zip\") | .browser_download_url",
         ]
     )
     if asset_q.returncode != 0 or not asset_q.stdout.strip():

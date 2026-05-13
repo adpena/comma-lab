@@ -172,10 +172,15 @@ def _compress_contract(path: Path) -> dict[str, Any]:
 def _sidecar_contract(path: Path) -> dict[str, Any]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     delta_scale: float | None = None
+    # Catalog #168 fix 2026-05-12: handle both `DELTA_SCALE = 0.5` (Assign)
+    # and `DELTA_SCALE: float = 0.5` (AnnAssign) module-level constants.
     for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
+        if (isinstance(node, ast.Assign) and any(
             isinstance(target, ast.Name) and target.id == "DELTA_SCALE" for target in node.targets
-        ):
+        )) or (isinstance(node, ast.AnnAssign)
+              and node.value is not None
+              and isinstance(node.target, ast.Name)
+              and node.target.id == "DELTA_SCALE"):
             delta_scale = _literal_float(node.value)
     return {
         "path": repo_relative(path, REPO_ROOT),

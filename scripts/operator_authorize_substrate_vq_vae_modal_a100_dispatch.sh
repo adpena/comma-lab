@@ -1,16 +1,18 @@
 #!/bin/bash
-# Thin shim: delegates to the canonical operator-authorize entry point.
+# Thin shim: delegates to the canonical smoke-before-full entry point.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_vq_vae_modal_a100_dispatch.yaml``
 #
-# Per simplification audit `a2a901c4f43d66a74` (operator approved 2026-05-12)
-# + Catalog #162 ``check_operator_authorize_canonical_use``.
+# Per Catalog #167, this wrapper fires a short Modal smoke through
+# tools/run_modal_smoke_before_full.py before any full canary.
 #
 # Env-var overrides honored by the canonical entry point:
 #   MODAL_GPU=T4|A10G|A100|H100  (default A100 per operator directive 2026-05-12)
 #   VQ_VAE_EPOCHS=2000           (council default; full training)
 #   VQ_VAE_BATCH_SIZE=16         (council default for VQ-VAE substrate)
-#   MODAL_TIMEOUT_HOURS=4.0      (Modal hard-kill wall-clock)
+#   MODAL_TIMEOUT_HOURS=4.0      (full Modal hard-kill wall-clock)
+#   VQ_VAE_SMOKE_EPOCHS=100      (smoke epoch override)
+#   VQ_VAE_SMOKE_GPU=T4          (smoke GPU class)
 #
 # Lane: lane_wave1_vq_vae_trainer_build_20260512
 # Cross-ref: feedback_wave1_vq_vae_trainer_build_LANDED_20260512.md
@@ -20,7 +22,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-exec .venv/bin/python tools/operator_authorize.py \
+SMOKE_ARGS=()
+if [ "${VQ_VAE_SMOKE_ONLY:-0}" = "1" ]; then
+    SMOKE_ARGS+=(--smoke-only)
+fi
+if [ "${VQ_VAE_FULL_ONLY:-0}" = "1" ]; then
+    SMOKE_ARGS+=(--full-only)
+fi
+
+exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --recipe substrate_vq_vae_modal_a100_dispatch \
-    --agent "claude:operator_authorize_substrate_vq_vae_modal_a100_dispatch" \
+    --smoke-epochs "${VQ_VAE_SMOKE_EPOCHS:-100}" \
+    --smoke-gpu "${VQ_VAE_SMOKE_GPU:-T4}" \
+    --smoke-timeout-hours "${VQ_VAE_SMOKE_TIMEOUT_HOURS:-1.0}" \
+    --operator-handle "claude:operator_authorize_substrate_vq_vae_modal_a100_dispatch" \
+    "${SMOKE_ARGS[@]}" \
     "$@"

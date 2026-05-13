@@ -16,22 +16,22 @@ cost_band:
 predicted_score_target: 0.17
 predicted_delta: "-0.023 vs PR101 0.193 [predicted; council Phase 5]"
 predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md#vq_vae"
-literature_anchor: "van den Oord, Vinyals, Kavukcuoglu — 'Neural Discrete Representation Learning' NeurIPS 2017"
+literature_anchor: "van den Oord, Vinyals, Kavukcuoglu - 'Neural Discrete Representation Learning' NeurIPS 2017"
 council_phase_5_prediction: 0.17
 
 risk: |
   WAVE-1-A HIGH-target dispatch on Modal A100. VQ-VAE pays log2(K) bits per
   spatial cell rather than 16 bits per float-latent, which is the discrete
   counterpart to cool_chic's continuous-AR latents. Architectural risks:
-  (a) codebook COLLAPSE — too few codes get used; van den Oord 2017 reports
+  (a) codebook COLLAPSE - too few codes get used; van den Oord 2017 reports
       this is the dominant failure mode; mitigated via persistent EMA codebook
       (decay=0.99) inside _quantize STE path; per-batch commitment loss
       (weight=0.25) pulls encoder output toward chosen codebook entries.
-  (b) GRADIENT INTERRUPTION at quantizer — the straight-through estimator
+  (b) GRADIENT INTERRUPTION at quantizer - the straight-through estimator
       (Bengio 2013) bypasses the argmin; deeper substrates can suffer from
       bias near the codebook boundary; council default decoder_hidden=24 keeps
       the post-quantizer decoder simple enough that STE bias stays bounded.
-  (c) CODEBOOK LR sensitivity — cosine annealing on weights, but codebook
+  (c) CODEBOOK LR sensitivity - cosine annealing on weights, but codebook
       uses an EMA buffer so it does not see the LR schedule; this is the van
       den Oord prescription and has been stable in our smoke tests.
   Trainer _full_main wires 16 stages including auth eval at stage 12.
@@ -81,7 +81,7 @@ notes: |
       per-pair index bytes  = 48 * 64 * 2 frames * 9 bits / 8 = 6912 B
       codebook bytes        = 512 * 8 * 2 (fp16)             = 8192 B
       decoder bytes         = ~10K params * 2 (fp16)         = ~20000 B
-      total per video       ≈ 35K B (ignoring brotli savings)
+      total per video       approximately 35K B (ignoring brotli savings)
     By comparison sane_hnerv carries continuous fp16 latents at 28 dim per
     pair * 600 pairs * 2 = 33600 B for latents alone. VQ-VAE compresses the
     SAME information through a much smaller per-cell bit budget, freeing
@@ -92,7 +92,7 @@ notes: |
   the substrate's _quantize STE path; the trainer's tac.training.EMA(0.997)
   applies to ENCODER + DECODER + CODEBOOK weight tensors, while van den Oord's
   faster-decay 0.99 applies INSIDE the codebook update via the persistent
-  N_c / m_c buffers (CLAUDE.md "EMA — non-negotiable" codebook exception).
+  N_c / m_c buffers (CLAUDE.md "EMA - non-negotiable" codebook exception).
 
   Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
   .spawn(); harvest within 24h via tools/harvest_modal_calls.py or

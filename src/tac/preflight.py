@@ -1,18 +1,18 @@
-"""Preflight pipeline validator — catches integration mismatches before GPU burns.
+"""Preflight pipeline validator - catches integration mismatches before GPU burns.
 
 Every bug in this project was at a boundary between components:
-  - Masks at wrong resolution (48x64 vs 384x512 → score 103 vs 2)
+  - Masks at wrong resolution (48x64 vs 384x512 -> score 103 vs 2)
   - Poses optimized against wrong masks (27x PoseNet regression)
-  - Archive missing artifacts (119KB vs 338KB → 0.108 rate error)
+  - Archive missing artifacts (119KB vs 338KB -> 0.108 rate error)
   - eval_roundtrip defaulting False (proxy-auth drift 11x)
   - FP4 without QAT (26x PoseNet degradation)
   - TTO frames at GT range [0,255] instead of TTO-optimized [0,~184] (WILDE failure 2026-04-25)
   - Ad-hoc nohup watchers dying silently (3-A100 deployment failure 2026-04-25)
 
 CANONICAL ENTRY POINT: preflight_all(). Combines:
-  - preflight_check         → artifact validation (renderer/masks/poses/archive)
-  - preflight_training_inputs → TTO range, profile arch, eval_roundtrip
-  - check_codebase_drift    → AST scan blocks ad-hoc patterns
+  - preflight_check         -> artifact validation (renderer/masks/poses/archive)
+  - preflight_training_inputs -> TTO range, profile arch, eval_roundtrip
+  - check_codebase_drift    -> AST scan blocks ad-hoc patterns
 
 Usage:
     from tac.preflight import preflight_all
@@ -721,7 +721,7 @@ def _read_python_text_and_tree(
 
 
 class PreflightError(Exception):
-    """A preflight check failed — do NOT proceed."""
+    """A preflight check failed - do NOT proceed."""
     pass
 
 
@@ -788,9 +788,9 @@ class _ParallelPreflightRunner:
                     mode = "violation(s)" if strict else "advisory finding(s)"
                     print(f"  {label} {len(result)} {mode}")
                     for item in result[:10]:
-                        print(f"    • {str(item)[:240]}")
+                        print(f"    - {str(item)[:240]}")
                     if len(result) > 10:
-                        print(f"    … and {len(result) - 10} more")
+                        print(f"    ... and {len(result) - 10} more")
                 else:
                     print(f"  {label} OK")
             else:
@@ -1265,12 +1265,12 @@ def preflight_check(
             _pass(f"Renderer: ASYM, pose_dim={pose_dim}, base_ch={base_ch}, dsconv={dsconv}, {len(raw):,}B")
 
             if pose_dim == 0:
-                _warn("Renderer has pose_dim=0 — FiLM conditioning disabled, poses will have no effect")
+                _warn("Renderer has pose_dim=0 - FiLM conditioning disabled, poses will have no effect")
             if pose_dim > 0 and poses_path is None:
-                _warn("Renderer has pose_dim>0 but no poses_path provided — will use zero poses")
+                _warn("Renderer has pose_dim>0 but no poses_path provided - will use zero poses")
         elif magic == b"FP4A":
             _pass(f"Renderer: FP4A, {len(raw):,}B")
-            _warn("FP4 renderer — verify QAT was used during training (post-hoc QAT degrades 3-26x)")
+            _warn("FP4 renderer - verify QAT was used during training (post-hoc QAT degrades 3-26x)")
         elif magic in runtime_renderer_magics:
             _pass(f"Renderer: {runtime_renderer_magics[magic]}, {len(raw):,}B")
         elif raw[:3] in runtime_renderer_magics:
@@ -1317,7 +1317,7 @@ def preflight_check(
         elif masks_path.suffix == ".pt":
             m = torch.load(str(masks_path), weights_only=True)
             if m.shape[1] != expected_seg_h or m.shape[2] != expected_seg_w:
-                _warn(f"Masks shape {m.shape} — expected (N, {expected_seg_h}, {expected_seg_w})")
+                _warn(f"Masks shape {m.shape} - expected (N, {expected_seg_h}, {expected_seg_w})")
             else:
                 _pass(f"Masks: {m.shape}, .pt format")
 
@@ -1329,16 +1329,16 @@ def preflight_check(
 
         p = torch.load(str(poses_path), weights_only=True)
         if p.shape[0] != expected_n_pairs:
-            _fail(f"Poses shape {p.shape} — expected ({expected_n_pairs}, 6). "
+            _fail(f"Poses shape {p.shape} - expected ({expected_n_pairs}, 6). "
                   f"Wrong number of pairs.")
         if p.shape[1] != 6:
-            _fail(f"Poses shape {p.shape} — expected (N, 6). Wrong pose dimension.")
+            _fail(f"Poses shape {p.shape} - expected (N, 6). Wrong pose dimension.")
         _pass(f"Poses: {p.shape}, dtype={p.dtype}")
 
         if p.abs().max() > 100:
-            _warn(f"Poses max value {p.abs().max():.1f} — unusually large, may indicate wrong scale")
+            _warn(f"Poses max value {p.abs().max():.1f} - unusually large, may indicate wrong scale")
         if p.abs().mean() < 0.001:
-            _warn(f"Poses mean abs {p.abs().mean():.6f} — near zero, may not have been optimized")
+            _warn(f"Poses mean abs {p.abs().mean():.6f} - near zero, may not have been optimized")
 
     # ── Pose-mask consistency ────────────────────────────────────
     # This is the #1 source of score regressions in this project.
@@ -1393,7 +1393,7 @@ def preflight_check(
 
 # Note: __main__ block moved to the bottom of the module so all validator
 # functions (preflight_all et al.) are defined before invocation. Was a
-# misleading-CLI bug per R38 — operators running `python -m tac.preflight`
+# misleading-CLI bug per R38 - operators running `python -m tac.preflight`
 # only got artifact validation, silently skipping all 5 codebase layers.
 
 
@@ -1675,7 +1675,7 @@ def preflight_all(
             "[arity]",
             lambda: preflight_arity(strict=True, verbose=verbose),
         )
-        # Check 72 (2026-04-29): close BUG CLASS A — invented CLI flags inside
+        # Check 72 (2026-04-29): close BUG CLASS A - invented CLI flags inside
         # remote_lane_*.sh shell-script invocations of experiments/*.py. The
         # existing preflight_arity walks Python launchers (subprocess.run +
         # bash -c strings); the bare shell pattern was a structural blind spot.
@@ -1687,7 +1687,7 @@ def preflight_all(
             "[shell-lane-arity]",
             lambda: preflight_shell_lane_arity(strict=True, verbose=verbose),
         )
-        # Check 73 (2026-04-29): close BUG CLASS B — unchunked SegMap /
+        # Check 73 (2026-04-29): close BUG CLASS B - unchunked SegMap /
         # renderer training that OOMs T4 (7.03 GiB allocation in 14.56 GiB
         # of VRAM, 11.66 GiB already in use). Lane scripts invoking
         # experiments/train_segmap.py or experiments/train_renderer.py MUST
@@ -1695,7 +1695,7 @@ def preflight_all(
         # The matching code-side fix is the new chunked train_epoch
         # (segmap_renderer.py SegMapTrainer.train_epoch + the train_segmap.py
         # main-loop wiring of args.batch_size). Live-codebase scan: 0
-        # violations → straight to STRICT.
+        # violations -> straight to STRICT.
         preflight_t4_oom_training_guard(strict=True, verbose=verbose)
         # 2026-05-05 recovery: shell/CLI typo and portability hazards caused
         # repeated dead dispatches (`--rmote`, adjudicator-only flags on
@@ -1706,7 +1706,7 @@ def preflight_all(
         # evidence. Live count was 4 (PR106 sister lanes); demoted L2->L1
         # in commit 9155f0e1. Strict-flipped after cleanup.
         check_lane_smoke_signal_nontrivial(strict=True, verbose=verbose)
-        # 2026-05-05 council Q4 (PCC10): anti-arbitrariness scanner — every
+        # 2026-05-05 council Q4 (PCC10): anti-arbitrariness scanner - every
         # prediction-logic numeric literal must carry a provenance tag
         # ([contest-defined] / [calibration:...] / [empirical:...] /
         # [heuristic:...] / [inherited:...]). Live count was 6; fixed in
@@ -1718,9 +1718,9 @@ def preflight_all(
         # (SKIPPED|TODO|STUB|"ready at"|"nothing additional"|"manual")
         # brought it to 0. Strict-flipped after cleanup.
         check_dispatch_wrapper_stages_implemented(strict=True, verbose=verbose)
-        # 2026-05-06 cross-paradigm wiring contract — STRICT @ 0 because every
+        # 2026-05-06 cross-paradigm wiring contract - STRICT @ 0 because every
         # PipelineConfig use_* flag landed alongside its WARN guard or
-        # dispatch (commits 999211e5 → cb2ea361). Future commits that add a
+        # dispatch (commits 999211e5 -> cb2ea361). Future commits that add a
         # flag without referencing it will fail this gate.
         check_cross_paradigm_wiring_contract(strict=True, verbose=verbose)
         # 2026-05-08 implementation-vs-model-gap audit (advisory; strict=False
@@ -1828,7 +1828,7 @@ def preflight_all(
             ),
             strict=False,
         )
-        # 2026-05-09 Catalog #146 — operator decision B: Phase 1 trainer
+        # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
         # gate's live count is 0 from the start. Any future regression in
@@ -1838,7 +1838,7 @@ def preflight_all(
         check_phase1_trainer_runtime_emits_contest_compliant_inflate(
             strict=True, verbose=verbose,
         )
-        # 2026-05-12 Catalog #158 — deterministic-compiler canonical use.
+        # 2026-05-12 Catalog #158 - deterministic-compiler canonical use.
         # STRICT @ 0 because the canonical compiler + CLI ship in the same
         # commit-batch and every pre-existing packet-builder is grandfathered
         # via _DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST. Any NEW packet-
@@ -1889,7 +1889,7 @@ def preflight_all(
         # score_aware_loss, bolt_on_loc_budget, no_op_detector_planned)
         # OR opt out via lane_class='substrate_engineering' / research_only.
         # 2026-05-09 STRICT-FLIP: adc4c39c backfill landed all 7 flagged
-        # lanes (live count 7→0); operator-approved per "fix all yourself"
+        # lanes (live count 7->0); operator-approved per "fix all yourself"
         # directive. Phase 2 lanes (T1/T6/T10/T15/T17/T18) pre-registered
         # at L0 SKETCH with research_only=true UNTIL Phase 1 lands sub-0.155.
         # Ratchet protects against future representation lanes promoting to
@@ -1904,16 +1904,16 @@ def preflight_all(
         # unified-Lagrangian wire-in hooks (sensitivity-map / pareto /
         # bit-allocator / cathedral-autopilot / continual-learning /
         # probe-disambiguator) OR opt out via research_only=true OR per-hook
-        # '<Hook>: N/A — <rationale>'. 2026-05-09 STRICT-FLIP: codex backfilled
+        # '<Hook>: N/A - <rationale>'. 2026-05-09 STRICT-FLIP: codex backfilled
         # 19 legacy post-cutover memos with conservative N/A declarations
-        # (live count 19→0), then ratcheted this guard to strict so future
+        # (live count 19->0), then ratcheted this guard to strict so future
         # subagent landings cannot skip solver/autopilot/posterior surfaces.
         # Memory:
         # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
         check_subagent_landing_has_solver_wire_in(strict=True, verbose=verbose)
         # 2026-05-09 Subagent coherence-by-default (#126): subagent commits
-        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval —
-        # 30 → 0 violations after backfilling 8 alias lanes (lane_t11_lovasz +
+        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval -
+        # 30 -> 0 violations after backfilling 8 alias lanes (lane_t11_lovasz +
         # lane_a1_per_pair_latent_sidecar_resampled + lane_12_v2 +
         # lane_pose_dc3 + lane_c_compliance_attestations +
         # lane_d_v3_full_engineering + lane_id_ref + lane_a_landed). Test
@@ -1924,7 +1924,7 @@ def preflight_all(
         # `validate_custody_verdict` (or `posterior_update`/
         # `posterior_update_locked`). The previous tag-only predicate
         # accepted CPU tags on non-GHA hardware + axis/tag mismatches.
-        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval —
+        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval -
         # Catalog #127 landed at 0 live violations; ratchet protects future
         # callers from skipping the custody validator. Memory:
         # feedback_codex_round2_custody_concurrency_fix_landed_20260509.md
@@ -1933,20 +1933,20 @@ def preflight_all(
         )
         # 2026-05-09 codex round-2 MEDIUM fix (#128): bare
         # `save_posterior(...)` calls under parallel harvest silently drop
-        # concurrent updates because the load→mutate→write cycle is not
+        # concurrent updates because the load->mutate->write cycle is not
         # atomic. The locked path `posterior_update_locked` does it inside
         # `fcntl.flock(LOCK_EX)`. STRICT-FLIP per "fix all yourself" operator
-        # approval — Catalog #128 landed at 0 live violations.
+        # approval - Catalog #128 landed at 0 live violations.
         check_continual_learning_writes_use_lock(
             strict=True, verbose=verbose,
         )
         # 2026-05-09 proactive META-class custody+concurrency audit (#130):
         # extends catalog #127 (`AUTHORITATIVE_TAGS` membership) to also catch
-        # the broader META class — `evidence_grade in {...}` set-membership +
+        # the broader META class - `evidence_grade in {...}` set-membership +
         # `tag.startswith("[contest-...")` substring-prefix patterns.
         # Held warn-only initially per directive; live count 0 on landing.
         # Memory: feedback_proactive_custody_concurrency_audit_landed_20260509.md
-        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval —
+        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval -
         # Catalog #130 landed at 0 live violations; ratchet permanently
         # extincts the broader tag-only-custody META class.
         check_no_tag_only_custody_validation(
@@ -1955,7 +1955,7 @@ def preflight_all(
         # 2026-05-09 proactive META-class custody+concurrency audit (#131):
         # extends catalog #128 (`continual_learning.save_posterior`) to all
         # shared-state writes. STRICT-FLIP per "fix all yourself" operator
-        # approval — Catalog #131 landed at 0 live violations after fixing
+        # approval - Catalog #131 landed at 0 live violations after fixing
         # 6 surfaces in the audit lane (LIGHTNING_ACTIVE_JOBS_PATH ×4 callers,
         # LIGHTNING_STATE, vastai_active_instances bypass,
         # instance_setup_first_seen). Memory:
@@ -1968,7 +1968,7 @@ def preflight_all(
         # that takes the caller's full post-prune map but does
         # `existing.update(data)` inside the lock silently re-introduces
         # rows the caller deliberately pruned. STRICT-FLIP per "fix all
-        # findings regardless of severity" operator approval — Catalog
+        # findings regardless of severity" operator approval - Catalog
         # #132 landed at 0 live violations (verify_vast_instances HIGH 1
         # fix closed the only known instance). Memory:
         # feedback_codex_round3_findings_fix_landed_20260509.md
@@ -1982,7 +1982,7 @@ def preflight_all(
         # verifies a canonical lock-pattern token is present (or the entry
         # is in the deferred-rationale dict / file-level waiver). STRICT-FLIP
         # per CLAUDE.md "Bugs must be permanently fixed AND self-protected
-        # against" — Catalog #133 lands at 0 live violations after Azure
+        # against" - Catalog #133 lands at 0 live violations after Azure
         # gets its canonical `active_vms_state.py` helper. Memory:
         # feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md
         check_no_excluded_writers_in_check_131_accept_list(
@@ -1992,7 +1992,7 @@ def preflight_all(
         # was an advisory gate (constructor was no-op; `.check()` had to be
         # called explicitly). The fix made it fail-closed at construction
         # with explicit `unsafe_test_only=True` opt-out for tests. STRICT-FLIP
-        # per the same self-protection mandate — Catalog #134 lands at 0 live
+        # per the same self-protection mandate - Catalog #134 lands at 0 live
         # violations.
         check_phase3_dispatch_gate_fail_closed(
             strict=True, verbose=verbose,
@@ -2000,11 +2000,11 @@ def preflight_all(
         # 2026-05-09 codex round-4 MEDIUM 2 fix (#135): the round-3 fix
         # made `_save_setup_first_seen` write transactionally INSIDE the
         # lock, but `main()` still loaded the on-disk state OUTSIDE the
-        # lock and saved at end-of-run — a lost-update race for two
+        # lock and saved at end-of-run - a lost-update race for two
         # overlapping verifier invocations. The fix added
         # `update_setup_first_seen_locked` (load+merge+prune+save inside
         # ONE locked window) and refactored main() to use it. STRICT-FLIP
-        # per the same self-protection mandate — Catalog #135 lands at 0
+        # per the same self-protection mandate - Catalog #135 lands at 0
         # live violations.
         check_setup_first_seen_uses_transactional_update_inside_lock(
             strict=True, verbose=verbose,
@@ -2014,7 +2014,7 @@ def preflight_all(
         # Round-3 patched ONE accept-list; #136 extincts the bug class so
         # no future accept-list addition can re-introduce a generic-token
         # bypass. STRICT-FLIP per CLAUDE.md "Bugs must be permanently fixed
-        # AND self-protected against" — Catalog #136 lands at 0 live
+        # AND self-protected against" - Catalog #136 lands at 0 live
         # violations. Memory:
         # feedback_production_hardening_polish_defense_in_depth_landed_20260509.md
         check_custody_gate_accept_tokens_concrete_only(
@@ -2024,7 +2024,7 @@ def preflight_all(
         # remote dispatch runbooks must NOT default to local CUDA probe.
         # Round-3 patched ONE runbook; #137 extincts the bug class across
         # every `scripts/remote_lane_*.sh`. STRICT-FLIP per the same
-        # self-protection mandate — Catalog #137 lands at 0 live violations.
+        # self-protection mandate - Catalog #137 lands at 0 live violations.
         check_remote_dispatch_runbooks_no_local_cuda_probe_default(
             strict=True, verbose=verbose,
         )
@@ -2033,7 +2033,7 @@ def preflight_all(
         # patched ONE writer (`active_jobs_state.py`); #138 extincts the
         # bug class across every `update_*_locked` / `_save_*` / `upsert_*` /
         # `register_*` / `mark_*_terminal` writer. STRICT-FLIP per the
-        # same self-protection mandate — Catalog #138 lands at 0 live
+        # same self-protection mandate - Catalog #138 lands at 0 live
         # violations.
         check_state_writers_strict_load_for_mutating_path(
             strict=True, verbose=verbose,
@@ -2043,9 +2043,9 @@ def preflight_all(
         # ``no_op_proof`` MUST promote ``runtime_consumes_bytes=False`` /
         # ``no_op_detector_passed=False`` to a real entry in the blockers
         # list. Pre-fix the proof was advisory-only and the CLI exit code
-        # passed a no-op packet — burning eval spend. STRICT-FLIP per
+        # passed a no-op packet - burning eval spend. STRICT-FLIP per
         # CLAUDE.md "Bugs must be permanently fixed AND self-protected
-        # against" — Catalog #139 lands at 0 live violations after the fix.
+        # against" - Catalog #139 lands at 0 live violations after the fix.
         # Memory: feedback_codex_round5_findings_fix_with_self_protection_landed_20260509.md.
         check_packet_compiler_no_op_proof_promotes_to_blocker(
             strict=True, verbose=verbose,
@@ -2055,7 +2055,7 @@ def preflight_all(
         # invariant (sister `_lock_held()` predicate / `_lock_depth` check
         # / `fcntl.flock` acquisition / `raise` on missing lock). Comment-
         # only contracts are FORBIDDEN per CLAUDE.md. STRICT-FLIP per the
-        # same self-protection mandate — Catalog #140 lands at 0 live
+        # same self-protection mandate - Catalog #140 lands at 0 live
         # violations after the LightningDispatcher._save_state fix.
         check_state_writers_own_their_lock_end_to_end(
             strict=True, verbose=verbose,
@@ -2065,7 +2065,7 @@ def preflight_all(
         # accepted) when the calling module defines its own tracker
         # constant. Tests that monkeypatch the calling module's constant
         # silently broke pre-fix because the helper's canonical path
-        # always won. STRICT-FLIP per the same self-protection mandate —
+        # always won. STRICT-FLIP per the same self-protection mandate -
         # Catalog #141 lands at 0 live violations after the
         # azure_dispatch.py fix.
         check_state_helper_paths_explicit(
@@ -2078,7 +2078,7 @@ def preflight_all(
         # The runtime guard now refuses `unsafe_test_only=True` from non-
         # test paths; this STRICT preflight check enforces the same at
         # commit time. STRICT-FLIP per CLAUDE.md "Bugs must be permanently
-        # fixed AND self-protected against" — Catalog #142 lands at 0
+        # fixed AND self-protected against" - Catalog #142 lands at 0
         # live violations.
         check_unsafe_test_only_restricted_to_test_paths(
             strict=True, verbose=verbose,
@@ -2086,11 +2086,11 @@ def preflight_all(
         # 2026-05-09 codex round-6 HIGH 2 fix (#143): Lightning dispatchers
         # called `Job.run(...)` (paid submit) BEFORE persisting the
         # active-jobs row. With round-3's strict register_job, a corrupt
-        # tracker file → paid job created but tracker write fails →
+        # tracker file -> paid job created but tracker write fails ->
         # invisible orphan paid job. The fix is the create-pending-row-
         # before-submit pattern (`register_pending_job_locked` BEFORE
         # `Job.run`, then `update_pending_to_active_locked` AFTER).
-        # STRICT-FLIP per the same self-protection mandate — Catalog #143
+        # STRICT-FLIP per the same self-protection mandate - Catalog #143
         # lands at 0 live violations after both Lightning dispatchers
         # adopt the canonical pattern.
         check_paid_job_register_before_submit(
@@ -2105,7 +2105,7 @@ def preflight_all(
         # `update_setup_first_seen_locked(observed_setup_ids,
         # left_setup_ids, tracked_ids, now_ts)` that does load + merge +
         # remove + save inside ONE locked window. STRICT-FLIP per the
-        # same self-protection mandate — Catalog #144 lands at 0 live
+        # same self-protection mandate - Catalog #144 lands at 0 live
         # violations.
         check_setup_first_seen_no_split_transactions(
             strict=True, verbose=verbose,
@@ -2122,15 +2122,15 @@ def preflight_all(
         )
         # 2026-05-09 codex round 7+8 HIGH 1 (#147): the round-6 fix made
         # dispatchers register the pending row BEFORE submit, but the
-        # cancel-on-exception logic was too aggressive — `except BaseException`
+        # cancel-on-exception logic was too aggressive - `except BaseException`
         # around `submit_lightning_job(...)` (which includes `Job.run(...)`)
         # could silently delete the only harvester-visible row for a real
         # paid Lightning job after an SDK timeout / post-create API error /
         # KeyboardInterrupt mid-Job.run. Fix: split exception routing
-        # (`_PreNetworkSubmitError` → cancel; `BaseException` →
+        # (`_PreNetworkSubmitError` -> cancel; `BaseException` ->
         # `mark_pending_failed_unknown_billing_locked`). STRICT-FLIP per
         # CLAUDE.md "Bugs must be permanently fixed AND self-protected
-        # against" — Catalog #147 lands at 0 live violations.
+        # against" - Catalog #147 lands at 0 live violations.
         check_lightning_submit_cancel_only_before_network(
             strict=True, verbose=verbose,
         )
@@ -2142,7 +2142,7 @@ def preflight_all(
         # `register_instance` / `remove_instance` use it inside the fcntl
         # lock and quarantine corrupt files to `<path>.corrupt.<utc>`.
         # Sister of Catalog #138 scoped to `tac.vastai_tracker` specifically.
-        # STRICT-FLIP per the same self-protection mandate — Catalog #148
+        # STRICT-FLIP per the same self-protection mandate - Catalog #148
         # lands at 0 live violations.
         check_vastai_tracker_strict_load(
             strict=True, verbose=verbose,
@@ -2155,17 +2155,17 @@ def preflight_all(
         # `# PHASE_B_AUTH_MEMO_OK:<reason>` for the rare
         # consult_session_state=True fallback callsite. STRICT-FLIP per
         # CLAUDE.md "Bugs must be permanently fixed AND self-protected
-        # against" — Catalog #150 lands at 0 live violations.
+        # against" - Catalog #150 lands at 0 live violations.
         check_phase_b_auth_memo_in_repo(
             strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #151 (council 9/10 PROCEED with R1-R7):
         # `check_operator_wrapper_threads_trainer_tier_required_flags`
         # refuses wrappers that invoke a trainer declaring
-        # `TIER_<N>_OPERATOR_REQUIRED_FLAGS` without threading the env→CLI
+        # `TIER_<N>_OPERATOR_REQUIRED_FLAGS` without threading the env->CLI
         # ladder for each flag. Sister of Catalog #12 (`preflight_arity`,
         # the dead-flag detector). Strict-from-byte-one per council R7
-        # atomicity rule — NF1 wire-fix (commit d37c6b20) already drove
+        # atomicity rule - NF1 wire-fix (commit d37c6b20) already drove
         # the 4-instance live count to 0.
         check_operator_wrapper_threads_trainer_tier_required_flags(
             strict=True, verbose=verbose,
@@ -2176,7 +2176,7 @@ def preflight_all(
         # burned $0.016 in 15s crashing on missing --pr95-parity-profile that
         # a local 100ms validation would have caught. Strict-from-byte-one per
         # CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
-        # — T1 Ballé operator-authorize wrapper invokes the canonical validator
+        # - T1 Ballé operator-authorize wrapper invokes the canonical validator
         # tool (`tools/validate_dispatch_required_inputs.py`) in same commit
         # batch as this gate, driving live count to 0.
         check_operator_wrapper_validates_required_input_files_pre_dispatch(
@@ -2191,7 +2191,7 @@ def preflight_all(
         # ``required_input_file=True`` trainer flag default wasn't in the
         # hand-curated list. Adding entries to hand-curated lists IS the bug
         # class. Strict-from-byte-one per CLAUDE.md "Bugs must be permanently
-        # fixed AND self-protected against" — modal_train_lane.py is
+        # fixed AND self-protected against" - modal_train_lane.py is
         # refactored in the same commit-batch, the other 10 dispatchers carry
         # per-line ``# MODAL_MANUAL_MOUNT_OK:<reason>`` waivers explaining
         # they are narrow file-by-file dispatchers (not trainer-discovery
@@ -2203,14 +2203,14 @@ def preflight_all(
         # mount builder must honor an mtime-stability check across the
         # full mount set BEFORE firing any ``add_local_*`` call. WWW4
         # surfaced that FIX-D's concurrent writes to
-        # ``src/tac/composition/registry.py`` (46257B → 52539B over 30s)
+        # ``src/tac/composition/registry.py`` (46257B -> 52539B over 30s)
         # produced torn Modal uploads that crashed v2/v3 dispatches.
         # The static gate refuses any state of
         # ``src/tac/deploy/modal/mount_manifest.py`` that drops the
         # ``verify_mount_set_mtime_stability`` call from
         # ``build_training_image``. STRICT-from-byte-one per CLAUDE.md
         # "Bugs must be permanently fixed AND self-protected against"
-        # non-negotiable — live count at landing: 0.
+        # non-negotiable - live count at landing: 0.
         check_modal_mount_builder_uses_mtime_stability_check(
             strict=True, verbose=verbose,
         )
@@ -2224,7 +2224,7 @@ def preflight_all(
         # consecutive sane_hnerv crashes (fc-01KREXK209TRX7ED5ZRVXHY1VT
         # 14.77s + fc-01KREXXSKGTDCF61QXQNBF6SX3 72.03s) burned $0.30 of
         # GPU spend with no way to distinguish "stale-mount" from
-        # "pre-fix-dispatch" — Catalog #166 closes that ambiguity.
+        # "pre-fix-dispatch" - Catalog #166 closes that ambiguity.
         # Strict-from-byte-one per CLAUDE.md "Bugs must be permanently
         # fixed AND self-protected against" non-negotiable. Live count at
         # landing: 0.
@@ -2247,6 +2247,25 @@ def preflight_all(
         check_substrate_dispatch_uses_smoke_before_full_pattern(
             strict=False, verbose=verbose,
         )
+        # 2026-05-12 Catalog #168 (META-CATALOG-152-FIX): META-CLASS gate
+        # over AST extractors that walk only `ast.Assign` without also
+        # handling `ast.AnnAssign`. The bug class silently bypasses static
+        # analysis when the target code uses annotated assignment syntax
+        # (`name: type = value`). Bug-class anchor: 2026-05-12
+        # `_check_151_extract_tier_manifests` returned empty manifests for
+        # 12/12 substrate trainers because they use the AnnAssign form;
+        # Catalog #151 + #152 STRICT modes were structurally false-OK
+        # across the substrate canvas. Same-line waiver
+        # `# ASSIGN_ONLY_OK:<reason>` accepted; file-level
+        # `# CHECK_168_FILE_LEVEL_WAIVED:<reason>`. Per CLAUDE.md "Bugs
+        # must be permanently fixed AND self-protected against" + per the
+        # META-meta finding from a8bc7e79 sweep ("bug classes have 6-7x
+        # spread across the repo"). Strict-from-byte-one per the
+        # "Strict-flip atomicity rule" - live count at landing: 0
+        # (12 candidate sites driven to 0 in same commit batch).
+        check_ast_walker_handles_both_assign_and_annassign(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -2255,7 +2274,7 @@ def preflight_all(
         # helper bypasses the dry-run-first / git-tracked-protect /
         # HISTORICAL_PROVENANCE-protect contract per Catalog #110 / #113.
         # Strict-from-byte-one per CLAUDE.md "Bugs must be permanently
-        # fixed AND self-protected against" — live count at landing: 0
+        # fixed AND self-protected against" - live count at landing: 0
         # (self-exempts: this file + the canonical helper).
         check_experiments_results_gc_helper_is_canonical(
             strict=True, verbose=verbose,
@@ -2266,7 +2285,7 @@ def preflight_all(
         # that strip the Part-2 TrackedDeleteRefusedError defense-in-depth.
         # Together the two gates extinct the entire GC-tracked-delete bug
         # class. Strict-from-byte-one per CLAUDE.md "Bugs must be
-        # permanently fixed AND self-protected against" — live count at
+        # permanently fixed AND self-protected against" - live count at
         # landing: 0 (no external callers exist; the helper is used only
         # via its CLI surface).
         check_gc_helper_refuses_delete_on_tracked_paths(
@@ -2281,7 +2300,7 @@ def preflight_all(
         # losing subagent sees "no changes". The structural fix is to
         # forbid ANY direct `git commit` invocation outside the canonical
         # serializer, so the lock contract is always honored. Strict-from-
-        # byte-one — live count at landing: 0 (operator-side auto_commit.sh
+        # byte-one - live count at landing: 0 (operator-side auto_commit.sh
         # carries a file-level waiver).
         check_commit_serializer_pre_lock_hash_against_head(
             strict=True, verbose=verbose,
@@ -2295,7 +2314,7 @@ def preflight_all(
         # gate refuses re-introduction at any substrate archive.
         # Originally landed as #160 then collided with DDDD's #158 claim
         # via ZZZZZ audit; FIX-A renumbered to #161 per claim_catalog_number.
-        # STRICT-FLIPPED 2026-05-12 — live count at landing: 0.
+        # STRICT-FLIPPED 2026-05-12 - live count at landing: 0.
         check_quantize_degenerate_range_clamped_correctly(
             strict=True, verbose=verbose,
         )
@@ -2346,7 +2365,7 @@ def preflight_all(
         # #118 (`check_claude_md_catalog_no_duplicate_numbers`).
         # UUU's audit 2026-05-12 identified 23 drift entries; FFFF Bug 3
         # bulk text-fix landed in commit 44ac1465 driving the drift to 0.
-        # STRICT-FLIPPED 2026-05-12 — live count at landing: 0.
+        # STRICT-FLIPPED 2026-05-12 - live count at landing: 0.
         check_claude_md_catalog_text_matches_preflight_strict_value(
             strict=True, verbose=verbose,
         )
@@ -2391,10 +2410,10 @@ def preflight_all(
 
         # 2026-04-27 codex R5-3 Finding #4 + R5-3-r3: wire all 11 meta-bug
         # checks (FORBIDDEN PATTERNS / CLAUDE.md) into preflight_all STRICT.
-        # Live-codebase counts went 40 → 0 across F1 (commit 7d2b5299), F2
+        # Live-codebase counts went 40 -> 0 across F1 (commit 7d2b5299), F2
         # (commit a94a9325), and the codex-round-4 probe-before-DALI fix.
-        # Every entry point — pre-commit hook (tools/preflight_hook.py), CI
-        # (.github/workflows/ci.yml), and any direct preflight_all caller —
+        # Every entry point - pre-commit hook (tools/preflight_hook.py), CI
+        # (.github/workflows/ci.yml), and any direct preflight_all caller -
         # now BLOCKS at commit/PR/run time on any new violation. The bug
         # classes that wasted days of GPU time + multiple rounds of council
         # rework are now structurally extinct. Reverting any of these fixes
@@ -2523,7 +2542,7 @@ def preflight_all(
         # 2026-04-27 codex R5-r6: 5 new checks for round-6 findings.
         # Each guards a regression of the matching finding fix. All 5 land
         # at 0 live-codebase violations (verified post-fix), so they go
-        # straight to strict=True per the Lane A → strict pattern.
+        # straight to strict=True per the Lane A -> strict pattern.
         check_no_brittle_six_line_waiver_lookback(strict=True, verbose=verbose)
         _parallel.run(
             "check_kl_distill_uses_roundtripped_frames",
@@ -2557,7 +2576,7 @@ def preflight_all(
             strict=False,
         )
         # 2026-04-29 PM: silent-default override class. Audit hardened in
-        # commit 4eeb6452 (246 noisy → 0 actionable); 3 real bugs fixed in
+        # commit 4eeb6452 (246 noisy -> 0 actionable); 3 real bugs fixed in
         # commit 256c5e42. Lands STRICT directly at 0 live violations.
         # Memory: feedback_silent_default_bug_class_findings_20260429.md.
         _parallel.run(
@@ -2572,7 +2591,7 @@ def preflight_all(
         # cc1ba193 STC FALSIFICATION withdrawn, ef8592d9 Lane PD docstring).
         # check_empirical_claims_have_evidence is wired warn-only first
         # because tagging discipline across legacy docs/reports needs a
-        # cleanup pass — promote to strict after the 0-count sweep.
+        # cleanup pass - promote to strict after the 0-count sweep.
         # Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
         _parallel.run(
             "check_callsite_contracts_satisfied",
@@ -2594,11 +2613,11 @@ def preflight_all(
         # into a static gate at preflight time.
         check_preflight_scanners_use_oss_mirror_helper(strict=True, verbose=verbose)
         # PCC2 (2026-04-30): comment-only contracts. Catches the IMP cycle
-        # 0 = 1.98 metabug class — placeholder/stub with a comment promising
+        # 0 = 1.98 metabug class - placeholder/stub with a comment promising
         # the wrapper will swap in the real impl, but no backing assertion.
         # Lands STRICT @ 0 live unbacked findings: the canonical incident
         # in experiments/train_imp_cycle.py:_finetune now has an inline
-        # backing assertion (n_trainable == 0 → raise RuntimeError) that
+        # backing assertion (n_trainable == 0 -> raise RuntimeError) that
         # documents the deploy contract + the PCC3 wall-clock-floor in
         # train_imp_cycle.main covers the runtime gate. Reverting either
         # safety net will fail strict here.
@@ -2621,8 +2640,8 @@ def preflight_all(
         )
         # Check 86 (DARTS-S freeze ROOT CAUSE incident 2026-04-29 PM):
         # forbid bare .round() inside eval-roundtrip chains. .round() has
-        # zero gradient → severs backprop → optimizer "steps" but params
-        # don't move → 5h GPU burned producing constant loss=277.02 across
+        # zero gradient -> severs backprop -> optimizer "steps" but params
+        # don't move -> 5h GPU burned producing constant loss=277.02 across
         # 400 epochs. Lane SC++/SA-v2/SO/MM v2 all invalidated. Lands STRICT
         # @ 0 violations after segmap_renderer.py:281 fix.
         _parallel.run(
@@ -2635,7 +2654,7 @@ def preflight_all(
         # must pass --bf16 + --scorer-chunk N + --batch-size B with B*N<=8.
         # Without DF2 (bf16 autocast) AND DF3 (per-pair scorer chunking),
         # PoseNet FastViT stage-1 self-attention map allocates ~21 GiB
-        # in fp32 at B=16 frames — 14 OOM crashes on Modal A10G 22 GB
+        # in fp32 at B=16 frames - 14 OOM crashes on Modal A10G 22 GB
         # shared-tenant cost ~$3.50 with zero artifact. Lands STRICT @ 0
         # violations after the 8 SegMap-class scripts (SC++/SA/SO/HM-S/
         # PA/WC-S/DARTS-S/FR-Ω) are updated to pass the new flags +
@@ -2651,9 +2670,9 @@ def preflight_all(
         # script in experiments/train_*.py + qat_*.py + quantize_*.py must
         # instantiate EMA, call ema.update(model) after optimizer.step(),
         # and ship the EMA shadow as the inference checkpoint. Per
-        # CLAUDE.md "EMA — NON-NEGOTIABLE". The Quantizr (#1, 0.33) +
+        # CLAUDE.md "EMA - NON-NEGOTIABLE". The Quantizr (#1, 0.33) +
         # Selfcomp (#2, 0.38) full pipelines run EMA through ALL stages
-        # (anchor → finetune → joint → QAT → final). Council D audit
+        # (anchor -> finetune -> joint -> QAT -> final). Council D audit
         # found 8 missing wire-ins; landed in same commit as Check 88
         # (train_szabolcs.py, qat_finetune.py, qat_omega_lagrangian.py,
         # quantize_distilled.py, train_imp_cycle.py, train_lora_tto.py,
@@ -2683,15 +2702,15 @@ def preflight_all(
         # violations and go straight to strict; the other 8 have real
         # existing violations and stay warn-only until a cleanup pass.
         # Per-check live counts at wire-in time:
-        #   check_vastai_create_has_label                 0  → STRICT
-        #   check_waivers_specify_env_gate                0  → STRICT
-        #   check_inflate_scorer_load_has_runtime_banner  0  → STRICT
-        #   check_vastai_prompts_have_cost_cap            0  → STRICT
+        #   check_vastai_create_has_label                 0  -> STRICT
+        #   check_waivers_specify_env_gate                0  -> STRICT
+        #   check_inflate_scorer_load_has_runtime_banner  0  -> STRICT
+        #   check_vastai_prompts_have_cost_cap            0  -> STRICT
         #   check_vastai_create_writes_tracker            2  warn
         #   check_subagent_prompts_no_cpu_fallback        1  warn
         #   check_scores_have_lane_tag                   20  warn (run_log/findings cleanup)
         #   check_halfframe_archive_uses_trained_profile  2  warn
-        #   check_profile_keys_have_resolvers            91  warn (real audit needed — same class as pose_dim)
+        #   check_profile_keys_have_resolvers            91  warn (real audit needed - same class as pose_dim)
         #   check_test_files_imports_resolve             25  warn (broken-test cleanup)
         #   check_uniward_delta_has_attestation_gate      6  warn
         #   check_remote_scripts_write_provenance         5  warn (Lane provenance write)
@@ -2717,7 +2736,7 @@ def preflight_all(
         )
         # 2026-04-27 final cleanup pass: 8 warn-only checks now at 0
         # live violations (commits eb985e40 + 17e5f903 + 676bf206 + this).
-        # Promoted to strict — bug classes structurally extinct.
+        # Promoted to strict - bug classes structurally extinct.
         _parallel.run(
             "check_vastai_create_writes_tracker",
             "[vastai-tracker]",
@@ -2759,12 +2778,12 @@ def preflight_all(
             lambda: check_remote_scripts_write_provenance(strict=True, verbose=verbose),
         )
 
-        # 2026-04-27 council forensics (findings.md "Lane G — really dead,
+        # 2026-04-27 council forensics (findings.md "Lane G - really dead,
         # or bugged?"): forbid `F.kl_div(..., reduction="batchmean")` on
         # spatial tensors. The bug under-divides the per-pixel mean by
         # H × W (=196,608 for 384×512 SegNet), silently over-weighting
         # every caller. Lands at 0 live violations after the losses.py
-        # fix → straight to strict per the Lane A pattern. See Check M
+        # fix -> straight to strict per the Lane A pattern. See Check M
         # comment block above the function definition.
         _parallel.run(
             "check_kl_div_reduction_correct",
@@ -2776,7 +2795,7 @@ def preflight_all(
         # 29th meta-bug check. Forbid the silent-default-masquerading-as-
         # negative-result pattern (auto-discover from N hardcoded paths +
         # WARN-and-proceed instead of raise). Lane F (qat_finetune.py) +
-        # Lane G (kl_distill_weight default) are the 2 known instances —
+        # Lane G (kl_distill_weight default) are the 2 known instances -
         # both fixed; live count after qat_finetune.py fix should be 0.
         # See Check N comment block above the function definition + memory
         # `feedback_silent_default_masquerading_as_negative_result`.
@@ -2821,8 +2840,8 @@ def preflight_all(
 
         # 2026-04-28: 2 more strict meta-bug checks (33, 34) from overnight
         # deploy failures. Both STRICT after the comment-stripping fix:
-        # NVDEC 7/12 hosts bad → probe must be Stage 0.
-        # Lane S motion.head 6-vs-4 mismatch → resume needs shape validation.
+        # NVDEC 7/12 hosts bad -> probe must be Stage 0.
+        # Lane S motion.head 6-vs-4 mismatch -> resume needs shape validation.
         _remote_script_parallel.run(
             "check_remote_scripts_probe_nvdec_early",
             "[nvdec-early]",
@@ -2867,7 +2886,7 @@ def preflight_all(
         # macOS resource forks crash auth_eval; SSH no-timeout hangs parent agent.
         # Both STRICT after setup_full purge-once landed (Check 37 satisfied
         # via canonical bootstrap path); SSH check has 0 violations (no
-        # script in repo uses ssh — it's all parent-agent invoked).
+        # script in repo uses ssh - it's all parent-agent invoked).
         _remote_script_parallel.run(
             "check_lane_scripts_strip_macos_resource_forks",
             "[strip-resource-forks]",
@@ -2885,14 +2904,14 @@ def preflight_all(
             ),
         )
 
-        # 2026-04-28 late: Check 39 — undeployed archive-artifact producers.
+        # 2026-04-28 late: Check 39 - undeployed archive-artifact producers.
         # CATCHES the recurring "code-shipped-never-deployed" failure mode:
         # tools that produce a registered submission artifact and have a
         # __main__ entry but no scripts/remote_lane_*.sh invocation. Lane EC
         # sat unused 2 weeks because of this exact gap. Lands at 0 live
         # violations after exemption pass for kaggle_kernels (alternative
         # platform), library helpers (scorer_targets.py), and 2 dead lanes
-        # (mini_tto_inflate, optimize_embedding) — straight to STRICT per
+        # (mini_tto_inflate, optimize_embedding) - straight to STRICT per
         # the Lane A pattern. References:
         # - project_lane_ec_engineered_corrections_20260428
         # - project_outstanding_work_and_stacks_20260428 TIER 3
@@ -2905,15 +2924,15 @@ def preflight_all(
             ),
         )
 
-        # 2026-04-28 late: Check 40 — FP4 hardware-disclosure markers.
+        # 2026-04-28 late: Check 40 - FP4 hardware-disclosure markers.
         # CATCHES the bug class that destroyed Lane F lineage: production
         # FP4 paths without hardware-capability disclosure. Lane F V1=2.73,
-        # V2=1.79, V3=1.85 were all simulated FakeQuantFP4 in FP32 — 4090
+        # V2=1.79, V3=1.85 were all simulated FakeQuantFP4 in FP32 - 4090
         # is CC 8.9 and NVFP4 needs Blackwell CC 10.0, so "FP4 architectural
         # hostility" was unverifiable. Lands at 0 live violations after
         # adding `# FP4_HARDWARE_DISCLOSED:` markers to the 3 actual
         # production sites (fp4_quantize.py, profile_fp4_layer_sensitivity.py,
-        # qat_finetune.py). Straight to STRICT — bug class structurally
+        # qat_finetune.py). Straight to STRICT - bug class structurally
         # extinct. Reference: project_cosmos_deep_dive_addendum_20260428.
         # Lane F-V5 (hardware FP8 via torchao.float8) is the proper rescue
         # path for Ada/Lovelace+ (CC >= 8.9) hardware.
@@ -2926,7 +2945,7 @@ def preflight_all(
             ),
         )
 
-        # 2026-04-28 evening: Check 41 — remote_lane_*.sh heartbeat loop.
+        # 2026-04-28 evening: Check 41 - remote_lane_*.sh heartbeat loop.
         # CATCHES the silent-non-start failure mode that wasted ~$2.50 today
         # on instances 35739770/35739771/35739773 (Lane W Iceland, Lane K
         # Denmark, Lane OS-V2 NC). SSH + clone succeeded but lane script
@@ -2943,7 +2962,7 @@ def preflight_all(
             ),
         )
 
-        # 2026-04-28: Check 42 — pose-projection train/inference parity.
+        # 2026-04-28: Check 42 - pose-projection train/inference parity.
         # CATCHES the BUG-1 class from Lane M-V2 audit: pose-projection
         # helpers used at OPTIMIZATION time but NOT at INFLATE time produce
         # train/inference distribution mismatches. Lane M-V2 lost 5h GPU +
@@ -2962,7 +2981,7 @@ def preflight_all(
             ),
         )
 
-        # 2026-04-28 PM: Check 43 — launcher tarball must include lane anchors.
+        # 2026-04-28 PM: Check 43 - launcher tarball must include lane anchors.
         # CATCHES the bug class where a tarball --exclude pattern wins over
         # a lane script's anchor reference. 3 lanes lost 2026-04-28 PM
         # because lane_a_landed/ was excluded but archive_lane_a.zip is the
@@ -3072,7 +3091,7 @@ def preflight_all(
         check_python_heredocs_in_shell_compile(strict=True, verbose=verbose)
         # Check 73: remote_lane_*.sh scripts must pass all required argparse
         # args of the Python scripts they invoke. Existing preflight_arity
-        # only scanned 2 launchers (pipeline.py, deploy_vastai.py) — missing
+        # only scanned 2 launchers (pipeline.py, deploy_vastai.py) - missing
         # 70+ remote_lane scripts. Q-FAITHFUL crashed on Modal at 64s with
         # `train_renderer.py: error: --tag required` because no preflight
         # check covered that surface. STRICT @ 0 after fixing 3 scripts.
@@ -3087,7 +3106,7 @@ def preflight_all(
         # off-manifold pattern. Lane GP v2 = 89.66, Lane M-V1 = 2.35 from
         # this exact bug. 9 live violations: needs audit + waivers before
         # STRICT promotion. See project_lane_gp_v2_audit_20260429.
-        # Promoted STRICT 2026-05-06: live count 0 — scanner now exempts
+        # Promoted STRICT 2026-05-06: live count 0 - scanner now exempts
         # vendored public-PR intake clones (public_pr_archive_release_view +
         # path-substring _intake_ markers) and uv_project_env site-packages.
         # The 3 authored-code uses (joint_admm protocol-conformance check;
@@ -3095,19 +3114,19 @@ def preflight_all(
         # carry inline `# OFF_MANIFOLD_OK:` waivers documenting intent.
         check_no_off_manifold_pose_zeros(strict=True, verbose=verbose)
         # Check 76 WARN-ONLY: every masks.mkv referenced as a lane anchor
-        # SHOULD be full resolution (≥384×512). Lane UNIWARD v7 = 53.61
+        # SHOULD be full resolution (>=384×512). Lane UNIWARD v7 = 53.61
         # (anchored on 64×48 masks), matches historical 2026-04-21 disaster
         # (score 103.27). Currently warn-only because submissions/
         # baseline_dilated_h64_0_90/masks.mkv (1 site) still exists and
         # 10+ scripts reference its directory (some only for renderer.bin,
         # not masks). Promote to STRICT after triage of remaining scripts.
-        # Promoted STRICT 2026-05-06: live count 0 — triage of remaining
+        # Promoted STRICT 2026-05-06: live count 0 - triage of remaining
         # baseline_dilated_h64_0_90 references confirmed those scripts use
         # renderer.bin only, not masks.mkv (so the 64×48 mask anchor is dead
         # code from the operator's perspective).
         check_lane_anchor_masks_full_resolution(strict=True, verbose=verbose)
 
-        # 2026-04-29: Check 43 — controlled-baseline methodology for new
+        # 2026-04-29: Check 43 - controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
         # remote_lane scripts added/modified after 2026-04-29 and is a
         # methodology guard, not a current correctness blocker.
@@ -3125,10 +3144,10 @@ def preflight_all(
         # bit-STE sign bug post-mortem (4 review rounds dismissed it because
         # the only assertion was `grad is not None`).
         # Per-check live counts at wire-in time + promotion plan:
-        #   Check 44 (gradient-direction-tests-exist)             0  → STRICT
-        #   Check 45 (loss-convergence-tests)                     0  → STRICT
-        #   Check 46 (quantizer-roundtrip-tests)                  0  → STRICT (R25 promotion: 5 test files added covering archive_codec/entropy_archive/mask_entropy_coder/network_codec/semantic_quantization; quantization_audit waived as drift-MEASUREMENT module not a quantizer)
-        #   Check 47 (lane-archive-size-assertion)                0  → STRICT
+        #   Check 44 (gradient-direction-tests-exist)             0  -> STRICT
+        #   Check 45 (loss-convergence-tests)                     0  -> STRICT
+        #   Check 46 (quantizer-roundtrip-tests)                  0  -> STRICT (R25 promotion: 5 test files added covering archive_codec/entropy_archive/mask_entropy_coder/network_codec/semantic_quantization; quantization_audit waived as drift-MEASUREMENT module not a quantizer)
+        #   Check 47 (lane-archive-size-assertion)                0  -> STRICT
         _parallel.run(
             "check_gradient_direction_tests_exist",
             "[gradient-direction-tests]",
@@ -3155,10 +3174,10 @@ def preflight_all(
         # project_killed_lanes_forensic_audit_20260428.
         # All 3 ship WARN-only initially because the live codebase has real
         # violations the user may want to fix incrementally:
-        # - Check 48 (orphan-src-tac-modules): catches Lane V class — silent
+        # - Check 48 (orphan-src-tac-modules): catches Lane V class - silent
         #   modules added but never wired into a profile / CLI / script.
         # - Check 49 (profile-loss-mode-allowlist-parity): catches Lane J-JBL
-        #   class — profile loss_mode value not in train_renderer.py
+        #   class - profile loss_mode value not in train_renderer.py
         #   _VALID_LOSS_MODES allowlist. Live count: 2 (posenet_embedding,
         #   segnet_kl in profiles that may not actively dispatch through
         #   train_renderer.py). Promote to STRICT after audit + fix.
@@ -3175,10 +3194,10 @@ def preflight_all(
             ),
             strict=False,
         )
-        # Promoted STRICT 2026-05-06: live count 0 — all profile loss_mode
+        # Promoted STRICT 2026-05-06: live count 0 - all profile loss_mode
         # values resolved against the validator allowlist.
         check_profile_loss_modes_in_validator_allowlist(strict=True, verbose=verbose)
-        # Promoted STRICT 2026-05-06: live count 0 — added `lane_g_v3` alias
+        # Promoted STRICT 2026-05-06: live count 0 - added `lane_g_v3` alias
         # to PROFILES dict (commit pending), all remote_lane_*.sh --profile
         # invocations now resolve.
         check_deploy_script_profiles_exist_in_registry(strict=True, verbose=verbose)
@@ -3187,7 +3206,7 @@ def preflight_all(
         # (51, 52, 53) for silent-swallow / unchecked-subprocess /
         # operator-discoverability. All ship WARN-only initially. Promote
         # to STRICT after one-time cleanup pass per the established
-        # warn-only → strict pattern (see Lane A pattern in checks 1-11).
+        # warn-only -> strict pattern (see Lane A pattern in checks 1-11).
         # Reference: feedback_deep_hardening_pass_2_patterns_20260428.
         # - Check 51 (no-bare-except): catches `except:` and
         #   `except Exception: pass`. Same class as the
@@ -3199,17 +3218,17 @@ def preflight_all(
         # - Check 53 (tools-have-argparse): operator-discoverability:
         #   tools/*.py + scripts/*.py with __main__ entry must wire
         #   argparse or click for --help.
-        # Promoted STRICT 2026-05-06: live count 0 — scanner now exempts
+        # Promoted STRICT 2026-05-06: live count 0 - scanner now exempts
         # vendored harvested venvs (uv_project_env / site-packages) and the
         # vast_harvest snapshots. Authored code in src/tac, scripts/, tools/,
         # experiments/ has no bare-except violations.
         check_no_bare_except(strict=True, verbose=verbose)
         # 2026-04-28 deep hardening pass 3: Checks 52 + 53 promoted to STRICT
         # after one-time cleanup pass. Subprocess: 31 violations triaged into
-        # 2 classes — wrappers/best-effort (24 waivers with concrete reason)
+        # 2 classes - wrappers/best-effort (24 waivers with concrete reason)
         # vs real bugs (7 fail-loud `check=True` adds for ffmpeg/ffprobe pipes
         # in hybrid_inflate, optimize_poses, train_distill, benchmark_codecs,
-        # variable_rate). Argparse: 7 violations — 5 hook/dispatcher waivers
+        # variable_rate). Argparse: 7 violations - 5 hook/dispatcher waivers
         # + 1 real argparse add (check_determinism.py) + 1 thin-shim waiver.
         # Bug classes structurally extinct.
         check_subprocess_run_checked(strict=True, verbose=verbose)
@@ -3225,20 +3244,20 @@ def preflight_all(
         #   phase2-launch Stage 2 polls setup.log + auto-destroys NVDEC_BAD.
         # Per the user mandate ("we need to automate and canonicalize and
         # permanently guard against NVDEC issue"), both layers are now
-        # structurally extinct bug classes — any future refactor that
+        # structurally extinct bug classes - any future refactor that
         # drops the poll OR re-orders the probe AFTER DALI fails preflight.
-        # Both checks land at 0 live violations → straight to STRICT per
+        # Both checks land at 0 live violations -> straight to STRICT per
         # the Lane A pattern.
         # Reference: feedback_canonical_nvdec_workflow_GUARD_20260428.
         check_phase2_launch_polls_setup_log(strict=True, verbose=verbose)
         check_setup_full_probe_before_dali(strict=True, verbose=verbose)
 
-        # 2026-04-28: Check 56 — verify_vast_instances.py auto-destroy
+        # 2026-04-28: Check 56 - verify_vast_instances.py auto-destroy
         # path must enforce BOTH IDLE-stale-minutes AND SETUP-stale-
         # minutes. Without the SETUP timer, a TRULY hung setup_full.sh
-        # accrues cost forever (no heartbeat ever lands → IDLE timer
+        # accrues cost forever (no heartbeat ever lands -> IDLE timer
         # never fires). Reference: feedback_setup_stuck_cost_leak_FIXED_20260428.
-        # Lands at 0 live violations → straight to STRICT.
+        # Lands at 0 live violations -> straight to STRICT.
         check_verify_vast_setup_stuck_dual_threshold(
             strict=True, verbose=verbose,
         )
@@ -3271,7 +3290,7 @@ def preflight_all(
         check_phase2_extract_destroys_on_failure(strict=True, verbose=verbose)
         # Check 60 ships warn-only because MEMORY.md is a user-controlled
         # file and the operator should fix it on their own cadence (this
-        # session: 234 lines, under the 250 ceiling — currently 0 violations).
+        # session: 234 lines, under the 250 ceiling - currently 0 violations).
         _parallel.run(
             "check_memory_md_size_under_ceiling",
             "[memory-md-size]",
@@ -3289,13 +3308,13 @@ def preflight_all(
         # for missing config.env) OR check PYTHON_INFLATE=renderer locally.
         # Lane RM-d burned 1+ hour discovering the canonical inflate env
         # was missing on the remote tarball. Lands at 0 live violations
-        # post-F5 fix → ships STRICT immediately.
+        # post-F5 fix -> ships STRICT immediately.
         check_lane_scripts_set_up_inflate_environment(strict=True, verbose=verbose)
 
-        # 2026-04-28 Check 64 — lane scripts must have a recent E2E smoke
+        # 2026-04-28 Check 64 - lane scripts must have a recent E2E smoke
         # proof. Closes the structural gap that cost Lane RM-d 3.5h GPU:
         # 63 STATIC preflight checks above all guard CODE PATTERNS, none
-        # actually run the deploy → inflate → contest_auth_eval pipeline
+        # actually run the deploy -> inflate -> contest_auth_eval pipeline
         # locally. Check 64 enforces every remote_lane_*.sh has an entry
         # in .omx/state/lane_e2e_smoke_proofs.json that is < 7 days old,
         # written by experiments/canonical_local_auth_eval_smoke.py.
@@ -3304,15 +3323,15 @@ def preflight_all(
         # feedback_canonical_e2e_smoke_PERMANENT_GUARD_20260428.
         check_lane_scripts_have_e2e_smoke_proof(strict=True, verbose=verbose)
 
-        # 2026-04-28 PM: Check 65 — lane CLASSES (not just per-lane scripts)
+        # 2026-04-28 PM: Check 65 - lane CLASSES (not just per-lane scripts)
         # must have at least one complete-pipeline proof on file. Closes the
         # Lane RM-d structural gap: new lane classes shipping without ever
-        # demonstrating dispatch → train → archive → auth_eval cycle. Ships
+        # demonstrating dispatch -> train -> archive -> auth_eval cycle. Ships
         # WARN-ONLY initially so the existing 70 lanes have a backfill window;
         # promotion plan (Lane A pattern): backfill .omx/state/
         # lane_class_proofs.json, then flip strict=True. Reference:
         # feedback_artifact_recovery_canonical_workflow_20260428.
-        # Promoted STRICT 2026-05-06: live count 0 — all 70 lane classes
+        # Promoted STRICT 2026-05-06: live count 0 - all 70 lane classes
         # have pipeline proofs backfilled in .omx/state/lane_class_proofs.json.
         check_lane_classes_have_pipeline_proof(strict=True, verbose=verbose)
 
@@ -3334,29 +3353,29 @@ def preflight_all(
         check_segmap_grayscale_lut_consistency(strict=True, verbose=verbose)
         check_segmap_lct_archive_contract(strict=True, verbose=verbose)
         check_block_fp_exponents_alongside_qint(strict=True, verbose=verbose)
-        # Promoted STRICT 2026-05-06: live count 0 — every segmap export
+        # Promoted STRICT 2026-05-06: live count 0 - every segmap export
         # call site invokes verify_roundtrip.
         check_segmap_export_calls_verify_roundtrip(strict=True, verbose=verbose)
         check_segmap_hm_sa_lossy_pack_contract(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 91 — Lane GP basis-fit kill enforcement. Forbids
+        # 2026-04-30: Check 91 - Lane GP basis-fit kill enforcement. Forbids
         # any new experiments/fit_pose_*.py from importing smooth-basis fit
         # functions (np.polyfit / scipy.interpolate.{BSpline,splrep,CubicSpline}
         # / scipy.fft.dct) WITHOUT a `# LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:`
         # marker pointing to .omx/research/council_lane_gp_v4_design_20260430.md.
         # The Lane GP v3 (89.67) failure was mis-attributed to Runge phenomenon;
         # actual root cause is white-noise trajectory in dims 1-5 (diff_std >
-        # signal_std). All smooth-basis fits plateau at RMSE ≈ 1.2 (near signal
+        # signal_std). All smooth-basis fits plateau at RMSE approximately 1.2 (near signal
         # std). Lands STRICT @ 0 violations after experiments/fit_pose_gp.py
         # gets the kill marker (in same commit). Memory:
         # project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md.
         check_pose_basis_fit_kill_acknowledged(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 90 — Lane Maturity Registry consistency.
+        # 2026-04-30: Check 90 - Lane Maturity Registry consistency.
         # Every lane MUST be tracked in .omx/state/lane_registry.json via
         # tools/lane_maturity.py. The registry encodes the 7-gate Level-3
         # production-hardened standard. This check delegates to
-        # tools/lane_maturity.validate_registry() — verifies schema_version,
+        # tools/lane_maturity.validate_registry() - verifies schema_version,
         # no duplicates, all gates present, stored level matches computed
         # level, and every file-path-looking evidence string points to a
         # real file. Lands STRICT @ 0 violations (verified 2026-04-30
@@ -3365,7 +3384,7 @@ def preflight_all(
         # Memory: project_lane_maturity_harness_landed_20260430.
         check_lane_registry_consistent(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 92 — Lane 8 inflate-time multipass forbidden.
+        # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
         # scorer-rule in CLAUDE.md). Any reference to it inside
         # `submissions/robust_current/inflate_renderer.py` or `inflate.sh`
@@ -3373,12 +3392,12 @@ def preflight_all(
         # destroys the rate term (~73MB scorer weights inside archive.zip).
         # Lands STRICT @ 0 live violations after Lane 8 implementation
         # lands (the implementation lives in src/tac/multipass_compressor.py
-        # and experiments/pipeline.py:step_multipass — both are explicitly
+        # and experiments/pipeline.py:step_multipass - both are explicitly
         # COMPRESS-time entry points and are exempted by path).
         # Memory: project_lane_8_multipass_landed_20260430.md (TBD).
         check_no_inflate_time_multipass(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 93 — Lane 19 (logit-margin) callers pass
+        # 2026-04-30: Check 93 - Lane 19 (logit-margin) callers pass
         # explicit threshold=. The loss module raises ValueError when
         # threshold is None, but a positional default would silently bypass
         # that gate (degrading margin loss to standard CE because all
@@ -3391,7 +3410,7 @@ def preflight_all(
         # Memory: feedback_silent_default_bug_class_findings_20260429.md.
         check_logit_margin_loss_uses_boundary_mask(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 94 — Lane 17 (IMP) cycle scripts must use EMA
+        # 2026-04-30: Check 94 - Lane 17 (IMP) cycle scripts must use EMA
         # AND end the chain with CUDA auth eval. Check 88 (Council D EMA
         # wire-in) covers per-script EMA presence; this check covers the
         # full Lane 17 dispatcher chain: any scripts/remote_lane_*imp*.sh
@@ -3402,7 +3421,7 @@ def preflight_all(
         # .omx/research/council_lane_17_imp_design_20260430.md.
         check_imp_cycles_use_ema_and_auth_eval(strict=True, verbose=verbose)
 
-        # 2026-04-30 ~23:30 UTC: Check 103 (PCC1) — Lane 17 IMP dispatcher
+        # 2026-04-30 ~23:30 UTC: Check 103 (PCC1) - Lane 17 IMP dispatcher
         # MUST invoke a real trainer (train_distill / train_renderer /
         # train_renderer_fridrich) in addition to train_imp_cycle.py.
         # Closes the cycle 0 = 1.98 [contest-CUDA] metabug bug class
@@ -3420,7 +3439,7 @@ def preflight_all(
         # runtime if the stub somehow gets shipped despite this check.
         check_imp_dispatch_calls_train_distill(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 95 — Lane 12 (NeRV mask codec) discipline.
+        # 2026-04-30: Check 95 - Lane 12 (NeRV mask codec) discipline.
         # The Lane 12 codec lane (`src/tac/nerv_mask_codec.py`) ships its
         # own training loop (`NeRVMaskTrainer`) and standalone trainer
         # script (`experiments/train_nerv_mask.py`). Both must follow the
@@ -3436,14 +3455,14 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
-        # Check 91 STRICT — Lane 20 (Ballé hyperprior) BHv1 wire-format
+        # Check 91 STRICT - Lane 20 (Ballé hyperprior) BHv1 wire-format
         # integrity. Verifies that:
         #   - encode_qints_full_balle serializes hyper_decoder weights into
         #     side_info (otherwise decode silently drifts because the FP16
         #     weight roundtrip changes σ values; debugged 2026-04-30 Phase B)
         #   - encode_qints_balle_auto keeps the static_baseline_bytes guard
         #     and the static_wins sentinel (the kill criterion that prevents
-        #     shipping a regressing untrained codec — Phase E empirical
+        #     shipping a regressing untrained codec - Phase E empirical
         #     showed untrained Ballé is ~3x worse than static on FP4 streams)
         # Lands STRICT @ 0 violations on the 2026-04-30 codebase (Lane 20
         # Phase B implementation already complies).
@@ -3452,7 +3471,7 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
-        # 2026-04-30: Check 96 — Lane PFP16 fp16-or-smaller pose stream
+        # 2026-04-30: Check 96 - Lane PFP16 fp16-or-smaller pose stream
         # discipline. Lane GP v4 KILL VERDICT surfaced Hotz's dominant-
         # strategy successor: cast `optimized_poses.pt` from fp32 (~15.6 KB
         # pickle) to raw fp16 binary (~7.2 KB) for ~8 KB savings at ZERO
@@ -3461,13 +3480,13 @@ def preflight_all(
         # shipping fp32 pose tensors when fp16 is sufficient. Lands STRICT
         # @ 0 violations on the 2026-04-30 codebase (the only existing
         # pose-touching build scripts use either canonical pose encoders
-        # OR pure byte-copy from a pre-built artifact — neither triggers
+        # OR pure byte-copy from a pre-built artifact - neither triggers
         # the heuristic).
         # Reference: .omx/research/council_lane_gp_v4_design_20260430.md.
         # Memory: project_lane_pfp16_landed_20260430.md.
         check_pose_stream_uses_fp16_or_smaller(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 98 — remote contest-auth adjudication must read
+        # 2026-04-30: Check 98 - remote contest-auth adjudication must read
         # machine JSON, never human-readable score text. PFP16 exact CUDA
         # landed at recomputed score 1.0440481283330025, but the remote script
         # parsed `Final score: 100*... = 1.04` as 100.0 and falsely hard-killed
@@ -3479,7 +3498,7 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
-        # 2026-04-30: Check 100 — retry launcher must be self-protecting.
+        # 2026-04-30: Check 100 - retry launcher must be self-protecting.
         # Dispatch attempts are production state transitions, not disposable
         # helper calls. The wrapper must hold a single-flight lock, refuse a
         # new Vast attempt when the same logical label is already live, and
@@ -3489,27 +3508,27 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
-        # 2026-04-30: Check 101 — Modal recovery docs must match the installed
+        # 2026-04-30: Check 101 - Modal recovery docs must match the installed
         # Modal CLI. Modal 1.4 removed the old `modal call get` command; stale
         # guidance caused recovery confusion immediately after the OWV3 Fisher
         # smoke dispatch. Recovery must go through experiments/modal_recover_lane.py
         # and log streaming through `modal app logs <app-id>`.
         check_modal_recovery_cli_guidance_current(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check 102 — Modal CPU auth eval must remain advisory.
+        # 2026-04-30: Check 102 - Modal CPU auth eval must remain advisory.
         # The Modal training wrapper may force AUTH_EVAL_DEVICE=cpu to avoid
         # NVDEC, but CPU/MPS scores cannot promote, rank, retire, or anchor a
         # stack. Enforce explicit advisory markers and device-aware recovery
         # output so stale provider telemetry does not become score truth.
         check_modal_cpu_auth_eval_is_advisory_only(strict=True, verbose=verbose)
 
-        # 2026-04-30: Check PCC4 — KILL/FALSIFIED memory files MUST cite a
+        # 2026-04-30: Check PCC4 - KILL/FALSIFIED memory files MUST cite a
         # Grand Council adversarial review. Per the user mandate ("permanently
         # fix all bugs and bug classes and metabugs and everything and have all
         # design decisions and ultimate experiment subject to extreme paranoia
         # and adversarial grand council reviews", 2026-04-30 ~22:55 UTC) and
         # the Lane 17 IMP premature-KILL incident (cycle 0 = 1.98 was a
-        # measurement bug — 200 epochs claimed in stats.json but elapsed_sec
+        # measurement bug - 200 epochs claimed in stats.json but elapsed_sec
         # = 3.47s revealed the in-script "lightweight loop" stub never got
         # swapped for train_distill).
         #
@@ -3520,7 +3539,7 @@ def preflight_all(
         # records lacking the canonical sections; they will be backfilled
         # 2026-05-01: 4 pre-existing KILL/FALSIFIED memory files cleaned up
         # (Lane GP v4, Lane GP class, Lane 7 PSD, All-Scores forensic audit
-        # — each got Grand Council review section + internal-consistency
+        # - each got Grand Council review section + internal-consistency
         # check + reactivation criteria appended). PCC4 now STRICT @ 0.
         # Reference: feedback_grand_council_pcc4_kill_memory_review_
         # enforcement_20260430.md.
@@ -3528,7 +3547,7 @@ def preflight_all(
             strict=True, verbose=verbose,
         )
 
-        # 2026-05-01: PCC5/6/7/8 — loop-session permanent extinction checks.
+        # 2026-05-01: PCC5/6/7/8 - loop-session permanent extinction checks.
         # Each closes a bug class that wasted a Vast.ai dispatch (~$0.30 +
         # 5-10 min) on 2026-05-01. All 4 ship WARN-ONLY; flip to STRICT once
         # live-codebase violations are 0. Reference:
@@ -3537,7 +3556,7 @@ def preflight_all(
         #   PCC6: venv-creating scripts must install pip (or annotate)
         #   PCC7: vastai create instance must use --disk >= 60GB
         #   PCC8: multi-candidate chain drivers must clean inflated/ per-cand
-        # Promoted STRICT 2026-05-06: live count 0 — wired
+        # Promoted STRICT 2026-05-06: live count 0 - wired
         # `bash scripts/ensure_remote_uv.sh --symlink-system` Stage 0b in the
         # 4 lane scripts that directly invoke contest_auth_eval.py (j_nwc,
         # j_nwcs_ec_stack, j_nwcs_sensitivity_aware_codec, wc_curator_outlier).
@@ -3566,7 +3585,7 @@ def preflight_all(
         # 2026-05-08 HARDEN-2026-05-08 (Path B step 5/6 + cross-paradigm
         # 137,531 B candidate hardening). Five new checks land at 0 live
         # violations on the current tree, so they go straight to STRICT per
-        # the Lane A → strict pattern. Memory ref:
+        # the Lane A -> strict pattern. Memory ref:
         # ``feedback_harden_2026_05_08_path_b_cross_paradigm_preflight_landed.md``.
         check_admm_lagrangian_bisection_convergent(strict=True, verbose=verbose)
         check_codec_pipeline_op_order_deterministic(strict=True, verbose=verbose)
@@ -3588,8 +3607,8 @@ def preflight_all(
         #   B2 (evidence-archive-bytes provenance)     5  warn
         #   B3 (build-manifest archive custody)        7  warn
         #   B4 (admm naming-vs-impl mismatch)         27  warn
-        #   B5 (inflate wire dead-bytes)               0  → STRICT
-        #   B6 (retired-config redispatch guard)       0  → STRICT
+        #   B5 (inflate wire dead-bytes)               0  -> STRICT
+        #   B6 (retired-config redispatch guard)       0  -> STRICT
         #   B7 (paper/research lane-tag extension)    58  warn
         #   B8 (pr101 torch.load weights_only=False)  32  warn
         _parallel.run(
@@ -3630,7 +3649,7 @@ def preflight_all(
         check_predispatch_retired_config_warning(
             strict=True, verbose=verbose,
         )
-        # Check 109 — public PR intake clones MUST be pristine bytes-identical
+        # Check 109 - public PR intake clones MUST be pristine bytes-identical
         # to upstream. Codex 2026-05-08 adversarial review HIGH finding:
         # in-place waiver comments in clone source files corrupt source
         # provenance. Lands at 0 live violations after the same-day revert
@@ -3644,7 +3663,7 @@ def preflight_all(
                 verbose=verbose,
             ),
         )
-        # Check 110 — recovery_metadata.json MUST be append-only attempts[]
+        # Check 110 - recovery_metadata.json MUST be append-only attempts[]
         # with unique started_at_utc per attempt. Codex 2026-05-08 adversarial
         # review MEDIUM finding: timestamp-only churn on recovered_42_dead +
         # recovered_99999_phantom destroyed the original April 30 audit trail.
@@ -3672,7 +3691,7 @@ def preflight_all(
             ),
             strict=True,
         )
-        # B9 — rel_err canonical-definition discipline (codex adversarial
+        # B9 - rel_err canonical-definition discipline (codex adversarial
         # review #1, 2026-05-08). Live count on landing: 0. Held warn-only
         # for one tranche; flip to STRICT after a follow-on review of any
         # new call sites. Memory:
@@ -3689,7 +3708,7 @@ def preflight_all(
         # 2026-05-08 DUAL-AXIS-RANKING (operator mandate): solver/
         # recommender outputs must distinguish predicted_cuda_score vs
         # predicted_cpu_score. The contest leaderboard ranks by --device
-        # cpu eval (CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
+        # cpu eval (CLAUDE.md "Submission auth eval - BOTH CPU AND CUDA").
         # Promoted STRICT on 2026-05-08 after the live count reached 0.
         # Memory: feedback_dual_axis_solver_integration_landed_20260508.md.
         check_solvers_use_dual_axis_ranking(
@@ -3703,16 +3722,16 @@ def preflight_all(
         # audit. Memory:
         # ``feedback_representation_integration_gates_landed_20260508.md``.
         # Live counts on landing:
-        #   Gate  1 (representation promotion card)             0  → STRICT
-        #   Gate  2 (no naked bytes)                            0  → STRICT
-        #   Gate  3 (parser-section manifest)                   0  → STRICT
+        #   Gate  1 (representation promotion card)             0  -> STRICT
+        #   Gate  2 (no naked bytes)                            0  -> STRICT
+        #   Gate  3 (parser-section manifest)                   0  -> STRICT
         #   Gate  4 (export-first)                              2  warn
-        #   Gate  5 (runtime closure)                           0  → STRICT
-        #   Gate  6 (mask/pose coupling)                        0  → STRICT
-        #   Gate  7 (no-op + provenance)                        0  → STRICT
-        #   Gate  8 (exact evidence frontier promotion)         0  → STRICT
-        #   Gate  9 (blocker ownership)                         0  → STRICT
-        #   Gate 10 (stack promotion)                           0  → STRICT
+        #   Gate  5 (runtime closure)                           0  -> STRICT
+        #   Gate  6 (mask/pose coupling)                        0  -> STRICT
+        #   Gate  7 (no-op + provenance)                        0  -> STRICT
+        #   Gate  8 (exact evidence frontier promotion)         0  -> STRICT
+        #   Gate  9 (blocker ownership)                         0  -> STRICT
+        #   Gate 10 (stack promotion)                           0  -> STRICT
         check_gate1_representation_promotion_card(
             strict=True, verbose=verbose,
         )
@@ -3732,7 +3751,7 @@ def preflight_all(
 
         # 2026-05-12 FFF pass W-1: wire three previously-orphan preflight
         # checks into preflight_all(). All three checks were defined in
-        # src/tac/preflight.py but never called from preflight_all() —
+        # src/tac/preflight.py but never called from preflight_all() -
         # exactly the "landed but not wired" failure mode that Catalog #151
         # extincts for trainer flag manifests. Sister failure: dormant
         # guards that would not catch a regression in the pose-fit /
@@ -3740,9 +3759,9 @@ def preflight_all(
         # Memory: .omx/research/wiring_audit_20260512.md (W-1 finding).
         # Memory: feedback_wiring_integration_arbitrariness_pass_landed_20260512.md.
         # Live counts (verified pre-wire-in):
-        #   check_pose_fit_module_has_white_noise_test           0  → STRICT
-        #   check_preflight_hook_supports_changed_files_mode     0  → STRICT
-        #   check_renderer_codec_has_posenet_protection         27  → WARN-ONLY
+        #   check_pose_fit_module_has_white_noise_test           0  -> STRICT
+        #   check_preflight_hook_supports_changed_files_mode     0  -> STRICT
+        #   check_renderer_codec_has_posenet_protection         27  -> WARN-ONLY
         # The renderer-codec check carries 27 live violations and lands
         # WARN-ONLY per its own docstring promotion plan ("Lands WARN-ONLY
         # initially. Promotion plan: per-module owner adds the appropriate
@@ -3772,7 +3791,7 @@ def preflight_all(
 
         # PCC9: shell-script runtime references must resolve. Catches the
         # subagent-worktree-lost-helper bug class (e.g. ensure_remote_uv.sh,
-        # line_search_pose_refinement.py — both were lost when subagent
+        # line_search_pose_refinement.py - both were lost when subagent
         # worktrees were auto-cleaned without committing helper source).
         # Warn-only initially; one known violation as of 2026-05-04.
         try:
@@ -3789,11 +3808,11 @@ def preflight_all(
                 ),
                 strict=False,
             )
-            # PCC9b: sister check — test-file `from <experiments|tools|submissions>.X
+            # PCC9b: sister check - test-file `from <experiments|tools|submissions>.X
             # import` references must resolve. Catches the same lost-helper bug
             # class but at pytest-collection time (e.g. test_qzs3_packer.py
             # depending on lost experiments/repack_quantizr_faithful_qzs3_archive.py
-            # and experiments/build_renderer_packed_payload_archive.py — both
+            # and experiments/build_renderer_packed_payload_archive.py - both
             # safe-stubbed 2026-05-04). Warn-only initially.
             _parallel.run(
                 "check_test_imports_resolve_to_disk",
@@ -4187,11 +4206,11 @@ def preflight_training_inputs(
       - GT poses missing or wrong shape
       - Profile architecture doesn't match what the renderer would expect
 
-    Raises PreflightError on fatal issues. No warnings — every fail is fatal.
+    Raises PreflightError on fatal issues. No warnings - every fail is fatal.
     """
     if verbose:
         print("=" * 60)
-        print(f"TRAINING PREFLIGHT — profile '{profile_name}'")
+        print(f"TRAINING PREFLIGHT - profile '{profile_name}'")
         print("=" * 60)
 
     # 1. TTO frames must exist, be valid, and be TTO-OPTIMIZED (range < 200)
@@ -4201,7 +4220,7 @@ def preflight_training_inputs(
     try:
         t = torch.load(str(p), map_location="cpu", weights_only=True)
     except Exception as e:
-        raise PreflightError(f"TTO frames corrupted (cannot torch.load): {p} — {e}")
+        raise PreflightError(f"TTO frames corrupted (cannot torch.load): {p} - {e}")
     # R38 fix: accept HWC (N,384,512,3) OR CHW (N,3,384,512). Project history
     # has had silent HWC/CHW format bugs; the validator should not assume one.
     if t.ndim != 4:
@@ -4214,10 +4233,10 @@ def preflight_training_inputs(
         )
     tmin, tmax = float(t.min()), float(t.max())
     if not (0 <= tmin and tmax < 1e6):
-        raise PreflightError(f"TTO frames out of range [{tmin},{tmax}] — likely corrupted: {p}")
+        raise PreflightError(f"TTO frames out of range [{tmin},{tmax}] - likely corrupted: {p}")
     # R38 fix: support both [0,255] uint-scale and [0,1] normalized scale.
-    # If max ≤ 1.5, treat as [0,1] — TTO-optimized [0,1] frames cluster ~0.72.
-    # If max > 1.5, treat as [0,255] — TTO-optimized clusters ~184.
+    # If max <= 1.5, treat as [0,1] - TTO-optimized [0,1] frames cluster ~0.72.
+    # If max > 1.5, treat as [0,255] - TTO-optimized clusters ~184.
     if tmax > 1.5:
         is_gt_video = tmax > 200
     else:
@@ -4225,7 +4244,7 @@ def preflight_training_inputs(
         is_gt_video = tmax > 0.95
     if is_gt_video:
         raise PreflightError(
-            f"TTO frames at GT-video range [0, {tmax:.0f}] — these are RAW GT FRAMES, "
+            f"TTO frames at GT-video range [0, {tmax:.0f}] - these are RAW GT FRAMES, "
             f"not TTO-optimized. This is the WILDE failure mode (proxy 267 instead of 0.5). "
             f"Re-run optimize_poses.py to generate TTO-optimized frames first. Path: {p}"
         )
@@ -4241,7 +4260,7 @@ def preflight_training_inputs(
         if isinstance(poses, dict):
             poses = poses.get("poses", poses.get("gt_poses"))
     except Exception as e:
-        raise PreflightError(f"GT poses corrupted: {pp} — {e}")
+        raise PreflightError(f"GT poses corrupted: {pp} - {e}")
     # R38 fix: was AttributeError on poses=None when neither 'poses' nor
     # 'gt_poses' key existed in the dict.
     if poses is None:
@@ -4268,7 +4287,7 @@ def preflight_training_inputs(
         ).strip()
         nframes = int(out)
     except (subprocess.TimeoutExpired, ValueError, subprocess.CalledProcessError) as e:
-        raise PreflightError(f"ffprobe failed on masks: {mp} — {e}")
+        raise PreflightError(f"ffprobe failed on masks: {mp} - {e}")
     if nframes not in (600, 1200):
         raise PreflightError(
             f"Masks have {nframes} frames (expected 600 half-frame or 1200 full): {mp}"
@@ -4336,7 +4355,7 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
     incident that motivated it so future maintainers can judge edge cases.
 
     Args:
-        text: shell text — either a bash file body or a string literal that
+        text: shell text - either a bash file body or a string literal that
             will be passed to bash -c / ssh.
         location: human-readable origin (e.g. "scripts/foo.sh" or
             "src/tac/deploy/x.py:412") used in violation messages.
@@ -4349,12 +4368,12 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
     # repeatedly wrote /tmp/*.sh files that vanished on instance restart and
     # were never under version control. The canonical entry point is
     # `scripts/remote_train_bootstrap.sh <profile>` (rsynced with the repo).
-    # Allow `/tmp/*.log`, `/tmp/foo.bin`, `/tmp/cache/...` etc — only fire on
+    # Allow `/tmp/*.log`, `/tmp/foo.bin`, `/tmp/cache/...` etc - only fire on
     # bash/python shell files written to /tmp and then EXECUTED.
     if re.search(r"\b(bash|sh|python3?)\s+/tmp/[A-Za-z_][\w./]*\.(sh|py)\b", text):
         if "scripts/remote_train_bootstrap.sh" not in text:
             violations.append(
-                f"{location}: executes a /tmp/*.{{sh,py}} script — ad-hoc "
+                f"{location}: executes a /tmp/*.{{sh,py}} script - ad-hoc "
                 f"deploy scripts in /tmp vanish across instance restarts and "
                 f"are not version-controlled. Use the canonical "
                 f"`scripts/remote_train_bootstrap.sh <profile>` instead, or "
@@ -4364,7 +4383,7 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
     # Self-matching `pgrep -f TOKEN` deadlock. 2026-04-26 SHIRAZ:
     #   bash -c "while pgrep -f train_distill > /dev/null; do sleep 60; done; bash run_pipeline.sh"
     # The bash -c argv literally contained "train_distill", so pgrep -f matched
-    # the wrapper itself and the loop never exited — burned ~21h of A100 time.
+    # the wrapper itself and the loop never exited - burned ~21h of A100 time.
     # Detect any `pgrep -f TOKEN` whose TOKEN appears elsewhere in the SAME
     # text blob (file or string literal).
     for m in re.finditer(r"pgrep\s+-[a-z]*f[a-z]*\s+['\"]?([A-Za-z0-9_./-]+)", text):
@@ -4373,7 +4392,7 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
             continue
         if text.count(token) >= 2:
             violations.append(
-                f"{location}: `pgrep -f {token}` will SELF-MATCH — the token "
+                f"{location}: `pgrep -f {token}` will SELF-MATCH - the token "
                 f"appears elsewhere in this text, so the wait loop's own argv "
                 f"matches and the loop sleeps forever. 2026-04-26 SHIRAZ "
                 f"deadlock burned ~21h of A100 time. Use a pidfile, "
@@ -4381,7 +4400,7 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
             )
             break
 
-    # Blind `.pt → .bin` rename. 2026-04-26 retto wrapper did
+    # Blind `.pt -> .bin` rename. 2026-04-26 retto wrapper did
     #   cp $(ls *_partial.pt) /tmp/.../optimized_poses.bin
     # Pickle masqueraded as raw fp16 buffer; auth_eval_renderer crashed after
     # 7 min of mask extraction with `frombuffer` size mismatch.
@@ -4399,7 +4418,7 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
     # `optimized_poses_partial.pt` is what optimize_poses.py writes
     # periodically; shipping it as the final archive artifact means N pairs
     # rather than the full 600 are present. Only fire when the reference
-    # appears near a copy/move/archive operation — a producer that natively
+    # appears near a copy/move/archive operation - a producer that natively
     # writes or resumes from its own partial is fine (e.g. optimize_poses.py
     # itself, --resume CLI args, docstrings).
     has_partial_ref = bool(
@@ -4549,14 +4568,14 @@ def _scan_python_for_forbidden(path: Path, *, source_index=None) -> list[str]:
                         if "nohup" in arg.value:
                             violations.append(
                                 f"{path}:{node.lineno}: {func_str} with 'nohup' "
-                                f"— use tmux instead (binding non-negotiable per CLAUDE.md)"
+                                f"- use tmux instead (binding non-negotiable per CLAUDE.md)"
                             )
                     elif isinstance(arg, ast.List):
                         for elt in arg.elts:
                             if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
                                 if elt.value.strip() == "nohup":
                                     violations.append(
-                                        f"{path}:{node.lineno}: {func_str} with nohup arg — use tmux"
+                                        f"{path}:{node.lineno}: {func_str} with nohup arg - use tmux"
                                     )
                 # R-mps-noise: detect auth_eval invocations with --device mps.
                 # Allow in test/smoke paths.
@@ -4565,7 +4584,7 @@ def _scan_python_for_forbidden(path: Path, *, source_index=None) -> list[str]:
                     if "auth_eval" in full and re.search(r"--device['\"\s,]+mps", full):
                         violations.append(
                             f"{path}:{node.lineno}: auth_eval invocation with "
-                            f"'--device mps' — MPS auth scores are NOISE per CLAUDE.md "
+                            f"'--device mps' - MPS auth scores are NOISE per CLAUDE.md "
                             f"HIGHEST-EMPHASIS rule (23x PoseNet drift verified 2026-04-25). "
                             f"Use --device cuda."
                         )
@@ -4576,7 +4595,7 @@ def _scan_python_for_forbidden(path: Path, *, source_index=None) -> list[str]:
             if re.search(r"nohup.*&", full) and ("ssh" in full.lower() or "/workspace" in full):
                 violations.append(
                     f"{path}:{node.lineno}: f-string with 'nohup ... &' over SSH "
-                    f"— this is the WATCHER PATTERN that DIED on 2026-04-25. Use tmux."
+                    f"- this is the WATCHER PATTERN that DIED on 2026-04-25. Use tmux."
                 )
             # Pose-format and self-match scans on the unparsed f-string. This
             # catches dynamically composed bash -c / ssh commands that never
@@ -4584,7 +4603,7 @@ def _scan_python_for_forbidden(path: Path, *, source_index=None) -> list[str]:
             for v in _scan_text_for_dangerous_patterns(full, f"{path}:{node.lineno}"):
                 violations.append(v)
 
-        # Plain string constants over 40 chars also worth scanning — the
+        # Plain string constants over 40 chars also worth scanning - the
         # `bash -c "..."` literal in deploy_vastai composes via str.join.
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             if len(node.value) > 40:
@@ -4795,7 +4814,7 @@ def check_codebase_drift(
     # 2. Bash scripts outside whitelist
     # Harvest bundles under experiments/results/<lane>/<bundle>/ record the
     # exact remote command line as run_command.sh purely for audit/traceability
-    # — these are recorded artifacts, not deploy patterns, and are also
+    # - these are recorded artifacts, not deploy patterns, and are also
     # gitignored. The drift rule exists to prevent ad-hoc deploy scripts
     # creeping in alongside the canonical pipeline.py + deploy_vastai.py path,
     # which a frozen result-bundle audit trail does not violate.
@@ -4813,13 +4832,13 @@ def check_codebase_drift(
         # each adapter to ALLOWED_BASH_PATHS (which would grow unboundedly
         # with each new public PR intake).
         if rel.startswith("experiments/public_runtime_adapters/"):
-            # Still scan the contents for forbidden patterns — exemption
+            # Still scan the contents for forbidden patterns - exemption
             # is for the path-allowlist, not for the bash-pattern check.
             all_violations.extend(_scan_bash_text_for_forbidden(sh_path))
             continue
         if rel not in ALLOWED_BASH_PATHS:
             all_violations.append(
-                f"{rel}: bash script in experiments/ — only contest submission "
+                f"{rel}: bash script in experiments/ - only contest submission "
                 f"scripts allowed (inflate.sh, compress.sh in submissions/)"
             )
         all_violations.extend(_scan_bash_text_for_forbidden(sh_path))
@@ -4878,11 +4897,11 @@ def check_codebase_drift(
 
     if all_violations and strict:
         msg = (
-            "CODEBASE DRIFT DETECTED — ad-hoc deployment patterns reappeared.\n"
+            "CODEBASE DRIFT DETECTED - ad-hoc deployment patterns reappeared.\n"
             "These patterns wasted real money and CO2 on 2026-04-25. "
             "Per CLAUDE.md binding rules:\n\n"
-            + "\n".join(f"  • {v}" for v in all_violations)
-            + "\n\nFix every violation. There is no bypass — this is the gate working."
+            + "\n".join(f"  - {v}" for v in all_violations)
+            + "\n\nFix every violation. There is no bypass - this is the gate working."
         )
         raise CodebaseDriftError(msg)
     return all_violations
@@ -4893,9 +4912,9 @@ def check_codebase_drift(
 # The bug class this catches: a launcher (pipeline.py, deploy_vastai.py, a shell
 # wrapper) invokes a target script (qat_finetune.py, train_distill.py, etc.)
 # with a list of CLI flags. If the target's argparse signature doesn't accept a
-# flag, that flag is silently dropped (or argparse errors out at runtime — way
+# flag, that flag is silently dropped (or argparse errors out at runtime - way
 # too late, after $$ of GPU has been spent on the wrong thing). If the launcher
-# fails to pass a flag the target needs, the target uses the default — the
+# fails to pass a flag the target needs, the target uses the default - the
 # SHIRAZ A100 disaster: profile said motion_hidden=24, qat_finetune.py defaulted
 # to 32, so QAT silently rebuilt the wrong architecture.
 #
@@ -4906,7 +4925,7 @@ def check_codebase_drift(
 #      target arg in ARCH_FLAGS_REQUIRED that the target accepts must be passed.
 
 # Architectural flags that, IF a target script accepts them, MUST be passed by
-# any launcher invoking that script. Missing one → silent default → wrong arch.
+# any launcher invoking that script. Missing one -> silent default -> wrong arch.
 # This is the SHIRAZ failure mode: trained with motion_hidden=24, QAT got 32.
 ARCH_FLAGS_REQUIRED = {
     "--base-ch", "--mid-ch", "--motion-hidden", "--depth", "--embed-dim",
@@ -4934,7 +4953,7 @@ LAUNCHER_FILES = [
 ]
 
 # Target script directories: every .py here is a potential subprocess target.
-# R38 fix: src/tac/experiments/ added — train_renderer.py is a de-facto
+# R38 fix: src/tac/experiments/ added - train_renderer.py is a de-facto
 # launcher invoked directly via `python -m tac.experiments.train_renderer`.
 TARGET_DIRS = ["experiments", "scripts", "src/tac/experiments"]
 
@@ -5006,7 +5025,7 @@ def _parse_argparse_signature(path: Path) -> dict[str, dict] | None:
 def _statically_resolve_list(node, scope: dict) -> list | None:
     """Try to resolve `node` to a list of AST elements (literals or names).
 
-    Handles: List literal, Name → scope lookup (which may already be a
+    Handles: List literal, Name -> scope lookup (which may already be a
     resolved Python list of AST nodes), BinOp `+` of two resolvable lists
     (R38: closes an arity-validator escape hatch). `.extend()` is tracked
     elsewhere (in scope's list_vars).
@@ -5070,7 +5089,7 @@ def _extract_invocations_from_scope(
     Iterates the scope's body sequentially (in lexical order) so that
     variable definitions are seen before their use. We descend into
     sub-statements (if-branches, for-bodies, with-bodies) but DO NOT descend
-    into nested FunctionDef/ClassDef — those are separate scopes handled by
+    into nested FunctionDef/ClassDef - those are separate scopes handled by
     the caller.
 
     Also detects `subprocess.run(["bash", "-c", "python experiments/foo.py ..."])`
@@ -5088,12 +5107,19 @@ def _extract_invocations_from_scope(
                 return
 
         # Track `name = [...]` and `name = a + b` (R38 BinOp).
+        # Catalog #168 fix 2026-05-12: also handle annotated assigns like
+        # `cmd: list[str] = [...]` which are common in modern callers.
         if isinstance(node, ast.Assign):
             if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-                # Try the full resolver — handles List, Name, BinOp(+).
+                # Try the full resolver - handles List, Name, BinOp(+).
                 resolved = _statically_resolve_list(node.value, list_vars)
                 if resolved is not None:
                     list_vars[node.targets[0].id] = resolved
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            if isinstance(node.target, ast.Name):
+                resolved = _statically_resolve_list(node.value, list_vars)
+                if resolved is not None:
+                    list_vars[node.target.id] = resolved
 
         # Track `name.extend([...])` and `name.append("--flag")`
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
@@ -5209,7 +5235,7 @@ def _scan_launcher_invocations(
     list to be polluted by Function B's `.extend(...)`.
 
     Also returns the set of every `--flag` literal appearing anywhere in the
-    file's source — used by Rule D to detect launchers that don't even
+    file's source - used by Rule D to detect launchers that don't even
     mention a target's boolean arch flag (silent-default risk).
     """
     try:
@@ -5244,11 +5270,11 @@ def preflight_arity(
       B. Every required=True arg of the target MUST be passed.
          (catches forgotten required flags)
       C. If the target accepts an ARCH_FLAGS_REQUIRED flag and the launcher does
-         NOT pass it, that's a silent-default risk → fail. (catches the SHIRAZ
+         NOT pass it, that's a silent-default risk -> fail. (catches the SHIRAZ
          motion_hidden=24 vs default 32 disaster.)
       D. If the target accepts an ARCH_FLAGS_BOOLEAN flag and the launcher's
          source code never even mentions that flag string, the launcher cannot
-         be conditionally passing it — that's also a silent-default risk →
+         be conditionally passing it - that's also a silent-default risk ->
          fail. (catches the SHIRAZ-class disaster for boolean flags like
          --use-dsconv and --use-dilation.)
 
@@ -5349,7 +5375,7 @@ def preflight_arity(
             for flag in sorted(missing_arch):
                 violations.append(
                     f"{launcher_rel}:{lineno}: invokes {target} which accepts arch "
-                    f"flag {flag!r} but launcher doesn't pass it. Silent default → "
+                    f"flag {flag!r} but launcher doesn't pass it. Silent default -> "
                     f"WRONG architecture (the SHIRAZ motion_hidden=24 vs default 32 disaster)."
                 )
 
@@ -5383,7 +5409,7 @@ def preflight_arity(
     if verbose and violations:
         print(f"  [arity] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         n_launchers = sum(1 for f in launcher_files if (root / f).exists())
         n_targets = len(sigs)
@@ -5392,7 +5418,7 @@ def preflight_arity(
     if violations and strict:
         raise ArityViolation(
             "ARITY MISMATCH between launcher(s) and target script(s):\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFix every violation. Each one is a real bug class that has "
             "burned GPU money in this repo (see CLAUDE.md SHIRAZ A100 incident)."
         )
@@ -5522,7 +5548,7 @@ def preflight_shell_lane_arity(
         for lineno, target, flags_used in invocations:
             target_sig = sigs.get(target)
             if target_sig is None:
-                # Target not parseable or no argparse → skip silently.
+                # Target not parseable or no argparse -> skip silently.
                 continue
             target_flags = set(target_sig.keys())
             unknown = set(flags_used) - target_flags
@@ -5530,13 +5556,13 @@ def preflight_shell_lane_arity(
                 violations.append(
                     f"{shell_rel}:{lineno}: passes {f!r} to {target} "
                     f"but target has no such argparse arg "
-                    f"(BUG CLASS A — invented CLI flag in shell script)"
+                    f"(BUG CLASS A - invented CLI flag in shell script)"
                 )
 
     if verbose and violations:
         print(f"  [shell-lane-arity] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         n_scripts = sum(1 for f in shell_files if (root / f).exists())
         print(
@@ -5548,7 +5574,7 @@ def preflight_shell_lane_arity(
         raise ArityViolation(
             "SHELL-LANE ARITY MISMATCH between remote_lane_*.sh and "
             "experiments/*.py target(s):\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFix every violation. Each one is a Bug Class A regression "
             "(the dead-flag-in-shell pattern that burned ~$3 of Modal time on "
             "2026-04-29 across Lanes MM/SA-v2/SC++-v2/SO-v2)."
@@ -5575,7 +5601,7 @@ def preflight_shell_lane_arity(
 # high.
 #
 # Conservative threshold: --batch-size <= 32. With T=2 frames per pair,
-# 32 pairs = 64 scorer-forward frames per mini-batch — the activations
+# 32 pairs = 64 scorer-forward frames per mini-batch - the activations
 # stay under ~2 GiB even at full 384x512.
 
 _T4_OOM_TRAINING_TARGETS = {
@@ -5622,7 +5648,7 @@ def preflight_t4_oom_training_guard(
         if not shell_path.exists():
             continue
         raw = shell_path.read_text()
-        # GPU_TIER_HINT export anywhere in the file → opt out.
+        # GPU_TIER_HINT export anywhere in the file -> opt out.
         has_tier_hint = bool(
             re.search(rf'(?:^|\n)\s*export\s+{_GPU_TIER_HINT_VAR}=', raw)
         )
@@ -5663,7 +5689,7 @@ def preflight_t4_oom_training_guard(
     if verbose and violations:
         print(f"  [t4-oom-guard] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(
             f"  [t4-oom-guard] OK: "
@@ -5674,9 +5700,9 @@ def preflight_t4_oom_training_guard(
         raise PreflightError(
             "T4-OOM TRAINING GUARD: lane scripts invoke a T4-OOM-prone "
             "training target without bounded --batch-size or GPU_TIER_HINT:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nMemory: BUG CLASS B (2026-04-29 Lane SA-v2/SC++-v2/SO-v2 "
-            "incident) — unchunked SegMap train_epoch needed 7.03 GiB on a "
+            "incident) - unchunked SegMap train_epoch needed 7.03 GiB on a "
             "14.56-GiB T4 and OOM'd in 126 s. The chunked train_epoch fix "
             "(Check 73) is wired but only effective when --batch-size is "
             "passed."
@@ -5688,7 +5714,7 @@ def preflight_t4_oom_training_guard(
 #
 # Bug class this catches: code that reads a profile-derived value via
 # `getattr(args, "X", DEFAULT)` (or `args.X`) but the script never actually
-# resolves X into the argparse Namespace — so the silent default fires every
+# resolves X into the argparse Namespace - so the silent default fires every
 # time and the profile's value is dead. Caught manually three times in the
 # 2026-04-27 R5 codex review:
 #   - pose_dim: every SHIRAZ/DEN/WILDE/GREEN run silently trained pose_dim=0
@@ -5713,9 +5739,10 @@ def _flag_to_attr(flag: str) -> str:
 
 
 def _collect_assigned_args_attrs(tree: ast.Module) -> set[str]:
-    """Walk the AST for every `args.X = ...` (Assign) and `args.X += ...`
-    (AugAssign) site. Returns the set of attribute names assigned anywhere
-    in the module — this is the resolver-side ground truth."""
+    """Walk the AST for every `args.X = ...` (Assign), `args.X += ...`
+    (AugAssign), and `args.X: T = ...` (AnnAssign — Catalog #168 fix
+    2026-05-12) site. Returns the set of attribute names assigned anywhere
+    in the module - this is the resolver-side ground truth."""
     out: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
@@ -5725,6 +5752,12 @@ def _collect_assigned_args_attrs(tree: ast.Module) -> set[str]:
                         and tgt.value.id == "args"):
                     out.add(tgt.attr)
         elif isinstance(node, ast.AugAssign):
+            tgt = node.target
+            if (isinstance(tgt, ast.Attribute)
+                    and isinstance(tgt.value, ast.Name)
+                    and tgt.value.id == "args"):
+                out.add(tgt.attr)
+        elif isinstance(node, ast.AnnAssign):
             tgt = node.target
             if (isinstance(tgt, ast.Attribute)
                     and isinstance(tgt.value, ast.Name)
@@ -6058,7 +6091,7 @@ def _import_inside_try_handler(tree: ast.Module, target: ast.ImportFrom) -> bool
         # Walk just the try-body (not the handlers / else / finally) for the target.
         for body_node in node.body:
             if any(child is target for child in ast.walk(body_node)):
-                # Now check the handlers — at least one must catch ImportError
+                # Now check the handlers - at least one must catch ImportError
                 # (or be a bare except).
                 for handler in node.handlers:
                     if handler.type is None:
@@ -6203,7 +6236,7 @@ def _scan_python_for_dead_imports(path: Path, repo_root: Path) -> list[str]:
     tac.X AND Y is not a resolvable submodule. Skips imports inside
     try/except ImportError blocks (intentional graceful fallback).
 
-    Catches the segnet_uncertainty_weighted_loss class — runtime
+    Catches the segnet_uncertainty_weighted_loss class - runtime
     NameError masked by stale .pyc caches.
     """
     text, err = _read_python_text(path)
@@ -6281,7 +6314,7 @@ def preflight_dead_resolvers(
          `--X` argparse flag OR an explicit `args.X = ...` assignment somewhere
          in the same file. Otherwise the silent default masks profile values.
          (pose_dim / uncertainty_loss_floor bug class.)
-      B. Every `from tac.X import Y` must resolve — Y must actually be defined
+      B. Every `from tac.X import Y` must resolve - Y must actually be defined
          at top level in tac.X. Otherwise stale .pyc caches mask a runtime
          NameError. (segnet_uncertainty_weighted_loss bug class.)
 
@@ -6349,17 +6382,17 @@ def preflight_dead_resolvers(
     if verbose and violations:
         print(f"  [dead-resolvers] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [dead-resolvers] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise DeadResolverViolation(
             "DEAD-RESOLVER / DEAD-IMPORT violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFix every violation. Each one is a real bug class that has "
             "burned GPU money in this repo (pose_dim, "
-            "segnet_uncertainty_weighted_loss, uncertainty_loss_floor — "
+            "segnet_uncertainty_weighted_loss, uncertainty_loss_floor - "
             "2026-04-27 R5 codex review)."
         )
     return violations
@@ -6394,6 +6427,8 @@ def _node_calls_name(node: ast.AST, function_name: str) -> bool:
 
 
 def _node_adds_to_objective(node: ast.AST, weight_attr: str) -> bool:
+    # Catalog #168 fix 2026-05-12: also handle annotated assigns like
+    # `loss: Tensor = ...` which are common in modern training scripts.
     for child in ast.walk(node):
         if isinstance(child, ast.Assign):
             targets = [
@@ -6401,6 +6436,12 @@ def _node_adds_to_objective(node: ast.AST, weight_attr: str) -> bool:
                 if isinstance(t, ast.Name) and t.id in {"loss", "total", "fridrich_extra"}
             ]
             if targets and _node_uses_attr(child.value, weight_attr):
+                return True
+        elif isinstance(child, ast.AnnAssign) and child.value is not None:
+            tgt = child.target
+            if (isinstance(tgt, ast.Name)
+                    and tgt.id in {"loss", "total", "fridrich_extra"}
+                    and _node_uses_attr(child.value, weight_attr)):
                 return True
         elif (
             isinstance(child, ast.AugAssign)
@@ -6508,14 +6549,14 @@ def check_feature_flags_have_live_objective_effect(
     if verbose and violations:
         print(f"  [objective-feature] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print("  [objective-feature] OK")
 
     if violations and strict:
         raise MetaBugViolation(
             "DEAD OBJECTIVE FEATURE violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -6530,15 +6571,15 @@ def check_feature_flags_have_live_objective_effect(
 # preflight_all (the previously-referenced TODO block was removed 2026-04-27
 # after every meta-bug check was promoted).
 #
-# Pattern → memory entry mapping:
-#   1. MPS-fallback device default       → feedback_default_to_convenience_trap
-#   2. set -uo pipefail (no -e)          → feedback_zip_dep_bootstrap_trap
-#   3. shell `zip` binary                → feedback_zip_dep_bootstrap_trap
-#   4. pipefail + grep -q SIGPIPE        → feedback_pipefail_grep_q_trap
-#   5. eval_roundtrip=False              → CLAUDE.md "eval_roundtrip" rule
-#   6. scorer load at inflate            → feedback_strict_scorer_rule
-#   7. training script no auth eval      → CLAUDE.md "Auth eval EVERYWHERE"
-#   8. --no-eval-roundtrip CLI flag      → Lane C R5 fix (commit 9d71ec5d)
+# Pattern -> memory entry mapping:
+#   1. MPS-fallback device default       -> feedback_default_to_convenience_trap
+#   2. set -uo pipefail (no -e)          -> feedback_zip_dep_bootstrap_trap
+#   3. shell `zip` binary                -> feedback_zip_dep_bootstrap_trap
+#   4. pipefail + grep -q SIGPIPE        -> feedback_pipefail_grep_q_trap
+#   5. eval_roundtrip=False              -> CLAUDE.md "eval_roundtrip" rule
+#   6. scorer load at inflate            -> feedback_strict_scorer_rule
+#   7. training script no auth eval      -> CLAUDE.md "Auth eval EVERYWHERE"
+#   8. --no-eval-roundtrip CLI flag      -> Lane C R5 fix (commit 9d71ec5d)
 
 
 class MetaBugViolation(Exception):
@@ -6597,7 +6638,7 @@ def check_lane_smoke_signal_nontrivial(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """PCC9 — Catch lanes promoted to L2 with zero-delta smoke evidence.
+    """PCC9 - Catch lanes promoted to L2 with zero-delta smoke evidence.
 
     Council Q2 prescription. Live count was 4 (4 PR106 sister lanes); fixed by
     demoting them L2 -> L1 in commit 9155f0e1. Strict-flipped on 2026-05-05.
@@ -6647,7 +6688,7 @@ def check_dispatch_wrapper_stages_implemented(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """PCC11 — Catch wrapper scripts whose ``# Stage N:`` labels lack a real
+    """PCC11 - Catch wrapper scripts whose ``# Stage N:`` labels lack a real
     command in the stage body (comment-only contract anti-pattern).
 
     Council Q5-B4 prescription. Live count was 63 across 20 wrapper scripts
@@ -6715,7 +6756,7 @@ def check_evidence_implementation_matches_model_spec(
       - compressai_balle ScaleHyperprior tested on 1D-reshaped INT8 weight
         symbols instead of 2D natural images (SUBSTRATE mismatch).
       - lossy_int4 tested only NAIVE PTQ instead of the lane-class variant
-        set (QAT, LSQ, GPTQ, AWQ — VARIANT mismatch).
+        set (QAT, LSQ, GPTQ, AWQ - VARIANT mismatch).
 
     Promotion plan: starts ``strict=False`` (advisory). Once the live
     count is driven to 0 by faithful re-tests of the audited 4 cases, the
@@ -6782,14 +6823,14 @@ def check_cross_paradigm_wiring_contract(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Cross-paradigm wiring contract — every PipelineConfig flag starting
+    """Cross-paradigm wiring contract - every PipelineConfig flag starting
     with ``use_`` must be referenced via ``cfg.<flag>`` at least once in
     experiments/pipeline.py source. Catches the silent-no-op trap where a
     new flag is added to PipelineConfig but no guard or dispatch references
     it (operator flips it, expects behavior change, gets nothing).
 
     Wired 2026-05-06 alongside the cross-paradigm wiring landing
-    (commits 999211e5 → cb2ea361). The companion test
+    (commits 999211e5 -> cb2ea361). The companion test
     ``src/tac/tests/test_cross_paradigm_wiring_contract.py`` verifies
     individual flags; this preflight check is the build-time gate.
     """
@@ -6828,7 +6869,7 @@ def check_cross_paradigm_wiring_contract(
         if violations:
             print(f"  [cross-paradigm-wiring] {len(violations)} violation(s)")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [cross-paradigm-wiring] OK: "
@@ -6843,7 +6884,7 @@ def check_calibration_provenance(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """PCC10 — Anti-arbitrariness scanner for prediction-logic magic numbers.
+    """PCC10 - Anti-arbitrariness scanner for prediction-logic magic numbers.
 
     Council Q4 prescription. Live count was 6; fixed by tagging in commit
     9155f0e1. Strict-flipped on 2026-05-05. Required tag forms: [contest-defined],
@@ -6947,7 +6988,7 @@ def check_operator_approval_must_be_lane_scoped(
                             or "unknown"
                         )
                         violations.append(
-                            f"{rel}: operator-approval-leak — "
+                            f"{rel}: operator-approval-leak - "
                             f"approved=True with manifest_operator_approved_exact_cuda=False "
                             f"(row_id={row_id!r}, source={state.get('source')!r})"
                         )
@@ -7026,7 +7067,7 @@ def check_artifact_lifecycle_compliance(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Meta gate — provenance-vs-state confusion class (CODEX 2026-05-08 META).
+    """Meta gate - provenance-vs-state confusion class (CODEX 2026-05-08 META).
 
     Umbrella check that runs all four artifact-lifecycle guards
     (LIVE_STATE / HISTORICAL_PROVENANCE / LIVE_RECIPE / DERIVED_OUTPUT)
@@ -7284,7 +7325,7 @@ def _is_oss_export_mirror_path(p: Path) -> bool:
     walks `experiments/` (or any other tree the mirror lives under) MUST
     consult this helper rather than reimplementing the check inline. This
     breaks the cascade-bug class documented in feedback_recursive_review_
-    cascade_pattern_20260506.md — the previous narrow-scope per-scanner
+    cascade_pattern_20260506.md - the previous narrow-scope per-scanner
     fixes (R12-R13) repeatedly missed siblings, requiring R12 / R13 / R14
     rounds of fixes.
     """
@@ -7326,7 +7367,7 @@ def check_preflight_scanners_use_oss_mirror_helper(
 
     The cascade documented in feedback_recursive_review_cascade_pattern_
     20260506.md ate 6 review rounds (R12-R17) because the helper was
-    advisory only — new scanners could omit it and nothing failed. This
+    advisory only - new scanners could omit it and nothing failed. This
     check converts the honor system into a static gate for the literal-
     argument 99% case. Future scanners that miss the helper at a literal
     rglob site FAIL preflight at commit time, not at the next adversarial
@@ -7361,7 +7402,7 @@ def check_preflight_scanners_use_oss_mirror_helper(
         if m:
             current_func = m.group(1)
             func_starts[i] = current_func
-    # Build line→function lookup by walking forward from each def.
+    # Build line->function lookup by walking forward from each def.
     sorted_starts = sorted(func_starts.items())
     line_to_func: dict[int, str] = {}
     for idx, (start_lineno, fn) in enumerate(sorted_starts):
@@ -7409,17 +7450,17 @@ def check_preflight_scanners_use_oss_mirror_helper(
         if violations:
             print(
                 f"  [oss-mirror-helper-enforced] {len(violations)} violation(s) "
-                f"in preflight.py — cascade-extinction gate"
+                f"in preflight.py - cascade-extinction gate"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [oss-mirror-helper-enforced] OK: cascade extinct")
     if violations and strict:
         raise MetaBugViolation(
             "OSS-EXPORT MIRROR HELPER ENFORCEMENT FAILED:\n"
-            + "\n".join(f"  • {v}" for v in violations[:10])
-            + (f"\n  … and {len(violations) - 10} more"
+            + "\n".join(f"  - {v}" for v in violations[:10])
+            + (f"\n  ... and {len(violations) - 10} more"
                if len(violations) > 10 else "")
             + "\n\nFix: every rglob() walking experiments/ or src/tac/ in "
             "preflight.py MUST either call _is_oss_export_mirror_path, "
@@ -7787,15 +7828,15 @@ def check_lightning_ssh_static_policy(
         if violations:
             print(f"  [lightning-ssh-static-policy] {len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print("  [lightning-ssh-static-policy] OK: Lightning SSH scripts/runbooks are fail-closed")
     if violations and strict:
         raise MetaBugViolation(
             "LIGHTNING SSH STATIC POLICY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
             + "\n\nLightning scripts and runbooks must preserve host-key "
             "checking and should target SSH config aliases instead of the "
             "bare provider host. This keeps staging/harvest custody auditable "
@@ -7909,15 +7950,15 @@ def check_no_submission_provider_or_cpu_score_leakage(
         if violations:
             print(f"  [submission-provider-score-leakage] {len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print(f"  [submission-provider-score-leakage] OK: {len(candidates)} submission helper(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "SUBMISSION PROVIDER/CPU SCORE LEAKAGE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
             + "\n\nSubmission helpers must not embed provider hostnames, "
             "disable SSH host-key custody, or run contest score paths on "
             "CPU/MPS. Use CUDA for score truth or --skip-score/package-only."
@@ -8182,15 +8223,15 @@ def check_no_compromised_lightning_supply_chain(
         if violations:
             print(f"  [lightning-supply-chain] {len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print("  [lightning-supply-chain] OK: no compromised Lightning artifacts or unsafe install paths")
     if violations and strict:
         raise MetaBugViolation(
             "COMPROMISED LIGHTNING SUPPLY-CHAIN RISK DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -8339,14 +8380,14 @@ def check_lightning_exact_eval_runner_bootstraps_dali(
         if violations:
             print(f"  [lightning-exact-eval-dali] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [lightning-exact-eval-dali] OK: DALI bootstrap and preflight are fail-closed")
 
     if violations and strict:
         raise MetaBugViolation(
             "LIGHTNING EXACT-EVAL DALI PREFLIGHT VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nExact CUDA eval must prove `nvidia.dali` and CUDA before "
             "archive copy, inflate, or upstream evaluate.py. The 2026-04-30 "
             "r3 OWV3 run failed after inflate because this dependency was "
@@ -8497,9 +8538,9 @@ def check_no_active_mcp_server_config(
         if violations:
             print(f"  [mcp-config-disabled] {len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print(
                 f"  [mcp-config-disabled] OK: {len(candidates)} repo-owned "
@@ -8508,7 +8549,7 @@ def check_no_active_mcp_server_config(
     if violations and strict:
         raise MetaBugViolation(
             "ACTIVE MCP SERVER CONFIG DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
             + "\n\nMCP servers are disabled for this project unless the user "
             "explicitly re-enables them."
         )
@@ -8655,15 +8696,15 @@ def check_no_live_mcp_processes(
         if violations:
             print(f"  [mcp-processes-disabled] {len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print("  [mcp-processes-disabled] OK: no live MCP helpers found")
     if violations and strict:
         raise MetaBugViolation(
             "LIVE MCP HELPER PROCESS DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
             + "\n\nKill MCP helper processes before contest/eval work unless "
             "the user explicitly re-enables MCP."
         )
@@ -8695,17 +8736,17 @@ def _mask_shell_heredocs(text: str) -> str:
     as Python/docs/embedded snippets) as executable shell.
 
     Behavior:
-      • Detects every `<<TOKEN`, `<<-TOKEN`, `<< TOKEN`, `<<"TOKEN"`,
+      - Detects every `<<TOKEN`, `<<-TOKEN`, `<< TOKEN`, `<<"TOKEN"`,
         `<<'TOKEN'` heredoc start on a non-comment line.
-      • Skips ahead until the next line whose stripped content equals TOKEN
+      - Skips ahead until the next line whose stripped content equals TOKEN
         (or, for `<<-TOKEN`, leading tabs are also stripped per bash).
-      • Replaces lines BETWEEN the start (exclusive) and the terminator
+      - Replaces lines BETWEEN the start (exclusive) and the terminator
         (exclusive) with empty strings. The start line itself is preserved
-        (so a violation written on the start line — unusual — is still
+        (so a violation written on the start line - unusual - is still
         visible) and the terminator line is preserved.
-      • If multiple heredocs start on the same line (rare: `cmd <<A <<B`),
+      - If multiple heredocs start on the same line (rare: `cmd <<A <<B`),
         we mask both bodies in order, requiring A then B as terminators.
-      • A heredoc with no terminator (eof) means everything from start+1
+      - A heredoc with no terminator (eof) means everything from start+1
         to EOF is masked. This matches bash's runtime behavior of erroring,
         but for static analysis "treat as quoted" is the safer call than
         "treat as code".
@@ -8727,7 +8768,7 @@ def _mask_shell_heredocs(text: str) -> str:
             i += 1
             continue
         # Tokens to consume in order. Track whether each was `<<-` form
-        # (which strips leading TABS — not spaces — from the terminator
+        # (which strips leading TABS - not spaces - from the terminator
         # comparison per POSIX).
         pending: list[tuple[str, bool]] = []
         for m in matches:
@@ -8743,7 +8784,7 @@ def _mask_shell_heredocs(text: str) -> str:
             token, is_dash = pending[0]
             cmp = cand.lstrip("\t") if is_dash else cand
             if cmp == token:
-                # Terminator hit — pop it; stop masking this body.
+                # Terminator hit - pop it; stop masking this body.
                 pending.pop(0)
                 j += 1
                 continue
@@ -8774,10 +8815,10 @@ def _scan_python_for_mps_fallback(
       B. Text: a regex backup catches one-liners that span multiple ternaries,
          covering the common `"cuda" if ... else "mps" if ... else "cpu"`.
 
-    Tests / smoke files are skipped — they may legitimately probe MPS.
+    Tests / smoke files are skipped - they may legitimately probe MPS.
     Vendored external PR-head clones under
     ``experiments/results/.../pr_heads/`` and other reverse-engineering /
-    forensics mirrors are also skipped — they are read-only mirrors of other
+    forensics mirrors are also skipped - they are read-only mirrors of other
     competitors' submissions, not our own code, and we cannot retroactively
     fix their MPS-fallback defaults.
     """
@@ -8795,10 +8836,10 @@ def _scan_python_for_mps_fallback(
         "/public_runtime_adapters_",
         "/raw/kaggle_ingest/",
         "/vendored/",
-        # Mirrored external public-PR intake clones — e.g.
+        # Mirrored external public-PR intake clones - e.g.
         # experiments/results/public_pr*_intake_*/{source,repo,pr*_src}/...
         "_intake_",
-        # Upstream contest baseline (av1_crf31_bicubic) — vendored from
+        # Upstream contest baseline (av1_crf31_bicubic) - vendored from
         # comma's organizer baseline submission, not our code.
         "/av1_crf31_bicubic/",
     )
@@ -8871,7 +8912,7 @@ def _scan_python_for_mps_fallback(
             if _test_checks_cuda(node.test) and _orelse_mentions_mps(node.orelse):
                 violations.append(
                     f"{rel}:{node.lineno}: ternary `cuda.is_available() ... "
-                    f"else \"mps\" ...` — MPS-fallback device default. "
+                    f"else \"mps\" ...` - MPS-fallback device default. "
                     f"FORBIDDEN per CLAUDE.md (feedback_default_to_convenience_trap). "
                     f"Default to CUDA-required; raise on no-CUDA; provide "
                     f"explicit `--device cpu` opt-in."
@@ -8879,11 +8920,11 @@ def _scan_python_for_mps_fallback(
 
     # codex R5-3 #7: BoolOp (and/or) device-selection chains. Pattern:
     #   torch.cuda.is_available() and 'cuda' or torch.backends.mps.is_available() and 'mps' or 'cpu'
-    # Has no IfExp anywhere — must AST-walk BoolOp explicitly. Rule (refined
+    # Has no IfExp anywhere - must AST-walk BoolOp explicitly. Rule (refined
     # to avoid the FP class `... or str(self.device) == "mps"` where "mps"
     # is INSIDE a Compare and never selected as a value):
     #   1. Walk top-level BoolOps (not nested inside Compare / Subscript /
-    #      Call / etc. — only BoolOps that COULD evaluate to the string
+    #      Call / etc. - only BoolOps that COULD evaluate to the string
     #      "mps" as a result).
     #   2. The BoolOp tree must contain a `cuda.is_available()` call.
     #   3. A string constant "mps" must appear as a DIRECT leaf operand of
@@ -8909,7 +8950,7 @@ def _scan_python_for_mps_fallback(
     for node in ast.walk(tree):
         if not isinstance(node, ast.BoolOp):
             continue
-        # Skip nested BoolOps — only flag the outermost.
+        # Skip nested BoolOps - only flag the outermost.
         p = parents.get(id(node))
         if isinstance(p, ast.BoolOp):
             continue
@@ -8936,7 +8977,7 @@ def _scan_python_for_mps_fallback(
         if is_fallback:
             violations.append(
                 f"{rel}:{node.lineno}: BoolOp chain `... cuda.is_available() "
-                f"... 'mps' ...` — MPS-fallback device default. FORBIDDEN per "
+                f"... 'mps' ...` - MPS-fallback device default. FORBIDDEN per "
                 f"CLAUDE.md (feedback_default_to_convenience_trap). Default "
                 f"to CUDA-required; raise on no-CUDA; provide explicit "
                 f"`--device cpu` opt-in."
@@ -8952,7 +8993,7 @@ def _scan_python_for_mps_fallback(
         if pat.search(line):
             violations.append(
                 f"{rel}:{i}: chained ternary with `\"cuda\" if "
-                f"cuda.is_available() else \"mps\"` — MPS-fallback device "
+                f"cuda.is_available() else \"mps\"` - MPS-fallback device "
                 f"default. FORBIDDEN per CLAUDE.md "
                 f"(feedback_default_to_convenience_trap)."
             )
@@ -9315,15 +9356,15 @@ def check_no_mps_fallback_default(
     if verbose and violations:
         print(f"  [no-mps-fallback] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-mps-fallback] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "MPS-FALLBACK DEFAULT violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
-            + "\n\nMPS auth eval is NOISE — see CLAUDE.md "
+            + "\n".join(f"  - {v}" for v in violations)
+            + "\n\nMPS auth eval is NOISE - see CLAUDE.md "
             "feedback_default_to_convenience_trap. Default to CUDA-required."
         )
     if not violations and cache_enabled and cache_fingerprint is not None:
@@ -9382,7 +9423,7 @@ def _scan_shell_for_missing_set_e(path: Path, repo_root: Path) -> list[str]:
             violations.append(
                 f"{rel}:{lineno}: `{line}` uses `u`/`pipefail` without `e`. "
                 f"Silent failure cascade: a failing command does not abort "
-                f"the script — empty captures pass to argparse and crash "
+                f"the script - empty captures pass to argparse and crash "
                 f"30 minutes later. Use `set -euo pipefail`. "
                 f"(feedback_zip_dep_bootstrap_trap.)"
             )
@@ -9412,14 +9453,14 @@ def check_shell_set_e_present(
     if verbose and violations:
         print(f"  [set-e-required] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [set-e-required] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "SHELL `set -e` MISSING violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nUse `set -euo pipefail` (feedback_zip_dep_bootstrap_trap)."
         )
     return violations
@@ -9487,14 +9528,14 @@ def check_no_shell_zip_binary(
     if verbose and violations:
         print(f"  [no-shell-zip] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-shell-zip] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "SHELL `zip` BINARY violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nUse `python -c \"import zipfile\"` "
             "(feedback_zip_dep_bootstrap_trap)."
         )
@@ -9505,7 +9546,7 @@ def check_no_shell_zip_binary(
 
 
 # codex R5-3 #6: LHS commands that are SAFE upstream of `| grep -q`.
-# echo/printf are shell builtins that do not SIGPIPE meaningfully — they
+# echo/printf are shell builtins that do not SIGPIPE meaningfully - they
 # write a fixed-size buffer once and exit. The capture-first remediation
 # (`OUT=$(cmd 2>&1); echo "$OUT" | grep -q ...`) MUST be allowed; otherwise
 # the scanner flags its own prescribed fix.
@@ -9542,10 +9583,10 @@ def _scan_shell_for_pipefail_grep_q(path: Path, repo_root: Path) -> list[str]:
     Remediation: capture-first idiom (`OUT=$(cmd); echo "$OUT" | grep -q ...`).
 
     codex R5-3 #6 exemptions:
-      • `echo "$VAR" | grep -q PAT` — echo is a builtin, no meaningful SIGPIPE.
-      • `printf "..." | grep -q PAT` — same.
-      • `grep -q PAT <<< "$VAR"` — here-string, no pipe at all.
-      These forms are the prescribed fix for the bug class — flagging them
+      - `echo "$VAR" | grep -q PAT` - echo is a builtin, no meaningful SIGPIPE.
+      - `printf "..." | grep -q PAT` - same.
+      - `grep -q PAT <<< "$VAR"` - here-string, no pipe at all.
+      These forms are the prescribed fix for the bug class - flagging them
       would block the remediation.
     codex R5-3 #5: heredoc bodies are masked before scanning.
     """
@@ -9597,7 +9638,7 @@ def _scan_shell_for_pipefail_grep_q(path: Path, repo_root: Path) -> list[str]:
             continue
         violations.append(
             f"{rel}:{i}: `| grep -q` under `set -e`/`pipefail` triggers "
-            f"SIGPIPE on the upstream command — pipeline aborts the "
+            f"SIGPIPE on the upstream command - pipeline aborts the "
             f"script. Capture-first idiom: "
             f"`OUT=$(cmd 2>&1); echo \"$OUT\" | grep -q ...`. "
             f"(feedback_pipefail_grep_q_trap.)"
@@ -9614,7 +9655,7 @@ def check_no_pipefail_grep_q_trap(
 
     Reference: feedback_pipefail_grep_q_trap. `cmd | grep -q PAT` under
     `set -euo pipefail` SIGPIPEs the upstream when grep stops reading
-    after first match. Whole pipeline reports failure → script aborts.
+    after first match. Whole pipeline reports failure -> script aborts.
 
     Returns list of violations. Raises MetaBugViolation if strict and any.
     """
@@ -9628,14 +9669,14 @@ def check_no_pipefail_grep_q_trap(
     if verbose and violations:
         print(f"  [no-pipefail-grep-q] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-pipefail-grep-q] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "PIPEFAIL + GREP -Q violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nUse capture-first idiom (feedback_pipefail_grep_q_trap)."
         )
     return violations
@@ -9878,14 +9919,14 @@ def check_no_pipefail_tee_pipestatus_loss(
             f"violation(s) across {n_scanned} files:"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-pipefail-tee-pipestatus-loss] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "PIPEFAIL + TEE + PIPESTATUS LOST-RESULT violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nWrap intentional result-capturing `cmd | tee log` pipelines "
             "with `set +e`, capture `${PIPESTATUS[0]}`, then restore `set -e` "
             "(feedback_pipefail_tee_pipestatus_loss)."
@@ -9975,7 +10016,7 @@ def check_no_eval_roundtrip_false(
 ) -> list[str]:
     """Catch eval_roundtrip=False anywhere (call site or function default).
 
-    Reference: CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE". Without
+    Reference: CLAUDE.md "eval_roundtrip - NON-NEGOTIABLE". Without
     eval_roundtrip, proxy-auth gap is 2-6x on PoseNet. Every training run
     without it is a wasted run.
 
@@ -9997,14 +10038,14 @@ def check_no_eval_roundtrip_false(
     if verbose and violations:
         print(f"  [no-eval-roundtrip-false] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-eval-roundtrip-false] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "eval_roundtrip=False violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\neval_roundtrip is non-negotiable (CLAUDE.md)."
         )
     return violations
@@ -10033,10 +10074,10 @@ _SCORER_NAME_LITERALS_RE = re.compile(r"\b(posenet|segnet)\b", re.IGNORECASE)
 #   3. __import__("tac.scorer*")
 #   4. getattr(<expr>, "load_scorers"|"load_posenet"|...)
 # AND respects an explicit `# SCORER_AT_INFLATE_WAIVED:<reason>` comment
-# marker (SAME LINE only — codex R5-r6 #1 tightened this from a 6-line
+# marker (SAME LINE only - codex R5-r6 #1 tightened this from a 6-line
 # lookback because nearby markers could waive unrelated calls). Waived
 # violations are counted separately and surfaced to the operator so the
-# gate cannot be silently bypassed — strict means "no UNWAIVED violations".
+# gate cannot be silently bypassed - strict means "no UNWAIVED violations".
 _DYNAMIC_IMPORT_FUNCS = (
     "importlib.import_module",
     "importlib.util.find_spec",
@@ -10047,13 +10088,13 @@ _GETATTR_LOADER_NAMES = frozenset({
     "load_differentiable_scorers", "load_posenet_targets",
     "extract_gt_pose_targets",
 })
-_SCORER_MODULE_PREFIX = "tac.scorer"  # matches tac.scorer, tac.scorer_targets, …
+_SCORER_MODULE_PREFIX = "tac.scorer"  # matches tac.scorer, tac.scorer_targets, ...
 _WAIVER_MARKER = "SCORER_AT_INFLATE_WAIVED"
 # 2026-04-27 codex R5-r6 #1 fix: lookback is now SAME-LINE ONLY.
 # The previous 6-line lookback meant a marker intended for one specific
 # pending-ruling import could waive an UNRELATED scorer load inserted
 # nearby (or above, in the same try-block). The failure message even
-# said "3 lines" while the constant was 6 — operators couldn't audit
+# said "3 lines" while the constant was 6 - operators couldn't audit
 # what a marker actually covered. Same-line policy:
 #   - Marker MUST be in a comment on the SAME line as the offending call.
 #   - For multi-line statements (e.g., a getattr(...) split across lines),
@@ -10062,11 +10103,11 @@ _WAIVER_MARKER = "SCORER_AT_INFLATE_WAIVED"
 #   - The legacy `# noqa: scorer-at-inflate` form is also recognised, but
 #     ONLY on the same line.
 # Same-line enforcement is the only policy that is auditable without a
-# walker — every waiver is structurally attached to the specific call
+# walker - every waiver is structurally attached to the specific call
 # being waived. Block-style waivers (a marker comment above a try-block)
 # are no longer recognised by the scanner; existing block markers must be
 # moved onto each offending call line.
-_WAIVER_LOOKBACK_LINES = 0  # SAME-LINE ONLY (was 6 → bug → fixed in R5-r6 #1)
+_WAIVER_LOOKBACK_LINES = 0  # SAME-LINE ONLY (was 6 -> bug -> fixed in R5-r6 #1)
 
 
 def _line_is_waived(lines: list[str], lineno: int) -> bool:
@@ -10078,7 +10119,7 @@ def _line_is_waived(lines: list[str], lineno: int) -> bool:
     on that line is fine; we never match inside a string literal because
     we only scan the post-# segment). We also accept the legacy
     `# noqa: scorer-at-inflate (...)` form so existing inflate scripts
-    keep working — but only when it's on the same line.
+    keep working - but only when it's on the same line.
     """
     if lineno <= 0 or lineno > len(lines):
         return False
@@ -10097,7 +10138,7 @@ def _line_is_waived(lines: list[str], lineno: int) -> bool:
 def _string_constant_arg(call: ast.Call) -> str | None:
     """Return the first positional arg of `call` if it is a string literal,
     else None. Handles `import_module("tac.scorer")` and `getattr(m, "x")`
-    forms — for getattr we want the SECOND arg (index 1), so callers
+    forms - for getattr we want the SECOND arg (index 1), so callers
     pass `call.args[idx]` instead."""
     if not call.args:
         return None
@@ -10111,7 +10152,7 @@ def _scan_inflate_for_scorer_load(
     path: Path, repo_root: Path,
 ) -> list[str]:
     """Detect scorer-load patterns in inflate*.py files. Returns UNWAIVED
-    violations only — waived hits are reported separately by the caller
+    violations only - waived hits are reported separately by the caller
     (see `_scan_inflate_for_scorer_load_with_waivers`)."""
     unwaived, _waived = _scan_inflate_for_scorer_load_with_waivers(path, repo_root)
     return unwaived
@@ -10131,7 +10172,7 @@ def _scan_inflate_for_scorer_load_with_waivers(
         text = path.read_text()
         tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError):
-        # .sh files won't parse — fall back to text scan.
+        # .sh files won't parse - fall back to text scan.
         text = ""
         try:
             text = path.read_text()
@@ -10176,13 +10217,13 @@ def _scan_inflate_for_scorer_load_with_waivers(
             if isinstance(node, ast.Call):
                 func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
 
-                # 1. Direct loader call (load_scorers, load_posenet, …).
+                # 1. Direct loader call (load_scorers, load_posenet, ...).
                 for name in ("load_scorers", "load_posenet", "load_segnet",
                              "load_differentiable_scorers"):
                     if func_str.endswith(name) and func_str != f"_{name}":
                         # Skip the helper-name shadows like `_resolve_scorers`
                         # (renamed in inflate_postfilter.py to avoid the
-                        # static endswith match — those are now caught via
+                        # static endswith match - those are now caught via
                         # the getattr path below).
                         _record(
                             node.lineno,
@@ -10210,7 +10251,7 @@ def _scan_inflate_for_scorer_load_with_waivers(
                             f"an env-gated pending-ruling path.",
                         )
 
-                # 3. getattr(<x>, "load_scorers"|"load_posenet"|...) — the
+                # 3. getattr(<x>, "load_scorers"|"load_posenet"|...) - the
                 #    canonical companion to importlib.import_module that
                 #    used to slip through the scanner.
                 if (func_str == "getattr" or func_str.endswith(".getattr")):
@@ -10232,7 +10273,7 @@ def _scan_inflate_for_scorer_load_with_waivers(
         #
         # Hardening 2026-05-12 (integration audit v3 polish): skip pure-comment
         # shell lines (those whose first non-whitespace char is '#'). A shell
-        # comment cannot load a scorer at runtime — including comment text in
+        # comment cannot load a scorer at runtime - including comment text in
         # the scan produces false-positives on documentation that itself cites
         # the strict-scorer-rule (e.g. `# * NO scorer load (strict-scorer-rule)`).
         # The canonical loader-invocation patterns (python -c "...load_scorers...",
@@ -10343,7 +10384,7 @@ def check_substrate_score_aware_losses_use_canonical_scorer_contract(
                 f"{len(violations)} violation(s) across {scanned} file(s)"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -10369,14 +10410,14 @@ def check_no_scorer_load_at_inflate(
     """Catch any scorer load at inflate time.
 
     Reference: feedback_strict_scorer_rule (CLAUDE.md "Strict scorer rule").
-    NO PoseNet/SegNet load at inflate — those weights would have to live
+    NO PoseNet/SegNet load at inflate - those weights would have to live
     in archive.zip per Yousfi PR #35, destroying the rate term.
 
     Scans `submissions/*/inflate*.py` and `submissions/*/inflate.sh`.
     Returns list of UNWAIVED violations. Raises MetaBugViolation if strict
     and any unwaived hits remain. Waived hits (those marked with
     `# SCORER_AT_INFLATE_WAIVED:<reason>`) are surfaced in verbose output
-    but do NOT block strict mode — operators can see exactly how many
+    but do NOT block strict mode - operators can see exactly how many
     pending-ruling paths exist.
     """
     root = repo_root or REPO_ROOT
@@ -10402,13 +10443,13 @@ def check_no_scorer_load_at_inflate(
     if verbose and violations:
         print(f"  [no-scorer-at-inflate] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-scorer-at-inflate] OK: {n_scanned} inflate files scanned")
     if verbose and waived:
         print(
             f"  [no-scorer-at-inflate] {len(waived)} WAIVED hit(s) "
-            f"(env-gated, pending-ruling — visible to operator):"
+            f"(env-gated, pending-ruling - visible to operator):"
         )
         for v in waived:
             print(f"    ◇ {v}")
@@ -10416,12 +10457,12 @@ def check_no_scorer_load_at_inflate(
     if violations and strict:
         raise MetaBugViolation(
             "SCORER LOAD AT INFLATE violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nNo scorer at inflate time (feedback_strict_scorer_rule). "
             + "If this is an env-gated pending-ruling path, add an explicit "
             + f"`# {_WAIVER_MARKER}:<reason>` comment marker on the SAME "
             + "line as the offending call (codex R5-r6 #1: block-level / "
-            + "lookback markers are no longer recognised — every waiver must "
+            + "lookback markers are no longer recognised - every waiver must "
             + "be structurally attached to its specific call site)."
         )
     return violations
@@ -10431,10 +10472,10 @@ def check_no_scorer_load_at_inflate(
 
 
 # codex R5-3 #8: tokens that mark a path string (literal) as referring to a
-# RENDERER artifact (the only thing that requires auth-eval — LoRA adapters,
+# RENDERER artifact (the only thing that requires auth-eval - LoRA adapters,
 # postfilters, statistics tensors, etc. do not). Match is case-insensitive
 # on the path basename. We deliberately exclude generic "best"/"state_dict"
-# from this list — those are too broad and produced FPs (lora_best.pt
+# from this list - those are too broad and produced FPs (lora_best.pt
 # was misclassified as a renderer in the regex era).
 _RENDERER_PATH_TOKENS = ("renderer", "checkpoint", "fp4")
 # Generic "model" matches lora_*.pt / postfilter_*.pt FALSELY less often
@@ -10514,7 +10555,7 @@ def _call_is_auth_eval_helper(node: ast.Call) -> bool:
 
 def _argparse_defines_no_auth_eval_optout(tree: ast.Module) -> bool:
     """True if the script defines `--no-auth-eval-on-best` argparse flag
-    (operator's explicit opt-out — satisfies the rule).
+    (operator's explicit opt-out - satisfies the rule).
 
     A default-on opt-out is not an explicit operator choice and must not
     satisfy the guard.
@@ -10541,7 +10582,7 @@ def _argparse_defines_no_auth_eval_optout(tree: ast.Module) -> bool:
 
 def _script_imports_auth_eval(tree: ast.Module) -> bool:
     """True if the script `import`s the auth_eval module (any form). An
-    import without a CALL is dead code — the rule requires an actual
+    import without a CALL is dead code - the rule requires an actual
     invocation, but we keep this distinction so the violation message can
     say 'imported but never called' for clarity."""
     for node in ast.walk(tree):
@@ -10562,15 +10603,15 @@ def _scan_training_script_for_auth_eval(path: Path, repo_root: Path) -> list[str
     codex R5-3 #8: AST-based replacement of the regex token-grep. Old form
     counted any token-anywhere (comment, help string, dead import) as
     satisfying. New rule:
-      • Find every torch.save() call. If args reference a path matching
+      - Find every torch.save() call. If args reference a path matching
         `_path_string_looks_like_renderer`, mark script as "saves a renderer".
-      • Find every subprocess.run([..., "auth_eval_renderer.py", ...])
+      - Find every subprocess.run([..., "auth_eval_renderer.py", ...])
         OR direct call to auth_eval_renderer.main()/run_auth_eval()/etc.
-      • If --no-auth-eval-on-best is defined, satisfied (operator opt-out).
-      • A script that imports auth_eval but never calls it → violation
+      - If --no-auth-eval-on-best is defined, satisfied (operator opt-out).
+      - A script that imports auth_eval but never calls it -> violation
         (dead-import-class).
-      • A script that saves a non-renderer (lora_best.pt, postfilter.pt,
-        masks.pt, posenet_targets.bin, stats.pt) → no violation.
+      - A script that saves a non-renderer (lora_best.pt, postfilter.pt,
+        masks.pt, posenet_targets.bin, stats.pt) -> no violation.
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
@@ -10586,7 +10627,7 @@ def _scan_training_script_for_auth_eval(path: Path, repo_root: Path) -> list[str
             func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
             # Detect `torch.save(...)` (the canonical form). Aliased forms
             # like `from torch import save; save(...)` are intentionally NOT
-            # supported — the codebase uses `torch.save(...)` exclusively
+            # supported - the codebase uses `torch.save(...)` exclusively
             # and the broader pattern would produce FPs (e.g. `model.save()`).
             if func_str == "torch.save":
                 # Inspect args for renderer-like path string.
@@ -10632,7 +10673,7 @@ def check_training_scripts_have_auth_eval(
 ) -> list[str]:
     """Catch training scripts that save a model but never auth-eval it.
 
-    Reference: CLAUDE.md "Auth eval EVERYWHERE — NON-NEGOTIABLE". Scans
+    Reference: CLAUDE.md "Auth eval EVERYWHERE - NON-NEGOTIABLE". Scans
     `experiments/train_*.py` and `src/tac/experiments/train_*.py`.
 
     Returns list of violations. Raises MetaBugViolation if strict and any.
@@ -10654,14 +10695,14 @@ def check_training_scripts_have_auth_eval(
     if verbose and violations:
         print(f"  [training-needs-auth-eval] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [training-needs-auth-eval] OK: {n_scanned} training scripts scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "TRAINING SCRIPT MISSING AUTH EVAL violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nAuth eval EVERYWHERE (CLAUDE.md non-negotiable)."
         )
     return violations
@@ -10721,7 +10762,7 @@ def check_training_scripts_use_real_data_in_nonsmoke_mode(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """STRICT-pending preflight gate (Catalog #114) — training scripts must NOT
+    """STRICT-pending preflight gate (Catalog #114) - training scripts must NOT
     call a synthetic data factory in non-smoke mode.
 
     Rationale: codex Pattern A review 2026-05-08 (HIGH finding) caught
@@ -10895,14 +10936,14 @@ def check_no_disable_eval_roundtrip_flag(
     if verbose and violations:
         print(f"  [no-disable-eval-roundtrip-flag] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-disable-eval-roundtrip-flag] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "--no-eval-roundtrip CLI FLAG violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nRemove the flag (CLAUDE.md non-negotiable)."
         )
     return violations
@@ -10935,9 +10976,9 @@ def _resolve_pack_sparse_delta_aliases(tree: ast.AST) -> set[str]:
     """Collect every name `pack_sparse_delta` is bound to in this module.
 
     Handles:
-      - `from tac.uniward_delta import pack_sparse_delta` → {"pack_sparse_delta"}
-      - `from tac.uniward_delta import pack_sparse_delta as pkt` → {"pkt"}
-      - `import tac.uniward_delta as uwd` → {"uwd.pack_sparse_delta"} (we
+      - `from tac.uniward_delta import pack_sparse_delta` -> {"pack_sparse_delta"}
+      - `from tac.uniward_delta import pack_sparse_delta as pkt` -> {"pkt"}
+      - `import tac.uniward_delta as uwd` -> {"uwd.pack_sparse_delta"} (we
         track the module alias and match `<alias>.pack_sparse_delta`)
       - bare `pack_sparse_delta(` calls (defensive: also include the literal
         name even if the import is somewhere else / wildcard / re-export)
@@ -11032,9 +11073,9 @@ def _scan_python_for_pack_sparse_delta_approved(
                     f"{rel}:{node.lineno}: pack_sparse_delta(compliance_status="
                     f"'approved' | COMPLIANCE_APPROVED) outside the canonical "
                     f"promotion tool ({_PACK_SPARSE_DELTA_APPROVED_PROMO_FILE}). "
-                    f"Lane C δ.bin promotion goes through "
+                    f"Lane C delta.bin promotion goes through "
                     f"tools/promote_lane_c_to_approved.py, which patches the "
-                    f"wire header in-place after attestation verification — "
+                    f"wire header in-place after attestation verification - "
                     f"NOT by re-packing with compliance_status='approved'. "
                     f"(codex R5-3 #2.)"
                 )
@@ -11055,9 +11096,9 @@ def _is_test_or_fixture_path(rel: Path) -> bool:
     integration-test fixture under any of those dirs that constructs an
     approved blob with the internal promotion token would block strict
     preflight. We now recognise tests broadly:
-      • basename matches test_*.py / *_test.py
-      • basename is conftest.py
-      • path contains a `/tests/` segment
+      - basename matches test_*.py / *_test.py
+      - basename is conftest.py
+      - path contains a `/tests/` segment
     """
     name = rel.name
     if name == "conftest.py":
@@ -11074,7 +11115,7 @@ def _is_test_or_fixture_path(rel: Path) -> bool:
 
 def _file_has_pack_approved_fixture_marker(path: Path) -> bool:
     """Return True if `path` contains a `# PACK_APPROVED_FIXTURE_OK` comment
-    anywhere — the explicit waiver mechanism for legitimate fixtures that
+    anywhere - the explicit waiver mechanism for legitimate fixtures that
     don't live in a recognised test directory.
     """
     try:
@@ -11157,9 +11198,9 @@ def check_no_pack_sparse_delta_approved_outside_promotion_tool(
     are permitted via two complementary mechanisms:
       1. Path-based: any `test_*.py` / `*_test.py` / `conftest.py` file,
          or any path containing a `/tests/` segment, is exempt (broader
-         than the previous `src/tac/tests/` only filter — codex R5-4 #3).
+         than the previous `src/tac/tests/` only filter - codex R5-4 #3).
       2. Marker-based: any file containing
-         `# PACK_APPROVED_FIXTURE_OK` (anywhere) is exempt — explicit
+         `# PACK_APPROVED_FIXTURE_OK` (anywhere) is exempt - explicit
          operator waiver for fixtures outside the standard test layout.
 
     Returns list of violations. Raises MetaBugViolation if strict and any.
@@ -11188,7 +11229,7 @@ def check_no_pack_sparse_delta_approved_outside_promotion_tool(
         # Exempt the canonical promotion tool itself.
         if rel_str == _PACK_SPARSE_DELTA_APPROVED_PROMO_FILE:
             continue
-        # Exempt any test file (broad detection — codex R5-4 #3).
+        # Exempt any test file (broad detection - codex R5-4 #3).
         if _is_test_or_fixture_path(rel):
             continue
         # Exempt any file with the explicit waiver marker.
@@ -11202,14 +11243,14 @@ def check_no_pack_sparse_delta_approved_outside_promotion_tool(
             f"across {n_scanned} files:"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-pack-sparse-delta-approved] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "PACK_SPARSE_DELTA APPROVED OUTSIDE PROMOTION TOOL violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLane C promotion uses tools/promote_lane_c_to_approved.py "
             "(codex R5-3 #2)."
         )
@@ -11269,7 +11310,7 @@ def _scan_inflate_sh_for_centralized_brotli(
             break
 
     if dispatch_lineno is None:
-        # No branch dispatch → trivial passthrough. Skip.
+        # No branch dispatch -> trivial passthrough. Skip.
         return []
 
     # Find the centralized brotli block. Three signals must all be present
@@ -11287,7 +11328,7 @@ def _scan_inflate_sh_for_centralized_brotli(
             m.lower() in line.lower() for m in _BROTLI_BLOCK_MARKERS
         ):
             # Confirm it's a brotli marker (not e.g. "Stage 0" referring to
-            # something else — require co-occurrence with "brotli" within ±10
+            # something else - require co-occurrence with "brotli" within ±10
             # lines OR on the same line).
             if "brotli" in line.lower():
                 marker_lineno = i
@@ -11323,7 +11364,7 @@ def _scan_inflate_sh_for_centralized_brotli(
         )
         return violations
 
-    # All three signals present BEFORE dispatch → PASS. Position is implicitly
+    # All three signals present BEFORE dispatch -> PASS. Position is implicitly
     # validated by the loop (we stop at dispatch_lineno).
 
     # ALSO: detect the after-dispatch case. If a brotli block ALSO appears
@@ -11349,7 +11390,7 @@ def check_inflate_sh_handles_br_centrally(
     centralized Stage 0 block, any non-renderer PYTHON_INFLATE branch on
     a Lane B-alt archive fails later as a missing renderer.bin / masks.mkv
     with no actionable hint. Trivial passthrough inflate.sh (no
-    PYTHON_INFLATE dispatch) is a soft pass — the block is unnecessary.
+    PYTHON_INFLATE dispatch) is a soft pass - the block is unnecessary.
 
     Returns list of violations. Raises MetaBugViolation if strict and any.
     """
@@ -11371,14 +11412,14 @@ def check_inflate_sh_handles_br_centrally(
             f"{n_scanned} inflate.sh file(s):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [inflate-br-central] OK: {n_scanned} inflate.sh file(s) scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "INFLATE.SH BROTLI CENTRALIZATION violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nAdd Stage 0 brotli block before PYTHON_INFLATE dispatch "
             "(codex R5-3 #11, commit a1128fd9)."
         )
@@ -11388,7 +11429,7 @@ def check_inflate_sh_handles_br_centrally(
 # ── Check 11: scripts/remote_*.sh must run NVDEC probe at Stage 0 ────────────
 #
 # Reference: feedback_vastai_nvdec_host_variation + commit eef64293. NVDEC
-# host availability is host-dependent on Vast.ai 4090s — same image, same
+# host availability is host-dependent on Vast.ai 4090s - same image, same
 # driver, different host = `CUDA_ERROR_NO_DEVICE` from DALI's video MIXED
 # operator. The probe catches the bad-host case in 5 seconds. Every remote
 # script that does GPU work MUST run `scripts/probe_nvdec.sh` BEFORE any
@@ -11477,7 +11518,7 @@ def _scan_remote_script_for_nvdec_probe(
 
     if gpu_work_lineno is None:
         # Script does no GPU work and didn't opt out. If the probe is also
-        # absent that's fine — nothing to probe FOR. PASS.
+        # absent that's fine - nothing to probe FOR. PASS.
         return []
 
     if probe_lineno is None:
@@ -11534,21 +11575,21 @@ def check_remote_scripts_have_nvdec_probe(
             f"{n_scanned} remote_*.sh file(s):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [remote-nvdec-probe] OK: {n_scanned} remote_*.sh file(s) scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE NVDEC PROBE violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nAdd Stage 0 NVDEC probe (feedback_vastai_nvdec_host_variation, "
             "commit eef64293)."
         )
     return violations
 
 
-# NOTE: 2026-04-27 codex R5-3 Finding #4 — all 8 meta-bug checks are wired
+# NOTE: 2026-04-27 codex R5-3 Finding #4 - all 8 meta-bug checks are wired
 # into preflight_all() above (warn-only). See the codex R5-3 #4 comment block
 # in preflight_all() for live-violation counts and per-check promotion plan.
 # The 3 follow-on checks (codex R5-3 #2 + #11 + NVDEC probe gap, commits
@@ -11560,11 +11601,11 @@ def check_remote_scripts_have_nvdec_probe(
 # Bug class this catches: a consumer script (pipeline.py) constructs a path
 # like `iter_dir / "renderer_qat_best.pt"` and reads/exists-checks it, but
 # the producer script (qat_finetune.py) actually saves it as
-# `qat_best_float.pt`. The mismatch is silent — exists() returns False, the
+# `qat_best_float.pt`. The mismatch is silent - exists() returns False, the
 # fallback branch fires, and the pipeline silently uses the wrong artifact.
 #
-# Caught manually in R33 (renderer_qat_best.pt → qat_best_float.pt) and R34
-# (renderer_qat.bin → renderer_fp4.bin). This validator automates the check.
+# Caught manually in R33 (renderer_qat_best.pt -> qat_best_float.pt) and R34
+# (renderer_qat.bin -> renderer_fp4.bin). This validator automates the check.
 
 class FilenameContractError(Exception):
     """A consumer-side filename literal is never produced by any script."""
@@ -11577,7 +11618,7 @@ class FilenameContractError(Exception):
 _ARTIFACT_SUFFIXES = (".bin", ".pt", ".pth", ".mkv", ".mp4", ".raw",
                       ".zip", ".tar", ".tar.gz", ".tgz", ".amrc")
 
-# Filenames that are deliberately external (not produced by our code) — they
+# Filenames that are deliberately external (not produced by our code) - they
 # come from upstream data, the contest archive, third-party tools, etc.
 _EXTERNAL_FILENAMES = {
     "0.mkv",  # upstream/videos/0.mkv (contest GT)
@@ -11666,11 +11707,11 @@ def _extract_write_literals(path: Path, source_index=None) -> set[str]:
     Detects two layers:
 
     Direct (literal IS the call argument):
-      - `torch.save(_, "X.pt")` — second arg literal
-      - `open("X", "w"|"a"|"wb"|"ab")` — first arg literal with write mode
-      - `<expr>.write_bytes(_)` / `.write_text(_)` / `.touch()` — receiver
+      - `torch.save(_, "X.pt")` - second arg literal
+      - `open("X", "w"|"a"|"wb"|"ab")` - first arg literal with write mode
+      - `<expr>.write_bytes(_)` / `.write_text(_)` / `.touch()` - receiver
         path expression containing an artifact literal
-      - `os.replace(_, "X")` / `shutil.copy(_, "X")` — target literal
+      - `os.replace(_, "X")` / `shutil.copy(_, "X")` - target literal
 
     Indirect (literal is in a Path-assignment, then the variable is used
     in a write context):
@@ -11708,11 +11749,11 @@ def _extract_write_literals(path: Path, source_index=None) -> set[str]:
                         out.add(base)
         return out
 
-    # Pass 1a: collect Name → set of artifact basenames assigned to that name.
+    # Pass 1a: collect Name -> set of artifact basenames assigned to that name.
     # Tracks `name = <expr-containing-artifact-literal>` for later write-context
     # cross-linking.
     name_to_literals: dict[str, set[str]] = {}
-    # Map FunctionDef → its name (so we can scope Return tracking).
+    # Map FunctionDef -> its name (so we can scope Return tracking).
     WRITE_FN_PREFIXES = (
         "export_", "save_", "write_", "encode_", "build_",
         "pack_", "dump_", "emit_", "serialize_",
@@ -11741,9 +11782,17 @@ def _extract_write_literals(path: Path, source_index=None) -> set[str]:
     # Pass 1a: build name_to_literals BEFORE any Return-tracking pass so
     # the lookup is complete (ast.walk order isn't guaranteed; a Return
     # could be visited before its Assign otherwise).
+    # Catalog #168 fix 2026-05-12: also handle annotated assigns like
+    # `path: Path = dir / "X.bin"` which are common in modern Pythonic style.
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
             t = node.targets[0]
+            if isinstance(t, ast.Name):
+                lits = _collect_artifact_literals_in(node.value)
+                if lits:
+                    name_to_literals.setdefault(t.id, set()).update(lits)
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            t = node.target
             if isinstance(t, ast.Name):
                 lits = _collect_artifact_literals_in(node.value)
                 if lits:
@@ -11802,7 +11851,7 @@ def _extract_write_literals(path: Path, source_index=None) -> set[str]:
             if isinstance(node.func, ast.Attribute):
                 _record_write(node.func.value)
         # export/save/write/encode/build/dump/emit/serialize/pack helpers:
-        # any function whose name starts with these prefixes — treat
+        # any function whose name starts with these prefixes - treat
         # 2nd-or-later arg as target. Includes encoder funcs (encode_masks,
         # encode_video) and serializer funcs (dump_state, emit_archive).
         if func_str.split(".")[-1].startswith(
@@ -11818,7 +11867,7 @@ def preflight_build_renderer_signature(strict: bool = True, verbose: bool = True
     """Validate that build_renderer() accepts every arch knob set by any
     renderer training profile. The 2026-04-26 DEN arch drift bug existed
     because build_renderer() didn't accept use_zoom_flow/use_dsconv/
-    padding_mode/use_dilation/pose_dim — the resolver in train_renderer
+    padding_mode/use_dilation/pose_dim - the resolver in train_renderer
     set the args.* fields correctly but the build_renderer call silently
     dropped them. Result: 1.2h of wasted GPU on a checkpoint that
     consumers couldn't load.
@@ -11862,7 +11911,7 @@ def preflight_build_renderer_signature(strict: bool = True, verbose: bool = True
     if verbose and violations:
         print(f"  [build_renderer_sig] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [build_renderer_sig] OK: build_renderer accepts all "
               f"{len(arch_flags)} arch kwargs")
@@ -11870,7 +11919,7 @@ def preflight_build_renderer_signature(strict: bool = True, verbose: bool = True
     if violations and strict:
         raise PreflightError(
             "BUILD_RENDERER SIGNATURE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -11935,7 +11984,7 @@ def preflight_canonical_checkpoints(strict: bool = True, verbose: bool = True) -
     if verbose and violations:
         print(f"  [canonical_checkpoints] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [canonical_checkpoints] OK: {len(PRODUCER_OUTPUTS)} producer(s) "
               f"validated against {len(all_canonical)} canonical name(s)")
@@ -11943,7 +11992,7 @@ def preflight_canonical_checkpoints(strict: bool = True, verbose: bool = True) -
     if violations and strict:
         raise PreflightError(
             "CANONICAL CHECKPOINT NAMES VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -12127,7 +12176,7 @@ def preflight_filename_contract(
                 violations.append(
                     f"{consumer}: reads {ph!r} but no producer in "
                     f"{producer_dirs} ever writes that name. "
-                    f"R33/R34 bug class — verify the producer's actual output filename."
+                    f"R33/R34 bug class - verify the producer's actual output filename."
                 )
 
         if violations:
@@ -12145,7 +12194,7 @@ def preflight_filename_contract(
     if verbose and violations:
         print(f"  [filenames] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose and not cached_source_clean:
         print(f"  [filenames] OK: {len(consumer_existing)} consumers x "
               f"{n_producer_files} producer files clean "
@@ -12159,13 +12208,13 @@ def preflight_filename_contract(
     violations.extend(amrc_violations)
     if amrc_violations and verbose:
         for v in amrc_violations:
-            print(f"    • [amrc] {v}")
+            print(f"    - [amrc] {v}")
 
     if violations and strict:
         raise FilenameContractError(
-            "FILENAME CONTRACT VIOLATIONS — consumer reads a filename no "
+            "FILENAME CONTRACT VIOLATIONS - consumer reads a filename no "
             "producer writes:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nThis is the R33/R34 bug class. Either:\n"
             "  1. Fix the consumer to use the actual producer filename\n"
             "  2. Add the filename to a producer that should write it\n"
@@ -12191,7 +12240,7 @@ def _validate_amrc_artifacts(root: Path) -> list[str]:
     try:
         from tac.lossless.argmax_codec import validate_amrc_file
     except ImportError as e:
-        # Codec module not yet built — skip the check rather than fail
+        # Codec module not yet built - skip the check rather than fail
         # the whole preflight. The contract violation list will still
         # surface if a consumer reads masks.amrc but no producer writes it.
         findings.append(
@@ -12217,7 +12266,7 @@ def _validate_amrc_artifacts(root: Path) -> list[str]:
             validate_amrc_file(amrc)
         except (ValueError, OSError) as e:
             findings.append(
-                f"{amrc}: invalid AMRC header — {e}"
+                f"{amrc}: invalid AMRC header - {e}"
             )
     return findings
 
@@ -12252,7 +12301,7 @@ _SAFE_LOADER_QUALNAMES = frozenset({
     "load_renderer_checkpoint",
     "detect_checkpoint_type",
     "load_int4_lzma2",
-    # NWCS sensitivity-aware container loader — does NWCS1 magic-byte
+    # NWCS sensitivity-aware container loader - does NWCS1 magic-byte
     # validation at neural_weight_codec_sensitivity.py:230 before parsing.
     # Functions that delegate to this then torch.load on the codec_blob
     # extracted from inside the verified container (a known-pickle field,
@@ -12318,16 +12367,16 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
 
     def _is_loader_name(name: str) -> bool:
         """Pattern 1 trigger: function names that are likely renderer/model
-        loaders. Intentionally broad — a false positive is a 1-line magic
+        loaders. Intentionally broad - a false positive is a 1-line magic
         check; a false negative is a DEN-V2-class production crash.
 
         Contrarian R2 V3 (2026-04-26): expanded from `load_renderer*` only
         to also catch `load_*`/`_load_*`/`restore_*` on model/renderer/
-        checkpoint/ckpt/weights/net suffixes — i.e. the realistic rename
+        checkpoint/ckpt/weights/net suffixes - i.e. the realistic rename
         surface that would silently bypass the original gate.
 
         Exclusions: training-state and optimizer-state loaders are NOT
-        renderer artifacts (they're always pickle by construction —
+        renderer artifacts (they're always pickle by construction -
         optimizer state isn't tensor-only), so we exempt those names to
         avoid noise.
         """
@@ -12349,14 +12398,14 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
             return False
         # 2026-04-26 Mario R2 CRITICAL #1: explicit allowlist for known
         # non-renderer loaders that the broad pattern (#1 below) would
-        # false-positive on. These are TRUSTED — they don't load the FP4
+        # false-positive on. These are TRUSTED - they don't load the FP4
         # renderer artifact format. Adding here exempts the function from
         # Pattern 1 scan but consumers will still be caught by the call-site
         # scan (Pattern 2) if they ever pass a renderer.bin path.
         TRUSTED_NON_RENDERER_LOADERS = frozenset({
-            "load_checkpoint_weights",     # train_distill.py — training resume
-            "load_network_codec",          # network_codec.py — NeRV codec, not renderer
-            "load_checkpoint_state_dict",  # ensemble.py — ensemble combiner
+            "load_checkpoint_weights",     # train_distill.py - training resume
+            "load_network_codec",          # network_codec.py - NeRV codec, not renderer
+            "load_checkpoint_state_dict",  # ensemble.py - ensemble combiner
             "load_compressed_weights",     # generic int-quant deserializer
             "load_postfilter",             # postfilter (different artifact class)
         })
@@ -12401,7 +12450,7 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
         if has_magic or delegates or does_magic_read:
             continue
         # Otherwise, look for a torch.load call in the body. If found AND
-        # it uses weights_only=False (DEN-V2's exact failure mode — the
+        # it uses weights_only=False (DEN-V2's exact failure mode - the
         # legacy pickle path that crashes cryptically on FP4A magic), the
         # function is unsafe. Calls with weights_only=True are tensor-only
         # state-dict loads and cannot trigger the FP4A pickle crash, so
@@ -12428,7 +12477,7 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
                 f"2026-04-26 DEN-V2 bug pattern: torch.load on an "
                 f"FP4A/ASYM/DPSM/I4LZ .bin file crashes with 'could not "
                 f"convert string to float'. (Detected via expanded "
-                f"loader-name match — load_*/restore_*/_load_*/_restore_* "
+                f"loader-name match - load_*/restore_*/_load_*/_restore_* "
                 f"over renderer/model/checkpoint/ckpt/weights/state/net; "
                 f"Contrarian R2 V3 fix.) Either add a magic-byte dispatch "
                 f"(read first 4 bytes, branch on FP4A/ASYM/DPSM/I4LZ vs "
@@ -12459,8 +12508,8 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
 
     # Pattern 2 is intentionally NARROW: only flag when the FIRST positional
     # arg looks SPECIFICALLY like a renderer-checkpoint variable (not just any
-    # "ckpt" — that's a TTO batch checkpoint, an optimizer state, etc.) AND
-    # the call uses `weights_only=False` (DEN-V2's exact failure mode — the
+    # "ckpt" - that's a TTO batch checkpoint, an optimizer state, etc.) AND
+    # the call uses `weights_only=False` (DEN-V2's exact failure mode - the
     # legacy pickle path).
     #
     # The Contrarian forced this narrowing: an over-broad rule that flags
@@ -12477,7 +12526,7 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
         if not node.args:
             continue
 
-        # Require weights_only=False (or absent → defaults vary; tighten by
+        # Require weights_only=False (or absent -> defaults vary; tighten by
         # requiring explicit False since that's the DEN-V2 failure mode).
         has_weights_only_false = False
         for kw in node.keywords:
@@ -12528,7 +12577,7 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
             f"Use experiments.precompute_gradient_corrections.load_renderer "
             f"(the canonical content-detecting loader) or "
             f"tac.renderer_export.load_any_renderer_checkpoint instead. "
-            f"(Bug pattern: DEN-V2 2026-04-26 — torch.load on FP4A .bin "
+            f"(Bug pattern: DEN-V2 2026-04-26 - torch.load on FP4A .bin "
             f"crashes cryptically.)"
         )
 
@@ -12624,22 +12673,22 @@ def preflight_loader_format_safety(
             print(f"  [loader-format] {len(all_violations)} violation(s) "
                   f"across {n_scanned} files:")
             for v in all_violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             suffix = f" ({n_cached} cached)" if n_cached else ""
-            print(f"  [loader-format] OK: {n_scanned} files clean — every "
+            print(f"  [loader-format] OK: {n_scanned} files clean - every "
                   f"renderer loader is content-detecting{suffix}")
 
     if all_violations and strict:
         raise LoaderFormatSafetyError(
-            "LOADER FORMAT SAFETY VIOLATIONS — a consumer would torch.load a "
+            "LOADER FORMAT SAFETY VIOLATIONS - a consumer would torch.load a "
             "path that might be a non-pickle binary export. This is the "
             "2026-04-26 DEN-V2 bug class:\n"
-            + "\n".join(f"  • {v}" for v in all_violations)
+            + "\n".join(f"  - {v}" for v in all_violations)
             + "\n\nFix: use experiments.precompute_gradient_corrections."
             "load_renderer (the canonical content-detecting loader) or add "
             "magic-byte dispatch to your local helper. Suffix-based dispatch "
-            "is forbidden — it is what burned us in DEN-V2 (FP4 .bin) and "
+            "is forbidden - it is what burned us in DEN-V2 (FP4 .bin) and "
             "SHIRAZ (pickle .bin)."
         )
     return all_violations
@@ -12648,12 +12697,12 @@ def preflight_loader_format_safety(
 # ── Profile-vs-ArchConfig field consistency ───────────────────────────────────
 #
 # Bug class this catches: a profile sets `use_dscovn: True` (typo of
-# use_dsconv) and the model is built without DSConv silently — same SHIRAZ
+# use_dsconv) and the model is built without DSConv silently - same SHIRAZ
 # class but at the profile-key level instead of the CLI-flag level.
 #
 # preflight_arity catches CLI flag drift (--use-dsconv missing). This new
 # validator catches profile-key drift (profile says `use_dscovn` but
-# ArchConfig has `use_dsconv` — close-match Levenshtein typo).
+# ArchConfig has `use_dsconv` - close-match Levenshtein typo).
 
 
 def preflight_arch_consistency(strict: bool = True, verbose: bool = True) -> list[str]:
@@ -12700,15 +12749,15 @@ def preflight_arch_consistency(strict: bool = True, verbose: bool = True) -> lis
     if verbose and violations:
         print(f"  [arch_consistency] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [arch_consistency] OK: {n_profiles} renderer profile(s) "
               f"× {len(arch_field_names)} ArchConfig fields clean")
     if violations and strict:
         raise PreflightError(
-            "ARCH CONSISTENCY VIOLATIONS — profile keys close to but not "
+            "ARCH CONSISTENCY VIOLATIONS - profile keys close to but not "
             "matching ArchConfig fields:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -12764,7 +12813,7 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
         etype = prof.get("experiment_type")
         if etype is None:
             violations.append(
-                f"profile {name!r} missing 'experiment_type' key — would be "
+                f"profile {name!r} missing 'experiment_type' key - would be "
                 f"silently skipped by validation. Set to 'training' or 'renderer_training'."
             )
             continue
@@ -12822,7 +12871,7 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
             elif not (0.0 <= float(dqw) <= 10.0):
                 violations.append(
                     f"profile {name!r} dct_quant_weight={dqw} out of range "
-                    f"[0.0, 10.0] — values >10 would overwhelm scorer signal "
+                    f"[0.0, 10.0] - values >10 would overwhelm scorer signal "
                     f"and starve PoseNet/SegNet gradients."
                 )
 
@@ -12850,7 +12899,7 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
     if verbose and violations:
         print(f"  [profiles] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         n_renderer = sum(1 for p in PROFILES.values() if p.get("experiment_type") in RENDERER_TYPES)
         print(f"  [profiles] OK: {n_renderer} renderer profile(s) validated")
@@ -12858,7 +12907,7 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
     if violations and strict:
         raise PreflightError(
             "PROFILE VALIDATION FAILED:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -12879,7 +12928,7 @@ def preflight_bootstrap_safety(
     This preflight catches #1 and #2 statically by reading every bootstrap
     script's source. Patterns enforced:
 
-      A. `set -euo pipefail` (or any -e* form) — `-e` is non-negotiable.
+      A. `set -euo pipefail` (or any -e* form) - `-e` is non-negotiable.
       B. No bare `zip` shell command (use python `zipfile.ZipFile` instead).
 
     Each violation explains what went wrong and the canonical fix.
@@ -12897,7 +12946,7 @@ def preflight_bootstrap_safety(
     from pathlib import Path as _Path
 
     if scripts_dir is None:
-        # Repo root resolution — preflight.py lives in src/tac/, so up two.
+        # Repo root resolution - preflight.py lives in src/tac/, so up two.
         scripts_dir = _Path(__file__).resolve().parents[2] / "scripts"
     scripts_dir = _Path(scripts_dir)
 
@@ -12914,14 +12963,14 @@ def preflight_bootstrap_safety(
             print(f"  [bootstrap] no *_bootstrap.sh found in {scripts_dir}")
         return []
 
-    # Match `set -e`, `set -eu`, `set -euo`, `set -ue`, etc. — any combination
+    # Match `set -e`, `set -eu`, `set -euo`, `set -ue`, etc. - any combination
     # that includes a literal `-e` flag (with or without -u / -o / pipefail).
     SET_E_RE = re.compile(r"^\s*set\s+-[a-z]*e[a-z]*(\s|$)", re.MULTILINE)
 
     for path in bootstraps:
         text = path.read_text()
 
-        # Strip comments + heredocs lazily — we want code-line analysis only.
+        # Strip comments + heredocs lazily - we want code-line analysis only.
         code_lines = []
         for line in text.splitlines():
             stripped = line.strip()
@@ -12933,7 +12982,7 @@ def preflight_bootstrap_safety(
         # A. set -e flag present
         if not SET_E_RE.search(code):
             violations.append(
-                f"{path.name}: missing `set -e` (any -e* flag) — silent "
+                f"{path.name}: missing `set -e` (any -e* flag) - silent "
                 f"command failures will cascade. LANE-B died this way: "
                 f"`zip` failed, script kept running, 6.5h of pose TTO "
                 f"output got crashed at the very end. Use "
@@ -12948,21 +12997,21 @@ def preflight_bootstrap_safety(
                 f"{path.name}: invokes `zip` shell binary (match: "
                 f"{bad.group(0).strip()!r}). The PyTorch CUDA container "
                 f"`pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel` does NOT "
-                f"ship `zip` — the command will silently fail. Use python "
+                f"ship `zip` - the command will silently fail. Use python "
                 f"`zipfile.ZipFile` instead (no apt dep, deterministic)."
             )
 
     if verbose and violations:
         print(f"  [bootstrap] {len(violations)} violation(s) across {len(bootstraps)} script(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [bootstrap] OK: {len(bootstraps)} bootstrap script(s) clean")
 
     if violations and strict:
         raise PreflightError(
             "BOOTSTRAP SCRIPT SAFETY FAILED (LANE-B kill chain):\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -12971,15 +13020,15 @@ def preflight_bootstrap_safety(
 # 2026-04-27 codex R5-r6: 5 new preflight checks for the round-6 findings.
 # Each check guards against a regression of the matching finding fix:
 #
-#   A. check_no_brittle_six_line_waiver_lookback  — Finding #1 (waiver)
-#   B. check_kl_distill_uses_roundtripped_frames   — Finding #2 (KL roundtrip)
+#   A. check_no_brittle_six_line_waiver_lookback  - Finding #1 (waiver)
+#   B. check_kl_distill_uses_roundtripped_frames   - Finding #2 (KL roundtrip)
 #   C. check_eval_roundtrip_gate_called_after_output_dir_resolution
-#                                                  — Finding #3 (gate ordering)
-#   D. check_nvdec_probe_has_error_classification  — Finding #4 (probe)
-#   E. check_archive_builders_use_deterministic_zip — Finding #5 (det. zip)
+#                                                  - Finding #3 (gate ordering)
+#   D. check_nvdec_probe_has_error_classification  - Finding #4 (probe)
+#   E. check_archive_builders_use_deterministic_zip - Finding #5 (det. zip)
 #
 # All wired warn-only initially in preflight_all() (per the established
-# Lane A → strict promotion pattern); flip to strict=True once live counts
+# Lane A -> strict promotion pattern); flip to strict=True once live counts
 # are zero and codex has signed off.
 # ─────────────────────────────────────────────────────────────────────────
 
@@ -13027,14 +13076,14 @@ def check_no_brittle_six_line_waiver_lookback(
             f"  [waiver-lookback] {len(violations)} violation(s):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [waiver-lookback] OK")
 
     if violations and strict:
         raise MetaBugViolation(
             "WAIVER LOOKBACK violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -13051,7 +13100,7 @@ def _scan_python_for_kl_distill_raw_pairs(
     `rendered_pair_hwc`). The contract requires the same eval-roundtripped
     frames the SegNet scoring path consumes (codex R5-r6 #2).
 
-    The check is intentionally STRICT on naming — the in-repo recipe is
+    The check is intentionally STRICT on naming - the in-repo recipe is
     `rendered_pair_hwc_rt` (or any name with `_rt` / `roundtripped` in it).
     Add a `# KL_RAW_PAIRS_OK:<reason>` marker on the call line if the
     raw pairs are intentional (e.g., a unit test verifying the contract).
@@ -13076,7 +13125,7 @@ def _scan_python_for_kl_distill_raw_pairs(
             continue
         first = node.args[0]
         # Extract simple name; skip complex expressions (which already permute
-        # / view → presumed roundtripped).
+        # / view -> presumed roundtripped).
         if not isinstance(first, ast.Name):
             continue
         if first.id not in _KL_DISTILL_FORBIDDEN_FIRST_ARGS:
@@ -13131,14 +13180,14 @@ def check_kl_distill_uses_roundtripped_frames(
             f"{n_scanned} script(s):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [kl-roundtrip] OK: {n_scanned} script(s) scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "KL DISTILL ROUNDTRIP violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFeed the SegNet path's simulate_eval_roundtrip output, "
             + "not raw renderer pairs (codex R5-r6 #2)."
         )
@@ -13222,7 +13271,7 @@ def check_eval_roundtrip_gate_called_after_output_dir_resolution(
         )
     for p in py_paths:
         # Round 2 codebase-drift fix continued (2026-05-06): skip
-        # OSS-publication staging mirror — verbatim copy of source files.
+        # OSS-publication staging mirror - verbatim copy of source files.
         if _is_oss_export_mirror_path(p):
             continue
         n_scanned += 1
@@ -13240,14 +13289,14 @@ def check_eval_roundtrip_gate_called_after_output_dir_resolution(
             f"{n_scanned} script(s):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [gate-ordering] OK: {n_scanned} script(s) scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "GATE ORDERING violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nMove the _enforce_eval_roundtrip(args) call AFTER any "
             + "args.output_dir = ... default-resolution (codex R5-r6 #3)."
         )
@@ -13271,7 +13320,7 @@ def check_nvdec_probe_has_error_classification(
     violations: list[str] = []
     if not probe.exists():
         violations.append(
-            "scripts/probe_nvdec.sh: missing — no NVDEC probe at all. "
+            "scripts/probe_nvdec.sh: missing - no NVDEC probe at all. "
             "Restore the file (feedback_vastai_nvdec_host_variation)."
         )
     else:
@@ -13303,14 +13352,14 @@ def check_nvdec_probe_has_error_classification(
             f"  [probe-classification] {len(violations)} violation(s):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [probe-classification] OK")
 
     if violations and strict:
         raise MetaBugViolation(
             "NVDEC PROBE CLASSIFICATION violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -13367,7 +13416,7 @@ def _scan_python_for_nondeterministic_zip(
             continue
         violations.append(
             f"{rel}:{node.lineno}: `{func_str}(...)` inside a ZipFile "
-            f"context — non-deterministic (embeds source mtime + perm bits). "
+            f"context - non-deterministic (embeds source mtime + perm bits). "
             f"Codex R5-r6 #5: use a fixed-timestamp ZipInfo + writestr() "
             f"OR add `# DETERMINISTIC_ZIP_OK` marker if intentional."
         )
@@ -13447,13 +13496,13 @@ def check_archive_builders_use_deterministic_zip(
             rel = p
         if rel.parts[:2] == ("experiments", "results"):
             continue
-        # OSS-export staging mirror — see _is_oss_export_mirror_path for
+        # OSS-export staging mirror - see _is_oss_export_mirror_path for
         # cascade-prevention rationale.
         # History: R12 missed this scanner (doesn't route through
         # _iter_python_files); R13 patched it inline; R14 introduced the
         # centralized helper; R15 standardized all 7 known callers on the
         # helper. New scanners walking experiments/ MUST call
-        # _is_oss_export_mirror_path — DO NOT reimplement inline.
+        # _is_oss_export_mirror_path - DO NOT reimplement inline.
         if _is_oss_export_mirror_path(p):
             continue
         n_scanned += 1
@@ -13489,14 +13538,14 @@ def check_archive_builders_use_deterministic_zip(
             f"{n_scanned} archive-build script(s):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [det-zip] OK: {n_scanned} archive-build script(s) scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "DETERMINISTIC ZIP violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nUse fixed-timestamp ZipInfo + writestr (codex R5-r6 #5)."
         )
     return violations
@@ -13521,7 +13570,7 @@ def check_no_raw_zip_extractall(
     member name shenanigans the canonical ``safe_extract_zip`` defends against.
     TAR has the same risk class, but the canonical defense is per-member
     path-traversal validation BEFORE the call (the Kaggle kernels already do
-    this — they walk ``tar.getmembers()``, resolve each member, and ``raise
+    this - they walk ``tar.getmembers()``, resolve each member, and ``raise
     RuntimeError`` on any member whose resolved path escapes ``destination``).
     Skip lines whose receiver is clearly a tar handle (tokens ``tar`` /
     ``tarfile`` / ``t`` named TarFile / etc.) so the gate stays focused on the
@@ -13535,7 +13584,7 @@ def check_no_raw_zip_extractall(
     # Patterns that mean "this is a tar handle, not a zip handle". We accept
     # ``<name>.extractall(`` where <name> contains ``tar`` (case-insensitive)
     # OR is a known tar-context receiver. The substring is intentionally
-    # conservative — narrow patterns that show up at scale in this codebase.
+    # conservative - narrow patterns that show up at scale in this codebase.
     tar_receiver_tokens: tuple[str, ...] = (
         "tar.extractall(",
         "tarball.extractall(",
@@ -13600,13 +13649,13 @@ def check_no_raw_zip_extractall(
     if verbose and violations:
         print(f"  [safe-zip-extract] {len(violations)} raw extractall violation(s):")
         for violation in violations:
-            print(f"    • {violation}")
+            print(f"    - {violation}")
     elif verbose:
         print("  [safe-zip-extract] OK")
     if violations and strict:
         raise MetaBugViolation(
             "RAW ZIP EXTRACTALL violations:\n"
-            + "\n".join(f"  • {violation}" for violation in violations)
+            + "\n".join(f"  - {violation}" for violation in violations)
         )
     return violations
 
@@ -13765,16 +13814,16 @@ def check_public_release_hygiene(
             f"across {len(files)} scanned public file(s):"
         )
         for v in violations[:20]:
-            print(f"    • {v}")
+            print(f"    - {v}")
         if len(violations) > 20:
-            print(f"    • ... {len(violations) - 20} more")
+            print(f"    - ... {len(violations) - 20} more")
     elif verbose:
         print(f"  [public-release-hygiene] OK: {len(files)} public file(s) scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "PUBLIC RELEASE HYGIENE violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nDo not publish local paths, provider job surfaces, or "
             + "secrets. Use sanitized public manifests for Lightning.ai and "
             + "Cloudflare Pages supplement URLs."
@@ -13795,28 +13844,28 @@ def check_public_release_hygiene(
 # all wired into preflight_all() at strict=True (call sites near the top of
 # preflight_all). New additive checks should land here too, then promoted.
 #
-# Pattern → memory entry mapping:
-#   A. vastai-create-no-label                → orphan-instance prevention (today)
-#   B. vastai-create-no-tracker              → cost-tracker registration
-#   C. subagent-prompt-allows-cpu-fallback   → CLAUDE.md device-required rule
-#   D. score-without-cuda-tag                → CLAUDE.md auth-eval-everywhere
-#   E. waiver-marker-no-env-gate-name        → strict-scorer-rule auditability
-#   F. half-frame-archive-without-trained    → feedback_half_frame_breaks_posenet
-#   G. profile-key-no-resolver-bidirectional → extends dead-resolver scanner
-#   H. inflate-scorer-load-no-runtime-banner → CLAUDE.md strict-scorer-rule
-#   I. test-files-broken-imports             → test-coverage hygiene
-#   J. subagent-prompt-no-cost-cap           → feedback_vastai_cost_paranoia
-#   K. uniward-delta-no-attestation-flag     → Lane C R5 attestation gate
-#   L. remote-script-no-provenance-write     → canonical pipeline standard
+# Pattern -> memory entry mapping:
+#   A. vastai-create-no-label                -> orphan-instance prevention (today)
+#   B. vastai-create-no-tracker              -> cost-tracker registration
+#   C. subagent-prompt-allows-cpu-fallback   -> CLAUDE.md device-required rule
+#   D. score-without-cuda-tag                -> CLAUDE.md auth-eval-everywhere
+#   E. waiver-marker-no-env-gate-name        -> strict-scorer-rule auditability
+#   F. half-frame-archive-without-trained    -> feedback_half_frame_breaks_posenet
+#   G. profile-key-no-resolver-bidirectional -> extends dead-resolver scanner
+#   H. inflate-scorer-load-no-runtime-banner -> CLAUDE.md strict-scorer-rule
+#   I. test-files-broken-imports             -> test-coverage hygiene
+#   J. subagent-prompt-no-cost-cap           -> feedback_vastai_cost_paranoia
+#   K. uniward-delta-no-attestation-flag     -> Lane C R5 attestation gate
+#   L. remote-script-no-provenance-write     -> canonical pipeline standard
 #
 # All twelve start strict=False and must be promoted manually after the live
-# violation count is verified clean (per the established Lane A → strict
+# violation count is verified clean (per the established Lane A -> strict
 # promotion pattern documented in commit 7f2740e4).
 
 
 # ── Check 81: silent-default override audit must produce 0 CRITICAL ───────
 #
-# CATCHES: the KL distill bug class — a non-None argparse default in a
+# CATCHES: the KL distill bug class - a non-None argparse default in a
 # profile-using script silently overrides the profile's value when the
 # resolver doesn't special-case it. Today's session found 3 real bugs of
 # this shape in train_renderer.py (--fp4-codebook silently using 'default'
@@ -13831,7 +13880,7 @@ def check_public_release_hygiene(
 def check_silent_default_audit_clean(
     *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
 ) -> list[str]:
-    """Wrap tools/audit_silent_defaults.py — fail strict if CRITICAL > 0.
+    """Wrap tools/audit_silent_defaults.py - fail strict if CRITICAL > 0.
 
     The audit tool already filters scripts without a profile mechanism,
     scripts using _resolve()/_apply_profile()/_user_provided_flags(), and
@@ -13847,7 +13896,7 @@ def check_silent_default_audit_clean(
         if verbose:
             print(
                 "  [silent-default-audit] WARN: tools/audit_silent_defaults.py "
-                "not found — skipping check"
+                "not found - skipping check"
             )
         return []
     cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
@@ -13912,7 +13961,7 @@ def check_silent_default_audit_clean(
     violations: list[str] = []
     if n_critical > 0:
         violations.append(
-            f"{n_critical} CRITICAL silent-default override(s) — see "
+            f"{n_critical} CRITICAL silent-default override(s) - see "
             f"reports/silent_defaults.md. Pattern: argparse default=X with "
             f"matching profile key silently overrides profile values. Fix: "
             f"change default to None and resolve in body via profile."
@@ -13932,13 +13981,13 @@ def check_silent_default_audit_clean(
                 f"  [silent-default-audit] {len(violations)} violation(s)"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [silent-default-audit] OK: 0 CRITICAL")
     if violations and strict:
         raise MetaBugViolation(
             "SILENT-DEFAULT OVERRIDE DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -13947,13 +13996,13 @@ def check_silent_default_audit_clean(
 #
 # Sister bug class to silent-default-audit (Check 81). Where Check 81 catches
 # `argparse default=X` overriding profile values, this check catches
-# "kwarg omitted at call site → defaults to a stale baked-in value".
+# "kwarg omitted at call site -> defaults to a stale baked-in value".
 #
 # Incident (2026-04-29): Lane GP added `baseline_poses=` kwarg to
 # `tac.pose_gaussian_process.reconstruct_poses` so dims 1-5 would be preserved
 # instead of zero-padded. The helper change landed in src/tac. The call site
 # at experiments/fit_pose_gp.py:33 (now :41) was NEVER updated to pass the
-# kwarg — for ~2 weeks the pipeline silently produced zero-padded poses,
+# kwarg - for ~2 weeks the pipeline silently produced zero-padded poses,
 # CATASTROPHICALLY degrading Lane GP scores. Finally fixed in commit 8746793e.
 #
 # Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
@@ -14011,7 +14060,7 @@ def _scan_python_for_callsite_contract_violations(
             continue
         required = CALLSITE_CONTRACTS[callee_name]
         provided = {kw.arg for kw in node.keywords if kw.arg is not None}
-        # If **kwargs is splatted, treat as opaque — assume satisfied.
+        # If **kwargs is splatted, treat as opaque - assume satisfied.
         if any(kw.arg is None for kw in node.keywords):
             continue
         missing = required - provided
@@ -14019,7 +14068,7 @@ def _scan_python_for_callsite_contract_violations(
             line = getattr(node, "lineno", "?")
             violations.append(
                 f"{rel_s}:{line}: {callee_name}(...) missing required "
-                f"kwarg(s) {sorted(missing)} — see CALLSITE_CONTRACTS."
+                f"kwarg(s) {sorted(missing)} - see CALLSITE_CONTRACTS."
             )
     return violations
 
@@ -14057,7 +14106,7 @@ def check_callsite_contracts_satisfied(
                 f"  [callsite-contracts] {len(violations)} violation(s)"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [callsite-contracts] OK: 0 violations across "
@@ -14066,7 +14115,7 @@ def check_callsite_contracts_satisfied(
     if violations and strict:
         raise MetaBugViolation(
             "CALLSITE-CONTRACT VIOLATION DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFix: pass the listed kwarg(s) at every call site, OR "
             "remove the entry from CALLSITE_CONTRACTS if the contract is "
             "no longer required."
@@ -14136,7 +14185,7 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
     "/uv_project_env/",     # vendored Python deps in remote eval workspaces (numpy/distutils ccompiler_opt etc.)
     "/site-packages/",      # vendored Python deps anywhere (third-party code, not ours)
     "/__pycache__/",        # compiled bytecode artifacts
-    "/comma_lab_public_export/",  # OSS-publication staging mirror — copy
+    "/comma_lab_public_export/",  # OSS-publication staging mirror - copy
                                   # of source files that themselves contain
                                   # the canonical no-MPS-decision RULE TEXT
                                   # (e.g. preflight.py docstring, AGENTS.md
@@ -14155,7 +14204,7 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
 #
 # Additional rule-attribution patterns (added 2026-04-30): when a paragraph
 # cites CLAUDE.md or a Council ruling as the AUTHORITY for a kill/promote
-# decision, the decision is NOT MPS-derived — it is rule-derived (CLAUDE.md
+# decision, the decision is NOT MPS-derived - it is rule-derived (CLAUDE.md
 # restatement) or council-derived. Lane 7 PSD kill memo was the motivating
 # false positive: docstring quoted CLAUDE.md verbatim and cited Council #271.
 _MPS_DECISION_EXEMPT_TAGS = re.compile(
@@ -14170,7 +14219,7 @@ _MPS_DECISION_EXEMPT_TAGS = re.compile(
     r"|\bper Council\b"
     r"|\bCouncil #\d+\b"
     # Same-line waiver marker (operator explicitly attests the line IS
-    # the rule, not a violation — meta-irony false-positive class).
+    # the rule, not a violation - meta-irony false-positive class).
     r"|MPS-DECISION-WAIVED:"
 )
 
@@ -14345,16 +14394,16 @@ def check_no_proxy_metric_drives_decision(
                 f"  [no-mps-decision] {len(violations)} violation(s)"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print("  [no-mps-decision] OK: 0 violations")
     if violations and strict:
         raise MetaBugViolation(
             "MPS-DERIVED STRATEGIC DECISION DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
-            + (f"\n  … and {len(violations) - 20} more"
+            + "\n".join(f"  - {v}" for v in violations[:20])
+            + (f"\n  ... and {len(violations) - 20} more"
                if len(violations) > 20 else "")
             + "\n\nFix: either remove the decision verb (kill/promote/etc) "
             "from the record, or attach a [contest-CUDA] artifact reference "
@@ -14405,7 +14454,7 @@ _COMMENT_ONLY_CONTRACT_PATTERNS_STRICT: tuple[re.Pattern[str], ...] = (
         r"(deploy|wrapper)\s+(script\s+)?(swaps|injects|provides|replaces)\b",
         re.IGNORECASE,
     ),
-    # NB: "caller is responsible for X" is NOT in the STRICT set — Q2 verdict
+    # NB: "caller is responsible for X" is NOT in the STRICT set - Q2 verdict
     # ruled it produces too many legitimate-API-docstring false positives.
     # It IS in the broader audit set below.
 )
@@ -14495,7 +14544,7 @@ def _has_backing_assertion(
       (c) any `check_*(` reference anywhere else in the file (sibling
           preflight check pattern)
     """
-    # (c) sibling check_* reference — cheap whole-file scan. Only count it if
+    # (c) sibling check_* reference - cheap whole-file scan. Only count it if
     # the reference is NOT on the comment line itself.
     for m in re.finditer(r"\bcheck_\w+\s*\(", text):
         line_idx = text[:m.start()].count("\n")
@@ -14700,16 +14749,16 @@ def check_no_comment_only_contracts(
                 tag = "UNBACKED" if not backed else "backed"
                 print(f"    [{tag}] {rel_s}:{lineno}: {snippet}")
             if len(all_findings) > 30:
-                print(f"    … and {len(all_findings) - 30} more")
+                print(f"    ... and {len(all_findings) - 30} more")
         elif violations:
             print(
                 f"  [no-comment-only-contracts] {len(violations)} "
                 f"violation(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(
                 "  [no-comment-only-contracts] OK: 0 unbacked findings"
@@ -14718,15 +14767,15 @@ def check_no_comment_only_contracts(
     if violations and strict:
         raise MetaBugViolation(
             "COMMENT-ONLY CONTRACT DETECTED (PCC2):\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
             + (
-                f"\n  … and {len(violations) - 20} more"
+                f"\n  ... and {len(violations) - 20} more"
                 if len(violations) > 20 else ""
             )
             + "\n\nFix: add a backing assertion (assert/raise/check_*) within "
             "±50 lines of the comment OR inside the enclosing function body. "
             "The IMP cycle 0 = 1.98 metabug (38× regression) was rooted in "
-            "this exact class — comments rot, assertions don't.\n"
+            "this exact class - comments rot, assertions don't.\n"
             "Council: feedback_grand_council_pcc2_comment_only_contracts_20260430.md"
         )
     return violations
@@ -14743,9 +14792,9 @@ def check_no_comment_only_contracts(
 # pose=nan". The loss WAS finite but the printer at experiments/train_segmap.py
 # read epoch_metrics["seg"] / ["seg_loss"] (with float("nan") fallback) when
 # SegMapTrainer.train_epoch returns "seg_dist" / "pose_dist". Both keys
-# missing → NaN printed → operator believed training was diverged → 5h
+# missing -> NaN printed -> operator believed training was diverged -> 5h
 # of GPU compute appeared "wasted" until SSH-debug found the actual
-# pose_dist/seg_dist values frozen (separate bug — model not learning).
+# pose_dist/seg_dist values frozen (separate bug - model not learning).
 #
 # This check scans every `experiments/train_*.py` file for `epoch_metrics`
 # / `metrics.get(...)` / `history[...]["..."]` style key references and
@@ -14754,7 +14803,7 @@ def check_no_comment_only_contracts(
 # {"loss", "pose_dist", "seg_dist", "kl_aux", "num_steps"}. Add other
 # trainers as they're discovered.
 
-# Registry of trainer-name → set-of-returned-keys. Populate from each
+# Registry of trainer-name -> set-of-returned-keys. Populate from each
 # trainer's known docstring + return statement.
 TRAINER_RETURN_KEYS: dict[str, set[str]] = {
     "SegMapTrainer.train_epoch": {
@@ -14777,7 +14826,7 @@ TRAINER_RETURN_KEYS: dict[str, set[str]] = {
 }
 
 # Files exempt: legacy training scripts that pre-date the registry can be
-# whitelisted here. Empty by default — every new caller MUST conform.
+# whitelisted here. Empty by default - every new caller MUST conform.
 _METRIC_KEY_CONSISTENCY_EXEMPT_FILES: set[str] = set()
 
 
@@ -14827,7 +14876,7 @@ def _scan_train_script_for_metric_key_misses(
             if key not in all_known:
                 line = getattr(node, "lineno", "?")
                 violations.append(
-                    f"{rel_s}:{line}: {recv.id}.get({key!r}, ...) — "
+                    f"{rel_s}:{line}: {recv.id}.get({key!r}, ...) - "
                     f"key not in TRAINER_RETURN_KEYS union "
                     f"{sorted(all_known)}"
                 )
@@ -14850,9 +14899,9 @@ def check_training_script_metric_keys_consistent(
                 f"  [training-metric-keys] {len(violations)} violation(s)"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(
                 f"  [training-metric-keys] OK: 0 violations across "
@@ -14861,7 +14910,7 @@ def check_training_script_metric_keys_consistent(
     if violations and strict:
         raise MetaBugViolation(
             "TRAINING-METRIC-KEY MISMATCH DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
             + "\n\nFix: either correct the key name in the print/log to match "
             "a real trainer return key, OR add the new key to "
             "TRAINER_RETURN_KEYS for the matching trainer."
@@ -14870,20 +14919,20 @@ def check_training_script_metric_keys_consistent(
 
 
 # ── Check 86 (DARTS-S freeze incident): no bare .round() in eval-roundtrip
-#    chains. PyTorch's torch.tensor.round() has ZERO gradient → severs the
-#    backprop chain → optimizer "steps" but params don't move → 5h GPU
+#    chains. PyTorch's torch.tensor.round() has ZERO gradient -> severs the
+#    backprop chain -> optimizer "steps" but params don't move -> 5h GPU
 #    burned producing constant loss = 277.02 across 400 epochs.
 #
 # Incident (2026-04-29 PM): Lane DARTS-S V1 sweep on Vast.ai 4090 ran 5h
 # with pose_dist=158.49, seg_dist=2.37, kl_aux=4.48 IDENTICAL to 4 decimals
 # across all 400 epochs. The eval-roundtrip in src/tac/segmap_renderer.py:281
 # called `up.clamp(0, 255).round()` with a comment claiming it was
-# "STE-friendly proxy" — it was NOT. Empirical confirmation by Council A
+# "STE-friendly proxy" - it was NOT. Empirical confirmation by Council A
 # (.omx/research/council_darts_s_freeze_audit_20260429.md): with .round(),
 # max(|grad|)=0.00e+00 + loss frozen to 6 decimals; with Uint8STE.apply,
 # max(|grad|)=5.83e+03 + loss DECREASES.
 #
-# Cross-impact: Lane SC++, Lane SA-v2, Lane SO, Lane MM v2 — all invalidated.
+# Cross-impact: Lane SC++, Lane SA-v2, Lane SO, Lane MM v2 - all invalidated.
 # Lane G v3 unaffected (uses train_distill.py + Uint8STE correctly).
 #
 # This check scans every src/tac/*.py and experiments/*.py file for the
@@ -14899,14 +14948,14 @@ _BARE_ROUND_RE = re.compile(r"\.round\(\s*\)")
 _INTERPOLATE_RE = re.compile(r"F\.interpolate\(")
 _UINT8_STE_RE = re.compile(r"Uint8STE\.apply|uint8_ste\(")
 # Manual STE pattern: `... + (X.round().clamp(...) - Y).detach()` produces
-# the round forward but identity backward — same effect as Uint8STE.apply.
+# the round forward but identity backward - same effect as Uint8STE.apply.
 # Detected by presence of `.detach()` on a same-line expression alongside
 # `.round()`, since the AST + line-text combination needs both.
 _MANUAL_STE_RE = re.compile(r"\.detach\(\s*\).*\.round\(\)|\.round\(\).*\.detach\(\s*\)")
-# Files that are READ-ONLY measurement tools — bare .round() is correct
+# Files that are READ-ONLY measurement tools - bare .round() is correct
 # because no gradient is needed (analysis / forensics / proxy-score path).
 _BARE_ROUND_READONLY_FILES: set[str] = {
-    "src/tac/forensics.py",                  # explicit "no STE — analysis"
+    "src/tac/forensics.py",                  # explicit "no STE - analysis"
     "src/tac/scorer.py",                     # compute_proxy_score read-only
     "experiments/pair_difficulty_map.py",    # measurement tool
     "experiments/profile_fp4_layer_sensitivity.py",  # measurement tool
@@ -14977,7 +15026,7 @@ def _scan_python_for_bare_round_in_roundtrip(
                 violations.append(
                     f"{rel_s}:{start + off + 1}: function {node.name!r} "
                     f"uses .round() inside eval-roundtrip pattern (calls "
-                    f"F.interpolate + 'roundtrip' in name/docstring) — "
+                    f"F.interpolate + 'roundtrip' in name/docstring) - "
                     f".round() has ZERO gradient. Use Uint8STE.apply()."
                 )
     return violations
@@ -14987,7 +15036,7 @@ def check_no_bare_round_in_eval_roundtrip(
     *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
 ) -> list[str]:
     """Forbid `.round()` inside eval-roundtrip chains. .round() has zero
-    gradient → severs backprop → silent training freeze. Use Uint8STE.apply
+    gradient -> severs backprop -> silent training freeze. Use Uint8STE.apply
     instead (clamp+round forward, identity backward inside [0,255])."""
     root = Path(repo_root or REPO_ROOT).resolve()
     scan_dirs = ["src/tac", "experiments"]
@@ -15012,13 +15061,13 @@ def check_no_bare_round_in_eval_roundtrip(
                 f"  [no-bare-round-roundtrip] {len(violations)} violation(s)"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [no-bare-round-roundtrip] OK: 0 violations")
     if violations and strict:
         raise MetaBugViolation(
             "BARE .round() IN EVAL-ROUNDTRIP DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFix: replace `up.clamp(0, 255).round()` with "
             "`Uint8STE.apply(up)` (canonical STE at src/tac/quantization.py)."
         )
@@ -15032,10 +15081,10 @@ def check_no_bare_round_in_eval_roundtrip(
 #   "$PYBIN" -u experiments/train_segmap.py ... [no --bf16 OR no --scorer-chunk]
 # OR with --batch-size B and --scorer-chunk N where B*N > 8. The DOMINANT
 # memory cost in SegMap-class training is NOT the 94K-param SegMap renderer
-# itself — it is the **two frozen scorer forward+backward chains** (PoseNet
+# itself - it is the **two frozen scorer forward+backward chains** (PoseNet
 # FastViT-T12 + SegNet EfficientNet-B2). Specifically PoseNet's FastViT
 # stage-1 self-attention map is `B × heads × N² × 4 bytes` where N=12288
-# at 384×512 scorer input — ~21 GiB at B=16 frames in fp32. This OOMed
+# at 384×512 scorer input - ~21 GiB at B=16 frames in fp32. This OOMed
 # 14 instances on Modal A10G 22 GB shared-tenant on 2026-04-29 (~$3.50
 # burnt for zero artifact).
 #
@@ -15073,7 +15122,7 @@ _SEGMAP_CLASS_TRAINING_TARGETS = {
     "experiments/train_segmap.py",
     # Round 7 Defect #1 (2026-04-29 PM): Lane FC invokes
     # train_segmap_film_canvas.py which constructs the SAME SegMapTrainer
-    # at experiments/train_segmap_film_canvas.py:228 — therefore exposed to
+    # at experiments/train_segmap_film_canvas.py:228 - therefore exposed to
     # the SAME 21 GiB FastViT-attention-map OOM. The check was previously
     # blind to it. Coverage gap closed; train_segmap_film_canvas.py also
     # gained --bf16 + --scorer-chunk CLI flags in the same commit so the
@@ -15181,7 +15230,7 @@ def check_segmap_class_lanes_have_oom_guards(
     if verbose and violations:
         print(f"  [segmap-oom-guard] {len(violations)} violation(s):")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(
             f"  [segmap-oom-guard] OK: "
@@ -15194,7 +15243,7 @@ def check_segmap_class_lanes_have_oom_guards(
             "DF2+DF3 deep fixes (bf16 autocast + per-pair scorer chunking) "
             "before dispatch. See "
             ".omx/research/council_oom_class_deep_fix_20260429.md\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -15202,10 +15251,10 @@ def check_segmap_class_lanes_have_oom_guards(
 # ── Check 88 (Council D EMA wire-in): every training path must EMA the model
 #
 # Bug class this catches: a script in experiments/train_*.py (or
-# src/tac/experiments/train_*.py) — and the QAT/post-training quantization
-# scripts (qat_*.py, quantize_*.py) — that calls optimizer.step() in its
+# src/tac/experiments/train_*.py) - and the QAT/post-training quantization
+# scripts (qat_*.py, quantize_*.py) - that calls optimizer.step() in its
 # main loop but does NOT instantiate `EMA(...)` or call `ema.update(...)`.
-# Per CLAUDE.md "EMA — NON-NEGOTIABLE": every training path MUST
+# Per CLAUDE.md "EMA - NON-NEGOTIABLE": every training path MUST
 # instantiate EMA, update it after every optimizer.step(), and save the
 # EMA shadow (not the live weights) as the inference checkpoint.
 # Without EMA, single-epoch noise dominates the final checkpoint. Lane G
@@ -15218,7 +15267,7 @@ def check_segmap_class_lanes_have_oom_guards(
 # (the canonical training-shaped pattern). If present without (a) `EMA(`
 # construction OR (b) `ema.update(` invocation, flag.
 #
-# Whitelist (waiver — head-of-file marker `# EMA_WAIVED: <reason>` in
+# Whitelist (waiver - head-of-file marker `# EMA_WAIVED: <reason>` in
 # first 5 lines, OR exempt basename in _EMA_EXEMPT_TRAINING_SCRIPTS):
 #   - smoke / DRY-RUN scripts where EMA isn't needed
 #   - profile scripts (training intentionally a one-shot loop)
@@ -15226,7 +15275,7 @@ def check_segmap_class_lanes_have_oom_guards(
 #   - codec-calibration scripts (not weight training): neural_weight_codec
 #
 # Memory: .omx/research/council_ema_audit_20260429.md (Council D).
-# Pairs with the CLAUDE.md "EMA — NON-NEGOTIABLE" section added in the
+# Pairs with the CLAUDE.md "EMA - NON-NEGOTIABLE" section added in the
 # same commit.
 
 
@@ -15310,7 +15359,7 @@ def _has_ema_waiver_head_marker(text: str) -> bool:
 # checkpoint that ships in the submission archive. Listed by basename so
 # the check is robust to repo-root path differences.
 _EMA_EXEMPT_TRAINING_SCRIPTS = {
-    # Research utility — never ships
+    # Research utility - never ships
     "train_mini_scorer.py",
     # Codec calibration (not weight training of a renderer)
     "train_neural_weight_codec.py",
@@ -15354,7 +15403,7 @@ def _scan_training_script_for_ema_wireins(
         missing.append("`ema.update(model)` call after optimizer.step()")
     return [
         f"{rel}: training script calls optimizer.step() but is missing "
-        f"{' AND '.join(missing)}. Per CLAUDE.md \"EMA — NON-NEGOTIABLE\": "
+        f"{' AND '.join(missing)}. Per CLAUDE.md \"EMA - NON-NEGOTIABLE\": "
         f"every training path MUST instantiate EMA (Quantizr decay=0.997), "
         f"update after every optim.step(), and ship the EMA shadow as the "
         f"inference checkpoint. Reference pattern: "
@@ -15373,7 +15422,7 @@ def check_training_paths_use_ema_correctly(
 ) -> list[str]:
     """Catch training scripts that call optimizer.step() but don't EMA.
 
-    Reference: CLAUDE.md "EMA — NON-NEGOTIABLE" + Council D audit at
+    Reference: CLAUDE.md "EMA - NON-NEGOTIABLE" + Council D audit at
     .omx/research/council_ema_audit_20260429.md. Scans
     `experiments/train_*.py`, `src/tac/experiments/train_*.py`, and the
     QAT / post-training quantization scripts (qat_*.py,
@@ -15407,14 +15456,14 @@ def check_training_paths_use_ema_correctly(
             f"{n_scanned} files:"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [training-needs-ema] OK: {n_scanned} training scripts scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "TRAINING SCRIPT MISSING EMA violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nEMA EVERYWHERE (CLAUDE.md non-negotiable). Reference "
             "audit: .omx/research/council_ema_audit_20260429.md."
         )
@@ -15422,7 +15471,7 @@ def check_training_paths_use_ema_correctly(
 
 
 # ── Check 89 (Council B UNIWARD NO-OP incident): remote_lane scripts that
-#    compute a payload and then `cp` over the anchor masks — the encoded
+#    compute a payload and then `cp` over the anchor masks - the encoded
 #    bytes never make it into the archive.
 #
 # Incident (2026-04-29 PM): Lane UNIWARD v8 ran 779s on Modal T4, computed
@@ -15491,7 +15540,7 @@ def _scan_remote_lane_for_encode_then_discard(
         line_num = text[:m.start()].count("\n") + 1
         snippet = m.group(0)[:120]
         violations.append(
-            f"{rel_s}:{line_num}: encode-then-discard antipattern — script "
+            f"{rel_s}:{line_num}: encode-then-discard antipattern - script "
             f"encodes a payload BEFORE this cp at line "
             f"{text[:encode_pos].count(chr(10)) + 1}, and `{snippet}` "
             f"overwrites it. Add `# UNIWARD-NO-OP-WAIVED:` marker if "
@@ -15519,15 +15568,15 @@ def check_remote_lane_scripts_use_computed_payloads(
                 f"  [encode-then-discard] {len(violations)} violation(s)"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print("  [encode-then-discard] OK: 0 violations")
     if violations and strict:
         raise MetaBugViolation(
             "ENCODE-THEN-DISCARD ANTIPATTERN DETECTED:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
             + "\n\nFix: either (a) modify the archive build step to actually "
             "ship the encoded payload, OR (b) add a `# UNIWARD-NO-OP-WAIVED:` "
             "marker explaining why the anchor cp is intentional."
@@ -15582,7 +15631,7 @@ def _scan_python_for_vastai_create_no_label(
         ]
         if "create" not in strs or "instance" not in strs:
             continue
-        # Confirm the order is "create" then "instance" — these are the
+        # Confirm the order is "create" then "instance" - these are the
         # vastai positional args. We only flag the literal CLI pattern,
         # not "create instance" as separate words used elsewhere.
         try:
@@ -15595,7 +15644,7 @@ def _scan_python_for_vastai_create_no_label(
             violations.append(
                 f"{rel}:{node.lineno}: `vastai create instance` invocation "
                 f"missing `--label`. Orphan instances cannot be matched to "
-                f"experiments → silent cost accrual (incident 2026-04-27, "
+                f"experiments -> silent cost accrual (incident 2026-04-27, "
                 f"$0.05). Add `'--label', f'lane-X-{{experiment.name}}'` to "
                 f"the arg list."
             )
@@ -15646,13 +15695,13 @@ def check_vastai_create_has_label(
         if violations:
             print(f"  [vastai-label] {len(violations)} unlabeled instance create(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [vastai-label] OK: {n_scanned} python file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "VASTAI CREATE INSTANCE WITHOUT --label:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -15787,13 +15836,13 @@ def check_vastai_create_writes_tracker(
         if violations:
             print(f"  [vastai-tracker] {len(violations)} untracked launch(es):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [vastai-tracker] OK: {n_scanned} python file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "VASTAI CREATE INSTANCE WITHOUT TRACKER REGISTRATION:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -15818,7 +15867,7 @@ def _scan_for_cpu_fallback_in_subagent_prompts(
 
     A subagent dispatch prompt that says "use --device cpu if CUDA fails"
     can produce non-byte-matching archive bytes. Today's Lane H CRF56 task
-    hit this — caught at review, no real cost, but a permanent gate is
+    hit this - caught at review, no real cost, but a permanent gate is
     structurally cheaper than catching it again.
 
     Path filter: .md files under .agents/ and prompts/, plus Python literal
@@ -15915,13 +15964,13 @@ def check_subagent_prompts_no_cpu_fallback(
         if violations:
             print(f"  [cpu-fallback] {len(violations)} unguarded cpu-fallback prompt(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [cpu-fallback] OK: {n_scanned} prompt/source file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "SUBAGENT PROMPT ALLOWS --device cpu WITHOUT CAVEAT:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -16002,15 +16051,15 @@ def check_scores_have_lane_tag(
         if violations:
             print(f"  [score-tag] {len(violations)} untagged score line(s):")
             for v in violations[:20]:  # cap output
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print(f"  [score-tag] OK: {n_scanned} doc file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "SCORE LINES WITHOUT LANE TAG:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -16020,7 +16069,7 @@ def check_scores_have_lane_tag_paper_research(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B7 — extend lane-tag discipline to docs/paper/**/*.md + .omx/research/**/*.md.
+    """B7 - extend lane-tag discipline to docs/paper/**/*.md + .omx/research/**/*.md.
 
     Bug class (CLAUDE.md ``forbidden_empirical_claim_without_evidence_tag``):
     paper blueprints, design memos, and research-state ledgers may carry
@@ -16060,9 +16109,9 @@ def check_scores_have_lane_tag_paper_research(
                 f"score line(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print(
                 f"  [score-tag-paper-research] OK: {n_scanned} md file(s) scanned"
@@ -16070,7 +16119,7 @@ def check_scores_have_lane_tag_paper_research(
     if violations and strict:
         raise MetaBugViolation(
             "PAPER/RESEARCH SCORE LINES WITHOUT LANE TAG:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -16147,13 +16196,13 @@ def check_waivers_specify_env_gate(
         if violations:
             print(f"  [waiver-envgate] {len(violations)} unspecific waiver(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [waiver-envgate] OK: {n_scanned} submission file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "SCORER_AT_INFLATE_WAIVED MARKERS WITHOUT ENV-GATE NAME:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -16174,7 +16223,7 @@ def _scan_for_halfframe_without_trained_profile(
     Rule: any invocation of `build_baseline_archive.py --half-frame` MUST
     also pass `--profile <X>` where the profile dict has
     `mask_half_sim_prob > 0` OR `use_zoom_flow=True`. We can statically
-    check the script-text only — the profile lookup happens at runtime
+    check the script-text only - the profile lookup happens at runtime
     via `tac.profiles.PROFILES[X]`. So we (a) extract the profile name
     from the same invocation arg list, (b) import PROFILES, (c) check
     the keys.
@@ -16227,7 +16276,7 @@ def _scan_for_halfframe_without_trained_profile(
         stripped = line.strip()
         if stripped.startswith("#"):
             continue
-        # Skip the argparse flag DEFINITION itself (false positive — this is
+        # Skip the argparse flag DEFINITION itself (false positive - this is
         # the file that introduces the flag, not a caller). Detect the
         # `add_argument("--half-frame"...)` pattern in the same line OR the
         # 2 preceding lines (multi-line argparse calls are common).
@@ -16239,7 +16288,7 @@ def _scan_for_halfframe_without_trained_profile(
         if "``" in line:
             continue
         if '"""' in line and line.count('"""') >= 1 and "--half-frame" in line.split('"""')[-1]:
-            # Inside a docstring tail — skip (heuristic).
+            # Inside a docstring tail - skip (heuristic).
             continue
         command_window = "\n".join(lines[max(0, i - 5): min(len(lines), i + 2)])
         if "``" in command_window:
@@ -16342,13 +16391,13 @@ def check_halfframe_archive_uses_trained_profile(
         if violations:
             print(f"  [halfframe] {len(violations)} half-frame mismatch(es):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [halfframe] OK: {n_scanned} script file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "HALF-FRAME ARCHIVE WITHOUT HALF-FRAME-TRAINED RENDERER:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -16357,7 +16406,7 @@ def check_halfframe_archive_uses_trained_profile(
 
 
 _PROFILE_KEY_EXEMPTIONS = frozenset({
-    # Documentation / metadata keys — never resolved as flags.
+    # Documentation / metadata keys - never resolved as flags.
     "_doc", "_notes", "_origin", "name", "description",
     # Pydantic / dataclass internal keys.
     "model_config", "Config",
@@ -16397,10 +16446,10 @@ def _scan_for_resolver_keys(
     Also catches a wide variety of profile-key access patterns so a key
     used anywhere in the codebase (not just in train_renderer) counts as
     'resolved'. The intent is to flag keys that have ZERO consumers, which
-    is the actual bug class — not to require a specific resolver pattern.
+    is the actual bug class - not to require a specific resolver pattern.
 
     Resolver detection patterns (any one is sufficient):
-      cfg.X = …                             # assignment
+      cfg.X = ...                             # assignment
       cfg.X                                 # bare read
       args.X                                # parsed-args read
       profile["X"] / profile.get("X")       # dict access (variants:
@@ -16409,7 +16458,7 @@ def _scan_for_resolver_keys(
       kwargs.get("X")
       setattr(_, "X", _) / getattr(_, "X")
       self.config.X / self.cfg.X / self._cfg.X / self._config.X
-      def …(X: type = default)              # function/method parameter
+      def ...(X: type = default)              # function/method parameter
       f(X=value)                            # keyword argument in call
       X: type = default                     # dataclass field declaration
       # PROFILE_KEY_RESOLVED:X              # explicit waiver marker
@@ -16420,7 +16469,7 @@ def _scan_for_resolver_keys(
     for m in re.finditer(r"\bargs\.([A-Za-z_][A-Za-z0-9_]*)\b", text):
         out.add(m.group(1))
     # `profile["<KEY>"]` / `profile.get("<KEY>")` / `prof["<KEY>"]` /
-    # `p["<KEY>"]` / `cfg["<KEY>"]` — all dict-access patterns.
+    # `p["<KEY>"]` / `cfg["<KEY>"]` - all dict-access patterns.
     # Extended to cover common alias names: `vals`, `opts`, `overrides`.
     for m in re.finditer(
         r'\b(?:profile|prof|p|cfg|config|hp|params|arch_dict|arch|vals|opts|overrides|profile_vals)'
@@ -16440,7 +16489,7 @@ def _scan_for_resolver_keys(
     for m in re.finditer(r'\bgetattr\s*\([^,]+,\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']', text):
         out.add(m.group(1))
     # `self.config.X`, `self.cfg.X`, `self._cfg.X`, `self._config.X`
-    # — dataclass-config reads (legitimate consumer pattern,
+    # - dataclass-config reads (legitimate consumer pattern,
     # used by tac.contrib.domain_solvers, etc.).
     for m in re.finditer(
         r'\bself\.(?:_?config|_?cfg)\.([A-Za-z_][A-Za-z0-9_]*)\b',
@@ -16487,7 +16536,7 @@ def _scan_for_resolver_keys(
     # Walk the AST to find function/method parameter names and
     # dataclass field declarations. This catches the very common
     # consumption pattern where a function signature names the key
-    # directly, e.g. `def train(scorer_weight: float = 20.0): …`.
+    # directly, e.g. `def train(scorer_weight: float = 20.0): ...`.
     # Without AST parsing, the regex would have to be fragile.
     # AST parsing is useful for ordinary source files, but this preflight module
     # itself is very large. The regex pass above catches explicit profile-key
@@ -16531,7 +16580,7 @@ def _scan_for_resolver_keys(
                                 if candidate_keys is None or t.id in candidate_keys:
                                     out.add(t.id)
             elif isinstance(node, ast.Call):
-                # `f(X=value)` — keyword arguments in calls.
+                # `f(X=value)` - keyword arguments in calls.
                 for kw in node.keywords:
                     if kw.arg is not None:  # exclude **kwargs spreads
                         if candidate_keys is None or kw.arg in candidate_keys:
@@ -16548,12 +16597,12 @@ def check_profile_keys_have_resolvers(
 
     The existing dead-resolver scanner finds parse_args entries that have
     no profile mapping (orphan flags). This complementary check finds
-    profile keys that have no parse_args resolver (silent default → bug
+    profile keys that have no parse_args resolver (silent default -> bug
     cluster: pose_dim, blend_mode, etc.).
     """
     root = repo_root or REPO_ROOT
     violations: list[str] = []
-    # If the provided repo_root has no profiles.py, skip — tests use this
+    # If the provided repo_root has no profiles.py, skip - tests use this
     # path with a stub repo and we don't want them to pull live PROFILES.
     if not (root / "src" / "tac" / "profiles.py").exists():
         if verbose:
@@ -16567,11 +16616,11 @@ def check_profile_keys_have_resolvers(
     # Resolver search: the profile-key consumer can be ANY file under
     # src/tac/ or experiments/. The original narrow list (train_renderer +
     # train_distill + training + build_renderer + profiles) missed legit
-    # consumers — e.g. T_max is used by the cosine scheduler in
+    # consumers - e.g. T_max is used by the cosine scheduler in
     # train_renderer.py:1356, but the regex matched the assignment not the
     # use. Cast a wide net: if a key appears as a dict-access ANYWHERE in
     # src/tac or experiments, count it as resolved. This makes the gate
-    # find the actual bug class — keys with ZERO consumers — without
+    # find the actual bug class - keys with ZERO consumers - without
     # producing false positives on widely-used keys.
     resolver_search_dirs = ["src/tac", "experiments"]
     resolver_source_files = _rg_file_list(
@@ -16669,15 +16718,15 @@ def check_profile_keys_have_resolvers(
         if violations:
             print(f"  [profile-resolver] {len(violations)} unresolved profile key(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print(f"  [profile-resolver] OK: {len(keys)} profile key(s) all resolved")
     if violations and strict:
         raise MetaBugViolation(
             "PROFILE KEYS WITHOUT RESOLVERS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -16740,13 +16789,13 @@ def check_inflate_scorer_load_has_runtime_banner(
         if violations:
             print(f"  [scorer-banner] {len(violations)} inflate file(s) lack runtime banner:")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [scorer-banner] OK: {n_scanned} inflate file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "INFLATE SCORER-LOAD WITHOUT RUNTIME BANNER:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -16796,7 +16845,7 @@ def _collect_importorskip_modules(tree: ast.Module) -> set[str]:
         from tac.self_augmentation import foo  # scanner accepts because of skip above
 
     A test file that opts in this way runs cleanly when the module lands and
-    skips gracefully (with reason) when it's missing — matches industrial
+    skips gracefully (with reason) when it's missing - matches industrial
     pytest workflow for in-flight subagent / staged work.
     """
     skipped: set[str] = set()
@@ -16832,7 +16881,7 @@ def _collect_importorskip_modules(tree: ast.Module) -> set[str]:
 def _has_module_level_skip(tree: ast.Module) -> bool:
     """Return True if module body contains `pytest.skip(..., allow_module_level=True)`.
 
-    This is the canonical pytest pattern for "skip the whole module" — see
+    This is the canonical pytest pattern for "skip the whole module" - see
     pytest docs on pytest.skip + allow_module_level. The scanner walks the
     module body (including nested if/try blocks at the top level) for any
     such call. When found, ALL ImportFrom in the file are tolerated since
@@ -16887,7 +16936,7 @@ def _scan_test_file_for_dead_imports(
     issues (target module not found, target name not in module).
 
     Honors `pytest.importorskip("X")` at module top as a legitimate opt-out
-    for tests of optional / in-flight modules — see _collect_importorskip_modules.
+    for tests of optional / in-flight modules - see _collect_importorskip_modules.
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
@@ -16919,7 +16968,7 @@ def _scan_test_file_for_dead_imports(
         return []
 
     if _has_module_level_skip(tree):
-        # `pytest.skip(..., allow_module_level=True)` at module top — pytest
+        # `pytest.skip(..., allow_module_level=True)` at module top - pytest
         # refuses to collect the module so no ImportFrom inside ever runs.
         return []
 
@@ -17266,15 +17315,15 @@ def check_test_files_imports_resolve(
         if violations:
             print(f"  [test-imports] {len(violations)} broken test import(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print(f"  [test-imports] OK: {n_scanned} test file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "TEST FILE IMPORTS DO NOT RESOLVE:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -17353,13 +17402,13 @@ def check_vastai_prompts_have_cost_cap(
         if violations:
             print(f"  [vastai-cost-cap] {len(violations)} unguarded vastai prompt(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [vastai-cost-cap] OK: {n_scanned} prompt file(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "VASTAI PROMPTS WITHOUT COST CAP:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -17372,7 +17421,7 @@ def _scan_for_uniward_delta_without_attestation(
 ) -> list[str]:
     """Detect --with-uniward-delta usage without the compliance gate.
 
-    Per Lane C R5 (commit ef8a9a1b): every UNIWARD δ injection MUST pass
+    Per Lane C R5 (commit ef8a9a1b): every UNIWARD delta injection MUST pass
     one of:
       - --allow-pending-compliance (operator override, recorded)
       - <attestation file present at canonical path>
@@ -17381,7 +17430,7 @@ def _scan_for_uniward_delta_without_attestation(
     have an explicit comment referencing the attestation file path.
 
     Refinement (R6 cleanup, 2026-04-27): the file that DEFINES the flag
-    (experiments/build_baseline_archive.py) is excluded — every mention
+    (experiments/build_baseline_archive.py) is excluded - every mention
     inside it is either the argparse definition, a help string, or an
     error message. The flag's compliance enforcement is implemented IN
     that file (the gate). So the rule: scan only CALLERS, not the file
@@ -17400,7 +17449,7 @@ def _scan_for_uniward_delta_without_attestation(
         return []
     # Skip the file that DEFINES the flag (and thus enforces the gate
     # internally). Every textual occurrence inside that file is either
-    # the argparse spec, the help string, or an internal error/comment —
+    # the argparse spec, the help string, or an internal error/comment -
     # never an actual subprocess call to itself.
     if 'add_argument("--with-uniward-delta"' in text or "add_argument('--with-uniward-delta'" in text:
         return []
@@ -17430,7 +17479,7 @@ def _scan_for_uniward_delta_without_attestation(
         violations.append(
             f"{rel}:{i}: `--with-uniward-delta` without "
             f"`--allow-pending-compliance` OR an attestation file reference "
-            f"in 30-line window. Per Lane C R5 (commit ef8a9a1b): δ.bin "
+            f"in 30-line window. Per Lane C R5 (commit ef8a9a1b): delta.bin "
             f"injection requires explicit compliance gate."
         )
     return violations
@@ -17475,15 +17524,15 @@ def check_uniward_delta_has_attestation_gate(
             violations.extend(_scan_for_uniward_delta_without_attestation(path, root))
     if verbose:
         if violations:
-            print(f"  [uniward-attestation] {len(violations)} ungated δ invocation(s):")
+            print(f"  [uniward-attestation] {len(violations)} ungated delta invocation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [uniward-attestation] OK: {n_scanned} script(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "UNIWARD DELTA WITHOUT COMPLIANCE GATE:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -17533,13 +17582,13 @@ def check_remote_scripts_write_provenance(
         if violations:
             print(f"  [provenance] {len(violations)} remote script(s) missing provenance:")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [provenance] OK: {n_scanned} remote script(s) scanned")
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE SCRIPTS WITHOUT PROVENANCE.JSON:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -17613,13 +17662,13 @@ def check_train_renderer_kl_aux_explicit_scope(
         if violations:
             print(f"  [train-renderer-kl-scope] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [train-renderer-kl-scope] OK: renderer KL auxiliaries are explicit-scope")
     if violations and strict:
         raise PreflightError(
             "TRAIN_RENDERER KL AUXILIARY SCOPE violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nRenderer KL-like auxiliaries must not activate from "
             "kl_distill_weight alone. Use kl_distill_scope='segnet_aux' and "
             "mark high-weight KL as non-promotable until exact CUDA archive "
@@ -17695,13 +17744,13 @@ def check_distillation_policy_schema_clean(
         if violations:
             print(f"  [distillation-policy-schema] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [distillation-policy-schema] OK: KL/JBL profiles normalize through policy schema")
     if violations and strict:
         raise PreflightError(
             "DISTILLATION POLICY SCHEMA violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nEvery KL/JBL/distillation lane must serialize a "
             "distillation_policy_v1-compatible policy before training, "
             "dispatch, adjudication, or promotion."
@@ -17711,12 +17760,12 @@ def check_distillation_policy_schema_clean(
 
 # ── Check M: F.kl_div(reduction="batchmean") on spatial tensors ────────────
 #
-# Bug class (2026-04-27 council forensics, findings.md "Lane G — really
+# Bug class (2026-04-27 council forensics, findings.md "Lane G - really
 # dead, or bugged?"): `F.kl_div(..., reduction="batchmean")` divides only
 # by the batch dim. On a (B, C, H, W) segmentation logit tensor that
 # under-divides the canonical per-pixel mean by H × W (= 196,608 for
 # 384 × 512 SegNet). The same surface API silently fits two completely
-# different objectives depending on tensor shape — exactly the silent-
+# different objectives depending on tensor shape - exactly the silent-
 # default class CLAUDE.md FORBIDDEN PATTERNS warns against.
 #
 # Live failure: every caller of `kl_distill_segnet_only` passing
@@ -17743,12 +17792,12 @@ def _scan_python_for_kl_div_batchmean(
     Heuristic: matches calls whose function reference ends in `kl_div`
     (covers `F.kl_div`, `torch.nn.functional.kl_div`, and bare
     `kl_div` after `from torch.nn.functional import kl_div`). Only the
-    exact `reduction="batchmean"` keyword form is flagged — positional
+    exact `reduction="batchmean"` keyword form is flagged - positional
     `reduction` is rare in this API but still caught when the value is
     a string constant `"batchmean"`.
 
     Vendored external code (PR-head mirrors, public-PR intake clones,
-    leaderboard intel snapshots, raw kaggle ingests) is skipped — these
+    leaderboard intel snapshots, raw kaggle ingests) is skipped - these
     are read-only mirrors of other competitors' submissions, not our
     own code, and we cannot retroactively fix their KL reductions. The
     marker list is kept in sync with the MPS-fallback scanner above
@@ -17816,7 +17865,7 @@ def _scan_python_for_kl_div_batchmean(
             f"{rel}:{node.lineno}: `F.kl_div(..., reduction=\"batchmean\")` "
             f"detected. On a spatial (B, C, H, W) tensor this under-divides "
             f"the canonical per-pixel mean by H × W (=196,608 for 384x512 "
-            f"SegNet — see findings.md \"Lane G — really dead, or bugged?\"). "
+            f"SegNet - see findings.md \"Lane G - really dead, or bugged?\"). "
             f"Use `F.kl_div(..., reduction=\"none\").sum(dim=1).mean()` for "
             f"per-pixel-per-class mean (canonical pattern: "
             f"`kl_distill_scorer_loss` line 622+646). If the input is "
@@ -17835,7 +17884,7 @@ def check_kl_div_reduction_correct(
     """Forbid `F.kl_div(..., reduction="batchmean")` without explicit waiver.
 
     See module-level Check M comment + findings.md
-    "## 2026-04-27 Council forensics: Lane G — really dead, or bugged?"
+    "## 2026-04-27 Council forensics: Lane G - really dead, or bugged?"
     for the full math derivation. The scanner walks `src/tac/`,
     `experiments/`, `submissions/`, and `scripts/` for offending calls
     and requires a same-line `# KL_BATCHMEAN_OK:<reason>` marker as the
@@ -17878,17 +17927,17 @@ def check_kl_div_reduction_correct(
     if verbose and violations:
         print(f"  [no-kl-div-batchmean] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-kl-div-batchmean] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "F.kl_div(reduction=\"batchmean\") on spatial tensors:\n"
-            + "\n".join(f"  • {v}" for v in violations)
-            + "\n\nSee findings.md \"Lane G — really dead, or bugged?\" "
+            + "\n".join(f"  - {v}" for v in violations)
+            + "\n\nSee findings.md \"Lane G - really dead, or bugged?\" "
             "for the math (1/H/W silent under-division). Use "
-            "`reduction=\"none\"` → `.sum(dim=1).mean()` (canonical pattern "
+            "`reduction=\"none\"` -> `.sum(dim=1).mean()` (canonical pattern "
             "in kl_distill_scorer_loss line 622+646), OR add a same-line "
             "`# KL_BATCHMEAN_OK:<reason>` marker if the input is provably "
             "a flat (B, num_classes) classifier tensor."
@@ -17907,7 +17956,7 @@ def check_kl_div_reduction_correct(
 # Check N (29th meta-bug): silent-default-masquerading-as-negative-result
 # ════════════════════════════════════════════════════════════════════════════
 #
-# The bug class — a CLI flag is missing, the script auto-discovers from a list
+# The bug class - a CLI flag is missing, the script auto-discovers from a list
 # of N hardcoded fallback paths, none exist, the script prints a `[WARN] ...`
 # line and proceeds with a silent default (None / zero / empty). The operator
 # sees the script "succeed" but the produced artifact was trained against the
@@ -17915,15 +17964,15 @@ def check_kl_div_reduction_correct(
 # a real negative result, leading to "this lane is dead" misjudgments.
 #
 # Real-world incidents (2 in 2 days, 2026-04-27):
-#   • Lane G v1 — `kl_distill_weight` defaulted to 5e-6 with batchmean reduction;
+#   - Lane G v1 - `kl_distill_weight` defaulted to 5e-6 with batchmean reduction;
 #     reported "KL distill killed PoseNet" when in fact the gradient was 5000x
-#     over-weighted. (See findings.md "Lane G — really dead, or bugged?")
-#   • Lane F v1 — `qat_finetune.py` had no `--poses` arg, auto-discovered from
+#     over-weighted. (See findings.md "Lane G - really dead, or bugged?")
+#   - Lane F v1 - `qat_finetune.py` had no `--poses` arg, auto-discovered from
 #     `experiments/results/gt_poses.pt` + `upstream/gt_poses.pt`, neither
 #     existed, printed `[WARN] ... will use zero poses` and proceeded. Renderer
 #     was QAT-trained against zero poses, deployed against real poses, +58%
 #     PoseNet regression reported as "FP4 quantization is dead." (See findings.md
-#     "Lane F regression — bugged or dead?")
+#     "Lane F regression - bugged or dead?")
 #
 # The structural fix: forbid the pattern `for x in [Path(...), Path(...)]:
 # if x.exists(): ... ; print("[WARN] ... not found"); return None` (or
@@ -18148,10 +18197,10 @@ def _scan_python_for_silent_auto_discovery(
             f"{rel}:{loop_lineno}: function `{fn_node.name}` uses Path-list "
             f"auto-discovery (loop at line {loop_lineno}) followed by an unguarded "
             f"`[WARN]` print at line {warn_lineno}, with no `raise`/`sys.exit` "
-            f"after it. This is the SILENT-DEFAULT-MASQUERADING bug class — "
+            f"after it. This is the SILENT-DEFAULT-MASQUERADING bug class - "
             f"the script proceeds with a wrong default that produces an invalid "
             f"result without operator awareness. See findings.md "
-            f"\"Lane F regression — bugged or dead?\" (2026-04-27) and memory "
+            f"\"Lane F regression - bugged or dead?\" (2026-04-27) and memory "
             f"`feedback_silent_default_masquerading_as_negative_result`. Fix: "
             f"raise SystemExit on missing input OR add a same-function "
             f"`# AUTO_DISCOVERY_OK:<reason>` marker on the loop or warn line."
@@ -18170,16 +18219,16 @@ def check_no_silent_auto_discovery_with_warn(
     Catches functions that auto-discover from a list of hardcoded paths,
     print a `[WARN]` line when none exist, and proceed without raising.
     The operator sees the script "succeed" but the artifact was built with
-    the wrong inputs — leading to "this lane is dead" misjudgments.
+    the wrong inputs - leading to "this lane is dead" misjudgments.
 
     Real-world incidents:
-      • Lane F v1 (qat_finetune.py): auto-discovered gt_poses.pt from 2 paths,
+      - Lane F v1 (qat_finetune.py): auto-discovered gt_poses.pt from 2 paths,
         printed [WARN] ... will use zero poses, trained renderer with wrong
         conditioning. Reported as "FP4 quantization is dead." (BUGGED.)
-      • Lane G v1 (kl_distill_weight defaulted with batchmean reduction):
-        same class — silent bad default reported as "KL distill is dead."
+      - Lane G v1 (kl_distill_weight defaulted with batchmean reduction):
+        same class - silent bad default reported as "KL distill is dead."
 
-    Reference: findings.md "Lane F regression — bugged or dead?" + memory
+    Reference: findings.md "Lane F regression - bugged or dead?" + memory
     `feedback_silent_default_masquerading_as_negative_result`.
 
     Returns list of violations. Raises MetaBugViolation if strict and any.
@@ -18213,18 +18262,18 @@ def check_no_silent_auto_discovery_with_warn(
     if verbose and violations:
         print(f"  [no-silent-auto-discovery] {len(violations)} violation(s) across {n_scanned} files:")
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(f"  [no-silent-auto-discovery] OK: {n_scanned} files scanned")
 
     if violations and strict:
         raise MetaBugViolation(
             "SILENT-DEFAULT-MASQUERADING-AS-NEGATIVE-RESULT violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nThis is the 2-in-2-days bug class (Lane G + Lane F, "
-            "2026-04-27). The pattern is: missing CLI flag → auto-discover "
-            "from N hardcoded paths → none exist → print [WARN] → proceed "
-            "with silent default → operator sees the result land as a "
+            "2026-04-27). The pattern is: missing CLI flag -> auto-discover "
+            "from N hardcoded paths -> none exist -> print [WARN] -> proceed "
+            "with silent default -> operator sees the result land as a "
             "negative outcome. Fix: replace the auto-discovery + warn with "
             "an explicit `--<flag>` argument that RAISES on missing input. "
             "Documented opt-out: same-function `# AUTO_DISCOVERY_OK:<reason>` "
@@ -18268,8 +18317,8 @@ def check_remote_scripts_executable_bit(strict: bool = False, verbose: bool = Fa
             print(f"  [executable-bit] OK: {n_scripts} remote_*.sh script(s) all executable")
     if strict and violations:
         raise PreflightError(
-            "REMOTE SCRIPT EXECUTABLE BIT VIOLATIONS — at least one "
-            f"scripts/remote_*.sh lacks +x bit:\n  • " + "\n  • ".join(violations) +
+            "REMOTE SCRIPT EXECUTABLE BIT VIOLATIONS - at least one "
+            f"scripts/remote_*.sh lacks +x bit:\n  - " + "\n  - ".join(violations) +
             "\nFix: chmod +x on each. Required so bash dispatch works "
             "without manual chmod intervention. (Lane GH bug 2026-04-27.)"
         )
@@ -18283,7 +18332,7 @@ def check_remote_scripts_executable_bit(strict: bool = False, verbose: bool = Fa
 # 2026-04-27: every remote_*.sh script today documents predicted_band in
 # provenance JSON for empirical calibration of council intuition. Without
 # the metadata, post-hoc analysis can't answer "did this lane land within
-# the council's predicted range?" — losing crucial signal.
+# the council's predicted range?" - losing crucial signal.
 def check_remote_scripts_record_predicted_band(strict: bool = False, verbose: bool = False) -> list[str]:
     """Every scripts/remote_*.sh that emits provenance.json AND runs a
     LANE EXPERIMENT (not a bootstrap or sweep orchestrator) must include
@@ -18327,9 +18376,9 @@ def check_remote_scripts_record_predicted_band(strict: bool = False, verbose: bo
             print(f"  [predicted-band] OK: {n_with_provenance}/{n_scripts} remote_*.sh script(s) record predicted_band")
     if strict and violations:
         raise PreflightError(
-            "PREDICTED BAND METADATA VIOLATIONS — at least one "
-            f"scripts/remote_*.sh emits provenance but lacks predicted_band:\n  • "
-            + "\n  • ".join(violations) +
+            "PREDICTED BAND METADATA VIOLATIONS - at least one "
+            f"scripts/remote_*.sh emits provenance but lacks predicted_band:\n  - "
+            + "\n  - ".join(violations) +
             "\nFix: add 'predicted_band': [LOW, HIGH] to each provenance JSON "
             "for council calibration. (no-signal-loss CLAUDE.md rule.)"
         )
@@ -18343,7 +18392,7 @@ def check_remote_scripts_record_predicted_band(strict: bool = False, verbose: bo
 # 2026-04-27: per CLAUDE.md FORBIDDEN PATTERNS rule, every score must carry
 # a lane tag (contest-CUDA / advisory / MPS-PROXY). Remote script completion
 # logs are the canonical place for the tag. Currently checked only via
-# per-script test files — generalize via preflight.
+# per-script test files - generalize via preflight.
 def check_remote_scripts_tag_contest_cuda_at_completion(strict: bool = False, verbose: bool = False) -> list[str]:
     """Every scripts/remote_*.sh that runs contest_auth_eval AND IS A
     LANE EXPERIMENT (not a bootstrap or sweep orchestrator) must include
@@ -18387,9 +18436,9 @@ def check_remote_scripts_tag_contest_cuda_at_completion(strict: bool = False, ve
             print(f"  [completion-tag] OK: {n_with_eval}/{n_scripts} remote_*.sh script(s) tag completion")
     if strict and violations:
         raise PreflightError(
-            "COMPLETION TAG VIOLATIONS — at least one scripts/remote_*.sh "
-            f"runs contest_auth_eval but lacks '[contest-CUDA]' tag:\n  • "
-            + "\n  • ".join(violations) +
+            "COMPLETION TAG VIOLATIONS - at least one scripts/remote_*.sh "
+            f"runs contest_auth_eval but lacks '[contest-CUDA]' tag:\n  - "
+            + "\n  - ".join(violations) +
             "\nFix: add '[contest-CUDA]' literal to the completion log line "
             "(LANE_X_DONE marker) so scores are self-tagging."
         )
@@ -18436,7 +18485,7 @@ def check_remote_scripts_probe_nvdec_early(strict: bool = False, verbose: bool =
         text = script_path.read_text(errors="ignore")
         # Honor NO_NVDEC_NEEDED opt-out marker in first 30 lines (parity with
         # _load_lane_script at line ~5831). Lanes operating on already-decoded
-        # tensors / archives don't need an NVDEC probe — the marker is the
+        # tensors / archives don't need an NVDEC probe - the marker is the
         # operator's affirmative declaration of that.
         header = "\n".join(text.split("\n")[:30])
         if _NVDEC_OPT_OUT_TOKEN in header:
@@ -18489,8 +18538,8 @@ def check_remote_scripts_probe_nvdec_early(strict: bool = False, verbose: bool =
             print(f"  [nvdec-early] OK: {n_with_probe}/{n_scripts} lane script(s) probe NVDEC at Stage 0")
     if strict and violations:
         raise PreflightError(
-            "EARLY NVDEC PROBE VIOLATIONS — at least one lane script "
-            f"doesn't probe NVDEC at Stage 0:\n  • " + "\n  • ".join(violations) +
+            "EARLY NVDEC PROBE VIOLATIONS - at least one lane script "
+            f"doesn't probe NVDEC at Stage 0:\n  - " + "\n  - ".join(violations) +
             "\nFix: add `bash $WORKSPACE/scripts/probe_nvdec.sh || exit 2` "
             "BEFORE any train/qat/eval/archive command. Per memory "
             "feedback_vastai_nvdec_host_variation, NVDEC failure rate is "
@@ -18563,9 +18612,9 @@ def check_resume_from_state_dict_shape_compat(strict: bool = False, verbose: boo
             print(f"  [resume-shape] OK: {n_with_resume}/{n_scripts} lane script(s) shape-validate resumes")
     if strict and violations:
         raise PreflightError(
-            "RESUME STATE_DICT SHAPE VALIDATION VIOLATIONS — at least one "
-            f"lane script uses --resume-from but doesn't shape-validate:\n  • "
-            + "\n  • ".join(violations) +
+            "RESUME STATE_DICT SHAPE VALIDATION VIOLATIONS - at least one "
+            f"lane script uses --resume-from but doesn't shape-validate:\n  - "
+            + "\n  - ".join(violations) +
             "\nFix: add a pre-flight shape check before training launch. "
             "Lane S motion.head bug 2026-04-28."
         )
@@ -18578,12 +18627,12 @@ def check_resume_from_state_dict_shape_compat(strict: bool = False, verbose: boo
 # ════════════════════════════════════════════════════════════════════════════
 #
 # 2026-04-28: I caught myself writing `tmux kill-server` in a quick_setup
-# inline command — it would have killed any other lane's tmux session
+# inline command - it would have killed any other lane's tmux session
 # running on a shared Vast.ai instance. The canonical safe alternative
 # is `tmux kill-session -t <session_name>` for the specific session, or
 # just rely on `tmux new-session -d` to NOT clobber existing.
 def check_no_tmux_kill_server_in_lane_scripts(strict: bool = False, verbose: bool = False) -> list[str]:
-    """Scripts must NOT call ``tmux kill-server`` — kills ALL tmux
+    """Scripts must NOT call ``tmux kill-server`` - kills ALL tmux
     sessions on the host, not just the lane's. Use
     ``tmux kill-session -t <name>`` instead, or rely on the absence
     of a same-named session.
@@ -18615,8 +18664,8 @@ def check_no_tmux_kill_server_in_lane_scripts(strict: bool = False, verbose: boo
             print(f"  [no-tmux-kill-server] OK: {n_scripts} script(s) clean")
     if strict and violations:
         raise PreflightError(
-            "TMUX KILL-SERVER VIOLATIONS — at least one remote script "
-            f"calls 'tmux kill-server':\n  • " + "\n  • ".join(violations)
+            "TMUX KILL-SERVER VIOLATIONS - at least one remote script "
+            f"calls 'tmux kill-server':\n  - " + "\n  - ".join(violations)
         )
     return violations
 
@@ -18628,7 +18677,7 @@ def check_no_tmux_kill_server_in_lane_scripts(strict: bool = False, verbose: boo
 #
 # 2026-04-28: setup_full Stage 2 hit `subprocess.CalledProcessError` because
 # the PyTorch container ships pip 26.x but ensurepip carries pip 24.0 wheels
-# — ensurepip refuses to "upgrade" to an older version. The canonical fix
+# - ensurepip refuses to "upgrade" to an older version. The canonical fix
 # is to skip ensurepip if pip is already importable.
 def check_no_unconditional_ensurepip(strict: bool = False, verbose: bool = False) -> list[str]:
     """Scripts must guard ensurepip --upgrade with an `if ! python -c
@@ -18671,9 +18720,9 @@ def check_no_unconditional_ensurepip(strict: bool = False, verbose: bool = False
             print(f"  [no-uncond-ensurepip] OK: {n_scripts} script(s) clean")
     if strict and violations:
         raise PreflightError(
-            "UNCONDITIONAL ENSUREPIP VIOLATIONS — at least one script "
-            f"calls ensurepip --upgrade without a pip-check guard:\n  • "
-            + "\n  • ".join(violations)
+            "UNCONDITIONAL ENSUREPIP VIOLATIONS - at least one script "
+            f"calls ensurepip --upgrade without a pip-check guard:\n  - "
+            + "\n  - ".join(violations)
         )
     return violations
 
@@ -18706,7 +18755,7 @@ def check_lane_scripts_strip_macos_resource_forks(strict: bool = False, verbose:
     scripts_dir = repo_root / "scripts"
     if not scripts_dir.is_dir():
         return violations
-    # Check if setup_full.sh has the canonical purge — if so, lane scripts
+    # Check if setup_full.sh has the canonical purge - if so, lane scripts
     # that follow the canonical bootstrap path are exempt.
     setup_full = scripts_dir / "remote_setup_full.sh"
     setup_full_purges = False
@@ -18727,7 +18776,7 @@ def check_lane_scripts_strip_macos_resource_forks(strict: bool = False, verbose:
             continue
         n_with_eval += 1
         # Look for `rm -f` of `._*.mkv` or equivalent before contest_auth_eval
-        # OR a `find ... -name '._*'` cleanup. Permissive — accept any of:
+        # OR a `find ... -name '._*'` cleanup. Permissive - accept any of:
         # - `rm -f upstream/videos/._*.mkv`
         # - `rm -f upstream/videos/._*`
         # - `find upstream/videos -name '._*' -delete`
@@ -18757,9 +18806,9 @@ def check_lane_scripts_strip_macos_resource_forks(strict: bool = False, verbose:
             print(f"  [strip-resource-forks] OK: {n_with_eval}/{n_scripts} script(s) strip macOS resource forks")
     if strict and violations:
         raise PreflightError(
-            "macOS RESOURCE FORK CLEANUP VIOLATIONS — at least one lane "
-            f"script invokes contest_auth_eval without ._* cleanup:\n  • "
-            + "\n  • ".join(violations)
+            "macOS RESOURCE FORK CLEANUP VIOLATIONS - at least one lane "
+            f"script invokes contest_auth_eval without ._* cleanup:\n  - "
+            + "\n  - ".join(violations)
         )
     return violations
 
@@ -18791,7 +18840,7 @@ def check_ssh_commands_have_connect_timeout(strict: bool = False, verbose: bool 
             line if not line.lstrip().startswith("#") else " " * len(line)
             for line in text.split("\n")
         )
-        # Look for `ssh ` invocations (remote execution) — but not in
+        # Look for `ssh ` invocations (remote execution) - but not in
         # `ssh-keygen`, `ssh-add`, etc.
         # Scan line by line for executable ssh calls
         lines = non_comment_text.split("\n")
@@ -18828,8 +18877,8 @@ def check_ssh_commands_have_connect_timeout(strict: bool = False, verbose: bool 
             print(f"  [ssh-timeout] OK: {n_with_ssh}/{n_scripts} script(s) use SSH timeouts")
     if strict and violations:
         raise PreflightError(
-            "SSH CONNECT TIMEOUT VIOLATIONS — at least one script uses "
-            f"`ssh` without ConnectTimeout:\n  • " + "\n  • ".join(violations)
+            "SSH CONNECT TIMEOUT VIOLATIONS - at least one script uses "
+            f"`ssh` without ConnectTimeout:\n  - " + "\n  - ".join(violations)
         )
     return violations
 
@@ -18841,16 +18890,16 @@ def check_ssh_commands_have_connect_timeout(strict: bool = False, verbose: bool 
 # a tool exists at experiments/precompute_*.py or src/tac/*.py that writes a
 # filename listed in submission_archive.py's artifact registry; it has a
 # __main__ entry; it has tests; but no scripts/remote_lane_*.sh ever invokes
-# it. Such a tool is dead code from the lab's perspective — burned engineering
+# it. Such a tool is dead code from the lab's perspective - burned engineering
 # hours that never reach a Vast.ai score measurement.
 #
 # Concrete instances this would have caught:
-#   - Lane EC engineered corrections — sat unused 2 weeks (Apr 14 → Apr 28).
+#   - Lane EC engineered corrections - sat unused 2 weeks (Apr 14 -> Apr 28).
 #     33KB precompute_gradient_corrections.py + 60KB trick_stack.py
 #     composition + 444-line test, all shipping `gradient_corrections.bin`,
 #     never deployed until hand-flagged this session.
 #   - Per project_outstanding_work_and_stacks_20260428: Lane Ω-V2, SI-V2,
-#     LR-V2, LM-V2, MOS — same pattern, varying severity.
+#     LR-V2, LM-V2, MOS - same pattern, varying severity.
 # ════════════════════════════════════════════════════════════════════════════
 
 # Artifact filenames recognized as "submission archive output". Mirrored from
@@ -18894,10 +18943,10 @@ _ARCHIVE_ARTIFACT_WRITE_MARKERS = (
 # catch, or historically-dead lanes preserved for archeology. EVERY
 # EXEMPTION needs a one-line WHY comment.
 _DEPLOY_SCANNER_EXEMPT_PRODUCERS = frozenset({
-    # Planning tool — CPU-only, deterministic, writes score_claim=false atom plans
+    # Planning tool - CPU-only, deterministic, writes score_claim=false atom plans
     # for charged mask grammar work; not a deployable archive producer
     "experiments/plan_charged_mask_grammar_atoms.py",
-    # Registry itself — it's the source of truth, not a producer
+    # Registry itself - it's the source of truth, not a producer
     "src/tac/submission_archive.py",
     # Renderer export is invoked from training scripts, never standalone
     "src/tac/renderer_export.py",
@@ -18907,16 +18956,16 @@ _DEPLOY_SCANNER_EXEMPT_PRODUCERS = frozenset({
     # Mask codec is invoked from compress.sh + canonical archive builders
     "src/tac/mask_codec.py",
     "src/tac/mask_entropy_coder.py",
-    # AMRC lossless mask codec — invoked from compress.sh
+    # AMRC lossless mask codec - invoked from compress.sh
     "src/tac/lossless/argmax_codec.py",
     # Pipeline is itself the orchestrator
     "experiments/pipeline.py",
     # Mini scorer training is the deployed lane's entry point itself
     "experiments/train_mini_scorer.py",
     # Library used by precompute_corrections.py, domain_solvers.py,
-    # trick_stack.py — not a standalone tool
+    # trick_stack.py - not a standalone tool
     "src/tac/scorer_targets.py",
-    # ARCHEOLOGY: mini-scorer inflate path — strict-scorer-rule (CLAUDE.md)
+    # ARCHEOLOGY: mini-scorer inflate path - strict-scorer-rule (CLAUDE.md)
     # forbids scorers at inflate time; mini-scorer lane is dead by policy.
     "experiments/mini_tto_inflate.py",
     # ARCHEOLOGY: embedding-loss TTO produced auth 0.61 on 2026-04-15 but was
@@ -18924,13 +18973,13 @@ _DEPLOY_SCANNER_EXEMPT_PRODUCERS = frozenset({
     "experiments/optimize_embedding.py",
     # Canonical local E2E auth-eval smoke (Check 64). Mentions 'masks.amrc' in
     # its archive whitelist string but is itself a LOCAL preflight tool, not
-    # a producer — it never writes the artifact, only validates archives that
+    # a producer - it never writes the artifact, only validates archives that
     # contain it. Invoked by operators before lane dispatch + by Check 64.
     "experiments/canonical_local_auth_eval_smoke.py",
     # CDO1 byte-closed mask-overlay archive builder. Local-only, scorer-free,
     # always records score_claim=false. Foveation_params.bin reference is in
     # the byte-closed archive payload, not a deployable training output.
-    # PARADIGM-α deferred dispatch (project_paradigm_alpha_architecture_clarification_20260506).
+    # PARADIGM-alpha deferred dispatch (project_paradigm_alpha_architecture_clarification_20260506).
     "experiments/build_c067_decoded_delta_overlay_candidate.py",
     # Local Q-FAITHFUL successor pose/geometry dispatch gate. CPU-only,
     # never runs scorers, never dispatches. Inspects candidate provenance
@@ -18962,7 +19011,7 @@ def _scan_repo_for_archive_artifact_producers(
     Heuristic: file mentions the literal filename in source AND has at least
     one of {open(...,"wb"), torch.save, .write_bytes, np.save, pickle.dump,
     json.dump, zipfile.write*, brotli, gzip}. False positives (mentions in a
-    docstring/comment) are rare and harmless — the deploy check filters them
+    docstring/comment) are rare and harmless - the deploy check filters them
     out by requiring __main__ + non-deployment.
     """
     producers: dict[str, list[Path]] = {
@@ -19014,7 +19063,7 @@ def _scan_repo_for_artifact_producers(
 
 
 def _producer_has_main_entry(py: Path, *, source_index=None) -> bool:
-    """True if file is a script (has __main__) — i.e., not a pure library."""
+    """True if file is a script (has __main__) - i.e., not a pure library."""
     try:
         if source_index is not None:
             text = source_index.read_text(py, errors="ignore")
@@ -19090,9 +19139,9 @@ def _producer_is_deployed(
     """True if any deployment surface references the producer or its output.
 
     Three-signal OR across three deployment surfaces:
-      1. scripts/remote_lane_*.sh — Vast.ai lane scripts
-      2. scripts/remote_*_bootstrap.sh — canonical bootstraps (parameterized)
-      3. src/tac/deploy/**/*.py — Vast.ai/Modal/Kaggle deployment registries
+      1. scripts/remote_lane_*.sh - Vast.ai lane scripts
+      2. scripts/remote_*_bootstrap.sh - canonical bootstraps (parameterized)
+      3. src/tac/deploy/**/*.py - Vast.ai/Modal/Kaggle deployment registries
 
     For each surface we accept a match on producer's basename, producer's
     full repo path, or the artifact filename itself (covers inline producers
@@ -19117,7 +19166,7 @@ def _producer_is_deployed(
                 except (FileNotFoundError, PermissionError):
                     continue
 
-    # Surface 3: deploy registries — train_joint_pair.py is invoked
+    # Surface 3: deploy registries - train_joint_pair.py is invoked
     # transparently through src/tac/deploy/vastai/experiments.py, etc.
     deploy_dir = repo_root / "src" / "tac" / "deploy"
     if deploy_dir.is_dir():
@@ -19141,7 +19190,7 @@ def check_undeployed_archive_artifact_producers(
     find tools that produce it (write the filename to disk) and have a
     __main__ entry. If none of those tools is referenced by any
     scripts/remote_lane_*.sh (or remote_*_bootstrap.sh), we have a never-
-    deployed lane — engineering hours that never produce a measured score.
+    deployed lane - engineering hours that never produce a measured score.
 
     Reference: project_lane_ec_engineered_corrections_20260428 (sat 2 weeks
     unused). Reference: project_outstanding_work_and_stacks_20260428 TIER 3.
@@ -19172,7 +19221,7 @@ def check_undeployed_archive_artifact_producers(
             if any(rel_s.startswith(p) for p in _DEPLOY_SCANNER_EXEMPT_DIR_PREFIXES):
                 continue  # alternative-platform producer (e.g., Kaggle)
             if not _producer_has_main_entry(py, source_index=source_index):
-                continue  # pure library — OK
+                continue  # pure library - OK
             if _producer_is_deployed(
                 py,
                 artifact,
@@ -19195,14 +19244,14 @@ def check_undeployed_archive_artifact_producers(
         if violations:
             print(f"  [undeployed-producers] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [undeployed-producers] OK: every artifact-producer __main__ has a remote_lane_*.sh invocation")
 
     if violations and strict:
         raise MetaBugViolation(
             "UNDEPLOYED ARCHIVE-ARTIFACT PRODUCERS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -19218,7 +19267,7 @@ def check_undeployed_archive_artifact_producers(
 # Memory ref: project_cosmos_deep_dive_addendum_20260428.
 # Lane F V1=2.73, V2=1.79, V3=1.85 all generated by FakeQuantFP4 simulation
 # with NO hardware backing. The "FP4 architecturally hostile" conclusion
-# was unverifiable — could be simulation noise, not architectural. FP8 IS
+# was unverifiable - could be simulation noise, not architectural. FP8 IS
 # hardware-supported on 4090 via torchao.float8 (Lane F-V5 rescue path).
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -19288,7 +19337,7 @@ def _scan_for_fp4_production_paths(repo_root: Path) -> list[str]:
             f"without a hardware-disclosure marker. FP4 hardware "
             f"acceleration requires Blackwell (CC 10.0); 4090 (CC 8.9) "
             f"only supports simulated FP4. Either: (a) add a runtime print "
-            f"'[SIMULATED-FP4] hardware capability < 10.0 — FP4 is "
+            f"'[SIMULATED-FP4] hardware capability < 10.0 - FP4 is "
             f"simulated via FakeQuantFP4'; (b) add `# FP4_HARDWARE_DISCLOSED: "
             f"<reason>` comment near the FakeQuantFP4 call; (c) call "
             f"`assert_quantization_hardware_supported('fp4', device, "
@@ -19318,14 +19367,14 @@ def check_fp4_production_paths_disclose_hardware(
         if violations:
             print(f"  [fp4-hw-disclose] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [fp4-hw-disclose] OK: every FP4 production path discloses hardware reality")
 
     if violations and strict:
         raise MetaBugViolation(
             "FP4 PRODUCTION PATHS MISSING HARDWARE DISCLOSURE:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -19338,8 +19387,8 @@ def check_fp4_production_paths_disclose_hardware(
 # helper used at OPTIMIZATION time but NOT at INFLATE time, so the optimizer
 # solves a different problem than what gets evaluated. The Lane M-V2 case:
 #
-#   optimize_poses.py: _project_to_renderer_pose(cond) → [zoom, 0,0,0,0,0]
-#   inflate_renderer: <not called>; uses raw saved tensor → [zoom, baseline]
+#   optimize_poses.py: _project_to_renderer_pose(cond) -> [zoom, 0,0,0,0,0]
+#   inflate_renderer: <not called>; uses raw saved tensor -> [zoom, baseline]
 #
 # Optimizer was driving a model conditioned on zero-pad; inflate evaluated
 # with frozen-baseline-pad. The 0.076 PoseNet result was signal of the bug,
@@ -19424,7 +19473,7 @@ def check_launcher_tarball_includes_lane_anchors(
 
     Reference: 2026-04-28 PM, 3 lanes (Ω-V2, EC, SAUG-V2) launched OK via
     launcher V4 split-mode but FAILED on remote because tarball excluded
-    `experiments/results/lane_a_landed/` (3.4GB) — losing the canonical
+    `experiments/results/lane_a_landed/` (3.4GB) - losing the canonical
     700KB `archive_lane_a.zip` anchor that all lanes reference. ~$1.50
     wasted across 3 destroyed instances.
 
@@ -19437,11 +19486,11 @@ def check_launcher_tarball_includes_lane_anchors(
     launcher = root / "scripts" / "launch_lane_on_vastai.py"
     if not scripts_dir.is_dir() or not launcher.exists():
         if verbose:
-            print(f"  [tarball-anchor-parity] OK: launcher or scripts dir missing — skipping")
+            print(f"  [tarball-anchor-parity] OK: launcher or scripts dir missing - skipping")
         return violations
 
     # Collect anchor paths referenced in remote_lane_*.sh
-    # 2026-04-29: regex fix — split optional quote and ${VAR:-` into two
+    # 2026-04-29: regex fix - split optional quote and ${VAR:-` into two
     # independent groups so `="${VAR:-experiments/...}"` matches.
     anchor_paths: set[str] = set()
     pattern = re.compile(
@@ -19484,7 +19533,7 @@ def check_launcher_tarball_includes_lane_anchors(
     for ap in sorted(anchor_paths):
         if ap in includes:
             continue
-        # If any exclude pattern would match the anchor path → violation
+        # If any exclude pattern would match the anchor path -> violation
         # (unless an include exactly overrides)
         excluded = False
         for ex in excludes:
@@ -19509,14 +19558,14 @@ def check_launcher_tarball_includes_lane_anchors(
         if violations:
             print(f"  [tarball-anchor-parity] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [tarball-anchor-parity] OK: {len(anchor_paths)} anchor path(s) all in tarball")
 
     if violations and strict:
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -19526,8 +19575,8 @@ def check_lane_anchor_masks_full_resolution(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Check 76 — every masks.mkv referenced as a lane anchor must be at
-    full resolution (≥384×512) to match renderer training.
+    """Check 76 - every masks.mkv referenced as a lane anchor must be at
+    full resolution (>=384×512) to match renderer training.
 
     HISTORICAL BUG, RECURRING:
       - 2026-04-21 (memory feedback_catastrophic_failures_20260421):
@@ -19537,7 +19586,7 @@ def check_lane_anchor_masks_full_resolution(
         submissions/baseline_dilated_h64_0_90/masks.mkv (64x48 1/8 res).
 
     Renderer is trained on 384×512 inputs. Sub-resolution masks force
-    the renderer to upscale/extrapolate → catastrophic distortion.
+    the renderer to upscale/extrapolate -> catastrophic distortion.
 
     This check probes every masks.mkv referenced as an ANCHOR_* /
     LANE_*_MASKS / ANCHOR_DIR path in remote_lane_*.sh, opens it via
@@ -19622,15 +19671,15 @@ def check_lane_anchor_masks_full_resolution(
             print(f"  [anchor-masks-fullres] {len(violations)} violation(s) "
                   f"({n_checked} checked):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [anchor-masks-fullres] OK: {n_checked} masks.mkv "
-                  f"all ≥ 384×512")
+                  f"all >= 384×512")
 
     if violations and strict:
         raise MetaBugViolation(
             "LANE ANCHOR MASKS BELOW FULL RESOLUTION:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -19641,20 +19690,20 @@ def check_no_off_manifold_pose_zeros(
     verbose: bool = True,
     scan_dirs: tuple[str, ...] = ("src/tac", "experiments", "scripts"),
 ) -> list[str]:
-    """Check 75 — `torch.zeros(N, 6)` for pose tensors is off-manifold for
+    """Check 75 - `torch.zeros(N, 6)` for pose tensors is off-manifold for
     6-DOF-trained renderers and CATASTROPHICALLY breaks scores.
 
     2026-04-29 incidents (verified):
-      - Lane GP v2: torch.zeros(n_pairs, 6) with poses[:, 0]=poly → 89.66
+      - Lane GP v2: torch.zeros(n_pairs, 6) with poses[:, 0]=poly -> 89.66
         (pose=149.95, baseline 0.003 = 50000× worse)
-      - Lane M-V1: same pattern → 2.35 (pose ~16× worse than baseline)
-      - Lane M-V2 fix attempted (preserve dims 1-5) → 1.84 (still worse)
+      - Lane M-V1: same pattern -> 2.35 (pose ~16× worse than baseline)
+      - Lane M-V2 fix attempted (preserve dims 1-5) -> 1.84 (still worse)
       - Memory `project_lane_mn_radial_zoom_negative` documents this for 7 days
-    User: "fix and harden all" — make this bug class IMPOSSIBLE to ship again.
+    User: "fix and harden all" - make this bug class IMPOSSIBLE to ship again.
 
     Detects: pattern `torch.zeros(<n>, 6, ...)` followed by assignment to
     only dim 0 (e.g. `poses[:, 0] = ...`). Requires same-line waiver
-    `# OFF_MANIFOLD_OK: <reason>` to ship — otherwise FAIL.
+    `# OFF_MANIFOLD_OK: <reason>` to ship - otherwise FAIL.
 
     Why this is the right surface: any pose tensor that GETS POPULATED with
     only one dimension is a renderer-input mismatch unless the renderer
@@ -19665,7 +19714,7 @@ def check_no_off_manifold_pose_zeros(
                   "build", "dist", "node_modules", "tests",
                   # Vendored uv-managed venvs from remote harvest snapshots
                   "uv_project_env", "site-packages",
-                  # Public-PR intake clones — vendored upstream code we don't
+                  # Public-PR intake clones - vendored upstream code we don't
                   # own; off-manifold-pose patterns there are not our bugs.
                   "public_pr_archive_release_view"}
     # Skip self (preflight.py contains regex patterns as strings)
@@ -19721,13 +19770,13 @@ def check_no_off_manifold_pose_zeros(
                 line = text[line_start:line_end]
                 if "OFF_MANIFOLD_OK:" in line:
                     continue
-                # Skip the canonical reconstruct_poses fallback path —
+                # Skip the canonical reconstruct_poses fallback path -
                 # that one is properly guarded with a `warnings.warn`.
                 if "warnings.warn" in text[max(0, m.start()-200):m.start()]:
                     continue
                 # Allow if same line has a 6-DOF assignment that fills
                 # all dims (e.g., `torch.zeros(n, 6); poses[:] = ...`)
-                # — but harder to verify, so require waiver.
+                # - but harder to verify, so require waiver.
                 violations.append(
                     f"{f.relative_to(root)}:{lineno}: `torch.zeros(N, 6)` "
                     f"creates an OFF-MANIFOLD pose tensor for 6-DOF-trained "
@@ -19743,14 +19792,14 @@ def check_no_off_manifold_pose_zeros(
         if violations:
             print(f"  [no-off-manifold-pose-zeros] {len(violations)} violation(s):")
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [no-off-manifold-pose-zeros] OK")
 
     if violations and strict:
         raise MetaBugViolation(
             "OFF-MANIFOLD POSE ZERO PATTERN (Lane GP/M failure mode):\n"
-            + "\n".join(f"  • {v}" for v in violations[:10])
+            + "\n".join(f"  - {v}" for v in violations[:10])
         )
     return violations
 
@@ -19761,12 +19810,12 @@ def check_python_heredocs_no_undefined_names(
     verbose: bool = True,
     scan_dirs: tuple[str, ...] = ("scripts", "experiments", "tools"),
 ) -> list[str]:
-    """Check 74 — Python heredocs in shell scripts must not reference
+    """Check 74 - Python heredocs in shell scripts must not reference
     undefined names (missing imports).
 
     2026-04-29 incidents (multiple lane crashes from this exact bug class):
-      - UNIWARD heredoc used `sys.path.insert` without `import sys` → NameError
-      - UNIWARD Stage 3 used `json.dump` without `import json` → NameError
+      - UNIWARD heredoc used `sys.path.insert` without `import sys` -> NameError
+      - UNIWARD Stage 3 used `json.dump` without `import json` -> NameError
     User: "not importing libraries needed is so dumb. how are you not
     catching these beforehand. permanently protect against all bug classes."
 
@@ -19775,7 +19824,7 @@ def check_python_heredocs_no_undefined_names(
     common-shell-env-vars). Anything left is an UndefinedName risk.
 
     Common shell-injected vars (UW_PAYLOAD, GIT_HASH, etc) get treated
-    as `os.environ` keys at runtime — substitute and skip.
+    as `os.environ` keys at runtime - substitute and skip.
     """
     import ast
     import builtins as _builtins
@@ -19813,7 +19862,7 @@ def check_python_heredocs_no_undefined_names(
             for m in heredoc_re.finditer(text):
                 body = m.group("body")
                 lineno = text[:m.start("body")].count("\n") + 1
-                # Substitute $VAR and ${VAR} → 'shellvar' string so AST parses
+                # Substitute $VAR and ${VAR} -> 'shellvar' string so AST parses
                 stub = re.sub(r"\$\{?(\w+)\}?", r"'shellvar'", body)
                 try:
                     tree = ast.parse(stub)
@@ -19905,12 +19954,12 @@ def check_python_heredocs_no_undefined_names(
                         if name in defined or name in builtin_names or name in runtime_injected:
                             continue
                         # Skip common module-attribute access roots that ARE imported
-                        # (e.g., 'os.environ' — `os` should be in defined if imported).
-                        # If we get here, name isn't defined → flag it.
+                        # (e.g., 'os.environ' - `os` should be in defined if imported).
+                        # If we get here, name isn't defined -> flag it.
                         violations.append(
                             f"{sh.relative_to(root)}:{lineno + node.lineno - 1}: "
                             f"heredoc <<'{m.group('tag')}' references "
-                            f"undefined name {name!r} — missing import?"
+                            f"undefined name {name!r} - missing import?"
                         )
 
     # Dedupe identical violations (one per occurrence)
@@ -19925,7 +19974,7 @@ def check_python_heredocs_no_undefined_names(
         if deduped:
             print(f"  [heredoc-undefined-names] {len(deduped)} violation(s):")
             for v in deduped[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(deduped) > 20:
                 print(f"    ... and {len(deduped) - 20} more")
         else:
@@ -19934,7 +19983,7 @@ def check_python_heredocs_no_undefined_names(
     if deduped and strict:
         raise MetaBugViolation(
             "PYTHON HEREDOCS REFERENCE UNDEFINED NAMES (likely missing imports):\n"
-            + "\n".join(f"  • {v}" for v in deduped[:20])
+            + "\n".join(f"  - {v}" for v in deduped[:20])
         )
     return deduped
 
@@ -19944,13 +19993,13 @@ def check_remote_lane_argparse_arity(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Check 73 — every `python <script.py>` invocation in a remote_lane_*.sh
+    """Check 73 - every `python <script.py>` invocation in a remote_lane_*.sh
     must pass all required argparse args of <script.py>.
 
     Why: 2026-04-29 Q-FAITHFUL crashed at 64s on Modal with
     `train_renderer.py: error: --tag required`. preflight_arity (the
     existing arity check) only scans `experiments/pipeline.py` and
-    `scripts/deploy_vastai.py` — NOT the 70+ remote_lane_*.sh scripts.
+    `scripts/deploy_vastai.py` - NOT the 70+ remote_lane_*.sh scripts.
 
     This check parses every `"$PYBIN"|python|python3 -u <path>.py \\
     [args...]` invocation across all lane scripts (handles bash line
@@ -20031,7 +20080,7 @@ def check_remote_lane_argparse_arity(
                 continue
             target_path = m.group("target")
             # Normalize relative path. Lane scripts use 'src/tac/experiments/X.py'
-            # and 'experiments/X.py' — both should resolve.
+            # and 'experiments/X.py' - both should resolve.
             invocation_lineno = i + 1
             # Detect bash-array context: previous non-blank, non-comment line
             # ends with `=(` (e.g. `BUILD_CMD=(`).
@@ -20124,7 +20173,7 @@ def check_remote_lane_argparse_arity(
         if violations:
             print(f"  [remote-lane-arity] {len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(f"    ... and {len(violations) - 20} more")
         else:
@@ -20133,7 +20182,7 @@ def check_remote_lane_argparse_arity(
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE LANE SCRIPT ARGPARSE ARITY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
         )
     return violations
 
@@ -20144,14 +20193,14 @@ def check_python_heredocs_in_shell_compile(
     verbose: bool = True,
     scan_dirs: tuple[str, ...] = ("scripts", "experiments", "tools"),
 ) -> list[str]:
-    """Check 72 — Python code embedded in shell heredocs must compile.
+    """Check 72 - Python code embedded in shell heredocs must compile.
 
     py_compile (Check 67) only sees standalone .py files. bash -n (Check 68)
     treats heredocs as opaque strings. Neither catches Python SyntaxErrors
     inside `python -u - <<'PY' ... PY` heredocs.
 
     2026-04-29 incident: R9 batch-patch added bash PIPE_RC guards to lines
-    matching `| tee log` — but the regex hit lines INSIDE python heredocs:
+    matching `| tee log` - but the regex hit lines INSIDE python heredocs:
 
         "$PYBIN" -u - <<'PY' 2>&1 | tee log
         PIPE_RC=("${PIPESTATUS[@]}")     ← injected INTO heredoc
@@ -20208,11 +20257,11 @@ def check_python_heredocs_in_shell_compile(
                 # Normalize: heredoc bodies often use $VAR which Python won't
                 # like, but only at runtime. Python compilation only cares
                 # about syntax. $VAR is just a $ followed by identifier in
-                # most string contexts → SyntaxError. So we substitute $VAR
-                # → 'VAR' as a parse-only proxy.
+                # most string contexts -> SyntaxError. So we substitute $VAR
+                # -> 'VAR' as a parse-only proxy.
                 #
                 # However bash $VAR appears in real Python only inside string
-                # literals (e.g., os.environ["..."]) — bash expands them
+                # literals (e.g., os.environ["..."]) - bash expands them
                 # BEFORE python sees them. For static parse, treat $VAR as
                 # an identifier.
                 stub = re.sub(r"\$\{?(\w+)\}?", r"_v_\1", body)
@@ -20249,14 +20298,14 @@ def check_python_heredocs_in_shell_compile(
             print(f"  [python-heredocs-compile] {len(violations)} violation(s) "
                   f"({n_compiled} heredocs OK):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [python-heredocs-compile] OK: {n_compiled} heredocs compile clean")
 
     if violations and strict:
         raise MetaBugViolation(
             "PYTHON HEREDOCS IN SHELL SCRIPTS FAIL TO COMPILE:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
         )
     return violations
 
@@ -20267,14 +20316,14 @@ def check_no_shadowed_module_import_used_before_local_import(
     verbose: bool = True,
     scan_dirs: tuple[str, ...] = ("src/tac", "experiments", "tools"),
 ) -> list[str]:
-    """Check 71 — UnboundLocalError trap from `from X import Y` inside a
+    """Check 71 - UnboundLocalError trap from `from X import Y` inside a
     function body shadowing a module-level `from X import Y`, when Y is
     used in that function body BEFORE the local import line.
 
     2026-04-29 incident: src/tac/experiments/train_renderer.py line 3057
     had `from tac.losses import _hwc_to_chw` inside `def train()`, which
     Python compiled as making `_hwc_to_chw` local-throughout-train. The
-    same function used `_hwc_to_chw` at line 2357 → UnboundLocalError.
+    same function used `_hwc_to_chw` at line 2357 -> UnboundLocalError.
     All v4 TIER-1 lanes crashed at this exact line. ~$1+ wasted.
 
     py_compile (Check 67) doesn't catch this (legal syntax).
@@ -20438,7 +20487,7 @@ def check_no_shadowed_module_import_used_before_local_import(
                         f"`from ... import {name}` inside `{node.name}()` "
                         f"shadows module-level import. {name} is also "
                         f"used at line {use_line} (BEFORE the local import) "
-                        f"→ UnboundLocalError. Remove the inner import."
+                        f"-> UnboundLocalError. Remove the inner import."
                     )
         if file_violations:
             violations.extend(file_violations)
@@ -20458,14 +20507,14 @@ def check_no_shadowed_module_import_used_before_local_import(
         if violations:
             print(f"  [shadowed-import-before-use] {len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [shadowed-import-before-use] OK")
 
     if violations and strict:
         raise MetaBugViolation(
             "SHADOWED IMPORT TRIGGERS UnboundLocalError:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
         )
     return violations
 
@@ -20477,7 +20526,7 @@ def check_pytest_collection_clean(
     test_dirs: tuple[str, ...] = ("src/tac/tests",),
     timeout: int = 60,
 ) -> list[str]:
-    """Check 70 — `pytest --collect-only` must succeed cleanly.
+    """Check 70 - `pytest --collect-only` must succeed cleanly.
 
     PROACTIVE: catches missing imports, fixture errors, conftest bugs that
     only surface at test-collection time. py_compile (Check 67) catches
@@ -20573,14 +20622,14 @@ def check_pytest_collection_clean(
         if violations:
             print(f"  [pytest-collect] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [pytest-collect] OK: all test dirs collect clean")
 
     if violations and strict:
         raise MetaBugViolation(
             "PYTEST COLLECTION ERRORS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -20590,7 +20639,7 @@ def check_lane_anchor_files_exist_locally(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Check 69 — every `ANCHOR_*` / `LANE_*_ARCHIVE` path referenced in
+    """Check 69 - every `ANCHOR_*` / `LANE_*_ARCHIVE` path referenced in
     `remote_lane_*.sh` must EXIST in the local working tree.
 
     Check 43 verifies launcher tarball INCLUDES the path. This check is
@@ -20604,10 +20653,10 @@ def check_lane_anchor_files_exist_locally(
     scripts_dir = root / "scripts"
     if not scripts_dir.is_dir():
         if verbose:
-            print(f"  [anchor-exists-locally] OK: scripts/ missing — skipping")
+            print(f"  [anchor-exists-locally] OK: scripts/ missing - skipping")
         return []
 
-    # 2026-04-29: regex fix — `="${VAR:-experiments/...}"` form needs two
+    # 2026-04-29: regex fix - `="${VAR:-experiments/...}"` form needs two
     # independent optional groups, not one alternation.
     pattern = re.compile(
         r'(?:ANCHOR_\w+|LANE_\w*ARCHIVE\w*|LANE_\w*POSES\w*|LANE_\w*MASKS\w*|LANE_\w*RENDERER\w*)='
@@ -20630,7 +20679,7 @@ def check_lane_anchor_files_exist_locally(
             if not full.exists():
                 violations.append(
                     f"{sh.relative_to(root)}: ANCHOR `{anchor_path}` does NOT "
-                    f"exist locally — launcher tarball will ship nothing, "
+                    f"exist locally - launcher tarball will ship nothing, "
                     f"lane will crash at `[ -f $ANCHOR_... ]` check on remote."
                 )
 
@@ -20639,14 +20688,14 @@ def check_lane_anchor_files_exist_locally(
             print(f"  [anchor-exists-locally] {len(violations)} violation(s) "
                   f"({n_checked} anchor refs scanned):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [anchor-exists-locally] OK: {n_checked} anchor refs all exist locally")
 
     if violations and strict:
         raise MetaBugViolation(
             "LANE ANCHOR FILES DO NOT EXIST LOCALLY:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
         )
     return violations
 
@@ -20657,7 +20706,7 @@ def check_python_files_compile(
     verbose: bool = True,
     scan_dirs: tuple[str, ...] = ("src/tac", "scripts", "experiments", "tools"),
 ) -> list[str]:
-    """Check 67 — every `.py` file in `scan_dirs` must parse + compile.
+    """Check 67 - every `.py` file in `scan_dirs` must parse + compile.
 
     PROACTIVE: catches SyntaxError + IndentationError + obvious typos
     BEFORE they ship to a remote and crash the lane after 5 minutes of
@@ -20750,7 +20799,7 @@ def check_python_files_compile(
             print(f"  [python-compile] {len(violations)} violation(s) "
                   f"({n_compiled} files compiled OK):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(f"    ... and {len(violations) - 20} more")
         else:
@@ -20759,8 +20808,8 @@ def check_python_files_compile(
 
     if violations and strict:
         raise MetaBugViolation(
-            "PYTHON FILES FAIL TO COMPILE — would crash on import at deploy:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            "PYTHON FILES FAIL TO COMPILE - would crash on import at deploy:\n"
+            + "\n".join(f"  - {v}" for v in violations[:20])
             + (f"\n  ... and {len(violations) - 20} more" if len(violations) > 20 else "")
         )
     return violations
@@ -20772,10 +20821,10 @@ def check_shell_scripts_syntax_clean(
     verbose: bool = True,
     scan_dirs: tuple[str, ...] = ("scripts", "submissions", "experiments", "tools"),
 ) -> list[str]:
-    """Check 68 — every `*.sh` file in `scan_dirs` must pass `bash -n`.
+    """Check 68 - every `*.sh` file in `scan_dirs` must pass `bash -n`.
 
     PROACTIVE bash syntax check (no execution). Catches unclosed quotes,
-    bad heredocs, unmatched braces — bugs that would otherwise crash 30s
+    bad heredocs, unmatched braces - bugs that would otherwise crash 30s
     into a remote deploy.
 
     Skips: directories that happen to end in .sh (recovered_*.sh, etc.)
@@ -20863,7 +20912,7 @@ def check_shell_scripts_syntax_clean(
             print(f"  [shell-syntax] {len(violations)} violation(s) "
                   f"({n_checked} scripts checked):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(f"    ... and {len(violations) - 20} more")
         else:
@@ -20872,7 +20921,7 @@ def check_shell_scripts_syntax_clean(
     if violations and strict:
         raise MetaBugViolation(
             "SHELL SCRIPTS FAIL `bash -n` SYNTAX CHECK:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n".join(f"  - {v}" for v in violations[:20])
         )
     return violations
 
@@ -20882,9 +20931,9 @@ def check_no_git_reset_hard_in_remote_lane_scripts(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Check 44 — `git reset --hard origin/main` in remote_lane_*.sh wipes
+    """Check 44 - `git reset --hard origin/main` in remote_lane_*.sh wipes
     local-only anchor files (archive_lane_a.zip, baseline dirs, etc.) that
-    the launcher just SCP'd. The tarball IS the parity mechanism — never
+    the launcher just SCP'd. The tarball IS the parity mechanism - never
     re-sync from origin/main on the remote.
 
     2026-04-29 incident: 5/6 TIER-1 lanes crashed at Stage 1 with
@@ -20900,7 +20949,7 @@ def check_no_git_reset_hard_in_remote_lane_scripts(
     scripts_dir = root / "scripts"
     if not scripts_dir.is_dir():
         if verbose:
-            print(f"  [no-git-reset-hard] OK: scripts/ missing — skipping")
+            print(f"  [no-git-reset-hard] OK: scripts/ missing - skipping")
         return []
 
     violations: list[str] = []
@@ -20914,29 +20963,29 @@ def check_no_git_reset_hard_in_remote_lane_scripts(
             if stripped.startswith("#"):
                 continue
             # Match executable `git reset --hard` (not in comments).
-            # Allow optional `-C <path>` (or `--git-dir=…`/`--work-tree=…`
-            # variants) between `git` and `reset` — earlier regex missed
+            # Allow optional `-C <path>` (or `--git-dir=...`/`--work-tree=...`
+            # variants) between `git` and `reset` - earlier regex missed
             # `git -C "$WORKSPACE" reset --hard origin/main` (Lane J-IMP
             # 2026-04-30 incident).
             if re.search(r"\bgit\b(?:\s+(?:-C\s+\S+|--git-dir=\S+|--work-tree=\S+|-c\s+\S+))*\s+reset\s+--hard\b", line):
                 violations.append(
                     f"{sh.relative_to(root)}:{lineno}: executable `git reset --hard` "
                     f"wipes local-only anchor files SCP'd by launcher. "
-                    f"Trust the tarball — remove this line."
+                    f"Trust the tarball - remove this line."
                 )
 
     if verbose:
         if violations:
             print(f"  [no-git-reset-hard] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [no-git-reset-hard] OK: 0 lane scripts run `git reset --hard`")
 
     if violations and strict:
         raise MetaBugViolation(
             "LANE SCRIPTS RUNNING `git reset --hard` WILL WIPE LOCAL-ONLY ANCHORS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nRemove the `git fetch + git reset --hard` block from each script. "
             "The launcher tarball is the canonical parity mechanism."
         )
@@ -20979,7 +21028,7 @@ def check_pose_projection_train_inference_parity(
             f"BUG-1 class from Lane M-V2 audit "
             f"(project_lane_m_v2_audit_council_findings_20260428): the "
             f"optimizer projects pose tensors one way, inflate evaluates "
-            f"with raw saved tensors → train/inference distribution mismatch. "
+            f"with raw saved tensors -> train/inference distribution mismatch. "
             f"Either: (a) call the same helper from inflate_renderer.py to "
             f"ensure parity; (b) add `# PROJECT_PARITY_WAIVED: <reason>` "
             f"comment near the def if the helper is intentionally one-sided."
@@ -20989,14 +21038,14 @@ def check_pose_projection_train_inference_parity(
         if violations:
             print(f"  [pose-parity] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [pose-parity] OK: every pose-projection helper has parity or waiver")
 
     if violations and strict:
         raise MetaBugViolation(
             "POSE-PROJECTION TRAIN/INFERENCE PARITY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -21109,14 +21158,14 @@ def check_remote_lane_scripts_have_heartbeat(
         if violations:
             print(f"  [lane-heartbeat] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [lane-heartbeat] OK: every remote_lane_*.sh writes a heartbeat (or is sweep-exempt)")
 
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE LANE SCRIPTS MISSING HEARTBEAT:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -21318,10 +21367,10 @@ def check_remote_lane_scripts_have_controlled_baseline(
         if violations:
             print(f"  [controlled-baseline] {len(violations)} warning(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(
-                    f"    … (+{len(violations) - 20} more; rerun this check "
+                    f"    ... (+{len(violations) - 20} more; rerun this check "
                     "directly for the full list)"
                 )
         else:
@@ -21333,7 +21382,7 @@ def check_remote_lane_scripts_have_controlled_baseline(
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE LANE SCRIPTS MISSING CONTROLLED BASELINE:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -21347,7 +21396,7 @@ def check_remote_lane_scripts_have_controlled_baseline(
 # `assert bits.grad is not None`. A SIGN bug (positive grad pushing bits
 # down instead of up) hid for 4 review rounds before Round 21 finally caught
 # it. The CLAUDE.md anti-arbitrariness rule: gradient-correctness tests must
-# pin a number, a sign, or a comparison to a reference — finiteness is not
+# pin a number, a sign, or a comparison to a reference - finiteness is not
 # a correctness gate.
 #
 # This check scans `src/tac/tests/test_*.py`. For each test that mentions
@@ -21536,7 +21585,7 @@ def _scan_test_file_for_grad_direction(
         violations.append(
             f"{rel}:{node.lineno}: test '{node.name}' touches an autograd."
             f"Function backward but only checks `grad is not None` / "
-            f"`isfinite(grad)` — NO direction/value assertion. Add one of: "
+            f"`isfinite(grad)` - NO direction/value assertion. Add one of: "
             f"`pytest.approx(...)`, `torch.allclose(...)`, `assert grad < 0`, "
             f"or a loss-decrease check after a gradient step. "
             f"(Round 22 bit-STE sign bug hid for 4 review rounds because "
@@ -21580,9 +21629,9 @@ def check_gradient_direction_tests_exist(
                 f"across {n_scanned} test file(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … (+{len(violations) - 20} more)")
+                print(f"    ... (+{len(violations) - 20} more)")
         else:
             print(
                 f"  [grad-direction-tests] OK: {n_scanned} test file(s) "
@@ -21592,7 +21641,7 @@ def check_gradient_direction_tests_exist(
     if violations and strict:
         raise MetaBugViolation(
             "GRADIENT-DIRECTION TESTS MISSING:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
             + "\n\nRound 22 bit-STE sign bug hid for 4 review rounds because "
             "the only assertion was `grad is not None`. Add direction/value "
             "checks (pytest.approx, torch.allclose, sign comparison, or a "
@@ -21694,7 +21743,7 @@ def check_posenet_gradient_preprocess_patch(
                 f"  [posenet-grad-preprocess] {len(violations)} violation(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 "  [posenet-grad-preprocess] OK: "
@@ -21704,7 +21753,7 @@ def check_posenet_gradient_preprocess_patch(
     if violations and strict:
         raise MetaBugViolation(
             "POSENET GRADIENT PREPROCESS PATCH VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
             + "\n\nThe upstream PoseNet preprocess path has a no-grad YUV "
             "conversion barrier. Gradient proposal tools must patch it and "
             "also assert `loss.requires_grad` before backward. Waive only with "
@@ -21771,14 +21820,14 @@ def check_line_search_scorer_runtime_preflight(
         if violations:
             print("  [line-search-scorer-runtime] " f"{len(violations)} violation(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [line-search-scorer-runtime] OK: dependency preflight is fail-closed")
 
     if violations and strict:
         raise MetaBugViolation(
             "LINE-SEARCH SCORER RUNTIME PREFLIGHT VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
             + "\n\nGT-backed pose/search tools import upstream scorer modules "
             "and DALI datasets. Missing runtime deps must fail before paid "
             "remote work; use the repo runtime extra plus the hash-pinned "
@@ -21818,7 +21867,7 @@ _LOSS_CONVERGENCE_PATTERNS = (
     "minimize",  # any reference to a minimisation / minimisable claim
     "monotonic",
     "decreases",
-    ".step()",  # SGD/Adam step → loss recomputed → can compare
+    ".step()",  # SGD/Adam step -> loss recomputed -> can compare
     "torch.optim",
     "gradient descent",  # docstring marker
     "GD step",
@@ -21840,7 +21889,7 @@ def _scan_test_file_for_loss_convergence(
     convergence check.
 
     "Loss" must appear as a token, not as a fragment ("lossless" does NOT
-    qualify — that's the lossless-coding test family, not a loss-function
+    qualify - that's the lossless-coding test family, not a loss-function
     test).
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
@@ -21878,7 +21927,7 @@ def _scan_test_file_for_loss_convergence(
         f"(no loss_after/loss_before pattern, no `.step()`, no "
         f"`pytest.approx` / `torch.allclose` numeric anchor). A loss "
         f"function can return finite values whose gradient still points the "
-        f"wrong way — finiteness is NOT a correctness gate. Add a "
+        f"wrong way - finiteness is NOT a correctness gate. Add a "
         f"loss-decrease assertion or a known-minimum numeric check. "
         f"Waive with `# {_LOSS_CONVERGENCE_WAIVER_TOKEN}<reason>` anywhere "
         f"in the file."
@@ -21924,7 +21973,7 @@ def check_test_assertion_strength_for_loss_functions(
                 f"across {n_scanned} loss-test file(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [loss-convergence-tests] OK: {n_scanned} loss-test file(s) scanned"
@@ -21933,14 +21982,14 @@ def check_test_assertion_strength_for_loss_functions(
     if violations and strict:
         raise MetaBugViolation(
             "LOSS-FUNCTION TESTS MISSING CONVERGENCE CHECK:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
 
 # ════════════════════════════════════════════════════════════════════════════
 # Check 46 (2026-04-28): every public quantizer / encoder needs a roundtrip
-#                        test (`unquantize(quantize(x))` ≈ `x`).
+#                        test (`unquantize(quantize(x))` approximately `x`).
 #
 # A quantizer that silently drops dynamic range (or saturates / shifts) can
 # pass forward-shape and finiteness tests but corrupt the artifact at
@@ -22094,9 +22143,9 @@ def check_quantizer_modules_have_round_trip_test(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Every public quantizer / encoder needs a `decode(encode(x)) ≈ x` test.
+    """Every public quantizer / encoder needs a `decode(encode(x)) approximately x` test.
 
-    Reference: archive measurement disasters (2026-04-21) — quantizers
+    Reference: archive measurement disasters (2026-04-21) - quantizers
     silently dropped dynamic range, passing forward-shape tests but
     corrupting the inflated artifact. Roundtrip tests catch this in seconds.
 
@@ -22116,7 +22165,7 @@ def check_quantizer_modules_have_round_trip_test(
                 f"across {n_scanned} quantizer/encoder module(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [quantizer-roundtrip-tests] OK: {n_scanned} module(s) scanned"
@@ -22125,7 +22174,7 @@ def check_quantizer_modules_have_round_trip_test(
     if violations and strict:
         raise MetaBugViolation(
             "QUANTIZER MODULES MISSING ROUNDTRIP TEST:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -22137,7 +22186,7 @@ def check_quantizer_modules_have_round_trip_test(
 #
 # Reference: Lane B class disasters where archive composition silently
 # changed the rate term (renderer-only 119 KB instead of 338 KB full
-# submission → 0.108 rate error per CLAUDE.md). The shell idiom
+# submission -> 0.108 rate error per CLAUDE.md). The shell idiom
 # `ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" ...) && [ "$ARCHIVE_BYTES" -gt N ]`
 # OR a Python `os.path.getsize(...) >= N` assertion catches the failure
 # mode at compose time, not after a $0.50 eval.
@@ -22242,7 +22291,7 @@ def check_lane_deploy_scripts_have_archive_size_assertion(
 ) -> list[str]:
     """Lane scripts that build an archive must assert size before auth eval.
 
-    Reference: CLAUDE.md "Auth eval measurement — non-negotiable" — every
+    Reference: CLAUDE.md "Auth eval measurement - non-negotiable" - every
     auth eval MUST use the EXACT archive that will be submitted, and the
     archive size must be reported. Lane B's 119 KB renderer-only archive
     silently inflated the rate term by 0.108 across multiple sessions. A
@@ -22268,7 +22317,7 @@ def check_lane_deploy_scripts_have_archive_size_assertion(
                 f"across {n_scanned} remote_lane_*.sh file(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [lane-archive-size] OK: {n_scanned} remote_lane_*.sh file(s) scanned"
@@ -22277,7 +22326,7 @@ def check_lane_deploy_scripts_have_archive_size_assertion(
     if violations and strict:
         raise MetaBugViolation(
             "LANE SCRIPTS MISSING ARCHIVE-SIZE ASSERTION:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -22285,7 +22334,7 @@ def check_lane_deploy_scripts_have_archive_size_assertion(
 # ── Check 48: orphan src/tac modules (no profile / CLI / script reference) ──
 #
 # CATCHES: a contributor adds src/tac/new_thing.py, never wires it into a
-# profile, CLI flag, or deploy script — silent dead code that bloats the
+# profile, CLI flag, or deploy script - silent dead code that bloats the
 # wheel and confuses future agents about what's actually shipped. Live at
 # session start (2026-04-28 evening): unknown count; check ships warn-only
 # initially because the audit is a real cleanup task, not a regression
@@ -22297,12 +22346,12 @@ def check_lane_deploy_scripts_have_archive_size_assertion(
 
 # Modules that are intentionally library-only (imported by other tac
 # modules but not user-facing via a profile / CLI / script). Excluding
-# these prevents false positives — they're EXPECTED to be referenced only
+# these prevents false positives - they're EXPECTED to be referenced only
 # via Python imports, not via a deploy script or profile knob.
 _ORPHAN_CHECK_EXEMPT_MODULES = {
     "__init__", "__main__",
     # Top-level entry / config modules (referenced by name from many places,
-    # not via `tac.<name>` import — exempt from this check's grep heuristic).
+    # not via `tac.<name>` import - exempt from this check's grep heuristic).
     "profiles", "preflight", "cli", "entrypoints", "__main__",
     # Library helpers / utilities (imported by other tac.* modules)
     "bootstrap_codegen", "checkpoint_names", "cost_tracker",
@@ -22315,7 +22364,7 @@ _ORPHAN_CHECK_EXEMPT_MODULES = {
     # them via `from tac import X`. Orphan-check haystack still excludes
     # tests/ on purpose (tests alone shouldn't keep orphan production code
     # alive), so the exemption is the right escape hatch here.
-    "alpha_mask_codec_readiness",       # paradigm-α codec contract registry
+    "alpha_mask_codec_readiness",       # paradigm-alpha codec contract registry
     "arithmetic_terminal",              # arithmetic terminal codec primitive
     "joint_admm_proximal_pose_delta",   # joint-ADMM pose-delta proximal codec
     "joint_admm_proximal_water_filling_v2",  # joint-ADMM water-filling v2
@@ -22326,7 +22375,7 @@ _ORPHAN_CHECK_EXEMPT_MODULES = {
     # in src/tac/tests/. Same rationale: tests are the acceptance surface,
     # production code uses them via internal cross-references that the
     # orphan haystack already covers (src/tac/**/*.py).
-    "balle_sensitivity_weighted",       # paradigm-β Ballé hyperprior + sensitivity weights
+    "balle_sensitivity_weighted",       # paradigm-beta Ballé hyperprior + sensitivity weights
     "bit_level_archive_optimizer",      # bit-level archive ZIP/Brotli optimizer
     "calibrated_geometry",              # Lane CG calibrated geometry primitive
     "custom_binary_container",          # Carmack-style custom binary archive
@@ -22341,10 +22390,10 @@ _ORPHAN_CHECK_EXEMPT_MODULES = {
     "meta_lagrangian_allocator",        # meta-Lagrangian rate allocator
     "openpilot_features",               # openpilot feature extractor primitive
     "raft_radial_pose",                 # RAFT-derived radial pose helper
-    # 2026-05-07 batch 3 — additional library-only modules confirmed by
+    # 2026-05-07 batch 3 - additional library-only modules confirmed by
     # docstring inspection (no test_<name>.py but explicitly documented as
     # library/scaffold/diagnostic tools, not deployable producers):
-    # - categorical_candidate_runtime_skeleton: paradigm-α charged-archive
+    # - categorical_candidate_runtime_skeleton: paradigm-alpha charged-archive
     #   runtime consumer skeleton (sibling of lapose_foveation_runtime_skeleton);
     #   "still not a contest decoder and never claims score readiness".
     # - forensics: scorer-visible artifact analysis tools (manual diagnostic).
@@ -22438,7 +22487,7 @@ def check_no_orphan_src_tac_modules(
                 continue
             scan_file(py)
     # Cross-references: src/tac/**/*.py (research, visualization, experiments,
-    # submissions subdirs — modules legitimately import each other internally).
+    # submissions subdirs - modules legitimately import each other internally).
     for py in sorted(src_tac.rglob("*.py")):
         # Skip the OSS-export mirror, tests/ (orphan check excludes them on
         # purpose so test files alone can't keep a module alive), and pycache.
@@ -22468,7 +22517,7 @@ def check_no_orphan_src_tac_modules(
         if name not in reference_names:
             violations.append(
                 f"src/tac/{name}.py: no reference in profiles.py / train_renderer.py / "
-                f"remote_lane_*.sh / experiments/*.py — orphan module suspected. "
+                f"remote_lane_*.sh / experiments/*.py - orphan module suspected. "
                 f"If intentional library-only helper, add to _ORPHAN_CHECK_EXEMPT_MODULES."
             )
 
@@ -22479,9 +22528,9 @@ def check_no_orphan_src_tac_modules(
                 f"across {len(candidates)} candidate module(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … and {len(violations) - 20} more")
+                print(f"    ... and {len(violations) - 20} more")
         else:
             print(
                 f"  [no-orphan-src-tac] OK: {len(candidates)} module(s) all referenced"
@@ -22490,7 +22539,7 @@ def check_no_orphan_src_tac_modules(
     if violations and strict:
         raise MetaBugViolation(
             "ORPHAN SRC/TAC MODULES (no profile / CLI / script reference):\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -22499,7 +22548,7 @@ def check_no_orphan_src_tac_modules(
 #
 # CATCHES: the Lane J-JBL exit class. A profile sets loss_mode="jbl" but
 # train_renderer.py's _VALID_LOSS_MODES allowlist (~line 888) doesn't
-# include "jbl" — the validator raises SystemExit at boot, the lane exits
+# include "jbl" - the validator raises SystemExit at boot, the lane exits
 # unexpectedly. Lane J-JBL hit this on 2026-04-28; ~$0.05 burned + 1
 # debugging cycle. Catching at preflight time means the violation surfaces
 # at commit/PR, not after deploy.
@@ -22537,12 +22586,12 @@ def check_profile_loss_modes_in_validator_allowlist(
         re.DOTALL,
     )
     if not m:
-        # Allowlist not present — can't validate. Treat as a warning, not a
+        # Allowlist not present - can't validate. Treat as a warning, not a
         # failure (the allowlist itself is enforced by code review).
         if verbose:
             print(
                 "  [profile-loss-mode-allowlist] WARN: _VALID_LOSS_MODES "
-                "tuple not found in train_renderer.py — skipping check"
+                "tuple not found in train_renderer.py - skipping check"
             )
         return []
     allowlist_raw = m.group(1)
@@ -22577,10 +22626,10 @@ def check_profile_loss_modes_in_validator_allowlist(
         if violations:
             print(
                 f"  [profile-loss-mode-allowlist] {len(violations)} "
-                f"violation(s) — allowed: {sorted(allowed)}"
+                f"violation(s) - allowed: {sorted(allowed)}"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [profile-loss-mode-allowlist] OK: profile loss_mode "
@@ -22590,7 +22639,7 @@ def check_profile_loss_modes_in_validator_allowlist(
     if violations and strict:
         raise MetaBugViolation(
             "PROFILE LOSS_MODE NOT IN VALIDATOR ALLOWLIST:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -22615,7 +22664,7 @@ def check_deploy_script_profiles_exist_in_registry(
 
     For every scripts/remote_lane_*.sh file, extract every `--profile X`
     invocation and verify X exists as a key in PROFILES (parsed statically
-    from src/tac/profiles.py — no Python import to keep preflight cheap).
+    from src/tac/profiles.py - no Python import to keep preflight cheap).
 
     Returns list of violations. Raises MetaBugViolation if strict and any.
     """
@@ -22661,7 +22710,7 @@ def check_deploy_script_profiles_exist_in_registry(
         if verbose:
             print(
                 "  [deploy-script-profile-exists] WARN: failed to "
-                "extract PROFILES keys — skipping check"
+                "extract PROFILES keys - skipping check"
             )
         return []
 
@@ -22695,7 +22744,7 @@ def check_deploy_script_profiles_exist_in_registry(
                 violations.append(
                     f"{rel}: --profile {ref!r} not in PROFILES registry. "
                     f"Add to src/tac/profiles.py PROFILES dict OR fix typo. "
-                    f"Available: {sorted(registered)[:5]}…"
+                    f"Available: {sorted(registered)[:5]}..."
                 )
 
     if verbose:
@@ -22705,7 +22754,7 @@ def check_deploy_script_profiles_exist_in_registry(
                 f"violation(s) across {n_scanned} remote_lane_*.sh:"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [deploy-script-profile-exists] OK: {n_scanned} "
@@ -22715,7 +22764,7 @@ def check_deploy_script_profiles_exist_in_registry(
     if violations and strict:
         raise MetaBugViolation(
             "DEPLOY SCRIPT --profile X REFERENCES MISSING PROFILE:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -22766,7 +22815,7 @@ def check_no_bare_except(
         # (experiments/results/vast_harvest/.../uv_project_env/...).
         "uv_project_env", "site-packages",
     }
-    # Vendored / harvested intake snapshots — same exclude markers as
+    # Vendored / harvested intake snapshots - same exclude markers as
     # check_subprocess_run_checked. We don't own this code; it's evidence
     # of public-PR / remote-host state, not authored code we can edit.
     _VENDORED_INTAKE_MARKERS = (
@@ -22816,7 +22865,7 @@ def check_no_bare_except(
             if _BARE_EXCEPT_RE.match(line):
                 rel = py_path.relative_to(root)
                 violations.append(
-                    f"{rel}:{i}: bare `except:` — catches BaseException "
+                    f"{rel}:{i}: bare `except:` - catches BaseException "
                     f"including KeyboardInterrupt. Use specific exception type "
                     f"OR add `# noqa: E722` if intentional."
                 )
@@ -22835,16 +22884,16 @@ def check_no_bare_except(
                 f"across {n_scanned} files:"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(f"  [no-bare-except] OK: {n_scanned} files clean")
 
     if violations and strict:
         raise MetaBugViolation(
             "BARE EXCEPT / SILENT-SWALLOW VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -22861,9 +22910,9 @@ def check_no_bare_except(
 #   # ... no result.returncode check anywhere ...
 #
 # Allowed:
-#   - `subprocess.run([...], check=True)` — raises CalledProcessError
-#   - `r = subprocess.run([...]); if r.returncode != 0: ...` — explicit
-#   - `subprocess.run([...], check=False)` — explicit opt-out
+#   - `subprocess.run([...], check=True)` - raises CalledProcessError
+#   - `r = subprocess.run([...]); if r.returncode != 0: ...` - explicit
+#   - `subprocess.run([...], check=False)` - explicit opt-out
 #   - Same-line `# subprocess-no-check-OK: <reason>` waiver
 #
 # Heuristic: scan for `subprocess.run(` and verify ONE of:
@@ -22894,10 +22943,10 @@ def check_subprocess_run_checked(
         # Vendored python interpreter trees harvested from remote runs
         "site-packages", "uv_project_env", "uv-cache", ".cache",
     }
-    # Vendored / third-party intake snapshots — same exclude markers as the
+    # Vendored / third-party intake snapshots - same exclude markers as the
     # MPS-fallback check above. We can't fix code we don't own; intake
     # directories are evidence of public-PR state, not our authored code.
-    # The comma_lab_public_export mirror is also exempt — it's a frozen
+    # The comma_lab_public_export mirror is also exempt - it's a frozen
     # OSS staging snapshot, not authored code we can edit (see _is_in_oss_export).
     _VENDORED_INTAKE_MARKERS = (
         "/pr_heads/",
@@ -22950,7 +22999,7 @@ def check_subprocess_run_checked(
                 continue
             # Inline returncode check: `subprocess.run(...).returncode == 0` /
             # `if subprocess.run(...).returncode != 0` etc. The return value
-            # is consumed immediately by a returncode comparison — that IS
+            # is consumed immediately by a returncode comparison - that IS
             # the canonical safe pattern, just without a temporary variable.
             # Hardening 2026-05-12 (integration audit v3 polish).
             if ".returncode" in line:
@@ -22967,7 +23016,7 @@ def check_subprocess_run_checked(
             if "check=True" in window or "check = True" in window:
                 continue
             if "check=False" in window or "check = False" in window:
-                # Explicit opt-out — accept (operator made an active choice).
+                # Explicit opt-out - accept (operator made an active choice).
                 continue
             # Multi-line call with trailing `).returncode` (canonical
             # `result = subprocess.run(...,\n  ...\n).returncode` shape).
@@ -22984,7 +23033,7 @@ def check_subprocess_run_checked(
                 if f"{varname}.check_returncode" in lookahead:
                     continue
             else:
-                # Not assigned — if the call discards the result and is in a
+                # Not assigned - if the call discards the result and is in a
                 # context where failures don't matter (e.g., bootstrap script),
                 # the operator should waive explicitly.
                 pass
@@ -22999,19 +23048,19 @@ def check_subprocess_run_checked(
         if violations:
             print(
                 f"  [subprocess-run-checked] {len(violations)} violation(s) "
-                f"across {n_scanned} files (warn-only — promote after cleanup):"
+                f"across {n_scanned} files (warn-only - promote after cleanup):"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(f"  [subprocess-run-checked] OK: {n_scanned} files clean")
 
     if violations and strict:
         raise MetaBugViolation(
             "SUBPROCESS.RUN WITHOUT CHECK= VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -23073,7 +23122,7 @@ def check_tools_have_argparse(
             if not (has_argparse or has_click):
                 rel = py_path.relative_to(root)
                 violations.append(
-                    f"{rel}: __main__ entry but no argparse/click — operators "
+                    f"{rel}: __main__ entry but no argparse/click - operators "
                     f"can't discover options via --help. Add an "
                     f"argparse.ArgumentParser OR `# no-argparse-OK: <reason>` "
                     f"in the top docstring."
@@ -23086,16 +23135,16 @@ def check_tools_have_argparse(
                 f"across {n_scanned} CLI scripts:"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(f"  [tools-have-argparse] OK: {n_scanned} CLI scripts clean")
 
     if violations and strict:
         raise MetaBugViolation(
             "CLI SCRIPTS WITHOUT --help:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -23110,7 +23159,7 @@ def check_tools_have_argparse(
 #
 # 2026-04-28: Today wasted ~$10 on 87% NVDEC_BAD Vast.ai 4090 hosts because
 # phase2-launch returned success the moment SSH+tmux backgrounded the lane
-# wrapper — but setup_full.sh would then crash on Stage 4 NVDEC probe and
+# wrapper - but setup_full.sh would then crash on Stage 4 NVDEC probe and
 # the operator only learned about it 5+ minutes later via heartbeat.
 #
 # Fix landed in two layers:
@@ -23158,7 +23207,7 @@ def check_phase2_launch_polls_setup_log(
     try:
         text = target.read_text()
     except (OSError, UnicodeDecodeError) as e:
-        violations.append(f"{target.relative_to(root)}: cannot read — {e}")
+        violations.append(f"{target.relative_to(root)}: cannot read - {e}")
         if strict:
             raise MetaBugViolation(violations[0])
         return violations
@@ -23167,7 +23216,7 @@ def check_phase2_launch_polls_setup_log(
         tree = ast.parse(text, filename=str(target))
     except SyntaxError as e:
         violations.append(
-            f"{target.relative_to(root)}: SyntaxError ({e}) — cannot AST-scan"
+            f"{target.relative_to(root)}: SyntaxError ({e}) - cannot AST-scan"
         )
         if strict:
             raise MetaBugViolation(violations[0])
@@ -23183,7 +23232,7 @@ def check_phase2_launch_polls_setup_log(
     if target_func is None:
         violations.append(
             f"{target.relative_to(root)}: cmd_phase2_launch function not "
-            f"found — the launcher must define a phase2-launch subcommand "
+            f"found - the launcher must define a phase2-launch subcommand "
             f"that polls setup.log for NVDEC_BAD outcomes."
         )
     else:
@@ -23230,7 +23279,7 @@ def check_phase2_launch_polls_setup_log(
                 f"  [phase2-launch-poll] {len(violations)} violation(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [phase2-launch-poll] OK: cmd_phase2_launch polls "
@@ -23239,11 +23288,11 @@ def check_phase2_launch_polls_setup_log(
 
     if violations and strict:
         raise MetaBugViolation(
-            "PHASE2-LAUNCH POLL VIOLATIONS — the launcher's phase2-launch "
+            "PHASE2-LAUNCH POLL VIOLATIONS - the launcher's phase2-launch "
             "must call _poll_setup_log_for_outcome AND honor a "
             "skip_post_verify opt-in. Without the poll, NVDEC-bad hosts "
             "burn $0.05-0.10 each (today's wave: ~$10 on 87% NVDEC_BAD).\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -23257,7 +23306,7 @@ def check_phase2_launch_polls_setup_log(
 # 2026-04-28: companion to Check 54. The deep DALI-based NVDEC probe at
 # Stage 4 runs AFTER a 5-minute `pip install nvidia-dali-cuda120` in
 # Stage 3, costing $0.05+ per bad-NVDEC host. The lightweight pre-probe
-# at Stage 0.5 dlopens libnvcuvid.so + cuvidGetDecoderCaps via ctypes —
+# at Stage 0.5 dlopens libnvcuvid.so + cuvidGetDecoderCaps via ctypes -
 # DALI-free, ~3s, catches ~95% of NVDEC-missing hosts BEFORE the heavy
 # install.
 #
@@ -23276,8 +23325,8 @@ def check_setup_full_probe_before_dali(
     probe AFTER the DALI install (defeating the savings purpose).
 
     Scans ``scripts/remote_setup_full.sh`` for the FIRST occurrence of:
-      - ``probe_nvdec.sh --lightweight``  → line N1
-      - ``nvidia-dali-cuda120`` install OR ``Stage 3`` marker  → line N2
+      - ``probe_nvdec.sh --lightweight``  -> line N1
+      - ``nvidia-dali-cuda120`` install OR ``Stage 3`` marker  -> line N2
 
     Asserts N1 < N2. A file with neither is exempt (no DALI install ⇒
     no savings to defeat).
@@ -23296,7 +23345,7 @@ def check_setup_full_probe_before_dali(
     try:
         text = target.read_text(errors="ignore")
     except OSError as e:
-        violations.append(f"{target.relative_to(root)}: cannot read — {e}")
+        violations.append(f"{target.relative_to(root)}: cannot read - {e}")
         if strict:
             raise MetaBugViolation(violations[0])
         return violations
@@ -23342,7 +23391,7 @@ def check_setup_full_probe_before_dali(
             f"probe BEFORE Stage 3 to save $0.05+/bad-NVDEC host."
         )
     elif dali_line is None:
-        # Probe but no DALI — fine, nothing to defeat.
+        # Probe but no DALI - fine, nothing to defeat.
         if verbose:
             print(
                 f"  [setup-full-probe-order] OK: probe present (line "
@@ -23353,7 +23402,7 @@ def check_setup_full_probe_before_dali(
         violations.append(
             f"{target.relative_to(root)}: `probe_nvdec.sh --lightweight` "
             f"at line {probe_line} runs AFTER nvidia-dali-cuda120 install "
-            f"at line {dali_line} — defeats the savings purpose. Move "
+            f"at line {dali_line} - defeats the savings purpose. Move "
             f"probe to Stage 0.5 BEFORE Stage 3 DALI install. See "
             f"feedback_canonical_nvdec_workflow_GUARD_20260428."
         )
@@ -23364,7 +23413,7 @@ def check_setup_full_probe_before_dali(
                 f"  [setup-full-probe-order] {len(violations)} violation(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [setup-full-probe-order] OK: probe@line{probe_line} "
@@ -23373,11 +23422,11 @@ def check_setup_full_probe_before_dali(
 
     if violations and strict:
         raise MetaBugViolation(
-            "SETUP_FULL NVDEC PROBE ORDER VIOLATIONS — the lightweight "
+            "SETUP_FULL NVDEC PROBE ORDER VIOLATIONS - the lightweight "
             "NVDEC pre-probe must run BEFORE Stage 3 DALI install. "
             "Without it, every bad-NVDEC host pays the 5-minute DALI "
             "install cost before failing.\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -23390,7 +23439,7 @@ def check_setup_full_probe_before_dali(
 #
 # 2026-04-28: companion to the R31 cross-cutting SETUP-stuck cost-leak
 # fix. The verify script's --auto-destroy-stale path originally only
-# fired on IDLE/CRASHED — but a TRULY hung setup_full.sh (deadlocked,
+# fired on IDLE/CRASHED - but a TRULY hung setup_full.sh (deadlocked,
 # no heartbeat ever written) is classified SETUP, not IDLE. The IDLE
 # stale-minutes threshold compares heartbeat freshness; with no
 # heartbeat, that comparison never fires, so the instance accrues
@@ -23436,7 +23485,7 @@ def check_verify_vast_setup_stuck_dual_threshold(
     try:
         text = target.read_text(errors="ignore")
     except OSError as e:
-        violations.append(f"{target.relative_to(root)}: cannot read — {e}")
+        violations.append(f"{target.relative_to(root)}: cannot read - {e}")
         if strict:
             raise MetaBugViolation(violations[0])
         return violations
@@ -23447,7 +23496,7 @@ def check_verify_vast_setup_stuck_dual_threshold(
             f"{target.relative_to(root)}: missing CLI flag "
             f"`--setup-stale-minutes` definition. Without it, SETUP-"
             f"stuck instances (deadlocked setup_full.sh, never write "
-            f"heartbeat) accrue cost silently forever — the IDLE "
+            f"heartbeat) accrue cost silently forever - the IDLE "
             f"timer never fires because there's no heartbeat to be "
             f"stale. See feedback_setup_stuck_cost_leak_FIXED_20260428."
         )
@@ -23464,12 +23513,12 @@ def check_verify_vast_setup_stuck_dual_threshold(
     if "args.auto_destroy_stale" not in text:
         violations.append(
             f"{target.relative_to(root)}: missing "
-            f"`args.auto_destroy_stale` branch — the auto-destroy "
+            f"`args.auto_destroy_stale` branch - the auto-destroy "
             f"path is the only place the dual-threshold matters."
         )
     else:
         # Slice from the auto_destroy_stale branch onwards. We don't
-        # need exact AST analysis — substring presence in the rest of
+        # need exact AST analysis - substring presence in the rest of
         # the file is sufficient evidence the path consults each
         # threshold.
         idx = text.find("args.auto_destroy_stale")
@@ -23484,7 +23533,7 @@ def check_verify_vast_setup_stuck_dual_threshold(
             violations.append(
                 f"{target.relative_to(root)}: auto-destroy branch "
                 f"doesn't reference `setup_age_minutes` or "
-                f"`setup_stale_minutes` — SETUP-stuck instances "
+                f"`setup_stale_minutes` - SETUP-stuck instances "
                 f"will leak cost. Add a stuck-SETUP filter to the "
                 f"to_destroy list."
             )
@@ -23493,7 +23542,7 @@ def check_verify_vast_setup_stuck_dual_threshold(
         if '"IDLE"' not in tail and "'IDLE'" not in tail:
             violations.append(
                 f"{target.relative_to(root)}: auto-destroy branch "
-                f"doesn't reference the IDLE classification — half of "
+                f"doesn't reference the IDLE classification - half of "
                 f"the dual-threshold pattern is gone."
             )
 
@@ -23504,7 +23553,7 @@ def check_verify_vast_setup_stuck_dual_threshold(
                 f"{len(violations)} violation(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [verify-vast-dual-threshold] OK: "
@@ -23514,12 +23563,12 @@ def check_verify_vast_setup_stuck_dual_threshold(
 
     if violations and strict:
         raise MetaBugViolation(
-            "VERIFY_VAST_INSTANCES DUAL-THRESHOLD VIOLATIONS — the "
+            "VERIFY_VAST_INSTANCES DUAL-THRESHOLD VIOLATIONS - the "
             "auto-destroy path must use BOTH --stale-minutes (IDLE "
             "heartbeat freshness) AND --setup-stale-minutes "
             "(SETUP first-seen age). Dropping either half re-introduces "
             "the SETUP-stuck cost-leak class.\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -23601,7 +23650,7 @@ def check_lane_scripts_use_canonical_git_sync(
             text = script.read_text(errors="ignore")
         except OSError as e:
             violations.append(
-                f"{script.relative_to(root)}: cannot read — {e}"
+                f"{script.relative_to(root)}: cannot read - {e}"
             )
             continue
 
@@ -23613,7 +23662,7 @@ def check_lane_scripts_use_canonical_git_sync(
         file_has_waiver = False
         for lineno, raw_line in enumerate(text.splitlines(), start=1):
             stripped = raw_line.lstrip()
-            # Skip pure-comment lines — they're documentation, not code.
+            # Skip pure-comment lines - they're documentation, not code.
             if stripped.startswith("#"):
                 continue
             if "git pull --ff-only" not in raw_line:
@@ -23628,7 +23677,7 @@ def check_lane_scripts_use_canonical_git_sync(
             for lineno, line in offending_lines:
                 violations.append(
                     f"{script.relative_to(root)}:{lineno}: bare "
-                    f"`git pull --ff-only` is FORBIDDEN — replace with "
+                    f"`git pull --ff-only` is FORBIDDEN - replace with "
                     f"`git fetch origin main && git reset --hard origin/main` "
                     f"or add same-line `# GIT_SYNC_OPT_OUT:<reason>` waiver. "
                     f"Line: {line}"
@@ -23636,7 +23685,7 @@ def check_lane_scripts_use_canonical_git_sync(
             continue
 
         # If a same-line waiver was found, the operator has explicitly
-        # opted out of the canonical pattern — exempt the file.
+        # opted out of the canonical pattern - exempt the file.
         if file_has_waiver:
             continue
 
@@ -23648,7 +23697,7 @@ def check_lane_scripts_use_canonical_git_sync(
             or ("git reset" in text and "origin" in text)
         )
         if not does_git_sync:
-            # Lane script trusts parent launcher — fine.
+            # Lane script trusts parent launcher - fine.
             continue
 
         if not (canonical_re_a.search(text) and canonical_re_b.search(text)):
@@ -23667,7 +23716,7 @@ def check_lane_scripts_use_canonical_git_sync(
                 f"{len(violations)} violation(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [canonical-git-sync] OK: "
@@ -23677,11 +23726,11 @@ def check_lane_scripts_use_canonical_git_sync(
 
     if violations and strict:
         raise MetaBugViolation(
-            "CANONICAL GIT SYNC VIOLATIONS — lane scripts must use "
+            "CANONICAL GIT SYNC VIOLATIONS - lane scripts must use "
             "`git fetch origin main && git reset --hard origin/main` "
             "(NOT bare `git pull --ff-only` which crashes on stale "
             "Vast.ai workspaces).\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -23760,7 +23809,7 @@ def check_launcher_max_dph_floor(
                 if val < floor:
                     violations.append(
                         f"{path.relative_to(root)}:{lineno}: hardcoded "
-                        f"--max-dph={val} is below the {floor} floor — too few "
+                        f"--max-dph={val} is below the {floor} floor - too few "
                         f"hosts after NVDEC_BAD attrition. Raise the cap or add "
                         f"same-line `{waiver}<reason>` waiver. Line: {raw_line.strip()}"
                     )
@@ -23773,7 +23822,7 @@ def check_launcher_max_dph_floor(
         if violations:
             print(f"  [launcher-max-dph-floor] {len(violations)} violation(s):")
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [launcher-max-dph-floor] OK: no hardcoded --max-dph below "
@@ -23782,9 +23831,9 @@ def check_launcher_max_dph_floor(
 
     if violations and strict:
         raise MetaBugViolation(
-            f"LAUNCHER --max-dph BELOW FLOOR ({floor}) — pool too small for "
+            f"LAUNCHER --max-dph BELOW FLOOR ({floor}) - pool too small for "
             f"NVDEC attrition. Raise cap or waive.\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -23835,7 +23884,7 @@ def check_phase2_extract_destroys_on_failure(
     if not m:
         violations.append(
             "scripts/launch_lane_on_vastai.py: cmd_phase2_extract function "
-            "definition not found — has the launcher been refactored? Update "
+            "definition not found - has the launcher been refactored? Update "
             "this check or restore the function."
         )
     else:
@@ -23843,13 +23892,13 @@ def check_phase2_extract_destroys_on_failure(
         if "lightweight_nvdec_probe" not in body:
             violations.append(
                 "scripts/launch_lane_on_vastai.py:cmd_phase2_extract: missing "
-                "`lightweight_nvdec_probe(...)` call — Stage 2 CUDA probe is "
+                "`lightweight_nvdec_probe(...)` call - Stage 2 CUDA probe is "
                 "the canonical NVDEC_BAD detection step."
             )
         if "destroy_instance" not in body:
             violations.append(
                 "scripts/launch_lane_on_vastai.py:cmd_phase2_extract: missing "
-                "`destroy_instance(...)` call — failed CUDA probe must auto-"
+                "`destroy_instance(...)` call - failed CUDA probe must auto-"
                 "destroy the instance to stop cost accrual (unless "
                 "--no-destroy-on-fail is set explicitly)."
             )
@@ -23858,7 +23907,7 @@ def check_phase2_extract_destroys_on_failure(
         if violations:
             print(f"  [phase2-extract-cleanup] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 "  [phase2-extract-cleanup] OK: cmd_phase2_extract probes NVDEC "
@@ -23868,14 +23917,14 @@ def check_phase2_extract_destroys_on_failure(
     if violations and strict:
         raise MetaBugViolation(
             "PHASE2-EXTRACT MUST AUTO-DESTROY ON CUDA-PROBE FAILURE.\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
 
 # ════════════════════════════════════════════════════════════════════════════
 # Check 60 (60th meta-bug): MEMORY.md must stay under 250 lines (warns
-#                          when exceeded — the auto-memory file accumulates
+#                          when exceeded - the auto-memory file accumulates
 #                          across sessions and silently bloats context).
 # ════════════════════════════════════════════════════════════════════════════
 #
@@ -23930,7 +23979,7 @@ def check_memory_md_size_under_ceiling(
         if violations:
             print(f"  [memory-md-size] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             if candidates:
                 print(
@@ -23943,7 +23992,7 @@ def check_memory_md_size_under_ceiling(
     if violations and strict:
         raise MetaBugViolation(
             f"MEMORY.md EXCEEDS {ceiling}-LINE CEILING.\n"
-            + "\n".join(f"  • {v}" for v in violations[:5])
+            + "\n".join(f"  - {v}" for v in violations[:5])
         )
     return violations
 
@@ -23999,7 +24048,7 @@ def check_canonical_bootstraps_write_provenance(
             continue
         if "provenance.json" not in text:
             violations.append(
-                f"scripts/{name}: does not write provenance.json — required "
+                f"scripts/{name}: does not write provenance.json - required "
                 f"for post-mortem traceability per "
                 f"feedback_canonical_remote_bootstraps."
             )
@@ -24018,7 +24067,7 @@ def check_canonical_bootstraps_write_provenance(
         if violations:
             print(f"  [bootstrap-provenance] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [bootstrap-provenance] OK: {n_checked} canonical bootstrap(s) "
@@ -24028,7 +24077,7 @@ def check_canonical_bootstraps_write_provenance(
     if violations and strict:
         raise MetaBugViolation(
             "CANONICAL BOOTSTRAPS MUST WRITE provenance.json.\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -24156,7 +24205,7 @@ def check_lightning_exact_eval_manifest_runtime_closure(
         if violations:
             print(f"  [lightning-exact-eval-runtime-closure] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 "  [lightning-exact-eval-runtime-closure] OK: manifest runtime "
@@ -24166,7 +24215,7 @@ def check_lightning_exact_eval_manifest_runtime_closure(
     if violations and strict:
         raise MetaBugViolation(
             "LIGHTNING EXACT-EVAL RUNTIME CLOSURE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -24212,7 +24261,7 @@ def check_remote_archive_only_eval_custody_closure(
         if violations:
             print(f"  [remote-archive-only-custody] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 "  [remote-archive-only-custody] OK: archive custody, scorer deps, "
@@ -24222,7 +24271,7 @@ def check_remote_archive_only_eval_custody_closure(
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE ARCHIVE-ONLY EVAL CUSTODY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -24374,13 +24423,13 @@ def check_cmg3a_remote_dispatch_requires_pose_safety(
         if violations:
             print(f"  [cmg3a-pose-safety] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [cmg3a-pose-safety] OK: remote CMG3A dispatches carry pose-safety review")
     if violations and strict:
         raise MetaBugViolation(
             "CMG3A REMOTE DISPATCH POSE-SAFETY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -24411,13 +24460,13 @@ def check_pmg_remote_dispatch_requires_geometry_escape(
         if violations:
             print(f"  [pmg-geometry-escape] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [pmg-geometry-escape] OK: remote PMG dispatches carry geometry-escape review")
     if violations and strict:
         raise MetaBugViolation(
             "PMG REMOTE DISPATCH GEOMETRY-ESCAPE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -24468,7 +24517,7 @@ def check_contest_component_trace_runtime_parity(
         if violations:
             print(f"  [component-trace-runtime-parity] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 "  [component-trace-runtime-parity] OK: parity ffmpeg, isolated "
@@ -24479,7 +24528,7 @@ def check_contest_component_trace_runtime_parity(
     if violations and strict:
         raise MetaBugViolation(
             "CONTEST COMPONENT TRACE RUNTIME PARITY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -24545,14 +24594,14 @@ def check_dispatch_claim_helper_present(
         if violations:
             print(f"  [dispatch-claim-helper] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [dispatch-claim-helper] OK: paid-dispatch claim helper is present")
 
     if violations and strict:
         raise MetaBugViolation(
             "DISPATCH CLAIM HELPER VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
         )
     return violations
 
@@ -24666,7 +24715,7 @@ def check_lane_scripts_set_up_inflate_environment(
                 break
         if delegate_satisfied:
             continue
-        # Otherwise this lane bypasses all guards — flag it.
+        # Otherwise this lane bypasses all guards - flag it.
         rel = str(path.relative_to(root))
         violations.append(
             f"{rel}: calls contest_auth_eval but neither (a) routes through "
@@ -24683,7 +24732,7 @@ def check_lane_scripts_set_up_inflate_environment(
             print(f"  [lane-inflate-env] {len(violations)} violation(s) across "
                   f"{n_scanned} remote_lane_*.sh file(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [lane-inflate-env] OK: {n_scanned} remote_lane_*.sh "
                   f"scripts checked; all set up inflate env correctly")
@@ -24691,7 +24740,7 @@ def check_lane_scripts_set_up_inflate_environment(
     if violations and strict:
         raise MetaBugViolation(
             "LANE SCRIPTS MUST SET UP INFLATE ENV (Codex F5 2026-04-28).\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -24701,16 +24750,16 @@ def check_lane_scripts_set_up_inflate_environment(
 # Reference: feedback_canonical_e2e_smoke_PERMANENT_GUARD_20260428.
 #
 # The structural gap this check closes: 63 STRICT preflight checks before
-# Check 64 are STATIC analysis — code-pattern guards. None of them actually
-# run the deploy → inflate → contest_auth_eval pipeline locally. A lane can
+# Check 64 are STATIC analysis - code-pattern guards. None of them actually
+# run the deploy -> inflate -> contest_auth_eval pipeline locally. A lane can
 # pass every static check and still ship to Vast.ai with a broken pipeline.
 #
 # Lane RM-d (2026-04-28) is the canonical example: trained 3.5h on Vast.ai,
 # built archive successfully, then crashed at Stage 3 because the inflate.sh
 # ffmpeg path tried to read extracted/0.mkv (file that never exists in a
 # renderer archive). The F5 fix in contest_auth_eval.py closes that specific
-# bug, but the structural gap — "we never proved the lane will actually
-# inflate end-to-end before dispatch" — remained.
+# bug, but the structural gap - "we never proved the lane will actually
+# inflate end-to-end before dispatch" - remained.
 #
 # Check 64 enforces: every scripts/remote_lane_*.sh must have an entry in
 # .omx/state/lane_e2e_smoke_proofs.json that is < 7 days old. The proof is
@@ -24735,14 +24784,14 @@ def check_lane_scripts_have_e2e_smoke_proof(
     A smoke proof is an entry in .omx/state/lane_e2e_smoke_proofs.json
     written by experiments/canonical_local_auth_eval_smoke.py. Each proof
     asserts the lane's archive would inflate cleanly through the canonical
-    pipeline (extract → whitelist → renderer-magic → masks → config.env →
-    inflate.sh dispatch → inflate_renderer.py imports → upstream/evaluate.py
-    arity → GT video present → launcher includes .env).
+    pipeline (extract -> whitelist -> renderer-magic -> masks -> config.env ->
+    inflate.sh dispatch -> inflate_renderer.py imports -> upstream/evaluate.py
+    arity -> GT video present -> launcher includes .env).
 
     Acceptance paths per lane:
       (a) Proof exists with timestamp_utc < SMOKE_PROOF_MAX_AGE_DAYS old.
       (b) Lane script has same-line `# E2E_SMOKE_OPT_OUT:<reason>` comment
-          (for lanes that genuinely cannot be smoke-tested locally — e.g.
+          (for lanes that genuinely cannot be smoke-tested locally - e.g.
           require 60GB GPU memory for archive build).
 
     Otherwise the lane FAILS this check.
@@ -24766,7 +24815,7 @@ def check_lane_scripts_have_e2e_smoke_proof(
         return violations
 
     # Load proofs file (may not exist on a fresh repo). A missing file means
-    # ZERO proofs — every lane will violate. That is by design: the operator
+    # ZERO proofs - every lane will violate. That is by design: the operator
     # must run canonical_local_auth_eval_smoke.py at least once.
     proofs: dict = {}
     if proofs_path.exists():
@@ -24818,7 +24867,7 @@ def check_lane_scripts_have_e2e_smoke_proof(
         if not ts_str:
             violations.append(
                 f"{rel}: proof exists but missing 'timestamp_utc' field "
-                f"(corrupt proof — re-run smoke)"
+                f"(corrupt proof - re-run smoke)"
             )
             continue
 
@@ -24851,7 +24900,7 @@ def check_lane_scripts_have_e2e_smoke_proof(
                   f"{n_scanned} remote_lane_*.sh file(s) "
                   f"(proven={n_proven} waived={n_waived}):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(f"    ... and {len(violations) - 20} more")
         else:
@@ -24860,28 +24909,28 @@ def check_lane_scripts_have_e2e_smoke_proof(
 
     if violations and strict:
         raise MetaBugViolation(
-            "LANE SCRIPTS MUST HAVE E2E SMOKE PROOF (Check 64 — closes the "
+            "LANE SCRIPTS MUST HAVE E2E SMOKE PROOF (Check 64 - closes the "
             "static-vs-pipeline gap that cost Lane RM-d 3.5h GPU on the "
             "0.mkv crash). Run:\n"
             "  python experiments/canonical_local_auth_eval_smoke.py "
             "--backfill-all\n"
             "to regenerate proofs for every lane.\n\nViolations:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
 
 # ----------------------------------------------------------------------------
-# Check 65 — lane-class auto-scan for pipeline proof
+# Check 65 - lane-class auto-scan for pipeline proof
 # ----------------------------------------------------------------------------
 # Background: Lane RM-d (2026-04-28) crashed at the auth_eval stage AFTER 3.5h
 # of training on a remote Vast.ai instance. The crash exposed a structural
 # gap: while we have ~64 STATIC preflight checks for code patterns, no check
 # verifies that a NEW LANE CLASS (e.g., the first "renderer-replacement" or
 # "pose-replacement" lane) actually completed a full
-# dispatch → train → archive → auth_eval cycle anywhere on record. New lane
+# dispatch -> train -> archive -> auth_eval cycle anywhere on record. New lane
 # classes can ship into the codebase, run for hours on Vast.ai, and crash at
-# auth_eval — and no preflight catches that BEFORE the GPU spend.
+# auth_eval - and no preflight catches that BEFORE the GPU spend.
 #
 # Check 65 enforces: every lane CLASS in scripts/remote_lane_*.sh must have at
 # least one proof in .omx/state/lane_class_proofs.json showing a complete
@@ -24966,7 +25015,7 @@ def check_lane_classes_have_pipeline_proof(
     SHIPS WARN-ONLY initially (strict=False) so the existing 70 lanes have
     a backfill window. Promotion plan: backfill _LANE_CLASS_PROOFS_REL with
     one proof per existing class (~10-15 entries), then flip strict=True via
-    the standard Lane A → strict pattern.
+    the standard Lane A -> strict pattern.
     """
     import json as _json
 
@@ -25032,7 +25081,7 @@ def check_lane_classes_have_pipeline_proof(
                 f"{len(classes)} lane class(es) (proven={n_proven}):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(f"    ... and {len(violations) - 20} more")
         else:
@@ -25043,12 +25092,12 @@ def check_lane_classes_have_pipeline_proof(
 
     if violations and strict:
         raise MetaBugViolation(
-            "LANE CLASSES MUST HAVE PIPELINE PROOF (Check 65 — closes the "
+            "LANE CLASSES MUST HAVE PIPELINE PROOF (Check 65 - closes the "
             "Lane RM-d class of bug). New lane classes shipping without a "
-            "complete dispatch → train → archive → auth_eval proof on file. "
-            "Add an entry to .omx/state/lane_class_proofs.json — see check "
+            "complete dispatch -> train -> archive -> auth_eval proof on file. "
+            "Add an entry to .omx/state/lane_class_proofs.json - see check "
             "docstring for schema.\n\nViolations:\n"
-            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n".join(f"  - {v}" for v in violations[:50])
         )
     return violations
 
@@ -25119,13 +25168,13 @@ def check_segmap_grayscale_lut_consistency(
         if violations:
             print(f"  [grayscale-lut-consistency] {len(violations)} violation(s) across {n_scanned} script(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [grayscale-lut-consistency] OK: {n_scanned} remote_lane_*.sh script(s) clean")
     if violations and strict:
         raise PreflightError(
             "GRAYSCALE-LUT CONSISTENCY violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLane MM / Selfcomp paradigm guard: any archive that contains "
             "grayscale.mkv must be inflated through the segmap or "
             "renderer_grayscale PYTHON_INFLATE arm. Otherwise the legacy "
@@ -25202,13 +25251,13 @@ def check_segmap_lct_archive_contract(
         if violations:
             print(f"  [segmap-lct-archive-contract] {len(violations)} violation(s) across {n_scanned} script(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [segmap-lct-archive-contract] OK: {n_scanned} remote_lane_*.sh script(s) clean")
     if violations and strict:
         raise PreflightError(
             "SEGMAP LCT ARCHIVE CONTRACT violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLearnable class targets are score-affecting side "
             "information. Any SegMap lane enabling LCT must charge the "
             "fp16 class-target payload inside archive.zip and configure "
@@ -25250,7 +25299,7 @@ def check_block_fp_exponents_alongside_qint(
         rel_str = str(rel)
         if rel_str.endswith("block_fp_codec.py") or rel_str.endswith("test_block_fp_codec.py"):
             continue
-        # Skip test files in general — tests may reference qint without
+        # Skip test files in general - tests may reference qint without
         # exp for the encoder/decoder boundary verification.
         if "/tests/" in rel_str:
             continue
@@ -25265,13 +25314,13 @@ def check_block_fp_exponents_alongside_qint(
         if violations:
             print(f"  [block-fp-qint-exp-pair] {len(violations)} violation(s) across {n_scanned} files:")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [block-fp-qint-exp-pair] OK: {n_scanned} file(s) scanned")
     if violations and strict:
         raise PreflightError(
             "BLOCK-FP QINT/EXP PAIRING violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nThe Selfcomp block-FP codec stores int8 qint + int32 "
             "exponents per output channel; reconstruction is "
             "weight = qint * 2 ** exponents. Any consumer reading "
@@ -25326,13 +25375,13 @@ def check_segmap_export_calls_verify_roundtrip(
         if violations:
             print(f"  [segmap-export-verify-roundtrip] {len(violations)} warn(s) across {n_scanned} files:")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [segmap-export-verify-roundtrip] OK: {n_scanned} file(s) scanned")
     if violations and strict:
         raise PreflightError(
             "SEGMAP-EXPORT-VERIFY-ROUNDTRIP violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nEvery pack_payload_tar_xz call site should be paired with "
             "verify_roundtrip(state_dict, payload_path) BEFORE the archive "
             "ships, so a broken codec cannot silently degrade auth eval."
@@ -25398,7 +25447,7 @@ def check_segmap_hm_sa_lossy_pack_contract(
                 f"violation(s) across {n_scanned} file(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [segmap-hm-sa-lossy-pack-contract] OK: {n_scanned} "
@@ -25407,7 +25456,7 @@ def check_segmap_hm_sa_lossy_pack_contract(
     if violations and strict:
         raise PreflightError(
             "SEGMAP HM-S/SA LOSSY PACK CONTRACT violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nThese lanes must either fail statically before GPU spend "
             "or proceed only as lossy block-FP archives gated by exact CUDA "
             "contest_auth_eval evidence."
@@ -25416,7 +25465,7 @@ def check_segmap_hm_sa_lossy_pack_contract(
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# Check 91 (2026-04-30): Lane GP basis-fit kill — forbid polynomial / smooth-
+# Check 91 (2026-04-30): Lane GP basis-fit kill - forbid polynomial / smooth-
 # basis pose-fits in experiments/fit_pose_*.py without explicit kill-verdict
 # acknowledgement.
 # ════════════════════════════════════════════════════════════════════════════
@@ -25426,7 +25475,7 @@ def check_segmap_hm_sa_lossy_pack_contract(
 # the actual Lane G v3 baseline pose trajectory is approximately white-noise
 # in dims 1-5 (diff_std > signal_std) with uniformly-distributed spectral
 # support, making ANY low-rank smooth-basis fit (polynomial / cubic B-spline /
-# DCT / natural cubic) infeasible. All four bases plateau at RMSE ≈ 1.2 (near
+# DCT / natural cubic) infeasible. All four bases plateau at RMSE approximately 1.2 (near
 # signal std).
 #
 # This check prevents future agents from re-attempting the lane class. Any
@@ -25482,7 +25531,7 @@ def check_pose_basis_fit_kill_acknowledged(
     # Round 1 council finding (Contrarian Q2): scan BOTH experiments/fit_pose_*.py
     # AND src/tac/pose_*_fit.py / src/tac/pose_*_basis.py to close the
     # module-level evasion path. A future agent might place a smooth-basis
-    # pose-fit module under src/tac/ instead of experiments/ — this gate
+    # pose-fit module under src/tac/ instead of experiments/ - this gate
     # catches that pattern too.
     candidate_globs: list[Path] = []
     exp_dir = root / "experiments"
@@ -25497,7 +25546,7 @@ def check_pose_basis_fit_kill_acknowledged(
         candidate_globs.extend(sorted(tac_dir.glob("pose_*_dct.py")))
         candidate_globs.extend(sorted(tac_dir.glob("pose_*_wavelet.py")))
         # The existing pose_gaussian_process.py is exempted by name + marker
-        # path: it uses np.polyfit and IS the killed module — we add the
+        # path: it uses np.polyfit and IS the killed module - we add the
         # marker there in this same commit.
         candidate_globs.extend(sorted(tac_dir.glob("pose_gaussian_process.py")))
 
@@ -25512,12 +25561,12 @@ def check_pose_basis_fit_kill_acknowledged(
             text = py.read_text()
         except (OSError, UnicodeDecodeError):
             continue
-        # Skip test files — they may legitimately exercise the patterns.
+        # Skip test files - they may legitimately exercise the patterns.
         rel_str = str(py.relative_to(root)) if py.is_absolute() else str(py)
         if "/tests/" in rel_str:
             continue
         # Strip docstrings and comments? We allow the patterns to match
-        # anywhere — even mention in docstring suggests intent. The kill
+        # anywhere - even mention in docstring suggests intent. The kill
         # marker is the only valid waiver.
         triggers: list[str] = []
         for pat in SMOOTH_BASIS_PATTERNS:
@@ -25542,18 +25591,18 @@ def check_pose_basis_fit_kill_acknowledged(
         if violations:
             print(f"  [pose-basis-fit-kill] {len(violations)} violation(s) across {n_scanned} candidate file(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [pose-basis-fit-kill] OK: {n_scanned} candidate file(s) scanned")
 
     if violations and strict:
         raise PreflightError(
             "POSE-BASIS-FIT KILL violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLane GP (any smooth-basis pose-fit variant) was killed "
             "2026-04-30 per Council #271 + Lane GP v4 design verdict. The "
             "baseline pose trajectory is approximately white-noise in dims "
-            "1-5 — no smooth basis can fit it below RMSE ≈ 1.2. Read "
+            "1-5 - no smooth basis can fit it below RMSE approximately 1.2. Read "
             ".omx/research/council_lane_gp_v4_design_20260430.md and add "
             "`# LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:` comment to override "
             "(only legitimate use: archival of the original failed v3 lane)."
@@ -25567,7 +25616,7 @@ def check_pose_basis_fit_kill_acknowledged(
 #
 # Background: every lane MUST be tracked in .omx/state/lane_registry.json via
 # tools/lane_maturity.py. The registry encodes the 7-gate Level-3 production-
-# hardened standard (CLAUDE.md "Lane maturity registry — non-negotiable" +
+# hardened standard (CLAUDE.md "Lane maturity registry - non-negotiable" +
 # memory feedback_production_hardened_standard_definition_20260430). Without
 # this check, a hand-edit could mark a lane Level 3 without the corresponding
 # 7 gates true, defeating the standard.
@@ -25617,13 +25666,13 @@ def check_lane_registry_consistent(
     except (ImportError, FileNotFoundError) as e:
         violations.append(
             f"could not import tools.lane_maturity: {e}. "
-            f"This is a setup bug — the harness was supposed to land here."
+            f"This is a setup bug - the harness was supposed to land here."
         )
         if verbose:
             print(f"  [lane-registry] WARN: {violations[-1]}")
         if strict:
             raise MetaBugViolation(
-                "LANE-REGISTRY check failed:\n  • " + violations[-1]
+                "LANE-REGISTRY check failed:\n  - " + violations[-1]
             )
         return violations
 
@@ -25635,7 +25684,7 @@ def check_lane_registry_consistent(
             print(f"  [lane-registry] FAIL: {violations[-1]}")
         if strict:
             raise MetaBugViolation(
-                "LANE-REGISTRY check failed:\n  • " + violations[-1]
+                "LANE-REGISTRY check failed:\n  - " + violations[-1]
             )
         return violations
 
@@ -25649,7 +25698,7 @@ def check_lane_registry_consistent(
                 f"across {len(data.get('lanes', []))} lane(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [lane-registry] OK: {len(data.get('lanes', []))} lane(s) "
@@ -25659,16 +25708,16 @@ def check_lane_registry_consistent(
     if violations and strict:
         raise MetaBugViolation(
             "LANE-REGISTRY consistency violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFix via tools/lane_maturity.py (mark/unmark/add-lane). "
-            "Bare hand-edits of .omx/state/lane_registry.json are FORBIDDEN — "
-            "see CLAUDE.md 'Lane maturity registry — non-negotiable'."
+            "Bare hand-edits of .omx/state/lane_registry.json are FORBIDDEN - "
+            "see CLAUDE.md 'Lane maturity registry - non-negotiable'."
         )
     return violations
 
 
 # ── Check 93: logit-margin loss callers pass explicit threshold ──────────────
-# Lane 19 (SegNet logit-margin boundary loss) — see council memo
+# Lane 19 (SegNet logit-margin boundary loss) - see council memo
 # .omx/research/council_lane_19_logit_margin_design_20260430.md.
 #
 # Bug class: silent-default-on-boundary-loss. The Lane 19 module raises
@@ -25681,8 +25730,8 @@ def check_lane_registry_consistent(
 # explicit `threshold=` kwarg.
 #
 # Why STRICT @ 0 violations: the loss zeros out for confident pixels by
-# design; if threshold is silently set wrong (e.g., 0.0 → all weights 1.0
-# = standard CE; 100.0 → all weights ~1.0 also = standard CE), the loss
+# design; if threshold is silently set wrong (e.g., 0.0 -> all weights 1.0
+# = standard CE; 100.0 -> all weights ~1.0 also = standard CE), the loss
 # silently degrades to standard CE and the lane's wedge is invalidated.
 # Explicit-threshold-from-profile is the only audit-safe contract.
 #
@@ -25735,7 +25784,7 @@ def _scan_lane19_threshold_calls(py_path: Path, root: Path) -> list[str]:
         if "threshold" not in kw_names:
             violations.append(
                 f"{rel}:{node.lineno}: {name}(...) missing explicit "
-                f"threshold= kwarg (Check 93 STRICT — Lane 19 callers MUST "
+                f"threshold= kwarg (Check 93 STRICT - Lane 19 callers MUST "
                 f"pass threshold from profile resolver, never positional/default)."
             )
     return violations
@@ -25775,7 +25824,7 @@ def check_logit_margin_loss_uses_boundary_mask(
             f"across {n_scanned} files:"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(
             f"  [lane-19-threshold] OK: {n_scanned} files scanned "
@@ -25785,11 +25834,11 @@ def check_logit_margin_loss_uses_boundary_mask(
     if violations and strict:
         raise MetaBugViolation(
             "Lane 19 logit-margin caller-threshold violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLane 19 callers MUST pass an explicit threshold= kwarg "
             "(Check 93 STRICT). The loss module raises ValueError on None, "
             "but silent positional defaults bypass that gate. Pass threshold "
-            "from the profile resolver — see council memo "
+            "from the profile resolver - see council memo "
             ".omx/research/council_lane_19_logit_margin_design_20260430.md."
         )
     return violations
@@ -25810,7 +25859,7 @@ def check_logit_margin_loss_uses_boundary_mask(
 #
 # This check forbids the SYMBOL `MultiPassCompressor` and the helper
 # `compress_with_multipass` from appearing in inflate-side files. It also
-# forbids `from tac.multipass_compressor import …` from the same files.
+# forbids `from tac.multipass_compressor import ...` from the same files.
 #
 # Lane 8 implementation lives in:
 #   - src/tac/multipass_compressor.py  (the codec, COMPRESS-time)
@@ -25866,7 +25915,7 @@ def check_no_inflate_time_multipass(
             continue
         # Strip simple comment lines so a "DO NOT IMPORT MultiPassCompressor"
         # documentation note doesn't trigger. We use a coarse line filter
-        # — if a line that contains a FORBIDDEN_TOKEN ALSO starts with
+        # - if a line that contains a FORBIDDEN_TOKEN ALSO starts with
         # `#` or `//` (after strip), it's a documentation reference and is
         # exempt.
         for line_idx, raw in enumerate(text.splitlines(), start=1):
@@ -25877,10 +25926,10 @@ def check_no_inflate_time_multipass(
                 if token not in raw:
                     continue
                 if stripped.startswith("#") or stripped.startswith("//"):
-                    # comment / documentation — exempt
+                    # comment / documentation - exempt
                     continue
                 if "STRICT_PREFLIGHT_WAIVED" in raw:
-                    # explicit operator waiver — exempt (must be same-line)
+                    # explicit operator waiver - exempt (must be same-line)
                     continue
                 violations.append(
                     f"{rel}:{line_idx}: forbidden inflate-time multipass "
@@ -25895,7 +25944,7 @@ def check_no_inflate_time_multipass(
                 f"across {n_scanned} inflate file(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [no-inflate-time-multipass] OK: {n_scanned} inflate "
@@ -25905,7 +25954,7 @@ def check_no_inflate_time_multipass(
     if violations and strict:
         raise MetaBugViolation(
             "INFLATE-TIME-MULTIPASS violations:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nMultiPassCompressor is COMPRESS-time only per the strict-"
             "scorer-rule (CLAUDE.md). The compressor's scorer argument is a "
             "forward pass through auth_eval_renderer.py which loads the "
@@ -25972,7 +26021,7 @@ def _scan_imp_dispatcher_for_chain_completeness(
     if "contest_auth_eval.py" not in text:
         violations.append(
             f"{rel_s}: IMP dispatcher missing CUDA auth eval invocation "
-            f"(`contest_auth_eval.py`). Add a Stage-4 auth eval block — "
+            f"(`contest_auth_eval.py`). Add a Stage-4 auth eval block - "
             f"per CLAUDE.md `Auth eval EVERYWHERE` non-negotiable, every "
             f"chained experiment must end with a contest-CUDA auth eval."
         )
@@ -26010,7 +26059,7 @@ def check_imp_cycles_use_ema_and_auth_eval(
     Scans ``scripts/remote_lane_*imp*.sh`` (case-insensitive) and asserts
     each contains:
       1. ``contest_auth_eval.py`` invocation (auth-eval-everywhere).
-      2. A revert-on-regression token (Council Q4 — kill-criterion).
+      2. A revert-on-regression token (Council Q4 - kill-criterion).
       3. ``heartbeat`` loop / variable.
       4. ``probe_nvdec`` at Stage 0.
 
@@ -26035,7 +26084,7 @@ def check_imp_cycles_use_ema_and_auth_eval(
             # that are NOT multi-cycle dispatchers don't have cycles to
             # revert on. The waiver token must appear in the first 2000
             # bytes (header) and explain why the dispatcher chain doesn't
-            # apply. Reference: remote_lane_imp_c067_bridge.sh — bounded
+            # apply. Reference: remote_lane_imp_c067_bridge.sh - bounded
             # byte-screen builder, not a Lane-17 cycle dispatcher.
             if "IMP_NOT_A_CYCLE_DISPATCHER" in head:
                 continue
@@ -26051,9 +26100,9 @@ def check_imp_cycles_use_ema_and_auth_eval(
                 f"across {n_scanned} IMP dispatcher(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(
                 f"  [imp-dispatcher-chain] OK: "
@@ -26063,7 +26112,7 @@ def check_imp_cycles_use_ema_and_auth_eval(
     if violations and strict:
         raise MetaBugViolation(
             "LANE 17 IMP DISPATCHER CHAIN INCOMPLETE:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nCouncil Lane-17 design 2026-04-30 (Q3+Q4) requires "
             "(1) auth eval, (2) revert-on-regression, (3) heartbeat, "
             "(4) NVDEC probe. Reference: "
@@ -26076,9 +26125,9 @@ def check_imp_cycles_use_ema_and_auth_eval(
 #
 # 2026-04-30 ~23:00 UTC. The IMP cycle 0 = 1.98 [contest-CUDA] regression
 # metabug was caused by `experiments/train_imp_cycle.py::_finetune` being a
-# documented STUB loop (200 epochs in 3.5s on L40S = ~0.017s/epoch — synthetic
+# documented STUB loop (200 epochs in 3.5s on L40S = ~0.017s/epoch - synthetic
 # tensors, toy L2 loss). The stub's docstring promised "deploy script swaps
-# in train_distill" — but the swap never happened. The promise was a comment,
+# in train_distill" - but the swap never happened. The promise was a comment,
 # not a contract.
 #
 # Council Option B+assertion (6/3/1 verdict in
@@ -26093,10 +26142,10 @@ def check_imp_cycles_use_ema_and_auth_eval(
 # `experiments/train_renderer.py` / `experiments/train_renderer_fridrich.py`)
 # MUST also be invoked subsequently in the same script. Without that swap,
 # the dispatcher would be running stub-pretending-to-be-real fine-tunes
-# cycle after cycle — exactly the metabug this check exists to extinguish.
+# cycle after cycle - exactly the metabug this check exists to extinguish.
 #
 # Live count at land time: 1 dispatcher (the canonical
-# remote_lane_j_imp_iterative_magnitude_pruning.sh) — verified to invoke
+# remote_lane_j_imp_iterative_magnitude_pruning.sh) - verified to invoke
 # train_distill at the Stage 1.X swap landed in the same commit. Strict @ 0.
 #
 # Memory: feedback_grand_council_imp_permanent_fix_review_20260430.md (parent
@@ -26154,7 +26203,7 @@ def _scan_imp_dispatcher_for_train_distill_swap(
         )
         if _re.search(pattern_filepath, text):
             return True
-        # Module form: convert `experiments/train_distill.py` →
+        # Module form: convert `experiments/train_distill.py` ->
         # `experiments.train_distill` and look for `<runner> [-u] -m <module>`.
         if target.endswith(".py"):
             module_path = target[:-3].replace("/", ".")
@@ -26168,7 +26217,7 @@ def _scan_imp_dispatcher_for_train_distill_swap(
 
     invokes_imp_cycle = _has_real_invocation("experiments/train_imp_cycle.py")
     if not invokes_imp_cycle:
-        # No train_imp_cycle invocation at all — this isn't a real IMP
+        # No train_imp_cycle invocation at all - this isn't a real IMP
         # dispatcher (or it uses some other mechanism). Don't flag.
         return []
 
@@ -26238,9 +26287,9 @@ def check_imp_dispatch_calls_train_distill(
                 f"across {n_scanned} IMP dispatcher(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(
                 f"  [imp-train-distill-swap] OK: {n_scanned} IMP "
@@ -26250,7 +26299,7 @@ def check_imp_dispatch_calls_train_distill(
     if violations and strict:
         raise MetaBugViolation(
             "LANE 17 IMP DISPATCHER MISSING train_distill SWAP (PCC1):\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nFix: add a Stage 1.X block to the dispatcher that "
             "invokes `\"$PYBIN\" -u experiments/train_distill.py "
             "--resume \"$CYC_DIR/renderer.pt\" --masks \"$ANCHOR_MASKS\" "
@@ -26268,12 +26317,12 @@ def check_imp_dispatch_calls_train_distill(
 # 2026-04-30. Lane 12 (NeRV mask codec) is the Phase 2 ACCELERATE codec lane.
 # CLAUDE.md non-negotiables for any training path apply:
 #   - Trainer instantiates ``tac.training.EMA`` (NOT a local re-implementation
-#     — the Council D wire-in 2026-04-29 PM removed a duplicate `class EMA` in
+#     - the Council D wire-in 2026-04-29 PM removed a duplicate `class EMA` in
 #     `train_joint_pair.py`; same risk class for new training paths).
 #   - Trainer refuses ``device='mps'`` (MPS auth-eval drift 23x on PoseNet,
 #     2x on SegNet).
 #   - No bare ``.round()`` inside any forward / training / step / sample /
-#     evaluate function (Council A `.round()` zero-gradient bug class —
+#     evaluate function (Council A `.round()` zero-gradient bug class -
 #     5h GPU burned on Lane DARTS-S V1 freeze).
 #   - The standalone trainer (`experiments/train_nerv_mask.py`) must end
 #     the chain with a CUDA auth eval (delegated to the dispatch script
@@ -26369,7 +26418,7 @@ def _scan_nerv_mask_codec_for_canonical_discipline(
     finder.visit(tree)
     for fn_name, lineno in finder.found:
         violations.append(
-            f"{rel_s}:{lineno}: bare `.round()` inside {fn_name!r} — "
+            f"{rel_s}:{lineno}: bare `.round()` inside {fn_name!r} - "
             f"Council A zero-gradient bug class. Use `Uint8STE.apply()` "
             f"(from `tac.quantization`) inside any autograd-active forward."
         )
@@ -26384,7 +26433,7 @@ def _scan_nerv_trainer_script_for_auth_eval_delegation(
     discipline. The standalone trainer either invokes `contest_auth_eval`
     directly OR documents delegation to the dispatch script.
 
-    Comments are stripped before the substring check — a comment cannot
+    Comments are stripped before the substring check - a comment cannot
     satisfy the discipline. Delegation is satisfied when a comment OR a
     docstring mentions ``remote_lane_nerv.sh`` (a code-side import path
     is also accepted, but a comment-only delegation is enough since the
@@ -26454,9 +26503,9 @@ def check_nerv_codec_uses_ema_and_no_mps_and_auth_eval(
                 f"across {n_scanned} Lane-12 file(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(
                 f"  [nerv-codec-discipline] OK: "
@@ -26466,7 +26515,7 @@ def check_nerv_codec_uses_ema_and_no_mps_and_auth_eval(
     if violations and strict:
         raise MetaBugViolation(
             "LANE 12 NERV CODEC DISCIPLINE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nCLAUDE.md non-negotiables apply: canonical EMA "
             "(tac.training.EMA decay 0.997), no MPS strategic decisions, "
             "no bare `.round()` in autograd-active forwards, auth-eval at "
@@ -26479,7 +26528,7 @@ def check_nerv_codec_uses_ema_and_no_mps_and_auth_eval(
 def _strip_python_comments_and_docstrings(text: str) -> str:
     """Strip ``#`` line-comments and triple-quoted (doc)strings.
 
-    PRESERVES inline single-line string literals — the BHv1 integrity check
+    PRESERVES inline single-line string literals - the BHv1 integrity check
     looks for ``"static_wins"`` as a sentinel literal in actual code, not
     in docstrings. Stripping triple-quoted strings + ``#`` comments is
     enough to defeat the comment-mentions-the-keyword false-positive.
@@ -26500,7 +26549,7 @@ def _scan_balle_codec_for_side_info_inclusion(path: Path, root: Path) -> list[st
 
     1. ``encode_qints_full_balle`` MUST emit the hyper_decoder weights inside
        ``side_info`` (otherwise the inflate-side decode cannot reconstruct
-       per-block σ → roundtrip fails → archive unreadable). This is the
+       per-block σ -> roundtrip fails -> archive unreadable). This is the
        Check 91 STRICT predicate.
     2. ``encode_qints_balle_auto`` MUST keep the static-baseline guard so
        a regressing codec is never shipped (the kill criterion from Phase A
@@ -26528,7 +26577,7 @@ def _scan_balle_codec_for_side_info_inclusion(path: Path, root: Path) -> list[st
         if "_serialize_hyper_decoder" not in body:
             violations.append(
                 f"{rel_s}:encode_qints_full_balle: missing call to "
-                f"`_serialize_hyper_decoder` — hyper_decoder weights MUST be "
+                f"`_serialize_hyper_decoder` - hyper_decoder weights MUST be "
                 f"in side_info or the inflate-side decode cannot recover σ "
                 f"(Check 91 STRICT)."
             )
@@ -26537,7 +26586,7 @@ def _scan_balle_codec_for_side_info_inclusion(path: Path, root: Path) -> list[st
                 f"{rel_s}:encode_qints_full_balle: hyper_decoder serialized "
                 f"bytes must be written into `side_info` (the BytesIO that is "
                 f"recorded as `side_info_bytes`). Without this, the archive "
-                f"loads but Lane 20 decode silently drifts — this is exactly "
+                f"loads but Lane 20 decode silently drifts - this is exactly "
                 f"the bug class CLAUDE.md FORBIDDEN PATTERNS warns against."
             )
 
@@ -26566,12 +26615,12 @@ def _scan_balle_codec_for_side_info_inclusion(path: Path, root: Path) -> list[st
 def check_balle_hyperprior_includes_side_info_in_archive(
     *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
 ) -> list[str]:
-    """Lane 20 (Ballé hyperprior) — BHv1 wire-format integrity check.
+    """Lane 20 (Ballé hyperprior) - BHv1 wire-format integrity check.
 
     Verifies that the production codec at ``src/tac/balle_hyperprior_codec.py``:
 
     1. Always serializes the hyper_decoder weights into ``side_info`` for
-       the FULL_BALLE mode (otherwise inflate-side decode silently drifts —
+       the FULL_BALLE mode (otherwise inflate-side decode silently drifts -
        the FP16 round-trip mismatch debugged 2026-04-30 in Phase B).
     2. Keeps the ``static_baseline_bytes`` guard in ``encode_qints_balle_auto``
        so a regressing untrained codec falls back to ``static_wins`` rather
@@ -26600,9 +26649,9 @@ def check_balle_hyperprior_includes_side_info_in_archive(
                 f"across {n_scanned} Lane-20 file(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(
                 f"  [balle-bhv1-integrity] OK: "
@@ -26612,7 +26661,7 @@ def check_balle_hyperprior_includes_side_info_in_archive(
     if violations and strict:
         raise MetaBugViolation(
             "LANE 20 BHv1 WIRE-FORMAT INTEGRITY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nCLAUDE.md non-negotiables apply: side-info MUST contain "
             "hyper_decoder weights or inflate-side decode silently drifts; "
             "auto-fallback to static_wins MUST guard against shipping a "
@@ -26623,7 +26672,7 @@ def check_balle_hyperprior_includes_side_info_in_archive(
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# Check 96 (2026-04-30): Lane PFP16 — pose stream should use fp16 or smaller.
+# Check 96 (2026-04-30): Lane PFP16 - pose stream should use fp16 or smaller.
 # ════════════════════════════════════════════════════════════════════════════
 #
 # Background: Lane GP v4 KILL VERDICT (.omx/research/council_lane_gp_v4_design_20260430.md)
@@ -26642,13 +26691,13 @@ def check_balle_hyperprior_includes_side_info_in_archive(
 # / `encode_pose_deltas()` / `encode_pose_delta_v2()` / `encode_lora_*()`,
 # the build is shipping an fp32 pose tensor unnecessarily.
 #
-# Waiver pattern: `# POSE_FP32_REQUIRED:<reason>` — for legitimate exceptions
+# Waiver pattern: `# POSE_FP32_REQUIRED:<reason>` - for legitimate exceptions
 # where fp32 precision IS required (e.g., a future renderer that uses pose
 # values outside fp16 dynamic range, or a debug build).
 #
 # Lands STRICT @ 0 violations after Lane PFP16 lands (the only existing
 # archive build that ships poses is `experiments/build_lane_g_v3_omega_w_v2_stack.py`,
-# which copies bit-identical bytes from Lane G v3 — that path is exempted
+# which copies bit-identical bytes from Lane G v3 - that path is exempted
 # because it is a pure byte-copy with no encode-side decision to make).
 # Memory: project_lane_pfp16_landed_20260430.md.
 
@@ -26726,7 +26775,7 @@ def check_pose_stream_uses_fp16_or_smaller(
         rel = py.relative_to(root) if py.is_absolute() else py
         rel_str = str(rel)
 
-        # Skip test files — they may legitimately exercise the patterns.
+        # Skip test files - they may legitimately exercise the patterns.
         if "/tests/" in rel_str:
             continue
 
@@ -26745,7 +26794,7 @@ def check_pose_stream_uses_fp16_or_smaller(
         if "pose" not in text_lower:
             continue
 
-        # Look for torch.save(...) calls — this is the fp32-pickle smoking
+        # Look for torch.save(...) calls - this is the fp32-pickle smoking
         # gun. Pattern: torch.save(<expr>, ...) where <expr> mentions pose.
         #
         # Conservative: flag any torch.save in a pose-touching build script
@@ -26773,7 +26822,7 @@ def check_pose_stream_uses_fp16_or_smaller(
             print(f"  [pose-stream-fp16] {len(violations)} violation(s) across "
                   f"{n_scanned} candidate file(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(f"  [pose-stream-fp16] OK: {n_scanned} candidate file(s) "
                   f"scanned (Lane PFP16 fp16-or-smaller discipline)")
@@ -26781,7 +26830,7 @@ def check_pose_stream_uses_fp16_or_smaller(
     if violations and strict:
         raise PreflightError(
             "POSE-STREAM FP16 VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLane PFP16 (Hotz successor option from Lane GP v4 KILL) "
             "ships pose streams as raw fp16 binary for ~8 KB savings at zero "
             "distortion. Read .omx/research/council_lane_gp_v4_design_20260430.md "
@@ -26923,7 +26972,7 @@ def check_remote_lane_auth_eval_json_adjudication(
             print(f"  [remote-auth-json] {len(violations)} violation(s) across "
                   f"{n_scanned} remote_lane_*.sh file(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(f"    ... {len(violations) - 20} more")
         else:
@@ -26933,7 +26982,7 @@ def check_remote_lane_auth_eval_json_adjudication(
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE AUTH-EVAL JSON ADJUDICATION VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nDo not parse human report text. Use "
             "`eval_work/contest_auth_eval.json` and "
             "`score_recomputed_from_components`; keep `final_score` only as "
@@ -27064,7 +27113,7 @@ def check_remote_distillation_promotion_provenance(
             print(f"  [remote-distill-promotion] {len(violations)} violation(s) across "
                   f"{n_scanned} remote_lane_*.sh file(s):")
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
                 print(f"    ... {len(violations) - 20} more")
         else:
@@ -27074,7 +27123,7 @@ def check_remote_distillation_promotion_provenance(
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE DISTILLATION PROMOTION PROVENANCE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nKL/JBL/distillation-active artifacts cannot promote unless "
             "adjudication sees distillation_policy_v1, distillation_policy_sha256, "
             "exact CUDA auth eval, archive SHA/bytes, and PoseNet/SegNet "
@@ -27138,7 +27187,7 @@ def check_launch_retry_wrapper_singleflight_and_signal_safe(
             print("  [launch-retry-self-protect] "
                   f"{len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [launch-retry-self-protect] OK: retry launcher is "
                   "single-flight, duplicate-aware, and signal-safe")
@@ -27146,7 +27195,7 @@ def check_launch_retry_wrapper_singleflight_and_signal_safe(
     if violations and strict:
         raise MetaBugViolation(
             "LAUNCH RETRY SELF-PROTECTION VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nDispatch orchestration must fail closed. Add a per-label "
             "single-flight lock, a live Vast label-prefix guard, and "
             "process-group cleanup for child stages before launching lanes."
@@ -27206,7 +27255,7 @@ def check_modal_recovery_cli_guidance_current(
         if violations:
             print(f"  [modal-recovery-cli] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [modal-recovery-cli] OK: Modal recovery guidance uses "
                   "current CLI/API paths")
@@ -27214,7 +27263,7 @@ def check_modal_recovery_cli_guidance_current(
     if violations and strict:
         raise MetaBugViolation(
             "MODAL RECOVERY CLI GUIDANCE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nDetached Modal lanes must be recoverable with current "
             "Modal CLI/API commands. Use `experiments/modal_recover_lane.py` "
             "for FunctionCall polling and `modal app logs <app-id>` for logs."
@@ -27307,14 +27356,14 @@ def check_modal_cpu_auth_eval_is_advisory_only(
         if violations:
             print(f"  [modal-cpu-auth-advisory] {len(violations)} violation(s):")
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print("  [modal-cpu-auth-advisory] OK: Modal CPU auth eval is advisory-only")
 
     if violations and strict:
         raise MetaBugViolation(
             "MODAL CPU AUTH-EVAL ADVISORY-ONLY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nModal CPU/MPS auth output is diagnostic telemetry only. "
             "Rerun exact archive bytes through contest_auth_eval.py --device "
             "cuda before promotion, ranking, retirement, or stack claims."
@@ -27345,14 +27394,14 @@ def check_provider_deploy_contracts(
         if violations:
             print(f"  [provider-deploy-contracts] {len(violations)} violation(s):")
             for violation in violations:
-                print(f"    • {violation}")
+                print(f"    - {violation}")
         else:
             print("  [provider-deploy-contracts] OK: Modal/Kaggle/AWS/Azure/GCP contracts valid")
 
     if violations and strict:
         raise PreflightError(
             "PROVIDER DEPLOY CONTRACT VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nRemote provider surfaces must remain provider-agnostic, "
             "plan-only by default, lane-claimed before dispatch, "
             "custody-manifested, and unable to promote proxy/MPS score truth."
@@ -27366,7 +27415,7 @@ def check_provider_deploy_contracts(
 #
 # Background: Lane Ω-W-V2 stack on 2026-04-30 burnt $0.05 + 50s GPU and produced
 # score 1.07 vs Lane G v3 baseline 1.05. The codec saved -0.034 rate but cost
-# +0.052 PoseNet distortion (PoseNet went from 0.003455 → 0.005644, +63.4%).
+# +0.052 PoseNet distortion (PoseNet went from 0.003455 -> 0.005644, +63.4%).
 # Memory: feedback_owv2_savings_correction_conv_vs_full_renderer_20260430.md.
 #
 # Root cause: a codec module mutates renderer.bin weights but contains no
@@ -27394,7 +27443,7 @@ def check_provider_deploy_contracts(
 # module file). Test files, magic registries, library-only utilities, and
 # benchmark wrappers are exempted by name.
 #
-# Lands WARN-ONLY initially per the Lane A → STRICT promotion path because 4
+# Lands WARN-ONLY initially per the Lane A -> STRICT promotion path because 4
 # codec modules currently miss the tag (visible at audit time 2026-04-30):
 #   - src/tac/neural_weight_codec.py
 #   - src/tac/water_filling_codec_v2.py
@@ -27402,7 +27451,7 @@ def check_provider_deploy_contracts(
 #   - src/tac/block_fp_codec.py
 #   - src/tac/owv2_renderer_archive.py (only weak mention)
 # Promotion plan: each module gets the appropriate tag in a dedicated
-# follow-up commit (out of scope for the bug-class-hardening landing — adding
+# follow-up commit (out of scope for the bug-class-hardening landing - adding
 # the tags requires per-module audit by the codec subagent owners).
 #
 # Reference: feedback_owv2_savings_correction_conv_vs_full_renderer_20260430.md
@@ -27435,7 +27484,7 @@ _RENDERER_CODEC_EXEMPT_BASENAMES = frozenset({
     "arithmetic_qint_codec.py",
     "codec_magic_registry.py",
     "benchmark_codecs.py",
-    # Sensitivity wrapper (computes weights, doesn't apply them — consumers
+    # Sensitivity wrapper (computes weights, doesn't apply them - consumers
     # in renderer codecs MUST then prove they USE the weights).
     "neural_weight_codec_sensitivity.py",
     # Lossless container codecs (don't touch state_dict numerically).
@@ -27444,7 +27493,7 @@ _RENDERER_CODEC_EXEMPT_BASENAMES = frozenset({
     "mdl_bayesian_codec.py",
     # Pure VQ-VAE codebook (research code, not on the production renderer path).
     "vqvae_codec.py",
-    # Network codec (already heavily PoseNet-protected — verified 13 mentions
+    # Network codec (already heavily PoseNet-protected - verified 13 mentions
     # in audit). Stays in the scope but compliance is baked into its design.
 })
 
@@ -27457,7 +27506,7 @@ def _renderer_codec_files(repo_root: Path) -> list[Path]:
         return out
     # Top-level codec modules.
     out.extend(sorted(tac_dir.glob("*codec*.py")))
-    # OWV2 module — special case (incident origin).
+    # OWV2 module - special case (incident origin).
     owv2 = tac_dir / "owv2_renderer_archive.py"
     if owv2.is_file():
         out.append(owv2)
@@ -27475,7 +27524,7 @@ def _renderer_codec_touches_state_dict(text: str) -> bool:
 
     Looks for `state_dict()`, `state_dict[`, `.weight =`, `param.data =`,
     `module.weight`, etc. Uses regex over text; conservative (false-positives
-    OK at warn level — they get suppressed via tag or waiver).
+    OK at warn level - they get suppressed via tag or waiver).
     """
     patterns = [
         r"\bstate_dict\s*\(",
@@ -27560,7 +27609,7 @@ def check_renderer_codec_has_posenet_protection(
             f"without PoseNet sensitivity weighting. Override with "
             f"`# {_RENDERER_CODEC_WAIVER_MARKER}<reason>` ONLY when the "
             f"codec is provably score-neutral (e.g., bit-identical "
-            f"transcoding) — in which case empirical evidence MUST be cited."
+            f"transcoding) - in which case empirical evidence MUST be cited."
         )
 
     if verbose:
@@ -27570,9 +27619,9 @@ def check_renderer_codec_has_posenet_protection(
                 f"across {n_scanned} renderer-codec file(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 10:
-                print(f"    … and {len(violations) - 10} more")
+                print(f"    ... and {len(violations) - 10} more")
         else:
             print(
                 f"  [renderer-codec-posenet] OK: {n_scanned} "
@@ -27582,9 +27631,9 @@ def check_renderer_codec_has_posenet_protection(
     if violations and strict:
         raise PreflightError(
             "RENDERER-CODEC POSENET PROTECTION VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLane Ω-W-V2 (2026-04-30) shipped a codec that optimized "
-            "bytes-saved without PoseNet-sensitivity weighting — burnt $0.05 + "
+            "bytes-saved without PoseNet-sensitivity weighting - burnt $0.05 + "
             "50s GPU producing score 1.07 (regression vs Lane G v3 1.05). "
             "Add a PoseNet-protection tag (or explicit waiver) to every codec "
             "module that mutates renderer state_dict. Reference: "
@@ -27598,9 +27647,9 @@ def check_renderer_codec_has_posenet_protection(
 # ════════════════════════════════════════════════════════════════════════════
 #
 # Background: Lane GP v4 (B-spline + DCT + natural cubic spline candidates) all
-# plateaued at avg RMSE ≈ 1.15-1.59 (near signal std 1.5-2.3) because pose
+# plateaued at avg RMSE approximately 1.15-1.59 (near signal std 1.5-2.3) because pose
 # dims 1-5 of the actual Lane G v3 baseline `optimized_poses.pt` are
-# white-noise (`diff_std/signal_std ≈ 1.35` ≈ √2). Memory:
+# white-noise (`diff_std/signal_std approximately 1.35` approximately √2). Memory:
 # project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md.
 #
 # Check 91 (`check_pose_basis_fit_kill_acknowledged`) covers KILL-marker
@@ -27616,7 +27665,7 @@ def check_renderer_codec_has_posenet_protection(
 #     docstring/comment (operator escape hatch).
 #
 # Lands STRICT @ 0 violations: Lane GP v4's KILL markers cover all current
-# candidates (the kill-marker is the strongest possible deferral signal — it
+# candidates (the kill-marker is the strongest possible deferral signal - it
 # states "no fit is possible, here is the empirical proof"). New pose-fit
 # modules added without either a kill marker (Check 91) OR a white-noise
 # regression test will fail this check.
@@ -27630,7 +27679,7 @@ _WHITE_NOISE_TEST_TAG = "WHITE_NOISE_CHECK:"
 
 
 def _pose_fit_module_candidates(repo_root: Path) -> list[Path]:
-    """Same scope as Check 91 — pose-fit modules subject to the kill rule."""
+    """Same scope as Check 91 - pose-fit modules subject to the kill rule."""
     out: list[Path] = []
     exp = repo_root / "experiments"
     if exp.is_dir():
@@ -27749,7 +27798,7 @@ def check_pose_fit_module_has_white_noise_test(
                 f"across {n_scanned} pose-fit module(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [pose-fit-white-noise] OK: {n_scanned} pose-fit "
@@ -27759,10 +27808,10 @@ def check_pose_fit_module_has_white_noise_test(
     if violations and strict:
         raise PreflightError(
             "POSE-FIT WHITE-NOISE TEST VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nLane GP v4 KILL VERDICT (2026-04-30) proved the Lane G v3 "
             "pose trajectory is white-noise in dims 1-5; no smooth basis can "
-            "fit it below RMSE ≈ 1.2. Either acknowledge this with the "
+            "fit it below RMSE approximately 1.2. Either acknowledge this with the "
             "`LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:` marker (sister Check 91) "
             "OR ship a paired white-noise regression test that runs your "
             "module on the actual baseline poses and asserts the basis cannot "
@@ -27783,7 +27832,7 @@ def check_pose_fit_module_has_white_noise_test(
 # Multiple `commit_failed` outcomes from full-repo violations the subagent
 # never touched (e.g., MDL Bayesian quantizer-roundtrip-tests blocking
 # unrelated subagent commits). Memory:
-# project_swarm_recovery_state_20260430.md ("Class C — preflight thundering
+# project_swarm_recovery_state_20260430.md ("Class C - preflight thundering
 # herd").
 #
 # This check enforces the architectural pattern: any future change to
@@ -27822,7 +27871,7 @@ def check_preflight_hook_supports_changed_files_mode(
 
     Bug class motivation: pre-commit hook running whole-repo preflight on
     every commit produced a thundering-herd lock-contention pattern (max
-    wait 361s, max commit 160s — Class C in the bug-class audit). Refactor
+    wait 361s, max commit 160s - Class C in the bug-class audit). Refactor
     landed alongside this check uses changed-files mode by default + cache.
     This check guards against an accidental revert.
 
@@ -27868,7 +27917,7 @@ def check_preflight_hook_supports_changed_files_mode(
             f"{list(_PREFLIGHT_HOOK_FAST_MODE_TOKENS)}). The pre-commit "
             f"hook must support a changed-files-only mode to avoid the "
             f"thundering-herd lock contention bug class (max wait 361s "
-            f"observed 2026-04-30 — see project_swarm_recovery_state_20260430.md)."
+            f"observed 2026-04-30 - see project_swarm_recovery_state_20260430.md)."
         )
 
     if verbose:
@@ -27878,7 +27927,7 @@ def check_preflight_hook_supports_changed_files_mode(
                 f"violation(s):"
             )
             for v in violations:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [preflight-hook-changed-files] OK: hook supports "
@@ -27888,7 +27937,7 @@ def check_preflight_hook_supports_changed_files_mode(
     if violations and strict:
         raise PreflightError(
             "PREFLIGHT-HOOK CHANGED-FILES-MODE VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nThe pre-commit preflight hook MUST support changed-files-"
             "only mode (default) + PREFLIGHT_FULL=1 override + "
             "PREFLIGHT_HOOK_ENABLED=0 skip switch. Without changed-files "
@@ -27906,7 +27955,7 @@ def check_preflight_hook_supports_changed_files_mode(
 # ════════════════════════════════════════════════════════════════════════════
 #
 # Background: 2026-04-30 ~22:50 UTC the agent recorded a KILL verdict on
-# Lane 17 IMP based on a measurement bug — the dispatch script's "in-script
+# Lane 17 IMP based on a measurement bug - the dispatch script's "in-script
 # lightweight loop" ran for 3.47 seconds claiming 200 epochs of fine-tune.
 # The user's adversarial challenge ("was the IMP results reliable and is
 # that verdict actually hold up acording to etreme adversarail grand
@@ -27922,7 +27971,7 @@ def check_preflight_hook_supports_changed_files_mode(
 #     (case-insensitive)
 #   - body contains literal `VERDICT: KILL` (case-sensitive)
 #   - body contains a kill-class verdict literal: `FALSIFIED`, `DEAD`,
-#     `RETIRED` (case-sensitive — these are explicit verdict markers, not
+#     `RETIRED` (case-sensitive - these are explicit verdict markers, not
 #     incidental usage like "dead-flag bug" which is filtered by context)
 #
 # Required for every matched file (3 sections):
@@ -27943,7 +27992,7 @@ def check_preflight_hook_supports_changed_files_mode(
 #   - body contains `COUNCIL_REVIEW_SKIPPED_USER_OVERRIDE: <reason>` on
 #     a line of its own (the user-explicit override)
 #   - title contains `WITHDRAWN` (a kill-verdict that was reversed under
-#     adversarial scrutiny is the GOAL of this check, not a target — the
+#     adversarial scrutiny is the GOAL of this check, not a target - the
 #     reversal IS the adversarial outcome)
 #   - file timestamp suffix < 20260430 (legacy grandfather: this rule
 #     only binds for kill verdicts recorded on or after 2026-04-30, the
@@ -27954,7 +28003,7 @@ def check_preflight_hook_supports_changed_files_mode(
 # Bug-class lineage:
 #   - feedback_grand_council_imp_permanent_fix_review_20260430.md (DD3)
 #   - project_lane_17_imp_killed_cycle_0_198_regression_20260430.md
-#     (the test fixture — has WITHDRAWN in title, auto-passes)
+#     (the test fixture - has WITHDRAWN in title, auto-passes)
 
 # Inner-10 council member names (CLAUDE.md "## Council conduct").
 _PCC4_INNER_COUNCIL_NAMES = (
@@ -28081,7 +28130,7 @@ def _pcc4_count_named_members(text: str) -> int:
 def _pcc4_has_enumerated_item_after(text: str, header_literals: tuple[str, ...]) -> bool:
     """True if AT LEAST ONE bullet (`- `, `* `) or numbered list item
     (`1.`, `2.`, etc.) appears within 50 lines after any of the
-    given header literals. Conservative — false negatives are OK
+    given header literals. Conservative - false negatives are OK
     (operator just adds a bullet)."""
     lines = text.splitlines()
     for i, line in enumerate(lines):
@@ -28113,7 +28162,7 @@ def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
     name_lower = name.lower()
     # Filename glob match.
     for pat in _PCC4_KILL_FILENAME_GLOBS:
-        # Convert glob to regex-friendly: `project_*killed*.md` →
+        # Convert glob to regex-friendly: `project_*killed*.md` ->
         # check substring `killed` in lowercased name with `project_`
         # prefix.
         pat_lower = pat.lower()
@@ -28123,7 +28172,7 @@ def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
                 return True
     # Body literal match (case-sensitive). Per Round 1 council greenup,
     # exclude markdown table rows + lines inside fenced code blocks
-    # (`” ”` / `” ”python` etc.) — those are SELF-CITATIONS of other
+    # (`” ”` / `” ”python` etc.) - those are SELF-CITATIONS of other
     # files' kill verdicts, not a verdict about the current file.
     in_code_fence = False
     for line in text.splitlines():
@@ -28174,7 +28223,7 @@ def _pcc4_audit_one_file(path: Path) -> list[str]:
     named = _pcc4_count_named_members(text)
     if not has_council_header:
         missing.append(
-            f"missing Grand Council header — add one of "
+            f"missing Grand Council header - add one of "
             f"{list(_PCC4_GRAND_COUNCIL_HEADERS[:3])}"
         )
     if named < 5:
@@ -28190,7 +28239,7 @@ def _pcc4_audit_one_file(path: Path) -> list[str]:
     )
     if not has_consistency_header:
         missing.append(
-            f"missing internal-consistency check section — add one of "
+            f"missing internal-consistency check section - add one of "
             f"{list(_PCC4_INTERNAL_CONSISTENCY_HEADERS[:2])}"
         )
     elif not _pcc4_has_enumerated_item_after(
@@ -28208,7 +28257,7 @@ def _pcc4_audit_one_file(path: Path) -> list[str]:
     )
     if not has_reactivation_header:
         missing.append(
-            f"missing reactivation criteria — add one of "
+            f"missing reactivation criteria - add one of "
             f"{list(_PCC4_REACTIVATION_HEADERS[:3])}"
         )
     elif not _pcc4_has_enumerated_item_after(
@@ -28263,7 +28312,7 @@ def check_kill_memory_files_have_council_review(
         if not f.is_file() or f.suffix != ".md":
             continue
         if f.name == "MEMORY.md":
-            # Index file — never a kill record itself.
+            # Index file - never a kill record itself.
             continue
         candidates.append(f)
 
@@ -28277,9 +28326,9 @@ def check_kill_memory_files_have_council_review(
                 f"violation(s) (scanned {len(candidates)} memory files):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … and {len(violations) - 20} more")
+                print(f"    ... and {len(violations) - 20} more")
         else:
             print(
                 f"  [pcc4-kill-memory-review] OK: 0 violations "
@@ -28289,8 +28338,8 @@ def check_kill_memory_files_have_council_review(
     if violations and strict:
         raise PreflightError(
             "KILL/FALSIFIED MEMORY FILES MISSING GRAND COUNCIL REVIEW:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
-            + (f"\n  … and {len(violations) - 20} more"
+            + "\n".join(f"  - {v}" for v in violations[:20])
+            + (f"\n  ... and {len(violations) - 20} more"
                if len(violations) > 20 else "")
             + "\n\nFix: add the 3 required sections to each kill memory "
             "file:\n"
@@ -28315,7 +28364,7 @@ def check_kill_memory_files_have_council_review(
 # ════════════════════════════════════════════════════════════════════════════
 #
 # Background: 2026-04-30 ~22:50 UTC the IMP cycle 0 = 1.98 KILL was based on
-# stats.json claiming `{"epochs": 200, "elapsed_sec": 3.47}` — physically
+# stats.json claiming `{"epochs": 200, "elapsed_sec": 3.47}` - physically
 # impossible (200 epochs of fine-tune in 3.5s on any device). The producer-side
 # assertion landed in `experiments/train_imp_cycle.py` (~line 366):
 #
@@ -28335,7 +28384,7 @@ def check_kill_memory_files_have_council_review(
 #   - DD2: producer-side assertion AND preflight enforcement (defense in depth)
 #   - DD3: assertion gated on `not args.smoke and args.epochs > 0`
 #
-# Live audit (2026-04-30): 2 violations fixed in this landing wave —
+# Live audit (2026-04-30): 2 violations fixed in this landing wave -
 # `experiments/train_segmap.py` (line 456) and
 # `experiments/train_segmap_film_canvas.py` (line 337). With those fixed,
 # PCC3 lands at 0 live violations and goes straight to STRICT.
@@ -28365,8 +28414,8 @@ _PCC3_ELAPSED_KEYS: frozenset[str] = frozenset({
 # Same-line waiver markers. Authors who legitimately need to skip the check
 # (e.g. a smoke-only script that always reports elapsed=0) add one of these
 # adjacent to the json.dump call. Like the mature waiver patterns elsewhere
-# in this file, we require an EXPLICIT REASON after the colon — not a bare
-# tag — to prevent drive-by waiver inflation.
+# in this file, we require an EXPLICIT REASON after the colon - not a bare
+# tag - to prevent drive-by waiver inflation.
 _PCC3_WAIVER_RE = re.compile(
     r"#\s*PCC3-WAIVED(-INTERFUNCTION)?\s*:\s*\S",
 )
@@ -28403,7 +28452,8 @@ def _pcc3_dict_keys_in_call(call_node: ast.Call) -> set[str]:
 
 
 def _pcc3_find_dict_assigned_to(name: str, body: list[ast.stmt]) -> set[str] | None:
-    """Walk function body for a top-level `<name> = { ... }` assignment.
+    """Walk function body for a top-level `<name> = { ... }` or
+    `<name>: dict = { ... }` (Catalog #168 fix 2026-05-12) assignment.
     Returns the literal string keys if found, else None.
 
     Conservative: only matches simple top-level assignments; doesn't trace
@@ -28419,13 +28469,22 @@ def _pcc3_find_dict_assigned_to(name: str, body: list[ast.stmt]) -> set[str] | N
                             if isinstance(k, ast.Constant) and isinstance(k.value, str):
                                 keys.add(k.value)
                         return keys
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            t = node.target
+            if isinstance(t, ast.Name) and t.id == name:
+                if isinstance(node.value, ast.Dict):
+                    keys = set()
+                    for k in node.value.keys:
+                        if isinstance(k, ast.Constant) and isinstance(k.value, str):
+                            keys.add(k.value)
+                    return keys
     return None
 
 
 def _pcc3_function_has_assertion(
     fn: ast.AST, before_line: int,
 ) -> bool:
-    """True if `fn` contains at least one `assert` / `if … raise` /
+    """True if `fn` contains at least one `assert` / `if ... raise` /
     bare `Raise` whose subtree mentions BOTH an elapsed-like name AND
     an epochs-like name AND uses a Mult or Div op, occurring strictly
     BEFORE `before_line`.
@@ -28554,7 +28613,7 @@ def check_stats_json_internal_consistency(
                         f"{rel_s}:{lineno}: stats.json producer with epoch_keys="
                         f"{sorted(ep)} + elapsed_keys={sorted(el)} but no "
                         f"backing `elapsed >= epochs * MIN_SEC` assertion in "
-                        f"function `{fn.name}` — {snippet!r}"
+                        f"function `{fn.name}` - {snippet!r}"
                     )
 
     if verbose:
@@ -28564,9 +28623,9 @@ def check_stats_json_internal_consistency(
                 f"violation(s):"
             )
             for v in violations[:20]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 20:
-                print(f"    … and {len(violations) - 20} more")
+                print(f"    ... and {len(violations) - 20} more")
         else:
             print(
                 f"  [pcc3-stats-internal-consistency] OK: 0 violations "
@@ -28576,8 +28635,8 @@ def check_stats_json_internal_consistency(
     if violations and strict:
         raise MetaBugViolation(
             "STATS.JSON INTERNAL-CONSISTENCY VIOLATIONS:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
-            + (f"\n  … and {len(violations) - 20} more"
+            + "\n".join(f"  - {v}" for v in violations[:20])
+            + (f"\n  ... and {len(violations) - 20} more"
                if len(violations) > 20 else "")
             + "\n\nFix: each producer must include, BEFORE the json.dump call,\n"
             "  a runtime assertion of the form:\n"
@@ -28596,7 +28655,7 @@ def check_stats_json_internal_consistency(
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# 2026-05-01 PCC5-PCC8 — loop-session permanent extinction checks.
+# 2026-05-01 PCC5-PCC8 - loop-session permanent extinction checks.
 #
 # Each of the 4 checks below extincts a bug class that BURNED a Vast.ai
 # instance dispatch (~$0.30 + 5-10 min wall) on 2026-05-01. Reference:
@@ -28644,7 +28703,7 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
     Any of (1)-(3) satisfies the check.
 
     Exempt: scripts that don't run contest_auth_eval (build-only, training-
-    only, smoke-only) — the check is keyed on `contest_auth_eval` text.
+    only, smoke-only) - the check is keyed on `contest_auth_eval` text.
     """
     root = repo_root or REPO_ROOT
     violations: list[str] = []
@@ -28667,7 +28726,7 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
         "ensure_remote_uv.sh",
         "https://astral.sh/uv/install.sh",
     )
-    # Inheritance markers — script assumes setup_full.sh / canonical
+    # Inheritance markers - script assumes setup_full.sh / canonical
     # bootstrap (which DOES bootstrap uv) ran first. Acceptable but weaker
     # because operator MUST run setup_full.sh in the bootstrap chain.
     canonical_inheritance_markers = (
@@ -28686,7 +28745,7 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
         # before running contest_auth_eval.py.
         "remote_archive_only_eval.sh",
         # Some scripts call `command -v uv` then source the install if
-        # missing — that satisfies the contract by self-healing.
+        # missing - that satisfies the contract by self-healing.
         "command -v uv >/dev/null",
     )
     # Detect ACTUAL contest_auth_eval.py subprocess invocations, not
@@ -28710,7 +28769,7 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
         )
         # Accept either a real python invocation OR a delegation to a
         # remote_lane_*.sh / remote_archive_only_eval.sh that itself runs
-        # contest_auth_eval.py — the delegation is satisfied by the
+        # contest_auth_eval.py - the delegation is satisfied by the
         # `remote_archive_only_eval.sh` inheritance marker below.
         if not _invocation_re.search(non_comment) and "remote_archive_only_eval.sh" not in non_comment:
             continue
@@ -28737,7 +28796,7 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
                 f"contest-eval script(s) violate (of {n_scanned} scanned)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [pcc5-self-bootstrap-uv-ffmpeg] OK: {n_relevant} contest-eval "
@@ -28746,8 +28805,8 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
 
     if violations and strict:
         raise PreflightError(
-            "PCC5 self-bootstrap-uv-ffmpeg violations:\n  • "
-            + "\n  • ".join(violations)
+            "PCC5 self-bootstrap-uv-ffmpeg violations:\n  - "
+            + "\n  - ".join(violations)
             + "\n\nReference: feedback_loop_session_permanent_bug_class_"
             "extinction_20260501.md (Bug Class #1, #4)."
         )
@@ -28845,7 +28904,7 @@ def check_venv_creators_use_ensurepip(
                 f"across {n_with_venv} venv-create site(s) in {n_scanned} script(s)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [pcc6-ensurepip-after-venv] OK: {n_with_venv} venv-create "
@@ -28854,8 +28913,8 @@ def check_venv_creators_use_ensurepip(
 
     if violations and strict:
         raise PreflightError(
-            "PCC6 ensurepip-after-venv-create violations:\n  • "
-            + "\n  • ".join(violations)
+            "PCC6 ensurepip-after-venv-create violations:\n  - "
+            + "\n  - ".join(violations)
             + "\n\nReference: feedback_loop_session_permanent_bug_class_"
             "extinction_20260501.md (Bug Class #3)."
         )
@@ -28884,7 +28943,7 @@ _DISK_FLAG_LITERAL_RE = re.compile(
 # rather than a literal: `"--disk", str(int(disk_gb))` or
 # `"--disk", str(int(spec.disk_gb))`. The presence of --disk + non-literal
 # value means we trust the upstream `disk_gb`/`spec.disk_gb` parameter
-# default — which we ALSO check via the dataclass-default scanner below.
+# default - which we ALSO check via the dataclass-default scanner below.
 _DISK_FLAG_VAR_RE = re.compile(
     r"""(?x)
     (?: --disk \s* | "--disk" \s* , \s* | '--disk' \s* , \s* )
@@ -28972,7 +29031,7 @@ def check_vastai_create_uses_min_disk_60(
                 if var_match:
                     expr = var_match.group("expr")
                     if "disk" in expr.lower() or expr.isupper():
-                        # Pass — the disk value is parameterized; the
+                        # Pass - the disk value is parameterized; the
                         # parameter default is checked elsewhere (e.g.,
                         # InstanceSpec.disk_gb default in src/tac/deploy/base.py
                         # was bumped to 60 in this commit).
@@ -29006,7 +29065,7 @@ def check_vastai_create_uses_min_disk_60(
                 f"call(s) violate (of {n_scanned} scanned files)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [pcc7-vastai-disk-60] OK: {n_creates} create call(s) "
@@ -29015,8 +29074,8 @@ def check_vastai_create_uses_min_disk_60(
 
     if violations and strict:
         raise PreflightError(
-            "PCC7 vastai-create-disk-60 violations:\n  • "
-            + "\n  • ".join(violations)
+            "PCC7 vastai-create-disk-60 violations:\n  - "
+            + "\n  - ".join(violations)
             + "\n\nReference: feedback_loop_session_permanent_bug_class_"
             "extinction_20260501.md (Bug Class #6)."
         )
@@ -29035,7 +29094,7 @@ def check_remote_chain_drivers_clean_inflated_per_candidate(
     Bug class extincted (2026-05-01): a chain driver that leaves
     `LOG_DIR/eval_work/inflated/` from candidate N around when starting
     candidate N+1 piles 3.6 GB per candidate. After 6 candidates that's
-    21.6 GB in /workspace alone — combined with uv torch wheels (5 GB) the
+    21.6 GB in /workspace alone - combined with uv torch wheels (5 GB) the
     30/35 GB Vast.ai disk fills up mid-chain.
 
     Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md
@@ -29068,7 +29127,7 @@ def check_remote_chain_drivers_clean_inflated_per_candidate(
             text = path.read_text(errors="ignore")
         except OSError:
             continue
-        # Strip whole-line comments for the chain-detection logic only —
+        # Strip whole-line comments for the chain-detection logic only -
         # the waiver marker IS in a comment so it must remain visible.
         non_comment = "\n".join(
             line if not line.lstrip().startswith("#") else ""
@@ -29115,7 +29174,7 @@ def check_remote_chain_drivers_clean_inflated_per_candidate(
                 f"driver(s) violate (of {n_scanned} scanned)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [pcc8-chain-cleanup] OK: {n_chains} chain driver(s) "
@@ -29124,8 +29183,8 @@ def check_remote_chain_drivers_clean_inflated_per_candidate(
 
     if violations and strict:
         raise PreflightError(
-            "PCC8 chain-driver-per-candidate-cleanup violations:\n  • "
-            + "\n  • ".join(violations)
+            "PCC8 chain-driver-per-candidate-cleanup violations:\n  - "
+            + "\n  - ".join(violations)
             + "\n\nReference: feedback_loop_session_permanent_bug_class_"
             "extinction_20260501.md (Bug Class #7)."
         )
@@ -29133,12 +29192,12 @@ def check_remote_chain_drivers_clean_inflated_per_candidate(
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# HARDEN-2026-05-08 — preflight checks for the Path B step 5/6 ADMM tools +
+# HARDEN-2026-05-08 - preflight checks for the Path B step 5/6 ADMM tools +
 # cross-paradigm composition + 137,531 B candidate (commit 8d33d5c1).
 #
 # Five new checks per the HARDEN subagent mandate. All start `strict=False`;
 # each lands at 0 live violations on the current tree, so the wiring at the
-# call site flips them STRICT immediately (per the Lane A → strict pattern
+# call site flips them STRICT immediately (per the Lane A -> strict pattern
 # in commit 7f2740e4).
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -29233,7 +29292,7 @@ def check_admm_lagrangian_bisection_convergent(
         path = root / rel
         if not path.is_file():
             violations.append(
-                f"{rel}: declared ADMM bisection tool MISSING — was it "
+                f"{rel}: declared ADMM bisection tool MISSING - was it "
                 f"renamed or deleted? Update _ADMM_BISECTION_TOOLS."
             )
             continue
@@ -29276,7 +29335,7 @@ def check_admm_lagrangian_bisection_convergent(
                 f"across {n_scanned} bisection tool(s)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [harden-admm-bisection] OK: {n_scanned} bisection tool(s) "
@@ -29284,8 +29343,8 @@ def check_admm_lagrangian_bisection_convergent(
             )
     if violations and strict:
         raise PreflightError(
-            "ADMM LAGRANGIAN BISECTION CONVERGENCE VIOLATIONS:\n  • "
-            + "\n  • ".join(violations)
+            "ADMM LAGRANGIAN BISECTION CONVERGENCE VIOLATIONS:\n  - "
+            + "\n  - ".join(violations)
             + "\n\nReference: HARDEN-2026-05-08 mandate; bisection without a "
             "max-iter cap is a SIGURG-magnet."
         )
@@ -29301,7 +29360,7 @@ def check_codec_pipeline_op_order_deterministic(
     """STRICT: ``CodecPipeline.encode`` must be byte-deterministic for a
     fixed input + fixed op order.
 
-    AST-level scan of :mod:`tac.codec_pipeline` for the encode method body —
+    AST-level scan of :mod:`tac.codec_pipeline` for the encode method body -
     requires that the manifest emit a ``ts_iso`` field (timestamp) but that
     the actual blob bytes are NOT a function of any wall-clock or random
     source (``time.time``, ``random.``, ``os.urandom``, ``uuid.uuid``).
@@ -29323,7 +29382,7 @@ def check_codec_pipeline_op_order_deterministic(
     # propagates into the `out` bytearray that constitutes the blob. The
     # canonical CodecPipeline.encode uses `time.time()` only for the manifest
     # sidecar (`started_at_utc`, `elapsed_seconds`), which is NOT part of the
-    # blob bytes — so AST scoping is the only way to reject true offenders.
+    # blob bytes - so AST scoping is the only way to reject true offenders.
     violations: list[str] = []
     NONDETERMINISTIC_NAMES = {
         ("time", "time"): "time.time()",
@@ -29374,13 +29433,21 @@ def check_codec_pipeline_op_order_deterministic(
             if label is None:
                 continue
             nondet_call_lines.append((node.lineno, label))
-            # Find enclosing Assign/AugAssign target
+            # Find enclosing Assign/AnnAssign/AugAssign target.
+            # Catalog #168 fix 2026-05-12: also handle annotated assigns like
+            # `result: bytes = uuid.uuid4()` to avoid false-negative on the
+            # determinism guard.
             for parent in ast.walk(fn):
                 if isinstance(parent, ast.Assign):
                     if any(node is c for c in ast.walk(parent.value)):
                         for tgt in parent.targets:
                             if isinstance(tgt, ast.Name):
                                 tainted_names.add(tgt.id)
+                elif (isinstance(parent, ast.AnnAssign)
+                      and parent.value is not None):
+                    if any(node is c for c in ast.walk(parent.value)):
+                        if isinstance(parent.target, ast.Name):
+                            tainted_names.add(parent.target.id)
         # Check propagation: any tainted name appearing in a BinOp or AugAssign
         # whose other side is the bytes-blob (out, blob, final, payload).
         BLOB_SINKS = {"out", "blob", "final", "payload"}
@@ -29416,7 +29483,7 @@ def check_codec_pipeline_op_order_deterministic(
                 f"violation(s) in CodecPipeline source"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [harden-codec-pipeline-determinism] OK: no time/random/"
@@ -29424,8 +29491,8 @@ def check_codec_pipeline_op_order_deterministic(
             )
     if violations and strict:
         raise PreflightError(
-            "CODEC PIPELINE OP ORDER DETERMINISM VIOLATIONS:\n  • "
-            + "\n  • ".join(violations)
+            "CODEC PIPELINE OP ORDER DETERMINISM VIOLATIONS:\n  - "
+            + "\n  - ".join(violations)
         )
     return violations
 
@@ -29471,7 +29538,7 @@ def check_per_tensor_K_side_info_matches_decoder_expectation(
         path = root / rel
         if not path.is_file():
             violations.append(
-                f"{rel}: declared per-tensor-K decoder MISSING — was the "
+                f"{rel}: declared per-tensor-K decoder MISSING - was the "
                 f"candidate dir deleted? Update _PER_TENSOR_K_DECODER_PATHS."
             )
             continue
@@ -29486,7 +29553,7 @@ def check_per_tensor_K_side_info_matches_decoder_expectation(
         if 'struct.unpack("<I"' not in text and "struct.unpack('<I'" not in text:
             violations.append(
                 f"{rel}: decoder MUST use `struct.unpack(\"<I\", ...)` for "
-                f"the section_total prefix — uint32 LE wire format"
+                f"the section_total prefix - uint32 LE wire format"
             )
 
     # Encoder side: each declared encoder must produce the matching prefix.
@@ -29494,7 +29561,7 @@ def check_per_tensor_K_side_info_matches_decoder_expectation(
         path = root / rel
         if not path.is_file():
             violations.append(
-                f"{rel}: declared per-tensor-K encoder MISSING — was it "
+                f"{rel}: declared per-tensor-K encoder MISSING - was it "
                 f"renamed? Update _PER_TENSOR_K_ENCODER_PATHS."
             )
             continue
@@ -29512,7 +29579,7 @@ def check_per_tensor_K_side_info_matches_decoder_expectation(
                 f"violation(s) across {n_pairs} encoder/decoder pair(s)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [harden-per-tensor-K-wireformat] OK: {n_pairs} "
@@ -29520,8 +29587,8 @@ def check_per_tensor_K_side_info_matches_decoder_expectation(
             )
     if violations and strict:
         raise PreflightError(
-            "PER-TENSOR-K WIRE FORMAT VIOLATIONS:\n  • "
-            + "\n  • ".join(violations)
+            "PER-TENSOR-K WIRE FORMAT VIOLATIONS:\n  - "
+            + "\n  - ".join(violations)
         )
     return violations
 
@@ -29615,7 +29682,7 @@ def check_evidence_row_has_falsification_scope_when_negative(
                 technique = row.get("technique", "<unknown>")
                 violations.append(
                     f"{rel}:{lineno}: technique={technique!r} sets "
-                    f"family_falsified=True — per CLAUDE.md \"KILL is the "
+                    f"family_falsified=True - per CLAUDE.md \"KILL is the "
                     f"LAST RESORT\", this requires research-path exhaustion + "
                     f"grand-council consensus + reactivation criteria. "
                     f"Default for one-config failure is "
@@ -29628,7 +29695,7 @@ def check_evidence_row_has_falsification_scope_when_negative(
                 f"violation(s) across {n_rows} row(s) / {n_files} file(s)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [harden-falsification-scope] OK: {n_rows} evidence "
@@ -29636,8 +29703,8 @@ def check_evidence_row_has_falsification_scope_when_negative(
             )
     if violations and strict:
         raise PreflightError(
-            "EVIDENCE ROW FALSIFICATION SCOPE VIOLATIONS:\n  • "
-            + "\n  • ".join(violations)
+            "EVIDENCE ROW FALSIFICATION SCOPE VIOLATIONS:\n  - "
+            + "\n  - ".join(violations)
             + "\n\nReference: CLAUDE.md "
             "forbidden_premature_class_level_falsification + "
             "\"KILL is the LAST RESORT\"."
@@ -29721,7 +29788,7 @@ def check_137531_candidate_decoder_path_wired(
                 f"across {rows_with_137531} target row(s)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
         else:
             print(
                 f"  [harden-137531-decoder] OK: {rows_with_137531} "
@@ -29729,8 +29796,8 @@ def check_137531_candidate_decoder_path_wired(
             )
     if violations and strict:
         raise PreflightError(
-            "137531 B CANDIDATE DECODER WIRING VIOLATIONS:\n  • "
-            + "\n  • ".join(violations)
+            "137531 B CANDIDATE DECODER WIRING VIOLATIONS:\n  - "
+            + "\n  - ".join(violations)
             + "\n\nReference: HARDEN-2026-05-08 mandate. The cross-paradigm "
             "byte-anchor evidence row must point at a wired decoder OR "
             "explicitly mark itself pending the WIRE-DECODER subagent."
@@ -29798,15 +29865,15 @@ def _run_bugclass_scanner(
         if violations:
             print(f"  [{label}] {len(violations)} violation(s)")
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 5:
-                print(f"    … (+{len(violations) - 5} more)")
+                print(f"    ... (+{len(violations) - 5} more)")
         else:
             print(f"  [{label}] OK")
     if violations and strict:
         raise error_class(
-            f"{label.upper()} VIOLATIONS:\n  • "
-            + "\n  • ".join(violations[:50])
+            f"{label.upper()} VIOLATIONS:\n  - "
+            + "\n  - ".join(violations[:50])
         )
     return violations
 
@@ -29817,7 +29884,7 @@ def check_encoder_decoder_dequantization_roundtrip_tested(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B1 — encoder/decoder dequantization roundtrip test discipline.
+    """B1 - encoder/decoder dequantization roundtrip test discipline.
 
     Bug class: encoder uses ``(rounded / N) * scale`` while paired runtime
     decoder uses ``rounded * scale`` (or any other quantization-arithmetic
@@ -29849,7 +29916,7 @@ def check_evidence_row_archive_bytes_has_provenance(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B2 — phantom byte-proxy claim discipline.
+    """B2 - phantom byte-proxy claim discipline.
 
     Bug class: evidence row claims ``empirical_archive_bytes`` from
     ``len(blob)`` of an unwrapped encode without ZIP packaging + inflate
@@ -29880,7 +29947,7 @@ def check_build_manifest_archive_custody_clean(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B3 — build_manifest archive custody discipline.
+    """B3 - build_manifest archive custody discipline.
 
     Bug class: ``build_manifest.json`` references ``archive_relpath`` but the
     archive is gitignored AND no CI rebuild-and-SHA-assert smoke exists.
@@ -29910,7 +29977,7 @@ def check_admm_naming_matches_iterative_consensus_implementation(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B4 — naming-vs-implementation drift ("ADMM-named-but-not-ADMM").
+    """B4 - naming-vs-implementation drift ("ADMM-named-but-not-ADMM").
 
     Bug class: a class/function/file named ``ADMM`` or ``primal_dual``
     implements λ-bisection over independent per-tensor argmin (NOT iterative
@@ -29944,7 +30011,7 @@ def check_inflate_wire_format_no_dead_bytes(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B5 — inflate wire-format dead-bytes discipline.
+    """B5 - inflate wire-format dead-bytes discipline.
 
     Bug class: ``inflate.py`` reads N-byte side-info from the wire format
     that's never used in state-dict assembly. Real instance: ADMM step 6
@@ -29973,7 +30040,7 @@ def check_predispatch_retired_config_warning(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B6 — retired-negative config redispatch guard.
+    """B6 - retired-negative config redispatch guard.
 
     Bug class: a config previously dispatched with
     ``measured_config_status=measured_config_retired_exact_cuda_negative``
@@ -29987,7 +30054,7 @@ def check_predispatch_retired_config_warning(
     Static check: every retired row must carry
     ``dispatch_blockers=['reactivation_required_before_new_dispatch']`` AND
     a non-empty ``reactivation_criteria``. Lands at 0 live violations
-    (canonical retired row already has guards) — ships STRICT directly.
+    (canonical retired row already has guards) - ships STRICT directly.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_predispatch_retired_config_warning.py",
@@ -30005,11 +30072,11 @@ def check_public_pr_intake_clones_pristine(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Check 109 — public PR intake clones MUST be pristine bytes-identical to upstream.
+    """Check 109 - public PR intake clones MUST be pristine bytes-identical to upstream.
 
     Bug class: a scanner finding inside a public PR intake clone is "fixed"
     by adding an inline waiver comment to the clone's source file. This
-    corrupts source provenance — later replay/source audits no longer match
+    corrupts source provenance - later replay/source audits no longer match
     the public PR head, and preflight cleanliness becomes dependent on
     local-only edits not present upstream. Public PR clones under
     ``experiments/results/public_pr*_intake_*/`` are forensic inputs for
@@ -30052,7 +30119,7 @@ def check_public_pr_intake_clones_pristine(
     cache_updates: dict[str, object | None] = {}
 
     # Discovery: every directory matching public_pr*_intake_* under
-    # experiments/results/ (recursively, up to 4 levels deep) — covers
+    # experiments/results/ (recursively, up to 4 levels deep) - covers
     # the canonical layouts:
     #   experiments/results/public_pr*_intake_*/source/
     #   experiments/results/public_pr*_intake_*/repo/
@@ -30284,7 +30351,7 @@ def check_public_pr_intake_clones_pristine(
         # Codex verification HIGH-1 (2026-05-08 evening): the original gate
         # only flagged text edits via `git diff --numstat` and silently let
         # untracked files + binary/LFS payload mutations pass. That broke
-        # public-frontier provenance custody — a clone could carry added
+        # public-frontier provenance custody - a clone could carry added
         # waiver files or mutated binary payloads and still pass strict.
         # Fix: any non-empty `git status --short` is a violation by default.
         # The single explicit exception is git-LFS smudge state (pointer
@@ -30390,7 +30457,7 @@ def check_public_pr_intake_clones_pristine(
                 f"{len(binary_or_lfs_edits)} binary/LFS payload edit(s): "
                 f"[{', '.join(binary_or_lfs_edits[:3])}"
                 + ("..." if len(binary_or_lfs_edits) > 3 else "")
-                + "] (NOT exempted by `git lfs status` — these are real "
+                + "] (NOT exempted by `git lfs status` - these are real "
                 "payload mutations, not pointer-vs-content noise)"
             )
         if untracked_or_other:
@@ -30401,7 +30468,7 @@ def check_public_pr_intake_clones_pristine(
                 + "] (e.g. local-only waiver files corrupt forensic state)"
             )
         violations.append(
-            f"{rel}: dirty git status — public PR intake clone has "
+            f"{rel}: dirty git status - public PR intake clone has "
             + "; ".join(parts_msg)
             + f". Restore via `git -C {rel} checkout -- .` (and remove "
             "untracked files). Put any waiver rationale in "
@@ -30415,7 +30482,7 @@ def check_public_pr_intake_clones_pristine(
             f"across {n_scanned} scanned ({n_skipped_not_git} skipped non-git):"
         )
         for v in violations:
-            print(f"    • {v}")
+            print(f"    - {v}")
     elif verbose:
         print(
             f"  [public-pr-intake-pristine] OK: {n_scanned} clone(s) clean "
@@ -30428,7 +30495,7 @@ def check_public_pr_intake_clones_pristine(
             "to upstream PR head. Inline waivers in clone source files "
             "corrupt source provenance and break replay/audit. Found "
             f"{len(violations)} dirty clone(s):\n"
-            + "\n".join(f"  • {v}" for v in violations)
+            + "\n".join(f"  - {v}" for v in violations)
             + "\n\nRevert with `git -C <clone> checkout -- .`. Put any "
             "legitimate waiver rationale in "
             "`reverse_engineering/public_pr_waiver_manifest.json` "
@@ -30444,7 +30511,7 @@ def check_pr101_tools_torch_load_allowlist(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B8 — torch.load(weights_only=False) allowlist for cross-paradigm tools.
+    """B8 - torch.load(weights_only=False) allowlist for cross-paradigm tools.
 
     Bug class: cross-paradigm encoder tools (``tools/pr101_*.py``,
     ``tools/build_admm_*.py``, ``tools/build_cross_paradigm_*.py``) call
@@ -30467,7 +30534,7 @@ def check_pr101_tools_torch_load_allowlist(
     (``tools/pr101_*.py`` + ``tools/build_admm_*.py`` +
     ``tools/build_cross_paradigm_*.py``) are all STILL-ACTIVE infrastructure
     (~36 dedicated tests, 9 lane-registry entries, 2 preflight constants
-    requiring file existence — including ``_ADMM_BISECTION_TOOLS`` for
+    requiring file existence - including ``_ADMM_BISECTION_TOOLS`` for
     ``check_admm_lagrangian_bisection_convergent``). DELETE-OK count: 0.
     All 31 known violations annotated with the canonical waiver
     ``# WEIGHTS_ONLY_FALSE_OK:trusted-PR101-substrate-state-dict-local-artifact``
@@ -30494,7 +30561,7 @@ def check_rel_err_definition_canonical(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """B9 — rel_err canonical-definition discipline.
+    """B9 - rel_err canonical-definition discipline.
 
     Bug class: re-implementing ``rel_err`` inline silently in heterogeneous
     forms (L1 / L2 / RMS / per-element percentage) and feeding the result
@@ -30541,16 +30608,16 @@ def check_rel_err_definition_canonical(
 # as B1-B8). All starts at strict=False per the warn-then-flip promotion path.
 #
 # Live counts on landing:
-#   Gate  1 (representation promotion card)              0  → STRICT
-#   Gate  2 (no naked bytes)                             0  → STRICT
-#   Gate  3 (parser-section manifest)                    0  → STRICT
+#   Gate  1 (representation promotion card)              0  -> STRICT
+#   Gate  2 (no naked bytes)                             0  -> STRICT
+#   Gate  3 (parser-section manifest)                    0  -> STRICT
 #   Gate  4 (export-first)                               2  warn (backfill required)
-#   Gate  5 (runtime closure)                            0  → STRICT
-#   Gate  6 (mask/pose coupling)                         0  → STRICT
-#   Gate  7 (no-op + provenance)                         0  → STRICT
-#   Gate  8 (exact-evidence frontier promotion)          0  → STRICT
-#   Gate  9 (blocker ownership)                          0  → STRICT
-#   Gate 10 (stack promotion)                            0  → STRICT
+#   Gate  5 (runtime closure)                            0  -> STRICT
+#   Gate  6 (mask/pose coupling)                         0  -> STRICT
+#   Gate  7 (no-op + provenance)                         0  -> STRICT
+#   Gate  8 (exact-evidence frontier promotion)          0  -> STRICT
+#   Gate  9 (blocker ownership)                          0  -> STRICT
+#   Gate 10 (stack promotion)                            0  -> STRICT
 #
 # Memory ref:
 # ``feedback_representation_integration_gates_landed_20260508.md`` (this PR).
@@ -30562,7 +30629,7 @@ def check_gate1_representation_promotion_card(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 1 — representation promotion card schema discipline.
+    """Gate 1 - representation promotion card schema discipline.
 
     Required fields: ``representation_name``, ``target_modes``,
     ``source_artifact``, ``archive_builder``, ``inflate_consumer``,
@@ -30591,7 +30658,7 @@ def check_gate2_no_naked_bytes(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 2 — no naked bytes (byte-closure for score-claiming rows).
+    """Gate 2 - no naked bytes (byte-closure for score-claiming rows).
 
     Rule: if a ledger row sets ``score_claim=true`` /
     ``ready_for_exact_eval_dispatch=true`` / positive
@@ -30601,7 +30668,7 @@ def check_gate2_no_naked_bytes(
 
     Sister gate to B2 (``check_evidence_row_archive_bytes_has_provenance``):
     B2 catches phantom byte counts; this gate catches phantom score
-    claims that lack archive bytes. Live count: 0 → STRICT.
+    claims that lack archive bytes. Live count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate2_no_naked_bytes.py",
@@ -30619,14 +30686,14 @@ def check_gate3_parser_section_manifest(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 3 — parser-section manifest required for HNeRV-family packets.
+    """Gate 3 - parser-section manifest required for HNeRV-family packets.
 
     For monolithic HNeRV-family payloads, a parser manifest with offsets,
     lengths, section names, section SHA-256s, entropy estimates, and
     old/new section boundaries is required.
 
     Vendored public-PR intakes are excluded (they ship read-only). Live
-    count: 0 → STRICT.
+    count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate3_parser_section_manifest.py",
@@ -30644,7 +30711,7 @@ def check_gate4_export_first(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 4 — export-first (declare export format before long training).
+    """Gate 4 - export-first (declare export format before long training).
 
     Rule: trainable renderer / implicit representation MUST declare its
     export format BEFORE long training. Non-FP4A / non-int4 variants are
@@ -30671,12 +30738,12 @@ def check_gate5_runtime_closure(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 5 — runtime closure (clean-env inflate before dispatch).
+    """Gate 5 - runtime closure (clean-env inflate before dispatch).
 
     Two complementary scans: build_manifests claiming dispatch must
     record runtime closure evidence; public-PR replay rows marked
     negative/retired must classify failure_class (runtime blocker vs
-    method negative). Live count: 0 → STRICT.
+    method negative). Live count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate5_runtime_closure.py",
@@ -30694,14 +30761,14 @@ def check_gate6_mask_pose_coupling(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 6 — mask/pose coupling (mask replacements record pose impact).
+    """Gate 6 - mask/pose coupling (mask replacements record pose impact).
 
     Mask representation replacements MUST record decoded mask SHA-256s,
     mask disagreement, pose-regeneration status, geometry diagnostics,
     and component-risk plan. Smaller mask bytes alone are insufficient.
 
     Enforced only on rows that claim score/dispatch (proxy/planning
-    rows are exempt). Live count: 0 → STRICT.
+    rows are exempt). Live count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate6_mask_pose_coupling.py",
@@ -30719,12 +30786,12 @@ def check_gate7_no_op_provenance(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 7 — no-op + provenance (byte-level claims need proof).
+    """Gate 7 - no-op + provenance (byte-level claims need proof).
 
     Byte-level transforms (repack / brotli_q_search / codec_swap)
     claiming dispatch MUST record old/new archive SHA-256, payload
     change proof, and runtime consumption proof. Sister gate to B5
-    (inflate-side dead-bytes). Live count: 0 → STRICT.
+    (inflate-side dead-bytes). Live count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate7_no_op_provenance.py",
@@ -30742,13 +30809,13 @@ def check_gate8_exact_evidence(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 8 — exact-evidence (frontier-promotion contract).
+    """Gate 8 - exact-evidence (frontier-promotion contract).
 
     Promotion to frontier status REQUIRES archive_bytes + sha256, runtime
     manifest, exact_eval_command, hardware, sample_count >= 600,
     components (seg/pose/rate), recomputed_score, log_path, and
     dispatch_claim_status. Anything else must lower its evidence grade
-    tag. Live count: 0 → STRICT.
+    tag. Live count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate8_exact_evidence.py",
@@ -30766,13 +30833,13 @@ def check_gate9_blocker_ownership(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 9 — blocker ownership (no quietly-blocked learned-codec lanes).
+    """Gate 9 - blocker ownership (no quietly-blocked learned-codec lanes).
 
     Blocked learned-codec lanes (NeRV/HNeRV/CoolChic/C3/Ballé/hyperprior)
     MUST record one of: (active_owner+unblock_experiment),
     (exact_negative+reactivation_criteria),
     compliance_impossibility_proof, or terminal_retirement_note. Live
-    count: 0 → STRICT.
+    count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate9_blocker_ownership.py",
@@ -30790,13 +30857,13 @@ def check_gate10_stack_promotion(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Gate 10 — stack promotion (HStack/VStack/cross-paradigm contract).
+    """Gate 10 - stack promotion (HStack/VStack/cross-paradigm contract).
 
     Stack rows claiming dispatch MUST record archive_boundary,
     side_information, latent_streams, k_scale_tables,
     decoder_overhead_bytes, runtime_consumer, and exact_eval_plan.
     Proxy/byte-anchor rows MUST set score_claim=false AND
-    ready_for_exact_eval_dispatch=false. Live count: 0 → STRICT.
+    ready_for_exact_eval_dispatch=false. Live count: 0 -> STRICT.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate10_stack_promotion.py",
@@ -30808,8 +30875,8 @@ def check_gate10_stack_promotion(
     )
 
 
-# ── Dual-axis solver ranking — added 2026-05-08 per CLAUDE.md
-# "Submission auth eval — BOTH CPU AND CUDA"
+# ── Dual-axis solver ranking - added 2026-05-08 per CLAUDE.md
+# "Submission auth eval - BOTH CPU AND CUDA"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -31001,10 +31068,10 @@ def check_solvers_use_dual_axis_ranking(
 ) -> list[str]:
     """Catch solver/recommender outputs missing CUDA + CPU axis predictions.
 
-    Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
+    Per CLAUDE.md "Submission auth eval - BOTH CPU AND CUDA, ON 1:1
     CONTEST-COMPLIANT HARDWARE", the contest leaderboard ranks by CPU
-    eval. Empirical sweep (HNeRV cluster 2026-05-08) showed R_pose ≈ 5.04
-    + R_seg ≈ 1.17 + score_gap ≈ 0.033. A solver row carrying only the
+    eval. Empirical sweep (HNeRV cluster 2026-05-08) showed R_pose approximately 5.04
+    + R_seg approximately 1.17 + score_gap approximately 0.033. A solver row carrying only the
     legacy ``predicted_score`` key is silently using a CUDA-axis proxy.
 
     This check scans the solver/recommender/orchestrator surfaces for
@@ -31023,14 +31090,14 @@ def check_solvers_use_dual_axis_ranking(
     violations = _scan_dual_axis_ranking_violations(root)
     if verbose and violations:
         print(
-            f"  [dual-axis-ranking] {len(violations)} violation(s) — "
+            f"  [dual-axis-ranking] {len(violations)} violation(s) - "
             "rows missing predicted_cuda_score/predicted_cpu_score "
             "companion keys:"
         )
         for v in violations[:20]:
-            print(f"    • {v}")
+            print(f"    - {v}")
         if len(violations) > 20:
-            print(f"    • ... and {len(violations) - 20} more")
+            print(f"    - ... and {len(violations) - 20} more")
     elif verbose:
         print(
             "  [dual-axis-ranking] OK: solver surfaces declare CUDA + CPU "
@@ -31039,9 +31106,9 @@ def check_solvers_use_dual_axis_ranking(
     if violations and strict:
         raise PreflightError(
             "DUAL-AXIS-RANKING violations:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
-            + ("\n  • ..." if len(violations) > 20 else "")
-            + "\n\nPer CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA': "
+            + "\n".join(f"  - {v}" for v in violations[:20])
+            + ("\n  - ..." if len(violations) > 20 else "")
+            + "\n\nPer CLAUDE.md 'Submission auth eval - BOTH CPU AND CUDA': "
             "every solver row must distinguish predicted_cuda_score vs "
             "predicted_cpu_score. Add the companion or annotate the row "
             "with '# DUAL_AXIS_RANKING_WAIVED:<reason>'."
@@ -31067,18 +31134,18 @@ def check_recovery_metadata_append_only(
       * Schema is ``{schema_version: "recovery_metadata.v2_attempts",
         attempts: [...]}`` with ``attempts`` non-empty (legacy single-record
         files are warned but not refused, for backward-compat during the
-        v1→v2 migration window).
+        v1->v2 migration window).
       * Every attempt has required fields: ``attempt_kind``,
         ``started_at_utc``, ``completed_at_utc``, ``elapsed_seconds``,
         ``ssh_reachable``, ``archive_zip``, ``artifacts``.
-      * No two attempts share the same ``started_at_utc`` — that would
+      * No two attempts share the same ``started_at_utc`` - that would
         suggest in-place edit (the failure mode codex caught).
       * Every attempt past the first ("revisit"/"force-rerun" kinds) MUST
         carry provenance: either ``command_log_path`` non-null OR
         ``substantive_change_from_prior_attempt`` non-null. This blocks
         the "no-op rerun timestamp churn" anti-pattern.
 
-    Forbidden pattern: "recovery-metadata-timestamp-churn" — overwriting
+    Forbidden pattern: "recovery-metadata-timestamp-churn" - overwriting
     historical recovery timestamps in place. The fix lands in
     ``tools/recover_lane_artifacts.py::_write_report`` with append-only
     semantics keyed by ``started_at_utc``. Memory:
@@ -31135,7 +31202,7 @@ def check_recovery_metadata_append_only(
                 )
             if legacy_marker:
                 violations.append(
-                    f"{rel}: legacy v1 single-record schema — must migrate "
+                    f"{rel}: legacy v1 single-record schema - must migrate "
                     "to schema_version='recovery_metadata.v2_attempts' with "
                     "non-empty attempts[]. Run `tools/recover_lane_artifacts.py "
                     "--migrate-v1-to-v2 <dir>` (writer auto-migrates on next "
@@ -31145,7 +31212,7 @@ def check_recovery_metadata_append_only(
                 )
             continue
         # If `attempts` is present but schema_version is missing or wrong,
-        # that's also a violation — the schema marker is what makes the
+        # that's also a violation - the schema marker is what makes the
         # append-only contract machine-checkable.
         if schema_version != "recovery_metadata.v2_attempts":
             violations.append(
@@ -31174,7 +31241,7 @@ def check_recovery_metadata_append_only(
                     violations.append(
                         f"{rel}: attempts[{idx}] and attempts["
                         f"{seen_started[started]}] share started_at_utc="
-                        f"{started!r} — suggests in-place edit"
+                        f"{started!r} - suggests in-place edit"
                     )
                 else:
                     seen_started[started] = idx
@@ -31188,7 +31255,7 @@ def check_recovery_metadata_append_only(
                         violations.append(
                             f"{rel}: attempts[{idx}] kind={kind!r} requires "
                             f"command_log_path OR "
-                            f"substantive_change_from_prior_attempt — "
+                            f"substantive_change_from_prior_attempt - "
                             f"timestamp-only churn is invalid evidence"
                         )
 
@@ -31210,8 +31277,8 @@ def check_recovery_metadata_append_only(
     if violations and strict:
         raise PreflightError(
             "RECOVERY-METADATA-APPEND-ONLY violations:\n"
-            + "\n".join(f"  • {v}" for v in violations[:20])
-            + ("\n  • ..." if len(violations) > 20 else "")
+            + "\n".join(f"  - {v}" for v in violations[:20])
+            + ("\n  - ..." if len(violations) > 20 else "")
             + "\n\nPer codex 2026-05-08 finding 5: recovery_metadata.json must "
             "use the append-only attempts[] schema with unique "
             "started_at_utc and provenance for non-initial attempts."
@@ -31262,7 +31329,7 @@ def check_status_artifacts_no_stale_dirty_paths(
         dirty_paths_value = payload.get("dirty_paths")
         if isinstance(dirty_paths_value, list) and len(dirty_paths_value) > 0:
             violations.append(
-                f"{rel}: stale-dirty-paths-in-status — top-level "
+                f"{rel}: stale-dirty-paths-in-status - top-level "
                 f"`dirty_paths` field is a non-empty list of {len(dirty_paths_value)} "
                 f"paths; this freezes transient session noise into committed state"
             )
@@ -31344,7 +31411,7 @@ def check_rebuild_commands_no_baked_runtime_state(
         if offending_lines and not has_banner:
             sample = offending_lines[0]
             violations.append(
-                f"{rel}: rebuild-recipe-baked-state — hardcoded runtime state "
+                f"{rel}: rebuild-recipe-baked-state - hardcoded runtime state "
                 f"on line {sample[0]} ({sample[1][:80]!r}) without "
                 f"HISTORICAL-ARTIFACT banner in first 10 lines; "
                 f"{len(offending_lines)} offending line(s) total"
@@ -31437,7 +31504,7 @@ def check_packet_blocker_clearance_evidence_matches(
             # 1. cleared blocker must NOT also be in active dispatch_blockers
             if blocker in active:
                 violations.append(
-                    f"{rel}: packet-clearance-without-matching-evidence — "
+                    f"{rel}: packet-clearance-without-matching-evidence - "
                     f"blocker {blocker!r} is in BOTH cleared_blockers and "
                     f"dispatch_blockers (internally inconsistent)"
                 )
@@ -31446,7 +31513,7 @@ def check_packet_blocker_clearance_evidence_matches(
             evidence_label = evidence_map.get(blocker)
             if not evidence_label:
                 violations.append(
-                    f"{rel}: packet-clearance-without-matching-evidence — "
+                    f"{rel}: packet-clearance-without-matching-evidence - "
                     f"blocker {blocker!r} cleared without "
                     f"cleared_blockers_by_evidence[{blocker!r}] entry"
                 )
@@ -31455,7 +31522,7 @@ def check_packet_blocker_clearance_evidence_matches(
             allowed = valid_evidence_for_blocker.get(blocker)
             if allowed is not None and evidence_label not in allowed:
                 violations.append(
-                    f"{rel}: packet-clearance-without-matching-evidence — "
+                    f"{rel}: packet-clearance-without-matching-evidence - "
                     f"blocker {blocker!r} cleared with unrecognized evidence "
                     f"{evidence_label!r} (allowed: {sorted(allowed)})"
                 )
@@ -31465,7 +31532,7 @@ def check_packet_blocker_clearance_evidence_matches(
                 parity_rec = closure.get("inflate_parity_record")
                 if not isinstance(parity_rec, dict) or not parity_rec.get("passed"):
                     violations.append(
-                        f"{rel}: packet-clearance-without-matching-evidence — "
+                        f"{rel}: packet-clearance-without-matching-evidence - "
                         f"blocker 'packet_local_inflate_parity_not_run' cleared "
                         f"but inflate_parity_record is missing or not passed"
                     )
@@ -31486,7 +31553,7 @@ def check_packet_blocker_clearance_evidence_matches(
 
 
 # ---------------------------------------------------------------------------
-# Catalog #146 — Phase 1 trainer _write_runtime contest-compliant inflate
+# Catalog #146 - Phase 1 trainer _write_runtime contest-compliant inflate
 # emission (operator decision B 2026-05-09).
 # Bug class: trainer's research_only_no_export scaffold inflate.sh signature
 # `exec uv ... "$HERE/inflate.py" "$@"` (one arg passthrough) was REJECTED by
@@ -31494,7 +31561,7 @@ def check_packet_blocker_clearance_evidence_matches(
 # (archive_dir) $2 (output_dir) $3 (file_list)". Phase 1 GPU dispatch was
 # blocked until the trainer was rewritten to emit the contest-compliant
 # 3-positional-arg inflate.sh + per-video inflate.py loop. THIS gate
-# self-protects against regression — refuses any future change that would
+# self-protects against regression - refuses any future change that would
 # re-introduce the broken scaffold pattern.
 # Memory: feedback_phase1_trainer_write_runtime_fix_landed_20260509.md
 # ---------------------------------------------------------------------------
@@ -31506,7 +31573,7 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """Catalog #146 — Phase 1 trainer must emit contest-compliant inflate.sh + inflate.py.
+    """Catalog #146 - Phase 1 trainer must emit contest-compliant inflate.sh + inflate.py.
 
     Scans `experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py`'s
     `_write_runtime` function source for the regression patterns:
@@ -31585,18 +31652,29 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
             if not isinstance(top, ast.FunctionDef) or top.name != "_write_runtime":
                 continue
             for node in ast.walk(top):
-                if not isinstance(node, ast.Assign):
+                # Catalog #168 fix 2026-05-12: handle both `inflate_sh = "..."`
+                # (Assign) and `inflate_sh: str = "..."` (AnnAssign).
+                if isinstance(node, ast.Assign):
+                    target_iter = [
+                        target.id
+                        for target in node.targets
+                        if isinstance(target, ast.Name)
+                        and target.id in {"inflate_sh", "inflate_py"}
+                    ]
+                    value_node = node.value
+                elif (isinstance(node, ast.AnnAssign)
+                      and node.value is not None
+                      and isinstance(node.target, ast.Name)
+                      and node.target.id in {"inflate_sh", "inflate_py"}):
+                    target_iter = [node.target.id]
+                    value_node = node.value
+                else:
                     continue
-                target_names = [
-                    target.id
-                    for target in node.targets
-                    if isinstance(target, ast.Name)
-                    and target.id in {"inflate_sh", "inflate_py"}
-                ]
+                target_names = target_iter
                 if not target_names:
                     continue
                 try:
-                    value = ast.literal_eval(node.value)
+                    value = ast.literal_eval(value_node)
                 except (ValueError, SyntaxError):
                     continue
                 if not isinstance(value, str):
@@ -31645,7 +31723,7 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
     if 'inflate.py" "$@"' in inflate_sh_template:
         violations.append(
             "trainer:_write_runtime inflate.sh template uses '\"$@\"' "
-            "passthrough — contest contract requires explicit positional "
+            "passthrough - contest contract requires explicit positional "
             "args (\"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\")"
         )
 
@@ -31762,7 +31840,7 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
 
 
 # ---------------------------------------------------------------------------
-# 2026-05-12 Catalog #158 — canonical deterministic-packet-compiler use
+# 2026-05-12 Catalog #158 - canonical deterministic-packet-compiler use
 # Memory: feedback_deterministic_packet_compiler_landed_20260512.md
 # ---------------------------------------------------------------------------
 
@@ -31836,7 +31914,7 @@ def check_deterministic_compiler_canonical_use(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """Catalog #158 — new packet-compilation surfaces MUST route through the
+    """Catalog #158 - new packet-compilation surfaces MUST route through the
     canonical ``tac.packet_compiler.deterministic_compiler``.
 
     Refuses any **new** ``tools/build_*.py`` or
@@ -31962,7 +32040,7 @@ def check_subagent_commit_serializer_uses_lock(
     verbose: bool = False,
     last_n_commits: int = 50,
 ) -> list[str]:
-    """Catalog #117 — every subagent commit must go through subagent_commit_serializer.
+    """Catalog #117 - every subagent commit must go through subagent_commit_serializer.
 
     Scans the last ``last_n_commits`` commits. The serializer leaves a JSONL
     audit log at .omx/state/commit-serializer.log; commits whose hash does
@@ -32059,7 +32137,7 @@ def check_claude_md_catalog_no_duplicate_numbers(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """Catalog #118 — CLAUDE.md catalog entries must have unique numbers.
+    """Catalog #118 - CLAUDE.md catalog entries must have unique numbers.
 
     Bug class fixed: FIX-A-CUSTODY (fa604f72) and FIX-A-SYNTH (c80162e7)
     both grabbed Catalog #114 because they read CLAUDE.md concurrently to
@@ -32122,7 +32200,7 @@ def check_subagent_commits_have_co_author_trailer(
     verbose: bool = False,
     last_n_commits: int = 50,
 ) -> list[str]:
-    """Catalog #119 — subagent commits must include Co-Authored-By trailer.
+    """Catalog #119 - subagent commits must include Co-Authored-By trailer.
 
     Scans the last ``last_n_commits`` commits. Commits whose AuthorEmail
     matches the operator/main-session pattern AND whose message lacks the
@@ -32190,7 +32268,7 @@ def check_subagent_commits_have_co_author_trailer(
 
 
 # ---------------------------------------------------------------------------
-# Catalog #123 — weight-domain saliency on score-aware substrate gate
+# Catalog #123 - weight-domain saliency on score-aware substrate gate
 # ---------------------------------------------------------------------------
 
 # Tokens that name the canonical "weight-only" saliency proxies. The patterns
@@ -32202,7 +32280,7 @@ def check_subagent_commits_have_co_author_trailer(
 # ``hessian_diag``). Pose-MSE / Seg-MSE forward-pass losses live in different
 # functions and are correctly EXCLUDED.
 _WEIGHT_DOMAIN_SALIENCY_PATTERNS = (
-    # mean(theta**2) / mean(p*p) — magnitude-squared Fisher proxies
+    # mean(theta**2) / mean(p*p) - magnitude-squared Fisher proxies
     re.compile(r"\bmean\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\*\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\)"),
     re.compile(r"\bmean\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\*\*\s*2\s*\)"),
     re.compile(r"\.pow\(\s*2\s*\)\.\s*mean\(\)"),
@@ -32242,7 +32320,7 @@ _SCORE_AWARE_SUBSTRATE_TOKENS = (
     "train_score_gradient",
     "train_score_gradient_pr101_finetune",
     "score_gradient_param_saliency",
-    # A1 lane references — these archives all came from score-gradient training
+    # A1 lane references - these archives all came from score-gradient training
     "track1_phase_a1_score_gradient",
     "phase_a1_latent",
     "A1_ARCHIVE",
@@ -32275,7 +32353,7 @@ def check_no_weight_domain_saliency_on_score_gradient_substrate(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #123 — weight-domain saliency forbidden on score-aware substrates.
+    """Catalog #123 - weight-domain saliency forbidden on score-aware substrates.
 
     Bug class fixed: Track 4 v1 (memory
     ``feedback_track_4_uniward_stc_hessian_a1_landed_20260509.md``,
@@ -32299,7 +32377,7 @@ def check_no_weight_domain_saliency_on_score_gradient_substrate(
         # WEIGHT_SALIENCY_OK_ON_SCORE_AWARE:<reason>
 
     A file that offers a ``--saliency-source score_gradient`` alternative
-    (or wires the canonical helper module) passes — the weight-domain proxy
+    (or wires the canonical helper module) passes - the weight-domain proxy
     becomes a backward-compat default the operator can override.
     """
     root = Path(repo_root or REPO_ROOT)
@@ -32337,7 +32415,7 @@ def check_no_weight_domain_saliency_on_score_gradient_substrate(
         # the enclosing function name contains any token from
         # ``_SALIENCY_FUNCTION_NAME_TOKENS`` (case-insensitive). This filters
         # out forward-pass losses that happen to use ``.pow(2).mean()`` on a
-        # NETWORK OUTPUT tensor — those live in different functions.
+        # NETWORK OUTPUT tensor - those live in different functions.
         try:
             tree = ast.parse(text)
         except SyntaxError:
@@ -32439,7 +32517,7 @@ def check_no_fastvit_attention_compounding_claim(
 
     Bug class: research notes claim "FastViT attention precision compounding"
     explains the 23x PoseNet CPU/CUDA drift. PoseNet's FastViT-T12 backbone is
-    RepMixer/conv-style — there is no softmax-attention path to compound. The
+    RepMixer/conv-style - there is no softmax-attention path to compound. The
     hypothesis was structurally wrong; codex caught it on 2026-05-08 and
     superseded three claude-authored research notes (commits 879d9b13 +
     d12f9e26 + 1165ec2e + 96842d94 + 332fe36a + 8d0c4ec7).
@@ -32506,7 +32584,7 @@ def check_no_fastvit_attention_compounding_claim(
                     f"'NOT softmax') if intentionally referencing the "
                     f"retired hypothesis."
                 )
-                # One violation per file is enough — operator can fix all
+                # One violation per file is enough - operator can fix all
                 # co-occurrences when they edit the file.
                 break
     if violations and strict:
@@ -32540,7 +32618,7 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
     Bug class: training scripts that opt out of auth-eval-everywhere via the
     `--no-auth-eval-on-best` flag must name a downstream consumer in the help
     text that DOES run auth_eval. If the named consumer never invokes
-    auth_eval, the opt-out flag is dishonest — operator/agent reads the help
+    auth_eval, the opt-out flag is dishonest - operator/agent reads the help
     text and trusts the chain, but no auth_eval ever happens.
 
     This check parses the help string of every `--no-auth-eval-on-best`
@@ -32708,7 +32786,7 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
 
 
 # ---------------------------------------------------------------------------
-# Catalog #124 — representation lane archive grammar at design time gate
+# Catalog #124 - representation lane archive grammar at design time gate
 # ---------------------------------------------------------------------------
 #
 # Closes the FORBIDDEN PATTERN named in
@@ -32723,10 +32801,10 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
 # not silently re-enter the pipeline.
 #
 # Two opt-outs (per HNeRV parity discipline lessons 2 + 7):
-#   - lane_class=substrate_engineering → substrate work explicitly DOES NOT
+#   - lane_class=substrate_engineering -> substrate work explicitly DOES NOT
 #     ship a packetized inflate; it engineers the substrate the bolt-ons stack
 #     on. (lesson 7)
-#   - research_only=true → research-only path by construction; not destined
+#   - research_only=true -> research-only path by construction; not destined
 #     for the contest archive. (lesson 2)
 #
 # Held warn-only initially (per operator approval 2026-05-09); promoted to
@@ -32735,7 +32813,7 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
 # Memory: feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md
 
 # Token sets that classify a lane as a "representation lane". Match against
-# both the lane id and the lane name. Short tokens (≤ 5 chars) use a
+# both the lane id and the lane name. Short tokens (<= 5 chars) use a
 # WORD-BOUNDARY regex to avoid false positives like `c3` matching `c30` /
 # `dc3` / `lane_arc3_v2`. Long tokens fall back to case-insensitive
 # substring (cheaper and unambiguous).
@@ -32835,7 +32913,7 @@ def _lane_is_representation_lane(lane: dict) -> bool:
       - Explicit ``lane_class`` wins over token heuristics. Known
         representation lane classes force True; known diagnostic/tooling
         classes force False.
-      - Short name tokens (≤ 5 chars like `c3`, `nerv`, `siren`) require a
+      - Short name tokens (<= 5 chars like `c3`, `nerv`, `siren`) require a
         word-boundary match on the lane id + name (avoids false positives
         like `c3` matching `c30` / `dc3`).
       - Long name tokens (`hyperprior`, `vq_vae`, etc.) use cheap
@@ -32857,11 +32935,11 @@ def _lane_is_representation_lane(lane: dict) -> bool:
         return False
 
     haystack_for_name_tokens = lid + " " + name
-    # Long tokens — cheap substring
+    # Long tokens - cheap substring
     for tok in _REPRESENTATION_LANE_NAME_LONG_TOKENS:
         if tok in haystack_for_name_tokens:
             return True
-    # Short tokens — word-boundary regex
+    # Short tokens - word-boundary regex
     for token_re in _REPRESENTATION_LANE_NAME_TOKEN_RES:
         if token_re.search(haystack_for_name_tokens):
             return True
@@ -32878,7 +32956,7 @@ def _lane_is_representation_lane(lane: dict) -> bool:
 # inline-string matcher must accept `<=` / `>=` operators in addition to
 # `=` / `:`. Two in-flight substrates (`lane_substrate_cool_chic_20260512`,
 # `lane_substrate_wavelet_20260512`) declare
-# `inflate_runtime_loc_budget<=100 LOC` — with `<=` — and a 3rd
+# `inflate_runtime_loc_budget<=100 LOC` - with `<=` - and a 3rd
 # (`lane_packet_compiler_5_pr63_64_65_105_primitives`) uses
 # `bolt_on_loc_budget<=300`. Both are currently `research_only=true` so
 # the gate exempts them, but if either promotes to L1 the original
@@ -32895,7 +32973,7 @@ def _field_declared_in_text(field: str, text: str) -> bool:
     matches `<=` first instead of letting the bare `=` (which is also
     present in `<=`) succeed via the suffix path. Both behaviors yield
     True in the current call sites, so the ordering is documentation
-    rather than correctness — but it keeps the intent explicit.
+    rather than correctness - but it keeps the intent explicit.
     """
     if not isinstance(text, str) or not text:
         return False
@@ -32958,7 +33036,7 @@ def check_representation_lane_has_archive_grammar_at_design_time(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #124 — representation lanes must declare archive grammar at design.
+    """Catalog #124 - representation lanes must declare archive grammar at design.
 
     Refuses Level 1+ promotion of representation/codec lanes (NeRV / HNeRV /
     Cool-Chic / C3 / wavelet / VQ-VAE / grayscale-LUT / SIREN / hyperprior /
@@ -33010,7 +33088,7 @@ def check_representation_lane_has_archive_grammar_at_design_time(
     except (ImportError, FileNotFoundError) as e:
         msg = (
             f"could not import tools.lane_maturity: {e}. "
-            "This is a setup bug — the harness was supposed to land here."
+            "This is a setup bug - the harness was supposed to land here."
         )
         if verbose:
             print(f"  [representation-lane-archive-grammar] WARN: {msg}")
@@ -33074,7 +33152,7 @@ def check_representation_lane_has_archive_grammar_at_design_time(
                 f"lane_class=substrate_engineering or research_only=true)"
             )
             for v in violations[:5]:
-                print(f"    • {v}")
+                print(f"    - {v}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -33100,7 +33178,7 @@ def check_representation_lane_has_archive_grammar_at_design_time(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #125 — landing memos must declare 6 unified-Lagrangian wire-ins
+# Catalog #125 - landing memos must declare 6 unified-Lagrangian wire-ins
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Operationalises CLAUDE.md "Subagent coherence-by-default" non-negotiable
@@ -33118,7 +33196,7 @@ def check_representation_lane_has_archive_grammar_at_design_time(
 #
 # Opt-outs:
 #   - `research_only=true` declared explicitly with rationale
-#   - per-hook `<Hook>: N/A — <rationale>` declared explicitly
+#   - per-hook `<Hook>: N/A - <rationale>` declared explicitly
 #
 # Refusing to declare = silent orphan work. The gate is held warn-only on
 # initial landing because legacy memos have not yet backfilled; flip to
@@ -33153,7 +33231,7 @@ _UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS: tuple[tuple[str, tuple[str, ...]], ...] = (
         "cathedral autopilot", "cathedral-autopilot", "cathedral_autopilot",
         "autopilot dispatch", "autopilot-dispatch",
     )),
-    # 5. Continual-learning posterior update: anchor → posterior reseed
+    # 5. Continual-learning posterior update: anchor -> posterior reseed
     ("continual_learning", (
         "continual-learning", "continual learning", "continual_learning",
         "posterior update", "posterior-update", "posterior_update",
@@ -33243,8 +33321,8 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
       1. The body contains ``<alias>:`` followed by some non-empty content
          (the standard "wire-in declared" pattern). Specifically, look for
          a line where one of the aliases appears followed by ``:``, ``=``,
-         or "—" / "-" / "wire-in" markers.
-      2. The body contains ``<alias>: N/A — <rationale>`` (per-hook opt-out).
+         or "-" / "-" / "wire-in" markers.
+      2. The body contains ``<alias>: N/A - <rationale>`` (per-hook opt-out).
          The rationale must be non-empty.
     """
     # Per-line scan keeps the cost predictable and the matches localized.
@@ -33258,35 +33336,35 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
             alias_lower = alias.lower()
             if alias_lower not in line_lower:
                 continue
-            # Acceptance form 1: alias appears followed by `:` / `=` / `—` /
-            # `-` / `wire-in` marker. We accept generously — the goal is
+            # Acceptance form 1: alias appears followed by `:` / `=` / `-` /
+            # `-` / `wire-in` marker. We accept generously - the goal is
             # that the SUBAGENT acknowledged the hook, not that they used
             # one specific phrasing.
             #
             # Common acceptable patterns observed in landing memos:
             #   "Sensitivity-map contribution: ..."
-            #   "Pareto constraint: rate ≤ R"
+            #   "Pareto constraint: rate <= R"
             #   "Bit-allocator hook: per-tensor importance ..."
             #   "Cathedral autopilot dispatch: ..."
             #   "Continual-learning posterior update: ..."
             #   "Probe-disambiguator: deterministic, no design tension"
-            #   "1. Sensitivity-map: N/A — preflight infrastructure"
+            #   "1. Sensitivity-map: N/A - preflight infrastructure"
             #
             # Implementation: after the alias, require ANY of:
             #   - ':' (the canonical declaration form)
             #   - '=' (struct-style)
             #   - 'wire' / 'wired' / 'wiring' (informal acknowledgment)
-            #   - 'hook' (informal — "<hook>: ...")
+            #   - 'hook' (informal - "<hook>: ...")
             idx = line_lower.find(alias_lower)
             after = line_lower[idx + len(alias_lower):].lstrip()
             if not after:
-                # Alias is the entire line tail — reject (likely a header).
+                # Alias is the entire line tail - reject (likely a header).
                 continue
             # Look for declaration-form markers in the next ~80 chars.
             window = after[:120]
             is_na_form = (
                 "n/a" in window
-                or window.lstrip(" :=—-").lower().startswith("na")
+                or window.lstrip(" :=--").lower().startswith("na")
             )
             negative_phrases = (
                 "not wired",
@@ -33317,7 +33395,7 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
                 or "dispatch" in window
                 or "n/a" in window
                 or "na " in window
-                or "na—" in window
+                or "na-" in window
                 or "na-" in window
             ):
                 # Strong signal: the line is genuinely declaring the hook.
@@ -33329,9 +33407,9 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
                     if na_pos < 0:
                         na_pos = window.lower().find("na")
                     rationale_tail = window[na_pos:].lstrip("n/aNA").strip()
-                    rationale_tail = rationale_tail.lstrip(" :=—-,;").strip()
+                    rationale_tail = rationale_tail.lstrip(" :=--,;").strip()
                     if not rationale_tail:
-                        # N/A with no rationale → reject this line; keep scanning.
+                        # N/A with no rationale -> reject this line; keep scanning.
                         continue
                 return True
     return False
@@ -33343,7 +33421,7 @@ def check_subagent_landing_has_solver_wire_in(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #125 — every post-cutover landing memo declares 6 wire-in hooks.
+    """Catalog #125 - every post-cutover landing memo declares 6 wire-in hooks.
 
     Operationalises CLAUDE.md "Subagent coherence-by-default" (landed
     2026-05-09). Refuses any landing memo
@@ -33360,7 +33438,7 @@ def check_subagent_landing_has_solver_wire_in(
 
     Opt-outs:
       - ``research_only=true`` declared anywhere in the memo body.
-      - Per-hook ``<HookAlias>: N/A — <rationale>`` (rationale required).
+      - Per-hook ``<HookAlias>: N/A - <rationale>`` (rationale required).
 
     Held warn-only on initial landing (2026-05-09); flip to STRICT after
     backfill drives live count to 0.
@@ -33444,7 +33522,7 @@ def check_subagent_landing_has_solver_wire_in(
                 "unified-Lagrangian wire-ins (sensitivity-map / pareto / "
                 "bit-allocator / cathedral-autopilot / continual-learning / "
                 "probe-disambiguator) OR opt out via research_only=true OR "
-                "per-hook '<Hook>: N/A — <rationale>'."
+                "per-hook '<Hook>: N/A - <rationale>'."
             )
 
     if verbose:
@@ -33456,7 +33534,7 @@ def check_subagent_landing_has_solver_wire_in(
                 f"{scanned_optout} research-only opt-out)"
             )
             for v in violations[:5]:
-                print(f"    • {v[:200]}")
+                print(f"    - {v[:200]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -33475,13 +33553,13 @@ def check_subagent_landing_has_solver_wire_in(
             + "\n\nRequired hooks per CLAUDE.md 'Subagent coherence-by-default':\n    "
             + ", ".join(h for h, _ in _UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)
             + "\n\nOpt-out: declare research_only=true OR per-hook "
-            "'<Hook>: N/A — <rationale>' inside the memo body."
+            "'<Hook>: N/A - <rationale>' inside the memo body."
         )
     return violations
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #126 — referenced lane_ids must be pre-registered in the registry
+# Catalog #126 - referenced lane_ids must be pre-registered in the registry
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Operationalises CLAUDE.md "Lane maturity registry" lifecycle discipline +
@@ -33493,7 +33571,7 @@ def check_subagent_landing_has_solver_wire_in(
 # Bug class: parallel subagents claim overlapping lanes silently because
 # nothing prevents two of them from inventing the same fictional lane_id.
 # Pre-registration via `tools/lane_maturity.py add-lane <id> --name <...> --phase <N>`
-# at SKETCH (Level 0) is the coherence primitive — once a lane is in the
+# at SKETCH (Level 0) is the coherence primitive - once a lane is in the
 # registry, the second subagent sees it and either contributes to it or
 # coordinates with the operator.
 #
@@ -33790,7 +33868,7 @@ _LANE_ID_FAKE_WAIVER_RE = re.compile(
 # File-level waiver: a single `# FAKE_LANE_OK_FILE:<reason>` in the first
 # 30 lines exempts the entire test file (used for files like
 # `test_check_lane_pre_registered_before_work_starts.py` whose entire
-# purpose is to test the gate via dozens of fake lane_id fixtures — adding
+# purpose is to test the gate via dozens of fake lane_id fixtures - adding
 # per-line waivers would be noise and would mask real future violations).
 _LANE_ID_FAKE_WAIVER_FILE_RE = re.compile(
     r"#\s*FAKE_LANE_OK_FILE\s*:\s*[^\n]+",
@@ -33799,7 +33877,7 @@ _LANE_ID_FAKE_WAIVER_FILE_RE = re.compile(
 
 _LANE_ID_FILE_WAIVER_ALLOWED_RELS: frozenset[str] = frozenset({
     # Test files whose entire purpose is to construct fake lane_id fixtures
-    # to exercise the gate. Per Check #126 file-level waiver semantics —
+    # to exercise the gate. Per Check #126 file-level waiver semantics -
     # additions to this allowlist are intentional and require council/operator
     # justification (the FAKE_LANE_OK_FILE marker on its own is not enough to
     # avoid abuse; only files in this allowlist OR per-line FAKE_LANE_OK
@@ -33849,7 +33927,7 @@ def check_lane_pre_registered_before_work_starts(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #126 — referenced lane_ids must be pre-registered in the registry.
+    """Catalog #126 - referenced lane_ids must be pre-registered in the registry.
 
     Refuses subagent commits (last ``n_commits``) whose introduced files
     under ``src/tac/`` / ``tools/`` / ``experiments/`` / ``scripts/``
@@ -33974,7 +34052,7 @@ def check_lane_pre_registered_before_work_starts(
                 and (lineno + 1) not in tracked_worktree_changed_lines
             ):
                 continue
-            # Quick prefilter — skip lines without "lane_" prefix.
+            # Quick prefilter - skip lines without "lane_" prefix.
             if "lane_" not in line:
                 continue
             for m in _LANE_ID_REFERENCE_RE.finditer(line):
@@ -34000,7 +34078,7 @@ def check_lane_pre_registered_before_work_starts(
                     "'# FAKE_LANE_OK:<reason>' on the same line "
                     "or within 5 lines above."
                 )
-                # Only one violation per (file, lineno) — avoid noise on
+                # Only one violation per (file, lineno) - avoid noise on
                 # lines that mention the same lane_id multiple times.
                 break
 
@@ -34012,7 +34090,7 @@ def check_lane_pre_registered_before_work_starts(
                 f"{scanned_lines} line(s) across {len(paths_by_source)} source(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -34037,7 +34115,7 @@ def check_lane_pre_registered_before_work_starts(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #127 — authoritative tag emission must go through validate_custody
+# Catalog #127 - authoritative tag emission must go through validate_custody
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round-2 HIGH 2, 2026-05-09): direct `.evidence_tag in
@@ -34159,7 +34237,7 @@ def check_authoritative_tag_requires_custody_metadata(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #127 — authoritative-tag literals must route through validate_custody.
+    """Catalog #127 - authoritative-tag literals must route through validate_custody.
 
     Refuses code sites that match an authoritative-tag literal string
     (``"[contest-CUDA]"``, ``"[contest-CPU GHA Linux x86_64]"``, etc.)
@@ -34171,7 +34249,7 @@ def check_authoritative_tag_requires_custody_metadata(
        OR
     2. A same-line waiver comment ``# CUSTODY_VALIDATOR_OK:<reason>``.
 
-    Held warn-only initially per the directive — flip to STRICT after
+    Held warn-only initially per the directive - flip to STRICT after
     live count drives to 0.
 
     Bug class: codex round-2 HIGH 2 (2026-05-09). Empirical anchors with
@@ -34270,7 +34348,7 @@ def check_authoritative_tag_requires_custody_metadata(
                 f"experiments/)"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -34290,13 +34368,13 @@ def check_authoritative_tag_requires_custody_metadata(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #128 — continual_learning posterior writes must use the locked path
+# Catalog #128 - continual_learning posterior writes must use the locked path
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round-2 MEDIUM, 2026-05-09): direct `save_posterior`
 # calls under parallel harvesters silently drop concurrent updates because
-# the load → mutate → write cycle is not atomic. The locked path
-# `posterior_update_locked` does load → update → save inside an exclusive
+# the load -> mutate -> write cycle is not atomic. The locked path
+# `posterior_update_locked` does load -> update -> save inside an exclusive
 # fcntl lock so concurrent updates of distinct anchors all survive.
 # This gate refuses any caller invoking `save_posterior` directly without a
 # local `_posterior_lock` context OR a same-line waiver
@@ -34312,7 +34390,7 @@ def check_continual_learning_writes_use_lock(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #128 — continual_learning writes must go through the locked path.
+    """Catalog #128 - continual_learning writes must go through the locked path.
 
     Refuses code sites under `src/tac/`, `tools/`, or `experiments/` that
     import `save_posterior` from `tac.continual_learning` (or call it
@@ -34321,7 +34399,7 @@ def check_continual_learning_writes_use_lock(
     1. A local `_posterior_lock` context visible near the direct write, OR
     2. A same-line waiver `# SAVE_POSTERIOR_LOCKED_OK:<reason>`.
 
-    Held warn-only initially per the directive — flip to STRICT after live
+    Held warn-only initially per the directive - flip to STRICT after live
     count drives to 0.
 
     Bug class: codex round-2 MEDIUM (2026-05-09). Bare `save_posterior` +
@@ -34409,7 +34487,7 @@ def check_continual_learning_writes_use_lock(
                 "`_posterior_lock` context visible in the local line window. "
                 "Per codex round-2 MEDIUM, parallel harvesters "
                 "MUST go through `posterior_update_locked` so the "
-                "load→update→save cycle is atomic under fcntl. Add a "
+                "load->update->save cycle is atomic under fcntl. Add a "
                 "`# SAVE_POSTERIOR_LOCKED_OK:<reason>` waiver if the site "
                 "is single-writer / serialized externally."
             )
@@ -34422,7 +34500,7 @@ def check_continual_learning_writes_use_lock(
                 "src/tac/, tools/, experiments/)"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -34444,7 +34522,7 @@ def check_continual_learning_writes_use_lock(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #130 — proactive sweep widening of catalog #127's tag-only check
+# Catalog #130 - proactive sweep widening of catalog #127's tag-only check
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (proactive META-class custody+concurrency audit, 2026-05-09):
@@ -34455,7 +34533,7 @@ def check_continual_learning_writes_use_lock(
 #   - `tag.startswith("[contest-CUDA")` / `tag.startswith("[contest-CPU")`
 #     substring-prefix patterns
 #
-# These are the same META class as catalog #127 — code that classifies
+# These are the same META class as catalog #127 - code that classifies
 # custody / promotion eligibility from a tag string WITHOUT joint
 # axis + hardware_substrate + archive_sha256 validation. The proactive
 # sweep audit `.omx/research/proactive_custody_concurrency_audit_20260509.md`
@@ -34470,7 +34548,7 @@ def check_continual_learning_writes_use_lock(
 
 # Note: the four `tag.startswith(...)` literals below are DETECTION
 # PATTERNS used by this gate to scan other files. They are NOT bypass
-# code — they are string constants this gate compares against.
+# code - they are string constants this gate compares against.
 # Same-line `CUSTODY_VALIDATOR_OK` waivers tell catalog #127's
 # `_line_has_authoritative_tag_bypass_pattern` to skip these meta-pattern
 # strings (which would otherwise self-match).
@@ -34508,7 +34586,7 @@ _TAG_GRADE_VALIDATOR_FILES: tuple[str, ...] = (
 # validator-name prefixes (not bare identifiers). `sha256_file(`
 # requires the call form so a stray "sha256_file" docstring does not
 # silently waive the gate. `archive_sha256` is the canonical promotion
-# field — it is a real evidence-grade signal even when it appears as a
+# field - it is a real evidence-grade signal even when it appears as a
 # `.get("archive_sha256")` dict key, because every promotion path
 # routes through it.
 #
@@ -34534,7 +34612,7 @@ def check_no_tag_only_custody_validation(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #130 — broader tag/grade membership must route through joint validator.
+    """Catalog #130 - broader tag/grade membership must route through joint validator.
 
     Refuses code sites that match a tag/grade membership-check pattern
     (``evidence_grade in {...}``, ``tag.startswith("[contest-CUDA")``, etc.)
@@ -34547,7 +34625,7 @@ def check_no_tag_only_custody_validation(
        ``sha256_file`` / ``archive_sha256``), OR
     2. A same-line waiver comment ``# CUSTODY_VALIDATOR_OK:<reason>``.
 
-    Held warn-only initially per the directive — flip to STRICT after
+    Held warn-only initially per the directive - flip to STRICT after
     live count drives to 0 and stability period elapses.
 
     Bug class: proactive META-class sweep (2026-05-09). Sister of catalog #127
@@ -34635,7 +34713,7 @@ def check_no_tag_only_custody_validation(
                 f"experiments/)"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -34656,7 +34734,7 @@ def check_no_tag_only_custody_validation(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #131 — bare-write-on-shared-state must route through fcntl helpers
+# Catalog #131 - bare-write-on-shared-state must route through fcntl helpers
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (proactive META-class custody+concurrency audit, 2026-05-09):
@@ -34665,7 +34743,7 @@ def check_no_tag_only_custody_validation(
 # an fcntl lockfile + reload-inside-lock + unique tmp + fsync + os.replace.
 #
 # Without serialization, two concurrent writers loading the same stale
-# state + each appending different rows + each replacing → ONE row's update
+# state + each appending different rows + each replacing -> ONE row's update
 # silently dropped (the same MEDIUM bug class codex round-2 caught in
 # `continual_learning.save_posterior`, catalog #128). The proactive sweep
 # found 6 ADDITIONAL surfaces with the same META class beyond #128's scope:
@@ -34860,9 +34938,9 @@ def _bare_write_target_name_from_assign_target(target: ast.AST) -> str | None:
 
     Handles:
 
-    - ``ast.Name`` → returns the bare name (e.g. ``state_path``)
-    - ``ast.Attribute`` → returns the dotted path (e.g. ``self.foo_path``)
-    - tuple/list-pack targets → returns None (rare; callers should ignore)
+    - ``ast.Name`` -> returns the bare name (e.g. ``state_path``)
+    - ``ast.Attribute`` -> returns the dotted path (e.g. ``self.foo_path``)
+    - tuple/list-pack targets -> returns None (rare; callers should ignore)
     """
     if isinstance(target, ast.Name):
         return target.id
@@ -34887,13 +34965,13 @@ def _bare_write_collect_shared_vars_ast(text: str) -> set[str]:
     variable / attribute path when the RHS contains any shared-state path
     marker. Catches:
 
-    - ``state_path = Path('.omx/state/foo.json')`` — lowercase, was missed
+    - ``state_path = Path('.omx/state/foo.json')`` - lowercase, was missed
       by the regex collector.
-    - ``self.foo_path = base / 'active_jobs.json'`` — attribute target.
-    - ``base = REPO_ROOT / '.omx' / 'state' / 'foo.json'`` — Path-joined
+    - ``self.foo_path = base / 'active_jobs.json'`` - attribute target.
+    - ``base = REPO_ROOT / '.omx' / 'state' / 'foo.json'`` - Path-joined
       string-tuple where the SHARED marker is a string fragment.
-    - ``cache: Path = Path('.omx/state/...')`` — annotated assignment.
-    - ``foo = f'.omx/state/{name}.json'`` — f-string.
+    - ``cache: Path = Path('.omx/state/...')`` - annotated assignment.
+    - ``foo = f'.omx/state/{name}.json'`` - f-string.
 
     Both bare names AND attribute names (e.g. ``self.foo_path``) are
     returned so the line scanner's receiver-match can resolve either.
@@ -34933,7 +35011,7 @@ def _bare_write_collect_shared_vars(text: str) -> set[str]:
 
     Catalog #131 v2 (codex round 8 MEDIUM, 2026-05-09): expands #131's
     detection to lowercase variables (``state_path``), attribute paths
-    (``self.foo_path``), and Path-joined bindings — all of which were
+    (``self.foo_path``), and Path-joined bindings - all of which were
     silently invisible to the original all-caps-regex collector.
     """
     out = set(m.group(1) for m in _BARE_WRITE_SHARED_VAR_RE.finditer(text))
@@ -34975,7 +35053,7 @@ def check_no_bare_writes_to_shared_state(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #131 — shared-state writes must route through fcntl helpers.
+    """Catalog #131 - shared-state writes must route through fcntl helpers.
 
     Refuses code sites under `src/tac/`, `tools/`, `experiments/`, `scripts/`
     that write to a recognized shared-state path (e.g. `.omx/state/*.json`,
@@ -34986,7 +35064,7 @@ def check_no_bare_writes_to_shared_state(
        ``_lightning_state_lock``, ``_active_jobs_lock``, or ``FileLock``), OR
     2. A same-line waiver comment ``# BARE_WRITE_OK:<reason>``.
 
-    Held warn-only initially per the directive — flip to STRICT after live
+    Held warn-only initially per the directive - flip to STRICT after live
     count drives to 0 and stability period elapses.
 
     Bug class: proactive META-class sweep (2026-05-09). Sister of catalog #128
@@ -35046,7 +35124,7 @@ def check_no_bare_writes_to_shared_state(
                 text = py.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        # Quick prefilter — file must reference a shared-state marker.
+        # Quick prefilter - file must reference a shared-state marker.
         if not any(m in text for m in _SHARED_STATE_PATH_MARKERS):
             continue
         has_write_surface = (
@@ -35092,7 +35170,7 @@ def check_no_bare_writes_to_shared_state(
                 # is also required for partial-read safety. The exempt patterns
                 # are:
                 #   (a) call into a canonical helper (e.g. `update_active_jobs_locked`,
-                #       `register_instance`, `posterior_update_locked`) — whole
+                #       `register_instance`, `posterior_update_locked`) - whole
                 #       transactional contract owned by the helper
                 #   (b) lock token AND atomic-replace tokens both visible in
                 #       the window (write to .tmp then os.replace)
@@ -35133,7 +35211,7 @@ def check_no_bare_writes_to_shared_state(
                     or "tmpfile" in window_forward.lower()
                     or "with_suffix" in window_forward
                 )
-                # The current line IS the os.replace itself — accept (the
+                # The current line IS the os.replace itself - accept (the
                 # write to the .tmp staging is partial-read safe by construction).
                 line_is_atomic_replace = (
                     _BARE_OS_REPLACE_RE.search(line) is not None
@@ -35162,7 +35240,7 @@ def check_no_bare_writes_to_shared_state(
                     )
                 violations.append(
                     f"[Check 131] {rel}:{lineno + 1}: "
-                    f"bare write to shared-state path — {detail}. "
+                    f"bare write to shared-state path - {detail}. "
                     "Per proactive META-class audit + codex round 8 MEDIUM, "
                     "every shared-state write MUST satisfy ONE of: "
                     "(a) route through a canonical helper "
@@ -35181,7 +35259,7 @@ def check_no_bare_writes_to_shared_state(
                 f"(scanned: {scanned_files} file(s) referencing shared-state markers)"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -35202,19 +35280,19 @@ def check_no_bare_writes_to_shared_state(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #132 — locked writes must preserve caller deletions
+# Catalog #132 - locked writes must preserve caller deletions
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round-3 HIGH 1, 2026-05-09): a previous "locked save"
 # helper (`scripts/verify_vast_instances.py::_save_setup_first_seen`)
 # took a caller-supplied map under fcntl lock, then RE-LOADED the on-disk
 # file inside the lock and did `existing.update(data)` before writing.
-# The .update() silently merged-away any keys the caller had pruned —
+# The .update() silently merged-away any keys the caller had pruned -
 # stale `first_seen` rows persisted; `--auto-destroy-stale` then targeted
 # fresh instances that inherited an old age from the merge.
 #
 # The structural fix: locked helpers that take the FULL post-prune map
-# from the caller MUST do TRANSACTIONAL REPLACE inside the lock — not
+# from the caller MUST do TRANSACTIONAL REPLACE inside the lock - not
 # `existing.update(data)`. The caller is the source of truth for
 # deletions; the writer's job is to atomically commit that snapshot.
 #
@@ -35222,7 +35300,7 @@ def check_no_bare_writes_to_shared_state(
 # `update_*_locked` style functions and refuses any that contain the
 # `existing.update(data)` anti-pattern (or the variant
 # `<reload>.update(<param>)`) inside an fcntl-locked window. Sister of
-# catalog #131 (which catches BARE writes — this one catches LOCKED but
+# catalog #131 (which catches BARE writes - this one catches LOCKED but
 # DELETION-LOSING writes).
 
 # Function-name patterns this gate considers "locked save" helpers.
@@ -35260,7 +35338,7 @@ def check_locked_writes_preserve_deletions(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #132 — locked-save helpers must do transactional replace, not merge.
+    """Catalog #132 - locked-save helpers must do transactional replace, not merge.
 
     Refuses any function whose name matches a "locked save" pattern
     (``_save_*_first_seen`` / ``_save_*_state`` / ``update_*_locked``)
@@ -35277,7 +35355,7 @@ def check_locked_writes_preserve_deletions(
     Live count expected: 0 after the verify_vast_instances HIGH 1 fix.
 
     Bug class: codex round-3 HIGH 1 (2026-05-09). Sister of catalog #131
-    (bare writes) — that catches the unlocked META class; this catches
+    (bare writes) - that catches the unlocked META class; this catches
     the LOCKED-but-deletion-losing META class. Memory:
     feedback_codex_round3_findings_fix_landed_20260509.md.
     """
@@ -35331,7 +35409,7 @@ def check_locked_writes_preserve_deletions(
                     text = src.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            # Quick prefilter — file must have at least one anti-pattern AND
+            # Quick prefilter - file must have at least one anti-pattern AND
             # one fcntl-related token. (We allow 2-line gap; the function
             # name must also appear nearby.)
             if not any(pat in text for pat in _DELETION_MERGE_PATTERNS):
@@ -35403,7 +35481,7 @@ def check_locked_writes_preserve_deletions(
                 f"deletion-merge violation(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -35427,7 +35505,7 @@ def check_locked_writes_preserve_deletions(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #133 — Catalog #131 accept-list must contain real locked writers
+# Catalog #133 - Catalog #131 accept-list must contain real locked writers
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 4 HIGH 1, 2026-05-09): Catalog #131's
@@ -35444,7 +35522,7 @@ def check_locked_writes_preserve_deletions(
 # that lacks the locked-writer pattern is a false-green failure mode that
 # undermines the META gate.
 #
-# Sister of catalog #131 (bare writes — primary META gate). This is the
+# Sister of catalog #131 (bare writes - primary META gate). This is the
 # META-META gate that protects the META gate's accept list itself.
 
 _CHECK_131_EXEMPT_AUDIT_WAIVER_MARKER = "CHECK_131_EXEMPT_AUDIT_OK"
@@ -35456,7 +35534,7 @@ def check_no_excluded_writers_in_check_131_accept_list(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #133 — META-meta: #131's exempt list must contain real locked writers.
+    """Catalog #133 - META-meta: #131's exempt list must contain real locked writers.
 
     Iterates every entry in ``_BARE_WRITE_CANONICAL_HELPERS`` and verifies
     the file actually has at least one of:
@@ -35534,7 +35612,7 @@ def check_no_excluded_writers_in_check_131_accept_list(
         # File-wide waiver check
         if _CHECK_131_EXEMPT_AUDIT_WAIVER_MARKER in text:
             continue
-        # No waiver — file must contain at least one canonical lock pattern.
+        # No waiver - file must contain at least one canonical lock pattern.
         if not any(tok in text for tok in LOCK_PATTERN_TOKENS):
             violations.append(
                 f"[Check 133] #131 exempt-list entry {rel!r} is claimed to be "
@@ -35558,7 +35636,7 @@ def check_no_excluded_writers_in_check_131_accept_list(
                 f"exempt entry(ies) (scanned: {len(_BARE_WRITE_CANONICAL_HELPERS)})"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -35577,7 +35655,7 @@ def check_no_excluded_writers_in_check_131_accept_list(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #134 — Phase3DispatchGate must be fail-closed at construction
+# Catalog #134 - Phase3DispatchGate must be fail-closed at construction
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 4 MEDIUM 1, 2026-05-09): the previous
@@ -35603,7 +35681,7 @@ def check_phase3_dispatch_gate_fail_closed(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #134 — Phase3DispatchGate construction must be fail-closed.
+    """Catalog #134 - Phase3DispatchGate construction must be fail-closed.
 
     Refuses any ``Phase3DispatchGate(...)`` call site outside the
     canonical scaffold integration point that does NOT include
@@ -35613,11 +35691,11 @@ def check_phase3_dispatch_gate_fail_closed(
 
     Allowed sites (excluded from scanning):
 
-    - ``src/tac/phase3/joint_scorer_renderer_codec.py`` — the canonical
+    - ``src/tac/phase3/joint_scorer_renderer_codec.py`` - the canonical
       module that defines the gate; integration self-references are
       expected here.
     - Test files (``src/tac/tests/test_*.py``,  ``tools/tests/``,
-      ``experiments/tests/``, ``scripts/tests/``) — tests legitimately
+      ``experiments/tests/``, ``scripts/tests/``) - tests legitimately
       construct opted-out gates.
 
     Out-of-scope sites that DO call ``Phase3DispatchGate(...)`` MUST
@@ -35645,7 +35723,7 @@ def check_phase3_dispatch_gate_fail_closed(
         root / "scripts",
     ]
 
-    # Canonical scaffold module — its own self-references are expected
+    # Canonical scaffold module - its own self-references are expected
     EXCLUDED_FILES = {
         root / "src" / "tac" / "phase3" / "joint_scorer_renderer_codec.py",
         root / "src" / "tac" / "preflight.py",  # this gate's own implementation
@@ -35675,7 +35753,7 @@ def check_phase3_dispatch_gate_fail_closed(
             continue
         if py in EXCLUDED_FILES:
             continue
-        # Test files are exempt — they legitimately exercise the gate
+        # Test files are exempt - they legitimately exercise the gate
         s = str(py)
         if "/tests/" in s or py.name.startswith("test_"):
             continue
@@ -35771,7 +35849,7 @@ def check_phase3_dispatch_gate_fail_closed(
                 f"unsafe construction(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -35790,7 +35868,7 @@ def check_phase3_dispatch_gate_fail_closed(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #135 — SETUP-first-seen writers must update INSIDE the lock
+# Catalog #135 - SETUP-first-seen writers must update INSIDE the lock
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 4 MEDIUM 2, 2026-05-09): the round-3 fix made
@@ -35799,7 +35877,7 @@ def check_phase3_dispatch_gate_fail_closed(
 # per-instance verify (~minutes), then saved the post-mutation snapshot
 # at the end. Two overlapping verifier runs both loaded the same stale
 # snapshot, did per-instance work, then the slower run replaced the file
-# with its now-stale view — deleting first-seen timestamps the faster run
+# with its now-stale view - deleting first-seen timestamps the faster run
 # had created.
 #
 # The fix is a true transactional update API
@@ -35820,13 +35898,13 @@ def check_setup_first_seen_uses_transactional_update_inside_lock(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #135 — SETUP-first-seen writers must update INSIDE the lock.
+    """Catalog #135 - SETUP-first-seen writers must update INSIDE the lock.
 
     Refuses any module that:
 
     1. Defines a ``_save_*_first_seen`` / ``_save_setup_*`` function, AND
     2. Has a CALL SITE that loads the on-disk state OUTSIDE any lock,
-       performs work, then calls the save function — without using the
+       performs work, then calls the save function - without using the
        canonical transactional update helper
        (``update_*_first_seen_locked`` / ``update_setup_*_locked``).
 
@@ -35912,7 +35990,7 @@ def check_setup_first_seen_uses_transactional_update_inside_lock(
             )
         except OSError:
             continue
-        # Quick prefilter — file must reference both load + save first-seen
+        # Quick prefilter - file must reference both load + save first-seen
         if not (LOAD_PATTERNS.search(text) and SAVE_PATTERNS.search(text)):
             continue
         scanned_files += 1
@@ -36032,7 +36110,7 @@ def check_setup_first_seen_uses_transactional_update_inside_lock(
                 f"lost-update violation(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -36051,7 +36129,7 @@ def check_setup_first_seen_uses_transactional_update_inside_lock(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #136 — Custody-validator accept-token lists must be CONCRETE only
+# Catalog #136 - Custody-validator accept-token lists must be CONCRETE only
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (defense-in-depth on codex round-3 HIGH 2, 2026-05-09):
@@ -36064,7 +36142,7 @@ def check_setup_first_seen_uses_transactional_update_inside_lock(
 #
 # Round-3 fixed the immediate accept-token list (removed `"blockers"` and
 # `"errors"`). This META gate (#136) extincts the bug CLASS so no future
-# accept-list addition can re-introduce a generic-token bypass — at any
+# accept-list addition can re-introduce a generic-token bypass - at any
 # `*_VALIDATOR_TOKENS` / `*_LOCAL_VALIDATOR_TOKENS` / `*_VALIDATOR_PATTERNS`
 # tuple/list constant in `src/tac/preflight.py`.
 #
@@ -36084,7 +36162,7 @@ def check_setup_first_seen_uses_transactional_update_inside_lock(
 # pattern), Catalog #133 (a3f4a072's META-meta on #131 exempt list), and
 # Catalog #127/#128 (the original custody gates).
 
-# Forbidden generic identifiers — any unrelated `<tok> = ...` variable in a
+# Forbidden generic identifiers - any unrelated `<tok> = ...` variable in a
 # validator's line window will silently waive the gate. Constant name
 # deliberately uses the suffix `_BLOCKLIST` (NOT `_VALIDATOR_TOKENS` /
 # `_ACCEPT_TOKENS`) so that Catalog #136 does not flag itself.
@@ -36109,7 +36187,7 @@ _ACCEPT_TOKENS_CONCRETE_WAIVER_MARKER = "ACCEPT_TOKENS_CONCRETE_OK"
 # as accept-token lists. We deliberately scope to "_*VALIDATOR_TOKENS" /
 # "_*VALIDATOR_PATTERNS" / "_*VALIDATOR_FNS" / "_*ACCEPT_TOKENS" / similar
 # explicit accept-list naming. Generic constants like `_PATTERNS` are
-# excluded — only constants whose name explicitly says VALIDATOR / ACCEPT
+# excluded - only constants whose name explicitly says VALIDATOR / ACCEPT
 # count as a custody-validator accept-list.
 _ACCEPT_TOKENS_CONSTANT_NAME_RE = re.compile(
     r"\b_[A-Z][A-Z0-9_]*"
@@ -36124,7 +36202,7 @@ def check_custody_gate_accept_tokens_concrete_only(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #136 — custody-validator accept lists must be CONCRETE only.
+    """Catalog #136 - custody-validator accept lists must be CONCRETE only.
 
     Scans ``src/tac/preflight.py`` (and any ``src/tac/**/*.py`` /
     ``tools/**/*.py`` / ``experiments/**/*.py`` / ``scripts/**/*.py``)
@@ -36136,16 +36214,16 @@ def check_custody_gate_accept_tokens_concrete_only(
     ``warnings`` / ``issues`` / ``problems`` / ``results`` / ``checks`` /
     ``messages`` / ``verdicts`` / ``reasons``).
 
-    Concrete validator tokens — function call patterns like
+    Concrete validator tokens - function call patterns like
     ``"validate_custody("``, ``"validate_custody_verdict"``, attribute
-    references like ``"sha256_file("``, ``"archive_sha256"`` — are accepted.
+    references like ``"sha256_file("``, ``"archive_sha256"`` - are accepted.
 
     Same-line waiver: ``# ACCEPT_TOKENS_CONCRETE_OK:<reason>`` on the
     entry line OR on the tuple-definition line. Reserved for the rare
     case where the bare generic identifier IS the contract (typed
     attribute access whose accessor is the validator).
 
-    Live count expected: 0 — round-3's fix already removed the only
+    Live count expected: 0 - round-3's fix already removed the only
     known instance (``"blockers"`` / ``"errors"`` from
     ``_TAG_GRADE_LOCAL_VALIDATOR_TOKENS``).
 
@@ -36296,7 +36374,7 @@ def check_custody_gate_accept_tokens_concrete_only(
                 f"entry(ies) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -36320,7 +36398,7 @@ def check_custody_gate_accept_tokens_concrete_only(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #137 — Remote dispatch runbooks must NOT default to local CUDA probe
+# Catalog #137 - Remote dispatch runbooks must NOT default to local CUDA probe
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (defense-in-depth on codex round-3 MEDIUM 1, 2026-05-09):
@@ -36361,7 +36439,7 @@ _LOCAL_CUDA_PROBE_TOKENS: tuple[str, ...] = (
 _LOCAL_CUDA_PROBE_GUARD_TOKENS: tuple[str, ...] = (
     "LOCAL_CUDA_WORKER",
     "DRY_RUN",
-    # Remote-execution wrapper tokens — the probe runs on the remote side
+    # Remote-execution wrapper tokens - the probe runs on the remote side
     "vastai exec",
     "lightning ssh",
     "modal run",
@@ -36431,7 +36509,7 @@ def check_remote_dispatch_runbooks_no_local_cuda_probe_default(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #137 — remote dispatch runbooks must NOT default to local CUDA probe.
+    """Catalog #137 - remote dispatch runbooks must NOT default to local CUDA probe.
 
     Scans ``scripts/remote_lane_*.sh`` (and ``scripts/remote_*.sh`` more
     broadly) for invocations of ``probe_nvdec.sh`` / ``nvidia-smi`` /
@@ -36448,7 +36526,7 @@ def check_remote_dispatch_runbooks_no_local_cuda_probe_default(
     backwards up to 30 lines (within the same function / case-arm) for
     a guard token. If none is present, flag.
 
-    Live count expected: 0 — round-3's fix already guarded the only known
+    Live count expected: 0 - round-3's fix already guarded the only known
     instance.
 
     Bug class (defense-in-depth on codex round-3 MEDIUM 1): the round-3
@@ -36468,7 +36546,7 @@ def check_remote_dispatch_runbooks_no_local_cuda_probe_default(
 
     violations: list[str] = []
     scanned_files = 0
-    # Scope tightly to `scripts/remote_lane_*.sh` per the prompt — these are
+    # Scope tightly to `scripts/remote_lane_*.sh` per the prompt - these are
     # local dispatch drivers that fan out to remote GPUs. Sister scripts like
     # `remote_archive_only_eval.sh` and `remote_train_bootstrap.sh` are the
     # remote-side bootstraps that legitimately call `nvidia-smi` ON the GPU.
@@ -36527,7 +36605,7 @@ def check_remote_dispatch_runbooks_no_local_cuda_probe_default(
                 f"unguarded probe(s) (scanned: {scanned_files} runbook(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -36551,14 +36629,14 @@ def check_remote_dispatch_runbooks_no_local_cuda_probe_default(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #138 — State writers MUST use strict load on the mutating path
+# Catalog #138 - State writers MUST use strict load on the mutating path
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (defense-in-depth on codex round-3 MEDIUM 2, 2026-05-09):
 # `src/tac/deploy/lightning/active_jobs_state.py::load_active_jobs` returned
 # `[]` on corrupt JSON or non-list state. `update_active_jobs_locked` then
 # wrote the empty snapshot back, silently overwriting the malformed file
-# with a fresh one — DROPPING all active and terminal rows. Harvesters
+# with a fresh one - DROPPING all active and terminal rows. Harvesters
 # that re-read after the dispatcher write would see `[]` and skip every
 # still-running job.
 #
@@ -36614,7 +36692,7 @@ def check_state_writers_strict_load_for_mutating_path(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #138 — state writers must use strict load on mutating path.
+    """Catalog #138 - state writers must use strict load on mutating path.
 
     Scans ``src/tac/**/*.py`` (and ``tools/**/*.py``) for function
     definitions whose name matches a state-writer pattern (``update_*_locked``,
@@ -36631,7 +36709,7 @@ def check_state_writers_strict_load_for_mutating_path(
     inside their body are scanned; pure-write functions (no `_load_` or
     `read_text` / `read_bytes` reference) are out-of-scope.
 
-    Live count expected: 0 — round-3's fix already added the strict load
+    Live count expected: 0 - round-3's fix already added the strict load
     path to the only known instance (`active_jobs_state.py`).
 
     Bug class (defense-in-depth on codex round-3 MEDIUM 2): the round-3
@@ -36696,10 +36774,10 @@ def check_state_writers_strict_load_for_mutating_path(
             )
         except OSError:
             continue
-        # Quick prefilter — file must contain at least one writer-fn name
+        # Quick prefilter - file must contain at least one writer-fn name
         if not any(p in text for p in _STATE_WRITER_FN_NAME_PATTERNS):
             continue
-        # Quick prefilter — file must mention a load OR write op
+        # Quick prefilter - file must mention a load OR write op
         if not any(
             t in text
             for t in (
@@ -36742,7 +36820,7 @@ def check_state_writers_strict_load_for_mutating_path(
             # Same-line waiver on def line
             if _STATE_WRITER_STRICT_LOAD_WAIVER_MARKER in line:
                 continue
-            # Find function body — scan forward until less-or-equal-indent
+            # Find function body - scan forward until less-or-equal-indent
             fn_indent = len(line) - len(stripped)
             body_start = lineno + 1
             body_end = len(lines)
@@ -36812,7 +36890,7 @@ def check_state_writers_strict_load_for_mutating_path(
                 f"missing strict load (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -36836,7 +36914,7 @@ def check_state_writers_strict_load_for_mutating_path(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #139 — Packet-compiler no_op_proof failures must promote to blocker
+# Catalog #139 - Packet-compiler no_op_proof failures must promote to blocker
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 5 HIGH 1, 2026-05-09): the previous Phase 1 packet
@@ -36889,7 +36967,7 @@ def check_packet_compiler_no_op_proof_promotes_to_blocker(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #139 — packet-compiler no_op_proof must promote to blocker.
+    """Catalog #139 - packet-compiler no_op_proof must promote to blocker.
 
     Scans ``src/tac/**/*.py``, ``tools/**/*.py``, ``scripts/**/*.py``, and
     ``experiments/**/*.py`` for function definitions whose body references
@@ -36905,7 +36983,7 @@ def check_packet_compiler_no_op_proof_promotes_to_blocker(
     ``# NO_OP_PROOF_ADVISORY_OK:<reason>``. Reserved for probe-only packets
     that explicitly opt to keep the no_op_proof as an advisory record.
 
-    Live count expected: 0 — the codex round 5 HIGH 1 fix in
+    Live count expected: 0 - the codex round 5 HIGH 1 fix in
     ``src/tac/phase1_packet_compiler.py::_finalize_packet_result`` is the
     only known production instance.
 
@@ -36960,7 +37038,7 @@ def check_packet_compiler_no_op_proof_promotes_to_blocker(
                 )
             except OSError:
                 continue
-            # Quick prefilter — file must call the CANONICAL no_op_proof
+            # Quick prefilter - file must call the CANONICAL no_op_proof
             # constructor (`_build_no_op_proof`) AND mutate a blockers list.
             # Modules that maintain their own runtime-proof verification with
             # their own tag scheme (runtime_proof_*, typed_sidechannel_*) are
@@ -37024,7 +37102,7 @@ def check_packet_compiler_no_op_proof_promotes_to_blocker(
                 f"function(s) miss blocker promotion (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -37043,7 +37121,7 @@ def check_packet_compiler_no_op_proof_promotes_to_blocker(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #140 — `_save_*` writers documented as caller-locked must enforce
+# Catalog #140 - `_save_*` writers documented as caller-locked must enforce
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 5 HIGH 2, 2026-05-09): ``LightningDispatcher._save_state``
@@ -37090,18 +37168,18 @@ def check_state_writers_own_their_lock_end_to_end(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #140 — `_save_*` writers documented as caller-locked must enforce.
+    """Catalog #140 - `_save_*` writers documented as caller-locked must enforce.
 
     Refuses any function whose name matches ``_save_*`` (or ``save_*_state``)
     AND whose body contains a comment/docstring with one of the
     "MUST be called inside the lock" / "caller is responsible for the lock"
-    contract phrases — UNLESS the function body ALSO contains a runtime
+    contract phrases - UNLESS the function body ALSO contains a runtime
     enforcement (call to a sister ``_lock_held()`` predicate, ``_lock_depth``
     counter check, ``fcntl.flock`` acquisition, or ``raise RuntimeError`` /
     ``raise PreflightError`` triggered by the predicate).
 
     Comment-only contracts are FORBIDDEN per CLAUDE.md
-    "Comment-only contracts — FORBIDDEN". Pre-fix, the docstring rotted as
+    "Comment-only contracts - FORBIDDEN". Pre-fix, the docstring rotted as
     a generation of callers learned to bypass the lock without surfacing
     the contract violation. Now the writer raises at runtime if the
     in-process lock-held predicate is False.
@@ -37110,7 +37188,7 @@ def check_state_writers_own_their_lock_end_to_end(
     ``# CALLER_LOCK_ENFORCED_OK:<reason>``. Reserved for genuinely-single-
     process unittest scaffolds.
 
-    Live count expected: 0 — the codex round 5 HIGH 2 fix in
+    Live count expected: 0 - the codex round 5 HIGH 2 fix in
     ``src/tac/deploy/lightning/lightning_dispatch.py::LightningDispatcher._save_state``
     is the only known production instance.
 
@@ -37229,7 +37307,7 @@ def check_state_writers_own_their_lock_end_to_end(
                 f"comment-only-contract writer(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -37248,14 +37326,14 @@ def check_state_writers_own_their_lock_end_to_end(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #141 — Cross-module state-helper calls must thread paths
+# Catalog #141 - Cross-module state-helper calls must thread paths
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 5 HIGH 3, 2026-05-09): ``azure_dispatch.py``
 # defined its own module-level ``ACTIVE_VMS_PATH`` constant AND imported
 # ``register_active_vm_record`` / ``unregister_active_vm_by_name`` /
 # ``load_active_vms`` from ``tac.deploy.azure.active_vms_state`` (which has
-# its OWN module-level ``ACTIVE_VMS_PATH``) — without threading
+# its OWN module-level ``ACTIVE_VMS_PATH``) - without threading
 # ``path=ACTIVE_VMS_PATH`` through the calls. Tests that monkeypatched
 # ``azd.ACTIVE_VMS_PATH`` to isolate writes silently observed the helper's
 # canonical path; recovery/cleanup tooling that constructed an alternative
@@ -37298,7 +37376,7 @@ def check_state_helper_paths_explicit(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #141 — cross-module state-helper calls must thread paths.
+    """Catalog #141 - cross-module state-helper calls must thread paths.
 
     Scans ``src/tac/**/*.py``, ``tools/**/*.py``, ``scripts/**/*.py`` for
     files that:
@@ -37315,7 +37393,7 @@ def check_state_helper_paths_explicit(
 
     Same-line waiver on the call line: ``# STATE_HELPER_PATH_OK:<reason>``.
 
-    Live count expected: 0 — the codex round 5 HIGH 3 fix in
+    Live count expected: 0 - the codex round 5 HIGH 3 fix in
     ``src/tac/deploy/azure/azure_dispatch.py`` threads
     ``path=ACTIVE_VMS_PATH`` and ``lock_path=ACTIVE_VMS_LOCK`` through
     every helper call.
@@ -37363,7 +37441,7 @@ def check_state_helper_paths_explicit(
                 )
             except OSError:
                 continue
-            # Quick prefilter — must import from a state-helper module
+            # Quick prefilter - must import from a state-helper module
             if not any(f"from {mod} import" in text for mod in helper_modules):
                 continue
             # Identify module-level tracker path constant(s)
@@ -37451,7 +37529,7 @@ def check_state_helper_paths_explicit(
                 f"un-threaded helper call(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -37470,7 +37548,7 @@ def check_state_helper_paths_explicit(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #142 — `unsafe_test_only=True` restricted to test paths
+# Catalog #142 - `unsafe_test_only=True` restricted to test paths
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 6 HIGH 1, 2026-05-09): the round-4 fix added
@@ -37505,7 +37583,7 @@ def check_unsafe_test_only_restricted_to_test_paths(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #142 — `unsafe_test_only=True` only allowed from test paths.
+    """Catalog #142 - `unsafe_test_only=True` only allowed from test paths.
 
     Refuses any ``Phase3DispatchGate(...)`` constructor callsite outside
     a recognized test path that passes ``unsafe_test_only=True`` without
@@ -37558,7 +37636,7 @@ def check_unsafe_test_only_restricted_to_test_paths(
             if py in EXCLUDED_FILES:
                 continue
             s = str(py)
-            # Test paths exempt — they legitimately need a permissive gate
+            # Test paths exempt - they legitimately need a permissive gate
             if "/tests/" in s or py.name.startswith("test_") or py.name.endswith("_test.py"):
                 continue
             # Vendored intakes / hosted exports
@@ -37643,7 +37721,7 @@ def check_unsafe_test_only_restricted_to_test_paths(
                 f"unsafe construction(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -37663,24 +37741,24 @@ def check_unsafe_test_only_restricted_to_test_paths(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #143 — Paid-job submit must register pending row first
+# Catalog #143 - Paid-job submit must register pending row first
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 6 HIGH 2, 2026-05-09): Lightning dispatchers
 # called ``Job.run(...)`` (which CREATES the paid job + bills the
 # operator) THEN persisted the active-jobs row. With round-3's strict
 # ``register_job`` (which raises on corrupt active-jobs state), a
-# corrupt tracker file → paid job created but tracker write fails →
+# corrupt tracker file -> paid job created but tracker write fails ->
 # invisible orphan job. The harvester never knows about it; the operator
 # pays for an instance no one is watching.
 #
 # The canonical fix is the create-pending-row-before-submit pattern:
 #
-#   1. ``register_pending_job_locked(metadata)`` — writes a "pending"
+#   1. ``register_pending_job_locked(metadata)`` - writes a "pending"
 #      row to the tracker BEFORE submit. If the tracker is corrupt,
 #      the dispatcher refuses to even attempt the paid submit.
-#   2. ``Job.run(...)`` — actually submit; bill starts here.
-#   3. ``update_pending_to_active_locked(job_id, ...)`` — promote the
+#   2. ``Job.run(...)`` - actually submit; bill starts here.
+#   3. ``update_pending_to_active_locked(job_id, ...)`` - promote the
 #      pending row to active with the submit result.
 #   4. On submit failure: ``cancel_pending_job_locked(job_id)`` to drop
 #      the pending row.
@@ -37711,7 +37789,7 @@ def _is_lightning_dispatch_file(py: Path) -> bool:
 def _ast_finds_real_job_run_call(tree: ast.AST) -> list[ast.Call]:
     """Return a list of AST ``Job.run(...)`` Call nodes.
 
-    Filters out string constants and docstrings — only real Call nodes
+    Filters out string constants and docstrings - only real Call nodes
     where ``func.attr == "run"`` and ``func.value.id == "Job"`` are
     considered.
     """
@@ -37730,7 +37808,7 @@ def check_paid_job_register_before_submit(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #143 — every ``Job.run(...)`` caller must register pending row first.
+    """Catalog #143 - every ``Job.run(...)`` caller must register pending row first.
 
     Refuses any function in a Lightning dispatcher file that calls
     ``Job.run(...)`` (Lightning paid submit) WITHOUT calling
@@ -37857,8 +37935,8 @@ def check_paid_job_register_before_submit(
                     f"[Check 143] {rel}:{node.lineno}: function "
                     f"{node.name!r} calls Job.run(...) (paid Lightning "
                     "submit) WITHOUT calling register_pending_job_locked(...) "
-                    "first. Bug class: a corrupt active-jobs file → paid "
-                    "submit succeeds → tracker write fails → ORPHANED PAID "
+                    "first. Bug class: a corrupt active-jobs file -> paid "
+                    "submit succeeds -> tracker write fails -> ORPHANED PAID "
                     "JOB. Fix: call `register_pending_job_locked(metadata)` "
                     "before `Job.run(...)`, then "
                     "`update_pending_to_active_locked(job_id, ...)` after. "
@@ -37874,7 +37952,7 @@ def check_paid_job_register_before_submit(
                 f"orphan-prone caller(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -37894,7 +37972,7 @@ def check_paid_job_register_before_submit(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #144 — SETUP-first-seen helpers must use single transactional update
+# Catalog #144 - SETUP-first-seen helpers must use single transactional update
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (codex round 6 MEDIUM 1, 2026-05-09): the round-4 fix split
@@ -37932,7 +38010,7 @@ def check_setup_first_seen_no_split_transactions(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #144 — refuse SETUP-first-seen split transactions.
+    """Catalog #144 - refuse SETUP-first-seen split transactions.
 
     Refuses any function that calls BOTH an "observed-insertion" helper
     (``update_setup_first_seen_locked`` or ``_save_setup_first_seen``)
@@ -38074,7 +38152,7 @@ def check_setup_first_seen_no_split_transactions(
                 f"split-txn caller(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -38094,7 +38172,7 @@ def check_setup_first_seen_no_split_transactions(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #145 — Preflight CLI default `--scope` must be bounded
+# Catalog #145 - Preflight CLI default `--scope` must be bounded
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Superseded bug class (codex round 6 MEDIUM 2, 2026-05-09): making the CLI
@@ -38121,7 +38199,7 @@ def check_preflight_cli_default_scope_is_bounded_dev(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #145 — preflight CLI ``--scope`` default must be bounded.
+    """Catalog #145 - preflight CLI ``--scope`` default must be bounded.
 
     Scans ``src/tac/preflight.py`` (the canonical preflight CLI module)
     for an ``argparse`` ``--scope`` flag and asserts its default is the
@@ -38232,7 +38310,7 @@ def check_preflight_cli_default_scope_is_bounded_dev(
                 f"default/choice violation(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
         else:
             print(
                 "  [preflight-cli-default-scope-is-dev] OK "
@@ -38260,21 +38338,21 @@ def check_preflight_cli_default_scope_is_bounded_dev(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #147 — Lightning submit `cancel_pending_job_locked` only
+# Catalog #147 - Lightning submit `cancel_pending_job_locked` only
 # pre-network (codex round 7+8 HIGH 1, 2026-05-09)
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class: the round-6 fix (#143) made dispatchers register the pending
 # row BEFORE submit, but the cancel-on-exception logic was too aggressive:
 # `except BaseException` wrapped the entire `submit_lightning_job(...)`
-# call (which includes `Job.run(...)` — the network call) and
+# call (which includes `Job.run(...)` - the network call) and
 # unconditionally invoked `cancel_pending_job_locked`. SDK timeouts,
 # post-create API errors, property-access failures, or KeyboardInterrupt
 # during/after `Job.run` could leave a real paid Lightning job while
 # the cancel logic silently deleted the only harvester-visible row.
 #
 # Fix surface: dispatchers split exception routing into two narrow
-# clauses — `except _PreNetworkSubmitError` calls
+# clauses - `except _PreNetworkSubmitError` calls
 # `cancel_pending_job_locked` (safe pre-network), and the residual
 # `except BaseException` calls `mark_pending_failed_unknown_billing_locked`
 # (preserves the row for forensic recovery).
@@ -38377,7 +38455,7 @@ def check_lightning_submit_cancel_only_before_network(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #147 — `cancel_pending_job_locked` only safe pre-network.
+    """Catalog #147 - `cancel_pending_job_locked` only safe pre-network.
 
     Refuses any Lightning dispatcher file (filename contains "lightning")
     where a `try:` block invokes `submit_lightning_job(...)` or `Job.run(...)`
@@ -38394,7 +38472,7 @@ def check_lightning_submit_cancel_only_before_network(
     call. Cancelling on ambiguous-billing failures silently deletes the
     only harvester-visible row for a real paid job.
 
-    Fix: split exception routing — narrow handler for pre-network failures
+    Fix: split exception routing - narrow handler for pre-network failures
     (cancel safe), residual `BaseException` handler routes to
     `mark_pending_failed_unknown_billing_locked` (preserve row).
 
@@ -38473,7 +38551,7 @@ def check_lightning_submit_cancel_only_before_network(
                         "Bug class: SDK timeout / post-create API error / "
                         "KeyboardInterrupt mid-Job.run() leaves a real paid "
                         "Lightning job while this code silently deletes the "
-                        "pending row → ORPHANED PAID JOB invisible to the "
+                        "pending row -> ORPHANED PAID JOB invisible to the "
                         "harvester. Fix: narrow the cancel handler to "
                         "`except _PreNetworkSubmitError` (pre-network only); "
                         "route the residual `except BaseException` to "
@@ -38490,7 +38568,7 @@ def check_lightning_submit_cancel_only_before_network(
                 f"ambiguous-billing-cancel(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -38509,7 +38587,7 @@ def check_lightning_submit_cancel_only_before_network(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #148 — `tac.vastai_tracker` mutating callers must use the strict
+# Catalog #148 - `tac.vastai_tracker` mutating callers must use the strict
 # loader (codex round 7 HIGH 2, 2026-05-09)
 # ─────────────────────────────────────────────────────────────────────────
 #
@@ -38548,7 +38626,7 @@ def check_vastai_tracker_strict_load(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #148 — vastai_tracker mutating writers must use strict load.
+    """Catalog #148 - vastai_tracker mutating writers must use strict load.
 
     Refuses any function in `src/tac/vastai_tracker.py` whose body calls
     `_write_records(...)` (mutation) inside a body that also invokes the
@@ -38649,7 +38727,7 @@ def check_vastai_tracker_strict_load(
                 f"non-strict-loader writer(s)"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
         else:
             print(
                 "  [vastai-tracker-strict-load] OK "
@@ -38666,7 +38744,7 @@ def check_vastai_tracker_strict_load(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #150 — Phase B `auth_memo_path` MUST be repo-relative
+# Catalog #150 - Phase B `auth_memo_path` MUST be repo-relative
 # (Phase B Option C operator decision 2026-05-09)
 # ─────────────────────────────────────────────────────────────────────────
 #
@@ -38676,9 +38754,9 @@ def check_vastai_tracker_strict_load(
 # carrying the `operator_phase_b_authorization=true` token. Codex round 8
 # HIGH 2 flagged this as non-hermetic + spoofable + machine-dependent.
 #
-# Per CLAUDE.md "Design decisions — non-negotiable", this is a council-
+# Per CLAUDE.md "Design decisions - non-negotiable", this is a council-
 # grade design tradeoff (not a clear bug). Operator decision 2026-05-09
-# via AskUserQuestion: **Option C compromise** — keep True default
+# via AskUserQuestion: **Option C compromise** - keep True default
 # (a6535b1ed back-compat) PLUS add explicit
 # `phase_b_preconditions_status(auth_memo_path=...)` argument that MUST
 # resolve to a path under the git repo root.
@@ -38719,7 +38797,7 @@ def _check_150_extract_string_literal(node: ast.AST) -> str | None:
     - `auth_memo_path="~/.claude/foo.md"` (Constant)
     - `auth_memo_path=Path("~/.claude/foo.md")` (Call wrapping Constant)
     - `auth_memo_path=pathlib.Path.home() / ".claude/foo.md"` (BinOp / Call)
-    - `auth_memo_path=f"/tmp/{lane}.md"` (JoinedStr — extract literal parts)
+    - `auth_memo_path=f"/tmp/{lane}.md"` (JoinedStr - extract literal parts)
     """
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
@@ -38747,7 +38825,7 @@ def _check_150_extract_string_literal(node: ast.AST) -> str | None:
         # Even one side gives us anchor evidence.
         return left if left is not None else right
     if isinstance(node, ast.Attribute):
-        # Path.home() / ".claude" — walk the chain for "home" + ".claude" token
+        # Path.home() / ".claude" - walk the chain for "home" + ".claude" token
         # is handled by callers via `Path.home()` BinOp form above.
         return None
     return None
@@ -38814,7 +38892,7 @@ def check_phase_b_auth_memo_in_repo(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #150 — Phase B `auth_memo_path` must be repo-relative.
+    """Catalog #150 - Phase B `auth_memo_path` must be repo-relative.
 
     Refuses any caller of `phase_b_preconditions_status(...)` that passes
     `auth_memo_path=` pointing to a literal under `~/.claude`, `/tmp`,
@@ -38822,7 +38900,7 @@ def check_phase_b_auth_memo_in_repo(
     BinOp expression.
 
     Per the **Phase B Option C operator decision 2026-05-09** (CLAUDE.md
-    "Design decisions — non-negotiable" arbitration of codex round 8
+    "Design decisions - non-negotiable" arbitration of codex round 8
     HIGH 2 vs a6535b1ed): the authorization memo MUST live in a committed
     repo-relative path so the reviewer audits the same bytes that gate
     the dispatch. The canonical location is
@@ -38833,7 +38911,7 @@ def check_phase_b_auth_memo_in_repo(
     fallback case.
 
     Implementation files (`src/tac/lane_12_v2_nerv_as_renderer.py` +
-    this module) are exempt by construction — they define / proxy the
+    this module) are exempt by construction - they define / proxy the
     parameter rather than passing literal paths.
 
     Bug class: codex round 8 HIGH 2 (2026-05-09). Memory:
@@ -38860,7 +38938,7 @@ def check_phase_b_auth_memo_in_repo(
         if _is_oss_export_mirror_path(py):
             continue
         s = str(py)
-        # Skip vendored / intake / tests / results paths — they are not
+        # Skip vendored / intake / tests / results paths - they are not
         # production callers.
         if "/tests/" in s or py.name.startswith("test_"):
             continue
@@ -38972,7 +39050,7 @@ def check_phase_b_auth_memo_in_repo(
                 f"(scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 5:
                 print(f"    ... ({len(violations) - 5} more)")
         else:
@@ -38994,7 +39072,7 @@ def check_phase_b_auth_memo_in_repo(
 # Catalog #151: check_operator_wrapper_threads_trainer_tier_required_flags
 # ============================================================================
 # Refuses operator-authorize / remote-lane wrappers that invoke a trainer
-# declaring `TIER_<N>_OPERATOR_REQUIRED_FLAGS` without threading the env→CLI
+# declaring `TIER_<N>_OPERATOR_REQUIRED_FLAGS` without threading the env->CLI
 # ladder for each flag. Sister of Catalog #12 `preflight_arity` (dead-flag
 # detector): #12 catches CALLER flags not in target argparse; #151 catches
 # TARGET-required flags not threaded by caller. Together they close the
@@ -39021,8 +39099,18 @@ _CHECK_151_EXCLUDED_PATH_MARKERS = (
 def _check_151_extract_tier_manifests(trainer_path: Path) -> dict[str, dict]:
     """AST-walk a trainer module, return union of every TIER_N_OPERATOR_REQUIRED_FLAGS dict.
 
-    Per council R1: a trainer may declare TIER_1 AND TIER_2 etc. — union them.
+    Per council R1: a trainer may declare TIER_1 AND TIER_2 etc. - union them.
     Per council R3: trainer with no manifest returns {} (fail-open).
+
+    META-CATALOG-152-FIX 2026-05-12: substrate trainers (sane_hnerv, balle,
+    SIREN, Cool-Chic, VQ-VAE, hybrid_renderer_residual, self_compress_nn,
+    TCNeRV, BlockNeRV, FFNeRV, DSNeRV, HiNeRV, ...) declare the manifest as
+    `TIER_<N>_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {...}`,
+    which is `ast.AnnAssign`, NOT `ast.Assign`. The previous extractor walked
+    only `ast.Assign` and silently returned `{}` for every annotated declaration
+    -- making Catalog #151 + #152 STRICT modes structurally false-OK across the
+    entire substrate canvas. The fix below walks BOTH node kinds and normalizes
+    target extraction. See `feedback_meta_catalog_152_annassign_fix_LANDED_20260512.md`.
     """
     try:
         text = trainer_path.read_text(encoding="utf-8", errors="replace")
@@ -39031,15 +39119,28 @@ def _check_151_extract_tier_manifests(trainer_path: Path) -> dict[str, dict]:
         return {}
     union: dict[str, dict] = {}
     for node in tree.body:
-        if not isinstance(node, ast.Assign):
+        # Walk BOTH unannotated assigns (`TIER_1 = {...}`) AND annotated
+        # assigns (`TIER_1: dict[...] = {...}`). The latter is the dominant
+        # form across substrate trainers in the 2026-05-12 canvas.
+        if isinstance(node, ast.Assign):
+            targets: list[ast.expr] = list(node.targets)
+            value = node.value
+        elif isinstance(node, ast.AnnAssign):
+            # AnnAssign has a single target (`node.target`) not `node.targets`.
+            # Bare-annotation form `name: type` (no value) is skipped via value-None guard.
+            if node.value is None:
+                continue
+            targets = [node.target]
+            value = node.value
+        else:
             continue
-        for tgt in node.targets:
+        for tgt in targets:
             if not (isinstance(tgt, ast.Name)
                     and _CHECK_151_TIER_MANIFEST_NAME_RE.match(tgt.id)):
                 continue
-            if not isinstance(node.value, ast.Dict):
+            if not isinstance(value, ast.Dict):
                 continue
-            for k_node, v_node in zip(node.value.keys, node.value.values):
+            for k_node, v_node in zip(value.keys, value.values):
                 if not isinstance(k_node, ast.Constant) or not isinstance(k_node.value, str):
                     continue
                 if not isinstance(v_node, ast.Dict):
@@ -39085,7 +39186,7 @@ def _check_151_extract_trainer_paths(wrapper_text: str) -> list[str]:
 
     Per council R5: scope by INVOCATION (the wrapper runs the trainer), not
     by string-mention. A trainer path mentioned only in a docstring or
-    comment is NOT an invocation — it's a reference. Heuristic: the trainer
+    comment is NOT an invocation - it's a reference. Heuristic: the trainer
     path must appear on a line containing OR within 3 lines of an
     invocation token (`subprocess.`, `python -u`, `uv run`, `$PYBIN`, etc.),
     AND must not appear inside a triple-quoted docstring at module level.
@@ -39164,7 +39265,7 @@ def check_operator_wrapper_threads_trainer_tier_required_flags(
       - `experiments/results/**` build artifacts
       - `.omx/oss_export/**` mirrors
 
-    Per council R3: trainer with NO `TIER_N_OPERATOR_REQUIRED_FLAGS` → OK
+    Per council R3: trainer with NO `TIER_N_OPERATOR_REQUIRED_FLAGS` -> OK
     (declaration is opt-in; silence is correct fail-open behavior).
     """
     root = (repo_root or Path.cwd()).resolve()
@@ -39210,7 +39311,7 @@ def check_operator_wrapper_threads_trainer_tier_required_flags(
                 if flag not in union_required:
                     union_required[flag] = meta
         if not union_required:
-            continue  # R3: no trainer manifest → no required flags
+            continue  # R3: no trainer manifest -> no required flags
         waivers = _check_151_collect_waivers(text)
         for flag, meta in union_required.items():
             if flag in waivers:
@@ -39234,7 +39335,7 @@ def check_operator_wrapper_threads_trainer_tier_required_flags(
                 f"across {scanned} wrapper(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
             if len(violations) > 10:
                 print(f"    ... ({len(violations) - 10} more)")
         else:
@@ -39256,7 +39357,7 @@ def check_operator_wrapper_threads_trainer_tier_required_flags(
 # Catalog #152: check_operator_wrapper_validates_required_input_files_pre_dispatch
 # ============================================================================
 # Sister of Catalog #151. While #151 catches TARGET-required CLI flags not
-# threaded by caller (env→CLI ladder), #152 catches `required_input_file=True`
+# threaded by caller (env->CLI ladder), #152 catches `required_input_file=True`
 # flags whose VALUE must be an EXISTING FILE PATH at wrapper-dispatch time but
 # whose wrapper does NOT pre-validate the file exists BEFORE the GPU dispatch.
 #
@@ -39286,7 +39387,7 @@ _CHECK_152_WAIVER_RE = re.compile(
 # Canonical validator-tool invocation token; if any wrapper line contains this,
 # the trainer-required input validation is considered satisfied.
 _CHECK_152_VALIDATOR_TOOL_TOKEN = "tools/validate_dispatch_required_inputs.py"
-# Shell-level dispatch tokens — if a wrapper contains one of these, it is
+# Shell-level dispatch tokens - if a wrapper contains one of these, it is
 # considered a "dispatch wrapper" that must validate before firing. Scoping by
 # dispatch token (not by filename glob) so the check also covers future
 # operator_authorize_*.sh / remote_lane_*.sh / experiments/launch_*.py shapes.
@@ -39345,7 +39446,7 @@ def _check_152_wrapper_validates_required_input(
           test referencing the env-var (covers POSIX shell wrappers).
       (b) `tools/validate_dispatch_required_inputs.py` invocation in the body
           (the canonical validator delegates to the same trainer-manifest read).
-      (c) Same-line `# REQUIRED_INPUT_VALIDATION_OK:<reason>` waiver — handled
+      (c) Same-line `# REQUIRED_INPUT_VALIDATION_OK:<reason>` waiver - handled
           at the caller-level (per-flag granularity) so the waiver list comes
           back as a set of waived env-vars from `_check_152_collect_waivers`.
     """
@@ -39383,7 +39484,7 @@ def _check_152_collect_waivers(wrapper_text: str) -> set[str]:
 
     A waiver applies broadly: any token after the marker excuses ALL required
     inputs on that line (because the operator has explicitly declared the
-    dispatch is safe-by-construction — e.g. smoke-only, no required-input gate).
+    dispatch is safe-by-construction - e.g. smoke-only, no required-input gate).
     """
     return {m.group(1).strip() for m in _CHECK_152_WAIVER_RE.finditer(wrapper_text)}
 
@@ -39497,7 +39598,7 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
                 if flag not in union_required:
                     union_required[flag] = meta
         if not union_required:
-            # No required-input-file flags declared → wrapper is safe-by-design.
+            # No required-input-file flags declared -> wrapper is safe-by-design.
             continue
         waivers = _check_152_collect_waivers(text)
         # Acceptance: a waiver token MUST explicitly name the flag, the env-var,
@@ -39539,7 +39640,7 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
                 f"across {scanned} dispatch wrapper(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 10:
                 print(f"    ... ({len(violations) - 10} more)")
         else:
@@ -39568,7 +39669,7 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
 # directly without routing through
 # ``tac.deploy.modal.mount_manifest.build_training_image``.
 #
-# Bug class: hand-curated mount lists are an "N+1 entry" failure mode — every
+# Bug class: hand-curated mount lists are an "N+1 entry" failure mode - every
 # new trainer-default path the operator adds is one place the mount list can
 # be stale. The 2026-05-12 Modal A100 dispatch ``fc-01KREJST89QHFRWJXHAKXD850C``
 # burned $0.016 in 15s because the operator added a new
@@ -39576,7 +39677,7 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
 # the 11 Modal dispatcher mount lists. Adding entries to hand-curated lists
 # IS the bug class. ``tac.deploy.modal.mount_manifest.build_training_image``
 # resolves the same problem by INTROSPECTING the trainer's
-# ``TIER_<N>_OPERATOR_REQUIRED_FLAGS`` at image-build time — adding a new
+# ``TIER_<N>_OPERATOR_REQUIRED_FLAGS`` at image-build time - adding a new
 # required-input flag automatically propagates to the mount list.
 #
 # Same-line waiver: ``# MODAL_MANUAL_MOUNT_OK:<reason>`` exempts intentional
@@ -39585,7 +39686,7 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
 #
 # Sister of Catalog #151 (operator-wrapper-threads-trainer-flags) +
 # Catalog #152 (operator-wrapper-validates-required-input-files): together
-# they close the trainer-manifest → wrapper → image-build wire-up loop.
+# they close the trainer-manifest -> wrapper -> image-build wire-up loop.
 _CHECK_153_MANUAL_MOUNT_TOKENS = (
     ".add_local_dir(",
     ".add_local_file(",
@@ -39600,7 +39701,7 @@ _CHECK_153_EXEMPT_PATH_SUFFIXES = (
     # ``experiments/modal_t1_balle_endtoend.py`` ships its own static
     # MODAL_MOUNT_MANIFEST tuple (a different but compatible pattern that
     # snapshots mount provenance for custody review). The check accepts it
-    # because the manifest tuple is itself a discovery primitive — operator
+    # because the manifest tuple is itself a discovery primitive - operator
     # extras get appended via ``_apply_modal_mount_manifest``, not hand-curated
     # at every dispatcher.
 )
@@ -39669,17 +39770,17 @@ def check_modal_dispatcher_uses_canonical_mount_builder(
             for ln_no, snippet in manual_lines:
                 violations.append(
                     f"{rel}:{ln_no}: manual mount call alongside canonical "
-                    f"build_training_image — add `# MODAL_MANUAL_MOUNT_OK:"
+                    f"build_training_image - add `# MODAL_MANUAL_MOUNT_OK:"
                     f"<reason>` same-line waiver if intentional. line: "
                     f"{snippet}"
                 )
             continue
-        # File never calls the canonical builder → all manual lines are
+        # File never calls the canonical builder -> all manual lines are
         # violations.
         for ln_no, snippet in manual_lines:
             violations.append(
                 f"{rel}:{ln_no}: manual mount call without canonical "
-                f"build_training_image — route through "
+                f"build_training_image - route through "
                 f"tac.deploy.modal.mount_manifest.build_training_image, OR add "
                 f"`# MODAL_MANUAL_MOUNT_OK:<reason>` same-line waiver. line: "
                 f"{snippet}"
@@ -39692,7 +39793,7 @@ def check_modal_dispatcher_uses_canonical_mount_builder(
                 f"across {scanned} modal dispatcher(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
             if len(violations) > 10:
                 print(f"    ... ({len(violations) - 10} more)")
         else:
@@ -39731,7 +39832,7 @@ def check_modal_dispatcher_uses_canonical_mount_builder(
 # Acceptance:
 #   - The canonical helper file itself (tools/gc_experiments_results.py)
 #     is exempt by construction.
-#   - Tests under */tests/* and test_*.py are exempt — they legitimately
+#   - Tests under */tests/* and test_*.py are exempt - they legitimately
 #     exercise rmtree on tmp_path fixtures that happen to embed
 #     `experiments/results` substrings.
 #   - Vendored public-PR clones (`experiments/results/public_pr*_intake_*`)
@@ -39745,7 +39846,7 @@ def check_modal_dispatcher_uses_canonical_mount_builder(
 # explicitly. The dotted-attribute lookups (e.g. `shutil.rmtree`) and the
 # shell `rm -rf` family are textually unmistakable. Variables that hold
 # `experiments/results/` paths and are later passed to a destructive call
-# are not caught by this textual signature — and that's acceptable
+# are not caught by this textual signature - and that's acceptable
 # because the bug class we extinct is the literal-path-in-script class
 # (the "ad-hoc one-off cleanup script someone wrote in 5 minutes").
 
@@ -39763,7 +39864,7 @@ _CHECK_154_EXCLUDED_PATH_MARKERS = (
 # that match its own signature; the canonical GC helper performs the
 # destructive call we license).
 _CHECK_154_SELF_EXEMPT_PATHS = frozenset({
-    "src/tac/preflight.py",  # this file — defines the patterns
+    "src/tac/preflight.py",  # this file - defines the patterns
     "tools/gc_experiments_results.py",  # the canonical helper
 })
 _CHECK_154_DESTRUCTIVE_PY_PATTERNS = (
@@ -39825,7 +39926,7 @@ def check_experiments_results_gc_helper_is_canonical(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """Catalog #154 — refuse bulk-delete under ``experiments/results/`` outside
+    """Catalog #154 - refuse bulk-delete under ``experiments/results/`` outside
     the canonical helper (``tools/gc_experiments_results.py``).
 
     See module-level commentary above for rationale, scope, and acceptance
@@ -39886,7 +39987,7 @@ def check_experiments_results_gc_helper_is_canonical(
                 f"violation(s) across {scanned} candidate(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
             if len(violations) > 10:
                 print(f"    ... ({len(violations) - 10} more)")
         else:
@@ -39909,7 +40010,7 @@ def check_experiments_results_gc_helper_is_canonical(
 # ============================================================================
 # Catalog #156: check_gc_helper_refuses_delete_on_tracked_paths
 # ============================================================================
-# 2026-05-12 (subagent F, Wave 1) — sister gate of Catalog #154. Where #154
+# 2026-05-12 (subagent F, Wave 1) - sister gate of Catalog #154. Where #154
 # refuses bulk-delete under ``experiments/results/`` outside the canonical
 # helper, #156 refuses the canonical helper ITSELF from accepting a plan
 # that would delete a git-tracked path.
@@ -39924,7 +40025,7 @@ def check_experiments_results_gc_helper_is_canonical(
 #   (b) the file carries a same-line waiver
 #       ``# GC_TRACKED_DELETE_OK:<reason>`` on the call line;
 #   (c) the call is wrapped in a try/except that catches
-#       ``TrackedDeleteRefusedError`` — i.e. the caller acknowledges the
+#       ``TrackedDeleteRefusedError`` - i.e. the caller acknowledges the
 #       Part-2 defense-in-depth and handles refusal gracefully.
 #
 # Why this is the *self-protect* sister, not a duplicate of #154:
@@ -39963,7 +40064,7 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """Catalog #156 — refuse external callers of the canonical GC helper
+    """Catalog #156 - refuse external callers of the canonical GC helper
     that strip the Part-2 ``TrackedDeleteRefusedError`` defense-in-depth.
 
     See module-level commentary for rationale, scope, and acceptance rules.
@@ -40106,7 +40207,7 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
                 f"violation(s) across {scanned} candidate(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
             if len(violations) > 10:
                 print(f"    ... ({len(violations) - 10} more)")
         else:
@@ -40131,7 +40232,7 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
 # ============================================================================
 # Catalog #157: check_commit_serializer_pre_lock_hash_against_head
 # ============================================================================
-# 2026-05-12 (subagent F, Part 4) — commit-swap class permanent fix.
+# 2026-05-12 (subagent F, Part 4) - commit-swap class permanent fix.
 #
 # The 2026-04-29 PM memory entry feedback_concurrent_subagent_commit_message_swap
 # documented a bug class where concurrent subagents staged + committed in
@@ -40153,7 +40254,7 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
 # returns "no changes to commit" because HEAD already contains everything.
 #
 # The permanent fix is to compare the pre-lock hash NOT against a
-# post-lock hash, but against the EXPECTED hash — what the caller asserts
+# post-lock hash, but against the EXPECTED hash - what the caller asserts
 # the file content SHOULD be at commit time. If the caller passes
 # `--expected-content-sha256 <file>=<sha>` (computed by the subagent at
 # the START of its work, BEFORE any sibling has edited the same file),
@@ -40204,7 +40305,7 @@ def check_commit_serializer_pre_lock_hash_against_head(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """Catalog #157 — refuse direct ``git commit`` invocations that bypass
+    """Catalog #157 - refuse direct ``git commit`` invocations that bypass
     the canonical subagent commit serializer.
 
     The commit-swap bug class (2026-04-29, 2026-05-12 92aba3ca) is
@@ -40283,7 +40384,7 @@ def check_commit_serializer_pre_lock_hash_against_head(
                 f"violation(s) across {scanned} candidate(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
             if len(violations) > 10:
                 print(f"    ... ({len(violations) - 10} more)")
         else:
@@ -40306,7 +40407,7 @@ def check_commit_serializer_pre_lock_hash_against_head(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #161 — substrate archive _quantize_intN degenerate-range fill
+# Catalog #161 - substrate archive _quantize_intN degenerate-range fill
 # must be -(MAX_LEVELS // 2) so that dequant recovers `lo` exactly.
 # (FFFF Bug 1 self-protection, 2026-05-12; renumbered from #160 by FIX-A
 # 2026-05-12 after ZZZZZ collision audit against DDDD's #158 reservation.)
@@ -40314,7 +40415,7 @@ def check_commit_serializer_pre_lock_hash_against_head(
 #
 # Bug class (NNN flagged 2026-05-12 sister bug class FFFF fix):
 # When pack_archive() encounters a tensor whose min == max (degenerate
-# range — all-equal value), the int16/int8 quantizer code path must fill
+# range - all-equal value), the int16/int8 quantizer code path must fill
 # `q` with the negative sentinel value `-(MAX_LEVELS // 2)` so the
 # dequant formula `(q + (MAX_LEVELS // 2)) * scale + zero_point` produces
 # exactly `lo`. The buggy pattern fills with zeros, which dequant'd to
@@ -40362,7 +40463,7 @@ def check_quantize_degenerate_range_clamped_correctly(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #161 — refuse substrate archive `_quantize_intN` functions
+    """Catalog #161 - refuse substrate archive `_quantize_intN` functions
     whose degenerate (``hi <= lo``) branch fills `q` with zeros instead of
     `-(MAX_LEVELS // 2)`.
 
@@ -40494,7 +40595,7 @@ def check_quantize_degenerate_range_clamped_correctly(
                 f"violation(s) across {scanned} substrate archive(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
         else:
             print(
                 f"  [quantize-degenerate-range] OK "
@@ -40514,12 +40615,12 @@ def check_quantize_degenerate_range_clamped_correctly(
 
 
 # ============================================================================
-# Catalog #162 — operator_authorize_*.sh wrappers must be thin shims that
+# Catalog #162 - operator_authorize_*.sh wrappers must be thin shims that
 # delegate to tools/operator_authorize.py --recipe <name>.
 # ============================================================================
 # Per FIX-G T1-C wrapper unification (simplification audit a2a901c4f43d66a74,
 # operator approved 2026-05-12): the 10 legacy `scripts/operator_authorize_*.sh`
-# wrappers (~1,497 LOC, ~70% structurally duplicate — set -euo pipefail +
+# wrappers (~1,497 LOC, ~70% structurally duplicate - set -euo pipefail +
 # cost-band-prompt + lane-claim + platform case) collapse to ONE canonical
 # Python entry point (`tools/operator_authorize.py`) + N small YAML recipes
 # under `.omx/operator_authorize_recipes/`.
@@ -40530,7 +40631,9 @@ def check_quantize_degenerate_range_clamped_correctly(
 #
 # Acceptance: a wrapper passes if EITHER (a) the body contains a call to
 # `tools/operator_authorize.py` (typically via `.venv/bin/python tools/...`
-# or `python tools/...`), OR (b) it carries a same-line
+# or `python tools/...`), (b) the body routes through the canonical
+# `tools/run_modal_smoke_before_full.py` helper that delegates to
+# `tools/operator_authorize.py`, OR (c) it carries a same-line
 # `# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>` waiver on the shebang or first
 # 10 lines for explicit legacy preservation.
 #
@@ -40546,6 +40649,7 @@ _CHECK_162_OPERATOR_AUTHORIZE_GLOB = "operator_authorize_*.sh"
 _CHECK_162_WAIVER_TOKEN = "OPERATOR_AUTHORIZE_LEGACY_OK:"
 _CHECK_162_CANONICAL_ENTRY_POINT_TOKENS = (
     "tools/operator_authorize.py",
+    "tools/run_modal_smoke_before_full.py",
 )
 
 
@@ -40571,9 +40675,9 @@ def check_operator_authorize_canonical_use(
 
     Scan scope: `scripts/operator_authorize_*.sh`.
 
-    Acceptance: wrapper body invokes ``tools/operator_authorize.py``, OR the
-    wrapper's first 10 lines carry a ``# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>``
-    waiver.
+    Acceptance: wrapper body invokes ``tools/operator_authorize.py`` directly,
+    routes through ``tools/run_modal_smoke_before_full.py``, OR the wrapper's
+    first 10 lines carry a ``# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>`` waiver.
     """
     root = (repo_root or Path.cwd()).resolve()
     scripts_dir = root / "scripts"
@@ -40602,9 +40706,10 @@ def check_operator_authorize_canonical_use(
         # Canonical entry-point invocation in executable command text. Comments
         # documenting the desired tool are not enough to satisfy the gate.
         command_text = _check_162_command_text(text)
-        if all(
-            tok in command_text for tok in _CHECK_162_CANONICAL_ENTRY_POINT_TOKENS
-        ) and "--recipe" in command_text:
+        if (
+            any(tok in command_text for tok in _CHECK_162_CANONICAL_ENTRY_POINT_TOKENS)
+            and "--recipe" in command_text
+        ):
             continue
         violations.append(
             f"{rel}: operator_authorize_*.sh wrapper must delegate to "
@@ -40621,7 +40726,7 @@ def check_operator_authorize_canonical_use(
                 f"violation(s) across {scanned} wrapper(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
         else:
             print(
                 f"  [operator-authorize-canonical] OK "
@@ -40644,7 +40749,7 @@ def check_operator_authorize_canonical_use(
 
 
 # ============================================================================
-# Catalog #163 — `scripts/remote_lane_*.sh` that ``source`` the canonical
+# Catalog #163 - `scripts/remote_lane_*.sh` that ``source`` the canonical
 # ``scripts/remote_archive_only_eval.sh`` MUST prepend the
 # ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` sentinel.
 # ============================================================================
@@ -40664,7 +40769,7 @@ def check_operator_authorize_canonical_use(
 #
 # Acceptance: a remote_lane_*.sh script passes if EITHER (a) every line
 # containing ``source ... remote_archive_only_eval.sh`` (with the path as a
-# direct argument — NOT via ``<(grep ...)`` / ``<(awk ...)`` substitution,
+# direct argument - NOT via ``<(grep ...)`` / ``<(awk ...)`` substitution,
 # which extract only specific function bodies and never include the main
 # flow) ALSO contains ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` either as
 # an inline env-var assignment or anywhere in the 5 preceding lines as an
@@ -40758,7 +40863,7 @@ def check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap(
             m = _CHECK_163_SOURCE_DIRECT_PATTERN.search(line)
             if m is None:
                 continue
-            # Same-line waiver — explicit opt-in to full main flow.
+            # Same-line waiver - explicit opt-in to full main flow.
             if _CHECK_163_WAIVER_TOKEN in line:
                 continue
             # Same-line sentinel (e.g. ``VAR=1 source ...``).
@@ -40788,7 +40893,7 @@ def check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap(
                 f"violation(s) across {scanned} remote_lane_*.sh file(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
         else:
             print(
                 f"  [remote-lane-sentinel] OK "
@@ -40810,7 +40915,7 @@ def check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap(
 
 
 # ============================================================================
-# Catalog #164 — substrate score-aware loss code MUST call
+# Catalog #164 - substrate score-aware loss code MUST call
 # ``<scorer>.preprocess_input(...)`` before invoking ``<scorer>(...)`` on
 # any code path that passes a tensor to the scorer's forward.
 # ============================================================================
@@ -40820,7 +40925,7 @@ def check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap(
 # ``(B, T=1, C, H, W)`` directly into ``self.seg_scorer(...)`` which is
 # an ``smp.Unet`` that expects 4D ``(B, C, H, W)``. The upstream
 # ``SegNet.preprocess_input`` slices the last frame and interpolates to
-# (384, 512) — that's the dimension reduction the loss skipped.
+# (384, 512) - that's the dimension reduction the loss skipped.
 #
 # Sibling bug at the same call-site fed 4D 6-channel RGB to
 # ``self.pose_scorer(...)`` instead of the 4D 12-channel post-yuv6
@@ -40891,7 +40996,7 @@ def _check_164_collect_scorer_calls_and_preprocess(
       forward-pass call (the call's func is Attribute(self, <scorer>)).
     * a dict of {scorer_attr: first_lineno} for every
       ``self.<scorer>.preprocess_input(...)`` (or other non-forward method)
-      pre-processing call observed in the body — anything that's a chained
+      pre-processing call observed in the body - anything that's a chained
       ``self.<scorer>.<method>(...)`` registers <scorer> as having been
       preprocessed-by-the-body.
 
@@ -40925,7 +41030,7 @@ def _check_164_collect_scorer_calls_and_preprocess(
                 continue
         if not isinstance(func, ast.Attribute):
             continue
-        # Case A: BARE forward call — ``self.<scorer>(...)``.
+        # Case A: BARE forward call - ``self.<scorer>(...)``.
         # node.func is Attribute(value=Name('self'), attr=<scorer>).
         if (
             isinstance(func.value, ast.Name)
@@ -40934,7 +41039,7 @@ def _check_164_collect_scorer_calls_and_preprocess(
         ):
             forward_calls.append((func.attr, node.lineno))
             continue
-        # Case B: chained call — ``self.<scorer>.<method>(...)``.
+        # Case B: chained call - ``self.<scorer>.<method>(...)``.
         # node.func is Attribute(value=Attribute(value=Name('self'), attr=<scorer>), attr=<method>).
         # Only ``preprocess_input`` registers the scorer as preprocessed;
         # other methods (e.g. compute_distortion) don't count.
@@ -41014,8 +41119,8 @@ def check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
                     f"``self.{scorer_attr}(...)`` without a sibling "
                     f"``self.{scorer_attr}.preprocess_input(...)`` in the "
                     "same body. Upstream scorers require ``preprocess_input`` "
-                    "for dimension reduction (5D→4D for SegNet, "
-                    "5D→4D-12-channel for PoseNet via differentiable "
+                    "for dimension reduction (5D->4D for SegNet, "
+                    "5D->4D-12-channel for PoseNet via differentiable "
                     "rgb_to_yuv6). WWW4 dispatch crashed at this exact "
                     "shape mismatch. Add the preprocess call OR a same-line "
                     "``# SCORER_PREPROCESS_HANDLED_OK:<reason>`` waiver."
@@ -41027,7 +41132,7 @@ def check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
                 f"violation(s) across {scanned} score_aware*.py file(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
         else:
             print(
                 f"  [scorer-preprocess-before-forward] OK "
@@ -41049,7 +41154,7 @@ def check_substrate_score_aware_loss_calls_preprocess_input_before_scorer(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #159 — CLAUDE.md catalog text strictness must match preflight.py
+# Catalog #159 - CLAUDE.md catalog text strictness must match preflight.py
 # wired `strict=` parameter at orchestrator callsites (UUU's Path B,
 # FFFF Bug 4 self-protection, 2026-05-12).
 # ─────────────────────────────────────────────────────────────────────────
@@ -41080,9 +41185,9 @@ _CHECK_159_STRICT_PHRASES: tuple[str, ...] = (
     "strict @ 0",
     "strict-from-byte-one",
     "strict from byte one",
-    "→ strict",
     "-> strict",
-    "live count: 0 → strict",
+    "-> strict",
+    "live count: 0 -> strict",
     "live count: 0 -> strict",
 )
 
@@ -41092,7 +41197,7 @@ def _check_159_extract_catalog_entries(
 ) -> list[tuple[int, str, str]]:
     """Extract (catalog_num, check_name, entry_text) tuples from CLAUDE.md.
 
-    Entry format: ``N. \\`check_*\\` — entry text body``. Body extends
+    Entry format: ``N. \\`check_*\\` - entry text body``. Body extends
     until the next catalog entry header or a section header.
     """
     entries: list[tuple[int, str, str]] = []
@@ -41113,7 +41218,7 @@ def _check_159_extract_catalog_entries(
             if cur_num is not None:
                 # Stop entry on blank-line-followed-by-header / new section
                 if line.startswith("**") and (line.endswith("**") or "**:" in line):
-                    # Section break — close current entry
+                    # Section break - close current entry
                     entries.append((cur_num, cur_name, "\n".join(cur_body)))
                     cur_num = None
                     cur_name = None
@@ -41152,7 +41257,7 @@ def _check_159_extract_callsite_strict(
         if m_false and not m_true:
             return False
         if m_true and m_false:
-            # Both present — return the first one by position
+            # Both present - return the first one by position
             return m_true.start() < m_false.start()
     return None  # not invoked
 
@@ -41163,18 +41268,18 @@ def check_claude_md_catalog_text_matches_preflight_strict_value(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #159 — refuse CLAUDE.md catalog entries whose strictness
+    """Catalog #159 - refuse CLAUDE.md catalog entries whose strictness
     text claim contradicts the orchestrator callsite `strict=` value.
 
     Sister to Catalog #118 (`check_claude_md_catalog_no_duplicate_numbers`)
-    — both keep the CLAUDE.md catalog table the canonical strictness
+    - both keep the CLAUDE.md catalog table the canonical strictness
     ledger. UUU's audit 2026-05-12 identified 23 drift entries; this
     gate refuses re-introduction.
 
     Conservative classifier:
       - Entry text contains "Held warn-only initially" / "warn-only
         initially" / "currently warn-only" with NO adjacent
-        "STRICT-FLIPPED" / "STRICT @ 0" / "→ STRICT" phrase ⇒ entry
+        "STRICT-FLIPPED" / "STRICT @ 0" / "-> STRICT" phrase ⇒ entry
         claims WARN-ONLY.
       - Entry text contains "STRICT-FLIPPED" / "STRICT @ 0" /
         "strict-from-byte-one" ⇒ entry claims STRICT.
@@ -41201,7 +41306,7 @@ def check_claude_md_catalog_text_matches_preflight_strict_value(
             if phrase in body_lower:
                 claims_warn = True
                 break
-        # Allow "warn-only initially; ... STRICT-FLIPPED" — only count as
+        # Allow "warn-only initially; ... STRICT-FLIPPED" - only count as
         # warn-only if NO strict phrase appears AFTER the warn phrase.
         if claims_warn:
             for phrase in _CHECK_159_STRICT_PHRASES:
@@ -41243,7 +41348,7 @@ def check_claude_md_catalog_text_matches_preflight_strict_value(
                 f"CLAUDE.md catalog text and preflight.py strict= callsite:"
             )
             for v in violations[:10]:
-                print(f"    • {v[:220]}")
+                print(f"    - {v[:220]}")
         else:
             print(
                 f"  [catalog-drift] OK ({len(entries)} catalog entries "
@@ -41263,13 +41368,13 @@ def check_claude_md_catalog_text_matches_preflight_strict_value(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #165 — check_modal_mount_builder_uses_mtime_stability_check
-# (FIX-I, D2 — 2026-05-12, STRICT @ 0)
+# Catalog #165 - check_modal_mount_builder_uses_mtime_stability_check
+# (FIX-I, D2 - 2026-05-12, STRICT @ 0)
 # ─────────────────────────────────────────────────────────────────────────
 #
 # Bug class (WWW4 audit, 2026-05-12): Modal v2/v3 dispatches failed because
 # FIX-D's concurrent writes to ``src/tac/composition/registry.py`` (46257B
-# → 52539B over 30s) hit Modal's ``add_local_dir`` mid-upload. Modal walks
+# -> 52539B over 30s) hit Modal's ``add_local_dir`` mid-upload. Modal walks
 # the filesystem at upload time; a sibling subagent editing a file in the
 # mount set produces a torn read, the GPU container runs the partial code,
 # and the dispatch crashes or silently corrupts.
@@ -41339,7 +41444,7 @@ def check_modal_mount_builder_uses_mtime_stability_check(
 
     if not path.is_file():
         violations.append(
-            f"{_CHECK_165_MOUNT_MANIFEST_PATH}: missing — the canonical "
+            f"{_CHECK_165_MOUNT_MANIFEST_PATH}: missing - the canonical "
             "Modal mount-builder is gone; the upload-race bug class is "
             "re-exposed."
         )
@@ -41356,7 +41461,7 @@ def check_modal_mount_builder_uses_mtime_stability_check(
             if surface not in text:
                 violations.append(
                     f"{_CHECK_165_MOUNT_MANIFEST_PATH}: missing required "
-                    f"contract surface `{surface}` — Catalog #165 (FIX-I, "
+                    f"contract surface `{surface}` - Catalog #165 (FIX-I, "
                     "D2) requires the mtime-stability surface."
                 )
 
@@ -41367,7 +41472,7 @@ def check_modal_mount_builder_uses_mtime_stability_check(
         if builder_idx < 0:
             violations.append(
                 f"{_CHECK_165_MOUNT_MANIFEST_PATH}: `def build_training_image`"
-                " missing — the canonical builder API is gone."
+                " missing - the canonical builder API is gone."
             )
         else:
             # Find end of this function. Look for next top-level def/class.
@@ -41383,14 +41488,14 @@ def check_modal_mount_builder_uses_mtime_stability_check(
                 violations.append(
                     f"{_CHECK_165_MOUNT_MANIFEST_PATH}: "
                     "`build_training_image` no longer accepts the "
-                    "`mtime_stability_check` kwarg — Catalog #165 (FIX-I, "
+                    "`mtime_stability_check` kwarg - Catalog #165 (FIX-I, "
                     "D2) requires the opt-out kwarg on the canonical builder."
                 )
             if _CHECK_165_VERIFY_CALL_TOKEN not in body:
                 violations.append(
                     f"{_CHECK_165_MOUNT_MANIFEST_PATH}: "
                     "`build_training_image` body does not call "
-                    "`verify_mount_set_mtime_stability(` — Catalog #165 "
+                    "`verify_mount_set_mtime_stability(` - Catalog #165 "
                     "(FIX-I, D2) requires the stability check to fire "
                     "before any add_local_* call."
                 )
@@ -41401,7 +41506,7 @@ def check_modal_mount_builder_uses_mtime_stability_check(
                 f"  [modal-mtime-stability] {len(violations)} violation(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
         else:
             print(
                 "  [modal-mtime-stability] OK "
@@ -41421,7 +41526,7 @@ def check_modal_mount_builder_uses_mtime_stability_check(
 
 
 # ----------------------------------------------------------------------------
-# Catalog #166 — check_modal_dispatch_verifies_worker_source_matches_head
+# Catalog #166 - check_modal_dispatch_verifies_worker_source_matches_head
 #
 # PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive Modal A100
 # dispatches of ``experiments/train_substrate_sane_hnerv.py`` crashed rc=1
@@ -41502,7 +41607,7 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
 
     if not path.is_file():
         violations.append(
-            f"{_CHECK_166_DISPATCHER_PATH}: missing — the canonical Modal "
+            f"{_CHECK_166_DISPATCHER_PATH}: missing - the canonical Modal "
             "dispatcher is gone; the HEAD-parity ledger contract is "
             "re-exposed."
         )
@@ -41519,7 +41624,7 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
             if surface not in text:
                 violations.append(
                     f"{_CHECK_166_DISPATCHER_PATH}: missing required "
-                    f"contract surface `{surface}` — Catalog #166 requires "
+                    f"contract surface `{surface}` - Catalog #166 requires "
                     "the dispatch-time HEAD-parity ledger to remain wired."
                 )
 
@@ -41529,7 +41634,7 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
                 f"  [modal-head-parity] {len(violations)} violation(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
         else:
             print(
                 "  [modal-head-parity] OK "
@@ -41548,11 +41653,11 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
 
 
 # ----------------------------------------------------------------------------
-# Catalog #167 — check_substrate_dispatch_uses_smoke_before_full_pattern
+# Catalog #167 - check_substrate_dispatch_uses_smoke_before_full_pattern
 #
 # PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive 2000-epoch
 # sane_hnerv Modal A100 dispatches crashed rc=1 within 15s and 72s respectively
-# — burned $0.30 + a harvest slot each. A 100-epoch ~$0.30 smoke would have
+# - burned $0.30 + a harvest slot each. A 100-epoch ~$0.30 smoke would have
 # caught the integration failure for the same cost; the operator could have
 # fixed the integration BEFORE the $5-15 full canary fired.
 #
@@ -41565,12 +41670,12 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
 # smoke-green).
 #
 # Same-line waiver on the dispatch invocation line: ``# SMOKE_BEFORE_FULL_OK:
-# <reason>`` reserved for established trainers with ≥3 successful Modal
+# <reason>`` reserved for established trainers with >=3 successful Modal
 # anchors at the target config (cost band is empirically calibrated; smoke
 # would not surface new info).
 #
 # Sister of Catalog #146 (trainer runtime contract) + Catalog #151
-# (env→CLI flag wire-up) + Catalog #152 (required-input validation) +
+# (env->CLI flag wire-up) + Catalog #152 (required-input validation) +
 # Catalog #166 (HEAD parity ledger).
 # ----------------------------------------------------------------------------
 
@@ -41694,7 +41799,7 @@ def check_substrate_dispatch_uses_smoke_before_full_pattern(
                 f"  [smoke-before-full] {len(violations)} violation(s):"
             )
             for v in violations[:10]:
-                print(f"    • {v[:240]}")
+                print(f"    - {v[:240]}")
         else:
             print(
                 "  [smoke-before-full] OK "
@@ -41714,11 +41819,286 @@ def check_substrate_dispatch_uses_smoke_before_full_pattern(
     return violations
 
 
+# ============================================================================
+# Catalog #168: check_ast_walker_handles_both_assign_and_annassign
+# ============================================================================
+# META-CLASS gate: refuses any AST extractor function that filters by
+# `ast.Assign` ONLY without also handling `ast.AnnAssign`. The bug class
+# silently bypasses static analysis when the target code uses annotated
+# assignment syntax (`name: type = value`).
+#
+# Bug-class anchor: 2026-05-12 META-CATALOG-152-FIX. The
+# `_check_151_extract_tier_manifests` AST walker filtered `ast.Assign` only.
+# Substrate trainers (sane_hnerv, balle, SIREN, Cool-Chic, VQ-VAE, hybrid_*,
+# self_compress, TCNeRV, BlockNeRV, FFNeRV, DSNeRV, HiNeRV) declare the
+# manifest as `TIER_<N>_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]]
+# = {...}` (`ast.AnnAssign`), so 12/12 substrate trainers silently returned
+# empty manifests -- making Catalog #151 + #152 STRICT modes structurally
+# false-OK across the entire substrate canvas. WAVE-1-A (VQ-VAE subagent)
+# confirmed; PHASE-B2-BUILD subagent caught the architecture gap.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+# the structural fix is a META-CLASS gate that refuses ANY future surface
+# that re-introduces the same Assign-only walk. AST extractor sites that
+# legitimately need only Assign (e.g. parsing PEP 8 module-level constants
+# where annotation is forbidden) must carry the same-line waiver
+# `# ASSIGN_ONLY_OK:<reason>`.
+
+_CHECK_168_SCAN_DIRS = ("src/tac", "tools", "experiments")
+# Require a real rationale after the colon. Reject the literal placeholder
+# `<reason>` (which appears in this gate's own docstring/source) so the
+# gate doesn't waive itself accidentally.
+_CHECK_168_WAIVER_RE = re.compile(
+    r"#\s*ASSIGN_ONLY_OK:\s*(?!<reason>)\S+"
+)
+# Files that legitimately walk only `ast.Assign` for non-extraction reasons
+# (e.g. tests that intentionally exercise the Assign-only path), or are this
+# check's own definition / test file.
+# File-level waiver marker. We require a real rationale (not the literal
+# placeholder `<reason>`) so the literal token appearing in this gate's own
+# docstring/source is NOT a self-waiver.
+_CHECK_168_FILE_LEVEL_WAIVER_RE = re.compile(
+    r"#\s*CHECK_168_FILE_LEVEL_WAIVED:\s*(?!<reason>)\S+"
+)
+_CHECK_168_EXEMPT_FILES = (
+    "src/tac/tests/test_check_168_ast_walker_handles_assign_and_annassign.py",
+)
+# Per Catalog #113 artifact-lifecycle: DERIVED_OUTPUT / vendored-intake /
+# OSS-export-mirror trees are reproduction snapshots, not active code that
+# the gate should police. Sister exclusion to Catalog #109 + #151's
+# `_CHECK_151_EXCLUDED_PATH_MARKERS`.
+_CHECK_168_EXCLUDED_PATH_MARKERS = (
+    "experiments/results/",  # build artifacts (DERIVED_OUTPUT per #113)
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+)
+
+
+def _check_168_isinstance_filters_assign_only(
+    node: ast.AST,
+) -> bool:
+    """Return True iff `node` is an `isinstance(_, ast.Assign)` call WITHOUT
+    a sibling reference to `ast.AnnAssign` in the same isinstance type-tuple.
+
+    Accepted (correct dual handling) at this CALL level:
+      isinstance(x, (ast.Assign, ast.AnnAssign))      -> OK
+      isinstance(x, (ast.AnnAssign, ast.Assign))      -> OK
+
+    Rejected (Assign-only) at this CALL level:
+      isinstance(x, ast.Assign)                       -> CANDIDATE
+      isinstance(x, (ast.Assign,))                    -> CANDIDATE
+      isinstance(x, (ast.Assign, ast.AugAssign))      -> CANDIDATE
+        (AugAssign is augmented assign `x += y`, NOT annotated assign)
+
+    NOTE: Returns CANDIDATE status. The caller must additionally check
+    enclosing-scope context (sister `isinstance(_, ast.AnnAssign)` call in
+    the SAME function/method/module-level for-loop body) to suppress the
+    common if/elif chain pattern where each AST node-kind is handled in
+    its own branch.
+    """
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    if not (isinstance(func, ast.Name) and func.id == "isinstance"):
+        return False
+    if len(node.args) < 2:
+        return False
+    type_arg = node.args[1]
+    # Collect every `ast.<Name>` reference inside the type-arg.
+    referenced: set[str] = set()
+    for sub in ast.walk(type_arg):
+        if isinstance(sub, ast.Attribute) and isinstance(sub.value, ast.Name):
+            if sub.value.id == "ast":
+                referenced.add(sub.attr)
+    # Trigger only if `ast.Assign` is referenced AND `ast.AnnAssign` is NOT.
+    if "Assign" not in referenced:
+        return False
+    if "AnnAssign" in referenced:
+        return False
+    return True
+
+
+def _check_168_scope_handles_annassign(
+    scope_node: ast.AST,
+) -> bool:
+    """Return True iff `scope_node` (a function, method, or module) contains
+    AT LEAST ONE `isinstance(_, ast.AnnAssign)` call anywhere in its body.
+
+    This is the if/elif chain accept rule: a function whose body has
+
+        if isinstance(node, ast.Assign):
+            handle_assign(...)
+        elif isinstance(node, ast.AnnAssign):
+            handle_annassign(...)
+
+    legitimately filters by Assign at the first branch BECAUSE the second
+    branch handles AnnAssign. The Catalog #168 META class is only a real bug
+    when AnnAssign is NEVER referenced anywhere in the same scope.
+    """
+    for sub in ast.walk(scope_node):
+        if not isinstance(sub, ast.Call):
+            continue
+        func = sub.func
+        if not (isinstance(func, ast.Name) and func.id == "isinstance"):
+            continue
+        if len(sub.args) < 2:
+            continue
+        for inner in ast.walk(sub.args[1]):
+            if (isinstance(inner, ast.Attribute)
+                    and isinstance(inner.value, ast.Name)
+                    and inner.value.id == "ast"
+                    and inner.attr == "AnnAssign"):
+                return True
+    return False
+
+
+def _check_168_enclosing_scope(
+    target_node: ast.AST,
+    tree: ast.Module,
+) -> ast.AST:
+    """Find the smallest enclosing FunctionDef / AsyncFunctionDef / ClassDef
+    that contains `target_node`, falling back to the module.
+    """
+    best: ast.AST = tree
+    for ancestor in ast.walk(tree):
+        if not isinstance(
+            ancestor,
+            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+        ):
+            continue
+        for sub in ast.walk(ancestor):
+            if sub is target_node:
+                # Pick the smallest scope (innermost). We approximate by
+                # function definitions because preflight extractors are
+                # typically module-top function bodies.
+                best = ancestor
+                break
+    return best
+
+
+def _check_168_line_has_waiver(text_line: str) -> bool:
+    return bool(_CHECK_168_WAIVER_RE.search(text_line))
+
+
+def _check_168_file_has_waiver(text: str) -> bool:
+    return bool(_CHECK_168_FILE_LEVEL_WAIVER_RE.search(text))
+
+
+def check_ast_walker_handles_both_assign_and_annassign(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #168. META-CLASS gate. Refuses AST extractor sites that walk
+    only `ast.Assign` without also handling `ast.AnnAssign`.
+
+    Scan scope: every `.py` file under `src/tac/`, `tools/`, `experiments/`.
+
+    Acceptance:
+      - The isinstance type-tuple references both `ast.Assign` AND `ast.AnnAssign`.
+      - Same-line waiver `# ASSIGN_ONLY_OK:<reason>` (annotated assign genuinely
+        irrelevant for the surface — e.g. a parser of PEP 8 `__all__` lists,
+        or a security check looking at unannotated dynamic-eval RHS).
+      - File-level waiver `# CHECK_168_FILE_LEVEL_WAIVED:<reason>` for files
+        that are testing the violation behavior (e.g. this check's own tests).
+      - Files in `_CHECK_168_EXEMPT_FILES` (this check's test file).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned = 0
+
+    for scan_dir in _CHECK_168_SCAN_DIRS:
+        scan_root = root / scan_dir
+        if not scan_root.is_dir():
+            continue
+        for py_file in scan_root.rglob("*.py"):
+            try:
+                rel = py_file.relative_to(root).as_posix()
+            except ValueError:
+                continue
+            if rel in _CHECK_168_EXEMPT_FILES:
+                continue
+            if any(marker in rel for marker in _CHECK_168_EXCLUDED_PATH_MARKERS):
+                continue
+            try:
+                text = py_file.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned += 1
+            if _check_168_file_has_waiver(text):
+                continue
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                continue
+            lines = text.splitlines()
+            for node in ast.walk(tree):
+                if not _check_168_isinstance_filters_assign_only(node):
+                    continue
+                lineno = getattr(node, "lineno", 0)
+                if lineno <= 0 or lineno > len(lines):
+                    continue
+                # Same-line waiver respects either the isinstance line OR
+                # the immediately preceding line (multi-line isinstance
+                # callsite indent style).
+                line_idx = lineno - 1
+                target_lines = [lines[line_idx]]
+                if line_idx > 0:
+                    target_lines.append(lines[line_idx - 1])
+                if any(_check_168_line_has_waiver(L) for L in target_lines):
+                    continue
+                # Scope-aware accept: if the enclosing function/method ALSO
+                # contains an `isinstance(_, ast.AnnAssign)` call, the
+                # if/elif chain pattern handles AnnAssign separately and
+                # the Assign-only branch is correct by design.
+                scope = _check_168_enclosing_scope(node, tree)
+                if _check_168_scope_handles_annassign(scope):
+                    continue
+                snippet = lines[line_idx].strip()[:200]
+                violations.append(
+                    f"{rel}:{lineno}: AST extractor walks `ast.Assign` only "
+                    f"without `ast.AnnAssign`; annotated assignments will be "
+                    f"silently skipped. Update to "
+                    f"`isinstance(x, (ast.Assign, ast.AnnAssign))` and handle "
+                    f"the AnnAssign branch (single `node.target` not `node.targets`, "
+                    f"check `node.value is not None`). Same-line waiver "
+                    f"`# ASSIGN_ONLY_OK:<reason>` if annotated assign is genuinely "
+                    f"irrelevant for this surface.\n    Code: {snippet}"
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [ast-walker-assign-vs-annassign] {len(violations)} "
+                f"violation(s) across {scanned} file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:300]}")
+        else:
+            print(
+                f"  [ast-walker-assign-vs-annassign] OK ({scanned} file(s) scanned; "
+                "0 Assign-only AST extractor surface(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_ast_walker_handles_both_assign_and_annassign found "
+            f"{len(violations)} META-CLASS violation(s). Catalog #168 closes "
+            "the AST-extractor type-annotation-syntax bypass class anchored "
+            "by 2026-05-12 META-CATALOG-152-FIX (12 substrate trainer "
+            "manifests silently false-OK):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
         description=(
-            "Preflight pipeline validator — fast developer scope by default; "
+            "Preflight pipeline validator - fast developer scope by default; "
             "explicit release scope for exhaustive custody sweeps"
         )
     )

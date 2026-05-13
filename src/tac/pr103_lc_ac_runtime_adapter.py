@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import importlib.util
 import ast
 import hashlib
+import importlib.util
 import os
 import re
 import shutil
@@ -566,13 +566,22 @@ def _verify_inflate_shell_contract(path: Path) -> dict[str, Any]:
 
 
 def _integer_constant_assignments(text: str) -> dict[str, int]:
+    """Catalog #168 fix 2026-05-12: handle both `BLOCK_LEN = 16` (Assign) and
+    `BLOCK_LEN: int = 16` (AnnAssign) module-level constants. The latter is
+    increasingly common in modern Python and would have been silently missed."""
     module = ast.parse(text)
     assignments: dict[str, int] = {}
     seen: set[str] = set()
     for node in module.body:
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+        # Normalize Assign / AnnAssign into (target_name, value) pair.
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            value_node = node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            target = node.target
+            value_node = node.value
+        else:
             continue
-        target = node.targets[0]
         if not isinstance(target, ast.Name):
             continue
         if target.id not in REQUIRED_RUNTIME_CONSTANTS:
@@ -583,14 +592,14 @@ def _integer_constant_assignments(text: str) -> dict[str, int]:
             )
         seen.add(target.id)
         if (
-            not isinstance(node.value, ast.Constant)
-            or isinstance(node.value.value, bool)
-            or not isinstance(node.value.value, int)
+            not isinstance(value_node, ast.Constant)
+            or isinstance(value_node.value, bool)
+            or not isinstance(value_node.value, int)
         ):
             raise Pr103RuntimeAdapterError(
                 f"inflate.py assignment for {target.id} must be an integer literal"
             )
-        assignments[target.id] = int(node.value.value)
+        assignments[target.id] = int(value_node.value)
     return assignments
 
 
@@ -847,10 +856,11 @@ def _state_dict_records(state_dict: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _tensor_record(value: Any) -> dict[str, Any]:
-    if hasattr(value, "detach"):
-        array = value.detach().cpu().contiguous().numpy()
-    else:
-        array = np.asarray(value)
+    array = (
+        value.detach().cpu().contiguous().numpy()
+        if hasattr(value, "detach")
+        else np.asarray(value)
+    )
     contiguous = np.ascontiguousarray(array)
     return {
         "shape": [int(item) for item in contiguous.shape],

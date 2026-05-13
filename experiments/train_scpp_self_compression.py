@@ -8,13 +8,13 @@ through the canonical CLAUDE.md QAT pipeline 5-stage curriculum:
                         + Hessian-based per-tensor saliency.
     Stage 3 (joint):    co-train latent + decoder with eval-roundtrip.
     Stage 4 (QAT):      insert FakeQuantFP4 fake-quant + LSQ-learnable step
-                        size, 20% of original epochs at 0.1× LR.
+                        size, 20% of original epochs at 0.1x LR.
     Stage 5 (final):    MDL/FP4 TTO with rate-distortion Lagrangian.
 
 The trainer honours ALL CLAUDE.md trainer non-negotiables:
 
 * ``eval_roundtrip=True`` (mandatory in every score-bearing inner loop)
-* EMA decay 0.997 (weights) / 0.99 (codebooks) — applied at eval time only,
+* EMA decay 0.997 (weights) / 0.99 (codebooks) - applied at eval time only,
   with snapshot+restore
 * Differentiable ``rgb_to_yuv6`` via ``tac.differentiable_eval_roundtrip``
   ``patch_upstream_yuv6_globally``
@@ -22,9 +22,9 @@ The trainer honours ALL CLAUDE.md trainer non-negotiables:
 * Real video data outside ``--smoke`` (decodes ``upstream/videos/0.mkv``)
 * CUDA-required default (raises on no-CUDA; explicit ``--device cpu`` opt-in
   with banner per CLAUDE.md "Forbidden device-selection defaults")
-* Auth eval at end against the EMA shadow (per CLAUDE.md "EMA —
+* Auth eval at end against the EMA shadow (per CLAUDE.md "EMA -
   NON-NEGOTIABLE": archive bytes come from EMA shadow)
-* ``research_only=false`` — produces a contest-shippable archive
+* ``research_only=false`` - produces a contest-shippable archive
 * No /tmp paths: all artifacts go to
   ``experiments/results/lane_self_compression_scpp_full_trainer_<timestamp>/``
 
@@ -48,15 +48,15 @@ CLI signature
         --auth-eval-on-best \\
         [--smoke]
 
-Smoke mode runs each stage for ≤ 10 iters on synthetic data; full mode requires
+Smoke mode runs each stage for <= 10 iters on synthetic data; full mode requires
 ``--video-path upstream/videos/0.mkv`` and uses the real contest video.
 
 References
 ----------
-* CLAUDE.md "QAT pipeline — non-negotiable for FP4 deployment"
-* CLAUDE.md "Auth eval EVERYWHERE — NON-NEGOTIABLE"
-* CLAUDE.md "EMA — NON-NEGOTIABLE"
-* CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE"
+* CLAUDE.md "QAT pipeline - non-negotiable for FP4 deployment"
+* CLAUDE.md "Auth eval EVERYWHERE - NON-NEGOTIABLE"
+* CLAUDE.md "EMA - NON-NEGOTIABLE"
+* CLAUDE.md "eval_roundtrip - NON-NEGOTIABLE"
 * CLAUDE.md "Forbidden device-selection defaults"
 * tac.scpp_substrate (the architecture)
 * tac.hessian_block_fp (bit-allocator)
@@ -66,15 +66,104 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 import torch
 import torch.nn as nn
+
+# ---------------------------------------------------------------------------
+# TIER_1_OPERATOR_REQUIRED_FLAGS - Catalog #151 + #152 manifest.
+#
+# Required by:
+#   - Catalog #151 ``check_operator_wrapper_threads_trainer_tier_required_flags``
+#     (operator wrappers MUST thread env -> CLI ladder for each declared flag)
+#   - Catalog #152 ``check_operator_wrapper_validates_required_input_files_pre_dispatch``
+#     (every ``required_input_file=True`` flag must have pre-dispatch
+#      existence validation BEFORE the GPU meter starts)
+#
+# Wave 5 SC++ Stage 1 Modal A100 production variant uses this manifest via the
+# canonical ``tools/operator_authorize.py --recipe scpp_stage1_modal_a100_dispatch``
+# entry point + ``tools/validate_dispatch_required_inputs.py``.
+#
+# Per CLAUDE.md "HNeRV parity discipline" lesson 7: SC++ is
+# ``lane_class=substrate_engineering`` (>350 LOC budget OK once per architecture
+# class). The Stage 1 anchor is the canonical SC++ block-FP empirical anchor on
+# the contest-CUDA axis.
+# ---------------------------------------------------------------------------
+TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
+    "--video-path": {
+        "env": "SCPP_VIDEO_PATH",
+        "rationale": (
+            "score-aware substrate MUST train against the contest video "
+            "(upstream/videos/0.mkv); synthetic data is FORBIDDEN outside "
+            "--smoke per CLAUDE.md Catalog #114 + HNeRV parity lesson 1"
+        ),
+        "default": "upstream/videos/0.mkv",
+        "satisfied_by_profile": (),
+        "requires": (),
+        "required_input_file": True,
+        "generator_command": (
+            "contest-pinned upstream snapshot - never regenerated locally"
+        ),
+        "rationale_audit": (
+            "CLAUDE.md 'HNeRV / leaderboard-implementation parity discipline' "
+            "lesson 1: substrate must be score-aware against the contest video"
+        ),
+    },
+    "--output-dir": {
+        "env": "SCPP_OUTPUT_DIR",
+        "rationale": (
+            "custody location for SC++ archive + EMA shadow + stage metrics + "
+            "provenance; /tmp paths refused per CLAUDE.md FORBIDDEN PATTERNS"
+        ),
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--stage-1-epochs": {
+        "env": "SCPP_STAGE_1_EPOCHS",
+        "rationale": (
+            "Stage 1 anchor epoch count; 3 for smoke, 100+ for production "
+            "Modal A100 full anchor"
+        ),
+        "default": 100,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--device": {
+        "env": "SCPP_DEVICE",
+        "rationale": (
+            "CUDA-required by default per CLAUDE.md 'Forbidden device-selection "
+            "defaults'; --device cpu opt-in with banner for dev/CI only"
+        ),
+        "default": "cuda",
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--target-archive-bytes": {
+        "env": "SCPP_TARGET_ARCHIVE_BYTES",
+        "rationale": (
+            "Hessian water-filling bit budget; PR106 r2 frontier is ~187KB so "
+            "180000 is the production-anchor default"
+        ),
+        "default": 180_000,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--seed": {
+        "env": "SCPP_SEED",
+        "rationale": (
+            "deterministic seed for archive-byte reproducibility (per CLAUDE.md "
+            "'Canonical pipeline standard - non-negotiable' seed pinning)"
+        ),
+        "default": 42,
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+}
 
 
 # ── Argument parser ───────────────────────────────────────────────────────
@@ -155,7 +244,7 @@ class RealVideoBatchSource:
     def __init__(self, video_path: str, n_pairs: int) -> None:
         self.video_path = video_path
         self.n_pairs = n_pairs
-        self._cache: Optional[torch.Tensor] = None
+        self._cache: torch.Tensor | None = None
 
     def _load_video(self) -> torch.Tensor:
         if self._cache is not None:
@@ -223,7 +312,7 @@ class _SyntheticBatchSource:
 
 
 class EMA:
-    """Canonical EMA shadow per CLAUDE.md "EMA — NON-NEGOTIABLE".
+    """Canonical EMA shadow per CLAUDE.md "EMA - NON-NEGOTIABLE".
 
     Mirror of ``tac.training.EMA`` so this trainer doesn't bring the whole
     training module's hardware-discovery surface. Decay defaults to 0.997
@@ -237,7 +326,7 @@ class EMA:
             if v.dtype.is_floating_point:
                 self.shadow[k] = v.detach().clone()
             else:
-                # Non-floating buffers (int counters, etc.) — copy directly
+                # Non-floating buffers (int counters, etc.) - copy directly
                 self.shadow[k] = v.detach().clone()
 
     def update(self, model: nn.Module) -> None:
@@ -281,7 +370,7 @@ def score_domain_lagrangian(
     """  # SCORE_PROXY_OK: dev-only; full trainer wires differentiable scorers
     if not eval_roundtrip_applied:
         raise RuntimeError(
-            "score_domain_lagrangian called without eval_roundtrip — "
+            "score_domain_lagrangian called without eval_roundtrip - "
             "per CLAUDE.md NON-NEGOTIABLE this is forbidden."
         )
     # Proxy: MSE for seg, sqrt-MSE for pose
@@ -302,9 +391,9 @@ class StageMetrics:
 
 
 def _apply_eval_roundtrip_proxy(rendered: torch.Tensor) -> torch.Tensor:
-    """Simulate the uint8 bottleneck (384 → 874 → uint8 → 384).
+    """Simulate the uint8 bottleneck (384 -> 874 -> uint8 -> 384).
 
-    Per CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE": this is mandatory in
+    Per CLAUDE.md "eval_roundtrip - NON-NEGOTIABLE": this is mandatory in
     any training inner loop where the loss is computed against a downstream
     scorer that runs on uint8 frames.
 
@@ -332,7 +421,7 @@ def stage_1_anchor(
 ) -> StageMetrics:
     """Stage 1: anchor training with score-domain loss."""
     optimizer = torch.optim.Adam(
-        list(substrate.parameters()) + [latents],
+        [*list(substrate.parameters()), latents],
         lr=lr,
     )
     t0 = time.time()
@@ -386,7 +475,7 @@ def stage_2_finetune_with_distill(
     grand council seat.
     """
     optimizer = torch.optim.Adam(
-        list(substrate.parameters()) + [latents],
+        [*list(substrate.parameters()), latents],
         lr=lr * 0.5,  # Stage 2 LR is half of anchor
     )
     t0 = time.time()
@@ -453,7 +542,7 @@ def stage_3_joint(
 ) -> StageMetrics:
     """Stage 3: joint training of latent + decoder."""
     optimizer = torch.optim.Adam(
-        list(substrate.parameters()) + [latents],
+        [*list(substrate.parameters()), latents],
         lr=lr * 0.25,
     )
     t0 = time.time()
@@ -500,15 +589,15 @@ def stage_4_qat(
 ) -> StageMetrics:
     """Stage 4: QAT with FakeQuantFP4 + LSQ-learnable step size.
 
-    Per CLAUDE.md QAT pipeline: 20% of original epochs at 0.1× LR with
-    LSQ step size at ``0.01 × base_lr``. This proxy version skips the
+    Per CLAUDE.md QAT pipeline: 20% of original epochs at 0.1x LR with
+    LSQ step size at ``0.01 x base_lr``. This proxy version skips the
     actual FakeQuantFP4 insertion to keep the dev-only smoke surface
     focused; the production trainer wires ``tac.fp4_quantize.FakeQuantFP4``
     + ``tac.quantization.LSQScale``.
     """
     optimizer = torch.optim.Adam(
-        list(substrate.parameters()) + [latents],
-        lr=lr * 0.1,  # 0.1× LR per CLAUDE.md QAT pipeline
+        [*list(substrate.parameters()), latents],
+        lr=lr * 0.1,  # 0.1x LR per CLAUDE.md QAT pipeline
     )
     t0 = time.time()
     final_loss = float("inf")
@@ -614,7 +703,7 @@ def assert_cuda_or_explicit_cpu(args: argparse.Namespace) -> torch.device:
     unless ``--device cpu`` is explicit with a banner."""
     if args.device == "cpu":
         print(
-            "[BANNER] SC++ trainer running on CPU — bytes and scores will "
+            "[BANNER] SC++ trainer running on CPU - bytes and scores will "
             "DIFFER from a CUDA contest run. This is for dev/CI only.",
             file=sys.stderr,
         )

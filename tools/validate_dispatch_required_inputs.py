@@ -23,8 +23,9 @@ Exit codes:
     2 — trainer file does not exist or has no parseable TIER_N manifest
 
 Resolution order for each flag's value:
-    1. The flag's `env` env-var (highest precedence — operator override)
-    2. The flag's `default` field in the manifest
+    1. Explicit `--flag-value FLAG=PATH` from the operator recipe
+    2. The flag's `env` env-var (operator override)
+    3. The flag's `default` field in the manifest
 
 A flag whose env-var is unset AND whose default is `None` is FATAL — the
 operator must explicitly set the env-var or the trainer is misconfigured.
@@ -50,11 +51,18 @@ ensure_repo_imports(_REPO_ROOT)
 from tac.preflight import _check_151_extract_tier_manifests  # noqa: E402
 
 
-def _resolve_flag_value(meta: dict, repo_root: Path) -> tuple[str | None, str]:
+def _resolve_flag_value(
+    meta: dict,
+    repo_root: Path,
+    *,
+    explicit_value: str | None = None,
+) -> tuple[str | None, str]:
     """Return (resolved_path_str_or_None, source_description).
 
     source_description is one of: "env:<NAME>", "default", "unresolved".
     """
+    if explicit_value:
+        return explicit_value, "flag-value"
     env_var = meta.get("env") or ""
     if env_var and os.environ.get(env_var):
         return os.environ[env_var], f"env:{env_var}"
@@ -65,10 +73,18 @@ def _resolve_flag_value(meta: dict, repo_root: Path) -> tuple[str | None, str]:
 
 
 def _validate_one_flag(
-    flag: str, meta: dict, repo_root: Path
+    flag: str,
+    meta: dict,
+    repo_root: Path,
+    *,
+    explicit_value: str | None = None,
 ) -> tuple[bool, str]:
     """Return (ok, message). `message` is operator-facing diagnostic text."""
-    raw_value, source = _resolve_flag_value(meta, repo_root)
+    raw_value, source = _resolve_flag_value(
+        meta,
+        repo_root,
+        explicit_value=explicit_value,
+    )
     env_var = meta.get("env") or "<none>"
     rationale = (meta.get("rationale") or "").strip()
     generator = (meta.get("generator_command") or "").strip()
@@ -125,6 +141,17 @@ def main() -> int:
         action="store_true",
         help="Only print FATAL messages on stderr; suppress OK lines",
     )
+    parser.add_argument(
+        "--flag-value",
+        action="append",
+        default=[],
+        metavar="FLAG=PATH",
+        help=(
+            "Explicit value for a required input flag, usually supplied from "
+            "an operator-authorize recipe's required_input_files.default_path. "
+            "May be repeated. Takes precedence over env/default."
+        ),
+    )
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve() if args.repo_root else _REPO_ROOT
@@ -169,9 +196,25 @@ def main() -> int:
 
     failures: list[str] = []
     ok_lines: list[str] = []
+    explicit_values: dict[str, str] = {}
+    for item in args.flag_value:
+        if "=" not in item:
+            print(
+                f"[validate-dispatch-required-inputs] FATAL: --flag-value "
+                f"must be FLAG=PATH, got {item!r}",
+                file=sys.stderr,
+            )
+            return 2
+        flag, value = item.split("=", 1)
+        explicit_values[flag.strip()] = value.strip()
     for flag in sorted(required_input_flags):
         meta = required_input_flags[flag]
-        ok, message = _validate_one_flag(flag, meta, repo_root)
+        ok, message = _validate_one_flag(
+            flag,
+            meta,
+            repo_root,
+            explicit_value=explicit_values.get(flag),
+        )
         if ok:
             ok_lines.append(message)
         else:

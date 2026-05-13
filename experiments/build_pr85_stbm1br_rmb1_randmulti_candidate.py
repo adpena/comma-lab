@@ -16,24 +16,22 @@ import io
 import json
 import sys
 import zipfile
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
-
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from tac.pr85_bundle import (  # noqa: E402
-    Pr85BundleError,
+from tac.pr85_bundle import (
     decode_pr85_randmulti_to_headerless_rows,
     pack_pr85_bundle,
     parse_pr85_bundle,
     validate_pr85_member_name,
 )
-from tac.stbm1br_mask_codec import STBM1BR_MAGIC  # noqa: E402
-
+from tac.stbm1br_mask_codec import STBM1BR_MAGIC
 
 TOOL = "experiments/build_pr85_stbm1br_rmb1_randmulti_candidate.py"
 SCHEMA = "pr85_stbm1br_rmb1_randmulti_candidate_summary_v1"
@@ -109,7 +107,7 @@ def _read_single_x_archive(path: Path, *, allow_extra_members: bool = False) -> 
             "archive_bytes": int(path.stat().st_size),
             "archive_sha256": _sha256_file(path),
             "member_name": "x",
-            "member_bytes": int(len(payload)),
+            "member_bytes": len(payload),
             "member_sha256": _sha256_bytes(payload),
             "zip_stored": info.compress_type == zipfile.ZIP_STORED,
             "zip_timestamp": list(info.date_time),
@@ -233,14 +231,22 @@ def _robust_current_runtime_support_report(runtime_dir: Path | None = None) -> d
 def _module_string_constants(path: Path, names: set[str]) -> dict[str, str]:
     constants: dict[str, str] = {}
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    # Catalog #168 fix 2026-05-12: handle both `X = "y"` (Assign) and
+    # `X: str = "y"` (AnnAssign) module-level string constants.
     for node in tree.body:
-        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
-            continue
-        if not isinstance(node.value.value, str):
-            continue
-        for target in node.targets:
-            if isinstance(target, ast.Name) and target.id in names:
-                constants[target.id] = node.value.value
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
+            if not isinstance(node.value.value, str):
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in names:
+                    constants[target.id] = node.value.value
+        elif (isinstance(node, ast.AnnAssign)
+              and node.value is not None
+              and isinstance(node.value, ast.Constant)
+              and isinstance(node.value.value, str)
+              and isinstance(node.target, ast.Name)
+              and node.target.id in names):
+            constants[node.target.id] = node.value.value
     return constants
 
 

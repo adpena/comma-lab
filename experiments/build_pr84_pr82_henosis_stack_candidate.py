@@ -15,12 +15,12 @@ import json
 import sys
 import tempfile
 import zipfile
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import brotli
 import numpy as np
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -29,6 +29,24 @@ if str(REPO_ROOT) not in sys.path:
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from experiments.build_pr81_pr82_henosis_stack_candidate import (
+    DEFAULT_PR82_ARCHIVE,
+    DEFAULT_REPLAY_INFLATE,
+    EXPECTED_PR82_SHA256,
+    ORIGINAL_VIDEO_BYTES,
+    PR82_POSENET_DIST,
+    PR82_SEGNET_DIST,
+    RUNTIME_INFLATE_RENDERER_PATH,
+    _changed_qpost_atoms_from_pr82,
+    _classify_qrm1_stream,
+    _load_runtime_inflate_renderer,
+    _qrm1_exclusion_report,
+    _repo_rel,
+    _synthetic_raw_delta_proof,
+    _write_archive,
+    _write_json,
+    contest_score_from_components,
+)
 from tac.henosis_pr82_transfer import (
     QPOST_STREAM_NAMES,
     decode_control_arrays,
@@ -51,26 +69,6 @@ from tac.qma9_range_mask_contract import (
     read_single_member_zip,
     split_qma9_pr81_payload,
 )
-
-from experiments.build_pr81_pr82_henosis_stack_candidate import (
-    DEFAULT_PR82_ARCHIVE,
-    DEFAULT_REPLAY_INFLATE,
-    EXPECTED_PR82_SHA256,
-    ORIGINAL_VIDEO_BYTES,
-    PR82_POSENET_DIST,
-    PR82_SEGNET_DIST,
-RUNTIME_INFLATE_RENDERER_PATH,
-    _changed_qpost_atoms_from_pr82,
-    _classify_qrm1_stream,
-    _load_runtime_inflate_renderer,
-    _qrm1_exclusion_report,
-    _repo_rel,
-    _synthetic_raw_delta_proof,
-    _write_archive,
-    _write_json,
-    contest_score_from_components,
-)
-
 
 TOOL = "experiments/build_pr84_pr82_henosis_stack_candidate.py"
 SCHEMA = "pr84_pr82_henosis_stack_candidate_v1"
@@ -124,13 +122,21 @@ def _parse_pr84_source_constants(source_inflate: Path) -> dict[str, int]:
     text = source_inflate.read_text(encoding="utf-8")
     tree = ast.parse(text)
     constants: dict[str, int] = {}
+    # Catalog #168 fix 2026-05-12: handle both `X = 16` (Assign) and
+    # `X: int = 16` (AnnAssign) module-level constants.
     for node in tree.body:
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            value_node = node.value
+        elif (isinstance(node, ast.AnnAssign)
+              and node.value is not None):
+            target = node.target
+            value_node = node.value
+        else:
             continue
-        target = node.targets[0]
         if not isinstance(target, ast.Name):
             continue
-        value = _eval_int_expr(node.value, constants)
+        value = _eval_int_expr(value_node, constants)
         if value is not None:
             constants[target.id] = value
     required = {
@@ -635,7 +641,7 @@ def build_candidates(
     controls_streams = {name: bundle.encoded_segments[name] for name in QPOST_STREAM_NAMES if name != "randmulti"}
     controls_streams["randmulti"] = b""
     control_atoms = _changed_qpost_atoms_from_pr82(bundle, include_randmulti=False)
-    qrm1_streams = {name: b"" for name in QPOST_STREAM_NAMES}
+    qrm1_streams = dict.fromkeys(QPOST_STREAM_NAMES, b"")
     qrm1_streams["randmulti"] = qrm1
     qrm1_atoms = int(sum(np.count_nonzero(group.rows) for group in groups))
     common_blockers: list[str] = []
@@ -752,7 +758,7 @@ def build_candidates(
             encoded=selected_qrm1,
             source_encoded=bundle.encoded_segments["randmulti"],
         )
-        streams = {name: b"" for name in QPOST_STREAM_NAMES}
+        streams = dict.fromkeys(QPOST_STREAM_NAMES, b"")
         streams["randmulti"] = selected_qrm1
         atom_filtered_candidates.append(
             _build_qpost_candidate(

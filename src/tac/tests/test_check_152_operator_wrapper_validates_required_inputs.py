@@ -41,7 +41,6 @@ from tac.preflight import (
     check_operator_wrapper_validates_required_input_files_pre_dispatch,
 )
 
-
 # -- Fixture helpers ---------------------------------------------------------
 
 def _write_trainer(tmp: Path, name: str, manifest_src: str = "") -> Path:
@@ -529,6 +528,7 @@ def _run_validator(
     trainer_rel: str,
     repo_root: Path,
     env: dict | None = None,
+    flag_values: list[str] | None = None,
 ) -> tuple[int, str, str]:
     """Run the validator tool as a subprocess; return (rc, stdout, stderr)."""
     cmd = [
@@ -540,6 +540,8 @@ def _run_validator(
         str(repo_root),
         "--quiet",
     ]
+    for flag_value in flag_values or []:
+        cmd.append(f"--flag-value={flag_value}")
     merged_env = os.environ.copy()
     if env:
         merged_env.update(env)
@@ -613,6 +615,54 @@ TIER_1_OPERATOR_REQUIRED_FLAGS = {
         "experiments/train_x.py", tmp_path, env={"MY_CONFIG_T2": str(config_path)},
     )
     assert rc == 0, f"env-var override should resolve to existing file; stderr={stderr}"
+
+
+def test_validator_flag_value_overrides_unparseable_manifest_default(tmp_path: Path) -> None:
+    config_path = tmp_path / "recipe_config.json"
+    config_path.write_text("{}")
+    trainer_src = '''
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]
+TIER_1_OPERATOR_REQUIRED_FLAGS = {
+    "--config-file": {
+        "env": "MY_CONFIG_T3",
+        "rationale": "r",
+        "default": str((ROOT / "not_literal.json").relative_to(ROOT)),
+        "required_input_file": True,
+    },
+}
+'''
+    _write_trainer(tmp_path, "train_x.py", trainer_src)
+    rc, _, stderr = _run_validator(
+        "experiments/train_x.py",
+        tmp_path,
+        flag_values=[f"--config-file={config_path.name}"],
+    )
+    assert rc == 0, (
+        "recipe-supplied --flag-value should validate even when the trainer "
+        f"manifest default is not literal; stderr={stderr}"
+    )
+
+
+def test_validator_malformed_flag_value_is_rc2(tmp_path: Path) -> None:
+    trainer_src = '''
+TIER_1_OPERATOR_REQUIRED_FLAGS = {
+    "--config-file": {
+        "env": "MY_CONFIG_T4",
+        "rationale": "r",
+        "default": None,
+        "required_input_file": True,
+    },
+}
+'''
+    _write_trainer(tmp_path, "train_x.py", trainer_src)
+    rc, _, stderr = _run_validator(
+        "experiments/train_x.py",
+        tmp_path,
+        flag_values=["missing_equals"],
+    )
+    assert rc == 2
+    assert "--flag-value" in stderr
 
 
 def test_validator_rc1_unresolvable_no_default_no_env(tmp_path: Path) -> None:

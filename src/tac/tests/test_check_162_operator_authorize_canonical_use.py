@@ -33,6 +33,22 @@ set -euo pipefail
     assert check_operator_authorize_canonical_use(repo_root=tmp_path, strict=True) == []
 
 
+def test_check_162_allows_wrapper_that_delegates_to_smoke_before_full(
+    tmp_path: Path,
+) -> None:
+    _write_wrapper(
+        tmp_path,
+        "operator_authorize_substrate_example_modal_a100_dispatch.sh",
+        """#!/bin/bash
+set -euo pipefail
+.venv/bin/python tools/run_modal_smoke_before_full.py \\
+    --recipe substrate_example_modal_a100_dispatch "$@"
+""",
+    )
+
+    assert check_operator_authorize_canonical_use(repo_root=tmp_path, strict=True) == []
+
+
 def test_check_162_flags_wrapper_without_canonical_tool(tmp_path: Path) -> None:
     _write_wrapper(
         tmp_path,

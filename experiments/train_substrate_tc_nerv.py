@@ -1,24 +1,26 @@
-"""Train the grayscale_lut substrate end-to-end on contest video (WAVE-4).
+"""Train the tc_nerv substrate end-to-end on contest video.
 
 Operator-callable training script per the Fields-medal grand council substrate
-design wave (2026-05-12). Mirrors ``experiments/train_substrate_sane_hnerv.py``
-end-to-end with substrate-specific differences for the Selfcomp/szabolcs-cs
-PR #56 grayscale-LUT analog mask paradigm:
+design wave (2026-05-12). WAVE-3-A wires ``_full_main`` so the trainer is
+dispatch-ready as a MEDIUM-target HNeRV-family architectural-twist attack;
+council Phase 5 prediction ~0.18-0.20 [contest-CUDA].
 
-* Per-pair grayscale stream stored as fp32 at training time, quantized to uint8
-  + brotli at archive export (the dominant rate term).
-* FiLM-conditioned RGB decoder (~94K params per Selfcomp's anchor) maps
-  ``(grayscale + per-pair embedding) -> RGB``.
-* Score-domain Lagrangian ``alpha*B/N + beta*d_seg + gamma*sqrt(d_pose) + tv``
-  per HNeRV parity lesson L6, with an additional total-variation regularizer
-  on the analog grayscale (smoother grayscale -> smaller brotli output).
+Architectural twist vs ``sane_hnerv``: same SIREN+PixelShuffle+per-pair-latents
+backbone, but the score-aware Lagrangian carries a first-class
+**temporal-consistency regularizer** ``lambda_tc * mean(||rgb_1 - rgb_0||^2)``.
+The hypothesis: PoseNet's 12-channel YUV6 input (two adjacent frames) rewards
+temporal smoothness at the pose-distortion level, so a renderer that explicitly
+trains to keep adjacent frames close should reduce ``pose_avg`` faster than the
+un-regularized HNeRV variant at the PR106 r2 operating point (pose_avg ~ 3.4e-5,
+where the pose marginal is 2.71x SegNet's per CLAUDE.md).
 
 Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 
 - Train against ``upstream/videos/0.mkv`` decoded via pyav (NOT synthetic data;
   synthetic batches are FORBIDDEN outside ``--smoke`` per Catalog #114).
 - Patch upstream ``rgb_to_yuv6`` via ``patch_upstream_yuv6_globally`` BEFORE
-  scorer construction (PR #95/#106 contract).
+  scorer construction (PR #95/#106 contract - see CLAUDE.md "eval_roundtrip -
+  NON-NEGOTIABLE" section).
 - ``load_differentiable_scorers`` for SegNet/PoseNet (no scorer load at
   inflate; only at training).
 - ``apply_eval_roundtrip_during_training`` inside the per-batch loop
@@ -26,6 +28,8 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 - ``tac.training.EMA(decay=0.997)`` update after every ``optimizer.step``;
   inference checkpoint = EMA shadow, NEVER live weights (CLAUDE.md "EMA -
   NON-NEGOTIABLE").
+- Score-domain Lagrangian ``alpha*B(theta)/N + beta*d_seg + gamma*sqrt(d_pose)
+  + lambda_tc * tc_term`` per HNeRV parity lesson L6.
 - AdamW lr cosine annealing; gradient clip 1.0; NaN watchdog per Council D.
 - End with CUDA auth eval on best EMA checkpoint per CLAUDE.md "Auth eval
   EVERYWHERE"; refuse MPS (Catalog #1); CPU permitted only with ``--smoke``.
@@ -33,24 +37,35 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
   (Catalog #128 atomic fcntl).
 - Cost-band anchor append via ``tools/append_cost_band_anchor.py``.
 - Contest-compliant runtime emission (inflate.sh / inflate.py with 3
-  positional args + ``set -euo pipefail`` + NO scorer imports) per
-  Catalog #146 semantics.
+  positional args + ``set -euo pipefail`` + <= 100 LOC inflate.py + NO scorer
+  imports) per Catalog #146 semantics.
 - TIER_1_OPERATOR_REQUIRED_FLAGS declared per Catalog #151 for wire-up.
+
+Architectural risk (council Round 3 - NVIDIA-grade):
+- LOWEST RISK of the WAVE-3 trio: only delta vs sane_hnerv is the additive
+  ``lambda_tc * (rgb_1 - rgb_0)^2`` term. lambda_tc=0.5 is small enough not
+  to dominate score-domain terms; large enough to bias adjacency.
+- The temporal regularizer uses pre-roundtrip rgb (clean gradient) but the
+  score terms still flow through eval-roundtrip. Side-effect: tc gradient
+  has higher SNR than score gradient, which can dominate at extreme
+  lambda_tc values. lambda_tc=0.5 default is conservative; CLI override.
+- Decoder channel ladder is smaller than sane_hnerv (~121K params vs ~229K)
+  per L0 SKETCH design; this trades capacity for byte budget.
 
 Usage (smoke; CPU, tiny config, ~10 epochs, no scorer load)::
 
-    .venv/bin/python experiments/train_substrate_grayscale_lut.py \\
+    .venv/bin/python experiments/train_substrate_tc_nerv.py \\
         --video-path upstream/videos/0.mkv \\
-        --output-dir experiments/results/grayscale_lut_smoke_<utc> \\
+        --output-dir experiments/results/tc_nerv_smoke_<utc> \\
         --epochs 10 \\
         --device cpu --smoke
 
 Usage (full; CUDA-required; threads from operator wrapper)::
 
-    .venv/bin/python experiments/train_substrate_grayscale_lut.py \\
+    .venv/bin/python experiments/train_substrate_tc_nerv.py \\
         --video-path upstream/videos/0.mkv \\
-        --output-dir experiments/results/grayscale_lut_<utc> \\
-        --epochs 2000 --batch-size 16 --lr 5e-4 --grad-clip 1.0 \\
+        --output-dir experiments/results/tc_nerv_<utc> \\
+        --epochs 2000 --batch-size 32 --lr 5e-4 --grad-clip 1.0 \\
         --device cuda
 """
 
@@ -62,6 +77,7 @@ import json
 import math
 import os
 import random
+import shutil
 import subprocess
 import sys
 import time
@@ -92,12 +108,13 @@ CONTEST_NORMALIZER = 37_545_489.0  # contest evaluate.py N constant
 
 
 # ---------------------------------------------------------------------------
-# Catalog #151 manifest — every flag below must be threaded by any operator
-# wrapper that subprocess-invokes this trainer.
+# Catalog #151 manifest - every flag below must be threaded by any operator
+# wrapper that subprocess-invokes this trainer. Schema mirrors the canonical
+# sane_hnerv manifest per council R1-R7 (see CLAUDE.md catalog #151).
 # ---------------------------------------------------------------------------
 TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--video-path": {
-        "env": "GRAYSCALE_LUT_VIDEO_PATH",
+        "env": "TC_NERV_VIDEO_PATH",
         "rationale": (
             "score-aware substrate MUST train against the contest video "
             "(upstream/videos/0.mkv); synthetic data is FORBIDDEN outside --smoke"
@@ -107,7 +124,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "requires": (),
         "required_input_file": True,
         "generator_command": (
-            "contest-pinned upstream snapshot — never regenerated locally"
+            "contest-pinned upstream snapshot - never regenerated locally"
         ),
         "rationale_audit": (
             ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
@@ -115,15 +132,15 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
     },
     "--output-dir": {
-        "env": "GRAYSCALE_LUT_OUTPUT_DIR",
+        "env": "TC_NERV_OUTPUT_DIR",
         "rationale": "custody location for checkpoints + archive + provenance",
         "satisfied_by_profile": (),
         "requires": (),
     },
     "--epochs": {
-        "env": "GRAYSCALE_LUT_EPOCHS",
+        "env": "TC_NERV_EPOCHS",
         "rationale": (
-            "substrate engineering pass; under-training silently regresses "
+            "tc_nerv substrate engineering pass; under-training silently regresses "
             "(council target: 2000)"
         ),
         "default": "2000",
@@ -131,7 +148,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "requires": (),
     },
     "--upstream-dir": {
-        "env": "GRAYSCALE_LUT_UPSTREAM_DIR",
+        "env": "TC_NERV_UPSTREAM_DIR",
         "rationale": (
             "upstream/ root for scorer weights + evaluate.py; required for full "
             "training (non-smoke) and auth eval"
@@ -141,7 +158,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "requires": (),
     },
     "--device": {
-        "env": "GRAYSCALE_LUT_DEVICE",
+        "env": "TC_NERV_DEVICE",
         "rationale": (
             "compute device; cuda required for full training (MPS refused per "
             "CLAUDE.md MPS-NOISE rule); cpu permitted only with --smoke"
@@ -159,11 +176,8 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="train_substrate_grayscale_lut",
-        description=(
-            "Train grayscale_lut substrate end-to-end (WAVE-4-GRAYSCALE-LUT; "
-            "Selfcomp PR #56 paradigm)."
-        ),
+        prog="train_substrate_tc_nerv",
+        description="Train tc_nerv substrate end-to-end (WAVE-3-A wired).",
     )
 
     # ---- TIER_1 required ----
@@ -196,8 +210,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--batch-size",
         type=int,
-        default=16,
-        help="Number of pair indices per batch (council default 16 for grayscale_lut).",
+        default=32,
+        help="Number of pair indices per batch (council default 32).",
     )
     p.add_argument(
         "--lr",
@@ -226,31 +240,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # ---- Substrate architecture knobs ----
     p.add_argument(
-        "--grayscale-downsample",
+        "--latent-dim",
         type=int,
-        default=4,
-        help=(
-            "Spatial downsample factor for the analog grayscale stream "
-            "(council default 4; H/4 x W/4 = 96 x 128 grid)."
-        ),
+        default=24,
+        help="Per-pair latent dimensionality (tc_nerv default 24; tighter than sane_hnerv 28).",
     )
     p.add_argument(
-        "--decoder-hidden",
-        type=int,
-        default=48,
-        help="Hidden channels of the colorization decoder (council default 48).",
-    )
-    p.add_argument(
-        "--decoder-blocks",
-        type=int,
-        default=4,
-        help="Number of FiLM-conditioned decoder blocks (council default 4).",
-    )
-    p.add_argument(
-        "--embedding-dim",
-        type=int,
-        default=16,
-        help="Per-pair embedding dimensionality for FiLM conditioning.",
+        "--sin-frequency",
+        type=float,
+        default=30.0,
+        help="SIREN sin activation frequency (NeRF default).",
     )
 
     # ---- Lagrangian weights (score-aware) ----
@@ -270,7 +269,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--gamma-pose",
         type=float,
         default=1.0,
-        help="PoseNet distortion coefficient multiplier (sqrt(10) baked into loss).",
+        help="PoseNet distortion coefficient (contest evaluate.py: 1.0).",
     )
     p.add_argument(
         "--pose-weight-scale",
@@ -279,16 +278,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Operating-point-aware pose-marginal multiplier. At PR106-r2 "
             "(pose_avg ~ 3.4e-5) the pose marginal is 2.71x SegNet's (CLAUDE.md "
-            "'SegNet vs PoseNet — operating-point dependent')."
+            "'SegNet vs PoseNet - operating-point dependent')."
         ),
     )
     p.add_argument(
-        "--grayscale-tv-weight",
+        "--lambda-tc",
         type=float,
-        default=0.01,
+        default=0.5,
         help=(
-            "Total-variation regularizer weight on the analog grayscale field. "
-            "Smoother grayscale -> smaller brotli output (Selfcomp PR #56 anchor)."
+            "Temporal-consistency regularizer weight. 0 disables. Council "
+            "pre-set 0.5 - small enough not to dominate score-domain terms, "
+            "large enough to bias adjacency. L1 calibration may sweep over "
+            "{0.0, 0.1, 0.5, 1.0, 2.0}."
         ),
     )
     p.add_argument(
@@ -304,8 +305,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.997,
         help=(
-            "EMA decay (CLAUDE.md non-negotiable default 0.997 for weights). "
-            "Codebook EMAs keep their own 0.99."
+            "EMA decay (CLAUDE.md non-negotiable default 0.997 for weights)."
         ),
     )
     p.add_argument(
@@ -380,7 +380,7 @@ def _load_upstream_yuv420_to_rgb():
             "verify --upstream-dir is correct."
         )
     spec = importlib.util.spec_from_file_location(
-        "pact_grayscale_lut_upstream_frame_utils", frame_utils_path
+        "pact_tc_nerv_upstream_frame_utils", frame_utils_path
     )
     if spec is None or spec.loader is None:
         raise RuntimeError(f"unable to load upstream frame_utils.py from {frame_utils_path}")
@@ -412,7 +412,7 @@ def _decode_real_pairs(
         import av  # type: ignore[import-not-found]
     except Exception as exc:
         raise RuntimeError(
-            "pyav (`av`) is required for non-smoke grayscale_lut training; "
+            "pyav (`av`) is required for non-smoke tc_nerv training; "
             "run `uv pip install av`"
         ) from exc
 
@@ -439,75 +439,30 @@ def _decode_real_pairs(
             f"{video_path} yielded {len(frames_chw)} frame(s), need {frames_needed}"
         )
     stacked = torch.stack(frames_chw[:frames_needed])  # (frames, 3, H, W)
+    # (N, 2, 3, H, W) per upstream AVVideoDataset pair order
     return torch.stack([stacked[0::2], stacked[1::2]], dim=1)
-
-
-def _initialize_grayscale_from_pairs(model, pair_tensor) -> None:
-    """Initialize the substrate's grayscale parameter from the GT video.
-
-    The grayscale-LUT paradigm exploits the GT luminance channel as the
-    analog stream. Initializing from BT.601 luminance of frame 0 in each
-    pair gives the decoder a meaningful starting point and avoids the
-    cold-start where the grayscale stream is mid-gray everywhere.
-    """
-    import torch
-    import torch.nn.functional as F
-
-    cfg = model.cfg
-    h_g = cfg.output_height // cfg.grayscale_downsample
-    w_g = cfg.output_width // cfg.grayscale_downsample
-
-    n_pairs = int(pair_tensor.shape[0])
-    if n_pairs != cfg.num_pairs:
-        return  # silently skip; trainer will use mid-gray init
-
-    # BT.601 luminance from frame 0 of each pair (matches yuv6 contract)
-    rgb_0 = pair_tensor[:, 0]  # (N, 3, H, W) in [0, 255]
-    luma = (
-        0.299 * rgb_0[:, 0]
-        + 0.587 * rgb_0[:, 1]
-        + 0.114 * rgb_0[:, 2]
-    ).unsqueeze(1) / 255.0  # (N, 1, H, W) in [0, 1]
-    luma_ds = F.interpolate(luma, size=(h_g, w_g), mode="bilinear", align_corners=False)
-    with torch.no_grad():
-        model.grayscale.copy_(luma_ds.to(model.grayscale.device))
 
 
 # ---------------------------------------------------------------------------
 # Lagrangian helpers
 # ---------------------------------------------------------------------------
 
-def _archive_bytes_proxy_closed_form(model):
-    # type: (...) -> 'torch.Tensor'  # forward-ref; torch is imported lazily
+def _archive_bytes_proxy_closed_form(model, *, num_pairs: int, latent_dim: int):
+    # type: (...) -> 'torch.Tensor'
     """Closed-form upper-bound on archive bytes for the rate term.
 
-    The grayscale_lut substrate has TWO rate components:
-      (a) decoder state_dict (stem + FiLM blocks + heads + pair_embedding)
-          stored as fp16 + brotli (~50% brotli savings on weights).
-      (b) per-pair grayscale stream stored as uint8 + brotli (~30-40% brotli
-          savings on natural-video luminance).
-
-    We use a non-tight but monotone proxy:
-      decoder_bytes ~= num_decoder_params * 2  (fp16, no brotli savings counted)
-      grayscale_bytes ~= num_pairs * 1 * H/D * W/D  (uint8, no brotli savings)
-
-    The proxy is constant during training (no parameter dependence), so the
-    rate term is a constant offset; gradient flows entirely through the
-    seg + pose + tv terms. The TV regularizer is what shapes the grayscale
-    field toward smoother (= more compressible) configurations.
+    tc_nerv archive grammar TCV1: fp16 decoder weights + int16 latents + int8
+    tc_table (one byte per pair). Proxy ``bytes ~= (num_decoder_params * 2) +
+    (num_pairs * latent_dim * 2) + num_pairs``. This proxy is constant during
+    training (no parameter dependence), so the rate term is a constant offset;
+    gradient flows entirely through the seg + pose + tc terms.
     """
     import torch
 
-    cfg = model.cfg
     n_decoder = sum(
-        p.numel()
-        for n, p in model.named_parameters()
-        if n != "grayscale"
+        p.numel() for n, p in model.named_parameters() if n != "latents"
     )
-    h_g = cfg.output_height // cfg.grayscale_downsample
-    w_g = cfg.output_width // cfg.grayscale_downsample
-    grayscale_bytes = cfg.num_pairs * 1 * h_g * w_g  # uint8 = 1 byte/elem
-    bytes_proxy = float(n_decoder * 2 + grayscale_bytes)
+    bytes_proxy = float(n_decoder * 2 + num_pairs * latent_dim * 2 + num_pairs)
     device = next(model.parameters()).device
     return torch.tensor(bytes_proxy, dtype=torch.float32, device=device)
 
@@ -520,20 +475,30 @@ def _write_runtime(submission_dir: Path) -> None:
     """Emit the contest-compliant ``inflate.sh`` + ``inflate.py`` pair.
 
     Per Catalog #146 semantics:
-
     * 3-positional-arg ``inflate.sh`` ($1=archive_dir $2=output_dir $3=file_list)
     * ``set -euo pipefail``
     * No runtime network/dep fetches
     * No scorer code imports in ``inflate.py``
     * Per-video loop in ``inflate.py``
-    * ``inflate.py`` ≤ 100 LOC (substrate inflate is ~90 LOC; CLI glue keeps
-      the wrapper under the HNeRV parity lesson L4 budget).
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
+    runtime_pkg = submission_dir / "src" / "tac" / "substrates" / "tc_nerv"
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    # Vendor only the inflate-time tc_nerv package surface. Do NOT copy
+    # score-aware training modules or scorer imports into the runtime tree.
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+        runtime_pkg / "__init__.py",
+    ):
+        pkg_init.write_text("", encoding="utf-8")
+    substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "tc_nerv"
+    for name in ("architecture.py", "archive.py", "inflate.py"):
+        shutil.copy2(substrate_src / name, runtime_pkg / name)
 
     inflate_sh = (
         "#!/usr/bin/env bash\n"
-        "# grayscale_lut contest-compliant inflate (WAVE-4-GRAYSCALE-LUT 2026-05-12)\n"
+        "# tc_nerv contest-compliant inflate (WAVE-3-A wired 2026-05-12)\n"
         "# Contract: $1=archive_dir $2=output_dir $3=file_list\n"
         "set -euo pipefail\n"
         "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
@@ -549,7 +514,7 @@ def _write_runtime(submission_dir: Path) -> None:
 
     inflate_py = (
         "#!/usr/bin/env python\n"
-        "\"\"\"grayscale_lut contest-compliant inflate runtime.\n"
+        "\"\"\"tc_nerv contest-compliant inflate runtime.\n"
         "\n"
         "Reads archive_dir/0.bin via the packaged substrate parser, then for\n"
         "each base in file_list writes per-frame .png under output_dir/<base>/.\n"
@@ -560,7 +525,7 @@ def _write_runtime(submission_dir: Path) -> None:
         "\n"
         "HERE = Path(__file__).resolve().parent\n"
         "sys.path.insert(0, str(HERE / 'src'))\n"
-        "from tac.substrates.grayscale_lut.inflate import inflate_one_video\n"
+        "from tac.substrates.tc_nerv.inflate import inflate_one_video\n"
         "\n"
         "def main() -> int:\n"
         "    if len(sys.argv) != 4:\n"
@@ -609,6 +574,13 @@ def _build_archive_zip(
             zi = zipfile.ZipInfo(name, date_time=fixed_ts)
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, src.read_bytes())
+        runtime_root = submission_dir / "src"
+        if runtime_root.is_dir():
+            for src in sorted(runtime_root.rglob("*.py")):
+                rel = src.relative_to(submission_dir).as_posix()
+                zi = zipfile.ZipInfo(rel, date_time=fixed_ts)
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                zf.writestr(zi, src.read_bytes())
 
 
 # ---------------------------------------------------------------------------
@@ -661,8 +633,8 @@ def _device_or_die(name: str, *, smoke: bool):
     if name == "cpu":
         if not smoke:
             raise SystemExit(
-                "[grayscale_lut] --device cpu is permitted only with --smoke per "
-                "CLAUDE.md 'MPS auth eval is NOISE' + 'EMA — non-negotiable' "
+                "[tc_nerv] --device cpu is permitted only with --smoke per "
+                "CLAUDE.md 'MPS auth eval is NOISE' + 'EMA - non-negotiable' "
                 "+ full-training-needs-CUDA convention. Use --device cuda for "
                 "promotion-grade training."
             )
@@ -670,10 +642,10 @@ def _device_or_die(name: str, *, smoke: bool):
     if name == "cuda":
         if not torch.cuda.is_available():
             raise SystemExit(
-                "[grayscale_lut] --device cuda requested but cuda not available"
+                "[tc_nerv] --device cuda requested but cuda not available"
             )
         return torch.device("cuda")
-    raise SystemExit(f"[grayscale_lut] unknown --device {name!r}")
+    raise SystemExit(f"[tc_nerv] unknown --device {name!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -684,34 +656,38 @@ def _smoke_main(args: argparse.Namespace) -> int:
     """Tiny CPU smoke that proves the scaffold is wired (no scorer load)."""
     import torch
 
-    from tac.substrates.grayscale_lut.architecture import (
-        GrayscaleLutConfig,
-        GrayscaleLutSubstrate,
+    from tac.substrates.tc_nerv.architecture import (
+        TCNervConfig,
+        TCNervSubstrate,
     )
 
     _pin_seeds(args.seed)
 
-    # Tiny config that fits in CPU RAM (24 x 32 output, 6 x 8 grayscale)
-    cfg = GrayscaleLutConfig(
-        grayscale_downsample=args.grayscale_downsample,
-        decoder_hidden=16,
-        decoder_blocks=2,
-        embedding_dim=args.embedding_dim,
+    # 2-block tiny config that fits in CPU RAM
+    cfg = TCNervConfig(
+        latent_dim=args.latent_dim,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(24, 16, 8),
+        sin_frequency=args.sin_frequency,
         num_pairs=4,
         output_height=24,
         output_width=32,
+        num_upsample_blocks=2,
     )
     device = _device_or_die(args.device, smoke=True)
-    model = GrayscaleLutSubstrate(cfg).to(device)
+    model = TCNervSubstrate(cfg).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"[smoke] grayscale_lut params: {model.num_parameters():,}")
+    print(f"[smoke] tc_nerv params: {model.num_parameters():,}")
     for step in range(min(args.epochs, 3)):
         idx = torch.arange(cfg.num_pairs, device=device, dtype=torch.long)
         rgb_0, rgb_1 = model(idx)
-        loss = rgb_0.abs().mean() + rgb_1.abs().mean()
+        # Smoke loss: simple frame magnitude + tc regularizer (no scorers loaded)
+        loss = rgb_0.abs().mean() + rgb_1.abs().mean() + args.lambda_tc * ((rgb_1 - rgb_0) ** 2).mean()
         opt.zero_grad()
         loss.backward()
         opt.step()
@@ -733,7 +709,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full training entry point — requires CUDA + score-aware scorers."""
+    """Full training entry point - requires CUDA + score-aware scorers.
+
+    This path is OPERATOR-GATED. The wrapper (Vast.ai / Lightning / Modal)
+    threads all TIER_1 flags + runs the auth-eval afterward per CLAUDE.md
+    "Auth eval EVERYWHERE" + "Submission auth eval - BOTH CPU AND CUDA".
+    """
     import torch
 
     from tac.differentiable_eval_roundtrip import (
@@ -741,14 +722,14 @@ def _full_main(args: argparse.Namespace) -> int:
         unpatch_upstream_yuv6,
     )
     from tac.scorer import load_differentiable_scorers
-    from tac.substrates.grayscale_lut.architecture import (
-        GrayscaleLutConfig,
-        GrayscaleLutSubstrate,
+    from tac.substrates.tc_nerv.architecture import (
+        TCNervConfig,
+        TCNervSubstrate,
     )
-    from tac.substrates.grayscale_lut.archive import pack_archive
-    from tac.substrates.grayscale_lut.score_aware_loss import (
-        GrayscaleLutScoreAwareLoss,
-        ScoreAwareLossWeights,
+    from tac.substrates.tc_nerv.archive import pack_archive
+    from tac.substrates.tc_nerv.score_aware_loss import (
+        TCNervScoreAwareLoss,
+        TCScoreAwareLossWeights,
     )
     from tac.training import EMA
 
@@ -798,40 +779,36 @@ def _full_main(args: argparse.Namespace) -> int:
         val_indices = torch.arange(val_idx_start, n_pairs, device=device, dtype=torch.long)
 
         # 5. Build model
-        cfg = GrayscaleLutConfig(
-            grayscale_downsample=args.grayscale_downsample,
-            decoder_hidden=args.decoder_hidden,
-            decoder_blocks=args.decoder_blocks,
-            embedding_dim=args.embedding_dim,
+        cfg = TCNervConfig(
+            latent_dim=args.latent_dim,
+            sin_frequency=args.sin_frequency,
             num_pairs=n_pairs,
             output_height=EVAL_HW[0],
             output_width=EVAL_HW[1],
         )
-        model = GrayscaleLutSubstrate(cfg).to(device)
-        print(f"[full] grayscale_lut params: {model.num_parameters():,}")
-        # Initialize grayscale field from GT luminance for warm start
-        _initialize_grayscale_from_pairs(model, pair_tensor)
-        _stage("model_built_with_gt_luminance_init")
+        model = TCNervSubstrate(cfg).to(device)
+        print(f"[full] tc_nerv params: {model.num_parameters():,}")
+        _stage("model_built")
 
         # 6. EMA shadow (CLAUDE.md non-negotiable)
         ema = EMA(model, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
 
-        # 7. Score-aware Lagrangian
-        weights = ScoreAwareLossWeights(
+        # 7. Score-aware Lagrangian (with temporal-consistency regularizer)
+        weights = TCScoreAwareLossWeights(
             alpha_rate=args.alpha_rate,
             beta_seg=args.beta_seg,
             gamma_pose=args.gamma_pose,
             pose_weight_scale=args.pose_weight_scale,
+            lambda_tc=args.lambda_tc,
             contest_normalizer=CONTEST_NORMALIZER,
-            grayscale_tv_weight=args.grayscale_tv_weight,
         )
-        loss_fn = GrayscaleLutScoreAwareLoss(
+        loss_fn = TCNervScoreAwareLoss(
             seg_scorer=segnet,
             pose_scorer=posenet,
             weights=weights,
         )
-        _stage("lagrangian_built")
+        _stage(f"lagrangian_built_lambda_tc_{args.lambda_tc}")
 
         # 8. Optimizer + cosine annealing
         optimizer = torch.optim.AdamW(
@@ -849,7 +826,9 @@ def _full_main(args: argparse.Namespace) -> int:
 
         n_train = int(train_indices.shape[0])
         batch_size = max(1, args.batch_size)
-        archive_bytes_proxy = _archive_bytes_proxy_closed_form(model)
+        archive_bytes_proxy = _archive_bytes_proxy_closed_form(
+            model, num_pairs=n_pairs, latent_dim=cfg.latent_dim,
+        )
 
         # NaN watchdog (Council D pattern)
         nan_strike = 0
@@ -865,19 +844,17 @@ def _full_main(args: argparse.Namespace) -> int:
                 if idx.numel() == 0:
                     continue
                 rgb_0, rgb_1 = model(idx)
-                # Substrate outputs in [0, 1]; loss expects [0, 255]
+                # Frames in [0,1]; score-aware loss + eval-roundtrip expect [0, 255]
                 rgb_0_255 = rgb_0 * 255.0
                 rgb_1_255 = rgb_1 * 255.0
-                gt = pair_tensor[idx]
+                gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
                 gt_0 = gt[:, 0]
                 gt_1 = gt[:, 1]
                 loss, parts = loss_fn(
                     rgb_0_255, rgb_1_255, gt_0, gt_1, archive_bytes_proxy,
-                    grayscale_param=model.grayscale,
                     apply_eval_roundtrip=True,
                     noise_std=args.noise_std,
                 )
-                # NaN watchdog
                 if not torch.isfinite(loss):
                     nan_strike += 1
                     print(
@@ -922,11 +899,11 @@ def _full_main(args: argparse.Namespace) -> int:
                         pair_tensor[val_indices, 0],
                         pair_tensor[val_indices, 1],
                         archive_bytes_proxy,
-                        grayscale_param=model.grayscale,
                         apply_eval_roundtrip=True,
                         noise_std=args.noise_std,
                     )
                 val_lag = float(val_loss.detach().item())
+                # Restore live weights
                 model.load_state_dict(orig_state)
                 model.train()
                 print(
@@ -937,7 +914,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 if val_lag < best_val_lag and math.isfinite(val_lag):
                     best_val_lag = val_lag
                     best_epoch = epoch
-                    # Save EMA shadow (NOT live weights) — CLAUDE.md EMA rule
+                    # Save EMA shadow (NOT live weights) - CLAUDE.md EMA rule
                     ema_state = ema.state_dict()
                     torch.save(
                         {
@@ -981,42 +958,55 @@ def _full_main(args: argparse.Namespace) -> int:
                 ckpt_best_path,
             )
 
-        # 11. Build the GLV1 archive bytes from the EMA shadow
+        # 11. Build the TCV1 archive bytes from the EMA shadow
         archive_sha = ""
         archive_bytes = 0
         archive_zip_path = args.output_dir / "archive.zip"
         if not args.skip_archive_build:
             print(f"[full] building archive from {ckpt_best_path} ...")
-            ema_ckpt = torch.load(ckpt_best_path, map_location="cpu", weights_only=False)
-            sd = ema_ckpt["state_dict"]
-
-            # Re-instantiate the model on CPU with the EMA weights to use the
-            # quantize_grayscale_for_archive + runtime_state_dict_for_archive
-            # helpers (avoids replicating the byte-packing logic here).
-            cpu_model = GrayscaleLutSubstrate(cfg).to("cpu")
-            cpu_model.load_state_dict(sd, strict=False)
-            grayscale_uint8 = cpu_model.quantize_grayscale_for_archive()
-            decoder_sd = cpu_model.runtime_state_dict_for_archive()
-
+            ema_state = torch.load(ckpt_best_path, map_location="cpu", weights_only=False)
+            sd = ema_state["state_dict"]
+            decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+            latents = sd["latents"].detach().cpu()
+            # Build a tc_table provenance record: per-pair adjacency strength
+            # ``mean(||rgb_1 - rgb_0||^2)`` clipped to int8 range. The tc_table
+            # is a TRAINING-only provenance section; inflate does not consume
+            # it (the runtime-rendered RGB pair is generated from the decoder
+            # + latent only). The presence of the table is part of the
+            # Catalog #139 byte-mutation no_op_proof contract.
+            with torch.no_grad():
+                # Reconstruct the EMA model in eval mode for the tc_table pass
+                eval_model = TCNervSubstrate(cfg).to(device).eval()
+                eval_model.load_state_dict(sd, strict=False)
+                tc_strengths: list[int] = []
+                with torch.no_grad():
+                    for pair_idx in range(n_pairs):
+                        idx_t = torch.tensor([pair_idx], device=device, dtype=torch.long)
+                        r0, r1 = eval_model(idx_t)
+                        delta_sq = ((r1 - r0) ** 2).mean().item()
+                        # Map [0, 0.1] -> [-127, 127] (clamp). Anything above
+                        # 0.1 saturates 127. Empirically the regularized
+                        # values are <= 0.05 so this fits.
+                        clamped = max(-1.0, min(1.0, (delta_sq * 20.0) - 1.0))
+                        tc_strengths.append(round(clamped * 127))
+                tc_table = torch.tensor(tc_strengths, dtype=torch.int8)
             meta = {
-                "decoder_hidden": cfg.decoder_hidden,
-                "decoder_blocks": cfg.decoder_blocks,
+                "embed_dim": cfg.embed_dim,
+                "initial_grid_h": cfg.initial_grid_h,
+                "initial_grid_w": cfg.initial_grid_w,
+                "decoder_channels": list(cfg.decoder_channels),
+                "sin_frequency": cfg.sin_frequency,
+                "output_height": cfg.output_height,
+                "output_width": cfg.output_width,
+                "num_upsample_blocks": cfg.num_upsample_blocks,
             }
-            bin_bytes = pack_archive(
-                decoder_sd,
-                grayscale_uint8,
-                meta,
-                num_pairs=cfg.num_pairs,
-                grayscale_downsample=cfg.grayscale_downsample,
-                embedding_dim=cfg.embedding_dim,
-                output_height=cfg.output_height,
-                output_width=cfg.output_width,
-            )
+            bin_bytes = pack_archive(decoder_sd, latents, tc_table, meta)
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
             archive_sha = _sha256_bytes(bin_bytes)
             archive_bytes = len(bin_bytes)
             print(f"[full] wrote 0.bin ({archive_bytes} bytes, sha256={archive_sha})")
 
+            # Emit contest-compliant runtime alongside the bin
             submission_dir = args.output_dir / "submission"
             _write_runtime(submission_dir)
             (submission_dir / "0.bin").write_bytes(bin_bytes)
@@ -1090,12 +1080,12 @@ def _full_main(args: argparse.Namespace) -> int:
                 result = ContestResult(
                     axis="cuda",
                     hardware_substrate="linux_x86_64_t4",
-                    architecture_class="lane_substrate_grayscale_lut_20260512",
+                    architecture_class="lane_substrate_tc_nerv_20260512",
                     score_value=contest_cuda_score,
                     evidence_tag="[contest-CUDA]",
                     archive_sha256=archive_sha,
                     archive_bytes=archive_bytes,
-                    notes=f"grayscale_lut first-anchor dispatch; epochs={args.epochs}",
+                    notes=f"tc_nerv first-anchor dispatch; epochs={args.epochs}; lambda_tc={args.lambda_tc}",
                     observed_at_utc=_utc_now_iso(),
                 )
                 update = posterior_update_locked(result)
@@ -1113,29 +1103,26 @@ def _full_main(args: argparse.Namespace) -> int:
             from tac.cost_band_calibration import parse_actual_cost_usd
 
             actual_cost_usd = parse_actual_cost_usd(
-                os.environ.get("GRAYSCALE_LUT_ACTUAL_COST_USD"),
-                field_name="GRAYSCALE_LUT_ACTUAL_COST_USD",
+                os.environ.get("TC_NERV_ACTUAL_COST_USD"),
+                field_name="TC_NERV_ACTUAL_COST_USD",
             )
         except ValueError as exc:
             actual_cost_usd = None
-            cost_band_anchor_skip_reason = (
-                f"invalid_GRAYSCALE_LUT_ACTUAL_COST_USD:{exc}"
-            )
+            cost_band_anchor_skip_reason = f"invalid_TC_NERV_ACTUAL_COST_USD:{exc}"
         if COST_BAND_TOOL.is_file() and train_elapsed_sec > 0 and actual_cost_usd is not None:
             try:
                 proc = subprocess.run(
                     [
                         sys.executable, str(COST_BAND_TOOL),
-                        "--dispatch-label", f"grayscale_lut_{_utc_now_iso()}",
-                        "--trainer", "experiments/train_substrate_grayscale_lut.py",
-                        "--platform", os.environ.get("GRAYSCALE_LUT_PLATFORM", "modal"),
-                        "--gpu", os.environ.get("GRAYSCALE_LUT_GPU", "A100"),
+                        "--dispatch-label", f"tc_nerv_{_utc_now_iso()}",
+                        "--trainer", "experiments/train_substrate_tc_nerv.py",
+                        "--platform", os.environ.get("TC_NERV_PLATFORM", "modal"),
+                        "--gpu", os.environ.get("TC_NERV_GPU", "A100"),
                         "--epochs", str(args.epochs),
                         "--batch-size", str(args.batch_size),
                         "--actual-wall-clock-sec", str(train_elapsed_sec),
-                        "--actual-cost-usd",
-                        str(actual_cost_usd),
-                        "--notes", "WAVE-4-GRAYSCALE-LUT first-anchor dispatch",
+                        "--actual-cost-usd", str(actual_cost_usd),
+                        "--notes", "WAVE-3-A first-anchor dispatch",
                     ],
                     capture_output=True, text=True, timeout=30, check=False,
                 )
@@ -1151,7 +1138,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 print(f"[full] cost-band anchor append failed (non-fatal): {exc}", file=sys.stderr)
         else:
             if actual_cost_usd is None and cost_band_anchor_skip_reason is None:
-                cost_band_anchor_skip_reason = "missing_GRAYSCALE_LUT_ACTUAL_COST_USD"
+                cost_band_anchor_skip_reason = "missing_TC_NERV_ACTUAL_COST_USD"
             elif not COST_BAND_TOOL.is_file():
                 cost_band_anchor_skip_reason = "cost_band_tool_missing"
             else:
@@ -1159,12 +1146,12 @@ def _full_main(args: argparse.Namespace) -> int:
 
         # 15. Provenance manifest
         provenance = {
-            "schema": "grayscale_lut_provenance_v1",
+            "schema": "tc_nerv_provenance_v1",
             "generated_at": _utc_now_iso(),
             "from_state_hash": "regen_per_session_below",
             "git_head": _git_head_sha(),
-            "trainer": "experiments/train_substrate_grayscale_lut.py",
-            "lane_id": "lane_substrate_grayscale_lut_20260512",
+            "trainer": "experiments/train_substrate_tc_nerv.py",
+            "lane_id": "lane_substrate_tc_nerv_20260512",
             "args": {
                 k: (str(v) if isinstance(v, Path) else v)
                 for k, v in vars(args).items()

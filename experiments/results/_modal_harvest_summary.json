@@ -2,72 +2,254 @@
   {
     "label": "lane_fl",
     "status": "already_harvested",
-    "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86"
+    "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_fl_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4"
+    "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_g_v3_owv3_fisher_smoke_20260430_codex",
     "status": "already_harvested",
-    "call_id": "fc-01KQFKCAKBZ3MKRRPNDK6T8DV6"
+    "call_id": "fc-01KQFKCAKBZ3MKRRPNDK6T8DV6",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_gp",
     "status": "already_harvested",
-    "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ"
+    "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_gp_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQCR8G6843PK2JJ0HT3WBW3S"
+    "call_id": "fc-01KQCR8G6843PK2JJ0HT3WBW3S",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_gp_v3",
     "status": "already_harvested",
-    "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ"
+    "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_mae_v",
     "status": "already_harvested",
-    "call_id": "fc-01KQCJ8F0X9KNR3CQ6QMWNDF4P"
+    "call_id": "fc-01KQCJ8F0X9KNR3CQ6QMWNDF4P",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_mm",
     "status": "already_harvested",
-    "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB"
+    "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_mm_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQD283JJFDGJ11XYPPQK7VN5"
+    "call_id": "fc-01KQD283JJFDGJ11XYPPQK7VN5",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_omega_hessian",
     "status": "already_harvested",
-    "call_id": "fc-01KQCJ7J556562CSNMM7CZH801"
+    "call_id": "fc-01KQCJ7J556562CSNMM7CZH801",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_s",
     "status": "already_harvested",
-    "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ"
+    "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sa",
     "status": "already_harvested",
-    "call_id": "fc-01KQCZW4BM6NXBWTNSC4G24ZCC"
+    "call_id": "fc-01KQCZW4BM6NXBWTNSC4G24ZCC",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sa_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQD090GDA30NFM325M0M20PB"
+    "call_id": "fc-01KQD090GDA30NFM325M0M20PB",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sa_v3",
     "status": "already_harvested",
-    "call_id": "fc-01KQD2AHSSJEENJB2WBAKB2XRA"
+    "call_id": "fc-01KQD2AHSSJEENJB2WBAKB2XRA",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sa_v4",
@@ -77,37 +259,115 @@
   {
     "label": "lane_sa_v5_post_oom_fix",
     "status": "already_harvested",
-    "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR"
+    "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sc_plus_plus",
     "status": "already_harvested",
-    "call_id": "fc-01KQCZW6WCBYV2VZMD5CAMEG2B"
+    "call_id": "fc-01KQCZW6WCBYV2VZMD5CAMEG2B",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sc_plus_plus_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY"
+    "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sc_plus_plus_v3",
     "status": "already_harvested",
-    "call_id": "fc-01KQD2AKKV97GVWXYYQVKPM84W"
+    "call_id": "fc-01KQD2AKKV97GVWXYYQVKPM84W",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_sc_plus_plus_v4",
-    "status": "expired",
+    "status": "error_NotFoundError",
     "call_id": "fc-01KQD5X0CYES4VGRH3KKB3QAKE"
   },
   {
     "label": "lane_so",
     "status": "already_harvested",
-    "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q"
+    "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_so_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQD093VQ8TR0W0QX1AF14KM9"
+    "call_id": "fc-01KQD093VQ8TR0W0QX1AF14KM9",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_so_v3",
@@ -117,22 +377,74 @@
   {
     "label": "lane_so_v3_post_oom_fix",
     "status": "already_harvested",
-    "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76"
+    "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_uniward",
     "status": "already_harvested",
-    "call_id": "fc-01KQCJ93WY9B57WNCY8BBHBPQW"
+    "call_id": "fc-01KQCJ93WY9B57WNCY8BBHBPQW",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_w",
     "status": "already_harvested",
-    "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF"
+    "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "lane_w_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQCR7SWQZPCS71F8D564C9ME"
+    "call_id": "fc-01KQCR7SWQZPCS71F8D564C9ME",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "mae_v_v2",
@@ -142,12 +454,38 @@
   {
     "label": "q_faithful",
     "status": "already_harvested",
-    "call_id": "fc-01KQCPXJ36DDZRV85F0M3H4MTY"
+    "call_id": "fc-01KQCPXJ36DDZRV85F0M3H4MTY",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "q_faithful_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6"
+    "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "q_faithful_v3",
@@ -155,68 +493,453 @@
     "call_id": "fc-01KQCQS0XBEXZDFWW574FN0W5G"
   },
   {
+    "label": "scpp_stage1_20260512T130830Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KRE4YCY88E8H6XEY0F9BVG7N",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
     "label": "stc_cuda",
     "status": "error_NotFoundError",
     "call_id": "fc-01KQDN5G9VKCR4Z2VPD3VD0PE2"
   },
   {
+    "label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
+    "call_id": "fc-01KREXK209TRX7ED5ZRVXHY1VT",
+    "rc": 1,
+    "elapsed_seconds": 12.868933203000001,
+    "n_artifacts": 53,
+    "crash_kind": "ERROR",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": true,
+      "already_appended": false,
+      "score_claim": false,
+      "promotion_eligible": false,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
+      "trainer": "experiments/train_substrate_sane_hnerv.py",
+      "platform": "modal",
+      "gpu": "A100",
+      "epochs": 2000,
+      "batch_size": 32,
+      "all_flags_on": true,
+      "elapsed_seconds": 12.868933203000001,
+      "estimated_cost_usd": 0.014298814670000002,
+      "hourly_rate_usd": 4.0,
+      "outcome": "failed_dispatch",
+      "returncode": 1,
+      "posterior_path": null,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=4.0; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": true,
+      "already_appended": false,
+      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
+      "platform": "modal",
+      "status": "failed_modal_training_rc_1",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=12.868933203000001; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z_modal"
+    }
+  },
+  {
+    "label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
+    "call_id": "fc-01KREXXSKGTDCF61QXQNBF6SX3",
+    "rc": 1,
+    "elapsed_seconds": 72.033509716,
+    "n_artifacts": 51,
+    "crash_kind": "RC_1",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": true,
+      "already_appended": false,
+      "score_claim": false,
+      "promotion_eligible": false,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
+      "trainer": "experiments/train_substrate_sane_hnerv.py",
+      "platform": "modal",
+      "gpu": "A100",
+      "epochs": 2000,
+      "batch_size": 32,
+      "all_flags_on": true,
+      "elapsed_seconds": 72.033509716,
+      "estimated_cost_usd": 0.08003723301777778,
+      "hourly_rate_usd": 4.0,
+      "outcome": "failed_dispatch",
+      "returncode": 1,
+      "posterior_path": null,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=4.0; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": true,
+      "already_appended": false,
+      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
+      "platform": "modal",
+      "status": "failed_modal_training_rc_1",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=72.033509716; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z_modal"
+    }
+  },
+  {
     "label": "sz_phase2_v2",
     "status": "expired",
-    "call_id": "fc-01KQCPZM0D2NMZCTH23RT98SK5"
+    "call_id": "fc-01KQCPZM0D2NMZCTH23RT98SK5",
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
+  },
+  {
+    "label": "t1_balle_cheap_config_20260512T171203Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KREJST89QHFRWJXHAKXD850C",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 16,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "t1_balle_cheap_config_20260512T171203Z",
+      "elapsed_seconds": 14.770903902,
+      "epochs": 3000,
+      "estimated_cost_usd": 0.016412115446666667,
+      "gpu": "A100",
+      "hourly_rate_usd": 4.0,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=4.0; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "schema": "modal_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "t1_balle_cheap_config_20260512T171203Z",
+      "lane_id": "t1_balle_128k_endtoend",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=14.770903902; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_t1_balle_cheap_config_20260512T171203Z_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    }
+  },
+  {
+    "label": "t1_balle_cheap_v2_20260512T130830Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KRE4XPREYGDHQ80XR2H2T54J",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_full_ce1b4e2d_20260510T1333Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR91CR2V5AM6Y2DVBFTXCDVM",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_fullpath_smoke_b82164a7_20260510T1348Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR928YET5BZGFV803ANT8CTS",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR93KESQB87VSD2WKE4GYZEC",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_guard_1aac11aa_20260510T1301Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR8ZNESYP42EP7928ZK94ZQB",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_guard_740778ba_20260510T1000Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR8HFZPJRQHWTXAX7TT72D04",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_guard_80b139c9_20260510T1240Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR8YCW8F12KACG5TKWSNZ7A7",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_guard_a3311268_20260510T0831Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR8GACB3NCW5TNG1E9YFPXHM",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_guard_c0ea27df_20260510T0927Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR8KCXEGTVFGSZ75HAK9S2QX",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_guard_c4100de4_20260510T0915Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR8JMK531A9PECP0CV513KQM",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "t1_balle_modal_phase1_ab2d0f6_20260510T1437Z",
+    "status": "already_harvested",
+    "call_id": "fc-01KR955JSYQAVTTYZA48VAV7WJ",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "t1_balle_modal_phase1_ab2d0f6_20260510T1437Z",
+      "lane_id": "t1_balle_128k_endtoend",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=124; timed_out=False; elapsed_seconds=84607.95735532901; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_t1_balle_modal_phase1_ab2d0f6_20260510T1437Z_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_124"
+    }
   },
   {
     "label": "track1_phase_a1_score_gradient_20260508T215443Z_modal",
     "status": "already_harvested",
-    "call_id": "fc-01KR4SBZ24K5DP3WXAV8M39H0R"
+    "call_id": "fc-01KR4SBZ24K5DP3WXAV8M39H0R",
+    "cost_band_anchor": null,
+    "terminal_claim": null
   },
   {
     "label": "track1_phase_a1_score_gradient_20260508T222043Z_modal",
     "status": "already_harvested",
-    "call_id": "fc-01KR4TVY14SWW0VN07XT1B4Y2Q"
+    "call_id": "fc-01KR4TVY14SWW0VN07XT1B4Y2Q",
+    "cost_band_anchor": null,
+    "terminal_claim": null
   },
   {
     "label": "track1_phase_a1_score_gradient_20260508T230020Z_modal",
     "status": "already_harvested",
-    "call_id": "fc-01KR4X449H99NB1MQXJC0QN52S"
+    "call_id": "fc-01KR4X449H99NB1MQXJC0QN52S",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex",
+    "status": "already_harvested",
+    "call_id": "fc-01KR5MQ0WYS8TQWDN7HCYBZZ3B",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal",
+    "status": "already_harvested",
+    "call_id": "fc-01KR55GH98QW3J3QDGQB1EG4CR",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal",
+    "status": "error_ModuleNotFoundError",
+    "call_id": "fc-01KR553TPH27G73HMHH56MDZH0"
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal",
+    "status": "already_harvested",
+    "call_id": "fc-01KR5B4JKGXQWZ4452G7JJ23J1",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_modal_20260510T0738Z_codex",
+    "status": "already_harvested",
+    "call_id": "fc-01KR8D302GXGKGT49ETYMA0BZC",
+    "cost_band_anchor": null,
+    "terminal_claim": null
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal",
+    "status": "already_harvested",
+    "call_id": "fc-01KR5K3V8VT735P73ZV881ZQA2",
+    "cost_band_anchor": null,
+    "terminal_claim": null
   },
   {
     "label": "track1_phase_a4_charm_50k_toy_20260508T220839Z_modal",
     "status": "already_harvested",
-    "call_id": "fc-01KR4T5E7RYA2MY4487TSY4Q4V"
+    "call_id": "fc-01KR4T5E7RYA2MY4487TSY4Q4V",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "track1_phase_a4_charm_50k_toy_20260508T220839Z_modal",
+      "lane_id": "track1_phase_a4_charm_50k_toy",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=None; timed_out=False; elapsed_seconds=106.646717531; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_track1_phase_a4_charm_50k_toy_20260508T220839Z_modal_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_unknown_returncode"
+    }
   },
   {
     "label": "uniward_v2",
     "status": "already_harvested",
-    "call_id": "fc-01KQCP43K3GGENCTY4QK087XY1"
+    "call_id": "fc-01KQCP43K3GGENCTY4QK087XY1",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "uniward_v3",
     "status": "already_harvested",
-    "call_id": "fc-01KQCQ6DEQJME9VWZ1PESQRPZ4"
+    "call_id": "fc-01KQCQ6DEQJME9VWZ1PESQRPZ4",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "uniward_v4",
     "status": "already_harvested",
-    "call_id": "fc-01KQCQX3Q8VZ7YJ9XMZVSDMYQ4"
+    "call_id": "fc-01KQCQX3Q8VZ7YJ9XMZVSDMYQ4",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "uniward_v5",
     "status": "already_harvested",
-    "call_id": "fc-01KQCR74WEBWX7JJ57MSM6MDA9"
+    "call_id": "fc-01KQCR74WEBWX7JJ57MSM6MDA9",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "uniward_v6",
     "status": "already_harvested",
-    "call_id": "fc-01KQCRMNNFS60Z7Y9ZHAFC2MDG"
+    "call_id": "fc-01KQCRMNNFS60Z7Y9ZHAFC2MDG",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "uniward_v7",
     "status": "already_harvested",
-    "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY"
+    "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   },
   {
     "label": "uniward_v8",
     "status": "already_harvested",
-    "call_id": "fc-01KQCTS1BKB5GYNA2AKREFRYXY"
+    "call_id": "fc-01KQCTS1BKB5GYNA2AKREFRYXY",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": false,
+      "reason": "metadata_missing_cost_band_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": false,
+      "already_appended": false,
+      "reason": "metadata_missing_lane_id_or_instance_job_id",
+      "score_claim": false,
+      "promotion_eligible": false
+    }
   }
 ]

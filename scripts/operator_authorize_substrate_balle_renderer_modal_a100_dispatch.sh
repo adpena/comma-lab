@@ -1,5 +1,5 @@
 #!/bin/bash
-# Operator-authorize wrapper for the Ballé hyperprior renderer (β) substrate.
+# Operator-authorize wrapper for the Ballé hyperprior renderer (beta) substrate.
 #
 # Recipe: ``.omx/operator_authorize_recipes/substrate_balle_renderer_modal_a100_dispatch.yaml``
 #
@@ -31,10 +31,19 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 # Smoke + Full chain via the canonical Catalog #167 helper.
+SMOKE_ARGS=()
+if [ "${BALLE_RENDERER_SMOKE_ONLY:-0}" = "1" ]; then
+    SMOKE_ARGS+=(--smoke-only)
+fi
+if [ "${BALLE_RENDERER_FULL_ONLY:-0}" = "1" ]; then
+    SMOKE_ARGS+=(--full-only)
+fi
+
 exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --recipe substrate_balle_renderer_modal_a100_dispatch \
     --smoke-epochs "${BALLE_RENDERER_SMOKE_EPOCHS:-100}" \
     --smoke-gpu "${BALLE_RENDERER_SMOKE_GPU:-T4}" \
     --smoke-timeout-hours "${BALLE_RENDERER_SMOKE_TIMEOUT_HOURS:-1.0}" \
     --operator-handle "claude:operator_authorize_substrate_balle_renderer_modal_a100_dispatch" \
+    "${SMOKE_ARGS[@]}" \
     "$@"

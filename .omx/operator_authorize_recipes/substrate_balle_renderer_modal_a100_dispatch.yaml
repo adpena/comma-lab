@@ -1,7 +1,7 @@
 schema_version: 1
 name: substrate_balle_renderer_modal_a100_dispatch
 lane_id: lane_substrate_balle_renderer_20260512
-summary: Ballé hyperprior renderer (β) first-anchor dispatch on Modal A100 (PHASE-B1-PIVOT HIGH-target attack).
+summary: Ballé hyperprior renderer (beta) first-anchor dispatch on Modal A100 (PHASE-B1-PIVOT HIGH-target attack).
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -14,9 +14,9 @@ cost_band:
   gpu_key: A100
 
 predicted_score_target: 0.18
-predicted_delta: "-0.013 vs PR101 0.193 [predicted; council Phase 5 first β anchor]"
+predicted_delta: "-0.013 vs PR101 0.193 [predicted; council Phase 5 first beta anchor]"
 predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md#balle-renderer"
-literature_anchor: "Ballé, Minnen, Singh, Hwang, Johnston — 'Variational Image Compression with a Scale Hyperprior' ICLR 2018"
+literature_anchor: "Ballé, Minnen, Singh, Hwang, Johnston - 'Variational Image Compression with a Scale Hyperprior' ICLR 2018"
 council_phase_5_prediction: 0.18
 
 risk: |
@@ -80,10 +80,10 @@ dependencies:
 notes: |
   PHASE-B1-PIVOT first-anchor dispatch for the Ballé hyperprior family.
   Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
-  this is a substrate-engineering lane (not bolt-on) — Ballé 2018 ships
+  this is a substrate-engineering lane (not bolt-on) - Ballé 2018 ships
   a learned entropy bottleneck + GDN nonlinearity + scale-hyperprior
   side info that the HNeRV substrate does NOT carry. The trainer's
-  TIER_1_OPERATOR_REQUIRED_FLAGS manifest declares the β-specific knobs
+  TIER_1_OPERATOR_REQUIRED_FLAGS manifest declares the beta-specific knobs
   (`--balle-hyperprior-channels`, `--gdn-eps`, `--lambda-hyperprior`)
   per Catalog #151.
 
@@ -91,7 +91,7 @@ notes: |
   .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
   experiments/modal_recover_lane.py.
 
-  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 2000) — current
+  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 2000) - current
   confidence: hand_calibrated_fallback (N=0 anchors). The smoke + full
   dispatches in this lane will bootstrap the calibration system.
 
