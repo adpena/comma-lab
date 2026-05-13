@@ -1075,6 +1075,17 @@ Before deploying any change to training code (`train_renderer_fridrich.py`, trai
 
 This protocol caught 2 CRITICAL bugs (auto-kill at epoch 200, OOM fix bypassed) and 3 medium issues in the Lagrangian R1-R4 patch. Without it, v5 training would have failed within the first 200 epochs.
 
+## Recursive adversarial review protocol — close paths (post-R12+R13)
+
+1. **Counter-advance SEAL** (canonical): 3 consecutive clean rounds → SEAL
+2. **Operator-declared SEAL (D-1, conservative)**: cycle MAY ALSO close via operator-declared SEAL when ALL of:
+   - (a) external-adversary unanimous SEAL recommendation
+   - (b) Contrarian SUPER-VETO invoked
+   - (c) 7-day cool-down since last finding-producing round
+   - (d) operator explicitly invokes the close via session prompt
+
+D-1 is a higher-bar alternative for cycles structurally unsatisfiable per R12-D meta-finding (lens-coverage expansion outpacing Zipf-decay).
+
 ## Design decisions — non-negotiable
 
 - **NEVER make design decisions unilaterally.** Always consult the skunkworks council (Yousfi + Fridrich + Hotz + Quantizr + Contrarian) before implementing any change that affects training behavior, loss functions, architecture configuration, interpolation methods, boundary values, optimization strategy, or any other design tradeoff.
