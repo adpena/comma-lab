@@ -22,9 +22,8 @@ This produced a new local candidate archive:
 - byte delta: `-151`
 - rate-only formula delta if components are unchanged: about `-0.000100545`
 
-The candidate now has exact [contest-CUDA T4] auth-eval custody. [contest-CPU
-Linux x86_64] closure was launched through Modal and is still pending harvest at
-the time of this ledger update.
+The candidate now has paired exact [contest-CUDA T4] and [contest-CPU Linux
+x86_64] auth-eval custody.
 
 ## Proofs Produced
 
@@ -52,6 +51,9 @@ Artifact directory:
 - `pre_submission_compliance.cuda_exact_nonfinal.json`: strict nonfinal CUDA
   compliance passed against the recovered exact auth-eval JSON, candidate
   archive manifest, runtime tree match, and terminal Modal dispatch claim.
+- `pre_submission_compliance.cpu_exact_nonfinal.json`: strict nonfinal CPU
+  compliance passed against the recovered exact auth-eval JSON, candidate
+  archive manifest, runtime tree match, and terminal Modal dispatch claim.
 
 Exact CUDA artifact directory:
 `experiments/results/modal_auth_eval/pr106_r2_pr101_grammar_lowlevel_repack_cuda_20260513_codex/`
@@ -76,8 +78,14 @@ Exact CPU artifact directory:
 - Modal call id: `fc-01KRFTYAENF8Y6CT0TC9QDKS43`
 - lane id: `pr106_r2_pr101_grammar_lowlevel_repack_151b_cpu`
 - job id: `modal_pr106_r2_pr101_lowlevel_151b_cpu_20260513T0454Z`
-- status as of `2026-05-13T04:55:53Z`: pending; active claim intentionally
-  remains open.
+- `contest_auth_eval.json`: exact [contest-CPU Linux x86_64] score
+  `0.22796397327358284`, final rounded score `0.23`, 600 samples.
+- components: `avg_segnet_dist=0.00063196`, `avg_posenet_dist=0.00016402`,
+  archive bytes `186629`.
+- runtime: uploaded `submissions/pr106_latent_sidecar_r2_pr101_grammar`
+  runtime, Linux `x86_64`, CUDA unavailable.
+- terminal claim status:
+  `completed_contest_cpu_modal_auth_eval_recovered`.
 
 ## Exact-Eval Boundary
 
@@ -91,18 +99,14 @@ Existing exact source result:
 
 Because the candidate has full-frame same-runtime local parity against the
 source runtime, the valid score authority is exact auth eval on the candidate
-bytes. CUDA is now measured; CPU closure is pending.
+bytes. Both CUDA and CPU are now measured.
 
 Before this candidate can be called release/submission ready:
 
-1. Harvest the pending [contest-CPU Linux x86_64] Modal run.
-2. If CPU succeeds, compare the candidate against the matching source archive on
-   the same CPU axis. Do not infer CPU behavior from CUDA or from local macOS
-   parity.
-3. Build a candidate-specific release surface if submission review is desired:
+1. Build a candidate-specific release surface if submission review is desired:
    candidate `archive.zip`, candidate `archive_manifest.json`, candidate
    `contest_auth_eval.json`, and report text that names the candidate SHA/bytes.
-4. Re-run strict `--contest-final` compliance against that release surface.
+2. Re-run strict `--contest-final` compliance against that release surface.
 
 ## Score Movement
 
@@ -116,13 +120,22 @@ This is a rate-only win consistent with the 151-byte archive reduction. It is
 not a new representation win and does not change SegNet/PoseNet behavior by
 itself.
 
+CPU apples-to-apples comparison against the matching source archive/runtime:
+
+- source [contest-CPU Linux x86_64]: `0.22806463271134514`, bytes `186780`.
+- candidate [contest-CPU Linux x86_64]: `0.22796397327358284`, bytes `186629`.
+- measured delta: `-0.00010065943776230331`.
+
+The equal CUDA and CPU deltas are expected because the decoded frames and
+scorer components stayed fixed per axis; only the archive byte term changed.
+
 ## Classification
 
 - Legitimate local byte movement: yes, candidate archive is byte-different and
   byte-smaller.
 - Runtime sidecar consumption: yes, proven by mutation digest.
 - Full-frame same-runtime local parity: yes.
-- Exact contest score: yes on [contest-CUDA T4], pending on [contest-CPU Linux
+- Exact contest score: yes on [contest-CUDA T4] and [contest-CPU Linux
   x86_64].
-- Promotion/submission readiness: false until CPU closure and contest-final
-  release-surface compliance close.
+- Promotion/submission readiness: false until contest-final release-surface
+  compliance closes.

@@ -78,7 +78,7 @@ Measured:
 | Axis | Score | SegNet | PoseNet | Evidence |
 | --- | ---: | ---: | ---: | --- |
 | [contest-CUDA T4] | `0.2065174760196528` | `0.0006426` | `0.00003236` | `contest-CUDA` |
-| [contest-CPU Linux x86_64] | pending | pending | pending | Modal call `fc-01KRFTYAENF8Y6CT0TC9QDKS43` |
+| [contest-CPU Linux x86_64] | `0.22796397327358284` | `0.00063196` | `0.00016402` | `contest-CPU` |
 
 CUDA apples-to-apples movement versus the matching source packet:
 
@@ -86,8 +86,21 @@ CUDA apples-to-apples movement versus the matching source packet:
 - candidate CUDA: `0.2065174760196528`
 - measured CUDA delta: `-0.00010065943776230331`
 
-Classification: measured CUDA score lowering is rate-only and byte-closed.
-CPU closure is pending and must be harvested before CPU-axis claims.
+CPU apples-to-apples movement versus the matching source packet:
+
+- source CPU: `0.22806463271134514`
+- candidate CPU: `0.22796397327358284`
+- measured CPU delta: `-0.00010065943776230331`
+
+Observed same-archive candidate gap:
+
+- CPU minus CUDA score: `+0.02144649725393004`
+- CPU/CUDA pose distortion ratio: about `5.0686`
+- CPU/CUDA SegNet distortion ratio: about `0.9834`
+
+Classification: measured CUDA and CPU score lowering is rate-only and
+byte-closed. The PR106/R2 PR101-grammar packet remains CUDA-dominant after the
+151-byte repack.
 
 ## Implications
 
@@ -98,5 +111,8 @@ CPU closure is pending and must be harvested before CPU-axis claims.
    PR101-grammar is CUDA-dominant.
 3. Score lowering work must preserve paired-axis tables near every claim that
    says "medal-band", "submission-ready", "frontier", or "rounds to".
-4. The next valid PR106/R2 action is harvesting the pending CPU run, then
-   updating this ledger with the measured candidate CPU row.
+4. The next valid PR106/R2 action is a candidate-specific release surface and
+   strict contest-final compliance only if this 151-byte rate win is worth
+   submission packaging. The score-lowering frontier should otherwise move to
+   transforms that change representation/scorer components, not more generic
+   brotli polish.
