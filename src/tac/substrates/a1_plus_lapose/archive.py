@@ -181,6 +181,10 @@ def split_composition_archive(archive_bytes: bytes) -> tuple[bytes, bytes]:
         return archive_bytes, b""
     if magic != LAPOSE_SIDECAR_MAGIC or ver != LAPOSE_SIDECAR_VERSION:
         return archive_bytes, b""
+    try:
+        decode_lapose_sidecar(archive_bytes[idx:])
+    except Exception:
+        return archive_bytes, b""
     return archive_bytes[:idx], archive_bytes[idx:]
 
 

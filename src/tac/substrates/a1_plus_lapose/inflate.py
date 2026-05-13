@@ -28,9 +28,15 @@ def _vendored_a1_root(here: Path) -> Path:
     candidate = here / "src"
     if (candidate / "codec.py").is_file() and (candidate / "model.py").is_file():
         return candidate
+    for parent in (here, *here.parents):
+        candidate = parent / "src"
+        if (candidate / "codec.py").is_file() and (candidate / "model.py").is_file():
+            return candidate
+        if (parent / "codec.py").is_file() and (parent / "model.py").is_file():
+            return parent
     raise FileNotFoundError(
         f"A1 vendored modules not found near {here}; expected src/a1/ or "
-        "src/codec.py + src/model.py"
+        "an ancestor src/codec.py + src/model.py"
     )
 
 
