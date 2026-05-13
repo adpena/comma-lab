@@ -294,6 +294,55 @@ If the estimated byte floor cannot plausibly fit below the HNeRV comparator
 while improving components, the lane stays research-only until a new mechanism
 changes the floor.
 
+## Independent-agent synthesis: implementation order
+
+Two fresh xhigh reviews converged on the same route split:
+
+1. HNeRV/PR101 worked because it was export-first: score-domain training,
+   differentiable evaluator preprocessing, small latent-per-pair structure,
+   QAT/export discipline, and a tiny closed runtime. Treat "HNeRV" as a whole
+   train-export-pack protocol, not only an architecture label.
+2. Rate-only work is insufficient at the current HLM1 comparator. The local
+   exact-CUDA artifact `pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex`
+   records `0.20638030907530963 [contest-CUDA]`, 186,423 bytes, SHA-256
+   `8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0`; generic
+   wrapper compression is near saturation. Below-0.17 work must change
+   representation or components.
+3. Replacement lanes should be ranked separately from HNeRV-stack lanes. A
+   replacement substrate is not allowed to inherit HNeRV silently; it must own
+   trainer, archive grammar, inflate runtime, byte floor, and exact-eval path.
+
+Ranked replacement implementation order:
+
+| Rank | Replacement path | Why it is high signal | Immediate build target | Kill gate |
+| --- | --- | --- | --- | --- |
+| R1 | Ballé/CompressAI hyperprior codec | strongest non-HNeRV replacement because it has an explicit entropy-model and side-information theory | make `balle_renderer` export a closed decoder/latent grammar; no external model zoo dependency at inflate | T4 runtime closure fails, decoder deps leak, or exact same-axis packet loses to HNeRV with no byte-floor advantage |
+| R2 | Domain-specific ego-motion/foveal hybrid renderer | exploits the dashcam/scorer contract directly and attacks under-served pose/foveation axes | `ego_foveal_hybrid` or `a1_plus_lapose`-adjacent trainer/materializer with runtime-consumed RGB changes | no CUDA PoseNet/SegNet gain after mutation proof |
+| R3 | SIREN/FINER/WIRE/BACON/MFN activation-family INR | best INR replacement family; FINER/WIRE/BACON are model changes, not just SIREN hyperparameter tweaks | shared activation-family substrate interface behind the SIREN trainer and archive grammar | T4 decode too slow, byte floor explodes, or eval-roundtrip scorer loss cannot beat HNeRV comparator |
+| R4 | Cool-Chic/C3 overfit codec | strong low-complexity coordinate-codec prior, but current scaffolds are not literal bitstreams | integer/context-coded latent export and exact decoder, not float renderer only | quant/export destroys component gains or context stream is not runtime-consumed |
+| R5 | Classical+learned motion/wavelet/CTW packet | strongest first-principles non-neural replacement candidate | motion-compensated prediction plus embedded residual prefix under one PacketIR schema | decoder overhead erases entropy gain or raw-output mutation proof fails |
+
+Ranked HNeRV-stack implementation order:
+
+| Rank | Stack path | Why it is high signal | Immediate build target | Kill gate |
+| --- | --- | --- | --- | --- |
+| S1 | Archive-in-loop HNeRV parity training | converts public PR95/PR101 lessons into exact packet selection instead of another blind refire | mini export inside validation loop, parsed-byte score proxy, runtime-frame parity guard | recovered recipe cannot reproduce same-axis PR101/PR103 neighborhood |
+| S2 | Scorer-aware residual/replacement atom selector over HLM1 | directly targets SegNet/PoseNet distortion per charged byte | select SIREN/FINER/WIRE/C3/wavelet/LAPose atoms by component sensitivity and emit runtime-consumed sidecar | proxy/local win disappears under exact CUDA or sidecar no-ops |
+| S3 | Semantic PacketIR recode after stream selection | amplifies a better model or atom stream; avoids wrapper-compression local minimum | consume PacketIR worker golden vectors and apply only to runtime-consumed streams | parse-emit identity or mutation proof fails |
+| S4 | Muon as training accelerator | can improve wall-clock/sample efficiency for 2D hidden weights; no inflate implication | separate Muon parameter groups for hidden matrices, AdamW for embeddings/bias/norm/scalars | same-budget score-domain validation does not improve or QAT/export destabilizes |
+| S5 | GEPA/autoresearch as candidate proposer | useful for text-serializable configs, PacketIR policies, and queue filters only | evaluator must parse/materialize candidates and return no-claim diagnostics unless exact packet exists | invented flags, unparseable policies, or noncompliant shortcuts |
+
+Implementation consequence: do not spend GPU on naked L0 substrates until they
+have real trainers, recipes, archive grammar, exact packet construction, and
+smoke-before-full auth-eval evidence. The current best next code slices are
+therefore:
+
+1. activation-family SIREN/FINER/WIRE interface plus exact export hooks;
+2. Ballé/CompressAI closed-grammar replacement substrate;
+3. archive-in-loop HNeRV parity selection;
+4. runtime-consumed residual atom sidecar with no-op mutation proof;
+5. PacketIR semantic recode only after the selected stream is proven consumed.
+
 ## Threats to validity
 
 - Public frontier artifacts may encode undocumented training/export choices.
