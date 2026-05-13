@@ -55,6 +55,12 @@ def append_modal_training_terminal_claim(
     repo_root = Path(repo_root)
     out_dir = Path(out_dir)
     marker = out_dir / "modal_training_terminal_claim.json"
+
+    def _write_marker(manifest: dict[str, Any]) -> dict[str, Any]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        marker.write_text(json_text(manifest), encoding="utf-8")
+        return manifest
+
     if marker.is_file():
         try:
             existing = marker.read_text(encoding="utf-8")
@@ -68,14 +74,16 @@ def append_modal_training_terminal_claim(
     instance_job_id = str(metadata.get("label") or metadata.get("instance_job_id") or "").strip()
     platform = str(metadata.get("platform") or "modal").strip() or "modal"
     if not lane_id or not instance_job_id:
-        return {
+        return _write_marker({
             "schema": SCHEMA,
             "appended": False,
             "already_appended": False,
             "reason": "metadata_missing_lane_id_or_instance_job_id",
+            "metadata_label": str(metadata.get("label") or ""),
+            "metadata_call_id": str(metadata.get("call_id") or ""),
             "score_claim": False,
             "promotion_eligible": False,
-        }
+        })
 
     terminal_status = status or modal_training_terminal_status(result)
     if result is None:
@@ -123,9 +131,7 @@ def append_modal_training_terminal_claim(
         return manifest
 
     manifest["appended"] = True
-    out_dir.mkdir(parents=True, exist_ok=True)
-    marker.write_text(json_text(manifest), encoding="utf-8")
-    return manifest
+    return _write_marker(manifest)
 
 
 __all__ = [

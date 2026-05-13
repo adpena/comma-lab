@@ -81,11 +81,17 @@ def test_append_modal_training_terminal_claim_idempotent(tmp_path: Path) -> None
 
 
 def test_append_modal_training_terminal_claim_skips_without_metadata(tmp_path: Path) -> None:
+    out_dir = tmp_path / "out"
     manifest = append_modal_training_terminal_claim(
         repo_root=tmp_path,
-        out_dir=tmp_path / "out",
+        out_dir=out_dir,
         metadata={"label": "missing_lane"},
         result={"returncode": 0},
     )
     assert manifest["appended"] is False
     assert manifest["reason"] == "metadata_missing_lane_id_or_instance_job_id"
+    marker = json.loads((out_dir / "modal_training_terminal_claim.json").read_text())
+    assert marker["appended"] is False
+    assert marker["metadata_label"] == "missing_lane"
+    assert marker["score_claim"] is False
+    assert marker["promotion_eligible"] is False

@@ -13,7 +13,11 @@ ensure_repo_imports(REPO)
 
 from tac.deploy.modal.training_claims import append_modal_training_terminal_claim  # noqa: E402
 from tac.deploy.modal.training_cost import append_modal_training_cost_anchor  # noqa: E402
-from tac.deploy.modal.harvest_summary import modal_training_summary_entry  # noqa: E402
+from tac.deploy.modal.harvest_summary import (  # noqa: E402
+    modal_training_summary_entry,
+    normalise_modal_training_result_summary,
+    partial_modal_training_result_summary,
+)
 
 result_dirs = list((REPO / "experiments" / "results").glob("lane_*_modal"))
 metadata_files = [d / "modal_metadata.json" for d in result_dirs if (d / "modal_metadata.json").exists()]
@@ -42,6 +46,29 @@ for mfile in sorted(metadata_files):
                     harvested = loaded
             except json.JSONDecodeError:
                 harvested = {"crash_kind": "INVALID_HARVEST_SUMMARY"}
+        else:
+            root_harvest_summary = out_dir / "harvest_summary.json"
+            if root_harvest_summary.is_file():
+                try:
+                    loaded = json.loads(root_harvest_summary.read_text(encoding="utf-8"))
+                    if isinstance(loaded, dict):
+                        harvested = normalise_modal_training_result_summary(
+                            loaded,
+                            artifacts_dir=artifacts_dir,
+                            source_summary=root_harvest_summary,
+                        )
+                        (artifacts_dir / "_harvest_summary.json").write_text(
+                            json.dumps(harvested, indent=2, default=str),
+                            encoding="utf-8",
+                        )
+                except json.JSONDecodeError:
+                    harvested = {"crash_kind": "INVALID_ROOT_HARVEST_SUMMARY"}
+            else:
+                harvested = partial_modal_training_result_summary(artifacts_dir=artifacts_dir)
+                (artifacts_dir / "_harvest_summary.json").write_text(
+                    json.dumps(harvested, indent=2, default=str),
+                    encoding="utf-8",
+                )
         cost_marker = out_dir / "cost_band_anchor_appended.json"
         cost_anchor = None
         if cost_marker.is_file():
@@ -167,12 +194,23 @@ for mfile in sorted(metadata_files):
             status="failed_modal_training_result_cache_expired",
             agent="codex:harvest_modal_calls",
         )
-        summary.append({
-            "label": label,
+        artifacts_dir.mkdir(exist_ok=True)
+        expired_summary = {
             "status": "expired",
-            "call_id": call_id,
+            "crash_kind": "RESULT_CACHE_EXPIRED",
+            "n_artifacts": 0,
             "terminal_claim": terminal_claim,
-        })
+        }
+        (artifacts_dir / "_harvest_summary.json").write_text(
+            json.dumps(expired_summary, indent=2, default=str), encoding="utf-8"
+        )
+        summary.append(modal_training_summary_entry(
+            label=label,
+            status="expired",
+            call_id=call_id,
+            harvested=expired_summary,
+            terminal_claim=terminal_claim,
+        ))
     except modal.exception.FunctionTimeoutError as e:
         print(f"  FUNCTION TIMEOUT: {e}")
         summary.append({"label": label, "status": "function_timeout", "call_id": call_id})
@@ -181,7 +219,34 @@ for mfile in sorted(metadata_files):
         summary.append({"label": label, "status": "not_ready", "call_id": call_id})
     except Exception as e:
         print(f"  ERROR: {type(e).__name__}: {str(e)[:200]}")
-        summary.append({"label": label, "status": f"error_{type(e).__name__}", "call_id": call_id})
+        status = f"failed_modal_training_recovery_error_{type(e).__name__.lower()}"
+        terminal_claim = append_modal_training_terminal_claim(
+            repo_root=REPO,
+            out_dir=out_dir,
+            metadata=meta,
+            result=None,
+            status=status,
+            agent="codex:harvest_modal_calls",
+        )
+        artifacts_dir.mkdir(exist_ok=True)
+        error_summary = {
+            "status": f"error_{type(e).__name__}",
+            "error_type": type(e).__name__,
+            "error_message": str(e)[:1000],
+            "crash_kind": f"ERROR_{type(e).__name__}",
+            "n_artifacts": 0,
+            "terminal_claim": terminal_claim,
+        }
+        (artifacts_dir / "_harvest_summary.json").write_text(
+            json.dumps(error_summary, indent=2, default=str), encoding="utf-8"
+        )
+        summary.append(modal_training_summary_entry(
+            label=label,
+            status=f"error_{type(e).__name__}",
+            call_id=call_id,
+            harvested=error_summary,
+            terminal_claim=terminal_claim,
+        ))
 
 print("\n\n=== SUMMARY ===")
 for s in summary:

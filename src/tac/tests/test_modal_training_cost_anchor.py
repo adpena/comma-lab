@@ -89,6 +89,10 @@ def test_append_modal_training_cost_anchor_skips_without_metadata(tmp_path: Path
     )
     assert manifest["appended"] is False
     assert manifest["reason"] == "metadata_missing_cost_band_anchor"
+    marker = json.loads((tmp_path / "cost_band_anchor_appended.json").read_text())
+    assert marker["appended"] is False
+    assert marker["score_claim"] is False
+    assert marker["promotion_eligible"] is False
 
 
 def test_append_modal_training_cost_anchor_skips_without_elapsed(tmp_path: Path) -> None:
@@ -99,3 +103,7 @@ def test_append_modal_training_cost_anchor_skips_without_elapsed(tmp_path: Path)
     )
     assert manifest["appended"] is False
     assert manifest["reason"] == "result_missing_numeric_elapsed_seconds"
+    marker = json.loads((tmp_path / "cost_band_anchor_appended.json").read_text())
+    assert marker["appended"] is False
+    assert marker["score_claim"] is False
+    assert marker["promotion_eligible"] is False

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from tac.deploy.modal.harvest_summary import modal_training_summary_entry
+from pathlib import Path
+
+from tac.deploy.modal.harvest_summary import (
+    modal_training_summary_entry,
+    normalise_modal_training_result_summary,
+    partial_modal_training_result_summary,
+)
 
 
 def test_already_harvested_summary_preserves_result_signal() -> None:
@@ -35,3 +41,42 @@ def test_already_harvested_summary_preserves_result_signal() -> None:
             "status": "failed_modal_training_rc_1",
         },
     }
+
+
+def test_normalise_legacy_root_harvest_summary_preserves_failure_signal(tmp_path: Path) -> None:
+    artifacts_dir = tmp_path / "harvested_artifacts"
+    artifacts_dir.mkdir()
+    (artifacts_dir / "remote.log").write_text("fatal\n", encoding="utf-8")
+    source_summary = tmp_path / "harvest_summary.json"
+    loaded = {
+        "returncode": 21,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+    row = normalise_modal_training_result_summary(
+        loaded,
+        artifacts_dir=artifacts_dir,
+        source_summary=source_summary,
+    )
+
+    assert row["rc"] == 21
+    assert row["crash_kind"] == "RC_21"
+    assert row["n_artifacts"] == 1
+    assert row["source_summary"] == str(source_summary)
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+
+
+def test_partial_harvest_summary_is_non_score_claim(tmp_path: Path) -> None:
+    artifacts_dir = tmp_path / "harvested_artifacts"
+    artifacts_dir.mkdir()
+    (artifacts_dir / "train.json").write_text("{}", encoding="utf-8")
+
+    row = partial_modal_training_result_summary(artifacts_dir=artifacts_dir)
+
+    assert row["crash_kind"] == "HARVESTED_PARTIAL"
+    assert row["n_artifacts"] == 1
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False

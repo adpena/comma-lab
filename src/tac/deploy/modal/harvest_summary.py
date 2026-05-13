@@ -8,6 +8,7 @@ surface instead of a lossy status list.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Mapping
 
 
@@ -45,4 +46,48 @@ def modal_training_summary_entry(
     return row
 
 
-__all__ = ["PRESERVED_RESULT_KEYS", "modal_training_summary_entry"]
+def normalise_modal_training_result_summary(
+    loaded: Mapping[str, Any],
+    *,
+    artifacts_dir: Path,
+    source_summary: Path,
+) -> dict[str, Any]:
+    """Normalize legacy Modal training harvest summaries to bulk-harvest shape."""
+
+    rc = loaded.get("returncode", loaded.get("rc"))
+    timed_out = bool(loaded.get("timed_out", False))
+    if timed_out:
+        crash_kind = "TIMEOUT"
+    elif isinstance(rc, int) and not isinstance(rc, bool):
+        crash_kind = "OK" if rc == 0 else f"RC_{rc}"
+    else:
+        crash_kind = "HARVESTED_PARTIAL"
+    return {
+        **dict(loaded),
+        "rc": rc,
+        "timed_out": timed_out,
+        "n_artifacts": len([p for p in Path(artifacts_dir).iterdir() if p.is_file()]),
+        "crash_kind": crash_kind,
+        "source_summary": str(source_summary),
+    }
+
+
+def partial_modal_training_result_summary(*, artifacts_dir: Path) -> dict[str, Any]:
+    """Represent harvested artifacts that predate structured result summaries."""
+
+    return {
+        "timed_out": False,
+        "n_artifacts": len([p for p in Path(artifacts_dir).iterdir() if p.is_file()]),
+        "crash_kind": "HARVESTED_PARTIAL",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+
+
+__all__ = [
+    "PRESERVED_RESULT_KEYS",
+    "modal_training_summary_entry",
+    "normalise_modal_training_result_summary",
+    "partial_modal_training_result_summary",
+]

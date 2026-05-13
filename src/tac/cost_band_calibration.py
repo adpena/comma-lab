@@ -670,6 +670,15 @@ def append_platform_training_anchor(
 
     out_dir = Path(out_dir)
     marker = out_dir / "cost_band_anchor_appended.json"
+
+    def _write_marker(manifest: dict[str, Any]) -> dict[str, Any]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        marker.write_text(
+            json.dumps(manifest, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return manifest
+
     if marker.is_file():
         try:
             payload = json.loads(marker.read_text(encoding="utf-8"))
@@ -680,19 +689,23 @@ def append_platform_training_anchor(
 
     cost_meta = metadata.get("cost_band_anchor")
     if not isinstance(cost_meta, dict):
-        return {
+        return _write_marker({
             "schema": "platform_training_cost_anchor_append_v1",
             "appended": False,
             "reason": "metadata_missing_cost_band_anchor",
-        }
+            "score_claim": False,
+            "promotion_eligible": False,
+        })
 
     elapsed = result.get("elapsed_seconds")
     if not isinstance(elapsed, (int, float)) or isinstance(elapsed, bool):
-        return {
+        return _write_marker({
             "schema": "platform_training_cost_anchor_append_v1",
             "appended": False,
             "reason": "result_missing_numeric_elapsed_seconds",
-        }
+            "score_claim": False,
+            "promotion_eligible": False,
+        })
 
     gpu = normalize_gpu(platform, str(metadata.get("gpu") or cost_meta.get("gpu") or ""))
     try:
@@ -701,11 +714,13 @@ def append_platform_training_anchor(
         batch_size = int(cost_meta["batch_size"])
         trainer = str(cost_meta["trainer"])
     except (KeyError, TypeError, ValueError) as exc:
-        return {
+        return _write_marker({
             "schema": "platform_training_cost_anchor_append_v1",
             "appended": False,
             "reason": f"invalid_cost_band_metadata:{type(exc).__name__}:{exc}",
-        }
+            "score_claim": False,
+            "promotion_eligible": False,
+        })
 
     label = str(metadata.get("label") or cost_meta.get("dispatch_label") or f"{platform}_training")
     rc = result.get("returncode")
@@ -813,10 +828,7 @@ def append_platform_training_anchor(
         )
     # The marker file's JSON payload must match what an idempotent re-run
     # returns. Serialize stably to keep byte-identical output across runs.
-    marker.write_text(
-        json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8"
-    )
-    return manifest
+    return _write_marker(manifest)
 
 
 def summary_by_bucket(
