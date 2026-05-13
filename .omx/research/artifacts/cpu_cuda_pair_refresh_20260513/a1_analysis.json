@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-05-13T01:13:24Z",
+  "created_at_utc": "2026-05-13T01:17:48Z",
   "evidence_grade": "paired_exact_auth_eval_mechanism_diagnostic",
   "pair": {
     "blockers": [
@@ -42,6 +42,7 @@
       "seg_gap_share": 0.30670556341151856,
       "seg_term": 0.010276
     },
+    "individual_axis_blockers": [],
     "interpretation": [
       "Negative score gap means CUDA scored lower than CPU for this exact pair; positive means CPU scored lower.",
       "Do not infer global CPU-better or CUDA-better behavior from one row.",
@@ -65,7 +66,9 @@
       "cuda_json": "submissions/a1/contest_auth_eval.cuda.json"
     },
     "valid_for_mechanism_analysis": false,
-    "valid_for_pair_score_analysis": false
+    "valid_for_pair_score_analysis": false,
+    "valid_individual_axis_scores": true,
+    "valid_same_archive_axis_score_pair": true
   },
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,

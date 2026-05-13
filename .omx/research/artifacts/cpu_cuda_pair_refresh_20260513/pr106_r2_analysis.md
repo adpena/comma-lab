@@ -1,12 +1,14 @@
 # CPU/CUDA exact-pair mechanism analysis
 
-generated_at_utc: `2026-05-13T01:13:24Z`
+generated_at_utc: `2026-05-13T01:17:48Z`
 evidence_grade: `paired_exact_auth_eval_mechanism_diagnostic`
 score_claim: `false`
 promotion_eligible: `false`
 
 ## Pair
 
+- valid_individual_axis_scores: `True`
+- valid_same_archive_axis_score_pair: `True`
 - valid_for_mechanism_analysis: `False`
 - valid_for_pair_score_analysis: `False`
 - mechanism_class: `different_raw_outputs_runtime_or_inflate_drift`
@@ -27,6 +29,10 @@ promotion_eligible: `false`
 - pose_term: `-0.022510497253930027`
 - seg_term: `0.0010639999999999955`
 - rate_term: `0.0`
+
+## Individual Axis Blockers
+
+- none
 
 ## Blockers
 

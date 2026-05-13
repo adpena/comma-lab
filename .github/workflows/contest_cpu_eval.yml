@@ -67,7 +67,8 @@ jobs:
       LANE_ID: ${{ github.event.inputs.lane_id || 'lane_g_v3' }}
       INFLATE_SH_PATH: ${{ github.event.inputs.inflate_sh_path || 'submissions/robust_current/inflate.sh' }}
       # Canonical CPU torch wheel index — matches CI lane-1.
-      INFLATE_TORCH_SPEC: 'torch==2.5.1'
+      INFLATE_TORCH_SPEC: 'torch==2.5.1+cpu'
+      UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
       UV_INDEX_STRATEGY: 'unsafe-best-match'
       UPSTREAM_REPO_URL: 'https://github.com/commaai/comma_video_compression_challenge.git'
       UPSTREAM_COMMIT: '11ad728f563d8970929e8947a1cf6124ee6303e4'

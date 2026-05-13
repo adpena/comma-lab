@@ -324,3 +324,43 @@ Adversarial verdict:
   archive family. A1 is CPU-better on its recorded axis; PR106 R2 is
   CUDA-better on its recorded axis; the mechanism evidence still depends on
   runtime/raw-output custody.
+
+## Follow-up: lane_g_v3 Retry6 terminal classification + CPU torch fix (2026-05-13)
+
+- Retry6 GHA run `25771550637` reached real inflate and generated
+  `1120/1200` frames, then failed with:
+  `OSError: [Errno 28] No space left on device` while writing `frame_out` to
+  the raw output file.
+- Terminal claim row appended:
+  `failed_gha_cpu_eval_runner_disk_full`.
+- Artifact harvest:
+  `experiments/results/gha_cpu_eval/lane_g_v3_retry6_25771550637/contest_cpu_eval-lane_g_v3-25771550637/eval_work/provenance.json`.
+  No `contest_auth_eval.json` was emitted, so this is **not** a score result.
+- Root cause:
+  `.github/workflows/contest_cpu_eval.yml` installed CPU torch in the outer
+  repo venv, but `submissions/robust_current/inflate.sh` creates its own
+  `uv run` environment. That inner environment saw `INFLATE_TORCH_SPEC=torch==2.5.1`
+  and resolved PyPI CUDA wheels, consuming several extra GB before the
+  3.66GB raw file was complete.
+- Fix:
+  the workflow now sets `INFLATE_TORCH_SPEC=torch==2.5.1+cpu` plus
+  `UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu`, so both the outer
+  workflow venv and the inner inflate `uv run` env resolve the CPU wheel.
+- Guard:
+  `src/tac/tests/test_contest_cpu_eval_workflow_ffmpeg_bootstrap.py` now
+  asserts the workflow pins CPU torch for both the runner and inflate env and
+  does not contain a CUDA PyTorch wheel index.
+- Tooling correction:
+  `tools/analyze_cpu_cuda_eval_drift.py` now reports
+  `valid_individual_axis_scores` and `valid_same_archive_axis_score_pair`
+  separately from stricter same-runtime/mechanism readiness. This preserves
+  A1/PR106 axis evidence without weakening the mechanism/promotion block.
+- Verification:
+  - `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_contest_cpu_eval_workflow_ffmpeg_bootstrap.py src/tac/tests/test_analyze_cpu_cuda_eval_drift.py -q`
+    -> `10 passed`.
+  - `.venv/bin/ruff check tools/analyze_cpu_cuda_eval_drift.py src/tac/tests/test_analyze_cpu_cuda_eval_drift.py src/tac/tests/test_contest_cpu_eval_workflow_ffmpeg_bootstrap.py`
+    -> pass.
+
+Next exact action: retry lane_g_v3 GHA CPU eval from the CPU-torch-fixed
+workflow commit. This should spend the same free GHA runner minutes and remove
+the CUDA-wheel disk pressure from the prior attempt.

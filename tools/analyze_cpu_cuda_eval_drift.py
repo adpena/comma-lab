@@ -40,8 +40,8 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 from tac.device_axis_eval import (  # noqa: E402
     cuda_minus_cpu_gaps,
     mechanism_class_from_pair,
-    score_terms,
     raw_output_pairing,
+    score_terms,
 )
 from tac.repo_io import json_text, read_json, write_json  # noqa: E402
 
@@ -119,29 +119,39 @@ def _component_pair_from_auth_eval(
     if cpu_record is None or cuda_record is None:
         return {
             "source": source or {},
+            "valid_individual_axis_scores": False,
+            "valid_same_archive_axis_score_pair": False,
             "valid_for_mechanism_analysis": False,
             "blockers": blockers,
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
         }
+    individual_axis_blockers: list[str] = []
     if cpu_record.score_axis != "contest_cpu":
-        blockers.append(f"cpu_axis_not_contest_cpu:{cpu_record.score_axis}")
+        individual_axis_blockers.append(
+            f"cpu_axis_not_contest_cpu:{cpu_record.score_axis}"
+        )
     if cuda_record.score_axis != "contest_cuda":
-        blockers.append(f"cuda_axis_not_contest_cuda:{cuda_record.score_axis}")
+        individual_axis_blockers.append(
+            f"cuda_axis_not_contest_cuda:{cuda_record.score_axis}"
+        )
     for axis_name, record in (("cpu", cpu_record), ("cuda", cuda_record)):
         if record.avg_posenet_dist is None:
-            blockers.append(f"{axis_name}_pose_missing")
+            individual_axis_blockers.append(f"{axis_name}_pose_missing")
         if record.avg_segnet_dist is None:
-            blockers.append(f"{axis_name}_seg_missing")
+            individual_axis_blockers.append(f"{axis_name}_seg_missing")
         if record.archive_bytes is None:
-            blockers.append(f"{axis_name}_archive_bytes_missing")
+            individual_axis_blockers.append(f"{axis_name}_archive_bytes_missing")
         if record.archive_sha256 is None:
-            blockers.append(f"{axis_name}_archive_sha256_missing")
+            individual_axis_blockers.append(f"{axis_name}_archive_sha256_missing")
         if record.samples != 600:
-            blockers.append(f"{axis_name}_not_full_sample_600")
+            individual_axis_blockers.append(f"{axis_name}_not_full_sample_600")
         if record.hardware_compliance_blocker:
-            blockers.append(f"{axis_name}_hardware:{record.hardware_compliance_blocker}")
+            individual_axis_blockers.append(
+                f"{axis_name}_hardware:{record.hardware_compliance_blocker}"
+            )
+    blockers.extend(individual_axis_blockers)
     cpu_runtime = runtime_tree_sha256(cpu_payload)
     cuda_runtime = runtime_tree_sha256(cuda_payload)
     if cpu_runtime is None:
@@ -165,6 +175,10 @@ def _component_pair_from_auth_eval(
         blockers.append("cpu_cuda_archive_bytes_mismatch")
     if same_runtime_tree_sha256 is False:
         blockers.append("cpu_cuda_runtime_tree_sha256_mismatch")
+    valid_individual_axis_scores = not individual_axis_blockers
+    valid_same_archive_axis_score_pair = (
+        valid_individual_axis_scores and same_archive_sha256 and same_archive_bytes
+    )
 
     cpu_terms = score_terms(
         pose=float(cpu_record.avg_posenet_dist or 0.0),
@@ -194,8 +208,11 @@ def _component_pair_from_auth_eval(
 
     return {
         "source": source or {},
+        "valid_individual_axis_scores": valid_individual_axis_scores,
+        "valid_same_archive_axis_score_pair": valid_same_archive_axis_score_pair,
         "valid_for_pair_score_analysis": pair_score_complete,
         "valid_for_mechanism_analysis": mechanism_complete,
+        "individual_axis_blockers": sorted(set(individual_axis_blockers)),
         "blockers": sorted(set(blockers)),
         "mechanism_blockers": mechanism_blockers,
         "same_archive_sha256": same_archive_sha256,
@@ -322,6 +339,8 @@ def format_markdown(analysis: dict[str, Any]) -> str:
             "",
             "## Pair",
             "",
+            f"- valid_individual_axis_scores: `{pair.get('valid_individual_axis_scores')}`",
+            f"- valid_same_archive_axis_score_pair: `{pair.get('valid_same_archive_axis_score_pair')}`",
             f"- valid_for_mechanism_analysis: `{pair.get('valid_for_mechanism_analysis')}`",
             f"- valid_for_pair_score_analysis: `{pair.get('valid_for_pair_score_analysis')}`",
             f"- mechanism_class: `{pair.get('mechanism_class')}`",
@@ -355,10 +374,15 @@ def format_markdown(analysis: dict[str, Any]) -> str:
                 f"- seg_term: `{gaps.get('seg_term')}`",
                 f"- rate_term: `{gaps.get('rate_term')}`",
                 "",
-                "## Blockers",
-                "",
             ]
         )
+        individual_axis_blockers = pair.get("individual_axis_blockers") or []
+        lines.extend(["## Individual Axis Blockers", ""])
+        if individual_axis_blockers:
+            lines.extend(f"- `{blocker}`" for blocker in individual_axis_blockers)
+        else:
+            lines.append("- none")
+        lines.extend(["", "## Blockers", ""])
         blockers = pair.get("blockers") or []
         if blockers:
             lines.extend(f"- `{blocker}`" for blocker in blockers)

@@ -29,6 +29,17 @@ def test_contest_cpu_eval_workflow_fetches_pinned_upstream_snapshot() -> None:
     assert "11ad728f563d8970929e8947a1cf6124ee6303e4" in workflow
 
 
+def test_contest_cpu_eval_workflow_pins_cpu_torch_for_outer_and_inflate_env() -> None:
+    """The runner and inflate.sh uv env must not pull CUDA torch wheels on GHA CPU."""
+    workflow = (REPO_ROOT / ".github/workflows/contest_cpu_eval.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "INFLATE_TORCH_SPEC: 'torch==2.5.1+cpu'" in workflow
+    assert "UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'" in workflow
+    assert "UV_INDEX_STRATEGY: 'unsafe-best-match'" in workflow
+    assert "https://download.pytorch.org/whl/cu" not in workflow
+
+
 def test_parity_ffmpeg_bootstrap_preserves_required_color_contract() -> None:
     script = (REPO_ROOT / "scripts/ensure_parity_ffmpeg.sh").read_text(
         encoding="utf-8"

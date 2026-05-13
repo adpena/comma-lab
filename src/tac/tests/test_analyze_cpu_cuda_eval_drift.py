@@ -206,3 +206,39 @@ def test_analyze_exact_pair_keeps_score_pair_but_blocks_mechanism_without_raw_ou
     assert pair["mechanism_class"] == "same_archive_runtime_raw_outputs_unmeasured"
     assert pair["mechanism_blockers"] == ["raw_output_manifest_missing"]
     assert pair["blockers"] == []
+
+
+def test_analyze_exact_pair_preserves_axis_scores_when_pair_custody_incomplete(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool("analyze_cpu_cuda_eval_drift")
+    cpu_payload = _exact_payload(
+        device="cpu",
+        score=0.19284757743677347,
+        pose=0.00003286,
+        seg=0.00056023,
+        raw_sha="1" * 64,
+    )
+    cuda_payload = _exact_payload(
+        device="cuda",
+        score=0.2263520234784395,
+        pose=0.00017103,
+        seg=0.00066299,
+        raw_sha="2" * 64,
+    )
+    cpu_payload.pop("runtime_content_tree_sha256")
+    cpu_payload["provenance"].pop("inflated_output_manifest")
+    cuda_payload["provenance"].pop("inflated_output_manifest")
+    cpu_json = tmp_path / "cpu.json"
+    cuda_json = tmp_path / "cuda.json"
+    cpu_json.write_text(json.dumps(cpu_payload), encoding="utf-8")
+    cuda_json.write_text(json.dumps(cuda_payload), encoding="utf-8")
+
+    pair = mod.analyze_exact_pair(cpu_json, cuda_json)
+
+    assert pair["valid_individual_axis_scores"] is True
+    assert pair["valid_same_archive_axis_score_pair"] is True
+    assert pair["valid_for_pair_score_analysis"] is False
+    assert pair["valid_for_mechanism_analysis"] is False
+    assert pair["individual_axis_blockers"] == []
+    assert "cpu_runtime_tree_sha256_missing" in pair["blockers"]
