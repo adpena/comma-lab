@@ -50,10 +50,8 @@ import time
 import zipfile
 from pathlib import Path
 
-import brotli  # type: ignore[import-not-found]
 import numpy as np
 import torch
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -68,14 +66,20 @@ for candidate in reversed(PR106_SRC_CANDIDATE_PATHS):
         sys.path.insert(0, str(candidate.resolve()))
 
 # Imported AFTER path insertion: PR106's reference codec + decoder model.
-from codec import parse_packed_archive  # type: ignore[import-not-found]  # noqa: E402
-from model import HNeRVDecoder  # type: ignore[import-not-found]  # noqa: E402
-from tac.repo_io import json_text  # noqa: E402
+from codec import parse_packed_archive  # type: ignore[import-not-found]
+from model import HNeRVDecoder  # type: ignore[import-not-found]
+
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_NO_OP_DIM,
+    decode_brotli_dim_delta_sidecar_payload,
+    encode_brotli_dim_delta_sidecar_payload,
+)
+from tac.repo_io import json_text
 
 SIDECAR_MAGIC = 0xFE
 SIDECAR_FORMAT_ID = 0x01
 DELTA_SCALE = 0.01  # [inherited:PR100/hnerv_lc_v2/sidecar.py] int8 quant: real_delta = i8 * 0.01 (range ±1.27)
-NO_OP_DIM = 255
+NO_OP_DIM = PR106_NO_OP_DIM
 
 CAMERA_H, CAMERA_W = 874, 1164
 NATIVE_H, NATIVE_W = 384, 512
@@ -92,24 +96,12 @@ def encode_sidecar_corrections(dim_arr: np.ndarray, delta_q_arr: np.ndarray) -> 
     Mirrors PR100 hnerv_lc_v2/sidecar.py::encode_corrections wire format
     so future PR100-style submissions can adopt this archive shape.
     """
-    n = len(dim_arr)
-    assert len(delta_q_arr) == n
-    # Encode dim=255 as "no correction" (255 sentinel).
-    dim_packed = np.where(delta_q_arr == 0, NO_OP_DIM, dim_arr).astype(np.uint8)
-    payload = struct.pack("<H", n) + np.stack(
-        [dim_packed, delta_q_arr.astype(np.int8).view(np.uint8)], axis=1
-    ).tobytes()
-    return brotli.compress(payload, quality=11)
+    return encode_brotli_dim_delta_sidecar_payload(dim_arr, delta_q_arr, quality=11)
 
 
 def decode_sidecar_corrections(blob: bytes) -> tuple[np.ndarray, np.ndarray]:
     """Inverse of encode_sidecar_corrections. Returns (dim_arr uint8, delta_q_arr int8)."""
-    raw = brotli.decompress(blob)
-    n = struct.unpack_from("<H", raw, 0)[0]
-    arr = np.frombuffer(raw[2 : 2 + 2 * n], dtype=np.uint8).reshape(n, 2)
-    dim = arr[:, 0]  # uint8 with 255 sentinel
-    delta_q = arr[:, 1].view(np.int8)  # signed view of same bytes
-    return dim, delta_q
+    return decode_brotli_dim_delta_sidecar_payload(blob)
 
 
 def apply_sidecar_corrections(
@@ -225,7 +217,7 @@ def _try_load_scorers(device: torch.device):
     try:
         sys.path.insert(0, str(REPO_ROOT / "upstream"))
         from modules import PoseNet, SegNet  # type: ignore[import-not-found]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"[sidecar-build] WARN: scorer modules unavailable ({exc}); "
               f"falling back to self-consistency heuristic.")
         return None, None
@@ -235,7 +227,7 @@ def _try_load_scorers(device: torch.device):
         # Best effort: load weights if pinned in upstream; else random-init scorers
         # are still useful for smoke pipeline-correctness validation.
         return posenet, segnet
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"[sidecar-build] WARN: scorer load failed ({exc}); "
               f"falling back to self-consistency heuristic.")
         return None, None

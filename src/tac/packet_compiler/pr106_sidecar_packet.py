@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import math
 import struct
 import zipfile
 from dataclasses import asdict, dataclass, replace
@@ -23,6 +24,7 @@ import numpy as np
 
 from tac.packet_compiler.pr101_sidecar_grammar import (
     RankedSidecarSchema,
+    _huff_length_vector_count,
     decode_ranked_no_op_sidecar,
     encode_ranked_no_op_sidecar,
 )
@@ -34,6 +36,8 @@ PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
 )
+PR106_LATENT_N_PAIRS = 600
+PR106_LATENT_N_DIMS = 28
 PR106_DEFAULT_MEMBER_NAME = "0.bin"
 PR106_ALLOWED_SINGLE_MEMBER_NAMES = (PR106_DEFAULT_MEMBER_NAME, "x")
 PR106_NO_OP_DIM = 255
@@ -106,8 +110,619 @@ class PR106SidecarMutation:
     new_delta_index: int | None = None
 
 
+@dataclass(frozen=True)
+class PR106SidecarRecodeCandidate:
+    """Lossless alternative sidecar byte grammar candidate.
+
+    These candidates are compiler-planning artifacts. They prove that the
+    candidate byte string decodes to the same ``(dim, delta_q)`` correction
+    arrays as the source sidecar, but they do not imply runtime support, archive
+    emission, or score movement.
+    """
+
+    name: str
+    encoded_bytes: bytes
+    decoded_dims: np.ndarray
+    decoded_delta_q: np.ndarray
+    sidecar_format_id: int | None
+    framing_meta_bytes: bytes = b""
+    runtime_decoder_implemented: bool = False
+    notes: tuple[str, ...] = ()
+
+    @property
+    def charged_bytes(self) -> int:
+        """Bytes that would be charged inside the PR106 sidecar wrapper."""
+
+        return len(self.encoded_bytes) + len(self.framing_meta_bytes)
+
+
 def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def canonicalize_brotli_dim_delta_sidecar_arrays(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    n_dims: int = PR106_LATENT_N_DIMS,
+    no_op_dim: int = PR106_NO_OP_DIM,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Validate and canonicalize PR106 ``(dim, delta_q)`` correction arrays."""
+
+    dims_in = np.asarray(dim_arr)
+    deltas_in = np.asarray(delta_q_arr)
+    if dims_in.ndim != 1 or deltas_in.ndim != 1:
+        raise ValueError(
+            f"dim/delta arrays must be 1D; got {dims_in.shape}/{deltas_in.shape}"
+        )
+    if dims_in.shape != deltas_in.shape:
+        raise ValueError(f"dim/delta shapes differ: {dims_in.shape} vs {deltas_in.shape}")
+    if dims_in.dtype.kind not in {"i", "u"}:
+        raise TypeError(f"dim_arr must be integer typed; got {dims_in.dtype}")
+    if deltas_in.dtype.kind not in {"i", "u"}:
+        raise TypeError(f"delta_q_arr must be integer typed; got {deltas_in.dtype}")
+    if dims_in.size > 0xFFFF:
+        raise ValueError(f"sidecar has too many pairs for u16 length: {dims_in.size}")
+    dims_i64 = dims_in.astype(np.int64, copy=False)
+    deltas_i64 = deltas_in.astype(np.int64, copy=False)
+    if dims_i64.size and (int(dims_i64.min()) < 0 or int(dims_i64.max()) > no_op_dim):
+        raise ValueError(
+            f"dim values must be in [0, {n_dims}) or {no_op_dim}; "
+            f"got min={int(dims_i64.min())} max={int(dims_i64.max())}"
+        )
+    invalid_dim = (dims_i64 >= n_dims) & (dims_i64 != no_op_dim)
+    if bool(np.any(invalid_dim)):
+        bad = int(dims_i64[np.flatnonzero(invalid_dim)[0]])
+        raise ValueError(f"invalid correction dim {bad}; expected [0, {n_dims}) or {no_op_dim}")
+    if deltas_i64.size and (
+        int(deltas_i64.min()) < -128 or int(deltas_i64.max()) > 127
+    ):
+        raise ValueError(
+            "delta_q values must fit int8; "
+            f"got min={int(deltas_i64.min())} max={int(deltas_i64.max())}"
+        )
+    no_op_with_delta = (dims_i64 == no_op_dim) & (deltas_i64 != 0)
+    if bool(np.any(no_op_with_delta)):
+        idx = int(np.flatnonzero(no_op_with_delta)[0])
+        raise ValueError(f"pair {idx} has no-op dim {no_op_dim} but nonzero delta")
+    dims = dims_i64.astype(np.uint8)
+    deltas = deltas_i64.astype(np.int8)
+    dims = np.where(deltas == 0, no_op_dim, dims).astype(np.uint8)
+    return dims, deltas
+
+
+def encode_brotli_dim_delta_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    quality: int = 11,
+    n_dims: int = PR106_LATENT_N_DIMS,
+    no_op_dim: int = PR106_NO_OP_DIM,
+) -> bytes:
+    """Encode PR106 format-0x01 sidecar payload.
+
+    Layout matches the original PR100/PR106 sidecar grammar:
+    ``brotli(u16 n_pairs | repeated u8 dim | i8 delta_q)``. Zero deltas are
+    canonicalized to the ``no_op_dim`` sentinel before compression.
+    """
+
+    dims, deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        dim_arr,
+        delta_q_arr,
+        n_dims=n_dims,
+        no_op_dim=no_op_dim,
+    )
+    payload = struct.pack("<H", int(dims.size)) + np.stack(
+        [dims, deltas.view(np.uint8)], axis=1
+    ).tobytes()
+    return brotli.compress(payload, quality=quality)
+
+
+def decode_brotli_dim_delta_sidecar_payload(
+    payload: bytes,
+    *,
+    n_dims: int = PR106_LATENT_N_DIMS,
+    no_op_dim: int = PR106_NO_OP_DIM,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode PR106 format-0x01 sidecar payload into canonical arrays."""
+
+    raw = brotli.decompress(payload)
+    if len(raw) < 2:
+        raise ValueError("brotli sidecar decompressed payload too short")
+    n_pairs = struct.unpack_from("<H", raw, 0)[0]
+    expected = 2 + 2 * n_pairs
+    if len(raw) != expected:
+        raise ValueError(
+            f"brotli sidecar decompressed payload has trailing/truncated bytes: "
+            f"got={len(raw)} expected={expected}"
+        )
+    arr = np.frombuffer(raw[2:], dtype=np.uint8).reshape(n_pairs, 2)
+    return canonicalize_brotli_dim_delta_sidecar_arrays(
+        arr[:, 0].copy(),
+        arr[:, 1].copy().view(np.int8),
+        n_dims=n_dims,
+        no_op_dim=no_op_dim,
+    )
+
+
+def encode_pr101_ranked_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[bytes, bytes]:
+    """Encode PR106 corrections with the PR101 ranked/no-op grammar.
+
+    Returns ``(sidecar_payload, framing_meta)`` where ``framing_meta`` is the
+    six-byte trailer consumed by PR106 sidecar format ``0x02``.
+    """
+
+    dims_u8, deltas_i8 = canonicalize_brotli_dim_delta_sidecar_arrays(
+        dim_arr,
+        delta_q_arr,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    if int(dims_u8.size) != int(schema.n_pairs):
+        raise ValueError(f"schema expects {schema.n_pairs} pairs; got {dims_u8.size}")
+    dims = dims_u8.astype(np.int64)
+    deltas = deltas_i8.astype(np.int64)
+    valid = dims != schema.no_op_sentinel
+    delta_to_index = {int(value): index for index, value in enumerate(schema.deltas)}
+    delta_indices = np.zeros(schema.n_pairs, dtype=np.int64)
+    for value in sorted({int(item) for item in deltas[valid].tolist()}):
+        if value not in delta_to_index:
+            raise ValueError(
+                f"delta {value} not in ranked sidecar schema vocabulary "
+                f"{list(schema.deltas)}"
+            )
+        delta_indices[(deltas == value) & valid] = delta_to_index[value]
+
+    payload = encode_ranked_no_op_sidecar(
+        dims=dims,
+        delta_indices=delta_indices,
+        schema=schema,
+    )
+    n_valid = int(valid.sum())
+    noop_count = int(schema.n_pairs - n_valid)
+    dim_bits = max(1, n_valid * math.ceil(math.log2(max(schema.n_dims, 2))))
+    dim_bytes = (dim_bits + 7) // 8
+    total_length_vectors = _huff_length_vector_count(
+        0,
+        schema.kraft_total,
+        n_symbols=len(schema.deltas),
+        huff_min_len=schema.huff_min_len,
+        huff_max_len=schema.huff_max_len,
+    )
+    rank_bits = max(1, math.ceil(math.log2(max(total_length_vectors, 2))))
+    rank_bytes = (rank_bits + 7) // 8
+    noop_total = max(math.comb(schema.n_pairs, noop_count), 1)
+    noop_rank_bits = max(1, math.ceil(math.log2(noop_total)))
+    noop_rank_bytes = (noop_rank_bits + 7) // 8
+    framing_meta = struct.pack("<HHBB", noop_count, dim_bytes, rank_bytes, noop_rank_bytes)
+    decoded_dims, decoded_delta_indices = _decode_pr101_ranked_sidecar_payload(
+        payload,
+        framing_meta,
+        schema=schema,
+    )
+    decoded_deltas = np.zeros(schema.n_pairs, dtype=np.int64)
+    decoded_valid = decoded_dims != schema.no_op_sentinel
+    decoded_deltas[decoded_valid] = np.asarray(schema.deltas, dtype=np.int64)[
+        decoded_delta_indices[decoded_valid]
+    ]
+    expected_dims, expected_deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        dims,
+        deltas,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    if not np.array_equal(decoded_dims.astype(np.uint8), expected_dims):
+        raise ValueError("ranked sidecar encode/decode dim mismatch")
+    if not np.array_equal(decoded_deltas.astype(np.int8), expected_deltas):
+        raise ValueError("ranked sidecar encode/decode delta mismatch")
+    return payload, framing_meta
+
+
+def decode_pr101_ranked_sidecar_payload_to_dim_delta(
+    payload: bytes,
+    framing_meta: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode PR106 format-0x02 sidecar payload into ``(dim, delta_q)`` arrays."""
+
+    dims, delta_indices = _decode_pr101_ranked_sidecar_payload(
+        payload,
+        framing_meta,
+        schema=schema,
+    )
+    deltas = np.zeros(schema.n_pairs, dtype=np.int64)
+    valid = dims != schema.no_op_sentinel
+    deltas[valid] = np.asarray(schema.deltas, dtype=np.int64)[delta_indices[valid]]
+    return canonicalize_brotli_dim_delta_sidecar_arrays(
+        dims,
+        deltas,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+
+
+def _pack_fixed_width_symbols(symbols: np.ndarray, *, bit_width: int) -> bytes:
+    if bit_width <= 0:
+        raise ValueError(f"bit_width must be positive; got {bit_width}")
+    values = np.asarray(symbols, dtype=np.int64).reshape(-1)
+    max_value = (1 << bit_width) - 1
+    if values.size and (int(values.min()) < 0 or int(values.max()) > max_value):
+        raise ValueError(
+            f"symbols out of range for {bit_width}-bit packing: "
+            f"min={int(values.min())} max={int(values.max())}"
+        )
+    out = bytearray()
+    acc = 0
+    acc_bits = 0
+    for value in values.tolist():
+        acc |= int(value) << acc_bits
+        acc_bits += bit_width
+        while acc_bits >= 8:
+            out.append(acc & 0xFF)
+            acc >>= 8
+            acc_bits -= 8
+    if acc_bits:
+        out.append(acc & 0xFF)
+    return bytes(out)
+
+
+def _unpack_fixed_width_symbols(payload: bytes, *, n_symbols: int, bit_width: int) -> np.ndarray:
+    if bit_width <= 0:
+        raise ValueError(f"bit_width must be positive; got {bit_width}")
+    if n_symbols < 0:
+        raise ValueError(f"n_symbols must be non-negative; got {n_symbols}")
+    expected_bytes = (n_symbols * bit_width + 7) // 8
+    if len(payload) != expected_bytes:
+        raise ValueError(
+            f"fixed-width payload byte length mismatch: got={len(payload)} "
+            f"expected={expected_bytes}"
+        )
+    out = np.empty(n_symbols, dtype=np.int64)
+    acc = 0
+    acc_bits = 0
+    pos = 0
+    mask = (1 << bit_width) - 1
+    for index in range(n_symbols):
+        while acc_bits < bit_width:
+            if pos >= len(payload):
+                raise ValueError("truncated fixed-width payload")
+            acc |= int(payload[pos]) << acc_bits
+            acc_bits += 8
+            pos += 1
+        out[index] = acc & mask
+        acc >>= bit_width
+        acc_bits -= bit_width
+    if acc and acc_bits:
+        raise ValueError("non-zero fixed-width padding bits")
+    return out
+
+
+def _encode_vocab_bitpack_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    n_dims: int = PR106_LATENT_N_DIMS,
+    no_op_dim: int = PR106_NO_OP_DIM,
+) -> bytes:
+    dims, deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        dim_arr,
+        delta_q_arr,
+        n_dims=n_dims,
+        no_op_dim=no_op_dim,
+    )
+    vocab = tuple(sorted({int(value) for value in deltas.astype(np.int16).tolist()}))
+    if len(vocab) > 255:
+        raise ValueError(f"delta vocabulary too large for u8 length: {len(vocab)}")
+    if n_dims >= no_op_dim:
+        raise ValueError(f"n_dims must be below no_op_dim; got {n_dims}/{no_op_dim}")
+    dim_width = max(1, math.ceil(math.log2(n_dims + 1)))
+    delta_width = max(1, math.ceil(math.log2(max(len(vocab), 2))))
+    dim_codes = np.where(dims == no_op_dim, n_dims, dims).astype(np.int64)
+    delta_index = {value: index for index, value in enumerate(vocab)}
+    delta_codes = np.asarray([delta_index[int(value)] for value in deltas], dtype=np.int64)
+    return b"LSV1" + struct.pack(
+        "<HBBBB",
+        int(dims.size),
+        int(n_dims),
+        int(dim_width),
+        int(delta_width),
+        len(vocab),
+    ) + np.asarray(vocab, dtype=np.int8).view(np.uint8).tobytes() + _pack_fixed_width_symbols(
+        dim_codes,
+        bit_width=dim_width,
+    ) + _pack_fixed_width_symbols(
+        delta_codes,
+        bit_width=delta_width,
+    )
+
+
+def _decode_vocab_bitpack_sidecar_payload(
+    payload: bytes,
+    *,
+    no_op_dim: int = PR106_NO_OP_DIM,
+) -> tuple[np.ndarray, np.ndarray]:
+    if not payload.startswith(b"LSV1"):
+        raise ValueError("vocab-bitpack sidecar magic mismatch")
+    if len(payload) < 10:
+        raise ValueError("vocab-bitpack sidecar payload too short")
+    n_pairs, n_dims, dim_width, delta_width, vocab_len = struct.unpack_from(
+        "<HBBBB",
+        payload,
+        4,
+    )
+    pos = 10
+    vocab_end = pos + vocab_len
+    if vocab_end > len(payload):
+        raise ValueError("vocab-bitpack sidecar truncated before vocabulary")
+    vocab = np.frombuffer(payload[pos:vocab_end], dtype=np.uint8).copy().view(np.int8)
+    pos = vocab_end
+    dim_bytes = (n_pairs * dim_width + 7) // 8
+    delta_bytes = (n_pairs * delta_width + 7) // 8
+    if pos + dim_bytes + delta_bytes != len(payload):
+        raise ValueError(
+            "vocab-bitpack sidecar byte length mismatch: "
+            f"pos={pos} dim_bytes={dim_bytes} delta_bytes={delta_bytes} total={len(payload)}"
+        )
+    dim_codes = _unpack_fixed_width_symbols(
+        payload[pos : pos + dim_bytes],
+        n_symbols=n_pairs,
+        bit_width=dim_width,
+    )
+    pos += dim_bytes
+    delta_codes = _unpack_fixed_width_symbols(
+        payload[pos : pos + delta_bytes],
+        n_symbols=n_pairs,
+        bit_width=delta_width,
+    )
+    if bool(np.any(dim_codes > n_dims)):
+        bad = int(dim_codes[np.flatnonzero(dim_codes > n_dims)[0]])
+        raise ValueError(f"vocab-bitpack dim code {bad} exceeds no-op code {n_dims}")
+    if vocab_len == 0:
+        raise ValueError("vocab-bitpack delta vocabulary is empty")
+    if bool(np.any(delta_codes >= vocab_len)):
+        bad = int(delta_codes[np.flatnonzero(delta_codes >= vocab_len)[0]])
+        raise ValueError(f"vocab-bitpack delta code {bad} exceeds vocab_len {vocab_len}")
+    dims = np.where(dim_codes == n_dims, no_op_dim, dim_codes).astype(np.uint8)
+    deltas = vocab[delta_codes].astype(np.int8)
+    return canonicalize_brotli_dim_delta_sidecar_arrays(
+        dims,
+        deltas,
+        n_dims=int(n_dims),
+        no_op_dim=no_op_dim,
+    )
+
+
+def _encode_split_stream_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    quality: int = 11,
+) -> bytes:
+    dims, deltas = canonicalize_brotli_dim_delta_sidecar_arrays(dim_arr, delta_q_arr)
+    raw = struct.pack("<H", int(dims.size)) + dims.tobytes() + deltas.view(np.uint8).tobytes()
+    return b"LSS1" + brotli.compress(raw, quality=quality)
+
+
+def _decode_split_stream_sidecar_payload(payload: bytes) -> tuple[np.ndarray, np.ndarray]:
+    if not payload.startswith(b"LSS1"):
+        raise ValueError("split-stream sidecar magic mismatch")
+    raw = brotli.decompress(payload[4:])
+    if len(raw) < 2:
+        raise ValueError("split-stream sidecar raw payload too short")
+    n_pairs = struct.unpack_from("<H", raw, 0)[0]
+    expected = 2 + 2 * n_pairs
+    if len(raw) != expected:
+        raise ValueError(
+            f"split-stream sidecar raw length mismatch: got={len(raw)} expected={expected}"
+        )
+    dims = np.frombuffer(raw[2 : 2 + n_pairs], dtype=np.uint8).copy()
+    deltas = np.frombuffer(raw[2 + n_pairs :], dtype=np.uint8).copy().view(np.int8)
+    return canonicalize_brotli_dim_delta_sidecar_arrays(dims, deltas)
+
+
+def _encode_sparse_indexed_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    quality: int = 11,
+) -> bytes:
+    dims, deltas = canonicalize_brotli_dim_delta_sidecar_arrays(dim_arr, delta_q_arr)
+    valid = (dims != PR106_NO_OP_DIM) & (deltas != 0)
+    indices = np.flatnonzero(valid)
+    if len(indices) > 0xFFFF:
+        raise ValueError(f"too many sparse corrections for u16 length: {len(indices)}")
+    out = io.BytesIO()
+    out.write(struct.pack("<HH", int(dims.size), len(indices)))
+    for index in indices.tolist():
+        delta_u8 = int(np.asarray([deltas[index]], dtype=np.int8).view(np.uint8)[0])
+        out.write(struct.pack("<HBB", int(index), int(dims[index]), delta_u8))
+    return b"LSP1" + brotli.compress(out.getvalue(), quality=quality)
+
+
+def _decode_sparse_indexed_sidecar_payload(payload: bytes) -> tuple[np.ndarray, np.ndarray]:
+    if not payload.startswith(b"LSP1"):
+        raise ValueError("sparse-indexed sidecar magic mismatch")
+    raw = brotli.decompress(payload[4:])
+    if len(raw) < 4:
+        raise ValueError("sparse-indexed sidecar raw payload too short")
+    n_pairs, n_records = struct.unpack_from("<HH", raw, 0)
+    expected = 4 + 4 * n_records
+    if len(raw) != expected:
+        raise ValueError(
+            f"sparse-indexed sidecar raw length mismatch: got={len(raw)} expected={expected}"
+        )
+    dims = np.full(n_pairs, PR106_NO_OP_DIM, dtype=np.uint8)
+    deltas = np.zeros(n_pairs, dtype=np.int8)
+    seen: set[int] = set()
+    pos = 4
+    for _ in range(n_records):
+        index, dim, delta_u8 = struct.unpack_from("<HBB", raw, pos)
+        pos += 4
+        if index >= n_pairs:
+            raise ValueError(f"sparse-indexed sidecar index {index} out of range {n_pairs}")
+        if index in seen:
+            raise ValueError(f"sparse-indexed sidecar duplicate index {index}")
+        seen.add(index)
+        dims[index] = np.uint8(dim)
+        deltas[index] = np.asarray([delta_u8], dtype=np.uint8).view(np.int8)[0]
+    return canonicalize_brotli_dim_delta_sidecar_arrays(dims, deltas)
+
+
+def _candidate(
+    *,
+    name: str,
+    encoded_bytes: bytes,
+    decoded: tuple[np.ndarray, np.ndarray],
+    sidecar_format_id: int | None,
+    framing_meta_bytes: bytes = b"",
+    runtime_decoder_implemented: bool = False,
+    notes: tuple[str, ...] = (),
+) -> PR106SidecarRecodeCandidate:
+    dims, deltas = decoded
+    return PR106SidecarRecodeCandidate(
+        name=name,
+        encoded_bytes=encoded_bytes,
+        decoded_dims=dims,
+        decoded_delta_q=deltas,
+        sidecar_format_id=sidecar_format_id,
+        framing_meta_bytes=framing_meta_bytes,
+        runtime_decoder_implemented=runtime_decoder_implemented,
+        notes=notes,
+    )
+
+
+def lossless_pr106_sidecar_recode_candidates(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    brotli_quality: int = 11,
+) -> list[PR106SidecarRecodeCandidate]:
+    """Return lossless PR106 sidecar grammar alternatives for byte profiling."""
+
+    source_dims, source_deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        dim_arr,
+        delta_q_arr,
+    )
+    candidates: list[PR106SidecarRecodeCandidate] = []
+
+    current = encode_brotli_dim_delta_sidecar_payload(
+        source_dims,
+        source_deltas,
+        quality=brotli_quality,
+    )
+    candidates.append(
+        _candidate(
+            name="current_pr100_dim_delta_brotli_q11",
+            encoded_bytes=current,
+            decoded=decode_brotli_dim_delta_sidecar_payload(current),
+            sidecar_format_id=PR106_SIDECAR_FORMAT_BROTLI,
+            runtime_decoder_implemented=True,
+            notes=("current_runtime_consumed_format",),
+        )
+    )
+
+    split = _encode_split_stream_sidecar_payload(
+        source_dims,
+        source_deltas,
+        quality=brotli_quality,
+    )
+    candidates.append(
+        _candidate(
+            name="split_dim_stream_delta_stream_brotli_q11",
+            encoded_bytes=split,
+            decoded=_decode_split_stream_sidecar_payload(split),
+            sidecar_format_id=None,
+            notes=("candidate_requires_new_runtime_decoder",),
+        )
+    )
+
+    sparse = _encode_sparse_indexed_sidecar_payload(
+        source_dims,
+        source_deltas,
+        quality=brotli_quality,
+    )
+    candidates.append(
+        _candidate(
+            name="sparse_indexed_nonzero_brotli_q11",
+            encoded_bytes=sparse,
+            decoded=_decode_sparse_indexed_sidecar_payload(sparse),
+            sidecar_format_id=None,
+            notes=("candidate_requires_new_runtime_decoder",),
+        )
+    )
+
+    vocab = _encode_vocab_bitpack_sidecar_payload(source_dims, source_deltas)
+    candidates.append(
+        _candidate(
+            name="vocab_bitpack_dim_delta_raw",
+            encoded_bytes=vocab,
+            decoded=_decode_vocab_bitpack_sidecar_payload(vocab),
+            sidecar_format_id=None,
+            notes=("candidate_requires_new_runtime_decoder",),
+        )
+    )
+    vocab_brotli = b"LSC1" + brotli.compress(vocab, quality=brotli_quality)
+    decoded_vocab_brotli = _decode_vocab_bitpack_sidecar_payload(
+        brotli.decompress(vocab_brotli[4:])
+    )
+    candidates.append(
+        _candidate(
+            name="vocab_bitpack_dim_delta_brotli_q11",
+            encoded_bytes=vocab_brotli,
+            decoded=decoded_vocab_brotli,
+            sidecar_format_id=None,
+            notes=("candidate_requires_new_runtime_decoder",),
+        )
+    )
+
+    try:
+        ranked_payload, ranked_meta = encode_pr101_ranked_sidecar_payload(
+            source_dims,
+            source_deltas,
+        )
+    except ValueError as exc:
+        candidates.append(
+            PR106SidecarRecodeCandidate(
+                name="pr101_ranked_no_op_sidecar_format_0x02",
+                encoded_bytes=b"",
+                decoded_dims=source_dims,
+                decoded_delta_q=source_deltas,
+                sidecar_format_id=PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+                framing_meta_bytes=b"",
+                runtime_decoder_implemented=False,
+                notes=(f"not_applicable:{exc}",),
+            )
+        )
+    else:
+        candidates.append(
+            _candidate(
+                name="pr101_ranked_no_op_sidecar_format_0x02",
+                encoded_bytes=ranked_payload,
+                decoded=decode_pr101_ranked_sidecar_payload_to_dim_delta(
+                    ranked_payload,
+                    ranked_meta,
+                ),
+                sidecar_format_id=PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+                framing_meta_bytes=ranked_meta,
+                runtime_decoder_implemented=True,
+                notes=("existing_pr106_r2_pr101_grammar_runtime_consumed_format",),
+            )
+        )
+
+    for candidate in candidates:
+        if candidate.encoded_bytes and not (
+            np.array_equal(candidate.decoded_dims, source_dims)
+            and np.array_equal(candidate.decoded_delta_q, source_deltas)
+        ):
+            raise ValueError(f"candidate {candidate.name} failed lossless sidecar equivalence")
+    candidates.sort(key=lambda item: (item.charged_bytes if item.encoded_bytes else 10**9, item.name))
+    return candidates
 
 
 def read_single_stored_member_archive(
@@ -249,32 +864,14 @@ def parse_pr106_sidecar_packet(
 
 
 def _decode_brotli_sidecar_payload(payload: bytes) -> tuple[np.ndarray, np.ndarray]:
-    raw = brotli.decompress(payload)
-    if len(raw) < 2:
-        raise ValueError("brotli sidecar decompressed payload too short")
-    n_pairs = struct.unpack_from("<H", raw, 0)[0]
-    expected = 2 + 2 * n_pairs
-    if len(raw) != expected:
-        raise ValueError(
-            f"brotli sidecar decompressed payload has trailing/truncated bytes: "
-            f"got={len(raw)} expected={expected}"
-        )
-    arr = np.frombuffer(raw[2:], dtype=np.uint8).reshape(n_pairs, 2)
-    return arr[:, 0].copy(), arr[:, 1].copy().view(np.int8)
+    return decode_brotli_dim_delta_sidecar_payload(payload)
 
 
 def _encode_brotli_sidecar_payload(
     dim_arr: np.ndarray,
     delta_q_arr: np.ndarray,
 ) -> bytes:
-    dims = np.asarray(dim_arr, dtype=np.uint8)
-    deltas = np.asarray(delta_q_arr, dtype=np.int8)
-    if dims.shape != deltas.shape:
-        raise ValueError(f"dim/delta shapes differ: {dims.shape} vs {deltas.shape}")
-    payload = struct.pack("<H", int(dims.size)) + np.stack(
-        [dims, deltas.view(np.uint8)], axis=1
-    ).tobytes()
-    return brotli.compress(payload, quality=11)
+    return encode_brotli_dim_delta_sidecar_payload(dim_arr, delta_q_arr)
 
 
 def _decode_pr101_ranked_sidecar_payload(
