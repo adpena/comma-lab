@@ -5,10 +5,9 @@ import hashlib
 import json
 import re
 import shutil
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Iterable
-
 
 BEST_RE = re.compile(r"best checkpoint -> epoch (?P<epoch>\d+) score=(?P<score>[0-9.]+) int8=(?P<int8_bytes>\d+) bytes")
 SAVED_FP32_RE = re.compile(r"Saved fp32:\s+(?P<path>\S+)")
@@ -265,10 +264,14 @@ def ingest_downloaded_outputs(
                     "best_improvement_mean": payload.get("best_improvement_mean"),
                     "best_improvement_max": payload.get("best_improvement_max"),
                     "ready_for_builder": payload.get("ready_for_builder"),
-                    "score_claim": payload.get("score_claim"),
-                    "ready_for_exact_eval_dispatch": payload.get(
+                    "source_manifest_score_claim": payload.get("score_claim"),
+                    "source_manifest_ready_for_exact_eval_dispatch": payload.get(
                         "ready_for_exact_eval_dispatch"
                     ),
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "promotion_eligible": False,
+                    "proxy_authority_forced_false": True,
                 }
 
     summary = {
@@ -326,8 +329,8 @@ def _download_output_items(
     files_seen = 0
     files_matched = 0
     for item in page_items:
-        file_name = str(getattr(item, "file_name"))
-        url = str(getattr(item, "url"))
+        file_name = str(item.file_name)
+        url = str(item.url)
         files_seen += 1
         keep, reason = should_download_output(
             file_name,
@@ -384,7 +387,7 @@ def download_kernel_outputs(
     download_dir.mkdir(parents=True, exist_ok=True)
     owner_slug, kernel_slug = _split_kernel_ref(kernel_ref)
 
-    from kaggle.api.kaggle_api_extended import KaggleApi  # type: ignore[import-untyped]
+    from kaggle.api.kaggle_api_extended import KaggleApi  # type: ignore[import-untyped] # noqa: I001
     from kagglesdk.kernels.types.kernels_api_service import (  # type: ignore[import-untyped]
         ApiListKernelSessionOutputRequest,
     )

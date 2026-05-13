@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import tac.deploy.kaggle.kaggle_output_ingest as mod
 
@@ -245,8 +245,8 @@ class KaggleOutputIngestTests(unittest.TestCase):
                         "best_improvement_mean": 0.00251,
                         "best_improvement_max": 0.00596,
                         "ready_for_builder": True,
-                        "score_claim": False,
-                        "ready_for_exact_eval_dispatch": False,
+                        "score_claim": True,
+                        "ready_for_exact_eval_dispatch": True,
                     }
                 )
             )
@@ -268,6 +268,10 @@ class KaggleOutputIngestTests(unittest.TestCase):
         self.assertEqual(score_table["score_table_shape"], [600, 57])
         self.assertEqual(score_table["strict_improvement_pair_count"], 600)
         self.assertEqual(score_table["score_claim"], False)
+        self.assertEqual(score_table["ready_for_exact_eval_dispatch"], False)
+        self.assertEqual(score_table["source_manifest_score_claim"], True)
+        self.assertEqual(score_table["source_manifest_ready_for_exact_eval_dispatch"], True)
+        self.assertEqual(score_table["proxy_authority_forced_false"], True)
         self.assertEqual(score_table["ready_for_builder"], True)
 
     def test_ingest_summary_surfaces_completed_yshift_score_table(self) -> None:

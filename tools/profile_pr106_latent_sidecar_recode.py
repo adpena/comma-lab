@@ -285,7 +285,9 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         "current_charged_sidecar_bytes": current_charged_bytes,
         "candidate_rows": rows,
         "best_lossless_candidate": best,
+        "best_runtime_decoder_implemented_candidate": best_runtime,
         "best_runtime_consumed_candidate": best_runtime,
+        "best_runtime_consumed_candidate_legacy_name": True,
         "emitted_runtime_candidate_manifests": emitted_candidate_manifests,
         "adversarial_claim_check": {
             "verdict": "planning_only_no_score_claim",

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from tac.auth_eval_result import recompute_contest_score_from_payload
 from tools.run_modal_smoke_before_full import (
     _expected_auth_artifact_markers,
+    _recipe_requests_smoke_only,
     _resolve_smoke_band,
     _validate_smoke_result,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _auth_payload(*, score_axis: str = "contest_cuda") -> dict:
@@ -147,3 +151,35 @@ def test_resolve_smoke_band_prefers_explicit_smoke_score_band() -> None:
 
     assert lo == 0.05
     assert hi == 5.0
+
+
+def test_recipe_requests_smoke_only_reads_top_level_flag() -> None:
+    assert _recipe_requests_smoke_only("lane_id: lane_x\nsmoke_only: true\n") is True
+    assert _recipe_requests_smoke_only("lane_id: lane_x\nsmoke_only: false\n") is False
+    assert _recipe_requests_smoke_only("# smoke_only: true in comment\n") is False
+
+
+def test_s2sbs_recipe_is_smoke_only_scaffold_guard() -> None:
+    text = (
+        REPO_ROOT
+        / ".omx/operator_authorize_recipes/substrate_s2sbs_byte_stuffing_modal_t4_dispatch.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert _recipe_requests_smoke_only(text) is True
+
+
+def test_pr95plus_recipe_is_smoke_only_until_full_trainer_lands() -> None:
+    text = (
+        REPO_ROOT
+        / ".omx/operator_authorize_recipes/substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert _recipe_requests_smoke_only(text) is True
+    assert "PR95PLUS_SMOKE: \"1\"" in text
+
+
+def test_smoke_wrapper_uses_explicit_noninteractive_authorization_flag() -> None:
+    text = (REPO_ROOT / "tools/run_modal_smoke_before_full.py").read_text(encoding="utf-8")
+
+    assert '"tools/operator_authorize.py",' in text
+    assert '"--yes",' in text

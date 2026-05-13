@@ -191,18 +191,8 @@
       "pr86_hpac.py": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01",
       "range_mask_codec.cpp": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
     },
-    "file_count": 6,
+    "file_count": 4,
     "files": [
-      {
-        "bytes": 110051,
-        "path": "__pycache__/inflate.cpython-312.pyc",
-        "sha256": "f61d13b45251b738edba51486323229887a7dfd5a72dda48f660d1a6e7ac5085"
-      },
-      {
-        "bytes": 34363,
-        "path": "__pycache__/pr86_hpac.cpython-312.pyc",
-        "sha256": "72f5ad6cb03355d489b704df199d3ac20bb25ba5ddcfd889473021783ba310b7"
-      },
       {
         "bytes": 86673,
         "expected_sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba",
@@ -235,19 +225,8 @@
     "mismatched_required_source_files": [],
     "missing_expected_source_sha256": [],
     "missing_required_source_files": [],
-    "pycache_file_count": 2,
-    "pycache_files": [
-      {
-        "bytes": 110051,
-        "path": "__pycache__/inflate.cpython-312.pyc",
-        "sha256": "f61d13b45251b738edba51486323229887a7dfd5a72dda48f660d1a6e7ac5085"
-      },
-      {
-        "bytes": 34363,
-        "path": "__pycache__/pr86_hpac.cpython-312.pyc",
-        "sha256": "72f5ad6cb03355d489b704df199d3ac20bb25ba5ddcfd889473021783ba310b7"
-      }
-    ],
+    "pycache_file_count": 0,
+    "pycache_files": [],
     "pycache_only": false,
     "ready_for_exact_eval_dispatch": false,
     "required_source_files": [
@@ -309,7 +288,7 @@
       "--json-out",
       "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "f6896b798a9487625f33b1fe0068410b0f5632bd544e8aae729e0d362e006f99",
+    "canonical_payload_without_tool_manifest_sha256": "d97842df01a8c0e6ddc98eb1bceae22971a1d04ec90fb5ead5f2c2920fa3b893",
     "dispatch_attempted": false,
     "input_files": [
       {

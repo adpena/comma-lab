@@ -5,8 +5,8 @@ the operator one-touch authorization toolkit landing 2026-05-11. These tests
 cover:
 
 - orphan detection (custody intact but not in posterior)
-- Catalog #127 validation per orphan (accepts CUDA T4 + GHA CPU; refuses
-  Modal CPU + macOS substrates)
+- Catalog #127 validation per orphan (accepts CUDA T4 + Linux x86_64 CPU;
+  refuses macOS substrates)
 - dry-run produces no posterior changes
 - --commit produces locked writes per Catalog #128
 - substrate-class signature correctly inferred from result-dir name
@@ -20,19 +20,17 @@ import json
 import sys
 from pathlib import Path
 
-
 # Make the tools/ module importable in the test environment.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from tools import bulk_backfill_anchors_into_posterior as bbf  # noqa: E402
 from tac.continual_learning import (  # noqa: E402
     ContinualLearningPosterior,
     load_posterior,
     save_posterior,
 )
-
+from tools import bulk_backfill_anchors_into_posterior as bbf  # noqa: E402
 
 # ── Fixtures: minimal contest_auth_eval.json payloads ─────────────────────────
 
@@ -65,7 +63,7 @@ def _cuda_t4_payload(sha: str = "1" * 64) -> dict:
 
 
 def _modal_cpu_payload(sha: str = "2" * 64) -> dict:
-    """Modal CPU payload — REFUSED per Catalog #127 (cpu_tag_non_gha_linux)."""
+    """Modal CPU payload — accepted as a Linux x86_64 contest-CPU axis."""
     return {
         "score_axis": "contest_cpu",
         "device": "cpu",
@@ -257,7 +255,7 @@ def test_discover_anchors_classifies_cuda_t4_as_promotable_orphan(tmp_path: Path
     assert a.evidence_tag == "[contest-CUDA]"
 
 
-def test_discover_anchors_classifies_modal_cpu_as_refused_cpu_tag_non_gha_linux(
+def test_discover_anchors_classifies_modal_cpu_as_promotable_orphan(
     tmp_path: Path,
 ):
     root = tmp_path / "experiments" / "results" / "modal_auth_eval_cpu"
@@ -273,9 +271,9 @@ def test_discover_anchors_classifies_modal_cpu_as_refused_cpu_tag_non_gha_linux(
     )
     assert len(anchors) == 1
     a = anchors[0]
-    assert a.custody_accepted is False
-    assert a.custody_refused_class == "cpu_tag_non_gha_linux"
-    assert a.is_promotable_orphan is False
+    assert a.custody_accepted is True
+    assert a.custody_refused_class is None
+    assert a.is_promotable_orphan is True
     assert a.axis == "cpu"
 
 
@@ -424,12 +422,11 @@ def test_summarize_anchors_counts_correctly(tmp_path: Path):
     summary = bbf.summarize_anchors(anchors)
 
     assert summary["total_artifacts_discovered"] == 5
-    assert summary["custody_accepted"] == 3
-    assert summary["custody_refused"] == 2
-    assert summary["promotable_orphans"] == 3
+    assert summary["custody_accepted"] == 4
+    assert summary["custody_refused"] == 1
+    assert summary["promotable_orphans"] == 4
     assert summary["promotable_orphans_by_axis"]["cuda"] == 2
-    assert summary["promotable_orphans_by_axis"]["cpu"] == 1
-    assert summary["custody_refused_by_class"]["cpu_tag_non_gha_linux"] == 1
+    assert summary["promotable_orphans_by_axis"]["cpu"] == 2
     assert summary["custody_refused_by_class"]["macos_substrate"] == 1
 
 
@@ -598,7 +595,7 @@ def test_commit_idempotent_re_run_no_double_count(tmp_path: Path):
     assert posterior_after_2.accepted_anchor_count == 1
 
 
-def test_commit_skips_modal_cpu_with_audit_row(tmp_path: Path):
+def test_commit_accepts_modal_cpu_with_audit_row(tmp_path: Path):
     root = tmp_path / "experiments" / "results" / "modal_auth_eval_cpu"
     _make_eval_dir(root, "pr106_modal_cpu_skip_test", _modal_cpu_payload())
     posterior_path = tmp_path / "posterior.json"
@@ -624,12 +621,10 @@ def test_commit_skips_modal_cpu_with_audit_row(tmp_path: Path):
     assert rc == 0
     rows = [json.loads(L) for L in audit_path.read_text().splitlines() if L.strip()]
     assert len(rows) == 1
-    assert rows[0]["action"] == "skipped_custody_refused"
-    assert rows[0]["custody_refused_class"] == "cpu_tag_non_gha_linux"
-    # No posterior update should have happened.
-    if posterior_path.exists():
-        posterior = load_posterior(posterior_path)
-        assert posterior.accepted_anchor_count == 0
+    assert rows[0]["action"] == "posterior_update_locked_called"
+    assert rows[0]["posterior_update_accepted"] is True
+    posterior = load_posterior(posterior_path)
+    assert posterior.accepted_anchor_count == 1
 
 
 def test_commit_writes_one_jsonl_row_per_anchor(tmp_path: Path):

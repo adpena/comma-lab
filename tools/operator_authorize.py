@@ -609,6 +609,17 @@ class Recipe:
         return bool(self.raw.get("dispatch_enabled", True))
 
     @property
+    def smoke_only(self) -> bool:
+        """Return whether this recipe is restricted to the smoke wrapper path."""
+
+        raw = self.raw.get("smoke_only", False)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, int):
+            return bool(raw)
+        return str(raw).strip().lower() in {"1", "on", "true", "yes"}
+
+    @property
     def dispatch_blockers(self) -> list[str]:
         """Return declared recipe blockers, normalized to strings."""
 
@@ -696,6 +707,25 @@ def _recipe_dispatch_refusal(recipe: Recipe) -> str | None:
             "or custody artifacts land."
         )
     return None
+
+
+def _smoke_only_direct_dispatch_refusal(
+    recipe: Recipe,
+    *,
+    cost_band_epochs_override: int | None,
+) -> str | None:
+    """Return a refusal reason for direct full dispatch of smoke-only recipes."""
+
+    if not recipe.smoke_only:
+        return None
+    if cost_band_epochs_override is not None:
+        return None
+    return (
+        "smoke_only=true; direct operator_authorize full dispatch is refused. "
+        "Use tools/run_modal_smoke_before_full.py so the wrapper emits only the "
+        "implemented smoke anchor, or remove smoke_only only after the full "
+        "trainer/runtime path lands."
+    )
 
 
 def _list_recipes() -> int:
@@ -1132,6 +1162,16 @@ def main(argv: list[str] | None = None) -> int:
 
     recipe = _load_recipe(args.recipe)
     dispatch_refusal = _recipe_dispatch_refusal(recipe)
+    direct_smoke_refusal = _smoke_only_direct_dispatch_refusal(
+        recipe,
+        cost_band_epochs_override=args.cost_band_epochs_override,
+    )
+    if direct_smoke_refusal:
+        dispatch_refusal = (
+            f"{dispatch_refusal}; {direct_smoke_refusal}"
+            if dispatch_refusal
+            else direct_smoke_refusal
+        )
 
     # Cost-band prediction.
     cost_cfg = recipe.raw.get("cost_band", {}) or {}

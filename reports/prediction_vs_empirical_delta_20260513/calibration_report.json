@@ -1,0 +1,23 @@
+{
+  "schema": "tac_prediction_calibration_report_v1",
+  "schema_version": 1,
+  "generated_at_utc": "2026-05-13T21:11:11.001245+00:00",
+  "n_matched_substrates": 1,
+  "n_within_band": 0,
+  "n_over_predicted": 1,
+  "n_under_predicted": 0,
+  "mean_abs_delta": 0.016133635457415085,
+  "max_abs_delta": 0.016133635457415085,
+  "per_substrate_recommendations": [
+    {
+      "lane_id": "lane_a1_plus_wavelet_residual_retarget_20260513",
+      "recommendation": "widen_band",
+      "rationale": "empirical 0.2066 fell outside [0.1870, 0.1940]; band must widen to cover the over_predicted drift of +0.0161."
+    }
+  ],
+  "evidence_grade": "[prediction-calibration; planning_only]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "notes": "Per CLAUDE.md 'Apples-to-apples evidence discipline': prediction anchors stay [prediction; planning_only] and empirical anchors keep their original axis label. This calibration report informs operator-routable band tighten/widen decisions; it does NOT promote any prediction to authoritative evidence."
+}

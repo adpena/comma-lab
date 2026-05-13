@@ -65,7 +65,7 @@ import datetime as dt
 import json
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -75,6 +75,7 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.continual_learning import CONTEST_CPU_LINUX_X86_64_SUBSTRATES  # noqa: E402
 from tac.optimization.cuda_cpu_axis_profile_registry import (  # noqa: E402
     ARCHITECTURE_CLASSES,
     DEFAULT_AUDIT_LOG_PATH,
@@ -97,7 +98,7 @@ ALLOWED_CUDA_SUBSTRATES = frozenset({
     "linux_x86_64_a10g",
     "linux_x86_64_l40s",
 })
-ALLOWED_CPU_SUBSTRATES = frozenset({"linux_x86_64_gha_cpu"})
+ALLOWED_CPU_SUBSTRATES = CONTEST_CPU_LINUX_X86_64_SUBSTRATES
 
 NON_HNERV_CLASSES = tuple(
     c for c in ARCHITECTURE_CLASSES
@@ -120,7 +121,7 @@ def validate_paired_eval(payload: dict[str, Any]) -> tuple[dict[str, float], dic
           "cuda": {"pose": float, "seg": float, "score": float,
                    "hardware_substrate": "linux_x86_64_t4"},
           "cpu":  {"pose": float, "seg": float, "score": float,
-                   "hardware_substrate": "linux_x86_64_gha_cpu"},
+                   "hardware_substrate": "linux_x86_64_modal_cpu"},
         }
 
     Raises :class:`CalibrationRefusalError` on any missing field, blank value,
@@ -310,7 +311,7 @@ def _payload_from_args(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--paired-eval-json", type=str, default=None,

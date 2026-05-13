@@ -132,6 +132,25 @@ def test_pr106_sidecar_packet_ir_identity_proof_is_operator_facing_and_nonpromot
     assert proof["packet"]["format_id"] == expected_format_id
     assert proof["emitted_payload"]["byte_identical_to_source_member"] is True
     assert proof["emitted_archive"]["byte_identical_to_source_archive"] is True
+    assert proof["proof_not_score"] is True
+    assert proof["evidence_axis"] == "packet-ir-parser-local-no-score"
+    assert proof["byte_exact_identity"] == {
+        "source_archive_bytes": archive_path.stat().st_size,
+        "source_archive_sha256": expected_archive_sha,
+        "source_member_name": "0.bin",
+        "source_member_payload_bytes": proof["member"]["payload_bytes"],
+        "source_member_payload_sha256": proof["member"]["payload_sha256"],
+        "emitted_payload_bytes": proof["emitted_payload"]["bytes"],
+        "emitted_payload_sha256": proof["emitted_payload"]["sha256"],
+        "emitted_archive_bytes": proof["emitted_archive"]["bytes"],
+        "emitted_archive_sha256": proof["emitted_archive"]["sha256"],
+        "payload_byte_identical": True,
+        "archive_byte_identical": True,
+        "expected_archive_sha256": expected_archive_sha,
+        "expected_archive_sha256_matches": True,
+        "expected_member_name": None,
+        "expected_member_name_matches": None,
+    }
     consumed = proof["packet"]["packet_ir_consumed_byte_proof"]
     assert consumed["all_payload_bytes_accounted"] is True
     assert consumed["runtime_consumption_claim"] is False
@@ -146,6 +165,19 @@ def test_pr106_sidecar_packet_ir_identity_proof_fails_closed_on_sha_mismatch() -
     assert proof["packet_ir_identity_passed"] is False
     assert proof["archive"]["expected_sha256_matches"] is False
     assert proof["blockers"] == ["expected_archive_sha256_mismatch"]
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pr106_sidecar_packet_ir_identity_proof_fails_closed_on_malformed_sha() -> None:
+    proof = prove_pr106_sidecar_packet_ir_identity(
+        archive_path=PR106_R2_ARCHIVE,
+        expected_archive_sha256="not-a-sha",
+    )
+
+    assert proof["packet_ir_identity_passed"] is False
+    assert proof["archive"]["expected_sha256_well_formed"] is False
+    assert proof["blockers"] == ["expected_archive_sha256_malformed"]
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
 
@@ -210,6 +242,16 @@ def test_single_member_archive_explicit_expected_name_still_fails_closed() -> No
         read_single_stored_member_archive(
             archive_bytes,
             expected_member_name="0.bin",
+        )
+
+
+def test_single_member_archive_rejects_unsupported_expected_name() -> None:
+    archive_bytes = _single_member_zip("0.bin", b"payload")
+
+    with pytest.raises(ValueError, match="unsupported expected PR106 ZIP member"):
+        read_single_stored_member_archive(
+            archive_bytes,
+            expected_member_name="../0.bin",
         )
 
 
@@ -378,9 +420,19 @@ def test_pr106_sidecar_semantic_mutation_is_valid_and_nonpromotable(
     assert manifest["payload_sha256_changed"] is True
     assert manifest["inner_pr106_payload_sha256_unchanged"] is True
     assert manifest["sidecar_payload_sha256_changed"] is True
+    assert manifest["parser_consumed_byte_accounting_passed"] is True
+    assert manifest["source_packet_ir_consumed_byte_proof"][
+        "all_payload_bytes_accounted"
+    ] is True
+    assert manifest["mutated_packet_ir_consumed_byte_proof"][
+        "all_payload_bytes_accounted"
+    ] is True
     assert manifest["runtime_sidecar_decode_consumption_claim"] is False
     assert manifest["full_frame_inflate_output_parity_claim"] is False
+    assert manifest["contest_axis_claim"] is False
     assert manifest["score_claim"] is False
+    assert manifest["proof_not_score"] is True
+    assert manifest["evidence_axis"] == "packet-ir-mutation-local-no-score"
     assert manifest["promotion_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
 

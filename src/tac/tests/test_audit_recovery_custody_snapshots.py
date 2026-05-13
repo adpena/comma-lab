@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -99,6 +100,49 @@ def test_recovery_custody_audit_blocks_missing_pyc_custody(tmp_path: Path) -> No
 
     assert payload["ready_for_recovery_custody_preservation"] is False
     assert "lost bytecode custody" in "\n".join(payload["blockers"])
+
+
+def test_recovery_custody_audit_accepts_tracked_rehydration_after_pyc_cleanup(
+    tmp_path: Path,
+) -> None:
+    _write_expected_snapshot(tmp_path)
+    rows_path = tmp_path / "pyc/recovery_results.json"
+    rows = json.loads(rows_path.read_text(encoding="utf-8"))
+    row = rows[0]
+    Path(row["pyc_path"]).unlink()
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, stdout=subprocess.DEVNULL)
+    current_source = tmp_path / row["orphan_rel"]
+    current_source.parent.mkdir(parents=True, exist_ok=True)
+    current_source.write_text("# recovered parse-stub\n", encoding="utf-8")
+    mirror_source = (
+        tmp_path
+        / "reverse_engineering/orphan_pyc_recovery_20260505_codex"
+        / row["orphan_rel"]
+    )
+    mirror_source.parent.mkdir(parents=True, exist_ok=True)
+    mirror_source.write_text("# recovered parse-stub mirror\n", encoding="utf-8")
+    mirror_source.with_suffix(".recovery_spec.json").write_text("{}\n", encoding="utf-8")
+    subprocess.run(
+        [
+            "git",
+            "add",
+            row["orphan_rel"],
+            str(mirror_source.relative_to(tmp_path)),
+            str(mirror_source.with_suffix(".recovery_spec.json").relative_to(tmp_path)),
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    report = audit_recovery_custody_snapshots(tmp_path, config=_config())
+    payload = report.to_dict()
+
+    assert payload["ready_for_recovery_custody_preservation"] is True
+    pyc_summary = payload["summary"]["pyc_recovery"]
+    assert pyc_summary["pyc_present_count"] == EXPECTED_PYC_TOTAL - 1
+    assert pyc_summary["durable_recovery_evidence_count"] == EXPECTED_PYC_TOTAL
+    assert pyc_summary["missing_pyc_with_durable_recovery_evidence_count"] == 1
 
 
 def test_recovery_custody_audit_blocks_tracked_source_loss_marker(tmp_path: Path) -> None:

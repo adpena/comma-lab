@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import pytest
 
-
 REPO = Path(__file__).resolve().parents[3]
 LAUNCHER = REPO / "scripts" / "launch_lane_on_vastai.py"
 
@@ -102,6 +101,57 @@ def test_vast_claim_uses_provider_instance_as_job_id(monkeypatch: pytest.MonkeyP
     assert cmd[cmd.index("--lane-id") + 1] == "lane_unit_test"
     assert cmd[cmd.index("--platform") + 1] == "vastai"
     assert cmd[cmd.index("--instance-job-id") + 1] == "987"
+
+
+def test_vast_precreate_claim_happens_without_provider_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    launcher = _load_launcher()
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, timeout=60, capture=True):
+        calls.append(cmd)
+        return 0, "", ""
+
+    monkeypatch.setattr(launcher, "run", fake_run)
+
+    rc = launcher.claim_vastai_lane_precreate(
+        SimpleNamespace(label="lane_unit_test"),
+        precreate_claim_id="precreate:lane_unit_test:1",
+    )
+
+    assert rc == 0
+    cmd = calls[0]
+    assert cmd[cmd.index("--lane-id") + 1] == "lane_unit_test"
+    assert cmd[cmd.index("--platform") + 1] == "vastai"
+    assert cmd[cmd.index("--instance-job-id") + 1] == "precreate:lane_unit_test:1"
+    assert cmd[cmd.index("--status") + 1] == "active_precreate"
+    assert "--force" not in cmd
+
+
+def test_vast_real_instance_claim_supersedes_precreate_with_force(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    launcher = _load_launcher()
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, timeout=60, capture=True):
+        calls.append(cmd)
+        return 0, "", ""
+
+    monkeypatch.setattr(launcher, "run", fake_run)
+
+    rc = launcher.claim_vastai_lane_dispatch(
+        SimpleNamespace(label="lane_unit_test"),
+        instance_id=987,
+        precreate_claim_id="precreate:lane_unit_test:1",
+    )
+
+    assert rc == 0
+    cmd = calls[0]
+    assert cmd[cmd.index("--instance-job-id") + 1] == "987"
+    assert "--force" in cmd
+    assert "precreate:lane_unit_test:1" in cmd[cmd.index("--notes") + 1]
 
 
 def test_vast_terminal_claim_uses_force_and_status(monkeypatch: pytest.MonkeyPatch) -> None:

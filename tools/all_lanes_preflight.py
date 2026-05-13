@@ -218,8 +218,12 @@ MODAL_A1_SCORE_GRADIENT_DISPATCHER = REPO / "experiments/modal_phase_a1_score_gr
 LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER = TOOLS / "dispatch_phase_a1_score_gradient_pr101.py"
 PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2"
+PR106_R2_ARCHIVE_SHA256 = "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
+PR106_R2_RUNTIME_SOURCE_TREE_SHA256 = "f12c3a81a5a52c39d48d7528f1fab926acccab0ce1b86450978c6ae6e4bab357"
 PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
+PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
+PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f"
 CLAIM_LANE_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY = (
     REPO / "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
@@ -1812,6 +1816,8 @@ def _pr106_sidecar_runtime_consumption_failures(
     manifest: dict[str, object],
     *,
     expected_format_id: str,
+    expected_archive_sha256: str,
+    expected_runtime_source_tree_sha256: str,
 ) -> list[str]:
     failures: list[str] = []
     expected_fields = {
@@ -1822,18 +1828,50 @@ def _pr106_sidecar_runtime_consumption_failures(
         "sidecar_payload_sha256_changed": True,
         "runtime_semantic_digest_changed": True,
         "runtime_corrected_latents_digest_changed": True,
+        "runtime_all_score_affecting_sections_consumed": True,
         "runtime_sidecar_decode_consumption_claim": True,
         "runtime_sidecar_apply_consumption_claim": True,
         "full_frame_inflate_output_parity_claim": False,
+        "contest_axis_claim": False,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "blockers": [],
     }
     for field, expected in expected_fields.items():
         if manifest.get(field) != expected:
             failures.append(
                 f"{label}:{field}_drift expected {expected!r}, got {manifest.get(field)!r}"
             )
+
+    archive = manifest.get("archive")
+    if not isinstance(archive, dict):
+        failures.append(f"{label}:archive_manifest_missing")
+    else:
+        if archive.get("sha256") != expected_archive_sha256:
+            failures.append(
+                f"{label}:archive_sha256_drift expected {expected_archive_sha256!r}, "
+                f"got {archive.get('sha256')!r}"
+            )
+        if archive.get("expected_sha256") != expected_archive_sha256:
+            failures.append(f"{label}:expected_archive_sha256_not_threaded")
+        if archive.get("expected_sha256_matches") is not True:
+            failures.append(f"{label}:expected_archive_sha256_mismatch")
+
+    runtime = manifest.get("runtime_source_manifest")
+    if not isinstance(runtime, dict):
+        failures.append(f"{label}:runtime_source_manifest_missing")
+    else:
+        if runtime.get("runtime_source_tree_sha256") != expected_runtime_source_tree_sha256:
+            failures.append(
+                f"{label}:runtime_source_tree_sha256_drift expected "
+                f"{expected_runtime_source_tree_sha256!r}, "
+                f"got {runtime.get('runtime_source_tree_sha256')!r}"
+            )
+        if runtime.get("expected_runtime_source_tree_sha256") != expected_runtime_source_tree_sha256:
+            failures.append(f"{label}:expected_runtime_source_tree_sha256_not_threaded")
+        if runtime.get("expected_runtime_source_tree_sha256_matches") is not True:
+            failures.append(f"{label}:expected_runtime_source_tree_sha256_mismatch")
 
     for digest_field in (
         "source_runtime_correction_digest",
@@ -1864,6 +1902,21 @@ def _pr106_sidecar_runtime_consumption_failures(
             failures.append(f"{label}:corrected_latents_unchanged_under_sidecar_mutation")
         if source_digest.get("combined_sha256") == mutated_digest.get("combined_sha256"):
             failures.append(f"{label}:combined_digest_unchanged_under_sidecar_mutation")
+
+    sections = manifest.get("runtime_consumed_score_affecting_sections")
+    if not isinstance(sections, dict):
+        failures.append(f"{label}:runtime_consumed_score_affecting_sections_missing")
+    else:
+        if sections.get("pr106_payload") is not True:
+            failures.append(f"{label}:pr106_payload_runtime_consumption_not_proven")
+        if sections.get("sidecar_payload") is not True:
+            failures.append(f"{label}:sidecar_payload_runtime_consumption_not_proven")
+        expected_framing = True if expected_format_id == "0x02" else None
+        if sections.get("framing_meta") is not expected_framing:
+            failures.append(
+                f"{label}:framing_meta_runtime_consumption_drift "
+                f"expected {expected_framing!r}, got {sections.get('framing_meta')!r}"
+            )
     return failures
 
 
@@ -1872,12 +1925,14 @@ def _pr106_sidecar_packet_ir_identity_failures(
     archive_path: Path,
     *,
     expected_format_id: str,
+    expected_archive_sha256: str,
 ) -> list[str]:
     from tac.packet_compiler import prove_pr106_sidecar_packet_ir_identity
 
     failures: list[str] = []
     manifest = prove_pr106_sidecar_packet_ir_identity(
         archive_path=archive_path,
+        expected_archive_sha256=expected_archive_sha256,
     )
     packet = manifest.get("packet")
     if not isinstance(packet, dict):
@@ -1913,6 +1968,19 @@ def _pr106_sidecar_packet_ir_identity_failures(
             failures.append(f"{label}:packet_ir_manifest_{field}_drift")
     if manifest.get("packet_ir_identity_passed") is not True:
         failures.append(f"{label}:packet_ir_identity_not_passed")
+    archive = manifest.get("archive")
+    if not isinstance(archive, dict):
+        failures.append(f"{label}:packet_ir_archive_manifest_missing")
+    else:
+        if archive.get("sha256") != expected_archive_sha256:
+            failures.append(
+                f"{label}:packet_ir_archive_sha256_drift expected {expected_archive_sha256!r}, "
+                f"got {archive.get('sha256')!r}"
+            )
+        if archive.get("expected_sha256") != expected_archive_sha256:
+            failures.append(f"{label}:packet_ir_expected_archive_sha256_not_threaded")
+        if archive.get("expected_sha256_matches") is not True:
+            failures.append(f"{label}:packet_ir_expected_archive_sha256_mismatch")
 
     proof = packet.get("packet_ir_consumed_byte_proof")
     if not isinstance(proof, dict):
@@ -2003,9 +2071,30 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
 
     failures: list[str] = []
     observed_formats: list[str] = []
-    for label, archive_path, runtime_dir, expected_format_id in (
-        ("r2_brotli", PR106_R2_ARCHIVE, PR106_R2_RUNTIME, "0x01"),
-        ("r2_pr101_grammar", PR106_R2_PR101_ARCHIVE, PR106_R2_PR101_RUNTIME, "0x02"),
+    for (
+        label,
+        archive_path,
+        runtime_dir,
+        expected_format_id,
+        expected_archive_sha256,
+        expected_runtime_source_tree_sha256,
+    ) in (
+        (
+            "r2_brotli",
+            PR106_R2_ARCHIVE,
+            PR106_R2_RUNTIME,
+            "0x01",
+            PR106_R2_ARCHIVE_SHA256,
+            PR106_R2_RUNTIME_SOURCE_TREE_SHA256,
+        ),
+        (
+            "r2_pr101_grammar",
+            PR106_R2_PR101_ARCHIVE,
+            PR106_R2_PR101_RUNTIME,
+            "0x02",
+            PR106_R2_PR101_ARCHIVE_SHA256,
+            PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256,
+        ),
     ):
         try:
             failures.extend(
@@ -2013,6 +2102,7 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
                     label,
                     archive_path,
                     expected_format_id=expected_format_id,
+                    expected_archive_sha256=expected_archive_sha256,
                 )
             )
         except Exception as exc:
@@ -2023,6 +2113,8 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
             manifest = prove_pr106_sidecar_runtime_decode_consumption(
                 archive_path=archive_path,
                 runtime_dir=runtime_dir,
+                expected_archive_sha256=expected_archive_sha256,
+                expected_runtime_source_tree_sha256=expected_runtime_source_tree_sha256,
             )
         except Exception as exc:
             failures.append(f"{label}: proof raised {type(exc).__name__}: {exc}")
@@ -2033,6 +2125,8 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
                 label,
                 manifest,
                 expected_format_id=expected_format_id,
+                expected_archive_sha256=expected_archive_sha256,
+                expected_runtime_source_tree_sha256=expected_runtime_source_tree_sha256,
             )
         )
 
@@ -2045,6 +2139,7 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
         "PR106 sidecar runtime-consumption proof: PASS "
         f"(format_ids={','.join(observed_formats)}; PacketIR identity parse-emit "
         "accounts for every payload byte; runtime decodes/applies sidecar bytes; "
+        "expected archive/runtime SHA custody is enforced; "
         "runtime-consumption manifests intentionally remain non-promotable; "
         f"{parity_note}; "
         "score_claim=false; ready_for_exact_eval_dispatch=false)"

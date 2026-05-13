@@ -1,7 +1,7 @@
 schema_version: 1
 name: substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch
 lane_id: lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513
-summary: PR95++ meta-stack-of-stacks enhanced curriculum (11 enhancements over PR95's 29,650-epoch 8-stage protocol) - first-anchor dispatch on Modal A100.
+summary: PR95++ meta-stack-of-stacks enhanced curriculum smoke anchor (11 enhancements over PR95's 29,650-epoch 8-stage protocol); full A100 dispatch remains gated until the real full trainer path lands.
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -12,6 +12,11 @@ target_modes:
   - contest_one_video_replay
   - research_substrate
 canary_status: canary
+# The trainer's implemented path is smoke-only today; `_full_main` intentionally
+# refuses full training. This flag forces the canonical smoke wrapper to stop
+# after the smoke anchor and `tools/operator_authorize.py` to refuse direct full
+# dispatch of this recipe.
+smoke_only: true
 
 cost_band:
   epochs: 29650
@@ -34,11 +39,12 @@ risk: |
   pr95_enhanced enables 9 of 11 (composition E10/E11 SABOR + S2SBS are
   explicit opt-in).
 
-  Smoke-before-full pattern (Catalog #167): the operator-authorize wrapper
+  Smoke-only scaffold guard (Catalog #167): the operator-authorize wrapper
   routes through tools/run_modal_smoke_before_full.py which fires a
-  100-epoch ~$0.30 Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON
-  present + score in plausible band [0.0, 10.0], then fires the full
-  29,650-epoch A100 dispatch only on smoke-green.
+  100-epoch ~$0.30 Modal T4 smoke, validates rc=0 + auth-eval JSON present
+  + score in the recipe smoke band, and then STOPS. The full 29,650-epoch
+  A100 dispatch is intentionally refused until `_full_main` is implemented
+  against real contest-video batches and a byte-closed archive export.
 
   Engineering wins (compounding speedup vs PR95 baseline):
   * E1 Muon at every stage (vs only Stage 8): ~2-4x convergence on hidden
@@ -49,11 +55,12 @@ risk: |
   * E9 DP1 bootstrap: starts from frozen Comma2k19 codebook; shrinks
     Stage 1 random-init variance.
 
-  Predicted cost: $50-100 for the full 29,650-epoch A100 (Muon convergence
-  + ternary archive size reduction reduce dispatch time vs PR95 baseline);
-  $15-25 for Stage 1-3 only (epoch-multiplier=0.34); $0.30 for smoke.
+  Predicted cost: $0.30 for the current smoke-only first anchor. Full-run
+  cost remains estimated at $50-100 for the 29,650-epoch A100 path, but
+  that path is not dispatchable from this recipe until full training/export
+  implementation lands.
 
-envelope_status: "FITS $100 envelope at p50 fallback (smoke $0.30 + full $50 conservative)"
+envelope_status: "SMOKE-ONLY; fits $1 envelope now. Full A100 spend blocked until implemented."
 
 remote_driver: scripts/remote_lane_substrate_pr101_lc_v2_clone_enhanced_curriculum.sh
 timeout_hours: 8.0
@@ -79,6 +86,7 @@ env_overrides:
   PR95PLUS_DEVICE: cuda
   PR95PLUS_CURRICULUM: pr95_enhanced
   PR95PLUS_EPOCHS_MULTIPLIER: "1.0"
+  PR95PLUS_SMOKE: "1"
   PR95PLUS_SEED: "0"
   PR95PLUS_GPU: "${MODAL_GPU:-A100}"
   PR95PLUS_CODEBOOK_PATH: ""

@@ -55,6 +55,10 @@ _DISTILLATION_TEXT_MARKERS = (
     "jbl",
 )
 _SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
+_RAW_PROMOTION_BLOCKER_FIELDS = (
+    "promotion_blockers",
+    "rank_or_kill_blockers",
+)
 
 
 def _require_number(payload: dict[str, Any], key: str) -> float:
@@ -491,6 +495,51 @@ def _check_distillation_promotion_gate(
     }
 
 
+def _as_blocker_list(value: Any) -> list[str]:
+    """Normalize raw blocker fields without treating malformed data as clean."""
+
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item)]
+    if isinstance(value, tuple):
+        return [str(item) for item in value if str(item)]
+    if isinstance(value, str):
+        return [value] if value else []
+    return [f"malformed_blocker_field:{type(value).__name__}:{value!r}"]
+
+
+def _check_raw_promotion_policy_gate(payload: dict[str, Any]) -> dict[str, Any]:
+    """Fail closed when upstream/raw adjudication blockers are still present.
+
+    This catches re-adjudication of partially blocked artifacts. A result may
+    pass local component/regression/hardware checks but still carry raw
+    `promotion_blockers` or `rank_or_kill_blockers` from earlier custody layers
+    such as missing CPU pairing or missing strict pre-submission compliance.
+    Those blockers must not be laundered into `promotion_eligible=true`.
+    """
+
+    blocker_fields: dict[str, list[str]] = {}
+    violations: list[dict[str, Any]] = []
+    for field in _RAW_PROMOTION_BLOCKER_FIELDS:
+        blockers = _as_blocker_list(payload.get(field))
+        if not blockers:
+            continue
+        blocker_fields[field] = blockers
+        violations.append(
+            {
+                "field": field,
+                "blockers": blockers,
+                "reason": "raw_promotion_policy_blockers_present",
+            }
+        )
+    return {
+        "triggered": bool(violations),
+        "blocker_fields": blocker_fields,
+        "violations": violations,
+    }
+
+
 def _regression_threshold(args: argparse.Namespace) -> tuple[float, str]:
     threshold = getattr(args, "regression_threshold", None)
     if threshold is not None:
@@ -685,6 +734,10 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     source_manifest_closure_gate_triggered = bool(
         source_manifest_closure.get("violations")
     )
+    raw_promotion_policy_gate = _check_raw_promotion_policy_gate(payload)
+    raw_promotion_policy_gate_triggered = bool(
+        raw_promotion_policy_gate["triggered"]
+    )
 
     result_copy = Path(args.result_copy) if args.result_copy else contest_json
 
@@ -721,6 +774,8 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             lane_status = "DISTILLATION_POLICY_REVIEW_REQUIRED"
     if source_manifest_closure_gate_triggered:
         lane_status = _add_review_status(lane_status, "SOURCE_MANIFEST_CLOSURE")
+    if raw_promotion_policy_gate_triggered:
+        lane_status = _add_review_status(lane_status, "RAW_PROMOTION_POLICY")
     gpu_t4_match = eval_provenance.get("gpu_t4_match")
     contest_equivalent_hardware = gpu_t4_match is True
     evidence_grade = (
@@ -732,6 +787,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         and not sane_score_gate_triggered
         and not distillation_gate_triggered
         and not source_manifest_closure_gate_triggered
+        and not raw_promotion_policy_gate_triggered
     )
     promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
     hardware_promotion_gate_triggered = scientific_score_eligible and not contest_equivalent_hardware
@@ -807,6 +863,9 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             "source_manifest_sha256": source_manifest_closure.get("source_manifest_sha256"),
             "source_manifest_file_sha256": source_manifest_closure.get("source_manifest_file_sha256"),
             "source_manifest_runtime_closure_sha256": source_manifest_closure.get("closure_sha256"),
+            "raw_promotion_policy_gate": raw_promotion_policy_gate,
+            "raw_promotion_policy_gate_triggered": raw_promotion_policy_gate_triggered,
+            "raw_promotion_policy_gate_violations": raw_promotion_policy_gate["violations"],
             "lane_status": lane_status,
         }
     )
@@ -844,6 +903,8 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "source_manifest_runtime_closure_gate_triggered": source_manifest_closure_gate_triggered,
         "source_manifest_sha256": source_manifest_closure.get("source_manifest_sha256"),
         "source_manifest_runtime_closure_sha256": source_manifest_closure.get("closure_sha256"),
+        "raw_promotion_policy_gate_triggered": raw_promotion_policy_gate_triggered,
+        "raw_promotion_policy_gate_violations": raw_promotion_policy_gate["violations"],
         "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
         "contest_cuda_archive_sha256": actual_archive_sha256,
         "contest_cuda_archive_bytes": actual_archive_bytes,
@@ -861,12 +922,15 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             "contest_equivalent_hardware": contest_equivalent_hardware,
             "paper_claim_grade": paper_claim_grade,
             "allowed_use": allowed_use,
+            "allowed_uses": allowed_use,
             "lane_status": lane_status,
             "regression_triggered": regression_triggered,
             "component_gate_triggered": component_gate_triggered,
             "sane_score_gate_triggered": sane_score_gate_triggered,
             "distillation_policy_gate_triggered": distillation_gate_triggered,
             "source_manifest_runtime_closure_gate_triggered": source_manifest_closure_gate_triggered,
+            "raw_promotion_policy_gate_triggered": raw_promotion_policy_gate_triggered,
+            "raw_promotion_policy_gate_violations": raw_promotion_policy_gate["violations"],
             "score_delta_vs_baseline": score_delta_vs_baseline,
             args.delta_key: score_delta_vs_baseline,
             "adjudication_provenance": str(provenance_path),
@@ -875,6 +939,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     if promotion_eligible:
         result_payload["evidence_grade"] = "A++"
         result_payload["score_claim"] = True
+        result_payload["rank_or_kill_eligible"] = True
     else:
         result_payload["evidence_grade"] = paper_claim_grade
         result_payload["score_claim"] = False
@@ -908,6 +973,9 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "source_manifest_runtime_closure_gate_triggered": source_manifest_closure_gate_triggered,
         "source_manifest_sha256": source_manifest_closure.get("source_manifest_sha256"),
         "source_manifest_runtime_closure_sha256": source_manifest_closure.get("closure_sha256"),
+        "raw_promotion_policy_gate": raw_promotion_policy_gate,
+        "raw_promotion_policy_gate_triggered": raw_promotion_policy_gate_triggered,
+        "raw_promotion_policy_gate_violations": raw_promotion_policy_gate["violations"],
         "archive_sha256": actual_archive_sha256,
         "archive_bytes": actual_archive_bytes,
         "gpu_model": eval_provenance.get("gpu_model"),
@@ -915,6 +983,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "contest_equivalent_hardware": contest_equivalent_hardware,
         "evidence_grade": evidence_grade,
         "promotion_eligible": promotion_eligible,
+        "score_claim_valid": promotion_eligible,
         "scientific_score_eligible": scientific_score_eligible,
         "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
         "paper_claim_grade": paper_claim_grade,
@@ -1011,6 +1080,7 @@ def main() -> int:
     print(f"DISTILLATION_POLICY_ACTIVE={int(result['distillation_policy_active'])}")
     print(f"DISTILLATION_POLICY_GATE_TRIGGERED={int(result['distillation_policy_gate_triggered'])}")
     print(f"SOURCE_MANIFEST_CLOSURE_GATE_TRIGGERED={int(result['source_manifest_runtime_closure_gate_triggered'])}")
+    print(f"RAW_PROMOTION_POLICY_GATE_TRIGGERED={int(result['raw_promotion_policy_gate_triggered'])}")
     print(f"ARCHIVE_SHA256={result['archive_sha256']}")
     print(f"ARCHIVE_BYTES={result['archive_bytes']}")
     print(f"GPU_T4_MATCH={json.dumps(result['gpu_t4_match'])}")
@@ -1059,6 +1129,13 @@ def main() -> int:
             sort_keys=True,
         )
         print("FATAL: source-manifest runtime byte/SHA closure violation: " + violation_json)
+        exit_code = 2
+    if result["raw_promotion_policy_gate_triggered"]:
+        violation_json = json.dumps(
+            result["raw_promotion_policy_gate_violations"],
+            sort_keys=True,
+        )
+        print("FATAL: raw promotion/rank blockers still present: " + violation_json)
         exit_code = 2
     return exit_code
 

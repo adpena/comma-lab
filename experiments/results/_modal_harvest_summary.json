@@ -962,6 +962,49 @@
     }
   },
   {
+    "label": "substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep",
+    "call_id": "fc-01KRGTEM56EXCV94Q7DC1HF0PB",
+    "rc": 124,
+    "elapsed_seconds": 3601.0182130919998,
+    "n_artifacts": 53,
+    "crash_kind": "TIMEOUT",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": true,
+      "appended": true,
+      "batch_size": 1,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep",
+      "elapsed_seconds": 3601.0182130919998,
+      "epochs": 100,
+      "estimated_cost_usd": 0.5901668738122999,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=124; timed_out=True; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "timed_out",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 124,
+      "schema": "modal_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_siren.py"
+    },
+    "terminal_claim": {
+      "already_appended": true,
+      "appended": true,
+      "instance_job_id": "substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep",
+      "lane_id": "remote_lane_substrate_siren",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=124; timed_out=True; elapsed_seconds=3601.0182130919998; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_timeout"
+    }
+  },
+  {
     "label": "sz_phase2_v2",
     "call_id": "fc-01KQCPZM0D2NMZCTH23RT98SK5",
     "status": "already_harvested",
@@ -1372,23 +1415,23 @@
     "n_artifacts": 4,
     "crash_kind": "HARVESTED_PARTIAL",
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
+      "promotion_eligible": false,
       "reason": "metadata_missing_cost_band_anchor",
-      "score_claim": false,
-      "promotion_eligible": false
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "track1_phase_a1_score_gradient",
+      "appended": true,
       "instance_job_id": "track1_phase_a1_score_gradient_20260508T222043Z_modal",
+      "lane_id": "track1_phase_a1_score_gradient",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=None; timed_out=False; elapsed_seconds=None; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_track1_phase_a1_score_gradient_20260508T222043Z_modal_modal",
       "platform": "modal",
-      "status": "failed_modal_training_unknown_returncode",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=None; timed_out=False; elapsed_seconds=None; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_track1_phase_a1_score_gradient_20260508T222043Z_modal_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_unknown_returncode"
     }
   },
   {

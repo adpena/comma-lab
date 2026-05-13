@@ -73,13 +73,12 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.deploy.claims import (
+from tac.deploy.claims import (  # noqa: E402
     DispatchClaimSpec,
     dispatch_claim_command,
     predicted_eta,
     utc_now,
 )
-
 
 TRACKER_PATH = REPO_ROOT / ".omx/state/vastai_active_instances.json"
 DISPATCH_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
@@ -142,14 +141,57 @@ def _print_forwarded_env_args(items: list[str] | None) -> None:
         print(f"    --env {shlex.quote(item)}{suffix}")
 
 
-def claim_vastai_lane_dispatch(args, *, instance_id: int) -> int:
-    """Record the mandatory dispatch claim after Vast returns a real job id."""
+def _vastai_precreate_claim_id(args) -> str:
+    """Stable pre-provider claim id used before Vast can return an instance id."""
+
+    safe_label = str(args.label).replace("|", "_").replace(" ", "_")
+    return f"precreate:{safe_label}:{int(time.time())}"
+
+
+def claim_vastai_lane_precreate(args, *, precreate_claim_id: str) -> int:
+    """Claim the lane before paid Vast instance creation."""
+
+    if not DISPATCH_CLAIMS_PATH.parent.is_dir():
+        DISPATCH_CLAIMS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    cmd = dispatch_claim_command(
+        spec=DispatchClaimSpec(
+            lane_id=args.label,
+            platform="vastai",
+            instance_job_id=precreate_claim_id,
+            agent="codex:vastai-launcher",
+            predicted_eta_utc=predicted_eta(hours=1),
+            notes=(
+                "Pre-provider Vast.ai claim; no instance exists yet. This row "
+                "prevents duplicate paid instance creation before offer/create."
+            ),
+        ),
+        status="active_precreate",
+        python_executable=sys.executable,
+        claim_tool=REPO_ROOT / "tools" / "claim_lane_dispatch.py",
+    )
+    rc, out, err = run(cmd, timeout=30)
+    if out.strip():
+        print(out.strip())
+    if rc != 0 and err.strip():
+        print(err.strip(), file=sys.stderr)
+    return rc
+
+
+def claim_vastai_lane_dispatch(
+    args,
+    *,
+    instance_id: int,
+    precreate_claim_id: str | None = None,
+) -> int:
+    """Record the mandatory dispatch claim for the real Vast instance id."""
     if not DISPATCH_CLAIMS_PATH.parent.is_dir():
         DISPATCH_CLAIMS_PATH.parent.mkdir(parents=True, exist_ok=True)
     notes = (
-        "Vast.ai launcher created instance before claim because instance_id is "
-        "the provider job id; tarball includes refreshed claim ledger"
+        "Vast.ai launcher real instance claim; tarball includes refreshed "
+        "claim ledger"
     )
+    if precreate_claim_id:
+        notes += f"; supersedes pre-provider claim {precreate_claim_id}"
     cmd = dispatch_claim_command(
         spec=DispatchClaimSpec(
             lane_id=args.label,
@@ -157,6 +199,7 @@ def claim_vastai_lane_dispatch(args, *, instance_id: int) -> int:
             instance_job_id=str(instance_id),
             agent="codex:vastai-launcher",
             predicted_eta_utc=predicted_eta(hours=2),
+            force=bool(precreate_claim_id),
             notes=notes,
         ),
         status="active_dispatching",
@@ -188,7 +231,7 @@ def _label_for_instance(instance_id: int) -> str | None:
 def close_vastai_lane_dispatch(
     *,
     lane_id: str | None,
-    instance_id: int,
+    instance_id: int | str,
     status: str,
     notes: str,
 ) -> None:
@@ -437,7 +480,7 @@ def wait_for_ssh(host: str, port: int, timeout_s: int = 90) -> bool:
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         rc, _, _ = run(
-            ["ssh"] + SSH_OPTS + ["-p", str(port), f"root@{host}", "echo ready"],
+            ["ssh", *SSH_OPTS, "-p", str(port), f"root@{host}", "echo ready"],
             timeout=20,
         )
         if rc == 0:
@@ -739,8 +782,14 @@ def build_tarball(anchor_dirs: list[str] | None = None) -> Path:
 
 def scp_tarball(tar_path: Path, host: str, port: int) -> None:
     """SCP tarball to /workspace on remote."""
-    cmd = ["scp"] + SSH_OPTS + ["-P", str(port), str(tar_path),
-                                f"root@{host}:/workspace/pact.tar.gz"]
+    cmd = [
+        "scp",
+        *SSH_OPTS,
+        "-P",
+        str(port),
+        str(tar_path),
+        f"root@{host}:/workspace/pact.tar.gz",
+    ]
     rc, out, err = run(cmd, timeout=600)
     if rc != 0:
         raise RuntimeError(f"scp failed: {err.strip()}")
@@ -748,19 +797,26 @@ def scp_tarball(tar_path: Path, host: str, port: int) -> None:
 
 def extract_remote(host: str, port: int) -> None:
     """Extract tarball into /workspace/pact on remote."""
-    cmd = ["ssh"] + SSH_OPTS + ["-p", str(port), f"root@{host}", (
-        "mkdir -p /workspace/pact && "
-        "tar -xzf /workspace/pact.tar.gz -C /workspace/pact && "
-        "rm /workspace/pact.tar.gz && "
-        "echo extracted"
-    )]
+    cmd = [
+        "ssh",
+        *SSH_OPTS,
+        "-p",
+        str(port),
+        f"root@{host}",
+        (
+            "mkdir -p /workspace/pact && "
+            "tar -xzf /workspace/pact.tar.gz -C /workspace/pact && "
+            "rm /workspace/pact.tar.gz && "
+            "echo extracted"
+        ),
+    ]
     rc, out, err = run(cmd, timeout=120)
     # Distinguish timeout (rc=-1, err=='TIMEOUT') from other failures so the
     # caller log line is actionable rather than "extract failed: TIMEOUT".
     if rc == -1 and err.strip() == "TIMEOUT":
         raise RuntimeError(
-            f"extract timed out after 120s (tarball may be huge or remote disk slow); "
-            f"manually verify /workspace/pact/ before retrying"
+            "extract timed out after 120s (tarball may be huge or remote disk slow); "
+            "manually verify /workspace/pact/ before retrying"
         )
     if rc != 0 or "extracted" not in out:
         raise RuntimeError(
@@ -771,13 +827,20 @@ def extract_remote(host: str, port: int) -> None:
 
 def lightweight_nvdec_probe(host: str, port: int) -> tuple[bool, str]:
     """Pre-DALI lightweight CUDA + nvidia-smi probe. Returns (ok, message)."""
-    cmd = ["ssh"] + SSH_OPTS + ["-p", str(port), f"root@{host}", (
-        "nvidia-smi --query-gpu=name,memory.free --format=csv,noheader 2>&1 | head -1; "
-        "echo '---'; "
-        "/opt/conda/bin/python -c "
-        "'import torch; print(\"cuda_available=\", torch.cuda.is_available()); "
-        "print(\"cuda_count=\", torch.cuda.device_count())' 2>&1"
-    )]
+    cmd = [
+        "ssh",
+        *SSH_OPTS,
+        "-p",
+        str(port),
+        f"root@{host}",
+        (
+            "nvidia-smi --query-gpu=name,memory.free --format=csv,noheader 2>&1 | head -1; "
+            "echo '---'; "
+            "/opt/conda/bin/python -c "
+            "'import torch; print(\"cuda_available=\", torch.cuda.is_available()); "
+            "print(\"cuda_count=\", torch.cuda.device_count())' 2>&1"
+        ),
+    ]
     rc, out, err = run(cmd, timeout=30)
     if rc != 0:
         return False, f"SSH failed: {err.strip()[:80]}"
@@ -853,11 +916,18 @@ def execute_lane_in_tmux(
     # both hung SSH because the parent shell stayed alive holding stdout.
     # The subshell-with-& pattern is the only reliable way to detach over
     # SSH without --use-tty trickery.
-    launch_cmd = ["ssh"] + SSH_OPTS + ["-p", str(port), f"root@{host}", (
-        "chmod +x /workspace/run_lane.sh && "
-        "( bash /workspace/run_lane.sh </dev/null >/dev/null 2>&1 & ) && "
-        "echo launched"
-    )]
+    launch_cmd = [
+        "ssh",
+        *SSH_OPTS,
+        "-p",
+        str(port),
+        f"root@{host}",
+        (
+            "chmod +x /workspace/run_lane.sh && "
+            "( bash /workspace/run_lane.sh </dev/null >/dev/null 2>&1 & ) && "
+            "echo launched"
+        ),
+    ]
     rc2, out, err2 = run(launch_cmd, timeout=30)
     if rc2 != 0 or "launched" not in out:
         sys.stderr.write(f"  exec: subshell-launch failed: rc={rc2} out={out[:80]} err={err2[:80]}\n")
@@ -872,10 +942,17 @@ def poll_heartbeat(
     deadline = time.time() + timeout_s
     last_age = None
     while time.time() < deadline:
-        cmd = ["ssh"] + SSH_OPTS + ["-p", str(port), f"root@{host}", (
-            "find /workspace/pact -name 'heartbeat.log' -printf '%T@\\n' 2>/dev/null "
-            "| sort -n | tail -1"
-        )]
+        cmd = [
+            "ssh",
+            *SSH_OPTS,
+            "-p",
+            str(port),
+            f"root@{host}",
+            (
+                "find /workspace/pact -name 'heartbeat.log' -printf '%T@\\n' 2>/dev/null "
+                "| sort -n | tail -1"
+            ),
+        ]
         rc, out, err = run(cmd, timeout=20)
         if rc == 0 and out.strip():
             try:
@@ -908,7 +985,11 @@ def register_in_tracker(
     # phase2/destroy commands (which never call this function).
     from tac.vastai_tracker import (
         VastaiTrackerCorruptError,
+    )
+    from tac.vastai_tracker import (
         list_instances as _list_instances,
+    )
+    from tac.vastai_tracker import (
         register_instance as _register_instance,
     )
 
@@ -992,18 +1073,60 @@ def cmd_phase1(args) -> int:
         print(f"FATAL: {e}", file=sys.stderr)
         return 2
     print(f"  offer_id={offer_id}")
-    print(f"=== phase1 Stage 1: Create instance (disk={min_disk_gb}GB) ===")
-    instance_id = create_instance(offer_id, args.label, disk_gb=min_disk_gb)
-    print("=== phase1 Stage 2: Claim lane dispatch ===")
-    claim_rc = claim_vastai_lane_dispatch(args, instance_id=instance_id)
+    print("=== phase1 Stage 1: Claim lane before paid Vast instance creation ===")
+    precreate_claim_id = _vastai_precreate_claim_id(args)
+    preclaim_rc = claim_vastai_lane_precreate(
+        args,
+        precreate_claim_id=precreate_claim_id,
+    )
+    if preclaim_rc != 0:
+        print(
+            f"FATAL: pre-provider dispatch claim refused for lane={args.label}; "
+            "aborting before Vast.ai instance creation",
+            file=sys.stderr,
+        )
+        return preclaim_rc
+
+    print(f"=== phase1 Stage 2: Create instance (disk={min_disk_gb}GB) ===")
+    try:
+        instance_id = create_instance(offer_id, args.label, disk_gb=min_disk_gb)
+    except Exception as exc:
+        close_vastai_lane_dispatch(
+            lane_id=args.label,
+            instance_id=precreate_claim_id,
+            status="failed_vastai_create_instance",
+            notes=f"Vast.ai create_instance failed before provider id existed: {type(exc).__name__}: {exc}",
+        )
+        raise
+    print("=== phase1 Stage 3: Claim real Vast instance id ===")
+    claim_rc = claim_vastai_lane_dispatch(
+        args,
+        instance_id=instance_id,
+        precreate_claim_id=precreate_claim_id,
+    )
     if claim_rc != 0:
         print(
             f"FATAL: dispatch claim refused for lane={args.label} instance={instance_id}; "
             "destroying the newly created instance before any GPU work",
             file=sys.stderr,
         )
+        close_vastai_lane_dispatch(
+            lane_id=args.label,
+            instance_id=precreate_claim_id,
+            status="failed_real_instance_claim",
+            notes=(
+                "Pre-provider claim closed because real Vast instance claim "
+                f"failed after instance creation: instance={instance_id}"
+            ),
+        )
         destroy_instance(instance_id, recover=False, lane_label=args.label)
         return claim_rc
+    close_vastai_lane_dispatch(
+        lane_id=args.label,
+        instance_id=precreate_claim_id,
+        status="stale_superseded_vastai_precreate",
+        notes=f"Superseded by real Vast.ai instance claim {instance_id}",
+    )
     try:
         register_in_tracker(instance_id, args.label, {
             "estimated_cost_usd": args.estimated_cost,
@@ -1024,11 +1147,11 @@ def cmd_phase1(args) -> int:
         )
         destroy_instance(instance_id, recover=False, lane_label=args.label)
         raise
-    print(f"\n✓ phase1 SUCCESS")
+    print("\n✓ phase1 SUCCESS")
     print(f"INSTANCE_ID={instance_id}")
     print(f"  label={args.label}")
-    print(f"\nNext step (run phase2 after waiting ~3 min for OS boot):")
-    print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2 \\")
+    print("\nNext step (run phase2 after waiting ~3 min for OS boot):")
+    print("  .venv/bin/python scripts/launch_lane_on_vastai.py phase2 \\")
     print(f"    --instance-id {instance_id} \\")
     print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
     _print_forwarded_env_args(getattr(args, "env", []))
@@ -1045,20 +1168,20 @@ def cmd_phase2_wait(args) -> int:
     instance_id = int(args.instance_id)
     print("=== phase2-wait Stage 1: Wait actual_status=running (max 240s) ===")
     if not wait_for_vastai_ready(instance_id, timeout_s=240):
-        print(f"\n⚠ phase2-wait NOT READY (actual_status=None still). Instance kept.", file=sys.stderr)
-        print(f"  Re-run phase2-wait in 1-2 min OR phase2-deploy if you've manually verified SSH.", file=sys.stderr)
+        print("\n⚠ phase2-wait NOT READY (actual_status=None still). Instance kept.", file=sys.stderr)
+        print("  Re-run phase2-wait in 1-2 min OR phase2-deploy if you've manually verified SSH.", file=sys.stderr)
         return 1
     host, port = get_ssh_details(instance_id)
     print(f"  ssh=root@{host}:{port}")
     print("=== phase2-wait Stage 2: Wait for SSH (max 240s post-status) ===")
     if not wait_for_ssh(host, port, timeout_s=240):
-        print(f"\n⚠ phase2-wait NOT READY (sshd still not listening). Instance kept.", file=sys.stderr)
-        print(f"  Re-run phase2-wait, OR if you can manually SSH, run phase2-deploy.", file=sys.stderr)
+        print("\n⚠ phase2-wait NOT READY (sshd still not listening). Instance kept.", file=sys.stderr)
+        print("  Re-run phase2-wait, OR if you can manually SSH, run phase2-deploy.", file=sys.stderr)
         return 1
     print("\n✓ phase2-wait SUCCESS — instance ready for phase2-deploy")
     print(f"  ssh=root@{host}:{port}")
-    print(f"\nNext step:")
-    print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-deploy \\")
+    print("\nNext step:")
+    print("  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-deploy \\")
     print(f"    --instance-id {instance_id} \\")
     print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
     _print_forwarded_env_args(getattr(args, "env", []))
@@ -1115,9 +1238,9 @@ def cmd_phase2_scp(args) -> int:
         return 1
     finally:
         tar.unlink(missing_ok=True)
-    print(f"\n✓ phase2-scp SUCCESS — tarball at /workspace/pact.tar.gz on remote")
-    print(f"\nNext step:")
-    print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-extract \\")
+    print("\n✓ phase2-scp SUCCESS — tarball at /workspace/pact.tar.gz on remote")
+    print("\nNext step:")
+    print("  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-extract \\")
     print(f"    --instance-id {instance_id} \\")
     print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
     _print_forwarded_env_args(getattr(args, "env", []))
@@ -1162,9 +1285,9 @@ def cmd_phase2_extract(args) -> int:
                 lane_label=lane_label or args.lane_script,
             )
         return 1
-    print(f"\n✓ phase2-extract SUCCESS")
-    print(f"\nNext step:")
-    print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-launch \\")
+    print("\n✓ phase2-extract SUCCESS")
+    print("\nNext step:")
+    print("  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-launch \\")
     print(f"    --instance-id {instance_id} \\")
     print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
     _print_forwarded_env_args(getattr(args, "env", []))
@@ -1283,9 +1406,9 @@ def cmd_phase2_launch(args) -> int:
         print("=== phase2-launch Stage 2: Post-launch outcome poll (~240s) ===")
         outcome = _poll_setup_log_for_outcome(host, port, instance_id, timeout_seconds=240)
         if outcome == "NVDEC_BAD":
-            print(f"FATAL: setup_full.sh hit NVDEC_BAD on this host — auto-destroying", file=sys.stderr)
-            print(f"  Instance had no NVDEC despite passing offer filter.", file=sys.stderr)
-            print(f"  Per memory feedback_vastai_nvdec_host_variation: same image, different host = different NVDEC.", file=sys.stderr)
+            print("FATAL: setup_full.sh hit NVDEC_BAD on this host — auto-destroying", file=sys.stderr)
+            print("  Instance had no NVDEC despite passing offer filter.", file=sys.stderr)
+            print("  Per memory feedback_vastai_nvdec_host_variation: same image, different host = different NVDEC.", file=sys.stderr)
             close_vastai_lane_dispatch(
                 lane_id=lane_label,
                 instance_id=instance_id,
@@ -1297,12 +1420,12 @@ def cmd_phase2_launch(args) -> int:
                 recover=False,
                 lane_label=lane_label or args.lane_script,
             )
-            print(f"\nRetry: re-run phase1 + phase2 to get a fresh host.", file=sys.stderr)
+            print("\nRetry: re-run phase1 + phase2 to get a fresh host.", file=sys.stderr)
             return 2
         elif outcome == "LANE_CRASHED":
-            print(f"FATAL: lane script crashed early — python process gone, run.log stale.", file=sys.stderr)
-            print(f"  Likely a code bug surfaced at training startup (e.g., UnboundLocalError, missing dep).", file=sys.stderr)
-            print(f"  Recovering artifacts before destroy...", file=sys.stderr)
+            print("FATAL: lane script crashed early — python process gone, run.log stale.", file=sys.stderr)
+            print("  Likely a code bug surfaced at training startup (e.g., UnboundLocalError, missing dep).", file=sys.stderr)
+            print("  Recovering artifacts before destroy...", file=sys.stderr)
             close_vastai_lane_dispatch(
                 lane_id=lane_label,
                 instance_id=instance_id,
@@ -1318,16 +1441,16 @@ def cmd_phase2_launch(args) -> int:
             )
             return 3
         elif outcome == "SETUP_COMPLETE":
-            print(f"  outcome=SETUP_COMPLETE (setup_full.sh done, lane process verified alive)")
+            print("  outcome=SETUP_COMPLETE (setup_full.sh done, lane process verified alive)")
         elif outcome == "SSH_FAILED":
-            print(f"  WARNING: SSH probe failed during post-launch verify; lane may still be running. Verify manually.")
+            print("  WARNING: SSH probe failed during post-launch verify; lane may still be running. Verify manually.")
         else:
-            print(f"  outcome=RUNNING (still in setup_full.sh; verify in 5-15min)")
+            print("  outcome=RUNNING (still in setup_full.sh; verify in 5-15min)")
 
-    print(f"\n✓ phase2-launch SUCCESS")
+    print("\n✓ phase2-launch SUCCESS")
     print(f"  instance_id={instance_id}  ssh=root@{host}:{port}")
-    print(f"\nVerify heartbeat in 5 min:")
-    print(f"  .venv/bin/python scripts/verify_vast_instances.py")
+    print("\nVerify heartbeat in 5 min:")
+    print("  .venv/bin/python scripts/verify_vast_instances.py")
     return 0
 
 

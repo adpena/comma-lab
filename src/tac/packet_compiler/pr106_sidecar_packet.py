@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import io
 import math
+import string
 import struct
 import zipfile
 from dataclasses import asdict, dataclass, replace
@@ -138,6 +139,19 @@ class PR106SidecarRecodeCandidate:
 
 def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def canonical_expected_sha256(expected_sha256: str | None) -> tuple[str | None, bool | None]:
+    """Return normalized expected SHA-256 text plus a well-formed flag."""
+
+    if expected_sha256 is None:
+        return None, None
+    canonical = expected_sha256.strip().lower()
+    well_formed = (
+        len(canonical) == 64
+        and all(char in string.hexdigits.lower() for char in canonical)
+    )
+    return canonical, well_formed
 
 
 def _sidecar_charged_bytes(packet: PR106SidecarPacket) -> int:
@@ -763,6 +777,15 @@ def read_single_stored_member_archive(
     single-member packet names and preserve the original name on re-emit.
     """
 
+    if (
+        expected_member_name is not None
+        and expected_member_name not in PR106_ALLOWED_SINGLE_MEMBER_NAMES
+    ):
+        raise ValueError(
+            "unsupported expected PR106 ZIP member "
+            f"{expected_member_name!r}; expected one of {PR106_ALLOWED_SINGLE_MEMBER_NAMES!r}"
+        )
+
     with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as zf:
         infos = zf.infolist()
         if len(infos) != 1:
@@ -1211,6 +1234,9 @@ def prove_pr106_sidecar_packet_ir_identity(
     archive_path = Path(archive_path)
     archive_bytes = archive_path.read_bytes()
     archive_sha = sha256_hex(archive_bytes)
+    expected_archive_sha, expected_archive_sha_well_formed = canonical_expected_sha256(
+        expected_archive_sha256
+    )
     member = read_single_stored_member_archive(
         archive_bytes,
         expected_member_name=expected_member_name,
@@ -1226,7 +1252,13 @@ def prove_pr106_sidecar_packet_ir_identity(
         raise TypeError("packet_ir_consumed_byte_proof must be a dict")
 
     blockers: list[str] = []
-    if expected_archive_sha256 is not None and archive_sha != expected_archive_sha256:
+    if expected_archive_sha_well_formed is False:
+        blockers.append("expected_archive_sha256_malformed")
+    if (
+        expected_archive_sha_well_formed is True
+        and expected_archive_sha is not None
+        and archive_sha != expected_archive_sha
+    ):
         blockers.append("expected_archive_sha256_mismatch")
     if emitted_payload != member.payload:
         blockers.append("packet_ir_payload_parse_emit_not_identity")
@@ -1250,15 +1282,20 @@ def prove_pr106_sidecar_packet_ir_identity(
             "sha256": archive_sha,
             "zip_comment_bytes": len(member.archive_comment),
             "zip_comment_sha256": sha256_hex(member.archive_comment),
-            "expected_sha256": expected_archive_sha256,
+            "expected_sha256": expected_archive_sha,
+            "expected_sha256_well_formed": expected_archive_sha_well_formed,
             "expected_sha256_matches": (
                 None
-                if expected_archive_sha256 is None
-                else archive_sha == expected_archive_sha256
+                if expected_archive_sha is None or expected_archive_sha_well_formed is False
+                else archive_sha == expected_archive_sha
             ),
         },
         "member": {
             "name": member.name,
+            "expected_name": expected_member_name,
+            "expected_name_matches": (
+                None if expected_member_name is None else member.name == expected_member_name
+            ),
             "payload_bytes": len(member.payload),
             "payload_sha256": sha256_hex(member.payload),
         },
@@ -1273,8 +1310,33 @@ def prove_pr106_sidecar_packet_ir_identity(
             "sha256": emitted_archive_sha,
             "byte_identical_to_source_archive": emitted_archive == archive_bytes,
         },
+        "byte_exact_identity": {
+            "source_archive_bytes": len(archive_bytes),
+            "source_archive_sha256": archive_sha,
+            "source_member_name": member.name,
+            "source_member_payload_bytes": len(member.payload),
+            "source_member_payload_sha256": sha256_hex(member.payload),
+            "emitted_payload_bytes": len(emitted_payload),
+            "emitted_payload_sha256": sha256_hex(emitted_payload),
+            "emitted_archive_bytes": len(emitted_archive),
+            "emitted_archive_sha256": emitted_archive_sha,
+            "payload_byte_identical": emitted_payload == member.payload,
+            "archive_byte_identical": emitted_archive == archive_bytes,
+            "expected_archive_sha256": expected_archive_sha,
+            "expected_archive_sha256_matches": (
+                None
+                if expected_archive_sha is None or expected_archive_sha_well_formed is False
+                else archive_sha == expected_archive_sha
+            ),
+            "expected_member_name": expected_member_name,
+            "expected_member_name_matches": (
+                None if expected_member_name is None else member.name == expected_member_name
+            ),
+        },
         "packet_ir_identity_passed": identity_passed,
         "blockers": blockers,
+        "proof_not_score": True,
+        "evidence_axis": "packet-ir-parser-local-no-score",
         "runtime_consumption_claim": False,
         "full_frame_inflate_output_parity_claim": False,
         "contest_axis_claim": False,
@@ -1506,7 +1568,8 @@ def pr106_sidecar_mutation_manifest(
 
     source_payload = emit_pr106_sidecar_packet(source_packet)
     mutated_payload = emit_pr106_sidecar_packet(mutated_packet)
-    proof = pr106_sidecar_consumed_byte_proof(mutated_packet)
+    source_proof = pr106_sidecar_consumed_byte_proof(source_packet)
+    mutated_proof = pr106_sidecar_consumed_byte_proof(mutated_packet)
     return {
         "schema": "pr106_sidecar_runtime_decode_mutation_manifest_v1",
         "proof_scope": "packet_ir_valid_mutation_for_runtime_decode_smoke_not_score",
@@ -1524,10 +1587,32 @@ def pr106_sidecar_mutation_manifest(
         == sha256_hex(mutated_packet.pr106_bytes),
         "sidecar_payload_sha256_changed": sha256_hex(source_packet.sidecar_payload)
         != sha256_hex(mutated_packet.sidecar_payload),
-        "mutated_packet_ir_consumed_byte_proof": proof,
+        "source_packet_ir_consumed_byte_proof": source_proof,
+        "mutated_packet_ir_consumed_byte_proof": mutated_proof,
+        "parser_consumed_byte_accounting_passed": (
+            source_proof.get("all_payload_bytes_accounted") is True
+            and mutated_proof.get("all_payload_bytes_accounted") is True
+        ),
+        "byte_exact_identity": {
+            "inner_pr106_payload_sha256_unchanged": sha256_hex(source_packet.pr106_bytes)
+            == sha256_hex(mutated_packet.pr106_bytes),
+            "source_payload_sha256": sha256_hex(source_payload),
+            "mutated_payload_sha256": sha256_hex(mutated_payload),
+            "payload_sha256_changed": sha256_hex(source_payload)
+            != sha256_hex(mutated_payload),
+            "source_packet_accounted_payload_bytes": source_proof.get(
+                "accounted_payload_bytes"
+            ),
+            "mutated_packet_accounted_payload_bytes": mutated_proof.get(
+                "accounted_payload_bytes"
+            ),
+        },
         "runtime_sidecar_decode_consumption_claim": False,
         "full_frame_inflate_output_parity_claim": False,
+        "contest_axis_claim": False,
         "score_claim": False,
+        "proof_not_score": True,
+        "evidence_axis": "packet-ir-mutation-local-no-score",
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "required_next_proof": (

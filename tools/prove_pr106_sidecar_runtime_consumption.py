@@ -46,6 +46,17 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--expected-archive-sha256",
+        help="Optional expected archive SHA-256. A mismatch fails closed.",
+    )
+    parser.add_argument(
+        "--expected-runtime-source-tree-sha256",
+        help=(
+            "Optional expected SHA-256 over inflate.py plus recognized src/*.py "
+            "runtime files. A mismatch fails closed."
+        ),
+    )
+    parser.add_argument(
         "--output-json",
         type=Path,
         help="Optional path for the proof manifest.",
@@ -59,13 +70,15 @@ def main(argv: list[str] | None = None) -> int:
         archive_path=args.archive,
         runtime_dir=args.runtime_dir,
         expected_member_name=args.member_name,
+        expected_archive_sha256=args.expected_archive_sha256,
+        expected_runtime_source_tree_sha256=args.expected_runtime_source_tree_sha256,
     )
     text = dumps_runtime_consumption_manifest(manifest)
     if args.output_json is not None:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(json_text(manifest), encoding="utf-8")
     sys.stdout.write(text)
-    if not manifest.get("runtime_sidecar_decode_consumption_claim"):
+    if manifest.get("blockers") or not manifest.get("runtime_sidecar_decode_consumption_claim"):
         return 2
     return 0
 

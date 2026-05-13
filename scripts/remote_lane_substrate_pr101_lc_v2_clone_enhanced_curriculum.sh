@@ -1,5 +1,5 @@
 #!/bin/bash
-# Remote lane script: PR95++ enhanced-curriculum first-anchor dispatch.
+# Remote lane script: PR95++ enhanced-curriculum smoke-anchor dispatch.
 #
 # Trainer: experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py
 # Lane: lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513
@@ -22,6 +22,7 @@ PR95PLUS_UPSTREAM_DIR="${PR95PLUS_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 PR95PLUS_DEVICE="${PR95PLUS_DEVICE:-cuda}"
 PR95PLUS_CURRICULUM="${PR95PLUS_CURRICULUM:-pr95_enhanced}"
 PR95PLUS_EPOCHS_MULTIPLIER="${PR95PLUS_EPOCHS_MULTIPLIER:-1.0}"
+PR95PLUS_SMOKE="${PR95PLUS_SMOKE:-0}"
 PR95PLUS_SEED="${PR95PLUS_SEED:-0}"
 PR95PLUS_GPU="${PR95PLUS_GPU:-${MODAL_GPU:-A100}}"
 PR95PLUS_CODEBOOK_PATH="${PR95PLUS_CODEBOOK_PATH:-}"
@@ -152,19 +153,26 @@ PY
 HEARTBEAT_PID=$!
 trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
 
-log "stage_4_trainer_invoke_begin curriculum=$PR95PLUS_CURRICULUM multiplier=$PR95PLUS_EPOCHS_MULTIPLIER device=$PR95PLUS_DEVICE"
+TRAIN_ARGS=(
+    experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py
+    --video-path "$PR95PLUS_VIDEO_PATH"
+    --output-dir "$OUTPUT_DIR"
+    --upstream-dir "$PR95PLUS_UPSTREAM_DIR"
+    --device "$PR95PLUS_DEVICE"
+    --curriculum "$PR95PLUS_CURRICULUM"
+    --epochs-multiplier "$PR95PLUS_EPOCHS_MULTIPLIER"
+    --batch-size "$PR95PLUS_BATCH_SIZE"
+    --seed "$PR95PLUS_SEED"
+    --gpu "$PR95PLUS_GPU"
+    --codebook-path "$PR95PLUS_CODEBOOK_PATH"
+)
+if [ "$PR95PLUS_SMOKE" = "1" ] || [ "$PR95PLUS_SMOKE" = "true" ] || [ "$PR95PLUS_SMOKE" = "yes" ]; then
+    TRAIN_ARGS+=(--smoke)
+fi
+
+log "stage_4_trainer_invoke_begin curriculum=$PR95PLUS_CURRICULUM multiplier=$PR95PLUS_EPOCHS_MULTIPLIER device=$PR95PLUS_DEVICE smoke=$PR95PLUS_SMOKE"
 set +e
-"$PYBIN" experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py \
-    --video-path "$PR95PLUS_VIDEO_PATH" \
-    --output-dir "$OUTPUT_DIR" \
-    --upstream-dir "$PR95PLUS_UPSTREAM_DIR" \
-    --device "$PR95PLUS_DEVICE" \
-    --curriculum "$PR95PLUS_CURRICULUM" \
-    --epochs-multiplier "$PR95PLUS_EPOCHS_MULTIPLIER" \
-    --batch-size "$PR95PLUS_BATCH_SIZE" \
-    --seed "$PR95PLUS_SEED" \
-    --gpu "$PR95PLUS_GPU" \
-    --codebook-path "$PR95PLUS_CODEBOOK_PATH" \
+"$PYBIN" "${TRAIN_ARGS[@]}" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e

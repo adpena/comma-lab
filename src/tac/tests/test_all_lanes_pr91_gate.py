@@ -344,7 +344,7 @@ def test_run_lane_respects_tools_without_verbose_flag(monkeypatch) -> None:
         stdout = "ok"
         stderr = ""
 
-    def fake_run(args, *, capture_output: bool, text: bool):  # noqa: ANN001
+    def fake_run(args, *, capture_output: bool, text: bool):
         calls.append(list(args))
         return Result()
 
@@ -374,7 +374,7 @@ def test_run_lane_passes_verbose_by_default(monkeypatch) -> None:
         stdout = "ok"
         stderr = ""
 
-    def fake_run(args, *, capture_output: bool, text: bool):  # noqa: ANN001
+    def fake_run(args, *, capture_output: bool, text: bool):
         calls.append(list(args))
         return Result()
 

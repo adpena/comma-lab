@@ -40,7 +40,6 @@ from tac.continual_learning import (
     save_posterior,
 )
 
-
 # ── Fixture helpers ────────────────────────────────────────────────────────
 
 
@@ -223,15 +222,14 @@ def test_custody_axis_mismatch_cpu_tag_with_cuda_axis_refused():
     assert "axis mismatch" in update.refusal_reason
 
 
-def test_custody_short_form_contest_cpu_requires_gha_substrate():
-    """The short-form `[contest-CPU]` no longer accepts arbitrary Linux x86_64
-    hosts — must be the GHA substrate (codex round-2 HIGH 2)."""
+def test_custody_short_form_contest_cpu_requires_approved_linux_x86_64_substrate():
+    """The short-form `[contest-CPU]` accepts approved Linux x86_64 hosts only."""
     posterior = ContinualLearningPosterior()
     # Short-form tag on a generic Linux box — refused.
     result = _make_authoritative_result(
         tag="[contest-CPU]",
         axis="cpu",
-        substrate="linux_x86_64_random_vm",  # NOT GHA
+        substrate="linux_x86_64_random_vm",  # not an approved contest-CPU substrate
     )
     update = posterior_update(posterior, result)
     assert update.accepted is False
@@ -312,6 +310,7 @@ def test_posterior_update_locked_serializes_concurrent_writes(tmp_path):
     both grab the lock sequentially — but the test still validates
     reload-inside-lock semantics."""
     import threading
+
     from tac.continual_learning import (
         ContestResult,
         load_posterior,
@@ -552,7 +551,7 @@ def test_contest_result_from_auth_eval_payload_cpu_gha_accepted_shape():
     assert result.validate_custody_verdict().accepted is True
 
 
-def test_contest_result_from_auth_eval_payload_modal_cpu_refused_shape():
+def test_contest_result_from_auth_eval_payload_modal_cpu_accepted_shape():
     payload = _auth_eval_payload(
         axis="contest_cpu",
         device="cpu",
@@ -570,8 +569,8 @@ def test_contest_result_from_auth_eval_payload_modal_cpu_refused_shape():
     verdict = result.validate_custody_verdict()
     assert result.hardware_substrate == "linux_x86_64_modal_cpu"
     assert result.evidence_tag == "[contest-CPU]"
-    assert verdict.accepted is False
-    assert verdict.refused_class == "cpu_tag_non_gha_linux"
+    assert verdict.accepted is True
+    assert verdict.refused_class is None
 
 
 def test_contest_result_from_auth_eval_payload_accepts_wrapper_expected_archive_fields():
@@ -824,11 +823,11 @@ def test_custody_verdict_refused_class_macos_calibrated_tag():
 
 
 def test_custody_verdict_refused_class_cpu_tag_non_gha_linux():
-    """[contest-CPU] with non-GHA linux substrate → refused_class=cpu_tag_non_gha_linux."""
+    """[contest-CPU] with unknown Linux CPU substrate keeps the legacy refused class."""
     result = _make_authoritative_result(
         axis="cpu",
         tag="[contest-CPU]",
-        substrate="linux_x86_64_modal_cpu",
+        substrate="linux_x86_64_random_vm",
     )
     verdict = result.validate_custody_verdict()
     assert verdict.accepted is False
@@ -874,6 +873,7 @@ def test_custody_verdict_refused_class_tag_axis_mismatch_cuda_tag_cpu_axis():
 def test_custody_verdict_is_frozen_dataclass():
     """CustodyVerdict is frozen so the verdict cannot be mutated post-validation."""
     import dataclasses
+
     from tac.continual_learning import CustodyVerdict
 
     v = CustodyVerdict(accepted=True, reason="", refused_class=None)
@@ -900,8 +900,8 @@ def test_custody_back_compat_existing_anchors_not_retroactively_revalidated():
     """
     posterior = ContinualLearningPosterior()
     # Seed the history with an entry that would FAIL today's stricter validator
-    # (e.g., short-form [contest-CPU] with a non-GHA linux substrate, which
-    # now refused_class=cpu_tag_non_gha_linux).
+    # (e.g., short-form [contest-CPU] with an unknown Linux CPU substrate, which
+    # gets refused_class=cpu_tag_non_gha_linux).
     posterior.accepted_anchor_history.append({
         "axis": "cpu",
         "architecture_class": "legacy_lane",
@@ -909,7 +909,7 @@ def test_custody_back_compat_existing_anchors_not_retroactively_revalidated():
         "archive_sha256": "legacy_" + "0" * 57,
         "archive_bytes": 200_000,
         "score_value": 0.19,
-        "hardware_substrate": "linux_x86_64_modal_cpu",  # non-GHA — now refused
+        "hardware_substrate": "linux_x86_64_random_vm",
         "observed_at_utc": "2026-04-01T00:00:00+00:00",
         "track_updates": [],
         "source_rho_estimate": None,
@@ -920,14 +920,14 @@ def test_custody_back_compat_existing_anchors_not_retroactively_revalidated():
     assert posterior.accepted_anchor_count == 1
     assert len(posterior.accepted_anchor_history) == 1
     assert posterior.accepted_anchor_history[0]["hardware_substrate"] == (
-        "linux_x86_64_modal_cpu"
+        "linux_x86_64_random_vm"
     )
 
     # But a NEW write with the same shape IS refused going forward.
     new_result = _make_authoritative_result(
         axis="cpu",
         tag="[contest-CPU]",
-        substrate="linux_x86_64_modal_cpu",  # would have been accepted pre-fix
+        substrate="linux_x86_64_random_vm",
         sha="modern_" + "1" * 57,
     )
     update = posterior_update(posterior, new_result)
@@ -942,6 +942,7 @@ def _multiproc_worker_distinct(args):
     """Worker for true cross-process lock test — must be top-level (picklable)."""
     posterior_path_str, lock_path_str, sha_seed = args
     from pathlib import Path as _P
+
     from tac.continual_learning import (
         ContestResult,
         posterior_update_locked,
@@ -968,6 +969,7 @@ def _multiproc_worker_same_anchor(args):
     """Worker that always sends the SAME anchor — idempotence test across procs."""
     posterior_path_str, lock_path_str, idx = args
     from pathlib import Path as _P
+
     from tac.continual_learning import (
         ContestResult,
         posterior_update_locked,
@@ -1069,6 +1071,7 @@ def test_save_posterior_no_fixed_tmp_path_collision(tmp_path):
     by checking the implementation has a uuid call at the tmp construction.
     """
     import inspect
+
     from tac.continual_learning import save_posterior as _save
 
     src = inspect.getsource(_save)

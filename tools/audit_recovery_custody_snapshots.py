@@ -37,6 +37,11 @@ from tac.repo_io import json_text, read_json, repo_relative  # noqa: E402
 
 PYC_RECOVERY_ROOT = ".omx/state/orphan_pyc_recovery_20260505"
 SIGNAL_LOSS_ROOT = ".omx/state/signal_loss_audit_20260505T1439Z"
+ORPHAN_RECOVERY_MIRROR_ROOT = "reverse_engineering/orphan_pyc_recovery_20260505_codex"
+PUBLIC_RUNTIME_RECOVERY_MIRROR_ROOT = (
+    "reverse_engineering/public_frontier/recovered_runtime/"
+    "experiments_results_20260505_pyc_recovery"
+)
 RESOLVED_DISPOSITIONS_MANIFEST = (
     ".omx/research/recovery_custody_resolved_dispositions_20260506_codex.json"
 )
@@ -174,17 +179,90 @@ def _tracked_paths(repo_root: Path) -> set[str]:
         ["git", "ls-files", "-z"],
         cwd=repo_root,
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return {item for item in proc.stdout.decode("utf-8").split("\0") if item}
+
+
+def _recovery_spec_path(relpath: str) -> str:
+    return str(Path(relpath).with_suffix(".recovery_spec.json")).replace("\\", "/")
+
+
+def _pyc_recovery_mirror_candidates(orphan_rel: str) -> list[str]:
+    relpath = orphan_rel.replace("\\", "/").lstrip("/")
+    candidates = [f"{ORPHAN_RECOVERY_MIRROR_ROOT}/{relpath}"]
+    if relpath.startswith("experiments/results/"):
+        candidates.append(
+            f"{PUBLIC_RUNTIME_RECOVERY_MIRROR_ROOT}/"
+            f"{relpath.removeprefix('experiments/results/')}"
+        )
+    results_marker = "/results/"
+    if relpath.startswith(".omx/state/") and results_marker in relpath:
+        candidates.append(
+            f"{PUBLIC_RUNTIME_RECOVERY_MIRROR_ROOT}/"
+            f"{relpath.split(results_marker, 1)[1]}"
+        )
+    return candidates
+
+
+def _tracked_file_exists(repo_root: Path, tracked_paths: set[str], relpath: str) -> bool:
+    normalized = relpath.replace("\\", "/").lstrip("/")
+    return normalized in tracked_paths and (repo_root / normalized).is_file()
+
+
+def _pyc_recovery_evidence(
+    row: dict[str, Any],
+    *,
+    repo_root: Path,
+    tracked_paths: set[str],
+) -> dict[str, Any]:
+    orphan_rel = str(row.get("orphan_rel") or "")
+    pyc_path = str(row.get("pyc_path") or "")
+    original_pyc_present = bool(pyc_path and Path(pyc_path).is_file())
+    current_tracked_source = bool(
+        orphan_rel and _tracked_file_exists(repo_root, tracked_paths, orphan_rel)
+    )
+    mirror_sources = [
+        candidate
+        for candidate in _pyc_recovery_mirror_candidates(orphan_rel)
+        if _tracked_file_exists(repo_root, tracked_paths, candidate)
+    ]
+    mirror_specs = [
+        _recovery_spec_path(candidate)
+        for candidate in _pyc_recovery_mirror_candidates(orphan_rel)
+        if _tracked_file_exists(repo_root, tracked_paths, _recovery_spec_path(candidate))
+    ]
+    source_present = current_tracked_source or bool(mirror_sources)
+    spec_present = bool(mirror_specs)
+    if original_pyc_present:
+        durable = True
+        evidence_class = "original_pyc_present"
+    elif row.get("stub_written") is True:
+        durable = source_present and spec_present
+        evidence_class = "stub_source_and_spec" if durable else "stub_missing_source_or_spec"
+    elif row.get("ast_parse_ok") is True or row.get("decompiled_ok") is True:
+        durable = source_present
+        evidence_class = "tracked_rehydrated_source" if durable else "ast_without_tracked_source"
+    else:
+        durable = source_present and spec_present
+        evidence_class = "source_and_spec" if durable else "missing_recovery_evidence"
+    return {
+        "orphan_rel": orphan_rel,
+        "original_pyc_present": original_pyc_present,
+        "current_tracked_source": current_tracked_source,
+        "mirror_sources": mirror_sources,
+        "mirror_specs": mirror_specs,
+        "durable": durable,
+        "evidence_class": evidence_class,
+    }
 
 
 def audit_recovery_custody_snapshots(
     repo_root: Path,
     *,
-    config: RecoveryCustodyConfig = RecoveryCustodyConfig(),
+    config: RecoveryCustodyConfig | None = None,
 ) -> AuditReport:
+    config = config or RecoveryCustodyConfig()
     blockers: list[str] = []
     pyc_root = repo_root / config.pyc_recovery_root
     signal_root = repo_root / config.signal_loss_root
@@ -235,12 +313,21 @@ def audit_recovery_custody_snapshots(
         except (OSError, ValueError) as exc:
             blockers.append(f"{config.pyc_recovery_root}/recovery_results.json: {exc}")
         if pyc_rows:
+            evidence_rows = [
+                _pyc_recovery_evidence(row, repo_root=repo_root, tracked_paths=tracked_paths)
+                for row in pyc_rows
+            ]
             stub_count = sum(1 for row in pyc_rows if row.get("stub_written") is True)
             ast_ok_count = sum(1 for row in pyc_rows if row.get("ast_parse_ok") is True)
             full_count = sum(1 for row in pyc_rows if row.get("decompiled_ok") is True)
-            pyc_present_count = sum(
-                1 for row in pyc_rows if row.get("pyc_path") and Path(str(row["pyc_path"])).exists()
+            pyc_present_count = sum(1 for row in evidence_rows if row["original_pyc_present"])
+            durable_evidence_count = sum(1 for row in evidence_rows if row["durable"])
+            missing_pyc_with_durable_evidence_count = sum(
+                1
+                for row in evidence_rows
+                if not row["original_pyc_present"] and row["durable"]
             )
+            missing_durable_evidence = [row for row in evidence_rows if not row["durable"]]
             source_present_count = sum(
                 1
                 for row in pyc_rows
@@ -249,6 +336,10 @@ def audit_recovery_custody_snapshots(
             spec_present_count = sum(
                 1 for row in pyc_rows if row.get("spec_path") and Path(str(row["spec_path"])).exists()
             )
+            tracked_source_present_count = sum(1 for row in evidence_rows if row["current_tracked_source"])
+            mirror_source_present_count = sum(1 for row in evidence_rows if row["mirror_sources"])
+            mirror_spec_present_count = sum(1 for row in evidence_rows if row["mirror_specs"])
+            evidence_classes = Counter(str(row["evidence_class"]) for row in evidence_rows)
             pyc_summary.update(
                 {
                     "recovery_result_count": len(pyc_rows),
@@ -256,8 +347,19 @@ def audit_recovery_custody_snapshots(
                     "ast_parse_ok_count": ast_ok_count,
                     "full_decompile_count": full_count,
                     "pyc_present_count": pyc_present_count,
+                    "durable_recovery_evidence_count": durable_evidence_count,
+                    "missing_pyc_with_durable_recovery_evidence_count": (
+                        missing_pyc_with_durable_evidence_count
+                    ),
                     "source_present_count": source_present_count,
                     "spec_present_count": spec_present_count,
+                    "tracked_source_present_count": tracked_source_present_count,
+                    "mirror_source_present_count": mirror_source_present_count,
+                    "mirror_spec_present_count": mirror_spec_present_count,
+                    "evidence_class_counts": dict(evidence_classes),
+                    "missing_durable_recovery_evidence_paths": [
+                        str(row["orphan_rel"]) for row in missing_durable_evidence
+                    ],
                     "top_level_roots": _counter(
                         [
                             {
@@ -281,9 +383,10 @@ def audit_recovery_custody_snapshots(
                 blockers.append(
                     f"pyc full-decompile count drifted: {full_count} != {EXPECTED_PYC_FULL_DECOMPILE}"
                 )
-            if pyc_present_count != len(pyc_rows):
+            if durable_evidence_count != len(pyc_rows):
                 blockers.append(
-                    f"pyc recovery lost bytecode custody: {pyc_present_count}/{len(pyc_rows)} pyc files present"
+                    "pyc recovery lost bytecode custody without durable recovery evidence: "
+                    f"{durable_evidence_count}/{len(pyc_rows)} rows covered"
                 )
 
     signal_required = (
@@ -499,6 +602,7 @@ def main(argv: list[str] | None = None) -> int:
         detail = (
             f"(pyc_rows={pyc.get('recovery_result_count', 0)}; "
             f"pyc_present={pyc.get('pyc_present_count', 0)}; "
+            f"pyc_durable={pyc.get('durable_recovery_evidence_count', 0)}; "
             f"quarantine_records={signal.get('quarantine_record_count', 0)}; "
             f"tracked_loss={signal.get('deleted_tracked_count', 0)} deleted/"
             f"{signal.get('modified_tracked_count', 0)} modified)"

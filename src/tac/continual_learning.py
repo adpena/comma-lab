@@ -5,7 +5,7 @@ learning and intelligence and optimization work and all other such systems of
 equations and domain solver work and like general relativity and such"), this
 module provides a thin orchestration layer over the existing posterior
 substrates so every empirical anchor (``[contest-CUDA]`` /
-``[contest-CPU GHA Linux x86_64]``) reseeds:
+``[contest-CPU]`` on Linux x86_64) reseeds:
 
   - per-architecture-class CUDA-CPU drift (cuda_cpu_axis_profile_registry)
   - rate-distortion calibration anchors (.omx/calibration/anchors_*.json)
@@ -45,7 +45,7 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 CONTINUAL_LEARNING_SCHEMA_VERSION = "tac_continual_learning_posterior_v1"
 CONTINUAL_LEARNING_EVIDENCE_GRADE = "[continual-learning posterior; non-authoritative]"
@@ -61,8 +61,7 @@ DEFAULT_POSTERIOR_LOCK_PATH = Path(".omx/state/.continual_learning.lock")
 # "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT
 # HARDWARE". Anything else is a custody mismatch and refused.
 
-# Tag → required axis. The short-form `[contest-CPU]` is allowed only with the
-# explicit GHA hardware substrate (codex HIGH 2 fix).
+# Tag → required axis.
 TAG_AXIS_REQUIREMENT = {
     "[contest-CUDA]": "cuda",
     "[contest-CPU GHA Linux x86_64]": "cpu",
@@ -70,9 +69,17 @@ TAG_AXIS_REQUIREMENT = {
     "[contest-CPU]": "cpu",
 }
 
+CONTEST_CPU_LINUX_X86_64_SUBSTRATES = frozenset({
+    "linux_x86_64_gha_cpu",
+    "linux_x86_64_modal_cpu",
+    "linux_x86_64_vast_cpu",
+    "linux_x86_64_lightning_cpu",
+    "linux_x86_64_cpu",
+})
+
 # Tag → set of hardware_substrate prefixes that are 1:1 contest-compliant.
-# Codex HIGH 2 fix: short-form `[contest-CPU]` no longer accepts arbitrary
-# Linux-x86_64 hosts — must be explicitly GHA.
+# CLAUDE.md accepts Linux x86_64 CPU hosts from GHA, Modal, Vast.ai, and
+# Lightning as the contest-CPU axis. macOS remains advisory-only.
 TAG_HARDWARE_REQUIREMENT: dict[str, frozenset[str]] = {
     "[contest-CUDA]": frozenset({
         "linux_x86_64_t4",
@@ -82,9 +89,9 @@ TAG_HARDWARE_REQUIREMENT: dict[str, frozenset[str]] = {
         "linux_x86_64_a10g",
         "linux_x86_64_l40s",
     }),
-    "[contest-CPU GHA Linux x86_64]": frozenset({"linux_x86_64_gha_cpu"}),
-    "[contest-CPU GHA]": frozenset({"linux_x86_64_gha_cpu"}),
-    "[contest-CPU]": frozenset({"linux_x86_64_gha_cpu"}),  # short form — GHA-only
+    "[contest-CPU GHA Linux x86_64]": CONTEST_CPU_LINUX_X86_64_SUBSTRATES,
+    "[contest-CPU GHA]": CONTEST_CPU_LINUX_X86_64_SUBSTRATES,
+    "[contest-CPU]": CONTEST_CPU_LINUX_X86_64_SUBSTRATES,
 }
 
 # Authoritative-axis tags per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
@@ -129,23 +136,14 @@ class CustodyVerdict:
         - ``"missing_metadata"`` — required field blank/None
         - ``"advisory_grade"`` — explicitly-non-promotable tag
         - ``"macos_substrate"`` — macOS substrate (or macOS-tag) refused
-        - ``"cpu_tag_non_gha_linux"`` — CPU tag with substrate not GHA Linux x86_64
+        - ``"cpu_tag_non_gha_linux"`` — CPU tag with substrate not approved Linux x86_64
         - ``"cuda_tag_unknown_substrate"`` — CUDA tag with substrate not in known CUDA set
         - ``"tag_axis_mismatch"`` — tag-axis combination is incoherent
     """
 
     accepted: bool
     reason: str
-    refused_class: Optional[
-        Literal[
-            "tag_axis_mismatch",
-            "cpu_tag_non_gha_linux",
-            "cuda_tag_unknown_substrate",
-            "macos_substrate",
-            "missing_metadata",
-            "advisory_grade",
-        ]
-    ] = None
+    refused_class: Literal["tag_axis_mismatch", "cpu_tag_non_gha_linux", "cuda_tag_unknown_substrate", "macos_substrate", "missing_metadata", "advisory_grade"] | None = None
 
 
 @dataclass
@@ -219,7 +217,7 @@ class ContestResult:
         verdict = self.validate_custody_verdict()
         return verdict.accepted, verdict.reason
 
-    def validate_custody_verdict(self) -> "CustodyVerdict":
+    def validate_custody_verdict(self) -> CustodyVerdict:
         """Typed verdict per codex round-2 HIGH 2 directive.
 
         Returns a :class:`CustodyVerdict` with one of seven ``refused_class``
@@ -229,7 +227,7 @@ class ContestResult:
         - ``"missing_metadata"`` — required metadata fields blank/None
         - ``"advisory_grade"`` — explicitly-non-promotable tag
         - ``"macos_substrate"`` — macOS substrate (advisory regardless of tag)
-        - ``"cpu_tag_non_gha_linux"`` — CPU tag with substrate not GHA Linux x86_64
+        - ``"cpu_tag_non_gha_linux"`` — CPU tag with substrate not approved Linux x86_64
         - ``"cuda_tag_unknown_substrate"`` — CUDA tag with substrate not in known CUDA set
         - ``"tag_axis_mismatch"`` — CPU tag with axis="cuda" or vice versa
         """
@@ -317,14 +315,7 @@ class ContestResult:
         if self.hardware_substrate not in allowed_substrates:
             # Refused-class depends on whether this is a CPU or CUDA tag.
             if required_axis == "cpu":
-                rc: Optional[Literal[
-                    "tag_axis_mismatch",
-                    "cpu_tag_non_gha_linux",
-                    "cuda_tag_unknown_substrate",
-                    "macos_substrate",
-                    "missing_metadata",
-                    "advisory_grade",
-                ]] = "cpu_tag_non_gha_linux"
+                rc: Literal["tag_axis_mismatch", "cpu_tag_non_gha_linux", "cuda_tag_unknown_substrate", "macos_substrate", "missing_metadata", "advisory_grade"] | None = "cpu_tag_non_gha_linux"
             else:
                 rc = "cuda_tag_unknown_substrate"
             return CustodyVerdict(
@@ -711,11 +702,19 @@ def _hardware_substrate_from_auth_eval_payload(
     axis: str,
 ) -> str:
     system = str(
-        _first_present(provenance.get("platform_system"), payload.get("platform_system"))
+        _first_present(
+            provenance.get("platform_system"),
+            payload.get("platform_system"),
+            payload.get("provenance_platform_system"),
+        )
         or ""
     )
     machine = str(
-        _first_present(provenance.get("platform_machine"), payload.get("platform_machine"))
+        _first_present(
+            provenance.get("platform_machine"),
+            payload.get("platform_machine"),
+            payload.get("provenance_platform_machine"),
+        )
         or ""
     ).lower()
     hardware = str(_first_present(provenance.get("hardware"), payload.get("hardware")) or "").lower()
@@ -747,7 +746,24 @@ def _hardware_substrate_from_auth_eval_payload(
                 or payload.get("score_axis") in {"contest_cpu_gha", "contest-cpu-gha"}
             ):
                 return "linux_x86_64_gha_cpu"
-            return "linux_x86_64_modal_cpu"
+            provider_hint = " ".join(
+                str(
+                    _first_present(
+                        provenance.get(key),
+                        payload.get(key),
+                    )
+                    or ""
+                ).lower()
+                for key in ("provider", "cloud_provider", "runtime_provider")
+            )
+            cpu_hint = f"{hardware} {provider_hint}"
+            if "vast" in cpu_hint:
+                return "linux_x86_64_vast_cpu"
+            if "lightning" in cpu_hint:
+                return "linux_x86_64_lightning_cpu"
+            if "modal" in cpu_hint:
+                return "linux_x86_64_modal_cpu"
+            return "linux_x86_64_cpu"
         return "unknown_cpu"
     return "unknown"
 
@@ -1157,27 +1173,27 @@ def harvest_anchors_from_iter(
 
 
 __all__ = [
-    "CONTINUAL_LEARNING_SCHEMA_VERSION",
-    "CONTINUAL_LEARNING_EVIDENCE_GRADE",
-    "DEFAULT_POSTERIOR_PATH",
-    "DEFAULT_POSTERIOR_LOCK_PATH",
     "AUTHORITATIVE_TAGS",
+    "CONTINUAL_LEARNING_EVIDENCE_GRADE",
+    "CONTINUAL_LEARNING_SCHEMA_VERSION",
+    "DEFAULT_POSTERIOR_LOCK_PATH",
+    "DEFAULT_POSTERIOR_PATH",
     "NON_PROMOTABLE_TAGS",
     "TAG_AXIS_REQUIREMENT",
     "TAG_HARDWARE_REQUIREMENT",
     "ContestResult",
-    "CustodyVerdict",
-    "PosteriorUpdate",
-    "PerTrackPosterior",
-    "SourceRhoPosterior",
     "ContinualLearningPosterior",
+    "CustodyVerdict",
+    "PerTrackPosterior",
+    "PosteriorUpdate",
+    "SourceRhoPosterior",
+    "contest_result_from_auth_eval_payload",
+    "harvest_anchors_from_iter",
     "load_posterior",
-    "save_posterior",
+    "posterior_query_source_rho",
+    "posterior_query_track_correction",
     "posterior_update",
     "posterior_update_locked",
-    "contest_result_from_auth_eval_payload",
     "posterior_update_locked_from_auth_eval_json",
-    "posterior_query_track_correction",
-    "posterior_query_source_rho",
-    "harvest_anchors_from_iter",
+    "save_posterior",
 ]

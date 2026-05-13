@@ -1,5 +1,25 @@
+# ruff: noqa: E402,I001
 """Harvest all dispatched Modal call_ids before their result cache expires (~24h)."""
+import argparse
 import json
+import sys
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help=(
+            "Run the existing harvest flow. This flag is optional for backward "
+            "compatibility; no-arg execution still harvests."
+        ),
+    )
+    return parser
+
+
+if sys.argv[1:]:
+    _parser().parse_args()
 
 import modal
 
@@ -11,9 +31,9 @@ except ModuleNotFoundError:
 REPO = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO)
 
-from tac.deploy.modal.training_claims import append_modal_training_terminal_claim  # noqa: E402
-from tac.deploy.modal.training_cost import append_modal_training_cost_anchor  # noqa: E402
-from tac.deploy.modal.harvest_summary import (  # noqa: E402
+from tac.deploy.modal.training_claims import append_modal_training_terminal_claim
+from tac.deploy.modal.training_cost import append_modal_training_cost_anchor
+from tac.deploy.modal.harvest_summary import (
     modal_training_summary_entry,
     normalise_modal_training_result_summary,
     partial_modal_training_result_summary,

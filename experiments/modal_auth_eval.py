@@ -1071,19 +1071,29 @@ def main(
     print(f"  Artifacts:        {out_dir}")
     print("=" * 60)
 
+    terminal_notes = (
+        "Modal CUDA auth eval "
+        f"{'passed path validation' if result.get('passed') else 'failed closed'}; "
+        f"score_axis={result.get('score_axis_from_payload') or result.get('score_axis')}; "
+        f"hardware={scorer_device_policy}; "
+        f"archive_sha256={archive_sha256}; "
+        f"archive_bytes={archive_size_bytes}; "
+        f"score={result.get('score_recomputed_from_components')}; "
+        f"output_dir={out_dir}"
+    )
     if not result.get("passed"):
         terminal_modal_auth_eval_claim(
             repo_root=Path.cwd(),
             spec=claim_spec,
             status="failed_modal_auth_eval_no_score_claim",
-            notes=f"Modal CUDA auth eval failed closed; output_dir={out_dir}",
+            notes=terminal_notes,
         )
         raise SystemExit(int(result.get("returncode") or 1))
     terminal_modal_auth_eval_claim(
         repo_root=Path.cwd(),
         spec=claim_spec,
         status="completed_modal_auth_eval_recovered",
-        notes=f"Modal CUDA auth eval passed path validation; output_dir={out_dir}",
+        notes=terminal_notes,
     )
 
 

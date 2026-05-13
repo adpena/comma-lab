@@ -32,6 +32,7 @@ def test_pr106_sidecar_runtime_consumption_gate_passes_current_archives() -> Non
     assert "format_ids=0x01,0x02" in output
     assert "PacketIR identity parse-emit accounts for every payload byte" in output
     assert "runtime decodes/applies sidecar bytes" in output
+    assert "expected archive/runtime SHA custody is enforced" in output
     assert "runtime-consumption manifests intentionally remain non-promotable" in output
     assert "same-runtime full-frame parity manifest" in output
     assert "score_claim=false" in output
@@ -127,26 +128,57 @@ def test_pr106_sidecar_runtime_consumption_gate_rejects_bad_full_frame_parity_ma
     assert "streaming_raw_sha256_mismatch" in output
 
 
-def test_pr106_sidecar_runtime_consumption_gate_rejects_promotable_manifest(monkeypatch) -> None:
+def test_pr106_sidecar_runtime_consumption_gate_threads_expected_archive_sha256(
+    monkeypatch,
+) -> None:
     module = _load_all_lanes_module()
+    packet_compiler = module.sys.modules["tac.packet_compiler"]
+    seen: list[str | None] = []
 
-    def fake_proof(*, archive_path: Path, runtime_dir: Path) -> dict[str, object]:
+    def fake_proof(
+        *,
+        archive_path: Path,
+        runtime_dir: Path,
+        expected_archive_sha256: str | None = None,
+        expected_runtime_source_tree_sha256: str | None = None,
+    ) -> dict[str, object]:
+        seen.append(expected_archive_sha256)
+        format_id = "0x01" if "pr101_grammar" not in str(runtime_dir) else "0x02"
+        expected_framing = True if format_id == "0x02" else None
         return {
             "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
-            "format_id": "0x01" if "pr101_grammar" not in str(runtime_dir) else "0x02",
+            "format_id": format_id,
             "payload_sha256_changed": True,
             "inner_pr106_payload_sha256_unchanged": True,
             "sidecar_payload_sha256_changed": True,
             "runtime_semantic_digest_changed": True,
             "runtime_corrected_latents_digest_changed": True,
+            "runtime_all_score_affecting_sections_consumed": True,
             "runtime_sidecar_decode_consumption_claim": True,
             "runtime_sidecar_apply_consumption_claim": True,
             "full_frame_inflate_output_parity_claim": False,
-            "score_claim": True,
+            "contest_axis_claim": False,
+            "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+            "blockers": [],
+            "archive": {
+                "sha256": expected_archive_sha256,
+                "expected_sha256": expected_archive_sha256,
+                "expected_sha256_matches": True,
+            },
+            "runtime_source_manifest": {
+                "runtime_source_tree_sha256": expected_runtime_source_tree_sha256,
+                "expected_runtime_source_tree_sha256": expected_runtime_source_tree_sha256,
+                "expected_runtime_source_tree_sha256_matches": True,
+            },
+            "runtime_consumed_score_affecting_sections": {
+                "pr106_payload": True,
+                "sidecar_payload": True,
+                "framing_meta": expected_framing,
+            },
             "source_runtime_correction_digest": {
-                "format_id": "0x01" if "pr101_grammar" not in str(runtime_dir) else "0x02",
+                "format_id": format_id,
                 "n_pairs": 600,
                 "source_latents_sha256": "a" * 64,
                 "corrected_latents_sha256": "b" * 64,
@@ -154,7 +186,84 @@ def test_pr106_sidecar_runtime_consumption_gate_rejects_promotable_manifest(monk
                 "latents_changed_by_sidecar": True,
             },
             "mutated_runtime_correction_digest": {
-                "format_id": "0x01" if "pr101_grammar" not in str(runtime_dir) else "0x02",
+                "format_id": format_id,
+                "n_pairs": 600,
+                "source_latents_sha256": "a" * 64,
+                "corrected_latents_sha256": "d" * 64,
+                "combined_sha256": "e" * 64,
+                "latents_changed_by_sidecar": True,
+            },
+        }
+
+    monkeypatch.setattr(
+        packet_compiler,
+        "prove_pr106_sidecar_runtime_decode_consumption",
+        fake_proof,
+    )
+
+    passed, output = module._run_pr106_sidecar_runtime_consumption_gate()
+
+    assert passed is True, output
+    assert seen == [
+        module.PR106_R2_ARCHIVE_SHA256,
+        module.PR106_R2_PR101_ARCHIVE_SHA256,
+    ]
+
+
+def test_pr106_sidecar_runtime_consumption_gate_rejects_promotable_manifest(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+
+    def fake_proof(
+        *,
+        archive_path: Path,
+        runtime_dir: Path,
+        expected_archive_sha256: str | None = None,
+        expected_runtime_source_tree_sha256: str | None = None,
+    ) -> dict[str, object]:
+        format_id = "0x01" if "pr101_grammar" not in str(runtime_dir) else "0x02"
+        expected_framing = True if format_id == "0x02" else None
+        return {
+            "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+            "format_id": format_id,
+            "payload_sha256_changed": True,
+            "inner_pr106_payload_sha256_unchanged": True,
+            "sidecar_payload_sha256_changed": True,
+            "runtime_semantic_digest_changed": True,
+            "runtime_corrected_latents_digest_changed": True,
+            "runtime_all_score_affecting_sections_consumed": True,
+            "runtime_sidecar_decode_consumption_claim": True,
+            "runtime_sidecar_apply_consumption_claim": True,
+            "full_frame_inflate_output_parity_claim": False,
+            "contest_axis_claim": False,
+            "score_claim": True,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "blockers": [],
+            "archive": {
+                "sha256": expected_archive_sha256,
+                "expected_sha256": expected_archive_sha256,
+                "expected_sha256_matches": True,
+            },
+            "runtime_source_manifest": {
+                "runtime_source_tree_sha256": expected_runtime_source_tree_sha256,
+                "expected_runtime_source_tree_sha256": expected_runtime_source_tree_sha256,
+                "expected_runtime_source_tree_sha256_matches": True,
+            },
+            "runtime_consumed_score_affecting_sections": {
+                "pr106_payload": True,
+                "sidecar_payload": True,
+                "framing_meta": expected_framing,
+            },
+            "source_runtime_correction_digest": {
+                "format_id": format_id,
+                "n_pairs": 600,
+                "source_latents_sha256": "a" * 64,
+                "corrected_latents_sha256": "b" * 64,
+                "combined_sha256": "c" * 64,
+                "latents_changed_by_sidecar": True,
+            },
+            "mutated_runtime_correction_digest": {
+                "format_id": format_id,
                 "n_pairs": 600,
                 "source_latents_sha256": "a" * 64,
                 "corrected_latents_sha256": "d" * 64,
@@ -181,10 +290,19 @@ def test_pr106_sidecar_runtime_consumption_gate_rejects_packet_ir_identity_drift
     module = _load_all_lanes_module()
     packet_compiler = module.sys.modules["tac.packet_compiler"]
 
-    def fake_identity(*, archive_path: Path) -> dict[str, object]:
+    def fake_identity(
+        *,
+        archive_path: Path,
+        expected_archive_sha256: str | None = None,
+    ) -> dict[str, object]:
         return {
             "schema": "pr106_sidecar_packet_ir_identity_proof_v1",
             "packet_ir_identity_passed": False,
+            "archive": {
+                "sha256": expected_archive_sha256,
+                "expected_sha256": expected_archive_sha256,
+                "expected_sha256_matches": True,
+            },
             "packet": {
                 "format_id": "0x01" if "pr101_grammar" not in str(archive_path) else "0x02",
                 "packet_ir_consumed_byte_proof": {

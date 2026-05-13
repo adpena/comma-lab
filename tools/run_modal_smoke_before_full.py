@@ -212,6 +212,17 @@ def _epoch_env_var_from_recipe(recipe_text: str) -> str | None:
     return None
 
 
+def _recipe_requests_smoke_only(recipe_text: str) -> bool:
+    """Return True when the recipe explicitly declares `smoke_only: true`."""
+    for raw in recipe_text.splitlines():
+        stripped = raw.split("#", 1)[0].strip()
+        if not stripped.startswith("smoke_only:"):
+            continue
+        value = stripped.split(":", 1)[1].strip().lower()
+        return value in {"1", "on", "true", "yes"}
+    return False
+
+
 def _lane_id_from_recipe(recipe_text: str) -> str:
     for line in recipe_text.splitlines():
         if line.startswith("lane_id:"):
@@ -344,6 +355,7 @@ def _spawn_smoke_dispatch(
         recipe_path.stem,
         "--agent",
         f"{operator_handle}:run_modal_smoke_before_full",
+        "--yes",
         "--label-suffix",
         f"__smoke__{smoke_epochs}ep",
         "--timeout-hours-override",
@@ -562,6 +574,7 @@ def _spawn_full_dispatch(
         recipe_path.stem,
         "--agent",
         f"{operator_handle}:run_modal_full_after_smoke_green",
+        "--yes",
     ]
     print(f"[smoke-before-full] dispatching FULL: {' '.join(cmd)}")
     proc = subprocess.run(cmd, cwd=repo_root, check=False)
@@ -633,23 +646,35 @@ def main(argv: list[str] | None = None) -> int:
     recipe_path = _resolve_recipe_path(args.recipe, repo_root)
     recipe_text = recipe_path.read_text()
     epoch_env_var = _epoch_env_var_from_recipe(recipe_text)
+    recipe_smoke_only = _recipe_requests_smoke_only(recipe_text)
+    smoke_only = args.smoke_only or recipe_smoke_only
 
     if args.dry_run:
         print("[smoke-before-full] --dry-run; no Modal dispatch")
         print(f"[smoke-before-full] recipe={recipe_path}")
         print(f"[smoke-before-full] epoch_env_var={epoch_env_var or '<none>'}")
+        if recipe_smoke_only:
+            print("[smoke-before-full] recipe declares smoke_only: true")
         print(
             "[smoke-before-full] would dispatch SMOKE: "
             f"recipe={args.recipe} smoke_epochs={args.smoke_epochs} "
             f"smoke_gpu={args.smoke_gpu} timeout_hours={args.smoke_timeout_hours}"
         )
-        if args.smoke_only:
-            print("[smoke-before-full] would stop after SMOKE because --smoke-only is set")
+        if smoke_only:
+            print("[smoke-before-full] would stop after SMOKE because smoke-only is set")
         elif args.full_only:
             print("[smoke-before-full] would dispatch FULL only because --full-only is set")
         else:
             print("[smoke-before-full] would dispatch FULL only after SMOKE GREEN")
         return 0
+
+    if recipe_smoke_only and args.full_only:
+        print(
+            "[smoke-before-full] FATAL: recipe declares smoke_only: true; "
+            "--full-only would bypass the recipe scaffold guard.",
+            file=sys.stderr,
+        )
+        return 6
 
     if args.full_only:
         print(
@@ -731,16 +756,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 5
 
-    if args.smoke_only:
+    if smoke_only:
         _close_smoke_claim(
             repo_root=repo_root,
             recipe_text=recipe_text,
             instance_job_id=smoke_instance_job_id,
             operator_handle=args.operator_handle,
             status="completed_modal_smoke_green",
-            notes="smoke green; --smoke-only requested",
+            notes="smoke green; smoke-only requested by CLI or recipe",
         )
-        print("[smoke-before-full] --smoke-only set; not firing full. Done.")
+        print("[smoke-before-full] smoke-only set; not firing full. Done.")
         return 0
 
     # Full phase

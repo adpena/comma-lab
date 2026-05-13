@@ -1,0 +1,127 @@
+{
+  "schema": "tac_dykstra_pareto_solver_output_v1",
+  "schema_version": 1,
+  "generated_at_utc": "2026-05-13T21:12:58.967790+00:00",
+  "evidence_grade": "[prediction-derived; planning_only]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "baseline_anchor": {
+    "lane_id": "pr106_r2_frontier",
+    "score": 0.193,
+    "seg_avg": 0.00067,
+    "pose_avg": 3.4e-05,
+    "rate_bytes": 186822,
+    "axis": "[contest-CUDA]",
+    "operating_point_note": "PR106 r2 frontier; CLAUDE.md SegNet-vs-PoseNet importance 2.71x pose-marginal regime"
+  },
+  "n_substrate_constraints": 7,
+  "achievable_region_polytope": [
+    {
+      "axis_name": "rate_bytes",
+      "tightest_bound": 4096.0,
+      "binding_substrates": [
+        "lane_a1_plus_wavelet_residual_retarget_20260513",
+        "lane_pr95_artifact_lora_dora_surgery_20260513"
+      ],
+      "is_newly_active_vs_baseline": true
+    },
+    {
+      "axis_name": "seg_distortion",
+      "tightest_bound": 0.0007,
+      "binding_substrates": [
+        "lane_a1_plus_lapose_composition_20260513",
+        "lane_a1_plus_wavelet_residual_retarget_20260513",
+        "lane_pr95_artifact_lora_dora_surgery_20260513"
+      ],
+      "is_newly_active_vs_baseline": false
+    },
+    {
+      "axis_name": "pose_distortion",
+      "tightest_bound": 3.4e-05,
+      "binding_substrates": [
+        "lane_a1_plus_lapose_composition_20260513",
+        "lane_a1_plus_wavelet_residual_retarget_20260513",
+        "lane_pr95_artifact_lora_dora_surgery_20260513"
+      ],
+      "is_newly_active_vs_baseline": false
+    }
+  ],
+  "newly_active_constraints": [
+    {
+      "axis": "rate_bytes",
+      "tightest_bound": 4096.0,
+      "binding_substrates": [
+        "lane_a1_plus_wavelet_residual_retarget_20260513",
+        "lane_pr95_artifact_lora_dora_surgery_20260513"
+      ],
+      "baseline_value": 186822
+    }
+  ],
+  "per_substrate_feasibility": [
+    {
+      "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+      "family": "time_traveler_l5_packet",
+      "active_constraint_hypothesis": "rate (substrate is heavyweight; sub-100KB feasibility tight)",
+      "feasible_within_intersection": false,
+      "infeasibility_reasons": [
+        "rate_bytes: substrate max 110000.0 > polytope bound 4096.0",
+        "seg_distortion: substrate max 0.00075 > polytope bound 0.0007",
+        "pose_distortion: substrate max 4.5e-05 > polytope bound 3.4e-05"
+      ]
+    },
+    {
+      "lane_id": "lane_sabor_boundary_only_renderer_substrate_20260513",
+      "family": "sabor_boundary_only_renderer_packet",
+      "active_constraint_hypothesis": "seg-axis (boundary-only design has texture-fill uncertainty)",
+      "feasible_within_intersection": false,
+      "infeasibility_reasons": [
+        "rate_bytes: substrate max 90000.0 > polytope bound 4096.0",
+        "seg_distortion: substrate max 0.0008 > polytope bound 0.0007",
+        "pose_distortion: substrate max 5e-05 > polytope bound 3.4e-05"
+      ]
+    },
+    {
+      "lane_id": "lane_s2sbs_stride2_byte_stuffing_substrate_20260513",
+      "family": "s2sbs_byte_stuffing_packet",
+      "active_constraint_hypothesis": "seg-axis (targets stride-2-stem blind spot; pose untouched)",
+      "feasible_within_intersection": false,
+      "infeasibility_reasons": [
+        "rate_bytes: substrate max 80000.0 > polytope bound 4096.0",
+        "seg_distortion: substrate max 0.00085 > polytope bound 0.0007",
+        "pose_distortion: substrate max 5.5e-05 > polytope bound 3.4e-05"
+      ]
+    },
+    {
+      "lane_id": "lane_a1_plus_lapose_composition_20260513",
+      "family": "a1_plus_lapose_composition",
+      "active_constraint_hypothesis": "pose-axis (PR106 2.71x pose-marginal regime; foveal RGB residual targets pose)",
+      "feasible_within_intersection": false,
+      "infeasibility_reasons": [
+        "rate_bytes: substrate max 6144.0 > polytope bound 4096.0"
+      ]
+    },
+    {
+      "lane_id": "lane_a1_plus_wavelet_residual_retarget_20260513",
+      "family": "a1_plus_wavelet_residual_sidecar",
+      "active_constraint_hypothesis": "seg-axis (detail-band wavelet residual sharpens edge regions where SegNet boundaries matter)",
+      "feasible_within_intersection": true,
+      "infeasibility_reasons": []
+    },
+    {
+      "lane_id": "lane_darts_supernet_time_traveler_architecture_search_20260513",
+      "family": "darts_supernet_architecture_search",
+      "active_constraint_hypothesis": "planning_only (architecture search lane; no bytes emitted; downstream training consumes verdict)",
+      "feasible_within_intersection": true,
+      "infeasibility_reasons": []
+    },
+    {
+      "lane_id": "lane_pr95_artifact_lora_dora_surgery_20260513",
+      "family": "pr95_artifact_lora_dora",
+      "active_constraint_hypothesis": "mixed seg+pose (artifact subspace decomposition surfaces per-layer leverage)",
+      "feasible_within_intersection": true,
+      "infeasibility_reasons": []
+    }
+  ],
+  "notes": "Per CLAUDE.md 'Meta-Lagrangian/Pareto solver' non-negotiable: this output is SOLVER OUTPUT, not score authority. Active-constraint identification informs operator routing to substrate-priority ordering. Per 'Apples-to-apples evidence discipline': every constraint stays labeled [prediction; planning_only] and the report does not promote any candidate to authoritative evidence."
+}

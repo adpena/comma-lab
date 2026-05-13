@@ -44,7 +44,7 @@ import json
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 try:
@@ -54,6 +54,8 @@ except ModuleNotFoundError:
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
+
+from tools.claim_lane_dispatch import TERMINAL_PREFIXES  # noqa: E402
 
 
 def _kaggle_cmd() -> list[str]:
@@ -218,6 +220,33 @@ def close_lane_claim(
     }
 
 
+def newest_active_kaggle_claim_instance_job_id(
+    *,
+    claims_path: Path,
+    lane_id: str,
+) -> str | None:
+    """Return newest active Kaggle claim id for a lane, if the ledger has one."""
+
+    if not claims_path.is_file():
+        return None
+    for line in claims_path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|") or "timestamp_utc" in line or "---" in line:
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 8:
+            continue
+        row_lane = cells[2]
+        platform = cells[3]
+        instance_job_id = cells[4]
+        status = cells[6]
+        if row_lane != lane_id or platform != "kaggle":
+            continue
+        if any(status.startswith(prefix) for prefix in TERMINAL_PREFIXES):
+            return None
+        return instance_job_id or None
+    return None
+
+
 def harvest_one_slug(
     *, slug: str, kaggle_cmd: list[str], results_root: Path,
     anchor_tool: Path, claim_tool: Path,
@@ -232,7 +261,7 @@ def harvest_one_slug(
     download_ok: bool = False
 
     if status and status.lower() == "complete":
-        utc = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         slug_basename = slug.split("/", 1)[1] if "/" in slug else slug
         output_dir = results_root / f"lane_kaggle_t1_balle_{slug_basename}_{utc}"
         download_ok = download_kernel_output(kaggle_cmd, slug, output_dir)
@@ -264,8 +293,7 @@ def harvest_one_slug(
             print(f"  cost-band anchor SKIPPED: {cost_anchor_result.get('reason') or cost_anchor_result.get('stderr')}")
 
     lane_close_result: dict | None = None
-    if not terminal_status.startswith("in_flight_") and summary is not None:
-        dispatch_label = summary.get("dispatch_label", slug)
+    if not terminal_status.startswith("in_flight_"):
         # Variant suffix encoded in dispatch_label (kaggle_t1_balle_<variant>_<utc>).
         # Lane id is `t1_balle_kaggle_sweep_<variant>` per the wrapper.
         # We do a best-effort lookup; if the label format doesn't match we fall
@@ -273,7 +301,18 @@ def harvest_one_slug(
         slug_basename = slug.split("/", 1)[1] if "/" in slug else slug
         variant_suffix = slug_basename.removeprefix("comma-lab-t1-balle-")
         lane_id = f"t1_balle_kaggle_sweep_{variant_suffix}"
-        notes = f"kaggle harvest; terminal_status={terminal_status}; rc={summary.get('trainer_returncode')}"
+        dispatch_label = (
+            str(summary.get("dispatch_label"))
+            if summary is not None and summary.get("dispatch_label")
+            else newest_active_kaggle_claim_instance_job_id(
+                claims_path=REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md",
+                lane_id=lane_id,
+            )
+        )
+        if not dispatch_label:
+            dispatch_label = slug
+        rc_label = summary.get("trainer_returncode") if summary is not None else "summary_missing"
+        notes = f"kaggle harvest; terminal_status={terminal_status}; rc={rc_label}"
         lane_close_result = close_lane_claim(
             claim_tool=claim_tool,
             lane_id=lane_id,

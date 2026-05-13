@@ -37,10 +37,10 @@ def test_partition_params_for_muon_keeps_stem_rgb_and_biases_on_adamw() -> None:
 
     muon_params, adamw_params = partition_params_for_muon(model)
 
-    assert model.hidden.weight in muon_params
-    assert model.hidden.bias in adamw_params
-    assert model.stem.weight in adamw_params
-    assert model.rgb_head.weight in adamw_params
+    assert any(param is model.hidden.weight for param in muon_params)
+    assert any(param is model.hidden.bias for param in adamw_params)
+    assert any(param is model.stem.weight for param in adamw_params)
+    assert any(param is model.rgb_head.weight for param in adamw_params)
     assert all(param.requires_grad for param in [*muon_params, *adamw_params])
 
 

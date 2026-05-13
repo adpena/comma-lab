@@ -294,6 +294,24 @@ class TestHarvesterTerminalStatusClassification(unittest.TestCase):
         )
         self.assertEqual(status, "stale_superseded_kaggle")
 
+    def test_newest_active_kaggle_claim_lookup_ignores_terminal_rows(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            claims = Path(tmpdir) / "claims.md"
+            claims.write_text(
+                "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+                "|---|---|---|---|---|---|---|---|\n"
+                "| 2026-05-13T02:00:00Z | a | t1_balle_kaggle_sweep_a | kaggle | job-live | eta | active_dispatch | live |\n"
+                "| 2026-05-13T01:00:00Z | a | t1_balle_kaggle_sweep_a | kaggle | job-old | eta | failed_kaggle_error | old |\n",
+                encoding="utf-8",
+            )
+
+            instance_job_id = self.harv.newest_active_kaggle_claim_instance_job_id(
+                claims_path=claims,
+                lane_id="t1_balle_kaggle_sweep_a",
+            )
+
+        self.assertEqual(instance_job_id, "job-live")
+
 
 class TestHarvesterCostBandAnchor(unittest.TestCase):
     """``append_cost_band_anchor_from_summary`` must invoke the anchor tool."""

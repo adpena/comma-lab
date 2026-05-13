@@ -1,0 +1,36 @@
+{
+  "schema": "tac_prediction_vs_empirical_delta_v1",
+  "schema_version": 1,
+  "generated_at_utc": "2026-05-13T21:11:11.001450+00:00",
+  "n_matched": 1,
+  "n_unmatched": 6,
+  "unmatched_lane_ids": [
+    "lane_time_traveler_l5_autonomy_substrate_20260513",
+    "lane_sabor_boundary_only_renderer_substrate_20260513",
+    "lane_s2sbs_stride2_byte_stuffing_substrate_20260513",
+    "lane_a1_plus_lapose_composition_20260513",
+    "lane_darts_supernet_time_traveler_architecture_search_20260513",
+    "lane_pr95_artifact_lora_dora_surgery_20260513"
+  ],
+  "rows": [
+    {
+      "lane_id": "lane_a1_plus_wavelet_residual_retarget_20260513",
+      "matched_empirical_architecture_class": "lane_wavelet_residual_pr106_sidecar_dispatch_ready",
+      "predicted_midpoint": 0.1905,
+      "predicted_score_band_low": 0.187,
+      "predicted_score_band_high": 0.194,
+      "empirical_score": 0.2066336354574151,
+      "delta": 0.016133635457415085,
+      "band_contained_empirical": false,
+      "over_or_under": "over_predicted",
+      "empirical_axis": "cuda",
+      "empirical_evidence_tag": "[contest-CUDA]",
+      "empirical_archive_sha256": "ed90a2250e948ed70086162a84ab907a866099b9d2a7d13fd13870e5fa29fe81",
+      "empirical_observed_at_utc": "2026-05-11T18:13:16.714402+00:00"
+    }
+  ],
+  "evidence_grade": "[prediction; planning_only]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false
+}

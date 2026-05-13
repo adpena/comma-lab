@@ -44,6 +44,56 @@ def test_operator_authorize_dry_run_does_not_claim_or_dispatch(monkeypatch, caps
     assert "--dry-run; no confirmation prompt, no dispatch" in capsys.readouterr().out
 
 
+def test_operator_authorize_refuses_direct_full_for_smoke_only_recipe(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(op, "_predict_cost_band", lambda **_: _band())
+    monkeypatch.setattr(
+        op,
+        "_claim_lane",
+        lambda **_: (_ for _ in ()).throw(AssertionError("claim should not fire")),
+    )
+    monkeypatch.setattr(
+        op,
+        "_run_dispatch",
+        lambda *_: (_ for _ in ()).throw(AssertionError("dispatch should not fire")),
+    )
+
+    with pytest.raises(SystemExit, match="smoke_only=true"):
+        op.main(
+            [
+                "--recipe",
+                "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch",
+                "--yes",
+            ]
+        )
+
+
+def test_operator_authorize_allows_smoke_wrapper_epoch_override_for_smoke_only_recipe(
+    monkeypatch,
+) -> None:
+    events: list[str] = []
+    monkeypatch.setattr(op, "_predict_cost_band", lambda **_: _band())
+    monkeypatch.setattr(op, "_validate_declared_local_paths", lambda *_: None)
+    monkeypatch.setattr(op, "_validate_required_input_files", lambda *_: None)
+    monkeypatch.setattr(op, "_native_dispatch_preflight", lambda *_: events.append("preflight"))
+    monkeypatch.setattr(op, "_claim_lane", lambda **_: events.append("claim"))
+    monkeypatch.setattr(op, "_run_dispatch", lambda *_args, **_kwargs: events.append("dispatch") or 0)
+
+    rc = op.main(
+        [
+            "--recipe",
+            "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch",
+            "--yes",
+            "--cost-band-epochs-override",
+            "100",
+        ]
+    )
+
+    assert rc == 0
+    assert events == ["preflight", "claim", "dispatch"]
+
+
 def test_operator_authorize_noop_recipe_skips_phantom_lane_claim(monkeypatch, capsys) -> None:
     claim_calls: list[dict[str, object]] = []
     dispatch_calls: list[tuple[op.Recipe, str]] = []

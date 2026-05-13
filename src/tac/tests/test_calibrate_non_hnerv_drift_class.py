@@ -36,7 +36,6 @@ from tac.optimization.cuda_cpu_axis_profile_registry import (  # noqa: E402
     write_registry,
 )
 
-
 SHA = "f" * 64
 
 
@@ -339,8 +338,8 @@ def test_allowed_substrates_match_continual_learning():
     from tac.continual_learning import TAG_HARDWARE_REQUIREMENT
     cuda_allowed = TAG_HARDWARE_REQUIREMENT["[contest-CUDA]"]
     cpu_allowed = TAG_HARDWARE_REQUIREMENT["[contest-CPU GHA Linux x86_64]"]
-    assert calib.ALLOWED_CUDA_SUBSTRATES == cuda_allowed
-    assert calib.ALLOWED_CPU_SUBSTRATES == cpu_allowed
+    assert cuda_allowed == calib.ALLOWED_CUDA_SUBSTRATES
+    assert cpu_allowed == calib.ALLOWED_CPU_SUBSTRATES
 
 
 def test_calibration_schema_constant_stable():

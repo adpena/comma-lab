@@ -21,6 +21,11 @@ TERMINAL_PREFIXES = (
     "stale_assumed_dead",
     "stale_superseded",
     "stopped_",
+    "falsified_",
+    "retired_",
+    "config_retired_",
+    "measured_implementation_retired_",
+    "stop_attempt_timeout_duplicate_after_primary_negative",
 )
 
 
@@ -204,8 +209,8 @@ def terminal_dispatch_claim(
 
 
 __all__ = [
-    "DispatchClaimSpec",
     "TERMINAL_PREFIXES",
+    "DispatchClaimSpec",
     "active_claim_row",
     "dispatch_claim_command",
     "is_terminal_status",
