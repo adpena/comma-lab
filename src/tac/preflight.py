@@ -2550,6 +2550,23 @@ def preflight_all(
         check_strict_flipped_catalog_entries_have_live_count_zero(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #186 (FIX-WAVE-7 R7-1 self-protection):
+        # ``tools/claim_catalog_number.py claim`` invocations from
+        # subagent / fan-out contexts MUST pass ``--commit-via-serializer
+        # --reason "<...>"`` so the counter increment is committed
+        # git-transactionally per CANON-1.E hardening. Bug class
+        # (R7 anchor 2026-05-13 08:16Z + 08:37Z): pid 40139 claimed
+        # #183 via bare claim, working-tree was rolled back, pid 58394
+        # later re-claimed #183 via bare claim again. Same pattern with
+        # pid 40141 / 62695 re-claiming #184. The 2026-05-08 #157 fcntl
+        # lock arbitrates concurrent claims WITHIN the working tree but
+        # does not survive a ``git reset``. Same-line waiver
+        # ``# CATALOG_CLAIM_BARE_OK:<reason>`` for one-off operator
+        # claims that intentionally skip the git-transactional commit.
+        # STRICT-FLIPPED 2026-05-13 - live count at landing: 0.
+        check_catalog_claim_committed_via_serializer(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -44775,6 +44792,284 @@ def check_strict_flipped_catalog_entries_have_live_count_zero(
             "'Bugs must be permanently fixed AND self-protected against' "
             "non-negotiable, the catalog table is the canonical "
             "strictness ledger:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #186 — check_catalog_claim_committed_via_serializer
+# (FIX-WAVE-7 R7-1 self-protection, 2026-05-13, STRICT @ 0)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (R7-1 anchor 2026-05-13 08:16Z + 08:37Z):
+#   ``.omx/state/catalog-claim.log`` shows pid 40139 claimed #183, pid
+#   40141 claimed #184 (both via BARE ``claim`` - no
+#   ``--commit-via-serializer``). The working-tree increment was rolled
+#   back. 21 minutes later pid 58394 re-claimed #183, pid 62695
+#   re-claimed #184 (again bare). The CANON-1.E hardening landed in
+#   ``tools/claim_catalog_number.py`` (2026-05-12) optional
+#   ``--commit-via-serializer`` flag whose docstring explicitly forecasted
+#   this recurrence: *"future STRICT gate
+#   check_catalog_claim_committed_via_serializer (planned, deferred -
+#   requires preflight.py edit when no in-flight subagent has it dirty)
+#   will REFUSE bare claim invocations from subagents in the fan-out
+#   context once the empirical collision recurs."* This gate lands that
+#   self-protection.
+#
+# Scope: scan ``tools/``, ``scripts/``, ``src/tac/``, ``experiments/``
+# (excluding tests, vendored intake clones, OSS export mirrors,
+# experiments/results/ build artifacts, and the canonical tool itself)
+# for invocations of ``tools/claim_catalog_number.py claim`` that do
+# NOT pass ``--commit-via-serializer``.
+#
+# Detection surfaces (text scan with line-level granularity so single
+# call-sites can be waived):
+#   1. Python files: ``subprocess.run([...claim_catalog_number.py..., "claim", ...])``
+#      or ``subprocess.Popen(...)`` or shell-string ``"claim_catalog_number.py claim"``.
+#   2. Shell files: literal ``claim_catalog_number.py claim`` invocations.
+#
+# Same-line waiver: ``# CATALOG_CLAIM_BARE_OK:<reason>`` (must include
+# colon + reason; bare token rejected per CLAUDE.md
+# "Comment-only contracts are FORBIDDEN").
+#
+# Exemptions:
+#   * The canonical tool itself (``tools/claim_catalog_number.py``) -
+#     its docstring + USAGE strings reference the bare form for
+#     documentation purposes.
+#   * Test files (``test_*.py`` / ``*/tests/*``) - they exercise the
+#     CLI surface intentionally.
+#   * Vendored intake clones (``experiments/results/*_intake_*``,
+#     ``reverse_engineering/``) and OSS export mirrors
+#     (``.omx/oss_export/``).
+#   * Build-artifact trees (``experiments/results/**``,
+#     ``reports/raw/**``) where committed code snapshots live.
+#
+
+_CHECK_186_CANONICAL_TOOL_RELPATH = "tools/claim_catalog_number.py"
+_CHECK_186_BARE_WAIVER_TOKEN = "# CATALOG_CLAIM_BARE_OK:"
+_CHECK_186_FILE_LEVEL_WAIVER_TOKEN = "# CATALOG_CLAIM_BARE_OK_FILE:"
+
+# Excluded directory prefixes (relative to repo root). Any source file
+# under these paths is OUT OF SCOPE.
+_CHECK_186_EXCLUDED_DIR_PREFIXES: tuple[str, ...] = (
+    "experiments/results/",
+    "reports/raw/",
+    "reverse_engineering/",
+    ".omx/oss_export/",
+    ".venv/",
+    "node_modules/",
+    "upstream/",  # pinned upstream snapshot - never edit
+)
+
+# Excluded path substrings (anywhere in relpath).
+_CHECK_186_EXCLUDED_SUBSTRINGS: tuple[str, ...] = (
+    "/_intake_",
+    "_intake_",
+    "/tests/",
+    "test_check_186",
+)
+
+_CHECK_186_SCAN_DIRS: tuple[str, ...] = (
+    "tools",
+    "scripts",
+    "src/tac",
+    "experiments",
+)
+
+_CHECK_186_SCAN_SUFFIXES: tuple[str, ...] = (".py", ".sh")
+
+
+def _check_186_is_scoped_path(relpath: str) -> bool:
+    """Return True if relpath is in-scope for the bare-claim scan."""
+    if not relpath:
+        return False
+    # Always exclude the canonical tool itself.
+    if relpath == _CHECK_186_CANONICAL_TOOL_RELPATH:
+        return False
+    for prefix in _CHECK_186_EXCLUDED_DIR_PREFIXES:
+        if relpath.startswith(prefix):
+            return False
+    for substr in _CHECK_186_EXCLUDED_SUBSTRINGS:
+        if substr in relpath:
+            return False
+    # File must be under one of the scan dirs (or top-level CLAUDE.md
+    # adjacent surfaces - but we restrict to scan dirs to keep cost
+    # bounded).
+    in_scope_dir = False
+    for top in _CHECK_186_SCAN_DIRS:
+        if relpath == top or relpath.startswith(top + "/"):
+            in_scope_dir = True
+            break
+    if not in_scope_dir:
+        return False
+    # File must have a scanned suffix.
+    if not relpath.endswith(_CHECK_186_SCAN_SUFFIXES):
+        return False
+    # Exclude test files by filename convention.
+    base = relpath.rsplit("/", 1)[-1]
+    if base.startswith("test_") or base.endswith("_test.py"):
+        return False
+    return True
+
+
+def _check_186_detect_bare_claim_lines(text: str) -> list[tuple[int, str]]:
+    """Return list of (1-indexed line number, line content) where a bare
+    ``claim_catalog_number.py claim`` invocation appears WITHOUT
+    ``--commit-via-serializer`` AND without the same-line waiver.
+
+    The detector is text-shape based (not AST) because the surface is
+    polyglot (.py + .sh) and the canonical invocations are simple
+    string literals. False positives are gated by:
+      - the line must contain ``claim_catalog_number.py`` AND the
+        ``claim`` subcommand token (as a whole word, to skip
+        docstrings that mention the word "claim" alone);
+      - the line must NOT contain ``--commit-via-serializer``;
+      - the line must NOT carry the same-line bare waiver.
+    """
+    lines = text.splitlines()
+    bare_lines: list[tuple[int, str]] = []
+    for i, raw_line in enumerate(lines, start=1):
+        line = raw_line
+        if "claim_catalog_number.py" not in line:
+            continue
+        # Require the `claim` subcommand token. Reject `peek` / `set`
+        # invocations and pure docstring references that say "the claim".
+        # The canonical CLI shape is `claim_catalog_number.py claim`,
+        # which the regex below matches loosely.
+        # We accept both "claim_catalog_number.py claim" and forms with
+        # an intervening argv element such as
+        # ``["...claim_catalog_number.py", "claim", ...]``.
+        if "claim_catalog_number.py claim" not in line and (
+            '"claim"' not in line and "'claim'" not in line
+        ):
+            continue
+        # If the line is part of a comment-only docstring chunk that
+        # doesn't invoke claim, skip. Conservative shape: require the
+        # line to look like a real invocation (contains either `python`,
+        # `subprocess`, `os.system`, `Popen`, `run(`, a shell `$(`, or
+        # starts with a `claim_catalog_number.py` shell invocation).
+        invocation_markers = (
+            "python ",
+            "python3 ",
+            "subprocess",
+            "os.system",
+            "Popen(",
+            "run(",
+            "$(",
+            "${",
+            "./tools/",
+            "tools/claim_catalog_number.py",
+        )
+        # Strip leading whitespace + comment markers to detect docstring-only
+        # references. If the stripped line starts with "#" or is inside a
+        # triple-quoted block we still flag it ONLY when it looks like an
+        # actual invocation; comment-prefix lines that document the CLI
+        # surface are filtered out by the invocation_markers check below.
+        stripped = line.lstrip()
+        if stripped.startswith("# ") and not any(
+            m in line for m in invocation_markers
+        ):
+            continue
+        if not any(m in line for m in invocation_markers):
+            continue
+        # Skip lines that already satisfy the canonical contract.
+        if "--commit-via-serializer" in line:
+            continue
+        # Same-line waiver.
+        if _CHECK_186_BARE_WAIVER_TOKEN in line:
+            continue
+        bare_lines.append((i, line.rstrip()))
+    return bare_lines
+
+
+def check_catalog_claim_committed_via_serializer(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #186 — refuse bare ``tools/claim_catalog_number.py claim``
+    invocations in subagent / fan-out contexts.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" non-negotiable + CANON-1.E hardening (2026-05-12). The
+    canonical invocation from any subagent / fan-out caller is::
+
+        python tools/claim_catalog_number.py claim \\
+            --commit-via-serializer \\
+            --reason "<WAVE>: <purpose>"
+
+    Same-line waiver: ``# CATALOG_CLAIM_BARE_OK:<reason>`` (must include
+    colon + non-empty reason). File-level waiver:
+    ``# CATALOG_CLAIM_BARE_OK_FILE:<reason>`` anywhere in the file body
+    for the rare operator-housekeeping helper that needs the bare form.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned_files = 0
+    waived_files = 0
+    for top in _CHECK_186_SCAN_DIRS:
+        top_path = root / top
+        if not top_path.is_dir():
+            continue
+        for candidate in top_path.rglob("*"):
+            if not candidate.is_file():
+                continue
+            try:
+                relpath = candidate.relative_to(root).as_posix()
+            except ValueError:
+                continue
+            if not _check_186_is_scoped_path(relpath):
+                continue
+            try:
+                text = candidate.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "claim_catalog_number.py" not in text:
+                # Cheap pre-filter - avoid line scan on irrelevant files.
+                continue
+            scanned_files += 1
+            # File-level waiver short-circuits the whole file.
+            if _CHECK_186_FILE_LEVEL_WAIVER_TOKEN in text:
+                waived_files += 1
+                continue
+            bare_lines = _check_186_detect_bare_claim_lines(text)
+            for line_no, line_content in bare_lines:
+                violations.append(
+                    f"{relpath}:{line_no}: bare "
+                    f"`claim_catalog_number.py claim` invocation without "
+                    f"`--commit-via-serializer`. Per CANON-1.E hardening "
+                    f"(see tools/claim_catalog_number.py docstring), "
+                    f"subagent fan-out claims MUST be git-transactional. "
+                    f"Replace with `python tools/claim_catalog_number.py "
+                    f"claim --commit-via-serializer --reason \"<purpose>\"` "
+                    f"OR add same-line `# CATALOG_CLAIM_BARE_OK:<reason>` "
+                    f"waiver. Line: {line_content[:160]}"
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-claim-serializer] {len(violations)} bare-claim "
+                f"violation(s) across {scanned_files} scanned files "
+                f"({waived_files} file-level waived)"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [catalog-claim-serializer] OK "
+                f"({scanned_files} scanned files; 0 bare claims; "
+                f"{waived_files} file-level waived)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_catalog_claim_committed_via_serializer found "
+            f"{len(violations)} bare-claim violation(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "non-negotiable + CANON-1.E hardening (2026-05-12), every "
+            "fan-out catalog-number claim must be git-transactional via "
+            "`--commit-via-serializer`:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
