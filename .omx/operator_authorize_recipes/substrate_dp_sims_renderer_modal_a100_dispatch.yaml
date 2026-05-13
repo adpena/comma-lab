@@ -1,0 +1,160 @@
+schema_version: 1
+name: substrate_dp_sims_renderer_modal_a100_dispatch
+lane_id: lane_substrate_dp_sims_renderer_20260512
+summary: DP-SIMS SPADE-conditioned semantic-synthesis renderer TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — trainer + driver missing).
+
+dispatch_enabled: false
+research_only: false
+substrate_tradition: TRADITION_2
+defer_reason: |
+  THREE blockers:
+
+  (1) src/tac/dp_sims_renderer.py is a LIBRARY (no argparse, no
+      `if __name__ == "__main__"`). It exposes builders
+      (`build_dp_sims_renderer`, `build_dp_sims_discriminator`,
+      `build_dp_sims_renderer_weighted`, `build_dp_sims_renderer_v2`) plus
+      module classes (SPADE, SPADEResBlock, CrossAttentionNoiseInjector,
+      DPSIMSRenderer, PatchDiscriminator, MultiScalePatchGAN, etc.). There
+      is NO experiments/train_dp_sims_renderer.py trainer script.
+
+  (2) NO scripts/remote_lane_substrate_dp_sims_renderer.sh canonical driver.
+
+  (3) Architecture targets ~500K-2M params (much larger than NeRV-family
+      88K-180K). FP4 quantization makes 2M params = ~1MB. The archive grammar
+      + inflate.py contract is NOT yet declared per Catalog #124. This is a
+      GAN-class substrate (multi-scale PatchGAN discriminator + SPADE
+      generator + cross-attention noise injection) with adversarial training
+      dynamics — fundamentally different shape from the NeRV-family lanes.
+
+  Per Catalog #124 + #146/#163, dispatch is REFUSED until (a) trainer +
+  driver are built AND (b) the 8 archive-grammar fields are declared at
+  design time.
+
+dispatch_blockers:
+  - canonical_trainer_script_missing
+  - remote_driver_missing
+  - catalog_124_archive_grammar_fields_not_declared
+  - tier_manifest_required_for_catalog_151_compliance
+  - gan_adversarial_training_dynamics_council_review_needed
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 8.00  # GAN training is more expensive (D + G)
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: "unknown — first empirical anchor needed"
+predicted_delta: "unknown — TRADITION 2 substrate; GAN family; no analog in current empirical corpus"
+literature_anchor: "Wang, Liu, Pan, Shechtman, Kim, Tao — 'DP-SIMS: Dense-prediction-based image-synthesis' CVPR 2024 arxiv 2312.13314 (Cityscapes mIoU 57.7); SPADE — Park et al. CVPR 2019"
+
+risk: |
+  TRADITION 2 substrate. The module ports DP-SIMS-inspired SPADE (Park et al.
+  CVPR 2019) for mask→frame semantic synthesis with cross-attention noise
+  injection (DP-SIMS) and optional multi-scale PatchGAN adversarial training.
+
+  Architectural risks:
+  - GAN training dynamics: Discriminator + Generator update schedules,
+    hinge_loss_d + hinge_loss_g balance, mode-collapse risk. NeRV-family
+    intuitions do NOT transfer.
+  - Param count: target ~500K-2M (vs NeRV-family 88K-180K). FP4 archive
+    likely ~1MB; rate term will be the binding constraint.
+  - Cross-attention noise injector adds non-trivial compute per forward.
+  - SPADE conditioning learns spatially-varying gamma/beta from masks via
+    small conv networks (richer than CLADE per-class affine).
+
+  Council review required before dispatch: GAN training dynamics + archive
+  grammar design are non-trivial decisions per CLAUDE.md "Design decisions"
+  non-negotiable.
+
+  TIER manifest gap: as a library, no manifest exists.
+envelope_status: "DEFERRED: substantial scaffolding work needed (trainer + driver + Catalog #124 fields + council review)"
+
+remote_driver: scripts/remote_lane_substrate_dp_sims_renderer.sh  # MISSING
+timeout_hours: 6.0  # GAN training takes longer
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+    note: "consumed by canonical trainer; not by library module directly"
+
+argparse_inventory:
+  trainer: "[MISSING] experiments/train_dp_sims_renderer.py"
+  library_module: src/tac/dp_sims_renderer.py
+  library_exports:
+    - SPADE
+    - SPADEResBlock
+    - CrossAttentionNoiseInjector
+    - DPSIMSRenderer
+    - PatchDiscriminator
+    - MultiScalePatchGAN
+    - hinge_loss_d / hinge_loss_g
+    - DPSIMSPairGenerator
+    - build_dp_sims_renderer
+    - build_dp_sims_discriminator
+    - WeightedSPADE
+    - build_dp_sims_renderer_weighted
+    - build_dp_sims_renderer_v2
+
+env_overrides:
+  DP_SIMS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  DP_SIMS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  DP_SIMS_OUTPUT_DIR: /workspace/pact/lane_substrate_dp_sims_renderer_results/output
+  DP_SIMS_EPOCHS: "2000"
+  DP_SIMS_UPSTREAM_DIR: /workspace/pact/upstream
+  DP_SIMS_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py
+  - tools/append_cost_band_anchor.py
+  - upstream/videos/0.mkv
+  - src/tac/dp_sims_renderer.py (library)
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - "[MISSING] experiments/train_dp_sims_renderer.py"
+  - "[MISSING] scripts/remote_lane_substrate_dp_sims_renderer.sh"
+  - "[MISSING] submissions/dp_sims_renderer_substrate/inflate.{py,sh}"
+
+reactivation_criteria: |
+  1. Council review of GAN training dynamics + archive grammar design (per
+     CLAUDE.md "Design decisions" non-negotiable).
+  2. Catalog #124 8 archive-grammar fields declared at design time
+     (archive_grammar, parser_section_manifest, inflate_runtime_loc_budget,
+     runtime_dep_closure, export_format, score_aware_loss, bolt_on_loc_budget,
+     no_op_detector_planned).
+  3. Canonical trainer experiments/train_dp_sims_renderer.py built.
+  4. Canonical driver scripts/remote_lane_substrate_dp_sims_renderer.sh
+     built per Catalog #163 sentinel-source pattern.
+  5. submissions/dp_sims_renderer_substrate/inflate.{py,sh} ≤ 200 LOC per
+     HNeRV parity lesson 4.
+  6. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed.
+  7. Local smoke verifies inflate.sh emits a contest-compliant 0.bin.
+  8. Catalog #152 validates --video-path resolves before dispatch.
+
+notes: |
+  TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
+  Per the taxonomy table, this substrate is recorded under inventory id
+  `dp_sims_renderer` with lineage "DP-SIMS semantic synthesis CVPR 2024".
+
+  Architectural distinction vs NeRV-family: SPADE-conditioned progressive
+  generator (24x32 → 384x512) with learned-constant input + multi-scale
+  PatchGAN discriminator. Targets ~500K-2M params (NeRV-family is 88K-180K).
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when canonical driver
+  lands, must register harvest hook within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": first anchor must be
+  tagged [contest-CUDA] (NVIDIA GPU on Linux; never MPS); CPU axis required
+  separately on Linux x86_64 before any submission claim.
+
+  Per CLAUDE.md "EMA — non-negotiable": GAN training requires EMA on the
+  generator weights at decay=0.997 with snapshot+restore at eval time.
+  Inference checkpoint = EMA shadow, not live weights.
+
+  Cross-ref:
+    .omx/research/substrate_tradition_taxonomy_20260512.md
+    DP-SIMS arxiv 2312.13314 (Wang et al. CVPR 2024)
+    SPADE — Park et al. CVPR 2019
