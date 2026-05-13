@@ -113,9 +113,9 @@ jobs:
           SELECTED_FFMPEG="$(bash scripts/ensure_parity_ffmpeg.sh \
             --install-root "${RUNNER_TEMP}/ffmpeg-btbn" \
             --env-file "${GITHUB_ENV}" \
-            --path-file "${GITHUB_PATH}")"
+            --path-file "${GITHUB_PATH}" \
+            --allow-missing-contract)"
           export FFMPEG_BIN="${SELECTED_FFMPEG}"
-          "$FFMPEG_BIN" -hide_banner -h filter=scale | grep -q in_primaries
           "$FFMPEG_BIN" -version | head -3
 
       - name: Create venv + install tac with runtime extras (CPU torch)

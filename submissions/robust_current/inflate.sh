@@ -58,7 +58,6 @@ ffmpeg_filter_option_available() {
 
 require_ffmpeg_parity() {
   require_cmd "$FFMPEG_BIN"
-  require_cmd "$UV_BIN"
 
   for opt in in_range out_range in_color_matrix in_primaries in_transfer; do
     if ! ffmpeg_filter_option_available "$opt"; then
@@ -69,7 +68,28 @@ require_ffmpeg_parity() {
   done
 }
 
-require_ffmpeg_parity
+inflate_mode_requires_ffmpeg_color_contract() {
+  if [ "$ROI_ENABLE" = "1" ]; then
+    return 0
+  fi
+  if [ "$PYTHON_INFLATE" = "0" ] || [ -z "$PYTHON_INFLATE" ]; then
+    # Renderer archives with a missing config.env should reach the dedicated
+    # renderer-archive guard below; do not mask that actionable failure behind
+    # an unrelated ffmpeg color-contract error.
+    if [ -f "$ARCHIVE_DIR/renderer.bin" ] || [ -f "$ARCHIVE_DIR/renderer.bin.br" ]; then
+      return 1
+    fi
+    return 0
+  fi
+  return 1
+}
+
+require_cmd "$UV_BIN"
+if inflate_mode_requires_ffmpeg_color_contract; then
+  require_ffmpeg_parity
+else
+  echo "[inflate] skipping ffmpeg color-contract gate for PYTHON_INFLATE=$PYTHON_INFLATE ROI_ENABLE=$ROI_ENABLE" >&2
+fi
 
 INFLATE_BROTLI_SPEC="${INFLATE_BROTLI_SPEC:-brotli==1.2.0}"
 INFLATE_AV_SPEC="${INFLATE_AV_SPEC:-av==17.0.1}"

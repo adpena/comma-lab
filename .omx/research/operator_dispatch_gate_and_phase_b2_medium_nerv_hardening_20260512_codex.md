@@ -204,3 +204,23 @@ anchor:
 5. Continual-learning posterior: N/A until a real empirical anchor is
    harvested.
 6. Probe-disambiguator: N/A - single correctness interpretation.
+
+## Follow-up: lane_g_v3 GHA CPU Retry3
+
+- Dispatch claim:
+  `lane_g_v3_gha_cpu_eval_l3_promotion_20260512_retry3`.
+- GHA run: `25771036919`.
+- Classification: `failed_gha_cpu_eval_toolchain_pre_score`. This is an
+  infrastructure/runtime bootstrap failure, not a score result and not a lane
+  or model negative.
+- Root cause: the GHA workflow still hard-required the robust-current ffmpeg
+  color-contract gate during setup, even for `PYTHON_INFLATE=renderer`
+  archives that do not use the ffmpeg decode branch. BtbN `latest` also no
+  longer satisfied the historic `in_primaries` scale-option assumption, so the
+  setup step failed before archive custody and auth eval began.
+- Fix landed locally for the next retry: `scripts/ensure_parity_ffmpeg.sh`
+  supports non-strict bootstrap for renderer-only workflows, and
+  `submissions/robust_current/inflate.sh` now applies the ffmpeg color-contract
+  gate only to runtime modes that can actually reach the ffmpeg decode path.
+  Renderer modes still require `uv` and fail closed later if renderer
+  dependencies are missing.

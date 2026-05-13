@@ -11,6 +11,7 @@ set -euo pipefail
 INSTALL_ROOT="${RUNNER_TEMP:-/tmp}/ffmpeg-btbn"
 ENV_FILE="${GITHUB_ENV:-}"
 PATH_FILE="${GITHUB_PATH:-}"
+ALLOW_MISSING_CONTRACT=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -25,6 +26,10 @@ while [ "$#" -gt 0 ]; do
     --path-file)
       PATH_FILE="$2"
       shift 2
+      ;;
+    --allow-missing-contract)
+      ALLOW_MISSING_CONTRACT=1
+      shift
       ;;
     -h|--help)
       sed -n '1,80p' "$0"
@@ -112,8 +117,12 @@ else
   fi
   resolved="$(install_btbn)"
   if ! has_scale_contract "$resolved"; then
+    if [ "$ALLOW_MISSING_CONTRACT" -eq 1 ]; then
+      log "WARNING: selected ffmpeg lacks explicit color-contract scale options; downstream inflate.sh will fail closed if the selected runtime mode needs them"
+    else
     log "FATAL: installed BtbN ffmpeg still lacks required scale options"
     exit 8
+    fi
   fi
 fi
 
