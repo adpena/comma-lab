@@ -45209,10 +45209,11 @@ def check_hnerv_training_parity_guard(
 # files in `src/tac/tests/` plus 1 file in `src/tac/substrates/_shared/`
 # (outside testpaths regardless of import syntax).
 #
-# This gate refuses any `.py` file under `src/tac/tests/` or `tests/` that
-# imports via `from src.tac.*` or `import src.tac.*`. Companion fixes in the
-# same commit batch: move the misplaced test file into the canonical
-# `src/tac/tests/` directory and rewrite the 3 offending imports.
+# This gate refuses any `.py` file under the test corpus and runtime roots that
+# imports via `from src.tac.*`, `import src.tac.*`, or a subprocess string
+# literal using those forms. Companion fixes: move the misplaced test file into
+# the canonical `src/tac/tests/` directory, rewrite the offending imports, and
+# extend the scanner to runtime/subprocess surfaces.
 #
 # Acceptance:
 # - same-line `# SRC_TAC_IMPORT_OK:<reason>` waiver on the import line for the
@@ -45226,6 +45227,12 @@ _CHECK_188_TEST_SCAN_DIRS: tuple[str, ...] = (
     "src/tac/tests",
     "tests",
 )
+_CHECK_188_RUNTIME_SCAN_DIRS: tuple[str, ...] = (
+    "src/tac",
+    "experiments",
+    "tools",
+    "scripts",
+)
 
 # Match real import statements only — `from src.tac.<X>` or `import src.tac.<X>`
 # at the start of a (possibly indented) line. Avoids docstring + string-literal
@@ -45233,8 +45240,24 @@ _CHECK_188_TEST_SCAN_DIRS: tuple[str, ...] = (
 _CHECK_188_SRC_TAC_IMPORT_RE = re.compile(
     r"^\s*(?:from\s+src\.tac(?:\.|\s)|import\s+src\.tac(?:\.|\s|$))"
 )
+_CHECK_188_SRC_TAC_STRING_RE = re.compile(
+    r"""['"].*?(?:from\s+src\.tac\.|import\s+src\.tac\.).*?['"]"""
+)
 _CHECK_188_WAIVER_RE = re.compile(
     r"#\s*SRC_TAC_IMPORT_OK:(?!<reason>)([^\s#].*?)\s*$"
+)
+_CHECK_188_EXEMPT_MARKERS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "build/lib/",
+    "reports/raw/",
+    "__pycache__",
+)
+_CHECK_188_SELF_EXEMPT_FILES: tuple[str, ...] = (
+    "src/tac/preflight.py",
+    "src/tac/tests/test_check_188_test_imports_canonical.py",
 )
 
 
@@ -45245,7 +45268,7 @@ def check_test_imports_use_tac_not_src_tac(
     verbose: bool = True,
 ) -> list[str]:
     """Catalog #188 — refuse `from src.tac.*` / `import src.tac.*` imports in
-    test files under `src/tac/tests/` + `tests/`.
+    tests and runtime entry points.
 
     R10-1 bug class: test files using non-canonical `src.tac.*` import syntax
     pass manually with `PYTHONPATH=<repo> pytest <file>` but fail default
@@ -45255,18 +45278,31 @@ def check_test_imports_use_tac_not_src_tac(
     way for manual passes to diverge from the default gate.
 
     Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
-    non-negotiable: companion fix rewrites the 3 offending imports in the same
-    commit batch; this gate refuses any future re-introduction.
+    non-negotiable: companion fixes rewrote the offending imports; this gate
+    refuses future re-introduction in test files, runtime modules, dispatch
+    tools, and subprocess string snippets.
     """
     root = (repo_root or Path.cwd()).resolve()
     violations: list[str] = []
     n_scanned = 0
-    for rel in _CHECK_188_TEST_SCAN_DIRS:
+    seen_paths: set[Path] = set()
+    scan_roots = _CHECK_188_TEST_SCAN_DIRS + _CHECK_188_RUNTIME_SCAN_DIRS
+    for rel in scan_roots:
         scan_dir = root / rel
         if not scan_dir.is_dir():
             continue
         for path in scan_dir.rglob("*.py"):
-            if "__pycache__" in path.parts:
+            if path in seen_paths:
+                continue
+            seen_paths.add(path)
+            try:
+                rel_path = path.relative_to(root).as_posix()
+            except ValueError:
+                rel_path = path.as_posix()
+            if (
+                rel_path in _CHECK_188_SELF_EXEMPT_FILES
+                or any(marker in rel_path for marker in _CHECK_188_EXEMPT_MARKERS)
+            ):
                 continue
             n_scanned += 1
             try:
@@ -45274,15 +45310,14 @@ def check_test_imports_use_tac_not_src_tac(
             except OSError:
                 continue
             for line_no, line in enumerate(text.splitlines(), start=1):
-                if not _CHECK_188_SRC_TAC_IMPORT_RE.match(line):
+                if not (
+                    _CHECK_188_SRC_TAC_IMPORT_RE.match(line)
+                    or _CHECK_188_SRC_TAC_STRING_RE.search(line)
+                ):
                     continue
                 # Same-line waiver respected; placeholder reason rejected.
                 if _CHECK_188_WAIVER_RE.search(line):
                     continue
-                try:
-                    rel_path = path.relative_to(root).as_posix()
-                except ValueError:
-                    rel_path = path.as_posix()
                 violations.append(
                     f"{rel_path}:{line_no}: forbidden `src.tac.*` import "
                     f"(use `tac.*` instead). Line: {line.strip()[:160]}"

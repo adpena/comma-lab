@@ -1,6 +1,6 @@
 """Tests for Catalog #188 — check_test_imports_use_tac_not_src_tac.
 
-FIX-WAVE-10 R10-1 silent-test-CI-evasion self-protect, 2026-05-13.
+FIX-WAVE-10/R11 import-canonicalization self-protect, 2026-05-13.
 
 Bug class: test files using non-canonical ``from src.tac.*`` /
 ``import src.tac.*`` imports pass manually with
@@ -11,7 +11,8 @@ configured testpaths are a sibling way for manual passes to diverge from
 the default gate.
 
 Sister of Catalog #25 (broken-import) + check_test_files_imports_resolve.
-Together they extinct the silent-test-CI-evasion class bidirectionally.
+Together they close manual-vs-CI import mismatch for tests and runtime
+entry points.
 """
 
 from __future__ import annotations
@@ -406,18 +407,178 @@ def test_non_py_files_ignored(tmp_path):
     assert violations == []
 
 
-def test_outside_test_dirs_is_ignored(tmp_path):
-    """Files OUTSIDE `src/tac/tests/` + `tests/` are NOT scanned.
-
-    The gate is scoped to test corpus only — `src/tac/foo.py` legitimately
-    has no `src.tac.*` import (it would be circular), but the gate must
-    not extend its enforcement scope to production code surfaces.
-    """
+def test_outside_scanned_roots_is_ignored(tmp_path):
+    """Files outside configured scan roots are not scanned."""
     root = _make_test_corpus(tmp_path, {})
-    (root / "src" / "tac" / "foo.py").parent.mkdir(parents=True, exist_ok=True)
-    (root / "src" / "tac" / "foo.py").write_text(
-        "from src.tac.bar import Baz  # would be circular but not our scope\n",
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "docs" / "example.py").write_text(
+        "from src.tac.bar import Baz  # outside scanner roots\n",
         encoding="utf-8",
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert violations == []
+
+
+def test_runtime_src_tac_import_is_violation(tmp_path):
+    """Runtime code under `src/tac/` is also scanned."""
+    root = _make_test_corpus(
+        tmp_path,
+        {"src/tac/runtime_bad.py": "from src.tac.foo import Bar\n"},
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert len(violations) == 1
+    assert "src/tac/runtime_bad.py" in violations[0]
+
+
+def test_subprocess_string_literal_import_is_violation(tmp_path):
+    """Python `-c` / subprocess strings using `src.tac.*` are refused."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "tools/bad_dispatch.py": (
+                'cmd = ["python", "-c", "from src.tac.preflight import preflight_all"]\n'
+            ),
+        },
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert len(violations) == 1
+    assert "tools/bad_dispatch.py" in violations[0]
+
+
+def test_runtime_scan_exempts_preflight_signature_literals(tmp_path):
+    """The preflight checker can contain literal patterns for its own scan."""
+    root = _make_test_corpus(
+        tmp_path,
+        {"src/tac/preflight.py": "TOKEN = 'from src.tac.foo import Bar'\n"},
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert violations == []
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# FIX-WAVE-11 R11-1 extended-scope coverage (2026-05-13)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_experiments_dir_runtime_training_entry_point_is_violation(tmp_path):
+    """R11-1 anchor: `experiments/train_*.py` runtime imports are scanned."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "experiments/train_foo.py": (
+                "from src.tac.foo_renderer import Bar\n"
+            ),
+        },
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert len(violations) == 1
+    assert "experiments/train_foo.py" in violations[0]
+
+
+def test_scripts_dir_python_dash_c_invocation_is_violation(tmp_path):
+    """`scripts/*.py` using `python -c "from src.tac..."` is scanned."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "scripts/driver.py": (
+                'subprocess.run(["python", "-c", '
+                '"from src.tac.preflight import preflight_all"])\n'
+            ),
+        },
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert len(violations) == 1
+    assert "scripts/driver.py" in violations[0]
+
+
+def test_experiments_results_path_marker_is_exempt(tmp_path):
+    """`experiments/results/` is DERIVED_OUTPUT and skipped per exempt markers."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "experiments/results/snapshot/old.py": (
+                "from src.tac.foo import Bar\n"
+            ),
+        },
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert violations == []
+
+
+def test_intake_path_marker_is_exempt(tmp_path):
+    """`_intake_` clones (vendored public PRs) are skipped."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "experiments/public_pr_intake_xyz/source/foo.py": (
+                "from src.tac.foo import Bar\n"
+            ),
+        },
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert violations == []
+
+
+def test_runtime_src_tac_same_line_waiver_respected(tmp_path):
+    """`# SRC_TAC_IMPORT_OK:<reason>` waiver works in runtime dirs."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "experiments/train_legacy.py": (
+                "from src.tac.legacy import Bar  "
+                "# SRC_TAC_IMPORT_OK:vendored-intake-fixture\n"
+            ),
+        },
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert violations == []
+
+
+def test_runtime_canonical_tac_import_is_clean(tmp_path):
+    """Canonical `from tac.*` imports under runtime dirs are clean."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "experiments/train_good.py": "from tac.foo_renderer import Bar\n",
+            "tools/good_dispatch.py": (
+                'cmd = ["python", "-c", "from tac.preflight import x"]\n'
+            ),
+        },
+    )
+    violations = check_test_imports_use_tac_not_src_tac(
+        repo_root=root, verbose=False
+    )
+    assert violations == []
+
+
+def test_self_exempt_test_file_with_violation_fixtures_is_clean(tmp_path):
+    """The test file itself contains fixture strings — must self-exempt."""
+    root = _make_test_corpus(
+        tmp_path,
+        {
+            "src/tac/tests/test_check_188_test_imports_canonical.py": (
+                "FIXTURE = 'from src.tac.foo import Bar'\n"
+                "from src.tac.preflight import x  # actual import in fixture\n"
+            ),
+        },
     )
     violations = check_test_imports_use_tac_not_src_tac(
         repo_root=root, verbose=False
