@@ -1,4 +1,33 @@
-HDM4+HLM1 static release surface.
-score_claim=false
-ready_for_exact_eval_dispatch=false
-Exact CUDA auth eval is required before any score claim.
+HDM4+HLM1 exact-CUDA release-review surface
+
+lane_id            : hnerv_hlm1_fixed_latent_recode_exact_eval
+job_id             : exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513
+archive_sha256     : 8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0
+archive_size_bytes : 186423
+member_count       : 1
+runtime_tree_sha256: de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9
+auth_eval_json     : experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513/contest_auth_eval.json
+
+Custody
+=======
+This surface preserves the runtime files used for the exact-CUDA auth eval.
+archive_manifest.json and report.txt are custody files and are excluded from
+the pre-submission runtime-match hash by the compliance checker.
+
+Empirical [contest-CUDA] anchor
+===============================
+archive_size_bytes: 186423
+avg_posenet_dist: 0.00003236
+avg_segnet_dist: 0.0006426
+canonical_score: 0.20638030907530963
+evidence_grade: contest-CUDA
+final_score: 0.21
+n_samples: 600
+score_axis: contest_cuda
+score_claim_valid: true
+
+Submission-readiness status
+===========================
+This report is not sufficient by itself. Submission readiness requires
+scripts/pre_submission_compliance_check.py --contest-final --strict to pass
+against this surface and the exact auth-eval artifact above.
