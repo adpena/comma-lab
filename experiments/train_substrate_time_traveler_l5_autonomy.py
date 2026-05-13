@@ -277,9 +277,23 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Predictive-coding hierarchy auxiliary term weight.")
 
     # Optimizer choice
-    p.add_argument("--optimizer", choices=("adamw", "iglt"), default="adamw",
-                   help="Inner optimizer: AdamW (default) or IGLT "
-                        "(Fisher-preconditioned Langevin) for polish-phase use.")
+    p.add_argument("--optimizer",
+                   choices=("adamw", "iglt", "muon", "muon+iglt"),
+                   default="adamw",
+                   help="Inner optimizer: 'adamw' (default), 'iglt' "
+                        "(Fisher-preconditioned Langevin for polish-phase), "
+                        "'muon' (Keller Jordan NS-orthogonalized momentum on "
+                        "hidden 2-D+ weights + AdamW on stem/RGB heads/biases), "
+                        "or 'muon+iglt' (Muon on hidden + IGLT on stem/heads).")
+    p.add_argument("--muon-lr", type=float, default=0.02,
+                   help="Muon learning rate (default 0.02; higher than AdamW "
+                        "because NS normalizes update magnitude). Only used "
+                        "when --optimizer is 'muon' or 'muon+iglt'.")
+    p.add_argument("--muon-weight-decay", type=float, default=0.0,
+                   help="Muon decoupled weight decay (default 0.0; recommended "
+                        "~0.01 per Chen-Li-Liu arXiv:2506.15054 spectral-KKT "
+                        "story). Only used when --optimizer is 'muon' or "
+                        "'muon+iglt'.")
 
     # Device / mode
     p.add_argument("--device", choices=("cuda", "cpu"), default="cuda",
@@ -512,6 +526,63 @@ def _write_runtime(submission_dir: Path) -> None:
         "    sys.exit(main())\n"
     )
     (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
+
+
+class _CompositeOptimizer:
+    """Minimal Optimizer-like wrapper for two-optimizer dispatch.
+
+    The Muon-and-AdamW (or Muon-and-IGLT) optimizer split (Keller Jordan) keeps
+    NS-orthogonalized momentum on hidden 2-D+ weights and a sister optimizer
+    on stem + RGB heads + biases. The training loop expects a single
+    ``optimizer`` object with ``.zero_grad()`` / ``.step()`` /
+    ``.param_groups`` — this wrapper preserves that contract while delegating
+    each call to the two underlying optimizers in order.
+
+    Cross-reference: ``tac.optimization.muon.partition_params_for_muon``.
+    Lane: ``lane_other_priorities_parallel_sweep_20260513``.
+    """
+
+    def __init__(self, optimizers: list[Any]) -> None:
+        if not optimizers:
+            raise ValueError("_CompositeOptimizer requires >=1 optimizer")
+        self._optimizers: list[Any] = list(optimizers)
+
+    @property
+    def param_groups(self) -> list[dict[str, Any]]:
+        """Flattened union of underlying param groups (read-only convention)."""
+        groups: list[dict[str, Any]] = []
+        for opt in self._optimizers:
+            groups.extend(opt.param_groups)
+        return groups
+
+    def zero_grad(self, set_to_none: bool = True) -> None:
+        for opt in self._optimizers:
+            opt.zero_grad(set_to_none=set_to_none)
+
+    def step(self, closure: Any = None) -> None:
+        if closure is not None:
+            raise NotImplementedError(
+                "_CompositeOptimizer does not support closure form; the train "
+                "loop must call .step() without a closure."
+            )
+        for opt in self._optimizers:
+            opt.step()
+
+    def state_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "tac_composite_optimizer_v1",
+            "optimizers": [opt.state_dict() for opt in self._optimizers],
+        }
+
+    def load_state_dict(self, state: dict[str, Any]) -> None:
+        sd_list = state.get("optimizers", [])
+        if len(sd_list) != len(self._optimizers):
+            raise ValueError(
+                f"state_dict mismatch: have {len(self._optimizers)} optimizers, "
+                f"got {len(sd_list)} state entries"
+            )
+        for opt, sd in zip(self._optimizers, sd_list, strict=True):
+            opt.load_state_dict(sd)
 
 
 def _build_archive_zip(
@@ -816,7 +887,10 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         _stage("lagrangian_built")
 
-        # 8. Optimizer (AdamW default; IGLT opt-in via --optimizer iglt).
+        # 8. Optimizer dispatch (AdamW default; IGLT/Muon/Muon+IGLT opt-in).
+        #    Muon path: partition substrate params into (hidden Muon-eligible,
+        #    stem+RGB+biases AdamW-handled) via partition_params_for_muon().
+        #    The per-pair side-info float is always Muon-ineligible (1-D).
         params_list = [*list(substrate.parameters()), per_pair_side_info_float]
         if args.optimizer == "iglt":
             from tac.optimization.iglt import IGLTOptimizer
@@ -831,6 +905,42 @@ def _full_main(args: argparse.Namespace) -> int:
                 fisher_estimation="diagonal",
             )
             scheduler = None
+        elif args.optimizer in ("muon", "muon+iglt"):
+            from tac.optimization.muon import (
+                MuonOptimizer,
+                partition_params_for_muon,
+            )
+
+            muon_params, adamw_params = partition_params_for_muon(substrate)
+            # per_pair_side_info_float is 1-D — must go to the AdamW group.
+            adamw_params = [*adamw_params, per_pair_side_info_float]
+            muon_opt = MuonOptimizer(
+                muon_params,
+                lr=args.muon_lr,
+                weight_decay=args.muon_weight_decay,
+            )
+            if args.optimizer == "muon+iglt":
+                from tac.optimization.iglt import IGLTOptimizer
+
+                adamw_opt = IGLTOptimizer(
+                    adamw_params,
+                    lr=args.lr,
+                    T_init=1e-3,
+                    T_final=1e-5,
+                    n_steps=max(1, args.epochs),
+                    weight_decay=args.weight_decay,
+                    fisher_estimation="diagonal",
+                )
+            else:
+                adamw_opt = torch.optim.AdamW(
+                    adamw_params, lr=args.lr, weight_decay=args.weight_decay
+                )
+            # Compose into a single Optimizer-like wrapper so the rest of the
+            # train loop (zero_grad / step) remains identical.
+            optimizer = _CompositeOptimizer([muon_opt, adamw_opt])
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                adamw_opt, T_max=max(1, args.epochs)
+            ) if args.optimizer == "muon" else None
         else:
             optimizer = torch.optim.AdamW(
                 params_list, lr=args.lr, weight_decay=args.weight_decay

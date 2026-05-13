@@ -28,6 +28,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "InformationGeometricLangevinOptimizer",
     ),
     "LangevinOptimizer": ("tac.optimization.langevin_optimizer", "LangevinOptimizer"),
+    "MuonOptimizer": ("tac.optimization.muon", "MuonOptimizer"),
     "OperatingPoint": ("tac.optimization.scorer_surface_shaking", "OperatingPoint"),
     "ScorerSurfacePlanError": (
         "tac.optimization.scorer_surface_shaking",
@@ -90,6 +91,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "onsager_importance_weights",
     ),
     "pack_ternary_tensor": ("tac.optimization.ternary_qat", "pack_ternary_tensor"),
+    "partition_params_for_muon": (
+        "tac.optimization.muon",
+        "partition_params_for_muon",
+    ),
     "precondition_gradient": (
         "tac.optimization.info_geom_langevin",
         "precondition_gradient",
@@ -114,6 +119,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "wasserstein_barycenter_diagonal_gaussians": (
         "tac.optimization.zen_state_frontier",
         "wasserstein_barycenter_diagonal_gaussians",
+    ),
+    "zeropower_via_newtonschulz5": (
+        "tac.optimization.muon",
+        "zeropower_via_newtonschulz5",
     ),
 }
 
