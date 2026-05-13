@@ -621,3 +621,32 @@ Score-lowering implication:
 - T1 still should not launch as a full 3000-epoch Modal T4 job without a
   reduced-epoch or cheaper-provider route, but the local required-input gate
   now points at the real PR95 parity evidence.
+
+## Follow-up: PR106/R2 GHA CPU eval archive-custody failure fixed (2026-05-13)
+
+Bug class:
+
+- GHA run `25773515494` for
+  `lane_pr106_latent_sidecar_r2_pr101_grammar` failed before scoring at the
+  workflow's "Verify committed archive exists" step.
+- The canonical packet existed locally at
+  `submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip`, but the
+  repo-level scratch-artifact ignore rule `submissions/*/archive.zip` kept it
+  out of the dispatched commit.
+- Classification: `archive_custody_missing_on_dispatched_sha`. This is an
+  infrastructure/custody failure, not a method result and not a score claim.
+
+Fix:
+
+- Added a narrow `.gitignore` allowlist for the PR106/R2 PR101-grammar archive.
+- Tracked the 186,780-byte archive whose SHA-256 matches
+  `archive_manifest.json`:
+  `c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383`.
+- Closed the failed GHA dispatch claim with terminal status before relaunch.
+
+Score-lowering implication:
+
+- The next GHA CPU run is the first apples-to-apples public CPU-axis closure
+  attempt for this exact PR106/R2 PR101-grammar archive/runtime packet.
+- No CPU/CUDA conversion is made here; CUDA remains the existing Modal T4 score
+  in the submission artifact, and GHA CPU must be measured directly.

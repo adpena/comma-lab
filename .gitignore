@@ -96,6 +96,7 @@ credentials.json
 
 # Generated submission scratch artifacts
 submissions/*/archive.zip
+!submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip
 submissions/*/submission.zip
 submissions/*/inflated/
 submissions/*/__pycache__/
