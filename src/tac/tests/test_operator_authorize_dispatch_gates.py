@@ -61,6 +61,24 @@ def test_pre_promotion_blockers_refuse_until_recipe_clears_them() -> None:
     assert "balle_renderer_first_anchor_required" in refusal
 
 
+def test_dispatch_blockers_refuse_even_if_dispatch_enabled_omitted() -> None:
+    refusal = _recipe_dispatch_refusal(
+        _recipe(
+            {
+                "name": "substrate_cnerv_modal_a100_dispatch",
+                "dispatch_blockers": [
+                    "tier_manifest_required_for_catalog_151_compliance",
+                    "trainer_scaffold_only_non_smoke_systemexit_gate",
+                ],
+            }
+        )
+    )
+    assert refusal is not None
+    assert "dispatch_blockers still declared" in refusal
+    assert "tier_manifest_required_for_catalog_151_compliance" in refusal
+    assert "trainer_scaffold_only_non_smoke_systemexit_gate" in refusal
+
+
 @pytest.mark.parametrize(
     "raw",
     [

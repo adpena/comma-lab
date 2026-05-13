@@ -1,15 +1,4 @@
 #!/usr/bin/env python
-# HNERV_INFLATE_LOC_BUDGET_WAIVED:embedded_pr103_arithmetic_decoder_section_closure
-# — this final-runtime adapter intentionally embeds the PR103 arithmetic
-# decoder section closure inline (no TAC imports, no scorer code at inflate
-# time) per PR103+PR106 byte-bound parity custody. The decoder + dequant +
-# arithmetic-coding paths cannot be modularized without breaking the byte-bound
-# guarantee against the candidate archive in
-# experiments/results/pr103_repack_pr106_standalone_20260507. Refactor path:
-# move the embedded decoder into a vendored module under submissions/
-# pr103_pr106_final_runtime/_pr103_decoder.py with byte-parity tests; planned
-# for FIX-WAVE-Z. Reviewable in 30 seconds requires the refactor, not the
-# waiver.
 """Self-contained PR103 arithmetic decoder inside a PR106 packed runtime.
 
 This final-runtime adapter is intentionally byte-bound to the candidate archive

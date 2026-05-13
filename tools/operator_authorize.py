@@ -488,11 +488,12 @@ def _recipe_dispatch_refusal(recipe: Recipe) -> str | None:
     """Return a fail-closed refusal reason for non-dispatchable recipes.
 
     Recipes are the operator-facing source of truth for dispatchability. A
-    recipe that declares ``dispatch_enabled: false`` or still lists
-    ``pre_promotion_blockers`` must not reach confirmation, claim creation, or
-    provider dispatch. This is deliberately independent of provider-specific
-    preflights so deferred research recipes also fail before cost prediction or
-    provider setup can create misleading state.
+    recipe that declares ``dispatch_enabled: false``, still lists
+    ``dispatch_blockers``, or still lists ``pre_promotion_blockers`` must not
+    reach confirmation, claim creation, or provider dispatch. This is
+    deliberately independent of provider-specific preflights so deferred
+    research recipes also fail before cost prediction or provider setup can
+    create misleading state.
     """
 
     if not recipe.dispatch_enabled:
@@ -502,6 +503,14 @@ def _recipe_dispatch_refusal(recipe: Recipe) -> str | None:
         if recipe.defer_reason:
             details.append("defer_reason=" + recipe.defer_reason.splitlines()[0])
         return "; ".join(details)
+    if recipe.dispatch_blockers:
+        return (
+            "dispatch_blockers still declared: "
+            + ", ".join(recipe.dispatch_blockers)
+            + ". Clear these in the recipe only after the substrate trainer, "
+            "runtime, archive grammar, and exact-eval packet path blockers are "
+            "actually resolved."
+        )
     if recipe.pre_promotion_blockers:
         return (
             "pre_promotion_blockers still declared: "

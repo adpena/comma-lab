@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 # ruff: noqa: E402, I001
-# HNERV_INFLATE_LOC_BUDGET_WAIVED:dual_format_id_dispatch_runtime — this
-# adapter dispatches across format_id=0x01 (legacy brotli sidecar) and
-# format_id=0x02 (PR101 ranked-Huffman/no-op grammar sidecar) inside a single
-# byte-bound runtime. The dual-grammar dispatch is structural to the PR101
-# grammar adapter; the per-pair latent-correction decoder is shared but the
-# entry/exit format_id parse + brotli-vs-Huffman branch cannot be expressed
-# in <=200 LOC without further module imports. Refactor path: extract the
-# grammar dispatch into _grammar.py and the brotli/Huffman decoders into
-# _decode_legacy.py / _decode_pr101.py; planned for FIX-WAVE-Z.
 """Inflate lane_pr106_latent_sidecar_r2_pr101_grammar archive.
 
 PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch:
