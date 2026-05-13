@@ -47,7 +47,7 @@ Recipe YAML schema (canonical fields)::
     remote_driver: scripts/remote_lane_t1_balle_endtoend.sh   # optional
     required_input_files: []     # optional; passed to validate_dispatch_required_inputs.py
     env_overrides: {KEY: VALUE}  # optional; threaded into the dispatch invocation
-    dependencies: []             # optional; for documentation only
+    dependencies: []             # optional; local paths are preflighted before native dispatch
     timeout_hours: 4.0           # optional; default 4.0 hours
     modal:                       # optional; only when platform == modal
       lane_script: scripts/remote_lane_<id>.sh
@@ -261,6 +261,113 @@ def _validate_required_input_files(
             "[operator-authorize] FATAL: required input missing per "
             f"Catalog #152 (validator returned {result.returncode}); aborting "
             "before GPU dispatch"
+        )
+
+
+def _normalize_declared_local_path(value: Any) -> str | None:
+    """Return a repo-local path declared in a recipe, or ``None`` if non-local.
+
+    Recipe ``dependencies`` often carry human annotations such as
+    ``tools/foo.py (Catalog #152)``. The dispatch preflight should validate the
+    actual path while ignoring bracketed placeholders, URLs, env refs, and
+    provider-absolute paths such as ``/workspace/pact/...``.
+    """
+
+    if value is None:
+        return None
+    text = str(value).strip().strip("'\"")
+    if not text:
+        return None
+    lowered = text.lower()
+    if (
+        text.startswith("[")
+        or text.startswith("$")
+        or text.startswith("${")
+        or "://" in text
+        or lowered in {"none", "null", "n/a", "na"}
+    ):
+        return None
+    if text.startswith("/"):
+        try:
+            Path(text).resolve().relative_to(REPO_ROOT)
+        except (OSError, ValueError):
+            return None
+        return text
+    # Strip common prose annotations while preserving paths with spaces as
+    # invalid/missing rather than guessing a different path.
+    for marker in (" (", "\t("):
+        if marker in text:
+            text = text.split(marker, 1)[0].strip()
+    return text or None
+
+
+def _iter_declared_local_path_refs(recipe: Recipe) -> list[tuple[str, str, bool]]:
+    """Collect declared local recipe paths that must exist before dispatch.
+
+    The boolean marks entries that must be files rather than directories.
+    """
+
+    refs: list[tuple[str, str, bool]] = []
+
+    def add(label: str, value: Any, *, must_be_file: bool = True) -> None:
+        normalized = _normalize_declared_local_path(value)
+        if normalized:
+            refs.append((label, normalized, must_be_file))
+
+    add("remote_driver", recipe.remote_driver)
+
+    modal_cfg = recipe.raw.get("modal", {}) or {}
+    if isinstance(modal_cfg, dict):
+        add("modal.lane_script", modal_cfg.get("lane_script"))
+        add("modal.cost_band_trainer", modal_cfg.get("cost_band_trainer"))
+
+    vastai_cfg = recipe.raw.get("vastai", {}) or {}
+    if isinstance(vastai_cfg, dict):
+        add("vastai.launcher", vastai_cfg.get("launcher"))
+        add("vastai.lane_script", vastai_cfg.get("lane_script"))
+
+    add("required_input_files_trainer", recipe.raw.get("required_input_files_trainer"))
+
+    readiness_gate = recipe.raw.get("readiness_gate")
+    if isinstance(readiness_gate, str):
+        add("readiness_gate", readiness_gate.split(maxsplit=1)[0])
+
+    for idx, value in enumerate(recipe.raw.get("sentinel_files", []) or []):
+        add(f"sentinel_files[{idx}]", value)
+
+    for idx, value in enumerate(recipe.raw.get("dependencies", []) or []):
+        add(f"dependencies[{idx}]", value, must_be_file=False)
+
+    # Deduplicate by path while preserving the most specific label list for
+    # actionable diagnostics.
+    seen: dict[str, tuple[list[str], bool]] = {}
+    for label, rel, must_be_file in refs:
+        labels, existing_must_be_file = seen.setdefault(rel, ([], must_be_file))
+        labels.append(label)
+        if must_be_file and not existing_must_be_file:
+            seen[rel] = (labels, True)
+
+    return [(", ".join(labels), rel, must_be_file) for rel, (labels, must_be_file) in seen.items()]
+
+
+def _validate_declared_local_paths(recipe: Recipe) -> None:
+    """Fail before claim/provider setup when a dispatchable recipe is incomplete."""
+
+    failures: list[str] = []
+    for labels, rel, must_be_file in _iter_declared_local_path_refs(recipe):
+        path = Path(rel)
+        full = path if path.is_absolute() else REPO_ROOT / path
+        if not full.exists():
+            failures.append(f"{labels}: missing {rel}")
+            continue
+        if must_be_file and not full.is_file():
+            failures.append(f"{labels}: expected file, found non-file {rel}")
+
+    if failures:
+        joined = "; ".join(failures)
+        raise SystemExit(
+            "[operator-authorize] FATAL: declared local path preflight failed "
+            f"for recipe '{recipe.name}' before lane claim/provider setup: {joined}"
         )
 
 
@@ -981,6 +1088,10 @@ def main(argv: list[str] | None = None) -> int:
     # Print banner.
     _print_banner(recipe, band)
 
+    native_dispatch = _platform_has_native_dispatch(recipe.platform)
+    if not dispatch_refusal and native_dispatch:
+        _validate_declared_local_paths(recipe)
+
     if args.dry_run:
         if dispatch_refusal:
             print(f"[operator-authorize] --dry-run; would refuse: {dispatch_refusal}")
@@ -1021,7 +1132,6 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
 
-    native_dispatch = _platform_has_native_dispatch(recipe.platform)
     if native_dispatch:
         _native_dispatch_preflight(recipe)
 
