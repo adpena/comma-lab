@@ -92,7 +92,7 @@ def _check_predicted_band_below_frontier() -> tuple[bool, str]:
 
 
 def _check_preflight_clean() -> tuple[bool, str]:
-    cmd = [sys.executable, "-c", "from src.tac.preflight import preflight_all; preflight_all(verbose=False)"]
+    cmd = [sys.executable, "-c", "from tac.preflight import preflight_all; preflight_all(verbose=False)"]
     try:
         result = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True, timeout=300, check=False)
     except subprocess.TimeoutExpired:

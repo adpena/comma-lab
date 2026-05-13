@@ -24,11 +24,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Make tac available — point sys.path at `src/` so the canonical `tac.*`
+# namespace resolves under any entry point (README's PYTHONPATH=src:upstream
+# OR standalone `python experiments/train_categorical_renderer.py`). Pre-FIX-
+# WAVE-11 used `parent.parent` (repo root) and `from src.tac.*` imports,
+# which created a parallel non-canonical namespace per FIX-WAVE-11 R11-1
+# closure (Catalog #188 extended scope). ROOT is retained as the repo root
+# for downstream default-path resolution (e.g. ``ROOT / "upstream"``).
 ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SRC_ROOT = ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
-from src.tac.categorical_substrate import (  # noqa: E402
+from tac.categorical_substrate import (  # noqa: E402
     CAMERA_H,
     CAMERA_W,
     CategoricalRenderer,
@@ -91,7 +99,7 @@ def _make_real_batch_iterator(args: argparse.Namespace, batch_size: int,
             "upstream/videos/0.mkv via RealPairBatchSource)"
         )
     try:
-        from src.tac.lane_12_v2_nerv_as_renderer import RealPairBatchSource
+        from tac.lane_12_v2_nerv_as_renderer import RealPairBatchSource
     except ImportError as e:
         raise RuntimeError(
             f"RealPairBatchSource import failed: {e}"
@@ -247,7 +255,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     # NON-SMOKE PATH
-    from src.tac.scorer import load_differentiable_scorers  # noqa: E402
+    from tac.scorer import load_differentiable_scorers  # noqa: E402
 
     scorer_pose, scorer_seg = load_differentiable_scorers(
         args.upstream_dir, device=device,
