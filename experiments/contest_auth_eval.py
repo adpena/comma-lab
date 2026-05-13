@@ -1000,11 +1000,13 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
         "UV_PROJECT_ENVIRONMENT",
         str(inflated_dir.parent / "uv_project_env"),
     )
-    # Public HNeRV/A1 runtimes commonly invoke `${PYTHON:-python3}`. Use the
-    # evaluator's interpreter by default so local exact-eval screens run in the
-    # repo venv that loaded this tool; callers may still override PYTHON for a
-    # contest container or public replay environment.
+    # Public HNeRV/A1 runtimes commonly invoke either `${PYTHON:-python3}` or a
+    # lane-local `${PYTHON_BIN:-python}`. Use the evaluator's interpreter by
+    # default so exact-eval screens run in the repo venv that loaded this tool;
+    # callers may still override these env vars for a contest container or
+    # public replay environment.
     env.setdefault("PYTHON", sys.executable)
+    env.setdefault("PYTHON_BIN", sys.executable)
     if extra_env:
         env.update(extra_env)
         print(f"[inflate] diagnostic env override keys: {sorted(extra_env)}")

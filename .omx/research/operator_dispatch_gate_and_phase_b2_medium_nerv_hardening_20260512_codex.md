@@ -650,3 +650,45 @@ Score-lowering implication:
   attempt for this exact PR106/R2 PR101-grammar archive/runtime packet.
 - No CPU/CUDA conversion is made here; CUDA remains the existing Modal T4 score
   in the submission artifact, and GHA CPU must be measured directly.
+
+## Follow-up: auth-eval inflate interpreter leak fixed (2026-05-13)
+
+Bug class:
+
+- GHA run `25773673132` for
+  `lane_pr106_latent_sidecar_r2_pr101_grammar` passed archive custody and
+  failed inside `inflate.sh` before scoring.
+- Root cause: `experiments/contest_auth_eval.py` defaulted `PYTHON` to the
+  evaluator interpreter, but this packet's `inflate.sh` uses
+  `PYTHON_BIN="${PYTHON_BIN:-python}"`. The child runtime therefore executed
+  outside the `.venv` dependency closure and missed the hard package
+  dependency `brotli`.
+- Classification: `runtime_dependency_closure_env_leak`. This is an
+  infrastructure/runtime-contract failure, not a method result and not a score
+  claim.
+
+Fix:
+
+- Updated canonical auth eval `_run_inflate(...)` to set both `PYTHON` and
+  `PYTHON_BIN` to `sys.executable` by default.
+- Extended the regression test so future exact-eval launches cannot silently
+  run shell-configured inflaters outside the evaluator interpreter.
+
+Score-lowering implication:
+
+- This fix benefits PR106/R2 and any public HNeRV/A1-style packet that uses a
+  lane-local `PYTHON_BIN` shell variable.
+- The relaunch remains an exact [contest-CPU GHA Linux x86_64] measurement of
+  the same committed archive/runtime packet; no CPU/CUDA conversion is made.
+
+Preflight/DX evidence:
+
+- `python -m tac.preflight --scope dev --timings-json reports/preflight_dev_timing_20260513.json`
+  passed and wrote a profile artifact.
+- The dev-scope hot path finished in about 6.7s wall-clock; slowest checks were
+  shared-state writer scan (~5.0s), codebase drift (~4.3s), and MPS fallback
+  scan (~3.9s), all parallelized under the 30s DX crash gate.
+- A direct all-scope `preflight_all()` intentionally hit the 30s crash gate
+  before release-scope checks completed. Classification: release/custody sweep
+  requires explicit slow-release override; dev preflight remains the normal
+  fast gate for iteration.

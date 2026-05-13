@@ -499,12 +499,12 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Local exact-eval must run `${PYTHON:-python3}` inflaters in this venv.
+    """Local exact-eval must run shell-configured Python inflaters in this venv.
 
     Public PR101/A1-style packets import dependencies such as brotli from the
     evaluator environment. If contest_auth_eval is launched with
     `.venv/bin/python`, the inflate subprocess should inherit that interpreter
-    unless the caller explicitly overrides PYTHON.
+    unless the caller explicitly overrides `PYTHON` or `PYTHON_BIN`.
     """
     captured: dict[str, str] = {}
     video_names = tmp_path / "names.txt"
@@ -529,6 +529,7 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     cae._run_inflate(inflate_sh, archive_dir, inflated_dir, video_names, timeout=5)
 
     assert captured["PYTHON"] == sys.executable
+    assert captured["PYTHON_BIN"] == sys.executable
 
 
 def test_run_inflate_applies_diagnostic_env_to_inflate_only(
