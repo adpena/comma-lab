@@ -1,0 +1,152 @@
+schema_version: 1
+name: substrate_a1_plus_wavelet_residual_modal_t4_dispatch
+lane_id: lane_a1_plus_wavelet_residual_retarget_20260513
+summary: A1 + wavelet residual sidecar retarget first-anchor dispatch on Modal T4 (META-COUNCIL §6b highest EV/$ competing path at $0.20-1; D3.C freeze-A1 mode; D4.B magic-byte trailer).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.60
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: 0.191
+predicted_delta: "META-COUNCIL §6a wavelet/c3-retarget central band: Δ -0.0005 to -0.003 on A1 0.192847 baseline → [contest-CPU prediction] [0.189847, 0.192347]"
+predicted_delta_basis: ".omx/research/meta_council_decision_attribution_audit_20260513.md#section-6a-competing-path-ev-ranking"
+literature_anchor: "Mallat 1989 'A theory for multiresolution signal decomposition' + Daubechies 1988 + Holub-Fridrich 2014 UNIWARD wavelet steganalysis"
+council_verdicts:
+  D1: "residual sidecar (operator-pre-approved default)"
+  D2: "int8 + brotli, ≤500B target (operator-pre-approved)"
+  D3: "D3.C freeze-A1 (META-COUNCIL §8b Bayesian-optimal first dispatch)"
+  D4: "D4.B magic-byte trailer 'WAV1' (mirrors A1+LAPose D4.B)"
+  D5: "pose-residual at central foveal patch (META-COUNCIL pose-marginal frontier)"
+  D6: "BOTH AXES contest-CPU + contest-CUDA (mandatory; CUDA inline, CPU dispatched separately)"
+
+predicted_band: [0.187, 0.194]
+
+risk: |
+  META-COUNCIL §6b highest-EV/$ competing path retarget.  The wavelet
+  residual scaffold previously L2 against PR106 r2 has NEVER been
+  retargeted to A1 base; A1's pose-axis headroom is empirically unknown.
+  This dispatch establishes the H3 (A1 saturation) prior at 5-25× the
+  cost of A1+LAPose ($0.20-1 vs $4-5).
+
+  A1 substrate is FROZEN (loaded verbatim from archive.zip SHA
+  87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5
+  unzipped to 178,162 B "x" blob SHA 8e664385...).  Only the wavelet
+  residual head is trained — per-pair low-rank K=1 coefficient outer
+  product per detail band (LH/HL/HH) × 2 frames × 3 RGB channels at
+  a half-camera foveal patch (default 64x64 = 128x128 at camera-native
+  after DB4 IDWT).
+
+  Sidecar overhead empirically observed at ~40-200 B for zero-init
+  coefficients (brotli compresses sparse residuals very well); after
+  training the upper bound stays under the D2 ≤500 B target with high
+  margin.
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable,
+  this lane requires BOTH `[contest-CUDA]` (inline) AND `[contest-CPU]`
+  (Linux x86_64 separate dispatch) before promotion.  First-anchor
+  dispatch is CUDA-only; CPU axis follow-up is a separate operator step.
+
+  Smoke-before-full pattern (Catalog #167): the operator-authorize wrapper
+  routes through `tools/run_modal_smoke_before_full.py` which fires a
+  100-epoch ~$0.15 Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON
+  present + score in plausible band [0.15, 0.25], then fires the full
+  2000-epoch T4 dispatch only on smoke-green.
+
+  Additional pre-smoke macOS-CPU gate (operator pre-approved 2026-05-13):
+  the wrapper runs `tools/score_macos_cpu_advisory_proxy.py` on the smoke
+  archive before Modal smoke is fired.  macOS-CPU score outside
+  [0.187, 0.200] refuses the chain at the local $0 surface.
+
+envelope_status: "FITS $5 envelope at p50 fallback (macOS-CPU $0 + smoke $0.15 + full $0.60)"
+
+remote_driver: scripts/remote_lane_substrate_a1_plus_wavelet_residual.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --a1-archive
+    default_path: experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  - flag: --pair-manifest
+    default_path: .omx/research/artifacts/lapose_motion_atoms_20260505_codex/lapose_motion_atom_manifest_fixture.json
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_a1_plus_wavelet_residual.sh
+  cost_band_trainer: experiments/train_substrate_a1_plus_wavelet_residual.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_a1_plus_wavelet_residual.py
+
+env_overrides:
+  A1_PLUS_WAVELET_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  A1_PLUS_WAVELET_A1_ARCHIVE: /workspace/pact/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  A1_PLUS_WAVELET_PAIR_MANIFEST: /workspace/pact/.omx/research/artifacts/lapose_motion_atoms_20260505_codex/lapose_motion_atom_manifest_fixture.json
+  A1_PLUS_WAVELET_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  A1_PLUS_WAVELET_OUTPUT_DIR: /workspace/pact/lane_a1_plus_wavelet_results/output
+  A1_PLUS_WAVELET_EPOCHS: "2000"
+  A1_PLUS_WAVELET_UPSTREAM_DIR: /workspace/pact/upstream
+  A1_PLUS_WAVELET_DEVICE: cuda
+  A1_PLUS_WAVELET_COEFF_RANK: "1"
+  A1_PLUS_WAVELET_MAX_PAIRS: "16"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_a1_plus_wavelet_residual.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_a1_plus_wavelet_residual.py
+  - experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - tools/run_modal_smoke_before_full.py (Catalog #167)
+  - tools/score_macos_cpu_advisory_proxy.py (operator pre-smoke gate)
+
+sentinel_files:
+  - experiments/train_substrate_a1_plus_wavelet_residual.py
+  - src/tac/substrates/a1_plus_wavelet_residual/architecture.py
+  - src/tac/substrates/a1_plus_wavelet_residual/archive.py
+  - src/tac/substrates/a1_plus_wavelet_residual/score_aware_loss.py
+  - src/tac/substrates/a1_plus_wavelet_residual/inflate.py
+
+notes: |
+  META-COUNCIL §6b first-anchor retarget dispatch for the A1 + wavelet
+  residual sidecar composition.  This is the recommended HIGHEST EV/$
+  attribution dispatch at the $0.20-1 cost band per `.omx/research/
+  meta_council_decision_attribution_audit_20260513.md` §8c phase 1a.
+
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
+  this is a substrate-engineering lane (substrate-engineering LOC budget
+  per HNeRV parity lesson L7).  Substrate package + trainer total
+  ~1500-1800 LOC; freeze-A1 mode keeps the substantive surface small
+  vs the joint-mode A1+LAPose.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per the new macOS-CPU proxy (verified 2026-05-13 within 2e-5 of GHA
+  Linux x86_64 contest-CPU): the operator wrapper runs the local-host
+  proxy BEFORE Modal smoke, gated on [0.187, 0.200].  Smoke + full
+  fire only on macOS-CPU-green.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'T4', 2000) —
+  hand_calibrated_fallback p50 = $0.60 (n=0 anchors; this dispatch
+  bootstraps the calibration system for the A1+wavelet family).
+
+  Cross-ref:
+    .omx/research/meta_council_decision_attribution_audit_20260513.md
+    .omx/research/grand_council_pose_axis_non_hnerv_a1_plus_lapose_20260513.md
+    feedback_macos_cpu_proxy_empirical_validation_landed_20260513.md
+    feedback_a1_plus_lapose_composition_substrate_landed_20260513.md
