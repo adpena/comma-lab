@@ -44,6 +44,7 @@ def test_pr106_sidecar_runtime_decode_consumption_proof_is_nonpromotable(
     )
 
     assert manifest["schema"] == "pr106_sidecar_runtime_decode_consumption_proof_v1"
+    assert manifest["archive_member_name"] == "0.bin"
     assert manifest["format_id"] == format_id
     assert manifest["payload_sha256_changed"] is True
     assert manifest["inner_pr106_payload_sha256_unchanged"] is True
@@ -73,6 +74,34 @@ def test_pr106_sidecar_runtime_decode_consumption_proof_is_nonpromotable(
     assert source_digest["latents_changed_by_sidecar"] is True
     assert mutated_digest["latents_changed_by_sidecar"] is True
     assert "score_claim" in dumps_runtime_consumption_manifest(manifest)
+
+
+def test_pr106_runtime_decode_consumption_autodetects_x_member(
+    tmp_path: Path,
+) -> None:
+    source_member = read_single_stored_member_archive(PR106_R2_ARCHIVE.read_bytes())
+    archive = tmp_path / "x_member.zip"
+    archive.write_bytes(
+        emit_single_stored_member_archive(type(source_member)(
+            name="x",
+            payload=source_member.payload,
+            date_time=source_member.date_time,
+            external_attr=source_member.external_attr,
+            create_system=source_member.create_system,
+            flag_bits=source_member.flag_bits,
+            comment=source_member.comment,
+            extra=source_member.extra,
+        ))
+    )
+
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=archive,
+        runtime_dir=PR106_R2_RUNTIME,
+    )
+
+    assert manifest["archive_member_name"] == "x"
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is True
+    assert manifest["score_claim"] is False
 
 
 def test_pr106_pr101_grammar_runtime_consumes_framing_meta_fail_closed() -> None:
@@ -147,6 +176,53 @@ def test_pr106_same_runtime_streaming_prefix_parity_is_nonpromotable() -> None:
     assert candidate["full_frame_digest"] is False
     assert source["total_frames"] == candidate["total_frames"] == 2
     assert source["streaming_raw_sha256"] == candidate["streaming_raw_sha256"]
+
+
+def test_pr106_same_runtime_streaming_prefix_autodetects_x_members(
+    tmp_path: Path,
+) -> None:
+    source_member = read_single_stored_member_archive(PR106_R2_ARCHIVE.read_bytes())
+    candidate_member = read_single_stored_member_archive(PR106_R2_PR101_ARCHIVE.read_bytes())
+    source_archive = tmp_path / "source_x.zip"
+    candidate_archive = tmp_path / "candidate_x.zip"
+    source_archive.write_bytes(
+        emit_single_stored_member_archive(type(source_member)(
+            name="x",
+            payload=source_member.payload,
+            date_time=source_member.date_time,
+            external_attr=source_member.external_attr,
+            create_system=source_member.create_system,
+            flag_bits=source_member.flag_bits,
+            comment=source_member.comment,
+            extra=source_member.extra,
+        ))
+    )
+    candidate_archive.write_bytes(
+        emit_single_stored_member_archive(type(candidate_member)(
+            name="x",
+            payload=candidate_member.payload,
+            date_time=candidate_member.date_time,
+            external_attr=candidate_member.external_attr,
+            create_system=candidate_member.create_system,
+            flag_bits=candidate_member.flag_bits,
+            comment=candidate_member.comment,
+            extra=candidate_member.extra,
+        ))
+    )
+
+    manifest = prove_pr106_same_runtime_full_frame_parity(
+        source_archive_path=source_archive,
+        candidate_archive_path=candidate_archive,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+        device="cpu",
+        batch_pairs=1,
+        max_pairs=1,
+    )
+
+    assert manifest["source_archive"]["member_name"] == "x"
+    assert manifest["candidate_archive"]["member_name"] == "x"
+    assert manifest["prefix_parity_claim"] is True
+    assert manifest["full_frame_inflate_output_parity_claim"] is False
 
 
 def test_pr106_same_runtime_streaming_prefix_detects_semantic_sidecar_change(

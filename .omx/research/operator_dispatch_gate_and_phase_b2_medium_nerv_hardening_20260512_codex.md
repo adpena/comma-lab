@@ -412,3 +412,49 @@ Score-lowering implication:
   path remains: identity parse/re-emit -> typed runtime-consumption proof ->
   same-runtime/full-frame parity or exact auth eval -> score claim only from
   harvested `[contest-CUDA]` / `[contest-CPU]` artifacts.
+
+## Follow-up: PR106 runtime proof member-name parity (2026-05-13)
+
+The PacketIR parser accepted both known public HNeRV single-member archive
+names (`0.bin` and `x`) after commit `4e960311`, but the runtime-consumption
+proof helpers still defaulted to `expected_member_name="0.bin"`. That was a
+harness bias: it preserved safety for PR106-style packets but forced public
+`x`-member artifacts onto one-off command flags before the same-runtime proof
+could run.
+
+Code hardening:
+
+- `prove_pr106_sidecar_runtime_decode_consumption(...)` and
+  `prove_pr106_same_runtime_full_frame_parity(...)` now default to the same
+  member-name autodetection as the canonical PacketIR archive reader.
+- Explicit `expected_member_name="0.bin"` / `"x"` still fails closed if the
+  archive member does not match.
+- Runtime proof manifests now record the consumed member name:
+  `archive_member_name` for decode-consumption and `member_name` on both
+  source/candidate archive records for same-runtime streaming parity.
+- CLI defaults for `tools/prove_pr106_sidecar_runtime_consumption.py` and
+  `tools/prove_pr106_same_runtime_frame_parity.py` now auto-detect `0.bin` /
+  `x`; operators can still pass `--member-name` for strict matching.
+
+Verification:
+
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_packet_compiler_pr106_runtime_consumption.py -q`
+  -> `8 passed`.
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_packet_compiler_pr106_runtime_consumption.py src/tac/tests/test_packet_compiler_pr106_sidecar_packet.py -q`
+  -> `21 passed`.
+- `.venv/bin/ruff check src/tac/packet_compiler/pr106_runtime_consumption.py src/tac/tests/test_packet_compiler_pr106_runtime_consumption.py tools/prove_pr106_same_runtime_frame_parity.py tools/prove_pr106_sidecar_runtime_consumption.py`
+  -> pass.
+- CLI proof smoke:
+  `tools/prove_pr106_sidecar_runtime_consumption.py --archive submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip --runtime-dir submissions/pr106_latent_sidecar_r2_pr101_grammar`
+  emitted `schema=pr106_sidecar_runtime_decode_consumption_proof_v1`,
+  `runtime_sidecar_decode_consumption_claim=true`,
+  `runtime_sidecar_apply_consumption_claim=true`, and `score_claim=false`.
+  Ignored raw artifact:
+  `experiments/results/pr106_r2_pr101_runtime_decode_consumption_default_member_autodetect.json`.
+
+Score-lowering implication:
+
+- Public-HNeRV `x` archives and internal PR106 `0.bin` archives now share the
+  same runtime-consumption proof surface. This reduces harness mismatch risk
+  before PR106/PR101/PR103 PacketIR transforms enter exact-eval queues, without
+  promoting parser-consumption evidence into scorer or contest-axis evidence.

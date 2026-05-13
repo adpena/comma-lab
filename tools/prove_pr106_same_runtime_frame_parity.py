@@ -28,7 +28,14 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-archive", required=True, type=Path)
     parser.add_argument("--candidate-archive", required=True, type=Path)
     parser.add_argument("--runtime-dir", required=True, type=Path)
-    parser.add_argument("--member-name", default="0.bin")
+    parser.add_argument(
+        "--member-name",
+        default=None,
+        help=(
+            "Expected ZIP member name. Omit to auto-detect the known single-member "
+            "packet names: 0.bin or x."
+        ),
+    )
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--batch-pairs", type=int)
     parser.add_argument(

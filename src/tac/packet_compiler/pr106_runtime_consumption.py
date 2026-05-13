@@ -257,7 +257,7 @@ def prove_pr106_same_runtime_full_frame_parity(
     source_archive_path: Path,
     candidate_archive_path: Path,
     runtime_dir: Path,
-    expected_member_name: str = "0.bin",
+    expected_member_name: str | None = None,
     device: str = "cpu",
     batch_pairs: int | None = None,
     max_pairs: int | None = None,
@@ -308,11 +308,13 @@ def prove_pr106_same_runtime_full_frame_parity(
             "path": source_archive_path.as_posix(),
             "bytes": source_archive_path.stat().st_size,
             "sha256": sha256_hex(source_archive_bytes),
+            "member_name": source_member.name,
         },
         "candidate_archive": {
             "path": candidate_archive_path.as_posix(),
             "bytes": candidate_archive_path.stat().st_size,
             "sha256": sha256_hex(candidate_archive_bytes),
+            "member_name": candidate_member.name,
         },
         "source": source,
         "candidate": candidate,
@@ -338,7 +340,7 @@ def prove_pr106_sidecar_runtime_decode_consumption(
     *,
     archive_path: Path,
     runtime_dir: Path,
-    expected_member_name: str = "0.bin",
+    expected_member_name: str | None = None,
 ) -> dict[str, object]:
     """Prove a valid sidecar mutation is consumed by the runtime decoder.
 
@@ -387,6 +389,7 @@ def prove_pr106_sidecar_runtime_decode_consumption(
             ),
             "runtime_dir": runtime_dir.as_posix(),
             "runtime_inflate_py_sha256": sha256_hex((runtime_dir / "inflate.py").read_bytes()),
+            "archive_member_name": member.name,
             "source_runtime_correction_digest": source_digest,
             "mutated_runtime_correction_digest": mutated_digest,
             "runtime_semantic_digest_changed": semantic_changed,

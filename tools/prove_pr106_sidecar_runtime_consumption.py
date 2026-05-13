@@ -29,7 +29,7 @@ def _parser() -> argparse.ArgumentParser:
         "--archive",
         type=Path,
         required=True,
-        help="Path to archive.zip containing single stored 0.bin member.",
+        help="Path to archive.zip containing a single stored 0.bin or x member.",
     )
     parser.add_argument(
         "--runtime-dir",
@@ -39,8 +39,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--member-name",
-        default="0.bin",
-        help="Expected ZIP member name (default: 0.bin).",
+        default=None,
+        help=(
+            "Expected ZIP member name. Omit to auto-detect the known single-member "
+            "packet names: 0.bin or x."
+        ),
     )
     parser.add_argument(
         "--output-json",
