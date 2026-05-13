@@ -1,0 +1,102 @@
+{
+  "created_at_utc": "2026-05-13T01:13:24Z",
+  "evidence_grade": "paired_exact_auth_eval_mechanism_diagnostic",
+  "pair": {
+    "blockers": [
+      "cpu_cuda_runtime_tree_sha256_mismatch"
+    ],
+    "cpu": {
+      "archive_bytes": 186822,
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "evidence_grade": "A score-grade; T4/equivalent promotion required",
+      "inflated_output_manifest": {
+        "aggregate_sha256": "08675dc4d129c8a1848de9c81dc158a80d6927061a60a8e8ac15befc5ecea107",
+        "files": [
+          {
+            "bytes": 3662409600,
+            "exists": true,
+            "relative_path": "0.raw",
+            "sha256": "5e210e739f4d92b0edef0d7c670a67b7f60bbb9b1cf44d7f5ed6ee4a35cc93a3",
+            "video_name": "0.mkv"
+          }
+        ],
+        "manifest_path": "/root/modal_auth_eval_cpu_work/eval_work/inflated_outputs_manifest.json",
+        "manifest_sha256": "085739244edf40123d595b84021a990a01ceee00a28ad0c946fd69f247b2dded",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600
+      },
+      "pose": 0.00016402,
+      "pose_term": 0.040499382711345115,
+      "rate_term": 0.12439710134019029,
+      "runtime_tree_sha256": "9181713cd849c80f6e0d24e1652c25f6d058c5ae00b3132da726ff840c7370b8",
+      "score": 0.22809248405153543,
+      "score_axis": "contest_cpu",
+      "seg": 0.00063196,
+      "seg_term": 0.063196
+    },
+    "cuda": {
+      "archive_bytes": 186822,
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "evidence_grade": "contest-CUDA",
+      "inflated_output_manifest": {
+        "aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+        "files": [
+          {
+            "bytes": 3662409600,
+            "exists": true,
+            "relative_path": "0.raw",
+            "sha256": "fb8eaaae74a6e86094681602769c3ba98126ae181c1c1106efd57eb421e3e0e6",
+            "video_name": "0.mkv"
+          }
+        ],
+        "manifest_path": "/root/modal_auth_eval_work/eval_work/inflated_outputs_manifest.json",
+        "manifest_sha256": "18a683613eb35cbdc90fd1f1e7d30e2779f59bdf0c1c530406a20ca23934ad64",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600
+      },
+      "pose": 3.236e-05,
+      "pose_term": 0.017988885457415088,
+      "rate_term": 0.12439710134019029,
+      "runtime_tree_sha256": "7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d",
+      "score": 0.20664598679760537,
+      "score_axis": "contest_cuda",
+      "seg": 0.0006426,
+      "seg_term": 0.06426
+    },
+    "gaps_cuda_minus_cpu": {
+      "pose_gap_share": 1.0496118311257097,
+      "pose_term": -0.022510497253930027,
+      "rate_gap_share": -0.0,
+      "rate_term": 0.0,
+      "score": -0.021446497253930052,
+      "seg_gap_share": -0.04961183112571067,
+      "seg_term": 0.0010639999999999955
+    },
+    "interpretation": [
+      "Negative score gap means CUDA scored lower than CPU for this exact pair; positive means CPU scored lower.",
+      "Do not infer global CPU-better or CUDA-better behavior from one row.",
+      "If raw outputs differ, runtime/inflate device behavior is part of the mechanism.",
+      "If raw outputs match but scores differ, localize through GT loader and scorer-kernel xray probes."
+    ],
+    "mechanism_blockers": [],
+    "mechanism_class": "different_raw_outputs_runtime_or_inflate_drift",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "raw_output_pairing_status": "different_inflated_outputs",
+    "same_archive_bytes": true,
+    "same_archive_sha256": true,
+    "same_inflated_output_aggregate_sha256": false,
+    "same_runtime_tree_sha256": false,
+    "score_claim": false,
+    "source": {
+      "cpu_json": "experiments/results/modal_auth_eval_cpu/pr106_latent_sidecar_r2_20260511T171453Z/contest_auth_eval.adjudicated.json",
+      "cuda_json": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json"
+    },
+    "valid_for_mechanism_analysis": false,
+    "valid_for_pair_score_analysis": false
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "schema": "cpu_cuda_exact_pair_mechanism_analysis.v1",
+  "score_claim": false
+}

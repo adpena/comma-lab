@@ -250,3 +250,77 @@ anchor:
 - Fix: the workflow now clones the official comma challenge repository and
   checks out pinned upstream commit
   `11ad728f563d8970929e8947a1cf6124ee6303e4` before verifying scorer inputs.
+
+## Follow-up: provider-gate repair + lane_g_v3 Retry6 (2026-05-13)
+
+- Commit `46fd39f8` keeps `tools/operator_authorize.py --dry-run` plan-only:
+  it now prints the cost/refusal banner and returns before required-input
+  validation, confirmation, lane claim, or provider dispatch. This prevents
+  missing local optional artifacts from masquerading as a dispatch outcome.
+- The same commit moves required-input validation after explicit operator
+  confirmation but still before native provider preflight, lane claim creation,
+  or any GPU-metered work.
+- Focused verification:
+  - `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_operator_authorize_canonical_tool.py src/tac/tests/test_operator_authorize_scripts.py src/tac/tests/test_operator_authorize_dispatch_gates.py -q`
+    -> `118 passed`.
+  - `.venv/bin/ruff check tools/operator_authorize.py src/tac/tests/test_operator_authorize_scripts.py`
+    -> pass.
+  - `GITHUB_ACTIONS=true PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 PACT_PREFLIGHT_PARALLEL_WORKERS=8 PYTHONPATH=src:upstream:$PWD /usr/bin/time -p .venv/bin/python -m tac.preflight`
+    -> `PREFLIGHT PASSED`, `real 9.53`.
+- Modal live-state check:
+  - `.venv/bin/modal app list --json` showed no running Modal tasks
+    (`Tasks: "0"` on listed apps).
+  - `.venv/bin/python tools/claim_lane_dispatch.py summary --ttl-hours 24`
+    showed no active Modal claim. The only active claim is the lane_g_v3 GHA
+    retry6 CPU eval.
+- Retry6 dispatch:
+  - lane id:
+    `lane_g_v3_gha_cpu_eval_l3_promotion_20260512_retry6`
+  - GHA run: `25771550637`
+  - URL:
+    `https://github.com/adpena/comma-lab/actions/runs/25771550637`
+  - Head SHA: `8c9a5e7f1c94bc7d5a2c45b03ce77d0e48db0bf2`
+  - Current status at 2026-05-13T01:13Z: still inside
+    `Run [contest-CPU] auth eval (canonical contest_auth_eval.py)`.
+  - Setup progress: pinned-upstream scorer checkout and upstream/input
+    verification both passed, so retry5's missing-upstream blocker is cleared.
+  - Score status: `score_claim=false`; no score or promotion claim until the
+    uploaded artifact is harvested and component fields are recomputed.
+
+## Follow-up: A1 / PR106 CPU-CUDA axis refresh (2026-05-13)
+
+The canonical non-promoting analyzer was run on A1 and PR106 exact-pair rows:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/analyze_cpu_cuda_eval_drift.py \
+  --exact-pair CPU_JSON CUDA_JSON \
+  --json-out .omx/research/artifacts/cpu_cuda_pair_refresh_20260513/<name>_analysis.json \
+  --markdown-out .omx/research/artifacts/cpu_cuda_pair_refresh_20260513/<name>_analysis.md
+```
+
+Artifacts:
+
+- `.omx/research/artifacts/cpu_cuda_pair_refresh_20260513/a1_analysis.json`
+- `.omx/research/artifacts/cpu_cuda_pair_refresh_20260513/a1_analysis.md`
+- `.omx/research/artifacts/cpu_cuda_pair_refresh_20260513/pr106_r2_analysis.json`
+- `.omx/research/artifacts/cpu_cuda_pair_refresh_20260513/pr106_r2_analysis.md`
+- `.omx/research/artifacts/cpu_cuda_pair_refresh_20260513/pr106_r2_pr101_grammar_analysis.json`
+- `.omx/research/artifacts/cpu_cuda_pair_refresh_20260513/pr106_r2_pr101_grammar_analysis.md`
+
+Adversarial verdict:
+
+- A1 same-archive CPU/CUDA scores remain individually useful axis evidence, but
+  the pair is **not** valid for full mechanism attribution because the CPU JSON
+  lacks `runtime_tree_sha256` and both axes lack raw-output aggregate hashes.
+  The analyzer classifies it as `custody_incomplete`, with
+  `score_claim=false`, `promotion_eligible=false`,
+  `rank_or_kill_eligible=false`.
+- PR106 R2 and PR106 R2 + PR101 grammar are same-archive pairs, but the runtime
+  tree hashes and inflated raw-output aggregate hashes differ across CPU/CUDA.
+  The analyzer classifies both as
+  `different_raw_outputs_runtime_or_inflate_drift`, not scorer-only drift.
+- This reinforces the current apples-to-apples rule: do not convert CPU to CUDA
+  or CUDA to CPU, and do not generalize "CPU better" or "CUDA better" from one
+  archive family. A1 is CPU-better on its recorded axis; PR106 R2 is
+  CUDA-better on its recorded axis; the mechanism evidence still depends on
+  runtime/raw-output custody.
