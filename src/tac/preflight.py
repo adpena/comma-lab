@@ -2231,6 +2231,22 @@ def preflight_all(
         check_modal_dispatch_verifies_worker_source_matches_head(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #167 (PHASE-B1-PIVOT): operator-authorize
+        # wrappers that fire a "full" Modal canary
+        # (`cost_band.epochs >= 1000`) MUST route through
+        # `tools/run_modal_smoke_before_full.py` so a 100-epoch ~$0.30
+        # smoke validates the integration BEFORE the $5-15 full dispatch
+        # fires. Same-line `# SMOKE_BEFORE_FULL_OK:<reason>` waiver
+        # accepted for established trainers with >=3 successful Modal
+        # anchors at the target config. Initial landing: warn-only
+        # (legacy wrappers will be migrated incrementally; the
+        # balle_renderer chain in this same commit-batch is the first
+        # user of the canonical pattern). Strict-flip per CLAUDE.md
+        # "Strict-flip atomicity rule" once the cluster of legacy
+        # wrappers is migrated.
+        check_substrate_dispatch_uses_smoke_before_full_pattern(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -41526,6 +41542,173 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
             f"{len(violations)} contract violation(s). The Modal HEAD-parity "
             "ledger (Catalog #166, PHASE-B1-PIVOT) cannot be dropped from "
             "the canonical dispatcher without re-exposing the bug class:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #167 — check_substrate_dispatch_uses_smoke_before_full_pattern
+#
+# PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive 2000-epoch
+# sane_hnerv Modal A100 dispatches crashed rc=1 within 15s and 72s respectively
+# — burned $0.30 + a harvest slot each. A 100-epoch ~$0.30 smoke would have
+# caught the integration failure for the same cost; the operator could have
+# fixed the integration BEFORE the $5-15 full canary fired.
+#
+# This gate refuses ``scripts/operator_authorize_substrate_*_modal_*.sh``
+# operator-authorize wrappers whose corresponding recipe declares
+# ``cost_band.epochs >= 1000`` (a "full" canary by canonical convention)
+# WITHOUT routing through ``tools/run_modal_smoke_before_full.py`` (the
+# canonical wrapper that fires a 100-epoch smoke first, validates rc=0 +
+# auth-eval ran + score-in-band, and only proceeds to the full dispatch on
+# smoke-green).
+#
+# Same-line waiver on the dispatch invocation line: ``# SMOKE_BEFORE_FULL_OK:
+# <reason>`` reserved for established trainers with ≥3 successful Modal
+# anchors at the target config (cost band is empirically calibrated; smoke
+# would not surface new info).
+#
+# Sister of Catalog #146 (trainer runtime contract) + Catalog #151
+# (env→CLI flag wire-up) + Catalog #152 (required-input validation) +
+# Catalog #166 (HEAD parity ledger).
+# ----------------------------------------------------------------------------
+
+_CHECK_167_WRAPPER_GLOB = "scripts/operator_authorize_substrate_*_modal_*.sh"
+_CHECK_167_RECIPE_DIR = ".omx/operator_authorize_recipes"
+_CHECK_167_FULL_EPOCHS_THRESHOLD = 1000
+_CHECK_167_SMOKE_TOOL_NAME = "run_modal_smoke_before_full"
+_CHECK_167_WAIVER_TOKEN = "# SMOKE_BEFORE_FULL_OK:"
+
+
+def _check_167_extract_recipe_epochs(recipe_text: str) -> int | None:
+    """Parse the YAML-ish ``cost_band.epochs`` value out of a recipe.
+
+    The recipe schema is small and ad-hoc; we use simple line-scanning rather
+    than pulling pyyaml as a runtime dep. Returns the integer epoch count or
+    None if the field is missing/unparseable.
+    """
+    in_cost_band = False
+    for line in recipe_text.splitlines():
+        stripped = line.rstrip()
+        if not stripped or stripped.lstrip().startswith("#"):
+            continue
+        # Top-level "cost_band:" opens the block; any other top-level key
+        # (no leading whitespace, ends in ":") closes it.
+        if not line.startswith(" ") and not line.startswith("\t"):
+            in_cost_band = stripped.startswith("cost_band:")
+            continue
+        if in_cost_band and "epochs:" in stripped:
+            value = stripped.split("epochs:", 1)[1].strip().strip('"').strip("'")
+            try:
+                return int(value)
+            except ValueError:
+                return None
+    return None
+
+
+def check_substrate_dispatch_uses_smoke_before_full_pattern(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #167. Refuse operator-authorize wrappers that fire a "full"
+    canary without routing through the canonical smoke-before-full helper.
+
+    A wrapper is a "full" canary when its recipe declares
+    ``cost_band.epochs >= 1000``. The canonical helper is
+    ``tools/run_modal_smoke_before_full.py``. Same-line waiver
+    ``# SMOKE_BEFORE_FULL_OK:<reason>`` on the dispatch invocation line is
+    accepted for established trainers.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    wrappers_root = root / "scripts"
+    recipes_root = root / _CHECK_167_RECIPE_DIR
+
+    violations: list[str] = []
+
+    if not wrappers_root.is_dir():
+        return violations
+
+    for wrapper in sorted(wrappers_root.glob("operator_authorize_substrate_*_modal_*.sh")):
+        try:
+            wrapper_text = wrapper.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(
+                f"{wrapper.relative_to(root)}: read error {exc!s}"
+            )
+            continue
+
+        # Same-line waiver -> short-circuit the entire wrapper.
+        if _CHECK_167_WAIVER_TOKEN in wrapper_text:
+            continue
+
+        # Resolve the recipe name from the wrapper. Convention:
+        # `scripts/operator_authorize_<recipe_name>.sh` invokes
+        # `--recipe <recipe_name>`. We sniff for either the `--recipe X`
+        # token or the wrapper's stem-derived name.
+        recipe_name: str | None = None
+        for line in wrapper_text.splitlines():
+            if "--recipe" in line:
+                parts = line.split("--recipe", 1)[1].strip().split()
+                if parts:
+                    recipe_name = parts[0].strip("\\").strip("'\"")
+                    break
+        if not recipe_name:
+            recipe_name = wrapper.stem.replace("operator_authorize_", "")
+        recipe_path = recipes_root / f"{recipe_name}.yaml"
+        if not recipe_path.is_file():
+            # No recipe -> outside Catalog #167 scope (probably old style
+            # wrapper; wired later if/when the recipe lands).
+            continue
+        try:
+            recipe_text = recipe_path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(
+                f"{recipe_path.relative_to(root)}: read error {exc!s}"
+            )
+            continue
+
+        epochs = _check_167_extract_recipe_epochs(recipe_text)
+        if epochs is None or epochs < _CHECK_167_FULL_EPOCHS_THRESHOLD:
+            # Not a "full" canary; smoke-before-full is not required.
+            continue
+
+        # The wrapper IS firing a full canary. It must invoke the canonical
+        # smoke-before-full helper somewhere in its body OR carry the waiver.
+        if _CHECK_167_SMOKE_TOOL_NAME not in wrapper_text:
+            violations.append(
+                f"{wrapper.relative_to(root)} fires a full canary "
+                f"({epochs} epochs from {recipe_path.relative_to(root)}) "
+                "without routing through "
+                f"`tools/{_CHECK_167_SMOKE_TOOL_NAME}.py`. Add the smoke-"
+                "before-full call OR carry a same-line "
+                f"`{_CHECK_167_WAIVER_TOKEN}<reason>` waiver if the trainer "
+                "has >=3 successful Modal anchors at the target config."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [smoke-before-full] {len(violations)} violation(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v[:240]}")
+        else:
+            print(
+                "  [smoke-before-full] OK "
+                "(every full-canary wrapper routes through the canonical "
+                "smoke helper or carries an explicit waiver)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_dispatch_uses_smoke_before_full_pattern found "
+            f"{len(violations)} violation(s). Catalog #167 (PHASE-B1-PIVOT) "
+            "refuses full Modal canaries that skip the 100-epoch smoke that "
+            "would have caught two sane_hnerv crashes in 2026-05-12 for "
+            "$0.30 each instead of $5-15 each:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
