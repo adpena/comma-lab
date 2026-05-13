@@ -19,13 +19,15 @@ Method: same archive bytes, same inflate.sh, evaluate.py on 4 devices/axes.
 | **A1 (PR101 fine-tuned)** | 178,262 | `[contest-CPU]` ref | 0.192848 | 3.29e-5 | 5.60e-4 | (GHA Linux) |
 | | | `[contest-CUDA]` Modal A100 | 0.226352 | 1.71e-4 | 6.63e-4 | 31.9s |
 | | | `[MPS-research-signal]` local M5 Max | **0.192864** | 3.29e-5 | 5.60e-4 | 23.3s |
-| | | `[macOS-CPU advisory]` local M5 Max | (in flight) | | | (running) |
+| | | `[macOS-CPU advisory]` local M5 Max | **0.192864** | 3.29e-5 | 5.60e-4 | 508.9s |
 | **PR106 latent_sidecar_r2** | 186,822 | `[contest-CUDA]` Modal | 0.206646 | 3.24e-5 | 6.43e-4 | 52.9s |
 | | | `[MPS-research-signal]` local | **0.228108** | 1.64e-4 | 6.32e-4 | 23.9s |
 
 **Divergence verdicts**:
 
-- A1 MPS-vs-contest-CPU: +1.6e-5 (essentially perfect)
+- A1 macOS-CPU-vs-contest-CPU: **+1.6e-5** (within Catalog #192 proxy threshold)
+- A1 MPS-vs-contest-CPU: **+1.6e-5** (BIT-IDENTICAL to macOS-CPU)
+- A1 MPS-vs-macOS-CPU: **0.0 exactly** (canonical_score matches to 17 decimal places — deterministic torch MPS forward on this architecture)
 - A1 contest-CUDA-vs-contest-CPU: **+0.0335** (this is the PR102-class CUDA-CPU gap; sign matches PR102's +0.033)
 - PR106 MPS-vs-contest-CUDA: **+0.0215** (pose distortion 5.06x higher on MPS for PR106 specifically)
 
