@@ -250,7 +250,7 @@ def test_forward_inverse_have_separate_parameters():
 
 def test_factory_rejects_dict():
     with pytest.raises(NonlinearTransformError):
-        NonlinearTransformBlock({"latent_dim": 192})  # noqa: type-arg
+        NonlinearTransformBlock({"latent_dim": 192})  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

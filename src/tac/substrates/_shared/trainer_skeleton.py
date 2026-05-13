@@ -16,6 +16,21 @@ Compatibility:
     their inlined copies. New substrates SHOULD import from this module.
     Migration of existing trainers is operator-gated (see landing memo).
 
+Exception-type policy:
+    Helper invariants (missing upstream frame_utils.py, pyav unavailable,
+    insufficient decoded frames) raise plain ``RuntimeError`` rather than a
+    dedicated ``SubstrateError`` subclass. Per R6-1 (2026-05-13 recursive
+    review): there is no architectural reason to invent a dedicated
+    exception class for canonical-helper invariants — these signal
+    operator-environment misconfiguration (substrate's call site cannot
+    recover and should fail loud). ``FileNotFoundError`` is used for
+    missing files where the standard exception type fits exactly.
+    Sibling ``tac.preflight`` raises ``PreflightError`` /
+    ``MetaBugViolation`` because those are CI-gating violations with
+    structured suppression semantics; this module's failures are
+    environment-level. Cross-module catch should use ``Exception``
+    rather than ``PreflightError`` when wrapping substrate trainer calls.
+
 Cross-refs:
     - CLAUDE.md "Beauty, simplicity, and developer experience"
     - Catalog #146 (Phase 1 trainer runtime contract — substrate-specific

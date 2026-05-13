@@ -231,7 +231,7 @@ def test_forward_rejects_wrong_entry_dim():
 
 def test_factory_rejects_dict():
     with pytest.raises(SharedCodebookError):
-        SharedCodebook({"num_entries": 256})  # noqa: type-arg
+        SharedCodebook({"num_entries": 256})  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

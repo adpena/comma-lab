@@ -1401,9 +1401,6 @@ def _compile_canonicalize(
                 info.create_system = 3
                 zf.writestr(info, payload, compress_type=zipfile.ZIP_STORED)
 
-    post_archive_sha = sha256_file(out_archive)
-    post_archive_size = out_archive.stat().st_size
-
     # Verify payload SHA per-member is preserved (canonicalize MUST NOT
     # change any score-affecting byte).
     out_members = _read_archive_members(out_archive)

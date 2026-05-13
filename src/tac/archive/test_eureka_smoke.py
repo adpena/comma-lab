@@ -255,7 +255,7 @@ def test_quantization_directions():
 def test_deblock_frames():
     """CPU Eureka #8: Non-local means deblocking."""
     try:
-        import cv2
+        import cv2  # noqa: F401 — availability probe inside try/except ImportError
     except ImportError:
         print("  SKIP: deblock_frames (cv2 not installed)")
         return

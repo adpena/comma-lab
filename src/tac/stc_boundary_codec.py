@@ -327,7 +327,6 @@ def encode_mask_video_stc(
     exception_gap_tokens_all: list[np.ndarray] = []
     exception_class_tokens_all: list[np.ndarray] = []
 
-    hw = h * w
     for f in range(n):
         frame_classes = masks_np[f].reshape(-1)
         frame_boundary = boundary_np[f].reshape(-1)
@@ -499,7 +498,6 @@ def decode_mask_video_stc(input_path: str | Path) -> torch.Tensor:
     eg_cursor = 0
     ec_cursor = 0
 
-    OVF = _MAX_GAP_ALPHABET - 1
     for f, (majority, n_boundary, n_exception) in enumerate(per_frame_records):
         # Boundary positions: walk bg_tokens until we have n_boundary positions.
         boundary_positions, bg_cursor = _consume_gap_stream(

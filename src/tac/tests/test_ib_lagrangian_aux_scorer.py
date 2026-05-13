@@ -142,7 +142,7 @@ def test_aux_scorer_full_forward_shapes():
 
 def test_aux_scorer_factory_rejects_dict():
     with pytest.raises(AuxiliaryScorerError) as exc:
-        AuxiliaryScorer({"distill_temperature": 2.0})  # noqa: type-arg
+        AuxiliaryScorer({"distill_temperature": 2.0})  # type: ignore[arg-type]
     assert "AuxiliaryScorerConfig" in str(exc.value)
 
 

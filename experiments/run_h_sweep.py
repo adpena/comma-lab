@@ -519,7 +519,7 @@ def plot_pareto_frontier(results: list[dict], output_path: Path) -> None:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        import numpy as np
+        import numpy as np  # noqa: F401 — availability probe inside try/except ImportError
     except ImportError:
         print("  [plot] matplotlib not available, skipping plot")
         return

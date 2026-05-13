@@ -251,7 +251,7 @@ def test_modulator_responds_to_pose_after_training_step():
 
 def test_factory_rejects_dict_input():
     with pytest.raises(TimeVaryingFiLMError) as exc:
-        TimeVaryingFiLM({"pose_dim": 6})  # noqa: type-arg
+        TimeVaryingFiLM({"pose_dim": 6})  # type: ignore[arg-type]
     assert "TimeVaryingFiLMConfig" in str(exc.value)
 
 
