@@ -574,3 +574,50 @@ Verification:
 - Direct strict preflight check:
   `check_substrate_trainer_pose_defaults_match_contest_formula(strict=True)`
   -> `[]` with `14 trainer(s) scanned`.
+
+## Follow-up: T1 PR95 parity-profile dispatch gate repaired (2026-05-13)
+
+Bug class:
+
+- The canonical PR95 trainer-parity profile exists at
+  `.omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json`, and
+  `experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py`
+  already uses that path as `DEFAULT_PR95_PARITY_PROFILE`.
+- The operator-authorize recipe for T1 still pointed wrapper-side required
+  input validation at a nonexistent
+  `docs/pr95_parity_profile_council_20260512.json`.
+- The TIER-1 metadata generator command also used a stale `--output` flag for
+  `experiments/profile_pr95_hnerv_muon_intake.py`; the profiler's actual CLI
+  uses `--json-out`.
+
+Fix:
+
+- Updated
+  `.omx/operator_authorize_recipes/phase1_t1_balle_cheap_config_dispatch.yaml`
+  so `--pr95-parity-profile` validates the tracked `.omx/research` profile.
+- Updated the trainer's `generator_command` metadata to use
+  `--json-out .omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json`.
+- Added a regression test tying the operator recipe default, trainer default,
+  tracked profile existence, and generator command together.
+- Removed unused imports from the T1 trainer while touching the file.
+
+Verification:
+
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_phase1_trainer_auth_eval_contract.py::test_phase1_trainer_default_pr95_parity_profile_is_tracked_and_loadable src/tac/tests/test_phase1_trainer_auth_eval_contract.py::test_phase1_operator_recipe_pr95_profile_default_matches_trainer_contract -q`
+  -> `2 passed`.
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/validate_dispatch_required_inputs.py --trainer experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py --flag-value=--pr95-parity-profile=.omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json`
+  -> validated 1 required input.
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python experiments/profile_pr95_hnerv_muon_intake.py --no-write`
+  -> emitted `pr95_hnerv_muon_static_intake_profile_v1` with
+  `trainer_parity_contract.schema=pr95_hnerv_muon_t1_trainer_parity_v1` and
+  `local_trainer_parity_preflight_passed=true`.
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/operator_authorize.py --recipe phase1_t1_balle_cheap_config_dispatch --dry-run`
+  -> plan-only banner succeeded with no claim/dispatch.
+
+Score-lowering implication:
+
+- The previous T1 Modal failure classified as `pr95_parity_profile_missing`
+  was a stale dispatch-contract bug, not a T1/Ballé method result.
+- T1 still should not launch as a full 3000-epoch Modal T4 job without a
+  reduced-epoch or cheaper-provider route, but the local required-input gate
+  now points at the real PR95 parity evidence.

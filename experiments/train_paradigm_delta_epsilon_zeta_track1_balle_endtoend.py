@@ -125,16 +125,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
+import math
 import platform
-import shutil
 import struct
 import subprocess
 import sys
 import time
-import math
-from copy import deepcopy
-from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -336,7 +332,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS = {
         "required_input_file": True,
         "generator_command": (
             ".venv/bin/python experiments/profile_pr95_hnerv_muon_intake.py "
-            "--output .omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
+            "--json-out .omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
         ),
         "rationale_audit": "feedback_permanent_fix_required_input_validation_20260512.md",
     },

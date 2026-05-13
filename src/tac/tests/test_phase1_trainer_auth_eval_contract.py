@@ -121,6 +121,24 @@ def test_phase1_trainer_default_pr95_parity_profile_is_tracked_and_loadable() ->
     assert loaded["source_stage_count"] == 8
 
 
+def test_phase1_operator_recipe_pr95_profile_default_matches_trainer_contract() -> None:
+    module = _load_trainer_module()
+    profile_path = module.DEFAULT_PR95_PARITY_PROFILE.relative_to(
+        module.REPO_ROOT
+    ).as_posix()
+    recipe_text = Path(
+        ".omx/operator_authorize_recipes/phase1_t1_balle_cheap_config_dispatch.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert f"default_path: {profile_path}" in recipe_text
+    assert module.DEFAULT_PR95_PARITY_PROFILE.is_file()
+
+    meta = module.TIER_1_OPERATOR_REQUIRED_FLAGS["--pr95-parity-profile"]
+    assert meta["default"] == profile_path
+    assert f"--json-out {profile_path}" in meta["generator_command"]
+    assert "--output " not in meta["generator_command"]
+
+
 def test_phase1_ema_proxy_eval_is_chunked_to_avoid_full_table_decoder_oom() -> None:
     module = _load_trainer_module()
 

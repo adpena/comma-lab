@@ -27,7 +27,7 @@ timeout_hours: 4.0
 
 required_input_files:
   - flag: --pr95-parity-profile
-    default_path: docs/pr95_parity_profile_council_20260512.json
+    default_path: .omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json
 
 required_input_files_trainer: experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py
 
