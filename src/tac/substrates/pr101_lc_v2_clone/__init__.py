@@ -88,20 +88,42 @@ from .archive import (
     pack_archive,
     parse_archive,
 )
+from .curriculum import (
+    CURRICULUM_STAGES,
+    CurriculumStageConfig,
+    Muon,
+    apply_qat,
+    cat_entropy_v2,
+    ema_update,
+    get_seg_loss_fn,
+    partition_params_for_muon,
+    pose_loss,
+    restore_qat,
+)
 from .score_aware_loss import (
     Pr101LcV2CloneScoreAwareLoss,
     Pr101LcV2ScoreAwareLossWeights,
 )
 
 __all__ = [
+    "CURRICULUM_STAGES",
+    "CurriculumStageConfig",
+    "Muon",
     "PR101_LC_V2_ARCHIVE_GRAMMAR",
     "Pr101LcV2Archive",
     "Pr101LcV2CloneConfig",
     "Pr101LcV2CloneScoreAwareLoss",
     "Pr101LcV2CloneSubstrate",
     "Pr101LcV2ScoreAwareLossWeights",
+    "apply_qat",
+    "cat_entropy_v2",
     "decode_decoder_compact",
+    "ema_update",
     "encode_decoder_compact",
+    "get_seg_loss_fn",
     "pack_archive",
     "parse_archive",
+    "partition_params_for_muon",
+    "pose_loss",
+    "restore_qat",
 ]
