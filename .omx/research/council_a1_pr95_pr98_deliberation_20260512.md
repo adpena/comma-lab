@@ -59,7 +59,7 @@ The closed form (from `src/tac/score_geometry.py:contest_score` + `score_gradien
 - Crossover threshold: `100 = 5 / sqrt(10 * d_pose)` -> `d_pose = 2.5e-4`
 - Above `d_pose ~ 2.5e-4`: SegNet dominates marginally.
 - Below `d_pose ~ 2.5e-4`: PoseNet dominates marginally.
-- At PR106 r2 (`d_pose ~ 3.4e-5`): pose-marginal is `100 / sqrt(10 * 3.4e-5) ~ 542` vs `seg-marginal = 100`. Ratio: **~5.4x pose dominance** (the CLAUDE.md 2.71x figure is at a slightly larger `d_pose ~ 3.4e-4`; at the truly-floor frontier the ratio is larger).
+- At PR106 r2 (`d_pose ~ 3.4e-5`): pose-marginal is `5 / sqrt(10 * 3.4e-5) ~ 271` vs `seg-marginal = 100`. Ratio: **~2.71x pose dominance**. **[math-corrected-by-codex 2026-05-13]** Earlier draft of this line substituted `100` into the numerator (wrong — the pose derivative's leading coefficient is `5`, not `100`; `100` is the SegNet weight, not part of `d/dp sqrt(10p)`), yielding the incorrect ratios `~542` and `~5.4×`. The correct derivative `d/dp sqrt(10p) = 5/sqrt(10p)` matches both line 58 of this memo, the CLAUDE.md "Operating-point-aware rule" 2.71× figure, and codex's canonical helper `tac.substrates.pr95_lora_dora.budget`. Crossover threshold also confirmed: `100 = 5/sqrt(10·d_pose) ⇒ d_pose = 2.5e-4`.
 
 Question: at today's frontier operating point, the `(seg=100, pose=10)` defaults are mathematically inverted. What's the right move?
 
