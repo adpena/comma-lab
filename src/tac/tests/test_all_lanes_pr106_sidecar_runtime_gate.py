@@ -10,6 +10,10 @@ ALL_LANES = REPO / "tools" / "all_lanes_preflight.py"
 
 
 def _load_all_lanes_module() -> Any:
+    for path in (REPO, REPO / "src", REPO / "tools"):
+        value = str(path)
+        if value not in sys.path:
+            sys.path.insert(0, value)
     spec = importlib.util.spec_from_file_location("all_lanes_pr106_sidecar_test", ALL_LANES)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
@@ -28,9 +32,99 @@ def test_pr106_sidecar_runtime_consumption_gate_passes_current_archives() -> Non
     assert "format_ids=0x01,0x02" in output
     assert "PacketIR identity parse-emit accounts for every payload byte" in output
     assert "runtime decodes/applies sidecar bytes" in output
-    assert "full-frame inflate parity not claimed" in output
+    assert "runtime-consumption manifests intentionally remain non-promotable" in output
+    assert "same-runtime full-frame parity manifest" in output
     assert "score_claim=false" in output
     assert "ready_for_exact_eval_dispatch=false" in output
+
+
+def test_pr106_sidecar_runtime_consumption_gate_reports_valid_full_frame_parity_manifest(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    module = _load_all_lanes_module()
+    manifest_path = tmp_path / "full_frame_parity.json"
+    manifest_path.write_text(
+        module.json.dumps(
+            {
+                "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+                "proof_scope": "same_runtime_streaming_full_frame_hash",
+                "streaming_output_sha256_equal": True,
+                "streaming_output_total_bytes_equal": True,
+                "full_frame_inflate_output_parity_claim": True,
+                "prefix_parity_claim": False,
+                "device_axis_label": "local-cpu-streaming-runtime",
+                "contest_axis_claim": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "source": {
+                    "n_pairs_hashed": 600,
+                    "total_frames": 1200,
+                    "total_bytes": 3662409600,
+                    "streaming_raw_sha256": "a" * 64,
+                },
+                "candidate": {
+                    "n_pairs_hashed": 600,
+                    "total_frames": 1200,
+                    "total_bytes": 3662409600,
+                    "streaming_raw_sha256": "a" * 64,
+                },
+            }
+        )
+    )
+    monkeypatch.setattr(module, "PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY", manifest_path)
+
+    failures, note = module._pr106_same_runtime_full_frame_parity_status()
+
+    assert failures == []
+    assert "manifest present" in note
+    assert "contest_axis_claim=false" in note
+    assert "score_claim=false" in note
+
+
+def test_pr106_sidecar_runtime_consumption_gate_rejects_bad_full_frame_parity_manifest(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    module = _load_all_lanes_module()
+    manifest_path = tmp_path / "full_frame_parity.json"
+    manifest_path.write_text(
+        module.json.dumps(
+            {
+                "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+                "proof_scope": "same_runtime_streaming_full_frame_hash",
+                "streaming_output_sha256_equal": False,
+                "streaming_output_total_bytes_equal": True,
+                "full_frame_inflate_output_parity_claim": True,
+                "prefix_parity_claim": False,
+                "device_axis_label": "local-cpu-streaming-runtime",
+                "contest_axis_claim": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "source": {
+                    "n_pairs_hashed": 600,
+                    "total_frames": 1200,
+                    "total_bytes": 3662409600,
+                    "streaming_raw_sha256": "a" * 64,
+                },
+                "candidate": {
+                    "n_pairs_hashed": 600,
+                    "total_frames": 1200,
+                    "total_bytes": 3662409600,
+                    "streaming_raw_sha256": "b" * 64,
+                },
+            }
+        )
+    )
+    monkeypatch.setattr(module, "PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY", manifest_path)
+
+    passed, output = module._run_pr106_sidecar_runtime_consumption_gate()
+
+    assert passed is False
+    assert "streaming_output_sha256_equal_drift" in output
+    assert "streaming_raw_sha256_mismatch" in output
 
 
 def test_pr106_sidecar_runtime_consumption_gate_rejects_promotable_manifest(monkeypatch) -> None:

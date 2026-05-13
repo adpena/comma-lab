@@ -56,15 +56,23 @@ Classification: lane_g_v3 has the requested Linux x86_64 `[contest-CPU]`
 closure. This is not a CUDA promotion claim; its CUDA anchor remains the
 separate Lane G v3 CUDA evidence chain.
 
-## PR106 latent-sidecar R2 PR101 grammar CPU validation
+## PR106 latent-sidecar R2 PR101 grammar dual-axis validation
 
-Artifact copied locally from GHA run 25773960214:
+CPU artifact copied locally from GHA run 25773960214:
 `experiments/results/gha_cpu_eval/lane_pr106_latent_sidecar_r2_pr101_grammar_25773960214/contest_cpu_eval-lane_pr106_latent_sidecar_r2_pr101_grammar-25773960214/contest_auth_eval.json`
 
-Workflow:
+CPU workflow:
 `https://github.com/adpena/comma-lab/actions/runs/25773960214`
 
-Evidence:
+CUDA artifact:
+`submissions/pr106_latent_sidecar_r2_pr101_grammar/contest_auth_eval.json`
+
+Source R2 baseline artifacts:
+
+- CUDA: `submissions/pr106_latent_sidecar_r2/contest_auth_eval.json`
+- CPU: `experiments/results/modal_auth_eval_cpu/pr106_latent_sidecar_r2_20260511T171453Z/contest_auth_eval.json`
+
+Candidate evidence:
 
 - archive SHA-256:
   `c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383`
@@ -76,10 +84,30 @@ Evidence:
 - PoseNet avg: `0.00016402`
 - rate unscaled: `0.004974765410566366`
 - samples: `600`
+- axis: `[contest-CUDA Tesla T4]`
+- canonical score: `0.2066181354574151`
+- displayed score: `0.21`
+- SegNet avg: `0.0006426`
+- PoseNet avg: `0.00003236`
+- rate unscaled: `0.00497477`
+- samples: `600`
 
-Classification: validates the partner PR106/A1 CPU-CUDA axis finding's R2 CPU
-cell within the same score neighborhood. It remains a CPU-axis artifact only;
-no CUDA inference is made.
+Apples-to-apples source R2 comparison:
+
+- source R2 archive SHA-256:
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- source R2 archive bytes: `186822`
+- source R2 `[contest-CPU]` score: `0.22809238271134513`
+- source R2 `[contest-CUDA]` score: `0.20664588545741508`
+- PR101-grammar delta vs source R2 `[contest-CPU]`: `-0.00002686473584085`
+- PR101-grammar delta vs source R2 `[contest-CUDA]`: `-0.0000277500000000`
+
+Classification: the PR101-grammar packet is a byte-closed consumed-runtime
+rate-only improvement over source R2 on both measured axes. It does not lower
+the global frontier, but it is a valid PacketIR/compiler primitive: same
+scorer components within axis precision, 42 fewer archive bytes, and paired
+CPU/CUDA artifacts with matching archive SHA custody. No CPU-to-CUDA or
+CUDA-to-CPU conversion is used.
 
 ## A1 CPU-CUDA axis validation
 
@@ -110,11 +138,13 @@ The exact-eval short-term state is now clearer:
 2. lane_g_v3 has its requested `[contest-CPU]` closure.
 3. A1's dual-axis evidence is complete and argues against more blind
    inflate-time bias sweeps for CUDA-frontier work.
-4. PR106/R2 sidecar work remains interesting as a CPU/CUDA mechanism probe, but
-   byte-format changes must not become score claims until runtime consumption
-   and exact paired-axis eval are both present.
+4. PR106/R2 PR101-grammar sidecar work now has runtime consumption, local
+   same-runtime full-frame parity, and exact paired CPU/CUDA evidence. It is a
+   small but real rate-only PacketIR/compiler win, not a global frontier win.
 
-The highest-value next exact-evaluable work remains: claimed CUDA/CPU paired
-evaluation of packet-consumed PR106 sidecar/compiler candidates, and wiring
-score-aware HNeRV/PR95 parity or SIREN/Ballé substrate trainers into byte-closed
-archives before further remote spend.
+The highest-value next exact-evaluable work is no longer to relaunch this
+already-closed PR106/R2 PR101-grammar CUDA eval. It is to generalize the same
+discipline to new score-moving candidates: PacketIR/compressor primitives that
+change more bytes without scorer harm, and score-aware HNeRV/PR95 parity or
+SIREN/Ballé substrate trainers that emit byte-closed archives before remote
+spend.

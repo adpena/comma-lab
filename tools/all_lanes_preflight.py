@@ -218,6 +218,9 @@ PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2"
 PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
+PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY = (
+    REPO / "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
+)
 EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS = "missing_prerequisite"
 EVAL_LOADER_DRIFT_PROBE_RUNTIME_ERROR_CLASS = "probe_runtime_error"
 EVAL_LOADER_DRIFT_KNOWN_MISSING_PREREQ_CODES = frozenset(
@@ -1881,6 +1884,61 @@ def _pr106_sidecar_packet_ir_identity_failures(
     return failures
 
 
+def _pr106_same_runtime_full_frame_parity_status() -> tuple[list[str], str]:
+    path = PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY
+    if not path.exists():
+        return [], "same-runtime full-frame parity manifest absent (optional local artifact)"
+
+    try:
+        manifest = json.loads(path.read_text())
+    except Exception as exc:
+        return [f"same_runtime_full_frame_parity_manifest_unreadable:{type(exc).__name__}"], (
+            "same-runtime full-frame parity manifest unreadable"
+        )
+
+    failures: list[str] = []
+    expected_fields = {
+        "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+        "proof_scope": "same_runtime_streaming_full_frame_hash",
+        "streaming_output_sha256_equal": True,
+        "streaming_output_total_bytes_equal": True,
+        "full_frame_inflate_output_parity_claim": True,
+        "prefix_parity_claim": False,
+        "device_axis_label": "local-cpu-streaming-runtime",
+        "contest_axis_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    for field, expected in expected_fields.items():
+        if manifest.get(field) != expected:
+            failures.append(
+                f"same_runtime_full_frame:{field}_drift "
+                f"expected {expected!r}, got {manifest.get(field)!r}"
+            )
+
+    source = manifest.get("source")
+    candidate = manifest.get("candidate")
+    if not isinstance(source, dict) or not isinstance(candidate, dict):
+        failures.append("same_runtime_full_frame:source_or_candidate_missing")
+    else:
+        for field in ("n_pairs_hashed", "total_frames", "total_bytes", "streaming_raw_sha256"):
+            if source.get(field) != candidate.get(field):
+                failures.append(f"same_runtime_full_frame:{field}_mismatch")
+        if source.get("n_pairs_hashed") != 600 or candidate.get("n_pairs_hashed") != 600:
+            failures.append("same_runtime_full_frame:n_pairs_hashed_not_600")
+        if source.get("total_frames") != 1200 or candidate.get("total_frames") != 1200:
+            failures.append("same_runtime_full_frame:total_frames_not_1200")
+        if not source.get("streaming_raw_sha256"):
+            failures.append("same_runtime_full_frame:streaming_raw_sha256_missing")
+
+    note = (
+        "same-runtime full-frame parity manifest present "
+        "[local-cpu-streaming-runtime; contest_axis_claim=false; score_claim=false]"
+    )
+    return failures, note
+
+
 def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
     from tac.packet_compiler import prove_pr106_sidecar_runtime_decode_consumption
 
@@ -1919,13 +1977,17 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
             )
         )
 
+    parity_failures, parity_note = _pr106_same_runtime_full_frame_parity_status()
+    failures.extend(parity_failures)
+
     if failures:
         return False, "PR106 sidecar runtime-consumption proof failed: " + "; ".join(failures)
     return True, (
         "PR106 sidecar runtime-consumption proof: PASS "
         f"(format_ids={','.join(observed_formats)}; PacketIR identity parse-emit "
         "accounts for every payload byte; runtime decodes/applies sidecar bytes; "
-        "full-frame inflate parity not claimed; "
+        "runtime-consumption manifests intentionally remain non-promotable; "
+        f"{parity_note}; "
         "score_claim=false; ready_for_exact_eval_dispatch=false)"
     )
 
