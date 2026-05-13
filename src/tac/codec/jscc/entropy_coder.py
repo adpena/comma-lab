@@ -58,6 +58,7 @@ __all__ = [
     "JSCC_FORMAT_VERSION",
     "JSCC_MAGIC",
     "PRECISION_BITS",
+    "SE4R_MAGIC",
     "TOTAL_FREQ",
     "ScorerConditionalEntropyCoder",
     "ScorerConditionalProbabilityModel",
@@ -67,7 +68,7 @@ __all__ = [
 ]
 
 
-JSCC_MAGIC: bytes = b"SE4R"
+SE4R_MAGIC: bytes = b"SE4R"
 """Magic bytes for the SE-4 scorer-conditional range-coder section.
 
 Distinct from the legacy Huffman variant's ``b"JSCC"`` magic
@@ -76,7 +77,16 @@ same JSCC package but emit different magic so a stream-level parser can
 distinguish them.
 """
 
-JSCC_FORMAT_VERSION: int = 1
+JSCC_MAGIC: bytes = SE4R_MAGIC
+"""Backward-compatible alias for ``SE4R_MAGIC``.
+
+The package is named ``tac.codec.jscc`` because both scorer-conditional
+coders share the JSCC lane, but this range-coder stream is specifically the
+SE4R binary grammar. New code should prefer ``SE4R_MAGIC`` when the distinction
+from the legacy Huffman ``b"JSCC"`` packet matters.
+"""
+
+JSCC_FORMAT_VERSION: int = 2
 """Format-version byte that follows the magic. Bumped on grammar changes."""
 
 PRECISION_BITS: int = 16

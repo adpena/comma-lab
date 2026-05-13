@@ -1,0 +1,877 @@
+{
+  "dispatch_ready_count": 0,
+  "generated_at_utc": "1970-01-01T00:00:00Z",
+  "meta_insight": "Do not spend archive bytes on information the fixed scorer/decoder can infer from shared knowledge; every row remains planning-only until byte-closed exact eval exists.",
+  "planning_only": true,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "tac_cooperative_receiver_campaign_queue_v1",
+  "score_claim": false,
+  "shared_receiver_knowledge": [
+    "contest scorer architecture",
+    "contest scorer weights",
+    "contest preprocessing and eval roundtrip",
+    "single fixed video distribution"
+  ],
+  "source_commits": [
+    "1d62a114",
+    "27cd8b41",
+    "cbc6b48b",
+    "d1fb9f6a",
+    "fdfc347f",
+    "local_dpw1_substrate"
+  ],
+  "top_k": [
+    {
+      "byte_closed_packet_plan": "Lower the DARTS-selected architecture into the TT5L archive grammar, prove deterministic inflate consumption, then run paired exact eval.",
+      "campaign_id": "darts_confirmed_time_traveler_config",
+      "candidate_id": "darts_confirmed_time_traveler_config",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        3.0,
+        8.0
+      ],
+      "estimated_dispatch_cost_usd": 5.5,
+      "ev_per_dollar_proxy": 0.009545454545454544,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Materialize the DARTS-confirmed time-traveler configuration (25K params, 30 B/pair, 4x4 foveation, hidden 32, int8) as the highest-EV follow-on packet candidate.",
+      "implementation_surface": "src/tac/composition/darts_supernet.py + src/tac/substrates/time_traveler_l5_autonomy/",
+      "lane_id": "lane_darts_confirmed_time_traveler_config",
+      "lineage": "darts_supernet_time_traveler",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.06,
+        -0.045
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.0525,
+      "promotion_eligible": false,
+      "promotion_gate": "DARTS config materialized + TT5L archive roundtrip + paired [contest-CUDA]/[contest-CPU] exact eval",
+      "proxy_only": true,
+      "rank_hint": 1,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Materialize the DARTS-confirmed time-traveler configuration (25K params, 30 B/pair, 4x4 foveation, hidden 32, int8) as the highest-EV follow-on packet candidate.",
+      "source_citations": [
+        ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md"
+      ],
+      "source_commit": "local_darts_supernet",
+      "source_memo": ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md",
+      "target_axis": "representation_pose_segmentation_rate",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --help"
+    },
+    {
+      "byte_closed_packet_plan": "TT5L monolithic archive: world model + per-pair side info + AC state + metadata; exact eval only after runtime closure.",
+      "campaign_id": "time_traveler_world_model_substrate",
+      "candidate_id": "time_traveler_world_model_substrate",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        3.0,
+        8.0
+      ],
+      "estimated_dispatch_cost_usd": 5.5,
+      "ev_per_dollar_proxy": 0.006,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Encode a small ego-motion world model once, then transmit only per-pair prediction errors under a cooperative-receiver loss.",
+      "implementation_surface": "src/tac/substrates/time_traveler_l5_autonomy/",
+      "lane_id": "lane_time_traveler_world_model_substrate",
+      "lineage": "time_traveler_architecture",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.043,
+        -0.023
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.033,
+      "promotion_eligible": false,
+      "promotion_gate": "TT5L archive roundtrip + macOS advisory smoke + paired exact eval",
+      "proxy_only": true,
+      "rank_hint": 2,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Encode a small ego-motion world model once, then transmit only per-pair prediction errors under a cooperative-receiver loss.",
+      "source_citations": [
+        ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md"
+      ],
+      "source_commit": "1d62a114",
+      "source_memo": ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md",
+      "target_axis": "representation_pose_segmentation_rate",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --help"
+    },
+    {
+      "byte_closed_packet_plan": "Materialize SBO1 monolithic archive, prove boundary bytes are consumed by inflate, then run paired exact eval.",
+      "campaign_id": "sabor_boundary_only_renderer",
+      "candidate_id": "sabor_boundary_only_renderer",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        1.0,
+        2.0
+      ],
+      "estimated_dispatch_cost_usd": 1.5,
+      "ev_per_dollar_proxy": 0.012000000000000002,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Exploit SegNet argmax-stable interiors by charging boundary RGB and reconstructing interiors from class means plus tiny refinement.",
+      "implementation_surface": "src/tac/substrates/sabor_boundary_only_renderer/",
+      "lane_id": "lane_sabor_boundary_only_renderer",
+      "lineage": "council_f_stable_argmax_boundary_only_renderer",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.028,
+        -0.008
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.018000000000000002,
+      "promotion_eligible": false,
+      "promotion_gate": "SBO1 archive custody + scorer-free inflate + paired exact eval",
+      "proxy_only": true,
+      "rank_hint": 3,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Exploit SegNet argmax-stable interiors by charging boundary RGB and reconstructing interiors from class means plus tiny refinement.",
+      "source_citations": [
+        ".omx/research/sabor_boundary_audit_20260513.md"
+      ],
+      "source_commit": "local_sabor_substrate",
+      "source_memo": ".omx/research/sabor_boundary_audit_20260513.md",
+      "target_axis": "segmentation_rate",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/sabor_boundary_only_renderer/tests"
+    },
+    {
+      "byte_closed_packet_plan": "Materialize S2S1 monolithic archive, prove HF payload bytes survive decode and reduce scorer distortion net of rate.",
+      "campaign_id": "s2sbs_hf_byte_stuffing",
+      "candidate_id": "s2sbs_hf_byte_stuffing",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        1.0,
+        3.0
+      ],
+      "estimated_dispatch_cost_usd": 2.0,
+      "ev_per_dollar_proxy": 0.007500000000000001,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Use high-frequency regions attenuated by the scorer stems as a charged side-information channel for useful residual bytes.",
+      "implementation_surface": "src/tac/substrates/s2sbs_byte_stuffing/",
+      "lane_id": "lane_s2sbs_hf_byte_stuffing",
+      "lineage": "council_f_stride2_stem_blindspot",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.025,
+        -0.005
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.015000000000000001,
+      "promotion_eligible": false,
+      "promotion_gate": "S2S1 archive custody + byte-consumption proof + paired exact eval",
+      "proxy_only": true,
+      "rank_hint": 4,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Use high-frequency regions attenuated by the scorer stems as a charged side-information channel for useful residual bytes.",
+      "source_citations": [
+        ".omx/research/s2sbs_blindspot_audit_20260513.md"
+      ],
+      "source_commit": "local_s2sbs_substrate",
+      "source_memo": ".omx/research/s2sbs_blindspot_audit_20260513.md",
+      "target_axis": "side_information_rate",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/s2sbs_byte_stuffing/tests"
+    },
+    {
+      "byte_closed_packet_plan": "Train a public-driving prior outside the contest packet, export a deterministic small renderer/codebook, then charge every consumed weight/residual byte in a monolithic archive before paired exact eval.",
+      "campaign_id": "driving_prior_pretrained_renderer_2032",
+      "candidate_id": "driving_prior_pretrained_renderer_2032",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        5.0,
+        30.0
+      ],
+      "estimated_dispatch_cost_usd": 17.5,
+      "ev_per_dollar_proxy": 0.00048571428571428577,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Pre-train a sub-100K dashcam renderer on public driving video distributions, then fine-tune only contest residuals using the fixed scorer as cooperative receiver and penultimate-feature saliency as the allocation signal.",
+      "implementation_surface": "src/tac/analysis/driving_prior_readiness.py + future substrate",
+      "lane_id": "lane_driving_prior_pretrained_renderer_2032",
+      "lineage": "hardware_physics_2032",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.012,
+        -0.005
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.0085,
+      "promotion_eligible": false,
+      "promotion_gate": "dataset/license manifest + scorer penultimate-hook readiness + deterministic renderer export + paired [contest-CUDA]/[contest-CPU] exact eval",
+      "proxy_only": true,
+      "rank_hint": 5,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Pre-train a sub-100K dashcam renderer on public driving video distributions, then fine-tune only contest residuals using the fixed scorer as cooperative receiver and penultimate-feature saliency as the allocation signal.",
+      "source_citations": [
+        "Comma2k19",
+        "BDD100K",
+        "Waymo Open Dataset",
+        ".omx/research/expert_team_hardware_physics_future_alien_tech_20260513.md"
+      ],
+      "source_commit": "fdfc347f",
+      "source_memo": ".omx/research/expert_team_hardware_physics_future_alien_tech_20260513.md",
+      "target_axis": "representation_pretraining_residual",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/probe_driving_prior_readiness.py --output reports/cooperative_receiver/driving_prior_readiness.json"
+    },
+    {
+      "byte_closed_packet_plan": "Promote DPW1 from deterministic scaffold to trained prior by replacing the charged codebook/residual bytes, proving byte consumption, then running paired exact eval.",
+      "campaign_id": "driving_prior_world_model_substrate",
+      "candidate_id": "driving_prior_world_model_substrate",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        1.0,
+        3.0
+      ],
+      "estimated_dispatch_cost_usd": 2.0,
+      "ev_per_dollar_proxy": 0.00375,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Exercise the DPW1 charged world-model archive grammar now: a small deterministic driving prior plus residual grid that can later absorb a trained public-driving prior without changing inflate semantics.",
+      "implementation_surface": "src/tac/substrates/driving_prior_world_model/",
+      "lane_id": "lane_driving_prior_world_model_substrate",
+      "lineage": "hardware_physics_2032",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.012,
+        -0.003
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.0075,
+      "promotion_eligible": false,
+      "promotion_gate": "DPW1 byte-consumption proof + trained prior export + paired [contest-CUDA]/[contest-CPU] exact eval",
+      "proxy_only": true,
+      "rank_hint": 6,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Exercise the DPW1 charged world-model archive grammar now: a small deterministic driving prior plus residual grid that can later absorb a trained public-driving prior without changing inflate semantics.",
+      "source_citations": [
+        ".omx/research/expert_team_hardware_physics_future_alien_tech_20260513.md"
+      ],
+      "source_commit": "local_dpw1_substrate",
+      "source_memo": ".omx/research/expert_team_hardware_physics_future_alien_tech_20260513.md",
+      "target_axis": "representation_pretraining_residual",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/driving_prior_world_model/tests"
+    },
+    {
+      "byte_closed_packet_plan": "Fork the PR106/A1 runtime, add one charged Coord-MLP residual sidecar section consumed by inflate.py, prove no-op failure impossible, then run paired exact eval.",
+      "campaign_id": "h15_coord_mlp_residual_sidecar_pr103_on_pr106",
+      "candidate_id": "h15_coord_mlp_residual_sidecar_pr103_on_pr106",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        1.0,
+        3.0
+      ],
+      "estimated_dispatch_cost_usd": 2.0,
+      "ev_per_dollar_proxy": 0.00625,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Build a Coord-MLP residual basis as an HNeRV-external PR103-on-PR106 sidecar: small, reviewable, and directly aimed at the current frontier without another family-internal retrain.",
+      "implementation_surface": "src/tac/substrates/coord_mlp_residual_sidecar/",
+      "lane_id": "lane_h15_coord_mlp_residual_sidecar_pr103_on_pr106",
+      "lineage": "skunkworks_cia_ach",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.0125,
+      "promotion_eligible": false,
+      "promotion_gate": "sidecar bytes changed and consumed + full-frame parity baseline + paired [contest-CUDA]/[contest-CPU] exact eval",
+      "proxy_only": true,
+      "rank_hint": 7,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Build a Coord-MLP residual basis as an HNeRV-external PR103-on-PR106 sidecar: small, reviewable, and directly aimed at the current frontier without another family-internal retrain.",
+      "source_citations": [
+        "Heuer-Pherson ACH method",
+        ".omx/research/expert_team_aerospace_stealth_analytic_ach_matrix_20260513.md",
+        ".omx/research/expert_team_aerospace_stealth_analytic_pre_mortem_20260513.md"
+      ],
+      "source_commit": "d1fb9f6a",
+      "source_memo": ".omx/research/expert_team_aerospace_stealth_analytic_ach_matrix_20260513.md",
+      "target_axis": "representation_external_sidecar",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/probe_coord_mlp_residual_sidecar.py --output reports/cooperative_receiver/coord_mlp_residual_sidecar_probe.json"
+    },
+    {
+      "byte_closed_packet_plan": "Patch the PR95/PR101 decoder export path to emit thresholded weight sections, prove state_dict consumption parity, then run paired [contest-CUDA]/[contest-CPU] exact eval.",
+      "campaign_id": "s7_donoho_hnerv_wavelet_threshold",
+      "candidate_id": "s7_donoho_hnerv_wavelet_threshold",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        0.0,
+        0.1
+      ],
+      "estimated_dispatch_cost_usd": 0.1,
+      "ev_per_dollar_proxy": 0.15,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Apply Donoho-Johnstone universal thresholding to HNeRV-family decoder weights in a wavelet basis before entropy coding.",
+      "implementation_surface": "src/tac/codec/ + PR95/HNeRV export path",
+      "lane_id": "lane_s7_donoho_hnerv_wavelet_threshold",
+      "lineage": "fields_medalist_statistics",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.02,
+        -0.01
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.015,
+      "promotion_eligible": false,
+      "promotion_gate": "state_dict_parity + full-frame inflate parity + paired exact eval",
+      "proxy_only": true,
+      "rank_hint": 8,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Apply Donoho-Johnstone universal thresholding to HNeRV-family decoder weights in a wavelet basis before entropy coding.",
+      "source_citations": [
+        "Donoho-Johnstone 1994 Biometrika DOI:10.1093/biomet/81.3.425",
+        ".omx/research/expert_team_fields_medalist_math_biology_alien_tech_20260513.md"
+      ],
+      "source_commit": "cbc6b48b",
+      "source_memo": ".omx/research/expert_team_statistics_20260513.md",
+      "target_axis": "rate_then_pose",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_cooperative_receiver_campaign_queue.py --output reports/cooperative_receiver/campaign_queue.json"
+    },
+    {
+      "byte_closed_packet_plan": "If spectrum is concentrated, add a pose-side-info section using top-K rFFT coefficients and deterministic inverse FFT in inflate.",
+      "campaign_id": "l2_sar_coherent_pose_spectrum",
+      "candidate_id": "l2_sar_coherent_pose_spectrum",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        0.0,
+        1.0
+      ],
+      "estimated_dispatch_cost_usd": 0.5,
+      "ev_per_dollar_proxy": 0.008,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Pose targets may be temporally smooth enough that sparse FFT/SAR-style coherent coding beats per-pair independent pose side information.",
+      "implementation_surface": "src/tac/pose_delta_codec.py or src/tac/codec/pose_filler_stc_codec.py",
+      "lane_id": "lane_l2_sar_coherent_pose_spectrum",
+      "lineage": "bell_nsa_lincoln_lab",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.006,
+        -0.002
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.004,
+      "promotion_eligible": false,
+      "promotion_gate": "spectral concentration smoke + pose codec roundtrip + paired exact eval",
+      "proxy_only": true,
+      "rank_hint": 9,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Pose targets may be temporally smooth enough that sparse FFT/SAR-style coherent coding beats per-pair independent pose side information.",
+      "source_citations": [
+        "Carrara-Goodman-Majewski 1995 Spotlight Synthetic Aperture Radar",
+        ".omx/research/expert_team_signal_processing_lincoln_lab_20260513.md"
+      ],
+      "source_commit": "27cd8b41",
+      "source_memo": ".omx/research/expert_team_signal_processing_lincoln_lab_20260513.md",
+      "target_axis": "pose",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/probe_cooperative_receiver_pose_spectrum.py --pose-targets experiments/posenet_targets.bin --output reports/cooperative_receiver/pose_spectrum_l2.json"
+    },
+    {
+      "byte_closed_packet_plan": "Derive the codebook from a committed seed and fixed source bytes; store only indices plus seed metadata, with no network or hidden state.",
+      "campaign_id": "n4_video_keyed_codebook",
+      "candidate_id": "n4_video_keyed_codebook",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        1.0,
+        5.0
+      ],
+      "estimated_dispatch_cost_usd": 3.0,
+      "ev_per_dollar_proxy": 0.001,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "A deterministic video-derived seed can specialize latent/codebook indices to this exact video without storing a generic codebook.",
+      "implementation_surface": "src/tac/codec/per_tensor_codecs.py",
+      "lane_id": "lane_n4_video_keyed_codebook",
+      "lineage": "bell_nsa_signal_processing",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.003,
+      "promotion_eligible": false,
+      "promotion_gate": "deterministic codebook regeneration + archive-byte reduction + exact eval",
+      "proxy_only": true,
+      "rank_hint": 10,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "A deterministic video-derived seed can specialize latent/codebook indices to this exact video without storing a generic codebook.",
+      "source_citations": [
+        "NIST SP 800-90A deterministic DRBG",
+        ".omx/research/expert_team_signal_processing_nsa_sigint_20260513.md"
+      ],
+      "source_commit": "27cd8b41",
+      "source_memo": ".omx/research/expert_team_signal_processing_nsa_sigint_20260513.md",
+      "target_axis": "rate",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_cooperative_receiver_campaign_queue.py --output reports/cooperative_receiver/campaign_queue.json"
+    },
+    {
+      "byte_closed_packet_plan": "Materialize a SegMap/eigenmode payload with deterministic basis hash; consume it from a single-file archive section before exact eval.",
+      "campaign_id": "b1_atick_redlich_segmap_eigenmodes",
+      "candidate_id": "b1_atick_redlich_segmap_eigenmodes",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        0.5,
+        1.0
+      ],
+      "estimated_dispatch_cost_usd": 0.75,
+      "ev_per_dollar_proxy": 0.013333333333333334,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "SegMap signal should be encoded in whitened scorer eigenmodes, dropping low-power modes under the Atick-Redlich power constraint.",
+      "implementation_surface": "src/tac/sensitivity_map/atick_redlich.py",
+      "lane_id": "lane_b1_atick_redlich_segmap_eigenmodes",
+      "lineage": "fields_medalist_biology",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.01,
+      "promotion_eligible": false,
+      "promotion_gate": "basis custody + decoded mask/pose coupling proof + paired exact eval",
+      "proxy_only": true,
+      "rank_hint": 11,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "SegMap signal should be encoded in whitened scorer eigenmodes, dropping low-power modes under the Atick-Redlich power constraint.",
+      "source_citations": [
+        "Atick-Redlich 1990 Neural Computation",
+        ".omx/research/expert_team_fields_medalist_math_biology_alien_tech_20260513.md"
+      ],
+      "source_commit": "cbc6b48b",
+      "source_memo": ".omx/research/expert_team_biology_20260513.md",
+      "target_axis": "segmentation",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_lapose_foveation_atom_manifest.py --help"
+    },
+    {
+      "byte_closed_packet_plan": "Build a substrate with fixed scattering kernels in source, train only latents/adapters, then export monolithic archive + <=200 LOC inflate.",
+      "campaign_id": "g5_mallat_scattering_decoder",
+      "candidate_id": "g5_mallat_scattering_decoder",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        3.0,
+        5.0
+      ],
+      "estimated_dispatch_cost_usd": 4.0,
+      "ev_per_dollar_proxy": 0.0075,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "A fixed wavelet-scattering decoder may replace learned decoder bytes, moving archive budget from weights into pair-specific latents.",
+      "implementation_surface": "src/tac/substrates/mallat_scattering_decoder/",
+      "lane_id": "lane_g5_mallat_scattering_decoder",
+      "lineage": "fields_medalist_geometry",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.04,
+        -0.02
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.03,
+      "promotion_eligible": false,
+      "promotion_gate": "trainer + archive grammar + runtime dependency closure + paired exact eval",
+      "proxy_only": true,
+      "rank_hint": 12,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "A fixed wavelet-scattering decoder may replace learned decoder bytes, moving archive budget from weights into pair-specific latents.",
+      "source_citations": [
+        "Mallat 2012 CPAM DOI:10.1002/cpa.21413",
+        ".omx/research/expert_team_geometry_20260513.md"
+      ],
+      "source_commit": "cbc6b48b",
+      "source_memo": ".omx/research/expert_team_geometry_20260513.md",
+      "target_axis": "representation",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_cooperative_receiver_campaign_queue.py --output reports/cooperative_receiver/campaign_queue.json"
+    },
+    {
+      "byte_closed_packet_plan": "Lower LAPose foveal residual bytes into an A1-host sidecar, prove inflate consumption and full-frame baseline parity, then run exact eval.",
+      "campaign_id": "a1_plus_lapose_composition",
+      "candidate_id": "a1_plus_lapose_composition",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        0.3,
+        3.0
+      ],
+      "estimated_dispatch_cost_usd": 1.65,
+      "ev_per_dollar_proxy": 0.0048484848484848485,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Compose A1's rate-frontier renderer with LAPose foveal RGB residuals so bytes target the pose-axis marginal regime instead of another HNeRV-family internal retrain.",
+      "implementation_surface": "src/tac/substrates/a1_plus_lapose/",
+      "lane_id": "lane_a1_plus_lapose_composition",
+      "lineage": "operator_lapose_pose_axis",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.013,
+        -0.003
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.008,
+      "promotion_eligible": false,
+      "promotion_gate": "sidecar byte-consumption proof + predicted packet below 0.19 target + paired [contest-CUDA]/[contest-CPU] exact eval",
+      "proxy_only": true,
+      "rank_hint": 13,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Compose A1's rate-frontier renderer with LAPose foveal RGB residuals so bytes target the pose-axis marginal regime instead of another HNeRV-family internal retrain.",
+      "source_citations": [
+        ".omx/research/cross_paradigm_frontier_inventory_20260511_codex.md"
+      ],
+      "source_commit": "local_a1_lapose",
+      "source_memo": ".omx/research/cross_paradigm_frontier_inventory_20260511_codex.md",
+      "target_axis": "pose_foveation_composition",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/a1_plus_lapose/tests"
+    },
+    {
+      "byte_closed_packet_plan": "Keep wavelet residual as a sidecar compiler pass only when xray saliency predicts sub-frontier score movement; otherwise block dispatch.",
+      "campaign_id": "a1_plus_wavelet_residual_retarget",
+      "candidate_id": "a1_plus_wavelet_residual_retarget",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "byte_closed_archive_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_cpu_axis_pair_missing",
+        "lane_dispatch_claim_missing"
+      ],
+      "estimated_cost_usd_band": [
+        0.1,
+        1.0
+      ],
+      "estimated_dispatch_cost_usd": 0.55,
+      "ev_per_dollar_proxy": 0.006363636363636363,
+      "evidence_semantics": "cooperative_receiver_campaign_planning_only",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "hypothesis": "Retarget A1+wavelet away from generic byte shaving and toward score-sensitive edge/detail bands selected by xray/saliency probes.",
+      "implementation_surface": "src/tac/substrates/a1_plus_wavelet_residual/",
+      "lane_id": "lane_a1_plus_wavelet_residual_retarget",
+      "lineage": "operator_wavelet_sidecar",
+      "planning_only": true,
+      "predicted_delta_band": [
+        -0.006,
+        -0.001
+      ],
+      "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
+      "predicted_score_delta": -0.0035,
+      "promotion_eligible": false,
+      "promotion_gate": "score-sensitive wavelet atom selection + packet predicted below 0.19 + paired [contest-CUDA]/[contest-CPU] exact eval",
+      "proxy_only": true,
+      "rank_hint": 14,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_only": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_lowering_hypothesis": "Retarget A1+wavelet away from generic byte shaving and toward score-sensitive edge/detail bands selected by xray/saliency probes.",
+      "source_citations": [
+        ".omx/research/cross_paradigm_frontier_inventory_20260511_codex.md"
+      ],
+      "source_commit": "local_a1_wavelet",
+      "source_memo": ".omx/research/cross_paradigm_frontier_inventory_20260511_codex.md",
+      "target_axis": "segmentation_detail_composition",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/a1_plus_wavelet_residual/tests"
+    }
+  ]
+}

@@ -43,7 +43,7 @@ def test_live_repo_clean_no_violations() -> None:
         strict=False, verbose=False
     )
     assert violations == [], (
-        "Live repo MUST stay at 0 promoted-macOS-CPU-advisory violations. "
+        "Live repo MUST stay at 0 macOS-CPU-advisory authority violations. "
         "Found:\n  " + "\n  ".join(violations[:5])
     )
 

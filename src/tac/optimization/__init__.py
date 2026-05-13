@@ -3,28 +3,129 @@
 This package ranks, allocates, and composes charged archive atoms. It consumes
 analysis records and emits planning policies or ledgers. Exact CUDA auth eval
 remains the only score authority.
+
+Exports are lazy so lightweight tools can import submodules such as
+``tac.optimization.macos_cpu_advisory_signal`` without importing PyTorch-only
+optimizer modules first.
 """
 
-from tac.optimization.langevin_optimizer import (
-    LangevinOptimizer,
-    cosine_temperature_schedule,
-    exponential_temperature_schedule,
-    geman_geman_log_schedule,
-)
-from tac.optimization.scorer_surface_shaking import (
-    OperatingPoint,
-    ScorerSurfacePlanError,
-    SurfaceAtomFamily,
-    build_scorer_surface_shaking_plan,
-)
+from __future__ import annotations
 
-__all__ = [
-    "LangevinOptimizer",
-    "OperatingPoint",
-    "ScorerSurfacePlanError",
-    "SurfaceAtomFamily",
-    "build_scorer_surface_shaking_plan",
-    "cosine_temperature_schedule",
-    "exponential_temperature_schedule",
-    "geman_geman_log_schedule",
-]
+from importlib import import_module
+from typing import Any
+
+_EXPORTS: dict[str, tuple[str, str]] = {
+    "InfoGeomLangevinConfig": (
+        "tac.optimization.info_geom_langevin",
+        "InfoGeomLangevinConfig",
+    ),
+    "InfoGeomLangevinOptimizer": (
+        "tac.optimization.info_geom_langevin",
+        "InfoGeomLangevinOptimizer",
+    ),
+    "InformationGeometricLangevinOptimizer": (
+        "tac.optimization.zen_state_frontier",
+        "InformationGeometricLangevinOptimizer",
+    ),
+    "LangevinOptimizer": ("tac.optimization.langevin_optimizer", "LangevinOptimizer"),
+    "OperatingPoint": ("tac.optimization.scorer_surface_shaking", "OperatingPoint"),
+    "ScorerSurfacePlanError": (
+        "tac.optimization.scorer_surface_shaking",
+        "ScorerSurfacePlanError",
+    ),
+    "SurfaceAtomFamily": (
+        "tac.optimization.scorer_surface_shaking",
+        "SurfaceAtomFamily",
+    ),
+    "TensorTrain": ("tac.optimization.zen_state_frontier", "TensorTrain"),
+    "brenier_quantile_quantize_1d": (
+        "tac.optimization.zen_state_frontier",
+        "brenier_quantile_quantize_1d",
+    ),
+    "build_scorer_surface_shaking_plan": (
+        "tac.optimization.scorer_surface_shaking",
+        "build_scorer_surface_shaking_plan",
+    ),
+    "build_info_geom_langevin_optimizer": (
+        "tac.optimization.info_geom_langevin",
+        "build_info_geom_langevin_optimizer",
+    ),
+    "TernaryCalibration": (
+        "tac.optimization.ternary_qat",
+        "TernaryCalibration",
+    ),
+    "TernaryQATConfig": ("tac.optimization.ternary_qat", "TernaryQATConfig"),
+    "TernaryQuantizedTensor": (
+        "tac.optimization.ternary_qat",
+        "TernaryQuantizedTensor",
+    ),
+    "calibrate_ternary_tensor": (
+        "tac.optimization.ternary_qat",
+        "calibrate_ternary_tensor",
+    ),
+    "cosine_temperature_schedule": (
+        "tac.optimization.langevin_optimizer",
+        "cosine_temperature_schedule",
+    ),
+    "dequantize_ternary_tensor": (
+        "tac.optimization.ternary_qat",
+        "dequantize_ternary_tensor",
+    ),
+    "exponential_temperature_schedule": (
+        "tac.optimization.langevin_optimizer",
+        "exponential_temperature_schedule",
+    ),
+    "fisher_diagonal_ema": (
+        "tac.optimization.info_geom_langevin",
+        "fisher_diagonal_ema",
+    ),
+    "geman_geman_log_schedule": (
+        "tac.optimization.langevin_optimizer",
+        "geman_geman_log_schedule",
+    ),
+    "mps_decompose": ("tac.optimization.zen_state_frontier", "mps_decompose"),
+    "mps_reconstruct": ("tac.optimization.zen_state_frontier", "mps_reconstruct"),
+    "onsager_importance_weights": (
+        "tac.optimization.zen_state_frontier",
+        "onsager_importance_weights",
+    ),
+    "pack_ternary_tensor": ("tac.optimization.ternary_qat", "pack_ternary_tensor"),
+    "precondition_gradient": (
+        "tac.optimization.info_geom_langevin",
+        "precondition_gradient",
+    ),
+    "quantize_ternary_tensor": (
+        "tac.optimization.ternary_qat",
+        "quantize_ternary_tensor",
+    ),
+    "sinkhorn_transport_plan": (
+        "tac.optimization.zen_state_frontier",
+        "sinkhorn_transport_plan",
+    ),
+    "ternary_ste": ("tac.optimization.ternary_qat", "ternary_ste"),
+    "tropical_lora_forward": (
+        "tac.optimization.zen_state_frontier",
+        "tropical_lora_forward",
+    ),
+    "unpack_ternary_tensor": (
+        "tac.optimization.ternary_qat",
+        "unpack_ternary_tensor",
+    ),
+    "wasserstein_barycenter_diagonal_gaussians": (
+        "tac.optimization.zen_state_frontier",
+        "wasserstein_barycenter_diagonal_gaussians",
+    ),
+}
+
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name: str) -> Any:
+    """Resolve public optimization exports lazily."""
+    try:
+        module_name, attr_name = _EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(name) from exc
+    value = getattr(import_module(module_name), attr_name)
+    globals()[name] = value
+    return value

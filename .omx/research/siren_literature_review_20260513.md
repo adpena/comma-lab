@@ -2,6 +2,7 @@
 
 **Date:** 2026-05-13
 **Lane:** `lane_siren_literature_review_20260513` (L0 → L1 after this memo lands)
+**research_only:** true — literature/intake memo; no archive grammar or dispatchable packet.
 **Scope:** Operator-routed pre-dispatch literature review of the SIREN substrate
 (`experiments/train_substrate_siren.py` + `src/tac/substrates/siren/*`) ahead of
 the $6 Modal A100 dispatch authorized by the audit + fix-wave landings

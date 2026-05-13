@@ -21,10 +21,16 @@ The noise_std=0.5 Hotz STE fix is preserved.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from tac.substrates.sane_hnerv.score_aware_loss import (
     SaneHnervScoreAwareLoss,
     ScoreAwareLossWeights,
 )
+from tac.substrates.score_aware_common import score_pair_components
+
+if TYPE_CHECKING:
+    import torch
 
 
 class Pr95LoRADoRAScoreAwareLoss(SaneHnervScoreAwareLoss):
@@ -38,6 +44,26 @@ class Pr95LoRADoRAScoreAwareLoss(SaneHnervScoreAwareLoss):
     attribution so Catalog #164 audits (scorer preprocess discipline) can
     track the substrate that owns the loss callsite.
     """
+
+    def score_pair_components(
+        self,
+        *,
+        seg_scorer: torch.nn.Module,
+        pose_scorer: torch.nn.Module,
+        rgb_0_rt: torch.Tensor,
+        rgb_1_rt: torch.Tensor,
+        gt_rgb_0: torch.Tensor,
+        gt_rgb_1: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Route PR95 LoRA/DoRA through the canonical scorer contract."""
+        return score_pair_components(
+            seg_scorer=seg_scorer,
+            pose_scorer=pose_scorer,
+            rgb_0_rt=rgb_0_rt,
+            rgb_1_rt=rgb_1_rt,
+            gt_rgb_0=gt_rgb_0,
+            gt_rgb_1=gt_rgb_1,
+        )
 
 
 __all__ = [

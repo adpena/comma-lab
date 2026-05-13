@@ -41,6 +41,7 @@ SIREN_BATCH_SIZE="${SIREN_BATCH_SIZE:-1}"
 SIREN_UPSTREAM_DIR="${SIREN_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 SIREN_DEVICE="${SIREN_DEVICE:-cuda}"
 SIREN_DISPATCH_CONTRACT="${SIREN_DISPATCH_CONTRACT:-naked_siren_replacement}"
+SIREN_ACTIVATION_FAMILY="${SIREN_ACTIVATION_FAMILY:-siren}"
 
 DISPATCH_INSTANCE_JOB_ID="${SIREN_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${SIREN_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -140,7 +141,7 @@ log "stage_2_provenance_begin"
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")
 DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1 || echo "no-driver")
-"$PYBIN" - "$PROVENANCE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_PLATFORM" "$GIT_HASH" "$GPU_NAME" "$DRIVER_VER" "$SIREN_VIDEO_PATH" "$SIREN_UPSTREAM_DIR" "$SIREN_EPOCHS" "$SIREN_BATCH_SIZE" "$SIREN_DEVICE" "$SIREN_DISPATCH_CONTRACT" <<'PY'
+"$PYBIN" - "$PROVENANCE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_PLATFORM" "$GIT_HASH" "$GPU_NAME" "$DRIVER_VER" "$SIREN_VIDEO_PATH" "$SIREN_UPSTREAM_DIR" "$SIREN_EPOCHS" "$SIREN_BATCH_SIZE" "$SIREN_DEVICE" "$SIREN_DISPATCH_CONTRACT" "$SIREN_ACTIVATION_FAMILY" <<'PY'
 import json, sys, time, torch
 (
     provenance_path,
@@ -156,7 +157,8 @@ import json, sys, time, torch
     batch_size,
     device,
     dispatch_contract,
-) = sys.argv[1:14]
+    activation_family,
+) = sys.argv[1:15]
 prov = {
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'lane_id': lane_id,
@@ -174,6 +176,7 @@ prov = {
     'batch_size': int(batch_size),
     'device': device,
     'dispatch_contract': dispatch_contract,
+    'activation_family': activation_family,
     'dispatch_contracts_distinguished': [
         'naked_siren_replacement: SIREN/INR replaces the HNeRV/A1 substrate with SRV1 0.bin',
         'siren_residual_on_hnerv_a1: SIREN/INR residual sidecar over byte-verified HNeRV/A1 base',
@@ -214,6 +217,7 @@ set +e
     --upstream-dir "$SIREN_UPSTREAM_DIR" \
     --device "$SIREN_DEVICE" \
     --dispatch-contract "$SIREN_DISPATCH_CONTRACT" \
+    --activation-family "$SIREN_ACTIVATION_FAMILY" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e

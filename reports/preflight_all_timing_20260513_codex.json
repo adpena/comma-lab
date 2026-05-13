@@ -1,0 +1,1932 @@
+{
+  "allow_slow_preflight": true,
+  "check_codebase": true,
+  "error": "EARLY NVDEC PROBE VIOLATIONS - at least one lane script doesn't probe NVDEC at Stage 0:\n  - /Users/adpena/Projects/pact/scripts/remote_lane_substrate_stack_of_stacks.sh: no `probe_nvdec.sh` call. Add Stage 0 NVDEC probe before any GPU-cost operation.\nFix: add `bash $WORKSPACE/scripts/probe_nvdec.sh || exit 2` BEFORE any train/qat/eval/archive command. Per memory feedback_vastai_nvdec_host_variation, NVDEC failure rate is ~30-50% across host pools; early-probe saves $0.05-0.10 per bad host.",
+  "error_type": "PreflightError",
+  "failed_step_count": 2,
+  "generated_at": "2026-05-13T19:49:14.363283Z",
+  "hot_steps": [
+    {
+      "elapsed_s": 8.83022,
+      "finished_offset_s": 41.678363,
+      "name": "check_test_files_imports_resolve",
+      "sequence": 153,
+      "started_offset_s": 32.848143,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 7.127435,
+      "finished_offset_s": 41.06239,
+      "name": "check_profile_keys_have_resolvers",
+      "sequence": 167,
+      "started_offset_s": 33.934955,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 6.455491,
+      "finished_offset_s": 12.042244,
+      "name": "check_no_compromised_lightning_supply_chain",
+      "sequence": 2,
+      "started_offset_s": 5.586753,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 6.153125,
+      "finished_offset_s": 11.741313,
+      "name": "preflight_filename_contract",
+      "sequence": 7,
+      "started_offset_s": 5.588188,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 5.941995,
+      "finished_offset_s": 38.84808,
+      "name": "check_test_imports_use_tac_not_src_tac",
+      "sequence": 154,
+      "started_offset_s": 32.906086,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 5.820952,
+      "finished_offset_s": 12.290272,
+      "name": "check_no_proxy_metric_drives_decision",
+      "sequence": 11,
+      "started_offset_s": 6.469319,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 5.103586,
+      "finished_offset_s": 10.687486,
+      "name": "check_codebase_drift",
+      "sequence": 1,
+      "started_offset_s": 5.583901,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 4.157931,
+      "finished_offset_s": 10.417939,
+      "name": "check_silent_default_audit_clean",
+      "sequence": 9,
+      "started_offset_s": 6.260008,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 4.133629,
+      "finished_offset_s": 9.722077,
+      "name": "preflight_loader_format_safety",
+      "sequence": 8,
+      "started_offset_s": 5.588448,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 3.6963,
+      "finished_offset_s": 9.283902,
+      "name": "check_artifact_lifecycle_compliance",
+      "sequence": 5,
+      "started_offset_s": 5.587601,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 3.146362,
+      "finished_offset_s": 33.547623,
+      "name": "check_no_scorer_load_at_inflate",
+      "sequence": 140,
+      "started_offset_s": 30.401261,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 2.565182,
+      "finished_offset_s": 32.955272,
+      "name": "check_shell_set_e_present",
+      "sequence": 134,
+      "started_offset_s": 30.39009,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 2.533722,
+      "finished_offset_s": 32.931667,
+      "name": "check_no_shell_zip_binary",
+      "sequence": 136,
+      "started_offset_s": 30.397945,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 2.506065,
+      "finished_offset_s": 32.906324,
+      "name": "check_no_pipefail_grep_q_trap",
+      "sequence": 137,
+      "started_offset_s": 30.400258,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 2.505494,
+      "finished_offset_s": 32.906023,
+      "name": "check_no_pipefail_tee_pipestatus_loss",
+      "sequence": 138,
+      "started_offset_s": 30.400529,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 2.33675,
+      "finished_offset_s": 27.393788,
+      "name": "check_strict_flipped_catalog_entries_have_live_count_zero",
+      "sequence": 103,
+      "started_offset_s": 25.057037,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 2.230051,
+      "finished_offset_s": 36.864447,
+      "name": "check_undeployed_archive_artifact_producers",
+      "sequence": 186,
+      "started_offset_s": 34.634396,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 2.018821,
+      "finished_offset_s": 9.93458,
+      "name": "check_archive_builders_use_deterministic_zip",
+      "sequence": 12,
+      "started_offset_s": 7.91576,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 1.767311,
+      "finished_offset_s": 32.157292,
+      "name": "check_no_mps_fallback_default",
+      "sequence": 133,
+      "started_offset_s": 30.389981,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 1.630572,
+      "finished_offset_s": 7.915686,
+      "name": "check_callsite_contracts_satisfied",
+      "sequence": 10,
+      "started_offset_s": 6.285115,
+      "status": "passed",
+      "thread": "preflight_3"
+    }
+  ],
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema": "pact.tac_preflight_cli_timing.v1",
+  "scope": "all",
+  "serial_elapsed_s": 123.291048,
+  "slow_step_count": 52,
+  "slow_step_threshold_s": 0.5,
+  "status": "failed",
+  "step_count": 192,
+  "steps": [
+    {
+      "elapsed_s": 5.103586,
+      "finished_offset_s": 10.687486,
+      "name": "check_codebase_drift",
+      "sequence": 1,
+      "started_offset_s": 5.583901,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 6.455491,
+      "finished_offset_s": 12.042244,
+      "name": "check_no_compromised_lightning_supply_chain",
+      "sequence": 2,
+      "started_offset_s": 5.586753,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 0.882241,
+      "finished_offset_s": 6.469288,
+      "name": "preflight_arity",
+      "sequence": 3,
+      "started_offset_s": 5.587047,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 0.697953,
+      "finished_offset_s": 6.285073,
+      "name": "preflight_shell_lane_arity",
+      "sequence": 4,
+      "started_offset_s": 5.58712,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 3.6963,
+      "finished_offset_s": 9.283902,
+      "name": "check_artifact_lifecycle_compliance",
+      "sequence": 5,
+      "started_offset_s": 5.587601,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.671895,
+      "finished_offset_s": 6.259931,
+      "name": "preflight_dead_resolvers",
+      "sequence": 6,
+      "started_offset_s": 5.588036,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 6.153125,
+      "finished_offset_s": 11.741313,
+      "name": "preflight_filename_contract",
+      "sequence": 7,
+      "started_offset_s": 5.588188,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 4.133629,
+      "finished_offset_s": 9.722077,
+      "name": "preflight_loader_format_safety",
+      "sequence": 8,
+      "started_offset_s": 5.588448,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 4.157931,
+      "finished_offset_s": 10.417939,
+      "name": "check_silent_default_audit_clean",
+      "sequence": 9,
+      "started_offset_s": 6.260008,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 1.630572,
+      "finished_offset_s": 7.915686,
+      "name": "check_callsite_contracts_satisfied",
+      "sequence": 10,
+      "started_offset_s": 6.285115,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 5.820952,
+      "finished_offset_s": 12.290272,
+      "name": "check_no_proxy_metric_drives_decision",
+      "sequence": 11,
+      "started_offset_s": 6.469319,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 2.018821,
+      "finished_offset_s": 9.93458,
+      "name": "check_archive_builders_use_deterministic_zip",
+      "sequence": 12,
+      "started_offset_s": 7.91576,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.024731,
+      "finished_offset_s": 9.308699,
+      "name": "check_eval_roundtrip_gate_called_after_output_dir_resolution",
+      "sequence": 13,
+      "started_offset_s": 9.283969,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.054091,
+      "finished_offset_s": 12.096467,
+      "name": "check_lightning_ssh_static_policy",
+      "sequence": 14,
+      "started_offset_s": 12.042375,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.043612,
+      "finished_offset_s": 12.140086,
+      "name": "check_no_submission_provider_or_cpu_score_leakage",
+      "sequence": 15,
+      "started_offset_s": 12.096474,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.01592,
+      "finished_offset_s": 12.156014,
+      "name": "check_provider_deploy_contracts",
+      "sequence": 16,
+      "started_offset_s": 12.140094,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.00021,
+      "finished_offset_s": 12.15623,
+      "name": "check_lightning_exact_eval_runner_bootstraps_dali",
+      "sequence": 17,
+      "started_offset_s": 12.156021,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.062946,
+      "finished_offset_s": 12.219178,
+      "name": "check_lightning_exact_eval_manifest_runtime_closure",
+      "sequence": 18,
+      "started_offset_s": 12.156232,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.17445,
+      "finished_offset_s": 12.393639,
+      "name": "check_gate5_runtime_closure",
+      "sequence": 19,
+      "started_offset_s": 12.219188,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000106,
+      "finished_offset_s": 12.393766,
+      "name": "check_remote_archive_only_eval_custody_closure",
+      "sequence": 20,
+      "started_offset_s": 12.39366,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.01359,
+      "finished_offset_s": 12.407359,
+      "name": "check_cmg3a_remote_dispatch_requires_pose_safety",
+      "sequence": 21,
+      "started_offset_s": 12.393768,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.015485,
+      "finished_offset_s": 12.422851,
+      "name": "check_pmg_remote_dispatch_requires_geometry_escape",
+      "sequence": 22,
+      "started_offset_s": 12.407366,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 6.7e-05,
+      "finished_offset_s": 12.422925,
+      "name": "check_contest_component_trace_runtime_parity",
+      "sequence": 23,
+      "started_offset_s": 12.422858,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000218,
+      "finished_offset_s": 12.423145,
+      "name": "check_dispatch_claim_helper_present",
+      "sequence": 24,
+      "started_offset_s": 12.422927,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000244,
+      "finished_offset_s": 12.423391,
+      "name": "check_no_active_mcp_server_config",
+      "sequence": 25,
+      "started_offset_s": 12.423147,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.030459,
+      "finished_offset_s": 12.453852,
+      "name": "check_no_live_mcp_processes",
+      "sequence": 26,
+      "started_offset_s": 12.423393,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.030178,
+      "finished_offset_s": 12.484095,
+      "name": "preflight_t4_oom_training_guard",
+      "sequence": 27,
+      "started_offset_s": 12.453917,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.637647,
+      "finished_offset_s": 13.121752,
+      "name": "check_dispatch_cli_shell_hazards",
+      "sequence": 28,
+      "started_offset_s": 12.484105,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.002336,
+      "finished_offset_s": 13.124112,
+      "name": "check_lane_smoke_signal_nontrivial",
+      "sequence": 29,
+      "started_offset_s": 13.121776,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.349761,
+      "finished_offset_s": 13.473879,
+      "name": "check_calibration_provenance",
+      "sequence": 30,
+      "started_offset_s": 13.124117,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.073447,
+      "finished_offset_s": 13.547335,
+      "name": "check_dispatch_wrapper_stages_implemented",
+      "sequence": 31,
+      "started_offset_s": 13.473888,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.008194,
+      "finished_offset_s": 13.555535,
+      "name": "check_cross_paradigm_wiring_contract",
+      "sequence": 32,
+      "started_offset_s": 13.547341,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.007854,
+      "finished_offset_s": 13.563401,
+      "name": "check_evidence_implementation_matches_model_spec",
+      "sequence": 33,
+      "started_offset_s": 13.555546,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.003753,
+      "finished_offset_s": 15.019844,
+      "name": "check_operator_approval_must_be_lane_scoped",
+      "sequence": 34,
+      "started_offset_s": 15.016091,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.002549,
+      "finished_offset_s": 15.022398,
+      "name": "check_status_artifacts_no_stale_dirty_paths",
+      "sequence": 35,
+      "started_offset_s": 15.019849,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001313,
+      "finished_offset_s": 15.023714,
+      "name": "check_rebuild_commands_no_baked_runtime_state",
+      "sequence": 36,
+      "started_offset_s": 15.022401,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.042625,
+      "finished_offset_s": 15.066342,
+      "name": "check_packet_blocker_clearance_evidence_matches",
+      "sequence": 37,
+      "started_offset_s": 15.023717,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.02169,
+      "finished_offset_s": 15.088045,
+      "name": "check_subagent_commit_serializer_uses_lock",
+      "sequence": 38,
+      "started_offset_s": 15.066355,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000577,
+      "finished_offset_s": 15.08868,
+      "name": "check_claude_md_catalog_no_duplicate_numbers",
+      "sequence": 39,
+      "started_offset_s": 15.088103,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.01276,
+      "finished_offset_s": 15.101444,
+      "name": "check_subagent_commits_have_co_author_trailer",
+      "sequence": 40,
+      "started_offset_s": 15.088684,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.007226,
+      "finished_offset_s": 15.108709,
+      "name": "check_phase1_trainer_runtime_emits_contest_compliant_inflate",
+      "sequence": 41,
+      "started_offset_s": 15.101483,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.002059,
+      "finished_offset_s": 15.110774,
+      "name": "check_deterministic_compiler_canonical_use",
+      "sequence": 42,
+      "started_offset_s": 15.108715,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.082437,
+      "finished_offset_s": 15.193215,
+      "name": "check_no_fastvit_attention_compounding_claim",
+      "sequence": 43,
+      "started_offset_s": 15.110778,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.245071,
+      "finished_offset_s": 15.438297,
+      "name": "check_no_auth_eval_optout_help_text_consumer_unverified",
+      "sequence": 44,
+      "started_offset_s": 15.193226,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.053457,
+      "finished_offset_s": 15.491766,
+      "name": "check_no_weight_domain_saliency_on_score_gradient_substrate",
+      "sequence": 45,
+      "started_offset_s": 15.438309,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.005153,
+      "finished_offset_s": 15.49693,
+      "name": "check_representation_lane_has_archive_grammar_at_design_time",
+      "sequence": 46,
+      "started_offset_s": 15.491777,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.080158,
+      "finished_offset_s": 15.577092,
+      "name": "check_subagent_landing_has_solver_wire_in",
+      "sequence": 47,
+      "started_offset_s": 15.496934,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.219481,
+      "finished_offset_s": 15.796583,
+      "name": "check_lane_pre_registered_before_work_starts",
+      "sequence": 48,
+      "started_offset_s": 15.577102,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.305901,
+      "finished_offset_s": 16.10251,
+      "name": "check_authoritative_tag_requires_custody_metadata",
+      "sequence": 49,
+      "started_offset_s": 15.796609,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.025798,
+      "finished_offset_s": 16.128336,
+      "name": "check_continual_learning_writes_use_lock",
+      "sequence": 50,
+      "started_offset_s": 16.102538,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.020017,
+      "finished_offset_s": 16.14836,
+      "name": "check_no_tag_only_custody_validation",
+      "sequence": 51,
+      "started_offset_s": 16.128343,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.502861,
+      "finished_offset_s": 16.651226,
+      "name": "check_no_bare_writes_to_shared_state",
+      "sequence": 52,
+      "started_offset_s": 16.148366,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.039786,
+      "finished_offset_s": 16.691037,
+      "name": "check_locked_writes_preserve_deletions",
+      "sequence": 53,
+      "started_offset_s": 16.651251,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000517,
+      "finished_offset_s": 16.691571,
+      "name": "check_no_excluded_writers_in_check_131_accept_list",
+      "sequence": 54,
+      "started_offset_s": 16.691054,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.074165,
+      "finished_offset_s": 16.765739,
+      "name": "check_phase3_dispatch_gate_fail_closed",
+      "sequence": 55,
+      "started_offset_s": 16.691574,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.052978,
+      "finished_offset_s": 16.818726,
+      "name": "check_setup_first_seen_uses_transactional_update_inside_lock",
+      "sequence": 56,
+      "started_offset_s": 16.765748,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.431917,
+      "finished_offset_s": 17.250651,
+      "name": "check_custody_gate_accept_tokens_concrete_only",
+      "sequence": 57,
+      "started_offset_s": 16.818734,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.011445,
+      "finished_offset_s": 17.262111,
+      "name": "check_remote_dispatch_runbooks_no_local_cuda_probe_default",
+      "sequence": 58,
+      "started_offset_s": 17.250666,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.276895,
+      "finished_offset_s": 17.539013,
+      "name": "check_state_writers_strict_load_for_mutating_path",
+      "sequence": 59,
+      "started_offset_s": 17.262119,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.138458,
+      "finished_offset_s": 17.677497,
+      "name": "check_packet_compiler_no_op_proof_promotes_to_blocker",
+      "sequence": 60,
+      "started_offset_s": 17.539039,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.222498,
+      "finished_offset_s": 17.900018,
+      "name": "check_state_writers_own_their_lock_end_to_end",
+      "sequence": 61,
+      "started_offset_s": 17.67752,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.04442,
+      "finished_offset_s": 17.944462,
+      "name": "check_state_helper_paths_explicit",
+      "sequence": 62,
+      "started_offset_s": 17.900042,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.021401,
+      "finished_offset_s": 17.965872,
+      "name": "check_unsafe_test_only_restricted_to_test_paths",
+      "sequence": 63,
+      "started_offset_s": 17.944471,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.134223,
+      "finished_offset_s": 18.100104,
+      "name": "check_paid_job_register_before_submit",
+      "sequence": 64,
+      "started_offset_s": 17.965881,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.143857,
+      "finished_offset_s": 18.243983,
+      "name": "check_setup_first_seen_no_split_transactions",
+      "sequence": 65,
+      "started_offset_s": 18.100126,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.413696,
+      "finished_offset_s": 18.657698,
+      "name": "check_preflight_cli_default_scope_is_bounded_dev",
+      "sequence": 66,
+      "started_offset_s": 18.244002,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.008434,
+      "finished_offset_s": 18.666146,
+      "name": "check_lightning_submit_cancel_only_before_network",
+      "sequence": 67,
+      "started_offset_s": 18.657712,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001065,
+      "finished_offset_s": 18.667218,
+      "name": "check_vastai_tracker_strict_load",
+      "sequence": 68,
+      "started_offset_s": 18.666153,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.046894,
+      "finished_offset_s": 18.714117,
+      "name": "check_phase_b_auth_memo_in_repo",
+      "sequence": 69,
+      "started_offset_s": 18.667223,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.349591,
+      "finished_offset_s": 19.063714,
+      "name": "check_operator_wrapper_threads_trainer_tier_required_flags",
+      "sequence": 70,
+      "started_offset_s": 18.714123,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.3187,
+      "finished_offset_s": 19.382425,
+      "name": "check_operator_wrapper_validates_required_input_files_pre_dispatch",
+      "sequence": 71,
+      "started_offset_s": 19.063726,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.003214,
+      "finished_offset_s": 19.38565,
+      "name": "check_modal_dispatcher_uses_canonical_mount_builder",
+      "sequence": 72,
+      "started_offset_s": 19.382436,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000102,
+      "finished_offset_s": 19.385756,
+      "name": "check_modal_mount_builder_uses_mtime_stability_check",
+      "sequence": 73,
+      "started_offset_s": 19.385654,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 9.5e-05,
+      "finished_offset_s": 19.385853,
+      "name": "check_modal_dispatch_verifies_worker_source_matches_head",
+      "sequence": 74,
+      "started_offset_s": 19.385758,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000958,
+      "finished_offset_s": 19.386812,
+      "name": "check_substrate_dispatch_uses_smoke_before_full_pattern",
+      "sequence": 75,
+      "started_offset_s": 19.385854,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 1.587755,
+      "finished_offset_s": 20.974569,
+      "name": "check_ast_walker_handles_both_assign_and_annassign",
+      "sequence": 76,
+      "started_offset_s": 19.386814,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.01238,
+      "finished_offset_s": 20.98696,
+      "name": "check_compressai_primitives_registered_in_canonical_inventory",
+      "sequence": 77,
+      "started_offset_s": 20.97458,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001173,
+      "finished_offset_s": 20.988142,
+      "name": "check_substrate_recipes_declare_min_vram_gb_floor",
+      "sequence": 78,
+      "started_offset_s": 20.986969,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000842,
+      "finished_offset_s": 20.988987,
+      "name": "check_substrate_recipes_declare_video_input_strategy",
+      "sequence": 79,
+      "started_offset_s": 20.988146,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000899,
+      "finished_offset_s": 20.989889,
+      "name": "check_substrate_trainers_declare_autocast_fp16_support",
+      "sequence": 80,
+      "started_offset_s": 20.98899,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000938,
+      "finished_offset_s": 20.99083,
+      "name": "check_substrate_dispatch_honors_canary_first_ordering",
+      "sequence": 81,
+      "started_offset_s": 20.989892,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 1.480745,
+      "finished_offset_s": 22.471577,
+      "name": "check_subagent_commit_serializer_always_uses_expected_content_sha256",
+      "sequence": 82,
+      "started_offset_s": 20.990833,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.248573,
+      "finished_offset_s": 22.720162,
+      "name": "check_cost_band_anchor_writers_declare_outcome",
+      "sequence": 83,
+      "started_offset_s": 22.471589,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.007387,
+      "finished_offset_s": 22.72756,
+      "name": "check_strict_preflight_callsites_have_claude_md_catalog_row",
+      "sequence": 84,
+      "started_offset_s": 22.720173,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000123,
+      "finished_offset_s": 22.727691,
+      "name": "check_cost_band_posterior_rows_have_outcome_field",
+      "sequence": 85,
+      "started_offset_s": 22.727568,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001407,
+      "finished_offset_s": 22.729101,
+      "name": "check_legacy_allowlist_backfill_cadence_ledger_current",
+      "sequence": 86,
+      "started_offset_s": 22.727693,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 6.3e-05,
+      "finished_offset_s": 22.729167,
+      "name": "check_preflight_hook_codebase_default",
+      "sequence": 87,
+      "started_offset_s": 22.729104,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001193,
+      "finished_offset_s": 22.730363,
+      "name": "check_substrate_trainers_declare_tf32_support",
+      "sequence": 88,
+      "started_offset_s": 22.729169,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000717,
+      "finished_offset_s": 22.731082,
+      "name": "check_substrate_trainers_declare_torch_compile_support",
+      "sequence": 89,
+      "started_offset_s": 22.730365,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000966,
+      "finished_offset_s": 22.73205,
+      "name": "check_substrate_trainers_use_no_grad_at_eval",
+      "sequence": 90,
+      "started_offset_s": 22.731084,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000944,
+      "finished_offset_s": 22.732997,
+      "name": "check_substrate_recipes_declare_pyav_decode_strategy",
+      "sequence": 91,
+      "started_offset_s": 22.732052,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000912,
+      "finished_offset_s": 22.73391,
+      "name": "check_substrate_recipes_declare_target_modes",
+      "sequence": 92,
+      "started_offset_s": 22.732998,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001125,
+      "finished_offset_s": 22.735038,
+      "name": "check_substrate_trainers_do_not_use_finite_auth_eval_parser_for_claims",
+      "sequence": 93,
+      "started_offset_s": 22.733912,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 1.459972,
+      "finished_offset_s": 24.195012,
+      "name": "check_experiments_results_gc_helper_is_canonical",
+      "sequence": 94,
+      "started_offset_s": 22.73504,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.109518,
+      "finished_offset_s": 24.304543,
+      "name": "check_gc_helper_refuses_delete_on_tracked_paths",
+      "sequence": 95,
+      "started_offset_s": 24.195025,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.548601,
+      "finished_offset_s": 24.853171,
+      "name": "check_commit_serializer_pre_lock_hash_against_head",
+      "sequence": 96,
+      "started_offset_s": 24.30457,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.020187,
+      "finished_offset_s": 24.873368,
+      "name": "check_quantize_degenerate_range_clamped_correctly",
+      "sequence": 97,
+      "started_offset_s": 24.853181,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001271,
+      "finished_offset_s": 24.87465,
+      "name": "check_operator_authorize_canonical_use",
+      "sequence": 98,
+      "started_offset_s": 24.873379,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.009171,
+      "finished_offset_s": 24.883826,
+      "name": "check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap",
+      "sequence": 99,
+      "started_offset_s": 24.874655,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.007988,
+      "finished_offset_s": 24.89182,
+      "name": "check_substrate_score_aware_loss_calls_preprocess_input_before_scorer",
+      "sequence": 100,
+      "started_offset_s": 24.883831,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.065021,
+      "finished_offset_s": 24.956847,
+      "name": "check_substrate_trainer_pose_defaults_match_contest_formula",
+      "sequence": 101,
+      "started_offset_s": 24.891826,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.10015,
+      "finished_offset_s": 25.057026,
+      "name": "check_claude_md_catalog_text_matches_preflight_strict_value",
+      "sequence": 102,
+      "started_offset_s": 24.956877,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 2.33675,
+      "finished_offset_s": 27.393788,
+      "name": "check_strict_flipped_catalog_entries_have_live_count_zero",
+      "sequence": 103,
+      "started_offset_s": 25.057037,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.045446,
+      "finished_offset_s": 25.103645,
+      "name": "check_training_scripts_use_real_data_in_nonsmoke_mode",
+      "sequence": 104,
+      "started_offset_s": 25.058198,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.005094,
+      "finished_offset_s": 25.108765,
+      "name": "check_representation_lane_has_archive_grammar_at_design_time",
+      "sequence": 105,
+      "started_offset_s": 25.103671,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.019553,
+      "finished_offset_s": 25.128324,
+      "name": "check_no_tag_only_custody_validation",
+      "sequence": 106,
+      "started_offset_s": 25.108771,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.414011,
+      "finished_offset_s": 25.542342,
+      "name": "check_no_bare_writes_to_shared_state",
+      "sequence": 107,
+      "started_offset_s": 25.128331,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.416078,
+      "finished_offset_s": 25.958434,
+      "name": "check_preflight_cli_default_scope_is_bounded_dev",
+      "sequence": 108,
+      "started_offset_s": 25.542356,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.00194,
+      "finished_offset_s": 25.960392,
+      "name": "check_deterministic_compiler_canonical_use",
+      "sequence": 109,
+      "started_offset_s": 25.958452,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.019027,
+      "finished_offset_s": 25.979424,
+      "name": "check_quantize_degenerate_range_clamped_correctly",
+      "sequence": 110,
+      "started_offset_s": 25.960396,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001163,
+      "finished_offset_s": 25.980598,
+      "name": "check_operator_authorize_canonical_use",
+      "sequence": 111,
+      "started_offset_s": 25.979434,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.009123,
+      "finished_offset_s": 25.989724,
+      "name": "check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap",
+      "sequence": 112,
+      "started_offset_s": 25.980601,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 9.2e-05,
+      "finished_offset_s": 25.989821,
+      "name": "check_modal_mount_builder_uses_mtime_stability_check",
+      "sequence": 113,
+      "started_offset_s": 25.989729,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000811,
+      "finished_offset_s": 25.990635,
+      "name": "check_substrate_dispatch_uses_smoke_before_full_pattern",
+      "sequence": 114,
+      "started_offset_s": 25.989824,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000895,
+      "finished_offset_s": 25.991535,
+      "name": "check_substrate_recipes_declare_min_vram_gb_floor",
+      "sequence": 115,
+      "started_offset_s": 25.99064,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000822,
+      "finished_offset_s": 25.99236,
+      "name": "check_substrate_recipes_declare_video_input_strategy",
+      "sequence": 116,
+      "started_offset_s": 25.991539,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000841,
+      "finished_offset_s": 25.993206,
+      "name": "check_substrate_trainers_declare_autocast_fp16_support",
+      "sequence": 117,
+      "started_offset_s": 25.992365,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000895,
+      "finished_offset_s": 25.994104,
+      "name": "check_substrate_dispatch_honors_canary_first_ordering",
+      "sequence": 118,
+      "started_offset_s": 25.993209,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 1.385526,
+      "finished_offset_s": 27.379635,
+      "name": "check_catalog_claim_committed_via_serializer",
+      "sequence": 119,
+      "started_offset_s": 25.994109,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.014117,
+      "finished_offset_s": 27.393767,
+      "name": "check_hnerv_training_parity_guard",
+      "sequence": 120,
+      "started_offset_s": 27.379651,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 1.372971,
+      "finished_offset_s": 28.766767,
+      "name": "check_catalog_claim_committed_via_serializer",
+      "sequence": 121,
+      "started_offset_s": 27.393796,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.013046,
+      "finished_offset_s": 28.779823,
+      "name": "check_hnerv_training_parity_guard",
+      "sequence": 122,
+      "started_offset_s": 28.766777,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.002634,
+      "finished_offset_s": 28.782465,
+      "name": "check_substrate_trainer_does_not_hardcode_hardware_substrate",
+      "sequence": 123,
+      "started_offset_s": 28.779831,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 8.5e-05,
+      "finished_offset_s": 28.782553,
+      "name": "check_modal_dispatch_threads_sentinel_files_per_catalog_166",
+      "sequence": 124,
+      "started_offset_s": 28.782468,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 1.435878,
+      "finished_offset_s": 30.218433,
+      "name": "check_macos_cpu_advisory_not_promoted_without_linux_verification",
+      "sequence": 125,
+      "started_offset_s": 28.782555,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.135433,
+      "finished_offset_s": 30.35388,
+      "name": "check_reverse_engineering_tree_curation",
+      "sequence": 126,
+      "started_offset_s": 30.218447,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.024027,
+      "finished_offset_s": 30.377944,
+      "name": "check_feature_flags_have_live_objective_effect",
+      "sequence": 127,
+      "started_offset_s": 30.353917,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000137,
+      "finished_offset_s": 30.378091,
+      "name": "preflight_profiles",
+      "sequence": 128,
+      "started_offset_s": 30.377954,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.010401,
+      "finished_offset_s": 30.388494,
+      "name": "preflight_arch_consistency",
+      "sequence": 129,
+      "started_offset_s": 30.378093,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000165,
+      "finished_offset_s": 30.388686,
+      "name": "preflight_canonical_checkpoints",
+      "sequence": 130,
+      "started_offset_s": 30.388521,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 4.9e-05,
+      "finished_offset_s": 30.388738,
+      "name": "preflight_build_renderer_signature",
+      "sequence": 131,
+      "started_offset_s": 30.388689,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001086,
+      "finished_offset_s": 30.389826,
+      "name": "preflight_bootstrap_safety",
+      "sequence": 132,
+      "started_offset_s": 30.38874,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 1.767311,
+      "finished_offset_s": 32.157292,
+      "name": "check_no_mps_fallback_default",
+      "sequence": 133,
+      "started_offset_s": 30.389981,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 2.565182,
+      "finished_offset_s": 32.955272,
+      "name": "check_shell_set_e_present",
+      "sequence": 134,
+      "started_offset_s": 30.39009,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.017269,
+      "finished_offset_s": 30.407443,
+      "name": "check_shell_empty_arrays_guarded_under_set_u",
+      "sequence": 135,
+      "started_offset_s": 30.390174,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 2.533722,
+      "finished_offset_s": 32.931667,
+      "name": "check_no_shell_zip_binary",
+      "sequence": 136,
+      "started_offset_s": 30.397945,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 2.506065,
+      "finished_offset_s": 32.906324,
+      "name": "check_no_pipefail_grep_q_trap",
+      "sequence": 137,
+      "started_offset_s": 30.400258,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 2.505494,
+      "finished_offset_s": 32.906023,
+      "name": "check_no_pipefail_tee_pipestatus_loss",
+      "sequence": 138,
+      "started_offset_s": 30.400529,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 1.238507,
+      "finished_offset_s": 31.639333,
+      "name": "check_no_eval_roundtrip_false",
+      "sequence": 139,
+      "started_offset_s": 30.400826,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 3.146362,
+      "finished_offset_s": 33.547623,
+      "name": "check_no_scorer_load_at_inflate",
+      "sequence": 140,
+      "started_offset_s": 30.401261,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 0.602168,
+      "finished_offset_s": 31.009648,
+      "name": "check_substrate_score_aware_losses_use_canonical_scorer_contract",
+      "sequence": 141,
+      "started_offset_s": 30.40748,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.520514,
+      "finished_offset_s": 31.530208,
+      "name": "check_substrate_trainer_pose_defaults_match_contest_formula",
+      "sequence": 142,
+      "started_offset_s": 31.009694,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.10923,
+      "finished_offset_s": 31.639454,
+      "name": "check_no_disable_eval_roundtrip_flag",
+      "sequence": 143,
+      "started_offset_s": 31.530224,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.141747,
+      "finished_offset_s": 31.781092,
+      "name": "check_no_pack_sparse_delta_approved_outside_promotion_tool",
+      "sequence": 144,
+      "started_offset_s": 31.639345,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 0.611982,
+      "finished_offset_s": 32.251441,
+      "name": "check_remote_scripts_have_nvdec_probe",
+      "sequence": 145,
+      "started_offset_s": 31.63946,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.042957,
+      "finished_offset_s": 31.824088,
+      "name": "check_kl_distill_uses_roundtripped_frames",
+      "sequence": 146,
+      "started_offset_s": 31.78113,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 0.817652,
+      "finished_offset_s": 32.641791,
+      "name": "check_no_comment_only_contracts",
+      "sequence": 147,
+      "started_offset_s": 31.82414,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 1.409107,
+      "finished_offset_s": 33.566472,
+      "name": "check_training_script_metric_keys_consistent",
+      "sequence": 148,
+      "started_offset_s": 32.157365,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.467715,
+      "finished_offset_s": 32.719183,
+      "name": "check_no_bare_round_in_eval_roundtrip",
+      "sequence": 149,
+      "started_offset_s": 32.251468,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 1.502969,
+      "finished_offset_s": 34.144802,
+      "name": "check_training_paths_use_ema_correctly",
+      "sequence": 150,
+      "started_offset_s": 32.641833,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 0.066598,
+      "finished_offset_s": 32.7858,
+      "name": "check_vastai_create_has_label",
+      "sequence": 151,
+      "started_offset_s": 32.719202,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.0623,
+      "finished_offset_s": 32.848124,
+      "name": "check_vastai_create_writes_tracker",
+      "sequence": 152,
+      "started_offset_s": 32.785824,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 8.83022,
+      "finished_offset_s": 41.678363,
+      "name": "check_test_files_imports_resolve",
+      "sequence": 153,
+      "started_offset_s": 32.848143,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 5.941995,
+      "finished_offset_s": 38.84808,
+      "name": "check_test_imports_use_tac_not_src_tac",
+      "sequence": 154,
+      "started_offset_s": 32.906086,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 0.151842,
+      "finished_offset_s": 33.058176,
+      "name": "check_kl_div_reduction_correct",
+      "sequence": 155,
+      "started_offset_s": 32.906334,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.428359,
+      "finished_offset_s": 33.360045,
+      "name": "check_no_silent_auto_discovery_with_warn",
+      "sequence": 156,
+      "started_offset_s": 32.931685,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 0.67727,
+      "finished_offset_s": 33.632559,
+      "name": "check_inflate_sh_handles_br_centrally",
+      "sequence": 157,
+      "started_offset_s": 32.955289,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 1.333684,
+      "finished_offset_s": 34.391881,
+      "name": "check_segmap_class_lanes_have_oom_guards",
+      "sequence": 158,
+      "started_offset_s": 33.058198,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.565863,
+      "finished_offset_s": 33.925927,
+      "name": "check_remote_lane_scripts_use_computed_payloads",
+      "sequence": 159,
+      "started_offset_s": 33.360064,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 0.818807,
+      "finished_offset_s": 34.366449,
+      "name": "check_waivers_specify_env_gate",
+      "sequence": 160,
+      "started_offset_s": 33.547642,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 0.675455,
+      "finished_offset_s": 34.225177,
+      "name": "check_training_scripts_have_auth_eval",
+      "sequence": 161,
+      "started_offset_s": 33.549722,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.966557,
+      "finished_offset_s": 34.533044,
+      "name": "check_inflate_scorer_load_has_runtime_banner",
+      "sequence": 162,
+      "started_offset_s": 33.566487,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.078556,
+      "finished_offset_s": 33.711128,
+      "name": "check_vastai_prompts_have_cost_cap",
+      "sequence": 163,
+      "started_offset_s": 33.632573,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.187859,
+      "finished_offset_s": 33.899003,
+      "name": "check_subagent_prompts_no_cpu_fallback",
+      "sequence": 164,
+      "started_offset_s": 33.711144,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.035907,
+      "finished_offset_s": 33.934945,
+      "name": "check_scores_have_lane_tag",
+      "sequence": 165,
+      "started_offset_s": 33.899038,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.172014,
+      "finished_offset_s": 34.097964,
+      "name": "check_halfframe_archive_uses_trained_profile",
+      "sequence": 166,
+      "started_offset_s": 33.92595,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 7.127435,
+      "finished_offset_s": 41.06239,
+      "name": "check_profile_keys_have_resolvers",
+      "sequence": 167,
+      "started_offset_s": 33.934955,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.000284,
+      "finished_offset_s": 34.098286,
+      "name": "check_uniward_delta_has_attestation_gate",
+      "sequence": 168,
+      "started_offset_s": 34.098003,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 0.361864,
+      "finished_offset_s": 34.460157,
+      "name": "check_remote_scripts_write_provenance",
+      "sequence": 169,
+      "started_offset_s": 34.098292,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 0.141996,
+      "finished_offset_s": 34.28682,
+      "name": "check_remote_scripts_executable_bit",
+      "sequence": 170,
+      "started_offset_s": 34.144824,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 0.029519,
+      "finished_offset_s": 34.25472,
+      "name": "check_training_scripts_use_real_data_in_nonsmoke_mode",
+      "sequence": 171,
+      "started_offset_s": 34.225202,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.001185,
+      "finished_offset_s": 34.255944,
+      "name": "check_no_brittle_six_line_waiver_lookback",
+      "sequence": 172,
+      "started_offset_s": 34.254759,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000535,
+      "finished_offset_s": 34.256487,
+      "name": "check_train_renderer_kl_aux_explicit_scope",
+      "sequence": 173,
+      "started_offset_s": 34.255952,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000947,
+      "finished_offset_s": 34.257438,
+      "name": "check_distillation_policy_schema_clean",
+      "sequence": 174,
+      "started_offset_s": 34.256491,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.000471,
+      "finished_offset_s": 34.25792,
+      "name": "check_nvdec_probe_has_error_classification",
+      "sequence": 175,
+      "started_offset_s": 34.257449,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.154427,
+      "finished_offset_s": 34.41236,
+      "name": "check_no_raw_zip_extractall",
+      "sequence": 176,
+      "started_offset_s": 34.257933,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.256037,
+      "finished_offset_s": 34.542937,
+      "name": "check_remote_scripts_record_predicted_band",
+      "sequence": 177,
+      "started_offset_s": 34.2869,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 0.207622,
+      "finished_offset_s": 34.574092,
+      "name": "check_remote_scripts_tag_contest_cuda_at_completion",
+      "sequence": 178,
+      "started_offset_s": 34.36647,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "detail": "PreflightError: EARLY NVDEC PROBE VIOLATIONS - at least one lane script doesn't probe NVDEC at Stage 0:\n  - /Users/adpena/Projects/pact/scripts/remote_lane_substrate_stack_of_stacks.sh: no `probe_nvdec.sh` call. Add Stage 0 NVDEC probe before any GPU-cost operation.\nFix: add `bash $WORKSPACE/scripts/probe_nvdec.sh || exit 2` BEFORE any train/qat/eval/archive command. Per memory feedback_vastai_nvdec_host_variation, NVDEC failure rate is ~30-50% across host pools; early-probe saves $0.05-0.10 per bad host.",
+      "elapsed_s": 0.178682,
+      "finished_offset_s": 34.570585,
+      "name": "check_remote_scripts_probe_nvdec_early",
+      "sequence": 179,
+      "started_offset_s": 34.391903,
+      "status": "failed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 1.475591,
+      "finished_offset_s": 35.88797,
+      "name": "check_public_release_hygiene",
+      "sequence": 180,
+      "started_offset_s": 34.412378,
+      "status": "passed",
+      "thread": "MainThread"
+    },
+    {
+      "elapsed_s": 0.174207,
+      "finished_offset_s": 34.63438,
+      "name": "check_resume_from_state_dict_shape_compat",
+      "sequence": 181,
+      "started_offset_s": 34.460173,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 0.656847,
+      "finished_offset_s": 35.189911,
+      "name": "check_no_tmux_kill_server_in_lane_scripts",
+      "sequence": 182,
+      "started_offset_s": 34.533064,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.660081,
+      "finished_offset_s": 35.203035,
+      "name": "check_no_unconditional_ensurepip",
+      "sequence": 183,
+      "started_offset_s": 34.542954,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "detail": "PreflightError: macOS RESOURCE FORK CLEANUP VIOLATIONS - at least one lane script invokes contest_auth_eval without ._* cleanup:\n  - /Users/adpena/Projects/pact/scripts/remote_lane_substrate_a1_plus_wavelet_residual.sh: invokes contest_auth_eval but doesn't strip macOS AppleDouble files (._*.mkv) from upstream/videos. Add `rm -f upstream/videos/._*.mkv` BEFORE the eval call to prevent contamination-error crashes (Lane F-V2 bug 2026-04-27).\n  - /Users/adpena/Projects/pact/scripts/remote_lane_substrate_stack_of_stacks.sh: invokes contest_auth_eval but doesn't strip macOS AppleDouble files (._*.mkv) from upstream/videos. Add `rm -f upstream/videos/._*.mkv` BEFORE the eval call to prevent contamination-error crashes (Lane F-V2 bug 2026-04-27).",
+      "elapsed_s": 0.633006,
+      "finished_offset_s": 35.203615,
+      "name": "check_lane_scripts_strip_macos_resource_forks",
+      "sequence": 184,
+      "started_offset_s": 34.57061,
+      "status": "failed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.819418,
+      "finished_offset_s": 35.393521,
+      "name": "check_ssh_commands_have_connect_timeout",
+      "sequence": 185,
+      "started_offset_s": 34.574102,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 2.230051,
+      "finished_offset_s": 36.864447,
+      "name": "check_undeployed_archive_artifact_producers",
+      "sequence": 186,
+      "started_offset_s": 34.634396,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 1.586005,
+      "finished_offset_s": 36.775933,
+      "name": "check_fp4_production_paths_disclose_hardware",
+      "sequence": 187,
+      "started_offset_s": 35.189927,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.301999,
+      "finished_offset_s": 35.505045,
+      "name": "check_remote_lane_scripts_have_heartbeat",
+      "sequence": 188,
+      "started_offset_s": 35.203046,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 1.586299,
+      "finished_offset_s": 36.789924,
+      "name": "check_pose_projection_train_inference_parity",
+      "sequence": 189,
+      "started_offset_s": 35.203625,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.252135,
+      "finished_offset_s": 35.645712,
+      "name": "check_launcher_tarball_includes_lane_anchors",
+      "sequence": 190,
+      "started_offset_s": 35.393577,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 0.265861,
+      "finished_offset_s": 35.77093,
+      "name": "check_no_git_reset_hard_in_remote_lane_scripts",
+      "sequence": 191,
+      "started_offset_s": 35.505069,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 0.012951,
+      "finished_offset_s": 35.900982,
+      "name": "check_preflight_scanners_use_oss_mirror_helper",
+      "sequence": 192,
+      "started_offset_s": 35.888031,
+      "status": "passed",
+      "thread": "MainThread"
+    }
+  ],
+  "timeout_s": 0,
+  "wall_elapsed_s": 41.890642
+}

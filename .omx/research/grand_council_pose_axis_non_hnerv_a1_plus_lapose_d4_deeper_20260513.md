@@ -2,6 +2,7 @@
 
 **Task**: deeper deliberation on D4 (retry of crashed subagent `ae3b141d0830dbed0`)
 **Lane**: `lane_pose_axis_non_hnerv_council_d4_deeper_20260513` (L0 → L1 on memo land)
+**research_only**: true — D4 council deliberation; the sister BUILD lane owns archive grammar and dispatch.
 **Sister BUILD lane**: `lane_a1_plus_lapose_composition_20260513` (L1 — substrate package + trainer + recipe + scripts landed at commits `533e487a` + `b0b6e0dd` … `d4adab79`)
 **Prior council**: `.omx/research/grand_council_pose_axis_non_hnerv_a1_plus_lapose_20260513.md` (commit `7e77321f`, D4 split 5-5 binding tie)
 **Axis discipline**: every score in this memo is tagged `[contest-CPU]`, `[contest-CUDA]`, `[macOS-CPU advisory]`, `[prediction]`, or `[empirical]`.

@@ -1,0 +1,140 @@
+schema_version: 1
+name: substrate_sabor_boundary_only_renderer_modal_t4_dispatch
+lane_id: lane_sabor_boundary_only_renderer_substrate_20260513
+summary: >-
+  SABOR (Stable-Argmax Boundary-Only Renderer) first-anchor Modal T4 dispatch.
+  Council F O1 first-principles substrate — consumes the 14.6-263 MB free-byte
+  capacity proven by the φ1 SABOR audit (2026-05-13) by factoring each frame
+  into a sparse boundary mask + high-fidelity boundary RGB + per-class mean +
+  per-pair bias + FiLM refinement.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: 0.175
+predicted_delta: >-
+  Council F O1 derivation: by replacing dense renderer fidelity with sparse
+  boundary fidelity + per-class interior fill, SABOR consumes the
+  argmax-stable interior capacity at near-zero SegNet cost. Predicted band
+  [0.165, 0.185] [contest-CPU prediction].
+predicted_delta_basis: >-
+  .omx/research/sabor_boundary_audit_20260513.md (φ1 empirical capacity
+  proof: 99.27% argmax-stable @ ε=32; 14.6 MB free-byte capacity per
+  video; interior fraction ≥ 0.97 of stable fraction).
+literature_anchor: >-
+  Mallat 1989 "A theory for multiresolution signal decomposition" (boundary
+  vs interior factorization is a non-wavelet analog) +
+  Yousfi/Fridrich 2014 UNIWARD steganography (textured-region undetectability
+  is the dual of SegNet argmax-stable interior capacity).
+council_verdicts:
+  D1: >-
+    O1 first-principles Council F design: boundary-only renderer with verbatim
+    boundary RGB + per-class interior mean (operator-pre-approved 2026-05-13).
+  D2: >-
+    Archive grammar SBO1 monolithic 0.bin per HNeRV parity discipline L2/L3
+    (operator-pre-approved); inflate.py ≤ 200 LOC (substrate_engineering opt-out
+    per L7).
+  D3: >-
+    Independent substrate (no A1 base composition); standalone full RGB renderer
+    per HNeRV parity L5.
+  D4: >-
+    SBO1 magic + version + parser_section_manifest declared at design time
+    (Catalog #124).
+  D5: >-
+    Score-aware Lagrangian + boundary-consistency regularizer; pose-weight
+    tilt opt-in at frontier operating points.
+  D6: >-
+    BOTH AXES contest-CPU + contest-CUDA (mandatory; CUDA inline, CPU
+    dispatched separately via operator wrapper).
+
+predicted_band: [0.165, 0.185]
+
+risk: >-
+  First-anchor SABOR dispatch on Modal T4. The φ1 audit empirically proved
+  the free-byte capacity exists (14.6 MB per video at ε=32 conservative);
+  this dispatch tests whether a learned boundary/interior renderer
+  consumes that capacity at sub-0.20 contest-CPU. Predicted band
+  [0.165, 0.185] is wider than capacity alone implies because the
+  operating gap between capacity and achievable depends on boundary
+  fraction (1-3% per audit) AND per-class mean fidelity.
+
+  Smoke-before-full (Catalog #167): operator wrapper routes through
+  tools/run_modal_smoke_before_full.py — 100-epoch ~$0.20 smoke validates
+  rc=0 + auth-eval JSON + plausible band [0.10, 0.30], then fires the
+  full 2000-epoch T4 dispatch only on smoke-green.
+
+envelope_status: >-
+  FITS $5 envelope at p50 fallback (smoke $0.20 + full $1.50).
+
+remote_driver: scripts/remote_lane_substrate_sabor_boundary_only_renderer.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_sabor_boundary_only_renderer.sh
+  cost_band_trainer: experiments/train_substrate_sabor_boundary_only_renderer.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_sabor_boundary_only_renderer.py
+
+env_overrides:
+  SABOR_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SABOR_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  SABOR_OUTPUT_DIR: /workspace/pact/lane_sabor_results/output
+  SABOR_EPOCHS: "2000"
+  SABOR_UPSTREAM_DIR: /workspace/pact/upstream
+  SABOR_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_sabor_boundary_only_renderer.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_sabor_boundary_only_renderer.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+
+sentinel_files:
+  - experiments/train_substrate_sabor_boundary_only_renderer.py
+  - src/tac/substrates/sabor_boundary_only_renderer/architecture.py
+  - src/tac/substrates/sabor_boundary_only_renderer/archive.py
+  - src/tac/substrates/sabor_boundary_only_renderer/score_aware_loss.py
+  - src/tac/substrates/sabor_boundary_only_renderer/inflate.py
+
+notes: |
+  Council F O1 first-principles SABOR substrate first-anchor dispatch.
+
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
+  this is a substrate-engineering lane (substrate-engineering LOC budget
+  per HNeRV parity lesson L7). Substrate package + trainer total ~900 +
+  ~700 LOC ≈ 1600 LOC.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'T4', 2000) —
+  hand_calibrated_fallback p50 = $1.50 (n=0 anchors; this dispatch
+  bootstraps the calibration system for the SABOR family).
+
+  Cross-ref:
+    .omx/research/sabor_boundary_audit_20260513.md (φ1 audit capacity)
+    .omx/research/time_traveler_architecture_reverse_engineered_20260513.md
+    tools/measure_segnet_argmax_stable_interior.py

@@ -17,6 +17,7 @@ from tac.preflight import (
     PreflightError,
     check_gc_helper_refuses_delete_on_tracked_paths,
 )
+from tac.source_index import source_index_context
 
 
 def test_check_156_live_count_zero():
@@ -46,6 +47,21 @@ def test_check_156_detects_external_execute_plan_call_without_handler(tmp_path):
         check_gc_helper_refuses_delete_on_tracked_paths(
             repo_root=tmp_path, strict=True, verbose=False
         )
+
+
+def test_check_156_detects_external_execute_plan_call_with_source_index(tmp_path):
+    """The indexed full-preflight path must preserve the strict semantics."""
+    (tmp_path / "tools").mkdir()
+    bad = tmp_path / "tools" / "bad_indexed_consumer.py"
+    bad.write_text(
+        "from tools.gc_experiments_results import execute_plan\n"
+        "execute_plan({'would_delete': []}, repo_root='.', operator_approved='x:y')\n"
+    )
+    with source_index_context(tmp_path):
+        violations = check_gc_helper_refuses_delete_on_tracked_paths(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+    assert any("bad_indexed_consumer.py" in v for v in violations)
 
 
 def test_check_156_accepts_exception_handler(tmp_path):

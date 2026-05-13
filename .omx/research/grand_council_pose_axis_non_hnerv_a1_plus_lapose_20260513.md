@@ -2,6 +2,7 @@
 
 **Task**: #486 (parent dispatch 2026-05-13)
 **Lane**: `lane_pose_axis_non_hnerv_council_20260513` (L0 → L1 on memo land)
+**research_only**: true — council deliberation consumed by the sister BUILD lane; not a dispatchable representation packet.
 **Sister BUILD lane**: `lane_a1_plus_lapose_composition_20260513`
 **Axis discipline (per CLAUDE.md "Apples-to-apples evidence")**: every score in this memo is tagged `[contest-CPU]`, `[contest-CUDA]`, `[macOS-CPU advisory]`, or `[prediction]`.
 **Verdict mode**: DEFERRED-pending-empirical for any non-consensus item (per CLAUDE.md "KILL is LAST RESORT").

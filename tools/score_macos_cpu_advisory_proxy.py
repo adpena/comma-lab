@@ -180,11 +180,10 @@ def _run_inflate(
     work_dir.mkdir(parents=True, exist_ok=True)
     archive_dir = work_dir / "archive_in"
     archive_dir.mkdir(parents=True, exist_ok=True)
-    # Unzip the archive into archive_dir.
-    import zipfile
+    # Unzip the archive into archive_dir through the canonical safe extractor.
+    from tac.submission_archive import safe_extract_zip
 
-    with zipfile.ZipFile(archive, "r") as zf:
-        zf.extractall(archive_dir)
+    safe_extract_zip(archive, archive_dir)
     output_dir = work_dir / "inflated"
     output_dir.mkdir(parents=True, exist_ok=True)
     # File list — default to the contest's public_test_video_names.txt-style

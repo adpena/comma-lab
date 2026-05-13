@@ -1,0 +1,136 @@
+schema_version: 1
+name: substrate_s2sbs_byte_stuffing_modal_t4_dispatch
+lane_id: lane_s2sbs_stride2_byte_stuffing_substrate_20260513
+summary: |
+  Council F O3 PAIR T+OPT3 substrate. Exploit the empirically-measured
+  stride-2-stem HF blindspot of SegNet/PoseNet (φ3 audit memo
+  `.omx/research/s2sbs_blindspot_audit_20260513.md`) to encode useful
+  per-pair side-information bytes via Hermitian-FFT into the rendered
+  RGB high-frequency band. The bytes are invisible to the contest
+  scorer; the rate cost is real (6.66e-7 score/byte).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.60
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: 0.178
+predicted_delta: |
+  Range [-0.014, +0.006] over A1 0.193 baseline. The HF byte channel
+  itself does NOT move SegNet/PoseNet distortion (audit-confirmed); the
+  rate cost is +0.027 if 40 KB are stuffed (40_960 × 6.66e-7 = +0.027).
+  The substrate breaks even only if stuffed bytes are CONSUMED by a
+  downstream side-channel that reduces seg+pose by more than +0.027.
+  Predicted band reflects substrate-engineering scaffold uncertainty.
+predicted_delta_basis: |
+  .omx/research/s2sbs_blindspot_audit_20260513.md
+  feedback_codex_math_correction_pr95_lora_dora_landed_20260513.md
+
+literature_anchor: |
+  Fridrich 2009 "Steganography in Digital Media" §5 (HF embedding under
+  detector-aware adversary), Yousfi 2020 EfficientNet steganalysis stem
+  surgery, Holub-Fridrich 2014 UNIWARD wavelet-adaptive embedding.
+
+council_verdicts:
+  D1: "research-only substrate scaffold (NO score authority emitted)"
+  D2: "per-pair payload 32 B post-ECC (audit-pinned at delta_amp=0.75)"
+  D3: "L0/L1 substrate-engineering exemption (HNeRV parity lesson 7)"
+  D4: "monolithic 0.bin grammar S2SBS_AR/S2S1 (HNeRV parity lesson 3)"
+  D5: "no scorer load at inflate (Catalog #6); HF codec is deterministic"
+  D6: "BOTH AXES required before any promotion (mandatory)"
+
+predicted_band: [0.168, 0.188]
+
+risk: |
+  This is a SUBSTRATE-ENGINEERING scaffold (L0/L1). The HF byte channel
+  is empirically measured (audit memo: 97 KB joint-safe per frame, PRBS
+  BER 0.42 at uint8) but no downstream consumer of the stuffed payload
+  exists yet. Without a consumer that improves seg+pose by ≥ rate cost,
+  the byte stuffing is a NET LOSS on the score axis.
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable,
+  this lane requires BOTH `[contest-CUDA]` AND `[contest-CPU]` on
+  1:1-contest-CI Linux x86_64 hardware before any promotion. First-anchor
+  dispatch is CUDA-only; CPU axis is a separate operator step.
+
+  Per CLAUDE.md "KILL is LAST RESORT": research-path exhaustion REQUIRES
+  multiple downstream-consumer designs (LoRA per-pair delta loader,
+  boundary atom decoder, pose-prior conditioner) before any retire
+  verdict on the substrate as a whole.
+
+  Smoke-before-full pattern (Catalog #167): the operator wrapper routes
+  through `tools/run_modal_smoke_before_full.py` for a 100-epoch ~$0.15
+  Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON present, then
+  fires the 2000-epoch full dispatch only on smoke-green.
+
+envelope_status: "FITS $5 envelope at p50 fallback (smoke $0.15 + full $0.60)"
+
+remote_driver: scripts/remote_lane_substrate_s2sbs_byte_stuffing.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_s2sbs_byte_stuffing.sh
+  cost_band_trainer: experiments/train_substrate_s2sbs_byte_stuffing.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 8
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_s2sbs_byte_stuffing.py
+
+env_overrides:
+  S2SBS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  S2SBS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  S2SBS_OUTPUT_DIR: /workspace/pact/lane_s2sbs_results/output
+  S2SBS_EPOCHS: "2000"
+  S2SBS_UPSTREAM_DIR: /workspace/pact/upstream
+  S2SBS_DEVICE: cuda
+  S2SBS_PAYLOAD_BYTES_PER_PAIR: "32"
+  S2SBS_DELTA_AMP_UINT8: "0.75"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_s2sbs_byte_stuffing.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_s2sbs_byte_stuffing.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+
+sentinel_files:
+  - experiments/train_substrate_s2sbs_byte_stuffing.py
+  - src/tac/substrates/s2sbs_byte_stuffing/architecture.py
+  - src/tac/substrates/s2sbs_byte_stuffing/archive.py
+  - src/tac/substrates/s2sbs_byte_stuffing/score_aware_loss.py
+  - src/tac/substrates/s2sbs_byte_stuffing/inflate.py
+
+notes: |
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
+  substrate-engineering L0/L1 scaffold (lesson L7); inflate runtime ≤
+  100 LOC budget honored at 90 LOC; archive grammar declared inline in
+  __init__.py (Catalog #124).
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": every score
+  number emitted by this lane carries the `[contest-CUDA]` /
+  `[contest-CPU]` / `[macOS-CPU advisory]` axis tag inline.
+
+  Cross-ref:
+    .omx/research/s2sbs_blindspot_audit_20260513.md
+    feedback_codex_math_correction_pr95_lora_dora_landed_20260513.md

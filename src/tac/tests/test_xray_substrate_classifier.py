@@ -26,18 +26,20 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from tac.packet_compiler.cooperative_receiver_grammars import (
+    COOPERATIVE_RECEIVER_PACKET_GRAMMARS,
+)
 from tools.xray_substrate_classifier import (
+    _SECTION_MAGIC_SIGNATURES,
+    _SUBSTRATE_CLASSES,
     XraySubstrateClassifierError,
     _detect_magic,
     _shannon_entropy_bits_per_byte,
-    _SECTION_MAGIC_SIGNATURES,
-    _SUBSTRATE_CLASSES,
     _validate_output_dir,
     classify_archive,
     main,
     parse_args,
 )
-
 
 # ── Synthetic-archive helpers ───────────────────────────────────────────────
 
@@ -54,6 +56,12 @@ def _make_magic_codec_archive(path: Path) -> Path:
             "primitive.bin",
             b"MAGC" + struct.pack("<BB", 0xF0, 1) + b"\x00" * 16,
         )
+    return path
+
+
+def _make_single_magic_archive(path: Path, magic: bytes) -> Path:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("0.bin", magic + b"\x01" + b"\x00" * 32)
     return path
 
 
@@ -91,6 +99,13 @@ class TestMagicDetection:
 
     def test_detect_pr65_pq12(self):
         assert _detect_magic(b"PQ12other") == "pr65_pq12_pose"
+
+    def test_detect_cooperative_receiver_packet_magics(self):
+        assert _detect_magic(b"TT5L\x01") == "time_traveler_l5_v1"
+        assert _detect_magic(b"SBO1\x01") == "sabor_boundary_only_renderer_v1"
+        assert _detect_magic(b"S2SB" + b"S2S1") == "s2sbs_byte_stuffing_archive_v1"
+        assert _detect_magic(b"CMLR\x01") == "coord_mlp_residual_sidecar_v1"
+        assert _detect_magic(b"DPW1\x01") == "driving_prior_world_model_v1"
 
     def test_detect_returns_none_for_unknown(self):
         assert _detect_magic(b"XXXX") is None
@@ -170,6 +185,18 @@ class TestSubstrateClassification:
 
     def test_substrate_classes_includes_unknown_sentinel(self):
         assert "unknown_substrate_unclassifiable" in _SUBSTRATE_CLASSES
+
+    @pytest.mark.parametrize("grammar", COOPERATIVE_RECEIVER_PACKET_GRAMMARS)
+    def test_cooperative_receiver_packet_archive_classified(
+        self,
+        tmp_path,
+        grammar,
+    ):
+        path = _make_single_magic_archive(tmp_path / "a.zip", grammar.magic)
+        result = classify_archive(path)
+        assert result.substrate_class == grammar.substrate_class
+        assert result.archive_version == grammar.archive_version
+        assert result.substrate_class_confidence == "medium"
 
 
 # ── Per-section info + manifest ─────────────────────────────────────────────

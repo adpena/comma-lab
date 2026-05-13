@@ -129,7 +129,7 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        seg_term, pose_term = score_pair_components(
+        seg_term, pose_term = self.score_pair_components(
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
             rgb_0_rt=rgb_0_rt,
@@ -155,3 +155,27 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
             "loss_total": loss.detach(),
         }
         return loss, parts
+
+    def score_pair_components(
+        self,
+        *,
+        seg_scorer: torch.nn.Module,
+        pose_scorer: torch.nn.Module,
+        rgb_0_rt: torch.Tensor,
+        rgb_1_rt: torch.Tensor,
+        gt_rgb_0: torch.Tensor,
+        gt_rgb_1: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Call the canonical scorer-preprocess contract.
+
+        Subclasses can override this method to make substrate-local ownership
+        explicit while preserving the single canonical helper.
+        """
+        return score_pair_components(
+            seg_scorer=seg_scorer,
+            pose_scorer=pose_scorer,
+            rgb_0_rt=rgb_0_rt,
+            rgb_1_rt=rgb_1_rt,
+            gt_rgb_0=gt_rgb_0,
+            gt_rgb_1=gt_rgb_1,
+        )

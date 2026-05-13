@@ -81,7 +81,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import random
 import shutil
 import subprocess
@@ -107,7 +106,6 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
-
 
 # ---------------------------------------------------------------------------
 # Module paths + constants (council memo + CLAUDE.md anchors)
@@ -216,7 +214,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "env": "A1_PLUS_LAPOSE_EPOCHS",
         "rationale": (
             "training epochs; council default 3000 for full per cost-band "
-            "table §5 (Modal A100 $2.50–$4.50 [prediction])."
+            "table §5 (Modal A100 $2.50-$4.50 [prediction])."
         ),
         "default": "3000",
     },
@@ -516,6 +514,7 @@ def _decode_a1_base_pairs(
     truth frames used as a proxy.
     """
     import struct
+
     import torch
     import torch.nn.functional as F
 
@@ -716,8 +715,6 @@ def _full_main(args: argparse.Namespace) -> int:
     )
     from tac.scorer import load_differentiable_scorers
     from tac.substrates.a1_plus_lapose.architecture import (
-        A1_CAMERA_H,
-        A1_CAMERA_W,
         A1PlusLaposeConfig,
         PerPairResidualHead,
         parse_lapose_atom_indices,
@@ -975,7 +972,7 @@ def _full_main(args: argparse.Namespace) -> int:
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_emitted")
 
-        # 13. Auth eval (CUDA inline; CPU axis dispatched by operator wrapper)
+        # 13. Auth eval ([contest-CUDA] inline; CPU axis handled by operator wrapper)
         auth_eval_json_path = args.output_dir / "auth_eval.json"
         if not args.skip_auth_eval and device.type == "cuda":
             _run_contest_auth_eval_cuda(

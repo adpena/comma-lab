@@ -73,7 +73,7 @@ def parse_sos_trailer(archive_bytes: bytes) -> dict[str, Any]:
     import json as _json  # local import keeps this module's API surface tight
 
     arm_meta = _json.loads(meta_json.decode("utf-8"))
-    return {
+    parsed = {
         "arm_concat_bytes": bytes(archive_bytes[:idx]),
         "selector": selector,
         "arm_meta": arm_meta,
@@ -81,25 +81,60 @@ def parse_sos_trailer(archive_bytes: bytes) -> dict[str, Any]:
         "n_pairs": int(n_pairs),
         "layer_mask": int(layer_mask),
     }
+    _arms(parsed)
+    _validate_selector(parsed)
+    return parsed
+
+
+def _arms(parsed: dict[str, Any]) -> list[Any]:
+    arm_meta = parsed["arm_meta"]
+    arms = arm_meta.get("arms")
+    k = int(parsed["k"])
+    if k < 1:
+        raise ValueError(f"SOS1 k must be >= 1; got {k}")
+    if not isinstance(arms, list):
+        raise ValueError("SOS1 arm_meta.arms must be a list")
+    if len(arms) != k:
+        raise ValueError(f"SOS1 arm count mismatch: header k={k}, meta arms={len(arms)}")
+    return arms
+
+
+def _validate_selector(parsed: dict[str, Any]) -> None:
+    selector = parsed["selector"]
+    n_pairs = int(parsed["n_pairs"])
+    k = int(parsed["k"])
+    if k < 1:
+        raise ValueError(f"SOS1 k must be >= 1; got {k}")
+    if len(selector) != n_pairs:
+        raise ValueError(
+            f"SOS1 selector length mismatch: selector={len(selector)} n_pairs={n_pairs}"
+        )
+    for pair_index, arm in enumerate(selector):
+        if arm >= k:
+            raise ValueError(
+                f"selector byte {arm} for pair {pair_index} out of range [0, {k})"
+            )
 
 
 def slice_arm_bytes(parsed: dict[str, Any], arm_index: int) -> bytes:
-    """Return the bytes belonging to arm ``arm_index`` from a parsed trailer.
-
-    Uses the arm_offset / arm_length fields written by the composer.
-    """
-    arm_meta = parsed["arm_meta"]
-    arms = arm_meta.get("arms")
-    if not isinstance(arms, list) or arm_index < 0 or arm_index >= len(arms):
+    """Return arm ``arm_index`` bytes using composer arm_offset/arm_length."""
+    arms = _arms(parsed)
+    if arm_index < 0 or arm_index >= len(arms):
         raise ValueError(
             f"arm_index {arm_index} out of range; arm_meta has {len(arms or [])} arms"
         )
     arm = arms[arm_index]
-    offset = int(arm.get("arm_offset", 0))
-    length = int(arm.get("arm_length", 0))
+    if "arm_offset" not in arm or "arm_length" not in arm:
+        raise ValueError(f"arm {arm_index} missing arm_offset/arm_length metadata")
+    offset = int(arm["arm_offset"])
+    length = int(arm["arm_length"])
+    if offset < 0 or length < 0:
+        raise ValueError(
+            f"arm {arm_index} has negative byte range offset={offset} length={length}"
+        )
     arm_concat = parsed["arm_concat_bytes"]
     end = offset + length
-    if end > len(arm_concat):
+    if offset > len(arm_concat) or end > len(arm_concat):
         raise ValueError(
             f"arm {arm_index} bytes range [{offset}, {end}) exceeds arm_concat length "
             f"({len(arm_concat)})"
@@ -121,9 +156,7 @@ def selector_for_pair(parsed: dict[str, Any], pair_index: int) -> int:
     n_pairs = parsed["n_pairs"]
     k = parsed["k"]
     if pair_index < 0 or pair_index >= n_pairs:
-        raise ValueError(
-            f"pair_index {pair_index} out of range [0, {n_pairs})"
-        )
+        raise ValueError(f"pair_index {pair_index} out of range [0, {n_pairs})")
     arm = int(selector[pair_index])
     if arm < 0 or arm >= k:
         raise ValueError(
@@ -132,11 +165,32 @@ def selector_for_pair(parsed: dict[str, Any], pair_index: int) -> int:
     return arm
 
 
+def base_arm_passthrough_bytes(parsed: dict[str, Any]) -> bytes:
+    """Return arm 0 only when every selector byte is pure base-arm."""
+    _validate_selector(parsed)
+    for pair_index, arm in enumerate(parsed["selector"]):
+        if arm != 0:
+            raise ValueError(
+                "base-arm passthrough requires every selector byte to be 0; "
+                f"pair {pair_index} selects arm {arm}"
+            )
+    return slice_arm_bytes(parsed, 0)
+
+
+def selected_arm_bytes(parsed: dict[str, Any], pair_index: int | None = None) -> bytes:
+    """Return selected arm bytes or strict all-zero base passthrough."""
+    if pair_index is None:
+        return base_arm_passthrough_bytes(parsed)
+    return slice_arm_bytes(parsed, selector_for_pair(parsed, pair_index))
+
+
 __all__ = [
     "SOS_HEADER_STRUCT",
     "SOS_SIDECAR_MAGIC",
     "SOS_SIDECAR_VERSION",
+    "base_arm_passthrough_bytes",
     "parse_sos_trailer",
+    "selected_arm_bytes",
     "selector_for_pair",
     "slice_arm_bytes",
 ]

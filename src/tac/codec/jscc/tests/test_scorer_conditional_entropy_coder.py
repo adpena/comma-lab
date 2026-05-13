@@ -13,7 +13,11 @@ import torch
 from tac.codec.jscc import (
     JSCC_FORMAT_VERSION,
     JSCC_MAGIC,
+    JSCC_PROXY_EVIDENCE_GRADE,
+    LEGACY_JSCC_HUFFMAN_MAGIC,
+    SE4R_MAGIC,
     JSCCArchiveSection,
+    JSCCCustodyContract,
     JSCCSectionManifest,
     ScorerConditionalEntropyCoder,
     ScorerConditionalProbabilityModel,
@@ -36,12 +40,14 @@ from tac.codec.jscc.entropy_coder import (
 def test_jscc_magic_is_four_bytes_SE4R():
     # SE-4 range-coder magic; distinct from the legacy Huffman variant's
     # b"JSCC" magic in tac.codec.jscc.conditional_huffman.
-    assert JSCC_MAGIC == b"SE4R"
+    assert SE4R_MAGIC == b"SE4R"
+    assert JSCC_MAGIC == SE4R_MAGIC
+    assert LEGACY_JSCC_HUFFMAN_MAGIC == b"JSCC"
     assert len(JSCC_MAGIC) == 4
 
 
-def test_jscc_format_version_is_one():
-    assert JSCC_FORMAT_VERSION == 1
+def test_jscc_format_version_is_two():
+    assert JSCC_FORMAT_VERSION == 2
 
 
 def test_precision_bits_matches_total_freq():
@@ -270,6 +276,12 @@ def test_serialize_parse_roundtrip_empty_payload():
     assert parsed.manifest.alphabet_size == 16
     assert parsed.manifest.n_symbols == 0
     assert parsed.payload == b""
+    assert parsed.manifest.evidence_grade == JSCC_PROXY_EVIDENCE_GRADE
+    assert parsed.manifest.proxy is True
+    assert parsed.manifest.proxy_only is True
+    assert parsed.manifest.score_claim is False
+    assert parsed.manifest.promotion_eligible is False
+    assert parsed.manifest.ready_for_exact_eval_dispatch is False
 
 
 def test_serialize_parse_roundtrip_real_payload():
@@ -296,16 +308,23 @@ def test_parse_rejects_short_section():
 
 
 def test_parse_rejects_bad_magic():
-    bad = b"NOPE" + b"\x01" + b"\x00\x04" + b"\x00\x00\x00\x10" + b"\x00\x00\x00\x05"
+    good = serialize_jscc_section(
+        payload=b"payload", side_dim=4, alphabet_size=16, n_symbols=5
+    )
+    bad = b"NOPE" + good[4:]
     with pytest.raises(ValueError, match="bad magic"):
         parse_jscc_section(bad)
 
 
 def test_parse_rejects_unsupported_version():
-    # Magic OK, version=99
-    bad = JSCC_MAGIC + b"\x63" + b"\x00\x04" + b"\x00\x00\x00\x10" + b"\x00\x00\x00\x05"
+    good = bytearray(
+        serialize_jscc_section(
+            payload=b"payload", side_dim=4, alphabet_size=16, n_symbols=5
+        )
+    )
+    good[4] = 99
     with pytest.raises(ValueError, match="unsupported JSCC version"):
-        parse_jscc_section(bad)
+        parse_jscc_section(bytes(good))
 
 
 def test_serialize_rejects_side_dim_too_big():
@@ -338,6 +357,66 @@ def test_serialize_section_starts_with_magic():
     )
     assert section[:4] == JSCC_MAGIC
     assert section[4] == JSCC_FORMAT_VERSION
+
+
+def test_serialize_records_proxy_only_custody_metadata():
+    section = serialize_jscc_section(
+        payload=b"\x01\x02",
+        side_dim=2,
+        alphabet_size=4,
+        n_symbols=2,
+        model_contract=JSCCCustodyContract(
+            embedded=True,
+            charged_bytes=1024,
+            sha256="a" * 64,
+            description="embedded int8 probability model",
+        ),
+        side_state_contract={
+            "embedded": True,
+            "charged_bytes": 64,
+            "sha256": "b" * 64,
+            "description": "deterministic side-state reconstruction code",
+        },
+        ready_for_exact_eval_dispatch=True,
+    )
+    manifest = parse_jscc_section(section).manifest
+
+    assert manifest.ready_for_exact_eval_dispatch is False
+    assert manifest.score_claim is False
+    assert manifest.promotion_eligible is False
+    assert manifest.proxy_only is True
+    assert manifest.custody_metadata["exact_eval_ready_requested"] is True
+    assert manifest.custody_metadata["embedded_side_contract_complete"] is True
+    assert manifest.custody_metadata["model_contract"][
+        "charged_and_embedded"
+    ] is True
+    assert manifest.custody_metadata["side_state_reconstruction_contract"][
+        "charged_and_embedded"
+    ] is True
+
+
+def test_serialize_exact_eval_ready_fails_without_embedded_contracts():
+    with pytest.raises(ValueError, match="model_contract"):
+        serialize_jscc_section(
+            payload=b"",
+            side_dim=2,
+            alphabet_size=4,
+            n_symbols=0,
+            ready_for_exact_eval_dispatch=True,
+        )
+    with pytest.raises(ValueError, match="side_state_contract"):
+        serialize_jscc_section(
+            payload=b"",
+            side_dim=2,
+            alphabet_size=4,
+            n_symbols=0,
+            model_contract=JSCCCustodyContract(
+                embedded=True,
+                charged_bytes=1,
+                sha256="c" * 64,
+            ),
+            ready_for_exact_eval_dispatch=True,
+        )
 
 
 # ── Cumulative-table helper ────────────────────────────────────────────
@@ -386,5 +465,7 @@ def test_manifest_typed_attributes_present():
     assert m.payload_offset > 0
     assert m.payload_length == 2
     assert m.total_section_bytes == m.payload_offset + m.payload_length
+    assert m.custody_metadata_offset > 0
+    assert m.custody_metadata_length > 0
     assert isinstance(m, JSCCSectionManifest)
     assert isinstance(parsed, JSCCArchiveSection)

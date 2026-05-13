@@ -400,6 +400,12 @@ def test_memo_declares_hook_canonical_form() -> None:
     assert _memo_declares_hook(text, "sensitivity_map", aliases)
 
 
+def test_memo_declares_hook_with_markdown_bold_label() -> None:
+    aliases = ("probe-disambiguator", "probe disambiguator", "probe_disambiguator")
+    text = "6. **Probe-disambiguator**: ships both interpretations behind CLI flags."
+    assert _memo_declares_hook(text, "probe_disambiguator", aliases)
+
+
 def test_memo_declares_hook_na_form_with_rationale() -> None:
     aliases = ("pareto", "pareto-constraint")
     text = "Pareto: N/A — no new constraint"

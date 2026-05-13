@@ -1,0 +1,95 @@
+{
+  "campaign_id": "l2_sar_coherent_pose_spectrum",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "pose_codec_section_missing",
+    "byte_closed_archive_missing",
+    "paired_exact_eval_missing"
+  ],
+  "estimated_sparse_fft_bytes_at_95pct": 4436,
+  "evidence_semantics": "zero_spend_pose_target_spectrum_proxy",
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "hypothesis_supported": true,
+  "low_frequency_bins": 31,
+  "low_frequency_energy_fraction": 0.631099239666357,
+  "low_frequency_fraction": 0.1,
+  "num_pairs": 600,
+  "pose_dims": 6,
+  "pose_targets_path": "experiments/posenet_targets.bin",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_top_k_coefficients": {
+    "0.90": 121,
+    "0.95": 170,
+    "0.99": 245
+  },
+  "rfft_bins": 301,
+  "schema": "tac_cooperative_receiver_pose_spectrum_probe_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "strongest_frequency_bins": [
+    {
+      "energy_fraction": 0.27254524007397024,
+      "frequency_bin": 2
+    },
+    {
+      "energy_fraction": 0.114695826034232,
+      "frequency_bin": 1
+    },
+    {
+      "energy_fraction": 0.10128991428497919,
+      "frequency_bin": 3
+    },
+    {
+      "energy_fraction": 0.04463273459540649,
+      "frequency_bin": 6
+    },
+    {
+      "energy_fraction": 0.03368281800864722,
+      "frequency_bin": 4
+    },
+    {
+      "energy_fraction": 0.01214376304237276,
+      "frequency_bin": 8
+    },
+    {
+      "energy_fraction": 0.010301919390507942,
+      "frequency_bin": 80
+    },
+    {
+      "energy_fraction": 0.00965412725865332,
+      "frequency_bin": 15
+    },
+    {
+      "energy_fraction": 0.00680167243114902,
+      "frequency_bin": 35
+    },
+    {
+      "energy_fraction": 0.005832208869525275,
+      "frequency_bin": 127
+    },
+    {
+      "energy_fraction": 0.005695139366749724,
+      "frequency_bin": 132
+    },
+    {
+      "energy_fraction": 0.005585473243104284,
+      "frequency_bin": 217
+    }
+  ],
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "top_decile_energy_fraction": 0.7120956782534476,
+  "total_centered_power": 284839.11692160065
+}

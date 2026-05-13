@@ -233,3 +233,9 @@ def test_cli_help_prints_advisory_disclaimer() -> None:
     assert result.returncode == 0
     assert "macOS-CPU" in result.stdout or "advisory" in result.stdout.lower()
     assert "samples" in result.stdout.lower()
+
+
+def test_cli_uses_canonical_safe_zip_extractor() -> None:
+    text = SCORER_SCRIPT.read_text(encoding="utf-8")
+    assert "safe_extract_zip(" in text
+    assert ".extractall(" not in text

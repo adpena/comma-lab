@@ -102,7 +102,7 @@ _FILE_PATH_PREFIXES = (
 
 
 def _now_iso() -> str:
-    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _registry_path(repo_root: Path | None = None) -> Path:
@@ -370,7 +370,7 @@ def mark_gate(
         raise ValueError("evidence is required and must be non-empty")
 
     lanes = data["lanes"]
-    lane = next((l for l in lanes if l["id"] == lane_id), None)
+    lane = next((lane_entry for lane_entry in lanes if lane_entry["id"] == lane_id), None)
     if lane is None:
         raise ValueError(f"unknown lane id: {lane_id!r}")
 
@@ -401,7 +401,7 @@ def unmark_gate(
             f"unknown gate '{gate}'. Valid gates: {', '.join(GATES)}"
         )
     lanes = data["lanes"]
-    lane = next((l for l in lanes if l["id"] == lane_id), None)
+    lane = next((lane_entry for lane_entry in lanes if lane_entry["id"] == lane_id), None)
     if lane is None:
         raise ValueError(f"unknown lane id: {lane_id!r}")
     if not reason or not reason.strip():
@@ -420,7 +420,7 @@ def add_lane(
 ) -> dict[str, Any]:
     """Register a new lane at level 0."""
     lanes = data["lanes"]
-    if any(l["id"] == lane_id for l in lanes):
+    if any(lane_entry["id"] == lane_id for lane_entry in lanes):
         raise ValueError(f"lane id already exists: {lane_id}")
     new_lane = {
         "id": lane_id,
@@ -484,7 +484,7 @@ def set_field(
         ever needed — set-field is for explicit declaration)
     """
     lanes = data["lanes"]
-    lane = next((l for l in lanes if l["id"] == lane_id), None)
+    lane = next((lane_entry for lane_entry in lanes if lane_entry["id"] == lane_id), None)
     if lane is None:
         raise ValueError(f"unknown lane id: {lane_id!r}")
 
@@ -664,7 +664,7 @@ def render_report_md(data: dict[str, Any]) -> str:
             lvl = lane.get("level", 0)
             gates = lane.get("gates", {})
 
-            def _cell(g: str) -> str:
+            def _cell(g: str, gates: dict[str, Any] = gates) -> str:
                 return "✓" if gates.get(g, {}).get("status") is True else "✗"
 
             notes = (lane.get("notes") or "").replace("\n", " ").replace("|", "\\|")
@@ -683,6 +683,8 @@ def render_report_md(data: dict[str, Any]) -> str:
             )
         lines.append("")
 
+    while lines and lines[-1] == "":
+        lines.pop()
     return "\n".join(lines) + "\n"
 
 
@@ -710,7 +712,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 def cmd_mark(args: argparse.Namespace) -> int:
     data = load_registry()
     before = json.dumps(
-        next((l for l in data["lanes"] if l["id"] == args.lane_id), None),
+        next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
         sort_keys=True,
     )
     try:
@@ -736,7 +738,7 @@ def cmd_mark(args: argparse.Namespace) -> int:
 def cmd_unmark(args: argparse.Namespace) -> int:
     data = load_registry()
     before = json.dumps(
-        next((l for l in data["lanes"] if l["id"] == args.lane_id), None),
+        next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
         sort_keys=True,
     )
     try:
@@ -809,7 +811,9 @@ def _coerce_set_field_value(field: str, raw: str) -> Any:
         try:
             return int(raw)
         except ValueError as e:
-            raise ValueError(f"int field {field!r} expects integer, got {raw!r}: {e}")
+            raise ValueError(
+                f"int field {field!r} expects integer, got {raw!r}: {e}"
+            ) from e
     if f in list_fields:
         items = [s.strip() for s in raw.split(",") if s.strip()]
         return items
@@ -819,7 +823,7 @@ def _coerce_set_field_value(field: str, raw: str) -> Any:
 def cmd_set_field(args: argparse.Namespace) -> int:
     data = load_registry()
     before = json.dumps(
-        next((l for l in data["lanes"] if l["id"] == args.lane_id), None),
+        next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
         sort_keys=True,
     )
     try:

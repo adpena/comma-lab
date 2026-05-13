@@ -38,19 +38,18 @@ from tac.composition.stack_of_stacks.compose import (
     LAYER_BIT_MIDDLE,
     LAYER_BIT_OUTER,
     MAX_OUTER_ARMS,
-    SABOR_BOUNDARY_MAGIC,
-    SOS_HEADER_STRUCT,
     S2SBS_HF_MAGIC,
+    SABOR_BOUNDARY_MAGIC,
     SCORE_GRAD_RESIDUAL_MAGIC,
+    SOS_HEADER_STRUCT,
 )
-
-_HEADER_LEN = SOS_HEADER_STRUCT.size
 from tac.composition.stack_of_stacks.inflate import (
     parse_sos_trailer,
     selector_for_pair,
     slice_arm_bytes,
 )
 
+_HEADER_LEN = SOS_HEADER_STRUCT.size
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -70,7 +69,7 @@ def fake_sane_hnerv_bytes() -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Inner stack: substrate × SABOR atoms / S2SBS HF / score-grad residual
+# Inner stack: substrate x SABOR atoms / S2SBS HF / score-grad residual
 # ---------------------------------------------------------------------------
 
 
@@ -86,7 +85,7 @@ class TestInnerStackSpec:
         assert meta["sub_layers"] == []
 
     def test_inner_stack_with_sabor_atoms(self, fake_a1_bytes: bytes) -> None:
-        """Substrate × SABOR boundary atoms appends an SAB1 sidecar."""
+        """Substrate x SABOR boundary atoms appends an SAB1 sidecar."""
         boundary = BoundaryAtomSpec(
             capacity_bytes=64,
             audit_capacity_bytes=14_600_000,
@@ -105,7 +104,7 @@ class TestInnerStackSpec:
         assert len(layers) == 1 and layers[0]["kind"] == "sabor_boundary"
 
     def test_inner_stack_with_s2sbs_sidecar(self, fake_a1_bytes: bytes) -> None:
-        """Substrate × S2SBS HF sidecar appends an SHF1 sidecar."""
+        """Substrate x S2SBS HF sidecar appends an SHF1 sidecar."""
         hf = HFSidecarSpec(
             capacity_bytes=128,
             audit_capacity_bytes=38_000_000,
@@ -120,7 +119,7 @@ class TestInnerStackSpec:
         assert meta["sub_layers"][0]["kind"] == "s2sbs_hf"
 
     def test_inner_stack_substrate_times_both_sabor_and_s2sbs(self, fake_a1_bytes: bytes) -> None:
-        """Substrate × both atoms applies both sidecars deterministically (SABOR before S2SBS)."""
+        """Substrate x both atoms applies both sidecars deterministically (SABOR before S2SBS)."""
         boundary = BoundaryAtomSpec(
             capacity_bytes=32, audit_capacity_bytes=10000, atom_payload=b"\x01" * 32
         )
@@ -144,7 +143,7 @@ class TestInnerStackSpec:
         assert sabor_idx < s2sbs_idx
 
     def test_inner_stack_with_residual(self, fake_a1_bytes: bytes) -> None:
-        """Substrate × score-grad residual appends an SGR1 sidecar."""
+        """Substrate x score-grad residual appends an SGR1 sidecar."""
         residual = ResidualSpec(residual_int8_bytes=b"\x10" * 96, scale=4.0)
         spec = InnerStackSpec(
             substrate_id="a1", base_bytes=fake_a1_bytes, residual_spec=residual
@@ -155,7 +154,7 @@ class TestInnerStackSpec:
         assert SCORE_GRAD_RESIDUAL_MAGIC in composed
 
     def test_inner_stack_with_all_three_layers(self, fake_a1_bytes: bytes) -> None:
-        """Substrate × SABOR × S2SBS × residual layers ALL three sidecars in order."""
+        """Substrate x SABOR x S2SBS x residual layers ALL three sidecars in order."""
         spec = InnerStackSpec(
             substrate_id="a1",
             base_bytes=fake_a1_bytes,
@@ -174,7 +173,7 @@ class TestInnerStackSpec:
 
     def test_inner_stack_refuses_capacity_exceeding_audit(self) -> None:
         """SABOR capacity_bytes > audit_capacity_bytes raises."""
-        with pytest.raises(StackOfStacksError, match="exceeds.*audit_capacity_bytes"):
+        with pytest.raises(StackOfStacksError, match=r"exceeds.*audit_capacity_bytes"):
             BoundaryAtomSpec(capacity_bytes=200, audit_capacity_bytes=100)
 
     def test_inner_stack_refuses_payload_exceeding_capacity(self) -> None:
@@ -292,7 +291,7 @@ class TestMiddleStack:
         inner = InnerStackSpec(
             substrate_id="a1", base_bytes=fake_a1_bytes, boundary_atom_spec=boundary
         )
-        with pytest.raises(StackOfStacksError, match="added .* but budget is"):
+        with pytest.raises(StackOfStacksError, match=r"added .* but budget is"):
             MiddleStackSpec(
                 inner_specs=(inner,),
                 rate_budget_partition={"a1": 100},
@@ -318,7 +317,7 @@ class TestOuterStack:
 
     def test_outer_stack_k3_per_pair_selector(self) -> None:
         """K=3 outer stack stores per-pair arm indices."""
-        per_pair = tuple([0, 1, 2, 0, 1, 2, 1, 0, 2, 1])
+        per_pair = (0, 1, 2, 0, 1, 2, 1, 0, 2, 1)
         spec = OuterStackSpec(k=3, per_pair_arm=per_pair, temperatures=(1.0, 0.5, 0.1))
         stack = OuterStack(spec, n_pairs=len(per_pair))
         trailer = stack.pack(
@@ -386,7 +385,7 @@ class TestByteBudgetEnforcement:
             substrate_id="a1", base_bytes=fake_a1_bytes, boundary_atom_spec=boundary
         )
         middle_spec = MiddleStackSpec(inner_specs=(inner,))
-        with pytest.raises(StackOfStacksError, match="exceeds.*max_total_bytes"):
+        with pytest.raises(StackOfStacksError, match=r"exceeds.*max_total_bytes"):
             validate_byte_budget(
                 middle_spec,
                 base_substrate_bytes=len(fake_a1_bytes),
@@ -473,7 +472,7 @@ class TestRoundtripIdentity:
             middle_stack_spec=MiddleStackSpec(inner_specs=inners),
             outer_stack_spec=OuterStackSpec(
                 k=3,
-                per_pair_arm=tuple([0, 1, 2, 0, 1, 2]),
+                per_pair_arm=(0, 1, 2, 0, 1, 2),
                 temperatures=(1.0, 0.3, 0.1),
             ),
             n_pairs=6,

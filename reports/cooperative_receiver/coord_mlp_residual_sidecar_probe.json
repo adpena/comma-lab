@@ -1,0 +1,89 @@
+{
+  "campaign_id": "h15_coord_mlp_residual_sidecar_pr103_on_pr106",
+  "frames_changed": true,
+  "inflate_consumption": {
+    "applied_pixels": 25,
+    "consumed_bytes": 781,
+    "consumed_sections": [
+      "HEADER",
+      "PATCH_TABLE",
+      "WEIGHT_BLOB",
+      "META_JSON"
+    ],
+    "consumed_sha256": "1ef2198904881f48e3e7eb9e4feaf9c1a02deb0eb977d12d4df760a5d4e4f552",
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "scorer_at_inflate": false
+  },
+  "promotion_eligible": false,
+  "readiness": {
+    "archive_sha256": null,
+    "charged_bits_changed": false,
+    "charged_bytes": 781,
+    "charged_section": true,
+    "contest_cuda_auth_eval": false,
+    "deployment_target": "desktop_research",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "archive_custody_missing",
+      "runtime_tree_custody_missing",
+      "coord_mlp_sidecar_requires_byte_closed_exact_eval_adjudication"
+    ],
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "lane_id": "h15_coord_mlp_residual_sidecar",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_tree_sha256": null,
+    "schema": "coord_mlp_residual_sidecar_readiness_v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "scorer_at_inflate": false,
+    "section_manifest": [
+      {
+        "charged": true,
+        "name": "HEADER",
+        "offset": 0,
+        "sha256": "1149dc50f7e4f4030cc656f7893afbba550b6bbeae87d21858a323d081b400ff",
+        "size": 16
+      },
+      {
+        "charged": true,
+        "name": "PATCH_TABLE",
+        "offset": 16,
+        "sha256": "8e3b98960f19f109781a371ae5ad23b3965fc8c5e311bac3cdc4f70db8f6a597",
+        "size": 20
+      },
+      {
+        "charged": true,
+        "name": "WEIGHT_BLOB",
+        "offset": 36,
+        "sha256": "f8b5660a439226b22c6976cd723ece7f49a79a6beda463609b4ebc5ce40d60f1",
+        "size": 22
+      },
+      {
+        "charged": true,
+        "name": "META_JSON",
+        "offset": 58,
+        "sha256": "e0d268135cffbab0bc39da198b1c47e655b9f4ff18f077bb74fb797ad8cd0983",
+        "size": 723
+      }
+    ],
+    "sidecar_schema": "coord_mlp_residual_sidecar_v1",
+    "sidecar_sha256": "1ef2198904881f48e3e7eb9e4feaf9c1a02deb0eb977d12d4df760a5d4e4f552",
+    "source_recommendation": "H15",
+    "structural_noop": false,
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ]
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "coord_mlp_residual_sidecar_probe_v1",
+  "score_claim": false
+}

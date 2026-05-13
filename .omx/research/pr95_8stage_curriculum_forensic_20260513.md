@@ -1,6 +1,7 @@
 # PR95 hnerv_muon — 8-stage curriculum forensic recovery (F1, 2026-05-13)
 
 **Lane**: `lane_f1_pr95_8stage_reproduce_20260513` (registered L0 → working to L1+).
+**lane_class**: substrate_engineering — PR95 curriculum primitive/forensics; archive grammar belongs to the downstream substrate packet.
 **Source clone**: `experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/` (also mirror in `kaggle_mirror/` and `public_pr_intake_full/`). The `public_pr95_intake_20260504_codex/pr95_src/` clone only contains `.pyc` files; the `_auto` clones carry the canonical `.py` source.
 **Council G provenance**: `896f1d79` (council: first-principles original score-lowering verdict TRIPLET phi).
 **Predicted score**: 0.20-0.21 [contest-CUDA] if reproduced byte-faithfully (matches PR95 public T4 anchor 0.21 [contest-CUDA] / 0.197 [contest-CPU]). PR101 (gold, 0.193) and PR100 (silver, 0.195) layer on top of PR95's substrate; PR101 has **NO training script** of its own — it is codec-only on top of PR95-shaped weights.

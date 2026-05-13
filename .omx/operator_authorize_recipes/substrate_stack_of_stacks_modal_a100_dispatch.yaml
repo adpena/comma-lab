@@ -1,0 +1,166 @@
+schema_version: 1
+name: substrate_stack_of_stacks_modal_a100_dispatch
+lane_id: lane_stack_of_stacks_composition_implementation_20260513
+summary: Stack-of-stacks composition path on Modal A100; single-arm A1 exact-eval canary is wired, full score-lowering multi-arm stack remains blocked until score-aware selectors and frame stitching land.
+
+dispatch_enabled: false
+research_only: false
+defer_reason: |
+  Full score-lowering dispatch refused after adversarial review 2026-05-13.
+  The trainer now emits a byte-closed single-arm A1 passthrough canary that
+  can render frames through the bundled A1 runtime and can be exact-evaluated,
+  but that canary is not expected to lower score because it adds the SOS1
+  wrapper. Paid provider work must target the multi-arm/score-aware stack, not
+  a score-neutral canary, unless the operator explicitly asks for a custody
+  canary.
+
+  Remaining blocking facts for the actual sub-0.19 path:
+  - Full residual training is not score-aware: no differentiable scorer load
+    and no eval_roundtrip loop.
+  - The composer still uses one base archive for all arms; distinct per-arm
+    A1+LAPose/A1+wavelet/SIREN archive inputs must be wired.
+  - Mixed per-pair selectors intentionally fail closed until frame-level
+    multi-arm stitching exists in the runtime.
+
+dispatch_blockers:
+  - score_aware_training_missing
+  - eval_roundtrip_training_missing
+  - per_arm_archive_inputs_missing
+  - multi_arm_frame_stitching_missing
+  - full_stack_score_lowering_unproven
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 40
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_exact_eval
+  - contest_exact_eval_canary
+  - stack_score_lowering_deferred
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 800
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 3.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: "[canary expected >= A1 due SOS1 wrapper; full-stack prediction disabled until blockers clear]"
+predicted_delta: "score_claim=false. Single-arm canary is custody-only; full multi-arm central [contest-CPU prediction] 0.175-0.190 remains hypothesis-only until score-aware selectors and per-arm runtimes land."
+predicted_delta_basis: ".omx/research/beat_pr95_curriculum_substrate_training_design_20260513.md#idea-3-stack-of-stacks-composition"
+literature_anchor: "beat-PR95 design memo Idea 3 (operator-routed 2026-05-13); LangevinOptimizer (Welling & Teh 2011 SGLD); A1+LAPose council 8-2; A1+wavelet retarget"
+council_verdicts:
+  IDEA_3: "operator-routed 2026-05-13 cascade — stacked-of-stacks composition path approved"
+
+predicted_band: [0.175, 0.190]
+
+risk: |
+  Stack-of-stacks composition path. The current trainer's unblocked path is a
+  byte-closed single-arm A1 passthrough exact-eval canary. It renders contest
+  frames through the bundled A1 runtime but should not be treated as
+  score-lowering because the SOS1 wrapper adds bytes.
+
+  Cost band is smaller than A1+LAPose's because most arms (A1, A1+LAPose,
+  A1+wavelet) are pre-trained: this dispatch loads the K base archives
+  verbatim and trains ONLY the per-arm residual heads + selector
+  precomputation. ~$2-5 envelope at p50 fallback.
+
+  This full-stack recipe remains intentionally non-dispatchable until the
+  blockers above are cleared. The remote driver exists and can run a custody
+  canary only when explicitly operator-routed.
+
+envelope_status: "REFUSED for score-lowering spend: $0 until score-aware selector/residual training + multi-arm runtime land"
+
+remote_driver: scripts/remote_lane_substrate_stack_of_stacks.sh
+timeout_hours: 3.0
+
+required_input_files:
+  - flag: --base-archive
+    default_path: submissions/a1/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_stack_of_stacks.sh
+  cost_band_trainer: experiments/train_substrate_stack_of_stacks.py
+  cost_band_epochs: 800
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_stack_of_stacks.py
+
+env_overrides:
+  STACK_OF_STACKS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  STACK_OF_STACKS_BASE_ARCHIVE: /workspace/pact/submissions/a1/archive.zip
+  STACK_OF_STACKS_BASE_RUNTIME_DIR: /workspace/pact/submissions/a1
+  STACK_OF_STACKS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  STACK_OF_STACKS_OUTPUT_DIR: /workspace/pact/lane_stack_of_stacks_results/output
+  STACK_OF_STACKS_EPOCHS: "0"
+  STACK_OF_STACKS_UPSTREAM_DIR: /workspace/pact/upstream
+  STACK_OF_STACKS_DEVICE: cuda
+  STACK_OF_STACKS_MIDDLE_ARM_SUBSTRATE_IDS: "a1"
+  STACK_OF_STACKS_OUTER_K: "1"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_stack_of_stacks.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_stack_of_stacks.py
+  - submissions/a1/archive.zip
+  - submissions/a1/inflate.sh
+  - submissions/a1/inflate.py
+  - src/tac/composition/stack_of_stacks/compose.py
+  - src/tac/composition/stack_of_stacks/inflate.py
+  - src/tac/optimization/langevin_optimizer.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+
+sentinel_files:
+  - experiments/train_substrate_stack_of_stacks.py
+  - src/tac/composition/stack_of_stacks/compose.py
+  - src/tac/composition/stack_of_stacks/inflate.py
+  - src/tac/optimization/langevin_optimizer.py
+
+notes: |
+  Stack-of-stacks composition substrate. The canary path is byte-closed; the
+  full score-lowering path remains blocker-explicit.
+  Design memo: `.omx/research/beat_pr95_curriculum_substrate_training_design_20260513.md`
+  Lane: `lane_stack_of_stacks_composition_implementation_20260513`
+
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
+  this is substrate-engineering. Current status is blocker-explicit:
+
+  * L1 score-aware substrate — BLOCKED for full stack: residual loop is not
+    scorer/eval-roundtrip trained.
+  * L2 export-first — PARTIAL: SOS1 grammar exists; single-arm scoreable
+    runtime exists.
+  * L3 monolithic 0.bin — PARTIAL: single 'x' ZIP member exists in local smoke.
+  * L4 inflate ≤ 200 LOC — PARTIAL: single-arm runtime delegates to bundled
+    A1; mixed-arm runtime fails closed.
+  * L5 architecture is full renderer — PARTIAL: single-arm A1 renderer only.
+  * L6 score-domain Lagrangian — BLOCKED: no scorer/eval-roundtrip loop.
+  * L7 bolt-on ≤ 350 LOC — PARTIAL: composer exists; trainer is scaffold.
+  * L8 eval-roundtrip — BLOCKED: not wired in this trainer.
+  * L9 runtime closure — PARTIAL: remote driver exists for canary; full-stack
+    closure waits on per-arm runtimes.
+  * L10 mask/pose coupling — BLOCKED: selector not score-trained.
+  * L11 no-op detector — PARTIAL: canary intentionally adds bytes; no score
+    claim until exact eval.
+  * L12 single-LOC review — PARTIAL: composer tests exist; dispatch path blocked.
+  * L13 KILL is last resort — N/A (build-time module, no kill verdict).
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 800) —
+  hand_calibrated_fallback p50 = $3.00 (n=0 anchors; this dispatch
+  bootstraps the calibration system for the stack-of-stacks family).
+
+  Cross-ref:
+    .omx/research/beat_pr95_curriculum_substrate_training_design_20260513.md
+    .omx/research/sabor_boundary_audit_20260513.md
+    .omx/research/s2sbs_blindspot_audit_20260513.md
+    src/tac/composition/stack_of_stacks/__init__.py
+    src/tac/optimization/langevin_optimizer.py

@@ -82,6 +82,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+_SRC_ROOT = _REPO_ROOT / "src"
+if str(_SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SRC_ROOT))
+
+from tac.packet_compiler.cooperative_receiver_grammars import (  # noqa: E402
+    COOPERATIVE_RECEIVER_PACKET_GRAMMARS,
+    xray_magic_signatures,
+    xray_substrate_classes,
+)
 
 # Known substrate-class identifiers. The classifier emits one of these (or
 # "unknown_substrate_unclassifiable" when no signal matches).
@@ -147,6 +156,10 @@ _SUBSTRATE_CLASSES: tuple[str, ...] = (
     "mlx_mask_renderer_substrate",  # `[macOS-CPU advisory only]`.
     "dp_sims_renderer_substrate",
     "diffusion_renderer_substrate",
+    # ── Cooperative-receiver / first-principles substrates (2026-05-13) ──
+    # Imported from tac.packet_compiler.cooperative_receiver_grammars so xray
+    # and compiler/integration manifests cannot drift.
+    *xray_substrate_classes(),
     "unknown_substrate_unclassifiable",
 )
 
@@ -205,6 +218,8 @@ _SECTION_MAGIC_SIGNATURES: tuple[tuple[bytes, str], ...] = (
     (b"MLXR", "mlx_mask_renderer_v1"),  # Apple-Silicon-only; advisory tag.
     (b"DPSV", "dp_sims_renderer_v1"),
     (b"DIFV", "diffusion_renderer_v1"),
+    # ── Cooperative-receiver / first-principles packet grammars (2026-05-13) ──
+    *xray_magic_signatures(),
 )
 
 
@@ -352,6 +367,15 @@ _SUBSTRATE_RULES: tuple[_SubstrateRule, ...] = (
         substrate_class="compressai_cheng2020_packet",
         required_section_magics=frozenset({b"CACG"}),
         archive_version="compressai_cheng2020_v1",
+    ),
+    # ── Cooperative-receiver / first-principles packet rules (2026-05-13) ──
+    *(
+        _SubstrateRule(
+            substrate_class=row.substrate_class,
+            required_section_magics=frozenset({row.magic}),
+            archive_version=row.archive_version,
+        )
+        for row in COOPERATIVE_RECEIVER_PACKET_GRAMMARS
     ),
 )
 

@@ -391,6 +391,8 @@ def test_render_report_md(tmp_path, monkeypatch):
     assert "Phase 2" in md
     # Auto-generated stamp must be present (caller has been warned not to edit)
     assert "Auto-generated" in md
+    assert md.endswith("\n")
+    assert not md.endswith("\n\n")
 
 
 # ── Test 9: end-to-end CLI smoke (subprocess) ────────────────────────────
@@ -462,7 +464,7 @@ def test_check_90_passes_on_real_registry():
 
 def test_check_90_strict_raises_on_inconsistent_registry(tmp_path, monkeypatch):
     """Check 90 must RAISE MetaBugViolation when registry is inconsistent."""
-    from tac.preflight import check_lane_registry_consistent, MetaBugViolation
+    from tac.preflight import MetaBugViolation, check_lane_registry_consistent
     repo = _make_repo(tmp_path, [
         {"id": "lane_bad", "name": "Bad", "phase": 1, "level": 3,  # wrong
          "gates": _empty_gates(), "notes": ""}

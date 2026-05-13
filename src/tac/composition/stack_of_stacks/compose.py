@@ -537,10 +537,7 @@ class OuterStack:
         ``layer_mask`` is the bit-set declaring which layers are active.
         """
         # Per-pair selector (n_pairs bytes; default arm 0 for all if empty).
-        if self.spec.per_pair_arm:
-            selector = bytes(self.spec.per_pair_arm)
-        else:
-            selector = b"\x00" * self.n_pairs
+        selector = bytes(self.spec.per_pair_arm) if self.spec.per_pair_arm else b"\x00" * self.n_pairs
 
         # Brotli-compressed JSON describing each arm's grammar.
         sos_meta = {
@@ -848,31 +845,31 @@ def validate_byte_budget(
 
 
 __all__ = [
-    "BoundaryAtomSpec",
     "CONTEST_POSE_MARGINAL_PR106",
     "CONTEST_RATE_MARGINAL",
     "CONTEST_SEG_MARGINAL",
     "DEFAULT_N_PAIRS_CONTEST",
-    "HFSidecarSpec",
-    "InnerStack",
-    "InnerStackSpec",
     "LAYER_BIT_INNER",
     "LAYER_BIT_MIDDLE",
     "LAYER_BIT_OUTER",
     "MAX_N_PAIRS",
     "MAX_OUTER_ARMS",
-    "MiddleStack",
-    "MiddleStackSpec",
-    "OuterStack",
-    "OuterStackSpec",
-    "ResidualSpec",
+    "S2SBS_HF_MAGIC",
     "SABOR_BOUNDARY_MAGIC",
     "SCHEMA_VERSION",
     "SCORE_GRAD_RESIDUAL_MAGIC",
     "SOS_HEADER_STRUCT",
     "SOS_SIDECAR_MAGIC",
     "SOS_SIDECAR_VERSION",
-    "S2SBS_HF_MAGIC",
+    "BoundaryAtomSpec",
+    "HFSidecarSpec",
+    "InnerStack",
+    "InnerStackSpec",
+    "MiddleStack",
+    "MiddleStackSpec",
+    "OuterStack",
+    "OuterStackSpec",
+    "ResidualSpec",
     "StackOfStacksError",
     "compose_stack_of_stacks",
     "decompose_stack_of_stacks",

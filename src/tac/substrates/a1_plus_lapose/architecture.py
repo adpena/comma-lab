@@ -24,7 +24,6 @@ from typing import Any
 import torch
 from torch import nn
 
-
 # A1 wire-format constants (canonical A1 anchor on contest CPU GHA Linux
 # x86_64 + contest CUDA T4 — 178,162 bytes, sha256
 # 8e664385af0a25ec98bd02d97b697fbf0d2bb3c2d954f5aa5c95b5131330a243).
@@ -34,8 +33,10 @@ from torch import nn
 # for the canonical reference parser.  The longer SHA ``87ec7ca5...`` cited
 # in the council memo refers to the unfinetuned PR101 source; the operator
 # directive uses the t178000 fork as the BUILD anchor.
-A1_EVAL_H, A1_EVAL_W = 384, 512
-A1_CAMERA_H, A1_CAMERA_W = 874, 1164
+A1_EVAL_H = 384
+A1_EVAL_W = 512
+A1_CAMERA_H = 874
+A1_CAMERA_W = 1164
 A1_N_PAIRS = 600
 A1_LATENT_DIM = 28
 A1_BASE_CHANNELS = 36

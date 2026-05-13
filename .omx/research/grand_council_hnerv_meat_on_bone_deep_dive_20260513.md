@@ -1,6 +1,7 @@
 # Grand Council — HNeRV meat-on-bone deep-dive 2026-05-13
 
 **Lane**: `lane_hnerv_meat_on_bone_deep_dive_council_20260513` (L0 SKETCH, phase 2.0)
+**research_only**: true — council deliberation; no archive build, packet, or dispatch.
 **Operator framing (2026-05-13)**: *"we want to be very wary of getting stuck in local minima especially hnerv local minima though there is still hnerv meat on the bone i believe"*.
 **Sister council**: `lane_first_principles_original_score_lowering_council_20260513` (parallel — derives ORIGINAL ideas from first principles; calibrates against this memo's HNeRV-family empirical ceiling).
 **Scope**: read-only deliberation; no code edits, no archive builds, no dispatch.
