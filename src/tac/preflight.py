@@ -2338,6 +2338,24 @@ def preflight_all(
         check_cost_band_anchor_writers_declare_outcome(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #176 (FIX-WAVE-2 R2-1): META-meta gate ensuring
+        # every strict=True orchestrator callsite has a corresponding
+        # numbered row in CLAUDE.md "Meta-bug class catalog" table. R1
+        # missed entries for #174 + #175; this gate prevents recurrence.
+        # Strict-from-byte-one (live count at landing: 0).
+        check_strict_preflight_callsites_have_claude_md_catalog_row(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #177 (FIX-WAVE-2 R2-3): read-side defense
+        # sister of Catalog #175 over `cost_band_calibration.py:333`
+        # back-compat trap. Refuses any stored row in the posterior JSONL
+        # that is missing the `outcome` field (after the companion
+        # `load_anchors` fix flips silent coerce -> explicit
+        # outcome="legacy_pre_nv7" tag). Strict-from-byte-one (live count
+        # at landing: 0).
+        check_cost_band_posterior_rows_have_outcome_field(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -41509,6 +41527,12 @@ _CHECK_159_WARN_ONLY_PHRASES: tuple[str, ...] = (
     "held warn-only initially",
     "warn-only initially",
     "currently warn-only",
+    # R2-2 (FIX-WAVE-2 2026-05-13): the 4 strict-flipped entries
+    # (#170/#171/#172/#173) used "Initial landing: warn-only" prose
+    # which did NOT match any prior phrase token. Catalog #159 silently
+    # missed 4 false-negative drift entries post-strict-flip. Phrase
+    # coverage extended per the probe-disambiguator "ship both" pattern.
+    "initial landing: warn-only",
 )
 _CHECK_159_STRICT_PHRASES: tuple[str, ...] = (
     "strict-flipped",
@@ -43388,6 +43412,342 @@ def check_cost_band_anchor_writers_declare_outcome(
             f"found {len(violations)} direct-write surface(s) missing "
             "outcome= discipline. Catalog #175 closes R1 Medium #6 "
             "(cost_band_calibration.py:333 back-compat trap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #176 - check_strict_preflight_callsites_have_claude_md_catalog_row
+#
+# FIX-WAVE-2 R2-1 (2026-05-13). META-meta gate: every check function
+# wired into preflight_all() with strict=True MUST have a matching
+# numbered row in the CLAUDE.md "Meta-bug class catalog" table. RECURSIVE-
+# REVIEW-R1 missed Catalog #174 + #175 entries; R2 caught the omission.
+#
+# Sister of Catalog #118 (no duplicate numbers) and Catalog #159
+# (text-matches-preflight-strict-value). Together they keep the
+# CLAUDE.md table the canonical operator-facing strictness ledger.
+_CHECK_176_WAIVER_RE: re.Pattern[str] = re.compile(
+    r"#\s*CLAUDE_MD_ENTRY_OK\s*:\s*(?P<reason>[^\s].+)$",
+    re.IGNORECASE,
+)
+# FIX-WAVE-2 R2-1 legacy snapshot (2026-05-13). The 79 strict callsites
+# below were already wired into `preflight_all()` BEFORE the catalog
+# discipline was extended to require a numbered CLAUDE.md row. Catalog
+# #176 is strict-from-byte-one for ALL NEW strict callsites; legacy
+# pre-existing strict callsites are accepted via this snapshot. Adding a
+# NEW strict callsite without a CLAUDE.md row fails the gate. Removing
+# an entry from this list (e.g. once the operator backfills the CLAUDE.md
+# row for that legacy check) is always safe and converges toward
+# whole-repo cataloging discipline.
+#
+# Operator note: the LONG-TERM target is to backfill every legacy entry
+# (one at a time) and shrink this list to empty. Until then, the snapshot
+# preserves the META gate's "strict for new code, accepting for legacy"
+# behavior per the CLAUDE.md "Strict-flip atomicity rule" — flip strict
+# only after live count == 0.
+_CHECK_176_LEGACY_ALLOWLIST: frozenset[str] = frozenset({
+    "check_137531_candidate_decoder_path_wired",
+    "check_admm_lagrangian_bisection_convergent",
+    "check_balle_hyperprior_includes_side_info_in_archive",
+    "check_block_fp_exponents_alongside_qint",
+    "check_calibration_provenance",
+    "check_canonical_bootstraps_write_provenance",
+    "check_cmg3a_remote_dispatch_requires_pose_safety",
+    "check_codec_pipeline_op_order_deterministic",
+    "check_contest_component_trace_runtime_parity",
+    "check_cross_paradigm_wiring_contract",
+    "check_deploy_script_profiles_exist_in_registry",
+    "check_dispatch_claim_helper_present",
+    "check_dispatch_cli_shell_hazards",
+    "check_dispatch_wrapper_stages_implemented",
+    "check_distillation_policy_schema_clean",
+    "check_evidence_row_has_falsification_scope_when_negative",
+    "check_feature_flags_have_live_objective_effect",
+    "check_imp_cycles_use_ema_and_auth_eval",
+    "check_imp_dispatch_calls_train_distill",
+    "check_kill_memory_files_have_council_review",
+    "check_lane_anchor_masks_full_resolution",
+    "check_lane_classes_have_pipeline_proof",
+    "check_lane_deploy_scripts_have_archive_size_assertion",
+    "check_lane_scripts_have_e2e_smoke_proof",
+    "check_lane_scripts_set_up_inflate_environment",
+    "check_lane_smoke_signal_nontrivial",
+    "check_launch_retry_wrapper_singleflight_and_signal_safe",
+    "check_launcher_max_dph_floor",
+    "check_lightning_exact_eval_manifest_runtime_closure",
+    "check_lightning_exact_eval_runner_bootstraps_dali",
+    "check_lightning_ssh_static_policy",
+    "check_line_search_scorer_runtime_preflight",
+    "check_logit_margin_loss_uses_boundary_mask",
+    "check_modal_cpu_auth_eval_is_advisory_only",
+    "check_modal_mount_builder_uses_mtime_stability_check",
+    "check_modal_recovery_cli_guidance_current",
+    "check_nerv_codec_uses_ema_and_no_mps_and_auth_eval",
+    "check_no_active_mcp_server_config",
+    "check_no_bare_except",
+    "check_no_inflate_time_multipass",
+    "check_no_live_mcp_processes",
+    "check_no_off_manifold_pose_zeros",
+    "check_no_raw_zip_extractall",
+    "check_no_submission_provider_or_cpu_score_leakage",
+    "check_operator_approval_must_be_lane_scoped",
+    "check_operator_authorize_canonical_use",
+    "check_per_tensor_K_side_info_matches_decoder_expectation",
+    "check_phase2_extract_destroys_on_failure",
+    "check_phase2_launch_polls_setup_log",
+    "check_pmg_remote_dispatch_requires_geometry_escape",
+    "check_pose_basis_fit_kill_acknowledged",
+    "check_pose_stream_uses_fp16_or_smaller",
+    "check_posenet_gradient_preprocess_patch",
+    "check_preflight_scanners_use_oss_mirror_helper",
+    "check_profile_loss_modes_in_validator_allowlist",
+    "check_provider_deploy_contracts",
+    "check_python_heredocs_in_shell_compile",
+    "check_python_heredocs_no_undefined_names",
+    "check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg",
+    "check_remote_archive_only_eval_custody_closure",
+    "check_remote_distillation_promotion_provenance",
+    "check_remote_lane_argparse_arity",
+    "check_remote_lane_auth_eval_json_adjudication",
+    "check_reverse_engineering_tree_curation",
+    "check_segmap_export_calls_verify_roundtrip",
+    "check_segmap_grayscale_lut_consistency",
+    "check_segmap_hm_sa_lossy_pack_contract",
+    "check_segmap_lct_archive_contract",
+    "check_setup_full_probe_before_dali",
+    "check_solvers_use_dual_axis_ranking",
+    "check_subprocess_run_checked",
+    "check_substrate_dispatch_uses_smoke_before_full_pattern",
+    "check_substrate_trainer_pose_defaults_match_contest_formula",
+    "check_test_assertion_strength_for_loss_functions",
+    "check_tools_have_argparse",
+    "check_train_renderer_kl_aux_explicit_scope",
+    "check_vastai_create_uses_min_disk_60",
+    "check_venv_creators_use_ensurepip",
+    "check_verify_vast_setup_stuck_dual_threshold",
+})
+
+
+def _check_176_collect_strict_callsites(
+    preflight_text: str,
+) -> list[tuple[int, str]]:
+    """Return (line_number, check_name) pairs for every callsite invoked
+    inside `def preflight_all(...)` whose resolved kwargs include
+    ``strict=True``.
+
+    Conservative scan: find the start and end of `def preflight_all`,
+    then within that span look for `check_<name>(...)` invocations.
+    For each, scan ~15 forward lines for the kwarg `strict=True` or
+    `strict=False` to disambiguate.
+    """
+    out: list[tuple[int, str]] = []
+    lines = preflight_text.splitlines()
+    body_start: int | None = None
+    body_end: int | None = None
+    for i, line in enumerate(lines):
+        if body_start is None and re.match(r"^def\s+preflight_all\s*\(", line):
+            body_start = i
+            continue
+        if body_start is not None and re.match(r"^def\s+\w+\s*\(", line):
+            body_end = i
+            break
+    if body_start is None:
+        return []
+    if body_end is None:
+        body_end = len(lines)
+    call_re = re.compile(r"^\s+(check_[a-zA-Z0-9_]+)\s*\(")
+    i = body_start
+    while i < body_end:
+        m = call_re.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        name = m.group(1)
+        # Walk forward up to 25 lines to find strict=True / strict=False
+        window_lo = i
+        window_hi = min(body_end, i + 25)
+        window = "\n".join(lines[window_lo:window_hi])
+        # Match up to a balanced close paren - heuristic: stop at first
+        # bare close paren at same-or-less indent than the call.
+        m_true = re.search(r"\bstrict\s*=\s*True\b", window)
+        m_false = re.search(r"\bstrict\s*=\s*False\b", window)
+        if m_true and not m_false:
+            out.append((i + 1, name))
+        elif m_true and m_false:
+            # Both - prefer first by position (defensive; usually first
+            # wins per Catalog #159 logic).
+            if m_true.start() < m_false.start():
+                out.append((i + 1, name))
+        i += 1
+    return out
+
+
+def check_strict_preflight_callsites_have_claude_md_catalog_row(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #176 - refuse strict=True orchestrator callsites that have
+    no matching numbered row in CLAUDE.md "Meta-bug class catalog".
+
+    Sister of Catalog #118 + Catalog #159. R1 missed Catalog #174 + #175
+    rows; this gate catches the omission class structurally.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    claude_md = root / "CLAUDE.md"
+    preflight_py = root / "src" / "tac" / "preflight.py"
+    if not claude_md.is_file() or not preflight_py.is_file():
+        return []
+    try:
+        claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
+        preflight_text = preflight_py.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    # Build the set of catalog'd check names from CLAUDE.md.
+    catalog_re = re.compile(r"^([0-9]+)\.\s+`(check_[a-zA-Z0-9_]+)`")
+    cataloged: set[str] = set()
+    for line in claude_text.splitlines():
+        m = catalog_re.match(line)
+        if m:
+            cataloged.add(m.group(2))
+    # Collect every strict=True callsite from preflight_all() body.
+    strict_calls = _check_176_collect_strict_callsites(preflight_text)
+    violations: list[str] = []
+    preflight_lines = preflight_text.splitlines()
+    for line_no, check_name in strict_calls:
+        # Legacy allowlist - pre-FIX-WAVE-2 strict callsites accepted
+        # as not-yet-cataloged. Backfilling each entry to CLAUDE.md and
+        # then dropping from the allowlist is always safe.
+        if check_name in _CHECK_176_LEGACY_ALLOWLIST:
+            continue
+        # Check same-line waiver on the callsite line.
+        callsite_line = preflight_lines[line_no - 1]
+        if _CHECK_176_WAIVER_RE.search(callsite_line):
+            continue
+        if check_name not in cataloged:
+            violations.append(
+                f"src/tac/preflight.py:{line_no}: `{check_name}` wired at "
+                f"strict=True in preflight_all() but no `N. `{check_name}`` "
+                "row exists in CLAUDE.md 'Meta-bug class catalog' table. "
+                "Add a numbered entry OR add a "
+                "`# CLAUDE_MD_ENTRY_OK:<reason>` waiver."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [strict-callsite-claude-md-row] {len(violations)} "
+                f"strict callsite(s) missing CLAUDE.md catalog row:"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                f"  [strict-callsite-claude-md-row] OK ({len(strict_calls)} "
+                "strict callsite(s) checked; all have CLAUDE.md catalog rows)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_strict_preflight_callsites_have_claude_md_catalog_row "
+            f"found {len(violations)} strict callsite(s) missing CLAUDE.md "
+            "catalog rows. Per CLAUDE.md 'Bugs must be permanently fixed "
+            "AND self-protected against' non-negotiable, the CLAUDE.md "
+            "catalog table is the canonical operator-facing strictness "
+            "ledger:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #177 - check_cost_band_posterior_rows_have_outcome_field
+#
+# FIX-WAVE-2 R2-3 (2026-05-13). Read-side sister of Catalog #175 (write
+# side). The companion fix flips `cost_band_calibration.py:333` from
+# silently coercing missing `outcome` to ``SUCCESSFUL_DISPATCH`` to
+# tagging it `outcome="legacy_pre_nv7"` (explicit token). This gate
+# scans the live posterior JSONL and refuses any row missing the
+# `outcome` field. Defense-in-depth on the back-compat trap.
+_CHECK_177_POSTERIOR_REL_PATH: str = ".omx/state/cost_band_posterior.jsonl"
+_CHECK_177_SCHEMA_VERSION: str = "cost_band_posterior_v1"
+
+
+def check_cost_band_posterior_rows_have_outcome_field(
+    *,
+    repo_root: Path | None = None,
+    posterior_path: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #177 - refuse any row in
+    ``.omx/state/cost_band_posterior.jsonl`` that is missing the
+    ``outcome`` field. Read-side defense over the
+    ``cost_band_calibration.py:333`` back-compat trap.
+
+    Sister of Catalog #175 (write-side gate). Catalog #175 refuses NEW
+    writes without outcome=; this gate refuses STORED rows without
+    outcome=. Together they extinct the missing-outcome bug class
+    bidirectionally.
+
+    If the posterior file does not exist, returns [] (no violations).
+    Malformed JSON lines are skipped (already handled by load_anchors).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    posterior = (
+        posterior_path if posterior_path is not None else root / _CHECK_177_POSTERIOR_REL_PATH
+    )
+    violations: list[str] = []
+    rows_checked = 0
+    if not posterior.is_file():
+        if verbose:
+            print(
+                f"  [cost-band-posterior-outcome] OK (posterior file "
+                f"{posterior} does not exist; no rows to check)"
+            )
+        return []
+    try:
+        text = posterior.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    import json as _json
+    for line_idx, raw in enumerate(text.splitlines(), start=1):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            d = _json.loads(raw)
+        except _json.JSONDecodeError:
+            continue
+        if d.get("schema") != _CHECK_177_SCHEMA_VERSION:
+            continue
+        rows_checked += 1
+        if "outcome" not in d:
+            violations.append(
+                f"{posterior}:line {line_idx}: row schema={_CHECK_177_SCHEMA_VERSION} "
+                f"missing required `outcome` field (dispatch_label="
+                f"{d.get('dispatch_label', '<?>')}). Run "
+                "tools/migrate_cost_band_posterior_failed_anchors.py OR "
+                "tag the row with outcome='legacy_pre_nv7'."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [cost-band-posterior-outcome] {len(violations)} row(s) "
+                f"missing outcome= (of {rows_checked} schema-v1 rows scanned):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [cost-band-posterior-outcome] OK ({rows_checked} "
+                "schema-v1 row(s); all carry the outcome field)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_cost_band_posterior_rows_have_outcome_field "
+            f"found {len(violations)} row(s) missing the outcome field. "
+            "Catalog #177 closes FIX-WAVE-2 R2-3 (read-side defense "
+            "over cost_band_calibration.py:333 back-compat trap):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

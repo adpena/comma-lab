@@ -502,8 +502,15 @@ def test_nv7_predict_mixes_successful_and_failed(tmp_path: Path) -> None:
     assert p.p50_cost_usd == 5.0  # NOT poisoned by the 2 failed at $0.016
 
 
-def test_nv7_anchor_with_no_outcome_field_defaults_to_successful(tmp_path: Path) -> None:
-    """Pre-NV7 anchors (no outcome field) load as successful_dispatch."""
+def test_nv7_anchor_with_no_outcome_field_tagged_legacy_pre_nv7(tmp_path: Path) -> None:
+    """FIX-WAVE-2 R2-3 (2026-05-13): pre-NV7 anchors (no outcome field) load
+    with the explicit ``LEGACY_PRE_NV7`` tag rather than being silently
+    coerced to ``SUCCESSFUL_DISPATCH``. The silent coercion corrupted the
+    posterior side-information channel (per Ballé's review). The explicit
+    tag preserves the row but ``predict()`` excludes it by default
+    because it is NOT ``SUCCESSFUL_DISPATCH``.
+    """
+    from tac.cost_band_calibration import LEGACY_PRE_NV7
     pp = tmp_path / "posterior.jsonl"
     pp.parent.mkdir(parents=True, exist_ok=True)
     pp.write_text(
@@ -520,7 +527,8 @@ def test_nv7_anchor_with_no_outcome_field_defaults_to_successful(tmp_path: Path)
     )
     anchors = load_anchors(pp)
     assert len(anchors) == 1
-    assert anchors[0].outcome == SUCCESSFUL_DISPATCH
+    assert anchors[0].outcome == LEGACY_PRE_NV7
+    assert anchors[0].outcome != SUCCESSFUL_DISPATCH
     assert anchors[0].returncode is None
 
 

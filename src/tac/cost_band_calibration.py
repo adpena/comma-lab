@@ -205,12 +205,21 @@ SUCCESSFUL_DISPATCH = "successful_dispatch"
 FAILED_DISPATCH = "failed_dispatch"
 TIMED_OUT = "timed_out"
 HARVESTED_PARTIAL = "harvested_partial"
+# FIX-WAVE-2 R2-3 (2026-05-13): explicit tag for pre-NV7 rows that lack
+# an ``outcome`` field. Previously the read-side coerced missing
+# outcome to SUCCESSFUL_DISPATCH silently, which Ballé flagged as a
+# side-information channel corruption. Now read-side tags such rows
+# with this explicit outcome so the load is non-destructive but the
+# downstream predict() / posterior math knows to exclude them by default
+# (legacy_pre_nv7 is NOT in the default-included outcome set).
+LEGACY_PRE_NV7 = "legacy_pre_nv7"
 
 VALID_OUTCOMES = frozenset({
     SUCCESSFUL_DISPATCH,
     FAILED_DISPATCH,
     TIMED_OUT,
     HARVESTED_PARTIAL,
+    LEGACY_PRE_NV7,
 })
 
 
@@ -326,11 +335,18 @@ def load_anchors(
         if d.get("schema") != SCHEMA_VERSION:
             continue
         try:
-            # NV7: missing outcome defaults to SUCCESSFUL_DISPATCH for
-            # backward compat with pre-NV7 anchors. The migration tool
-            # tags historical failed rows by inspecting `notes` for
-            # `returncode=<nonzero>` markers.
-            outcome_raw = d.get("outcome", SUCCESSFUL_DISPATCH)
+            # FIX-WAVE-2 R2-3 (2026-05-13): missing outcome is tagged
+            # explicitly as ``LEGACY_PRE_NV7`` rather than silently
+            # coerced to ``SUCCESSFUL_DISPATCH``. Per Ballé's review the
+            # silent coercion corrupted the posterior side-information
+            # channel. ``predict()`` excludes ``LEGACY_PRE_NV7`` rows by
+            # default (caller may opt them in via include_legacy=True).
+            # The migration tool
+            # ``tools/migrate_cost_band_posterior_failed_anchors.py``
+            # tags historical failed rows by inspecting ``notes`` for
+            # ``returncode=<nonzero>`` markers; rows it cannot
+            # classify carry the LEGACY_PRE_NV7 tag.
+            outcome_raw = d.get("outcome", LEGACY_PRE_NV7)
             if outcome_raw not in VALID_OUTCOMES:
                 # Refuse to materialize anchors with an unknown outcome string;
                 # treat as malformed line (skip, do NOT default-coerce).
