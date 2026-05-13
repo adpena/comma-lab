@@ -384,7 +384,7 @@ def test_score_aware_loss_runs_on_dummy_scorers():
             # (B, T, C, H, W) -> (B, C, H, W) using last frame, per upstream
             return x_btchw[:, -1, ...]
 
-        def forward(self, x_bchw: torch.Tensor) -> torch.Tensor:
+        def forward(self, x_bchw: torch.Tensor) -> dict[str, torch.Tensor]:
             # (B, C, H, W) -> (B, 5, h, w)
             b, _c, h, w = x_bchw.shape
             # Connect to the input so autograd has a path through the dummy
@@ -410,7 +410,7 @@ def test_score_aware_loss_runs_on_dummy_scorers():
 
         def forward(self, x_bchw: torch.Tensor) -> torch.Tensor:
             # (B, 12, H, W) -> (B, 12)
-            return x_bchw.flatten(2).mean(dim=2)
+            return {"pose": x_bchw.flatten(2).mean(dim=2)}
 
     weights = ScoreAwareLossWeights(
         alpha_rate=25.0, beta_seg=100.0, gamma_pose=1.0,

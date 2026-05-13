@@ -458,3 +458,45 @@ Score-lowering implication:
   same runtime-consumption proof surface. This reduces harness mismatch risk
   before PR106/PR101/PR103 PacketIR transforms enter exact-eval queues, without
   promoting parser-consumption evidence into scorer or contest-axis evidence.
+
+## Follow-up: sane_hnerv Modal failure classification + local test-contract fix (2026-05-13)
+
+Recovered Modal canary artifacts show the latest sane_hnerv A100 attempts are
+terminal failures, not active jobs:
+
+- `substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z`: rc=1 after
+  12.87s, terminal claim `failed_modal_training_rc_1`.
+- `substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z`: rc=1 after
+  72.03s, terminal claim `failed_modal_training_rc_1`.
+
+The first failure was a stale bootstrap harness path that sourced
+`remote_archive_only_eval.sh` without the source-only sentinel and failed on a
+missing `/workspace/pact/iter_0/archive.zip`. The second reached training and
+failed in the score-aware loss path with a SegNet 5D input:
+`[32, 1, 3, 384, 512]`.
+
+Current source status:
+
+- Production `sane_hnerv` loss already delegates to
+  `tac.substrates.score_aware_common.score_pair_components(...)`, which stages
+  `(B,T=2,C,H,W)` pairs and calls each scorer's `preprocess_input` before
+  `forward`.
+- The local smoke test had drifted from that contract: its dummy PoseNet
+  returned a bare tensor, while upstream PoseNet returns `{"pose": tensor}`.
+  The test now mirrors the upstream dict contract so green tests exercise the
+  same shape/protocol path that Modal needs.
+
+Verification:
+
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/substrates/sane_hnerv/tests/test_score_aware_loss_real_scorer_forward.py src/tac/substrates/sane_hnerv/tests/test_train_substrate_sane_hnerv_full_main.py::test_score_aware_loss_runs_on_dummy_scorers -q`
+  -> `7 passed`.
+- `.venv/bin/ruff check src/tac/substrates/sane_hnerv/tests/test_train_substrate_sane_hnerv_full_main.py`
+  -> pass.
+
+Score-lowering implication:
+
+- The next sane_hnerv canary must be launched from current `main`, after local
+  preflight, with the source-only bootstrap sentinel and the canonical scorer
+  contract. The two recovered Modal failures remain infrastructure/harness
+  failures with `score_claim=false`; they do not falsify sane_hnerv as a
+  substrate.
