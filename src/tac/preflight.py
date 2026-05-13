@@ -2242,8 +2242,12 @@ def preflight_all(
         # user of the canonical pattern). Strict-flip per CLAUDE.md
         # "Strict-flip atomicity rule" once the cluster of legacy
         # wrappers is migrated.
+        # 2026-05-13 FIX-WAVE-1 R1 Medium #2 strict-flip (Catalog #167):
+        # Live count = 0 at the time of this flip; per CLAUDE.md
+        # "Strict-flip atomicity rule" the flip happens in the same wave
+        # that verifies the count.
         check_substrate_dispatch_uses_smoke_before_full_pattern(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #168 (META-CATALOG-152-FIX): META-CLASS gate
         # over AST extractors that walk only `ast.Assign` without also
@@ -2277,16 +2281,21 @@ def preflight_all(
         # ``min_vram_gb`` integer floor. Initial landing: warn-only;
         # legacy recipes will be backfilled in a separate wave per
         # CLAUDE.md "Strict-flip atomicity rule" (no live=0 yet).
+        # 2026-05-13 FIX-WAVE-1 R1 Medium #2 strict-flip (Catalog #170):
+        # Live count = 0 (verified in fix-wave); strict per Strict-flip
+        # atomicity rule.
         check_substrate_recipes_declare_min_vram_gb_floor(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #171 (WAVE-7-MED-FIX, REVIEW-OMNI NV9):
         # Substrate operator-authorize recipes MUST declare
         # ``video_input_strategy`` (per_dispatch_local_copy /
         # readonly_mmap / shared_volume_no_contention_expected). Initial
         # landing: warn-only; legacy recipes will be backfilled.
+        # 2026-05-13 FIX-WAVE-1 R1 Medium #2 strict-flip (Catalog #171):
+        # Live count = 0 (verified); strict per atomicity rule.
         check_substrate_recipes_declare_video_input_strategy(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #172 (WAVE-7-MED-FIX, REVIEW-OMNI NV2):
         # Substrate trainers MUST either declare ``--enable-autocast-fp16``
@@ -2294,8 +2303,10 @@ def preflight_all(
         # carry a file-level ``# AUTOCAST_FP16_WAIVED:<reason>`` waiver.
         # Initial landing: warn-only; backport-or-waive sweep is a separate
         # engineering wave.
+        # 2026-05-13 FIX-WAVE-1 R1 Medium #2 strict-flip (Catalog #172):
+        # Live count = 0 (verified); strict per atomicity rule.
         check_substrate_trainers_declare_autocast_fp16_support(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #173 (WAVE-7-MED-FIX, REVIEW-OMNI C4):
         # Substrate operator-authorize recipes MUST declare
@@ -2303,8 +2314,10 @@ def preflight_all(
         # independent_substrate). ``post_canary_dependent`` recipes also
         # need ``canary_dependency: <substrate_id>``. Initial landing:
         # warn-only; legacy recipes will be backfilled.
+        # 2026-05-13 FIX-WAVE-1 R1 Medium #2 strict-flip (Catalog #173):
+        # Live count = 0 (verified); strict per atomicity rule.
         check_substrate_dispatch_honors_canary_first_ordering(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
