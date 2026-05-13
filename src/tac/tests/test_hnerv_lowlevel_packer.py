@@ -14,13 +14,20 @@ from tac.hnerv_lowlevel_packer import (
     brotli_recode_search,
     build_lowlevel_brotli_repack_candidate,
     parse_ff_packed_brotli_hnerv,
+    read_packed_archive_view,
     read_strict_single_member_zip,
     sha256_bytes,
     write_stored_single_member_zip,
 )
 from tac.hnerv_section_repack import audit_candidate_section_diff, build_section_repack_plan
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_FORMAT_BROTLI,
+    emit_pr106_sidecar_packet,
+    parse_pr106_sidecar_packet,
+)
 
 REPO = Path(__file__).resolve().parents[3]
+PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 
 
 def test_parse_ff_packed_payload_round_trips_sections() -> None:
@@ -93,6 +100,63 @@ def test_build_lowlevel_brotli_repack_candidate_proves_changed_section(tmp_path:
     plan = build_section_repack_plan(scorecard, labels=["PR106x"])
     reaudit = audit_candidate_section_diff(plan, result["candidate_diff"])
     assert reaudit["ready_for_archive_preflight"] is True
+
+
+def test_read_packed_archive_view_unwraps_real_pr106_sidecar_wrapper() -> None:
+    view = read_packed_archive_view(PR106_R2_PR101_ARCHIVE)
+
+    assert view.payload_kind == "pr106_sidecar_wrapper"
+    assert view.sidecar_packet is not None
+    assert view.sidecar_packet.format_id == 0x02
+    assert view.packed.to_bytes() == view.sidecar_packet.pr106_bytes
+
+
+def test_build_lowlevel_brotli_repack_candidate_reemits_pr106_sidecar_wrapper(
+    tmp_path: Path,
+) -> None:
+    decoder = brotli.compress((b"wrapped-decoder-record-" * 3000), quality=1)
+    latents = brotli.compress((b"wrapped-latent-row-" * 2000), quality=1)
+    inner_payload = _packed_payload(decoder, latents)
+    source_packet_payload = emit_pr106_sidecar_packet(
+        _sidecar_packet(inner_payload, sidecar_payload=b"runtime-visible-sidecar")
+    )
+    source_archive = tmp_path / "source.zip"
+    write_stored_single_member_zip(
+        source_archive,
+        member_name="0.bin",
+        payload=source_packet_payload,
+    )
+
+    result = build_lowlevel_brotli_repack_candidate(
+        source_archive=source_archive,
+        scorecard={"schema_version": 1, "payload_section_manifests": []},
+        source_label="PR106_R2_PR101_GRAMMAR",
+        output_dir=tmp_path / "out",
+        target_sections=["decoder_packed_brotli"],
+        qualities=[11],
+        lgwins=[None],
+    )
+
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+    assert result["ready_for_archive_preflight"] is True
+    assert result["source_payload_kind"] == "pr106_sidecar_wrapper"
+    assert result["scorecard_anchor"]["derived_from_source_archive"] is True
+    assert result["packet_ir_consumed_byte_proof"]["all_payload_bytes_accounted"] is True
+    assert result["sidecar_packet"]["sidecar_payload_preserved"] is True
+    assert result["sidecar_packet"]["framing_meta_preserved"] is True
+
+    candidate = read_strict_single_member_zip(result["candidate_archive_path"])
+    candidate_packet = parse_pr106_sidecar_packet(candidate.payload)
+    source_packet = parse_pr106_sidecar_packet(source_packet_payload)
+    assert candidate_packet.sidecar_payload == source_packet.sidecar_payload
+    assert candidate_packet.framing_meta == source_packet.framing_meta
+    assert candidate_packet.pr106_bytes != source_packet.pr106_bytes
+    candidate_inner = parse_ff_packed_brotli_hnerv(candidate_packet.pr106_bytes)
+    source_inner = parse_ff_packed_brotli_hnerv(source_packet.pr106_bytes)
+    assert brotli.decompress(candidate_inner.decoder_packed_brotli) == brotli.decompress(
+        source_inner.decoder_packed_brotli
+    )
 
 
 def test_brotli_recode_search_parallel_matches_serial() -> None:
@@ -212,6 +276,17 @@ def _packed_payload(decoder_brotli: bytes, latents_brotli: bytes) -> bytes:
     if len(decoder_brotli) > 0xFFFFFF:
         raise AssertionError("test decoder too large")
     return bytes([0xFF]) + len(decoder_brotli).to_bytes(3, "little") + decoder_brotli + latents_brotli
+
+
+def _sidecar_packet(inner_payload: bytes, *, sidecar_payload: bytes):
+    from tac.packet_compiler.pr106_sidecar_packet import PR106SidecarPacket
+
+    return PR106SidecarPacket(
+        format_id=PR106_SIDECAR_FORMAT_BROTLI,
+        pr106_bytes=inner_payload,
+        sidecar_payload=sidecar_payload,
+        framing_meta=None,
+    )
 
 
 def _scorecard(source, label: str) -> dict:

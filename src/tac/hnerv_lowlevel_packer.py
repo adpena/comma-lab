@@ -25,6 +25,18 @@ from tac.hnerv_section_repack import (
     audit_candidate_section_diff,
     build_section_repack_plan,
 )
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_MAGIC,
+    PR106SidecarPacket,
+    StoredZipMember,
+    emit_pr106_sidecar_packet,
+    emit_single_stored_member_archive,
+    parse_pr106_sidecar_packet,
+    pr106_sidecar_consumed_byte_proof,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (
+    read_single_stored_member_archive as read_packet_single_stored_member_archive,
+)
 from tac.repo_io import sha256_file
 
 FIXED_DATE_TIME = (1980, 1, 1, 0, 0, 0)
@@ -84,6 +96,39 @@ class PackedHnervPayload:
             raise HnervLowlevelPackError(f"decoder section too large for len24: {decoder_len}")
         header = bytes([0xFF]) + decoder_len.to_bytes(3, "little")
         return header + self.decoder_packed_brotli + self.latents_and_sidecar_brotli
+
+
+@dataclasses.dataclass(frozen=True)
+class PackedArchiveView:
+    """Archive view whose repack target is an inner ``0xff`` HNeRV payload."""
+
+    archive: SingleMemberArchive
+    packed: PackedHnervPayload
+    payload_kind: str
+    hnerv_payload: bytes
+    sidecar_packet: PR106SidecarPacket | None = None
+    stored_member: StoredZipMember | None = None
+
+    def emit_payload(self, packed: PackedHnervPayload) -> bytes:
+        inner = packed.to_bytes()
+        if self.sidecar_packet is None:
+            return inner
+        return emit_pr106_sidecar_packet(
+            dataclasses.replace(self.sidecar_packet, pr106_bytes=inner)
+        )
+
+    def write_archive(self, path: str | Path, payload: bytes) -> None:
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if self.stored_member is None:
+            write_stored_single_member_zip(
+                target,
+                member_name=self.archive.member_name,
+                payload=payload,
+            )
+            return
+        candidate_member = dataclasses.replace(self.stored_member, payload=payload)
+        target.write_bytes(emit_single_stored_member_archive(candidate_member))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -167,6 +212,37 @@ def parse_ff_packed_brotli_hnerv(payload: bytes) -> PackedHnervPayload:
         header=payload[:4],
         decoder_packed_brotli=payload[decoder_start:decoder_end],
         latents_and_sidecar_brotli=payload[decoder_end:],
+    )
+
+
+def read_packed_archive_view(path: str | Path) -> PackedArchiveView:
+    """Read a raw HNeRV archive or PR106 sidecar wrapper as a repackable view."""
+
+    archive = read_strict_single_member_zip(path)
+    if archive.payload and archive.payload[0] == PR106_SIDECAR_MAGIC:
+        try:
+            packet = parse_pr106_sidecar_packet(archive.payload)
+            packed = parse_ff_packed_brotli_hnerv(packet.pr106_bytes)
+            stored_member = read_packet_single_stored_member_archive(
+                Path(path).read_bytes(),
+                expected_member_name=archive.member_name,
+            )
+        except ValueError as exc:
+            raise HnervLowlevelPackError(f"invalid PR106 sidecar packet: {exc}") from exc
+        return PackedArchiveView(
+            archive=archive,
+            packed=packed,
+            payload_kind="pr106_sidecar_wrapper",
+            hnerv_payload=packet.pr106_bytes,
+            sidecar_packet=packet,
+            stored_member=stored_member,
+        )
+    packed = parse_ff_packed_brotli_hnerv(archive.payload)
+    return PackedArchiveView(
+        archive=archive,
+        packed=packed,
+        payload_kind="raw_ff_hnerv",
+        hnerv_payload=archive.payload,
     )
 
 
@@ -261,11 +337,21 @@ def build_lowlevel_brotli_repack_candidate(
     eval are run on those bytes.
     """
 
-    archive = read_strict_single_member_zip(source_archive)
-    packed = parse_ff_packed_brotli_hnerv(archive.payload)
-    manifest = _manifest_for_label(scorecard, source_label)
-    plan = build_section_repack_plan(scorecard, labels=[source_label])
-    blockers = _audit_source_against_manifest(archive, packed, manifest)
+    view = read_packed_archive_view(source_archive)
+    archive = view.archive
+    packed = view.packed
+    effective_scorecard, manifest, scorecard_anchor = _scorecard_for_source(
+        scorecard,
+        source_label=source_label,
+        view=view,
+    )
+    plan = build_section_repack_plan(effective_scorecard, labels=[source_label])
+    blockers = _audit_source_against_manifest(
+        archive,
+        packed,
+        manifest,
+        section_payload_bytes=len(view.hnerv_payload),
+    )
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
 
@@ -317,6 +403,9 @@ def build_lowlevel_brotli_repack_candidate(
             source_label=source_label,
             source_archive=archive,
             packed=packed,
+            source_payload_kind=view.payload_kind,
+            source_payload_sha256=sha256_bytes(archive.payload),
+            source_inner_hnerv_payload_sha256=sha256_bytes(view.hnerv_payload),
             blockers=blockers,
             attempts=attempts,
         )
@@ -330,22 +419,22 @@ def build_lowlevel_brotli_repack_candidate(
             "latents_and_sidecar_brotli", packed.latents_and_sidecar_brotli
         ),
     )
-    candidate_payload = candidate_packed.to_bytes()
+    candidate_inner_payload = candidate_packed.to_bytes()
+    candidate_payload = view.emit_payload(candidate_packed)
     candidate_archive_path = output_root / f"{_slug(source_label)}_hnerv_brotli_repack_candidate.zip"
-    write_stored_single_member_zip(
-        candidate_archive_path,
-        member_name=archive.member_name,
-        payload=candidate_payload,
-    )
+    view.write_archive(candidate_archive_path, candidate_payload)
     candidate_archive_sha = sha256_file(candidate_archive_path)
     candidate_archive_bytes = candidate_archive_path.stat().st_size
-    candidate_packed_checked = parse_ff_packed_brotli_hnerv(candidate_payload)
+    candidate_packed_checked = _parse_candidate_inner_payload(view, candidate_payload)
     raw_equivalence = _brotli_raw_equivalence(packed, candidate_packed_checked)
     candidate_diff = _candidate_diff(
         source_label=source_label,
         source_archive=archive,
         candidate_archive_sha256=candidate_archive_sha,
         candidate_archive_bytes=candidate_archive_bytes,
+        source_payload_kind=view.payload_kind,
+        source_payload_sha256=sha256_bytes(archive.payload),
+        candidate_payload_sha256=sha256_bytes(candidate_payload),
         packed=packed,
         candidate_packed=candidate_packed_checked,
         brotli_raw_equivalence=raw_equivalence,
@@ -371,14 +460,22 @@ def build_lowlevel_brotli_repack_candidate(
         "source_archive_sha256": archive.archive_sha256,
         "source_archive_bytes": archive.archive_bytes,
         "source_member_name": archive.member_name,
+        "source_payload_kind": view.payload_kind,
         "source_payload_sha256": sha256_bytes(archive.payload),
         "source_payload_bytes": len(archive.payload),
+        "source_inner_hnerv_payload_sha256": sha256_bytes(view.hnerv_payload),
+        "source_inner_hnerv_payload_bytes": len(view.hnerv_payload),
         "candidate_archive_path": str(candidate_archive_path),
         "candidate_archive_sha256": candidate_archive_sha,
         "candidate_archive_bytes": candidate_archive_bytes,
         "candidate_member_name": archive.member_name,
         "candidate_payload_sha256": sha256_bytes(candidate_payload),
         "candidate_payload_bytes": len(candidate_payload),
+        "candidate_inner_hnerv_payload_sha256": sha256_bytes(candidate_inner_payload),
+        "candidate_inner_hnerv_payload_bytes": len(candidate_inner_payload),
+        "scorecard_anchor": scorecard_anchor,
+        "packet_ir_consumed_byte_proof": _packet_ir_consumed_byte_proof(view, candidate_payload),
+        "sidecar_packet": _sidecar_packet_summary(view, candidate_payload),
         "brotli_raw_equivalence": raw_equivalence,
         "attempts": attempts,
         "candidate_diff": candidate_diff,
@@ -443,6 +540,35 @@ def _brotli_recode_attempt(
     )
 
 
+def _scorecard_for_source(
+    scorecard: Mapping[str, Any],
+    *,
+    source_label: str,
+    view: PackedArchiveView,
+) -> tuple[Mapping[str, Any], Mapping[str, Any], dict[str, Any]]:
+    try:
+        manifest = _manifest_for_label(scorecard, source_label)
+        return scorecard, manifest, {
+            "matched_scorecard_label": True,
+            "derived_from_source_archive": False,
+            "source_label": source_label,
+        }
+    except HnervSectionPlanError as exc:
+        if "missing payload section manifest label" not in str(exc):
+            raise
+        manifest = _derive_payload_section_manifest(view, source_label)
+        base = dict(scorecard)
+        manifests = list(scorecard.get("payload_section_manifests") or [])
+        manifests.append(manifest)
+        base["payload_section_manifests"] = manifests
+        return base, manifest, {
+            "matched_scorecard_label": False,
+            "derived_from_source_archive": True,
+            "source_label": source_label,
+            "source_scorecard_error": str(exc),
+        }
+
+
 def _manifest_for_label(scorecard: Mapping[str, Any], label: str) -> Mapping[str, Any]:
     manifests = scorecard.get("payload_section_manifests")
     if not isinstance(manifests, list):
@@ -457,6 +583,8 @@ def _audit_source_against_manifest(
     archive: SingleMemberArchive,
     packed: PackedHnervPayload,
     manifest: Mapping[str, Any],
+    *,
+    section_payload_bytes: int,
 ) -> list[str]:
     blockers: list[str] = []
     expected_archive_sha = manifest.get("archive_sha256")
@@ -491,7 +619,7 @@ def _audit_source_against_manifest(
             "latents_and_sidecar_brotli",
             2,
             4 + len(packed.decoder_packed_brotli),
-            len(archive.payload),
+            section_payload_bytes,
         ),
     ]
     if len(sections) != len(expected_sections):
@@ -528,6 +656,9 @@ def _candidate_diff(
     source_archive: SingleMemberArchive,
     candidate_archive_sha256: str,
     candidate_archive_bytes: int,
+    source_payload_kind: str,
+    source_payload_sha256: str,
+    candidate_payload_sha256: str,
     packed: PackedHnervPayload,
     candidate_packed: PackedHnervPayload,
     brotli_raw_equivalence: Sequence[Mapping[str, Any]],
@@ -562,8 +693,11 @@ def _candidate_diff(
         "candidate_archive_sha256": candidate_archive_sha256,
         "source_archive_bytes": source_archive.archive_bytes,
         "candidate_archive_bytes": candidate_archive_bytes,
-        "source_payload_sha256": sha256_bytes(packed.to_bytes()),
-        "candidate_payload_sha256": sha256_bytes(candidate_packed.to_bytes()),
+        "source_payload_kind": source_payload_kind,
+        "source_payload_sha256": source_payload_sha256,
+        "candidate_payload_sha256": candidate_payload_sha256,
+        "source_inner_hnerv_payload_sha256": sha256_bytes(packed.to_bytes()),
+        "candidate_inner_hnerv_payload_sha256": sha256_bytes(candidate_packed.to_bytes()),
         "brotli_raw_equivalence": list(brotli_raw_equivalence),
         "sections": rows,
     }
@@ -606,6 +740,9 @@ def _blocked_result(
     source_label: str,
     source_archive: SingleMemberArchive,
     packed: PackedHnervPayload,
+    source_payload_kind: str,
+    source_payload_sha256: str,
+    source_inner_hnerv_payload_sha256: str,
     blockers: Sequence[str],
     attempts: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
@@ -620,7 +757,9 @@ def _blocked_result(
         "source_archive_sha256": source_archive.archive_sha256,
         "source_archive_bytes": source_archive.archive_bytes,
         "source_member_name": source_archive.member_name,
-        "source_payload_sha256": sha256_bytes(packed.to_bytes()),
+        "source_payload_kind": source_payload_kind,
+        "source_payload_sha256": source_payload_sha256,
+        "source_inner_hnerv_payload_sha256": source_inner_hnerv_payload_sha256,
         "attempts": list(attempts),
         "blockers": list(blockers),
         "dispatch_blockers": [
@@ -629,6 +768,108 @@ def _blocked_result(
             "requires_lane_dispatch_claim",
             "requires_exact_cuda_auth_eval",
         ],
+    }
+
+
+def _derive_payload_section_manifest(
+    view: PackedArchiveView,
+    label: str,
+) -> dict[str, Any]:
+    sections: list[dict[str, Any]] = []
+    start = 0
+    for index, (name, data, role) in enumerate(
+        [
+            ("packed_header_ff_len24", view.packed.header, "control_or_metadata"),
+            (
+                "decoder_packed_brotli",
+                view.packed.decoder_packed_brotli,
+                "decoder_weight_stream",
+            ),
+            (
+                "latents_and_sidecar_brotli",
+                view.packed.latents_and_sidecar_brotli,
+                "latent_stream",
+            ),
+        ]
+    ):
+        end = start + len(data)
+        sections.append(
+            {
+                "index": index,
+                "name": name,
+                "start": start,
+                "end": end,
+                "bytes": len(data),
+                "sha256": sha256_bytes(data),
+                "optimization_role": role,
+                "entropy_bits_per_byte": None,
+            }
+        )
+        start = end
+    return {
+        "label": label,
+        "archive_sha256": view.archive.archive_sha256,
+        "archive_bytes": view.archive.archive_bytes,
+        "zip_member": view.archive.member_name,
+        "payload_sha256": sha256_bytes(view.archive.payload),
+        "member_bytes": view.archive.member_bytes,
+        "payload_kind": view.payload_kind,
+        "section_payload_kind": "inner_hnerv_ff_payload",
+        "section_payload_sha256": sha256_bytes(view.hnerv_payload),
+        "section_payload_bytes": len(view.hnerv_payload),
+        "profile_match_key": "member_sha256",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "sections": sections,
+    }
+
+
+def _parse_candidate_inner_payload(
+    view: PackedArchiveView,
+    candidate_payload: bytes,
+) -> PackedHnervPayload:
+    if view.sidecar_packet is None:
+        return parse_ff_packed_brotli_hnerv(candidate_payload)
+    try:
+        packet = parse_pr106_sidecar_packet(candidate_payload)
+    except ValueError as exc:
+        raise HnervLowlevelPackError(f"candidate PR106 sidecar packet invalid: {exc}") from exc
+    return parse_ff_packed_brotli_hnerv(packet.pr106_bytes)
+
+
+def _packet_ir_consumed_byte_proof(
+    view: PackedArchiveView,
+    candidate_payload: bytes,
+) -> dict[str, Any] | None:
+    if view.sidecar_packet is None:
+        return None
+    packet = parse_pr106_sidecar_packet(candidate_payload)
+    return pr106_sidecar_consumed_byte_proof(packet)
+
+
+def _sidecar_packet_summary(
+    view: PackedArchiveView,
+    candidate_payload: bytes,
+) -> dict[str, Any] | None:
+    if view.sidecar_packet is None:
+        return None
+    candidate_packet = parse_pr106_sidecar_packet(candidate_payload)
+    source_packet = view.sidecar_packet
+    return {
+        "format_id": f"0x{source_packet.format_id:02X}",
+        "sidecar_kind": source_packet.sidecar_kind,
+        "source_pr106_payload_sha256": sha256_bytes(source_packet.pr106_bytes),
+        "candidate_pr106_payload_sha256": sha256_bytes(candidate_packet.pr106_bytes),
+        "source_sidecar_payload_sha256": sha256_bytes(source_packet.sidecar_payload),
+        "candidate_sidecar_payload_sha256": sha256_bytes(candidate_packet.sidecar_payload),
+        "sidecar_payload_preserved": candidate_packet.sidecar_payload == source_packet.sidecar_payload,
+        "source_framing_meta_sha256": None
+        if source_packet.framing_meta is None
+        else sha256_bytes(source_packet.framing_meta),
+        "candidate_framing_meta_sha256": None
+        if candidate_packet.framing_meta is None
+        else sha256_bytes(candidate_packet.framing_meta),
+        "framing_meta_preserved": candidate_packet.framing_meta == source_packet.framing_meta,
     }
 
 
@@ -666,11 +907,13 @@ __all__ = [
     "SCHEMA_VERSION",
     "BrotliRecodeChoice",
     "HnervLowlevelPackError",
+    "PackedArchiveView",
     "PackedHnervPayload",
     "SingleMemberArchive",
     "brotli_recode_search",
     "build_lowlevel_brotli_repack_candidate",
     "parse_ff_packed_brotli_hnerv",
+    "read_packed_archive_view",
     "read_strict_single_member_zip",
     "sha256_bytes",
     "write_stored_single_member_zip",
