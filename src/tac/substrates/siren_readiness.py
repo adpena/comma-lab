@@ -138,6 +138,13 @@ def _audit_trainer(text: str, blockers: list[str], evidence: dict[str, Any]) -> 
         "fails_closed_for_promotion": '"promotion_eligible": False' in text,
         "fails_closed_for_exact_eval_dispatch": '"ready_for_exact_eval_dispatch": False'
         in text,
+        "proxy_lagrangian_marked_non_authoritative": "training_proxy_non_authoritative"
+        in text
+        and '"best_val_lagrangian_score_claim": False' in text
+        and '"best_val_lagrangian_promotion_eligible": False' in text,
+        "proxy_score_authority_false": '"proxy_score_authority": False' in text,
+        "score_claim_requires_exact_auth_eval_score": '"score_claim": contest_cuda_score is not None'
+        in text,
     }
     evidence.update(checks)
     for name, passed in checks.items():
@@ -212,6 +219,9 @@ def _audit_score_aware_loss(
 ) -> None:
     checks = {
         "uses_canonical_score_pair_components": "score_pair_components" in text,
+        "uses_shared_contest_constants": "CONTEST_RATE_WEIGHT" in text
+        and "CONTEST_SEG_WEIGHT" in text
+        and "CONTEST_POSE_SQRT_WEIGHT" in text,
         "forbids_eval_roundtrip_false": "apply_eval_roundtrip=False is forbidden" in text,
         "has_contest_lagrangian_terms": "alpha_rate" in text
         and "beta_seg" in text

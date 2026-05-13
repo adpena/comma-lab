@@ -31,9 +31,15 @@ SMOKE_FLAG = "--smoke"
 def _full_main(args):
     from tac.substrates.siren.archive import pack_archive
     pack_archive()
+    contest_cuda_score = None
     return {
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "best_val_lagrangian_evidence_grade": "training_proxy_non_authoritative",
+        "best_val_lagrangian_score_claim": False,
+        "best_val_lagrangian_promotion_eligible": False,
+        "proxy_score_authority": False,
+        "score_claim": contest_cuda_score is not None,
         "auth": "contest_auth_eval_cuda.json",
     }
 def _write_runtime(path): print("inflate.sh")
@@ -83,6 +89,7 @@ SirenSubstrate = object
     _write(
         repo / "src/tac/substrates/siren/score_aware_loss.py",
         """
+CONTEST_RATE_WEIGHT = CONTEST_SEG_WEIGHT = CONTEST_POSE_SQRT_WEIGHT = 1
 def score_pair_components(): pass
 def loss(apply_eval_roundtrip=True):
     if not apply_eval_roundtrip:

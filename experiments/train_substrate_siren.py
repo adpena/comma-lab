@@ -2,12 +2,14 @@
 
 Operator-callable training script per the Fields-medal grand council substrate
 design wave (2026-05-12). PHASE-B2-BUILD wires ``_full_main`` so the trainer
-is dispatch-ready as a HIGH-target attack on beating PR101's 0.193 [contest-CUDA].
+can produce a first-anchor packet after operator authorization; local training
+losses remain proxy signals until archive auth eval lands.
 
 Council prediction (Sitzmann et al., NeurIPS 2020 + grand council Phase 5):
-target ~0.145 [contest-CUDA]. SIREN is the purely-coordinate-based counterpart
-to NeRV/HNeRV: ZERO bytes go to latents — all variation across frames is
-encoded in the MLP weights themselves via the sinusoidal activations.
+target ~0.145 [predicted; not score evidence]. SIREN is the
+purely-coordinate-based counterpart to NeRV/HNeRV: ZERO bytes go to latents —
+all variation across frames is encoded in the MLP weights themselves via the
+sinusoidal activations.
 
 Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 
@@ -85,11 +87,23 @@ from typing import Any
 # 2026-05-13 substrate-trainer dedup migration wave.
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
+)
+from tac.substrates._shared.trainer_skeleton import (
     device_or_die as _canon_device_or_die,
+)
+from tac.substrates._shared.trainer_skeleton import (
     git_head_sha as _canon_git_head_sha,
+)
+from tac.substrates._shared.trainer_skeleton import (
     pin_seeds as _canon_pin_seeds,
+)
+from tac.substrates._shared.trainer_skeleton import (
     sha256_bytes as _canon_sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
     torch_version_string as _canon_torch_version_string,
+)
+from tac.substrates._shared.trainer_skeleton import (
     utc_now_iso as _canon_utc_now_iso,
 )
 
@@ -834,9 +848,18 @@ def _full_main(args: argparse.Namespace) -> int:
                             "config": asdict(cfg),
                             "ema_decay": args.ema_decay,
                             "best_val_lagrangian": val_lag,
+                            "best_val_lagrangian_evidence_grade": "training_proxy_non_authoritative",
+                            "best_val_lagrangian_score_claim": False,
+                            "best_val_lagrangian_promotion_eligible": False,
                             "best_epoch": int(epoch),
                             "saved_at_utc": _utc_now_iso(),
-                            "training_axis_note": "[contest-CUDA] for promotion; auth eval still required",
+                            "training_axis_note": (
+                                "[training-proxy] score-aware Lagrangian only; "
+                                "not [contest-CUDA]; archive auth eval still required"
+                            ),
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
                         },
                         ckpt_best_path,
                     )
@@ -865,9 +888,15 @@ def _full_main(args: argparse.Namespace) -> int:
                     "config": asdict(cfg),
                     "ema_decay": args.ema_decay,
                     "best_val_lagrangian": best_val_lag,
+                    "best_val_lagrangian_evidence_grade": "training_proxy_non_authoritative",
+                    "best_val_lagrangian_score_claim": False,
+                    "best_val_lagrangian_promotion_eligible": False,
                     "best_epoch": int(args.epochs - 1),
                     "saved_at_utc": _utc_now_iso(),
                     "fallback_end_of_training_save": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
                 },
                 ckpt_best_path,
             )
@@ -1060,6 +1089,15 @@ def _full_main(args: argparse.Namespace) -> int:
             "best_val_lagrangian": (
                 best_val_lag if math.isfinite(best_val_lag) else None
             ),
+            "best_val_lagrangian_evidence_grade": "training_proxy_non_authoritative",
+            "best_val_lagrangian_score_claim": False,
+            "best_val_lagrangian_promotion_eligible": False,
+            "proxy_score_authority": False,
+            "proxy_authority_blockers": [
+                "training_lagrangian_is_not_archive_auth_eval",
+                "archive_bytes_proxy_is_not_measured_archive_size",
+                "exact_cuda_auth_eval_required_before_score_claim",
+            ],
             "best_epoch": int(best_epoch),
             "train_elapsed_sec": float(train_elapsed_sec),
             "archive_sha256": archive_sha,

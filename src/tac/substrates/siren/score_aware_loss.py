@@ -23,6 +23,8 @@ import torch
 
 from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
+    CONTEST_RATE_WEIGHT,
+    CONTEST_SEG_WEIGHT,
     score_pair_components,
 )
 
@@ -31,10 +33,10 @@ from tac.substrates.score_aware_common import (
 class ScoreAwareLossWeights:
     """The (alpha, beta, gamma) of the score-domain Lagrangian."""
 
-    alpha_rate: float = 25.0
+    alpha_rate: float = CONTEST_RATE_WEIGHT
     """Rate term weight. Contest score = (alpha_rate * archive_bytes) / N."""
 
-    beta_seg: float = 100.0
+    beta_seg: float = CONTEST_SEG_WEIGHT
     """SegNet term weight."""
 
     gamma_pose: float = CONTEST_POSE_SQRT_WEIGHT
