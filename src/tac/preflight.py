@@ -33395,6 +33395,8 @@ def _lane_is_representation_lane(lane: dict) -> bool:
         return False
     if lane_class in _NON_REPRESENTATION_LANE_CLASSES:
         return False
+    if lid.startswith("lane_fix_wave_") or name.startswith("fix-wave"):
+        return False
 
     haystack_for_name_tokens = lid + " " + name
     # Long tokens - cheap substring

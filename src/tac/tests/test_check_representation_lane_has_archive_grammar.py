@@ -39,11 +39,11 @@ from pathlib import Path
 import pytest
 
 from tac.preflight import (
-    PreflightError,
-    check_representation_lane_has_archive_grammar_at_design_time,
     _REPRESENTATION_LANE_REQUIRED_FIELDS,
-    _lane_is_representation_lane,
+    PreflightError,
     _lane_has_field,
+    _lane_is_representation_lane,
+    check_representation_lane_has_archive_grammar_at_design_time,
 )
 
 # Lane registry path (constant from tools/lane_maturity.py)
@@ -442,6 +442,15 @@ def test_explicit_calibration_lane_class_overrides_hnerv_token() -> None:
         "name": "Non-HNeRV cluster drift calibrations",
         "lane_class": "calibration_diagnostic",
         "notes": "Learns CPU/CUDA drift profiles; emits no representation packet.",
+    }
+    assert not _lane_is_representation_lane(lane)
+
+
+def test_fix_wave_guard_lane_not_classified_by_representation_token() -> None:
+    lane = {
+        "id": "lane_fix_wave_12c_surgical_20260513",
+        "name": "FIX-WAVE-12C-SURGICAL: siren_readiness blocklist",
+        "notes": "",
     }
     assert not _lane_is_representation_lane(lane)
 

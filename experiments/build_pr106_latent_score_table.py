@@ -50,18 +50,22 @@ prepend_paths(
     REPO_ROOT / "experiments",
 )
 
-from build_pr106_latent_sidecar import (  # type: ignore[import-not-found]
-    DELTA_SCALE,
-    NO_OP_DIM,
+from build_pr106_latent_sidecar import DELTA_SCALE, NO_OP_DIM  # type: ignore[import-not-found]
+from codec import parse_packed_archive  # type: ignore[import-not-found]
+from model import HNeRVDecoder  # type: ignore[import-not-found]
+
+from tac.packet_compiler.pr106_latent_sidecar_selection import (
     build_latent_candidate_grid,
     latent_candidate_grid_npy_sha256,
 )
-from codec import parse_packed_archive  # type: ignore[import-not-found]
-from model import HNeRVDecoder  # type: ignore[import-not-found]
 from tac.repo_io import json_text, sha256_bytes, sha256_file
 from tac.sidechannel_score_table import (
     atomic_save_npy as _atomic_save_npy,
+)
+from tac.sidechannel_score_table import (
     atomic_write_text as _atomic_write_text,
+)
+from tac.sidechannel_score_table import (
     clear_cuda_retry_state,
     completed_prefix_rows,
     is_cuda_oom,

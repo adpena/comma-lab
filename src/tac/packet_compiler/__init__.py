@@ -111,6 +111,14 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     pr106_sidecar_mutation_manifest,
     read_single_stored_member_archive,
 )
+from tac.packet_compiler.pr106_latent_sidecar_selection import (
+    build_latent_candidate_grid as build_pr106_latent_candidate_grid,
+    choose_latent_corrections_from_score_table_file,
+    choose_latent_corrections_from_scores,
+    latent_candidate_grid_npy_sha256 as pr106_latent_candidate_grid_npy_sha256,
+    profile_latent_sidecar_topk_pareto,
+    validate_score_table_manifest as validate_pr106_latent_score_table_manifest,
+)
 from tac.packet_compiler.pr106_runtime_consumption import (
     dumps_runtime_consumption_manifest,
     load_pr106_sidecar_runtime,
@@ -424,6 +432,12 @@ __all__ = [
     "pr106_sidecar_consumed_byte_proof",
     "pr106_sidecar_manifest",
     "pr106_sidecar_mutation_manifest",
+    "build_pr106_latent_candidate_grid",
+    "choose_latent_corrections_from_score_table_file",
+    "choose_latent_corrections_from_scores",
+    "pr106_latent_candidate_grid_npy_sha256",
+    "profile_latent_sidecar_topk_pareto",
+    "validate_pr106_latent_score_table_manifest",
     "read_single_stored_member_archive",
     "runtime_full_frame_streaming_digest",
     "runtime_sidecar_correction_digest",
