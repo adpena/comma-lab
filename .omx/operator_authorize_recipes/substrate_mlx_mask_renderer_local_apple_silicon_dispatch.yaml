@@ -1,0 +1,137 @@
+schema_version: 1
+name: substrate_mlx_mask_renderer_local_apple_silicon_dispatch
+lane_id: lane_substrate_mlx_mask_renderer_20260512
+summary: MLX MaskRenderer TRADITION 2 substrate research-only dispatch on local Apple Silicon (PERMANENTLY non-promotable; pre-training only).
+
+dispatch_enabled: false
+research_only: true
+substrate_tradition: TRADITION_2
+defer_reason: |
+  THREE structural blockers:
+
+  (1) src/tac/mlx_renderer.py runs on Apple MLX (Metal). Per CLAUDE.md
+      "MPS auth eval is NOISE — NON-NEGOTIABLE, HIGHEST EMPHASIS":
+      LOCAL MPS/MLX IS NEVER TO BE USED AS SCORE TRUTH OR AS THE AUTHORITY
+      FOR STRATEGY, PLANNING, OR ANALYSIS. Any score from MLX is
+      `[MPS-PROXY]` / `[macOS-CPU advisory only]`, not `[contest-CUDA]` or
+      `[contest-CPU]` (which requires Linux x86_64).
+
+  (2) The module is LIBRARY-ONLY (no argparse, no `if __name__ == "__main__"`).
+      It exposes `MaskRenderer`, `MotionPredictor`, `PairGenerator`, plus
+      `pytorch_to_mlx()` / `mlx_to_pytorch()` weight conversion utilities.
+      The intended use is: train Phase 1 in MLX (4.7x faster than PyTorch
+      MPS for forward+backward on M-series) → convert to PyTorch → continue
+      Phase 2 (scorer fine-tune) on CUDA.
+
+  (3) NO trainer script exists. The MLX-side Phase 1 trainer would need to
+      be authored before any operator_authorize dispatch, and the final
+      [contest-CUDA] anchor MUST come from the PyTorch/CUDA Phase 2, not
+      from MLX.
+
+  Per CLAUDE.md non-negotiable, any "dispatch" of this substrate produces
+  research-signal-only output. Promotion-grade evidence requires the
+  PyTorch/CUDA Phase 2 follow-up on a separate lane.
+
+dispatch_blockers:
+  - mps_mlx_non_promotable_per_claude_md_non_negotiable
+  - canonical_trainer_script_missing
+  - phase_2_cuda_followup_required_for_score_truth
+  - tier_manifest_required_for_catalog_151_compliance
+
+platform: local_apple_silicon
+gpu: "MLX (Apple Metal)"
+
+cost_band:
+  epochs: "Phase 1 only (L1 + edge loss; no scorer)"
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.00  # Local MLX is operator-machine-cost only
+  platform_key: local_apple_silicon
+  gpu_key: MLX
+
+predicted_score_target: "[macOS-MLX advisory only] — NEVER promotable to [contest-CUDA] or [contest-CPU]"
+predicted_delta: "research_only=true; no score claim per MPS-noise non-negotiable"
+literature_anchor: "Apple MLX framework (mlx.core); architecture identical to tac.renderer.MaskRenderer"
+
+risk: |
+  PERMANENTLY non-promotable per CLAUDE.md MPS-noise non-negotiable. MLX
+  PoseNet drift ~23x; SegNet ~2x; final score ~2.5x worse on MPS vs CUDA
+  (verified 2026-04-25 side-by-side measurement).
+
+  This recipe exists for: (a) Phase 1 pre-training acceleration (4.7x
+  faster than PyTorch MPS), (b) architecture validation, (c) free parallel
+  research-signal sweeps that feed `tac.optimization.mps_research_signal`
+  (per CLAUDE.md 2026-05-07 refinement: tag MPS sweeps `MPS-research-signal`
+  with `score_claim=false`, `promotion_eligible=false`).
+
+  TIER manifest gap: as a library, no TIER manifest exists. Architecture
+  decision needed if MLX Phase 1 trainer lands.
+envelope_status: "RESEARCH-ONLY: never promotable; never bills GPU"
+
+remote_driver: "[N/A] local Apple Silicon execution; no remote driver"
+timeout_hours: 8.0  # local research sweep budget
+
+required_input_files:
+  - flag: "[N/A — no canonical trainer]"
+    note: "input contract not yet defined"
+
+argparse_inventory:
+  trainer: "[MISSING] no canonical MLX trainer; library-only"
+  library_module: src/tac/mlx_renderer.py
+  library_exports:
+    - haar_dwt2d / haar_idwt2d
+    - CLADENorm
+    - ResBlock
+    - MaskRenderer
+    - MotionPredictor
+    - PairGenerator
+    - build_mlx_renderer
+    - pytorch_to_mlx (PyTorch state_dict → MLX params)
+    - mlx_to_pytorch (MLX params → PyTorch state_dict)
+
+env_overrides:
+  MLX_DISPATCH_LANE: lane_substrate_mlx_mask_renderer_20260512
+  MLX_RESEARCH_ONLY: "1"
+  MLX_PROMOTION_REFUSED_PER_CLAUDE_MD_NON_NEGOTIABLE: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py (still required for cross-agent coordination)
+  - src/tac/mlx_renderer.py (library)
+  - src/tac/optimization/mps_research_signal.py (MPS-research-signal serializer)
+  - tools/build_mps_research_signal_manifest.py (per CLAUDE.md 2026-05-07)
+  - "[MISSING] experiments/train_mlx_mask_renderer.py (Phase 1 trainer; if added)"
+
+reactivation_criteria: |
+  This recipe will NEVER reactivate to a `[contest-CUDA]`-eligible state by
+  construction (per CLAUDE.md MPS-noise non-negotiable). The recipe stays
+  `dispatch_enabled: false research_only: true` permanently.
+
+  Future Phase 1 MLX trainer work would land a sister recipe limited to
+  `evidence_grade=MPS-research-signal` outputs that feed the meta-Lagrangian
+  / Pareto solver as priors only, never as score truth.
+
+notes: |
+  TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
+  Architecture identical to tac.renderer.MaskRenderer (CLADE U-Net) but in
+  MLX/Metal for Apple Silicon dev acceleration.
+
+  Per CLAUDE.md "MPS auth eval is NOISE": MLX is for development /
+  architecture validation / research-signal sweeps ONLY. Any score
+  produced is `[MPS-PROXY]` / `[macOS-MLX advisory]`, never `[contest-*]`.
+
+  Per CLAUDE.md 2026-05-07 refinement: long MLX sweeps that feed autopilot,
+  meta-Lagrangian, Pareto, or bilevel planning MUST be serialized through
+  tools/build_mps_research_signal_manifest.py with stamps:
+    evidence_grade="MPS-research-signal"
+    score_claim=false
+    promotion_eligible=false
+    ready_for_exact_eval_dispatch=false
+
+  Phase 2 follow-up on CUDA (using pytorch_to_mlx weight conversion) is the
+  only path to `[contest-CUDA]` evidence — that lives on a separate lane,
+  not this one.
+
+  Cross-ref:
+    .omx/research/substrate_tradition_taxonomy_20260512.md
+    CLAUDE.md "MPS auth eval is NOISE — NON-NEGOTIABLE, HIGHEST EMPHASIS"
+    src/tac/optimization/mps_research_signal.py
+    tools/build_mps_research_signal_manifest.py
