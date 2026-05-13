@@ -4,35 +4,67 @@
     "archive_bytes": 186629,
     "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
     "evidence_grade": "forensic_byte_profile",
-    "kind": "pr101_microcodec",
+    "kind": "pr106_sidecar_wrapper",
     "member_bytes": 186521,
     "member_name": "0.bin",
     "member_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
     "score_claim": false,
     "sections": [
       {
-        "bytes": 162164,
-        "end": 162164,
-        "entropy_bits_per_byte": 7.998197,
-        "name": "decoder_compact_brotli_streams",
-        "sha256": "b91cdfb888580defa90aa1d69f81e4b7af2527b32d1de61649c7168cdd5f25e7",
+        "bytes": 6,
+        "end": 6,
+        "entropy_bits_per_byte": 2.251629,
+        "name": "pr106_sidecar_header_fe_fmt_len_u32",
+        "sha256": "0dfe359c42f7430dd4ca7e743182a3cddedd56b7c433e51f1ba795a857383f1d",
         "start": 0
       },
       {
-        "bytes": 15387,
-        "end": 177551,
-        "entropy_bits_per_byte": 7.983996,
-        "name": "latents_raw_lzma_delta_u8",
-        "sha256": "76e632e1749f469534275daf8ae695e36dbf1c28df4ef85f8c39d7955c6842ea",
-        "start": 162164
+        "bytes": 4,
+        "end": 10,
+        "entropy_bits_per_byte": 2.0,
+        "name": "inner_packed_header_ff_len24",
+        "sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+        "start": 6
       },
       {
-        "bytes": 8970,
+        "bytes": 170127,
+        "end": 170137,
+        "entropy_bits_per_byte": 7.998224,
+        "name": "inner_decoder_packed_brotli",
+        "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+        "start": 10
+      },
+      {
+        "bytes": 15849,
+        "end": 185986,
+        "entropy_bits_per_byte": 7.985386,
+        "name": "inner_latents_and_sidecar_brotli",
+        "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "start": 170137
+      },
+      {
+        "bytes": 2,
+        "end": 185988,
+        "entropy_bits_per_byte": 1.0,
+        "name": "sidecar_len_u16",
+        "sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41",
+        "start": 185986
+      },
+      {
+        "bytes": 527,
+        "end": 186515,
+        "entropy_bits_per_byte": 7.429261,
+        "name": "sidecar_payload_pr101_ranked_no_op",
+        "sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+        "start": 185988
+      },
+      {
+        "bytes": 6,
         "end": 186521,
-        "entropy_bits_per_byte": 7.975361,
-        "name": "sidecar_dim_delta_huffman_enum",
-        "sha256": "e7ec8a186e284b4f91cfb58a1718841d14d3316a500219467ea8cadcbaee4c0c",
-        "start": 177551
+        "entropy_bits_per_byte": 1.459148,
+        "name": "sidecar_framing_meta_pr101",
+        "sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+        "start": 186515
       }
     ],
     "zip_overhead_bytes": 108

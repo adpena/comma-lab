@@ -41,7 +41,24 @@ Internal exact-CUDA score-lowering frontier:
 - canonicality blockers: `promotion_ineligible`
 - promotion authority: `false`
 - next internal exact-evaluable target:
-  `decoder_compact_brotli_streams` (`162164` bytes)
+  `inner_decoder_packed_brotli` (`170127` bytes)
+
+Parser correction, same day:
+
+- Initial refresh incorrectly let the path substring `pr101` classify the whole
+  `0xfe` PR106 sidecar wrapper as a PR101 fixed-offset payload.
+- Correct parser truth: `pr106_sidecar_wrapper` with inner PR106 `0xff`
+  payload.
+- Correct PR106-R2 internal byte target: `inner_decoder_packed_brotli`, not
+  `decoder_compact_brotli_streams`.
+- Correct sidecar-wrapper sections:
+  `pr106_sidecar_header_fe_fmt_len_u32` (6 bytes),
+  `inner_packed_header_ff_len24` (4 bytes),
+  `inner_decoder_packed_brotli` (170127 bytes),
+  `inner_latents_and_sidecar_brotli` (15849 bytes),
+  `sidecar_len_u16` (2 bytes),
+  `sidecar_payload_pr101_ranked_no_op` (527 bytes),
+  `sidecar_framing_meta_pr101` (6 bytes).
 
 ## Rigor check
 
@@ -63,7 +80,13 @@ score-lowering work from targeting the best exact-CUDA artifact.
 Commands:
 
 ```bash
-PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_build_hnerv_frontier_scorecard.py
+PYTHONPATH=. .venv/bin/pytest \
+  src/tac/tests/test_profile_hnerv_frontier_payloads.py \
+  src/tac/tests/test_hnerv_brotli_saturation.py \
+  src/tac/tests/test_hnerv_lowlevel_packer.py \
+  src/tac/tests/test_hnerv_frontier_entropy_ranking.py \
+  src/tac/tests/test_audit_hnerv_frontier_scorecard.py \
+  src/tac/tests/test_build_hnerv_frontier_scorecard.py
 .venv/bin/python experiments/profile_hnerv_frontier_payloads.py \
   --json-out experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/new_section_profiles.json \
   --md-out experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/new_section_profiles.md \
@@ -88,13 +111,18 @@ PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_build_hnerv_frontier_scorecard.
 
 Results:
 
-- focused scorecard tests: `8 passed`
+- focused parser/scorecard/ranking/saturation tests: `32 passed`
 - all-lanes preflight: `ALL 30 PREFLIGHT CHECKS PASSED`
 
 ## Next routing implication
 
 Canonical/public hidden-gem routing still starts from `PR103-ac-repack`. Internal
 score-lowering routing starts from `PR106-R2-lowlevel` and should prioritize
-byte-different transforms against `decoder_compact_brotli_streams`, with old/new
+byte-different transforms against `inner_decoder_packed_brotli`, with old/new
 section SHA-256, charged-byte proof, lane claim, and exact CUDA eval before any
-score claim.
+score claim. A bounded local Brotli parameter-grid audit over that inner decoder
+section found no rate-positive replacement: best grid bytes `170127`, delta `0`,
+verdict `no_rate_positive_brotli_grid_candidate_same_size_variants_only`. The
+next score-lowering move is therefore not another generic Brotli parameter
+sweep; it is a semantic decoder transform, PR101 split-codec primitive,
+sidecar/latent grammar move, or scorer-aware retraining path.

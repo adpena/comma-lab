@@ -22,8 +22,8 @@ import brotli
 
 from tac.hnerv_lowlevel_packer import (
     HnervLowlevelPackError,
-    parse_ff_packed_brotli_hnerv,
-    read_strict_single_member_zip,
+    _split_brotli_streams,
+    read_packed_archive_view,
     sha256_bytes,
 )
 
@@ -32,6 +32,7 @@ TOOL_NAME = "tac.hnerv_brotli_saturation.build_hnerv_decoder_brotli_saturation_a
 CONTEST_ORIGINAL_BYTES = 37_545_489
 RATE_SCORE_PER_BYTE = 25.0 / CONTEST_ORIGINAL_BYTES
 SECTION_NAME = "decoder_packed_brotli"
+SPLIT_SECTION_NAME = "decoder_compact_brotli_streams"
 
 DEFAULT_QUALITIES = tuple(range(12))
 DEFAULT_LGWINS: tuple[int | None, ...] = (None, *range(10, 25))
@@ -82,13 +83,18 @@ def build_hnerv_decoder_brotli_saturation_audit(
 ) -> dict[str, Any]:
     """Audit whether a deterministic Brotli grid beats the current decoder bytes."""
 
-    archive = read_strict_single_member_zip(source_archive)
-    packed = parse_ff_packed_brotli_hnerv(archive.payload)
+    view = read_packed_archive_view(source_archive)
+    archive = view.archive
+    packed = view.packed
     source_section = packed.decoder_packed_brotli
+    section_name = _scorecard_section_name(view)
     try:
-        raw_decoder = brotli.decompress(source_section)
+        raw_decoder = _decode_source_section(
+            source_section,
+            stream_count=view.decoder_brotli_stream_count,
+        )
     except brotli.error as exc:
-        raise HnervBrotliSaturationError("decoder_packed_brotli is not Brotli-decompressible") from exc
+        raise HnervBrotliSaturationError(f"{section_name} is not Brotli-decompressible") from exc
 
     params = _parameter_grid(
         qualities=qualities,
@@ -104,11 +110,13 @@ def build_hnerv_decoder_brotli_saturation_audit(
         archive=archive,
         payload_sha256=sha256_bytes(archive.payload),
         source_section=source_section,
+        section_name=section_name,
     )
     entropy_anchor = _entropy_ranking_anchor(
         entropy_ranking=entropy_ranking,
         source_label=source_label,
         source_section=source_section,
+        section_name=section_name,
     )
     blockers = [
         *scorecard_anchor.get("blockers", []),
@@ -149,13 +157,13 @@ def build_hnerv_decoder_brotli_saturation_audit(
         "source_member_bytes": archive.member_bytes,
         "source_payload_sha256": sha256_bytes(archive.payload),
         "source_payload_bytes": len(archive.payload),
-        "source_decoder_section_name": SECTION_NAME,
+        "source_decoder_section_name": section_name,
         "source_decoder_section_bytes": len(source_section),
         "source_decoder_section_sha256": sha256_bytes(source_section),
         "source_decoder_section_entropy_bits_per_byte": _byte_entropy(source_section),
-        "source_decoder_raw_bytes": len(raw_decoder),
-        "source_decoder_raw_sha256": sha256_bytes(raw_decoder),
-        "source_decoder_raw_entropy_bits_per_byte": _byte_entropy(raw_decoder),
+        "source_decoder_raw_bytes": _raw_size(raw_decoder),
+        "source_decoder_raw_sha256": sha256_bytes(_raw_joined(raw_decoder)),
+        "source_decoder_raw_entropy_bits_per_byte": _byte_entropy(_raw_joined(raw_decoder)),
         "scorecard_anchor": scorecard_anchor,
         "entropy_ranking_anchor": entropy_anchor,
         "grid": {
@@ -284,7 +292,7 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
 
 def _run_grid(
     source_section: bytes,
-    raw_decoder: bytes,
+    raw_decoder: bytes | tuple[bytes, ...],
     params: Sequence[BrotliGridParams],
     *,
     jobs: int,
@@ -304,7 +312,7 @@ def _run_grid(
 
 def _brotli_attempt(
     source_section: bytes,
-    raw_decoder: bytes,
+    raw_decoder: bytes | tuple[bytes, ...],
     param: BrotliGridParams,
 ) -> dict[str, Any]:
     kwargs: dict[str, int] = {
@@ -315,8 +323,13 @@ def _brotli_attempt(
         kwargs["lgwin"] = param.lgwin
     if param.lgblock is not None:
         kwargs["lgblock"] = param.lgblock
-    candidate = brotli.compress(raw_decoder, **kwargs)
-    raw_equal = brotli.decompress(candidate) == raw_decoder
+    if isinstance(raw_decoder, bytes):
+        candidate = brotli.compress(raw_decoder, **kwargs)
+        raw_equal = brotli.decompress(candidate) == raw_decoder
+    else:
+        candidate = b"".join(brotli.compress(chunk, **kwargs) for chunk in raw_decoder)
+        decoded = tuple(row[1] for row in _split_brotli_streams(candidate, len(raw_decoder)))
+        raw_equal = decoded == raw_decoder
     delta = len(candidate) - len(source_section)
     return {
         "mode": param.mode,
@@ -395,6 +408,7 @@ def _scorecard_anchor(
     archive: Any,
     payload_sha256: str,
     source_section: bytes,
+    section_name: str,
 ) -> dict[str, Any]:
     blockers: list[str] = []
     if scorecard is None:
@@ -402,9 +416,9 @@ def _scorecard_anchor(
     row = _row_by_label(scorecard, source_label)
     if row is None:
         return {"matched": False, "blockers": [f"missing_scorecard_row:{source_label}"]}
-    section = _section_by_name(row, SECTION_NAME)
+    section = _section_by_name_or_sha(row, section_name, sha256_bytes(source_section))
     if section is None:
-        blockers.append(f"missing_scorecard_section:{SECTION_NAME}")
+        blockers.append(f"missing_scorecard_section:{section_name}")
     section_sha = sha256_bytes(source_section)
     section_bytes = len(source_section)
     checks = {
@@ -427,7 +441,7 @@ def _scorecard_anchor(
         "frontier_scope": row.get("frontier_scope"),
         "evidence_grade": row.get("evidence_grade"),
         "canonical_frontier_eligible": row.get("canonical_frontier_eligible"),
-        "section_name": SECTION_NAME,
+        "section_name": section_name,
         "section_bytes": section.get("bytes") if section else None,
         "section_sha256": section.get("sha256") if section else None,
         "section_entropy_bits_per_byte": (
@@ -443,6 +457,7 @@ def _entropy_ranking_anchor(
     entropy_ranking: Mapping[str, Any] | None,
     source_label: str,
     source_section: bytes,
+    section_name: str,
 ) -> dict[str, Any]:
     blockers: list[str] = []
     if entropy_ranking is None:
@@ -456,11 +471,14 @@ def _entropy_ranking_anchor(
     byte_mass = entropy_ranking.get("frontier_byte_mass_ranking")
     if isinstance(byte_mass, Sequence) and not isinstance(byte_mass, (str, bytes, bytearray)):
         for row in byte_mass:
-            if isinstance(row, Mapping) and row.get("section") == SECTION_NAME:
+            if isinstance(row, Mapping) and (
+                row.get("section") == section_name
+                or row.get("section_sha256") == sha256_bytes(source_section)
+            ):
                 top = row
                 break
     if top is None:
-        blockers.append(f"entropy_ranking_missing_byte_mass_section:{SECTION_NAME}")
+        blockers.append(f"entropy_ranking_missing_byte_mass_section:{section_name}")
     section_sha = sha256_bytes(source_section)
     if top is not None and top.get("section_sha256") != section_sha:
         blockers.append("entropy_ranking_decoder_section_sha256_mismatch")
@@ -498,14 +516,44 @@ def _row_by_label(scorecard: Mapping[str, Any], label: str) -> Mapping[str, Any]
     return None
 
 
-def _section_by_name(row: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
+def _section_by_name_or_sha(
+    row: Mapping[str, Any],
+    name: str,
+    section_sha256: str,
+) -> Mapping[str, Any] | None:
     sections = row.get("payload_sections") or row.get("top_payload_sections")
     if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes, bytearray)):
         return None
     for section in sections:
-        if isinstance(section, Mapping) and section.get("name") == name:
+        if not isinstance(section, Mapping):
+            continue
+        if section.get("name") == name or section.get("sha256") == section_sha256:
             return section
     return None
+
+
+def _scorecard_section_name(view: Any) -> str:
+    if getattr(view, "payload_kind", None) == "pr106_sidecar_wrapper":
+        return "inner_decoder_packed_brotli"
+    if getattr(view, "decoder_brotli_stream_count", None):
+        return SPLIT_SECTION_NAME
+    return SECTION_NAME
+
+
+def _decode_source_section(data: bytes, *, stream_count: int | None) -> bytes | tuple[bytes, ...]:
+    if stream_count is None:
+        return brotli.decompress(data)
+    return tuple(raw for _compressed, raw in _split_brotli_streams(data, stream_count))
+
+
+def _raw_joined(raw: bytes | tuple[bytes, ...]) -> bytes:
+    if isinstance(raw, bytes):
+        return raw
+    return b"".join(raw)
+
+
+def _raw_size(raw: bytes | tuple[bytes, ...]) -> int:
+    return len(_raw_joined(raw))
 
 
 def _byte_entropy(data: bytes) -> float:

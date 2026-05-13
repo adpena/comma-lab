@@ -25,7 +25,7 @@ DEFAULT_SCORECARD = (
     REPO_ROOT
     / "experiments"
     / "results"
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
+    / "hnerv_frontier_scorecard_refresh_20260513_codex"
     / "scorecard.json"
 )
 DEFAULT_JOBS = max(1, min(os.cpu_count() or 1, 8))

@@ -13,10 +13,22 @@ import argparse
 import hashlib
 import json
 import math
+import struct
+import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from zipfile import ZipFile
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_SIDECAR_FORMAT_BROTLI,
+    PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_MAGIC,
+)
 
 
 PR101_DECODER_BLOB_LEN = 162_164
@@ -82,6 +94,8 @@ def infer_profile_kind(kind: str, archive: Path, member_name: str, payload: byte
     if kind != "auto":
         return kind
     text = f"{archive} {member_name}".lower()
+    if payload[:1] == bytes([PR106_SIDECAR_MAGIC]):
+        return "pr106_sidecar_wrapper"
     if "pr101" in text or "hnerv_ft_microcodec" in text:
         return "pr101_microcodec"
     if "pr103" in text or "hnerv_lc_ac" in text:
@@ -108,6 +122,8 @@ def infer_profile_kind(kind: str, archive: Path, member_name: str, payload: byte
 
 def profile_payload(kind: str, payload: bytes) -> list[SectionProfile]:
     sections: list[SectionProfile] = []
+    if kind == "pr106_sidecar_wrapper":
+        return profile_pr106_sidecar_wrapper(payload)
     if kind == "pr101_microcodec":
         decoder_end = PR101_DECODER_BLOB_LEN
         latent_end = decoder_end + PR101_LATENT_BLOB_LEN
@@ -139,6 +155,61 @@ def profile_payload(kind: str, payload: bytes) -> list[SectionProfile]:
             section("latents_and_sidecar_brotli", payload, 4 + dec_len, len(payload)),
         ]
     return [section("opaque_single_payload", payload, 0, len(payload))]
+
+
+def profile_pr106_sidecar_wrapper(payload: bytes) -> list[SectionProfile]:
+    if len(payload) < 8:
+        raise ValueError(f"PR106 sidecar wrapper too short: {len(payload)}")
+    if payload[0] != PR106_SIDECAR_MAGIC:
+        raise ValueError(f"PR106 sidecar wrapper magic mismatch: 0x{payload[0]:02x}")
+    format_id = payload[1]
+    pos = 2
+    (inner_len,) = struct.unpack_from("<I", payload, pos)
+    pos += 4
+    inner_start = pos
+    inner_end = inner_start + inner_len
+    if inner_end > len(payload):
+        raise ValueError(f"PR106 sidecar inner payload truncated: {inner_len} > {len(payload)}")
+    inner = payload[inner_start:inner_end]
+    if len(inner) < 4 or inner[0] != 0xFF:
+        raise ValueError("PR106 sidecar inner payload is not ff-packed HNeRV")
+    dec_len = int.from_bytes(inner[1:4], "little")
+    inner_decoder_start = inner_start + 4
+    inner_decoder_end = inner_decoder_start + dec_len
+    if inner_decoder_end > inner_end:
+        raise ValueError("PR106 sidecar inner decoder section exceeds inner payload")
+    pos = inner_end
+    if pos + 2 > len(payload):
+        raise ValueError("PR106 sidecar wrapper missing sidecar length")
+    (sidecar_len,) = struct.unpack_from("<H", payload, pos)
+    sidecar_len_start = pos
+    pos += 2
+    sidecar_start = pos
+    sidecar_end = sidecar_start + sidecar_len
+    if sidecar_end > len(payload):
+        raise ValueError("PR106 sidecar wrapper sidecar payload truncated")
+    pos = sidecar_end
+    rows = [
+        section("pr106_sidecar_header_fe_fmt_len_u32", payload, 0, 6),
+        section("inner_packed_header_ff_len24", payload, inner_start, inner_start + 4),
+        section("inner_decoder_packed_brotli", payload, inner_decoder_start, inner_decoder_end),
+        section("inner_latents_and_sidecar_brotli", payload, inner_decoder_end, inner_end),
+        section("sidecar_len_u16", payload, sidecar_len_start, sidecar_start),
+    ]
+    if format_id == PR106_SIDECAR_FORMAT_BROTLI:
+        if sidecar_end != len(payload):
+            raise ValueError("PR106 brotli sidecar wrapper has trailing bytes")
+        rows.append(section("sidecar_payload_brotli_dim_delta", payload, sidecar_start, sidecar_end))
+        return rows
+    if format_id != PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+        raise ValueError(f"unsupported PR106 sidecar format_id=0x{format_id:02x}")
+    rows.append(section("sidecar_payload_pr101_ranked_no_op", payload, sidecar_start, sidecar_end))
+    framing_start = sidecar_end
+    framing_end = framing_start + 6
+    if framing_end != len(payload):
+        raise ValueError("PR106 PR101-grammar sidecar wrapper framing/trailing mismatch")
+    rows.append(section("sidecar_framing_meta_pr101", payload, framing_start, framing_end))
+    return rows
 
 
 def build_record(archive: Path, kind: str) -> dict[str, object]:

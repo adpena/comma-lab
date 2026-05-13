@@ -46,6 +46,37 @@ def test_brotli_saturation_audit_proves_no_smaller_single_attempt(tmp_path: Path
     assert "HNeRV Decoder Brotli Saturation Audit" in render_markdown(manifest)
 
 
+def test_brotli_saturation_audit_supports_pr101_split_brotli_section(tmp_path: Path) -> None:
+    raw_chunks = tuple((bytes([idx]) + b" split decoder raw ") * 64 for idx in range(7))
+    decoder = b"".join(brotli.compress(chunk, quality=5) for chunk in raw_chunks)
+    archive = _write_split_archive(tmp_path / "split.zip", decoder)
+    scorecard = _scorecard("PR106-R2-lowlevel", archive, decoder, section_name="decoder_compact_brotli_streams")
+    entropy_ranking = _entropy_ranking(
+        "PR106-R2-lowlevel",
+        archive,
+        decoder,
+        section_name="decoder_compact_brotli_streams",
+    )
+
+    manifest = build_hnerv_decoder_brotli_saturation_audit(
+        source_archive=archive,
+        source_label="PR106-R2-lowlevel",
+        scorecard=scorecard,
+        entropy_ranking=entropy_ranking,
+        qualities=[5],
+        lgwins=[None],
+        lgblocks=[None],
+        modes=["generic"],
+        jobs=1,
+    )
+
+    assert manifest["source_decoder_section_name"] == "decoder_compact_brotli_streams"
+    assert manifest["source_decoder_raw_bytes"] == sum(len(chunk) for chunk in raw_chunks)
+    assert manifest["scorecard_anchor"]["matched"] is True
+    assert manifest["entropy_ranking_anchor"]["matched"] is True
+    assert manifest["best_attempt"]["raw_equal"] is True
+
+
 def test_audit_hnerv_brotli_saturation_cli_writes_manifest(tmp_path: Path) -> None:
     raw = bytes(range(64)) * 64
     decoder = brotli.compress(raw, quality=4)
@@ -102,7 +133,20 @@ def _write_archive(path: Path, decoder: bytes) -> Path:
     return path
 
 
-def _scorecard(label: str, archive: Path, decoder: bytes) -> dict:
+def _write_split_archive(path: Path, decoder: bytes) -> Path:
+    section_total = 4 + len(decoder)
+    payload = section_total.to_bytes(4, "little") + decoder + b"latent-sidecar"
+    write_stored_single_member_zip(path, member_name="x", payload=payload)
+    return path
+
+
+def _scorecard(
+    label: str,
+    archive: Path,
+    decoder: bytes,
+    *,
+    section_name: str = "decoder_packed_brotli",
+) -> dict:
     payload = _payload(archive)
     return {
         "schema_version": 1,
@@ -118,7 +162,7 @@ def _scorecard(label: str, archive: Path, decoder: bytes) -> dict:
                 "evidence_grade": "empirical",
                 "payload_sections": [
                     {
-                        "name": "decoder_packed_brotli",
+                        "name": section_name,
                         "bytes": len(decoder),
                         "sha256": sha256_bytes(decoder),
                         "entropy_bits_per_byte": 7.0,
@@ -129,7 +173,13 @@ def _scorecard(label: str, archive: Path, decoder: bytes) -> dict:
     }
 
 
-def _entropy_ranking(label: str, archive: Path, decoder: bytes) -> dict:
+def _entropy_ranking(
+    label: str,
+    archive: Path,
+    decoder: bytes,
+    *,
+    section_name: str = "decoder_packed_brotli",
+) -> dict:
     return {
         "schema_version": 1,
         "current_frontier": {
@@ -138,12 +188,12 @@ def _entropy_ranking(label: str, archive: Path, decoder: bytes) -> dict:
         },
         "next_entropy_research_action": {
             "action_id": "fixture_entropy_action",
-            "target_section": "decoder_packed_brotli",
+            "target_section": section_name,
             "minimum_section_bytes_to_beat": len(decoder) - 1,
         },
         "frontier_byte_mass_ranking": [
             {
-                "section": "decoder_packed_brotli",
+                "section": section_name,
                 "section_bytes": len(decoder),
                 "section_sha256": sha256_bytes(decoder),
                 "entropy_bits_per_byte": 7.0,

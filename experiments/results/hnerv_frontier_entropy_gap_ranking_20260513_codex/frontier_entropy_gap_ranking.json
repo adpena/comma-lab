@@ -1,0 +1,170 @@
+{
+  "combined_entropy_gap_groups": [],
+  "current_frontier": {
+    "archive_bytes": 186629,
+    "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+    "eval_artifact": "experiments/results/modal_auth_eval/pr106_r2_pr101_grammar_lowlevel_repack_cuda_20260513_codex/contest_auth_eval.json",
+    "evidence_grade": "A++",
+    "frontier_scope": "exact_local_cuda_custody",
+    "label": "PR106-R2-lowlevel",
+    "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+    "runtime_tree_sha256": "0ca4ae381ec08247f08d87529d61c4033797dc8ac88a94cea596637b0c9e736a",
+    "score": 0.2065174760196528
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "frontier_entropy_ranking_is_planning_only",
+    "requires_byte_different_candidate_archive_before_new_exact_eval",
+    "requires_runtime_parity_or_lossless_raw_equivalence_proof",
+    "requires_archive_manifest_preflight",
+    "requires_lane_dispatch_claim_before_gpu",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "entropy_gap_ranking": [],
+  "exact_lossless_control_actions": [],
+  "frontier_byte_mass_ranking": [
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 7.998224,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "decoder_weight_stream",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "rate_mass_score_if_removed": 0.113280586118,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "section": "inner_decoder_packed_brotli",
+      "section_bytes": 170127,
+      "section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 7.985386,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "latent_stream",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "rate_mass_score_if_removed": 0.010553198548,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "section": "inner_latents_and_sidecar_brotli",
+      "section_bytes": 15849,
+      "section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 7.429261,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "sidecar_or_correction_stream",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "rate_mass_score_if_removed": 0.000350907668,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "section": "sidecar_payload_pr101_ranked_no_op",
+      "section_bytes": 527,
+      "section_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 1.0,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "sidecar_or_correction_stream",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "rate_mass_score_if_removed": 1.331718e-06,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "section": "sidecar_len_u16",
+      "section_bytes": 2,
+      "section_sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 2.251629,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "control_or_metadata",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "rate_mass_score_if_removed": 3.995154e-06,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "section": "pr106_sidecar_header_fe_fmt_len_u32",
+      "section_bytes": 6,
+      "section_sha256": "0dfe359c42f7430dd4ca7e743182a3cddedd56b7c433e51f1ba795a857383f1d"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 1.459148,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "control_or_metadata",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "rate_mass_score_if_removed": 3.995154e-06,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "section": "sidecar_framing_meta_pr101",
+      "section_bytes": 6,
+      "section_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 2.0,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "control_or_metadata",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "rate_mass_score_if_removed": 2.663436e-06,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "section": "inner_packed_header_ff_len24",
+      "section_bytes": 4,
+      "section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7"
+    }
+  ],
+  "frontier_mode": "score_lowering",
+  "gpu_required": false,
+  "next_entropy_research_action": null,
+  "next_rate_only_action": {
+    "action_id": "build_byte_different_recode_for_largest_current_frontier_section",
+    "dispatch_allowed": false,
+    "dispatch_attempted": false,
+    "rationale": "largest current exact-frontier section is the deterministic rate target",
+    "ready_for_exact_eval_dispatch": false,
+    "required_next_artifact": "old_new_section_sha256_and_charged_byte_diff_manifest",
+    "score_claim": false,
+    "target_label": "PR106-R2-lowlevel",
+    "target_section": "inner_decoder_packed_brotli"
+  },
+  "planning_only": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "tac.hnerv_frontier_entropy_ranking",
+  "tool_run_manifest": {
+    "argv": [
+      "--frontier-mode",
+      "score_lowering",
+      "--scorecard",
+      "experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/scorecard.json",
+      "--json-out",
+      "experiments/results/hnerv_frontier_entropy_gap_ranking_20260513_codex/frontier_entropy_gap_ranking.json",
+      "--md-out",
+      "experiments/results/hnerv_frontier_entropy_gap_ranking_20260513_codex/frontier_entropy_gap_ranking.md"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "473669b817530ab01666b1dc41934540404bba2c697dbb3bd2a220eb81adeb2d",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 160745,
+        "path": "experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/scorecard.json",
+        "sha256": "3c4fdfa503ecc6f01bf354b3529a9af1922b78778e023634b9ea53d5042fe78d"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_frontier_entropy_gap_ranking_20260513_codex/frontier_entropy_gap_ranking.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/rank_hnerv_frontier_entropy_gaps.py"
+  }
+}

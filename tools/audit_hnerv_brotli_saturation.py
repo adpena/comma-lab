@@ -30,12 +30,12 @@ from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 DEFAULT_RESULT_ROOT = REPO_ROOT / "experiments" / "results"
 DEFAULT_SCORECARD = (
     DEFAULT_RESULT_ROOT
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
+    / "hnerv_frontier_scorecard_refresh_20260513_codex"
     / "scorecard.json"
 )
 DEFAULT_ENTROPY_RANKING = (
     DEFAULT_RESULT_ROOT
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
+    / "hnerv_frontier_entropy_gap_ranking_20260513_codex"
     / "frontier_entropy_gap_ranking.json"
 )
 DEFAULT_JOBS = max(1, min(os.cpu_count() or 1, 8))

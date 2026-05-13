@@ -53,6 +53,44 @@ def test_frontier_entropy_ranking_maps_hdc2_to_current_lowlevel_section() -> Non
     assert "Combined Entropy Gap Groups" in render_markdown(manifest)
 
 
+def test_frontier_entropy_ranking_can_target_internal_score_lowering_frontier() -> None:
+    scorecard = _scorecard()
+    internal_row = {
+        "label": "PR106-R2-lowlevel",
+        "canonical_frontier_eligible": False,
+        "canonicality_blockers": ["promotion_ineligible"],
+        "score": 0.19,
+        "archive_bytes": 210,
+        "archive_sha256": "9" * 64,
+        "payload_sha256": "8" * 64,
+        "runtime_tree_sha256": "7" * 64,
+        "evidence_grade": "A++",
+        "frontier_scope": "exact_local_cuda_custody",
+        "eval_artifact": "internal.json",
+        "payload_sections": [
+            _section("decoder_compact_brotli_streams", 162, "6" * 64),
+            _section("sidecar_dim_delta_huffman_enum", 9, "5" * 64),
+        ],
+    }
+    scorecard["rows"].append(internal_row)
+    scorecard["score_lowering_frontier"] = {
+        "label": "PR106-R2-lowlevel",
+        "score": internal_row["score"],
+        "archive_bytes": internal_row["archive_bytes"],
+        "archive_sha256": internal_row["archive_sha256"],
+        "frontier_scope": "internal_exact_cuda_score_lowering",
+        "promotion_authority": False,
+    }
+
+    manifest = build_frontier_entropy_gap_ranking(scorecard, frontier_mode="score_lowering")
+
+    assert manifest["frontier_mode"] == "score_lowering"
+    assert manifest["current_frontier"]["label"] == "PR106-R2-lowlevel"
+    assert manifest["next_rate_only_action"]["target_section"] == "decoder_compact_brotli_streams"
+    assert manifest["next_rate_only_action"]["dispatch_allowed"] is False
+    assert "frontier_mode: `score_lowering`" in render_markdown(manifest)
+
+
 def test_rank_hnerv_frontier_entropy_gaps_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     scorecard = tmp_path / "scorecard.json"
     entropy = tmp_path / "entropy.json"

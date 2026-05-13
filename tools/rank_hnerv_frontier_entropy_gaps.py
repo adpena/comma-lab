@@ -26,7 +26,7 @@ DEFAULT_SCORECARD = (
     REPO_ROOT
     / "experiments"
     / "results"
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
+    / "hnerv_frontier_scorecard_refresh_20260513_codex"
     / "scorecard.json"
 )
 
@@ -34,6 +34,16 @@ DEFAULT_SCORECARD = (
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scorecard", type=Path, default=DEFAULT_SCORECARD)
+    parser.add_argument(
+        "--frontier-mode",
+        choices=("canonical", "score_lowering"),
+        default="canonical",
+        help=(
+            "Which exact-CUDA scorecard frontier to plan against. "
+            "Use score_lowering for internal optimizer routing; canonical remains the "
+            "public/promotion-safe default."
+        ),
+    )
     parser.add_argument(
         "--entropy-audit",
         action="append",
@@ -70,6 +80,7 @@ def main(argv: list[str] | None = None) -> int:
             scorecard,
             entropy_audits=entropy_audits,
             candidate_manifests=candidate_manifests,
+            frontier_mode=args.frontier_mode,
         )
     except (OSError, ValueError) as exc:
         print(f"FATAL: HNeRV frontier entropy ranking input rejected: {exc}", file=sys.stderr)

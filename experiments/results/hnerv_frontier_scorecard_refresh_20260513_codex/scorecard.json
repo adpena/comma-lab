@@ -29,20 +29,20 @@
     },
     {
       "entropy_bits_per_byte": 7.998224,
+      "label": "PR106-R2-lowlevel",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "inner_decoder_packed_brotli",
+      "section_bytes": 170127,
+      "suggested_action": "decoder self-compression or weight-stream recoding fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.998224,
       "label": "PR106x-lowlevel",
       "payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
       "required_next_gate": "build byte-different archive, then exact CUDA replay",
       "section": "decoder_packed_brotli",
       "section_bytes": 170127,
-      "suggested_action": "decoder self-compression or weight-stream recoding fixture"
-    },
-    {
-      "entropy_bits_per_byte": 7.998197,
-      "label": "PR106-R2-lowlevel",
-      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
-      "required_next_gate": "build byte-different archive, then exact CUDA replay",
-      "section": "decoder_compact_brotli_streams",
-      "section_bytes": 162164,
       "suggested_action": "decoder self-compression or weight-stream recoding fixture"
     },
     {
@@ -119,6 +119,15 @@
     },
     {
       "entropy_bits_per_byte": 7.985386,
+      "label": "PR106-R2-lowlevel",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "inner_latents_and_sidecar_brotli",
+      "section_bytes": 15849,
+      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.985386,
       "label": "PR106x",
       "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
       "required_next_gate": "build byte-different archive, then exact CUDA replay",
@@ -163,24 +172,6 @@
       "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
     },
     {
-      "entropy_bits_per_byte": 7.983996,
-      "label": "PR106-R2-lowlevel",
-      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
-      "required_next_gate": "build byte-different archive, then exact CUDA replay",
-      "section": "latents_raw_lzma_delta_u8",
-      "section_bytes": 15387,
-      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
-    },
-    {
-      "entropy_bits_per_byte": 7.975361,
-      "label": "PR106-R2-lowlevel",
-      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
-      "required_next_gate": "build byte-different archive, then exact CUDA replay",
-      "section": "sidecar_dim_delta_huffman_enum",
-      "section_bytes": 8970,
-      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
-    },
-    {
       "entropy_bits_per_byte": 7.973072,
       "label": "PR103-ac-repack",
       "payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
@@ -206,6 +197,15 @@
       "section": "non_ac_weights_brotli",
       "section_bytes": 7097,
       "suggested_action": "decoder self-compression or weight-stream recoding fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.429261,
+      "label": "PR106-R2-lowlevel",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "sidecar_payload_pr101_ranked_no_op",
+      "section_bytes": 527,
+      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
     },
     {
       "entropy_bits_per_byte": 2.0,
@@ -984,7 +984,7 @@
   "next_score_lowering_exact_evaluable_target": {
     "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
     "dispatch_attempted": false,
-    "entropy_bits_per_byte": 7.998197,
+    "entropy_bits_per_byte": 7.998224,
     "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
     "frontier_label": "PR106-R2-lowlevel",
     "frontier_score": 0.2065174760196528,
@@ -992,12 +992,12 @@
     "optimization_role": "decoder_weight_stream",
     "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
     "priority": "internal_score_lowering_frontier_primary",
-    "rate_mass_score_if_removed": 0.1079783512741038,
+    "rate_mass_score_if_removed": 0.11328058611781565,
     "score_claim": false,
     "score_gap_to_score_lowering_frontier": 0.0,
-    "section": "decoder_compact_brotli_streams",
-    "section_bytes": 162164,
-    "section_sha256": "b91cdfb888580defa90aa1d69f81e4b7af2527b32d1de61649c7168cdd5f25e7"
+    "section": "inner_decoder_packed_brotli",
+    "section_bytes": 170127,
+    "section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c"
   },
   "payload_equivalence_groups": [
     {
@@ -1547,37 +1547,81 @@
       "score_claim": false,
       "sections": [
         {
-          "bytes": 162164,
-          "end": 162164,
-          "entropy_bits_per_byte": 7.998197,
+          "bytes": 6,
+          "end": 6,
+          "entropy_bits_per_byte": 2.251629,
           "index": 0,
-          "name": "decoder_compact_brotli_streams",
-          "optimization_role": "decoder_weight_stream",
+          "name": "pr106_sidecar_header_fe_fmt_len_u32",
+          "optimization_role": "control_or_metadata",
           "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
-          "sha256": "b91cdfb888580defa90aa1d69f81e4b7af2527b32d1de61649c7168cdd5f25e7",
+          "sha256": "0dfe359c42f7430dd4ca7e743182a3cddedd56b7c433e51f1ba795a857383f1d",
           "start": 0
         },
         {
-          "bytes": 15387,
-          "end": 177551,
-          "entropy_bits_per_byte": 7.983996,
+          "bytes": 4,
+          "end": 10,
+          "entropy_bits_per_byte": 2.0,
           "index": 1,
-          "name": "latents_raw_lzma_delta_u8",
-          "optimization_role": "latent_stream",
+          "name": "inner_packed_header_ff_len24",
+          "optimization_role": "control_or_metadata",
           "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
-          "sha256": "76e632e1749f469534275daf8ae695e36dbf1c28df4ef85f8c39d7955c6842ea",
-          "start": 162164
+          "sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+          "start": 6
         },
         {
-          "bytes": 8970,
-          "end": 186521,
-          "entropy_bits_per_byte": 7.975361,
+          "bytes": 170127,
+          "end": 170137,
+          "entropy_bits_per_byte": 7.998224,
           "index": 2,
-          "name": "sidecar_dim_delta_huffman_enum",
+          "name": "inner_decoder_packed_brotli",
+          "optimization_role": "decoder_weight_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+          "start": 10
+        },
+        {
+          "bytes": 15849,
+          "end": 185986,
+          "entropy_bits_per_byte": 7.985386,
+          "index": 3,
+          "name": "inner_latents_and_sidecar_brotli",
+          "optimization_role": "latent_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170137
+        },
+        {
+          "bytes": 2,
+          "end": 185988,
+          "entropy_bits_per_byte": 1.0,
+          "index": 4,
+          "name": "sidecar_len_u16",
           "optimization_role": "sidecar_or_correction_stream",
           "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
-          "sha256": "e7ec8a186e284b4f91cfb58a1718841d14d3316a500219467ea8cadcbaee4c0c",
-          "start": 177551
+          "sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41",
+          "start": 185986
+        },
+        {
+          "bytes": 527,
+          "end": 186515,
+          "entropy_bits_per_byte": 7.429261,
+          "index": 5,
+          "name": "sidecar_payload_pr101_ranked_no_op",
+          "optimization_role": "sidecar_or_correction_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+          "start": 185988
+        },
+        {
+          "bytes": 6,
+          "end": 186521,
+          "entropy_bits_per_byte": 1.459148,
+          "index": 6,
+          "name": "sidecar_framing_meta_pr101",
+          "optimization_role": "control_or_metadata",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+          "start": 186515
         }
       ],
       "zip_member": "0.bin"
@@ -1701,43 +1745,75 @@
       "gpu_model": "Tesla T4",
       "label": "PR106-R2-lowlevel",
       "largest_payload_section": {
-        "bytes": 162164,
-        "end": 162164,
-        "entropy_bits_per_byte": 7.998197,
-        "name": "decoder_compact_brotli_streams",
-        "sha256": "b91cdfb888580defa90aa1d69f81e4b7af2527b32d1de61649c7168cdd5f25e7",
-        "start": 0
+        "bytes": 170127,
+        "end": 170137,
+        "entropy_bits_per_byte": 7.998224,
+        "name": "inner_decoder_packed_brotli",
+        "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+        "start": 10
       },
       "member_bytes": 186521,
       "payload_sections": [
         {
-          "bytes": 162164,
-          "end": 162164,
-          "entropy_bits_per_byte": 7.998197,
-          "name": "decoder_compact_brotli_streams",
-          "sha256": "b91cdfb888580defa90aa1d69f81e4b7af2527b32d1de61649c7168cdd5f25e7",
+          "bytes": 6,
+          "end": 6,
+          "entropy_bits_per_byte": 2.251629,
+          "name": "pr106_sidecar_header_fe_fmt_len_u32",
+          "sha256": "0dfe359c42f7430dd4ca7e743182a3cddedd56b7c433e51f1ba795a857383f1d",
           "start": 0
         },
         {
-          "bytes": 15387,
-          "end": 177551,
-          "entropy_bits_per_byte": 7.983996,
-          "name": "latents_raw_lzma_delta_u8",
-          "sha256": "76e632e1749f469534275daf8ae695e36dbf1c28df4ef85f8c39d7955c6842ea",
-          "start": 162164
+          "bytes": 4,
+          "end": 10,
+          "entropy_bits_per_byte": 2.0,
+          "name": "inner_packed_header_ff_len24",
+          "sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+          "start": 6
         },
         {
-          "bytes": 8970,
+          "bytes": 170127,
+          "end": 170137,
+          "entropy_bits_per_byte": 7.998224,
+          "name": "inner_decoder_packed_brotli",
+          "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+          "start": 10
+        },
+        {
+          "bytes": 15849,
+          "end": 185986,
+          "entropy_bits_per_byte": 7.985386,
+          "name": "inner_latents_and_sidecar_brotli",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170137
+        },
+        {
+          "bytes": 2,
+          "end": 185988,
+          "entropy_bits_per_byte": 1.0,
+          "name": "sidecar_len_u16",
+          "sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41",
+          "start": 185986
+        },
+        {
+          "bytes": 527,
+          "end": 186515,
+          "entropy_bits_per_byte": 7.429261,
+          "name": "sidecar_payload_pr101_ranked_no_op",
+          "sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+          "start": 185988
+        },
+        {
+          "bytes": 6,
           "end": 186521,
-          "entropy_bits_per_byte": 7.975361,
-          "name": "sidecar_dim_delta_huffman_enum",
-          "sha256": "e7ec8a186e284b4f91cfb58a1718841d14d3316a500219467ea8cadcbaee4c0c",
-          "start": 177551
+          "entropy_bits_per_byte": 1.459148,
+          "name": "sidecar_framing_meta_pr101",
+          "sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+          "start": 186515
         }
       ],
       "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
       "profile_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
-      "profile_kind": "pr101_microcodec",
+      "profile_kind": "pr106_sidecar_wrapper",
       "profile_match_key": "archive_sha256",
       "profile_member_name": "0.bin",
       "runtime_tree_sha256": "0ca4ae381ec08247f08d87529d61c4033797dc8ac88a94cea596637b0c9e736a",
@@ -1747,28 +1823,28 @@
       "score_seg_contribution": 0.06426,
       "top_payload_sections": [
         {
-          "bytes": 162164,
-          "end": 162164,
-          "entropy_bits_per_byte": 7.998197,
-          "name": "decoder_compact_brotli_streams",
-          "sha256": "b91cdfb888580defa90aa1d69f81e4b7af2527b32d1de61649c7168cdd5f25e7",
-          "start": 0
+          "bytes": 170127,
+          "end": 170137,
+          "entropy_bits_per_byte": 7.998224,
+          "name": "inner_decoder_packed_brotli",
+          "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+          "start": 10
         },
         {
-          "bytes": 15387,
-          "end": 177551,
-          "entropy_bits_per_byte": 7.983996,
-          "name": "latents_raw_lzma_delta_u8",
-          "sha256": "76e632e1749f469534275daf8ae695e36dbf1c28df4ef85f8c39d7955c6842ea",
-          "start": 162164
+          "bytes": 15849,
+          "end": 185986,
+          "entropy_bits_per_byte": 7.985386,
+          "name": "inner_latents_and_sidecar_brotli",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170137
         },
         {
-          "bytes": 8970,
-          "end": 186521,
-          "entropy_bits_per_byte": 7.975361,
-          "name": "sidecar_dim_delta_huffman_enum",
-          "sha256": "e7ec8a186e284b4f91cfb58a1718841d14d3316a500219467ea8cadcbaee4c0c",
-          "start": 177551
+          "bytes": 527,
+          "end": 186515,
+          "entropy_bits_per_byte": 7.429261,
+          "name": "sidecar_payload_pr101_ranked_no_op",
+          "sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+          "start": 185988
         }
       ],
       "zip_member": "0.bin",
@@ -2602,7 +2678,7 @@
     {
       "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
       "dispatch_attempted": false,
-      "entropy_bits_per_byte": 7.998197,
+      "entropy_bits_per_byte": 7.998224,
       "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
       "frontier_label": "PR106-R2-lowlevel",
       "frontier_score": 0.2065174760196528,
@@ -2610,17 +2686,17 @@
       "optimization_role": "decoder_weight_stream",
       "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
       "priority": "internal_score_lowering_frontier_primary",
-      "rate_mass_score_if_removed": 0.1079783512741038,
+      "rate_mass_score_if_removed": 0.11328058611781565,
       "score_claim": false,
       "score_gap_to_score_lowering_frontier": 0.0,
-      "section": "decoder_compact_brotli_streams",
-      "section_bytes": 162164,
-      "section_sha256": "b91cdfb888580defa90aa1d69f81e4b7af2527b32d1de61649c7168cdd5f25e7"
+      "section": "inner_decoder_packed_brotli",
+      "section_bytes": 170127,
+      "section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c"
     },
     {
       "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
       "dispatch_attempted": false,
-      "entropy_bits_per_byte": 7.983996,
+      "entropy_bits_per_byte": 7.985386,
       "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
       "frontier_label": "PR106-R2-lowlevel",
       "frontier_score": 0.2065174760196528,
@@ -2628,17 +2704,17 @@
       "optimization_role": "latent_stream",
       "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
       "priority": "internal_score_lowering_frontier_primary",
-      "rate_mass_score_if_removed": 0.01024557171169085,
+      "rate_mass_score_if_removed": 0.010553198548033294,
       "score_claim": false,
       "score_gap_to_score_lowering_frontier": 0.0,
-      "section": "latents_raw_lzma_delta_u8",
-      "section_bytes": 15387,
-      "section_sha256": "76e632e1749f469534275daf8ae695e36dbf1c28df4ef85f8c39d7955c6842ea"
+      "section": "inner_latents_and_sidecar_brotli",
+      "section_bytes": 15849,
+      "section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
     },
     {
       "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
       "dispatch_attempted": false,
-      "entropy_bits_per_byte": 7.975361,
+      "entropy_bits_per_byte": 7.429261,
       "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
       "frontier_label": "PR106-R2-lowlevel",
       "frontier_score": 0.2065174760196528,
@@ -2646,12 +2722,84 @@
       "optimization_role": "sidecar_or_correction_stream",
       "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
       "priority": "internal_score_lowering_frontier_primary",
-      "rate_mass_score_if_removed": 0.005972754809505877,
+      "rate_mass_score_if_removed": 0.0003509076682953843,
       "score_claim": false,
       "score_gap_to_score_lowering_frontier": 0.0,
-      "section": "sidecar_dim_delta_huffman_enum",
-      "section_bytes": 8970,
-      "section_sha256": "e7ec8a186e284b4f91cfb58a1718841d14d3316a500219467ea8cadcbaee4c0c"
+      "section": "sidecar_payload_pr101_ranked_no_op",
+      "section_bytes": 527,
+      "section_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 1.0,
+      "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
+      "frontier_label": "PR106-R2-lowlevel",
+      "frontier_score": 0.2065174760196528,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "sidecar_or_correction_stream",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "priority": "internal_score_lowering_frontier_primary",
+      "rate_mass_score_if_removed": 1.3317179062443428e-06,
+      "score_claim": false,
+      "score_gap_to_score_lowering_frontier": 0.0,
+      "section": "sidecar_len_u16",
+      "section_bytes": 2,
+      "section_sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 2.251629,
+      "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
+      "frontier_label": "PR106-R2-lowlevel",
+      "frontier_score": 0.2065174760196528,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "control_or_metadata",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "priority": "low",
+      "rate_mass_score_if_removed": 3.995153718733028e-06,
+      "score_claim": false,
+      "score_gap_to_score_lowering_frontier": 0.0,
+      "section": "pr106_sidecar_header_fe_fmt_len_u32",
+      "section_bytes": 6,
+      "section_sha256": "0dfe359c42f7430dd4ca7e743182a3cddedd56b7c433e51f1ba795a857383f1d"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 1.459148,
+      "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
+      "frontier_label": "PR106-R2-lowlevel",
+      "frontier_score": 0.2065174760196528,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "control_or_metadata",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "priority": "low",
+      "rate_mass_score_if_removed": 3.995153718733028e-06,
+      "score_claim": false,
+      "score_gap_to_score_lowering_frontier": 0.0,
+      "section": "sidecar_framing_meta_pr101",
+      "section_bytes": 6,
+      "section_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "dispatch_attempted": false,
+      "entropy_bits_per_byte": 2.0,
+      "exact_evaluable_next_gate": "build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim",
+      "frontier_label": "PR106-R2-lowlevel",
+      "frontier_score": 0.2065174760196528,
+      "label": "PR106-R2-lowlevel",
+      "optimization_role": "control_or_metadata",
+      "payload_sha256": "01bd18ebf200533eb9ee81a3ca545ed5df07b95afb3608bbb195b00b4c37fb71",
+      "priority": "low",
+      "rate_mass_score_if_removed": 2.6634358124886856e-06,
+      "score_claim": false,
+      "score_gap_to_score_lowering_frontier": 0.0,
+      "section": "inner_packed_header_ff_len24",
+      "section_bytes": 4,
+      "section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7"
     },
     {
       "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",

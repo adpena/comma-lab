@@ -46,6 +46,9 @@ REPACKABLE_SECTIONS = ("decoder_packed_brotli", "latents_and_sidecar_brotli")
 A1_SPLIT_BROTLI_STREAM_COUNT = 7
 HEADER_FORMAT_FF_LEN24 = "ff_len24"
 HEADER_FORMAT_A1_U32_SECTION_TOTAL = "a1_u32_section_total"
+HEADER_FORMAT_PR101_FIXED_OFFSETS = "pr101_fixed_offsets"
+PR101_DECODER_BLOB_LEN = 162_164
+PR101_LATENT_BLOB_LEN = 15_387
 
 # Adversarial review 2026-05-06 (BUG #5): single source of truth for section
 # names previously hardcoded across hnerv_wavelet_residual / sidechannel /
@@ -91,6 +94,8 @@ class PackedHnervPayload:
             return "packed_header_ff_len24"
         if self.header_format == HEADER_FORMAT_A1_U32_SECTION_TOTAL:
             return "packed_header_a1_u32_section_total"
+        if self.header_format == HEADER_FORMAT_PR101_FIXED_OFFSETS:
+            return "packed_header_pr101_fixed_offsets"
         raise HnervLowlevelPackError(f"unknown packed HNeRV header format: {self.header_format}")
 
     def section_bytes(self, name: str) -> bytes:
@@ -111,6 +116,8 @@ class PackedHnervPayload:
         elif self.header_format == HEADER_FORMAT_A1_U32_SECTION_TOTAL:
             section_total = 4 + decoder_len
             header = section_total.to_bytes(4, "little")
+        elif self.header_format == HEADER_FORMAT_PR101_FIXED_OFFSETS:
+            return self.decoder_packed_brotli + self.latents_and_sidecar_brotli
         else:
             raise HnervLowlevelPackError(f"unknown packed HNeRV header format: {self.header_format}")
         return header + self.decoder_packed_brotli + self.latents_and_sidecar_brotli
@@ -258,6 +265,24 @@ def parse_a1_headered_split_brotli_hnerv(payload: bytes) -> PackedHnervPayload:
     )
 
 
+def parse_pr101_fixed_offset_microcodec_hnerv(payload: bytes) -> PackedHnervPayload:
+    """Parse PR101/PR106-R2 fixed-offset HNeRV microcodec payloads."""
+
+    minimum = PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN
+    if len(payload) < minimum:
+        raise HnervLowlevelPackError(
+            f"PR101 microcodec payload {len(payload)} bytes is smaller than fixed minimum {minimum}"
+        )
+    decoder_blob = payload[:PR101_DECODER_BLOB_LEN]
+    _split_brotli_streams(decoder_blob, A1_SPLIT_BROTLI_STREAM_COUNT)
+    return PackedHnervPayload(
+        header=b"",
+        decoder_packed_brotli=decoder_blob,
+        latents_and_sidecar_brotli=payload[PR101_DECODER_BLOB_LEN:],
+        header_format=HEADER_FORMAT_PR101_FIXED_OFFSETS,
+    )
+
+
 def read_packed_archive_view(path: str | Path) -> PackedArchiveView:
     """Read a raw HNeRV archive or PR106 sidecar wrapper as a repackable view."""
 
@@ -287,6 +312,19 @@ def read_packed_archive_view(path: str | Path) -> PackedArchiveView:
             packed=packed,
             payload_kind="raw_ff_hnerv",
             hnerv_payload=archive.payload,
+        )
+    try:
+        packed = parse_pr101_fixed_offset_microcodec_hnerv(archive.payload)
+    except HnervLowlevelPackError:
+        packed = None
+    if packed is not None:
+        return PackedArchiveView(
+            archive=archive,
+            packed=packed,
+            payload_kind="pr101_fixed_offset_hnerv_microcodec",
+            hnerv_payload=archive.payload,
+            repackable_sections=("decoder_packed_brotli",),
+            decoder_brotli_stream_count=A1_SPLIT_BROTLI_STREAM_COUNT,
         )
     packed = parse_a1_headered_split_brotli_hnerv(archive.payload)
     return PackedArchiveView(
@@ -1018,11 +1056,14 @@ __all__ = [
     "HnervLowlevelPackError",
     "PackedArchiveView",
     "PackedHnervPayload",
+    "PR101_DECODER_BLOB_LEN",
+    "PR101_LATENT_BLOB_LEN",
     "SingleMemberArchive",
     "brotli_recode_search",
     "build_lowlevel_brotli_repack_candidate",
     "parse_a1_headered_split_brotli_hnerv",
     "parse_ff_packed_brotli_hnerv",
+    "parse_pr101_fixed_offset_microcodec_hnerv",
     "read_packed_archive_view",
     "read_strict_single_member_zip",
     "sha256_bytes",

@@ -36,11 +36,12 @@ def build_frontier_entropy_gap_ranking(
     *,
     entropy_audits: Sequence[Mapping[str, Any]] = (),
     candidate_manifests: Sequence[Mapping[str, Any]] = (),
+    frontier_mode: str = "canonical",
 ) -> dict[str, Any]:
     """Build a deterministic non-dispatch ranking for HNeRV rate-only work."""
 
     rows = _scorecard_rows(scorecard)
-    frontier = _current_frontier_row(scorecard, rows)
+    frontier = _selected_frontier_row(scorecard, rows, frontier_mode=frontier_mode)
     sections = _frontier_sections(frontier)
     candidates = [dict(item) for item in candidate_manifests if isinstance(item, Mapping)]
 
@@ -58,6 +59,7 @@ def build_frontier_entropy_gap_ranking(
         "gpu_required": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": list(DISPATCH_BLOCKERS),
+        "frontier_mode": frontier_mode,
         "current_frontier": _frontier_summary(frontier),
         "next_rate_only_action": _next_rate_only_action(
             exact_controls=exact_controls,
@@ -84,8 +86,9 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
         f"- score_claim: `{_bool_text(manifest.get('score_claim') is True)}`",
         f"- dispatch_attempted: `{_bool_text(manifest.get('dispatch_attempted') is True)}`",
         f"- ready_for_exact_eval_dispatch: `{_bool_text(manifest.get('ready_for_exact_eval_dispatch') is True)}`",
+        f"- frontier_mode: `{manifest.get('frontier_mode')}`",
         "",
-        "## Current Frontier",
+        "## Selected Frontier",
         "",
         f"- label: `{frontier.get('label')}`",
         f"- score: `{frontier.get('score')}`",
@@ -240,6 +243,19 @@ def _scorecard_rows(scorecard: Mapping[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def _selected_frontier_row(
+    scorecard: Mapping[str, Any],
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    frontier_mode: str,
+) -> dict[str, Any]:
+    if frontier_mode == "canonical":
+        return _current_frontier_row(scorecard, rows)
+    if frontier_mode == "score_lowering":
+        return _score_lowering_frontier_row(scorecard, rows)
+    raise HnervFrontierEntropyRankingError(f"unknown frontier_mode: {frontier_mode}")
+
+
 def _current_frontier_row(scorecard: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     current = scorecard.get("current_frontier")
     if isinstance(current, Mapping) and current.get("label"):
@@ -261,6 +277,22 @@ def _current_frontier_row(scorecard: Mapping[str, Any], rows: Sequence[Mapping[s
             int(row.get("archive_bytes") or 10**18),
             str(row.get("label") or ""),
         ),
+    )
+
+
+def _score_lowering_frontier_row(
+    scorecard: Mapping[str, Any],
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    frontier = scorecard.get("score_lowering_frontier")
+    if not isinstance(frontier, Mapping) or not frontier.get("label"):
+        raise HnervFrontierEntropyRankingError("scorecard has no score_lowering_frontier")
+    label = str(frontier["label"])
+    for row in rows:
+        if str(row.get("label") or "") == label:
+            return dict(row)
+    raise HnervFrontierEntropyRankingError(
+        f"score_lowering_frontier row missing from scorecard rows: {label}"
     )
 
 
