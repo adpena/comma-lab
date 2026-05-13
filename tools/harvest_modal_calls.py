@@ -13,6 +13,7 @@ ensure_repo_imports(REPO)
 
 from tac.deploy.modal.training_claims import append_modal_training_terminal_claim  # noqa: E402
 from tac.deploy.modal.training_cost import append_modal_training_cost_anchor  # noqa: E402
+from tac.deploy.modal.harvest_summary import modal_training_summary_entry  # noqa: E402
 
 result_dirs = list((REPO / "experiments" / "results").glob("lane_*_modal"))
 metadata_files = [d / "modal_metadata.json" for d in result_dirs if (d / "modal_metadata.json").exists()]
@@ -32,6 +33,15 @@ for mfile in sorted(metadata_files):
     artifacts_dir = out_dir / "harvested_artifacts"
     if artifacts_dir.exists() and any(artifacts_dir.iterdir()):
         print(f"[SKIP-already-harvested] {label:30s} call_id={call_id[:30]}")
+        harvest_summary = artifacts_dir / "_harvest_summary.json"
+        harvested = None
+        if harvest_summary.is_file():
+            try:
+                loaded = json.loads(harvest_summary.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    harvested = loaded
+            except json.JSONDecodeError:
+                harvested = {"crash_kind": "INVALID_HARVEST_SUMMARY"}
         cost_marker = out_dir / "cost_band_anchor_appended.json"
         cost_anchor = None
         if cost_marker.is_file():
@@ -39,22 +49,18 @@ for mfile in sorted(metadata_files):
                 cost_anchor = json.loads(cost_marker.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 cost_anchor = {"appended": False, "reason": "invalid_existing_cost_anchor_marker"}
-        else:
-            harvest_summary = artifacts_dir / "_harvest_summary.json"
-            if harvest_summary.is_file():
-                try:
-                    harvested = json.loads(harvest_summary.read_text(encoding="utf-8"))
-                    if isinstance(harvested, dict):
-                        cost_anchor = append_modal_training_cost_anchor(
-                            out_dir=out_dir,
-                            metadata=meta,
-                            result=harvested,
-                        )
-                except Exception as exc:
-                    cost_anchor = {
-                        "appended": False,
-                        "reason": f"already_harvested_append_failed:{type(exc).__name__}:{exc}",
-                    }
+        elif harvested is not None:
+            try:
+                cost_anchor = append_modal_training_cost_anchor(
+                    out_dir=out_dir,
+                    metadata=meta,
+                    result=dict(harvested),
+                )
+            except Exception as exc:
+                cost_anchor = {
+                    "appended": False,
+                    "reason": f"already_harvested_append_failed:{type(exc).__name__}:{exc}",
+                }
         terminal_claim = None
         terminal_marker = out_dir / "modal_training_terminal_claim.json"
         if terminal_marker.is_file():
@@ -62,30 +68,30 @@ for mfile in sorted(metadata_files):
                 terminal_claim = json.loads(terminal_marker.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 terminal_claim = {"appended": False, "reason": "invalid_existing_terminal_claim_marker"}
-        else:
-            harvest_summary = artifacts_dir / "_harvest_summary.json"
-            if harvest_summary.is_file():
-                try:
-                    harvested = json.loads(harvest_summary.read_text(encoding="utf-8"))
-                    terminal_claim = append_modal_training_terminal_claim(
-                        repo_root=REPO,
-                        out_dir=out_dir,
-                        metadata=meta,
-                        result=harvested if isinstance(harvested, dict) else None,
-                        agent="codex:harvest_modal_calls",
-                    )
-                except Exception as exc:
-                    terminal_claim = {
-                        "appended": False,
-                        "reason": f"already_harvested_terminal_claim_failed:{type(exc).__name__}:{exc}",
-                    }
-        summary.append({
-            "label": label,
-            "status": "already_harvested",
-            "call_id": call_id,
-            "cost_band_anchor": cost_anchor,
-            "terminal_claim": terminal_claim,
-        })
+        elif harvested is not None:
+            try:
+                terminal_claim = append_modal_training_terminal_claim(
+                    repo_root=REPO,
+                    out_dir=out_dir,
+                    metadata=meta,
+                    result=dict(harvested),
+                    agent="codex:harvest_modal_calls",
+                )
+            except Exception as exc:
+                terminal_claim = {
+                    "appended": False,
+                    "reason": f"already_harvested_terminal_claim_failed:{type(exc).__name__}:{exc}",
+                }
+        summary.append(
+            modal_training_summary_entry(
+                label=label,
+                status="already_harvested",
+                call_id=call_id,
+                harvested=harvested,
+                cost_anchor=cost_anchor,
+                terminal_claim=terminal_claim,
+            )
+        )
         continue
 
     print(f"\n=== {label} ({call_id[:30]}, dispatched {dispatched}) ===")

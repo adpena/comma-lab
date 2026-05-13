@@ -1,8 +1,13 @@
 [
   {
     "label": "lane_fl",
-    "status": "already_harvested",
     "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86",
+    "status": "already_harvested",
+    "rc": 137,
+    "elapsed_seconds": 33.025160749,
+    "timed_out": false,
+    "n_artifacts": 55,
+    "crash_kind": "RC_137",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -19,8 +24,13 @@
   },
   {
     "label": "lane_fl_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4",
+    "status": "already_harvested",
+    "rc": 137,
+    "elapsed_seconds": 25.243142915000004,
+    "timed_out": false,
+    "n_artifacts": 55,
+    "crash_kind": "RC_137",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -37,8 +47,13 @@
   },
   {
     "label": "lane_g_v3_owv3_fisher_smoke_20260430_codex",
-    "status": "already_harvested",
     "call_id": "fc-01KQFKCAKBZ3MKRRPNDK6T8DV6",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 46.994304066000005,
+    "timed_out": false,
+    "n_artifacts": 60,
+    "crash_kind": "OK",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -55,8 +70,13 @@
   },
   {
     "label": "lane_gp",
-    "status": "already_harvested",
     "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 12.047052263999994,
+    "timed_out": false,
+    "n_artifacts": 55,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -73,8 +93,13 @@
   },
   {
     "label": "lane_gp_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQCR8G6843PK2JJ0HT3WBW3S",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 824.331508526,
+    "timed_out": false,
+    "n_artifacts": 70,
+    "crash_kind": "OK",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -91,8 +116,13 @@
   },
   {
     "label": "lane_gp_v3",
-    "status": "already_harvested",
     "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 792.725123586,
+    "timed_out": false,
+    "n_artifacts": 70,
+    "crash_kind": "OK",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -109,8 +139,13 @@
   },
   {
     "label": "lane_mae_v",
-    "status": "already_harvested",
     "call_id": "fc-01KQCJ8F0X9KNR3CQ6QMWNDF4P",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 6.565697213,
+    "timed_out": false,
+    "n_artifacts": 55,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -127,8 +162,13 @@
   },
   {
     "label": "lane_mm",
-    "status": "already_harvested",
     "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB",
+    "status": "already_harvested",
+    "rc": 3,
+    "elapsed_seconds": 4.229495890999999,
+    "timed_out": false,
+    "n_artifacts": 50,
+    "crash_kind": "RC_3",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -145,8 +185,13 @@
   },
   {
     "label": "lane_mm_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQD283JJFDGJ11XYPPQK7VN5",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 831.610461059,
+    "timed_out": false,
+    "n_artifacts": 61,
+    "crash_kind": "OK",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -163,8 +208,13 @@
   },
   {
     "label": "lane_omega_hessian",
-    "status": "already_harvested",
     "call_id": "fc-01KQCJ7J556562CSNMM7CZH801",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 44.632006531,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -181,8 +231,13 @@
   },
   {
     "label": "lane_s",
-    "status": "already_harvested",
     "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 156.78563206500002,
+    "timed_out": false,
+    "n_artifacts": 54,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -199,8 +254,13 @@
   },
   {
     "label": "lane_sa",
-    "status": "already_harvested",
     "call_id": "fc-01KQCZW4BM6NXBWTNSC4G24ZCC",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 129.33854739,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -217,8 +277,13 @@
   },
   {
     "label": "lane_sa_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQD090GDA30NFM325M0M20PB",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 126.056802656,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -235,8 +300,13 @@
   },
   {
     "label": "lane_sa_v3",
-    "status": "already_harvested",
     "call_id": "fc-01KQD2AHSSJEENJB2WBAKB2XRA",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 111.615706277,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -258,8 +328,13 @@
   },
   {
     "label": "lane_sa_v5_post_oom_fix",
-    "status": "already_harvested",
     "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 25293.738436452,
+    "timed_out": false,
+    "n_artifacts": 55,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -276,8 +351,13 @@
   },
   {
     "label": "lane_sc_plus_plus",
-    "status": "already_harvested",
     "call_id": "fc-01KQCZW6WCBYV2VZMD5CAMEG2B",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 128.666151564,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -294,8 +374,13 @@
   },
   {
     "label": "lane_sc_plus_plus_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 159.989060777,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -312,8 +397,13 @@
   },
   {
     "label": "lane_sc_plus_plus_v3",
-    "status": "already_harvested",
     "call_id": "fc-01KQD2AKKV97GVWXYYQVKPM84W",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 140.47479359599998,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -335,8 +425,13 @@
   },
   {
     "label": "lane_so",
-    "status": "already_harvested",
     "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 127.924227941,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -353,8 +448,13 @@
   },
   {
     "label": "lane_so_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQD093VQ8TR0W0QX1AF14KM9",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 132.041815489,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -376,8 +476,13 @@
   },
   {
     "label": "lane_so_v3_post_oom_fix",
-    "status": "already_harvested",
     "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76",
+    "status": "already_harvested",
+    "rc": 124,
+    "elapsed_seconds": 28800.007886009,
+    "timed_out": true,
+    "n_artifacts": 52,
+    "crash_kind": "TIMEOUT",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -394,8 +499,13 @@
   },
   {
     "label": "lane_uniward",
-    "status": "already_harvested",
     "call_id": "fc-01KQCJ93WY9B57WNCY8BBHBPQW",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 4.185886556,
+    "timed_out": false,
+    "n_artifacts": 50,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -412,8 +522,13 @@
   },
   {
     "label": "lane_w",
-    "status": "already_harvested",
     "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 273.95998892,
+    "timed_out": false,
+    "n_artifacts": 55,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -430,8 +545,13 @@
   },
   {
     "label": "lane_w_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQCR7SWQZPCS71F8D564C9ME",
+    "status": "already_harvested",
+    "rc": 124,
+    "elapsed_seconds": 28800.008594441002,
+    "timed_out": true,
+    "n_artifacts": 59,
+    "crash_kind": "TIMEOUT",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -453,8 +573,13 @@
   },
   {
     "label": "q_faithful",
-    "status": "already_harvested",
     "call_id": "fc-01KQCPXJ36DDZRV85F0M3H4MTY",
+    "status": "already_harvested",
+    "rc": 2,
+    "elapsed_seconds": 64.137555832,
+    "timed_out": false,
+    "n_artifacts": 58,
+    "crash_kind": "RC_2",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -471,8 +596,13 @@
   },
   {
     "label": "q_faithful_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 80.837770559,
+    "timed_out": false,
+    "n_artifacts": 58,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -494,10 +624,8 @@
   },
   {
     "label": "scpp_stage1_20260512T130830Z",
-    "status": "already_harvested",
     "call_id": "fc-01KRE4YCY88E8H6XEY0F9BVG7N",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "stc_cuda",
@@ -507,87 +635,91 @@
   {
     "label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
     "call_id": "fc-01KREXK209TRX7ED5ZRVXHY1VT",
+    "status": "already_harvested",
     "rc": 1,
     "elapsed_seconds": 12.868933203000001,
+    "timed_out": false,
     "n_artifacts": 53,
     "crash_kind": "ERROR",
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": true,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 32,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
-      "trainer": "experiments/train_substrate_sane_hnerv.py",
-      "platform": "modal",
-      "gpu": "A100",
-      "epochs": 2000,
-      "batch_size": 32,
-      "all_flags_on": true,
       "elapsed_seconds": 12.868933203000001,
+      "epochs": 2000,
       "estimated_cost_usd": 0.014298814670000002,
+      "gpu": "A100",
       "hourly_rate_usd": 4.0,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=4.0; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "failed_dispatch",
-      "returncode": 1,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=4.0; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_sane_hnerv.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "appended": true,
       "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
+      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=12.868933203000001; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z_modal",
       "platform": "modal",
-      "status": "failed_modal_training_rc_1",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=12.868933203000001; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
     "label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
     "call_id": "fc-01KREXXSKGTDCF61QXQNBF6SX3",
+    "status": "already_harvested",
     "rc": 1,
     "elapsed_seconds": 72.033509716,
+    "timed_out": false,
     "n_artifacts": 51,
     "crash_kind": "RC_1",
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": true,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 32,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
-      "trainer": "experiments/train_substrate_sane_hnerv.py",
-      "platform": "modal",
-      "gpu": "A100",
-      "epochs": 2000,
-      "batch_size": 32,
-      "all_flags_on": true,
       "elapsed_seconds": 72.033509716,
+      "epochs": 2000,
       "estimated_cost_usd": 0.08003723301777778,
+      "gpu": "A100",
       "hourly_rate_usd": 4.0,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=4.0; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "failed_dispatch",
-      "returncode": 1,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=4.0; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_sane_hnerv.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "appended": true,
       "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
+      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=72.033509716; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z_modal",
       "platform": "modal",
-      "status": "failed_modal_training_rc_1",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=72.033509716; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -605,8 +737,13 @@
   },
   {
     "label": "t1_balle_cheap_config_20260512T171203Z",
-    "status": "already_harvested",
     "call_id": "fc-01KREJST89QHFRWJXHAKXD850C",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 14.770903902,
+    "timed_out": false,
+    "n_artifacts": 54,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "all_flags_on": true,
       "already_appended": false,
@@ -643,78 +780,63 @@
   },
   {
     "label": "t1_balle_cheap_v2_20260512T130830Z",
-    "status": "already_harvested",
     "call_id": "fc-01KRE4XPREYGDHQ80XR2H2T54J",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_full_ce1b4e2d_20260510T1333Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR91CR2V5AM6Y2DVBFTXCDVM",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_fullpath_smoke_b82164a7_20260510T1348Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR928YET5BZGFV803ANT8CTS",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR93KESQB87VSD2WKE4GYZEC",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_guard_1aac11aa_20260510T1301Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR8ZNESYP42EP7928ZK94ZQB",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_guard_740778ba_20260510T1000Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR8HFZPJRQHWTXAX7TT72D04",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_guard_80b139c9_20260510T1240Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR8YCW8F12KACG5TKWSNZ7A7",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_guard_a3311268_20260510T0831Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR8GACB3NCW5TNG1E9YFPXHM",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_guard_c0ea27df_20260510T0927Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR8KCXEGTVFGSZ75HAK9S2QX",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_guard_c4100de4_20260510T0915Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR8JMK531A9PECP0CV513KQM",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "t1_balle_modal_phase1_ab2d0f6_20260510T1437Z",
-    "status": "already_harvested",
     "call_id": "fc-01KR955JSYQAVTTYZA48VAV7WJ",
+    "status": "already_harvested",
+    "rc": 124,
+    "elapsed_seconds": 84607.95735532901,
+    "timed_out": false,
+    "n_artifacts": 14,
+    "crash_kind": "RC_124",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -735,38 +857,28 @@
   },
   {
     "label": "track1_phase_a1_score_gradient_20260508T215443Z_modal",
-    "status": "already_harvested",
     "call_id": "fc-01KR4SBZ24K5DP3WXAV8M39H0R",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a1_score_gradient_20260508T222043Z_modal",
-    "status": "already_harvested",
     "call_id": "fc-01KR4TVY14SWW0VN07XT1B4Y2Q",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a1_score_gradient_20260508T230020Z_modal",
-    "status": "already_harvested",
     "call_id": "fc-01KR4X449H99NB1MQXJC0QN52S",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex",
-    "status": "already_harvested",
     "call_id": "fc-01KR5MQ0WYS8TQWDN7HCYBZZ3B",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal",
-    "status": "already_harvested",
     "call_id": "fc-01KR55GH98QW3J3QDGQB1EG4CR",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal",
@@ -775,29 +887,28 @@
   },
   {
     "label": "track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal",
-    "status": "already_harvested",
     "call_id": "fc-01KR5B4JKGXQWZ4452G7JJ23J1",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a1_score_gradient_modal_20260510T0738Z_codex",
-    "status": "already_harvested",
     "call_id": "fc-01KR8D302GXGKGT49ETYMA0BZC",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal",
-    "status": "already_harvested",
     "call_id": "fc-01KR5K3V8VT735P73ZV881ZQA2",
-    "cost_band_anchor": null,
-    "terminal_claim": null
+    "status": "already_harvested"
   },
   {
     "label": "track1_phase_a4_charm_50k_toy_20260508T220839Z_modal",
-    "status": "already_harvested",
     "call_id": "fc-01KR4T5E7RYA2MY4487TSY4Q4V",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 106.646717531,
+    "timed_out": false,
+    "n_artifacts": 39,
+    "crash_kind": "OK",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -818,8 +929,13 @@
   },
   {
     "label": "uniward_v2",
-    "status": "already_harvested",
     "call_id": "fc-01KQCP43K3GGENCTY4QK087XY1",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 3.4171778549999985,
+    "timed_out": false,
+    "n_artifacts": 52,
+    "crash_kind": "RC_1",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -836,8 +952,13 @@
   },
   {
     "label": "uniward_v3",
-    "status": "already_harvested",
     "call_id": "fc-01KQCQ6DEQJME9VWZ1PESQRPZ4",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 11.945904798,
+    "timed_out": false,
+    "n_artifacts": 53,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -854,8 +975,13 @@
   },
   {
     "label": "uniward_v4",
-    "status": "already_harvested",
     "call_id": "fc-01KQCQX3Q8VZ7YJ9XMZVSDMYQ4",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 14.036963152999999,
+    "timed_out": false,
+    "n_artifacts": 53,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -872,8 +998,13 @@
   },
   {
     "label": "uniward_v5",
-    "status": "already_harvested",
     "call_id": "fc-01KQCR74WEBWX7JJ57MSM6MDA9",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 14.703013351,
+    "timed_out": false,
+    "n_artifacts": 53,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -890,8 +1021,13 @@
   },
   {
     "label": "uniward_v6",
-    "status": "already_harvested",
     "call_id": "fc-01KQCRMNNFS60Z7Y9ZHAFC2MDG",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 14.748772480999996,
+    "timed_out": false,
+    "n_artifacts": 54,
+    "crash_kind": "ERROR",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -908,8 +1044,13 @@
   },
   {
     "label": "uniward_v7",
-    "status": "already_harvested",
     "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 848.070805186,
+    "timed_out": false,
+    "n_artifacts": 65,
+    "crash_kind": "OK",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
@@ -926,8 +1067,13 @@
   },
   {
     "label": "uniward_v8",
-    "status": "already_harvested",
     "call_id": "fc-01KQCTS1BKB5GYNA2AKREFRYXY",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 779.148722348,
+    "timed_out": false,
+    "n_artifacts": 65,
+    "crash_kind": "OK",
     "cost_band_anchor": {
       "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
