@@ -1,0 +1,129 @@
+schema_version: 1
+name: substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch
+lane_id: lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513
+summary: PR95++ meta-stack-of-stacks enhanced curriculum (11 enhancements over PR95's 29,650-epoch 8-stage protocol) - first-anchor dispatch on Modal A100.
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 40
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: canary
+
+cost_band:
+  epochs: 29650
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 50.0
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: 0.175
+predicted_delta: "-0.018 vs PR95 0.193 [predicted; 11-enhancement stack; Muon-every-stage + WSD + ternary-stage8 + DP1-bootstrap + IGLT-polish dominates]"
+predicted_delta_basis: ".omx/research/beat_pr95_curriculum_substrate_training_design_20260513.md + Keller Jordan synthesis (commit d64b17cf)"
+literature_anchor: "PR95 (hnerv_muon, public-frontier 0.193) + Keller Jordan modded-nanogpt (https://github.com/KellerJordan/Muon) + Atick-Redlich 1992 + Ballé 2018"
+
+risk: |
+  PR95++ enhanced curriculum first-anchor dispatch on Modal A100. The trainer
+  wraps the PR101 LC v2 clone substrate (228K-param HNeRV decoder) in the
+  pr95_enhanced curriculum mode: 11 engineering enhancements composed over
+  PR95's 29,650-epoch 8-stage protocol. Each enhancement is opt-in via an
+  explicit --enable-<feature> / --disable-<feature> flag pair; the default
+  pr95_enhanced enables 9 of 11 (composition E10/E11 SABOR + S2SBS are
+  explicit opt-in).
+
+  Smoke-before-full pattern (Catalog #167): the operator-authorize wrapper
+  routes through tools/run_modal_smoke_before_full.py which fires a
+  100-epoch ~$0.30 Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON
+  present + score in plausible band [0.0, 10.0], then fires the full
+  29,650-epoch A100 dispatch only on smoke-green.
+
+  Engineering wins (compounding speedup vs PR95 baseline):
+  * E1 Muon at every stage (vs only Stage 8): ~2-4x convergence on hidden
+    weights.
+  * E3 stage-aware ternary QAT (Stage 8 binary {-1, 0, +1}): rate-byte win.
+  * E4 WSD LR schedule (vs cosine): 1-3% wall-clock cost; floor at 0.1*peak.
+  * E5 logit softcap (30*tanh(x/30)): no zero-grad boundary, preserves grad.
+  * E9 DP1 bootstrap: starts from frozen Comma2k19 codebook; shrinks
+    Stage 1 random-init variance.
+
+  Predicted cost: $50-100 for the full 29,650-epoch A100 (Muon convergence
+  + ternary archive size reduction reduce dispatch time vs PR95 baseline);
+  $15-25 for Stage 1-3 only (epoch-multiplier=0.34); $0.30 for smoke.
+
+envelope_status: "FITS $100 envelope at p50 fallback (smoke $0.30 + full $50 conservative)"
+
+remote_driver: scripts/remote_lane_substrate_pr101_lc_v2_clone_enhanced_curriculum.sh
+timeout_hours: 8.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pr101_lc_v2_clone_enhanced_curriculum.sh
+  cost_band_trainer: experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py
+  cost_band_epochs: 29650
+  cost_band_batch_size: 8
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py
+
+env_overrides:
+  PR95PLUS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PR95PLUS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  PR95PLUS_OUTPUT_DIR: /workspace/pact/lane_pr95plus_results/output
+  PR95PLUS_UPSTREAM_DIR: /workspace/pact/upstream
+  PR95PLUS_DEVICE: cuda
+  PR95PLUS_CURRICULUM: pr95_enhanced
+  PR95PLUS_EPOCHS_MULTIPLIER: "1.0"
+  PR95PLUS_SEED: "0"
+  PR95PLUS_GPU: "${MODAL_GPU:-A100}"
+  PR95PLUS_CODEBOOK_PATH: ""
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_pr101_lc_v2_clone_enhanced_curriculum.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py
+  - src/tac/substrates/pr101_lc_v2_clone/curriculum_enhanced.py
+  - src/tac/optimization/muon.py
+  - src/tac/optimization/iglt.py
+  - src/tac/optimization/ternary_qat.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - tools/run_modal_smoke_before_full.py (Catalog #167)
+
+notes: |
+  Operator directive 2026-05-13: "PR 95 curriculum lessons should be improved
+  upon and enhanced and further optimized... meta stack of stack of stacks
+  kind of engineering that spans micro and macro... should be applied to all
+  approaches and paths and tracks and lanes going forward" +
+  "maximum signal and optimal everything".
+
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" non-
+  negotiable: every one of the 11 enhancements has been audited against the
+  13 parity-discipline lessons. The audit dict is emitted in the trainer's
+  manifest.json under `hnerv_parity_audit`.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": this is a research-
+  only first-anchor dispatch. score_claim/promotion_eligible/ready_for_
+  exact_eval_dispatch are all False until paired [contest-CUDA] + [contest-
+  CPU] anchors land on a specific enhanced curriculum config.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Catalog claims for self-protection:
+    #200 (check_enhanced_curriculum_lr_schedule_well_formed): claimed
+         2026-05-13 for this lane. STRICT preflight refuses any state of
+         the WSD-schedule helper that produces a degenerate flat line.
+
+  Cross-references:
+    .omx/research/beat_pr95_curriculum_substrate_training_design_20260513.md
+    Keller Jordan synthesis: commit d64b17cf
+    Pretrained driving prior: tac.substrates.pretrained_driving_prior
+    SABOR audit: .omx/research/sabor_boundary_audit_20260513.md
+    S2SBS audit: .omx/research/s2sbs_blindspot_audit_20260513.md
+    Time-traveler architecture: commit 1d62a114
