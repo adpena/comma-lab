@@ -55,6 +55,8 @@ import time
 import zipfile
 from pathlib import Path, PurePosixPath
 
+from tac.device_axis_eval import is_contest_cuda_equivalent_gpu
+
 # Line-buffer stdout so progress flushes to log files immediately.
 try:
     sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
@@ -1385,11 +1387,9 @@ def _auth_eval_evidence_contract(
     # contest-faithful CUDA replays on A100/4090/H100/A10G/L40S also qualify
     # as evidence_grade="contest-CUDA". Previously this gate accepted T4 only,
     # silently downgrading every A100 / 4090 / H100 result to "B" (diagnostic).
-    _gpu_model = str(provenance.get("gpu_model") or "").lower()
-    _gpu_t4 = provenance.get("gpu_t4_match") is True
-    _gpu_contest_faithful_cuda = _gpu_t4 or any(
-        token in _gpu_model
-        for token in ("a100", "4090", "h100", "a10g", "l40s")
+    _gpu_contest_faithful_cuda = is_contest_cuda_equivalent_gpu(
+        gpu_model=str(provenance.get("gpu_model") or ""),
+        gpu_t4_match=provenance.get("gpu_t4_match") is True,
     )
     is_cuda_contest_full = (
         device == "cuda"

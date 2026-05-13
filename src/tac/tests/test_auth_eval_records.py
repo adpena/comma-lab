@@ -178,7 +178,7 @@ def test_parser_demotes_persisted_cuda_promotion_when_blockers_present() -> None
     assert record.rank_or_kill_eligible is False
 
 
-def test_parser_demotes_non_t4_cuda_artifact_that_declares_contest_cuda() -> None:
+def test_parser_demotes_unsupported_cuda_artifact_that_declares_contest_cuda() -> None:
     records = _load_records_module()
 
     record = records.parse_auth_eval_payload(
@@ -200,7 +200,7 @@ def test_parser_demotes_non_t4_cuda_artifact_that_declares_contest_cuda() -> Non
     assert record.promotion_eligible is False
     assert record.score_claim_valid is False
     assert record.rank_or_kill_eligible is False
-    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4"
+    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4_a100_4090_h100_a10g_l40s"
 
 
 def test_parser_recovers_components_from_gha_report_text_when_fields_are_null() -> None:
@@ -389,7 +389,7 @@ def test_parser_keeps_cpu_artifact_out_of_rank_or_kill_even_if_payload_claims_tr
     assert record.rank_or_kill_eligible is False
 
 
-def test_parser_downgrades_explicit_contest_cuda_without_t4_match() -> None:
+def test_parser_accepts_explicit_contest_cuda_on_a100_without_t4_match() -> None:
     records = _load_records_module()
 
     record = records.parse_auth_eval_payload(
@@ -401,6 +401,7 @@ def test_parser_downgrades_explicit_contest_cuda_without_t4_match() -> None:
             "score_axis": "contest_cuda",
             "evidence_grade": "A++",
             "gpu_t4_match": False,
+            "gpu_model": "NVIDIA A100-SXM4-40GB",
             "promotion_eligible": True,
             "score_claim_valid": True,
             "rank_or_kill_eligible": True,
@@ -408,12 +409,12 @@ def test_parser_downgrades_explicit_contest_cuda_without_t4_match() -> None:
     )
 
     assert record is not None
-    assert record.score_axis == "cuda"
-    assert record.evidence_grade == "A"
-    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4"
-    assert record.promotion_eligible is False
-    assert record.score_claim_valid is False
-    assert record.rank_or_kill_eligible is False
+    assert record.score_axis == "contest_cuda"
+    assert record.evidence_grade == "A++"
+    assert record.hardware_compliance_blocker is None
+    assert record.promotion_eligible is True
+    assert record.score_claim_valid is True
+    assert record.rank_or_kill_eligible is True
 
 
 def test_parser_treats_string_booleans_as_false_for_cuda_promotion() -> None:
@@ -438,7 +439,7 @@ def test_parser_treats_string_booleans_as_false_for_cuda_promotion() -> None:
     assert record.gpu_t4_match is False
     assert record.score_axis == "cuda"
     assert record.evidence_grade == "A"
-    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4"
+    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4_a100_4090_h100_a10g_l40s"
     assert record.promotion_eligible is False
     assert record.score_claim_valid is False
     assert record.rank_or_kill_eligible is False

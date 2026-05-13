@@ -192,6 +192,17 @@ def test_whitespace_in_lane_id_rejected(claims_path):
         ])
 
 
+@pytest.mark.parametrize("lane_id", ["0", "12345", "modal", "unknown", "None"])
+def test_placeholder_lane_id_rejected(claims_path, lane_id):
+    with pytest.raises(SystemExit) as exc:
+        cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", lane_id, "--platform", "L", "--instance-job-id", "j",
+            "--agent", "a", "--status", "eval",
+        ])
+    assert "real canonical lane id" in str(exc.value)
+
+
 def test_terminal_prefixes_constants():
     # Spec from .pyc revealed these prefixes — verify they're all present
     expected = {"completed_", "failed_", "preempted", "cancelled",

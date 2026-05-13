@@ -7,6 +7,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from tac.device_axis_eval import is_contest_cuda_equivalent_gpu
+
 
 @dataclass(frozen=True)
 class AuthEvalRecord:
@@ -236,8 +238,25 @@ def _device_norm(device: str) -> str:
     return str(device or "").lower()
 
 
-def _is_contest_cuda_axis(*, device: str, samples: int | None, gpu_t4_match: bool) -> bool:
-    return _device_norm(device) == "cuda" and samples == 600 and gpu_t4_match
+def _gpu_model(provenance: dict[str, Any], payload: dict[str, Any]) -> str:
+    return str(provenance.get("gpu_model") or payload.get("gpu_model") or "")
+
+
+def _is_contest_cuda_axis(
+    *,
+    device: str,
+    samples: int | None,
+    gpu_t4_match: bool,
+    gpu_model: str,
+) -> bool:
+    return (
+        _device_norm(device) == "cuda"
+        and samples == 600
+        and is_contest_cuda_equivalent_gpu(
+            gpu_model=gpu_model,
+            gpu_t4_match=gpu_t4_match,
+        )
+    )
 
 
 def _is_contest_cpu_axis(
@@ -285,6 +304,7 @@ def _score_axis(
     device: str,
     samples: int | None,
     gpu_t4_match: bool,
+    gpu_model: str,
 ) -> str:
     explicit = str(payload.get("score_axis") or payload.get("device_axis") or "")
     explicit_norm = explicit.lower().replace("-", "_")
@@ -292,6 +312,7 @@ def _score_axis(
         device=device,
         samples=samples,
         gpu_t4_match=gpu_t4_match,
+        gpu_model=gpu_model,
     )
     contest_cpu = _is_contest_cpu_axis(
         payload=payload,
@@ -329,6 +350,7 @@ def _hardware_compliance_blocker(
     device: str,
     samples: int | None,
     gpu_t4_match: bool,
+    gpu_model: str,
     axis: str,
 ) -> str | None:
     blocker = payload.get("hardware_compliance_blocker")
@@ -347,12 +369,20 @@ def _hardware_compliance_blocker(
         if not _platform_is_linux_x86_64(provenance, payload):
             return "contest_cpu_requires_linux_x86_64"
     if device_kind == "cuda" and (
-        _declared_contest_axis(payload, "contest_cuda") or samples == 600 or gpu_t4_match
+        _declared_contest_axis(payload, "contest_cuda")
+        or samples == 600
+        or is_contest_cuda_equivalent_gpu(
+            gpu_model=gpu_model,
+            gpu_t4_match=gpu_t4_match,
+        )
     ):
         if samples != 600:
-            return "contest_cuda_requires_600_samples_t4"
-        if not gpu_t4_match:
-            return "contest_cuda_requires_t4"
+            return "contest_cuda_requires_600_samples_cuda_equivalent_gpu"
+        if not is_contest_cuda_equivalent_gpu(
+            gpu_model=gpu_model,
+            gpu_t4_match=gpu_t4_match,
+        ):
+            return "contest_cuda_requires_t4_a100_4090_h100_a10g_l40s"
     return None
 
 
@@ -431,6 +461,7 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         else payload.get("gpu_t4_match")
     )
     gpu_t4_match = _strict_bool(gpu_t4_raw)
+    gpu_model = _gpu_model(provenance, payload)
     promotion_eligible = _strict_bool(payload.get("promotion_eligible"))
     score_claim_valid = _strict_bool(payload.get("score_claim_valid"))
     promotion_blockers = payload.get("promotion_blockers")
@@ -443,6 +474,7 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         device=device,
         samples=samples,
         gpu_t4_match=gpu_t4_match,
+        gpu_model=gpu_model,
     )
     if axis != "contest_cuda":
         promotion_eligible = False
@@ -485,6 +517,7 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         device=device,
         samples=samples,
         gpu_t4_match=gpu_t4_match,
+        gpu_model=gpu_model,
         axis=axis,
     )
 

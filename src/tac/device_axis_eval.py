@@ -18,6 +18,33 @@ from typing import Any
 CONTEST_N_BYTES = 37_545_489
 CONTEST_CPU_AXIS = "contest_cpu"
 CONTEST_CUDA_AXIS = "contest_cuda"
+CONTEST_CUDA_EQUIVALENT_GPU_MODEL_TOKENS = (
+    "t4",
+    "a100",
+    "4090",
+    "h100",
+    "a10g",
+    "l40s",
+)
+
+
+def is_contest_cuda_equivalent_gpu(
+    *,
+    gpu_model: str | None,
+    gpu_t4_match: bool = False,
+) -> bool:
+    """Return whether a CUDA auth-eval GPU belongs to the accepted contest axis.
+
+    The public scorer uses NVIDIA T4, but internal exact CUDA custody also
+    treats Linux x86_64 A100/4090/H100/A10G/L40S replays as contest-CUDA
+    evidence. This helper intentionally only classifies the GPU family; callers
+    still own device, sample-count, and OS/architecture checks.
+    """
+
+    if gpu_t4_match is True:
+        return True
+    model = str(gpu_model or "").lower()
+    return any(token in model for token in CONTEST_CUDA_EQUIVALENT_GPU_MODEL_TOKENS)
 
 
 def score_terms(*, pose: float, seg: float, archive_bytes: int) -> dict[str, float]:

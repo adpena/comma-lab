@@ -100,6 +100,21 @@ _SHELL_ARGV0_EXPANSION_RE = re.compile(
     r"(?<![A-Za-z0-9_.-])/bin/(?:zsh|bash|sh)(?:[./\s]|$)"
 )
 _SHELL_ARGV0_WAIVER = "SHELL_ARGV0_OK:"
+_LANE_ID_RE = re.compile(r"^(?=.*[A-Za-z])[A-Za-z0-9][A-Za-z0-9_.:-]*$")
+_RESERVED_LANE_IDS = {
+    "0",
+    "none",
+    "null",
+    "undefined",
+    "unknown",
+    "na",
+    "n/a",
+    "modal",
+    "cuda",
+    "cpu",
+    "true",
+    "false",
+}
 
 
 @dataclass(frozen=True)
@@ -155,6 +170,18 @@ def _validate_cell(name: str, value, *, allow_empty: bool = False, allow_space: 
     return value
 
 
+def _validate_lane_id(value: str) -> str:
+    lane_id = _validate_cell("--lane-id", value, allow_space=False)
+    lane_id_lower = lane_id.lower()
+    if lane_id_lower in _RESERVED_LANE_IDS or not _LANE_ID_RE.fullmatch(lane_id):
+        raise SystemExit(
+            "VALIDATION_ERROR: --lane-id must be a real canonical lane id "
+            "(letters plus optional digits, dots, underscores, hyphens, or colons); "
+            f"got {lane_id!r}"
+        )
+    return lane_id
+
+
 def _validate_no_shell_argv0_expansion(name: str, value: str) -> None:
     """Reject notes where unescaped ``$0`` was expanded by the caller shell.
 
@@ -176,7 +203,7 @@ def _validate_no_shell_argv0_expansion(name: str, value: str) -> None:
 
 
 def _validate_claim_inputs(args: argparse.Namespace) -> None:
-    _validate_cell("--lane-id", args.lane_id, allow_space=False)
+    _validate_lane_id(args.lane_id)
     _validate_cell("--platform", args.platform, allow_space=False)
     _validate_cell("--instance-job-id", args.instance_job_id, allow_space=False)
     _validate_cell("--agent", args.agent, allow_space=False)
@@ -349,6 +376,10 @@ def _summary(args: argparse.Namespace) -> int:
         None
         if getattr(args, "live_only", False)
         else args.archive_dir
+        if args.archive_dir is not None
+        else DEFAULT_ARCHIVE_DIR
+        if args.claims_path == DEFAULT_CLAIMS_PATH
+        else None
     )
     claims = _load_claims_with_archives(args.claims_path, archive_dir)
     summary = _summarize_claims(
@@ -857,7 +888,7 @@ def build_parser() -> argparse.ArgumentParser:
     summary_p.add_argument(
         "--archive-dir",
         type=Path,
-        default=DEFAULT_ARCHIVE_DIR,
+        default=None,
         help="Monthly archive dir (default: .omx/state/dispatch_claims_archive)",
     )
     summary_p.add_argument(

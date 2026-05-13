@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from tac.device_axis_eval import (
     cuda_minus_cpu_gaps,
+    is_contest_cuda_equivalent_gpu,
     mechanism_class_from_pair,
     raw_output_pairing,
     score_terms,
@@ -20,6 +21,48 @@ def test_score_terms_and_cuda_minus_cpu_gaps_are_formula_exact() -> None:
     assert gaps["seg_term"] == cuda["seg_term"] - cpu["seg_term"]
     assert gaps["rate_term"] == 0.0
     assert gaps["pose_gap_share"] is not None
+
+
+def test_contest_cuda_equivalent_gpu_accepts_supported_models() -> None:
+    assert is_contest_cuda_equivalent_gpu(gpu_model="", gpu_t4_match=True) is True
+    assert (
+        is_contest_cuda_equivalent_gpu(
+            gpu_model="NVIDIA A100-SXM4-40GB",
+            gpu_t4_match=False,
+        )
+        is True
+    )
+    assert (
+        is_contest_cuda_equivalent_gpu(
+            gpu_model="NVIDIA GeForce RTX 4090",
+            gpu_t4_match=False,
+        )
+        is True
+    )
+    assert (
+        is_contest_cuda_equivalent_gpu(
+            gpu_model="NVIDIA L40S",
+            gpu_t4_match=False,
+        )
+        is True
+    )
+
+
+def test_contest_cuda_equivalent_gpu_rejects_unknown_models_and_string_flags() -> None:
+    assert (
+        is_contest_cuda_equivalent_gpu(
+            gpu_model="NVIDIA RTX 3090",
+            gpu_t4_match=False,
+        )
+        is False
+    )
+    assert (
+        is_contest_cuda_equivalent_gpu(
+            gpu_model="",
+            gpu_t4_match="true",  # type: ignore[arg-type]
+        )
+        is False
+    )
 
 
 def test_raw_output_pairing_classifies_same_different_partial_and_missing() -> None:
