@@ -1,0 +1,134 @@
+{
+  "archive_member_name": "0.bin",
+  "format_id": "0x02",
+  "full_frame_inflate_output_parity_claim": false,
+  "inner_pr106_payload_sha256_unchanged": true,
+  "mutated_archive_sha256": "42397aebaeece36f5e4fc399a84f4cbea2b817bccec7e590641205f0814e3991",
+  "mutated_packet_ir_consumed_byte_proof": {
+    "accounted_payload_bytes": 186315,
+    "all_payload_bytes_accounted": true,
+    "emitted_payload_bytes": 186315,
+    "emitted_payload_sha256": "055cf7755e9e765e903280f125c57c6f987854d5d8026f333829fbfdad3d43d2",
+    "proof_scope": "packet_ir_parser_accounting_not_runtime_inflate_consumption",
+    "runtime_consumption_claim": false,
+    "schema": "pr106_sidecar_packet_ir_consumed_byte_proof_v1",
+    "score_affecting_section_names": [
+      "pr106_payload",
+      "sidecar_payload",
+      "framing_meta"
+    ],
+    "section_gaps": [],
+    "sections": [
+      {
+        "bytes": 1,
+        "end_offset": 1,
+        "name": "magic",
+        "offset": 0,
+        "score_affecting": false,
+        "sha256": "aa687b58b0e73e2e383f8c500d75b591e188efe0168b3ffbcd3771caaa6dd4c7"
+      },
+      {
+        "bytes": 1,
+        "end_offset": 2,
+        "name": "format_id",
+        "offset": 1,
+        "score_affecting": false,
+        "sha256": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986"
+      },
+      {
+        "bytes": 4,
+        "end_offset": 6,
+        "name": "pr106_len_le_u32",
+        "offset": 2,
+        "score_affecting": false,
+        "sha256": "622c15593e14dd2625bf3dfb3269d64d344db6ab4bdb9ea01bae7cb688c8ba87"
+      },
+      {
+        "bytes": 185774,
+        "end_offset": 185780,
+        "name": "pr106_payload",
+        "offset": 6,
+        "score_affecting": true,
+        "sha256": "e1a203f136e5c39867077c007e4a3920e372f660e3bdc8aaf727a19c4fd527a7"
+      },
+      {
+        "bytes": 2,
+        "end_offset": 185782,
+        "name": "sidecar_len_le_u16",
+        "offset": 185780,
+        "score_affecting": false,
+        "sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41"
+      },
+      {
+        "bytes": 527,
+        "end_offset": 186309,
+        "name": "sidecar_payload",
+        "offset": 185782,
+        "score_affecting": true,
+        "sha256": "ad04a67dcd78bdbe068a84083cb1ee719af95a3bdf494d600092e9aeb268bdec"
+      },
+      {
+        "bytes": 6,
+        "end_offset": 186315,
+        "name": "framing_meta",
+        "offset": 186309,
+        "score_affecting": true,
+        "sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09"
+      }
+    ],
+    "unconsumed_trailing_bytes": 0
+  },
+  "mutated_payload_bytes": 186315,
+  "mutated_payload_sha256": "055cf7755e9e765e903280f125c57c6f987854d5d8026f333829fbfdad3d43d2",
+  "mutated_runtime_correction_digest": {
+    "combined_sha256": "637441f9b0518e0649c7b630ef9607c4623ea1514468a56f95467b6c6ef721fa",
+    "corrected_latents_sha256": "b0e237fe5230aa639aa1b3e4712760654ea7425dada8b72c80bbf88f0c3cf709",
+    "delta_q_sha256": "ca05b1d4c2c0c79724e5397bc3dd1bf7944161079af6ad1cf87c80b2265fc35e",
+    "dim_sha256": "a55bd9bdecb4a462e166cf0f8363bcb5578e8be61339a97639859173aa5098c3",
+    "format_id": "0x02",
+    "latents_changed_by_sidecar": true,
+    "n_corrections": 600,
+    "n_pairs": 600,
+    "source_latents_sha256": "10f7d166d680bb507151260176d5ecaac3b8239f20c3dad2198bcd919c81e225"
+  },
+  "mutation": {
+    "format_id": 2,
+    "new_delta_index": 0,
+    "new_delta_q": -2,
+    "new_dim": 26,
+    "old_delta_index": 3,
+    "old_delta_q": 2,
+    "old_dim": 26,
+    "pair_index": 0,
+    "section_name": "sidecar_payload"
+  },
+  "payload_sha256_changed": true,
+  "promotion_eligible": false,
+  "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+  "ready_for_exact_eval_dispatch": false,
+  "required_next_proof": "full-frame source-vs-candidate inflate output parity or exact same-runtime auth eval with archive/runtime custody",
+  "runtime_corrected_latents_digest_changed": true,
+  "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+  "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+  "runtime_semantic_digest_changed": true,
+  "runtime_sidecar_apply_consumption_claim": true,
+  "runtime_sidecar_decode_consumption_claim": true,
+  "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+  "score_claim": false,
+  "sidecar_kind": "pr101_ranked_no_op",
+  "sidecar_payload_sha256_changed": true,
+  "source_archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+  "source_payload_bytes": 186315,
+  "source_payload_sha256": "b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946",
+  "source_runtime_correction_digest": {
+    "combined_sha256": "7d2ff1afa765a94966d73573e57429f58522a0d324979b796f3fb05f148e78d2",
+    "corrected_latents_sha256": "1eaf8b72f9125b0ea507919341be082eab0ef9e8e3d9c391231472d3398b8481",
+    "delta_q_sha256": "616ee8fbee1e4770ee5574372efc8637fbf8b6f4c450c3c4c9cd47ee20ad6a53",
+    "dim_sha256": "a55bd9bdecb4a462e166cf0f8363bcb5578e8be61339a97639859173aa5098c3",
+    "format_id": "0x02",
+    "latents_changed_by_sidecar": true,
+    "n_corrections": 600,
+    "n_pairs": 600,
+    "source_latents_sha256": "10f7d166d680bb507151260176d5ecaac3b8239f20c3dad2198bcd919c81e225"
+  }
+}

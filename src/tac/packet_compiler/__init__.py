@@ -130,6 +130,8 @@ from tac.packet_compiler.pr106_fixed_latent_recode import (
 )
 from tac.packet_compiler.pr106_runtime_consumption import (
     dumps_runtime_consumption_manifest,
+    load_pr106_runtime_codec,
+    load_pr106_runtime_module,
     load_pr106_sidecar_runtime,
     prove_pr106_same_runtime_full_frame_parity,
     prove_pr106_sidecar_runtime_decode_consumption,
@@ -431,6 +433,8 @@ __all__ = [
     "emit_single_stored_member_archive",
     "encode_brotli_dim_delta_sidecar_payload",
     "encode_pr101_ranked_sidecar_payload",
+    "load_pr106_runtime_codec",
+    "load_pr106_runtime_module",
     "load_pr106_sidecar_runtime",
     "lossless_pr106_sidecar_recode_candidates",
     "mutate_pr106_sidecar_semantic_correction",

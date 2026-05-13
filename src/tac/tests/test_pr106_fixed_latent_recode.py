@@ -20,6 +20,9 @@ from tac.packet_compiler.pr106_fixed_latent_recode import (
     encode_hlm1_fixed_latents_from_brotli,
     split_pr106_fixed_latent_raw,
 )
+from tac.packet_compiler.pr106_hlm1_runtime_consumption import (
+    prove_pr106_hlm1_runtime_consumption,
+)
 
 REPO = Path(__file__).resolve().parents[3]
 PR106_R2_PR101_ARCHIVE = (
@@ -93,6 +96,30 @@ def test_hlm1_archive_candidate_builder_writes_nonpromotable_manifest(
     assert manifest["hlm1_recode"]["raw_roundtrip_equal"] is True
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
     assert (tmp_path / "out" / "hlm1_latent_archive_candidate_manifest.json").exists()
+
+
+def test_hlm1_runtime_consumption_proof_is_specific_to_fixed_latents(
+    tmp_path: Path,
+) -> None:
+    manifest = build_hlm1_latent_archive_candidate(
+        source_archive=PR106_R2_PR101_ARCHIVE,
+        output_dir=tmp_path / "out",
+        source_label="PR106 R2 PR101 grammar",
+        repo_root=REPO,
+    )
+
+    proof = prove_pr106_hlm1_runtime_consumption(
+        archive_path=Path(manifest["candidate_archive_path"]),
+        runtime_dir=REPO / "submissions" / "pr106_latent_sidecar_r2_pr101_grammar",
+        repo_root=REPO,
+    )
+
+    assert proof["runtime_hlm1_decode_consumption_claim"] is True
+    assert proof["runtime_hlm1_decode_matches_canonical"] is True
+    assert proof["runtime_hlm1_valid_mutation_changes_raw"] is True
+    assert proof["score_claim"] is False
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
 
 
 def test_hlm1_archive_candidate_cli_writes_manifest(tmp_path: Path) -> None:

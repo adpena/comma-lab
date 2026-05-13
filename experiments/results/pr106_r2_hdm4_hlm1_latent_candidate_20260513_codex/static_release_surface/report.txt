@@ -1,0 +1,4 @@
+HDM4+HLM1 static release surface.
+score_claim=false
+ready_for_exact_eval_dispatch=false
+Exact CUDA auth eval is required before any score claim.

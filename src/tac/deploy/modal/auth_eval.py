@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import hashlib
+import json
 import re
 import traceback
 import zipfile
@@ -74,6 +75,75 @@ def sha256_bytes(data: bytes) -> str:
     """Return the SHA-256 digest for in-memory custody payloads."""
 
     return hashlib.sha256(data).hexdigest()
+
+
+def _canonical_json_sha256(payload: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+
+
+def modal_uploaded_submission_dir_runtime_manifest(
+    local_runtime_manifest: dict[str, Any],
+    *,
+    remote_submission_dir: str = "/tmp/modal_auth_eval/submission_dir",
+) -> dict[str, Any]:
+    """Project a local contest runtime manifest to Modal's uploaded tree shape.
+
+    ``experiments/modal_auth_eval.py`` extracts ``--submission-dir`` transport
+    zips under ``/tmp/modal_auth_eval/submission_dir`` on the remote Linux host
+    before invoking ``experiments/contest_auth_eval.py``. The contest runtime
+    tree hash includes the runtime root name and each out-of-repo absolute file
+    path. Packet builders use this helper so exact-eval claim notes bind the
+    same runtime-tree hash the Modal evaluator will record after extraction.
+    """
+
+    files = []
+    remote_root = str(remote_submission_dir).rstrip("/")
+    for row in local_runtime_manifest.get("files", []):
+        if not isinstance(row, dict):
+            continue
+        relative_path = row.get("relative_path")
+        rewritten = dict(row)
+        if isinstance(relative_path, str):
+            rewritten["repo_relative_path"] = f"{remote_root}/{relative_path}"
+        files.append(rewritten)
+
+    repo_local_tac = dict(local_runtime_manifest.get("repo_local_tac_import_manifest") or {})
+    repo_local_tac["runtime_root_name"] = "submission_dir"
+    tree_payload = {
+        "runtime_root_name": "submission_dir",
+        "files": files,
+        "external_dependency_roots": [],
+        "repo_local_tac_import_manifest": repo_local_tac,
+        "upstream_evaluate_py": local_runtime_manifest.get("upstream_evaluate_py"),
+    }
+    content_payload = {
+        "files": [
+            {
+                "relative_path": row.get("relative_path"),
+                "bytes": row.get("bytes"),
+                "sha256": row.get("sha256"),
+            }
+            for row in files
+        ],
+        "external_dependency_roots": [],
+        "repo_local_tac_import_manifest": {
+            key: value for key, value in repo_local_tac.items() if key != "runtime_root_name"
+        },
+        "upstream_evaluate_py": local_runtime_manifest.get("upstream_evaluate_py"),
+    }
+    return {
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "runtime_root": remote_root,
+        "runtime_file_count": len(files),
+        "runtime_tree_sha256": _canonical_json_sha256(tree_payload),
+        "runtime_content_tree_sha256": _canonical_json_sha256(content_payload),
+        "files": files,
+        "external_dependency_roots": [],
+        "repo_local_tac_import_manifest": repo_local_tac,
+        "upstream_evaluate_py": local_runtime_manifest.get("upstream_evaluate_py"),
+    }
 
 
 def safe_artifact_label(value: str) -> str:
@@ -539,6 +609,7 @@ __all__ = [
     "claim_modal_auth_eval_dispatch",
     "fail_closed_remote_exception_result",
     "function_call_id",
+    "modal_uploaded_submission_dir_runtime_manifest",
     "predicted_eta",
     "read_spawn_metadata",
     "recover_modal_auth_eval",

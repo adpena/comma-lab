@@ -49,6 +49,7 @@ def test_briefing_runs_all_three_phases():
     assert "wr01_apply_pr106x_half" in proc.stdout
     assert "pr106_q10_151byte_brotli" in proc.stdout
     assert "pr106x_lgblock16_1byte_brotli" in proc.stdout
+    assert "hnerv_hlm1_fixed_latent_recode_exact_eval" in proc.stdout
     assert "Copy-safe next steps" in proc.stdout
     assert "assert_packet_ready_for_submit" in proc.stdout
     assert "refresh_with_operator_exact_cuda_approval" in proc.stdout
@@ -123,6 +124,7 @@ def test_briefing_json_composite_has_all_three_keys():
         "wr01_apply_pr106x_half",
         "pr106_q10_151byte_brotli",
         "pr106x_lgblock16_1byte_brotli",
+        "hnerv_hlm1_fixed_latent_recode_exact_eval",
     }
     q10 = packet_rows["pr106_q10_151byte_brotli"]
     assert q10["ready_for_submit"] is False
@@ -162,6 +164,35 @@ def test_briefing_json_composite_has_all_three_keys():
         assert lgblock16["operator_next_steps"]["schema"] == "terminal_exact_eval_evidence_stop_v1"
     else:
         assert lgblock16["operator_next_steps"]["schema"] == "hnerv_lowlevel_operator_next_steps_v1"
+    hlm1 = packet_rows["hnerv_hlm1_fixed_latent_recode_exact_eval"]
+    assert hlm1["archive_sha256"] == "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0"
+    assert hlm1["archive_bytes"] == 186423
+    packet_path = REPO / (
+        "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/"
+        "hlm1_exact_eval_packet.json"
+    )
+    packet_text = packet_path.read_text(encoding="utf-8")
+    hlm1_packet = json.loads(packet_text)
+    assert "/Users/adpena" not in packet_text
+    assert hlm1_packet["runtime_tree_sha256"] != hlm1_packet["local_runtime_tree_sha256"]
+    assert hlm1_packet["runtime_hlm1_decode_consumption_claim"] is True
+    assert hlm1_packet["runtime_hlm1_valid_mutation_changes_raw"] is True
+    assert hlm1_packet["artifacts"]["pre_submission_compliance"].endswith(
+        "pre_submission_compliance.static_clean.public.json"
+    )
+    assert hlm1["preflight_ready"] is True
+    assert hlm1["compliance_ok"] is True
+    assert hlm1["payload_diff_ready"] is True
+    assert hlm1["dry_run_ready"] is True
+    assert hlm1["score_affecting_runtime_changed"] is True
+    assert hlm1["operator_next_steps"]["schema"] == "hnerv_hlm1_operator_next_steps_v1"
+    hlm1_step_ids = [step["id"] for step in hlm1["operator_next_steps"]["steps"]]
+    assert hlm1_step_ids == [
+        "refresh_static_packet_no_dispatch",
+        "optional_local_cuda_exact_eval",
+        "submit_modal_exact_cuda",
+        "harvest_modal_exact_cuda",
+    ]
 
 
 def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
@@ -199,6 +230,10 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
         step["id"]
         for step in packet_rows["pr106x_lgblock16_1byte_brotli"]["operator_next_steps"]["steps"]
     ]
+    hlm1_step_ids = [
+        step["id"]
+        for step in packet_rows["hnerv_hlm1_fixed_latent_recode_exact_eval"]["operator_next_steps"]["steps"]
+    ]
     assert "assert_packet_ready_for_submit" in wr01_step_ids
     assert q10_step_ids == [
         "review_terminal_cuda_result",
@@ -211,6 +246,7 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
         ]
     else:
         assert "submit_exact_cuda" in lgblock16_step_ids
+    assert "submit_modal_exact_cuda" in hlm1_step_ids
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
 

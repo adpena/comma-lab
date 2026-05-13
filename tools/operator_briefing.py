@@ -124,6 +124,14 @@ PHASE_1_EXACT_EVAL_PACKETS = [
             "hnerv_lowlevel_exact_eval_packet.json"
         ),
     },
+    {
+        "lane_id": "hnerv_hlm1_fixed_latent_recode_exact_eval",
+        "name": "PR106 HDM4+HLM1 fixed-latent recode",
+        "packet_path": (
+            "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/"
+            "hlm1_exact_eval_packet.json"
+        ),
+    },
 ]
 
 

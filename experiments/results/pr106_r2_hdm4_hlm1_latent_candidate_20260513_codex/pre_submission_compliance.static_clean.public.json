@@ -1,0 +1,350 @@
+{
+  "archive": {
+    "bytes": 186423,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 186315,
+        "crc": 921521461,
+        "file_size": 186315,
+        "local_header": {
+          "compress_size": 186315,
+          "compress_type": 0,
+          "crc32": 921521461,
+          "extra_len": 0,
+          "file_size": 186315,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "0.bin",
+          "version_needed": 20
+        },
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive.zip",
+    "sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='0.bin' local='0.bin' local_reason=None",
+      "name": "zip_local_header_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_local_header_metadata_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_payload_readable:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0 actual=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186423 actual=186423",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/contest_auth_eval.json missing; nonfinal compliance may pass, but this packet has no auth-eval custody and is not score/rank/promote evidence",
+      "name": "auth_eval_optional_missing",
+      "passed": false,
+      "severity": "warning"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=01c792be01b4538507c73efcdedd8bc29b79287a2a0413e28c2c87815cd5c4ef",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['01c792be01b4538507c73efcdedd8bc29b79287a2a0413e28c2c87815cd5c4ef', '80b205d218e864575271bbb13ab7b4d0bd86f4e2c6e1892e3427bbd34a63b26e'] auth_eval_candidates={}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0 actual=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186423 actual=186423",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='0.bin' actual='0.bin'",
+      "name": "archive_manifest_member_0_name_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186315 actual=186315",
+      "name": "archive_manifest_member_0_file_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186315 actual=186315",
+      "name": "archive_manifest_member_0_compress_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=921521461 actual=921521461",
+      "name": "archive_manifest_member_0_crc_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946' actual='b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946'",
+      "name": "archive_manifest_member_0_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface"
+    ]
+  },
+  "public_hygiene_note": "Absolute local repo paths redacted from raw static compliance output; pass/fail/check payload preserved.",
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 11038,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.py",
+        "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+      },
+      {
+        "bytes": 1053,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh",
+        "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "80b205d218e864575271bbb13ab7b4d0bd86f4e2c6e1892e3427bbd34a63b26e",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "static_release_surface",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 5,
+    "runtime_root": "<repo>/experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface",
+    "runtime_tree_sha256": "01c792be01b4538507c73efcdedd8bc29b79287a2a0413e28c2c87815cd5c4ef",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}

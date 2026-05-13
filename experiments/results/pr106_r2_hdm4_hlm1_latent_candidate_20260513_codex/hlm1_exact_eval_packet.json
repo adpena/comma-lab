@@ -1,0 +1,212 @@
+{
+  "approval_scope": "operator approval for exact CUDA work only; Modal wrapper must claim lane, dispatch, harvest, and adjudication before any score claim",
+  "approved_exact_eval_target": true,
+  "archive_bytes": 186423,
+  "archive_identity": {
+    "bytes": 186423,
+    "exists": true,
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip",
+    "sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0"
+  },
+  "archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+  "artifact_identities": {
+    "hlm1_runtime_consumption": {
+      "bytes": 1767,
+      "exists": true,
+      "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_runtime_consumption.json",
+      "sha256": "1d7c5924d17e5b3af5e27e45f0ff015cbb7cda7e1d6ea966ca273c17f46960ca"
+    },
+    "manifest": {
+      "bytes": 3184,
+      "exists": true,
+      "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/manifest.json",
+      "sha256": "e86daa8ed9378bbe57ad19ff7cda24ef13b85110b7b1456ba41155d0b3c0f840"
+    },
+    "packetir_identity": {
+      "bytes": 4911,
+      "exists": true,
+      "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/packetir_identity.json",
+      "sha256": "d17597fbffcb8113005829201d6a0d484ae9810d9dc248829d2d512d13ade468"
+    },
+    "pre_submission_compliance": {
+      "bytes": 12499,
+      "exists": true,
+      "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.public.json",
+      "sha256": "ae3b64f7f5121ea0412038bf21c2cbcad6af3983ca7c2055ff37286d85331721"
+    },
+    "prefix_parity": {
+      "bytes": 2467,
+      "exists": true,
+      "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/same_runtime_prefix_parity.json",
+      "sha256": "ca9329a215b6d88e7a709608fc7676cb46a8af70394d6feec88964259c60da76"
+    },
+    "runtime_consumption": {
+      "bytes": 5290,
+      "exists": true,
+      "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_decode_consumption.json",
+      "sha256": "39e27b9e7128d0e689549b0651b315d4fda5e8d9ea01a7bd3ced57a9bd3c2e41"
+    }
+  },
+  "artifacts": {
+    "hlm1_runtime_consumption": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_runtime_consumption.json",
+    "manifest": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/manifest.json",
+    "modal_submission_dir_transport": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/modal_submission_dir_transport.json",
+    "packet": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json",
+    "packetir_identity": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/packetir_identity.json",
+    "pre_submission_compliance": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.public.json",
+    "prefix_parity": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/same_runtime_prefix_parity.json",
+    "runtime_manifest": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
+    "sidecar_runtime_consumption": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_decode_consumption.json",
+    "static_release_surface": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface"
+  },
+  "blockers": [],
+  "byte_delta": -69,
+  "candidate_id": "pr106_hlm1_fixed_latent_recode",
+  "commands": {
+    "claim": "Modal wrapper records the Level-2 active lane claim before provider spawn; do not pre-claim separately unless using a different provider actuator.",
+    "harvest": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513",
+    "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/contest_auth_eval.cuda.json",
+    "submit": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --claim-agent codex:gpt-5.5 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7; submission_dir_zip_sha256=2f382e0fd7494d00a1d764aaf4e71812708a188f7c8f817397efb43a63343cc8'"
+  },
+  "dispatch_attempted": false,
+  "dry_run_ready": true,
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "expected_pose_dist_delta": 0.0,
+  "expected_seg_dist_delta": 0.0,
+  "expected_total_score_delta_rate_only": -4.594426776542982e-05,
+  "family": "hnerv_fixed_latent_recode",
+  "full_frame_inflate_output_parity_claim": false,
+  "job_name": "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_20260513",
+  "lane_id": "hnerv_hlm1_fixed_latent_recode_exact_eval",
+  "local_runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
+  "local_runtime_tree_sha256": "580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa",
+  "missing_env": [],
+  "modal_submission_dir_transport": {
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/modal_submission_dir_transport.json",
+    "transport_zip_bytes": 201783,
+    "transport_zip_sha256": "2f382e0fd7494d00a1d764aaf4e71812708a188f7c8f817397efb43a63343cc8"
+  },
+  "name": "PR106 HDM4+HLM1 fixed-latent recode",
+  "operator_approved_exact_cuda": true,
+  "operator_next_steps": {
+    "copy_safe": true,
+    "current_submit_blockers": [],
+    "first_remote_gpu_step": "submit_modal_exact_cuda",
+    "must_run_in_order": true,
+    "packet_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json",
+    "schema": "hnerv_hlm1_operator_next_steps_v1",
+    "steps": [
+      {
+        "copy_safe_command": ".venv/bin/python tools/build_pr106_hlm1_exact_eval_packet.py --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json --operator-approved-exact-cuda",
+        "dispatches_remote_gpu": false,
+        "id": "refresh_static_packet_no_dispatch",
+        "order": 1,
+        "purpose": "regenerate HLM1 runtime custody and fail-closed exact-eval packet",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/contest_auth_eval.cuda.json",
+        "dispatches_remote_gpu": true,
+        "id": "optional_local_cuda_exact_eval",
+        "order": 2,
+        "purpose": "run only on a real CUDA host; MPS and macOS CPU are not promotion axes",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_20260513 --claim-agent codex:gpt-5.5 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7; submission_dir_zip_sha256=2f382e0fd7494d00a1d764aaf4e71812708a188f7c8f817397efb43a63343cc8'",
+        "dispatches_remote_gpu": true,
+        "id": "submit_modal_exact_cuda",
+        "order": 3,
+        "purpose": "canonical Modal T4 exact CUDA auth eval; wrapper records the Level-2 claim before spawn",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_20260513",
+        "dispatches_remote_gpu": false,
+        "id": "harvest_modal_exact_cuda",
+        "order": 4,
+        "purpose": "recover detached Modal artifacts before any score or promotion claim",
+        "writes_repo_state": true
+      }
+    ]
+  },
+  "packet_kind": "hnerv_hlm1_exact_eval_operator_packet",
+  "pareto_scope": "hnerv_rate_only_exact_archive",
+  "payload_diff_ready": true,
+  "prefix_parity_claim": true,
+  "preflight_ready": true,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch_claim": true,
+  "ready_for_submit": true,
+  "recorded_at_utc": "2026-05-13T12:33:24Z",
+  "remaining_required_for_score_or_promotion": [
+    "modal_cuda_auth_eval_dispatch",
+    "modal_auth_eval_harvest",
+    "contest_auth_eval_adjudication",
+    "operator_score_claim_review"
+  ],
+  "runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
+  "runtime_hlm1_decode_consumption_claim": true,
+  "runtime_hlm1_valid_mutation_changes_raw": true,
+  "runtime_manifest": {
+    "local_runtime_tree_sha256": "580faddd39d1bdd251393fc0e1a9fd3d953a48abade3e8910dcd6e6cffdad1fa",
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
+    "runtime_content_tree_sha256": "3e7c05354f0394d84c4ac87609f313eb20beb4b1e7c484420c13d551a16b7217",
+    "runtime_file_count": 7,
+    "runtime_tree_sha256": "4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7"
+  },
+  "runtime_sidecar_apply_consumption_claim": true,
+  "runtime_sidecar_decode_consumption_claim": true,
+  "runtime_tree_sha256": "4f674ac0cf2b838ec38709e0deb9af11beeffadaa5a1e30d36e4cd50e274cce7",
+  "schema_version": 1,
+  "score_affecting_runtime_changed": true,
+  "score_claim": false,
+  "source_archive_bytes": 186492,
+  "source_archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+  "source_repo_commit": "d21295b41baab2f9027103eac091557eb4470977",
+  "source_tree_custody": {
+    "diff_against_head_bytes": 682955,
+    "diff_against_head_sha256": "7d99f3b1f57f1537339b8d81ef66d1e8ff6212f379a9c4f98d42888fcaf00aef",
+    "dirty": true,
+    "head_commit": "d21295b41baab2f9027103eac091557eb4470977",
+    "schema": "provider_dispatch_source_tree_custody_v1",
+    "score_claim": false,
+    "status_short": [
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/archive_manifest.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/entropy_floor.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/entropy_floor.md",
+      "AM experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_exact_eval_packet.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_latent_archive_candidate_manifest.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/hlm1_runtime_consumption.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/manifest.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/modal_submission_dir_transport.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/packetir_identity.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.public.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_decode_consumption.json",
+      "AM experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/same_runtime_prefix_parity.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive.zip",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/archive_manifest.json",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.py",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/codec.py",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/model.py",
+      "A  experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/src/pr101_grammar.py",
+      " M src/tac/deploy/modal/auth_eval.py",
+      " M src/tac/packet_compiler/__init__.py",
+      " M src/tac/packet_compiler/pr106_runtime_consumption.py",
+      " M src/tac/tests/test_modal_auth_eval.py",
+      "MM src/tac/tests/test_operator_briefing.py",
+      " M src/tac/tests/test_pr106_fixed_latent_recode.py",
+      "AM tools/build_pr106_hlm1_exact_eval_packet.py",
+      "M  tools/operator_briefing.py",
+      "?? src/tac/packet_compiler/pr106_hlm1_runtime_consumption.py",
+      "?? tools/prove_pr106_hlm1_runtime_consumption.py"
+    ],
+    "untracked_path_count": 2
+  },
+  "static_compliance_ok": true,
+  "static_packet_ready": true
+}

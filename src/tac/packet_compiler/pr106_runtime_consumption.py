@@ -58,21 +58,37 @@ def _runtime_import_context(runtime_dir: Path) -> Iterator[None]:
                 sys.modules[name] = module  # type: ignore[assignment]
 
 
-def load_pr106_sidecar_runtime(runtime_dir: Path) -> ModuleType:
-    """Load a submission runtime ``inflate.py`` without polluting global imports."""
-
+def load_pr106_runtime_module(
+    runtime_dir: Path,
+    relative_path: str | Path,
+    *,
+    module_tag: str,
+) -> ModuleType:
+    """Load one submission runtime Python file without polluting global imports."""
     runtime_dir = Path(runtime_dir)
-    inflate_py = runtime_dir / "inflate.py"
-    if not inflate_py.is_file():
-        raise FileNotFoundError(f"runtime inflate.py not found: {inflate_py}")
-    module_name = f"_pact_runtime_{runtime_dir.name}_inflate"
-    spec = importlib.util.spec_from_file_location(module_name, inflate_py)
+    module_path = runtime_dir / relative_path
+    if not module_path.is_file():
+        raise FileNotFoundError(f"runtime module not found: {module_path}")
+    module_name = f"_pact_runtime_{runtime_dir.name}_{module_tag}"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"could not load import spec for {inflate_py}")
+        raise ImportError(f"could not load import spec for {module_path}")
     module = importlib.util.module_from_spec(spec)
     with _runtime_import_context(runtime_dir):
         spec.loader.exec_module(module)
     return module
+
+
+def load_pr106_sidecar_runtime(runtime_dir: Path) -> ModuleType:
+    """Load a submission runtime ``inflate.py`` without polluting global imports."""
+
+    return load_pr106_runtime_module(runtime_dir, "inflate.py", module_tag="inflate")
+
+
+def load_pr106_runtime_codec(runtime_dir: Path) -> ModuleType:
+    """Load a submission runtime ``src/codec.py`` without polluting global imports."""
+
+    return load_pr106_runtime_module(runtime_dir, "src/codec.py", module_tag="codec")
 
 
 def _array_bytes(array: Any, dtype_name: str) -> bytes:

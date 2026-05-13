@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from tac.deploy.modal.auth_eval import (
+    modal_uploaded_submission_dir_runtime_manifest,
     prepare_modal_auth_eval_request,
     runtime_upload_skip_reason,
     submission_dir_zip_bytes,
@@ -280,6 +281,53 @@ def test_prepare_modal_auth_eval_request_centralizes_upload_shape(tmp_path):
     assert len(prepared.submission_dir_zip_sha256 or "") == 64
     assert prepared.output_dir.parent == (tmp_path / "modal_results").resolve()
     assert "candidate_archive" in prepared.output_dir.name
+
+
+def test_modal_uploaded_submission_dir_runtime_manifest_uses_remote_shape() -> None:
+    local = {
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "runtime_root": "/local/static_release_surface",
+        "runtime_file_count": 2,
+        "files": [
+            {
+                "relative_path": "inflate.sh",
+                "repo_relative_path": "experiments/local/inflate.sh",
+                "bytes": 17,
+                "sha256": "a" * 64,
+            },
+            {
+                "relative_path": "src/codec.py",
+                "repo_relative_path": "experiments/local/src/codec.py",
+                "bytes": 31,
+                "sha256": "b" * 64,
+            },
+        ],
+        "external_dependency_roots": [],
+        "repo_local_tac_import_manifest": {
+            "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+            "runtime_root_name": "static_release_surface",
+            "files": [],
+        },
+        "upstream_evaluate_py": {
+            "relative_path": "evaluate.py",
+            "bytes": 11,
+            "sha256": "c" * 64,
+        },
+    }
+
+    projected = modal_uploaded_submission_dir_runtime_manifest(local)
+
+    assert projected["runtime_root"] == "/tmp/modal_auth_eval/submission_dir"
+    assert projected["repo_local_tac_import_manifest"]["runtime_root_name"] == "submission_dir"
+    assert [
+        row["repo_relative_path"] for row in projected["files"]
+    ] == [
+        "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+        "/tmp/modal_auth_eval/submission_dir/src/codec.py",
+    ]
+    assert len(projected["runtime_tree_sha256"]) == 64
+    assert len(projected["runtime_content_tree_sha256"]) == 64
+    assert projected["runtime_tree_sha256"] != projected["runtime_content_tree_sha256"]
 
 
 def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):

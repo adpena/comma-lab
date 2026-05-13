@@ -1,0 +1,21 @@
+{
+  "archive_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip",
+  "archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+  "archive_size_bytes": 186423,
+  "candidate_label": "HDM4+HLM1",
+  "lane_id": "hnerv_hlm1_fixed_latent_recode_exact_eval",
+  "member_count": 1,
+  "members": [
+    {
+      "compress_size": 186315,
+      "crc": 921521461,
+      "file_size": 186315,
+      "name": "0.bin",
+      "sha256": "b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946"
+    }
+  ],
+  "schema": "pre_submission_archive_manifest_v1",
+  "score_claim": false,
+  "score_claim_basis": "static custody only; exact auth eval missing",
+  "tool": "codex_hlm1_static_manifest"
+}
