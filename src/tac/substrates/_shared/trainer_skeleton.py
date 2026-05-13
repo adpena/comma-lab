@@ -12,9 +12,8 @@ Scope:
     trainer (per HNeRV parity discipline lessons 3 + 4 + 5).
 
 Compatibility:
-    The 14 existing trainers are NOT modified by this landing; they keep
-    their inlined copies. New substrates SHOULD import from this module.
-    Migration of existing trainers is operator-gated (see landing memo).
+    All 14 substrate trainers under ``experiments/train_substrate_*.py``
+    import from this module (migration completed 2026-05-13).
 
 Exception-type policy:
     Helper invariants (missing upstream frame_utils.py, pyav unavailable,
