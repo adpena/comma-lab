@@ -296,6 +296,15 @@ HNERV_SCORECARD = (
     REPO
     / "experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/scorecard.json"
 )
+HNERV_SCORECARD_REQUIRED_EVALS = (
+    (
+        "PR106-R2-HDM4-HLM1",
+        REPO
+        / "experiments/results/modal_auth_eval/"
+        / "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513/"
+        / "contest_auth_eval.adjudicated.json",
+    ),
+)
 PR106X_ARCHIVE = (
     REPO
     / "experiments/results/lightning_batch/"
@@ -748,8 +757,12 @@ def _run_reverse_engineering_release_gate() -> tuple[bool, str]:
 
 
 def _run_hnerv_scorecard_gate() -> tuple[bool, str]:
+    cmd = [sys.executable, str(HNERV_SCORECARD_AUDIT), "--scorecard", str(HNERV_SCORECARD)]
+    for label, path in HNERV_SCORECARD_REQUIRED_EVALS:
+        if path.is_file():
+            cmd.extend(["--required-eval", f"{label}={path.relative_to(REPO)}"])
     proc = _run_subprocess(
-        [sys.executable, str(HNERV_SCORECARD_AUDIT), "--scorecard", str(HNERV_SCORECARD)],
+        cmd,
         capture_output=True,
         text=True,
     )

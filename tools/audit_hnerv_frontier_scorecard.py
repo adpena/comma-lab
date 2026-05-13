@@ -150,7 +150,117 @@ def _audit_internal_score_lowering_frontier(
     return blockers
 
 
-def audit_scorecard(payload: dict[str, Any], *, repo_root: Path = REPO_ROOT) -> tuple[list[str], dict[str, Any]]:
+def _score_from_eval_payload(payload: dict[str, Any]) -> float | None:
+    for key in ("score_recomputed_from_components", "canonical_score", "score"):
+        value = payload.get(key)
+        if isinstance(value, int | float):
+            return float(value)
+    return None
+
+
+def _load_required_eval(spec: str, repo_root: Path) -> tuple[str, Path, dict[str, Any]]:
+    if "=" not in spec:
+        raise ValueError(f"required eval must be LABEL=PATH, got {spec!r}")
+    label, raw_path = spec.split("=", 1)
+    if not label:
+        raise ValueError(f"required eval label is empty: {spec!r}")
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = repo_root / path
+    try:
+        payload = read_json(path)
+    except FileNotFoundError as exc:
+        raise ValueError(f"{label}_required_eval_missing_file") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{label}_required_eval_invalid_json: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label}_required_eval_not_object")
+    return label, path, payload
+
+
+def _audit_required_eval_rows(
+    payload: dict[str, Any],
+    labels: dict[str, dict[str, Any]],
+    required_evals: tuple[str, ...],
+    repo_root: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    if not required_evals:
+        return blockers
+
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        return ["required_eval_rows_missing_scorecard_rows"]
+
+    frontier = payload.get("score_lowering_frontier")
+    frontier_score = (
+        float(frontier["score"])
+        if isinstance(frontier, dict) and isinstance(frontier.get("score"), int | float)
+        else None
+    )
+    frontier_label = frontier.get("label") if isinstance(frontier, dict) else None
+
+    for spec in required_evals:
+        try:
+            label, path, eval_payload = _load_required_eval(spec, repo_root)
+        except ValueError as exc:
+            blockers.append(str(exc))
+            continue
+
+        provenance = eval_payload.get("provenance") or {}
+        if provenance.get("device") != "cuda":
+            blockers.append(f"{label}_required_eval_not_cuda")
+        if provenance.get("gpu_t4_match") is not True:
+            blockers.append(f"{label}_required_eval_not_t4_match")
+        if eval_payload.get("n_samples") != 600:
+            blockers.append(f"{label}_required_eval_not_full_sample")
+        score = _score_from_eval_payload(eval_payload)
+        if score is None:
+            blockers.append(f"{label}_required_eval_missing_score")
+            continue
+        archive_sha = provenance.get("archive_sha256") or eval_payload.get("archive_sha256")
+        if not _valid_sha(archive_sha):
+            blockers.append(f"{label}_required_eval_missing_archive_sha256")
+            continue
+
+        row = labels.get(label)
+        if row is None:
+            for candidate in rows:
+                if isinstance(candidate, dict) and candidate.get("archive_sha256") == archive_sha:
+                    row = candidate
+                    break
+        if row is None:
+            blockers.append(f"{label}_required_eval_missing_from_scorecard_rows")
+            continue
+        if row.get("label") != label:
+            blockers.append(f"{label}_required_eval_row_label_mismatch_{row.get('label')}")
+        if row.get("archive_sha256") != archive_sha:
+            blockers.append(f"{label}_required_eval_archive_sha_mismatch")
+        if row.get("evidence_grade") != "A++":
+            blockers.append(f"{label}_required_eval_row_not_Aplusplus")
+        row_score = row.get("score")
+        if not isinstance(row_score, int | float):
+            blockers.append(f"{label}_required_eval_row_missing_score")
+        elif abs(float(row_score) - score) > SCORE_TOLERANCE:
+            blockers.append(f"{label}_required_eval_score_mismatch")
+        rel_path = str(path.relative_to(repo_root)) if path.is_relative_to(repo_root) else str(path)
+        if row.get("eval_artifact") != rel_path:
+            blockers.append(f"{label}_required_eval_artifact_mismatch")
+        if (
+            frontier_score is not None
+            and score < frontier_score - SCORE_TOLERANCE
+            and frontier_label != row.get("label")
+        ):
+            blockers.append(f"{label}_required_eval_lower_than_score_lowering_frontier_but_not_selected")
+    return blockers
+
+
+def audit_scorecard(
+    payload: dict[str, Any],
+    *,
+    repo_root: Path = REPO_ROOT,
+    required_evals: tuple[str, ...] = (),
+) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     rows = payload.get("rows")
     groups = payload.get("payload_equivalence_groups")
@@ -249,6 +359,7 @@ def audit_scorecard(payload: dict[str, Any], *, repo_root: Path = REPO_ROOT) -> 
         blockers.append("missing_latent_or_sidecar_section_manifest")
 
     blockers.extend(_audit_internal_score_lowering_frontier(payload, labels))
+    blockers.extend(_audit_required_eval_rows(payload, labels, required_evals, repo_root))
 
     score_lowering_frontier = payload.get("score_lowering_frontier")
     next_score_lowering_target = payload.get("next_score_lowering_exact_evaluable_target")
@@ -276,14 +387,15 @@ def audit_scorecard(payload: dict[str, Any], *, repo_root: Path = REPO_ROOT) -> 
             for row in rows
             if isinstance(row, dict) and row.get("canonical_frontier_eligible") is True
         ],
+        "required_eval_count": len(required_evals),
     }
     return blockers, summary
 
 
-def build_report(scorecard: Path) -> AuditReport:
+def build_report(scorecard: Path, *, required_evals: tuple[str, ...] = ()) -> AuditReport:
     try:
         payload = load_scorecard(scorecard)
-        blockers, summary = audit_scorecard(payload)
+        blockers, summary = audit_scorecard(payload, required_evals=required_evals)
     except ValueError as exc:
         blockers = [str(exc)]
         summary = {
@@ -316,9 +428,19 @@ def main(argv: list[str] | None = None) -> int:
         default="text",
         help="Output format. Default: text.",
     )
+    parser.add_argument(
+        "--required-eval",
+        action="append",
+        default=[],
+        metavar="LABEL=PATH",
+        help=(
+            "Exact CUDA eval artifact that must be present in the scorecard. "
+            "Used to fail closed when a lower harvested packet is omitted."
+        ),
+    )
     args = parser.parse_args(argv)
 
-    report = build_report(args.scorecard)
+    report = build_report(args.scorecard, required_evals=tuple(args.required_eval))
     if args.format == "json":
         print(json_text(report.to_dict()), end="")
     elif not report.ready:

@@ -315,6 +315,37 @@ def test_promotion_blocked_exact_row_can_route_internal_score_lowering(tmp_path:
     assert "| pr106_r2_internal | 0.240000000000 |" in md
 
 
+def test_promotion_blocker_list_blocks_public_frontier_but_not_internal_routing(
+    tmp_path: Path,
+) -> None:
+    canonical_dir = tmp_path / "canonical"
+    blocked_dir = tmp_path / "blocked"
+    canonical_dir.mkdir()
+    blocked_dir.mkdir()
+    canonical_info = _write_archive(canonical_dir / "archive.zip", "x", b"canonical-payload")
+    blocked_payload = b"\xff\x08\x00\x00lower-score-decoder-latent"
+    blocked_info = _write_archive(blocked_dir / "archive.zip", "x", blocked_payload)
+    canonical_eval = _write_eval(canonical_dir, canonical_info, score=0.250)
+    blocked_eval = _write_eval(
+        blocked_dir,
+        blocked_info,
+        score=0.240,
+        extra={
+            "promotion_eligible": True,
+            "promotion_blockers": ["pre_submission_compliance_check_not_recorded"],
+        },
+    )
+
+    canonical_row = row_from_eval("canonical_public", canonical_eval, profile_indexes([]))
+    blocked_row = row_from_eval("hlm1_candidate", blocked_eval, profile_indexes([]))
+    rows = [canonical_row, blocked_row]
+
+    assert blocked_row["canonical_frontier_eligible"] is False
+    assert blocked_row["canonicality_blockers"] == ["promotion_blockers_present"]
+    assert current_frontier(rows)["label"] == "canonical_public"
+    assert score_lowering_frontier(rows)["label"] == "hlm1_candidate"
+
+
 def test_negative_exact_row_cannot_route_internal_score_lowering(tmp_path: Path) -> None:
     canonical_dir = tmp_path / "canonical"
     negative_dir = tmp_path / "negative"

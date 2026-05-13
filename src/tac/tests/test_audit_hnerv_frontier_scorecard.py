@@ -222,6 +222,87 @@ def test_audit_scorecard_accepts_internal_score_lowering_frontier() -> None:
     }
 
 
+def test_required_eval_must_be_visible_and_selected_when_lower(tmp_path: Path) -> None:
+    payload = _valid_scorecard()
+    eval_path = tmp_path / "contest_auth_eval.adjudicated.json"
+    archive_sha = "9" * 64
+    score_fields = _score_fields(186_423, 0.0006426, 0.00003236)
+    eval_path.write_text(
+        json.dumps(
+            {
+                "archive_size_bytes": 186_423,
+                "avg_posenet_dist": 0.00003236,
+                "avg_segnet_dist": 0.0006426,
+                "n_samples": 600,
+                "provenance": {
+                    "archive_sha256": archive_sha,
+                    "device": "cuda",
+                    "gpu_t4_match": True,
+                    "inflate_runtime_manifest": {"runtime_tree_sha256": "f" * 64},
+                },
+                "score_recomputed_from_components": score_fields["score"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    required = (f"PR106-R2-HDM4-HLM1={eval_path}",)
+
+    blockers, _summary = audit.audit_scorecard(payload, required_evals=required)
+
+    assert "PR106-R2-HDM4-HLM1_required_eval_missing_from_scorecard_rows" in blockers
+
+    row = {
+        "label": "PR106-R2-HDM4-HLM1",
+        "evidence_grade": "A++",
+        "canonical_frontier_eligible": True,
+        "canonicality_blockers": [],
+        "profile_match_key": "archive_sha256",
+        "archive_sha256": archive_sha,
+        "payload_sha256": "8" * 64,
+        **score_fields,
+    }
+    row["eval_artifact"] = str(eval_path)
+    payload["rows"].append(row)
+    payload["score_lowering_frontier"] = {
+        "label": "PR106",
+        "score": payload["rows"][0]["score"],
+        "archive_bytes": payload["rows"][0]["archive_bytes"],
+        "archive_sha256": payload["rows"][0]["archive_sha256"],
+        "frontier_scope": "internal_exact_cuda_score_lowering",
+        "evidence_grade": "A++",
+        "eval_artifact": payload["rows"][0]["eval_artifact"],
+        "promotion_authority": False,
+        "canonical_frontier_eligible": True,
+        "canonicality_blockers": [],
+    }
+
+    blockers, _summary = audit.audit_scorecard(payload, required_evals=required)
+
+    assert (
+        "PR106-R2-HDM4-HLM1_required_eval_lower_than_score_lowering_frontier_but_not_selected"
+        in blockers
+    )
+
+    payload["score_lowering_frontier"] = {
+        "label": "PR106-R2-HDM4-HLM1",
+        "score": row["score"],
+        "archive_bytes": row["archive_bytes"],
+        "archive_sha256": row["archive_sha256"],
+        "frontier_scope": "internal_exact_cuda_score_lowering",
+        "evidence_grade": "A++",
+        "eval_artifact": row["eval_artifact"],
+        "promotion_authority": False,
+        "canonical_frontier_eligible": True,
+        "canonicality_blockers": [],
+    }
+    blockers, summary = audit.audit_scorecard(payload, required_evals=required)
+
+    assert blockers == []
+    assert summary["required_eval_count"] == 1
+
+
 def test_audit_scorecard_blocks_internal_frontier_on_regression_row() -> None:
     payload = _valid_scorecard()
     row = {

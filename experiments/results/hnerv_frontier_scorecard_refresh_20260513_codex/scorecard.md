@@ -2,6 +2,7 @@
 
 | label | grade | canonical | scope | score | bytes | seg | pose | rate | largest section | archive sha |
 |---|---:|---:|---|---:|---:|---:|---:|---:|---|---|
+| PR106-R2-HDM4-HLM1 | A++ | no | `exact_local_cuda_custody_candidate_manifest` | 0.206380309075 | 186423 | 0.064260000 | 0.017988885 | 0.124131424 | `inner_decoder_packed_brotli:169990` | `8801845d5099b957` |
 | PR106-R2-lowlevel-HDM4 | A++ | no | `exact_local_cuda_custody_candidate_manifest` | 0.206426253343 | 186492 | 0.064260000 | 0.017988885 | 0.124177368 | `inner_decoder_packed_brotli:169990` | `218ae16f3f13b722` |
 | PR106-R2-lowlevel-HDM3 | A++ | no | `exact_local_cuda_custody_candidate_manifest` | 0.206508153994 | 186615 | 0.064260000 | 0.017988885 | 0.124259269 | `inner_decoder_packed_brotli:170113` | `8cc7e3b21a5f7760` |
 | PR106-R2-lowlevel | A++ | no | `exact_local_cuda_custody` | 0.206517476020 | 186629 | 0.064260000 | 0.017988885 | 0.124268591 | `inner_decoder_packed_brotli:170127` | `287e6edc612803a9` |
@@ -30,13 +31,13 @@
 | PR106-R2-lowlevel | `inner_decoder_packed_brotli` | 170127 | 7.998224 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR106x-lowlevel | `decoder_packed_brotli` | 170127 | 7.998224 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR106-R2-lowlevel-HDM3 | `inner_decoder_packed_brotli` | 170113 | 7.998040 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
+| PR106-R2-HDM4-HLM1 | `inner_decoder_packed_brotli` | 169990 | 7.998504 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR106-R2-lowlevel-HDM4 | `inner_decoder_packed_brotli` | 169990 | 7.998504 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR105 | `decoder_packed_brotli` | 161891 | 7.998095 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR105x | `decoder_packed_brotli` | 161891 | 7.998095 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR102 | `merged_range_coded_weights_and_hi_latents` | 153856 | 7.996868 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR103-ac-repack | `merged_range_coded_weights_and_hi_latents` | 153856 | 7.998668 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
 | PR104 | `merged_range_coded_weights_and_hi_latents` | 153856 | 7.997740 | build byte-different archive, then exact CUDA replay | decoder self-compression or weight-stream recoding fixture |
-| PR105 | `latents_and_sidecar_brotli` | 15854 | 7.985312 | build byte-different archive, then exact CUDA replay | latent/sidecar arithmetic-coding parity fixture |
 
 ## Next Exact-Evaluable Target
 
@@ -69,7 +70,7 @@ claim.
 
 | label | score | bytes | canonical eligible | blockers | archive sha |
 |---|---:|---:|---:|---|---|
-| PR106-R2-lowlevel-HDM4 | 0.206426253343 | 186492 | false | promotion_ineligible | `218ae16f3f13b722` |
+| PR106-R2-HDM4-HLM1 | 0.206380309075 | 186423 | false | promotion_blockers_present | `8801845d5099b957` |
 
 This is an internal exact-CUDA score-lowering route, not promotion
 authority. It can point byte-closed optimizer work at a lower exact
@@ -79,24 +80,24 @@ score even when public/canonical adjudication blockers remain.
 
 | frontier | target label | section | role | bytes | score gap | required next gate |
 |---|---|---|---|---:|---:|---|
-| PR106-R2-lowlevel-HDM4 | PR106-R2-lowlevel-HDM4 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 169990 | 0.000000000000 | build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim |
+| PR106-R2-HDM4-HLM1 | PR106-R2-HDM4-HLM1 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 169990 | 0.000000000000 | build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim |
 
 ## Internal Score-Lowering Byte-Mass Ranking
 
 | rank | label | section | role | bytes | score gap | priority |
 |---:|---|---|---|---:|---:|---|
-| 1 | PR106-R2-lowlevel-HDM4 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 169990 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
-| 2 | PR106-R2-lowlevel-HDM4 | `inner_latents_and_sidecar_brotli` | `latent_stream` | 15849 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
-| 3 | PR106-R2-lowlevel-HDM4 | `sidecar_payload_pr101_ranked_no_op` | `sidecar_or_correction_stream` | 527 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
-| 4 | PR106-R2-lowlevel-HDM4 | `sidecar_len_u16` | `sidecar_or_correction_stream` | 2 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
-| 5 | PR106-R2-lowlevel-HDM4 | `pr106_sidecar_header_fe_fmt_len_u32` | `control_or_metadata` | 6 | 0.000000000000 | `low` |
-| 6 | PR106-R2-lowlevel-HDM4 | `sidecar_framing_meta_pr101` | `control_or_metadata` | 6 | 0.000000000000 | `low` |
-| 7 | PR106-R2-lowlevel-HDM4 | `inner_packed_header_ff_len24` | `control_or_metadata` | 4 | 0.000000000000 | `low` |
-| 8 | PR106-R2-lowlevel-HDM3 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 170113 | 0.000081900651 | `near_frontier_secondary` |
-| 9 | PR106-R2-lowlevel-HDM3 | `inner_latents_and_sidecar_brotli` | `latent_stream` | 15849 | 0.000081900651 | `near_frontier_secondary` |
-| 10 | PR106-R2-lowlevel-HDM3 | `sidecar_payload_pr101_ranked_no_op` | `sidecar_or_correction_stream` | 527 | 0.000081900651 | `near_frontier_secondary` |
-| 11 | PR106-R2-lowlevel-HDM3 | `pr106_sidecar_header_fe_fmt_len_u32` | `control_or_metadata` | 6 | 0.000081900651 | `low` |
-| 12 | PR106-R2-lowlevel-HDM3 | `sidecar_framing_meta_pr101` | `control_or_metadata` | 6 | 0.000081900651 | `low` |
+| 1 | PR106-R2-HDM4-HLM1 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 169990 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
+| 2 | PR106-R2-HDM4-HLM1 | `inner_latents_and_sidecar_brotli` | `latent_stream` | 15780 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
+| 3 | PR106-R2-HDM4-HLM1 | `sidecar_payload_pr101_ranked_no_op` | `sidecar_or_correction_stream` | 527 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
+| 4 | PR106-R2-HDM4-HLM1 | `sidecar_len_u16` | `sidecar_or_correction_stream` | 2 | 0.000000000000 | `internal_score_lowering_frontier_primary` |
+| 5 | PR106-R2-HDM4-HLM1 | `pr106_sidecar_header_fe_fmt_len_u32` | `control_or_metadata` | 6 | 0.000000000000 | `low` |
+| 6 | PR106-R2-HDM4-HLM1 | `sidecar_framing_meta_pr101` | `control_or_metadata` | 6 | 0.000000000000 | `low` |
+| 7 | PR106-R2-HDM4-HLM1 | `inner_packed_header_ff_len24` | `control_or_metadata` | 4 | 0.000000000000 | `low` |
+| 8 | PR106-R2-lowlevel-HDM4 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 169990 | 0.000045944268 | `near_frontier_secondary` |
+| 9 | PR106-R2-lowlevel-HDM4 | `inner_latents_and_sidecar_brotli` | `latent_stream` | 15849 | 0.000045944268 | `near_frontier_secondary` |
+| 10 | PR106-R2-lowlevel-HDM4 | `sidecar_payload_pr101_ranked_no_op` | `sidecar_or_correction_stream` | 527 | 0.000045944268 | `near_frontier_secondary` |
+| 11 | PR106-R2-lowlevel-HDM4 | `pr106_sidecar_header_fe_fmt_len_u32` | `control_or_metadata` | 6 | 0.000045944268 | `low` |
+| 12 | PR106-R2-lowlevel-HDM4 | `sidecar_framing_meta_pr101` | `control_or_metadata` | 6 | 0.000045944268 | `low` |
 
 ## Payload Section Manifests
 
@@ -129,6 +130,12 @@ score even when public/canonical adjudication blockers remain.
 | PR106 | `packed_header_ff_len24` | `control_or_metadata` | 4 | `7939f08db7d18dd4` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
 | PR106 | `decoder_packed_brotli` | `decoder_weight_stream` | 170278 | `654999f81f0552fb` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
 | PR106 | `latents_and_sidecar_brotli` | `latent_stream` | 15849 | `94257b33cf3083c5` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
+| PR106-R2-HDM4-HLM1 | `pr106_sidecar_header_fe_fmt_len_u32` | `control_or_metadata` | 6 | `e6307629b6c2e770` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
+| PR106-R2-HDM4-HLM1 | `inner_packed_header_ff_len24` | `control_or_metadata` | 4 | `b07007cb2d770cfa` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
+| PR106-R2-HDM4-HLM1 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 169990 | `76a1156369b6f3a5` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
+| PR106-R2-HDM4-HLM1 | `inner_latents_and_sidecar_brotli` | `latent_stream` | 15780 | `c5a6bfc157fcef47` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
+| PR106-R2-HDM4-HLM1 | `sidecar_len_u16` | `sidecar_or_correction_stream` | 2 | `d26b715881de3752` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
+| PR106-R2-HDM4-HLM1 | `sidecar_payload_pr101_ranked_no_op` | `sidecar_or_correction_stream` | 527 | `b017563f85cd8e6b` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
 | PR106-R2-lowlevel | `pr106_sidecar_header_fe_fmt_len_u32` | `control_or_metadata` | 6 | `0dfe359c42f7430d` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
 | PR106-R2-lowlevel | `inner_packed_header_ff_len24` | `control_or_metadata` | 4 | `c670d1bee2140039` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |
 | PR106-R2-lowlevel | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 170127 | `07725c39ff436195` | future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch |

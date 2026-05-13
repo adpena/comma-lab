@@ -163,6 +163,9 @@ def _canonicality_blockers(payload: dict[str, Any], evidence_grade: str) -> list
         blockers.append(f"evidence_grade_{evidence}")
     if meta.get("promotion_eligible") is False or payload.get("promotion_eligible") is False:
         blockers.append("promotion_ineligible")
+    promotion_blockers = meta.get("promotion_blockers") or payload.get("promotion_blockers")
+    if isinstance(promotion_blockers, list) and promotion_blockers:
+        blockers.append("promotion_blockers_present")
     if meta.get("regression_triggered") is True or payload.get("regression_triggered") is True:
         blockers.append("regression_triggered")
     if payload.get("score_claim_valid") is False:
