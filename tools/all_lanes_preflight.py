@@ -80,6 +80,8 @@ Currently runs:
            (PacketIR parse/emit identity accounts for every payload byte, and
             runtime decodes/applies changed sidecar bytes for both grammars,
             while remaining non-promotable without full-frame parity)
+  Gate #27: tools/claim_lane_dispatch.py summary
+           (refuse stale active dispatch claims before more dispatch work)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -218,6 +220,7 @@ PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2"
 PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
+CLAIM_LANE_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY = (
     REPO / "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
 )
@@ -479,6 +482,45 @@ def _run_dispatch_cli_shell_hazards_gate(source_index=None) -> tuple[bool, str]:
         ]
         return False, "\n".join(lines)
     return True, "dispatch CLI/shell hazards: PASS"
+
+
+def _run_active_dispatch_claims_gate() -> tuple[bool, str]:
+    """Refuse pre-dispatch green status while prior dispatch claims are active.
+
+    This is intentionally cheap and local. It catches the repeated failure mode
+    where a remote GHA/Modal run has already failed or been abandoned, but the
+    claim ledger still contains a nonterminal row that will block the next
+    same-lane dispatch.
+    """
+
+    proc = _run_subprocess(
+        [sys.executable, str(CLAIM_LANE_DISPATCH), "summary"],
+        capture_output=True,
+        text=True,
+    )
+    output = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        return False, output
+    counts: dict[str, int] = {}
+    for token in output.strip().split():
+        if "=" not in token:
+            continue
+        key, raw = token.split("=", 1)
+        try:
+            counts[key] = int(raw)
+        except ValueError:
+            continue
+    active = counts.get("active", 0)
+    stale = counts.get("stale_nonterminal", 0)
+    unparsable = counts.get("unparsable_timestamp", 0)
+    if active or stale or unparsable:
+        return (
+            False,
+            "dispatch claims are not clean before pre-dispatch work: "
+            f"active={active} stale_nonterminal={stale} "
+            f"unparsable_timestamp={unparsable}\n{output}",
+        )
+    return True, f"active dispatch claims: PASS ({output.strip()})"
 
 
 def _run_hidden_gems_gate() -> tuple[bool, str]:
@@ -2700,6 +2742,14 @@ def main(argv: list[str] | None = None) -> int:
             _run_pr106_sidecar_runtime_consumption_gate,
             "  ✓ Gate #26: PR106 sidecar runtime consumption — PASSED",
             "  ✗ Gate #26: PR106 sidecar runtime consumption — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            27,
+            "active dispatch claims closed",
+            _run_active_dispatch_claims_gate,
+            "  ✓ Gate #27: active dispatch claims closed — PASSED",
+            "  ✗ Gate #27: active dispatch claims closed — FAILED",
         ),
     ]
     lane_steps = [

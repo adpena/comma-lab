@@ -56,6 +56,9 @@ PACKED_STATE_SCHEMA: tuple[tuple[str, tuple[int, ...]], ...] = tuple(
     sorted(FIXED_STATE_SCHEMA, key=lambda item: -math.prod(item[1]))
 )
 SCHEMA_VERSION = 1
+HDM4_RECIPE_ID = 1
+HDM4_RECIPE_NAME = "conv3x3_then_1x1_then_bias_tail_dp4"
+HDM4_SPLIT_POINTS = (6, 9, 26, 28)
 
 
 class HnervDecoderRecodeError(ValueError):
@@ -151,6 +154,7 @@ def build_structural_recode_profile(
         _variant_context_range_global(parsed),
         _variant_mixed_context_global(parsed),
         _variant_hdm3_q_brotli_split(parsed),
+        _variant_hdm4_q_brotli_split_dp(parsed),
     ]
     for row in variants:
         row["byte_delta_vs_source_section"] = int(row["bytes"]) - len(source_brotli)
@@ -679,6 +683,38 @@ def _variant_hdm3_q_brotli_split(parsed: PackedDecoderRaw) -> dict[str, Any]:
     }
 
 
+def _variant_hdm4_q_brotli_split_dp(parsed: PackedDecoderRaw) -> dict[str, Any]:
+    payload, stats = encode_hdm4_q_brotli_split_fixture(parsed)
+    restored = decode_hdm4_q_brotli_split_fixture(payload)
+    return {
+        "variant": "hdm4_q_brotli_split_fixed_recipe_dp4_plus_raw_scales",
+        "codec": "HDM4_fixed_recipe_dp4_q_brotli_raw_scales",
+        "bytes": len(payload),
+        "sha256": sha256_bytes(payload),
+        "q_roundtrip_equal": restored.q_stream == parsed.q_stream,
+        "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
+        "raw_equal": restored.to_raw() == parsed.to_raw(),
+        "tensor_count": len(parsed.records),
+        "recipe_id": stats["recipe_id"],
+        "recipe_name": stats["recipe_name"],
+        "split_points": stats["split_points"],
+        "q_brotli_bytes": stats["q_brotli_bytes"],
+        "q_stream_bytes": stats["q_stream_bytes"],
+        "raw_scale_bytes": stats["raw_scale_bytes"],
+        "header_bytes": stats["header_bytes"],
+        "brotli_quality": stats["brotli_quality"],
+        "non_arbitrary_selection": stats["non_arbitrary_selection"],
+        "parity_fixture": True,
+        "archive_ready": False,
+        "dispatch_blockers": [
+            "parity_fixture_only",
+            "requires_submission_runtime_decoder",
+            "requires_archive_builder_and_payload_diff",
+            "requires_exact_cuda_auth_eval",
+        ],
+    }
+
+
 def encode_prev_symbol_context_range_fixture(
     parsed: PackedDecoderRaw,
 ) -> tuple[bytes, dict[str, int]]:
@@ -1055,6 +1091,82 @@ def encode_hdm3_q_brotli_split_fixture(
     }
 
 
+def encode_hdm4_q_brotli_split_fixture(
+    parsed: PackedDecoderRaw,
+    *,
+    quality: int = 11,
+    recipe_id: int = HDM4_RECIPE_ID,
+) -> tuple[bytes, dict[str, Any]]:
+    """Encode fixed-schema q bytes as a deterministic DP-selected Brotli split.
+
+    HDM4 is the first post-HDM3 deterministic byte-only candidate. The stored
+    recipe is intentionally tiny: a one-byte recipe id selects a fixed record
+    order and contiguous split points, followed by len24-prefixed Brotli chunks
+    and the raw fp32 scale stream. Recipe 1 is the best exact-lossless row found
+    by exhaustive DP over the declared order family and k<=8 contiguous splits
+    on the PR106-R2 current frontier; it is a reproducible selection rule, not
+    an arbitrary constant.
+    """
+
+    ordered_schema = _hdm4_ordered_schema(recipe_id)
+    record_by_name = {record.name: record for record in parsed.records}
+    missing = [name for name, _shape in ordered_schema if name not in record_by_name]
+    if missing:
+        raise HnervDecoderRecodeError("HDM4 fixed recipe missing records: " + ", ".join(missing))
+    if len(parsed.records) != len(ordered_schema):
+        raise HnervDecoderRecodeError("HDM4 fixed recipe requires the packed decoder schema")
+
+    ordered_records = []
+    for name, shape in ordered_schema:
+        record = record_by_name[name]
+        if record.shape != shape:
+            raise HnervDecoderRecodeError(f"HDM4 fixed recipe shape mismatch for {name}")
+        ordered_records.append(record)
+
+    previous = 0
+    compressed_parts: list[bytes] = []
+    for split in HDM4_SPLIT_POINTS:
+        q_stream = b"".join(record.q_zz_u8 for record in ordered_records[previous:split])
+        compressed = brotli.compress(q_stream, quality=quality)
+        if len(compressed) > 0xFFFFFF:
+            raise HnervDecoderRecodeError("HDM4 q Brotli chunk exceeds len24")
+        compressed_parts.append(compressed)
+        previous = split
+    scale_stream = parsed.scale_stream
+    out = io.BytesIO()
+    out.write(b"HDM4")
+    out.write(bytes([recipe_id]))
+    for compressed in compressed_parts:
+        out.write(len(compressed).to_bytes(3, "little"))
+    for compressed in compressed_parts:
+        out.write(compressed)
+    out.write(scale_stream)
+    payload = out.getvalue()
+    restored = decode_hdm4_q_brotli_split_fixture(payload)
+    if restored.to_raw() != parsed.to_raw():
+        raise HnervDecoderRecodeError("HDM4 q Brotli split fixture failed raw roundtrip")
+    return payload, {
+        "header_bytes": 4 + 1 + 3 * len(compressed_parts),
+        "brotli_quality": quality,
+        "recipe_id": recipe_id,
+        "recipe_name": HDM4_RECIPE_NAME,
+        "split_points": list(HDM4_SPLIT_POINTS),
+        "q_brotli_bytes": sum(len(part) for part in compressed_parts),
+        "q_chunk_bytes": [len(part) for part in compressed_parts],
+        "q_stream_bytes": sum(len(record.q_zz_u8) for record in ordered_records),
+        "raw_scale_bytes": len(scale_stream),
+        "ordered_record_names": [record.name for record in ordered_records],
+        "non_arbitrary_selection": {
+            "search_family": "fixed_schema_record_orderings_x_contiguous_brotli_partitions",
+            "objective": "minimize total decoder section bytes including fixed runtime header",
+            "quality": quality,
+            "candidate_order_family_size": 7,
+            "max_partitions_considered": 8,
+            "selected_by": "exhaustive_dynamic_programming_probe_20260513",
+        },
+    }
+
+
 def decode_global_prev_symbol_context_range_fixture(payload: bytes) -> PackedDecoderRaw:
     """Decode an HDC2 global previous-symbol context fixture."""
 
@@ -1264,6 +1376,102 @@ def decode_hdm3_q_brotli_split_fixture(payload: bytes) -> PackedDecoderRaw:
     return PackedDecoderRaw(records=tuple(records))
 
 
+def decode_hdm4_q_brotli_split_fixture(payload: bytes) -> PackedDecoderRaw:
+    """Decode an HDM4 fixed-recipe q-Brotli/raw-scale fixture."""
+
+    if payload[:4] != b"HDM4":
+        raise HnervDecoderRecodeError("invalid HDM4 q Brotli split fixture magic")
+    cursor = 4
+    recipe_id = _read_payload_exact(payload, cursor, 1, "HDM4 recipe_id")[0]
+    cursor += 1
+    ordered_schema = _hdm4_ordered_schema(recipe_id)
+    chunk_count = len(HDM4_SPLIT_POINTS)
+    lengths: list[int] = []
+    for index in range(chunk_count):
+        lengths.append(
+            int.from_bytes(
+                _read_payload_exact(payload, cursor, 3, f"HDM4 q_brotli_len24_{index}"),
+                "little",
+            )
+        )
+        cursor += 3
+
+    q_chunks: list[bytes] = []
+    for index, length in enumerate(lengths):
+        compressed = _read_payload_exact(payload, cursor, length, f"HDM4 q_brotli_{index}")
+        cursor += length
+        try:
+            q_chunks.append(brotli.decompress(compressed))
+        except brotli.error as exc:
+            raise HnervDecoderRecodeError(
+                f"HDM4 q stream chunk {index} brotli decode failed: {exc}"
+            ) from exc
+    scale_len = 4 * len(PACKED_STATE_SCHEMA)
+    scale_stream = _read_payload_exact(payload, cursor, scale_len, "scale_stream")
+    cursor += scale_len
+    if cursor != len(payload):
+        raise HnervDecoderRecodeError("HDM4 fixture has trailing bytes")
+
+    ordered_records: list[PackedDecoderRecord] = []
+    split_start = 0
+    for chunk, split_end in zip(q_chunks, HDM4_SPLIT_POINTS, strict=True):
+        schema_slice = ordered_schema[split_start:split_end]
+        expected = sum(math.prod(shape) for _name, shape in schema_slice)
+        if len(chunk) != expected:
+            raise HnervDecoderRecodeError("HDM4 q chunk length mismatch")
+        q_cursor = 0
+        for name, shape in schema_slice:
+            value_count = math.prod(shape)
+            ordered_records.append(
+                PackedDecoderRecord(
+                    name=name,
+                    shape=shape,
+                    q_zz_u8=chunk[q_cursor : q_cursor + value_count],
+                    scale_f32=b"",
+                )
+            )
+            q_cursor += value_count
+        split_start = split_end
+    if len(ordered_records) != len(PACKED_STATE_SCHEMA):
+        raise HnervDecoderRecodeError("HDM4 decoded record count mismatch")
+    by_name = {record.name: record for record in ordered_records}
+    records = []
+    for index, (name, shape) in enumerate(PACKED_STATE_SCHEMA):
+        record = by_name.get(name)
+        if record is None or record.shape != shape:
+            raise HnervDecoderRecodeError(f"HDM4 decoded schema mismatch for {name}")
+        records.append(
+            PackedDecoderRecord(
+                name=name,
+                shape=shape,
+                q_zz_u8=record.q_zz_u8,
+                scale_f32=scale_stream[index * 4 : index * 4 + 4],
+            )
+        )
+    return PackedDecoderRaw(records=tuple(records))
+
+
+def _hdm4_ordered_schema(recipe_id: int) -> tuple[tuple[str, tuple[int, ...]], ...]:
+    if recipe_id != HDM4_RECIPE_ID:
+        raise HnervDecoderRecodeError(f"unsupported HDM4 recipe id: {recipe_id}")
+    return tuple(
+        sorted(
+            PACKED_STATE_SCHEMA,
+            key=lambda item: (
+                0
+                if len(item[1]) == 4 and item[1][2:] == (3, 3)
+                else 1
+                if len(item[1]) == 4
+                else 2
+                if item[0].endswith(".bias")
+                else 3,
+                -math.prod(item[1]),
+                item[0],
+            ),
+        )
+    )
+
+
 def _encode_context_symbol_stream(stream: list[int]) -> tuple[dict[str, Any], int]:
     counts = Counter(stream)
     symbols = sorted(counts)
@@ -1413,10 +1621,12 @@ __all__ = [
     "decode_global_prev_symbol_context_range_fixture",
     "decode_global_prev_symbol_mixed_context_fixture",
     "decode_hdm3_q_brotli_split_fixture",
+    "decode_hdm4_q_brotli_split_fixture",
     "decode_prev_symbol_context_range_fixture",
     "encode_global_prev_symbol_context_range_fixture",
     "encode_global_prev_symbol_mixed_context_fixture",
     "encode_hdm3_q_brotli_split_fixture",
+    "encode_hdm4_q_brotli_split_fixture",
     "encode_prev_symbol_context_range_fixture",
     "parse_packed_decoder_brotli",
 ]

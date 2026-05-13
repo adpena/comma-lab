@@ -216,6 +216,52 @@ def test_execute_step_marks_subprocess_budget_timeout(monkeypatch) -> None:
     assert "TIMEOUT: all-lanes preflight wall-clock budget exhausted" in result.output
 
 
+def test_active_dispatch_claims_gate_passes_clean_summary(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+
+    def fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess:
+        assert cmd[:2] == [sys.executable, str(module.CLAIM_LANE_DISPATCH)]
+        return subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=(
+                "active=0 stale_nonterminal=0 terminal_latest=7 "
+                "unparsable_timestamp=0\n"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(module, "_run_subprocess", fake_run)
+
+    passed, output = module._run_active_dispatch_claims_gate()
+
+    assert passed is True
+    assert "active dispatch claims: PASS" in output
+
+
+def test_active_dispatch_claims_gate_fails_on_active_or_stale_claims(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+
+    def fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=(
+                "active=1 stale_nonterminal=2 terminal_latest=7 "
+                "unparsable_timestamp=0\n"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(module, "_run_subprocess", fake_run)
+
+    passed, output = module._run_active_dispatch_claims_gate()
+
+    assert passed is False
+    assert "active=1" in output
+    assert "stale_nonterminal=2" in output
+
+
 def test_run_steps_with_budget_cancels_unstarted_serial_work() -> None:
     module = _load_all_lanes_module()
     ran: list[str] = []

@@ -30,6 +30,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--source-label", required=True)
     parser.add_argument(
+        "--decoder-recode-variant",
+        choices=("hdm3", "hdm4"),
+        default="hdm3",
+        help="Lossless decoder-section recode to materialize.",
+    )
+    parser.add_argument(
         "--allow-rate-regression",
         action="store_true",
         help="Materialize the archive even when the HDM3 decoder section is not smaller.",
@@ -51,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
             source_archive=args.source_archive,
             output_dir=args.output_dir,
             source_label=args.source_label,
+            decoder_recode_variant=args.decoder_recode_variant,
             allow_rate_regression=args.allow_rate_regression,
             repo_root=REPO_ROOT,
         )

@@ -11,6 +11,7 @@ import torch
 from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     encode_hdm3_q_brotli_split_fixture,
+    encode_hdm4_q_brotli_split_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_pr101_schema_packer import encode_pr101_schema_split_fixture
@@ -92,3 +93,25 @@ def test_pr106_r2_pr101_runtime_accepts_hdm3_decoder_section() -> None:
     )
     with pytest.raises(ValueError, match="HDM3 q stream length mismatch"):
         codec.decode_packed_decoder(bad_hdm3)
+
+
+def test_pr106_r2_pr101_runtime_accepts_hdm4_decoder_section() -> None:
+    codec = _load_codec(
+        REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/codec.py",
+        "pr106_r2_pr101_codec_hdm4_adapter",
+    )
+    raw = _synthetic_decoder_raw()
+    legacy_decoder = brotli.compress(raw, quality=5)
+    parsed = parse_packed_decoder_brotli(legacy_decoder)
+    hdm4_decoder, _stats = encode_hdm4_q_brotli_split_fixture(parsed)
+
+    legacy_sd = codec.decode_packed_decoder(legacy_decoder)
+    hdm4_sd = codec.decode_packed_decoder(hdm4_decoder)
+
+    assert set(hdm4_sd) == set(legacy_sd)
+    for name in legacy_sd:
+        assert torch.equal(hdm4_sd[name], legacy_sd[name]), name
+
+    bad_hdm4 = b"HDM4" + b"\x02" + b"\x00" * (3 * 4) + bytes(4 * len(PACKED_STATE_SCHEMA))
+    with pytest.raises(ValueError, match="unsupported HDM4 recipe id"):
+        codec.decode_packed_decoder(bad_hdm4)

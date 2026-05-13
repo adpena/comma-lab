@@ -1,0 +1,113 @@
+{
+  "blockers": [],
+  "candidate_archive_bytes": 186492,
+  "candidate_archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+  "contract": "hnerv_hdm3_runtime_tree_inflate_output_parity_contract_v1",
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval_required_before_score": true,
+  "exact_frame_output_parity_run": false,
+  "external_dependency_root_count": 0,
+  "inflate_output_parity_proof_kind": "hnerv_hdm_decoder_section_lossless_runtime_support_plus_payload_identity",
+  "inflate_output_parity_proven_by_payload_identity": true,
+  "inflate_output_parity_scope": "HDM4 candidate payload normalizes to the exact source legacy payload, and the PR106-R2 PR101-grammar runtime decodes the HDM4 decoder section directly. This is a byte identity/runtime decode contract, not a CUDA frame or scorer parity result.",
+  "inflate_runtime_manifest": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 1474,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive_manifest.json",
+        "sha256": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc"
+      },
+      {
+        "bytes": 9705,
+        "relative_path": "contest_auth_eval.json",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/contest_auth_eval.json",
+        "sha256": "df916e652c50753e40be9b44f1e61190b4afe23032ececa20fb7c3b5d28089a4"
+      },
+      {
+        "bytes": 11038,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py",
+        "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+      },
+      {
+        "bytes": 1053,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh",
+        "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+      },
+      {
+        "bytes": 24082,
+        "relative_path": "pre_submission_compliance.contest_final.json",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/pre_submission_compliance.contest_final.json",
+        "sha256": "3365f95b3448f0d0bf795b46f83d850709e6d1c4be73e9bc392ce61dd8cf7171"
+      },
+      {
+        "bytes": 2309,
+        "relative_path": "report.txt",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/report.txt",
+        "sha256": "2b343cb5ab15bbb74160f45da3c4b3321edc17ba1440847371a3cf07a07352fd"
+      },
+      {
+        "bytes": 21084,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/codec.py",
+        "sha256": "a9e65b4f2902e5935d8f031a642ac4ac98be1b56f20f8292dfda4627b77f9d1a"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "pr106_latent_sidecar_r2_pr101_grammar",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "f7126d0ec3199bdc76a831d01c929139fb1bab373808a2dc8de088cf7a1121eb",
+    "runtime_file_count": 9,
+    "runtime_root": "/Users/adpena/Projects/pact/submissions/pr106_latent_sidecar_r2_pr101_grammar",
+    "runtime_tree_sha256": "73ecb7c5d3abdadf6f876d27ce1a37d04c8cb123ab40400e9e17fe18dc7cf659",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "lane_dispatch_claim_required_before_gpu": true,
+  "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/hdm3_runtime_tree_closure.json",
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_fixed_runtime_exact_eval_readiness": true,
+  "ready_for_score_claim": false,
+  "remaining_blockers": [],
+  "remote_gpu_run": false,
+  "repo_local_tac_import_file_count": 0,
+  "runtime_file_count": 9,
+  "runtime_inflate_sh": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh",
+  "runtime_manifest_schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+  "runtime_tree_closure_proven": true,
+  "runtime_tree_manifest_source": "experiments/contest_auth_eval.py::_runtime_dependency_manifest",
+  "runtime_tree_sha256": "73ecb7c5d3abdadf6f876d27ce1a37d04c8cb123ab40400e9e17fe18dc7cf659",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186629,
+  "source_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+  "upstream_dir": "upstream"
+}

@@ -1,0 +1,279 @@
+{
+  "byte_delta": -137,
+  "candidate_archive_bytes": 186492,
+  "candidate_archive_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/pr106_r2_lowlevel_hdm4_archive_candidate.zip",
+  "candidate_archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+  "candidate_id": "pr106_r2_hdm4_decoder_recode_dp4_123byte",
+  "candidate_member_name": "0.bin",
+  "candidate_payload_bytes": 186384,
+  "candidate_payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
+  "candidate_static_preflight_ready": true,
+  "contract": "hnerv_hdm3_exact_eval_packet_readiness_v1",
+  "decoder_recode_key": "hdm4",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "dispatch_gate": "blocked_until_level2_lane_claim_and_exact_cuda_auth_eval",
+  "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
+  "exact_cuda_auth_eval": {
+    "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "command_template": [
+      ".venv/bin/python",
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/pr106_r2_lowlevel_hdm4_archive_candidate.zip",
+      "--inflate-sh",
+      "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cuda"
+    ],
+    "present": false,
+    "required_before_score_claim": true
+  },
+  "expected_pose_dist_delta": 0.0,
+  "expected_seg_dist_delta": 0.0,
+  "expected_total_score_delta_rate_only_if_components_equal": -9.122267657773748e-05,
+  "family": "hnerv_hdm_decoder_recode",
+  "fixed_runtime_preflight": {
+    "blockers": [],
+    "contract": "hnerv_hdm3_fixed_runtime_preflight_v1",
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval_required_before_score": true,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_fixed_runtime_exact_eval_readiness": true,
+    "remaining_blockers": [],
+    "remote_gpu_run": false,
+    "runtime_tree_manifest_source": "experiments/contest_auth_eval.py::_runtime_dependency_manifest",
+    "runtime_tree_sha256": "73ecb7c5d3abdadf6f876d27ce1a37d04c8cb123ab40400e9e17fe18dc7cf659",
+    "runtime_tree_source": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/hdm3_runtime_tree_closure.json",
+    "schema_version": 1,
+    "score_claim": false
+  },
+  "lane_dispatch_claim": {
+    "active_claim_present": false,
+    "claim_command_template": [
+      "tools/claim_lane_dispatch.py",
+      "claim",
+      "--lane-id",
+      "hnerv_hdm4_q_brotli_split_exact_eval",
+      "--platform",
+      "<lightning|vast|modal>",
+      "--instance-job-id",
+      "<job-id>",
+      "--agent",
+      "<agent>",
+      "--status",
+      "eval",
+      "--notes",
+      "HDM4 exact CUDA auth eval for candidate archive 218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f"
+    ],
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "required_before_gpu": true
+  },
+  "lane_id": "hnerv_hdm4_q_brotli_split_exact_eval",
+  "operator_next_steps": [
+    "If pursuing exact eval, record a Level-2 lane claim before any GPU job.",
+    "Run exact CUDA auth eval on the exact candidate archive bytes.",
+    "Only after exact CUDA JSON exists, run contest-final compliance and adjudication."
+  ],
+  "packet_kind": "hnerv_hdm3_exact_eval_operator_packet_readiness",
+  "pareto_scope": "hnerv_rate_only_exact_archive",
+  "readiness_scope": "static local exact-eval packet only; no lane claim, no remote GPU dispatch, no CUDA auth eval, and no score claim",
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_exact_eval_packet": true,
+  "remote_gpu_run": false,
+  "runtime_adapter_payload_identity": {
+    "blockers": [],
+    "candidate_archive_sha256_matches": true,
+    "contract": "hnerv_hdm3_runtime_adapter_payload_identity_evidence_v1",
+    "latents_and_sidecar_match_source": true,
+    "payload_identity_proven": true,
+    "proof_contract": "hnerv_hdm3_runtime_adapter_archive_parity_v1",
+    "proof_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/runtime_adapter_proof.with_tool_run.json",
+    "proof_sha256": "9d9c039854173ff4bc4ef7db62c8d1fc5b9dabd09a1db554c08ca6605f86dc17",
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_public_runtime_inflate": true,
+    "restored_decoder_section_matches_source": true,
+    "restored_payload_matches_source": true,
+    "runtime_adapter_module": "tac.hnerv_hdm3_runtime_adapter",
+    "runtime_adapter_parity_proven": true,
+    "runtime_decoder_support": "direct_hdm4_decoder_section",
+    "runtime_inflate_sh": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh",
+    "runtime_normalizer_path": "",
+    "schema_version": 1
+  },
+  "runtime_tree_inflate_output_parity": {
+    "blockers": [],
+    "candidate_archive_bytes": 186492,
+    "candidate_archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+    "contract": "hnerv_hdm3_runtime_tree_inflate_output_parity_contract_v1",
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval_required_before_score": true,
+    "exact_frame_output_parity_run": false,
+    "external_dependency_root_count": 0,
+    "inflate_output_parity_proof_kind": "hnerv_hdm_decoder_section_lossless_runtime_support_plus_payload_identity",
+    "inflate_output_parity_proven_by_payload_identity": true,
+    "inflate_output_parity_scope": "HDM4 candidate payload normalizes to the exact source legacy payload, and the PR106-R2 PR101-grammar runtime decodes the HDM4 decoder section directly. This is a byte identity/runtime decode contract, not a CUDA frame or scorer parity result.",
+    "inflate_runtime_manifest": {
+      "external_dependency_roots": [],
+      "files": [
+        {
+          "bytes": 1474,
+          "relative_path": "archive_manifest.json",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive_manifest.json",
+          "sha256": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc"
+        },
+        {
+          "bytes": 9705,
+          "relative_path": "contest_auth_eval.json",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/contest_auth_eval.json",
+          "sha256": "df916e652c50753e40be9b44f1e61190b4afe23032ececa20fb7c3b5d28089a4"
+        },
+        {
+          "bytes": 11038,
+          "relative_path": "inflate.py",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py",
+          "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+        },
+        {
+          "bytes": 1053,
+          "relative_path": "inflate.sh",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh",
+          "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+        },
+        {
+          "bytes": 24082,
+          "relative_path": "pre_submission_compliance.contest_final.json",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/pre_submission_compliance.contest_final.json",
+          "sha256": "3365f95b3448f0d0bf795b46f83d850709e6d1c4be73e9bc392ce61dd8cf7171"
+        },
+        {
+          "bytes": 2309,
+          "relative_path": "report.txt",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/report.txt",
+          "sha256": "2b343cb5ab15bbb74160f45da3c4b3321edc17ba1440847371a3cf07a07352fd"
+        },
+        {
+          "bytes": 21084,
+          "relative_path": "src/codec.py",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/codec.py",
+          "sha256": "a9e65b4f2902e5935d8f031a642ac4ac98be1b56f20f8292dfda4627b77f9d1a"
+        },
+        {
+          "bytes": 2197,
+          "relative_path": "src/model.py",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 8240,
+          "relative_path": "src/pr101_grammar.py",
+          "repo_relative_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/pr101_grammar.py",
+          "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+        }
+      ],
+      "repo_local_tac_import_manifest": {
+        "discovery": "static_ast_recursive_import_closure",
+        "file_count": 0,
+        "files": [],
+        "module_count": 0,
+        "parse_errors": [],
+        "root_import_modules": [],
+        "runtime_root_name": "pr106_latent_sidecar_r2_pr101_grammar",
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "tac_root_relative_path": "src/tac",
+        "unresolved_modules": []
+      },
+      "runtime_content_tree_sha256": "f7126d0ec3199bdc76a831d01c929139fb1bab373808a2dc8de088cf7a1121eb",
+      "runtime_file_count": 9,
+      "runtime_root": "/Users/adpena/Projects/pact/submissions/pr106_latent_sidecar_r2_pr101_grammar",
+      "runtime_tree_sha256": "73ecb7c5d3abdadf6f876d27ce1a37d04c8cb123ab40400e9e17fe18dc7cf659",
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "lane_dispatch_claim_required_before_gpu": true,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/hdm3_runtime_tree_closure.json",
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_fixed_runtime_exact_eval_readiness": true,
+    "ready_for_score_claim": false,
+    "remaining_blockers": [],
+    "remote_gpu_run": false,
+    "repo_local_tac_import_file_count": 0,
+    "runtime_file_count": 9,
+    "runtime_inflate_sh": "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh",
+    "runtime_manifest_schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "runtime_tree_closure_proven": true,
+    "runtime_tree_manifest_source": "experiments/contest_auth_eval.py::_runtime_dependency_manifest",
+    "runtime_tree_sha256": "73ecb7c5d3abdadf6f876d27ce1a37d04c8cb123ab40400e9e17fe18dc7cf659",
+    "schema_version": 1,
+    "score_claim": false,
+    "source_archive_bytes": 186629,
+    "source_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+    "upstream_dir": "upstream"
+  },
+  "schema_version": 1,
+  "score_blockers": [
+    "exact_cuda_auth_eval_missing",
+    "contest_auth_eval_adjudication_missing",
+    "operator_score_claim_review_missing"
+  ],
+  "score_claim": false,
+  "source_archive_bytes": 186629,
+  "source_archive_path": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/pr106_r2_pr101_grammar_hnerv_brotli_repack_candidate.zip",
+  "source_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+  "static_blockers": [],
+  "static_packet_ready": true,
+  "static_release_surface": {
+    "archive_bytes": 186492,
+    "archive_manifest_json": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive_manifest.json",
+    "archive_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive.zip",
+    "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+    "contract": "hnerv_hdm3_static_release_surface_v1",
+    "dispatch_attempted": false,
+    "inflate_sh": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/inflate.sh",
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface",
+    "report_txt": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/report.txt",
+    "schema_version": 1,
+    "score_claim": false,
+    "strict_pre_submission_compliance_command": [
+      ".venv/bin/python",
+      "scripts/pre_submission_compliance_check.py",
+      "--submission-dir",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface",
+      "--archive",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive.zip",
+      "--archive-manifest-json",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive_manifest.json",
+      "--expect-single-member",
+      "0.bin",
+      "--expected-archive-sha256",
+      "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "--expected-archive-size-bytes",
+      "186492",
+      "--public-scan-path",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface",
+      "--json-out",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/pre_submission_compliance.static.json",
+      "--strict"
+    ]
+  },
+  "strict_static_compliance": {
+    "blockers": [],
+    "contract": "hnerv_hdm3_strict_static_compliance_evidence_v1",
+    "failed_error_checks": [],
+    "passed": true,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/pre_submission_compliance.static.json",
+    "present": true,
+    "schema_version": 1,
+    "sha256": "7add79b0fd463c77c9b7975b5348813a46a40b09da46b67fdd50da79a17c9db6"
+  },
+  "tool": "tac.hnerv_hdm3_archive_candidate.build_hdm3_archive_candidate"
+}

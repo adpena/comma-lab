@@ -79,6 +79,7 @@ def build_proof(
     source_latents_sha = sha256_bytes(source_packed.latents_and_sidecar_brotli)
     candidate_latents_sha = sha256_bytes(candidate_packed.latents_and_sidecar_brotli)
     restored_latents_sha = sha256_bytes(restored_packed.latents_and_sidecar_brotli)
+    candidate_decoder_magic = candidate_packed.decoder_packed_brotli[:4]
     restored_payload_matches_source = restored_payload_sha == source_payload_sha
     restored_decoder_section_matches_source = restored_decoder_section_sha == source_decoder_section_sha
     inflate_output_parity_proven_by_payload_identity = (
@@ -124,6 +125,8 @@ def build_proof(
         "candidate_decoder_section_sha256": sha256_bytes(candidate_packed.decoder_packed_brotli),
         "candidate_decoder_section_bytes": len(candidate_packed.decoder_packed_brotli),
         "candidate_decoder_section_is_hdm3": candidate_packed.decoder_packed_brotli.startswith(b"HDM3"),
+        "candidate_decoder_section_is_hdm": candidate_decoder_magic in (b"HDM3", b"HDM4"),
+        "candidate_decoder_section_magic": candidate_decoder_magic.decode("ascii", errors="replace"),
         "source_decoder_raw_sha256": source_raw_sha,
         "restored_decoder_raw_sha256": restored_raw_sha,
         "decoder_raw_matches_source": restored_raw_sha == source_raw_sha,

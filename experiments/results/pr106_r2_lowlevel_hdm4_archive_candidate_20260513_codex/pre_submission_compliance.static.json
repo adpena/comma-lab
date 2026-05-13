@@ -1,0 +1,295 @@
+{
+  "archive": {
+    "bytes": 186492,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 186384,
+        "crc": 3975715519,
+        "file_size": 186384,
+        "local_header": {
+          "compress_size": 186384,
+          "compress_type": 0,
+          "crc32": 3975715519,
+          "extra_len": 0,
+          "file_size": 186384,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "0.bin",
+          "version_needed": 20
+        },
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive.zip",
+    "sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='0.bin' local='0.bin' local_reason=None",
+      "name": "zip_local_header_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_local_header_metadata_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_payload_readable:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f actual=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186492 actual=186492",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/contest_auth_eval.json missing; nonfinal compliance may pass, but this packet has no auth-eval custody and is not score/rank/promote evidence",
+      "name": "auth_eval_optional_missing",
+      "passed": false,
+      "severity": "warning"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=db4860251fc12798353ab4c81220e6abeb20a6f69e9ae8ca2d7793f835456fbe",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['96f4ccc8db6f40e21ac46e8998cab1c894334762cffb244a1f4bdf9ac9f1f6df', 'db4860251fc12798353ab4c81220e6abeb20a6f69e9ae8ca2d7793f835456fbe'] auth_eval_candidates={}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f actual=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186492 actual=186492",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=0 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=0 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 616,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface/inflate.sh",
+        "sha256": "df7a1241ffe8937cb8c7ae885b3843c4babdafdbcc51a035e2c0c4319449ecc9"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "96f4ccc8db6f40e21ac46e8998cab1c894334762cffb244a1f4bdf9ac9f1f6df",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "exact_eval_static_release_surface",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 1,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_eval_static_release_surface",
+    "runtime_tree_sha256": "db4860251fc12798353ab4c81220e6abeb20a6f69e9ae8ca2d7793f835456fbe",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}

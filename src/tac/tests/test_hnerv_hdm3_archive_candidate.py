@@ -12,6 +12,7 @@ import brotli
 from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     decode_hdm3_q_brotli_split_fixture,
+    decode_hdm4_q_brotli_split_fixture,
 )
 from tac.hnerv_hdm3_archive_candidate import (
     build_hdm3_archive_candidate,
@@ -138,6 +139,45 @@ def test_build_hdm3_archive_candidate_preserves_pr106_sidecar_wrapper(
     assert candidate_view.packed.latents_and_sidecar_brotli == source_view.packed.latents_and_sidecar_brotli
     restored = decode_hdm3_q_brotli_split_fixture(candidate_view.packed.decoder_packed_brotli)
     assert restored.to_raw() == source_raw
+
+
+def test_build_hdm4_archive_candidate_uses_distinct_lane_and_preserves_raw_decoder(
+    tmp_path: Path,
+) -> None:
+    source_archive = _source_sidecar_archive(tmp_path)
+    source_view = read_packed_archive_view(source_archive)
+    source_raw = brotli.decompress(source_view.packed.decoder_packed_brotli)
+
+    manifest = build_hdm3_archive_candidate(
+        source_archive=source_archive,
+        output_dir=tmp_path / "out",
+        source_label="PR106 R2 sidecar",
+        decoder_recode_variant="hdm4",
+        repo_root=REPO,
+    )
+
+    assert manifest["score_claim"] is False
+    assert manifest["candidate_decoder_recode_key"] == "hdm4"
+    assert manifest["candidate_variant"] == "hdm4_q_brotli_split_fixed_recipe_dp4_plus_raw_scales"
+    assert manifest["lane_id"] == "hnerv_hdm4_q_brotli_split_exact_eval"
+    assert manifest["candidate_rate_positive"] is True
+    assert manifest["candidate_decoder_section_byte_delta"] < 0
+    assert manifest["hdm3_stats"] == {}
+    assert manifest["hdm4_stats"]["recipe_id"] == 1
+    assert manifest["hdm4_stats"]["split_points"] == [6, 9, 26, 28]
+
+    candidate_archive = Path(manifest["candidate_archive_path"])
+    candidate_view = read_packed_archive_view(candidate_archive)
+    assert candidate_view.payload_kind == "pr106_sidecar_wrapper"
+    assert candidate_view.packed.decoder_packed_brotli.startswith(b"HDM4")
+    assert candidate_view.packed.latents_and_sidecar_brotli == source_view.packed.latents_and_sidecar_brotli
+    restored = decode_hdm4_q_brotli_split_fixture(candidate_view.packed.decoder_packed_brotli)
+    assert restored.to_raw() == source_raw
+    blockers = manifest["exact_eval_packet_readiness"]["remaining_dispatch_blockers"]
+    assert "hdm3_runtime_adapter_archive_parity_proof_missing" in blockers
+    assert "strict_pre_submission_compliance_json_missing" in blockers
+    assert "lane_dispatch_claim_missing" in blockers
+    assert "exact_cuda_auth_eval_missing" in blockers
 
 
 def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(

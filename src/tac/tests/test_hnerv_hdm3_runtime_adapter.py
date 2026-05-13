@@ -8,7 +8,11 @@ from pathlib import Path
 import brotli
 import pytest
 
-from tac.hnerv_decoder_recode import PACKED_STATE_SCHEMA, encode_hdm3_q_brotli_split_fixture
+from tac.hnerv_decoder_recode import (
+    PACKED_STATE_SCHEMA,
+    encode_hdm3_q_brotli_split_fixture,
+    encode_hdm4_q_brotli_split_fixture,
+)
 from tac.hnerv_hdm3_runtime_adapter import (
     HnervHdm3RuntimeAdapterError,
     restore_hdm3_file_to_legacy_brotli,
@@ -109,6 +113,30 @@ def test_restore_pr106_sidecar_hdm3_inner_payload_preserves_sidecar() -> None:
     assert proof["wrapper_sidecar_preserved"] is True
     assert proof["ready_for_public_runtime_inflate"] is True
     assert proof["inner_payload_proof"]["mode"] == "hdm3_restored_to_legacy_brotli"
+
+
+def test_restore_hdm4_payload_to_legacy_brotli_preserves_raw_decoder_and_latents() -> None:
+    raw = _synthetic_decoder_raw()
+    hdm4, _stats = encode_hdm4_q_brotli_split_fixture(
+        _parsed_decoder_from_legacy_brotli(brotli.compress(raw, quality=0))
+    )
+    latents = brotli.compress(b"latent-sidecar" * 200, quality=5)
+    payload = PackedHnervPayload(
+        header=b"\xff\x00\x00\x00",
+        decoder_packed_brotli=hdm4,
+        latents_and_sidecar_brotli=latents,
+    ).to_bytes()
+
+    restored, proof = restore_hdm3_payload_to_legacy_brotli(payload, require_hdm3=True)
+
+    restored_packed = parse_ff_packed_brotli_hnerv(restored)
+    assert restored != payload
+    assert brotli.decompress(restored_packed.decoder_packed_brotli) == raw
+    assert restored_packed.latents_and_sidecar_brotli == latents
+    assert proof["mode"] == "hdm4_restored_to_legacy_brotli"
+    assert proof["decoder_raw_equal"] is True
+    assert proof["latents_and_sidecar_preserved"] is True
+    assert proof["ready_for_public_runtime_inflate"] is True
 
 
 def test_restore_unknown_decoder_fails_closed() -> None:
