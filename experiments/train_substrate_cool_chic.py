@@ -313,6 +313,7 @@ def _decode_real_pairs(video_path: Path, *, n_pairs: int, max_pairs: int | None 
         n_pairs=n_pairs,
         substrate_tag=_SUBSTRATE_TAG,
         max_pairs=max_pairs,
+        repo_root=REPO_ROOT,
     )
 
 

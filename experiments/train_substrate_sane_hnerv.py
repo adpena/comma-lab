@@ -385,6 +385,7 @@ def _decode_real_pairs(
         n_pairs=n_pairs,
         substrate_tag=_SUBSTRATE_TAG,
         max_pairs=max_pairs,
+        repo_root=REPO_ROOT,
     )
 
 

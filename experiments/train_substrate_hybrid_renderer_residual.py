@@ -441,7 +441,7 @@ def _build_parser() -> argparse.ArgumentParser:
 def _load_upstream_yuv420_to_rgb():
     """Thin substrate-tag-bound wrapper over the canonical helper (CANON-DEDUP-1)."""
     return _load_upstream_yuv420_to_rgb_canonical(
-        substrate_tag="hybrid_res", repo_root=REPO_ROOT
+        substrate_tag="hybrid_renderer_residual", repo_root=REPO_ROOT
     )
 
 
@@ -613,7 +613,7 @@ def _build_archive_zip(
 
 def _device_or_die(name: str, *, smoke: bool):
     """Thin substrate-tag-bound wrapper over the canonical helper (CANON-DEDUP-1)."""
-    return _device_or_die_canonical(name, smoke=smoke, substrate_tag="hybrid_res")
+    return _device_or_die_canonical(name, smoke=smoke, substrate_tag="hybrid_renderer_residual")
 
 
 # ---------------------------------------------------------------------------
