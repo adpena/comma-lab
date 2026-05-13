@@ -28,6 +28,8 @@ without adding a `constriction` dependency to the inflate runtime.
 - PacketIR identity proof: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/packetir_identity.json`
 - Runtime decode/sidecar consumption proof: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_decode_consumption.json`
 - Entropy floor refresh: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/entropy_floor.json`
+- Static release surface: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/`
+- Static compliance: `experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pre_submission_compliance.static_clean.json`
 
 ## Evidence Classification
 
@@ -60,14 +62,13 @@ are complete.
 - Targeted py_compile passed for the new primitive, candidate builder, CLI,
   runtime parser, and touched tests.
 - Targeted fatal ruff gate passed with `--select E9,F63,F7,F82`.
+- Static nonfinal pre-submission compliance passed on the clean release surface.
+  The only failed check is the expected warning `auth_eval_optional_missing`;
+  therefore the packet remains non-promotable until exact auth eval lands.
 
 ## Next Steps
 
-1. Materialize a static release surface for the HDM4+HLM1 archive using the
-   updated PR106 PR101-grammar runtime.
-2. Run strict pre-submission compliance on that static packet.
-3. Refresh runtime-tree custody after HLM1 runtime support lands in main.
-4. Claim lane `hnerv_hlm1_fixed_latent_recode_exact_eval` before any GPU job.
-5. Dispatch exact `[contest-CUDA]` auth eval only after the static packet is
+1. Refresh runtime-tree custody after HLM1 runtime support lands in main.
+2. Claim lane `hnerv_hlm1_fixed_latent_recode_exact_eval` before any GPU job.
+3. Dispatch exact `[contest-CUDA]` auth eval only after the static packet is
    green.
-
