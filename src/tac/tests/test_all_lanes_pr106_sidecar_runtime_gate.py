@@ -86,14 +86,49 @@ def test_pr106_sidecar_runtime_consumption_gate_rejects_packet_ir_identity_drift
 ) -> None:
     module = _load_all_lanes_module()
     packet_compiler = module.sys.modules["tac.packet_compiler"]
-    original_emit = packet_compiler.emit_pr106_sidecar_packet
 
-    def fake_emit(packet: object) -> bytes:
-        return original_emit(packet) + b"\x00"
+    def fake_identity(*, archive_path: Path) -> dict[str, object]:
+        return {
+            "schema": "pr106_sidecar_packet_ir_identity_proof_v1",
+            "packet_ir_identity_passed": False,
+            "packet": {
+                "format_id": "0x01" if "pr101_grammar" not in str(archive_path) else "0x02",
+                "packet_ir_consumed_byte_proof": {
+                    "runtime_consumption_claim": False,
+                    "all_payload_bytes_accounted": True,
+                    "unconsumed_trailing_bytes": 0,
+                    "section_gaps": [],
+                    "score_affecting_section_names": ["pr106_payload", "sidecar_payload"],
+                    "emitted_payload_bytes": 8,
+                    "emitted_payload_sha256": "a" * 64,
+                    "accounted_payload_bytes": 8,
+                },
+            },
+            "emitted_payload": {
+                "bytes": 8,
+                "sha256": "a" * 64,
+                "byte_identical_to_source_member": False,
+            },
+            "emitted_archive": {
+                "byte_identical_to_source_archive": False,
+            },
+            "runtime_consumption_claim": False,
+            "full_frame_inflate_output_parity_claim": False,
+            "contest_axis_claim": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
 
-    monkeypatch.setattr(packet_compiler, "emit_pr106_sidecar_packet", fake_emit)
+    monkeypatch.setattr(
+        packet_compiler,
+        "prove_pr106_sidecar_packet_ir_identity",
+        fake_identity,
+    )
 
     passed, output = module._run_pr106_sidecar_runtime_consumption_gate()
 
     assert passed is False
     assert "packet_ir_emit_payload_not_identity" in output
+    assert "stored_zip_reemit_not_identity" in output
+    assert "packet_ir_identity_not_passed" in output

@@ -1,0 +1,425 @@
+{
+  "allow_slow_preflight": false,
+  "check_codebase": true,
+  "failed_step_count": 0,
+  "generated_at": "2026-05-13T02:38:30.078229Z",
+  "hot_steps": [
+    {
+      "elapsed_s": 5.147727,
+      "finished_offset_s": 6.849748,
+      "name": "check_state_writers_strict_load_for_mutating_path",
+      "sequence": 2,
+      "started_offset_s": 1.702022,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 4.402367,
+      "finished_offset_s": 6.11121,
+      "name": "check_codebase_drift",
+      "sequence": 6,
+      "started_offset_s": 1.708843,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 3.106636,
+      "finished_offset_s": 4.811771,
+      "name": "check_authoritative_tag_requires_custody_metadata",
+      "sequence": 3,
+      "started_offset_s": 1.705135,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 2.869623,
+      "finished_offset_s": 4.578253,
+      "name": "check_no_bare_writes_to_shared_state",
+      "sequence": 5,
+      "started_offset_s": 1.708631,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 2.738957,
+      "finished_offset_s": 4.447936,
+      "name": "check_no_mps_fallback_default",
+      "sequence": 7,
+      "started_offset_s": 1.708979,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 2.29037,
+      "finished_offset_s": 5.382172,
+      "name": "check_subagent_landing_has_solver_wire_in",
+      "sequence": 12,
+      "started_offset_s": 3.091802,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 1.656002,
+      "finished_offset_s": 5.839896,
+      "name": "check_remote_dispatch_runbooks_no_local_cuda_probe_default",
+      "sequence": 17,
+      "started_offset_s": 4.183894,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 1.639832,
+      "finished_offset_s": 3.347525,
+      "name": "check_continual_learning_writes_use_lock",
+      "sequence": 4,
+      "started_offset_s": 1.707693,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 1.383839,
+      "finished_offset_s": 4.731375,
+      "name": "check_lane_pre_registered_before_work_starts",
+      "sequence": 13,
+      "started_offset_s": 3.347536,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 1.317961,
+      "finished_offset_s": 5.765918,
+      "name": "check_no_eval_roundtrip_false",
+      "sequence": 18,
+      "started_offset_s": 4.447957,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 1.248447,
+      "finished_offset_s": 5.979833,
+      "name": "check_no_pipefail_tee_pipestatus_loss",
+      "sequence": 20,
+      "started_offset_s": 4.731386,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 1.232614,
+      "finished_offset_s": 2.934484,
+      "name": "check_dispatch_cli_shell_hazards",
+      "sequence": 1,
+      "started_offset_s": 1.70187,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 1.188135,
+      "finished_offset_s": 5.766404,
+      "name": "check_no_disable_eval_roundtrip_flag",
+      "sequence": 19,
+      "started_offset_s": 4.578268,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.998016,
+      "finished_offset_s": 3.091786,
+      "name": "preflight_shell_lane_arity",
+      "sequence": 10,
+      "started_offset_s": 2.093771,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.935841,
+      "finished_offset_s": 6.702253,
+      "name": "check_public_pr_intake_clones_pristine",
+      "sequence": 25,
+      "started_offset_s": 5.766412,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 0.879959,
+      "finished_offset_s": 5.691779,
+      "name": "check_training_scripts_use_real_data_in_nonsmoke_mode",
+      "sequence": 21,
+      "started_offset_s": 4.81182,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 0.71083,
+      "finished_offset_s": 3.645326,
+      "name": "preflight_t4_oom_training_guard",
+      "sequence": 11,
+      "started_offset_s": 2.934497,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.671968,
+      "finished_offset_s": 6.05418,
+      "name": "check_no_scorer_load_at_inflate",
+      "sequence": 22,
+      "started_offset_s": 5.382212,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.374242,
+      "finished_offset_s": 4.18224,
+      "name": "check_custody_gate_accept_tokens_concrete_only",
+      "sequence": 16,
+      "started_offset_s": 3.807999,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.373817,
+      "finished_offset_s": 2.093745,
+      "name": "preflight_arity",
+      "sequence": 9,
+      "started_offset_s": 1.719928,
+      "status": "passed",
+      "thread": "preflight_7"
+    }
+  ],
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema": "pact.tac_preflight_cli_timing.v1",
+  "scope": "dev",
+  "serial_elapsed_s": 35.484761,
+  "slow_step_count": 18,
+  "slow_step_threshold_s": 0.5,
+  "status": "passed",
+  "step_count": 25,
+  "steps": [
+    {
+      "elapsed_s": 1.232614,
+      "finished_offset_s": 2.934484,
+      "name": "check_dispatch_cli_shell_hazards",
+      "sequence": 1,
+      "started_offset_s": 1.70187,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 5.147727,
+      "finished_offset_s": 6.849748,
+      "name": "check_state_writers_strict_load_for_mutating_path",
+      "sequence": 2,
+      "started_offset_s": 1.702022,
+      "status": "passed",
+      "thread": "preflight_1"
+    },
+    {
+      "elapsed_s": 3.106636,
+      "finished_offset_s": 4.811771,
+      "name": "check_authoritative_tag_requires_custody_metadata",
+      "sequence": 3,
+      "started_offset_s": 1.705135,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 1.639832,
+      "finished_offset_s": 3.347525,
+      "name": "check_continual_learning_writes_use_lock",
+      "sequence": 4,
+      "started_offset_s": 1.707693,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 2.869623,
+      "finished_offset_s": 4.578253,
+      "name": "check_no_bare_writes_to_shared_state",
+      "sequence": 5,
+      "started_offset_s": 1.708631,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 4.402367,
+      "finished_offset_s": 6.11121,
+      "name": "check_codebase_drift",
+      "sequence": 6,
+      "started_offset_s": 1.708843,
+      "status": "passed",
+      "thread": "preflight_5"
+    },
+    {
+      "elapsed_s": 2.738957,
+      "finished_offset_s": 4.447936,
+      "name": "check_no_mps_fallback_default",
+      "sequence": 7,
+      "started_offset_s": 1.708979,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 0.010554,
+      "finished_offset_s": 1.719885,
+      "name": "check_dispatch_claim_helper_present",
+      "sequence": 8,
+      "started_offset_s": 1.709331,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.373817,
+      "finished_offset_s": 2.093745,
+      "name": "preflight_arity",
+      "sequence": 9,
+      "started_offset_s": 1.719928,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.998016,
+      "finished_offset_s": 3.091786,
+      "name": "preflight_shell_lane_arity",
+      "sequence": 10,
+      "started_offset_s": 2.093771,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.71083,
+      "finished_offset_s": 3.645326,
+      "name": "preflight_t4_oom_training_guard",
+      "sequence": 11,
+      "started_offset_s": 2.934497,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 2.29037,
+      "finished_offset_s": 5.382172,
+      "name": "check_subagent_landing_has_solver_wire_in",
+      "sequence": 12,
+      "started_offset_s": 3.091802,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 1.383839,
+      "finished_offset_s": 4.731375,
+      "name": "check_lane_pre_registered_before_work_starts",
+      "sequence": 13,
+      "started_offset_s": 3.347536,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.050788,
+      "finished_offset_s": 3.696224,
+      "name": "check_no_tag_only_custody_validation",
+      "sequence": 14,
+      "started_offset_s": 3.645435,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.111722,
+      "finished_offset_s": 3.807963,
+      "name": "check_locked_writes_preserve_deletions",
+      "sequence": 15,
+      "started_offset_s": 3.69624,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 0.374242,
+      "finished_offset_s": 4.18224,
+      "name": "check_custody_gate_accept_tokens_concrete_only",
+      "sequence": 16,
+      "started_offset_s": 3.807999,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 1.656002,
+      "finished_offset_s": 5.839896,
+      "name": "check_remote_dispatch_runbooks_no_local_cuda_probe_default",
+      "sequence": 17,
+      "started_offset_s": 4.183894,
+      "status": "passed",
+      "thread": "preflight_0"
+    },
+    {
+      "elapsed_s": 1.317961,
+      "finished_offset_s": 5.765918,
+      "name": "check_no_eval_roundtrip_false",
+      "sequence": 18,
+      "started_offset_s": 4.447957,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 1.188135,
+      "finished_offset_s": 5.766404,
+      "name": "check_no_disable_eval_roundtrip_flag",
+      "sequence": 19,
+      "started_offset_s": 4.578268,
+      "status": "passed",
+      "thread": "preflight_4"
+    },
+    {
+      "elapsed_s": 1.248447,
+      "finished_offset_s": 5.979833,
+      "name": "check_no_pipefail_tee_pipestatus_loss",
+      "sequence": 20,
+      "started_offset_s": 4.731386,
+      "status": "passed",
+      "thread": "preflight_3"
+    },
+    {
+      "elapsed_s": 0.879959,
+      "finished_offset_s": 5.691779,
+      "name": "check_training_scripts_use_real_data_in_nonsmoke_mode",
+      "sequence": 21,
+      "started_offset_s": 4.81182,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 0.671968,
+      "finished_offset_s": 6.05418,
+      "name": "check_no_scorer_load_at_inflate",
+      "sequence": 22,
+      "started_offset_s": 5.382212,
+      "status": "passed",
+      "thread": "preflight_7"
+    },
+    {
+      "elapsed_s": 0.080577,
+      "finished_offset_s": 5.772372,
+      "name": "check_substrate_score_aware_losses_use_canonical_scorer_contract",
+      "sequence": 23,
+      "started_offset_s": 5.691795,
+      "status": "passed",
+      "thread": "preflight_2"
+    },
+    {
+      "elapsed_s": 0.063937,
+      "finished_offset_s": 5.829882,
+      "name": "check_substrate_trainer_pose_defaults_match_contest_formula",
+      "sequence": 24,
+      "started_offset_s": 5.765945,
+      "status": "passed",
+      "thread": "preflight_6"
+    },
+    {
+      "elapsed_s": 0.935841,
+      "finished_offset_s": 6.702253,
+      "name": "check_public_pr_intake_clones_pristine",
+      "sequence": 25,
+      "started_offset_s": 5.766412,
+      "status": "passed",
+      "thread": "preflight_4"
+    }
+  ],
+  "timeout_s": 30.0,
+  "wall_elapsed_s": 6.894118
+}

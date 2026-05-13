@@ -1811,43 +1811,48 @@ def _pr106_sidecar_packet_ir_identity_failures(
     *,
     expected_format_id: str,
 ) -> list[str]:
-    from tac.packet_compiler import (
-        emit_pr106_sidecar_packet,
-        emit_single_stored_member_archive,
-        parse_pr106_sidecar_packet,
-        pr106_sidecar_manifest,
-        read_single_stored_member_archive,
-    )
+    from tac.packet_compiler import prove_pr106_sidecar_packet_ir_identity
 
     failures: list[str] = []
-    archive_bytes = archive_path.read_bytes()
-    member = read_single_stored_member_archive(archive_bytes)
-    packet = parse_pr106_sidecar_packet(member.payload)
-    emitted_payload = emit_pr106_sidecar_packet(packet)
-    emitted_archive = emit_single_stored_member_archive(member)
-    manifest = pr106_sidecar_manifest(
-        packet,
-        archive_sha256=sha256_bytes(archive_bytes),
+    manifest = prove_pr106_sidecar_packet_ir_identity(
+        archive_path=archive_path,
     )
+    packet = manifest.get("packet")
+    if not isinstance(packet, dict):
+        failures.append(f"{label}:packet_ir_manifest_missing_packet")
+        return failures
 
-    if manifest.get("format_id") != expected_format_id:
+    if packet.get("format_id") != expected_format_id:
         failures.append(
             f"{label}:packet_ir_format_id_drift expected {expected_format_id!r}, "
-            f"got {manifest.get('format_id')!r}"
+            f"got {packet.get('format_id')!r}"
         )
-    if emitted_payload != member.payload:
+    emitted_payload = manifest.get("emitted_payload")
+    if not isinstance(emitted_payload, dict):
+        failures.append(f"{label}:packet_ir_emitted_payload_missing")
+        return failures
+    emitted_archive = manifest.get("emitted_archive")
+    if not isinstance(emitted_archive, dict):
+        failures.append(f"{label}:packet_ir_emitted_archive_missing")
+        return failures
+    if emitted_payload.get("byte_identical_to_source_member") is not True:
         failures.append(f"{label}:packet_ir_emit_payload_not_identity")
-    if emitted_archive != archive_bytes:
+    if emitted_archive.get("byte_identical_to_source_archive") is not True:
         failures.append(f"{label}:stored_zip_reemit_not_identity")
     for field in (
+        "runtime_consumption_claim",
+        "full_frame_inflate_output_parity_claim",
+        "contest_axis_claim",
         "score_claim",
         "promotion_eligible",
         "ready_for_exact_eval_dispatch",
     ):
         if manifest.get(field) is not False:
             failures.append(f"{label}:packet_ir_manifest_{field}_drift")
+    if manifest.get("packet_ir_identity_passed") is not True:
+        failures.append(f"{label}:packet_ir_identity_not_passed")
 
-    proof = manifest.get("packet_ir_consumed_byte_proof")
+    proof = packet.get("packet_ir_consumed_byte_proof")
     if not isinstance(proof, dict):
         failures.append(f"{label}:packet_ir_consumed_byte_proof_missing")
         return failures
@@ -1855,15 +1860,17 @@ def _pr106_sidecar_packet_ir_identity_failures(
     expected_score_sections = ["pr106_payload", "sidecar_payload"]
     if expected_format_id == "0x02":
         expected_score_sections.append("framing_meta")
+    expected_payload_bytes = emitted_payload.get("bytes")
+    expected_payload_sha256 = emitted_payload.get("sha256")
     expected_proof_fields = {
         "runtime_consumption_claim": False,
         "all_payload_bytes_accounted": True,
         "unconsumed_trailing_bytes": 0,
         "section_gaps": [],
         "score_affecting_section_names": expected_score_sections,
-        "emitted_payload_bytes": len(emitted_payload),
-        "emitted_payload_sha256": sha256_bytes(emitted_payload),
-        "accounted_payload_bytes": len(emitted_payload),
+        "emitted_payload_bytes": expected_payload_bytes,
+        "emitted_payload_sha256": expected_payload_sha256,
+        "accounted_payload_bytes": expected_payload_bytes,
     }
     for field, expected in expected_proof_fields.items():
         if proof.get(field) != expected:

@@ -17,6 +17,7 @@ from tac.packet_compiler import (
     pr106_sidecar_consumed_byte_proof,
     pr106_sidecar_manifest,
     pr106_sidecar_mutation_manifest,
+    prove_pr106_sidecar_packet_ir_identity,
     read_single_stored_member_archive,
 )
 
@@ -83,6 +84,64 @@ def test_pr106_sidecar_packet_ir_identity_on_release_archives(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["archive_sha256"] == expected_archive_sha
     assert manifest["emitted_payload_sha256"] == _sha(member.payload)
+
+
+@pytest.mark.parametrize(
+    ("archive_path", "expected_format_id", "expected_archive_sha"),
+    [
+        (
+            PR106_R2_ARCHIVE,
+            "0x01",
+            "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+        ),
+        (
+            PR106_R2_PR101_ARCHIVE,
+            "0x02",
+            "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+        ),
+    ],
+)
+def test_pr106_sidecar_packet_ir_identity_proof_is_operator_facing_and_nonpromotable(
+    archive_path: Path,
+    expected_format_id: str,
+    expected_archive_sha: str,
+) -> None:
+    proof = prove_pr106_sidecar_packet_ir_identity(
+        archive_path=archive_path,
+        expected_archive_sha256=expected_archive_sha,
+    )
+
+    assert proof["schema"] == "pr106_sidecar_packet_ir_identity_proof_v1"
+    assert proof["packet_ir_identity_passed"] is True
+    assert proof["blockers"] == []
+    assert proof["runtime_consumption_claim"] is False
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert proof["contest_axis_claim"] is False
+    assert proof["score_claim"] is False
+    assert proof["promotion_eligible"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+    assert proof["archive"]["sha256"] == expected_archive_sha
+    assert proof["archive"]["expected_sha256_matches"] is True
+    assert proof["member"]["name"] == "0.bin"
+    assert proof["packet"]["format_id"] == expected_format_id
+    assert proof["emitted_payload"]["byte_identical_to_source_member"] is True
+    assert proof["emitted_archive"]["byte_identical_to_source_archive"] is True
+    consumed = proof["packet"]["packet_ir_consumed_byte_proof"]
+    assert consumed["all_payload_bytes_accounted"] is True
+    assert consumed["runtime_consumption_claim"] is False
+
+
+def test_pr106_sidecar_packet_ir_identity_proof_fails_closed_on_sha_mismatch() -> None:
+    proof = prove_pr106_sidecar_packet_ir_identity(
+        archive_path=PR106_R2_ARCHIVE,
+        expected_archive_sha256="0" * 64,
+    )
+
+    assert proof["packet_ir_identity_passed"] is False
+    assert proof["archive"]["expected_sha256_matches"] is False
+    assert proof["blockers"] == ["expected_archive_sha256_mismatch"]
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
 
 
 def test_single_member_archive_autodetects_x_member_and_preserves_name() -> None:

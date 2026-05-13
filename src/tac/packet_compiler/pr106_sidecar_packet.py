@@ -15,7 +15,8 @@ import hashlib
 import io
 import struct
 import zipfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from pathlib import Path
 
 import brotli  # type: ignore[import-not-found]
 import numpy as np
@@ -562,6 +563,98 @@ def pr106_sidecar_manifest(
     if archive_sha256 is not None:
         manifest["archive_sha256"] = archive_sha256
     return manifest
+
+
+def prove_pr106_sidecar_packet_ir_identity(
+    *,
+    archive_path: Path,
+    expected_member_name: str | None = None,
+    expected_archive_sha256: str | None = None,
+) -> dict[str, object]:
+    """Prove PR106 sidecar PacketIR parse/emit identity for one archive.
+
+    This is the canonical operator-facing identity proof for PR106/R2 sidecar
+    packets. It proves only byte custody and parser accounting: it does not run
+    the submission runtime, does not render frames, and never makes a score or
+    promotion claim.
+    """
+
+    archive_path = Path(archive_path)
+    archive_bytes = archive_path.read_bytes()
+    archive_sha = sha256_hex(archive_bytes)
+    member = read_single_stored_member_archive(
+        archive_bytes,
+        expected_member_name=expected_member_name,
+    )
+    packet = parse_pr106_sidecar_packet(member.payload)
+    emitted_payload = emit_pr106_sidecar_packet(packet)
+    emitted_member = replace(member, payload=emitted_payload)
+    emitted_archive = emit_single_stored_member_archive(emitted_member)
+    emitted_archive_sha = sha256_hex(emitted_archive)
+    packet_manifest = pr106_sidecar_manifest(packet, archive_sha256=archive_sha)
+    consumed = packet_manifest["packet_ir_consumed_byte_proof"]
+    if not isinstance(consumed, dict):
+        raise TypeError("packet_ir_consumed_byte_proof must be a dict")
+
+    blockers: list[str] = []
+    if expected_archive_sha256 is not None and archive_sha != expected_archive_sha256:
+        blockers.append("expected_archive_sha256_mismatch")
+    if emitted_payload != member.payload:
+        blockers.append("packet_ir_payload_parse_emit_not_identity")
+    if emitted_archive != archive_bytes:
+        blockers.append("single_member_zip_parse_emit_not_identity")
+    if consumed.get("all_payload_bytes_accounted") is not True:
+        blockers.append("packet_ir_consumed_byte_accounting_failed")
+    if consumed.get("runtime_consumption_claim") is not False:
+        blockers.append("packet_ir_overclaimed_runtime_consumption")
+
+    identity_passed = not blockers
+    return {
+        "schema": "pr106_sidecar_packet_ir_identity_proof_v1",
+        "proof_scope": (
+            "packet_ir_parse_emit_identity_and_parser_consumed_byte_accounting_"
+            "not_runtime_inflate"
+        ),
+        "archive": {
+            "path": archive_path.as_posix(),
+            "bytes": len(archive_bytes),
+            "sha256": archive_sha,
+            "expected_sha256": expected_archive_sha256,
+            "expected_sha256_matches": (
+                None
+                if expected_archive_sha256 is None
+                else archive_sha == expected_archive_sha256
+            ),
+        },
+        "member": {
+            "name": member.name,
+            "payload_bytes": len(member.payload),
+            "payload_sha256": sha256_hex(member.payload),
+        },
+        "packet": packet_manifest,
+        "emitted_payload": {
+            "bytes": len(emitted_payload),
+            "sha256": sha256_hex(emitted_payload),
+            "byte_identical_to_source_member": emitted_payload == member.payload,
+        },
+        "emitted_archive": {
+            "bytes": len(emitted_archive),
+            "sha256": emitted_archive_sha,
+            "byte_identical_to_source_archive": emitted_archive == archive_bytes,
+        },
+        "packet_ir_identity_passed": identity_passed,
+        "blockers": blockers,
+        "runtime_consumption_claim": False,
+        "full_frame_inflate_output_parity_claim": False,
+        "contest_axis_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "required_next_proof": (
+            "runtime sidecar decode/apply proof, full-frame same-runtime parity, "
+            "then exact contest auth eval with axis labels before score language"
+        ),
+    }
 
 
 def pr106_sidecar_mutation_manifest(
