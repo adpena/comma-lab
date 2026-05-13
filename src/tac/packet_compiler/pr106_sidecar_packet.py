@@ -59,6 +59,7 @@ class StoredZipMember:
     flag_bits: int
     comment: bytes
     extra: bytes
+    archive_comment: bytes = b""
 
 
 @dataclass(frozen=True)
@@ -146,6 +147,7 @@ def read_single_stored_member_archive(
             flag_bits=info.flag_bits,
             comment=info.comment,
             extra=info.extra,
+            archive_comment=zf.comment,
         )
 
 
@@ -162,6 +164,7 @@ def emit_single_stored_member_archive(member: StoredZipMember) -> bytes:
     info.extra = member.extra
     with zipfile.ZipFile(out, "w") as zf:
         zf.writestr(info, member.payload)
+        zf.comment = member.archive_comment
     return out.getvalue()
 
 
@@ -619,6 +622,8 @@ def prove_pr106_sidecar_packet_ir_identity(
             "path": archive_path.as_posix(),
             "bytes": len(archive_bytes),
             "sha256": archive_sha,
+            "zip_comment_bytes": len(member.archive_comment),
+            "zip_comment_sha256": sha256_hex(member.archive_comment),
             "expected_sha256": expected_archive_sha256,
             "expected_sha256_matches": (
                 None

@@ -32,7 +32,12 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _single_member_zip(name: str, payload: bytes) -> bytes:
+def _single_member_zip(
+    name: str,
+    payload: bytes,
+    *,
+    archive_comment: bytes = b"",
+) -> bytes:
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_STORED) as zf:
         info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
@@ -40,6 +45,7 @@ def _single_member_zip(name: str, payload: bytes) -> bytes:
         info.external_attr = 0o644 << 16
         info.create_system = 3
         zf.writestr(info, payload, compress_type=zipfile.ZIP_STORED)
+        zf.comment = archive_comment
     return out.getvalue()
 
 
@@ -154,6 +160,47 @@ def test_single_member_archive_autodetects_x_member_and_preserves_name() -> None
     assert member.name == "x"
     assert member.payload == payload
     assert emitted == archive_bytes
+
+
+def test_single_member_archive_preserves_archive_comment() -> None:
+    payload = b"\xfe\x01\x00\x00\x00\x00\x00\x00"
+    archive_comment = b"packetir-comment: exact central directory metadata"
+    archive_bytes = _single_member_zip(
+        "0.bin",
+        payload,
+        archive_comment=archive_comment,
+    )
+
+    member = read_single_stored_member_archive(archive_bytes)
+    emitted = emit_single_stored_member_archive(member)
+
+    assert member.archive_comment == archive_comment
+    assert emitted == archive_bytes
+
+
+def test_pr106_sidecar_packet_ir_identity_proof_preserves_archive_comment(
+    tmp_path: Path,
+) -> None:
+    payload = b"\xfe\x01\x00\x00\x00\x00\x00\x00"
+    archive_bytes = _single_member_zip(
+        "0.bin",
+        payload,
+        archive_comment=b"packetir-comment: identity contract",
+    )
+    archive_path = tmp_path / "commented_archive.zip"
+    archive_path.write_bytes(archive_bytes)
+    expected_sha = _sha(archive_bytes)
+
+    proof = prove_pr106_sidecar_packet_ir_identity(
+        archive_path=archive_path,
+        expected_archive_sha256=expected_sha,
+    )
+
+    assert proof["packet_ir_identity_passed"] is True
+    assert proof["archive"]["zip_comment_bytes"] > 0
+    assert proof["archive"]["expected_sha256_matches"] is True
+    assert proof["emitted_archive"]["byte_identical_to_source_archive"] is True
+    assert proof["score_claim"] is False
 
 
 def test_single_member_archive_explicit_expected_name_still_fails_closed() -> None:
