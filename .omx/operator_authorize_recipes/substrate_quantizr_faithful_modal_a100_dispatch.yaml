@@ -1,0 +1,153 @@
+schema_version: 1
+name: substrate_quantizr_faithful_modal_a100_dispatch
+lane_id: lane_substrate_quantizr_faithful_20260512
+summary: Quantizr-faithful (PR #55 1:1 replica) TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — driver naming mismatch + library-only entry-point).
+
+dispatch_enabled: false
+research_only: false
+substrate_tradition: TRADITION_2
+defer_reason: |
+  TWO blockers:
+
+  (1) src/tac/quantizr_faithful_renderer.py is a LIBRARY (no argparse, no
+      `if __name__ == "__main__"`). It exposes `build_quantizr_faithful_renderer()`
+      and is consumed by experiments/plan_c067_renderer_self_compression_v2.py
+      and experiments/build_mixed_qzs_block_candidate.py. There is NO
+      experiments/train_quantizr_faithful_renderer.py trainer script.
+
+  (2) scripts/remote_lane_q_faithful_jointgen.sh exists and is the canonical
+      driver for this substrate, but its naming does NOT follow the
+      scripts/remote_lane_substrate_<name>.sh convention used by TRADITION 1
+      sibling recipes. Catalog #162 wrapper unification + Catalog #163
+      sentinel-source pattern require alignment with the canonical
+      scripts/remote_lane_substrate_*.sh naming for the operator_authorize
+      ladder.
+
+  Per Catalog #146/#163, dispatch is REFUSED until: (a) a canonical trainer
+  script that mirrors experiments/train_<name>_as_renderer.py is built, OR
+  (b) the existing scripts/remote_lane_q_faithful_jointgen.sh is renamed/
+  symlinked to scripts/remote_lane_substrate_quantizr_faithful.sh AND
+  delegates to a canonical trainer.
+
+dispatch_blockers:
+  - canonical_trainer_script_missing
+  - remote_driver_naming_misalignment
+  - tier_manifest_required_for_catalog_151_compliance
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: "[predicted; first-anchor replication target] 0.33 sub-band from Quantizr public [contest-CUDA] 0.33 anchor"
+predicted_delta: "[predicted] match Quantizr 0.33 [contest-CUDA] score; the target IS the public anchor"
+literature_anchor: "Quantizr (Jimmy Wu, UCLA CSE/Neuro) PR #55 head SHA e0b643b0a7c21f62cc93b5d920bcf3fc0d5a33d9; 0.33 contest score; FiLM-conditioned depthwise-separable CNN, 88K params, ~64KB FP4 (per .omx/research/quantizr_replica_audit_20260428.md)"
+
+risk: |
+  TRADITION 2 substrate. The module is a 1:1 line-for-line port of Quantizr's
+  PR #55 JointFrameGenerator architecture (87,836 params verified on RTX 4090
+  35959478). The architecture is faithful (NO motion module, NO optical flow,
+  NO warp; single mask input; FiLM-conditioned frame1_head; SepConv DSConv
+  trunk).
+
+  However, this module is LIBRARY-ONLY: it exposes builders + helpers, not a
+  standalone trainer. The training pipeline lives across multiple consumers:
+  - experiments/plan_c067_renderer_self_compression_v2.py
+  - experiments/build_mixed_qzs_block_candidate.py
+  - scripts/remote_lane_q_faithful_jointgen.sh
+
+  A canonical trainer script would consolidate the dispatch path. Currently
+  the operator_authorize wrapper would have ambiguous routing.
+
+  TIER manifest gap: as a library, no TIER_<N>_OPERATOR_REQUIRED_FLAGS
+  manifest exists. Adding it would require council review of which
+  consumer becomes canonical.
+envelope_status: "DEFERRED: trainer + driver-naming alignment work needed"
+
+remote_driver: scripts/remote_lane_substrate_quantizr_faithful.sh  # MISSING (rename of scripts/remote_lane_q_faithful_jointgen.sh required)
+existing_driver_alternative: scripts/remote_lane_q_faithful_jointgen.sh  # exists but naming-misaligned
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+    note: "consumed by canonical trainer; not by library module directly"
+
+argparse_inventory:
+  trainer: "[MISSING] experiments/train_quantizr_faithful_renderer.py"
+  library_module: src/tac/quantizr_faithful_renderer.py
+  library_exports:
+    - JointFrameGenerator
+    - SharedMaskDecoder
+    - Frame2StaticHead
+    - FiLMFrameHead
+    - SepConvGNAct
+    - SepResBlock
+    - FiLMSepResBlock
+    - make_coord_grid
+    - build_quantizr_faithful_renderer
+  current_consumers:
+    - experiments/plan_c067_renderer_self_compression_v2.py
+    - experiments/build_mixed_qzs_block_candidate.py
+    - scripts/remote_lane_q_faithful_jointgen.sh
+
+env_overrides:
+  QUANTIZR_FAITHFUL_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  QUANTIZR_FAITHFUL_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  QUANTIZR_FAITHFUL_OUTPUT_DIR: /workspace/pact/lane_substrate_quantizr_faithful_results/output
+  QUANTIZR_FAITHFUL_EPOCHS: "2000"
+  QUANTIZR_FAITHFUL_UPSTREAM_DIR: /workspace/pact/upstream
+  QUANTIZR_FAITHFUL_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - tools/claim_lane_dispatch.py
+  - tools/append_cost_band_anchor.py
+  - upstream/videos/0.mkv
+  - src/tac/quantizr_faithful_renderer.py (library module)
+  - src/tac/quantizr_faithful_export.py (export helper)
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - "[MISSING] experiments/train_quantizr_faithful_renderer.py (canonical trainer)"
+  - "[MISSING] scripts/remote_lane_substrate_quantizr_faithful.sh (canonical driver name)"
+  - "[EXISTING ALTERNATIVE] scripts/remote_lane_q_faithful_jointgen.sh"
+
+reactivation_criteria: |
+  1. Canonical trainer experiments/train_quantizr_faithful_renderer.py built
+     mirroring the experiments/train_<name>_as_renderer.py pattern (full
+     argparse + main() entry-point + EMA + eval_roundtrip per CLAUDE.md).
+  2. Canonical driver scripts/remote_lane_substrate_quantizr_faithful.sh
+     built (or rename existing scripts/remote_lane_q_faithful_jointgen.sh)
+     per Catalog #163 sentinel-source pattern.
+  3. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed in the trainer
+     (council review required).
+  4. Local smoke verifies inflate.sh emits a contest-compliant 0.bin per
+     Catalog #146.
+  5. Catalog #152 validates --video-path resolves before dispatch.
+
+notes: |
+  TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
+  Lane id `lane_q_faithful_retrain` registered at L1 with src/tac/
+  quantizr_faithful_renderer.py + scripts/remote_lane_q_faithful_jointgen.sh
+  evidence; 87,836 params verified on RTX 4090 35959478.
+
+  Per CLAUDE.md "Quantizr intelligence — verified competitive data": Quantizr
+  archive is 299,970 bytes (293KB), score 0.33. Architecture: FiLM-conditioned
+  depthwise-separable CNN, 88K params, ~64KB FP4. The replica targets this
+  architecture 1:1.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when canonical driver
+  lands, must register harvest hook within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": first anchor must be
+  tagged [contest-CUDA] (NVIDIA GPU on Linux; never MPS); CPU axis required
+  separately on Linux x86_64 before any submission claim.
+
+  Cross-ref:
+    .omx/research/substrate_tradition_taxonomy_20260512.md
+    .omx/research/quantizr_replica_audit_20260428.md
+    .omx/state/lane_registry.json#lane_q_faithful_retrain
