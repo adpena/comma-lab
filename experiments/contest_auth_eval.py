@@ -1378,13 +1378,29 @@ def _auth_eval_evidence_contract(
         provenance.get("platform_system") == "Linux"
         and str(provenance.get("platform_machine") or "").lower() in {"x86_64", "amd64"}
     )
-    is_cuda_t4_full = (
+    # Per CLAUDE.md SIREN audit 2026-05-13 DEFECT #9 + "Submission auth eval —
+    # BOTH CPU AND CUDA" section: NVIDIA T4 / A100 / 4090 / H100 / A10G / L40S
+    # are all 1:1 contest-compliant for the CUDA axis (Linux x86_64 + CUDA
+    # runtime). The contest's GitHub Actions bot scores CUDA on T4, but exact
+    # contest-faithful CUDA replays on A100/4090/H100/A10G/L40S also qualify
+    # as evidence_grade="contest-CUDA". Previously this gate accepted T4 only,
+    # silently downgrading every A100 / 4090 / H100 result to "B" (diagnostic).
+    _gpu_model = str(provenance.get("gpu_model") or "").lower()
+    _gpu_t4 = provenance.get("gpu_t4_match") is True
+    _gpu_contest_faithful_cuda = _gpu_t4 or any(
+        token in _gpu_model
+        for token in ("a100", "4090", "h100", "a10g", "l40s")
+    )
+    is_cuda_contest_full = (
         device == "cuda"
         and n_samples == 600
-        and provenance.get("gpu_t4_match") is True
+        and _gpu_contest_faithful_cuda
     )
+    # Kept as alias for backward-compat with any external consumers that
+    # imported this name (e.g. test fixtures).
+    is_cuda_t4_full = is_cuda_contest_full
     is_cpu_full = device == "cpu" and n_samples == 600 and is_linux_x86_64
-    if is_cuda_t4_full:
+    if is_cuda_contest_full:
         return {
             "evidence_grade": "contest-CUDA",
             "lane_tag": "[contest-CUDA]",
@@ -1626,6 +1642,11 @@ def main() -> int:
     #     contest_auth_eval.json  (final result)
     if args.work_dir:
         work_dir = args.work_dir.resolve()
+        work_dir.mkdir(parents=True, exist_ok=True)
+        cleanup = False
+    elif args.json_out is not None and not args.allow_temp_work_dir:
+        json_out = args.json_out.resolve()
+        work_dir = json_out.parent / f"{json_out.stem}_workdir"
         work_dir.mkdir(parents=True, exist_ok=True)
         cleanup = False
     else:

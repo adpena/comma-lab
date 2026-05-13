@@ -104,6 +104,9 @@ from tac.substrates._shared.trainer_skeleton import (
     torch_version_string as _canonical_torch_version_string,
     utc_now_iso as _canonical_utc_now_iso,
 )
+from tac.substrates._shared.trainer_skeleton import (
+    detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -974,9 +977,18 @@ def _full_main(args: argparse.Namespace) -> int:
             try:
                 from tac.continual_learning import ContestResult, posterior_update_locked
 
+                # Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #1 + Catalog
+                # #190: detect substrate dynamically from remote driver
+                # provenance.json, then env vars, then nvidia-smi.
+                _detected_substrate = _canon_detect_hardware_substrate(
+                    axis="cuda",
+                    substrate_tag="hi_nerv",
+                    provenance_path=args.output_dir / "provenance.json",
+                    env_var_candidates=("HI_NERV_GPU", "MODAL_GPU"),
+                )
                 result = ContestResult(
                     axis="cuda",
-                    hardware_substrate="linux_x86_64_t4",  # default; wrapper overrides
+                    hardware_substrate=_detected_substrate,
                     architecture_class="lane_substrate_hi_nerv_20260512",
                     score_value=contest_cuda_score,
                     evidence_tag="[contest-CUDA]",

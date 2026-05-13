@@ -93,6 +93,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -107,12 +108,22 @@ except ModuleNotFoundError:
 _REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(_REPO_ROOT)
 
+from tac.auth_eval_result import parse_auth_eval_score_claim  # noqa: E402
+
 DEFAULT_SMOKE_EPOCHS = 100
 DEFAULT_SMOKE_GPU = "T4"
 DEFAULT_SMOKE_TIMEOUT_HOURS = 1.0
 DEFAULT_SMOKE_POLL_INTERVAL_SECONDS = 30
 DEFAULT_SMOKE_MAX_WAIT_SECONDS = 1800  # 30 min
-SMOKE_PLAUSIBLE_SCORE_BAND = (0.0, 10.0)
+SMOKE_WAIT_MARGIN_SECONDS = 300
+# Per CLAUDE.md SIREN audit 2026-05-13 DEFECT #2: previously (0.0, 10.0) was
+# trivially wide — it only caught NaN / Inf. The contest's frontier score
+# range is ~0.18-0.25; bands below 0.05 are physically implausible (the
+# scorer architecture floor is ~0.001 for distortion + ~0.013 for rate);
+# bands above 5.0 indicate trainer crash or output-shape mismatch (a normal
+# untrained model scores ~1.0-3.0). Recipes can override this default by
+# declaring `predicted_band: [lo, hi]` — see _resolve_smoke_band.
+SMOKE_PLAUSIBLE_SCORE_BAND = (0.05, 5.0)
 
 
 def _resolve_recipe_path(recipe_name: str, repo_root: Path) -> Path:
@@ -128,6 +139,51 @@ def _resolve_recipe_path(recipe_name: str, repo_root: Path) -> Path:
             f"recipe not found: {candidate} (recipe={recipe_name!r})"
         )
     return candidate
+
+
+def _resolve_smoke_band(
+    recipe_text: str,
+    *,
+    default_band: tuple[float, float] = SMOKE_PLAUSIBLE_SCORE_BAND,
+) -> tuple[float, float]:
+    """Return the score band the smoke validator should enforce.
+
+    Per CLAUDE.md SIREN audit 2026-05-13 DEFECT #8 (predicted_band declared
+    in remote driver but never enforced) + DEFECT #2 (global default
+    trivially wide): recipes can declare a council-approved band via
+    ``predicted_band: [lo, hi]`` (the same shape the SIREN remote driver
+    writes to provenance.json). When present, the smoke validator enforces
+    THAT band. When absent, the global default applies.
+
+    The recipe's band is widened by ~50% on each side because the smoke
+    runs at lower epochs (typically 100 vs full's 2000) and may not reach
+    the same Pareto operating point — the council prediction is for the
+    FULL dispatch, not the smoke. Widening avoids false-negative smoke
+    reds when the smoke is healthy but undertrained.
+    """
+    # Parse only the top-level `predicted_band: [...]` line.
+    # We avoid a full YAML import to keep this stdlib-only.
+    import re
+
+    m = re.search(
+        r'^predicted_band\s*:\s*\[\s*([-+0-9.eE]+)\s*,\s*([-+0-9.eE]+)\s*\]\s*$',
+        recipe_text,
+        re.MULTILINE,
+    )
+    if not m:
+        return default_band
+    try:
+        lo = float(m.group(1))
+        hi = float(m.group(2))
+    except (TypeError, ValueError):
+        return default_band
+    if not (math.isfinite(lo) and math.isfinite(hi) and lo < hi and lo >= 0):
+        return default_band
+    # Widen by 50% on each side; floor at 0.0; cap at 10.0.
+    span = hi - lo
+    widened_lo = max(0.0, lo - 0.5 * span)
+    widened_hi = min(10.0, hi + 0.5 * span)
+    return (widened_lo, widened_hi)
 
 
 def _epoch_env_var_from_recipe(recipe_text: str) -> str | None:
@@ -287,6 +343,7 @@ def _validate_smoke_result(
       * returncode == 0 AND timed_out is False
       * artifacts dict contains an `auth_eval_*.json` entry
       * the auth-eval JSON parses to a finite, in-band score
+      * the auth-eval JSON explicitly authorizes a contest-CUDA score claim
     Otherwise red (with diagnostic text).
     """
     rc = result.get("returncode", -1)
@@ -318,13 +375,23 @@ def _validate_smoke_result(
             payload = raw
     except json.JSONDecodeError as exc:
         return False, f"SMOKE auth_eval JSON parse failed: {exc!r}"
-    score = payload.get("score") or payload.get("total_score") or payload.get("contest_score")
-    if score is None:
-        return False, f"SMOKE auth_eval has no recognizable score field: keys={list(payload.keys())}"
-    try:
-        score_f = float(score)
-    except (TypeError, ValueError):
-        return False, f"SMOKE auth_eval score not numeric: {score!r}"
+    parsed = parse_auth_eval_score_claim(
+        payload,
+        required_score_axis="contest_cuda",
+        require_component_recompute=True,
+    )
+    if parsed is None:
+        return False, (
+            "SMOKE auth_eval is not a finite component-coherent contest-CUDA "
+            "score claim: "
+            f"score_axis={payload.get('score_axis')!r}, "
+            f"lane_tag={payload.get('lane_tag')!r}, "
+            f"score_claim={payload.get('score_claim')!r}, "
+            f"score_claim_valid={payload.get('score_claim_valid')!r}, "
+            f"exact_cuda_eval_complete={payload.get('exact_cuda_eval_complete')!r}, "
+            f"keys={list(payload.keys())}"
+        )
+    score_f = parsed.score
     lo, hi = plausible_band
     if not (lo <= score_f <= hi):
         return False, (
@@ -333,7 +400,9 @@ def _validate_smoke_result(
             "research result; refusing to fire full canary"
         )
     return True, (
-        f"SMOKE GREEN: rc=0, auth_eval score={score_f:.4f} in band [{lo}, {hi}]"
+        "SMOKE GREEN: rc=0, "
+        f"{parsed.lane_tag or '[contest-CUDA]'} auth_eval score={score_f:.4f} "
+        f"in band [{lo}, {hi}]"
     )
 
 
@@ -463,12 +532,30 @@ def main(argv: list[str] | None = None) -> int:
     )
     print("[smoke-before-full] waiting for smoke to complete...")
     try:
-        result = _wait_for_smoke_completion(call_id, repo_root=repo_root)
+        max_wait_s = max(
+            DEFAULT_SMOKE_MAX_WAIT_SECONDS,
+            int(args.smoke_timeout_hours * 3600) + SMOKE_WAIT_MARGIN_SECONDS,
+        )
+        result = _wait_for_smoke_completion(
+            call_id,
+            repo_root=repo_root,
+            max_wait_s=max_wait_s,
+        )
     except TimeoutError as exc:
         print(f"[smoke-before-full] {exc!s}", file=sys.stderr)
         return 4
 
-    green, diagnostic = _validate_smoke_result(result)
+    # Per CLAUDE.md SIREN audit 2026-05-13 DEFECT #2 + #8: resolve the
+    # smoke band from recipe predicted_band when present; otherwise use
+    # the tightened global default (0.05, 5.0). The widened band accounts
+    # for the smoke being undertrained relative to the full canary.
+    smoke_band = _resolve_smoke_band(recipe_text)
+    print(
+        f"[smoke-before-full] enforcing smoke score band {smoke_band} "
+        f"(default={SMOKE_PLAUSIBLE_SCORE_BAND}; "
+        f"override_from_recipe={smoke_band != SMOKE_PLAUSIBLE_SCORE_BAND})"
+    )
+    green, diagnostic = _validate_smoke_result(result, plausible_band=smoke_band)
     print(f"[smoke-before-full] SMOKE verdict: {diagnostic}")
     if not green:
         print(
@@ -501,6 +588,7 @@ __all__ = [
     "SMOKE_PLAUSIBLE_SCORE_BAND",
     "_epoch_env_var_from_recipe",
     "_resolve_recipe_path",
+    "_resolve_smoke_band",
     "_validate_smoke_result",
     "main",
 ]

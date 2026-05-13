@@ -41,6 +41,8 @@ Cross-refs:
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 import random
 import subprocess
 from datetime import UTC, datetime
@@ -50,6 +52,26 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
 EVAL_HW: tuple[int, int] = (384, 512)
+
+# Canonical (axis, gpu_token) -> hardware_substrate map, aligned with
+# `tac.continual_learning.TAG_HARDWARE_REQUIREMENT` accepted-substrate set.
+# Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" + Catalog #127
+# (`check_authoritative_tag_requires_custody_metadata`): the posterior write
+# MUST record the actual GPU substrate the dispatch ran on, not a default
+# placeholder. The 14 substrate trainers previously hardcoded
+# `"linux_x86_64_t4"` regardless of the dispatched GPU — for A100/4090/H100
+# dispatches that produces a silent custody mislabel.
+_GPU_TOKEN_TO_SUBSTRATE: dict[str, str] = {
+    "t4": "linux_x86_64_t4",
+    "rtx_4090": "linux_x86_64_4090",
+    "4090": "linux_x86_64_4090",
+    "a100": "linux_x86_64_a100",
+    "a100-40gb": "linux_x86_64_a100",
+    "a100-80gb": "linux_x86_64_a100",
+    "h100": "linux_x86_64_h100",
+    "a10g": "linux_x86_64_a10g",
+    "l40s": "linux_x86_64_l40s",
+}
 
 
 def pin_seeds(seed: int) -> None:
@@ -110,6 +132,101 @@ def utc_now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def detect_hardware_substrate(
+    *,
+    axis: str = "cuda",
+    substrate_tag: str,
+    provenance_path: Path | None = None,
+    env_var_candidates: tuple[str, ...] = (),
+) -> str:
+    """Resolve the canonical ``hardware_substrate`` token for posterior writes.
+
+    Per CLAUDE.md SIREN audit (2026-05-13) CRITICAL #1 + Catalog #190
+    (``check_substrate_trainer_does_not_hardcode_hardware_substrate``): the
+    14 substrate trainers used to hardcode ``"linux_x86_64_t4"`` regardless
+    of the dispatched GPU. This helper resolves the substrate dynamically
+    from (1) the remote driver's ``provenance.json``, (2) environment-var
+    candidates (typically ``<SUBSTRATE>_GPU`` then ``MODAL_GPU``), or
+    (3) live ``nvidia-smi`` query. Falls back to
+    ``"linux_x86_64_unknown_cuda"`` with a stderr-warning if all sources
+    are silent — never silently mislabels.
+
+    Args:
+        axis: ``"cuda"`` (default) or ``"cpu"``. Drives the lookup table.
+        substrate_tag: Short label used in the warning banner (e.g. ``"siren"``).
+        provenance_path: Optional path to a substrate-emitted
+            ``provenance.json`` carrying a ``gpu_name`` field (typically from
+            ``scripts/remote_lane_substrate_<id>.sh``).
+        env_var_candidates: Ordered tuple of env var names to consult in
+            priority order (e.g. ``("SIREN_GPU", "MODAL_GPU")``).
+
+    Returns:
+        Canonical substrate token from
+        ``tac.continual_learning.TAG_HARDWARE_REQUIREMENT``: e.g.
+        ``"linux_x86_64_a100"``, ``"linux_x86_64_t4"``, ``"linux_x86_64_4090"``,
+        ``"linux_x86_64_unknown_cuda"`` (fallback). For ``axis="cpu"``,
+        returns ``"linux_x86_64_modal_cpu"`` (Linux x86_64 non-GHA) or
+        ``"unknown_cpu"``.
+    """
+    if axis == "cpu":
+        return "linux_x86_64_modal_cpu"
+    if axis != "cuda":
+        return "unknown"
+
+    gpu_token = ""
+
+    # (1) Prefer provenance.json (remote driver writes the actual GPU name).
+    if provenance_path is not None:
+        try:
+            if provenance_path.is_file():
+                prov = json.loads(provenance_path.read_text())
+                gpu_name = str(prov.get("gpu_name") or "").strip().lower()
+                gpu_token = gpu_name
+        except Exception:
+            gpu_token = ""
+
+    # (2) Environment-var ladder (operator wrapper / Modal env_overrides).
+    if not gpu_token:
+        for env_name in env_var_candidates:
+            value = os.environ.get(env_name)
+            if value:
+                gpu_token = value.strip().lower()
+                break
+
+    # (3) Live nvidia-smi probe (CUDA-only).
+    if not gpu_token:
+        try:
+            proc = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                gpu_token = proc.stdout.strip().splitlines()[0].lower()
+        except Exception:
+            gpu_token = ""
+
+    # Map the token to a canonical substrate.
+    for key, substrate in _GPU_TOKEN_TO_SUBSTRATE.items():
+        if key in gpu_token:
+            return substrate
+
+    # All sources silent or unrecognized GPU.
+    import sys as _sys
+
+    print(
+        f"[{substrate_tag}] WARN: hardware_substrate detection found no GPU "
+        f"token (provenance={provenance_path}, env_candidates={env_var_candidates}, "
+        f"resolved={gpu_token!r}); falling back to 'linux_x86_64_unknown_cuda'. "
+        "Posterior write will record this fallback explicitly per CLAUDE.md "
+        "forbidden-empirical-claim-without-evidence-tag discipline.",
+        file=_sys.stderr,
+    )
+    return "linux_x86_64_unknown_cuda"
+
+
 class StageLog:
     """Append-only stage tracker for provenance ``stage_log`` blocks.
 
@@ -150,7 +267,8 @@ def device_or_die(name: str, *, smoke: bool, substrate_tag: str):
                 f"[{substrate_tag}] --device cpu is permitted only with "
                 "--smoke per CLAUDE.md 'MPS auth eval is NOISE' + 'EMA — "
                 "non-negotiable' + full-training-needs-CUDA convention. "
-                "Use --device cuda for promotion-grade training."
+                "Use --device cuda for promotion-grade training. CPU smoke is "
+                "allowed only when deterministic-bytes acceptable."
             )
         return torch.device("cpu")
     if name == "cuda":
@@ -158,6 +276,12 @@ def device_or_die(name: str, *, smoke: bool, substrate_tag: str):
             raise SystemExit(
                 f"[{substrate_tag}] --device cuda requested but cuda not available"
             )
+        # Canonical substrate-trainer fast-math policy. Catalog #178 forbids
+        # each trainer from rediscovering or silently omitting this Ampere/
+        # Hopper speed path. TF32 affects CUDA matmul/convolution kernels only;
+        # exact score authority still comes from archive/runtime auth eval.
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
         return torch.device("cuda")
     raise SystemExit(f"[{substrate_tag}] unknown --device {name!r}")
 
@@ -266,6 +390,7 @@ __all__ = [
     "REPO_ROOT",
     "StageLog",
     "decode_real_pairs",
+    "detect_hardware_substrate",
     "device_or_die",
     "git_head_sha",
     "load_upstream_yuv420_to_rgb",

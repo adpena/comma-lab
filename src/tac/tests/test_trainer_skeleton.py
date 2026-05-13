@@ -221,6 +221,7 @@ def test_module_exports_are_stable() -> None:
         "REPO_ROOT",
         "StageLog",
         "decode_real_pairs",
+        "detect_hardware_substrate",
         "device_or_die",
         "git_head_sha",
         "load_upstream_yuv420_to_rgb",
@@ -230,3 +231,144 @@ def test_module_exports_are_stable() -> None:
         "utc_now_iso",
     }
     assert set(ts.__all__) == expected
+
+
+# ---------------------------------------------------------------------------
+# detect_hardware_substrate (SIREN audit 2026-05-13 CRITICAL #1)
+# ---------------------------------------------------------------------------
+
+
+def test_detect_hardware_substrate_cpu_axis_returns_modal_cpu(monkeypatch) -> None:
+    """axis='cpu' returns Modal CPU substrate by convention."""
+    assert ts.detect_hardware_substrate(
+        axis="cpu", substrate_tag="test",
+    ) == "linux_x86_64_modal_cpu"
+
+
+def test_detect_hardware_substrate_unknown_axis_returns_unknown() -> None:
+    """Unknown axis returns 'unknown' (defensive default)."""
+    assert ts.detect_hardware_substrate(
+        axis="mps", substrate_tag="test",
+    ) == "unknown"
+
+
+def test_detect_hardware_substrate_provenance_a100(tmp_path: Path) -> None:
+    """provenance.json carrying gpu_name=A100 maps to linux_x86_64_a100."""
+    import json
+    prov = tmp_path / "provenance.json"
+    prov.write_text(json.dumps({"gpu_name": "NVIDIA A100-SXM4-40GB"}))
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=prov,
+    ) == "linux_x86_64_a100"
+
+
+def test_detect_hardware_substrate_provenance_t4(tmp_path: Path) -> None:
+    """provenance.json carrying T4 maps to linux_x86_64_t4."""
+    import json
+    prov = tmp_path / "provenance.json"
+    prov.write_text(json.dumps({"gpu_name": "Tesla T4"}))
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=prov,
+    ) == "linux_x86_64_t4"
+
+
+def test_detect_hardware_substrate_provenance_4090(tmp_path: Path) -> None:
+    """provenance.json carrying 4090 maps to linux_x86_64_4090."""
+    import json
+    prov = tmp_path / "provenance.json"
+    prov.write_text(json.dumps({"gpu_name": "NVIDIA GeForce RTX 4090"}))
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=prov,
+    ) == "linux_x86_64_4090"
+
+
+def test_detect_hardware_substrate_provenance_h100(tmp_path: Path) -> None:
+    """provenance.json carrying H100 maps to linux_x86_64_h100."""
+    import json
+    prov = tmp_path / "provenance.json"
+    prov.write_text(json.dumps({"gpu_name": "NVIDIA H100 PCIe"}))
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=prov,
+    ) == "linux_x86_64_h100"
+
+
+def test_detect_hardware_substrate_env_var_fallback(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """When provenance.json absent, falls back to env_var_candidates."""
+    monkeypatch.setenv("TEST_TRAINER_GPU", "a100-80gb")
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=tmp_path / "missing_provenance.json",
+        env_var_candidates=("TEST_TRAINER_GPU", "MODAL_GPU"),
+    ) == "linux_x86_64_a100"
+
+
+def test_detect_hardware_substrate_env_var_first_match_wins(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """First env var with a value wins (priority order)."""
+    monkeypatch.delenv("FIRST_GPU", raising=False)
+    monkeypatch.setenv("SECOND_GPU", "T4")
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=tmp_path / "nope.json",
+        env_var_candidates=("FIRST_GPU", "SECOND_GPU"),
+    ) == "linux_x86_64_t4"
+
+
+def test_detect_hardware_substrate_unknown_gpu_returns_fallback(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Unrecognized GPU token falls back to linux_x86_64_unknown_cuda."""
+    monkeypatch.setenv("WEIRD_GPU", "ExoticBrand X-99-Z")
+    # Clear MODAL_GPU if present to avoid leakage from CI env.
+    monkeypatch.delenv("MODAL_GPU", raising=False)
+    out = ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=tmp_path / "absent.json",
+        env_var_candidates=("WEIRD_GPU",),
+    )
+    # On a machine with nvidia-smi available, this could still resolve;
+    # accept either the literal fallback or any valid linux_x86_64_* token.
+    assert out.startswith("linux_x86_64_"), out
+
+
+def test_detect_hardware_substrate_corrupt_provenance_falls_through(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Corrupt provenance.json doesn't crash — falls through to env vars."""
+    prov = tmp_path / "provenance.json"
+    prov.write_text("{not valid json")
+    monkeypatch.setenv("TEST_GPU_FALLBACK", "a100")
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=prov,
+        env_var_candidates=("TEST_GPU_FALLBACK",),
+    ) == "linux_x86_64_a100"
+
+
+def test_detect_hardware_substrate_a10g_token(tmp_path: Path) -> None:
+    """A10G token is recognized."""
+    import json
+    prov = tmp_path / "provenance.json"
+    prov.write_text(json.dumps({"gpu_name": "NVIDIA A10G"}))
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=prov,
+    ) == "linux_x86_64_a10g"
+
+
+def test_detect_hardware_substrate_l40s_token(tmp_path: Path) -> None:
+    """L40S token is recognized."""
+    import json
+    prov = tmp_path / "provenance.json"
+    prov.write_text(json.dumps({"gpu_name": "NVIDIA L40S"}))
+    assert ts.detect_hardware_substrate(
+        axis="cuda", substrate_tag="test",
+        provenance_path=prov,
+    ) == "linux_x86_64_l40s"

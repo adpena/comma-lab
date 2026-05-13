@@ -2574,6 +2574,33 @@ def preflight_all(
         # eval-roundtrip in the training loss, EMA export, archive build loop,
         # exact 3-arg runtime, and scorer/network-free inflate templates.
         check_hnerv_training_parity_guard(strict=True, verbose=verbose)
+        # 2026-05-13 Catalog #190 (SIREN PRE-DISPATCH AUDIT CRITICAL #1):
+        # substrate trainers (experiments/train_substrate_*.py) MUST detect
+        # hardware_substrate dynamically via the canonical helper
+        # `tac.substrates._shared.trainer_skeleton.detect_hardware_substrate`
+        # rather than hardcoding `linux_x86_64_t4` (or any literal). The
+        # hardcoded value silently mislabels every A100 / 4090 / H100 anchor
+        # in the posterior. Per CLAUDE.md "Forbidden empirical-claim-without-
+        # evidence-tag (the docstring-overstatement trap)". STRICT-FLIPPED
+        # 2026-05-13 - live count at landing: 0 (all 14 substrate trainers
+        # use dynamic detection in same commit-batch per Strict-flip
+        # atomicity rule).
+        check_substrate_trainer_does_not_hardcode_hardware_substrate(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #191 (SIREN PRE-DISPATCH AUDIT CRITICAL #2):
+        # The Modal dispatcher (tools/operator_authorize.py::_dispatch_modal)
+        # MUST thread `--sentinel-files` and `--require-clean-head` to the
+        # modal_train_lane CLI so Catalog #166's fail-closed sentinel-
+        # mismatch gate (rc=13) fires. Without these flags, only the warn-
+        # only HEAD-mismatch ledger remains; paid GPU dispatch proceeds on
+        # stale snapshots. Sister of Catalog #166 (HEAD parity ledger).
+        # STRICT-FLIPPED 2026-05-13 - live count at landing: 0 (the
+        # dispatcher already threads both flags; this gate prevents future
+        # regression).
+        check_modal_dispatch_threads_sentinel_files_per_catalog_166(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -44274,6 +44301,15 @@ _CHECK_178_TF32_TOKENS: tuple[str, ...] = (
     "torch.backends.cuda.matmul.allow_tf32",
     "torch.backends.cudnn.allow_tf32",
 )
+_CHECK_178_CANONICAL_DEVICE_HELPER_PATH = (
+    "src/tac/substrates/_shared/trainer_skeleton.py"
+)
+_CHECK_178_CANONICAL_DEVICE_HELPER_TOKENS: tuple[str, ...] = (
+    "device_or_die as",
+    "_canon_device_or_die",
+    "_canonical_device_or_die",
+    "_device_or_die_canonical",
+)
 _CHECK_178_FILE_WAIVER_RE = re.compile(
     r"#\s*TF32_WAIVED:\s*(?!<reason>)\S+"
 )
@@ -44286,12 +44322,23 @@ def check_substrate_trainers_declare_tf32_support(
     verbose: bool = False,
 ) -> list[str]:
     """Catalog #178. REVIEW-OMNI Low NV1. Refuses substrate trainers
-    that neither enable TF32 (`torch.backends.cuda.matmul.allow_tf32 =
-    True`) nor carry a file-level ``# TF32_WAIVED:<reason>`` waiver.
+    that neither enable TF32 directly, route CUDA device creation through
+    the canonical TF32-enabled trainer skeleton, nor carry a file-level
+    ``# TF32_WAIVED:<reason>`` waiver.
     """
     root = (repo_root or Path.cwd()).resolve()
     experiments_dir = root / "experiments"
     violations: list[str] = []
+    canonical_tf32_available = False
+    helper_path = root / _CHECK_178_CANONICAL_DEVICE_HELPER_PATH
+    if helper_path.is_file():
+        try:
+            helper_text = helper_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            helper_text = ""
+        canonical_tf32_available = all(
+            tok in helper_text for tok in _CHECK_178_TF32_TOKENS
+        )
     if not experiments_dir.is_dir():
         if verbose:
             print(
@@ -44312,10 +44359,14 @@ def check_substrate_trainers_declare_tf32_support(
             continue
         if any(tok in text for tok in _CHECK_178_TF32_TOKENS):
             continue
+        if canonical_tf32_available and any(
+            tok in text for tok in _CHECK_178_CANONICAL_DEVICE_HELPER_TOKENS
+        ):
+            continue
         violations.append(
             f"{rel}: substrate trainer neither enables TF32 "
-            "(`torch.backends.cuda.matmul.allow_tf32 = True` OR "
-            "`torch.backends.cudnn.allow_tf32 = True`) nor carries a "
+            "directly, imports the canonical TF32-enabled "
+            "`trainer_skeleton.device_or_die` helper, nor carries a "
             "file-level `# TF32_WAIVED:<reason>` waiver. ~1.5-2x speedup "
             "left on table on Ampere/Hopper. Enable TF32 OR explicitly waive."
         )
@@ -45473,6 +45524,245 @@ def check_test_imports_use_tac_not_src_tac(
             "`tac.*` OR add a same-line "
             "`# SRC_TAC_IMPORT_OK:<reason>` waiver:\n  "
             + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #190 — check_substrate_trainer_does_not_hardcode_hardware_substrate
+#
+# SIREN PRE-DISPATCH AUDIT bug-class anchor (2026-05-13). The 14 substrate
+# trainers under ``experiments/train_substrate_*.py`` previously hardcoded
+# ``hardware_substrate="linux_x86_64_t4"`` in the ``ContestResult`` passed
+# to ``posterior_update_locked(...)``. Recipes target A100 / 4090 / H100 /
+# A10G / L40S, but the trainer silently labeled every dispatch as T4 —
+# violating CLAUDE.md "Forbidden empirical-claim-without-evidence-tag (the
+# docstring-overstatement trap)". The posterior anchor recorded FALSE
+# hardware metadata; future cost-band predict() + architecture-class
+# lookups read wrong substrate; any T4-vs-A100 axis comparison
+# mis-bucketed every SIREN-class anchor.
+#
+# Fix surface: ``tac.substrates._shared.trainer_skeleton.detect_hardware_substrate``
+# resolves substrate dynamically from (1) remote driver ``provenance.json``,
+# (2) ``<SUBSTRATE>_GPU`` / ``MODAL_GPU`` env vars, (3) live ``nvidia-smi``,
+# (4) fallback ``linux_x86_64_unknown_cuda`` with stderr warning.
+#
+# This STRICT gate refuses any ``experiments/train_substrate_*.py`` that
+# contains a hardcoded ``hardware_substrate="linux_x86_64_<gpu>"`` literal
+# (any GPU token in the canonical accepted set). Acceptance:
+#   * The line is replaced with a variable reference or call expression
+#     (e.g. ``hardware_substrate=_detected_substrate,`` or
+#     ``hardware_substrate=detect_hardware_substrate(...),``).
+#   * Same-line ``# HARDWARE_SUBSTRATE_HARDCODE_OK:<reason>`` waiver for
+#     the rare legitimate hardcoded case (e.g. test fixtures pinning a
+#     known substrate).
+#
+# Self-exempt: the canonical helper module itself (which contains the
+# ``"linux_x86_64_*"`` strings in its lookup table) and ``preflight.py``
+# (which contains the strings in this gate's regex / accept tables).
+#
+# Sister of Catalog #127 (``check_authoritative_tag_requires_custody_metadata``)
+# which catches tag-membership checks without validator routing; this gate
+# catches the upstream class — hardcoded substrate writes that the
+# validator never sees because the data is wrong at the source.
+# ----------------------------------------------------------------------------
+
+_CHECK_190_HARDCODED_HW_RE = re.compile(
+    r'hardware_substrate\s*=\s*"linux_x86_64_(t4|4090|a100|h100|a10g|l40s|unknown_cuda)"',
+)
+_CHECK_190_WAIVER_RE = re.compile(
+    r"#\s*HARDWARE_SUBSTRATE_HARDCODE_OK\s*:\s*\S",
+)
+_CHECK_190_SELF_EXEMPT_FILES: tuple[str, ...] = (
+    "src/tac/substrates/_shared/trainer_skeleton.py",
+    "src/tac/continual_learning.py",
+    "src/tac/preflight.py",
+    "src/tac/tests/test_check_190_substrate_trainer_hardware_substrate.py",
+)
+
+
+def check_substrate_trainer_does_not_hardcode_hardware_substrate(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #190 — refuse substrate trainers that hardcode hardware_substrate.
+
+    Scans ``experiments/train_substrate_*.py`` for any line of the form
+    ``hardware_substrate="linux_x86_64_<gpu>"`` (literal string). The
+    canonical pattern is ``hardware_substrate=_detected_substrate,`` where
+    ``_detected_substrate`` is computed via
+    ``tac.substrates._shared.trainer_skeleton.detect_hardware_substrate``.
+
+    Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #1 +
+    "Forbidden empirical-claim-without-evidence-tag" non-negotiable.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    experiments_dir = root / "experiments"
+    if not experiments_dir.is_dir():
+        return violations
+    scanned = 0
+    for path in sorted(experiments_dir.glob("train_substrate_*.py")):
+        rel = path.relative_to(root).as_posix()
+        if rel in _CHECK_190_SELF_EXEMPT_FILES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            if not _CHECK_190_HARDCODED_HW_RE.search(line):
+                continue
+            if _CHECK_190_WAIVER_RE.search(line):
+                continue
+            violations.append(
+                f"{rel}:{line_no}: hardcoded hardware_substrate. Replace "
+                f"with `_detected_substrate = "
+                "_canon_detect_hardware_substrate(...)` and pass via "
+                f"`hardware_substrate=_detected_substrate,` OR add same-line "
+                f"`# HARDWARE_SUBSTRATE_HARDCODE_OK:<reason>` waiver. "
+                f"Line: {line.strip()[:160]}"
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-hardware-detection] {len(violations)} "
+                f"violation(s) across {scanned} trainer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-hardware-detection] OK ({scanned} substrate "
+                "trainer(s) use dynamic detection)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainer_does_not_hardcode_hardware_substrate "
+            f"found {len(violations)} violation(s). Substrate trainers must "
+            "detect hardware_substrate dynamically via "
+            "`tac.substrates._shared.trainer_skeleton.detect_hardware_substrate` "
+            "rather than hardcoding a literal value. The hardcoded value "
+            "produces silent custody mislabels on the posterior anchor when "
+            "the dispatch GPU differs from the hardcoded default (e.g. SIREN "
+            "recipe targets A100 but trainer wrote `linux_x86_64_t4`).\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #191 — check_modal_dispatch_threads_sentinel_files_per_catalog_166
+#
+# SIREN PRE-DISPATCH AUDIT CRITICAL #2 (2026-05-13). Sister gate to Catalog
+# #166. Catalog #166 enforces that the dispatch-time HEAD parity ledger
+# remains wired in ``experiments/modal_train_lane.py``; Catalog #191
+# enforces that the Modal-dispatch caller (``tools/operator_authorize.py``
+# specifically the ``_dispatch_modal`` function) THREADS ``--sentinel-files``
+# and ``--require-clean-head`` to the modal_train_lane CLI. Without these
+# flags, the Catalog #166 fail-closed sentinel-mismatch protection
+# (rc=13 at modal_train_lane.py:327-342) is structurally INACTIVE — only
+# the warn-only HEAD-mismatch ledger remains, which does NOT block stale
+# code from running on a paid GPU.
+#
+# Fix surface: ``tools/operator_authorize.py::_dispatch_modal`` builds the
+# modal CLI cmd with ``--sentinel-files <auto-discovered + recipe-declared>``
+# and ``--require-clean-head`` already wired.
+#
+# This STRICT gate verifies the function body contains BOTH wire-up tokens
+# (literal string ``"--sentinel-files"`` AND ``"--require-clean-head"``)
+# in the call-construction context. There is no waiver — removing either
+# flag re-enables the bug class. Same as Catalog #166 (no waiver).
+#
+# Sister of Catalog #166 (HEAD-parity ledger surface) + Catalog #167
+# (smoke-before-full pattern). Together they close the failure modes:
+#   * #166: dispatcher records HEAD parity ledger so post-mortem can
+#     distinguish stale-mount vs pre-fix-dispatch.
+#   * #191: caller WIRES the sentinel-files / require-clean-head flags so
+#     the dispatcher's fail-closed protection actually fires.
+#   * #167: full-canary dispatches must run smoke-before-full so a 100-ep
+#     smoke catches integration failures BEFORE the $5-15 full meter starts.
+# ----------------------------------------------------------------------------
+
+_CHECK_191_DISPATCHER_PATH = "tools/operator_authorize.py"
+_CHECK_191_REQUIRED_TOKENS: tuple[str, ...] = (
+    "--sentinel-files",
+    "--require-clean-head",
+    "_modal_sentinel_files",
+)
+
+
+def check_modal_dispatch_threads_sentinel_files_per_catalog_166(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #191 — refuse Modal dispatcher state that drops Catalog #166
+    sentinel-files / require-clean-head wire-up.
+
+    The check verifies ``tools/operator_authorize.py`` exists and contains
+    every required contract surface in ``_CHECK_191_REQUIRED_TOKENS``. The
+    bug class: removing either ``--sentinel-files`` or ``--require-clean-head``
+    from the modal cmd construction silently disables Catalog #166's
+    fail-closed protection — paid GPU dispatch proceeds on a stale snapshot
+    while only the warn-only HEAD ledger records the post-mortem evidence.
+
+    Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #2.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    path = root / _CHECK_191_DISPATCHER_PATH
+    violations: list[str] = []
+    if not path.is_file():
+        violations.append(
+            f"{_CHECK_191_DISPATCHER_PATH}: missing — the canonical Modal "
+            "dispatcher is gone; the sentinel-files / require-clean-head "
+            "wire-up contract is re-exposed."
+        )
+    else:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(
+                f"{_CHECK_191_DISPATCHER_PATH}: read error {exc!s}"
+            )
+            text = ""
+        for surface in _CHECK_191_REQUIRED_TOKENS:
+            if surface not in text:
+                violations.append(
+                    f"{_CHECK_191_DISPATCHER_PATH}: missing required "
+                    f"wire-up surface `{surface}` — Catalog #191 requires "
+                    "the Modal dispatcher to thread sentinel-files / "
+                    "require-clean-head into the modal_train_lane CLI so "
+                    "Catalog #166's fail-closed gate fires."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [modal-sentinel-wire-up] {len(violations)} violation(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [modal-sentinel-wire-up] OK "
+                "(canonical dispatcher threads sentinel-files + "
+                "require-clean-head)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_dispatch_threads_sentinel_files_per_catalog_166 "
+            f"found {len(violations)} contract violation(s). The Modal "
+            "dispatcher (`tools/operator_authorize.py::_dispatch_modal`) "
+            "must thread `--sentinel-files` and `--require-clean-head` to "
+            "the modal_train_lane CLI so Catalog #166's fail-closed "
+            "sentinel-mismatch gate (rc=13) fires. Without these flags, "
+            "stale code on the worker only emits a warn banner — paid GPU "
+            "spend proceeds.\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
 

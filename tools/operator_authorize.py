@@ -585,6 +585,59 @@ def _build_env_overrides(recipe: Recipe, instance_job_id: str) -> str:
     return ",".join(parts)
 
 
+def _modal_sentinel_files(recipe: Recipe) -> str:
+    """Return comma-separated source-custody sentinels for Modal uploads.
+
+    Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #2 + Catalog #191
+    (``check_modal_dispatch_threads_sentinel_files_per_catalog_166``): the
+    auto-discovered set (dispatcher / lane_script / cost_band_trainer /
+    trainer / recipe path) is good defense-in-depth, but substrate-specific
+    modules (e.g. ``src/tac/substrates/siren/score_aware_loss.py``) are not
+    captured. Recipes can declare their own ``sentinel_files: [...]`` list
+    and those paths are appended to the auto-discovered set.
+    """
+
+    raw_paths: list[str] = [
+        "experiments/modal_train_lane.py",
+        "tools/operator_authorize.py",
+        "tools/run_modal_smoke_before_full.py",
+        "src/tac/deploy/modal/mount_manifest.py",
+    ]
+    try:
+        raw_paths.append(str(recipe.path.resolve().relative_to(REPO_ROOT)))
+    except ValueError:
+        pass
+    if recipe.remote_driver:
+        raw_paths.append(recipe.remote_driver)
+    modal_cfg = recipe.raw.get("modal", {}) or {}
+    if isinstance(modal_cfg, dict):
+        for key in ("lane_script", "cost_band_trainer"):
+            value = modal_cfg.get(key)
+            if value:
+                raw_paths.append(str(value))
+    trainer = recipe.raw.get("required_input_files_trainer")
+    if trainer:
+        raw_paths.append(str(trainer))
+    # Recipe-declared sentinel_files (Catalog #191): substrate-specific
+    # modules that must remain stable across the dispatch window.
+    recipe_sentinels = recipe.raw.get("sentinel_files") or []
+    if isinstance(recipe_sentinels, list):
+        for entry in recipe_sentinels:
+            if isinstance(entry, str) and entry.strip():
+                raw_paths.append(entry.strip())
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for rel in raw_paths:
+        rel = rel.strip()
+        if not rel or rel in seen:
+            continue
+        if (REPO_ROOT / rel).is_file():
+            seen.add(rel)
+            out.append(rel)
+    return ",".join(out)
+
+
 def _dispatch_modal(
     recipe: Recipe,
     instance_job_id: str,
@@ -625,7 +678,11 @@ def _dispatch_modal(
         f"{timeout_hours}",
         "--env-overrides",
         env_overrides,
+        "--require-clean-head",
     ]
+    sentinel_files = _modal_sentinel_files(recipe)
+    if sentinel_files:
+        cmd.extend(["--sentinel-files", sentinel_files])
     # Optional cost-band hooks for the modal_train_lane wrapper.
     if modal_cfg.get("cost_band_trainer"):
         cmd.extend(["--cost-band-trainer", str(modal_cfg["cost_band_trainer"])])

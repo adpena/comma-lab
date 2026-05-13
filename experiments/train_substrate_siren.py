@@ -89,6 +89,9 @@ from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
 )
 from tac.substrates._shared.trainer_skeleton import (
+    detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
     device_or_die as _canon_device_or_die,
 )
 from tac.substrates._shared.trainer_skeleton import (
@@ -945,6 +948,11 @@ def _full_main(args: argparse.Namespace) -> int:
 
         # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
         auth_eval_result_path: Path | None = None
+        auth_eval_score: float | None = None
+        auth_eval_score_axis: str | None = None
+        auth_eval_lane_tag: str | None = None
+        auth_eval_score_claim_valid = False
+        auth_eval_exact_cuda_complete = False
         contest_cuda_score: float | None = None
         if not args.skip_auth_eval and archive_zip_path.is_file():
             print("[full] launching CUDA auth eval ...")
@@ -963,38 +971,61 @@ def _full_main(args: argparse.Namespace) -> int:
                     cmd, capture_output=True, text=True, timeout=3600
                 )
                 if proc.returncode != 0:
-                    print(
+                    raise RuntimeError(
                         f"[full] auth eval rc={proc.returncode}; stderr=\n{proc.stderr[-2000:]}",
-                        file=sys.stderr,
+                    )
+                if not auth_eval_result_path.is_file():
+                    raise RuntimeError(
+                        "[full] auth eval completed rc=0 but did not write "
+                        f"{auth_eval_result_path}"
+                    )
+                from tac.auth_eval_result import (
+                    parse_auth_eval_score_claim,
+                    parse_finite_auth_eval_score,
+                )
+
+                ae = json.loads(auth_eval_result_path.read_text())
+                parsed_score = parse_finite_auth_eval_score(
+                    ae,
+                    require_component_recompute=True,
+                )
+                if parsed_score is None:
+                    raise RuntimeError(
+                        "[full] auth eval JSON did not contain a finite, "
+                        "component-coherent score; refusing rc=0 because the "
+                        "dispatch output would be unactionable"
+                    )
+                auth_eval_score = parsed_score.score
+                auth_eval_score_axis = str(ae.get("score_axis") or "")
+                auth_eval_lane_tag = str(ae.get("lane_tag") or "")
+                auth_eval_score_claim_valid = ae.get("score_claim_valid") is True
+                auth_eval_exact_cuda_complete = (
+                    ae.get("exact_cuda_eval_complete") is True
+                )
+                claim = parse_auth_eval_score_claim(
+                    ae,
+                    required_score_axis="contest_cuda",
+                    require_component_recompute=True,
+                )
+                if claim is not None:
+                    contest_cuda_score = claim.score
+                    print(
+                        f"[full] {claim.lane_tag or '[contest-CUDA]'} score = "
+                        f"{contest_cuda_score} (source={claim.source_key}, "
+                        f"archive_sha256={archive_sha})"
                     )
                 else:
-                    if auth_eval_result_path.is_file():
-                        try:
-                            from tac.auth_eval_result import parse_finite_auth_eval_score
-
-                            ae = json.loads(auth_eval_result_path.read_text())
-                            parsed_score = parse_finite_auth_eval_score(
-                                ae,
-                                require_component_recompute=True,
-                            )
-                            if parsed_score is None:
-                                print(
-                                    "[full] auth eval JSON did not contain a finite, "
-                                    "component-coherent score; no [contest-CUDA] "
-                                    "score claim will be recorded",
-                                    file=sys.stderr,
-                                )
-                            else:
-                                contest_cuda_score = parsed_score.score
-                                print(
-                                    f"[full] [contest-CUDA] score = {contest_cuda_score} "
-                                    f"(source={parsed_score.source_key}, "
-                                    f"archive_sha256={archive_sha})"
-                                )
-                        except Exception as exc:
-                            print(f"[full] could not parse auth eval JSON: {exc}", file=sys.stderr)
-            except subprocess.TimeoutExpired:
-                print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
+                    print(
+                        "[full] auth eval score is finite but non-promotable: "
+                        f"score={auth_eval_score} axis={auth_eval_score_axis!r} "
+                        f"lane_tag={auth_eval_lane_tag!r} "
+                        f"score_claim_valid={auth_eval_score_claim_valid} "
+                        f"exact_cuda_eval_complete={auth_eval_exact_cuda_complete}. "
+                        "No [contest-CUDA] score claim or posterior update "
+                        "will be recorded."
+                    )
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError("[full] auth eval TIMEOUT (>3600s)") from exc
             _stage("auth_eval_cuda_done")
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)
@@ -1002,15 +1033,28 @@ def _full_main(args: argparse.Namespace) -> int:
             try:
                 from tac.continual_learning import ContestResult, posterior_update_locked
 
+                # Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #1 + Catalog
+                # #190: detect substrate from remote driver provenance.json,
+                # then SIREN_GPU / MODAL_GPU env vars, then nvidia-smi. Never
+                # silently hardcode T4 when the recipe targets A100.
+                _detected_substrate = _canon_detect_hardware_substrate(
+                    axis="cuda",
+                    substrate_tag="siren",
+                    provenance_path=args.output_dir / "provenance.json",
+                    env_var_candidates=("SIREN_GPU", "MODAL_GPU"),
+                )
                 result = ContestResult(
                     axis="cuda",
-                    hardware_substrate="linux_x86_64_t4",
+                    hardware_substrate=_detected_substrate,
                     architecture_class="lane_substrate_siren_20260512",
                     score_value=contest_cuda_score,
                     evidence_tag="[contest-CUDA]",
                     archive_sha256=archive_sha,
                     archive_bytes=archive_bytes,
-                    notes=f"siren first-anchor dispatch; epochs={args.epochs}",
+                    notes=(
+                        f"siren first-anchor dispatch; epochs={args.epochs}; "
+                        f"hardware_substrate_detected={_detected_substrate}"
+                    ),
                     observed_at_utc=_utc_now_iso(),
                 )
                 update = posterior_update_locked(result)
@@ -1102,6 +1146,11 @@ def _full_main(args: argparse.Namespace) -> int:
             "train_elapsed_sec": float(train_elapsed_sec),
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            "auth_eval_score": auth_eval_score,
+            "auth_eval_score_axis": auth_eval_score_axis,
+            "auth_eval_lane_tag": auth_eval_lane_tag,
+            "auth_eval_score_claim_valid": auth_eval_score_claim_valid,
+            "auth_eval_exact_cuda_complete": auth_eval_exact_cuda_complete,
             "auth_eval_cuda_score": contest_cuda_score,
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None

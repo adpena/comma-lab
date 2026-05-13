@@ -7,6 +7,7 @@ platform: modal
 gpu: "${MODAL_GPU:-A100}"
 min_vram_gb: 40
 video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
   - contest_one_video_replay
   - research_substrate
@@ -33,9 +34,11 @@ risk: |
   Architectural risk: first-layer omega=30 (Sitzmann signature) is high-frequency
   by design — gradients can explode if LR is too aggressive. Council default
   lr=5e-4 with cosine annealing is conservative; grad-clip=1.0 enforced.
-  Trainer _full_main wires 16 stages including auth eval at stage 12. Single-axis
-  [contest-CUDA] acceptable for first anchor; CPU axis required separately
-  before promotion.
+  Trainer _full_main wires 16 stages including auth eval at stage 12. T4 smoke
+  may produce [contest-CUDA] infrastructure evidence. Modal A100 full dispatch
+  is a training/build substrate and any A100 auth-eval JSON is diagnostic unless
+  the auth-eval contract itself records score_axis=contest_cuda and
+  score_claim_valid=true; CPU axis remains required separately before promotion.
 envelope_status: "FITS $20 envelope at p50 fallback"
 
 remote_driver: scripts/remote_lane_substrate_siren.sh
@@ -55,6 +58,22 @@ modal:
 
 required_input_files_trainer: experiments/train_substrate_siren.py
 
+# Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #2 + Catalog #191
+# (`check_modal_dispatch_threads_sentinel_files_per_catalog_166`): declare
+# substrate-specific source files whose SHAs must remain stable across the
+# Modal upload window. operator_authorize.py auto-discovers the dispatcher /
+# lane_script / cost_band_trainer / trainer / recipe path; this list extends
+# the set to SIREN-specific modules. A sibling-subagent edit to any of these
+# between dispatch-spawn and worker-start triggers rc=13 BEFORE the GPU
+# meter starts (modal_train_lane.py:327-342).
+sentinel_files:
+  - src/tac/substrates/siren/architecture.py
+  - src/tac/substrates/siren/archive.py
+  - src/tac/substrates/siren/inflate.py
+  - src/tac/substrates/siren/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/score_aware_common.py
+
 env_overrides:
   SIREN_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   SIREN_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
@@ -73,7 +92,9 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
 
 notes: |
-  PHASE-B2-BUILD HIGH-target attack on PR101's 0.193 [contest-CUDA] gold.
+  PHASE-B2-BUILD HIGH-target attack on PR101's 0.193 frontier. Do not promote
+  an A100 diagnostic score; exact score claims require a claimed contest-CUDA
+  auth-eval artifact plus the usual CPU/CUDA policy review.
 
   SIREN architectural distinction vs HNeRV: ZERO bytes in latents — all per-pair
   variation flows through the (x, y, t) coordinate input where t = pair_idx /
