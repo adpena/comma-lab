@@ -34301,6 +34301,21 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     # Docstring-example codec family name in mdl_bayesian_codec.py
     # (NOT a registered lane_id; just a generic identifier example).
     "lane_balle_hyperprior",
+    # R13-S3 2026-05-13: dict-key in pr106 latent score table manifest
+    # (NOT a lane_id; it's a boolean field meaning "the lane_claim was verified").
+    # Appears in experiments/build_pr106_latent_score_table.py:611 (writer),
+    # tools/materialize_pr106_latent_score_table_candidate.py:85,218 (reader),
+    # and src/tac/tests/test_materialize_pr106_latent_score_table_candidate.py:69 (fixture).
+    "lane_claim_verified",
+    # R13-S3 2026-05-13: check name reference in
+    # tools/dispatch_readiness_apogee_int6.py:128 — refers to Catalog #90
+    # `check_lane_registry_consistent`, NOT a lane_id.
+    "lane_registry_consistent",
+    # R13-S3 2026-05-13: Catalog #124 self-reference substring used by
+    # `_lane_class_is_representation_or_codec` to bypass FIX-WAVE-* lanes
+    # at src/tac/preflight.py:33508. The string `"lane_fix_wave_"` is a
+    # prefix-token compared via `lid.startswith(...)`, NOT a lane_id.
+    "lane_fix_wave_",
 })
 
 
