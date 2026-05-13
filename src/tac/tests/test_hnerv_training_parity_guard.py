@@ -8,7 +8,7 @@ from tac.hnerv_training_parity_guard import (
     assert_hnerv_training_parity_file,
     inspect_hnerv_training_parity_source,
 )
-
+from tac.preflight import check_hnerv_training_parity_guard
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -23,6 +23,10 @@ def test_guard_accepts_wave3_tc_nerv_trainer() -> None:
     assert_hnerv_training_parity_file(
         REPO_ROOT / "experiments" / "train_substrate_tc_nerv.py"
     )
+
+
+def test_preflight_wrapper_enforces_live_hnerv_trainer_parity() -> None:
+    assert check_hnerv_training_parity_guard(strict=False, verbose=False) == []
 
 
 def test_guard_rejects_runtime_without_exact_file_list_signature() -> None:
@@ -72,6 +76,54 @@ def test_guard_rejects_missing_archive_build_loop_and_ema_shadow() -> None:
     assert "ema.state_dict()" in joined
     assert "pack_archive" in joined
     assert "_build_archive_zip" in joined
+
+
+def test_guard_rejects_comment_only_or_dead_string_contracts() -> None:
+    text = '''
+def _write_runtime(submission_dir):
+    inflate_sh = (
+        "#!/usr/bin/env bash\\n"
+        "set -euo pipefail\\n"
+        "DATA_DIR=\\"$1\\"\\n"
+        "OUTPUT_DIR=\\"$2\\"\\n"
+        "FILE_LIST=\\"$3\\"\\n"
+        "exec python3 inflate.py \\"$DATA_DIR\\" \\"$OUTPUT_DIR\\" \\"$FILE_LIST\\"\\n"
+    )
+    inflate_py = (
+        "import sys\\n"
+        "from pathlib import Path\\n"
+        "def main():\\n"
+        "    if len(sys.argv) != 4:\\n"
+        "        return 2\\n"
+        "    archive_dir = Path(sys.argv[1])\\n"
+        "    output_dir = Path(sys.argv[2])\\n"
+        "    file_list_path = Path(sys.argv[3])\\n"
+        "    archive_bytes = (archive_dir / '0.bin').read_bytes()\\n"
+        "    for line in file_list_path.read_text(encoding='utf-8').splitlines():\\n"
+        "        pass\\n"
+    )
+
+
+def _full_main(args):
+    """
+    patch_upstream_yuv6_globally()
+    load_differentiable_scorers()
+    apply_eval_roundtrip=True
+    EMA(model); ema.update(model); ema.apply(model); ema.state_dict()
+    pack_archive(...); _write_runtime(...); _build_archive_zip(...)
+    """
+    # A comment mentioning patch_upstream_yuv6_globally before load_differentiable_scorers
+    note = "apply_eval_roundtrip=True EMA( ema.update ema.apply ema.state_dict() pack_archive _write_runtime _build_archive_zip"
+    return note
+'''
+    report = inspect_hnerv_training_parity_source(text, path_label="dead_contracts.py")
+    assert not report.passed
+    joined = "\n".join(report.violations)
+    assert "missing patch_upstream_yuv6_globally" in joined
+    assert "missing load_differentiable_scorers" in joined
+    assert "missing apply_eval_roundtrip=True" in joined
+    assert "EMA" in joined
+    assert "pack_archive" in joined
 
 
 _GOOD_TRAINER_SOURCE = '''

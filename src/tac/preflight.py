@@ -2567,6 +2567,13 @@ def preflight_all(
         check_catalog_claim_committed_via_serializer(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #187: HNeRV-family trainer parity contracts
+        # must be enforced by preflight, not just documented in a landing
+        # memo. This gates the PR95/PR100/PR101 lessons that materially affect
+        # score: differentiable rgb_to_yuv6 patch before scorer construction,
+        # eval-roundtrip in the training loss, EMA export, archive build loop,
+        # exact 3-arg runtime, and scorer/network-free inflate templates.
+        check_hnerv_training_parity_guard(strict=True, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -44743,6 +44750,14 @@ def check_strict_flipped_catalog_entries_have_live_count_zero(
         fn = globals().get(check_name)
         if fn is None or not callable(fn):
             not_found.append(check_name)
+            violations.append(
+                f"Catalog #{cat_num} `{check_name}`: CLAUDE.md claims "
+                "'Live count: 0' + STRICT but no callable gate with that name "
+                "exists in tac.preflight. Missing strict gates cannot certify "
+                "zero live violations; either restore the gate, correct the "
+                "catalog entry, or add an explicit skip-list entry with a "
+                "durable reason."
+            )
             continue
         scanned += 1
         try:
@@ -44927,6 +44942,26 @@ def _check_186_detect_bare_claim_lines(text: str) -> list[tuple[int, str]]:
       - the line must NOT contain ``--commit-via-serializer``;
       - the line must NOT carry the same-line bare waiver.
     """
+    def _has_claim_subcommand(s: str) -> bool:
+        return (
+            "claim_catalog_number.py claim" in s
+            or '"claim"' in s
+            or "'claim'" in s
+        )
+
+    invocation_markers = (
+        "python ",
+        "python3 ",
+        "subprocess",
+        "os.system",
+        "Popen(",
+        "run(",
+        "$(",
+        "${",
+        "./tools/",
+        "tools/claim_catalog_number.py",
+    )
+
     lines = text.splitlines()
     bare_lines: list[tuple[int, str]] = []
     for i, raw_line in enumerate(lines, start=1):
@@ -44940,27 +44975,23 @@ def _check_186_detect_bare_claim_lines(text: str) -> list[tuple[int, str]]:
         # We accept both "claim_catalog_number.py claim" and forms with
         # an intervening argv element such as
         # ``["...claim_catalog_number.py", "claim", ...]``.
-        if "claim_catalog_number.py claim" not in line and (
-            '"claim"' not in line and "'claim'" not in line
-        ):
+        window_lines = [line]
+        # Catalog #186 must catch the normal Python argv style where the tool,
+        # subcommand, and serializer flag are split across multiple lines.
+        # Stop before another tool occurrence so adjacent calls cannot mask a
+        # bare invocation with a later canonical one.
+        for next_line in lines[i : min(len(lines), i + 8)]:
+            if "claim_catalog_number.py" in next_line:
+                break
+            window_lines.append(next_line)
+        window_text = "\n".join(window_lines)
+        if not _has_claim_subcommand(window_text):
             continue
         # If the line is part of a comment-only docstring chunk that
         # doesn't invoke claim, skip. Conservative shape: require the
         # line to look like a real invocation (contains either `python`,
         # `subprocess`, `os.system`, `Popen`, `run(`, a shell `$(`, or
         # starts with a `claim_catalog_number.py` shell invocation).
-        invocation_markers = (
-            "python ",
-            "python3 ",
-            "subprocess",
-            "os.system",
-            "Popen(",
-            "run(",
-            "$(",
-            "${",
-            "./tools/",
-            "tools/claim_catalog_number.py",
-        )
         # Strip leading whitespace + comment markers to detect docstring-only
         # references. If the stripped line starts with "#" or is inside a
         # triple-quoted block we still flag it ONLY when it looks like an
@@ -44968,18 +44999,18 @@ def _check_186_detect_bare_claim_lines(text: str) -> list[tuple[int, str]]:
         # surface are filtered out by the invocation_markers check below.
         stripped = line.lstrip()
         if stripped.startswith("# ") and not any(
-            m in line for m in invocation_markers
+            m in window_text for m in invocation_markers
         ):
             continue
-        if not any(m in line for m in invocation_markers):
+        if not any(m in window_text for m in invocation_markers):
             continue
         # Skip lines that already satisfy the canonical contract.
-        if "--commit-via-serializer" in line:
+        if "--commit-via-serializer" in window_text:
             continue
         # Same-line waiver.
-        if _CHECK_186_BARE_WAIVER_TOKEN in line:
+        if _CHECK_186_BARE_WAIVER_TOKEN in window_text:
             continue
-        bare_lines.append((i, line.rstrip()))
+        bare_lines.append((i, " ".join(part.strip() for part in window_lines).strip()))
     return bare_lines
 
 
@@ -45071,6 +45102,73 @@ def check_catalog_claim_committed_via_serializer(
             "fan-out catalog-number claim must be git-transactional via "
             "`--commit-via-serializer`:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #187 — check_hnerv_training_parity_guard
+# (Pauli adversarial-review harden, 2026-05-13, STRICT @ 0)
+# ─────────────────────────────────────────────────────────────────────────
+
+_CHECK_187_HNERV_PARITY_TRAINERS: tuple[str, ...] = (
+    "experiments/train_substrate_sane_hnerv.py",
+    "experiments/train_substrate_tc_nerv.py",
+)
+
+
+def check_hnerv_training_parity_guard(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #187 — enforce PR95/PR100/PR101 HNeRV trainer parity contracts.
+
+    The reusable guard in :mod:`tac.hnerv_training_parity_guard` is cheap and
+    static, but it is only useful if dispatch surfaces run it before provider
+    setup. This preflight wrapper makes the current HNeRV-family trainer paths a
+    strict, visible gate.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    try:
+        from tac.hnerv_training_parity_guard import inspect_hnerv_training_parity_file
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        violations.append(
+            "could not import tac.hnerv_training_parity_guard: "
+            f"{type(exc).__name__}: {str(exc)[:160]}"
+        )
+    else:
+        for relpath in _CHECK_187_HNERV_PARITY_TRAINERS:
+            path = root / relpath
+            if not path.is_file():
+                violations.append(
+                    f"{relpath}: missing HNeRV-family trainer path expected by "
+                    "Catalog #187 parity gate"
+                )
+                continue
+            report = inspect_hnerv_training_parity_file(path)
+            for violation in report.violations:
+                violations.append(f"{relpath}: {violation}")
+
+    if verbose:
+        if violations:
+            print(f"  [hnerv-parity-guard] {len(violations)} violation(s):")
+            for v in violations[:8]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [hnerv-parity-guard] OK "
+                f"({len(_CHECK_187_HNERV_PARITY_TRAINERS)} trainer(s) checked)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_hnerv_training_parity_guard found "
+            f"{len(violations)} violation(s). HNeRV-family trainers must keep "
+            "PR95/PR100/PR101 parity contracts before provider dispatch:\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
         )
     return violations
 

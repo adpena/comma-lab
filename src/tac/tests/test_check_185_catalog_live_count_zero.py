@@ -21,9 +21,9 @@ from pathlib import Path
 import pytest
 
 from tac.preflight import (
-    PreflightError,
     _CHECK_185_LIVE_COUNT_ZERO_PHRASES,
     _CHECK_185_SKIP_FUNCTIONS,
+    PreflightError,
     _check_185_extract_strict_zero_entries,
     check_strict_flipped_catalog_entries_have_live_count_zero,
 )
@@ -262,7 +262,7 @@ def test_strict_mode_raises_on_drift(tmp_path, monkeypatch):
 
 
 def test_self_reference_skipped_no_recursion(tmp_path):
-    """Catalog #183 entry itself must be skipped — recursion guard."""
+    """Catalog #185 entry itself must be skipped — recursion guard."""
     text = """
 # Catalog
 
@@ -277,10 +277,10 @@ STRICT-FLIPPED 2026-05-13. Live count: 0.
     assert v == []
 
 
-def test_gate_not_found_in_globals_does_not_violate(tmp_path):
+def test_gate_not_found_in_globals_violates(tmp_path):
     """If the catalog entry names a gate that doesn't exist in
-    preflight's globals (e.g. a typo or future entry), accept rather
-    than fail-closed."""
+    preflight's globals, fail closed rather than certifying a phantom
+    strict gate as Live count: 0."""
     text = """
 # Catalog
 
@@ -290,7 +290,9 @@ def test_gate_not_found_in_globals_does_not_violate(tmp_path):
     v = check_strict_flipped_catalog_entries_have_live_count_zero(
         repo_root=tmp_path, strict=False, verbose=False
     )
-    assert v == []
+    assert len(v) == 1
+    assert "check_nonexistent_gate_does_not_exist" in v[0]
+    assert "no callable gate" in v[0]
 
 
 def test_skip_list_function_not_invoked(tmp_path, monkeypatch):

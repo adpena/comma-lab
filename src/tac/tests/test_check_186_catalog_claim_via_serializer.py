@@ -24,15 +24,14 @@ from pathlib import Path
 import pytest
 
 from tac.preflight import (
-    PreflightError,
     _CHECK_186_BARE_WAIVER_TOKEN,
     _CHECK_186_CANONICAL_TOOL_RELPATH,
     _CHECK_186_FILE_LEVEL_WAIVER_TOKEN,
+    PreflightError,
     _check_186_detect_bare_claim_lines,
     _check_186_is_scoped_path,
     check_catalog_claim_committed_via_serializer,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────
 # Phase 1: scope-filter unit tests
@@ -147,19 +146,23 @@ def test_canonical_python_subprocess_not_flagged():
         '    "--commit-via-serializer", "--reason", "FIX-WAVE-7"\n'
         '], check=True)\n'
     )
-    # The detector scans line-by-line; the bare "claim" line alone would
-    # be flagged unless --commit-via-serializer is on the same line. This
-    # multi-line subprocess.run is a known false-positive surface; the
-    # same-line waiver pattern is the canonical fix when the call must be
-    # split across lines. The test pins current behavior.
     flagged = _check_186_detect_bare_claim_lines(text)
-    # Line 2 has the bare `"claim"` token; line 3 carries the flag.
-    # The detector flags line 2 because --commit-via-serializer is not
-    # on the same line. Callers split across multiple lines must add a
-    # same-line waiver on the "claim" line. This is intentional - the
-    # waiver pattern is auditable; multi-line argv arrays are not.
+    assert flagged == []
+
+
+def test_multiline_bare_python_subprocess_is_flagged():
+    """Bare multi-line subprocess argv calls are the Catalog #186 bug class."""
+    text = (
+        'subprocess.run([\n'
+        '    "python", "tools/claim_catalog_number.py",\n'
+        '    "claim",\n'
+        '    "--reason", "FIX-WAVE-7"\n'
+        '], check=True)\n'
+    )
+    flagged = _check_186_detect_bare_claim_lines(text)
     assert len(flagged) == 1
-    assert "claim" in flagged[0][1]
+    assert flagged[0][0] == 2
+    assert "--commit-via-serializer" not in flagged[0][1]
 
 
 def test_peek_subcommand_not_flagged():
@@ -199,14 +202,8 @@ def test_docstring_only_reference_not_flagged():
         'but you should use --commit-via-serializer instead.\n'
         '"""\n'
     )
-    # The docstring line includes "python tools/claim_catalog_number.py claim"
-    # AND looks like an invocation (has "python "). It IS flagged.
-    # This is conservative - documentation should use a same-line waiver
-    # or the file-level waiver. We pin the current behavior; the canonical
-    # tool itself uses the file-level exemption via its path.
     flagged = _check_186_detect_bare_claim_lines(text)
-    # Line 3 looks like an invocation per the detector.
-    assert len(flagged) == 1
+    assert flagged == []
 
 
 def test_comment_line_documentation_skipped():

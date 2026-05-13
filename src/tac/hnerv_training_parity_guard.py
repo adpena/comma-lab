@@ -10,10 +10,8 @@ checks the source-level contracts that have repeatedly caused false readiness.
 from __future__ import annotations
 
 import ast
-import re
 from dataclasses import dataclass
 from pathlib import Path
-
 
 FORBIDDEN_RUNTIME_TOKENS: tuple[str, ...] = (
     "PoseNet",
@@ -52,16 +50,78 @@ class HnervTrainingParityReport:
         return not self.violations
 
 
-def _top_level_function_body(text: str, name: str) -> str:
-    marker = f"\ndef {name}("
-    start = text.find(marker)
-    if start < 0 and text.startswith(f"def {name}("):
-        start = -1
-    if start < 0:
-        return ""
-    rest = text[start + 1 :]
-    end_match = re.search(r"\n(def |class )", rest)
-    return rest if end_match is None else rest[: end_match.start()]
+def _parse_module(text: str) -> ast.Module | None:
+    try:
+        return ast.parse(text)
+    except SyntaxError:
+        return None
+
+
+def _top_level_function(module: ast.Module | None, name: str) -> ast.FunctionDef | None:
+    if module is None:
+        return None
+    for node in module.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    return None
+
+
+def _call_name(func: ast.AST) -> str:
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        base = _call_name(func.value)
+        return f"{base}.{func.attr}" if base else func.attr
+    return ""
+
+
+def _function_calls(func: ast.FunctionDef | None) -> list[tuple[int, str, ast.Call]]:
+    if func is None:
+        return []
+    calls: list[tuple[int, str, ast.Call]] = []
+    for node in ast.walk(func):
+        if isinstance(node, ast.Call):
+            calls.append((getattr(node, "lineno", 0), _call_name(node.func), node))
+    calls.sort(key=lambda item: item[0])
+    return calls
+
+
+def _has_call_named(calls: list[tuple[int, str, ast.Call]], name: str) -> bool:
+    return any(call_name == name or call_name.endswith("." + name) for _, call_name, _ in calls)
+
+
+def _first_call_lineno(calls: list[tuple[int, str, ast.Call]], name: str) -> int | None:
+    for lineno, call_name, _node in calls:
+        if call_name == name or call_name.endswith("." + name):
+            return lineno
+    return None
+
+
+def _has_bool_keyword(calls: list[tuple[int, str, ast.Call]], keyword: str, value: bool) -> bool:
+    for _lineno, _name, call in calls:
+        for kw in call.keywords:
+            if kw.arg != keyword:
+                continue
+            if isinstance(kw.value, ast.Constant) and kw.value.value is value:
+                return True
+    return False
+
+
+def _contains_ready_for_exact_eval_true(func: ast.FunctionDef | None) -> bool:
+    if func is None:
+        return False
+    for node in ast.walk(func):
+        if not isinstance(node, ast.Dict):
+            continue
+        for key, value in zip(node.keys, node.values, strict=False):
+            if (
+                isinstance(key, ast.Constant)
+                and key.value == "ready_for_exact_eval_dispatch"
+                and isinstance(value, ast.Constant)
+                and value.value is True
+            ):
+                return True
+    return False
 
 
 def _assigned_string_literals(text: str, function_name: str) -> dict[str, str]:
@@ -72,9 +132,8 @@ def _assigned_string_literals(text: str, function_name: str) -> dict[str, str]:
     forbidden patterns.
     """
 
-    try:
-        module = ast.parse(text)
-    except SyntaxError:
+    module = _parse_module(text)
+    if module is None:
         return {}
     values: dict[str, str] = {}
     for top in module.body:
@@ -123,38 +182,45 @@ def inspect_hnerv_training_parity_source(
     """
 
     violations: list[str] = []
-    full_main = _top_level_function_body(text, "_full_main")
-    runtime_body = _top_level_function_body(text, "_write_runtime")
+    module = _parse_module(text)
+    full_main_fn = _top_level_function(module, "_full_main")
+    runtime_fn = _top_level_function(module, "_write_runtime")
+    full_main_calls = _function_calls(full_main_fn)
 
-    if not full_main:
+    if full_main_fn is None:
         violations.append("_full_main function missing")
-    if not runtime_body:
+    if runtime_fn is None:
         violations.append("_write_runtime function missing")
 
-    if full_main:
-        patch_idx = full_main.find("patch_upstream_yuv6_globally(")
-        scorer_idx = full_main.find("load_differentiable_scorers(")
-        if patch_idx < 0:
+    if full_main_fn is not None:
+        patch_lineno = _first_call_lineno(full_main_calls, "patch_upstream_yuv6_globally")
+        scorer_lineno = _first_call_lineno(full_main_calls, "load_differentiable_scorers")
+        if patch_lineno is None:
             violations.append("_full_main missing patch_upstream_yuv6_globally")
-        if scorer_idx < 0:
+        if scorer_lineno is None:
             violations.append("_full_main missing load_differentiable_scorers")
-        if patch_idx >= 0 and scorer_idx >= 0 and patch_idx > scorer_idx:
+        if patch_lineno is not None and scorer_lineno is not None and patch_lineno > scorer_lineno:
             violations.append(
                 "_full_main constructs scorers before patching rgb_to_yuv6"
             )
-        if "apply_eval_roundtrip=False" in full_main:
+        if _has_bool_keyword(full_main_calls, "apply_eval_roundtrip", False):
             violations.append("_full_main contains apply_eval_roundtrip=False")
-        if "apply_eval_roundtrip=True" not in full_main:
+        if not _has_bool_keyword(full_main_calls, "apply_eval_roundtrip", True):
             violations.append("_full_main missing apply_eval_roundtrip=True")
-        for token in ("EMA(", "ema.update", "ema.apply", "ema.state_dict()"):
-            if token not in full_main:
-                violations.append(f"_full_main missing EMA export token {token!r}")
-        for token in ("pack_archive", "_write_runtime", "_build_archive_zip"):
-            if token not in full_main:
+        for token, call_name in (
+            ("EMA(", "EMA"),
+            ("ema.update", "ema.update"),
+            ("ema.apply", "ema.apply"),
+            ("ema.state_dict()", "ema.state_dict"),
+        ):
+            if not _has_call_named(full_main_calls, call_name):
+                violations.append(f"_full_main missing EMA export call {token!r}")
+        for call_name in ("pack_archive", "_write_runtime", "_build_archive_zip"):
+            if not _has_call_named(full_main_calls, call_name):
                 violations.append(
-                    f"_full_main missing archive build-in-loop token {token!r}"
+                    f"_full_main missing archive build-in-loop call {call_name!r}"
                 )
-        if '"ready_for_exact_eval_dispatch": True' in full_main:
+        if _contains_ready_for_exact_eval_true(full_main_fn):
             violations.append(
                 "_full_main marks ready_for_exact_eval_dispatch=True before exact eval"
             )
@@ -163,7 +229,7 @@ def inspect_hnerv_training_parity_source(
     inflate_sh = templates.get("inflate_sh", "")
     inflate_py = templates.get("inflate_py", "")
     emitted_runtime = "\n".join(value for value in (inflate_sh, inflate_py) if value)
-    if runtime_body and not emitted_runtime:
+    if runtime_fn is not None and not emitted_runtime:
         violations.append(
             "_write_runtime emits no literal inflate_sh/inflate_py templates"
         )
@@ -191,7 +257,7 @@ def inspect_hnerv_training_parity_source(
                 violations.append(
                     f"inflate.sh template contains runtime network token {token!r}"
                 )
-    elif runtime_body:
+    elif runtime_fn is not None:
         violations.append("_write_runtime missing inflate_sh template")
 
     if inflate_py:
@@ -210,7 +276,7 @@ def inspect_hnerv_training_parity_source(
         )
         if not consumes_zero_bin:
             violations.append("inflate.py template does not consume archive_dir/0.bin")
-    elif runtime_body:
+    elif runtime_fn is not None:
         violations.append("_write_runtime missing inflate_py template")
 
     for token in FORBIDDEN_RUNTIME_TOKENS:
