@@ -733,3 +733,49 @@ Score-lowering implication:
 - The FP16 waiver list is a precise backport queue: replacing each waiver with
   real canonical autocast support is expected to improve training wall-clock
   without creating false score authority.
+
+## Result: PR106/R2 PR101-grammar GHA CPU closure landed (2026-05-13)
+
+Artifact:
+
+- GHA run: `25773960214`
+- Workflow/job: `contest_cpu_eval.yml` / `contest_cpu_eval`
+- Head SHA evaluated: `a706f04f601d5f49fdbeaa7a4a5292ba3cc14baa`
+- Artifact JSON:
+  `experiments/results/gha_cpu_eval/pr106_r2_pr101_grammar_25773960214/contest_cpu_eval-lane_pr106_latent_sidecar_r2_pr101_grammar-25773960214/contest_auth_eval.json`
+- Artifact JSON SHA-256:
+  `d1b61f37beb5e3dc81c7d1e64fbc6ee4f1a699ac198376f78acd08575debee43`
+
+Custody:
+
+- Archive:
+  `submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip`
+- Archive bytes: `186780`
+- Archive SHA-256:
+  `c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383`
+- Runtime tree SHA-256:
+  `bc9624c900cd2a171e6a1cab8236fe9068cc3c329da3bebf97c7a240f42fabf1`
+- Inflated output aggregate SHA-256:
+  `9249df4f58f4824fe40dfc415df7c1ea9ca845a48857999d434da424ec9c4150`
+
+Score:
+
+- Axis: `[contest-CPU GHA Linux x86_64]`
+- `avg_segnet_dist`: `0.00063197`
+- `avg_posenet_dist`: `0.00016402`
+- Rate term input: `186780 / 37545489`
+- Recomputed score:
+  `100*0.00063197 + sqrt(10*0.00016402) + 25*186780/37545489 =
+  0.22806551797550428`
+- Display-rounded score: `0.23`
+- `score_claim=false`, `promotion_eligible=false`,
+  `cpu_leaderboard_reproduction_eligible=true`.
+
+Classification:
+
+- Legitimate GHA CPU-axis closure for the exact committed archive/runtime
+  packet.
+- Not CUDA, not submission-promotion evidence, and not a CPU->CUDA conversion.
+- The result matches the prior Modal CPU advisory value within ~`8.9e-7`, which
+  strongly suggests the earlier Modal CPU signal was not a harness artifact,
+  but only this GHA run carries the public CPU-axis tag.
