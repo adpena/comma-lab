@@ -5,6 +5,12 @@ analysis records and emits planning policies or ledgers. Exact CUDA auth eval
 remains the only score authority.
 """
 
+from tac.optimization.langevin_optimizer import (
+    LangevinOptimizer,
+    cosine_temperature_schedule,
+    exponential_temperature_schedule,
+    geman_geman_log_schedule,
+)
 from tac.optimization.scorer_surface_shaking import (
     OperatingPoint,
     ScorerSurfacePlanError,
@@ -13,8 +19,12 @@ from tac.optimization.scorer_surface_shaking import (
 )
 
 __all__ = [
+    "LangevinOptimizer",
     "OperatingPoint",
     "ScorerSurfacePlanError",
     "SurfaceAtomFamily",
     "build_scorer_surface_shaking_plan",
+    "cosine_temperature_schedule",
+    "exponential_temperature_schedule",
+    "geman_geman_log_schedule",
 ]
