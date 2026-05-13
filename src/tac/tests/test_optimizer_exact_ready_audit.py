@@ -474,6 +474,9 @@ def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
     _add_live_runtime_fields(queue, repo_root=tmp_path)
     payload = json.loads(queue.read_text(encoding="utf-8"))
     archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    payload["dispatch_ready"][0]["runtime_content_tree_sha256"] = "e" * 64
+    payload["dispatch_ready"][0]["score_axis"] = "contest_cuda"
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     _write_json(
         tmp_path / "experiments/results/packetir_closed/closure.json",
         {
@@ -486,6 +489,14 @@ def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
             "duplicate_dispatch_blockers": [
                 "same_candidate_archive_already_exact_evaluated",
                 "candidate_not_current_frontier_on_contest_cuda",
+            ],
+            "exact_eval_duplicate_keys": [
+                {
+                    "archive_sha256": archive_sha,
+                    "runtime_content_tree_sha256": "e" * 64,
+                    "score_axis": "contest_cuda",
+                    "key": f"{archive_sha}:{'e' * 64}:contest_cuda",
+                }
             ],
         },
     )
@@ -507,6 +518,10 @@ def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
     )
     assert any(
         blocker.startswith("packetir_exact_closure_duplicate_dispatch")
+        for blocker in row["blockers"]
+    )
+    assert any(
+        blocker.startswith("packetir_exact_closure_exact_eval_duplicate_key_match")
         for blocker in row["blockers"]
     )
 

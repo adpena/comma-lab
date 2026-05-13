@@ -39,6 +39,8 @@ def build_packetir_exact_closure(
     cpu_eval: Mapping[str, Any] | None = None,
     source_cuda_eval: Mapping[str, Any] | None = None,
     current_best_cuda_eval: Mapping[str, Any] | None = None,
+    runtime_consumption_proof: Mapping[str, Any] | None = None,
+    full_frame_parity_proof: Mapping[str, Any] | None = None,
     recode_profile: Mapping[str, Any] | None = None,
     input_paths: Mapping[str, str] | None = None,
     repo_root: str | Path | None = None,
@@ -63,9 +65,15 @@ def build_packetir_exact_closure(
     candidate_archive = _archive_identity(candidate_archive_path, repo_root=repo_root)
     audit = _as_mapping(candidate_result.get("candidate_diff_audit"))
     consumed = _as_mapping(candidate_result.get("packet_ir_consumed_byte_proof"))
+    expected_score_sections = tuple(
+        str(item)
+        for item in consumed.get("score_affecting_section_names") or []
+        if isinstance(item, str) and item
+    )
     byte_delta = _first_int(audit.get("total_byte_delta"))
     if byte_delta is None and isinstance(candidate_bytes, int) and isinstance(source_bytes, int):
         byte_delta = candidate_bytes - source_bytes
+    cuda_summary = _eval_summary(cuda_eval, required_axis="contest_cuda")
 
     _check(
         checks,
@@ -119,6 +127,42 @@ def build_packetir_exact_closure(
             "unconsumed_trailing_bytes": consumed.get("unconsumed_trailing_bytes"),
         },
     )
+    runtime_consumption_summary = _runtime_consumption_summary(
+        runtime_consumption_proof,
+        candidate_sha=candidate_sha,
+        candidate_bytes=candidate_bytes,
+        expected_score_affecting_sections=expected_score_sections,
+    )
+    _check(
+        checks,
+        "runtime_consumption_proof_binds_candidate_and_score_affecting_sections",
+        runtime_consumption_summary["valid"] is True,
+        requirement=(
+            "runtime proof must bind the candidate archive and show every "
+            "score-affecting PacketIR section is decoded/applied by the runtime"
+        ),
+        evidence=runtime_consumption_summary,
+    )
+    full_frame_parity_summary = _full_frame_parity_summary(
+        full_frame_parity_proof,
+        candidate_sha=candidate_sha,
+        candidate_bytes=candidate_bytes,
+        source_sha=source_sha,
+        source_bytes=source_bytes,
+        expected_n_pairs=_first_int(cuda_summary.get("n_samples")),
+        expected_total_bytes=_first_int(cuda_summary.get("inflated_output_total_bytes")),
+    )
+    _check(
+        checks,
+        "same_runtime_full_frame_parity_binds_candidate_source_and_runtime",
+        full_frame_parity_summary["valid"] is True,
+        requirement=(
+            "same-runtime full-frame parity must bind source/candidate archives "
+            "and prove all frame bytes match before treating a PacketIR recode "
+            "as rate-only"
+        ),
+        evidence=full_frame_parity_summary,
+    )
     if isinstance(recode_profile, Mapping):
         _check(
             checks,
@@ -139,7 +183,6 @@ def build_packetir_exact_closure(
             ),
         )
 
-    cuda_summary = _eval_summary(cuda_eval, required_axis="contest_cuda")
     _check(
         checks,
         "cuda_eval_is_valid_contest_cuda_score_claim",
@@ -190,30 +233,64 @@ def build_packetir_exact_closure(
     source_cuda_summary: dict[str, Any] | None = None
     if source_cuda_eval is not None:
         source_cuda_summary = _eval_summary(source_cuda_eval, required_axis="contest_cuda")
-        _check(
-            checks,
-            "source_cuda_eval_matches_packetir_source",
-            source_cuda_summary["claim_valid"] is True
-            and source_cuda_summary.get("archive_sha256") == source_sha
-            and source_cuda_summary.get("archive_bytes") == source_bytes,
-            requirement="source CUDA baseline must be the PacketIR source archive, not an inferred neighbor",
-            evidence={
-                "source_eval": source_cuda_summary,
-                "packetir_source_archive_sha256": source_sha,
-                "packetir_source_archive_bytes": source_bytes,
-            },
-        )
+    _check(
+        checks,
+        "source_cuda_eval_matches_packetir_source",
+        source_cuda_summary is not None
+        and source_cuda_summary["claim_valid"] is True
+        and source_cuda_summary.get("archive_sha256") == source_sha
+        and source_cuda_summary.get("archive_bytes") == source_bytes,
+        requirement=(
+            "source CUDA baseline must be supplied and must be the PacketIR "
+            "source archive, not an inferred neighbor"
+        ),
+        evidence={
+            "source_eval": source_cuda_summary,
+            "packetir_source_archive_sha256": source_sha,
+            "packetir_source_archive_bytes": source_bytes,
+        },
+    )
 
     current_best_summary: dict[str, Any] | None = None
     if current_best_cuda_eval is not None:
         current_best_summary = _eval_summary(current_best_cuda_eval, required_axis="contest_cuda")
-        _check(
-            checks,
-            "current_best_cuda_eval_is_valid_reference",
-            current_best_summary["claim_valid"] is True,
-            requirement="current-best reference must be a valid contest-CUDA score claim",
-            evidence=current_best_summary,
-        )
+    _check(
+        checks,
+        "current_best_cuda_eval_is_valid_reference",
+        current_best_summary is not None and current_best_summary["claim_valid"] is True,
+        requirement="current-best reference must be supplied as a valid contest-CUDA score claim",
+        evidence=current_best_summary,
+    )
+
+    _check(
+        checks,
+        "runtime_identity_matches_cuda_eval_runtime",
+        _runtime_identity_matches_eval(
+            full_frame_parity_summary,
+            runtime_consumption_summary,
+            cuda_summary,
+        ),
+        requirement=(
+            "local runtime proofs must identify the same inflate runtime content "
+            "that exact CUDA auth eval scored"
+        ),
+        evidence={
+            "full_frame_runtime_inflate_py_sha256": full_frame_parity_summary.get(
+                "runtime_inflate_py_sha256"
+            ),
+            "runtime_consumption_runtime_inflate_py_sha256": runtime_consumption_summary.get(
+                "runtime_inflate_py_sha256"
+            ),
+            "runtime_consumption_runtime_dir": runtime_consumption_summary.get("runtime_dir"),
+            "runtime_consumption_runtime_source_tree_sha256": runtime_consumption_summary.get(
+                "runtime_source_tree_sha256"
+            ),
+            "cuda_runtime_inflate_py_sha256": cuda_summary.get("runtime_inflate_py_sha256"),
+            "cuda_runtime_content_tree_sha256": cuda_summary.get(
+                "runtime_content_tree_sha256"
+            ),
+        },
+    )
 
     blockers = [
         check["id"]
@@ -254,7 +331,7 @@ def build_packetir_exact_closure(
 
     return {
         "schema": SCHEMA,
-        "schema_version": 1,
+        "schema_version": 2,
         "tool": TOOL_NAME,
         "lane_id": lane_id,
         "classification": classification,
@@ -284,6 +361,8 @@ def build_packetir_exact_closure(
                 "unconsumed_trailing_bytes": consumed.get("unconsumed_trailing_bytes"),
                 "proof_scope": consumed.get("proof_scope"),
             },
+            "runtime_consumption_proof": runtime_consumption_summary,
+            "same_runtime_full_frame_parity": full_frame_parity_summary,
         },
         "axes": {
             "contest_cuda": cuda_summary,
@@ -294,6 +373,7 @@ def build_packetir_exact_closure(
         "blockers": blockers,
         "warnings": warnings,
         "checks": checks,
+        "exact_eval_duplicate_keys": _exact_eval_duplicate_keys(cuda_summary),
         "reactivation_criteria": [
             "do_not_dispatch_same_candidate_archive_sha256_again",
             "reactivate_only_if_a_new_runtime_consumed_recode_has_smaller_exact_cuda_score_than_current_best",
@@ -317,6 +397,9 @@ def render_packetir_exact_closure_markdown(closure: Mapping[str, Any]) -> str:
     cuda = _as_mapping(axes.get("contest_cuda"))
     cpu = _as_mapping(axes.get("contest_cpu"))
     comparisons = _as_mapping(closure.get("comparisons"))
+    packetir = _as_mapping(closure.get("packetir"))
+    runtime_proof = _as_mapping(packetir.get("runtime_consumption_proof"))
+    full_frame_parity = _as_mapping(packetir.get("same_runtime_full_frame_parity"))
     lines = [
         "# PacketIR Exact-Eval Closure",
         "",
@@ -337,7 +420,16 @@ def render_packetir_exact_closure_markdown(closure: Mapping[str, Any]) -> str:
         "## Axes",
         "",
         f"- [contest-CUDA] score: `{cuda.get('score')}` bytes: `{cuda.get('archive_bytes')}` sha: `{cuda.get('archive_sha256')}`",
+        f"- [contest-CUDA] runtime_content_tree_sha256: `{cuda.get('runtime_content_tree_sha256')}`",
+        f"- [contest-CUDA] inflated_output_aggregate_sha256: `{cuda.get('inflated_output_aggregate_sha256')}`",
         f"- [contest-CPU] score: `{cpu.get('score')}` bytes: `{cpu.get('archive_bytes')}` sha: `{cpu.get('archive_sha256')}`",
+        "",
+        "## Runtime Proofs",
+        "",
+        f"- runtime_consumption_valid: `{_bool_text(runtime_proof.get('valid') is True)}`",
+        f"- runtime_all_score_affecting_sections_consumed: `{runtime_proof.get('runtime_all_score_affecting_sections_consumed')}`",
+        f"- same_runtime_full_frame_parity_valid: `{_bool_text(full_frame_parity.get('valid') is True)}`",
+        f"- full_frame_streaming_raw_sha256: `{full_frame_parity.get('candidate_streaming_raw_sha256')}`",
         "",
         "## Comparisons",
         "",
@@ -353,6 +445,13 @@ def render_packetir_exact_closure_markdown(closure: Mapping[str, Any]) -> str:
     lines.extend(["", "## Duplicate Dispatch Blockers", ""])
     dispatch_blockers = [str(item) for item in closure.get("duplicate_dispatch_blockers") or []]
     lines.extend(f"- `{item}`" for item in dispatch_blockers) if dispatch_blockers else lines.append("- none")
+    lines.extend(["", "## Exact Eval Duplicate Keys", ""])
+    duplicate_keys = [
+        str(item.get("key"))
+        for item in closure.get("exact_eval_duplicate_keys") or []
+        if isinstance(item, Mapping)
+    ]
+    lines.extend(f"- `{item}`" for item in duplicate_keys) if duplicate_keys else lines.append("- none")
     lines.extend(["", "## Warnings", ""])
     warnings = [item for item in closure.get("warnings") or [] if isinstance(item, Mapping)]
     if warnings:
@@ -372,6 +471,27 @@ def _eval_summary(payload: Mapping[str, Any], *, required_axis: str) -> dict[str
         require_component_recompute=True,
     )
     provenance = _as_mapping(payload.get("provenance"))
+    runtime_manifest = _as_mapping(provenance.get("inflate_runtime_manifest"))
+    inflated_manifest = _as_mapping(
+        _as_mapping(provenance.get("inflated_output_manifest")).get("payload")
+    )
+    runtime_files = [
+        file
+        for file in runtime_manifest.get("files", [])
+        if isinstance(file, Mapping)
+    ]
+    inflate_py_sha = None
+    inflate_sh_sha = None
+    runtime_file_sha256s: dict[str, str] = {}
+    for file in runtime_files:
+        rel = file.get("relative_path")
+        sha = _first_str(file.get("sha256"))
+        if isinstance(rel, str) and sha:
+            runtime_file_sha256s[rel] = sha
+        if rel == "inflate.py":
+            inflate_py_sha = sha
+        elif rel == "inflate.sh":
+            inflate_sh_sha = sha
     archive_sha = _first_str(
         provenance.get("archive_sha256"),
         payload.get("archive_sha256"),
@@ -403,7 +523,248 @@ def _eval_summary(payload: Mapping[str, Any], *, required_axis: str) -> dict[str
         "promotion_eligible": payload.get("promotion_eligible"),
         "rank_or_kill_blockers": list(payload.get("rank_or_kill_blockers") or []),
         "promotion_blockers": list(payload.get("promotion_blockers") or []),
+        "runtime_tree_sha256": _first_str(runtime_manifest.get("runtime_tree_sha256")),
+        "runtime_content_tree_sha256": _first_str(
+            runtime_manifest.get("runtime_content_tree_sha256")
+        ),
+        "runtime_inflate_py_sha256": inflate_py_sha,
+        "runtime_inflate_sh_sha256": inflate_sh_sha,
+        "runtime_file_sha256s": runtime_file_sha256s,
+        "inflated_output_aggregate_sha256": _first_str(
+            inflated_manifest.get("aggregate_sha256")
+        ),
+        "inflated_output_total_bytes": _first_int(inflated_manifest.get("total_bytes")),
     }
+
+
+def _runtime_consumption_summary(
+    payload: Mapping[str, Any] | None,
+    *,
+    candidate_sha: str | None,
+    candidate_bytes: int | None,
+    expected_score_affecting_sections: Sequence[str],
+) -> dict[str, Any]:
+    data = _as_mapping(payload)
+    archive = _as_mapping(data.get("archive"))
+    consumed_sections = _as_mapping(data.get("runtime_consumed_score_affecting_sections"))
+    blockers = list(data.get("blockers") or []) if isinstance(data.get("blockers"), list) else []
+    runtime_source_manifest = _as_mapping(data.get("runtime_source_manifest"))
+    runtime_files = [
+        file
+        for file in runtime_source_manifest.get("files", [])
+        if isinstance(file, Mapping)
+    ]
+    runtime_file_sha256s = {
+        str(file.get("path")): str(file.get("sha256"))
+        for file in runtime_files
+        if file.get("path") and _first_str(file.get("sha256"))
+    }
+    expected_sections = set(expected_score_affecting_sections)
+    actual_sections = {str(key) for key in consumed_sections}
+    runtime_inflate_py_sha = _first_str(data.get("runtime_inflate_py_sha256"))
+    valid = (
+        bool(data)
+        and data.get("schema") == "pr106_sidecar_runtime_decode_consumption_proof_v1"
+        and data.get("proof_scope")
+        == "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame"
+        and archive.get("sha256") == candidate_sha
+        and archive.get("bytes") == candidate_bytes
+        and not blockers
+        and data.get("parser_consumed_byte_accounting_passed") is True
+        and data.get("runtime_all_score_affecting_sections_consumed") is True
+        and bool(consumed_sections)
+        and bool(expected_sections)
+        and actual_sections == expected_sections
+        and all(value is True for value in consumed_sections.values())
+        and data.get("runtime_corrected_latents_digest_changed") is True
+        and isinstance(runtime_inflate_py_sha, str)
+        and bool(runtime_file_sha256s)
+        and runtime_file_sha256s.get("inflate.py") == runtime_inflate_py_sha
+        and data.get("score_claim") is False
+        and data.get("contest_axis_claim") is False
+        and data.get("ready_for_exact_eval_dispatch") is False
+    )
+    return {
+        "valid": valid,
+        "schema": data.get("schema"),
+        "archive_sha256": archive.get("sha256"),
+        "archive_bytes": archive.get("bytes"),
+        "expected_archive_sha256": candidate_sha,
+        "expected_archive_bytes": candidate_bytes,
+        "blockers": blockers,
+        "runtime_dir": data.get("runtime_dir"),
+        "runtime_inflate_py_sha256": runtime_inflate_py_sha,
+        "runtime_source_tree_sha256": runtime_source_manifest.get(
+            "runtime_source_tree_sha256"
+        ),
+        "runtime_source_files": [
+            {
+                "path": file.get("path"),
+                "sha256": file.get("sha256"),
+                "bytes": file.get("bytes"),
+            }
+            for file in runtime_files
+        ],
+        "runtime_file_sha256s": runtime_file_sha256s,
+        "parser_consumed_byte_accounting_passed": data.get(
+            "parser_consumed_byte_accounting_passed"
+        ),
+        "runtime_all_score_affecting_sections_consumed": data.get(
+            "runtime_all_score_affecting_sections_consumed"
+        ),
+        "runtime_consumed_score_affecting_sections": dict(consumed_sections),
+        "expected_score_affecting_sections": sorted(expected_sections),
+        "actual_score_affecting_sections": sorted(actual_sections),
+        "score_affecting_section_set_matches_packetir": actual_sections == expected_sections,
+        "runtime_corrected_latents_digest_changed": data.get(
+            "runtime_corrected_latents_digest_changed"
+        ),
+        "proof_scope": data.get("proof_scope"),
+        "score_claim": data.get("score_claim"),
+        "contest_axis_claim": data.get("contest_axis_claim"),
+        "ready_for_exact_eval_dispatch": data.get("ready_for_exact_eval_dispatch"),
+    }
+
+
+def _full_frame_parity_summary(
+    payload: Mapping[str, Any] | None,
+    *,
+    candidate_sha: str | None,
+    candidate_bytes: int | None,
+    source_sha: str | None,
+    source_bytes: int | None,
+    expected_n_pairs: int | None,
+    expected_total_bytes: int | None,
+) -> dict[str, Any]:
+    data = _as_mapping(payload)
+    candidate = _as_mapping(data.get("candidate"))
+    source = _as_mapping(data.get("source"))
+    candidate_archive = _as_mapping(data.get("candidate_archive"))
+    source_archive = _as_mapping(data.get("source_archive"))
+    candidate_n_pairs_hashed = _first_int(candidate.get("n_pairs_hashed"))
+    candidate_n_pairs_total = _first_int(candidate.get("n_pairs_total"))
+    source_n_pairs_hashed = _first_int(source.get("n_pairs_hashed"))
+    source_n_pairs_total = _first_int(source.get("n_pairs_total"))
+    candidate_total_bytes = _first_int(candidate.get("total_bytes"))
+    source_total_bytes = _first_int(source.get("total_bytes"))
+    valid = (
+        bool(data)
+        and data.get("schema") == "pr106_same_runtime_streaming_frame_parity_v1"
+        and data.get("proof_scope") == "same_runtime_streaming_full_frame_hash"
+        and data.get("device_axis_label") == "local-cpu-streaming-runtime"
+        and data.get("full_frame_inflate_output_parity_claim") is True
+        and data.get("prefix_parity_claim") is False
+        and data.get("streaming_output_sha256_equal") is True
+        and data.get("streaming_output_total_bytes_equal") is True
+        and data.get("score_claim") is False
+        and data.get("contest_axis_claim") is False
+        and data.get("ready_for_exact_eval_dispatch") is False
+        and candidate_archive.get("sha256") == candidate_sha
+        and candidate_archive.get("bytes") == candidate_bytes
+        and source_archive.get("sha256") == source_sha
+        and source_archive.get("bytes") == source_bytes
+        and candidate_n_pairs_total is not None
+        and source_n_pairs_total is not None
+        and expected_n_pairs is not None
+        and candidate_n_pairs_hashed == candidate_n_pairs_total
+        and source_n_pairs_hashed == source_n_pairs_total
+        and candidate_n_pairs_total == expected_n_pairs
+        and source_n_pairs_total == expected_n_pairs
+        and candidate_total_bytes is not None
+        and candidate_total_bytes > 0
+        and expected_total_bytes is not None
+        and candidate.get("streaming_raw_sha256") == source.get("streaming_raw_sha256")
+        and candidate_total_bytes == source_total_bytes
+        and candidate_total_bytes == expected_total_bytes
+        and candidate.get("full_frame_digest") is True
+        and source.get("full_frame_digest") is True
+    )
+    return {
+        "valid": valid,
+        "schema": data.get("schema"),
+        "runtime_dir": data.get("runtime_dir"),
+        "runtime_inflate_py_sha256": data.get("runtime_inflate_py_sha256"),
+        "proof_scope": data.get("proof_scope"),
+        "device_axis_label": data.get("device_axis_label"),
+        "candidate_archive_sha256": candidate_archive.get("sha256"),
+        "candidate_archive_bytes": candidate_archive.get("bytes"),
+        "source_archive_sha256": source_archive.get("sha256"),
+        "source_archive_bytes": source_archive.get("bytes"),
+        "expected_candidate_archive_sha256": candidate_sha,
+        "expected_candidate_archive_bytes": candidate_bytes,
+        "expected_source_archive_sha256": source_sha,
+        "expected_source_archive_bytes": source_bytes,
+        "full_frame_inflate_output_parity_claim": data.get(
+            "full_frame_inflate_output_parity_claim"
+        ),
+        "streaming_output_sha256_equal": data.get("streaming_output_sha256_equal"),
+        "streaming_output_total_bytes_equal": data.get(
+            "streaming_output_total_bytes_equal"
+        ),
+        "candidate_streaming_raw_sha256": candidate.get("streaming_raw_sha256"),
+        "source_streaming_raw_sha256": source.get("streaming_raw_sha256"),
+        "candidate_total_bytes": candidate.get("total_bytes"),
+        "source_total_bytes": source.get("total_bytes"),
+        "candidate_n_pairs_hashed": candidate.get("n_pairs_hashed"),
+        "candidate_n_pairs_total": candidate.get("n_pairs_total"),
+        "source_n_pairs_hashed": source.get("n_pairs_hashed"),
+        "source_n_pairs_total": source.get("n_pairs_total"),
+        "expected_n_pairs": expected_n_pairs,
+        "expected_total_bytes": expected_total_bytes,
+        "candidate_full_frame_digest": candidate.get("full_frame_digest"),
+        "source_full_frame_digest": source.get("full_frame_digest"),
+        "score_claim": data.get("score_claim"),
+        "contest_axis_claim": data.get("contest_axis_claim"),
+        "ready_for_exact_eval_dispatch": data.get("ready_for_exact_eval_dispatch"),
+    }
+
+
+def _runtime_identity_matches_eval(
+    full_frame_parity_summary: Mapping[str, Any],
+    runtime_consumption_summary: Mapping[str, Any],
+    cuda_summary: Mapping[str, Any],
+) -> bool:
+    inflate_py = full_frame_parity_summary.get("runtime_inflate_py_sha256")
+    consumption_inflate_py = runtime_consumption_summary.get("runtime_inflate_py_sha256")
+    cuda_inflate_py = cuda_summary.get("runtime_inflate_py_sha256")
+    cuda_runtime_files = _as_mapping(cuda_summary.get("runtime_file_sha256s"))
+    consumption_runtime_files = _as_mapping(
+        runtime_consumption_summary.get("runtime_file_sha256s")
+    )
+    consumption_files_match_cuda = bool(consumption_runtime_files) and all(
+        cuda_runtime_files.get(path) == sha
+        for path, sha in consumption_runtime_files.items()
+    )
+    return (
+        full_frame_parity_summary.get("valid") is True
+        and runtime_consumption_summary.get("valid") is True
+        and isinstance(inflate_py, str)
+        and inflate_py
+        and inflate_py == consumption_inflate_py
+        and inflate_py == cuda_inflate_py
+        and consumption_files_match_cuda
+        and isinstance(cuda_summary.get("runtime_content_tree_sha256"), str)
+    )
+
+
+def _exact_eval_duplicate_keys(cuda_summary: Mapping[str, Any]) -> list[dict[str, Any]]:
+    archive_sha = cuda_summary.get("archive_sha256")
+    runtime_sha = cuda_summary.get("runtime_content_tree_sha256")
+    score_axis = cuda_summary.get("score_axis")
+    if not (
+        isinstance(archive_sha, str)
+        and isinstance(runtime_sha, str)
+        and isinstance(score_axis, str)
+    ):
+        return []
+    return [
+        {
+            "archive_sha256": archive_sha,
+            "runtime_content_tree_sha256": runtime_sha,
+            "score_axis": score_axis,
+            "key": f"{archive_sha}:{runtime_sha}:{score_axis}",
+        }
+    ]
 
 
 def _comparisons(

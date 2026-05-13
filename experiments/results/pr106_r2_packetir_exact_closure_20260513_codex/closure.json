@@ -24,12 +24,29 @@
       "evidence_grade": "contest-CPU",
       "exact_cuda_eval_complete": false,
       "finite_score": true,
+      "inflated_output_aggregate_sha256": "08675dc4d129c8a1848de9c81dc158a80d6927061a60a8e8ac15befc5ecea107",
+      "inflated_output_total_bytes": 3662409600,
       "lane_tag": "[contest-CPU]",
       "n_samples": 600,
       "promotion_blockers": [],
       "promotion_eligible": false,
       "rank_or_kill_blockers": [],
       "recomputed_score": 0.22796397327358284,
+      "runtime_content_tree_sha256": "c2ed377bdb6d8964601ec6646d72f2016b9488a130c03c58f62190f809786516",
+      "runtime_file_sha256s": {
+        "archive_manifest.json": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc",
+        "contest_auth_eval.json": "df916e652c50753e40be9b44f1e61190b4afe23032ececa20fb7c3b5d28089a4",
+        "inflate.py": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "inflate.sh": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+        "pre_submission_compliance.contest_final.json": "3365f95b3448f0d0bf795b46f83d850709e6d1c4be73e9bc392ce61dd8cf7171",
+        "report.txt": "2b343cb5ab15bbb74160f45da3c4b3321edc17ba1440847371a3cf07a07352fd",
+        "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+        "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+        "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      },
+      "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+      "runtime_inflate_sh_sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+      "runtime_tree_sha256": "98be9452a6c94ef40e7f8a91bf3c793eed100daa65d132f0d4473a5a4ae7d253",
       "score": 0.22796397327358284,
       "score_axis": "contest_cpu",
       "score_claim": false,
@@ -45,6 +62,8 @@
       "evidence_grade": "contest-CUDA",
       "exact_cuda_eval_complete": true,
       "finite_score": true,
+      "inflated_output_aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+      "inflated_output_total_bytes": 3662409600,
       "lane_tag": "[contest-CUDA]",
       "n_samples": 600,
       "promotion_blockers": [
@@ -58,6 +77,21 @@
         "requires_adjudicated_cuda_cpu_policy_review"
       ],
       "recomputed_score": 0.2065174760196528,
+      "runtime_content_tree_sha256": "c2ed377bdb6d8964601ec6646d72f2016b9488a130c03c58f62190f809786516",
+      "runtime_file_sha256s": {
+        "archive_manifest.json": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc",
+        "contest_auth_eval.json": "df916e652c50753e40be9b44f1e61190b4afe23032ececa20fb7c3b5d28089a4",
+        "inflate.py": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "inflate.sh": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+        "pre_submission_compliance.contest_final.json": "3365f95b3448f0d0bf795b46f83d850709e6d1c4be73e9bc392ce61dd8cf7171",
+        "report.txt": "2b343cb5ab15bbb74160f45da3c4b3321edc17ba1440847371a3cf07a07352fd",
+        "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+        "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+        "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      },
+      "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+      "runtime_inflate_sh_sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+      "runtime_tree_sha256": "0ca4ae381ec08247f08d87529d61c4033797dc8ac88a94cea596637b0c9e736a",
       "score": 0.2065174760196528,
       "score_axis": "contest_cuda",
       "score_claim": true,
@@ -120,6 +154,117 @@
     {
       "blocking": true,
       "evidence": {
+        "actual_score_affecting_sections": [
+          "framing_meta",
+          "pr106_payload",
+          "sidecar_payload"
+        ],
+        "archive_bytes": 186629,
+        "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "blockers": [],
+        "contest_axis_claim": false,
+        "expected_archive_bytes": 186629,
+        "expected_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "expected_score_affecting_sections": [
+          "framing_meta",
+          "pr106_payload",
+          "sidecar_payload"
+        ],
+        "parser_consumed_byte_accounting_passed": true,
+        "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_all_score_affecting_sections_consumed": true,
+        "runtime_consumed_score_affecting_sections": {
+          "framing_meta": true,
+          "pr106_payload": true,
+          "sidecar_payload": true
+        },
+        "runtime_corrected_latents_digest_changed": true,
+        "runtime_dir": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/recovered_exact_cuda_runtime",
+        "runtime_file_sha256s": {
+          "inflate.py": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+          "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+          "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+          "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+        },
+        "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "runtime_source_files": [
+          {
+            "bytes": 11038,
+            "path": "inflate.py",
+            "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+          },
+          {
+            "bytes": 16850,
+            "path": "src/codec.py",
+            "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+          },
+          {
+            "bytes": 2197,
+            "path": "src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          },
+          {
+            "bytes": 8240,
+            "path": "src/pr101_grammar.py",
+            "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+          }
+        ],
+        "runtime_source_tree_sha256": "13417fceea39c52033dd798a7f74df65597c77e56ee12b04f0f46b0284483d97",
+        "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+        "score_affecting_section_set_matches_packetir": true,
+        "score_claim": false,
+        "valid": true
+      },
+      "failure_class": "ok",
+      "id": "runtime_consumption_proof_binds_candidate_and_score_affecting_sections",
+      "passed": true,
+      "requirement": "runtime proof must bind the candidate archive and show every score-affecting PacketIR section is decoded/applied by the runtime"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "candidate_archive_bytes": 186629,
+        "candidate_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "candidate_full_frame_digest": true,
+        "candidate_n_pairs_hashed": 600,
+        "candidate_n_pairs_total": 600,
+        "candidate_streaming_raw_sha256": "b272a1a4841f8fcc9fe843e0544ea0bb46b8359fe5f8cc9d81acf8bd3b7baf99",
+        "candidate_total_bytes": 3662409600,
+        "contest_axis_claim": false,
+        "device_axis_label": "local-cpu-streaming-runtime",
+        "expected_candidate_archive_bytes": 186629,
+        "expected_candidate_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "expected_n_pairs": 600,
+        "expected_source_archive_bytes": 186780,
+        "expected_source_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+        "expected_total_bytes": 3662409600,
+        "full_frame_inflate_output_parity_claim": true,
+        "proof_scope": "same_runtime_streaming_full_frame_hash",
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+        "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+        "score_claim": false,
+        "source_archive_bytes": 186780,
+        "source_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+        "source_full_frame_digest": true,
+        "source_n_pairs_hashed": 600,
+        "source_n_pairs_total": 600,
+        "source_streaming_raw_sha256": "b272a1a4841f8fcc9fe843e0544ea0bb46b8359fe5f8cc9d81acf8bd3b7baf99",
+        "source_total_bytes": 3662409600,
+        "streaming_output_sha256_equal": true,
+        "streaming_output_total_bytes_equal": true,
+        "valid": true
+      },
+      "failure_class": "ok",
+      "id": "same_runtime_full_frame_parity_binds_candidate_source_and_runtime",
+      "passed": true,
+      "requirement": "same-runtime full-frame parity must bind source/candidate archives and prove all frame bytes match before treating a PacketIR recode as rate-only"
+    },
+    {
+      "blocking": true,
+      "evidence": {
         "emitted_candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
         "found": true,
         "matches_exact_candidate_archive": false,
@@ -146,6 +291,8 @@
         "evidence_grade": "contest-CUDA",
         "exact_cuda_eval_complete": true,
         "finite_score": true,
+        "inflated_output_aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+        "inflated_output_total_bytes": 3662409600,
         "lane_tag": "[contest-CUDA]",
         "n_samples": 600,
         "promotion_blockers": [
@@ -159,6 +306,21 @@
           "requires_adjudicated_cuda_cpu_policy_review"
         ],
         "recomputed_score": 0.2065174760196528,
+        "runtime_content_tree_sha256": "c2ed377bdb6d8964601ec6646d72f2016b9488a130c03c58f62190f809786516",
+        "runtime_file_sha256s": {
+          "archive_manifest.json": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc",
+          "contest_auth_eval.json": "df916e652c50753e40be9b44f1e61190b4afe23032ececa20fb7c3b5d28089a4",
+          "inflate.py": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+          "inflate.sh": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+          "pre_submission_compliance.contest_final.json": "3365f95b3448f0d0bf795b46f83d850709e6d1c4be73e9bc392ce61dd8cf7171",
+          "report.txt": "2b343cb5ab15bbb74160f45da3c4b3321edc17ba1440847371a3cf07a07352fd",
+          "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+          "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+          "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+        },
+        "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "runtime_inflate_sh_sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+        "runtime_tree_sha256": "0ca4ae381ec08247f08d87529d61c4033797dc8ac88a94cea596637b0c9e736a",
         "score": 0.2065174760196528,
         "score_axis": "contest_cuda",
         "score_claim": true,
@@ -194,12 +356,29 @@
         "evidence_grade": "contest-CPU",
         "exact_cuda_eval_complete": false,
         "finite_score": true,
+        "inflated_output_aggregate_sha256": "08675dc4d129c8a1848de9c81dc158a80d6927061a60a8e8ac15befc5ecea107",
+        "inflated_output_total_bytes": 3662409600,
         "lane_tag": "[contest-CPU]",
         "n_samples": 600,
         "promotion_blockers": [],
         "promotion_eligible": false,
         "rank_or_kill_blockers": [],
         "recomputed_score": 0.22796397327358284,
+        "runtime_content_tree_sha256": "c2ed377bdb6d8964601ec6646d72f2016b9488a130c03c58f62190f809786516",
+        "runtime_file_sha256s": {
+          "archive_manifest.json": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc",
+          "contest_auth_eval.json": "df916e652c50753e40be9b44f1e61190b4afe23032ececa20fb7c3b5d28089a4",
+          "inflate.py": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+          "inflate.sh": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+          "pre_submission_compliance.contest_final.json": "3365f95b3448f0d0bf795b46f83d850709e6d1c4be73e9bc392ce61dd8cf7171",
+          "report.txt": "2b343cb5ab15bbb74160f45da3c4b3321edc17ba1440847371a3cf07a07352fd",
+          "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+          "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+          "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+        },
+        "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "runtime_inflate_sh_sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+        "runtime_tree_sha256": "98be9452a6c94ef40e7f8a91bf3c793eed100daa65d132f0d4473a5a4ae7d253",
         "score": 0.22796397327358284,
         "score_axis": "contest_cpu",
         "score_claim": false,
@@ -238,6 +417,8 @@
           "evidence_grade": "contest-CUDA",
           "exact_cuda_eval_complete": true,
           "finite_score": true,
+          "inflated_output_aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+          "inflated_output_total_bytes": 3662409600,
           "lane_tag": "[contest-CUDA]",
           "n_samples": 600,
           "promotion_blockers": [
@@ -251,6 +432,19 @@
             "requires_adjudicated_cuda_cpu_policy_review"
           ],
           "recomputed_score": 0.20661802072157426,
+          "runtime_content_tree_sha256": "699ed8bc1b7ff348069e04b7860f1a2e7dcc74cb2479ac5caeaa0ef2c862c0d9",
+          "runtime_file_sha256s": {
+            "archive_manifest.json": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc",
+            "inflate.py": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+            "inflate.sh": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+            "report.txt": "3622ee8d5f7d40e6d27c5accd9683eb266779f433833baf3ac48ad8667c1ebc8",
+            "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+            "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+            "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+          },
+          "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+          "runtime_inflate_sh_sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+          "runtime_tree_sha256": "e1408c6a8608c0e361d1096e19c20f85271f9edf915d3de8f765d666b37c3715",
           "score": 0.2066181354574151,
           "score_axis": "contest_cuda",
           "score_claim": true,
@@ -261,7 +455,7 @@
       "failure_class": "ok",
       "id": "source_cuda_eval_matches_packetir_source",
       "passed": true,
-      "requirement": "source CUDA baseline must be the PacketIR source archive, not an inferred neighbor"
+      "requirement": "source CUDA baseline must be supplied and must be the PacketIR source archive, not an inferred neighbor"
     },
     {
       "blocking": true,
@@ -274,6 +468,8 @@
         "evidence_grade": "contest-CUDA",
         "exact_cuda_eval_complete": true,
         "finite_score": true,
+        "inflated_output_aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+        "inflated_output_total_bytes": 3662409600,
         "lane_tag": "[contest-CUDA]",
         "n_samples": 600,
         "promotion_blockers": [
@@ -287,6 +483,19 @@
           "requires_adjudicated_cuda_cpu_policy_review"
         ],
         "recomputed_score": 0.20638030907530963,
+        "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+        "runtime_file_sha256s": {
+          "archive_manifest.json": "e2cbb2d50d41f14e2789e3f7f147a00d7c5fa1aa12564e035d6e7190a3a73da5",
+          "inflate.py": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f",
+          "inflate.sh": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+          "report.txt": "54fb3322c4e2cc380c50e988c513da7f6ec9abb94dde8c260b6032dfe4925c5d",
+          "src/codec.py": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc",
+          "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+          "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+        },
+        "runtime_inflate_py_sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f",
+        "runtime_inflate_sh_sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+        "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
         "score": 0.20638030907530963,
         "score_axis": "contest_cuda",
         "score_claim": true,
@@ -296,7 +505,22 @@
       "failure_class": "ok",
       "id": "current_best_cuda_eval_is_valid_reference",
       "passed": true,
-      "requirement": "current-best reference must be a valid contest-CUDA score claim"
+      "requirement": "current-best reference must be supplied as a valid contest-CUDA score claim"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "cuda_runtime_content_tree_sha256": "c2ed377bdb6d8964601ec6646d72f2016b9488a130c03c58f62190f809786516",
+        "cuda_runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "full_frame_runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "runtime_consumption_runtime_dir": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/recovered_exact_cuda_runtime",
+        "runtime_consumption_runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "runtime_consumption_runtime_source_tree_sha256": "13417fceea39c52033dd798a7f74df65597c77e56ee12b04f0f46b0284483d97"
+      },
+      "failure_class": "ok",
+      "id": "runtime_identity_matches_cuda_eval_runtime",
+      "passed": true,
+      "requirement": "local runtime proofs must identify the same inflate runtime content that exact CUDA auth eval scored"
     }
   ],
   "classification": "exact_measured_not_current_frontier",
@@ -312,13 +536,23 @@
     "same_candidate_archive_already_exact_evaluated",
     "candidate_not_current_frontier_on_contest_cuda"
   ],
+  "exact_eval_duplicate_keys": [
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "key": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d:c2ed377bdb6d8964601ec6646d72f2016b9488a130c03c58f62190f809786516:contest_cuda",
+      "runtime_content_tree_sha256": "c2ed377bdb6d8964601ec6646d72f2016b9488a130c03c58f62190f809786516",
+      "score_axis": "contest_cuda"
+    }
+  ],
   "input_paths": {
     "candidate_archive": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/pr106_r2_pr101_grammar_hnerv_brotli_repack_candidate.zip",
     "candidate_result": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/result.json",
     "cpu_eval": "experiments/results/modal_auth_eval_cpu/pr106_r2_pr101_grammar_lowlevel_repack_cpu_20260513_codex/contest_auth_eval.json",
     "cuda_eval": "experiments/results/modal_auth_eval/pr106_r2_pr101_grammar_lowlevel_repack_cuda_20260513_codex/contest_auth_eval.json",
     "current_best_cuda_eval": "experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513/contest_auth_eval.json",
+    "full_frame_parity_proof": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/same_runtime_full_frame_parity_local_cpu.json",
     "recode_profile": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/recode_profile.json",
+    "runtime_consumption_proof": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/runtime_consumption.json",
     "source_cuda_eval": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_pr101_grammar_20260511T180000Z/contest_auth_eval.json"
   },
   "interpretation": "This closure joins existing exact-eval artifacts. It does not authorize promotion, rank/kill decisions outside the stated axes, or another dispatch of the same archive SHA.",
@@ -331,6 +565,103 @@
       "proof_scope": "packet_ir_parser_accounting_not_runtime_inflate_consumption",
       "runtime_consumption_claim": false,
       "unconsumed_trailing_bytes": 0
+    },
+    "runtime_consumption_proof": {
+      "actual_score_affecting_sections": [
+        "framing_meta",
+        "pr106_payload",
+        "sidecar_payload"
+      ],
+      "archive_bytes": 186629,
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "blockers": [],
+      "contest_axis_claim": false,
+      "expected_archive_bytes": 186629,
+      "expected_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "expected_score_affecting_sections": [
+        "framing_meta",
+        "pr106_payload",
+        "sidecar_payload"
+      ],
+      "parser_consumed_byte_accounting_passed": true,
+      "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_all_score_affecting_sections_consumed": true,
+      "runtime_consumed_score_affecting_sections": {
+        "framing_meta": true,
+        "pr106_payload": true,
+        "sidecar_payload": true
+      },
+      "runtime_corrected_latents_digest_changed": true,
+      "runtime_dir": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/recovered_exact_cuda_runtime",
+      "runtime_file_sha256s": {
+        "inflate.py": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+        "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+        "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+        "src/pr101_grammar.py": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      },
+      "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+      "runtime_source_files": [
+        {
+          "bytes": 11038,
+          "path": "inflate.py",
+          "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+        },
+        {
+          "bytes": 16850,
+          "path": "src/codec.py",
+          "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+        },
+        {
+          "bytes": 2197,
+          "path": "src/model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 8240,
+          "path": "src/pr101_grammar.py",
+          "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+        }
+      ],
+      "runtime_source_tree_sha256": "13417fceea39c52033dd798a7f74df65597c77e56ee12b04f0f46b0284483d97",
+      "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+      "score_affecting_section_set_matches_packetir": true,
+      "score_claim": false,
+      "valid": true
+    },
+    "same_runtime_full_frame_parity": {
+      "candidate_archive_bytes": 186629,
+      "candidate_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "candidate_full_frame_digest": true,
+      "candidate_n_pairs_hashed": 600,
+      "candidate_n_pairs_total": 600,
+      "candidate_streaming_raw_sha256": "b272a1a4841f8fcc9fe843e0544ea0bb46b8359fe5f8cc9d81acf8bd3b7baf99",
+      "candidate_total_bytes": 3662409600,
+      "contest_axis_claim": false,
+      "device_axis_label": "local-cpu-streaming-runtime",
+      "expected_candidate_archive_bytes": 186629,
+      "expected_candidate_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "expected_n_pairs": 600,
+      "expected_source_archive_bytes": 186780,
+      "expected_source_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "expected_total_bytes": 3662409600,
+      "full_frame_inflate_output_parity_claim": true,
+      "proof_scope": "same_runtime_streaming_full_frame_hash",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+      "runtime_inflate_py_sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3",
+      "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+      "score_claim": false,
+      "source_archive_bytes": 186780,
+      "source_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "source_full_frame_digest": true,
+      "source_n_pairs_hashed": 600,
+      "source_n_pairs_total": 600,
+      "source_streaming_raw_sha256": "b272a1a4841f8fcc9fe843e0544ea0bb46b8359fe5f8cc9d81acf8bd3b7baf99",
+      "source_total_bytes": 3662409600,
+      "streaming_output_sha256_equal": true,
+      "streaming_output_total_bytes_equal": true,
+      "valid": true
     }
   },
   "promotion_eligible": false,
@@ -342,9 +673,9 @@
     "reactivate_if_a PacketIR candidate clears runtime_decoder_implemented plus exact CUDA closure and is not already measured"
   ],
   "ready_for_exact_eval_dispatch": false,
-  "recorded_at_utc": "2026-05-13T22:02:56+00:00",
+  "recorded_at_utc": "2026-05-13T23:00:25+00:00",
   "schema": "packetir_exact_eval_closure_v1",
-  "schema_version": 1,
+  "schema_version": 2,
   "score_claim": false,
   "tool": "tac.packetir_exact_closure",
   "warnings": [

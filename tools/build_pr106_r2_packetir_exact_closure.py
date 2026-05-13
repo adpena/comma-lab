@@ -57,6 +57,16 @@ DEFAULT_RECODE_PROFILE = (
     REPO_ROOT
     / "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/recode_profile.json"
 )
+DEFAULT_RUNTIME_CONSUMPTION_PROOF = (
+    REPO_ROOT
+    / "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/"
+    "runtime_consumption.json"
+)
+DEFAULT_FULL_FRAME_PARITY_PROOF = (
+    REPO_ROOT
+    / "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/"
+    "same_runtime_full_frame_parity_local_cpu.json"
+)
 
 
 def build_from_args(args: argparse.Namespace) -> dict[str, Any]:
@@ -73,6 +83,8 @@ def build_from_args(args: argparse.Namespace) -> dict[str, Any]:
         "current_best_cuda_eval": _rel(args.current_best_cuda_eval)
         if args.current_best_cuda_eval is not None
         else None,
+        "runtime_consumption_proof": _rel(args.runtime_consumption_proof),
+        "full_frame_parity_proof": _rel(args.full_frame_parity_proof),
         "recode_profile": _rel(args.recode_profile) if args.recode_profile is not None else None,
     }
     return build_packetir_exact_closure(
@@ -81,8 +93,10 @@ def build_from_args(args: argparse.Namespace) -> dict[str, Any]:
         candidate_archive_path=args.candidate_archive,
         cuda_eval=read_json(args.cuda_eval),
         cpu_eval=_read_optional(args.cpu_eval),
-        source_cuda_eval=_read_optional(args.source_cuda_eval),
-        current_best_cuda_eval=_read_optional(args.current_best_cuda_eval),
+        source_cuda_eval=read_json(args.source_cuda_eval),
+        current_best_cuda_eval=read_json(args.current_best_cuda_eval),
+        runtime_consumption_proof=read_json(args.runtime_consumption_proof),
+        full_frame_parity_proof=read_json(args.full_frame_parity_proof),
         recode_profile=_read_optional(args.recode_profile),
         input_paths={key: value for key, value in input_paths.items() if value is not None},
         repo_root=REPO_ROOT,
@@ -103,6 +117,16 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_CURRENT_BEST_CUDA_EVAL,
     )
     parser.add_argument("--recode-profile", type=Path, default=DEFAULT_RECODE_PROFILE)
+    parser.add_argument(
+        "--runtime-consumption-proof",
+        type=Path,
+        default=DEFAULT_RUNTIME_CONSUMPTION_PROOF,
+    )
+    parser.add_argument(
+        "--full-frame-parity-proof",
+        type=Path,
+        default=DEFAULT_FULL_FRAME_PARITY_PROOF,
+    )
     parser.add_argument("--output-json", type=Path, default=DEFAULT_RESULT_DIR / "closure.json")
     parser.add_argument("--output-md", type=Path, default=DEFAULT_RESULT_DIR / "closure.md")
     args = parser.parse_args(argv)

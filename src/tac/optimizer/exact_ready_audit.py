@@ -61,6 +61,26 @@ def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _row_exact_eval_duplicate_key(row: Mapping[str, Any]) -> str | None:
+    archive_sha = _row_archive_sha(row)
+    runtime_sha = None
+    for key in ("runtime_content_tree_sha256", "candidate_runtime_content_tree_sha256"):
+        value = row.get(key)
+        if is_sha256(value):
+            runtime_sha = str(value).lower()
+            break
+    if runtime_sha is None:
+        runtime_manifest = row.get("runtime_manifest")
+        if isinstance(runtime_manifest, Mapping):
+            value = runtime_manifest.get("runtime_content_tree_sha256")
+            if is_sha256(value):
+                runtime_sha = str(value).lower()
+    score_axis = row.get("score_axis") or row.get("target_score_axis")
+    if archive_sha is None or runtime_sha is None or not isinstance(score_axis, str):
+        return None
+    return f"{archive_sha}:{runtime_sha}:{score_axis}"
+
+
 def _row_archive_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
     for key in ("candidate_archive_path", "archive_path"):
         path = resolve_path(row.get(key), repo_root=repo_root, queue_dir=queue_dir)
@@ -104,12 +124,18 @@ def _discover_packetir_exact_closure_records(repo_root: Path) -> dict[str, list[
         blockers = payload.get("duplicate_dispatch_blockers")
         if not isinstance(blockers, list) or not blockers:
             continue
+        exact_eval_duplicate_keys = [
+            str(item.get("key"))
+            for item in payload.get("exact_eval_duplicate_keys") or []
+            if isinstance(item, Mapping) and item.get("key")
+        ]
         records.setdefault(str(archive_sha).lower(), []).append(
             {
                 "closure_path": repo_rel(path, repo_root),
                 "classification": payload.get("classification"),
                 "lane_id": payload.get("lane_id"),
                 "duplicate_dispatch_blockers": [str(blocker) for blocker in blockers],
+                "exact_eval_duplicate_keys": exact_eval_duplicate_keys,
                 "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch"),
                 "score_claim": payload.get("score_claim"),
             }
@@ -120,6 +146,8 @@ def _discover_packetir_exact_closure_records(repo_root: Path) -> dict[str, list[
 def _packetir_exact_closure_blockers(
     archive_sha: str | None,
     closure_records: Mapping[str, list[dict[str, Any]]],
+    *,
+    exact_eval_duplicate_key: str | None = None,
 ) -> tuple[list[str], list[dict[str, Any]]]:
     if archive_sha is None:
         return [], []
@@ -133,6 +161,13 @@ def _packetir_exact_closure_blockers(
                 "packetir_exact_closure_duplicate_dispatch:"
                 f"{classification}:{duplicate_blocker}:{closure_path}"
             )
+        for duplicate_key in record.get("exact_eval_duplicate_keys", []):
+            if exact_eval_duplicate_key is not None and duplicate_key != exact_eval_duplicate_key:
+                continue
+            label = "packetir_exact_closure_exact_eval_duplicate_key"
+            if exact_eval_duplicate_key is not None:
+                label = "packetir_exact_closure_exact_eval_duplicate_key_match"
+            blockers.append(f"{label}:{classification}:{duplicate_key}:{closure_path}")
     return blockers, records
 
 
@@ -386,6 +421,7 @@ def audit_exact_ready_queue(
                 closure_blockers, closure_evidence = _packetir_exact_closure_blockers(
                     archive_sha,
                     closure_records,
+                    exact_eval_duplicate_key=_row_exact_eval_duplicate_key(row),
                 )
                 if closure_evidence:
                     custody_facts["packetir_exact_closure_records"] = closure_evidence
