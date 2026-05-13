@@ -1,0 +1,136 @@
+schema_version: 1
+name: substrate_a1_plus_lapose_modal_a100_dispatch
+lane_id: lane_a1_plus_lapose_composition_20260513
+summary: A1 + LAPose D1.D HIERARCHICAL composition first-anchor dispatch on Modal A100 (council 8-2 verdict; D3.B joint end-to-end; D4 PENDING deeper council).
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 40
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 3000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 4.50
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: 0.189
+predicted_delta: "central [contest-CPU prediction] 0.187-0.191 vs A1 0.192847 baseline [council §1 central band]"
+predicted_delta_basis: ".omx/research/grand_council_pose_axis_non_hnerv_a1_plus_lapose_20260513.md#executive-summary"
+literature_anchor: "Ballé, Minnen, Singh, Hwang, Johnston - 'Variational Image Compression with a Scale Hyperprior' ICLR 2018 + Yousfi/Fridrich detector-informed embedding"
+council_verdicts:
+  D1: "D1.D HIERARCHICAL (8-2)"
+  D2: "D2.B bounded with D2.A target (10-0)"
+  D3: "D3.B JOINT END-TO-END (operator-routed 2026-05-13)"
+  D4: "PENDING COUNCIL-D4-DEEPER (sister subagent verdict; primary impl = D4.B single-stage)"
+  D5: "D5.A + D5.C (7-3)"
+  D6: "BOTH AXES contest-CPU + contest-CUDA (10-0)"
+
+predicted_band: [0.185, 0.195]
+
+risk: |
+  First-anchor D1.D composition dispatch.  A1 substrate is FROZEN (loaded
+  verbatim from archive.zip); only the LAPose foveal residual head is
+  trained (rank-4 outer product, ~4K params, ~3-5 KB int8+Brotli sidecar).
+  Score-aware Lagrangian end-to-end (D3.B) means the head sees scorer
+  gradient through SegNet + PoseNet on the contest video; D2 bounded
+  budget (5 KB hard cap; 2 KB target) prevents the FiLM hijack failure
+  mode Contrarian identified in council §3.1.
+
+  D4 mode is operator-routable PENDING COUNCIL-D4-DEEPER verdict.  The
+  trainer ships D4.B (single-stage with new archive section appended to
+  A1's `x` blob) as the primary path per council lean.  D4.A two-stage
+  swap surface is documented in `tac.substrates.a1_plus_lapose.archive`
+  (`split_composition_archive` helper); D4.C no-grammar-change is
+  research-only until sister subagent verdict lands.
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable,
+  this lane requires BOTH `[contest-CUDA]` (inline) AND `[contest-CPU]`
+  (Linux x86_64 separate dispatch) before promotion.  First-anchor dispatch
+  is CUDA-only; the CPU axis follow-up is a separate operator decision.
+
+  Smoke-before-full pattern (Catalog #167): the operator-authorize wrapper
+  routes through `tools/run_modal_smoke_before_full.py` which fires a
+  100-epoch ~$0.30 Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON
+  present + score in plausible band [0.15, 0.25], then fires the full
+  3000-epoch A100 dispatch only on smoke-green.
+
+envelope_status: "FITS $20 envelope at p50 fallback (smoke $0.30 + full $4.50)"
+
+remote_driver: scripts/remote_lane_substrate_a1_plus_lapose.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --a1-archive
+    default_path: experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  - flag: --lapose-atom-manifest
+    default_path: .omx/research/artifacts/lapose_motion_atoms_20260505_codex/lapose_motion_atom_manifest_fixture.json
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_a1_plus_lapose.sh
+  cost_band_trainer: experiments/train_substrate_a1_plus_lapose.py
+  cost_band_epochs: 3000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_a1_plus_lapose.py
+
+env_overrides:
+  A1_PLUS_LAPOSE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  A1_PLUS_LAPOSE_A1_ARCHIVE: /workspace/pact/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  A1_PLUS_LAPOSE_ATOM_MANIFEST: /workspace/pact/.omx/research/artifacts/lapose_motion_atoms_20260505_codex/lapose_motion_atom_manifest_fixture.json
+  A1_PLUS_LAPOSE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  A1_PLUS_LAPOSE_OUTPUT_DIR: /workspace/pact/lane_a1_plus_lapose_results/output
+  A1_PLUS_LAPOSE_EPOCHS: "3000"
+  A1_PLUS_LAPOSE_UPSTREAM_DIR: /workspace/pact/upstream
+  A1_PLUS_LAPOSE_DEVICE: cuda
+  A1_PLUS_LAPOSE_RESIDUAL_RANK: "4"
+  A1_PLUS_LAPOSE_MAX_ATOMS: "64"
+  A1_PLUS_LAPOSE_D4_MODE: d4b_single_stage
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_a1_plus_lapose.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_a1_plus_lapose.py
+  - experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - tools/run_modal_smoke_before_full.py (Catalog #167)
+
+sentinel_files:
+  - experiments/train_substrate_a1_plus_lapose.py
+  - src/tac/substrates/a1_plus_lapose/architecture.py
+  - src/tac/substrates/a1_plus_lapose/archive.py
+  - src/tac/substrates/a1_plus_lapose/score_aware_loss.py
+  - src/tac/substrates/a1_plus_lapose/inflate.py
+
+notes: |
+  First-anchor dispatch for the A1 + LAPose D1.D HIERARCHICAL composition.
+  Council memo: `.omx/research/grand_council_pose_axis_non_hnerv_a1_plus_lapose_20260513.md`
+  Sister BUILD lane: `lane_a1_plus_lapose_composition_20260513`
+
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
+  this is a substrate-engineering lane (substrate-engineering LOC budget
+  per HNeRV parity lesson L7).  The 13-lesson audit landed 11/13 PASS in
+  the council memo §6; lessons 7 and 12 are addressed in the trainer
+  source review.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 3000) —
+  hand_calibrated_fallback p50 = $4.50 (n=0 anchors; this dispatch
+  bootstraps the calibration system for the A1+LAPose family).
+
+  Cross-ref:
+    .omx/research/siren_literature_review_20260513.md (paper lessons applied)
+    feedback_phase_b1_pivot_modal_source_staleness_fix_LANDED_20260512.md
+    feedback_modal_strategy_reevaluation_post_tier1_engineering_20260512.md

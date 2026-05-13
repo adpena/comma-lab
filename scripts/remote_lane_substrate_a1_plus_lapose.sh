@@ -1,0 +1,186 @@
+#!/bin/bash
+# Remote lane script: A1 + LAPose D1.D HIERARCHICAL composition first-anchor dispatch.
+#
+# Trainer: experiments/train_substrate_a1_plus_lapose.py
+# Lane: lane_a1_plus_lapose_composition_20260513
+#
+# Per CLAUDE.md "Forbidden re-implementing remote bootstrap inline" + Catalog
+# #163: this script DELEGATES bootstrap to scripts/remote_archive_only_eval.sh's
+# bootstrap_runtime_deps() function via the SOURCE_ONLY sentinel.
+#
+# Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable: this
+# is a FIRST-ANCHOR research dispatch on CUDA only; the resulting tag is
+# [contest-CUDA] single-axis (CPU axis required separately before promotion).
+#
+# Council memo: .omx/research/grand_council_pose_axis_non_hnerv_a1_plus_lapose_20260513.md
+# Paper review: .omx/research/siren_literature_review_20260513.md
+#
+# Heartbeat: every 5 min per CLAUDE.md "Remote code parity".
+set -euo pipefail
+
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-}"
+LANE_ID="lane_a1_plus_lapose_composition_20260513"
+TAG="${TAG:-substrate_a1_plus_lapose}"
+LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_a1_plus_lapose_results}"
+OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+PROVENANCE="$LOG_DIR/provenance.json"
+
+# Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
+A1_PLUS_LAPOSE_A1_ARCHIVE="${A1_PLUS_LAPOSE_A1_ARCHIVE:-$WORKSPACE/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip}"
+A1_PLUS_LAPOSE_ATOM_MANIFEST="${A1_PLUS_LAPOSE_ATOM_MANIFEST:-$WORKSPACE/.omx/research/artifacts/lapose_motion_atoms_20260505_codex/lapose_motion_atom_manifest_fixture.json}"
+A1_PLUS_LAPOSE_VIDEO_PATH="${A1_PLUS_LAPOSE_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
+A1_PLUS_LAPOSE_OUTPUT_DIR="${A1_PLUS_LAPOSE_OUTPUT_DIR:-$OUTPUT_DIR}"
+A1_PLUS_LAPOSE_EPOCHS="${A1_PLUS_LAPOSE_EPOCHS:-3000}"
+A1_PLUS_LAPOSE_UPSTREAM_DIR="${A1_PLUS_LAPOSE_UPSTREAM_DIR:-$WORKSPACE/upstream}"
+A1_PLUS_LAPOSE_DEVICE="${A1_PLUS_LAPOSE_DEVICE:-cuda}"
+A1_PLUS_LAPOSE_RESIDUAL_RANK="${A1_PLUS_LAPOSE_RESIDUAL_RANK:-4}"
+A1_PLUS_LAPOSE_MAX_ATOMS="${A1_PLUS_LAPOSE_MAX_ATOMS:-64}"
+A1_PLUS_LAPOSE_D4_MODE="${A1_PLUS_LAPOSE_D4_MODE:-d4b_single_stage}"
+
+DISPATCH_INSTANCE_JOB_ID="${A1_PLUS_LAPOSE_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
+DISPATCH_CLAIMS_PATH="${A1_PLUS_LAPOSE_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
+DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
+HEARTBEAT_PID=""
+
+log() { echo "[lane-a1-plus-lapose] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+
+mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
+cd "$WORKSPACE"
+
+# Stage 0: dispatch claim verification.
+if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
+    log "FATAL: A1_PLUS_LAPOSE_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required"
+    exit 21
+fi
+if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+    log "FATAL: claim helper missing at $WORKSPACE/tools/claim_lane_dispatch.py"
+    exit 21
+fi
+if [ ! -f "$DISPATCH_CLAIMS_PATH" ]; then
+    log "FATAL: dispatch-claims ledger missing at $DISPATCH_CLAIMS_PATH"
+    exit 21
+fi
+
+# Stage 0b: NVDEC probe (best-effort).
+if [ -x "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    log "stage_0b_nvdec_probe_begin"
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+        log "FATAL: NVDEC probe failed (host hardware/driver/DALI mismatch); refusing dispatch"
+        exit 2
+    }
+    log "stage_0b_nvdec_probe_done"
+else
+    log "WARN: scripts/probe_nvdec.sh missing - skipping NVDEC early-fail probe"
+fi
+
+# Stage 1: bootstrap runtime deps (canonical, per Catalog #163).
+if [ ! -f "$WORKSPACE/scripts/remote_archive_only_eval.sh" ]; then
+    log "FATAL: canonical bootstrap script missing at scripts/remote_archive_only_eval.sh"
+    exit 22
+fi
+# shellcheck source=/dev/null
+REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source "$WORKSPACE/scripts/remote_archive_only_eval.sh"
+
+if declare -f bootstrap_runtime_deps > /dev/null 2>&1; then
+    log "stage_1_bootstrap_runtime_deps_begin"
+    bootstrap_runtime_deps
+    log "stage_1_bootstrap_runtime_deps_done PYBIN=${PYBIN:-unset}"
+else
+    log "FATAL: bootstrap_runtime_deps function not found after sourcing scripts/remote_archive_only_eval.sh"
+    exit 23
+fi
+
+if [ -z "${PYBIN:-}" ] || [ ! -x "$PYBIN" ]; then
+    log "FATAL: PYBIN not set or not executable after bootstrap (PYBIN=${PYBIN:-unset})"
+    exit 24
+fi
+
+# Stage 1b: validate required input files PRE-dispatch (Catalog #152).
+log "stage_1b_required_input_files_validate_begin"
+"$PYBIN" "$WORKSPACE/tools/validate_dispatch_required_inputs.py" \
+    --trainer "$WORKSPACE/experiments/train_substrate_a1_plus_lapose.py" \
+    || {
+    log "FATAL: Catalog #152 required input file validation failed; refusing dispatch"
+    exit 25
+}
+log "stage_1b_required_input_files_validate_done"
+
+# Stage 2: provenance + remote code parity.
+log "stage_2_provenance_begin"
+GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")
+DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1 || echo "no-driver")
+"$PYBIN" -c "
+import json, time, torch
+prov = {
+    'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    'lane_id': '$LANE_ID',
+    'dispatch_instance_job_id': '$DISPATCH_INSTANCE_JOB_ID',
+    'dispatch_platform': '$DISPATCH_PLATFORM',
+    'git_hash': '$GIT_HASH',
+    'gpu_name': '$GPU_NAME',
+    'driver_version': '$DRIVER_VER',
+    'torch_version': torch.__version__,
+    'cuda_version': getattr(torch.version, 'cuda', None),
+    'cuda_available': torch.cuda.is_available(),
+    'a1_archive': '$A1_PLUS_LAPOSE_A1_ARCHIVE',
+    'lapose_atom_manifest': '$A1_PLUS_LAPOSE_ATOM_MANIFEST',
+    'video_path': '$A1_PLUS_LAPOSE_VIDEO_PATH',
+    'upstream_dir': '$A1_PLUS_LAPOSE_UPSTREAM_DIR',
+    'epochs': $A1_PLUS_LAPOSE_EPOCHS,
+    'device': '$A1_PLUS_LAPOSE_DEVICE',
+    'residual_rank': $A1_PLUS_LAPOSE_RESIDUAL_RANK,
+    'max_atoms': $A1_PLUS_LAPOSE_MAX_ATOMS,
+    'd4_mode': '$A1_PLUS_LAPOSE_D4_MODE',
+    'predicted_band': [0.185, 0.195],
+    'predicted_basis': 'grand_council_pose_axis_non_hnerv_a1_plus_lapose_20260513_central_band',
+}
+import pathlib
+pathlib.Path('$PROVENANCE').write_text(json.dumps(prov, indent=2, sort_keys=True))
+print('[provenance]', json.dumps(prov, indent=2, sort_keys=True))
+"
+log "stage_2_provenance_done"
+
+# Stage 3: heartbeat watchdog.
+(
+    while true; do
+        echo "[heartbeat] $(date -u +%FT%TZ) lane=$LANE_ID alive" >> "$LOG_DIR/heartbeat.log"
+        sleep 300
+    done
+) &
+HEARTBEAT_PID=$!
+trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
+
+# Stage 4: invoke trainer.
+log "stage_4_trainer_invoke_begin epochs=$A1_PLUS_LAPOSE_EPOCHS device=$A1_PLUS_LAPOSE_DEVICE d4_mode=$A1_PLUS_LAPOSE_D4_MODE max_atoms=$A1_PLUS_LAPOSE_MAX_ATOMS residual_rank=$A1_PLUS_LAPOSE_RESIDUAL_RANK"
+TRAIN_START_UTC=$(date -u +%FT%TZ)
+set +e
+"$PYBIN" experiments/train_substrate_a1_plus_lapose.py \
+    --a1-archive "$A1_PLUS_LAPOSE_A1_ARCHIVE" \
+    --lapose-atom-manifest "$A1_PLUS_LAPOSE_ATOM_MANIFEST" \
+    --video-path "$A1_PLUS_LAPOSE_VIDEO_PATH" \
+    --output-dir "$A1_PLUS_LAPOSE_OUTPUT_DIR" \
+    --epochs "$A1_PLUS_LAPOSE_EPOCHS" \
+    --upstream-dir "$A1_PLUS_LAPOSE_UPSTREAM_DIR" \
+    --device "$A1_PLUS_LAPOSE_DEVICE" \
+    --residual-rank "$A1_PLUS_LAPOSE_RESIDUAL_RANK" \
+    --max-atoms "$A1_PLUS_LAPOSE_MAX_ATOMS" \
+    --d4-mode "$A1_PLUS_LAPOSE_D4_MODE" \
+    2>&1 | tee -a "$LOG_DIR/run.log"
+TRAIN_RC=${PIPESTATUS[0]}
+set -e
+TRAIN_END_UTC=$(date -u +%FT%TZ)
+log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
+
+# Stage 5: predicted-band enforcement post-smoke (per DEFECT #8 fix; sister-script pattern).
+AUTH_EVAL_JSON="$A1_PLUS_LAPOSE_OUTPUT_DIR/auth_eval.json"
+ARCHIVE_PATH="$A1_PLUS_LAPOSE_OUTPUT_DIR/submission_dir/archive.zip"
+if [ -f "$AUTH_EVAL_JSON" ]; then
+    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
+    log "LANE_A1_PLUS_LAPOSE_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+else
+    log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 13)"
+fi
+
+exit "$TRAIN_RC"
