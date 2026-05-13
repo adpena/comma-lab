@@ -43,6 +43,9 @@ FIXED_DATE_TIME = (1980, 1, 1, 0, 0, 0)
 SCHEMA_VERSION = 1
 
 REPACKABLE_SECTIONS = ("decoder_packed_brotli", "latents_and_sidecar_brotli")
+A1_SPLIT_BROTLI_STREAM_COUNT = 7
+HEADER_FORMAT_FF_LEN24 = "ff_len24"
+HEADER_FORMAT_A1_U32_SECTION_TOTAL = "a1_u32_section_total"
 
 # Adversarial review 2026-05-06 (BUG #5): single source of truth for section
 # names previously hardcoded across hnerv_wavelet_residual / sidechannel /
@@ -80,9 +83,18 @@ class PackedHnervPayload:
     header: bytes
     decoder_packed_brotli: bytes
     latents_and_sidecar_brotli: bytes
+    header_format: str = HEADER_FORMAT_FF_LEN24
+
+    @property
+    def header_section_name(self) -> str:
+        if self.header_format == HEADER_FORMAT_FF_LEN24:
+            return "packed_header_ff_len24"
+        if self.header_format == HEADER_FORMAT_A1_U32_SECTION_TOTAL:
+            return "packed_header_a1_u32_section_total"
+        raise HnervLowlevelPackError(f"unknown packed HNeRV header format: {self.header_format}")
 
     def section_bytes(self, name: str) -> bytes:
-        if name == "packed_header_ff_len24":
+        if name == self.header_section_name:
             return self.header
         if name == "decoder_packed_brotli":
             return self.decoder_packed_brotli
@@ -92,9 +104,15 @@ class PackedHnervPayload:
 
     def to_bytes(self) -> bytes:
         decoder_len = len(self.decoder_packed_brotli)
-        if decoder_len > 0xFFFFFF:
-            raise HnervLowlevelPackError(f"decoder section too large for len24: {decoder_len}")
-        header = bytes([0xFF]) + decoder_len.to_bytes(3, "little")
+        if self.header_format == HEADER_FORMAT_FF_LEN24:
+            if decoder_len > 0xFFFFFF:
+                raise HnervLowlevelPackError(f"decoder section too large for len24: {decoder_len}")
+            header = bytes([0xFF]) + decoder_len.to_bytes(3, "little")
+        elif self.header_format == HEADER_FORMAT_A1_U32_SECTION_TOTAL:
+            section_total = 4 + decoder_len
+            header = section_total.to_bytes(4, "little")
+        else:
+            raise HnervLowlevelPackError(f"unknown packed HNeRV header format: {self.header_format}")
         return header + self.decoder_packed_brotli + self.latents_and_sidecar_brotli
 
 
@@ -108,6 +126,8 @@ class PackedArchiveView:
     hnerv_payload: bytes
     sidecar_packet: PR106SidecarPacket | None = None
     stored_member: StoredZipMember | None = None
+    repackable_sections: tuple[str, ...] = REPACKABLE_SECTIONS
+    decoder_brotli_stream_count: int | None = None
 
     def emit_payload(self, packed: PackedHnervPayload) -> bytes:
         inner = packed.to_bytes()
@@ -212,6 +232,29 @@ def parse_ff_packed_brotli_hnerv(payload: bytes) -> PackedHnervPayload:
         header=payload[:4],
         decoder_packed_brotli=payload[decoder_start:decoder_end],
         latents_and_sidecar_brotli=payload[decoder_end:],
+        header_format=HEADER_FORMAT_FF_LEN24,
+    )
+
+
+def parse_a1_headered_split_brotli_hnerv(payload: bytes) -> PackedHnervPayload:
+    """Parse the A1/PR101-style ``uint32 section_total + split-brotli`` payload."""
+
+    if len(payload) < 4:
+        raise HnervLowlevelPackError("A1 packed HNeRV payload is shorter than 4-byte header")
+    section_total = int.from_bytes(payload[:4], "little")
+    if section_total < 4 or section_total > len(payload):
+        raise HnervLowlevelPackError(
+            f"A1 decoder section total {section_total} exceeds payload bytes {len(payload)}"
+        )
+    decoder_blob = payload[4:section_total]
+    if not decoder_blob:
+        raise HnervLowlevelPackError("A1 decoder split-brotli section is empty")
+    _split_brotli_streams(decoder_blob, A1_SPLIT_BROTLI_STREAM_COUNT)
+    return PackedHnervPayload(
+        header=payload[:4],
+        decoder_packed_brotli=decoder_blob,
+        latents_and_sidecar_brotli=payload[section_total:],
+        header_format=HEADER_FORMAT_A1_U32_SECTION_TOTAL,
     )
 
 
@@ -237,12 +280,22 @@ def read_packed_archive_view(path: str | Path) -> PackedArchiveView:
             sidecar_packet=packet,
             stored_member=stored_member,
         )
-    packed = parse_ff_packed_brotli_hnerv(archive.payload)
+    if archive.payload and archive.payload[0] == 0xFF:
+        packed = parse_ff_packed_brotli_hnerv(archive.payload)
+        return PackedArchiveView(
+            archive=archive,
+            packed=packed,
+            payload_kind="raw_ff_hnerv",
+            hnerv_payload=archive.payload,
+        )
+    packed = parse_a1_headered_split_brotli_hnerv(archive.payload)
     return PackedArchiveView(
         archive=archive,
         packed=packed,
-        payload_kind="raw_ff_hnerv",
+        payload_kind="a1_headered_split_brotli_hnerv",
         hnerv_payload=archive.payload,
+        repackable_sections=("decoder_packed_brotli",),
+        decoder_brotli_stream_count=A1_SPLIT_BROTLI_STREAM_COUNT,
     )
 
 
@@ -254,13 +307,18 @@ def brotli_recode_search(
     lgwins: Iterable[int | None] = (None, 18, 20, 22, 24),
     lgblocks: Iterable[int | None] = (None,),
     jobs: int = 1,
+    stream_count: int | None = None,
 ) -> tuple[BrotliRecodeChoice, bytes]:
     """Return the smallest deterministic brotli recode for one section."""
 
     if section_name not in REPACKABLE_SECTIONS:
         raise HnervLowlevelPackError(f"section is not brotli-repackable: {section_name}")
     try:
-        raw = brotli.decompress(compressed)
+        raw: bytes | tuple[bytes, ...]
+        if stream_count is None:
+            raw = brotli.decompress(compressed)
+        else:
+            raw = tuple(row[1] for row in _split_brotli_streams(compressed, stream_count))
     except brotli.error as exc:
         raise HnervLowlevelPackError(f"{section_name} is not brotli-decompressible") from exc
 
@@ -358,8 +416,10 @@ def build_lowlevel_brotli_repack_candidate(
     replacements: dict[str, bytes] = {}
     attempts: list[dict[str, Any]] = []
     target_set = tuple(dict.fromkeys(str(section) for section in target_sections))
+    if target_set == REPACKABLE_SECTIONS and view.repackable_sections != REPACKABLE_SECTIONS:
+        target_set = view.repackable_sections
     for section_name in target_set:
-        if section_name not in REPACKABLE_SECTIONS:
+        if section_name not in view.repackable_sections:
             blockers.append(f"target_section_not_repackable:{section_name}")
             continue
         source_bytes = packed.section_bytes(section_name)
@@ -371,6 +431,7 @@ def build_lowlevel_brotli_repack_candidate(
                 lgwins=lgwins,
                 lgblocks=lgblocks,
                 jobs=jobs,
+                stream_count=_section_brotli_stream_count(view, section_name),
             )
         except HnervLowlevelPackError as exc:
             blockers.append(f"brotli_recode_failed:{section_name}:{exc}")
@@ -426,7 +487,12 @@ def build_lowlevel_brotli_repack_candidate(
     candidate_archive_sha = sha256_file(candidate_archive_path)
     candidate_archive_bytes = candidate_archive_path.stat().st_size
     candidate_packed_checked = _parse_candidate_inner_payload(view, candidate_payload)
-    raw_equivalence = _brotli_raw_equivalence(packed, candidate_packed_checked)
+    raw_equivalence = _brotli_raw_equivalence(
+        packed,
+        candidate_packed_checked,
+        repackable_sections=view.repackable_sections,
+        decoder_brotli_stream_count=view.decoder_brotli_stream_count,
+    )
     candidate_diff = _candidate_diff(
         source_label=source_label,
         source_archive=archive,
@@ -513,7 +579,7 @@ def _bounded_jobs(jobs: int, attempt_count: int) -> int:
 def _brotli_recode_attempt(
     section_name: str,
     source: bytes,
-    raw: bytes,
+    raw: bytes | Sequence[bytes],
     quality: int,
     lgwin: int | None,
     lgblock: int | None,
@@ -523,11 +589,16 @@ def _brotli_recode_attempt(
         kwargs["lgwin"] = lgwin
     if lgblock is not None:
         kwargs["lgblock"] = lgblock
-    candidate = brotli.compress(raw, **kwargs)
+    if isinstance(raw, bytes):
+        raw_bytes = len(raw)
+        candidate = brotli.compress(raw, **kwargs)
+    else:
+        raw_bytes = sum(len(chunk) for chunk in raw)
+        candidate = b"".join(brotli.compress(chunk, **kwargs) for chunk in raw)
     return (
         BrotliRecodeChoice(
             section_name=section_name,
-            raw_bytes=len(raw),
+            raw_bytes=raw_bytes,
             source_bytes=len(source),
             candidate_bytes=len(candidate),
             quality=quality,
@@ -613,7 +684,7 @@ def _audit_source_against_manifest(
         blockers.append("source_manifest_missing_sections")
         return blockers
     expected_sections = [
-        ("packed_header_ff_len24", 0, 0, 4),
+        (packed.header_section_name, 0, 0, 4),
         ("decoder_packed_brotli", 1, 4, 4 + len(packed.decoder_packed_brotli)),
         (
             "latents_and_sidecar_brotli",
@@ -665,7 +736,7 @@ def _candidate_diff(
 ) -> dict[str, Any]:
     rows = []
     for section_name in (
-        "packed_header_ff_len24",
+        packed.header_section_name,
         "decoder_packed_brotli",
         "latents_and_sidecar_brotli",
     ):
@@ -706,14 +777,18 @@ def _candidate_diff(
 def _brotli_raw_equivalence(
     source: PackedHnervPayload,
     candidate: PackedHnervPayload,
+    *,
+    repackable_sections: Sequence[str] = REPACKABLE_SECTIONS,
+    decoder_brotli_stream_count: int | None = None,
 ) -> list[dict[str, Any]]:
     rows = []
-    for section_name in REPACKABLE_SECTIONS:
+    for section_name in repackable_sections:
         source_section = source.section_bytes(section_name)
         candidate_section = candidate.section_bytes(section_name)
         try:
-            source_raw = brotli.decompress(source_section)
-            candidate_raw = brotli.decompress(candidate_section)
+            stream_count = decoder_brotli_stream_count if section_name == "decoder_packed_brotli" else None
+            source_raw = _brotli_section_raw(source_section, stream_count=stream_count)
+            candidate_raw = _brotli_section_raw(candidate_section, stream_count=stream_count)
             raw_equal = source_raw == candidate_raw
             source_raw_sha = sha256_bytes(source_raw)
             candidate_raw_sha = sha256_bytes(candidate_raw)
@@ -779,7 +854,7 @@ def _derive_payload_section_manifest(
     start = 0
     for index, (name, data, role) in enumerate(
         [
-            ("packed_header_ff_len24", view.packed.header, "control_or_metadata"),
+            (view.packed.header_section_name, view.packed.header, "control_or_metadata"),
             (
                 "decoder_packed_brotli",
                 view.packed.decoder_packed_brotli,
@@ -829,12 +904,46 @@ def _parse_candidate_inner_payload(
     candidate_payload: bytes,
 ) -> PackedHnervPayload:
     if view.sidecar_packet is None:
+        if view.payload_kind == "a1_headered_split_brotli_hnerv":
+            return parse_a1_headered_split_brotli_hnerv(candidate_payload)
         return parse_ff_packed_brotli_hnerv(candidate_payload)
     try:
         packet = parse_pr106_sidecar_packet(candidate_payload)
     except ValueError as exc:
         raise HnervLowlevelPackError(f"candidate PR106 sidecar packet invalid: {exc}") from exc
     return parse_ff_packed_brotli_hnerv(packet.pr106_bytes)
+
+
+def _section_brotli_stream_count(view: PackedArchiveView, section_name: str) -> int | None:
+    if section_name == "decoder_packed_brotli":
+        return view.decoder_brotli_stream_count
+    return None
+
+
+def _brotli_section_raw(data: bytes, *, stream_count: int | None) -> bytes:
+    if stream_count is None:
+        return brotli.decompress(data)
+    return b"".join(raw for _compressed, raw in _split_brotli_streams(data, stream_count))
+
+
+def _split_brotli_streams(data: bytes, stream_count: int) -> list[tuple[bytes, bytes]]:
+    if stream_count < 1:
+        raise HnervLowlevelPackError(f"stream_count must be >= 1, got {stream_count}")
+    rows: list[tuple[bytes, bytes]] = []
+    pos = 0
+    for _ in range(stream_count):
+        start = pos
+        dec = brotli.Decompressor()
+        chunks: list[bytes] = []
+        while pos < len(data) and not dec.is_finished():
+            chunks.append(dec.process(data[pos : pos + 1]))
+            pos += 1
+        if not dec.is_finished():
+            raise HnervLowlevelPackError("truncated split-brotli HNeRV decoder stream")
+        rows.append((data[start:pos], b"".join(chunks)))
+    if pos != len(data):
+        raise HnervLowlevelPackError("trailing split-brotli HNeRV decoder payload")
+    return rows
 
 
 def _packet_ir_consumed_byte_proof(
@@ -912,6 +1021,7 @@ __all__ = [
     "SingleMemberArchive",
     "brotli_recode_search",
     "build_lowlevel_brotli_repack_candidate",
+    "parse_a1_headered_split_brotli_hnerv",
     "parse_ff_packed_brotli_hnerv",
     "read_packed_archive_view",
     "read_strict_single_member_zip",

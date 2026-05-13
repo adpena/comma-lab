@@ -6,7 +6,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "tools" / "probe_inflate_shell_output_parity.py"
 
@@ -47,6 +46,52 @@ def _write_packet(root: Path, *, payload: bytes, output_suffix: str = "") -> tup
     )
     inflate.chmod(0o755)
     return archive, inflate
+
+
+def _write_python3_packet(root: Path, *, payload: bytes) -> tuple[Path, Path]:
+    root.mkdir(parents=True)
+    archive = root / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", payload)
+    inflate = root / "inflate.sh"
+    inflate.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "DATA_DIR=\"$1\"",
+                "OUTPUT_DIR=\"$2\"",
+                "FILE_LIST=\"$3\"",
+                "mkdir -p \"$OUTPUT_DIR\"",
+                "while IFS= read -r line; do",
+                "  [ -z \"$line\" ] && continue",
+                "  base=\"${line%.*}\"",
+                "  python3 \"$DATA_DIR/x\" \"$OUTPUT_DIR/${base}.raw\"",
+                "done < \"$FILE_LIST\"",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+    return archive, inflate
+
+
+def _write_fake_python(root: Path) -> Path:
+    fake_python = root / "fake-python"
+    fake_python.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "cat \"$1\" > \"$2\"",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    fake_python.chmod(0o755)
+    return fake_python
 
 
 def test_inflate_shell_parity_probe_passes_for_identical_outputs(tmp_path: Path) -> None:
@@ -164,4 +209,38 @@ def test_inflate_shell_parity_probe_resolves_relative_inputs(tmp_path: Path, mon
     )
 
     assert report["passed"] is True
+    assert report["source"]["outputs"] == report["candidate"]["outputs"]
+
+
+def test_inflate_shell_parity_probe_python_bin_shims_python3(tmp_path: Path) -> None:
+    mod = _load_module()
+    source_archive, source_inflate = _write_python3_packet(tmp_path / "source", payload=b"payload")
+    candidate_archive, candidate_inflate = _write_python3_packet(
+        tmp_path / "candidate",
+        payload=b"payload",
+    )
+    fake_python = _write_fake_python(tmp_path)
+
+    report = mod.build_report(
+        mod.parse_args(
+            [
+                "--source-archive",
+                str(source_archive),
+                "--source-inflate-sh",
+                str(source_inflate),
+                "--candidate-archive",
+                str(candidate_archive),
+                "--candidate-inflate-sh",
+                str(candidate_inflate),
+                "--python-bin",
+                str(fake_python),
+            ]
+        ),
+        raw_argv=[],
+    )
+
+    resolution = report["runtime_environment"]["python_resolution"]
+    assert report["passed"] is True
+    assert sorted(resolution["python_shims"]) == ["python", "python3"]
+    assert sorted(resolution["python_shim_sha256s"]) == ["python", "python3"]
     assert report["source"]["outputs"] == report["candidate"]["outputs"]

@@ -135,6 +135,18 @@ def _output_map(record: dict[str, Any]) -> dict[str, tuple[int, str]]:
     }
 
 
+def _write_python_shim(shim_dir: Path, name: str, python_bin: Path) -> Path:
+    shim = shim_dir / name
+    shim.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        f"exec {str(python_bin)!r} \"$@\"\n",
+        encoding="utf-8",
+    )
+    shim.chmod(0o755)
+    return shim
+
+
 def build_report(args: argparse.Namespace, *, raw_argv: list[str]) -> dict[str, Any]:
     video_names = args.video_name or ["0.mkv"]
     source_archive = args.source_archive.resolve()
@@ -155,26 +167,25 @@ def build_report(args: argparse.Namespace, *, raw_argv: list[str]) -> dict[str, 
     python_env_record: dict[str, Any] = {
         "python_bin_supplied": args.python_bin.as_posix() if args.python_bin is not None else None,
         "python_shim_dir": None,
+        "python_shims": {},
+        "python_shim_sha256s": {},
     }
     if args.python_bin is not None:
         python_bin = args.python_bin if args.python_bin.is_absolute() else Path.cwd() / args.python_bin
         python_bin = python_bin.absolute()
         shim_dir = work_root / "python_path_shim"
         shim_dir.mkdir(parents=True, exist_ok=True)
-        shim = shim_dir / "python"
-        if not shim.exists():
-            shim.write_text(
-                "#!/usr/bin/env bash\n"
-                "set -euo pipefail\n"
-                f"exec {str(python_bin)!r} \"$@\"\n",
-                encoding="utf-8",
-            )
-            shim.chmod(0o755)
+        shims = {
+            name: _write_python_shim(shim_dir, name, python_bin)
+            for name in ("python", "python3")
+        }
         env["PATH"] = f"{shim_dir}{os.pathsep}{env.get('PATH', '')}"
         python_env_record = {
             "python_bin_supplied": python_bin.as_posix(),
             "python_shim_dir": shim_dir.as_posix(),
-            "python_shim_sha256": sha256_file(shim),
+            "python_shims": {name: path.as_posix() for name, path in shims.items()},
+            "python_shim_sha256s": {name: sha256_file(path) for name, path in shims.items()},
+            "python_shim_sha256": sha256_file(shims["python"]),
         }
     try:
         source = _run_inflate(

@@ -13,6 +13,7 @@ from tac.hnerv_lowlevel_packer import (
     HnervLowlevelPackError,
     brotli_recode_search,
     build_lowlevel_brotli_repack_candidate,
+    parse_a1_headered_split_brotli_hnerv,
     parse_ff_packed_brotli_hnerv,
     read_packed_archive_view,
     read_strict_single_member_zip,
@@ -42,6 +43,22 @@ def test_parse_ff_packed_payload_round_trips_sections() -> None:
     assert parsed.to_bytes() == payload
     assert brotli.decompress(parsed.decoder_packed_brotli).startswith(b"decoder")
     assert brotli.decompress(parsed.latents_and_sidecar_brotli).startswith(b"latent")
+
+
+def test_parse_a1_headered_split_brotli_payload_round_trips_sections() -> None:
+    payload = _a1_payload(
+        [
+            brotli.compress((f"decoder-stream-{idx}-".encode() * 500), quality=1)
+            for idx in range(7)
+        ],
+        b"latent-and-sidecar",
+    )
+
+    parsed = parse_a1_headered_split_brotli_hnerv(payload)
+
+    assert parsed.header_section_name == "packed_header_a1_u32_section_total"
+    assert parsed.to_bytes() == payload
+    assert parsed.latents_and_sidecar_brotli == b"latent-and-sidecar"
 
 
 def test_strict_single_member_zip_rejects_zip_slip(tmp_path: Path) -> None:
@@ -157,6 +174,46 @@ def test_build_lowlevel_brotli_repack_candidate_reemits_pr106_sidecar_wrapper(
     assert brotli.decompress(candidate_inner.decoder_packed_brotli) == brotli.decompress(
         source_inner.decoder_packed_brotli
     )
+
+
+def test_build_lowlevel_brotli_repack_candidate_reemits_a1_split_brotli(
+    tmp_path: Path,
+) -> None:
+    source_streams = [
+        brotli.compress((f"a1-decoder-stream-{idx}-".encode() * 4000), quality=1)
+        for idx in range(7)
+    ]
+    source_archive = tmp_path / "a1.zip"
+    write_stored_single_member_zip(
+        source_archive,
+        member_name="x",
+        payload=_a1_payload(source_streams, b"latent-lzma-and-sidecar"),
+    )
+
+    result = build_lowlevel_brotli_repack_candidate(
+        source_archive=source_archive,
+        scorecard={"schema_version": 1, "payload_section_manifests": []},
+        source_label="A1",
+        output_dir=tmp_path / "out",
+        qualities=[11],
+        lgwins=[None],
+    )
+
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+    assert result["ready_for_archive_preflight"] is True
+    assert result["source_payload_kind"] == "a1_headered_split_brotli_hnerv"
+    assert result["scorecard_anchor"]["derived_from_source_archive"] is True
+    assert {row["section_name"] for row in result["attempts"]} == {"decoder_packed_brotli"}
+    assert all(row["raw_equal"] is True for row in result["brotli_raw_equivalence"])
+
+    candidate = read_strict_single_member_zip(result["candidate_archive_path"])
+    candidate_parsed = parse_a1_headered_split_brotli_hnerv(candidate.payload)
+    source_parsed = parse_a1_headered_split_brotli_hnerv(
+        read_strict_single_member_zip(source_archive).payload
+    )
+    assert candidate_parsed.latents_and_sidecar_brotli == source_parsed.latents_and_sidecar_brotli
+    assert candidate_parsed.decoder_packed_brotli != source_parsed.decoder_packed_brotli
 
 
 def test_brotli_recode_search_parallel_matches_serial() -> None:
@@ -276,6 +333,12 @@ def _packed_payload(decoder_brotli: bytes, latents_brotli: bytes) -> bytes:
     if len(decoder_brotli) > 0xFFFFFF:
         raise AssertionError("test decoder too large")
     return bytes([0xFF]) + len(decoder_brotli).to_bytes(3, "little") + decoder_brotli + latents_brotli
+
+
+def _a1_payload(decoder_streams: list[bytes], tail: bytes) -> bytes:
+    decoder_blob = b"".join(decoder_streams)
+    section_total = 4 + len(decoder_blob)
+    return section_total.to_bytes(4, "little") + decoder_blob + tail
 
 
 def _sidecar_packet(inner_payload: bytes, *, sidecar_payload: bytes):
