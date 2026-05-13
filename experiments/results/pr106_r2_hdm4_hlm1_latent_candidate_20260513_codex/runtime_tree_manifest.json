@@ -1,5 +1,5 @@
 {
-  "dispatch_runtime": "modal_uploaded_submission_dir",
+  "dispatch_runtime": "modal_cuda_uploaded_submission_dir",
   "local_runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
   "local_runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
   "local_static_release_surface_runtime": {
@@ -64,6 +64,146 @@
     "runtime_file_count": 7,
     "runtime_root": "<repo>/experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface",
     "runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "modal_cpu_runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+  "modal_cpu_runtime_tree_sha256": "9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576",
+  "modal_cpu_uploaded_submission_dir_runtime": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 784,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/archive_manifest.json",
+        "sha256": "e2cbb2d50d41f14e2789e3f7f147a00d7c5fa1aa12564e035d6e7190a3a73da5"
+      },
+      {
+        "bytes": 11014,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.py",
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
+      },
+      {
+        "bytes": 1053,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+        "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+      },
+      {
+        "bytes": 145,
+        "relative_path": "report.txt",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/report.txt",
+        "sha256": "54fb3322c4e2cc380c50e988c513da7f6ec9abb94dde8c260b6032dfe4925c5d"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+    "runtime_file_count": 7,
+    "runtime_root": "/tmp/modal_auth_eval_cpu/submission_dir",
+    "runtime_tree_sha256": "9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "modal_cuda_uploaded_submission_dir_runtime": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 784,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/archive_manifest.json",
+        "sha256": "e2cbb2d50d41f14e2789e3f7f147a00d7c5fa1aa12564e035d6e7190a3a73da5"
+      },
+      {
+        "bytes": 11014,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
+      },
+      {
+        "bytes": 1053,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+        "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+      },
+      {
+        "bytes": 145,
+        "relative_path": "report.txt",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
+        "sha256": "54fb3322c4e2cc380c50e988c513da7f6ec9abb94dde8c260b6032dfe4925c5d"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+    "runtime_file_count": 7,
+    "runtime_root": "/tmp/modal_auth_eval/submission_dir",
+    "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,

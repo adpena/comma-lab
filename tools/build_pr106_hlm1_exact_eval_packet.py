@@ -53,10 +53,16 @@ DEFAULT_RUNTIME_MANIFEST = DEFAULT_RESULT_DIR / "runtime_tree_manifest.json"
 DEFAULT_MODAL_TRANSPORT = DEFAULT_RESULT_DIR / "modal_submission_dir_transport.json"
 DEFAULT_PACKET = DEFAULT_RESULT_DIR / "hlm1_exact_eval_packet.json"
 DEFAULT_JOB_NAME = "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
+DEFAULT_CPU_JOB_NAME = "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513"
 DEFAULT_LANE_ID = "hnerv_hlm1_fixed_latent_recode_exact_eval"
+DEFAULT_CPU_LANE_ID = "hnerv_hlm1_fixed_latent_recode_exact_cpu_closure"
 DEFAULT_OUTPUT_DIR = (
     "experiments/results/modal_auth_eval/"
     "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
+)
+DEFAULT_CPU_OUTPUT_DIR = (
+    "experiments/results/modal_auth_eval_cpu/"
+    "hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513"
 )
 REQUIRED_ARTIFACTS = (
     "manifest",
@@ -199,17 +205,24 @@ def _sanitize_for_public(payload: Any) -> Any:
 def _runtime_custody_manifest(
     *,
     local_manifest: dict[str, Any],
-    modal_manifest: dict[str, Any],
+    modal_cuda_manifest: dict[str, Any],
+    modal_cpu_manifest: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "schema": "pr106_hlm1_runtime_custody_manifest_v1",
         "score_claim": False,
         "promotion_eligible": False,
-        "dispatch_runtime": "modal_uploaded_submission_dir",
+        "dispatch_runtime": "modal_cuda_uploaded_submission_dir",
         "local_static_release_surface_runtime": _sanitize_for_public(local_manifest),
-        "modal_uploaded_submission_dir_runtime": modal_manifest,
-        "runtime_tree_sha256": modal_manifest.get("runtime_tree_sha256"),
-        "runtime_content_tree_sha256": modal_manifest.get("runtime_content_tree_sha256"),
+        "modal_uploaded_submission_dir_runtime": modal_cuda_manifest,
+        "modal_cuda_uploaded_submission_dir_runtime": modal_cuda_manifest,
+        "modal_cpu_uploaded_submission_dir_runtime": modal_cpu_manifest,
+        "runtime_tree_sha256": modal_cuda_manifest.get("runtime_tree_sha256"),
+        "runtime_content_tree_sha256": modal_cuda_manifest.get("runtime_content_tree_sha256"),
+        "modal_cpu_runtime_tree_sha256": modal_cpu_manifest.get("runtime_tree_sha256"),
+        "modal_cpu_runtime_content_tree_sha256": modal_cpu_manifest.get(
+            "runtime_content_tree_sha256"
+        ),
         "local_runtime_tree_sha256": local_manifest.get("runtime_tree_sha256"),
         "local_runtime_content_tree_sha256": local_manifest.get("runtime_content_tree_sha256"),
     }
@@ -329,9 +342,14 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     modal_runtime_manifest = modal_uploaded_submission_dir_runtime_manifest(
         local_runtime_manifest
     )
+    modal_cpu_runtime_manifest = modal_uploaded_submission_dir_runtime_manifest(
+        local_runtime_manifest,
+        remote_submission_dir="/tmp/modal_auth_eval_cpu/submission_dir",
+    )
     runtime_manifest = _runtime_custody_manifest(
         local_manifest=local_runtime_manifest,
-        modal_manifest=modal_runtime_manifest,
+        modal_cuda_manifest=modal_runtime_manifest,
+        modal_cpu_manifest=modal_cpu_runtime_manifest,
     )
     hlm1_runtime_consumption = prove_pr106_hlm1_runtime_consumption(
         archive_path=archive_path,
@@ -399,6 +417,39 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             ),
         ]
     )
+    modal_cpu_submit = "PYTHONPATH=src:upstream:$PWD " + _one_liner(
+        [
+            ".venv/bin/modal",
+            "run",
+            "--detach",
+            "experiments/modal_auth_eval_cpu.py",
+            "--archive",
+            archive_path,
+            "--output-dir",
+            args.modal_cpu_output_dir,
+            "--inflate-sh",
+            "inflate.sh",
+            "--submission-dir",
+            args.static_release_surface,
+            "--detach",
+            "--provider-detach-ack",
+            "--lane-id",
+            args.cpu_lane_id,
+            "--instance-job-id",
+            args.cpu_job_name,
+            "--claim-agent",
+            args.claim_agent,
+            "--expected-runtime-tree-sha256",
+            runtime_manifest.get("modal_cpu_runtime_tree_sha256", ""),
+            "--claim-notes",
+            (
+                f"PR106 HDM4+HLM1 exact CPU closure; archive_sha256={archive['sha256']}; "
+                f"bytes={archive['bytes']}; runtime_tree_sha256="
+                f"{runtime_manifest.get('modal_cpu_runtime_tree_sha256')}; "
+                f"submission_dir_zip_sha256={transport['transport_zip_sha256']}"
+            ),
+        ]
+    )
     local_cuda_smoke = _one_liner(
         [
             ".venv/bin/python",
@@ -423,6 +474,14 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             "tools/recover_modal_auth_eval.py",
             "--output-dir",
             args.modal_output_dir,
+        ]
+    )
+    recover_cpu = _one_liner(
+        [
+            ".venv/bin/python",
+            "tools/recover_modal_auth_eval.py",
+            "--output-dir",
+            args.modal_cpu_output_dir,
         ]
     )
     source_tree = _source_tree_custody()
@@ -486,6 +545,22 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "purpose": "recover detached Modal artifacts before any score or promotion claim",
                 "copy_safe_command": recover,
             },
+            {
+                "id": "submit_modal_exact_cpu",
+                "order": 5,
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": True,
+                "purpose": "canonical Modal Linux x86_64 exact CPU closure; never convert CUDA to CPU",
+                "copy_safe_command": modal_cpu_submit,
+            },
+            {
+                "id": "harvest_modal_exact_cpu",
+                "order": 6,
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": True,
+                "purpose": "recover detached Modal CPU artifacts for axis-labelled CPU/CUDA comparison",
+                "copy_safe_command": recover_cpu,
+            },
         ],
     }
 
@@ -503,6 +578,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_id": manifest.get("candidate_id"),
         "lane_id": args.lane_id,
         "job_name": args.job_name,
+        "cpu_lane_id": args.cpu_lane_id,
+        "cpu_job_name": args.cpu_job_name,
         "name": "PR106 HDM4+HLM1 fixed-latent recode",
         "family": "hnerv_fixed_latent_recode",
         "pareto_scope": "hnerv_rate_only_exact_archive",
@@ -544,6 +621,12 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             "runtime_tree_sha256": runtime_manifest.get("runtime_tree_sha256"),
             "runtime_content_tree_sha256": runtime_manifest.get("runtime_content_tree_sha256"),
             "local_runtime_tree_sha256": runtime_manifest.get("local_runtime_tree_sha256"),
+            "modal_cpu_runtime_tree_sha256": runtime_manifest.get(
+                "modal_cpu_runtime_tree_sha256"
+            ),
+            "modal_cpu_runtime_content_tree_sha256": runtime_manifest.get(
+                "modal_cpu_runtime_content_tree_sha256"
+            ),
             "runtime_file_count": modal_runtime_manifest.get("runtime_file_count"),
             "path": _repo_rel(args.runtime_manifest_out),
         },
@@ -612,7 +695,9 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "do not pre-claim separately unless using a different provider actuator."
             ),
             "submit": modal_submit,
+            "submit_contest_cpu": modal_cpu_submit,
             "harvest": recover,
+            "harvest_contest_cpu": recover_cpu,
             "local_cuda_exact_eval": local_cuda_smoke,
         },
         "operator_next_steps": operator_next_steps,
@@ -643,8 +728,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--json-out", type=Path, default=DEFAULT_PACKET)
     parser.add_argument("--upstream-dir", type=Path, default=Path("upstream"))
     parser.add_argument("--lane-id", default=DEFAULT_LANE_ID)
+    parser.add_argument("--cpu-lane-id", default=DEFAULT_CPU_LANE_ID)
     parser.add_argument("--job-name", default=DEFAULT_JOB_NAME)
+    parser.add_argument("--cpu-job-name", default=DEFAULT_CPU_JOB_NAME)
     parser.add_argument("--modal-output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--modal-cpu-output-dir", default=DEFAULT_CPU_OUTPUT_DIR)
     parser.add_argument("--modal-gpu", default="T4", choices=("T4", "A100", "A100-40GB", "A100-80GB", "H100", "H100-80GB"))
     parser.add_argument("--claim-agent", default="codex:gpt-5.5")
     parser.add_argument(

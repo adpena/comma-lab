@@ -65,9 +65,13 @@
   "commands": {
     "claim": "Modal wrapper records the Level-2 active lane claim before provider spawn; do not pre-claim separately unless using a different provider actuator.",
     "harvest": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513",
+    "harvest_contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513",
     "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85 --json-out experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/contest_auth_eval.cuda.json",
-    "submit": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9; submission_dir_zip_sha256=9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212'"
+    "submit": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_eval --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9; submission_dir_zip_sha256=9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212'",
+    "submit_contest_cpu": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_cpu_closure --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576 --claim-notes 'PR106 HDM4+HLM1 exact CPU closure; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576; submission_dir_zip_sha256=9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212'"
   },
+  "cpu_job_name": "exact_eval_hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513",
+  "cpu_lane_id": "hnerv_hlm1_fixed_latent_recode_exact_cpu_closure",
   "dispatch_attempted": false,
   "dry_run_ready": true,
   "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
@@ -128,6 +132,22 @@
         "order": 4,
         "purpose": "recover detached Modal artifacts before any score or promotion claim",
         "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface --detach --provider-detach-ack --lane-id hnerv_hlm1_fixed_latent_recode_exact_cpu_closure --instance-job-id exact_eval_hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576 --claim-notes 'PR106 HDM4+HLM1 exact CPU closure; archive_sha256=8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0; bytes=186423; runtime_tree_sha256=9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576; submission_dir_zip_sha256=9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212'",
+        "dispatches_remote_gpu": false,
+        "id": "submit_modal_exact_cpu",
+        "order": 5,
+        "purpose": "canonical Modal Linux x86_64 exact CPU closure; never convert CUDA to CPU",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513",
+        "dispatches_remote_gpu": false,
+        "id": "harvest_modal_exact_cpu",
+        "order": 6,
+        "purpose": "recover detached Modal CPU artifacts for axis-labelled CPU/CUDA comparison",
+        "writes_repo_state": true
       }
     ]
   },
@@ -139,7 +159,7 @@
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch_claim": true,
   "ready_for_submit": true,
-  "recorded_at_utc": "2026-05-13T12:54:00Z",
+  "recorded_at_utc": "2026-05-13T13:02:56Z",
   "remaining_required_for_score_or_promotion": [
     "modal_cuda_auth_eval_dispatch",
     "modal_auth_eval_harvest",
@@ -151,6 +171,8 @@
   "runtime_hlm1_valid_mutation_changes_raw": true,
   "runtime_manifest": {
     "local_runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
+    "modal_cpu_runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+    "modal_cpu_runtime_tree_sha256": "9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576",
     "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
     "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
     "runtime_file_count": 7,
@@ -164,18 +186,21 @@
   "score_claim": false,
   "source_archive_bytes": 186492,
   "source_archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
-  "source_repo_commit": "dbea05017dc912a01125d67bb76a04ba5e7080f8",
+  "source_repo_commit": "257e40dbe08bd16454cccb716b99588e8bd4b45d",
   "source_tree_custody": {
     "custody_scope": "build_time_local_tree_before_remote_dispatch",
-    "diff_against_head_bytes": 0,
-    "diff_against_head_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "dirty": false,
-    "head_commit": "dbea05017dc912a01125d67bb76a04ba5e7080f8",
+    "diff_against_head_bytes": 16144,
+    "diff_against_head_sha256": "3150acc0ce878b742a877c81f89cf49ac3e2a505f1795af62bb77c32c28f0c98",
+    "dirty": true,
+    "head_commit": "257e40dbe08bd16454cccb716b99588e8bd4b45d",
     "provider_wrapper_records_actual_source_repo_commit_at_dispatch": true,
     "schema": "provider_dispatch_source_tree_custody_v2",
     "score_claim": false,
-    "source_tree_custody_sha256": "d0021e8829e8490a766f6910c2d9fcb018eea35a179f95a0a22a6ee70c36b398",
-    "status_short": [],
+    "source_tree_custody_sha256": "82074c67ec52525a06a2401b36d2fa5df9af019d44b9d553d75a7567e4ceee3a",
+    "status_short": [
+      " M experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/runtime_tree_manifest.json",
+      " M tools/build_pr106_hlm1_exact_eval_packet.py"
+    ],
     "untracked_content_tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "untracked_files": [],
     "untracked_path_count": 0

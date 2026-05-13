@@ -320,6 +320,10 @@ def test_modal_uploaded_submission_dir_runtime_manifest_uses_remote_shape() -> N
     }
 
     projected = modal_uploaded_submission_dir_runtime_manifest(local)
+    projected_cpu = modal_uploaded_submission_dir_runtime_manifest(
+        local,
+        remote_submission_dir="/tmp/modal_auth_eval_cpu/submission_dir",
+    )
 
     assert projected["runtime_root"] == "/tmp/modal_auth_eval/submission_dir"
     assert projected["repo_local_tac_import_manifest"]["runtime_root_name"] == "submission_dir"
@@ -332,6 +336,12 @@ def test_modal_uploaded_submission_dir_runtime_manifest_uses_remote_shape() -> N
     assert len(projected["runtime_tree_sha256"]) == 64
     assert len(projected["runtime_content_tree_sha256"]) == 64
     assert projected["runtime_tree_sha256"] != projected["runtime_content_tree_sha256"]
+    assert projected_cpu["runtime_root"] == "/tmp/modal_auth_eval_cpu/submission_dir"
+    assert projected_cpu["runtime_tree_sha256"] != projected["runtime_tree_sha256"]
+    assert (
+        projected_cpu["runtime_content_tree_sha256"]
+        == projected["runtime_content_tree_sha256"]
+    )
 
 
 def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):

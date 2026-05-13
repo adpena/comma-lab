@@ -180,6 +180,14 @@ def test_briefing_json_composite_has_all_three_keys():
         + hlm1_packet["runtime_tree_sha256"]
         in hlm1_packet["commands"]["submit"]
     )
+    modal_cpu_runtime_sha = hlm1_packet["runtime_manifest"]["modal_cpu_runtime_tree_sha256"]
+    assert modal_cpu_runtime_sha != hlm1_packet["runtime_tree_sha256"]
+    assert (
+        "--expected-runtime-tree-sha256 "
+        + modal_cpu_runtime_sha
+        in hlm1_packet["commands"]["submit_contest_cpu"]
+    )
+    assert "experiments/modal_auth_eval_cpu.py" in hlm1_packet["commands"]["submit_contest_cpu"]
     refresh_cmd = hlm1_packet["operator_next_steps"]["steps"][0]["copy_safe_command"]
     assert "--operator-approved-exact-cuda" not in refresh_cmd
     assert hlm1_packet["runtime_hlm1_decode_consumption_claim"] is True
@@ -192,14 +200,24 @@ def test_briefing_json_composite_has_all_three_keys():
     assert hlm1["payload_diff_ready"] is True
     assert hlm1["dry_run_ready"] is True
     assert hlm1["score_affecting_runtime_changed"] is True
-    assert hlm1["operator_next_steps"]["schema"] == "hnerv_hlm1_operator_next_steps_v1"
-    hlm1_step_ids = [step["id"] for step in hlm1["operator_next_steps"]["steps"]]
-    assert hlm1_step_ids == [
+    packet_step_ids = [step["id"] for step in hlm1_packet["operator_next_steps"]["steps"]]
+    assert packet_step_ids == [
         "refresh_static_packet_no_dispatch",
         "optional_local_cuda_exact_eval",
         "submit_modal_exact_cuda",
         "harvest_modal_exact_cuda",
+        "submit_modal_exact_cpu",
+        "harvest_modal_exact_cpu",
     ]
+    if hlm1["terminal_exact_eval_evidence_blockers"]:
+        assert hlm1["operator_next_steps"]["schema"] == "terminal_exact_eval_evidence_stop_v1"
+        hlm1_step_ids = [step["id"] for step in hlm1["operator_next_steps"]["steps"]]
+        assert hlm1_step_ids == [
+            "review_terminal_cuda_result",
+            "choose_byte_different_successor_candidate",
+        ]
+    else:
+        assert hlm1["operator_next_steps"]["schema"] == "hnerv_hlm1_operator_next_steps_v1"
 
 
 def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
@@ -237,9 +255,10 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
         step["id"]
         for step in packet_rows["pr106x_lgblock16_1byte_brotli"]["operator_next_steps"]["steps"]
     ]
+    hlm1 = packet_rows["hnerv_hlm1_fixed_latent_recode_exact_eval"]
     hlm1_step_ids = [
         step["id"]
-        for step in packet_rows["hnerv_hlm1_fixed_latent_recode_exact_eval"]["operator_next_steps"]["steps"]
+        for step in hlm1["operator_next_steps"]["steps"]
     ]
     assert "assert_packet_ready_for_submit" in wr01_step_ids
     assert q10_step_ids == [
@@ -253,7 +272,13 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
         ]
     else:
         assert "submit_exact_cuda" in lgblock16_step_ids
-    assert "submit_modal_exact_cuda" in hlm1_step_ids
+    if hlm1["terminal_exact_eval_evidence_blockers"]:
+        assert hlm1_step_ids == [
+            "review_terminal_cuda_result",
+            "choose_byte_different_successor_candidate",
+        ]
+    else:
+        assert "submit_modal_exact_cuda" in hlm1_step_ids
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
 
