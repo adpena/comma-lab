@@ -310,6 +310,66 @@ def device_or_die(name: str, *, smoke: bool, substrate_tag: str):
     raise SystemExit(f"[{substrate_tag}] unknown --device {name!r}")
 
 
+def require_contest_cuda_auth_eval_claim(
+    auth_eval_result_path: Path,
+    *,
+    archive_sha256: str,
+    substrate_tag: str,
+) -> tuple[Any, dict[str, Any]]:
+    """Load an auth-eval JSON file and require a real contest-CUDA score claim.
+
+    This is the canonical substrate-trainer boundary between "auth eval
+    produced some finite diagnostics" and "this run may update the CUDA-axis
+    posterior." A finite component-coherent score is insufficient: the JSON
+    must also carry the contest-CUDA custody fields checked by
+    ``parse_auth_eval_score_claim``.
+    """
+
+    if not auth_eval_result_path.is_file():
+        raise RuntimeError(
+            f"[{substrate_tag}] auth eval JSON missing: {auth_eval_result_path}"
+        )
+    try:
+        payload = json.loads(auth_eval_result_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(
+            f"[{substrate_tag}] could not parse auth eval JSON "
+            f"{auth_eval_result_path}: {exc}"
+        ) from exc
+
+    from tac.auth_eval_result import (
+        parse_auth_eval_score_claim,
+        parse_finite_auth_eval_score,
+    )
+
+    parsed_score = parse_finite_auth_eval_score(
+        payload,
+        require_component_recompute=True,
+    )
+    if parsed_score is None:
+        raise RuntimeError(
+            f"[{substrate_tag}] auth eval JSON lacks a finite, "
+            "component-coherent score; refusing contest-CUDA claim."
+        )
+    claim = parse_auth_eval_score_claim(
+        payload,
+        required_score_axis="contest_cuda",
+        require_component_recompute=True,
+    )
+    if claim is None:
+        raise RuntimeError(
+            f"[{substrate_tag}] auth eval score is finite but is not a "
+            "valid [contest-CUDA] claim "
+            f"(score_axis={payload.get('score_axis')!r}, "
+            f"score_claim={payload.get('score_claim')!r}, "
+            f"score_claim_valid={payload.get('score_claim_valid')!r}, "
+            f"exact_cuda_eval_complete={payload.get('exact_cuda_eval_complete')!r}, "
+            f"evidence_grade={payload.get('evidence_grade')!r}, "
+            f"archive_sha256={archive_sha256})."
+        )
+    return claim, payload
+
+
 def load_upstream_yuv420_to_rgb(*, substrate_tag: str, repo_root: Path | None = None):
     """Load upstream/frame_utils.py's ``yuv420_to_rgb`` without patching upstream.
 
@@ -419,6 +479,7 @@ __all__ = [
     "git_head_sha",
     "load_upstream_yuv420_to_rgb",
     "pin_seeds",
+    "require_contest_cuda_auth_eval_claim",
     "sha256_bytes",
     "torch_version_string",
     "utc_now_iso",

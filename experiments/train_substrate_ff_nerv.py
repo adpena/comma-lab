@@ -967,34 +967,38 @@ def _full_main(args: argparse.Namespace) -> int:
                         f"[full] auth eval rc={proc.returncode}; stderr=\n{proc.stderr[-2000:]}",
                         file=sys.stderr,
                     )
+                    raise RuntimeError(
+                        f"CUDA auth eval failed rc={proc.returncode}; refusing "
+                        "ff_nerv contest-CUDA score claim."
+                    )
                 else:
-                    if auth_eval_result_path.is_file():
-                        try:
-                            from tac.auth_eval_result import parse_finite_auth_eval_score
+                    try:
+                        from tac.substrates._shared.trainer_skeleton import (
+                            require_contest_cuda_auth_eval_claim,
+                        )
 
-                            ae = json.loads(auth_eval_result_path.read_text())
-                            parsed_score = parse_finite_auth_eval_score(
-                                ae,
-                                require_component_recompute=True,
-                            )
-                            if parsed_score is None:
-                                print(
-                                    "[full] auth eval JSON did not contain a finite, "
-                                    "component-coherent score; no [contest-CUDA] "
-                                    "score claim will be recorded",
-                                    file=sys.stderr,
-                                )
-                            else:
-                                contest_cuda_score = parsed_score.score
-                                print(
-                                    f"[full] [contest-CUDA] score = {contest_cuda_score} "
-                                    f"(source={parsed_score.source_key}, "
-                                    f"archive_sha256={archive_sha})"
-                                )
-                        except Exception as exc:
-                            print(f"[full] could not parse auth eval JSON: {exc}", file=sys.stderr)
-            except subprocess.TimeoutExpired:
+                        claim, _ae = require_contest_cuda_auth_eval_claim(
+                            auth_eval_result_path,
+                            archive_sha256=archive_sha,
+                            substrate_tag="ff_nerv",
+                        )
+                        contest_cuda_score = claim.score
+                        print(
+                            f"[full] [contest-CUDA] score = {contest_cuda_score} "
+                            f"(source={claim.source_key}, "
+                            f"archive_sha256={archive_sha})"
+                        )
+                    except Exception as exc:
+                        raise RuntimeError(
+                            "could not validate ff_nerv contest-CUDA auth eval "
+                            f"JSON: {exc}"
+                        ) from exc
+            except subprocess.TimeoutExpired as exc:
                 print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
+                raise RuntimeError(
+                    "CUDA auth eval timed out; refusing ff_nerv "
+                    "contest-CUDA score claim."
+                ) from exc
             _stage("auth_eval_cuda_done")
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)

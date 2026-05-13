@@ -2426,6 +2426,15 @@ def preflight_all(
         check_substrate_recipes_declare_target_modes(
             strict=False, verbose=verbose,
         )
+        # 2026-05-13 Catalog #193: substrate trainers must not update CUDA
+        # posteriors from merely finite auth-eval JSON. The canonical boundary
+        # is `require_contest_cuda_auth_eval_claim()` (or an equivalent direct
+        # `parse_auth_eval_score_claim(... required_score_axis="contest_cuda")`
+        # use). Strict-from-byte-one after the SIREN/A1 dispatch review found
+        # the weak finite-score parser repeated across 13 sibling trainers.
+        check_substrate_trainers_do_not_use_finite_auth_eval_parser_for_claims(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -44689,7 +44698,8 @@ def check_substrate_recipes_declare_pyav_decode_strategy(
 # REVIEW-OMNI Low NV10: per-substrate ``target_modes`` not declared.
 # Production-graduation discipline gap. Each substrate operator-authorize
 # recipe MUST declare ``target_modes`` as a YAML list containing at least
-# one of: ``contest_one_video_replay``, ``contest_generalized``,
+# one of: ``contest_exact_eval``, ``contest_one_video_replay``,
+# ``contest_generalized``,
 # ``production_generalized``, ``production_edge_adaptive``,
 # ``research_substrate``. Same-line waiver:
 # ``# TARGET_MODES_OK:<reason>``. Initial landing: warn-only; legacy
@@ -44698,6 +44708,7 @@ _CHECK_182_RECIPE_DIR = ".omx/operator_authorize_recipes"
 _CHECK_182_RECIPE_GLOB = "substrate_*_modal_*_dispatch.yaml"
 _CHECK_182_FIELD = "target_modes"
 _CHECK_182_VALID_VALUES: tuple[str, ...] = (
+    "contest_exact_eval",
     "contest_one_video_replay",
     "contest_generalized",
     "production_generalized",
@@ -44822,6 +44833,87 @@ def check_substrate_recipes_declare_target_modes(
             "check_substrate_recipes_declare_target_modes found "
             f"{len(violations)} violation(s). Catalog #182 closes REVIEW-OMNI "
             "Low NV10 (production-graduation discipline gap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #193 - check_substrate_trainers_do_not_use_finite_auth_eval_parser_for_claims
+# ─────────────────────────────────────────────────────────────────────────
+# SIREN/A1 dispatch review 2026-05-13 found a repeated silent-failure class:
+# sibling substrate trainers launched `experiments/contest_auth_eval.py`, then
+# accepted any finite component-coherent JSON via `parse_finite_auth_eval_score`
+# and printed `[contest-CUDA]` / updated posteriors. Finite score is a
+# diagnostic parser; score-claim boundaries must require
+# `score_axis=contest_cuda`, `score_claim=true`, `score_claim_valid=true`, and
+# `exact_cuda_eval_complete=true`.
+
+_CHECK_193_TRAINER_GLOB = "experiments/train_substrate_*.py"
+_CHECK_193_FORBIDDEN_TOKEN = "parse_finite_auth_eval_score"
+_CHECK_193_CANONICAL_TOKEN = "require_contest_cuda_auth_eval_claim"
+_CHECK_193_DIRECT_CLAIM_TOKEN = "parse_auth_eval_score_claim"
+_CHECK_193_WAIVER_RE = re.compile(
+    r"#\s*AUTH_EVAL_FINITE_PARSER_OK:\s*(?!<reason>)\S+"
+)
+
+
+def check_substrate_trainers_do_not_use_finite_auth_eval_parser_for_claims(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #193. Refuse weak finite-score auth-eval parsing in substrate
+    trainers.
+
+    `parse_finite_auth_eval_score` is still valid for low-level parser tests and
+    diagnostics. It is forbidden inside `experiments/train_substrate_*.py`,
+    where a finite diagnostic score could otherwise be printed or recorded as a
+    contest-CUDA claim.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(root.glob(_CHECK_193_TRAINER_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_193_WAIVER_RE.search(text):
+            continue
+        if _CHECK_193_FORBIDDEN_TOKEN in text:
+            violations.append(
+                f"{rel}: imports or calls `{_CHECK_193_FORBIDDEN_TOKEN}`. "
+                "Substrate trainers must require a contest-CUDA score claim via "
+                f"`{_CHECK_193_CANONICAL_TOKEN}` or "
+                f"`{_CHECK_193_DIRECT_CLAIM_TOKEN}` before printing "
+                "`[contest-CUDA]` or updating posteriors."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [substrate-auth-eval-claim-boundary] "
+                f"{len(violations)} violation(s) across {scanned} trainer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [substrate-auth-eval-claim-boundary] OK "
+                f"({scanned} trainer(s); no weak finite-score parser at claim boundary)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainers_do_not_use_finite_auth_eval_parser_for_claims "
+            f"found {len(violations)} violation(s). Catalog #193 prevents "
+            "diagnostic auth-eval JSON from being promoted to contest-CUDA "
+            "claim/posterior evidence:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

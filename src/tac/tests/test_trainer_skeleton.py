@@ -6,6 +6,7 @@ Memo: feedback_canon_dedup_1_LANDED_20260513.md
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -226,11 +227,74 @@ def test_module_exports_are_stable() -> None:
         "git_head_sha",
         "load_upstream_yuv420_to_rgb",
         "pin_seeds",
+        "require_contest_cuda_auth_eval_claim",
         "sha256_bytes",
         "torch_version_string",
         "utc_now_iso",
     }
     assert set(ts.__all__) == expected
+
+
+# ---------------------------------------------------------------------------
+# require_contest_cuda_auth_eval_claim
+# ---------------------------------------------------------------------------
+
+
+def _component_coherent_payload(**overrides):
+    from tac.auth_eval_result import recompute_contest_score_from_payload
+
+    payload = {
+        "avg_segnet_dist": 0.001,
+        "avg_posenet_dist": 0.0004,
+        "archive_size_bytes": 150_000,
+        "score_axis": "contest_cuda",
+        "lane_tag": "[contest-CUDA]",
+        "evidence_grade": "contest-CUDA",
+        "exact_cuda_eval_complete": True,
+        "score_claim": True,
+        "score_claim_valid": True,
+    }
+    payload.update(overrides)
+    payload["canonical_score"] = recompute_contest_score_from_payload(payload)
+    return payload
+
+
+def test_require_contest_cuda_auth_eval_claim_accepts_valid_claim(tmp_path: Path) -> None:
+    path = tmp_path / "contest_auth_eval_cuda.json"
+    path.write_text(json.dumps(_component_coherent_payload()), encoding="utf-8")
+
+    claim, payload = ts.require_contest_cuda_auth_eval_claim(
+        path,
+        archive_sha256="abc123",
+        substrate_tag="testsub",
+    )
+
+    assert claim.score_axis == "contest_cuda"
+    assert claim.score == payload["canonical_score"]
+
+
+def test_require_contest_cuda_auth_eval_claim_rejects_diagnostic_cuda(tmp_path: Path) -> None:
+    path = tmp_path / "diagnostic_auth_eval.json"
+    path.write_text(
+        json.dumps(
+            _component_coherent_payload(
+                score_axis="diagnostic_cuda",
+                lane_tag="[diagnostic-auth-eval]",
+                evidence_grade="B",
+                exact_cuda_eval_complete=False,
+                score_claim=False,
+                score_claim_valid=False,
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="not a valid \\[contest-CUDA\\] claim"):
+        ts.require_contest_cuda_auth_eval_claim(
+            path,
+            archive_sha256="abc123",
+            substrate_tag="testsub",
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -253,6 +253,30 @@ def test_inflate_one_video_writes_contest_raw(tmp_path, monkeypatch):
     assert not list(tmp_path.glob("*.png"))
 
 
+def test_inflate_one_video_rejects_incomplete_state_dict(tmp_path):
+    cfg, _, sd, meta = _build_smoke_inputs()
+    sd_bad = dict(sd)
+    removed_key = next(key for key in sd_bad if key.endswith("linear.weight"))
+    sd_bad.pop(removed_key)
+    blob = pack_archive(
+        sd_bad,
+        meta,
+        num_pairs=cfg.num_pairs,
+        hidden_dim=cfg.hidden_dim,
+        num_hidden_layers=cfg.num_hidden_layers,
+        output_height=cfg.output_height,
+        output_width=cfg.output_width,
+    )
+
+    try:
+        inflate_one_video(blob, tmp_path / "bad.raw", device="cpu")
+    except RuntimeError as exc:
+        assert "state_dict mismatch" in str(exc)
+        assert removed_key in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected incomplete SIREN state_dict to be rejected")
+
+
 def test_substrate_forward_shape():
     cfg = _smoke_cfg()
     torch.manual_seed(7)

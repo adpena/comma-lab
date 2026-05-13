@@ -979,57 +979,21 @@ def _full_main(args: argparse.Namespace) -> int:
                     raise RuntimeError(
                         f"[full] auth eval rc={proc.returncode}; stderr=\n{proc.stderr[-2000:]}",
                     )
-                if not auth_eval_result_path.is_file():
-                    raise RuntimeError(
-                        "[full] auth eval completed rc=0 but did not write "
-                        f"{auth_eval_result_path}"
-                    )
-                from tac.auth_eval_result import (
-                    parse_auth_eval_score_claim,
-                    parse_finite_auth_eval_score,
+                from tac.substrates._shared.trainer_skeleton import (
+                    require_contest_cuda_auth_eval_claim,
                 )
 
-                ae = json.loads(auth_eval_result_path.read_text())
-                parsed_score = parse_finite_auth_eval_score(
-                    ae,
-                    require_component_recompute=True,
+                claim, _ae = require_contest_cuda_auth_eval_claim(
+                    auth_eval_result_path,
+                    archive_sha256=archive_sha,
+                    substrate_tag="siren",
                 )
-                if parsed_score is None:
-                    raise RuntimeError(
-                        "[full] auth eval JSON did not contain a finite, "
-                        "component-coherent score; refusing rc=0 because the "
-                        "dispatch output would be unactionable"
-                    )
-                auth_eval_score = parsed_score.score
-                auth_eval_score_axis = str(ae.get("score_axis") or "")
-                auth_eval_lane_tag = str(ae.get("lane_tag") or "")
-                auth_eval_score_claim_valid = ae.get("score_claim_valid") is True
-                auth_eval_exact_cuda_complete = (
-                    ae.get("exact_cuda_eval_complete") is True
+                contest_cuda_score = claim.score
+                print(
+                    f"[full] {claim.lane_tag or '[contest-CUDA]'} score = "
+                    f"{contest_cuda_score} (source={claim.source_key}, "
+                    f"archive_sha256={archive_sha})"
                 )
-                claim = parse_auth_eval_score_claim(
-                    ae,
-                    required_score_axis="contest_cuda",
-                    require_component_recompute=True,
-                )
-                if claim is not None:
-                    contest_cuda_score = claim.score
-                    print(
-                        f"[full] {claim.lane_tag or '[contest-CUDA]'} score = "
-                        f"{contest_cuda_score} (source={claim.source_key}, "
-                        f"archive_sha256={archive_sha})"
-                    )
-                else:
-                    diagnostic = (
-                        "[full] auth eval score is finite but non-promotable: "
-                        f"score={auth_eval_score} axis={auth_eval_score_axis!r} "
-                        f"lane_tag={auth_eval_lane_tag!r} "
-                        f"score_claim_valid={auth_eval_score_claim_valid} "
-                        f"exact_cuda_eval_complete={auth_eval_exact_cuda_complete}. "
-                        "No [contest-CUDA] score claim or posterior update is "
-                        "allowed."
-                    )
-                    raise RuntimeError(diagnostic)
             except subprocess.TimeoutExpired as exc:
                 raise RuntimeError("[full] auth eval TIMEOUT (>3600s)") from exc
             _stage("auth_eval_cuda_done")

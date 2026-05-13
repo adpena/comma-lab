@@ -53,7 +53,14 @@ def inflate_one_video(
     )
 
     model = SirenSubstrate(cfg).to(render_device).eval()
-    model.load_state_dict(arc.decoder_state_dict, strict=False)
+    incompat = model.load_state_dict(arc.decoder_state_dict, strict=False)
+    missing = set(incompat.missing_keys)
+    unexpected = set(incompat.unexpected_keys)
+    if missing - {"_spatial_coords"} or unexpected:
+        raise RuntimeError(
+            "siren archive state_dict mismatch: "
+            f"missing={sorted(missing)} unexpected={sorted(unexpected)}"
+        )
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
 
