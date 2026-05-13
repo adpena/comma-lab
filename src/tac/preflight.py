@@ -2643,6 +2643,7 @@ def preflight_all(
         _parallel.submit("check_vastai_create_has_label", lambda: check_vastai_create_has_label(strict=True, verbose=False))
         _parallel.submit("check_vastai_create_writes_tracker", lambda: check_vastai_create_writes_tracker(strict=True, verbose=False))
         _parallel.submit("check_test_files_imports_resolve", lambda: check_test_files_imports_resolve(strict=True, verbose=False))
+        _parallel.submit("check_test_imports_use_tac_not_src_tac", lambda: check_test_imports_use_tac_not_src_tac(strict=True, verbose=False))
         _parallel.submit("check_kl_div_reduction_correct", lambda: check_kl_div_reduction_correct(strict=True, verbose=False))
         _parallel.submit("check_no_silent_auto_discovery_with_warn", lambda: check_no_silent_auto_discovery_with_warn(strict=True, verbose=False))
         _parallel.submit("check_inflate_sh_handles_br_centrally", lambda: check_inflate_sh_handles_br_centrally(strict=True, verbose=False))
@@ -2972,6 +2973,17 @@ def preflight_all(
             "check_test_files_imports_resolve",
             "[test-imports]",
             lambda: check_test_files_imports_resolve(strict=True, verbose=verbose),
+        )
+        # 2026-05-13 Catalog #188 (FIX-WAVE-10 R10-1 silent-test-CI-evasion):
+        # refuse non-canonical `src.tac.*` imports in test files. These pass
+        # manually with non-canonical PYTHONPATH settings, then fail default
+        # collection or hide outside configured testpaths. Sister of #25
+        # (broken-import) and I (test_files_imports_resolve) — together they
+        # close the manual-vs-CI import mismatch bidirectionally.
+        _parallel.run(
+            "check_test_imports_use_tac_not_src_tac",
+            "[test-imports-canonical]",
+            lambda: check_test_imports_use_tac_not_src_tac(strict=True, verbose=verbose),
         )
         _parallel.run(
             "check_uniward_delta_has_attestation_gate",
@@ -34064,6 +34076,7 @@ _LANE_ID_REFERENCE_RE = re.compile(
 _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     # Common helper / tool / function names
     "lane_id",
+    "lane_id_matches",
     "lane_ids",
     "lane_name",
     "lane_phase",
@@ -45168,6 +45181,135 @@ def check_hnerv_training_parity_guard(
             "check_hnerv_training_parity_guard found "
             f"{len(violations)} violation(s). HNeRV-family trainers must keep "
             "PR95/PR100/PR101 parity contracts before provider dispatch:\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #188 — check_test_imports_use_tac_not_src_tac
+# (FIX-WAVE-10 R10-1 silent-test-CI-evasion self-protect, 2026-05-13, STRICT @ 0)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# R10 review surfaced the silent-test-CI-evasion bug class: test files in the
+# test corpus that import via the non-canonical `from src.tac.*` /
+# `import src.tac.*` syntax. The canonical pytest config (pyproject.toml
+# `[tool.pytest.ini_options] testpaths = ["tests", "src/tac/tests"]`) installs
+# `tac` as the canonical package name; `src.tac.*` works only when the
+# CWD-anchored `src/` is on `sys.path` (e.g. `PYTHONPATH=<repo> pytest <file>`).
+# Default `pytest` from the repo root collects from configured testpaths but
+# raises `ModuleNotFoundError: No module named 'src'` at import time for files
+# inside those paths; misplaced test files outside testpaths can remain
+# uncollected regardless of import syntax. Both shapes make manual test passes
+# disagree with the default gate.
+#
+# The bug class is high-impact: tests that PASS manually with an unusual
+# PYTHONPATH can fail default collection or sit outside the default testpaths;
+# either way, the manual signal is not the same as CI signal. R10-1 caught 2
+# files in `src/tac/tests/` plus 1 file in `src/tac/substrates/_shared/`
+# (outside testpaths regardless of import syntax).
+#
+# This gate refuses any `.py` file under `src/tac/tests/` or `tests/` that
+# imports via `from src.tac.*` or `import src.tac.*`. Companion fixes in the
+# same commit batch: move the misplaced test file into the canonical
+# `src/tac/tests/` directory and rewrite the 3 offending imports.
+#
+# Acceptance:
+# - same-line `# SRC_TAC_IMPORT_OK:<reason>` waiver on the import line for the
+#   rare deliberate case (placeholder `<reason>` literal rejected)
+# - `__pycache__` and binary files are excluded
+#
+# Strict-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" — live count
+# at landing: 0 (the 3 offending lines are rewritten in the same commit batch).
+
+_CHECK_188_TEST_SCAN_DIRS: tuple[str, ...] = (
+    "src/tac/tests",
+    "tests",
+)
+
+# Match real import statements only — `from src.tac.<X>` or `import src.tac.<X>`
+# at the start of a (possibly indented) line. Avoids docstring + string-literal
+# false positives like `"src/tac/duplicate.py.pyc"` or `# referenced from src/tac/`.
+_CHECK_188_SRC_TAC_IMPORT_RE = re.compile(
+    r"^\s*(?:from\s+src\.tac(?:\.|\s)|import\s+src\.tac(?:\.|\s|$))"
+)
+_CHECK_188_WAIVER_RE = re.compile(
+    r"#\s*SRC_TAC_IMPORT_OK:(?!<reason>)([^\s#].*?)\s*$"
+)
+
+
+def check_test_imports_use_tac_not_src_tac(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #188 — refuse `from src.tac.*` / `import src.tac.*` imports in
+    test files under `src/tac/tests/` + `tests/`.
+
+    R10-1 bug class: test files using non-canonical `src.tac.*` import syntax
+    pass manually with `PYTHONPATH=<repo> pytest <file>` but fail default
+    collection (`pytest` from repo root) because `from src.tac.X import Y`
+    raises `ModuleNotFoundError: No module named 'src'` when `src/` is not on
+    `sys.path`. Misplaced test files outside configured testpaths are a sibling
+    way for manual passes to diverge from the default gate.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+    non-negotiable: companion fix rewrites the 3 offending imports in the same
+    commit batch; this gate refuses any future re-introduction.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    n_scanned = 0
+    for rel in _CHECK_188_TEST_SCAN_DIRS:
+        scan_dir = root / rel
+        if not scan_dir.is_dir():
+            continue
+        for path in scan_dir.rglob("*.py"):
+            if "__pycache__" in path.parts:
+                continue
+            n_scanned += 1
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for line_no, line in enumerate(text.splitlines(), start=1):
+                if not _CHECK_188_SRC_TAC_IMPORT_RE.match(line):
+                    continue
+                # Same-line waiver respected; placeholder reason rejected.
+                if _CHECK_188_WAIVER_RE.search(line):
+                    continue
+                try:
+                    rel_path = path.relative_to(root).as_posix()
+                except ValueError:
+                    rel_path = path.as_posix()
+                violations.append(
+                    f"{rel_path}:{line_no}: forbidden `src.tac.*` import "
+                    f"(use `tac.*` instead). Line: {line.strip()[:160]}"
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [test-imports-canonical] {len(violations)} violation(s) "
+                f"across {n_scanned} test file(s) scanned:"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [test-imports-canonical] OK ({n_scanned} test file(s) "
+                "scanned; all use canonical `tac.*` import syntax)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_test_imports_use_tac_not_src_tac found "
+            f"{len(violations)} violation(s). Test files must use the "
+            "canonical `from tac.* import ...` / `import tac.*` syntax. "
+            "The non-canonical `src.tac.*` form can fail the default CI gate "
+            "(`pytest` from repo root raises "
+            "ModuleNotFoundError: No module named 'src'). Rewrite to "
+            "`tac.*` OR add a same-line "
+            "`# SRC_TAC_IMPORT_OK:<reason>` waiver:\n  "
             + "\n  ".join(v[:300] for v in violations[:8])
         )
     return violations
