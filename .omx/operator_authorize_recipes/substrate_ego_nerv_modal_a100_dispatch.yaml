@@ -1,22 +1,27 @@
 schema_version: 1
 name: substrate_ego_nerv_modal_a100_dispatch
 lane_id: lane_substrate_ego_nerv_20260512
-summary: EgoNeRV TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — remote driver missing).
+summary: EgoNeRV TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — TIER manifest pending council review).
 
 dispatch_enabled: false
 research_only: false
 substrate_tradition: TRADITION_2
 defer_reason: |
-  scripts/remote_lane_substrate_ego_nerv_as_renderer.sh does NOT exist
-  (Catalog #163-pattern gap). The trainer experiments/train_ego_nerv_as_renderer.py
-  exists and exposes a complete argparse, but the canonical Modal/Vast.ai
-  remote driver script that bootstraps deps + threads required-input files +
-  emits inflate.sh + harvest hooks is missing. Per Catalog #146/#163,
-  dispatch is REFUSED until the remote driver lands.
+  Remote driver scripts/remote_lane_substrate_ego_nerv.sh LANDED 2026-05-13
+  (WAVE-6-FOLLOWUP-MULTI) per the canonical sane_hnerv/cnerv pattern (Catalog
+  #2 set -euo pipefail; Catalog #11 NVDEC probe; Catalog #163 sentinel-sourced
+  bootstrap; driver-version-pinned torch via bootstrap_runtime_deps;
+  Catalog #152 required-input file existence pre-dispatch validation;
+  heartbeat + watchdog + lane-claim terminal-status update; cost-band anchor
+  emission). Remaining blocker: TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest in
+  experiments/train_ego_nerv_as_renderer.py (Catalog #151) plus the trainer's
+  scaffold-only gate at line 140 — non-smoke training raises SystemExit until
+  operator-approved gating lands per CLAUDE.md "Design decisions —
+  non-negotiable".
 
 dispatch_blockers:
-  - remote_driver_missing
   - tier_manifest_required_for_catalog_151_compliance
+  - trainer_scaffold_only_non_smoke_systemexit_gate
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -49,9 +54,9 @@ risk: |
 
   TIER manifest gap: trainer predates Catalog #151. Adding the manifest is an
   architecture decision that needs council review.
-envelope_status: "DEFERRED: remote driver gap blocks dispatch before GPU spend"
+envelope_status: "DEFERRED: TIER manifest gap + trainer scaffold-only gate (remote driver landed)"
 
-remote_driver: scripts/remote_lane_substrate_ego_nerv_as_renderer.sh  # MISSING
+remote_driver: scripts/remote_lane_substrate_ego_nerv.sh
 timeout_hours: 4.0
 
 required_input_files:
@@ -99,16 +104,19 @@ dependencies:
   - experiments/train_ego_nerv_as_renderer.py
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
   - submissions/ego_nerv_substrate/inflate.{py,sh} (existing per lane registry evidence)
-  - "[MISSING] scripts/remote_lane_substrate_ego_nerv_as_renderer.sh"
+  - scripts/remote_lane_substrate_ego_nerv.sh (LANDED 2026-05-13 WAVE-6-FOLLOWUP-MULTI)
 
 reactivation_criteria: |
-  1. scripts/remote_lane_substrate_ego_nerv_as_renderer.sh built per the
-     canonical pattern (Catalog #163 sentinel-source; Catalog #146 inflate
-     contract; Catalog #152 input validation).
-  2. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed in the trainer
+  1. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed in the trainer
      (council review required).
+  2. Trainer scaffold-only gate at experiments/train_ego_nerv_as_renderer.py:140
+     resolved — operator-approved non-smoke training path lands per
+     CLAUDE.md "Design decisions — non-negotiable" council review.
   3. Local smoke verifies inflate.sh emits a contest-compliant 0.bin.
   4. Catalog #152 validates --video-path resolves before dispatch.
+  5. inflate.py 207 LOC waiver tracked per HNeRV parity discipline lesson 4
+     (≤200 LOC budget; explicit waiver pending per .omx/research/full_stack_integration_audit_v4
+     advisory finding).
 
 notes: |
   TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
