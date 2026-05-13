@@ -128,6 +128,7 @@ def test_recode_profile_tool_writes_nonpromotable_report(tmp_path: Path) -> None
     assert report["schema"] == "pr106_latent_sidecar_recode_profile_v1"
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert "no_candidate_archive_emitted" in report["dispatch_blockers"]
     assert report["semantic_arrays"]["n_pairs"] == len(dims)
     assert report["best_lossless_candidate"]["lossless_semantic_equivalence_proven"] is True
 
@@ -234,6 +235,8 @@ def test_recode_profile_tool_emits_runtime_candidate_archives(tmp_path: Path) ->
     assert emitted
     assert all(row["score_claim"] is False for row in emitted)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in emitted)
+    assert "no_candidate_archive_emitted" not in report["dispatch_blockers"]
+    assert "missing_exact_contest_eval_for_any_candidate" in report["dispatch_blockers"]
     pr101_emitted = next(
         row
         for row in emitted

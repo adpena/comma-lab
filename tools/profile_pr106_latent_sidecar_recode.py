@@ -254,6 +254,14 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         (row for row in rows if row["applicable"] and row["runtime_decoder_implemented"]),
         None,
     )
+    dispatch_blockers = [
+        "candidate_runtime_decoder_missing_for_noncurrent_rows",
+        "missing_no_op_runtime_consumption_proof_for_new_grammar",
+        "missing_exact_contest_eval_for_any_candidate",
+    ]
+    if not emitted_candidate_manifests:
+        dispatch_blockers.insert(0, "no_candidate_archive_emitted")
+
     return {
         "schema": SCHEMA,
         "tool": TOOL,
@@ -288,12 +296,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
                 "contest eval on the emitted packet."
             ),
         },
-        "dispatch_blockers": [
-            "no_candidate_archive_emitted",
-            "candidate_runtime_decoder_missing_for_noncurrent_rows",
-            "missing_no_op_runtime_consumption_proof_for_new_grammar",
-            "missing_exact_contest_eval_for_any_candidate",
-        ],
+        "dispatch_blockers": dispatch_blockers,
     }
 
 
