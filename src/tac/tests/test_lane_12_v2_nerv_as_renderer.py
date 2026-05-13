@@ -28,6 +28,12 @@ import pytest
 import torch
 import torch.nn as nn
 
+# R5-1 finding (2026-05-13): repo-root-relative test fixtures replace prior
+# operator-absolute paths per CLAUDE.md "Public Disclosure Hygiene" + R5-1 fix
+# in feedback_recursive_review_r5_LANDED_20260513.md. This file lives at
+# src/tac/tests/test_lane_12_v2_nerv_as_renderer.py so parents[3] is the repo root.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
 from tac.lane_12_v2_nerv_as_renderer import (
     ARCHIVE_GRAMMAR,
     LANE_12_V2_FORMAT_VERSION,
@@ -476,7 +482,7 @@ def test_real_pair_batch_source_raises_if_video_missing():
 
 
 def test_real_pair_batch_source_shuffle_requires_cached_phase_b_source():
-    upstream_video = Path("/Users/adpena/Projects/pact/upstream/videos/0.mkv")
+    upstream_video = _REPO_ROOT / "upstream" / "videos" / "0.mkv"
     if not upstream_video.exists():
         pytest.skip("upstream/videos/0.mkv not present in this checkout")
     src = RealPairBatchSource(video_path=upstream_video, n_pairs=600, eval_size=(384, 512))
@@ -491,7 +497,7 @@ def test_real_pair_batch_source_yields_real_decoded_pairs():
     in non-smoke training paths. This test verifies the real-decode path
     produces real PyAV-decoded contest video frames.
     """
-    upstream_video = Path("/Users/adpena/Projects/pact/upstream/videos/0.mkv")
+    upstream_video = _REPO_ROOT / "upstream" / "videos" / "0.mkv"
     if not upstream_video.exists():
         pytest.skip("upstream/videos/0.mkv not present in this checkout")
     try:
@@ -512,7 +518,7 @@ def test_real_pair_batch_source_yields_real_decoded_pairs():
 
 
 def test_real_pair_batch_source_rejects_zero_batch_size():
-    upstream_video = Path("/Users/adpena/Projects/pact/upstream/videos/0.mkv")
+    upstream_video = _REPO_ROOT / "upstream" / "videos" / "0.mkv"
     if not upstream_video.exists():
         pytest.skip("upstream/videos/0.mkv not present in this checkout")
     src = RealPairBatchSource(video_path=upstream_video, n_pairs=4, eval_size=(384, 512))
@@ -643,7 +649,7 @@ def _effective_loc(path: Path) -> int:
 
 def test_lane_12_v2_inflate_loc_budget():
     """Inflate.py MUST be ≤ 100 effective LOC per Lesson 4."""
-    inflate_path = Path("/Users/adpena/Projects/pact/src/tac/inflate/lane_12_v2_inflate.py")
+    inflate_path = _REPO_ROOT / "src" / "tac" / "inflate" / "lane_12_v2_inflate.py"
     loc = _effective_loc(inflate_path)
     assert loc <= 100, (
         f"inflate LOC budget exceeded: {loc} > 100. "
@@ -660,7 +666,7 @@ def test_lane_12_v2_inflate_runtime_dep_closure():
     - brotli
     - tac.lane_12_v2_nerv_as_renderer
     """
-    inflate_path = Path("/Users/adpena/Projects/pact/src/tac/inflate/lane_12_v2_inflate.py")
+    inflate_path = _REPO_ROOT / "src" / "tac" / "inflate" / "lane_12_v2_inflate.py"
     src = inflate_path.read_text()
     tree = ast.parse(src)
     allowed_top_level = {

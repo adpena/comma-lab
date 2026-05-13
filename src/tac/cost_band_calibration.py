@@ -254,6 +254,14 @@ class CostBandAnchor:
     returncode: int | None = None
     notes: str = ""
     schema: str = SCHEMA_VERSION
+    # R4 finding Z-4.1 (2026-05-13): per-row integer schema_version for
+    # future-proof migration. Legacy rows (without schema_version) are
+    # implicitly schema_version=1. Subsequent schema bumps increment this
+    # integer; the LEGACY_PRE_NV7 outcome sentinel disambiguates the
+    # outcome-field shape; schema_version disambiguates ALL field
+    # additions/removals/renames. See
+    # feedback_review_zeta_r4_LANDED_20260513.md Finding Z-4.1.
+    schema_version: int = 1
 
 
 def _now_utc_iso() -> str:
@@ -287,6 +295,10 @@ def append_anchor(
     line = json.dumps(
         {
             "schema": anchor.schema,
+            # R4 finding Z-4.1 (2026-05-13): per-row integer schema_version.
+            # Legacy rows (pre-2026-05-13) lack this field — read-side defaults
+            # missing rows to 1 implicitly. Subsequent schema bumps increment.
+            "schema_version": anchor.schema_version,
             "logged_at_utc": anchor.logged_at_utc,
             "dispatch_label": anchor.dispatch_label,
             "trainer": anchor.trainer,
@@ -353,6 +365,9 @@ def load_anchors(
                 continue
             returncode_raw = d.get("returncode")
             returncode_val: int | None = None if returncode_raw is None else int(returncode_raw)
+            # R4 finding Z-4.1 (2026-05-13): legacy rows pre-2026-05-13 lack
+            # `schema_version`; default to 1 to preserve backward compat.
+            schema_version_raw = d.get("schema_version", 1)
             out.append(
                 CostBandAnchor(
                     logged_at_utc=d["logged_at_utc"],
@@ -371,6 +386,7 @@ def load_anchors(
                     outcome=outcome_raw,
                     returncode=returncode_val,
                     notes=d.get("notes", ""),
+                    schema_version=int(schema_version_raw),
                 )
             )
         except (KeyError, TypeError, ValueError):

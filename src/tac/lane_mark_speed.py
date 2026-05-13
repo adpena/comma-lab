@@ -14,7 +14,7 @@ the renderer's pose conditioning is now a function of the masks themselves —
 no separate stored signal — which matches the inverse-steganalysis principle
 that the scorer only sees the rendered output, not the conditioning input.
 
-Camera (verified from /Users/adpena/Projects/pact/CLAUDE.md project_comma_hardware.md):
+Camera (verified from <repo_root>/CLAUDE.md + project_comma_hardware.md):
     fx = 910 px, principal point pp = (582, 437) at native (1164, 874)
     FoE at scorer scale (256, 174) — verified empirically via radial_zoom.py
     20 fps, 1200 frames per clip
