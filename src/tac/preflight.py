@@ -2627,6 +2627,16 @@ def preflight_all(
         check_macos_cpu_advisory_not_promoted_without_linux_verification(
             strict=True, verbose=verbose,
         )
+        # Catalog #197 - check_full_cpu_requires_explicit_advisory_waiver
+        # Operator approved 2026-05-13 (time-traveler --full-cpu mode dev).
+        # Refuses trainers that declare --full-cpu without the coupled
+        # --advisory-cpu-explicitly-waived flag and coupled-flag validator
+        # invocation. Sister of Catalog #127 (call-site) + Catalog #192
+        # (persisted artifact). Live count at landing: 0. STRICT @ 0 per
+        # CLAUDE.md "Strict-flip atomicity rule".
+        check_full_cpu_requires_explicit_advisory_waiver(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -33983,7 +33993,11 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
             #   - 'wire' / 'wired' / 'wiring' (informal acknowledgment)
             #   - 'hook' (informal - "<hook>: ...")
             idx = line_lower.find(alias_lower)
-            after = line_lower[idx + len(alias_lower):].lstrip()
+            # Markdown landing memos commonly bold the hook label, e.g.
+            # ``**Probe-disambiguator**: ...``. Strip trailing emphasis markers
+            # before looking for the declaration colon so the guard enforces
+            # substance instead of prose style.
+            after = line_lower[idx + len(alias_lower):].lstrip(" *_")
             if not after:
                 # Alias is the entire line tail - reject (likely a header).
                 continue
@@ -40738,13 +40752,29 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
     root = (repo_root or Path.cwd()).resolve()
     violations: list[str] = []
     scan_dirs = ("tools", "scripts", "experiments", "src/tac")
+    source_index = _current_source_index(root)
+    candidate_paths: tuple[Path, ...]
+    if source_index is not None:
+        from tac.source_index import ScannerQuery
+
+        candidate_paths = source_index.query_files(
+            ScannerQuery(
+                dirs=scan_dirs,
+                pattern="*.py",
+                require_any=("gc_experiments_results", *_CHECK_156_EXTERNAL_API_NAMES),
+            )
+        )
+    else:
+        candidates: list[Path] = []
+        for d in scan_dirs:
+            top = root / d
+            if not top.is_dir():
+                continue
+            # preflight-mirror-skip-ok: inline filter below excludes ".omx/oss_export/"
+            candidates.extend(top.rglob("*.py"))
+        candidate_paths = tuple(candidates)
     scanned = 0
-    for d in scan_dirs:
-        top = root / d
-        if not top.is_dir():
-            continue
-        # preflight-mirror-skip-ok: inline filter below excludes ".omx/oss_export/"
-        for p in top.rglob("*.py"):
+    for p in candidate_paths:
             rel = str(p.relative_to(root))
             # Skip vendored / test-fixture trees.
             if any(m in rel for m in ("_intake_", ".omx/oss_export/", "/public_pr")):
@@ -40757,7 +40787,10 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
             if p.name.startswith("test_") and "gc_experiments_results" in p.name:
                 continue
             try:
-                text = p.read_text(encoding="utf-8", errors="replace")
+                if source_index is not None:
+                    text = source_index.read_text(p, encoding="utf-8", errors="replace")
+                else:
+                    text = p.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
             # Quick filter: must reference the helper module or its API.
@@ -40770,7 +40803,10 @@ def check_gc_helper_refuses_delete_on_tracked_paths(
             lines = text.splitlines()
             if p.suffix == ".py":
                 try:
-                    tree = ast.parse(text)
+                    if source_index is not None:
+                        tree = source_index.python_ast(p)
+                    else:
+                        tree = ast.parse(text)
                 except SyntaxError:
                     tree = None
                 if tree is not None:
@@ -46096,6 +46132,181 @@ def check_macos_cpu_advisory_not_promoted_without_linux_verification(
             "CONTEST-COMPLIANT HARDWARE' non-negotiable + Catalog #192 "
             "the macOS-CPU advisory axis is non-promotable until the "
             "paired Linux x86_64 result lands:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #197 — check_full_cpu_requires_explicit_advisory_waiver
+#
+# Operator approved 2026-05-13 (time-traveler --full-cpu mode dev). Sister
+# self-protection for the "device-or-die-gate-bypass-via-uncoupled-flags"
+# bug class. The canonical pattern is:
+#
+#   1. Trainer's argparse exposes ``--full-cpu`` to allow contest-shape CPU
+#      training (advisory-only per CLAUDE.md "MPS auth eval is NOISE" + the
+#      "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT
+#      HARDWARE" non-negotiable).
+#   2. The mode MUST also expose ``--advisory-cpu-explicitly-waived`` so the
+#      operator must explicitly acknowledge the non-promotable nature.
+#   3. The trainer MUST validate the coupling (refuse ``--full-cpu`` without
+#      ``--advisory-cpu-explicitly-waived``) BEFORE the device-or-die gate
+#      can be reached.
+#
+# Bug class: a future trainer that copies the ``--full-cpu`` flag without
+# also implementing the waiver coupling silently re-opens a CPU bypass to the
+# canonical ``device_or_die`` gate. The bypass produces non-promotable
+# artifacts that may leak into autopilot ranking unless Catalog #192 catches
+# the persisted-row leakage at preflight time — but that is only a
+# defence-in-depth layer; the structural fix is at the CLI surface.
+#
+# This STRICT gate refuses any ``experiments/train_substrate_*.py``,
+# ``experiments/train_*.py``, or ``experiments/train_renderer*.py`` source
+# file that:
+#   - declares ``--full-cpu`` argparse argument, AND
+#   - does NOT also declare ``--advisory-cpu-explicitly-waived``, OR
+#   - does NOT call a coupled-flag validator function (name pattern
+#     ``_validate_full_cpu_flags`` or ``validate_full_cpu_flags``) inside
+#     ``def main(`` body.
+#
+# Acceptance: same-line ``# FULL_CPU_COUPLED_FLAGS_OK:<reason>`` waiver on
+# the argparse ``add_argument("--full-cpu", ...)`` line for the rare case
+# the trainer legitimately has a different waiver mechanism (must document
+# the alternative in the waiver reason).
+#
+# Sister of Catalog #127 (call-site custody validator) + Catalog #192
+# (persisted-artifact macOS-CPU advisory gate). Together they extinct the
+# bug class across all 3 surfaces:
+#   - Catalog #197: CLI/source surface (this gate)
+#   - Catalog #127: in-memory result-object surface
+#   - Catalog #192: persisted-artifact JSON/JSONL surface
+#
+# Live count at landing: 0 (only experiments/train_substrate_time_
+# traveler_l5_autonomy.py uses --full-cpu; it has the coupled waiver +
+# validator).
+# ============================================================================
+
+_CHECK_197_FULL_CPU_FLAG_TOKEN = "--full-cpu"
+_CHECK_197_WAIVER_FLAG_TOKEN = "--advisory-cpu-explicitly-waived"
+_CHECK_197_VALIDATOR_FN_TOKENS: tuple[str, ...] = (
+    "_validate_full_cpu_flags",
+    "validate_full_cpu_flags",
+)
+_CHECK_197_SAMELINE_WAIVER_TOKEN = "FULL_CPU_COUPLED_FLAGS_OK:"
+_CHECK_197_SCAN_GLOBS: tuple[str, ...] = (
+    "experiments/train_substrate_*.py",
+    "experiments/train_renderer*.py",
+    "experiments/train_*.py",
+)
+
+
+def _check_197_iter_candidate_files(root: Path) -> list[Path]:
+    """Return experiments/train_*.py paths that may declare --full-cpu."""
+    out: set[Path] = set()
+    experiments = root / "experiments"
+    if not experiments.is_dir():
+        return []
+    for glob in _CHECK_197_SCAN_GLOBS:
+        # Strip the leading "experiments/" since we already root at experiments.
+        local_glob = glob.removeprefix("experiments/")
+        out.update(p for p in experiments.glob(local_glob) if p.is_file())
+    return sorted(out)
+
+
+def _check_197_line_has_waiver(line: str) -> bool:
+    return _CHECK_197_SAMELINE_WAIVER_TOKEN in line
+
+
+def check_full_cpu_requires_explicit_advisory_waiver(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Catalog #197 — refuse uncoupled ``--full-cpu`` declarations.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+    non-negotiable: the trainer-level coupled-flag validator is the immediate
+    fix; this preflight gate is the structural self-protection that prevents
+    a future trainer from re-introducing the device-or-die-gate-bypass-via-
+    uncoupled-flags bug class.
+    """
+    root = repo_root or Path.cwd()
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    scanned = 0
+    for path in _check_197_iter_candidate_files(root):
+        scanned += 1
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _CHECK_197_FULL_CPU_FLAG_TOKEN not in text:
+            continue
+        # Locate the argparse add_argument line for --full-cpu.
+        full_cpu_argparse_line: str | None = None
+        for line in text.splitlines():
+            stripped = line.strip()
+            if (
+                "add_argument" in stripped
+                and f'"{_CHECK_197_FULL_CPU_FLAG_TOKEN}"' in stripped
+            ):
+                full_cpu_argparse_line = line
+                break
+        # If no add_argument line, the file mentions --full-cpu in a docstring/
+        # comment only; treat as accepted.
+        if full_cpu_argparse_line is None:
+            continue
+        # Same-line waiver opt-out.
+        if _check_197_line_has_waiver(full_cpu_argparse_line):
+            continue
+        # Require sister --advisory-cpu-explicitly-waived argparse declaration.
+        has_waiver_flag = False
+        for line in text.splitlines():
+            stripped = line.strip()
+            if (
+                "add_argument" in stripped
+                and f'"{_CHECK_197_WAIVER_FLAG_TOKEN}"' in stripped
+            ):
+                has_waiver_flag = True
+                break
+        if not has_waiver_flag:
+            violations.append(
+                f"{path}: declares {_CHECK_197_FULL_CPU_FLAG_TOKEN} but is "
+                f"missing the sister {_CHECK_197_WAIVER_FLAG_TOKEN} argparse "
+                "declaration (Catalog #197)."
+            )
+            continue
+        # Require a coupled-flag validator function invocation somewhere in
+        # the file (typically called from main()).
+        has_validator_call = any(token in text for token in _CHECK_197_VALIDATOR_FN_TOKENS)
+        if not has_validator_call:
+            violations.append(
+                f"{path}: declares {_CHECK_197_FULL_CPU_FLAG_TOKEN} + "
+                f"{_CHECK_197_WAIVER_FLAG_TOKEN} but does not call any "
+                f"coupled-flag validator (any of {_CHECK_197_VALIDATOR_FN_TOKENS}). "
+                "Catalog #197 requires the validator to refuse uncoupled flag "
+                "combinations BEFORE the device-or-die gate is reached."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [full-cpu-coupled-flags] {len(violations)} "
+                f"violation(s) across {scanned} candidate file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                f"  [full-cpu-coupled-flags] OK "
+                f"({scanned} candidate file(s) scanned, 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_full_cpu_requires_explicit_advisory_waiver found "
+            f"{len(violations)} trainer(s) declaring --full-cpu without the "
+            "coupled --advisory-cpu-explicitly-waived flag and/or coupled-flag "
+            "validator invocation. Per CLAUDE.md 'Bugs must be permanently "
+            "fixed AND self-protected against' + Catalog #197:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
