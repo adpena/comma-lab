@@ -2356,6 +2356,32 @@ def preflight_all(
         check_cost_band_posterior_rows_have_outcome_field(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #183 (FIX-WAVE-3 R3-1): self-protection
+        # for the `_CHECK_176_LEGACY_ALLOWLIST` backfill cadence. Per
+        # Boyd's adversarial-review verdict in
+        # `feedback_recursive_review_r3_LANDED_20260513.md` the legacy
+        # allowlist must shrink monotonically toward zero. The canonical
+        # ledger at
+        # `.omx/research/legacy_allowlist_backfill_cadence_<YYYYMMDD>.md`
+        # must be dated within the last 30 days while the allowlist is
+        # non-empty. Strict-from-byte-one per CLAUDE.md "Bugs must be
+        # permanently fixed AND self-protected against" non-negotiable;
+        # live count at landing: 0.
+        check_legacy_allowlist_backfill_cadence_ledger_current(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #184 (FIX-WAVE-3 R3-4): self-protection
+        # for the deferred DEC-WAVE-7-META-PREFLIGHT-HOOK operator
+        # decision. Per FIX-WAVE-3 Option B the `--no-codebase` default
+        # in `tools/preflight_hook.py` stays (preserves the 30s-DX-budget
+        # tradeoff) BUT the canonical 3-token contract (`--no-codebase`
+        # default + `PREFLIGHT_FULL` + `PREFLIGHT_ALLOW_SLOW` env-var
+        # escapes) is locked in by this gate. Strict-from-byte-one;
+        # live count at landing: 0 (the hook already carries all 3
+        # tokens).
+        check_preflight_hook_codebase_default(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-13 Catalog #178 (WAVE-7-LOW-FIX, REVIEW-OMNI NV1):
         # Substrate trainers MUST either enable TF32
         # (`torch.backends.cuda.matmul.allow_tf32 = True`) OR carry a
@@ -43525,7 +43551,6 @@ _CHECK_176_LEGACY_ALLOWLIST: frozenset[str] = frozenset({
     "check_line_search_scorer_runtime_preflight",
     "check_logit_margin_loss_uses_boundary_mask",
     "check_modal_cpu_auth_eval_is_advisory_only",
-    "check_modal_mount_builder_uses_mtime_stability_check",
     "check_modal_recovery_cli_guidance_current",
     "check_nerv_codec_uses_ema_and_no_mps_and_auth_eval",
     "check_no_active_mcp_server_config",
@@ -43536,7 +43561,6 @@ _CHECK_176_LEGACY_ALLOWLIST: frozenset[str] = frozenset({
     "check_no_raw_zip_extractall",
     "check_no_submission_provider_or_cpu_score_leakage",
     "check_operator_approval_must_be_lane_scoped",
-    "check_operator_authorize_canonical_use",
     "check_per_tensor_K_side_info_matches_decoder_expectation",
     "check_phase2_extract_destroys_on_failure",
     "check_phase2_launch_polls_setup_log",
@@ -43562,7 +43586,6 @@ _CHECK_176_LEGACY_ALLOWLIST: frozenset[str] = frozenset({
     "check_setup_full_probe_before_dali",
     "check_solvers_use_dual_axis_ranking",
     "check_subprocess_run_checked",
-    "check_substrate_dispatch_uses_smoke_before_full_pattern",
     "check_substrate_trainer_pose_defaults_match_contest_formula",
     "check_test_assertion_strength_for_loss_functions",
     "check_tools_have_argparse",
@@ -43793,6 +43816,249 @@ def check_cost_band_posterior_rows_have_outcome_field(
             "Catalog #177 closes FIX-WAVE-2 R2-3 (read-side defense "
             "over cost_band_calibration.py:333 back-compat trap):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #183 - check_legacy_allowlist_backfill_cadence_ledger_current
+# ─────────────────────────────────────────────────────────────────────────
+#
+# FIX-WAVE-3 R3-1 (2026-05-13). Self-protection for the structural
+# "slack must shrink" rule on `_CHECK_176_LEGACY_ALLOWLIST` per Boyd's
+# adversarial-review verdict in
+# `feedback_recursive_review_r3_LANDED_20260513.md`.
+#
+# Without a backfill cadence the allowlist becomes a permanent
+# absorption layer rather than a transitional waiver mechanism. The
+# canonical ledger at
+# `.omx/research/legacy_allowlist_backfill_cadence_<YYYYMMDD>.md` must
+# be dated within the last 30 days OR this gate refuses with a
+# freshness violation. If `|allowlist| == 0` the gate is exempt
+# (mission accomplished; ledger may close).
+_CHECK_183_LEDGER_GLOB: str = ".omx/research/legacy_allowlist_backfill_cadence_*.md"
+_CHECK_183_FRESHNESS_WINDOW_DAYS: int = 30
+_CHECK_183_DATE_RE = re.compile(r"_(\d{8})\.md$")
+
+
+def _check_183_extract_ledger_dates(root: Path) -> list[tuple[Path, str]]:
+    """Return (path, YYYYMMDD) for every ledger file matching the canonical glob."""
+    out: list[tuple[Path, str]] = []
+    for path in sorted(root.glob(_CHECK_183_LEDGER_GLOB)):
+        m = _CHECK_183_DATE_RE.search(path.name)
+        if m:
+            out.append((path, m.group(1)))
+    return out
+
+
+def check_legacy_allowlist_backfill_cadence_ledger_current(
+    *,
+    repo_root: Path | None = None,
+    now_utc_ymd: str | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #183 - refuse repository state where the
+    `_CHECK_176_LEGACY_ALLOWLIST` backfill ledger is stale (no
+    `.omx/research/legacy_allowlist_backfill_cadence_<YYYYMMDD>.md`
+    file dated within the last 30 days) AND the allowlist is
+    non-empty.
+
+    If `len(_CHECK_176_LEGACY_ALLOWLIST) == 0` the ledger is exempt
+    from freshness (mission accomplished; ledger may close).
+
+    `now_utc_ymd` is overrideable for deterministic testing
+    (`YYYYMMDD` form). Defaults to today UTC.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    if not _CHECK_176_LEGACY_ALLOWLIST:
+        if verbose:
+            print(
+                "  [legacy-allowlist-backfill-cadence] OK (allowlist "
+                "empty; ledger may close)"
+            )
+        return violations
+    if now_utc_ymd is None:
+        import datetime as _dt
+        now_utc_ymd = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%d")
+    try:
+        int(now_utc_ymd)
+    except (TypeError, ValueError):
+        violations.append(
+            f"check_legacy_allowlist_backfill_cadence_ledger_current: "
+            f"invalid now_utc_ymd={now_utc_ymd!r} (must be YYYYMMDD)"
+        )
+        if violations and strict:
+            raise PreflightError(violations[-1])
+        return violations
+    ledgers = _check_183_extract_ledger_dates(root)
+    if not ledgers:
+        violations.append(
+            "no `.omx/research/legacy_allowlist_backfill_cadence_<YYYYMMDD>.md` "
+            f"ledger found; `_CHECK_176_LEGACY_ALLOWLIST` has "
+            f"{len(_CHECK_176_LEGACY_ALLOWLIST)} entries pending backfill. "
+            "Create the canonical ledger per CLAUDE.md Catalog #183 "
+            "self-protection (see FIX-WAVE-3 R3-1 closure memo)."
+        )
+    else:
+        newest_path, newest_ymd_str = max(ledgers, key=lambda t: t[1])
+        try:
+            import datetime as _dt
+            d_now = _dt.datetime.strptime(now_utc_ymd, "%Y%m%d").date()
+            d_ledger = _dt.datetime.strptime(newest_ymd_str, "%Y%m%d").date()
+            days_old = (d_now - d_ledger).days
+        except (ValueError, TypeError):
+            days_old = 9999
+        if days_old > _CHECK_183_FRESHNESS_WINDOW_DAYS:
+            violations.append(
+                f"newest backfill ledger {newest_path} is {days_old} days "
+                f"old (window: {_CHECK_183_FRESHNESS_WINDOW_DAYS} days); "
+                f"`_CHECK_176_LEGACY_ALLOWLIST` has "
+                f"{len(_CHECK_176_LEGACY_ALLOWLIST)} entries pending backfill. "
+                "Ship a backfill wave AND append a new row to the ledger, "
+                "OR add a new ledger file with today's date, OR drive the "
+                "allowlist to zero to retire this gate."
+            )
+        else:
+            try:
+                text = newest_path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                text = ""
+            if "Backfill wave log" not in text:
+                violations.append(
+                    f"ledger {newest_path} is missing the required "
+                    "'Backfill wave log' section heading; ledger contract "
+                    "requires the section to make backfill progress "
+                    "machine-verifiable."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [legacy-allowlist-backfill-cadence] {len(violations)} "
+                f"violation(s) (allowlist size: {len(_CHECK_176_LEGACY_ALLOWLIST)}):"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                "  [legacy-allowlist-backfill-cadence] OK (ledger fresh; "
+                f"allowlist size: {len(_CHECK_176_LEGACY_ALLOWLIST)})"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_legacy_allowlist_backfill_cadence_ledger_current "
+            f"found {len(violations)} violation(s). Catalog #183 (FIX-WAVE-3 "
+            "R3-1 self-protection) enforces the 30-day backfill cadence on "
+            "`_CHECK_176_LEGACY_ALLOWLIST`:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #184 - check_preflight_hook_codebase_default
+# ─────────────────────────────────────────────────────────────────────────
+#
+# FIX-WAVE-3 R3-4 (2026-05-13). Self-protection for the deferred
+# DEC-WAVE-7-META-PREFLIGHT-HOOK operator decision per
+# `feedback_recursive_review_r3_LANDED_20260513.md`. R1 originally
+# surfaced this as a BONUS CRITICAL surface 11 finding and recommended
+# a META gate that forces codebase-scoped checks to fire on the
+# changed-file subset; FIX-WAVE-1 DEFERRED the gate; R3-4 surfaces it
+# again because the bypass path remains structural.
+#
+# Per FIX-WAVE-3 Option B: keep the `--no-codebase` default in
+# `tools/preflight_hook.py` (preserves the 30s-DX budget the operator
+# opted into) BUT lock the canonical 3-token contract (`--no-codebase`
+# default + `PREFLIGHT_FULL` env-var escape + `PREFLIGHT_ALLOW_SLOW`
+# env-var escape) by this gate. Any change to the contract requires
+# a same-file `# PREFLIGHT_HOOK_DEFAULT_OK:<reason>` waiver OR an
+# explicit update to this gate.
+_CHECK_184_HOOK_REL_PATH: str = "tools/preflight_hook.py"
+_CHECK_184_REQUIRED_TOKENS: tuple[str, ...] = (
+    "--no-codebase",
+    "PREFLIGHT_FULL",
+    "PREFLIGHT_ALLOW_SLOW",
+)
+_CHECK_184_WAIVER_RE = re.compile(
+    r"#\s*PREFLIGHT_HOOK_DEFAULT_OK\s*:\s*\S"
+)
+
+
+def check_preflight_hook_codebase_default(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #184 - refuse any state of `tools/preflight_hook.py`
+    that drops the canonical default-arg-construction contract
+    (`--no-codebase` default OR the `PREFLIGHT_FULL` / `PREFLIGHT_ALLOW_SLOW`
+    env-var escapes).
+
+    Same-file `# PREFLIGHT_HOOK_DEFAULT_OK:<reason>` waiver accepted
+    for operator-approved changes to the contract.
+
+    Sister of Catalog #176 (the "structural lock on operator-facing
+    catalog table" pattern). #184 is the "structural lock on a
+    deferred operator decision" pattern.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    hook_path = root / _CHECK_184_HOOK_REL_PATH
+    violations: list[str] = []
+    if not hook_path.is_file():
+        if verbose:
+            print(
+                f"  [preflight-hook-codebase-default] OK ({hook_path} "
+                "does not exist; gate is no-op)"
+            )
+        return violations
+    try:
+        text = hook_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return violations
+    if _CHECK_184_WAIVER_RE.search(text):
+        if verbose:
+            print(
+                "  [preflight-hook-codebase-default] OK (file-level "
+                "# PREFLIGHT_HOOK_DEFAULT_OK:<reason> waiver present)"
+            )
+        return violations
+    missing: list[str] = []
+    for tok in _CHECK_184_REQUIRED_TOKENS:
+        if tok not in text:
+            missing.append(tok)
+    if missing:
+        violations.append(
+            f"{_CHECK_184_HOOK_REL_PATH} is missing required token(s) "
+            f"{missing!r}. The canonical contract requires "
+            f"`--no-codebase` default + `PREFLIGHT_FULL` + "
+            f"`PREFLIGHT_ALLOW_SLOW` env-var escapes per "
+            f"DEC-WAVE-7-META-PREFLIGHT-HOOK. Re-add the missing "
+            f"token(s) OR land a file-level "
+            f"`# PREFLIGHT_HOOK_DEFAULT_OK:<reason>` waiver."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [preflight-hook-codebase-default] {len(violations)} "
+                "violation(s):"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                "  [preflight-hook-codebase-default] OK (all 3 canonical "
+                "tokens present)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_hook_codebase_default found "
+            f"{len(violations)} violation(s). Catalog #184 (FIX-WAVE-3 "
+            "R3-4 self-protection) enforces the deferred "
+            "DEC-WAVE-7-META-PREFLIGHT-HOOK operator decision:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
         )
     return violations
 
