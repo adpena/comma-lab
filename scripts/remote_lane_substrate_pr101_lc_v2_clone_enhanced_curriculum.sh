@@ -22,6 +22,7 @@ PR95PLUS_UPSTREAM_DIR="${PR95PLUS_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 PR95PLUS_DEVICE="${PR95PLUS_DEVICE:-cuda}"
 PR95PLUS_CURRICULUM="${PR95PLUS_CURRICULUM:-pr95_enhanced}"
 PR95PLUS_EPOCHS_MULTIPLIER="${PR95PLUS_EPOCHS_MULTIPLIER:-1.0}"
+PR95PLUS_SMOKE_EPOCHS="${PR95PLUS_SMOKE_EPOCHS:-100}"
 PR95PLUS_SMOKE="${PR95PLUS_SMOKE:-0}"
 PR95PLUS_SEED="${PR95PLUS_SEED:-0}"
 PR95PLUS_GPU="${PR95PLUS_GPU:-${MODAL_GPU:-A100}}"
@@ -161,6 +162,7 @@ TRAIN_ARGS=(
     --device "$PR95PLUS_DEVICE"
     --curriculum "$PR95PLUS_CURRICULUM"
     --epochs-multiplier "$PR95PLUS_EPOCHS_MULTIPLIER"
+    --smoke-epochs "$PR95PLUS_SMOKE_EPOCHS"
     --batch-size "$PR95PLUS_BATCH_SIZE"
     --seed "$PR95PLUS_SEED"
     --gpu "$PR95PLUS_GPU"
@@ -170,7 +172,7 @@ if [ "$PR95PLUS_SMOKE" = "1" ] || [ "$PR95PLUS_SMOKE" = "true" ] || [ "$PR95PLUS
     TRAIN_ARGS+=(--smoke)
 fi
 
-log "stage_4_trainer_invoke_begin curriculum=$PR95PLUS_CURRICULUM multiplier=$PR95PLUS_EPOCHS_MULTIPLIER device=$PR95PLUS_DEVICE smoke=$PR95PLUS_SMOKE"
+log "stage_4_trainer_invoke_begin curriculum=$PR95PLUS_CURRICULUM multiplier=$PR95PLUS_EPOCHS_MULTIPLIER smoke_epochs=$PR95PLUS_SMOKE_EPOCHS device=$PR95PLUS_DEVICE smoke=$PR95PLUS_SMOKE"
 set +e
 "$PYBIN" "${TRAIN_ARGS[@]}" \
     2>&1 | tee -a "$LOG_DIR/run.log"
@@ -189,6 +191,14 @@ if [ "$TRAIN_RC" -ne 0 ]; then
         --notes "PR95++ enhanced trainer failed rc=$TRAIN_RC" \
         --force || true
     exit "$TRAIN_RC"
+fi
+
+AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
+if [ -f "$AUTH_EVAL_JSON" ]; then
+    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
+    log "LANE_PR95PLUS_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON rc=$TRAIN_RC"
+else
+    log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer completed without contest-CUDA score; smoke gate should refuse this for full canaries)"
 fi
 
 "$PYBIN" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \

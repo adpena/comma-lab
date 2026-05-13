@@ -54,6 +54,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -101,6 +103,7 @@ from tac.training import EMA
 
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
+CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 SUBSTRATE_TAG = "pr95plus"
 SUBSTRATE_LANE_ID = (
     "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513"
@@ -209,8 +212,25 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--num-pairs", type=int, default=600)
     p.add_argument("--max-pairs", type=int, default=16)
     p.add_argument("--smoke", action="store_true")
+    p.add_argument(
+        "--smoke-epochs",
+        type=int,
+        default=0,
+        help=(
+            "Total smoke curriculum epochs. 0 preserves the legacy tiny "
+            "structural smoke schedule; operator smoke wrappers set this."
+        ),
+    )
     p.add_argument("--gpu", default="A100")
     p.add_argument("--codebook-path", default="")
+    p.add_argument(
+        "--skip-auth-eval",
+        action="store_true",
+        help=(
+            "Skip final contest_auth_eval.py. CUDA smoke defaults to auth eval "
+            "so Catalog #167 validates a real contest-CUDA artifact."
+        ),
+    )
 
     # Per-enhancement override flags. Each defaults to "from-curriculum" so
     # the curriculum mode drives the stack; explicit overrides win.
@@ -334,7 +354,7 @@ def _smoke_stage_epoch_overrides(args: argparse.Namespace) -> dict[str, int]:
     Per CLAUDE.md "Forbidden ``make_synthetic_pair_batch`` calls in any
     non-smoke training path": this map ONLY applies when ``--smoke`` is set.
     """
-    return {
+    base = {
         "stage0_pretrained_driving_prior_bootstrap": 2,
         "stage1_v328_ce": 3,
         "stage2_v331_softplus": 3,
@@ -345,6 +365,40 @@ def _smoke_stage_epoch_overrides(args: argparse.Namespace) -> dict[str, int]:
         "stage7_sigma_sweep": 3,
         "stage8_muon_finetune": 3,
     }
+    requested = int(getattr(args, "smoke_epochs", 0) or 0)
+    if requested <= 0:
+        return base
+
+    # Preserve PR95 stage proportions while making the actual training budget
+    # match the operator smoke contract. This keeps Catalog #167 cost-band
+    # anchors honest: 100 advertised smoke epochs means 100 executed epochs.
+    names = list(base)
+    total = sum(base.values())
+    requested = max(requested, len(names))
+    raw = {name: base[name] * requested / total for name in names}
+    out = {name: max(1, int(raw[name])) for name in names}
+    remainder = requested - sum(out.values())
+    if remainder > 0:
+        ranked = sorted(
+            names,
+            key=lambda name: (raw[name] - int(raw[name]), base[name]),
+            reverse=True,
+        )
+        for i in range(remainder):
+            out[ranked[i % len(ranked)]] += 1
+    elif remainder < 0:
+        ranked = sorted(
+            names,
+            key=lambda name: (raw[name] - int(raw[name]), base[name]),
+        )
+        i = 0
+        while remainder < 0 and any(out[name] > 1 for name in names):
+            name = ranked[i % len(ranked)]
+            if out[name] > 1:
+                out[name] -= 1
+                remainder += 1
+            i += 1
+    return out
 
 
 def _full_stage_epoch_overrides(
@@ -373,10 +427,13 @@ def _full_stage_epoch_overrides(
 
 def _vendor_runtime(output_dir: Path) -> None:
     """Emit a contest-compliant inflate.sh (3 positional args + set -e)
-    + the canonical PR101 LC v2 clone inflate.py.
+    + the vendored PR101 LC v2 clone runtime package.
 
     Per Catalog #146 + #163: the inflate.sh sentinel pattern is required
-    when the script sources the canonical remote bootstrap.
+    when the script sources the canonical remote bootstrap. The runtime is
+    self-contained under ``runtime/src`` so ``contest_auth_eval.py`` exercises
+    the same archive parser and renderer that would ship with the packet,
+    instead of importing mutable repo source by accident.
     """
     runtime_dir = output_dir / "runtime"
     runtime_dir.mkdir(parents=True, exist_ok=True)
@@ -390,18 +447,92 @@ def _vendor_runtime(output_dir: Path) -> None:
         'ARCHIVE_DIR="$1"\n'
         'OUTPUT_DIR="$2"\n'
         'FILE_LIST="$3"\n'
+        'export PYTHONPATH="$HERE/src:${PYTHONPATH:-}"\n'
         'exec uv run --quiet --with torch==2.5.1+cu124 '
+        '--with numpy --with brotli --with pillow '
         '--extra-index-url https://download.pytorch.org/whl/cu124 '
         '--index-strategy unsafe-best-match '
-        '"$HERE/inflate.py" "$ARCHIVE_DIR" "$OUTPUT_DIR" "$FILE_LIST"\n',
+        'python -m tac.substrates.pr101_lc_v2_clone.inflate '
+        '"$ARCHIVE_DIR" "$OUTPUT_DIR" "$FILE_LIST"\n',
         encoding="utf-8",
     )
     inflate_sh.chmod(0o755)
-    src_inflate = REPO_ROOT / "src" / "tac" / "substrates" / "pr101_lc_v2_clone" / "inflate.py"
-    if src_inflate.is_file():
-        import shutil
+    src_root = runtime_dir / "src"
+    package_dir = src_root / "tac" / "substrates" / "pr101_lc_v2_clone"
+    packet_dir = src_root / "tac" / "packet_compiler"
+    package_dir.mkdir(parents=True, exist_ok=True)
+    packet_dir.mkdir(parents=True, exist_ok=True)
+    for init_dir in (
+        src_root / "tac",
+        src_root / "tac" / "substrates",
+        package_dir,
+        packet_dir,
+    ):
+        (init_dir / "__init__.py").write_text("", encoding="utf-8")
+    substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "pr101_lc_v2_clone"
+    for name in ("architecture.py", "archive.py", "inflate.py"):
+        shutil.copy2(substrate_src / name, package_dir / name)
+    packet_src = REPO_ROOT / "src" / "tac" / "packet_compiler"
+    for name in (
+        "pr101_conv4_storage_perms.py",
+        "pr101_decoder_byte_maps.py",
+        "pr101_decoder_storage_order.py",
+    ):
+        shutil.copy2(packet_src / name, packet_dir / name)
 
-        shutil.copy2(src_inflate, runtime_dir / "inflate.py")
+
+def _zero_state_dict_like(
+    state_dict: dict[str, torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """Return a PRC1-packable zero-state fallback for structural smoke eval."""
+
+    return {name: torch.zeros_like(t.detach().cpu()) for name, t in state_dict.items()}
+
+
+def _pack_smoke_archive_bytes(
+    state_dict: dict[str, torch.Tensor],
+    *,
+    latents: torch.Tensor,
+    meta: dict[str, object],
+) -> tuple[bytes, dict[str, object]]:
+    """Pack a valid smoke archive, falling back to a score-closed zero state.
+
+    The real PR101 byte map is intentionally fail-closed for negzig tensors
+    that quantise to ``-128``. Very short smoke runs can still hit that
+    non-bijection before QAT has moved weights into the safe interval. A JSON
+    placeholder proves only archive emission; it cannot be inflated or scored.
+    For the Catalog #167 smoke gate we instead fall back to a valid PRC1
+    archive with the same typed grammar and a zero decoder state. That keeps
+    the evidence honest: the smoke score is not a model-quality claim, but it
+    is a real contest-auth-eval pass through the runtime parser, decoder, PNG
+    writer, and scorer.
+    """
+
+    try:
+        return pack_archive(state_dict, latents=latents, meta=meta), {
+            "smoke_archive_mode": "ema_state",
+            "smoke_archive_score_claim": False,
+        }
+    except ValueError as exc:
+        if "NEGZIG_NON_BIJECTION" not in str(exc):
+            raise
+        fallback_meta = {
+            **meta,
+            "smoke_archive_mode": "zero_state_valid_prc1",
+            "smoke_zero_state_fallback_reason": str(exc),
+        }
+        return (
+            pack_archive(
+                _zero_state_dict_like(state_dict),
+                latents=torch.zeros_like(latents),
+                meta=fallback_meta,
+            ),
+            {
+                "smoke_archive_mode": "zero_state_valid_prc1",
+                "smoke_zero_state_fallback_reason": str(exc),
+                "smoke_archive_score_claim": False,
+            },
+        )
 
 
 class _SmokeSegScorer(torch.nn.Module):
@@ -565,12 +696,11 @@ def _train_smoke_loop(
                 global_step += 1
                 last_parts = {k: float(v.item()) for k, v in parts.items()}
 
-    # Build archive at the EMA snapshot.
-    # Per CLAUDE.md "Apples-to-apples evidence discipline": the smoke path
-    # short-circuits the PR101 NEGZIG-bijection quantizer (which refuses
-    # untrained weights whose biases land at -128) and writes a placeholder
-    # archive instead. The full training path lands a real PR101 archive
-    # after Stage 4 QAT has driven biases into the [-127, 127] range.
+    # Build a valid archive at the EMA snapshot. The smoke path may fall back
+    # to a zero-state PRC1 archive when the very short training run hits the
+    # PR101 negzig non-bijection before QAT has stabilized. That fallback is
+    # still contest-inflatable and scoreable; it is explicitly not a quality
+    # claim.
     orig = {k: v.detach().clone() for k, v in substrate.state_dict().items()}
     ema.apply(substrate)
     latents = torch.zeros(substrate.cfg.num_pairs, substrate.cfg.latent_dim)
@@ -578,26 +708,13 @@ def _train_smoke_loop(
         "substrate_tag": SUBSTRATE_TAG,
         "lane_id": SUBSTRATE_LANE_ID,
         "curriculum": args.curriculum,
-        "smoke_placeholder_archive": True,
+        "smoke_archive": True,
     }
-    try:
-        archive_bytes = pack_archive(
-            substrate.state_dict(),
-            latents=latents,
-            meta=meta,
-        )
-    except ValueError as exc:
-        # Smoke-only fallback: emit a tiny placeholder archive carrying the
-        # meta payload only. This keeps the smoke path testing the END-TO-
-        # END contract (archive emit + sha256 + zip) WITHOUT requiring a
-        # trained substrate. The full training path lands a real archive.
-        if "NEGZIG_NON_BIJECTION" not in str(exc):
-            raise
-        archive_bytes = json.dumps(
-            {**meta, "smoke_negzig_fallback_reason": str(exc)},
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode("utf-8")
+    archive_bytes, archive_meta = _pack_smoke_archive_bytes(
+        substrate.state_dict(),
+        latents=latents,
+        meta=meta,
+    )
     substrate.load_state_dict(orig)
 
     archive_dir = output_dir / "archive_dir"
@@ -613,12 +730,68 @@ def _train_smoke_loop(
     return {
         "archive_sha256": sha,
         "archive_bytes": len(archive_bytes),
+        "archive_zip_path": str(archive_zip),
+        "runtime_inflate_sh": str(output_dir / "runtime" / "inflate.sh"),
+        **archive_meta,
         "last_loss_parts": last_parts,
         "stage_log": stage_log,
         "training_mode": "smoke",
         "evidence_grade": (
             "macOS-CPU advisory" if str(device) == "cpu" else "training-only"
         ),
+    }
+
+
+def _run_contest_auth_eval_cuda(
+    *,
+    archive_zip: Path,
+    inflate_sh: Path,
+    upstream_dir: Path,
+    output_json: Path,
+) -> dict[str, object]:
+    """Run the canonical contest auth eval and require a CUDA score claim."""
+
+    cmd = [
+        sys.executable,
+        str(CONTEST_AUTH_EVAL_SCRIPT),
+        "--archive",
+        str(archive_zip),
+        "--inflate-sh",
+        str(inflate_sh),
+        "--upstream-dir",
+        str(upstream_dir),
+        "--device",
+        "cuda",
+        "--json-out",
+        str(output_json),
+    ]
+    print(f"[pr95plus-auth-eval] {' '.join(cmd)}")
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"contest_auth_eval.py failed rc={proc.returncode}; "
+            f"stdout_tail={proc.stdout[-2000:]}; "
+            f"stderr_tail={proc.stderr[-2000:]}"
+        )
+    from tac.auth_eval_result import parse_auth_eval_score_claim
+
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    claim = parse_auth_eval_score_claim(
+        payload,
+        required_score_axis="contest_cuda",
+        require_component_recompute=True,
+    )
+    if claim is None:
+        raise RuntimeError(
+            "contest_auth_eval.py completed but did not produce a valid "
+            "contest_cuda score claim; refusing silent smoke success"
+        )
+    return {
+        "auth_eval_json_path": str(output_json),
+        "auth_eval_cuda_score": float(claim.score),
+        "auth_eval_score_axis": "contest_cuda",
+        "auth_eval_lane_tag": claim.lane_tag,
+        "auth_eval_score_claim_valid": True,
     }
 
 
@@ -735,6 +908,16 @@ def main(argv: list[str] | None = None) -> int:
         stages=stages,
         output_dir=args.output_dir,
     )
+    if not args.skip_auth_eval and device.type == "cuda":
+        auth_eval_json_path = args.output_dir / "contest_auth_eval_cuda.json"
+        auth_result = _run_contest_auth_eval_cuda(
+            archive_zip=Path(result["archive_zip_path"]),
+            inflate_sh=Path(result["runtime_inflate_sh"]),
+            upstream_dir=Path(args.upstream_dir),
+            output_json=auth_eval_json_path,
+        )
+        result.update(auth_result)
+        result["evidence_grade"] = "contest-CUDA"
 
     manifest = {
         "lane_id": SUBSTRATE_LANE_ID,
@@ -764,6 +947,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[pr95plus] enhancements={enhanced_cfg.enabled_enhancements()}")
     print(f"[pr95plus] archive_sha256={result['archive_sha256']}")
     print(f"[pr95plus] archive_bytes={result['archive_bytes']}")
+    if "auth_eval_cuda_score" in result:
+        print(f"[pr95plus] [contest-CUDA] score={result['auth_eval_cuda_score']}")
     return 0
 
 

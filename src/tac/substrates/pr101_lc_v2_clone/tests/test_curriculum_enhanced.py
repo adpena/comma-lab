@@ -14,6 +14,8 @@ tests green.
 from __future__ import annotations
 
 import math
+from argparse import Namespace
+from pathlib import Path
 
 import pytest
 import torch
@@ -144,6 +146,64 @@ def test_wsd_lr_schedule_has_warmup_plateau_decay_and_floor() -> None:
     assert plateau == pytest.approx(1.0)
     assert floor == pytest.approx(0.1)
     assert floor < decayed < plateau
+
+
+def test_pr95plus_smoke_epoch_budget_matches_operator_contract() -> None:
+    from experiments.train_substrate_pr101_lc_v2_clone_enhanced_curriculum import (
+        _smoke_stage_epoch_overrides,
+    )
+
+    epochs = _smoke_stage_epoch_overrides(Namespace(smoke_epochs=100))
+
+    assert sum(epochs.values()) == 100
+    assert epochs["stage0_pretrained_driving_prior_bootstrap"] >= 1
+    assert epochs["stage8_muon_finetune"] >= epochs[
+        "stage0_pretrained_driving_prior_bootstrap"
+    ]
+
+
+def test_pr95plus_smoke_archive_fallback_is_valid_prc1_not_json_placeholder() -> None:
+    from experiments.train_substrate_pr101_lc_v2_clone_enhanced_curriculum import (
+        _pack_smoke_archive_bytes,
+    )
+    from tac.substrates.pr101_lc_v2_clone.archive import parse_archive
+
+    sub = Pr101LcV2CloneSubstrate(Pr101LcV2CloneConfig())
+    latents = torch.zeros(sub.cfg.num_pairs, sub.cfg.latent_dim)
+
+    archive_bytes, archive_meta = _pack_smoke_archive_bytes(
+        sub.state_dict(),
+        latents=latents,
+        meta={"lane_id": "test", "substrate_tag": "pr95plus"},
+    )
+
+    parsed = parse_archive(archive_bytes)
+    assert archive_bytes.startswith(b"PRC1")
+    assert parsed.latents.shape == (600, 28)
+    assert archive_meta["smoke_archive_mode"] in {
+        "ema_state",
+        "zero_state_valid_prc1",
+    }
+
+
+def test_pr95plus_runtime_vendor_is_self_contained(tmp_path: Path) -> None:
+    from experiments.train_substrate_pr101_lc_v2_clone_enhanced_curriculum import (
+        _vendor_runtime,
+    )
+
+    _vendor_runtime(tmp_path)
+    runtime = tmp_path / "runtime"
+
+    assert (runtime / "inflate.sh").is_file()
+    assert (
+        runtime / "src/tac/substrates/pr101_lc_v2_clone/inflate.py"
+    ).is_file()
+    assert (
+        runtime / "src/tac/packet_compiler/pr101_decoder_byte_maps.py"
+    ).is_file()
+    inflate_sh = (runtime / "inflate.sh").read_text(encoding="utf-8")
+    assert 'PYTHONPATH="$HERE/src:${PYTHONPATH:-}"' in inflate_sh
+    assert "python -m tac.substrates.pr101_lc_v2_clone.inflate" in inflate_sh
 
 
 def test_logit_softcap_is_smooth_and_bounded() -> None:
