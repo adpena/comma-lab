@@ -43,12 +43,9 @@ import io
 import json
 import math
 import sys
-import time
 import zipfile
-from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import torch
@@ -1303,7 +1300,7 @@ def main() -> int:
 
     manifest = build_archive(args.output, train_result, cfg)
 
-    print(f"\n=== Phase A4 BUILD COMPLETE ===")
+    print("\n=== Phase A4 BUILD COMPLETE ===")
     print(f"Output dir:       {args.output}")
     print(f"Archive:          {manifest['archive_zip_bytes']:,} B")
     print(f"SHA256:           {manifest['archive_sha256']}")

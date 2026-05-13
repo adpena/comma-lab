@@ -26,8 +26,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import sys
 import time
 from pathlib import Path
 
@@ -266,7 +264,7 @@ def main():
 
         warped_frames[2 * k + 1] = warped_f1.round().clamp(0, 255)
 
-    print(f"[3/4] Warping complete")
+    print("[3/4] Warping complete")
 
     # ── Step 4: Evaluate ─────────────────────────────────────────────────
     print("\n[4/4] Computing proxy scores...")

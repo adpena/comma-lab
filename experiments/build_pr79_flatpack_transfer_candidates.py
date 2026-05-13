@@ -14,7 +14,6 @@ import hashlib
 import importlib.util
 import itertools
 import json
-import math
 import sys
 import zipfile
 from dataclasses import dataclass

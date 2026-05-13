@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 from pathlib import Path
 
 import torch
@@ -49,8 +48,6 @@ def measure_distortion(
     n_pairs: int = 10,
 ) -> dict:
     """Measure scorer distortion for current model weights."""
-    from tac.renderer import simulate_eval_roundtrip
-    from tac.camera import CAMERA_H, CAMERA_W
 
     model.eval()
     pd_list, sd_list = [], []
@@ -73,7 +70,6 @@ def measure_distortion(
             ]).unsqueeze(0).to(device)
             comp_p = cam.permute(0, 2, 3, 1).unsqueeze(0).contiguous()
 
-            from modules import DistortionNet
             # Use pre-loaded scorers
             pd_val = F.mse_loss(
                 posenet.preprocess_input(comp_p.permute(0, 1, 4, 2, 3)),
@@ -108,7 +104,7 @@ def main():
 
     print(f"Model: {sum(p.numel() for p in model.parameters()):,} params")
     print(f"Sweeping {len(param_groups)} parameter groups")
-    print(f"Candidate bits: [2, 3, 4, 6, 8]")
+    print("Candidate bits: [2, 3, 4, 6, 8]")
     print()
 
     # Store original weights

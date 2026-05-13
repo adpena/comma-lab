@@ -179,7 +179,6 @@ def _write_local_modal_metadata(
 
 
 def _safe_extract_member(zf, member_name: str, dest: Path) -> None:
-    import zipfile
 
     info = zf.getinfo(member_name)
     if info.is_dir():

@@ -297,7 +297,6 @@ def run_qat(args: argparse.Namespace) -> dict:
     # Swap convs
     from tac.learnable_bit_quant import (
         LagrangianRateController,
-        LearnableBitConv2d,
         compute_learnable_bit_rate_penalty,
         list_learnable_bit_layers,
         renderer_average_learnable_bits_per_weight,
@@ -333,7 +332,7 @@ def run_qat(args: argparse.Namespace) -> dict:
     print(f"[lane-omega-v2]   {n_frames} frames → {n_pairs} pairs")
 
     # Load scorers
-    print(f"[lane-omega-v2] loading differentiable scorers ...")
+    print("[lane-omega-v2] loading differentiable scorers ...")
     from tac.scorer import load_differentiable_scorers
     posenet, segnet = load_differentiable_scorers(args.upstream, device=str(device))
     posenet.eval()
@@ -552,7 +551,7 @@ def run_qat(args: argparse.Namespace) -> dict:
     print(f"[lane-omega-v2] best checkpoint: {best_path}")
 
     # Reload best, then export OMG1
-    print(f"[lane-omega-v2] reloading best for OMG1 export ...")
+    print("[lane-omega-v2] reloading best for OMG1 export ...")
     best = torch.load(best_path, map_location=device, weights_only=False)
     model.load_state_dict(best["model_state_dict"])
 

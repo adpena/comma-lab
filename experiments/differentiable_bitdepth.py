@@ -16,9 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
-import time
 from pathlib import Path
 
 import torch
@@ -164,7 +162,6 @@ def main():
     print(f"Model: {sum(p.numel() for p in model.parameters()):,} params")
 
     # Load data
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
     import av
     video_path = Path("upstream/videos/0.mkv")
     gt_frames = []
@@ -200,7 +197,7 @@ def main():
     bit_optimizer = torch.optim.Adam(wrapper.bit_logits.parameters(), lr=0.1)
 
     print(f"\n{'='*60}")
-    print(f"DIFFERENTIABLE BIT-DEPTH LEARNING")
+    print("DIFFERENTIABLE BIT-DEPTH LEARNING")
     print(f"  Steps: {args.steps}")
     print(f"  Rate lambda: {args.rate_lambda}")
     print(f"  Candidates: {CANDIDATE_BITS.tolist()}")

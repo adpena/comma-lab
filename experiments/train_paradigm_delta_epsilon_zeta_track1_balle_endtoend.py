@@ -2655,8 +2655,8 @@ def main() -> int:
     aux_scaler = torch.cuda.amp.GradScaler(enabled=autocast_enabled) if optim_aux is not None else None
     if autocast_enabled:
         print(
-            f"[t1] autocast FP16 enabled: forward block wraps balle+decoder+scorers; "
-            f"losses cast to FP32 for Lagrangian dual; GradScaler ON"
+            "[t1] autocast FP16 enabled: forward block wraps balle+decoder+scorers; "
+            "losses cast to FP32 for Lagrangian dual; GradScaler ON"
         )
 
     for epoch in range(epochs):

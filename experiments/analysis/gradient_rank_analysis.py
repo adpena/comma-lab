@@ -359,7 +359,7 @@ def main():
     args = parser.parse_args()
 
     device = args.device or detect_device()
-    print(f"PoseNet Gradient Rank Analysis")
+    print("PoseNet Gradient Rank Analysis")
     print(f"{'=' * 60}")
     print(f"Device: {device}")
     print(f"Pairs to analyze: {args.n_pairs}")
@@ -459,10 +459,10 @@ def main():
         print(f"\n  Rank ratio (embedding / output): {ratio:.1f}x")
         print(f"\n  INTERPRETATION: The embedding Jacobian has {ratio:.0f}x the effective")
         print(f"  rank of the output Jacobian. This means {ratio:.0f}x more pixel-space")
-        print(f"  directions affect the embedding than affect the final pose output.")
-        print(f"  Feature-matching losses (KL distill) waste gradient budget on the")
+        print("  directions affect the embedding than affect the final pose output.")
+        print("  Feature-matching losses (KL distill) waste gradient budget on the")
         print(f"  {ratio:.0f}x-larger space. Standard loss operates in the minimal 6-dim")
-        print(f"  output space -- which is why it wins on authoritative eval.")
+        print("  output space -- which is why it wins on authoritative eval.")
 
     # Save results
     results_dir = project_root / "experiments" / "results"

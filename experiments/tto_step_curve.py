@@ -40,13 +40,10 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
-import sys
 import time
 from pathlib import Path
 
 import torch
-import torch.nn.functional as F
 
 # Default step counts for the full sweep
 DEFAULT_STEP_COUNTS: list[int] = [10, 25, 50, 100, 150, 200, 300, 500]
@@ -384,7 +381,6 @@ def main() -> None:
     print("\n[1/6] Loading scorers...")
     t0 = time.monotonic()
     from tac.scorer import (
-        compute_proxy_score,
         extract_gt_masks,
         extract_gt_pose_targets,
         load_differentiable_scorers,

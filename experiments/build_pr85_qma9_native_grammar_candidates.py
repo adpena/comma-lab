@@ -37,7 +37,6 @@ from tac.qma9_range_mask_contract import (  # noqa: E402
     QMA9ContractError,
     decode_qma9_mask,
     parse_qma9_header,
-    sha256_bytes,
 )
 
 

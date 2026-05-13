@@ -15,7 +15,6 @@ import importlib.util
 import json
 import struct
 import sys
-import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any

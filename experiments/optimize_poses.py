@@ -1470,7 +1470,7 @@ def main():
     # glance (per CLAUDE.md "no wasted resources" — silent mode flips
     # are how 6h GPU runs go off-target).
     if args.pose_mode == "radial-zoom":
-        print(f"[pose-mode] using radial-zoom (1-DOF, projected to 6-DOF before render)", flush=True)
+        print("[pose-mode] using radial-zoom (1-DOF, projected to 6-DOF before render)", flush=True)
     else:
         print(f"[pose-mode] using {args.pose_mode}", flush=True)
     # Lane N: Fridrich L∞ banner when active.
@@ -1572,7 +1572,7 @@ def main():
                 zoom_warp = load_zoom_scalars(zoom_path, device=str(device))
                 print(f"  Loaded zoom scalars from {zoom_path.name}", flush=True)
         if zoom_warp is None:
-            print(f"  WARNING: use_zoom_flow but no zoom scalars found. Using identity zoom.", flush=True)
+            print("  WARNING: use_zoom_flow but no zoom scalars found. Using identity zoom.", flush=True)
 
     # Verify pose_dim compatibility
     renderer_pose_dim = getattr(renderer, "pose_dim", 0)
@@ -1612,7 +1612,7 @@ def main():
 
     print("\n[4/6] Loading/extracting masks and pose targets...", flush=True)
     t0 = time.monotonic()
-    from tac.scorer import extract_gt_masks, extract_gt_pose_targets
+    from tac.scorer import extract_gt_pose_targets
 
     if args.masks:
         # Use pre-decoded masks (MUST match the archive masks for correct optimization)
@@ -2064,7 +2064,6 @@ def main():
     # for the sampled rows of U but the full V on every step.
     if args.lora_rank > 0:
         from tac.lora_pose import LoRAPose, save_lora_poses
-        from tac.losses import kl_distill_segnet_only
         from tac.fridrich import linf_pose_penalty as _linf_pose_penalty
 
         lora_steps = args.lora_steps if args.lora_steps > 0 else args.steps
@@ -2485,10 +2484,10 @@ def main():
             pose_dim=6,
         )
         print(
-            f"  [Lane M-V3-clean] composed (N, 6) save tensor via shared "
-            f"_project_to_renderer_pose helper: dim0=optimized radial-zoom, "
-            f"dims1-5=frozen baseline (from --gt-poses-path) — train/inference "
-            f"parity guaranteed",
+            "  [Lane M-V3-clean] composed (N, 6) save tensor via shared "
+            "_project_to_renderer_pose helper: dim0=optimized radial-zoom, "
+            "dims1-5=frozen baseline (from --gt-poses-path) — train/inference "
+            "parity guaranteed",
             flush=True,
         )
     else:

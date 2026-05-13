@@ -30,7 +30,6 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from tac.pr85_bundle import (  # noqa: E402
-    Pr85BundleError,
     pack_pr85_bundle,
     parse_pr85_bundle,
     validate_pr85_member_name,

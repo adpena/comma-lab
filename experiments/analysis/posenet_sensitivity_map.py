@@ -36,7 +36,6 @@ import json
 import time
 from pathlib import Path
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -135,7 +134,7 @@ def main() -> None:
     print(f"[sensitivity] Processing {n_pairs} pairs on {device}")
 
     # Extract masks for class-conditional analysis
-    print(f"[sensitivity] Extracting SegNet masks...")
+    print("[sensitivity] Extracting SegNet masks...")
     gt_masks = extract_gt_masks(gt_frames, segnet, device=device)
 
     # Compute sensitivity maps
@@ -260,12 +259,12 @@ def main() -> None:
 
     # Print summary
     print(f"\n{'='*60}")
-    print(f"[sensitivity] RESULTS")
+    print("[sensitivity] RESULTS")
     print(f"  Aggregate mean sensitivity: {stats['aggregate_stats']['mean']:.4f}")
     print(f"  Hardest pair: idx={pair_ranking[0][0]} (sens={pair_ranking[0][1]:.1f})")
     print(f"  Easiest pair: idx={pair_ranking[-1][0]} (sens={pair_ranking[-1][1]:.1f})")
     print(f"  Hard/Easy ratio: {stats['sensitivity_ratio_hard_vs_easy']:.1f}x")
-    print(f"  Per-class:")
+    print("  Per-class:")
     for c in range(5):
         print(f"    {class_names[c]}: {stats['per_class_mean_sensitivity'][f'class_{c}']:.4f}")
     print(f"{'='*60}")

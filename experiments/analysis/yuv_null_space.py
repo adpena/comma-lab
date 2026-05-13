@@ -328,7 +328,7 @@ def main() -> None:
     n_pairs = len(gt_frames) // 2
 
     # Empirical verification
-    print(f"\n[null-space] === EMPIRICAL VERIFICATION ===")
+    print("\n[null-space] === EMPIRICAL VERIFICATION ===")
     print(f"  Perturbation magnitude: {args.perturbation_magnitude}")
 
     posenet_diffs = []
@@ -415,7 +415,7 @@ def main() -> None:
 
     # Summary
     print(f"\n{'='*60}")
-    print(f"[null-space] RESULTS")
+    print("[null-space] RESULTS")
     print(f"  PoseNet invariance confirmed: {max_pose_diff < 1e-4}")
     print(f"    Max pose diff: {max_pose_diff:.2e} (threshold: 1e-4)")
     print(f"    Mean pose diff: {mean_pose_diff:.2e}")

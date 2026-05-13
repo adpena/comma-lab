@@ -484,7 +484,6 @@ def _byte_roundtrip_and_brotli_baseline(archive_dir: Path, build_manifest: dict[
 
     [empirical:experiments/results/track1_phase_a4_charm_50k_toy_<ts>_modal/]
     """
-    import io
     import zipfile as zf
 
     import brotli  # type: ignore[import-not-found]

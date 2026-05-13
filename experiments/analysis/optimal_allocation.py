@@ -121,12 +121,12 @@ def print_analysis(a: dict) -> None:
     print(f"  seg={a['seg']:.6f}  pose={a['pose']:.6f}  rate={a['rate']:.6f}")
     print(f"  score = {a['score']:.4f}")
     print()
-    print(f"  Marginal sensitivities (d_score / d_component):")
+    print("  Marginal sensitivities (d_score / d_component):")
     print(f"    d/d(seg)  = {a['d_score_d_seg']:>10.2f}   (constant)")
     print(f"    d/d(pose) = {a['d_score_d_pose']:>10.2f}   (depends on current pose)")
     print(f"    d/d(rate) = {a['d_score_d_rate']:>10.2f}   (constant)")
     print()
-    print(f"  Leverage ratios:")
+    print("  Leverage ratios:")
     print(f"    seg/pose  = {a['seg_pose_leverage']:.2f}x  "
           f"({'SegNet wins' if a['seg_pose_leverage'] > 1 else 'PoseNet wins'})")
     print(f"    pose/rate = {a['pose_rate_leverage']:.2f}x  "
@@ -135,9 +135,9 @@ def print_analysis(a: dict) -> None:
           f"({'SegNet wins' if a['seg_rate_leverage'] > 1 else 'rate wins'})")
     print()
     print(f"  >>> LARGEST SCORE CONTRIBUTOR: {a['best_dimension'].upper()}")
-    print(f"      (accounts for the most score -- biggest reduction target)")
+    print("      (accounts for the most score -- biggest reduction target)")
     print(f"  >>> HIGHEST MARGINAL SENSITIVITY: {a['best_marginal_dim'].upper()}")
-    print(f"      (most score reduction per absolute unit decrease)")
+    print("      (most score reduction per absolute unit decrease)")
 
     # Score contribution breakdown
     seg_contrib = 100.0 * a["seg"]
@@ -145,7 +145,7 @@ def print_analysis(a: dict) -> None:
     rate_contrib = 25.0 * a["rate"]
     total = seg_contrib + pose_contrib + rate_contrib
     print()
-    print(f"  Score contribution breakdown:")
+    print("  Score contribution breakdown:")
     print(f"    100*seg         = {seg_contrib:.4f}  ({100*seg_contrib/total:.1f}%)")
     print(f"    sqrt(10*pose)   = {pose_contrib:.4f}  ({100*pose_contrib/total:.1f}%)")
     print(f"    25*rate         = {rate_contrib:.4f}  ({100*rate_contrib/total:.1f}%)")
@@ -158,7 +158,7 @@ def print_analysis(a: dict) -> None:
     # => pose = 10 / (50)^2 = 10/2500 = 0.004
     pose_rate_crossover = 10.0 / (2.0 * 25.0) ** 2
     print()
-    print(f"  Crossover points (where marginal returns equalize):")
+    print("  Crossover points (where marginal returns equalize):")
     print(f"    PoseNet = SegNet  at pose = {pose_seg_crossover:.6f}")
     print(f"    PoseNet = Rate    at pose = {pose_rate_crossover:.6f}")
     print(f"    Current pose      = {a['pose']:.6f}  "
@@ -391,7 +391,7 @@ def main():
     print(f"  BUT: PoseNet accounts for {100*pose_gap/total_gap:.0f}% of the score gap vs Quantizr.")
     print(f"  Our seg ({our_best['seg']:.5f}) already matches Quantizr ({quantizr['seg']:.5f}).")
     print(f"  Our rate ({our_best['rate']:.5f}) already beats Quantizr ({quantizr['rate']:.5f}).")
-    print(f"  PoseNet is the ONLY dimension with large headroom.")
+    print("  PoseNet is the ONLY dimension with large headroom.")
     print()
     print("  VERDICT: PoseNet reduction is the dominant strategy because it is the")
     print("  only dimension where we trail Quantizr. Low marginal sensitivity means")

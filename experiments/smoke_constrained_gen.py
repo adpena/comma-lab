@@ -33,7 +33,7 @@ def main() -> int:
     args = parser.parse_args()
 
     device = args.device
-    print(f"=== Constrained Gen Smoke Test ===")
+    print("=== Constrained Gen Smoke Test ===")
     print(f"  Device: {device}")
     print(f"  Steps: {args.steps}")
     print(f"  Frames: {args.n_frames}")
@@ -93,7 +93,7 @@ def main() -> int:
 
     t0 = time.time()
     if args.coupled:
-        print(f"  Mode: COUPLED trajectory (joint pair optimization)")
+        print("  Mode: COUPLED trajectory (joint pair optimization)")
         generated = coupled_trajectory_optimize(
             masks=masks.to(device),
             expected_pose=pose_targets.to(device),
@@ -109,7 +109,7 @@ def main() -> int:
             log_every=max(1, args.steps // 5),
         )
     else:
-        print(f"  Mode: INDEPENDENT frame optimization")
+        print("  Mode: INDEPENDENT frame optimization")
         generated = constrained_generate(
             masks=masks.to(device),
             expected_pose=pose_targets.to(device),
@@ -130,7 +130,7 @@ def main() -> int:
     print(f"  Generated: {generated.shape} in {gen_time:.1f}s ({args.steps / gen_time:.1f} steps/s)")
 
     # 4. Sanity checks
-    print(f"\n[4/4] Sanity checks...")
+    print("\n[4/4] Sanity checks...")
     assert generated.shape[0] == args.n_frames, f"Expected {args.n_frames} frames, got {generated.shape[0]}"
     assert generated.shape[1] == 384, f"Expected H=384, got {generated.shape[1]}"
     assert generated.shape[2] == 512, f"Expected W=512, got {generated.shape[2]}"
@@ -153,8 +153,8 @@ def main() -> int:
     agreement = (gen_masks == masks).float().mean().item()
     print(f"  SegNet agreement: {agreement:.4f} ({agreement*100:.1f}%)")
 
-    print(f"\n=== SMOKE TEST PASSED ===")
-    print(f"  Constrained gen is functional.")
+    print("\n=== SMOKE TEST PASSED ===")
+    print("  Constrained gen is functional.")
     print(f"  {args.steps} steps on {device} took {gen_time:.1f}s")
     if args.steps >= 50:
         print(f"  Estimated 1000 steps: {gen_time / args.steps * 1000:.0f}s")

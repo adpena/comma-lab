@@ -14,14 +14,13 @@ import argparse
 import hashlib
 import importlib.util
 import json
-import math
 import struct
 import sys
 import zipfile
 from dataclasses import dataclass
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 import brotli
 

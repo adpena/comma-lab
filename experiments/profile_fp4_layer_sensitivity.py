@@ -64,10 +64,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import gc
 import json
 import math
-import os
 import sys
 import time
 from pathlib import Path
@@ -290,7 +288,6 @@ def profile_fp4_layer_sensitivity(
     # ── Load GT video + masks + scorers ──
     print(f"[profile_fp4] loading GT video {video_mkv}")
     import av
-    import numpy as np
     container = av.open(video_mkv)
     stream = container.streams.video[0]
     gt_frames: list = []
@@ -391,10 +388,10 @@ def profile_fp4_layer_sensitivity(
 
     # ── Summary stats ──
     sorted_by_delta = sorted(delta.items(), key=lambda kv: kv[1])
-    print(f"[profile_fp4] LEAST sensitive (FP4-tolerable, bottom 5):")
+    print("[profile_fp4] LEAST sensitive (FP4-tolerable, bottom 5):")
     for n, d in sorted_by_delta[:5]:
         print(f"    {n:<40s} Δd={d:+.4f} ({param_count[n]:>6d} params)")
-    print(f"[profile_fp4] MOST sensitive (keep FP16, top 5):")
+    print("[profile_fp4] MOST sensitive (keep FP16, top 5):")
     for n, d in sorted_by_delta[-5:][::-1]:
         print(f"    {n:<40s} Δd={d:+.4f} ({param_count[n]:>6d} params)")
 

@@ -34,7 +34,6 @@ if str(SRC_ROOT) not in sys.path:
 from tac.pr85_bundle import (  # noqa: E402
     PR85_HEADERLESS_RANDMULTI_SPECS,
     QPOST_STREAM_NAMES,
-    SEGMENT_ORDER,
     Pr85BundleError,
     parse_pr85_bundle,
     validate_pr85_member_name,

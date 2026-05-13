@@ -21,7 +21,6 @@ for _p in (_PROJECT_ROOT, _PROJECT_ROOT / "src"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import numpy as np
 import torch
 
 from tac.fp4_quantize import (

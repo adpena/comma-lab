@@ -285,11 +285,11 @@ def main() -> None:
     from tac.data import decode_video
     print(f"[quantize] Decoding video: {video_path}")
     gt_frames = decode_video(str(video_path))[:n_frames]
-    print(f"[quantize] Extracting SegNet masks...")
+    print("[quantize] Extracting SegNet masks...")
     gt_masks = extract_gt_masks(gt_frames, segnet, device=device)
 
     # Baseline: FP32 quality
-    print(f"\n[quantize] === BASELINE (FP32) ===")
+    print("\n[quantize] === BASELINE (FP32) ===")
     baseline = evaluate_model(
         model, gt_frames, gt_masks, posenet, segnet, device,
         eval_roundtrip=args.eval_roundtrip,
@@ -309,7 +309,7 @@ def main() -> None:
         "quantization_sweep": [],
     }
 
-    print(f"\n[quantize] === FP4 QUANTIZATION SWEEP ===")
+    print("\n[quantize] === FP4 QUANTIZATION SWEEP ===")
     for bs in block_sizes:
         print(f"\n  Block size = {bs}:")
 
@@ -359,7 +359,7 @@ def main() -> None:
         print(f"    SegNet: {quality['mean_seg_dist']:.4f} ({seg_degrad:.2f}x)")
 
     # Int8 baseline for comparison
-    print(f"\n[quantize] === INT8 BASELINE ===")
+    print("\n[quantize] === INT8 BASELINE ===")
     int8_state = {}
     for k, v in renderer_state.items():
         if v.ndim >= 2:
@@ -389,7 +389,7 @@ def main() -> None:
     if args.qat:
         from tac.fp4_quantize import QATRendererFP4
 
-        print(f"\n[quantize] === QAT FINE-TUNING ===")
+        print("\n[quantize] === QAT FINE-TUNING ===")
         # Reload FP32 weights
         model.load_state_dict(renderer_state, strict=False)
         model = model.to(device).train()
@@ -502,7 +502,7 @@ def main() -> None:
 
     # Summary
     print(f"\n{'='*60}")
-    print(f"[quantize] SUMMARY")
+    print("[quantize] SUMMARY")
     print(f"  FP32 baseline: {baseline['proxy_score']:.4f} ({fp32_bytes/1024:.1f}KB)")
     print(f"  INT8:          {int8_quality['proxy_score']:.4f} ({int8_bytes/1024:.1f}KB)")
     for r in results["quantization_sweep"]:

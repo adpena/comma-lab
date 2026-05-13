@@ -88,7 +88,6 @@ from tac.training import EMA  # noqa: E402
 # Reuse T1's helpers (eval_roundtrip, real-target loader, smoke target,
 # YUV6 monkey patch, scorer gradient reachability, device resolve, seed).
 from experiments.train_paradigm_delta_epsilon_zeta_track1_balle_endtoend import (  # noqa: E402
-    EVAL_HW,
     PHASE1_SCAFFOLD_ONLY,
     _activate_yuv6_mode_t1,
     _resolve_device,

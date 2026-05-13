@@ -32,7 +32,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from experiments import build_pr85_qrgb_transfer_archive_candidates as qrgb_builder  # noqa: E402
 from experiments import preflight_pr85_fixed_runtime_readiness as fixed_preflight  # noqa: E402
-from tac.pr85_bundle import SEGMENT_ORDER, Pr85BundleError, parse_pr85_bundle  # noqa: E402
+from tac.pr85_bundle import SEGMENT_ORDER, parse_pr85_bundle  # noqa: E402
 from tac.stbm1br_mask_codec import STBM1BR_MAGIC  # noqa: E402
 
 

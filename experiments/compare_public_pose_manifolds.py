@@ -21,7 +21,7 @@ import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 import brotli
 import numpy as np
@@ -33,7 +33,7 @@ if str(REPO_ROOT) not in sys.path:
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.qp1_pose_codec import QP1_MAGIC, VELOCITY_OFFSET, VELOCITY_SCALE, decode_qp1, encode_qp1
+from tac.qp1_pose_codec import QP1_MAGIC, VELOCITY_SCALE, decode_qp1, encode_qp1
 
 
 TOOL = "experiments/compare_public_pose_manifolds.py"

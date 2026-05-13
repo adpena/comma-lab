@@ -29,13 +29,10 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
-import sys
 import time
 from pathlib import Path
 
 import torch
-import torch.nn.functional as F
 
 
 from tac.scorer import compute_proxy_score
@@ -202,7 +199,7 @@ def main():
         # Truncate to n_frames if needed
         current_frames = current_frames[:args.n_frames]
     else:
-        print(f"\n[stage 1] Running GT-Sparse TTO...")
+        print("\n[stage 1] Running GT-Sparse TTO...")
         t0 = time.monotonic()
 
         # Import GT-sparse TTO components. Ensure project root is importable.
@@ -275,7 +272,7 @@ def main():
 
     # ── Stage 2: Post-filter ─────────────────────────────────────────────
     if not args.skip_postfilter and Path(args.postfilter_path).exists():
-        print(f"\n[stage 2] Applying post-filter...")
+        print("\n[stage 2] Applying post-filter...")
         t0 = time.monotonic()
         current_frames = apply_postfilter(current_frames, args.postfilter_path, device)
         dt = time.monotonic() - t0

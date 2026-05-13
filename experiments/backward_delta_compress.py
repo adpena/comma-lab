@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import time
 from pathlib import Path
 
@@ -199,7 +198,7 @@ def main() -> None:
     print(f"[backward-delta] {n_frames} frames, {H}x{W}")
 
     # Compute backward deltas: delta_i = frame_i - warp(frame_{i+1}, flow_{i->i+1})
-    print(f"\n[backward-delta] Computing backward flow + deltas...")
+    print("\n[backward-delta] Computing backward flow + deltas...")
     t0 = time.time()
 
     backward_deltas = []  # (N-1,) list of (H, W, 3) tensors
@@ -230,7 +229,7 @@ def main() -> None:
     print(f"[backward-delta] Flow computation: {flow_time:.1f}s")
 
     # Analysis
-    print(f"\n[backward-delta] === DELTA STATISTICS ===")
+    print("\n[backward-delta] === DELTA STATISTICS ===")
 
     delta_tensor = torch.stack(backward_deltas, dim=0)  # (N-1, H, W, 3)
 
@@ -272,7 +271,7 @@ def main() -> None:
     print(f"  Mean flow magnitude: {np.mean(flow_magnitudes):.2f} pixels")
     print(f"  Delta entropy: {delta_entropy:.2f} bits/element (vs {frame_entropy:.2f} for raw)")
     print(f"  Compression gain from flow: {frame_entropy / max(delta_entropy, 0.01):.1f}x")
-    print(f"\n  Sparsity:")
+    print("\n  Sparsity:")
     for thresh, frac in sparsity.items():
         print(f"    |delta| < {thresh.split('_')[1]}: {frac:.1%}")
 
@@ -281,11 +280,11 @@ def main() -> None:
     print(f"    Deltas (entropy-coded): {bytes_at_entropy/1024:.1f}KB")
     print(f"    Flow fields (int8): {total_flow_bytes/1024:.1f}KB")
     print(f"    TOTAL: {(anchor_bytes + bytes_at_entropy + total_flow_bytes)/1024:.1f}KB")
-    print(f"    (Context: contest budget ~250KB target)")
+    print("    (Context: contest budget ~250KB target)")
 
     # Compare with direct approaches
     renderer_archive_kb = 195.0  # FP4 renderer
-    print(f"\n  Comparison:")
+    print("\n  Comparison:")
     print(f"    Renderer (FP4): ~{renderer_archive_kb:.0f}KB")
     delta_total_kb = (anchor_bytes + bytes_at_entropy + total_flow_bytes) / 1024
     print(f"    Backward delta: ~{delta_total_kb:.0f}KB")
@@ -295,7 +294,7 @@ def main() -> None:
     # If we store GT anchor + perfect flow + deltas, reconstruction is perfect
     # But we need to compress the deltas...
     # Threshold deltas below a cutoff for rate savings:
-    print(f"\n[backward-delta] === RATE-QUALITY TRADEOFF ===")
+    print("\n[backward-delta] === RATE-QUALITY TRADEOFF ===")
     for thresh in [1.0, 2.0, 5.0, 10.0]:
         # Zero out deltas below threshold (treat as free)
         thresholded = delta_tensor.clone()
@@ -415,13 +414,13 @@ def main() -> None:
 
     # Final summary
     print(f"\n{'='*60}")
-    print(f"[backward-delta] CONCLUSION")
+    print("[backward-delta] CONCLUSION")
     if delta_total_kb < 250:
         print(f"  FEASIBLE: {delta_total_kb:.0f}KB < 250KB budget")
-        print(f"  But requires: perfect anchor + flow compression + sparse delta coding")
+        print("  But requires: perfect anchor + flow compression + sparse delta coding")
     else:
         print(f"  TOO LARGE: {delta_total_kb:.0f}KB > 250KB budget")
-        print(f"  Would need aggressive thresholding (lossy) or better flow compression")
+        print("  Would need aggressive thresholding (lossy) or better flow compression")
     print(f"  Flow compression gain: {frame_entropy / max(delta_entropy, 0.01):.1f}x over raw")
     print(f"  Key finding: {sparsity.get('below_5.0', 0):.1%} of deltas are below 5 pixels")
     print(f"{'='*60}")

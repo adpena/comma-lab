@@ -256,7 +256,7 @@ def main() -> None:
 
     # Pre-cache GT scorer outputs
     from tac.losses import scorer_forward_pair
-    print(f"[postfilter] Pre-caching GT scorer outputs...")
+    print("[postfilter] Pre-caching GT scorer outputs...")
     gt_pose_cache = []
     gt_seg_cache = []
     for i in range(n_pairs):

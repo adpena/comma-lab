@@ -555,7 +555,7 @@ def run_auth_eval(
     upstream = _ensure_upstream(upstream_dir)
 
     print(f"\n{'=' * 60}")
-    print(f"  Authoritative Renderer Evaluation")
+    print("  Authoritative Renderer Evaluation")
     print(f"  {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Checkpoint: {checkpoint}")
     print(f"  Device: {device}")
@@ -632,10 +632,10 @@ def run_auth_eval(
             ckpt_data = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
             if isinstance(ckpt_data, dict) and "zoom_warp_state_dict" in ckpt_data:
                 zoom_warp.load_state_dict(ckpt_data["zoom_warp_state_dict"])
-                print(f"  Loaded zoom scalars from checkpoint")
+                print("  Loaded zoom scalars from checkpoint")
             else:
-                print(f"  WARNING: use_zoom_flow model but no zoom_warp_state_dict in checkpoint. "
-                      f"Using identity zoom — PoseNet may be degraded.")
+                print("  WARNING: use_zoom_flow model but no zoom_warp_state_dict in checkpoint. "
+                      "Using identity zoom — PoseNet may be degraded.")
         else:
             # For .bin format, check for companion zoom_scalars.bin
             zoom_path = ckpt_path.parent / "zoom_scalars.bin"
@@ -644,7 +644,7 @@ def run_auth_eval(
                 zoom_warp = load_zoom_scalars(zoom_path, device=device)
                 print(f"  Loaded zoom scalars from {zoom_path.name}")
             else:
-                print(f"  WARNING: use_zoom_flow but no zoom_scalars.bin found. Using identity zoom.")
+                print("  WARNING: use_zoom_flow but no zoom_scalars.bin found. Using identity zoom.")
 
     # Stage 5: Generate frames
     print("\nStage 5: Generating frames ...")
@@ -680,19 +680,19 @@ def run_auth_eval(
     t_total = time.monotonic() - t_start
 
     print(f"\n{'=' * 60}")
-    print(f"  AUTHORITATIVE RESULTS")
+    print("  AUTHORITATIVE RESULTS")
     print(f"{'=' * 60}")
     print(f"  PoseNet dist:     {avg_posenet:.8f}")
     print(f"  SegNet dist:      {avg_segnet:.8f}")
     print(f"  Archive size:     {archive_size:,} bytes")
     print(f"  GT size:          {gt_size:,} bytes")
     print(f"  Rate:             {rate:.8f}")
-    print(f"")
-    print(f"  Score breakdown:")
+    print("")
+    print("  Score breakdown:")
     print(f"    100*seg       = {score_seg:.4f}")
     print(f"    sqrt(10*pose) = {score_pose:.4f}")
     print(f"    25*rate       = {score_rate:.4f}")
-    print(f"  ──────────────────")
+    print("  ──────────────────")
     print(f"  FINAL SCORE:      {final_score:.4f}")
     print(f"  Total time:       {t_total:.1f}s")
     print(f"{'=' * 60}")

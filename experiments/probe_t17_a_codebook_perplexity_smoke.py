@@ -158,7 +158,7 @@ def emit_typed_atom_row(
             f"perplexity_collapse_threshold="
             f"{perplexity_gate_threshold(cfg):.2f}"
         ),
-        f"NN-2 sentinel (codebook collapse) per Phase 2 pre-design",
+        "NN-2 sentinel (codebook collapse) per Phase 2 pre-design",
     ]
     if extra_notes:
         notes_parts.append(extra_notes)

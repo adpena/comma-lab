@@ -323,9 +323,9 @@ def main() -> int:
                 lane_a_poses_path = td_path / "poses.pt"
             else:
                 print(
-                    f"[build-zcp] WARNING: source archive has no "
-                    f"optimized_poses.pt / poses.pt. Skipping the "
-                    f"calibration sanity check.",
+                    "[build-zcp] WARNING: source archive has no "
+                    "optimized_poses.pt / poses.pt. Skipping the "
+                    "calibration sanity check.",
                     file=sys.stderr,
                 )
 

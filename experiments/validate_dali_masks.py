@@ -27,12 +27,9 @@ from __future__ import annotations
 
 import argparse
 import sys
-import math
 from pathlib import Path
 
-import numpy as np
 import torch
-import torch.nn.functional as F
 
 
 # ---------------------------------------------------------------------------
@@ -228,40 +225,40 @@ def main():
         print(f"--- {vid_name} ---")
 
         # Decode via PyAV
-        print(f"  PyAV decoding...", end=" ", flush=True)
+        print("  PyAV decoding...", end=" ", flush=True)
         pyav_frames = decode_pyav(vid_path, args.max_frames)
         print(f"{len(pyav_frames)} frames")
 
         if not use_dali:
             # CPU-only: just extract masks to verify pipeline works
-            print(f"  Extracting PyAV masks...", end=" ", flush=True)
+            print("  Extracting PyAV masks...", end=" ", flush=True)
             pyav_masks = extract_masks(pyav_frames, segnet, args.device)
             print(f"shape {tuple(pyav_masks.shape)}")
             print(f"  Classes present: {sorted(pyav_masks.unique().tolist())}")
-            print(f"  [CPU-only mode: skipping DALI comparison]")
+            print("  [CPU-only mode: skipping DALI comparison]")
             print()
             continue
 
         # Decode via DALI
         device_id = torch.cuda.current_device() if torch.cuda.is_available() else 0
-        print(f"  DALI decoding...", end=" ", flush=True)
+        print("  DALI decoding...", end=" ", flush=True)
         dali_frames = decode_dali(vid_path, args.max_frames, device_id=device_id)
         print(f"{len(dali_frames)} frames")
 
         # Align frame counts
         n = min(len(pyav_frames), len(dali_frames))
         if n == 0:
-            print(f"  WARNING: 0 frames decoded, skipping")
+            print("  WARNING: 0 frames decoded, skipping")
             continue
         pyav_frames = pyav_frames[:n]
         dali_frames = dali_frames[:n]
 
         # Extract masks
-        print(f"  Extracting PyAV masks...", end=" ", flush=True)
+        print("  Extracting PyAV masks...", end=" ", flush=True)
         pyav_masks = extract_masks(pyav_frames, segnet, args.device)
         print(f"shape {tuple(pyav_masks.shape)}")
 
-        print(f"  Extracting DALI masks...", end=" ", flush=True)
+        print("  Extracting DALI masks...", end=" ", flush=True)
         dali_masks = extract_masks(dali_frames, segnet, args.device)
         print(f"shape {tuple(dali_masks.shape)}")
 

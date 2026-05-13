@@ -30,7 +30,6 @@ from tac.multipass_compressor import (
     DEFAULT_EPS,
     DEFAULT_MAX_PASSES,
     MultiPassCompressor,
-    PassRecord,
 )
 
 

@@ -34,7 +34,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import sys
 import time
 from pathlib import Path
@@ -637,22 +636,22 @@ def main():
     print("\n" + "=" * 72)
     print("RENDERER + TTO RESULTS")
     print("=" * 72)
-    print(f"  Baseline (renderer only):")
+    print("  Baseline (renderer only):")
     print(f"    score = {baseline['score']:.4f}")
     print(f"    seg   = {baseline['seg']:.6f}  (contribution: {baseline['seg_contribution']:.4f})")
     print(f"    pose  = {baseline['pose']:.6f}  (contribution: {baseline['pose_contribution']:.4f})")
-    print(f"  After TTO:")
+    print("  After TTO:")
     print(f"    score = {tto_result['score']:.4f}")
     print(f"    seg   = {tto_result['seg']:.6f}  (contribution: {tto_result['seg_contribution']:.4f})")
     print(f"    pose  = {tto_result['pose']:.6f}  (contribution: {tto_result['pose_contribution']:.4f})")
-    print(f"  Improvement:")
+    print("  Improvement:")
     delta_score = baseline['score'] - tto_result['score']
     delta_pose = baseline['pose'] - tto_result['pose']
     delta_seg = baseline['seg'] - tto_result['seg']
     print(f"    score: {delta_score:+.4f} ({'better' if delta_score > 0 else 'worse'})")
     print(f"    pose:  {delta_pose:+.6f}")
     print(f"    seg:   {delta_seg:+.6f}")
-    print(f"  Timing:")
+    print("  Timing:")
     print(f"    total = {t_total:.1f}s | TTO = {t_tto:.1f}s | "
           f"scorers = {t_scorers:.1f}s | decode = {t_decode:.1f}s")
     print("=" * 72)

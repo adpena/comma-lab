@@ -23,11 +23,10 @@ import hashlib
 import itertools
 import io
 import json
-import struct
 import sys
 import zipfile
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +36,6 @@ if str(SRC_ROOT) not in sys.path:
 
 from tac.pr85_bundle import (  # noqa: E402
     Pr85Bundle,
-    Pr85BundleError,
     SEGMENT_ORDER,
     pack_pr85_bundle,
     parse_pr85_bundle,

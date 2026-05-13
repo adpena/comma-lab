@@ -43,7 +43,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
 import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

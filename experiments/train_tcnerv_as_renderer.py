@@ -234,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
         ],
     }
     (args.output_dir / "provenance.json").write_text(json.dumps(provenance, indent=2))
-    print(f"[tcnerv] done")
+    print("[tcnerv] done")
     if yuv6_token is not None:
         from tac.differentiable_eval_roundtrip import unpatch_upstream_yuv6
         try: unpatch_upstream_yuv6(yuv6_token)

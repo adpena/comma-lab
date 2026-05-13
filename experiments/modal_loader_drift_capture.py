@@ -42,7 +42,6 @@ import platform as _platform
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -401,7 +400,7 @@ def main(
 
     write_json(output_path / "modal_loader_drift_result.json", result)
     print("=" * 60)
-    print(f"MODAL LOADER-DRIFT CAPTURE COMPLETE")
+    print("MODAL LOADER-DRIFT CAPTURE COMPLETE")
     print(f"  ok={result.get('ok')}")
     print(f"  Artifacts: {output_path}")
     print(f"  DALI version: {result.get('dali_version')}")

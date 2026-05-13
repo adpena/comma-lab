@@ -27,11 +27,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.lossless.argmax_codec import (  # noqa: E402
-    NUM_BUCKETS,
     NUM_CLASSES,
     SAME_AS_PREV_SYMBOL,
-    decode_argmax_masks,
-    encode_argmax_masks,
     pack_archive,
     unpack_archive,
 )
@@ -145,7 +142,7 @@ def main() -> int:
         print(f"ERROR: real mask fixture not found at {AV1_CRF30}", file=sys.stderr)
         return 2
 
-    print(f"Loading reference mask sequence ...")
+    print("Loading reference mask sequence ...")
     t0 = time.monotonic()
     masks, src = _load_clean_masks()
     t_decode_av1 = time.monotonic() - t0

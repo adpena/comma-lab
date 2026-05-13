@@ -43,7 +43,7 @@ import sys
 import time
 import types
 import traceback
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
@@ -1144,7 +1144,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     assert ORIGINAL_UNCOMPRESSED_SIZE == 37_545_489, "ORIGINAL_UNCOMPRESSED_SIZE mismatch vs upstream"
     # Archive size upper limit (contest constraint)
     ARCHIVE_MAX_BYTES = 10 * 1024 * 1024  # 10MB
-    print(f"  Scoring formula: 100 * seg_dist + sqrt(10 * pose_dist) + 25 * rate")
+    print("  Scoring formula: 100 * seg_dist + sqrt(10 * pose_dist) + 25 * rate")
     print(f"  Contest archive limit: {ARCHIVE_MAX_BYTES / 1024 / 1024:.0f} MB")
     print(f"  Original uncompressed size: {ORIGINAL_UNCOMPRESSED_SIZE:,} bytes")
 
@@ -2123,7 +2123,6 @@ def validate_smoke(precomputed: str | None = None, pair_mode: str = "dp_sims") -
     4. _full_eval completes without error and returns valid score
     5. Checkpoint save/load roundtrip works
     """
-    import tempfile
 
     print("=" * 60)
     print("SMOKE VALIDATION (P3 — Karpathy protocol)")
@@ -2181,7 +2180,7 @@ def validate_smoke(precomputed: str | None = None, pair_mode: str = "dp_sims") -
         assert h["lambda_pose"] >= 0 and math.isfinite(h["lambda_pose"]), (
             f"FAIL: lambda_pose={h['lambda_pose']} at epoch {h['epoch']}"
         )
-    print(f"  [3/5] Lagrangian multipliers non-negative and finite ✓")
+    print("  [3/5] Lagrangian multipliers non-negative and finite ✓")
 
     # Assertion 4: Eval completed with valid score
     best_score = summary.get("best_score", float("inf"))
@@ -2193,7 +2192,7 @@ def validate_smoke(precomputed: str | None = None, pair_mode: str = "dp_sims") -
         assert math.isfinite(h["loss"]), f"FAIL: NaN loss at epoch {h['epoch']}"
         assert math.isfinite(h["seg_dist"]), f"FAIL: NaN seg_dist at epoch {h['epoch']}"
         assert math.isfinite(h["pose_dist"]), f"FAIL: NaN pose_dist at epoch {h['epoch']}"
-    print(f"  [5/5] All losses finite (no NaN/Inf) ✓")
+    print("  [5/5] All losses finite (no NaN/Inf) ✓")
 
     print()
     print("SMOKE VALIDATION: ALL 5 CHECKS PASSED")

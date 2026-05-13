@@ -23,16 +23,13 @@ operator approves the launch command separately.
 from __future__ import annotations
 
 import argparse
-import copy
 import json
-import os
 import sys
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Callable, Iterator, Sequence
+from typing import Iterator, Sequence
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,18 +40,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.tac.anr_token_renderer import (  # noqa: E402
-    ANR_FORMAT_ID,
     ANRTokenRendererConfig,
     CAMERA_H,
     CAMERA_W,
-    FiLMPortabilityGuard,
-    HPACMini,
     SEGNET_IN_H,
     SEGNET_IN_W,
     ShrinkSingleNeRV,
     TokenRendererV62,
-    encode_hpac_weights_ppmd,
-    export_to_archive,
     train_step,
 )
 
@@ -257,9 +249,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # SMOKE PATH — gradient correctness only; never the dispatched training path.
     if args.smoke:
-        from src.tac.differentiable_eval_roundtrip import (  # noqa: E402
-            apply_eval_roundtrip_during_training,
-        )
         scorer_seg = nn.Linear(3 * 384 * 512, 5 * 384 * 512).to(device)
         scorer_pose = nn.Linear(3 * 384 * 512 * 2, 6).to(device)
 

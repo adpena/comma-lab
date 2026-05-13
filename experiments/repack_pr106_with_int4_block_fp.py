@@ -37,7 +37,6 @@ import zipfile
 from pathlib import Path
 
 import brotli  # type: ignore[import-not-found]
-import numpy as np
 import torch
 
 PR106_SRC_PATH = Path(__file__).parent / "results" / (
@@ -150,8 +149,8 @@ def main() -> int:
     print(f"[repack-int4] wrote {archive_path}: {archive_size} bytes")
     print(f"[repack-int4] PR106: {pr106_size} bytes; delta: {delta:+d} ({100*delta/pr106_size:+.2f}%)")
     print(f"[repack-int4] estimated rate-component score Δ vs PR106: {score_delta:+.6f}")
-    print(f"[repack-int4] (distortion Δ unknown without CUDA dispatch; max_err per int4 weight = 0.069 — "
-          f"5-14% relative error per weight, may or may not survive eval)")
+    print("[repack-int4] (distortion Δ unknown without CUDA dispatch; max_err per int4 weight = 0.069 — "
+          "5-14% relative error per weight, may or may not survive eval)")
 
     metadata = {
         "archive_path": str(archive_path),

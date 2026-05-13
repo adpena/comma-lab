@@ -43,8 +43,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
-import sys
 import time
 from pathlib import Path
 
@@ -533,7 +531,7 @@ def main():
     )
 
     # ── Step 5: Extract GT targets ───────────────────────────────────────
-    print(f"\n[5/6] Extracting GT targets...")
+    print("\n[5/6] Extracting GT targets...")
     t0 = time.monotonic()
 
     gt_masks = extract_gt_masks(gt_frames, segnet, device)
@@ -623,26 +621,26 @@ def main():
     print(f"\n{'=' * 72}")
     print("GT-SPARSE TTO RESULTS")
     print(f"{'=' * 72}")
-    print(f"  GT Baseline (ground truth):")
+    print("  GT Baseline (ground truth):")
     print(f"    score = {gt_baseline['score']:.6f}")
     print(f"    seg   = {gt_baseline['seg']:.6f}  ({gt_baseline['seg_contribution']:.6f})")
     print(f"    pose  = {gt_baseline['pose']:.6f}  ({gt_baseline['pose_contribution']:.6f})")
-    print(f"  After Sparse TTO:")
+    print("  After Sparse TTO:")
     print(f"    score = {optimized_result['score']:.6f}")
     print(f"    seg   = {optimized_result['seg']:.6f}  ({optimized_result['seg_contribution']:.6f})")
     print(f"    pose  = {optimized_result['pose']:.6f}  ({optimized_result['pose_contribution']:.6f})")
-    print(f"  Delta from GT:")
+    print("  Delta from GT:")
     d_score = optimized_result['score'] - gt_baseline['score']
     d_pose = optimized_result['pose'] - gt_baseline['pose']
     d_seg = optimized_result['seg'] - gt_baseline['seg']
     print(f"    score: {d_score:+.6f} ({'regression' if d_score > 0 else 'improved'})")
     print(f"    pose:  {d_pose:+.6f}")
     print(f"    seg:   {d_seg:+.6f}")
-    print(f"  Config:")
+    print("  Config:")
     print(f"    patches: {args.n_patches} x {args.patch_size}x{args.patch_size}")
     print(f"    restarts: {args.n_restarts} x {args.steps_per_restart} steps")
     print(f"    perturbation budget: +/-{args.perturbation_budget}")
-    print(f"  Timing:")
+    print("  Timing:")
     print(f"    total = {t_total:.1f}s | TTO = {t_tto:.1f}s")
     print(f"{'=' * 72}")
 

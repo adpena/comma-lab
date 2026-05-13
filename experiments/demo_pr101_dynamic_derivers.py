@@ -33,9 +33,7 @@ import numpy as np
 import torch
 
 from tac.pr101_split_brotli_codec import (
-    CONV4_STORAGE_PERMS,
     DECODER_STORAGE_ORDER,
-    DECODER_STREAM_ENDS,
     encode_decoder_compact,
 )
 from tac.pr101_split_brotli_codec_derivers import (

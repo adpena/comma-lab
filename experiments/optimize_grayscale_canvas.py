@@ -290,7 +290,7 @@ def main(argv: list[str] | None = None) -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
 
-    print(f"[lane-al] decoding anchor masks.mkv → class ids ...", flush=True)
+    print("[lane-al] decoding anchor masks.mkv → class ids ...", flush=True)
     init_class_ids = _decode_anchor_masks_to_classes(args.anchor_archive)
     if init_class_ids.shape[0] < args.n_frames:
         raise RuntimeError(
@@ -310,7 +310,7 @@ def main(argv: list[str] | None = None) -> int:
           flush=True)
 
     # Load Lane A renderer (frozen).
-    print(f"[lane-al] loading Lane A renderer ...", flush=True)
+    print("[lane-al] loading Lane A renderer ...", flush=True)
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
         safe_extract_zip(args.anchor_archive, td_path)
@@ -336,7 +336,7 @@ def main(argv: list[str] | None = None) -> int:
     soft_forward = _make_renderer_soft_forward(renderer)
     embedding = renderer.embedding
 
-    print(f"[lane-al] loading frozen scorers (CUDA) ...", flush=True)
+    print("[lane-al] loading frozen scorers (CUDA) ...", flush=True)
     posenet, segnet = load_differentiable_scorers(
         args.upstream_dir, device=args.device,
     )

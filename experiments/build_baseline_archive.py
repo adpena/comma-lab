@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
 import sys
 import tempfile
 import time
@@ -469,7 +468,7 @@ def main() -> int:
     print(f"[build] decoded {len(frames)} frames in {time.monotonic()-t0:.1f}s")
 
     # Stage 2: SegNet → masks at 384x512
-    print(f"[build] loading SegNet from upstream/models/")
+    print("[build] loading SegNet from upstream/models/")
     _, segnet = load_scorers(
         posenet_path=REPO / "upstream" / "models" / "posenet.safetensors",
         segnet_path=REPO / "upstream" / "models" / "segnet.safetensors",
@@ -477,7 +476,7 @@ def main() -> int:
         upstream_dir=REPO / "upstream",
     )
     segnet.eval()
-    print(f"[build] extracting masks at 384x512 via SegNet")
+    print("[build] extracting masks at 384x512 via SegNet")
     t0 = time.monotonic()
     masks = extract_gt_masks(frames, segnet, device, batch_size=8)
     print(f"[build] masks shape={tuple(masks.shape)} in {time.monotonic()-t0:.1f}s")
@@ -570,7 +569,7 @@ def main() -> int:
         archive_size = args.output.stat().st_size
         rate_unscaled = archive_size / 37545489
         rate_contribution = 25 * rate_unscaled
-        print(f"\n=== Archive built ===")
+        print("\n=== Archive built ===")
         print(f"  Path: {args.output}")
         print(f"  Bytes: {archive_size:,}")
         print(f"  Rate (unscaled): {rate_unscaled:.6f}")

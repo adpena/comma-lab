@@ -55,7 +55,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-import torch
 
 _REPO = Path(__file__).resolve().parents[1]
 for _p in (_REPO / "src",):

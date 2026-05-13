@@ -131,7 +131,6 @@ print(f"Checkpoint: {checkpoint_path} ({ckpt_size:,} bytes)")
 import json
 import math
 import struct
-from typing import Any
 
 import numpy as np
 import torch
@@ -1037,7 +1036,6 @@ inflated_dir = submission_dir / "inflated"
 inflated_dir.mkdir(parents=True, exist_ok=True)
 
 # Copy .raw to inflated dir
-import shutil
 shutil.copy2(str(raw_path), str(inflated_dir / "0.raw"))
 
 # Build archive.zip (contains only the renderer checkpoint)
@@ -1135,7 +1133,7 @@ if report_path.exists():
             pose_component = math.sqrt(10 * parsed["pose_distortion"])
             seg_component = 100 * parsed["seg_distortion"]
             rate_component = 25 * parsed["rate"]
-            print(f"\n--- Score Components ---")
+            print("\n--- Score Components ---")
             print(f"  100 * seg_dist  = {seg_component:.4f}")
             print(f"  sqrt(10 * pose) = {pose_component:.4f}")
             print(f"  25 * rate       = {rate_component:.4f}")

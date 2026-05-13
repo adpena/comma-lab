@@ -13,16 +13,13 @@ Per CLAUDE.md non-negotiables this trainer:
 from __future__ import annotations
 
 import argparse
-import copy
 import json
-import os
 import sys
 import time
 from dataclasses import asdict
 from pathlib import Path
 from typing import Iterator, Sequence
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -40,7 +37,6 @@ from src.tac.categorical_substrate import (  # noqa: E402
     NUM_CLASSES,
     SEGNET_IN_H,
     SEGNET_IN_W,
-    export_to_archive,
     train_step,
 )
 
@@ -279,7 +275,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     lambda_seg=cfg.lambda_seg, lambda_pose=cfg.lambda_pose,
                     codebook_collapse_floor=cfg.codebook_collapse_floor,
                 )
-            except CodebookCollapseError as e:
+            except CodebookCollapseError:
                 collapse_count += 1
                 if collapse_count > 5:
                     print(f"FATAL: codebook collapse repeated {collapse_count}× — "

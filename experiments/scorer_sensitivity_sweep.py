@@ -30,11 +30,9 @@ import argparse
 import json
 import math
 import sys
-import time
 from pathlib import Path
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -113,7 +111,7 @@ def main():
     poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float() if poses_path.exists() else None
 
     print(f"Model: {sum(p.numel() for p in model.parameters()):,} params")
-    print(f"Scorer: DistortionNet (SegNet + PoseNet)")
+    print("Scorer: DistortionNet (SegNet + PoseNet)")
     print(f"Pairs: {args.n_pairs}")
     print()
 

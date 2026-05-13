@@ -12,7 +12,6 @@ import argparse
 import hashlib
 import importlib.util
 import json
-import math
 import struct
 import sys
 from dataclasses import dataclass

@@ -12,7 +12,6 @@ import argparse
 import hashlib
 import importlib.util
 import json
-import os
 import stat
 import sys
 from pathlib import Path

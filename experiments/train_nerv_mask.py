@@ -68,7 +68,6 @@ from tac.nerv_mask_codec import (  # noqa: E402
     NeRVSamplingComponent,
     NeRVSamplingPool,
     NeRVMaskTrainer,
-    encode_nerv_codec,
     nerv_codec_bytes,
 )
 from tac.profiles import PROFILES  # noqa: E402

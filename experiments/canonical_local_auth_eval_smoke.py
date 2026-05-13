@@ -85,18 +85,13 @@ import argparse
 import datetime as dt
 import fcntl
 import hashlib
-import importlib.util
 import json
-import os
-import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
 import zipfile
 from pathlib import Path
-from typing import Iterable
 
 SCHEMA_VERSION = 1
 
@@ -323,7 +318,7 @@ def _stage_renderer_magic(extracted: Path) -> tuple[bool, str]:
     # only care here that the magic is a recognized symbol, not that it
     # would inflate (the GPU smoke loop would catch MXLZ).
     if magic[:2] == b"PK":
-        return True, f"renderer.bin pytorch-pickle (PK header)"
+        return True, "renderer.bin pytorch-pickle (PK header)"
     return False, f"unknown renderer magic: {magic!r}"
 
 
@@ -379,8 +374,8 @@ def _stage_gt_video_present() -> tuple[bool, str]:
     gt = REPO_ROOT / "upstream/videos/0.mkv"
     if not gt.exists():
         return False, (
-            f"upstream/videos/0.mkv missing locally — the launcher tarball "
-            f"would not include it and remote eval would crash"
+            "upstream/videos/0.mkv missing locally — the launcher tarball "
+            "would not include it and remote eval would crash"
         )
     size = gt.stat().st_size
     if size < 1_000_000:

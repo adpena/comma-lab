@@ -158,7 +158,7 @@ def _gt_video_to_pair_input(
     if sys_path_added:
         sys.path.insert(0, str(upstream_dir))
     try:
-        from frame_utils import AVVideoDataset, seq_len, camera_size
+        from frame_utils import AVVideoDataset
 
         ds = AVVideoDataset(
             ["0.mkv"],

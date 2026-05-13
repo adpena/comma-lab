@@ -34,7 +34,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-import torch
 
 # Make the in-tree codec importable when run as a script.
 REPO_ROOT = Path(__file__).resolve().parent.parent

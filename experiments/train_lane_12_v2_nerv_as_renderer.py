@@ -66,7 +66,6 @@ Predicted Δ score at PR106 r2 frontier (operating point pose_avg=3.4e-5):
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 import time

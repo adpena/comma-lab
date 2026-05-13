@@ -27,10 +27,8 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 import click
-import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -71,12 +69,9 @@ from tac.camera import (
     CAMERA_W,
     SEGNET_INPUT_H,
     SEGNET_INPUT_W,
-    NUM_CLASSES,
 )
 from tac.constrained_gen import (
     coupled_trajectory_optimize,
-    estimate_expected_pose,
-    generate_initial_frames,
     build_constrained_archive,
     gpu_lane_full_pipeline,
 )
@@ -85,11 +80,10 @@ from tac.fridrich import (
     compute_pixel_cost_map,
     fridrich_constrained_optimize,
     optimal_quantization_stc,
-    fridrich_pipeline,
 )
 from tac.scorer import load_scorers, comma_score
 from tac.scorer_targets import extract_posenet_targets
-from tac.mask_codec import extract_masks, SEGNET_H, SEGNET_W
+from tac.mask_codec import extract_masks
 from tac.data import decode_video
 
 
@@ -314,7 +308,7 @@ def main(
     if use_full_pipeline:
         # Use the integrated pipeline with all Fridrich stages
         t0 = time.time()
-        print(f"\n[gpu_lane] Step 5: Running full GPU lane pipeline...")
+        print("\n[gpu_lane] Step 5: Running full GPU lane pipeline...")
         result = gpu_lane_full_pipeline(
             masks=masks,
             posenet=posenet,
@@ -462,7 +456,7 @@ def main(
 
     print(f"\n{'='*60}")
     print(f"  GPU LANE PROXY SCORE: {proxy:.4f}")
-    print(f"  Components:")
+    print("  Components:")
     print(f"    SegNet distortion:  {seg_dist:.6f} (100x = {100*seg_dist:.4f})")
     print(f"    PoseNet distortion: {pose_dist:.6f} (sqrt(10x) = {math.sqrt(10*pose_dist):.4f})")
     print(f"    Rate:               {rate:.6f} (25x = {25*rate:.4f})")

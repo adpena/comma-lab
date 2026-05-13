@@ -38,7 +38,7 @@ def test_timing() -> dict:
     projected = per_pair * 600 / 60
     print(f"T4: {elapsed:.1f}s for 10 pairs ({per_pair:.1f}s/pair)")
     print(f"Projected 600 pairs: {projected:.0f} min")
-    print(f"VIABLE" if projected < 25 else "EXCEEDS budget")
+    print("VIABLE" if projected < 25 else "EXCEEDS budget")
     return {"per_pair_s": per_pair, "projected_min": projected}
 
 

@@ -34,7 +34,6 @@ import time
 from pathlib import Path
 
 import torch
-import torch.nn.functional as F
 
 # Setup logging
 logging.basicConfig(

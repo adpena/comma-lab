@@ -54,7 +54,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -66,9 +65,7 @@ from tac.balle_hyperprior_codec import (
     HyperDecoder,
     HyperEncoder,
     decode_qints_balle,
-    encode_qints_balle_auto,
     encode_qints_full_balle,
-    encode_qints_hotz_lite,
 )
 from tac.arithmetic_qint_codec import encode_qints_arithmetic
 from tac.fp4_quantize import DEFAULT_CODEBOOK

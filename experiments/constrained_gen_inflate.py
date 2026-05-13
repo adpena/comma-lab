@@ -59,7 +59,6 @@ import argparse
 import json
 import logging
 import struct
-import sys
 import time
 from pathlib import Path
 
@@ -250,7 +249,7 @@ def optimize_batched(
     Includes time-budget awareness: if approaching time_limit, stops early
     and returns best-so-far frames.
     """
-    from tac.mini_scorer import MiniScorerTTO, MINI_SEG_H, MINI_SEG_W
+    from tac.mini_scorer import MiniScorerTTO
 
     N = frames.shape[0]
     P = N // 2

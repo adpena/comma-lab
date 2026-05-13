@@ -62,7 +62,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -351,7 +350,7 @@ def profile_hessian(
     if has_zoom:
         from tac.radial_zoom import RadialZoomWarp
 
-        print(f"[profile]   instantiating RadialZoomWarp")
+        print("[profile]   instantiating RadialZoomWarp")
         zoom_warp = RadialZoomWarp().to(device)
 
     # ── prepare per-weight grad accumulators ──

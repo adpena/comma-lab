@@ -191,7 +191,6 @@ def _record_stats(
 def parse_qh0_records(raw: bytes) -> dict[str, Any]:
     """Parse QH0/QM0 records using the runtime loader's byte contract."""
 
-    import torch
 
     if len(raw) < 3:
         raise QH0AnatomyError("QH0 payload shorter than magic")

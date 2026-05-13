@@ -21,8 +21,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
-import struct
 import subprocess
 import sys
 import time

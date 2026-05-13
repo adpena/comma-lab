@@ -493,7 +493,7 @@ def _qpost_archive_manifest(
 
 
 def _changed_qpost_atoms_from_pr82(bundle: Any, *, include_randmulti: bool) -> int:
-    from tac.henosis_pr82_transfer import decode_control_arrays, decode_randmulti_activity
+    from tac.henosis_pr82_transfer import decode_control_arrays
 
     arrays = decode_control_arrays(bundle.encoded_segments)
     total = 0

@@ -26,7 +26,6 @@ Cross-references:
 """
 
 import json
-import math
 import pathlib
 from dataclasses import asdict, dataclass
 

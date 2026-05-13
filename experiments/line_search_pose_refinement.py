@@ -73,7 +73,6 @@ if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from tac.qp1_pose_codec import (
-    POSE_SCALE,
     VELOCITY_OFFSET,
     VELOCITY_SCALE,
     decode_qp1,

@@ -36,14 +36,10 @@ Production integration (inflate):
 from __future__ import annotations
 
 import argparse
-import struct
 import sys
 import time
-import zlib
 from pathlib import Path
 
-import numpy as np
-import torch
 
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -93,7 +89,7 @@ def analyze_targets(path: str) -> None:
     # Inter-pair variance (how much does ego-motion change frame-to-frame?)
     if n_pairs > 1:
         diffs = targets[1:] - targets[:-1]
-        print(f"  Inter-pair differences (ego-motion change rate):")
+        print("  Inter-pair differences (ego-motion change rate):")
         print(f"  {'Component':<10} {'Mean |d|':>10} {'Max |d|':>10}")
         print(f"  {'-'*10} {'-'*10} {'-'*10}")
         for i, label in enumerate(labels):
@@ -102,22 +98,22 @@ def analyze_targets(path: str) -> None:
 
     # Overall distortion budget
     print(f"\n  Overall target norm (L2): {targets.norm(dim=1).mean().item():.6f}")
-    print(f"  If inflate reproduces these exactly: PoseNet distortion = 0.0")
-    print(f"  Current best PoseNet distortion: ~0.15 (from proxy eval)")
+    print("  If inflate reproduces these exactly: PoseNet distortion = 0.0")
+    print("  Current best PoseNet distortion: ~0.15 (from proxy eval)")
 
     # Verify float16 round-trip precision
     targets_f16 = targets.half().float()
     max_err = (targets - targets_f16).abs().max().item()
     mean_err = (targets - targets_f16).abs().mean().item()
-    print(f"\n  Float16 quantization error:")
+    print("\n  Float16 quantization error:")
     print(f"    Max: {max_err:.8f}")
     print(f"    Mean: {mean_err:.8f}")
     print(f"    Acceptable: {'YES' if max_err < 0.01 else 'NO — consider float32 storage'}")
 
     print(f"\n{'='*60}")
-    print(f"Council Question: Conditioning vs Loss Target?")
+    print("Council Question: Conditioning vs Loss Target?")
     print(f"{'='*60}")
-    print(f"""
+    print("""
   OPTION A — Loss Target (RECOMMENDED, already implemented):
     Store PoseNet(GT)[:6] as regression targets.
     At inflate time, supervised TTO minimizes:
@@ -156,7 +152,7 @@ def extract_targets(
     if upstream_dir is None:
         upstream_dir = str(Path(posenet_path).parent.parent)
 
-    print(f"\nExtracting PoseNet ego-motion targets ...")
+    print("\nExtracting PoseNet ego-motion targets ...")
     print(f"  GT video:  {gt_video}")
     print(f"  PoseNet:   {posenet_path}")
     print(f"  Upstream:  {upstream_dir}")
@@ -183,7 +179,7 @@ def verify_roundtrip(path: str) -> bool:
 
     import tempfile
 
-    print(f"\nVerifying round-trip integrity ...")
+    print("\nVerifying round-trip integrity ...")
     original = load_posenet_targets(path)
     if original is None:
         print("ERROR: Could not load original", file=sys.stderr)
@@ -262,7 +258,7 @@ def main():
             args.posenet = str(default_pn)
             if args.upstream is None:
                 args.upstream = str(PROJECT_ROOT / "upstream")
-            print(f"Using default paths:")
+            print("Using default paths:")
             print(f"  GT video: {args.gt_video}")
             print(f"  PoseNet:  {args.posenet}")
         else:

@@ -103,8 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     from tac.e_nerv_as_renderer import (
         ENeRVConfig, ENeRVEncoder, ENeRVLatentTable, ENeRVRenderer,
         _make_synthetic_pair_batch_for_smoke,
-        default_pose_surrogate, default_seg_surrogate,
-        export_e_nerv_to_archive, train_step_e_nerv,
+        export_e_nerv_to_archive,
     )
     from tac.training import EMA
 

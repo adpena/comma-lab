@@ -13,7 +13,6 @@ import argparse
 import hashlib
 import io
 import json
-import sys
 import zipfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence

@@ -63,7 +63,6 @@ from tac.pose_from_embedding import (  # noqa: E402
     POSE_FROM_EMBEDDING_SENTINEL,
     POSE_FROM_EMBEDDING_WEIGHTS_FILENAME,
     PoseFromEmbeddingMLP,
-    extract_mask_features,
     save_mlp,
 )
 

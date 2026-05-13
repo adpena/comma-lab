@@ -62,7 +62,6 @@ from tac.contrib.szabolcs_renderer import (  # noqa: E402
     CAMERA_SIZE,
     SEGMAP_INPUT_SIZE,
     build_szabolcs_renderer,
-    create_gaussian_softmax_lut,
     encode_luma_to_probability_map,
 )
 from tac.data import decode_video  # noqa: E402

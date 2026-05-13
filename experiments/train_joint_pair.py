@@ -704,14 +704,14 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
         # Restore EMA state
         if "ema_state_dict" in ckpt:
             ema.shadow = {k: v.to(device) for k, v in ckpt["ema_state_dict"].items()}
-            print(f"  EMA state restored")
+            print("  EMA state restored")
         # Re-wrap QAT if it was active (parametrizations must be re-registered
         # after loading state_dict since load_state_dict replaces weight data)
         if cfg.fp4_qat and qat_model is not None:
             qat_model.remove_hooks()
             from tac.fp4_quantize import QATRendererFP4 as _QAT
             qat_model = _QAT(model)
-            print(f"  FP4 QAT re-registered after resume")
+            print("  FP4 QAT re-registered after resume")
         print(f"  Resumed at epoch {start_epoch}, best_score={best_score:.4f}")
 
     # Move all GT data to device for speed (fits in VRAM for 600 pairs at 384x512)

@@ -46,7 +46,6 @@ script idempotent and resumable.
 from __future__ import annotations
 
 import argparse
-import io
 import json
 import os
 import sys
@@ -55,7 +54,6 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 # Path setup — match qat_finetune.py + train_distill.py conventions.
 _HERE = Path(__file__).resolve().parent

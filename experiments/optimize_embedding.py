@@ -474,7 +474,7 @@ def main():
             best_epoch_loss = avg_loss
             best_weights = embedding.weight.data.clone()
             patience_counter = 0
-            print(f"  ** New best (improvement)")
+            print("  ** New best (improvement)")
         else:
             patience_counter += 1
             print(f"  No improvement ({patience_counter}/{args.early_stop_patience})")
@@ -499,7 +499,7 @@ def main():
     print("=" * 70)
 
     weight_delta = (best_weights.to(device) - original_weights.to(device))
-    print(f"\n  Weight delta per class:")
+    print("\n  Weight delta per class:")
     class_names = ["road", "lane_marking", "vehicle", "other", "background"]
     for i in range(min(5, best_weights.shape[0])):
         name = class_names[i] if i < len(class_names) else f"class_{i}"

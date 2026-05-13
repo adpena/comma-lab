@@ -266,7 +266,7 @@ def optimize_latent_codes(
     Returns:
         dict with per-pair metrics and final statistics
     """
-    from tac.losses import scorer_forward_pair, _hwc_to_chw
+    from tac.losses import scorer_forward_pair
 
     n_pairs = len(gt_frames) // 2
     assert n_pairs == model.n_pairs, f"Expected {model.n_pairs} pairs, got {n_pairs}"
@@ -291,7 +291,7 @@ def optimize_latent_codes(
             gp_out, gs_out = scorer_forward_pair(pair_chw, posenet, segnet)
             gt_pose_cache.append(gp_out["pose"][..., :6].cpu())
             gt_seg_cache.append(F.softmax(gs_out, dim=1).cpu())
-    print(f"[latent] GT cache complete.")
+    print("[latent] GT cache complete.")
 
     # Optimization loop
     results = {"per_pair": [], "total_time": 0.0}

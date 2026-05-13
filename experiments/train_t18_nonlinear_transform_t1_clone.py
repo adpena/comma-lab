@@ -58,7 +58,6 @@ import time
 from pathlib import Path
 
 import torch
-import torch.nn.functional as F
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT / "src") not in sys.path:

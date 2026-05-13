@@ -10,14 +10,12 @@ import sys
 import time
 
 import torch
-import torch.nn.functional as F
 
 
 def test_qw1_class_weights():
     """QW1: Per-class weighting in hinge loss."""
     from tac.constrained_gen import (
         compute_segnet_class_weights,
-        compute_segnet_constraint_loss,
     )
 
     print("=" * 60)
@@ -59,7 +57,6 @@ def test_qw1_class_weights():
 def test_qw2_feature_matching():
     """QW2: Feature matching loss structure test."""
     from tac.feature_matching import (
-        DEFAULT_POSENET_LAYERS,
         DEFAULT_POSENET_LAYER_WEIGHTS,
         compute_feature_matching_loss,
         get_top_posenet_layers,
@@ -129,7 +126,7 @@ def test_qw3_multi_pass():
 
     # Verify the error is bounded by 0.5 (expected for rounding)
     assert quantization_error <= 0.5, f"Quantization error {quantization_error} > 0.5"
-    print(f"  PASS: Quantization error bounded at 0.5 as expected")
+    print("  PASS: Quantization error bounded at 0.5 as expected")
 
     # Verify multi-pass env var is parsed correctly in inflate_renderer
     import os
@@ -138,7 +135,7 @@ def test_qw3_multi_pass():
     multi_pass = int(os.environ.get("INFLATE_MULTI_PASS", "1"))
     assert multi_pass == 2
     del os.environ["INFLATE_MULTI_PASS"]
-    print(f"  PASS: INFLATE_MULTI_PASS env var parsed correctly")
+    print("  PASS: INFLATE_MULTI_PASS env var parsed correctly")
     print()
 
 

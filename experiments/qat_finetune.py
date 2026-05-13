@@ -52,7 +52,6 @@ import json
 import math
 import os
 import sys
-import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -485,7 +484,7 @@ def apply_mixed_precision_quant(
     Returns:
         list of (module, param_name) for cleanup
     """
-    from tac.fp4_quantize import FP4Parametrize, DEFAULT_CODEBOOK
+    from tac.fp4_quantize import DEFAULT_CODEBOOK
 
     class VariableBitParametrize(nn.Module):
         """Parametrize that quantizes to a specific bit-depth via STE."""
@@ -1016,7 +1015,7 @@ def main() -> None:
             "use_zoom_flow": header.get("use_zoom_flow", cfg.use_zoom_flow),
         }
         if any(detected_cfg[k] != getattr(cfg, k) for k in detected_cfg):
-            print(f"  Auto-detected architecture from ASYM header:")
+            print("  Auto-detected architecture from ASYM header:")
             for k, v in detected_cfg.items():
                 old = getattr(cfg, k)
                 if v != old:
@@ -1058,7 +1057,7 @@ def main() -> None:
             ckpt_data = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
             if isinstance(ckpt_data, dict) and "zoom_warp_state_dict" in ckpt_data:
                 zoom_warp.load_state_dict(ckpt_data["zoom_warp_state_dict"])
-                print(f"  Loaded zoom scalars from checkpoint")
+                print("  Loaded zoom scalars from checkpoint")
         else:
             zoom_path = ckpt_path.parent / "zoom_scalars.bin"
             if zoom_path.exists():
@@ -1406,7 +1405,7 @@ def main() -> None:
 
     # ── Summary ───────────────────────────────────────────────────────
     print(f"\n{'='*70}")
-    print(f"QAT SUMMARY")
+    print("QAT SUMMARY")
     print(f"{'='*70}")
     print(f"  Baseline (float):    distortion={baseline['distortion']:.3f}")
     print(f"  QAT-trained (float): distortion={final_float['distortion']:.3f}")

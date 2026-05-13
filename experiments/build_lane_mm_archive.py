@@ -25,7 +25,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import subprocess
 import sys
 import tempfile
@@ -162,7 +161,7 @@ def build_lane_mm_archive(
         # Build the new archive: renderer.bin + grayscale.mkv (+ poses if present).
         renderer = td_path / "renderer.bin"
         if not renderer.exists():
-            raise FileNotFoundError(f"anchor archive missing renderer.bin")
+            raise FileNotFoundError("anchor archive missing renderer.bin")
 
         # Deterministic zip: ZipInfo with fixed mtime so byte hash is stable
         # across machines (Codex R5-r6 #5; check_archive_builders_use_deterministic_zip).

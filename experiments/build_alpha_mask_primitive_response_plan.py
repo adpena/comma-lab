@@ -23,7 +23,6 @@ import platform
 import re
 import subprocess
 import sys
-import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath

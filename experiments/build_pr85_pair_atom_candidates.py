@@ -20,7 +20,7 @@ import math
 import sys
 import zipfile
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 try:

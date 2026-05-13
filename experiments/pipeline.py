@@ -42,7 +42,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import os
 import re
 import shlex
@@ -517,8 +516,8 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
                 _log(f"Export cache stale: {cfg.checkpoint} modified after "
                      f".done_export ({ckpt_mtime} > {done_mtime}), rerunning")
             elif not bin_path.exists():
-                _log(f"Export marker present but renderer.bin missing — "
-                     f"forcing re-export to avoid phantom path", "WARN")
+                _log("Export marker present but renderer.bin missing — "
+                     "forcing re-export to avoid phantom path", "WARN")
             else:
                 _log(f"Export already done (iter {iteration}), skipping")
                 return bin_path
@@ -526,7 +525,7 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
             if bin_path.exists():
                 _log(f"Export already done (iter {iteration}), skipping")
                 return bin_path
-            _log(f"Export marker unreadable + bin missing, forcing re-export", "WARN")
+            _log("Export marker unreadable + bin missing, forcing re-export", "WARN")
 
     _log("Exporting checkpoint to FP4")
 
@@ -1233,16 +1232,16 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
             elif done_meta.get("skipped"):
                 # R39: re-check whether the skip precondition still holds.
                 if (iter_dir / "qat_best_float.pt").exists():
-                    _log(f"  Fridrich was skipped but qat_best_float.pt now exists — retrying", "WARN")
+                    _log("  Fridrich was skipped but qat_best_float.pt now exists — retrying", "WARN")
                     _clear_marker_and_partial()
                 else:
-                    _log(f"  Fridrich previously skipped (no QAT input); using fallback")
+                    _log("  Fridrich previously skipped (no QAT input); using fallback")
                     return _resolve_fridrich_output()
             else:
                 _log(f"Fridrich refinement already done (iter {iteration}), skipping")
                 return _resolve_fridrich_output()
         except (json.JSONDecodeError, FileNotFoundError):
-            _log(f"Fridrich marker unreadable; running fresh", "WARN")
+            _log("Fridrich marker unreadable; running fresh", "WARN")
             _clear_marker_and_partial()
 
     # Find best QAT checkpoint to start from
@@ -2526,7 +2525,7 @@ def step_multipass(
     ``iter_dir/multipass_history.jsonl`` for forensics.
     """
     from tac.multipass_compressor import (
-        ABSOLUTE_MAX_PASSES, DEFAULT_EPS, MultiPassCompressor,
+        ABSOLUTE_MAX_PASSES, MultiPassCompressor,
     )
 
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"

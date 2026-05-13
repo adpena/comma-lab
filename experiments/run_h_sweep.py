@@ -751,7 +751,7 @@ def main():
         sweep["training"]["checkpoint_every"] = 25
         sweep["training"]["max_hours"] = 0.5
 
-    print(f"=== Karpathy Channel Width Sweep ===")
+    print("=== Karpathy Channel Width Sweep ===")
     print(f"  Configs: {[c['name'] for c in configs]}")
     print(f"  Platform: {'local advisory' if args.local else 'Modal T4'}")
     print(f"  Epochs: {sweep['training']['epochs']}")

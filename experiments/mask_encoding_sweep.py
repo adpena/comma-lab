@@ -28,11 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import shutil
-import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -43,7 +39,6 @@ for _p in (_PROJECT_ROOT, _PROJECT_ROOT / "src", _PROJECT_ROOT / "upstream"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import numpy as np
 import torch
 
 ORIGINAL_VIDEO_BYTES = 37_545_489  # for rate-term computation

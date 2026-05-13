@@ -1091,7 +1091,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             f"- status: `{replay['status']}`",
             f"- evidence grade: `{replay['evidence_grade']}`",
-            f"- score claim from this report: `false`",
+            "- score claim from this report: `false`",
             "",
             "## PR85 transplant opportunities",
             "",

@@ -37,7 +37,6 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from tac.utils import find_project_root
 
@@ -269,7 +268,7 @@ def main() -> None:
     print(f"[internals] GT frames: {len(gt_frames)}, Rendered frames: {len(rendered_frames)}")
 
     # Compute activation distances
-    print(f"\n[internals] Computing per-layer activation distances...")
+    print("\n[internals] Computing per-layer activation distances...")
     t0 = time.time()
     distances = compute_activation_distances(
         gt_frames, rendered_frames, posenet, segnet, device,
@@ -359,12 +358,12 @@ def main() -> None:
 
     # Final summary
     print(f"\n{'='*60}")
-    print(f"[internals] SUMMARY")
+    print("[internals] SUMMARY")
     print(f"  PoseNet: {len(results['posenet_layers'])} layers, total dist={posenet_total:.2f}")
     print(f"    Top 3 layers account for {results['summary']['posenet_top3_contribution_pct']:.1f}% of distance")
     print(f"  SegNet: {len(results['segnet_layers'])} layers, total dist={segnet_total:.2f}")
     print(f"    Top 3 layers account for {results['summary']['segnet_top3_contribution_pct']:.1f}% of distance")
-    print(f"  Implication: feature matching loss on top-3 layers could close the gap")
+    print("  Implication: feature matching loss on top-3 layers could close the gap")
     print(f"{'='*60}")
 
 

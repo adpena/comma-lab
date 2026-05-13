@@ -15,7 +15,6 @@ import json
 import lzma
 import math
 import struct
-import sys
 import zlib
 import zipfile
 from dataclasses import dataclass

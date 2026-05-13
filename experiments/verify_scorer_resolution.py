@@ -43,7 +43,6 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
-import einops
 import numpy as np
 
 
@@ -255,14 +254,14 @@ def report(posenet_results: dict, segnet_results: dict, label: str):
     print(f"\n  Tested on {n} frame pairs")
 
     # Preprocessing comparison
-    print(f"\n  --- Preprocessing (after scorer's internal downscale) ---")
+    print("\n  --- Preprocessing (after scorer's internal downscale) ---")
     print(f"  PoseNet preprocess max |diff|:  {posenet_results['preprocess_max_diff']:.10f}")
     print(f"  PoseNet preprocess mean |diff|: {posenet_results['preprocess_mean_diff']:.10f}")
     print(f"  SegNet  preprocess max |diff|:  {segnet_results['preprocess_max_diff']:.10f}")
     print(f"  SegNet  preprocess mean |diff|: {segnet_results['preprocess_mean_diff']:.10f}")
 
     # PoseNet
-    print(f"\n  --- PoseNet Output ---")
+    print("\n  --- PoseNet Output ---")
     mse = posenet_results["per_pair_mse"]
     print(f"  Per-pair MSE:    min={mse.min():.2e}  max={mse.max():.2e}  mean={mse.mean():.2e}")
     print(f"  Max output |diff|:  {posenet_results['max_output_diff']:.2e}")
@@ -272,7 +271,7 @@ def report(posenet_results: dict, segnet_results: dict, label: str):
     print(f"  Scorer distortion metric diff:  min={dist.min():.2e}  max={dist.max():.2e}  mean={dist.mean():.2e}")
 
     # SegNet
-    print(f"\n  --- SegNet Output ---")
+    print("\n  --- SegNet Output ---")
     disagree = segnet_results["per_frame_argmax_disagreement"]
     print(f"  Argmax disagreement:  min={disagree.min():.6f}  max={disagree.max():.6f}  mean={disagree.mean():.6f}")
     print(f"  Max logit |diff|:  {segnet_results['max_logit_diff']:.2e}")
@@ -285,7 +284,7 @@ def report(posenet_results: dict, segnet_results: dict, label: str):
     print(f"  Scorer distortion metric diff:  min={dist_s.min():.2e}  max={dist_s.max():.2e}  mean={dist_s.mean():.2e}")
 
     # Verdict
-    print(f"\n  --- VERDICT ---")
+    print("\n  --- VERDICT ---")
 
     # Thresholds: PoseNet distortion contributes sqrt(10*d) to score
     # SegNet distortion contributes 100*d to score
@@ -297,17 +296,17 @@ def report(posenet_results: dict, segnet_results: dict, label: str):
     if posenet_ok and segnet_ok:
         # Check if truly zero
         if posenet_results["preprocess_max_diff"] < 1e-6 and segnet_results["preprocess_max_diff"] < 1e-6:
-            print(f"  EXACT MATCH: bilinear round-trip is identity after scorer preprocessing")
-            print(f"  The scorer literally cannot distinguish 384x512 upscaled frames from native.")
+            print("  EXACT MATCH: bilinear round-trip is identity after scorer preprocessing")
+            print("  The scorer literally cannot distinguish 384x512 upscaled frames from native.")
             print(f"  Rate reduction: 874*1164 / (384*512) = {(874*1164)/(384*512):.1f}x storage")
-            print(f"  (But we already use a neural model, so storage is the model, not raw frames.)")
-            print(f"  KEY INSIGHT: upscale at inflate time introduces ZERO scorer error.")
+            print("  (But we already use a neural model, so storage is the model, not raw frames.)")
+            print("  KEY INSIGHT: upscale at inflate time introduces ZERO scorer error.")
         else:
-            print(f"  NEAR-EXACT: differences are within floating-point tolerance")
+            print("  NEAR-EXACT: differences are within floating-point tolerance")
             print(f"  Max score impact: < {100*disagree.max() + np.sqrt(10*dist.max()):.4f}")
-            print(f"  Upscale at inflate time introduces negligible scorer error.")
+            print("  Upscale at inflate time introduces negligible scorer error.")
     else:
-        print(f"  FAILED: round-trip introduces measurable scorer differences")
+        print("  FAILED: round-trip introduces measurable scorer differences")
         if not posenet_ok:
             max_pose_score = np.sqrt(10 * dist.max())
             print(f"    PoseNet score impact: up to {max_pose_score:.4f}")
@@ -439,7 +438,7 @@ def main():
 def run_math_analysis(device: torch.device):
     """Pure mathematical analysis of the bilinear round-trip. No models needed."""
     print(f"\n{'='*70}")
-    print(f"  MATHEMATICAL ANALYSIS (no models needed)")
+    print("  MATHEMATICAL ANALYSIS (no models needed)")
     print(f"{'='*70}")
     print()
     print("  The scorer preprocessing chain is:")
@@ -463,7 +462,7 @@ def run_math_analysis(device: torch.device):
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
 
     diff = (down - x).abs()
-    print(f"  384x512 -> 874x1164 -> 384x512 (uint8-range random):")
+    print("  384x512 -> 874x1164 -> 384x512 (uint8-range random):")
     print(f"    max |diff|  = {diff.max().item():.4f}")
     print(f"    mean |diff| = {diff.mean().item():.4f}")
     print(f"    as % of 255 = {diff.mean().item()/255*100:.1f}%")
@@ -499,31 +498,31 @@ def run_math_analysis(device: torch.device):
     down_s = F.interpolate(up_s, size=(384, 512), mode="bilinear", align_corners=False)
 
     diff_s = (down_s - x_smooth).abs()
-    print(f"  384x512 -> 874x1164 -> 384x512 (smooth/blurred):")
+    print("  384x512 -> 874x1164 -> 384x512 (smooth/blurred):")
     print(f"    max |diff|  = {diff_s.max().item():.4f}")
     print(f"    mean |diff| = {diff_s.mean().item():.4f}")
     print(f"    as % of 255 = {diff_s.mean().item()/255*100:.1f}%")
     print()
 
     # VERDICT
-    print(f"  --- MATHEMATICAL VERDICT ---")
+    print("  --- MATHEMATICAL VERDICT ---")
     print()
     if diff.mean().item() > 1.0:
-        print(f"  HYPOTHESIS BUSTED at preprocessing level.")
+        print("  HYPOTHESIS BUSTED at preprocessing level.")
         print(f"  The bilinear round-trip introduces mean {diff.mean().item():.1f} pixel")
         print(f"  difference ({diff.mean().item()/255*100:.1f}% of dynamic range).")
-        print(f"  This is NOT negligible -- the scorer sees substantially different inputs.")
+        print("  This is NOT negligible -- the scorer sees substantially different inputs.")
         print()
-        print(f"  The 'zero scorer error' claim from Eureka 3 is FALSE.")
-        print(f"  The round-trip acts as a low-pass filter, not the identity.")
+        print("  The 'zero scorer error' claim from Eureka 3 is FALSE.")
+        print("  The round-trip acts as a low-pass filter, not the identity.")
         print()
-        print(f"  HOWEVER: the scorer OUTPUT difference (requires model inference)")
-        print(f"  could still be small if the neural networks are insensitive to")
-        print(f"  the high-frequency content destroyed by the round-trip.")
-        print(f"  Run with --upstream-dir pointing to models to measure this.")
+        print("  HOWEVER: the scorer OUTPUT difference (requires model inference)")
+        print("  could still be small if the neural networks are insensitive to")
+        print("  the high-frequency content destroyed by the round-trip.")
+        print("  Run with --upstream-dir pointing to models to measure this.")
     else:
         print(f"  Preprocessing differences are small ({diff.mean().item():.4f} mean).")
-        print(f"  Model inference test needed to confirm scorer output equivalence.")
+        print("  Model inference test needed to confirm scorer output equivalence.")
     print()
 
 
