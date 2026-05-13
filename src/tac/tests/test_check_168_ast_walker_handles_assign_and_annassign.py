@@ -481,6 +481,36 @@ def test_source_index_candidate_prefilter_preserves_detection(
     assert "src/tac/indexed_bug.py" in violations[0]
 
 
+def test_source_index_candidate_prefilter_skips_rg(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """SourceIndex-backed runs should not pay a redundant ripgrep subprocess."""
+    root = _make_repo(tmp_path)
+    (root / "src/tac/indexed_bug.py").write_text(
+        "import ast\n"
+        "def f(node):\n"
+        "    if isinstance(node, ast.Assign):\n"
+        "        pass\n"
+    )
+
+    def fail_rg(*args, **kwargs):
+        raise AssertionError("SourceIndex path must not shell out to rg")
+
+    monkeypatch.setattr("tac.preflight._rg_python_files_matching_regex", fail_rg)
+
+    from tac.source_index import source_index_context
+
+    with source_index_context(root):
+        violations = check_ast_walker_handles_both_assign_and_annassign(
+            repo_root=root,
+            strict=False,
+        )
+
+    assert len(violations) == 1
+    assert "src/tac/indexed_bug.py" in violations[0]
+
+
 def test_experiments_dir_scanned(tmp_path: Path) -> None:
     root = _make_repo(tmp_path)
     (root / "experiments/in_exp.py").write_text(

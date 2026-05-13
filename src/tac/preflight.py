@@ -42303,14 +42303,7 @@ def check_ast_walker_handles_both_assign_and_annassign(
     violations: list[str] = []
     scanned = 0
     source_index = _current_source_index(root)
-    rg_candidates = _rg_python_files_matching_regex(
-        root,
-        _CHECK_168_SCAN_DIRS,
-        r"ast\.Assign",
-    )
-    if rg_candidates is not None:
-        py_files = rg_candidates
-    elif source_index is not None:
+    if source_index is not None:
         py_files = source_index.files_containing_substrings(
             _CHECK_168_SCAN_DIRS,
             pattern="*.py",
@@ -42318,12 +42311,20 @@ def check_ast_walker_handles_both_assign_and_annassign(
             require_all=True,
         )
     else:
-        py_file_list: list[Path] = []
-        for scan_dir in _CHECK_168_SCAN_DIRS:
-            scan_root = root / scan_dir
-            if scan_root.is_dir():
-                py_file_list.extend(scan_root.rglob("*.py"))
-        py_files = tuple(sorted(py_file_list, key=lambda item: item.as_posix()))
+        rg_candidates = _rg_python_files_matching_regex(
+            root,
+            _CHECK_168_SCAN_DIRS,
+            r"ast\.Assign",
+        )
+        if rg_candidates is not None:
+            py_files = rg_candidates
+        else:
+            py_file_list: list[Path] = []
+            for scan_dir in _CHECK_168_SCAN_DIRS:
+                scan_root = root / scan_dir
+                if scan_root.is_dir():
+                    py_file_list.extend(scan_root.rglob("*.py"))
+            py_files = tuple(sorted(py_file_list, key=lambda item: item.as_posix()))
 
     for py_file in py_files:
         try:
