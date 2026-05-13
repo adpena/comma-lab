@@ -281,6 +281,14 @@ def test_contest_auth_eval_source_records_inflate_budget_fields() -> None:
     assert "effective_inflate_python" in text
 
 
+def test_json_out_implies_durable_work_dir_source_contract() -> None:
+    text = (REPO / "experiments" / "contest_auth_eval.py").read_text()
+
+    assert 'elif args.json_out is not None and not args.allow_temp_work_dir:' in text
+    assert 'f"{json_out.stem}_workdir"' in text
+    assert "cleanup = False" in text
+
+
 def test_cuda_t4_auth_eval_contract_is_exact_eval_not_promotion(cae):
     contract = cae._auth_eval_evidence_contract(
         "cuda",

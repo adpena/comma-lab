@@ -88,3 +88,9 @@ def test_modal_train_lane_records_cost_band_metadata_without_score_authority() -
     assert '"score_claim": False' in text
     assert '"promotion_eligible": False' in text
     assert 'metadata["cost_band_anchor"] = cost_band_anchor' in text
+
+
+def test_modal_train_lane_returns_experiments_results_artifacts() -> None:
+    text = SOURCE.read_text()
+
+    assert 'workspace / "experiments" / "results"' in text

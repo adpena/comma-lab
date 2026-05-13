@@ -25,6 +25,21 @@ class AuthEvalScore:
     recomputed_matches: bool | None = None
 
 
+@dataclass(frozen=True)
+class AuthEvalScoreClaim:
+    """Parsed score plus the auth-eval evidence contract that permits claims."""
+
+    score: float
+    source_key: str
+    score_axis: str
+    lane_tag: str
+    evidence_grade: str
+    exact_cuda_eval_complete: bool
+    score_claim: bool
+    score_claim_valid: bool
+    recomputed_score: float | None = None
+
+
 def _finite_float(value: Any) -> float | None:
     try:
         out = float(value)
@@ -128,9 +143,54 @@ def parse_finite_auth_eval_score(
     )
 
 
+def parse_auth_eval_score_claim(
+    payload: Mapping[str, Any],
+    *,
+    required_score_axis: str | None = None,
+    require_component_recompute: bool = True,
+) -> AuthEvalScoreClaim | None:
+    """Return a score only when the auth-eval contract authorizes a claim.
+
+    This is stricter than :func:`parse_finite_auth_eval_score`: a finite score
+    may still be diagnostic-only, such as CUDA on a non-T4 GPU or macOS CPU.
+    Callers that update posteriors, greenlight paid full dispatch, or print
+    ``[contest-CUDA]`` must use this helper at the score-claim boundary.
+    """
+
+    parsed = parse_finite_auth_eval_score(
+        payload,
+        require_component_recompute=require_component_recompute,
+    )
+    if parsed is None:
+        return None
+    score_axis = str(payload.get("score_axis") or "")
+    if required_score_axis is not None and score_axis != required_score_axis:
+        return None
+    score_claim = payload.get("score_claim") is True
+    score_claim_valid = payload.get("score_claim_valid") is True
+    if not (score_claim and score_claim_valid):
+        return None
+    exact_cuda_eval_complete = payload.get("exact_cuda_eval_complete") is True
+    if required_score_axis == "contest_cuda" and not exact_cuda_eval_complete:
+        return None
+    return AuthEvalScoreClaim(
+        score=parsed.score,
+        source_key=parsed.source_key,
+        score_axis=score_axis,
+        lane_tag=str(payload.get("lane_tag") or ""),
+        evidence_grade=str(payload.get("evidence_grade") or ""),
+        exact_cuda_eval_complete=exact_cuda_eval_complete,
+        score_claim=score_claim,
+        score_claim_valid=score_claim_valid,
+        recomputed_score=parsed.recomputed_score,
+    )
+
+
 __all__ = [
+    "AuthEvalScoreClaim",
     "AuthEvalScore",
     "CONTEST_UNCOMPRESSED_BYTES",
+    "parse_auth_eval_score_claim",
     "parse_finite_auth_eval_score",
     "recompute_contest_score_from_payload",
 ]

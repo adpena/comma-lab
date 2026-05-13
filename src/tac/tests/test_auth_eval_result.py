@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 
 from tac.auth_eval_result import (
+    parse_auth_eval_score_claim,
     parse_finite_auth_eval_score,
     recompute_contest_score_from_payload,
 )
@@ -77,6 +78,54 @@ def test_parse_requires_component_recompute_when_requested() -> None:
         parse_finite_auth_eval_score(
             {"final_score": 0.19284758},
             require_component_recompute=True,
+        )
+        is None
+    )
+
+
+def test_parse_score_claim_accepts_component_coherent_contest_cuda() -> None:
+    payload = {
+        "avg_segnet_dist": 0.001,
+        "avg_posenet_dist": 0.0004,
+        "archive_size_bytes": 150_000,
+        "score_axis": "contest_cuda",
+        "lane_tag": "[contest-CUDA]",
+        "evidence_grade": "contest-CUDA",
+        "exact_cuda_eval_complete": True,
+        "score_claim": True,
+        "score_claim_valid": True,
+    }
+    payload["canonical_score"] = recompute_contest_score_from_payload(payload)
+
+    parsed = parse_auth_eval_score_claim(
+        payload,
+        required_score_axis="contest_cuda",
+    )
+
+    assert parsed is not None
+    assert parsed.score_axis == "contest_cuda"
+    assert parsed.lane_tag == "[contest-CUDA]"
+    assert parsed.score == payload["canonical_score"]
+
+
+def test_parse_score_claim_rejects_diagnostic_cuda_even_with_finite_score() -> None:
+    payload = {
+        "avg_segnet_dist": 0.001,
+        "avg_posenet_dist": 0.0004,
+        "archive_size_bytes": 150_000,
+        "score_axis": "diagnostic_cuda",
+        "lane_tag": "[diagnostic-auth-eval]",
+        "evidence_grade": "B",
+        "exact_cuda_eval_complete": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+    }
+    payload["canonical_score"] = recompute_contest_score_from_payload(payload)
+
+    assert (
+        parse_auth_eval_score_claim(
+            payload,
+            required_score_axis="contest_cuda",
         )
         is None
     )

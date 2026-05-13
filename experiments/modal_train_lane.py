@@ -504,6 +504,7 @@ def _run_lane_inner(
     # Top-level dirs to scan (avoid scanning src/ scripts/ etc.)
     scan_roots = [
         workspace / "results",
+        workspace / "experiments" / "results",
         workspace / "modal_worker_head_ledger.json",
     ]
     # Also any */_results/ siblings of workspace root

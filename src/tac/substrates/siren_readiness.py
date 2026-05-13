@@ -109,7 +109,8 @@ def audit_siren_substrate_readiness(repo_root: Path | str = ".") -> dict[str, An
                 ".venv/bin/python experiments/train_substrate_siren.py "
                 "--video-path upstream/videos/0.mkv "
                 "--output-dir experiments/results/siren_smoke_<utc> "
-                "--epochs 3 --device cpu --smoke --skip-archive-build --skip-auth-eval"
+                "--epochs 3 --device cpu --smoke --skip-archive-build --skip-auth-eval "
+                "# deterministic-bytes acceptable"
             ),
         },
     }

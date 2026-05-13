@@ -18,9 +18,9 @@
 #   - .omx/research/grand_council_fields_medal_substrate_design_20260512.md
 #     (council Phase 5 prediction: 0.145 [contest-CUDA])
 #
-# Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_SIREN_DONE marker) per the CLAUDE.md
-# score-tag rule and preflight completion-tag check.
+# Score-tagging: completion logs report the auth-eval JSON's own score_axis /
+# lane_tag. Modal A100 training is diagnostic unless the auth-eval contract
+# itself says score_axis=contest_cuda and score_claim_valid=true.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity — non-negotiable".
 set -euo pipefail
@@ -179,7 +179,23 @@ AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
 ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
 if [ -f "$AUTH_EVAL_JSON" ]; then
     log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_SIREN_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    AUTH_EVAL_TAG="$("$PYBIN" - "$AUTH_EVAL_JSON" <<'PY' || true
+import json, sys
+try:
+    payload = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    print("score_axis=unknown lane_tag=unknown score_claim_valid=false")
+else:
+    print(
+        "score_axis={axis} lane_tag={tag} score_claim_valid={valid}".format(
+            axis=payload.get("score_axis", "unknown"),
+            tag=payload.get("lane_tag", "unknown"),
+            valid=str(payload.get("score_claim_valid") is True).lower(),
+        )
+    )
+PY
+)"
+    log "LANE_SIREN_DONE $AUTH_EVAL_TAG auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
 else
     log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 12)"
 fi

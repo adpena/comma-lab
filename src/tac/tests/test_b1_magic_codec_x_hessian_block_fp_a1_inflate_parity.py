@@ -9,7 +9,7 @@ Closes Catalog #139 ``no_op_proof`` gate: when this adapter consumes the
 archive, ``runtime_consumes_bytes`` flips True (proven by byte-mutation test).
 
 CLAUDE.md compliance:
-* No scorer load, no MPS, no /tmp, no score claim, no KILL.
+* No scorer load, no MPS, no /tmp, no score claim, no lane-retirement verdict.
 * score_claim / promotion_eligible / ready_for_exact_eval_dispatch = False.
 """
 from __future__ import annotations

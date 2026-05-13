@@ -173,6 +173,16 @@ def test_script_has_confirmation_prompt(name: str):
     )
 
 
+def test_canonical_modal_dispatch_requires_clean_head_and_sentinels() -> None:
+    tool = _CANONICAL_TOOL.read_text()
+
+    assert "def _modal_sentinel_files(" in tool
+    assert '"--require-clean-head"' in tool
+    assert '"--sentinel-files"' in tool
+    assert '"experiments/modal_train_lane.py"' in tool
+    assert '"src/tac/deploy/modal/mount_manifest.py"' in tool
+
+
 @pytest.mark.parametrize("name", OPERATOR_AUTHORIZE_SCRIPTS)
 def test_script_has_claude_md_cross_reference(name: str):
     """Every script must cross-reference CLAUDE.md non-negotiables."""

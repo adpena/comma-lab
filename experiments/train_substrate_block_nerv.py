@@ -81,6 +81,7 @@ Usage (full; CUDA-required; threads from operator wrapper)::
 # AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
 
 
+# TORCH_COMPILE_WAIVED:defer-until-per-substrate-canary-validates-Inductor-graph-breaks-and-score-axis-custody
 from __future__ import annotations
 
 import argparse
