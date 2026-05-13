@@ -774,15 +774,31 @@ def _full_main(args: argparse.Namespace) -> int:
         segnet.eval()
         _stage("scorers_loaded")
 
-        # 5. Decode real pairs (CLAUDE.md FORBIDDEN: synthetic outside --smoke)
-        print(f"[full] decoding pairs from {args.video_path} ...")
-        pair_tensor = _decode_real_pairs(
+        # 5. Decode real target pairs and the frozen A1 base surface.
+        # The LAPose residual is trained against A1's actual decoded RGB, not
+        # a ground-truth proxy.  Otherwise the learned sidecar would optimize a
+        # surface the contest runtime never consumes.
+        print(f"[full] decoding GT pairs from {args.video_path} ...")
+        gt_pair_tensor = _decode_real_pairs(
             args.video_path,
             n_pairs=N_PAIRS_FULL,
             max_pairs=args.max_pairs,
+            output_hw=CAMERA_HW,
         ).to(device)
-        n_pairs = int(pair_tensor.shape[0])
-        _stage(f"pairs_decoded_{n_pairs}")
+        print("[full] decoding frozen A1 base pairs ...")
+        a1_pair_tensor = _decode_a1_base_pairs(
+            args.a1_archive,
+            a1_bytes,
+            device=device,
+            max_pairs=args.max_pairs,
+        )
+        n_pairs = int(gt_pair_tensor.shape[0])
+        if int(a1_pair_tensor.shape[0]) != n_pairs:
+            raise RuntimeError(
+                "A1 decoded pair count does not match GT pair count: "
+                f"a1={int(a1_pair_tensor.shape[0])} gt={n_pairs}"
+            )
+        _stage(f"pairs_decoded_gt_and_a1_{n_pairs}")
 
         # Held-out validation pairs (last val_pair_count)
         val_count = max(1, min(args.val_pair_count, max(1, n_pairs // 8)))
@@ -855,43 +871,16 @@ def _full_main(args: argparse.Namespace) -> int:
                 ]
                 if not batch_indices:
                     continue
-                # NOTE: in D3.B joint end-to-end mode, the LAPose head learns
-                # to produce additive residuals at A1's predicted RGB.  Since
-                # A1 is FROZEN and lives outside this trainer's graph (we
-                # only have its archive bytes), we use the ground-truth pairs
-                # AS A1's prediction proxy for the loss.  This is the
-                # 2026-05-13 Phase-2-optimal lean per Shannon §4.1: the
-                # residual is a Hinton-distilled differential code on top of
-                # the frozen A1 output.  Council D3.B verdict accepts this
-                # approximation; the empirical anchor will validate it.
                 pair_idxs = torch.tensor(batch_indices, device=device, dtype=torch.long)
-                gt_pairs = pair_tensor[pair_idxs]  # (B, 2, 3, H, W)
+                gt_pairs = gt_pair_tensor[pair_idxs]  # (B, 2, 3, H, W)
+                base_pairs = a1_pair_tensor[pair_idxs]
                 gt_a = gt_pairs[:, 0]
                 gt_b = gt_pairs[:, 1]
-
-                # Apply LAPose residual at scorer resolution (foveal patch is
-                # at camera-native; we downsize the residual to (384,512) via
-                # bilinear to match the scorer-roundtrip pipeline).
-                pred_a = gt_a.clone()
-                pred_b = gt_b.clone()
-                # Add residual at selected pairs.
-                for j, pair_id in enumerate(batch_indices):
-                    if pair_id not in head._pair_to_slot:
-                        continue
-                    r_a = head.residual_chw(pair_id, 0).unsqueeze(0)  # (1,3,fh,fw)
-                    r_b = head.residual_chw(pair_id, 1).unsqueeze(0)
-                    # Resize residual to EVAL_HW and add (centered).
-                    r_a_eval = torch.nn.functional.interpolate(
-                        r_a, size=EVAL_HW, mode="bilinear", align_corners=False
-                    )
-                    r_b_eval = torch.nn.functional.interpolate(
-                        r_b, size=EVAL_HW, mode="bilinear", align_corners=False
-                    )
-                    pred_a[j : j + 1] = pred_a[j : j + 1] + r_a_eval
-                    pred_b[j : j + 1] = pred_b[j : j + 1] + r_b_eval
-
-                pred_a = pred_a.clamp(0.0, 1.0)
-                pred_b = pred_b.clamp(0.0, 1.0)
+                pred_pairs = _apply_lapose_residual_batch(
+                    head, base_pairs, batch_indices
+                ).clamp(0.0, 255.0)
+                pred_a = pred_pairs[:, 0]
+                pred_b = pred_pairs[:, 1]
                 loss, parts = loss_fn(
                     pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
                     apply_eval_roundtrip=True, noise_std=args.noise_std,
@@ -920,7 +909,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 ema.apply(head)
                 try:
                     val_lag = _run_val_loop(
-                        head, loss_fn, pair_tensor, val_indices_pool,
+                        head, loss_fn, gt_pair_tensor, a1_pair_tensor, val_indices_pool,
                         archive_bytes_proxy, device
                     )
                 finally:
@@ -986,14 +975,10 @@ def _full_main(args: argparse.Namespace) -> int:
         # 13. Auth eval (CUDA inline; CPU axis dispatched by operator wrapper)
         auth_eval_json_path = args.output_dir / "auth_eval.json"
         if not args.skip_auth_eval and device.type == "cuda":
-            try:
-                _run_contest_auth_eval_cuda(
-                    submission_dir, args.upstream_dir, auth_eval_json_path
-                )
-                _stage("auth_eval_cuda_done")
-            except Exception as exc:
-                print(f"[full] WARN: auth_eval_cuda failed: {exc!r}")
-                _stage(f"auth_eval_cuda_failed_{type(exc).__name__}")
+            _run_contest_auth_eval_cuda(
+                submission_dir, args.upstream_dir, auth_eval_json_path
+            )
+            _stage("auth_eval_cuda_done")
     finally:
         unpatch_upstream_yuv6(yuv6_token)
         _stage("upstream_yuv6_unpatched")
@@ -1044,7 +1029,8 @@ def _full_main(args: argparse.Namespace) -> int:
 
 
 def _run_val_loop(
-    head, loss_fn, pair_tensor, val_indices_pool, archive_bytes_proxy, device
+    head, loss_fn, gt_pair_tensor, a1_pair_tensor, val_indices_pool,
+    archive_bytes_proxy, device
 ) -> float:
     """Validation forward pass — eval-time torch.inference_mode (Catalog #180)."""
     import torch
@@ -1052,22 +1038,15 @@ def _run_val_loop(
     losses: list[float] = []
     with torch.inference_mode():
         for pair_id in val_indices_pool:
-            pair = pair_tensor[pair_id : pair_id + 1]  # (1, 2, 3, H, W)
-            gt_a = pair[:, 0]
-            gt_b = pair[:, 1]
-            pred_a = gt_a.clone()
-            pred_b = gt_b.clone()
-            if pair_id in head._pair_to_slot:
-                r_a = head.residual_chw(pair_id, 0).unsqueeze(0)
-                r_b = head.residual_chw(pair_id, 1).unsqueeze(0)
-                r_a_eval = torch.nn.functional.interpolate(
-                    r_a, size=EVAL_HW, mode="bilinear", align_corners=False
-                )
-                r_b_eval = torch.nn.functional.interpolate(
-                    r_b, size=EVAL_HW, mode="bilinear", align_corners=False
-                )
-                pred_a = (pred_a + r_a_eval).clamp(0.0, 1.0)
-                pred_b = (pred_b + r_b_eval).clamp(0.0, 1.0)
+            gt_pair = gt_pair_tensor[pair_id : pair_id + 1]
+            base_pair = a1_pair_tensor[pair_id : pair_id + 1]
+            gt_a = gt_pair[:, 0]
+            gt_b = gt_pair[:, 1]
+            pred_pair = _apply_lapose_residual_batch(
+                head, base_pair, [int(pair_id)]
+            ).clamp(0.0, 255.0)
+            pred_a = pred_pair[:, 0]
+            pred_b = pred_pair[:, 1]
             try:
                 loss, _parts = loss_fn(
                     pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
@@ -1215,15 +1194,31 @@ def _run_contest_auth_eval_cuda(
     """Run contest_auth_eval.py --device cuda on the submission_dir."""
     cmd = [
         sys.executable, str(CONTEST_AUTH_EVAL_SCRIPT),
-        "--submission-dir", str(submission_dir),
+        "--archive", str(submission_dir / "archive.zip"),
+        "--inflate-sh", str(submission_dir / "inflate.sh"),
         "--upstream-dir", str(upstream_dir),
         "--device", "cuda",
-        "--output-json", str(output_json),
+        "--json-out", str(output_json),
     ]
     print(f"[auth_eval] {' '.join(cmd)}")
-    rc = subprocess.call(cmd)
-    if rc != 0:
-        raise RuntimeError(f"contest_auth_eval.py failed rc={rc}")
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"contest_auth_eval.py failed rc={proc.returncode}; "
+            f"stderr_tail={proc.stderr[-2000:]}"
+        )
+    from tac.auth_eval_result import parse_auth_eval_score_claim
+
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    claim = parse_auth_eval_score_claim(
+        payload,
+        required_score_axis="contest_cuda",
+    )
+    if claim is None:
+        raise RuntimeError(
+            "contest_auth_eval.py completed but did not produce a valid "
+            "contest_cuda score claim; refusing silent diagnostic-only success"
+        )
 
 
 # ---------------------------------------------------------------------------
