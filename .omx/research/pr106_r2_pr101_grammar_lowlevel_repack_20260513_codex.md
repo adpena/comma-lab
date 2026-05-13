@@ -22,9 +22,9 @@ This produced a new local candidate archive:
 - byte delta: `-151`
 - rate-only formula delta if components are unchanged: about `-0.000100545`
 
-No contest score is claimed here. Exact [contest-CUDA] and [contest-CPU]
-auth-eval artifacts are still required before score language, ranking, or
-promotion.
+The candidate now has exact [contest-CUDA T4] auth-eval custody. [contest-CPU
+Linux x86_64] closure was launched through Modal and is still pending harvest at
+the time of this ledger update.
 
 ## Proofs Produced
 
@@ -47,6 +47,37 @@ Artifact directory:
 - `pre_submission_compliance.static.json`: intentionally fails against stale
   source auth-eval/archive-manifest custody from the submission directory. This
   is expected until the candidate has its own exact auth-eval and manifest.
+- `archive_manifest.candidate.json`: candidate-specific archive manifest for
+  the 186,629-byte packet.
+- `pre_submission_compliance.cuda_exact_nonfinal.json`: strict nonfinal CUDA
+  compliance passed against the recovered exact auth-eval JSON, candidate
+  archive manifest, runtime tree match, and terminal Modal dispatch claim.
+
+Exact CUDA artifact directory:
+`experiments/results/modal_auth_eval/pr106_r2_pr101_grammar_lowlevel_repack_cuda_20260513_codex/`
+
+- Modal call id: `fc-01KRFTS57HQQPR7SKNA5JACZMZ`
+- lane id: `pr106_r2_pr101_grammar_lowlevel_repack_151b_cuda`
+- job id: `modal_pr106_r2_pr101_lowlevel_151b_cuda_20260513T0451Z`
+- `contest_auth_eval.json`: exact [contest-CUDA T4] score
+  `0.2065174760196528`, final rounded score `0.21`, 600 samples.
+- components: `avg_segnet_dist=0.0006426`, `avg_posenet_dist=0.00003236`,
+  archive bytes `186629`.
+- runtime: uploaded `submissions/pr106_latent_sidecar_r2_pr101_grammar`
+  runtime, T4 `Tesla T4`, CUDA `12.4`, driver `580.95.05`.
+- inflated output aggregate SHA-256:
+  `5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993`.
+- terminal claim status:
+  `completed_contest_cuda_modal_auth_eval_recovered`.
+
+Exact CPU artifact directory:
+`experiments/results/modal_auth_eval_cpu/pr106_r2_pr101_grammar_lowlevel_repack_cpu_20260513_codex/`
+
+- Modal call id: `fc-01KRFTYAENF8Y6CT0TC9QDKS43`
+- lane id: `pr106_r2_pr101_grammar_lowlevel_repack_151b_cpu`
+- job id: `modal_pr106_r2_pr101_lowlevel_151b_cpu_20260513T0454Z`
+- status as of `2026-05-13T04:55:53Z`: pending; active claim intentionally
+  remains open.
 
 ## Exact-Eval Boundary
 
@@ -59,19 +90,31 @@ Existing exact source result:
   `0.22806551797550428`, archive bytes `186780`, same SHA-256.
 
 Because the candidate has full-frame same-runtime local parity against the
-source runtime, the next valid action is exact auth eval on the candidate bytes,
-not further local score inference.
+source runtime, the valid score authority is exact auth eval on the candidate
+bytes. CUDA is now measured; CPU closure is pending.
 
-Required before any score claim:
+Before this candidate can be called release/submission ready:
 
-1. Claim lane dispatch with lane id `pr106_r2_pr101_grammar_lowlevel_repack_151b`.
-2. Run [contest-CUDA T4] auth eval against the candidate archive and
-   `submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh` with the
-   submission dir uploaded as the runtime tree.
-3. Run [contest-CPU Linux x86_64] closure if CUDA succeeds or if CPU-axis
-   submission readiness is being assessed.
-4. Re-run strict pre-submission compliance against the candidate-specific
-   auth-eval JSON and archive manifest.
+1. Harvest the pending [contest-CPU Linux x86_64] Modal run.
+2. If CPU succeeds, compare the candidate against the matching source archive on
+   the same CPU axis. Do not infer CPU behavior from CUDA or from local macOS
+   parity.
+3. Build a candidate-specific release surface if submission review is desired:
+   candidate `archive.zip`, candidate `archive_manifest.json`, candidate
+   `contest_auth_eval.json`, and report text that names the candidate SHA/bytes.
+4. Re-run strict `--contest-final` compliance against that release surface.
+
+## Score Movement
+
+CUDA apples-to-apples comparison against the matching source archive/runtime:
+
+- source [contest-CUDA T4]: `0.2066181354574151`, bytes `186780`.
+- candidate [contest-CUDA T4]: `0.2065174760196528`, bytes `186629`.
+- measured delta: `-0.00010065943776230331`.
+
+This is a rate-only win consistent with the 151-byte archive reduction. It is
+not a new representation win and does not change SegNet/PoseNet behavior by
+itself.
 
 ## Classification
 
@@ -79,6 +122,7 @@ Required before any score claim:
   byte-smaller.
 - Runtime sidecar consumption: yes, proven by mutation digest.
 - Full-frame same-runtime local parity: yes.
-- Exact contest score: not yet.
-- Promotion/submission readiness: false until exact eval and compliance close.
-
+- Exact contest score: yes on [contest-CUDA T4], pending on [contest-CPU Linux
+  x86_64].
+- Promotion/submission readiness: false until CPU closure and contest-final
+  release-surface compliance close.
