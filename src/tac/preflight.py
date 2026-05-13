@@ -2319,6 +2319,25 @@ def preflight_all(
         check_substrate_dispatch_honors_canary_first_ordering(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #174 (FIX-WAVE-1 R1 Medium #1): mandatory
+        # ``--expected-content-sha256`` on every subagent_commit_serializer
+        # invocation. Closes the asymmetric-protection gap exposed by the
+        # 2026-05-12 8c9a5e7f commit-swap incident. Strict-from-byte-one
+        # per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+        # against" non-negotiable AND "Strict-flip atomicity rule" (live
+        # count at landing: 0).
+        check_subagent_commit_serializer_always_uses_expected_content_sha256(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-13 Catalog #175 (FIX-WAVE-1 R1 Medium #6): defense-in-depth
+        # over `cost_band_calibration.py:333` ambient-default fallback.
+        # Refuses direct writes to `cost_band_posterior.jsonl` that don't
+        # route through `append_anchor(outcome=...)` OR carry a
+        # `# COST_BAND_ANCHOR_OUTCOME_OK:<reason>` waiver. Strict-from-byte-one
+        # (live count at landing: 0).
+        check_cost_band_anchor_writers_declare_outcome(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -42912,6 +42931,463 @@ def check_substrate_dispatch_honors_canary_first_ordering(
             "check_substrate_dispatch_honors_canary_first_ordering found "
             f"{len(violations)} violation(s). Catalog #173 closes REVIEW-OMNI "
             "Medium C4 (sane_hnerv canary-first ordering):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #174 - check_subagent_commit_serializer_always_uses_expected_content_sha256
+#
+# FIX-WAVE-1 R1 Medium #1 (2026-05-13). The 2026-05-12 8c9a5e7f incident
+# proved Catalog #157's protection is asymmetric: a subagent that DECLARES
+# --expected-content-sha256 catches sibling edits to ITS declared files,
+# but a sibling subagent that does NOT declare can freely absorb the
+# work because the sibling's commit lock window is never gated by the
+# pre-pre-lock content check.
+#
+# This META-meta gate refuses any subprocess-style invocation of the
+# canonical serializer that omits --expected-content-sha256.
+_CHECK_174_SCAN_DIRS: tuple[str, ...] = (
+    "tools",
+    "scripts",
+    "src/tac",
+    "experiments",
+)
+_CHECK_174_SERIALIZER_TOKENS: tuple[str, ...] = (
+    "tools/subagent_commit_serializer.py",
+    "tools.subagent_commit_serializer",
+)
+_CHECK_174_REQUIRED_FLAG: str = "--expected-content-sha256"
+_CHECK_174_WAIVER_RE: re.Pattern[str] = re.compile(
+    r"#\s*COMMIT_SERIALIZER_NO_SHA_OK\s*:\s*(?P<reason>[^\s].+)$",
+    re.IGNORECASE,
+)
+_CHECK_174_EXEMPT_FILE_NAMES: tuple[str, ...] = (
+    "subagent_commit_serializer.py",  # self
+    "preflight.py",  # this file (token literals)
+    "claim_catalog_number.py",  # claims commit via serializer with reason flag
+)
+_CHECK_174_TEST_PATH_MARKERS: tuple[str, ...] = (
+    "/tests/",
+)
+
+
+def _check_174_is_test_file(rel_posix: str, name: str) -> bool:
+    """True iff the file looks like a test surface (not a pytest tmp_path
+    fixture root that happens to have `test_<funcname>/` in the parent
+    directory chain)."""
+    if any(m in rel_posix for m in _CHECK_174_TEST_PATH_MARKERS):
+        return True
+    if name.startswith("test_") and name.endswith(".py"):
+        return True
+    return False
+_CHECK_174_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "/_intake_",
+    "/.omx/oss_export/",
+    "/experiments/results/",
+    "/vendored/",
+)
+
+
+# Invocation context-tokens: a line is a "real" invocation iff it has
+# both a serializer-token AND at least one of these execution markers
+# (subprocess call OR direct shell exec). Otherwise treat as docstring /
+# comment reference / path-allowlist entry.
+_CHECK_174_INVOCATION_CONTEXT_TOKENS: tuple[str, ...] = (
+    "subprocess.run",
+    "subprocess.Popen",
+    "subprocess.check_call",
+    "subprocess.check_output",
+    "subprocess.call",
+    "Popen(",
+    "os.system",
+    "os.execvp",
+    "os.execv",
+    "os.execlp",
+    "run(",
+    ".venv/bin/python",
+    "python -u",
+    "python3 -u",
+    "uv run",
+    "$PYBIN",
+)
+
+
+def _check_174_is_real_invocation(block: str) -> bool:
+    """Return True iff ``block`` looks like an actual subprocess
+    invocation of the canonical serializer (not a docstring / comment
+    reference / path-list entry).
+
+    For .sh files: a line whose stripped prefix is the serializer path or
+    a python interpreter invoking it. For .py files: a context-token
+    must be present in the block.
+    """
+    lines = [ln for ln in block.splitlines() if ln.strip()]
+    if not lines:
+        return False
+    # Inspect each line; if any has a strong invocation context-token,
+    # treat as real.
+    for ln in lines:
+        stripped = ln.lstrip()
+        # Skip comment-only lines and docstring-style markdown bullets.
+        if stripped.startswith("#") or stripped.startswith("*"):
+            continue
+        if stripped.startswith("- "):
+            # Markdown bullet inside docstring; skip.
+            continue
+        if any(tok in ln for tok in _CHECK_174_INVOCATION_CONTEXT_TOKENS):
+            return True
+        # Shell-style direct exec: e.g.
+        #   `.venv/bin/python tools/subagent_commit_serializer.py ...`
+        # The shell .sh form has no python-prefix but starts with the
+        # serializer path or an explicit `bash`/`python` call.
+        if (
+            stripped.startswith("tools/subagent_commit_serializer.py")
+            or stripped.startswith("./tools/subagent_commit_serializer.py")
+        ):
+            return True
+    return False
+
+
+def _check_174_collect_serializer_invocations(
+    text: str,
+) -> list[tuple[int, str]]:
+    """Return (line_no, joined_block_text) for every line that REFERENCES
+    the canonical serializer in ``text``. The "block" extends BACKWARD
+    until the enclosing call's opener (5-line lookback, breaks at blank
+    line) AND FORWARD until brace/bracket balance is reached OR shell
+    backslash continuations stop.
+
+    This conservatively coalesces both Python multi-line calls and shell
+    line-continued calls so the downstream is_real_invocation /
+    flag-detection / waiver-detection logic can inspect the whole call.
+    """
+    lines = text.splitlines()
+    out: list[tuple[int, str]] = []
+    consumed_until = -1
+    for i, raw in enumerate(lines):
+        if i <= consumed_until:
+            continue
+        if not any(tok in raw for tok in _CHECK_174_SERIALIZER_TOKENS):
+            continue
+        # Backward lookback: up to 5 lines OR first blank line.
+        back_start = i
+        for k in range(1, 6):
+            prev = i - k
+            if prev < 0:
+                break
+            prev_line = lines[prev]
+            if not prev_line.strip():
+                break
+            back_start = prev
+            # Stop once we find an unindented statement / def boundary.
+            stripped = prev_line.lstrip()
+            if stripped.startswith(("def ", "class ", "if ", "for ", "while ")):
+                break
+        # Forward extension by paren balance + shell backslash.
+
+        def _balance(s: str) -> int:
+            return (
+                s.count("(") - s.count(")")
+                + s.count("[") - s.count("]")
+                + s.count("{") - s.count("}")
+            )
+
+        buf = lines[back_start:i + 1]
+        bal = sum(_balance(ln) for ln in buf)
+        j = i
+        while j + 1 < len(lines) and (
+            buf[-1].rstrip().endswith("\\") or bal > 0
+        ):
+            j += 1
+            nxt = lines[j]
+            buf.append(nxt)
+            bal += _balance(nxt)
+            if bal <= 0 and not nxt.rstrip().endswith("\\"):
+                break
+        joined = "\n".join(buf)
+        out.append((i + 1, joined))
+        consumed_until = j
+    return out
+
+
+def check_subagent_commit_serializer_always_uses_expected_content_sha256(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #174. R1 Medium #1: refuse any caller of the canonical
+    subagent commit serializer (``tools/subagent_commit_serializer.py``)
+    that does NOT pass ``--expected-content-sha256 <file>=<sha>``.
+
+    This closes the asymmetric-protection gap exposed by the 2026-05-12
+    8c9a5e7f incident: sister subagents that skip the flag could absorb
+    each other's work freely.
+
+    Acceptance:
+      * canonical-flag string present anywhere in the (possibly
+        line-continued) invocation block
+      * same-line ``# COMMIT_SERIALIZER_NO_SHA_OK:<reason>`` waiver on any
+        line in the invocation block (reason is required; bare token is
+        rejected)
+      * the canonical serializer file itself (token literals) and
+        ``preflight.py`` (this file - token literals) are exempt
+      * test files / vendored intake / OSS export mirror / results dirs
+        excluded
+      * ``tools/claim_catalog_number.py`` is exempt - it commits the
+        state-only ``next_catalog_number.txt`` increment using a precise
+        reason flag the serializer itself accepts via Catalog #117
+
+    Scanned suffixes: .py, .sh. Sister of Catalog #117 (last-50-commit
+    serializer usage) + Catalog #157 (the pre-pre-lock hash gate). This
+    gate makes #157's protection mandatory.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned = 0
+    for sub in _CHECK_174_SCAN_DIRS:
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file():
+                continue
+            suffix = path.suffix.lower()
+            if suffix not in {".py", ".sh"}:
+                continue
+            rel_posix = path.as_posix()
+            if any(m in rel_posix for m in _CHECK_174_EXEMPT_PATH_MARKERS):
+                continue
+            if _check_174_is_test_file(rel_posix, path.name):
+                continue
+            if path.name in _CHECK_174_EXEMPT_FILE_NAMES:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            invocations = _check_174_collect_serializer_invocations(text)
+            if not invocations:
+                continue
+            scanned += 1
+            rel = str(path.relative_to(root))
+            for line_no, block in invocations:
+                # Filter docstring / comment / path-list references: only
+                # flag blocks that look like a real subprocess/shell exec.
+                if not _check_174_is_real_invocation(block):
+                    continue
+                if _CHECK_174_REQUIRED_FLAG in block:
+                    continue
+                # Same-line waiver: check the WHOLE invocation block for the
+                # waiver token (reason required).
+                if _CHECK_174_WAIVER_RE.search(block):
+                    continue
+                # File-level waiver: `# COMMIT_SERIALIZER_BYPASS_OK_FILE`
+                # (existing operator-side housekeeping; see auto_commit.sh).
+                if "COMMIT_SERIALIZER_BYPASS_OK_FILE" in text:
+                    continue
+                violations.append(
+                    f"{rel}:{line_no}: invokes "
+                    "tools/subagent_commit_serializer.py without "
+                    f"`{_CHECK_174_REQUIRED_FLAG} <file>=<sha>`. Add the "
+                    "flag (Catalog #157 pre-pre-lock hash gate) OR a "
+                    "same-line `# COMMIT_SERIALIZER_NO_SHA_OK:<reason>` "
+                    "waiver."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [commit-serializer-sha-required] "
+                f"{len(violations)} violation(s) across {scanned} caller(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [commit-serializer-sha-required] OK "
+                f"({scanned} caller file(s); all pass "
+                "--expected-content-sha256 or carry a "
+                "COMMIT_SERIALIZER_NO_SHA_OK waiver)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_subagent_commit_serializer_always_uses_expected_content_sha256 "
+            f"found {len(violations)} caller(s) missing the mandatory "
+            "`--expected-content-sha256` flag. Catalog #174 closes "
+            "FIX-WAVE-1 R1 Medium #1:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #175 - check_cost_band_anchor_writers_declare_outcome
+#
+# FIX-WAVE-1 R1 Medium #6 (2026-05-13). The
+# `src/tac/cost_band_calibration.py:333` ambient-default fallback allows a
+# direct writer to bypass the `outcome` discipline. Defense-in-depth gate:
+# refuse any direct writer to the cost-band posterior JSONL that does not
+# go through `append_anchor(outcome=...)` OR otherwise declare `outcome=`.
+_CHECK_175_POSTERIOR_PATH_TOKENS: tuple[str, ...] = (
+    "cost_band_posterior.jsonl",
+    "cost_band_posterior_v1.jsonl",
+)
+_CHECK_175_DIRECT_WRITE_TOKENS: tuple[str, ...] = (
+    ".write_text(",
+    "json.dump(",
+    "json.dumps(",  # often dumped+written
+)
+_CHECK_175_CANONICAL_HELPER_TOKENS: tuple[str, ...] = (
+    "append_anchor(",
+    "cost_band_calibration.append_anchor",
+    "append_platform_training_anchor(",
+    "outcome=",
+)
+_CHECK_175_WAIVER_RE: re.Pattern[str] = re.compile(
+    r"#\s*COST_BAND_ANCHOR_OUTCOME_OK\s*:\s*(?P<reason>[^\s].+)$",
+    re.IGNORECASE,
+)
+_CHECK_175_EXEMPT_FILE_NAMES: tuple[str, ...] = (
+    "cost_band_calibration.py",  # the canonical helper module itself
+    "preflight.py",  # this file (token literals)
+)
+
+
+def check_cost_band_anchor_writers_declare_outcome(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #175. R1 Medium #6: refuse direct writers to the cost-band
+    posterior JSONL that don't declare an ``outcome=`` (success /
+    rc_nonzero / archive_missing / etc.) AND don't go through the
+    canonical ``tac.cost_band_calibration.append_anchor`` helper.
+
+    Defense-in-depth on the ``cost_band_calibration.py:333`` back-compat
+    trap: even though the canonical helper threads outcome correctly, a
+    direct file write could bypass the discipline. This META gate refuses
+    any direct write to ``cost_band_posterior.jsonl`` (or its v1 variant)
+    that doesn't show one of the canonical helper tokens within a
+    30-line window of the write.
+
+    Acceptance:
+      * file routes through ``append_anchor(...)`` OR
+        ``append_platform_training_anchor(...)`` near the write
+      * the same call site declares ``outcome=`` explicitly
+      * same-line ``# COST_BAND_ANCHOR_OUTCOME_OK:<reason>`` waiver
+        on the write line
+      * canonical helper module + this preflight file exempt
+      * test files / vendored intake / DERIVED_OUTPUT trees excluded
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned = 0
+    for sub in _CHECK_174_SCAN_DIRS:
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file() or path.suffix.lower() != ".py":
+                continue
+            rel_posix = path.as_posix()
+            if any(m in rel_posix for m in _CHECK_174_EXEMPT_PATH_MARKERS):
+                continue
+            if _check_174_is_test_file(rel_posix, path.name):
+                continue
+            if path.name in _CHECK_175_EXEMPT_FILE_NAMES:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if not any(tok in text for tok in _CHECK_175_POSTERIOR_PATH_TOKENS):
+                continue
+            scanned += 1
+            lines = text.splitlines()
+            # First pass: find every WRITE line.
+            for idx, line in enumerate(lines):
+                if not any(
+                    wtok in line for wtok in _CHECK_175_DIRECT_WRITE_TOKENS
+                ):
+                    continue
+                # The write line itself must (a) directly contain a
+                # posterior path token (the simple case), OR (b) be in a
+                # 5-line window with an assignment-style line that defines
+                # the posterior path. This eliminates the false-positive
+                # case where a print/log/json.dumps near a docstring
+                # mention triggers the gate.
+                window_lo = max(0, idx - 5)
+                # Look backward only - the assignment must precede the
+                # write.
+                hit_path = False
+                assignment_kinds = (" = Path(", "= Path(", " = open(")
+                for back_idx in range(window_lo, idx + 1):
+                    back_line = lines[back_idx]
+                    if not any(
+                        tok in back_line
+                        for tok in _CHECK_175_POSTERIOR_PATH_TOKENS
+                    ):
+                        continue
+                    # On the write line itself, both tokens being present
+                    # is enough (e.g. open('.../cost_band_posterior.jsonl', 'w')).
+                    if back_idx == idx:
+                        hit_path = True
+                        break
+                    # On a preceding line, require assignment-style or
+                    # docstring-disqualifier absence.
+                    stripped = back_line.lstrip()
+                    if stripped.startswith("#") or stripped.startswith("*"):
+                        continue
+                    if stripped.startswith('"""') or stripped.startswith("'''"):
+                        continue
+                    # Must look like a Path assignment / open() to count.
+                    if any(kind in back_line for kind in assignment_kinds):
+                        hit_path = True
+                        break
+                if not hit_path:
+                    continue
+                # Same-line waiver
+                if _CHECK_175_WAIVER_RE.search(line):
+                    continue
+                # 30-line context window for canonical-helper acceptance.
+                lo = max(0, idx - 15)
+                hi = min(len(lines), idx + 15 + 1)
+                window = "\n".join(lines[lo:hi])
+                if any(
+                    ctok in window for ctok in _CHECK_175_CANONICAL_HELPER_TOKENS
+                ):
+                    continue
+                rel = str(path.relative_to(root))
+                violations.append(
+                    f"{rel}:{idx + 1}: direct write to "
+                    "`cost_band_posterior.jsonl` without "
+                    "`append_anchor(outcome=...)` helper context OR "
+                    "explicit `outcome=` kwarg. Route through "
+                    "`tac.cost_band_calibration.append_anchor(...)` OR add "
+                    "a `# COST_BAND_ANCHOR_OUTCOME_OK:<reason>` waiver."
+                )
+                break  # one violation per file is enough
+    if verbose:
+        if violations:
+            print(
+                f"  [cost-band-anchor-outcome] "
+                f"{len(violations)} violation(s) across {scanned} writer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [cost-band-anchor-outcome] OK "
+                f"({scanned} writer file(s); all route via canonical helper "
+                "or carry outcome= kwarg or waiver)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_cost_band_anchor_writers_declare_outcome "
+            f"found {len(violations)} direct-write surface(s) missing "
+            "outcome= discipline. Catalog #175 closes R1 Medium #6 "
+            "(cost_band_calibration.py:333 back-compat trap):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
