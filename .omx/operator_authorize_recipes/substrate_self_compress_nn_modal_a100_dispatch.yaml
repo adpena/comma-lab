@@ -1,0 +1,107 @@
+schema_version: 1
+name: substrate_self_compress_nn_modal_a100_dispatch
+lane_id: lane_substrate_self_compress_nn_20260512
+summary: >
+  self_compress_nn (delta) HIGH-target dispatch on Modal A100 - Selfcomp /
+  Quantizr-faithful block-FP self-compression with van den Oord persistent
+  codebook EMA. Council Phase 5 prediction: ~0.17 score.
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  # Hand-calibrated fallback p50 for delta - heavier than alpha (sane_hnerv ~$8) by
+  # ~30-50% because the per-batch chain runs (a) full forward through
+  # quantized weight reconstruction, (b) commit-loss accumulation over every
+  # _QuantizedConv2d / _QuantizedLinear layer, (c) codebook EMA step after
+  # every optimizer.step. Updated as N grows in
+  # tac.cost_band_calibration.predict('modal', 'A100', 2000).
+  hand_calibrated_fallback_p50_usd: 12.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_delta: "-0.060 [predicted; council Phase 5 HIGH-target ~0.17]"
+predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
+risk: |
+  Phase 1 first-anchor research dispatch on Modal A100 for the delta candidate.
+  Block-FP self-compression with van den Oord codebook EMA carries QAT-style
+  collapse risk at low-bit (council §4.2 L2 NEEDS-WORK; SKETCH default K=256
+  / D_v=8 = ~8 bits/group). Trainer _full_main wires 16 stages including
+  auth eval at stage 12. Single-axis [contest-CUDA] acceptable for first
+  anchor; CPU axis required separately before promotion. Per CLAUDE.md
+  KILL-LAST-RESORT: research-path exhaustion (QAT, LSQ, per-channel scaling,
+  smaller block sizes, GPTQ/AWQ) BEFORE any KILL verdict.
+envelope_status: "FITS $20 envelope at p50 fallback ($12.00)"
+
+remote_driver: scripts/remote_lane_substrate_self_compress_nn.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_self_compress_nn.sh
+  cost_band_trainer: experiments/train_substrate_self_compress_nn.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_self_compress_nn.py
+
+env_overrides:
+  SELF_COMPRESS_NN_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SELF_COMPRESS_NN_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  SELF_COMPRESS_NN_OUTPUT_DIR: /workspace/pact/lane_substrate_self_compress_nn_results/output
+  SELF_COMPRESS_NN_EPOCHS: "2000"
+  SELF_COMPRESS_NN_UPSTREAM_DIR: /workspace/pact/upstream
+  SELF_COMPRESS_NN_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_self_compress_nn.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_self_compress_nn.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - tools/claim_lane_dispatch.py (cross-agent dispatch coordination)
+  - tools/append_cost_band_anchor.py (cost-band anchor append; stage 14)
+
+literature_anchor: |
+  Selfcomp PR #56 (1.017-bpw block-FP weight self-compression; 94K-param
+  SegMap; PR #56's lead implementer szabolcs-cs is an inner-council member
+  per CLAUDE.md "Council conduct" roster) +
+  Quantizr 0.33 anchor 2026-04-21 (FiLM-conditioned depthwise-separable CNN,
+  88K params, FP4+Brotli, KL distill) +
+  van den Oord VQ-VAE 2017 persistent codebook EMA (CLAUDE.md "EMA -
+  non-negotiable" codebook clause; decay 0.99)
+
+council_phase_5_prediction: 0.17
+
+notes: |
+  Per operator directive 2026-05-12: "reroute all to modal and lightning free
+  tier" + "all are approved". WAVE-1-B operator-orchestrated parallel
+  deployment.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'A100', 2000) - for
+  delta this is a NEW posterior; the hand-calibrated p50 of $12 reflects (a)
+  per-batch quantized-weight reconstruction overhead, (b) commit-loss
+  accumulation across every quantized layer, (c) codebook EMA step after
+  every optimizer.step. First dispatches bootstrap the calibration system
+  for the delta row.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": [contest-CUDA] from
+  this dispatch is the CUDA-axis truth for the delta archive bytes ONLY; CPU-axis
+  status remains MISSING until a paired Linux x86_64 [contest-CPU] eval
+  lands per the dual-eval mandate.
+
+  Cross-ref:
+    feedback_wave1_self_compress_nn_trainer_build_LANDED_20260512.md
+    feedback_substrate_sane_hnerv_full_main_wired_landed_20260512.md
+    grand_council_fields_medal_substrate_design_20260512.md
+    feedback_modal_strategy_reevaluation_post_tier1_engineering_20260512.md
