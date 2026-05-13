@@ -17,6 +17,7 @@ from tac.substrates.siren.archive import (
     pack_archive,
     parse_archive,
 )
+from tac.substrates.siren.inflate import inflate_one_video
 
 
 def _smoke_cfg() -> SirenConfig:
@@ -218,7 +219,6 @@ def test_byte_mutation_changes_archive_no_op_proof():
         output_width=cfg.output_width,
     )
     assert blob_a != blob_b, "no_op_proof: mutating a weight must change archive bytes"
-
     arc_a = parse_archive(blob_a)
     arc_b = parse_archive(blob_b)
     # The mutated weight must differ between A and B
@@ -227,6 +227,25 @@ def test_byte_mutation_changes_archive_no_op_proof():
         arc_b.decoder_state_dict[out_key].to(torch.float32),
         atol=1e-3,
     )
+
+
+def test_inflate_one_video_writes_png_without_pil(tmp_path):
+    cfg, _, sd, meta = _build_smoke_inputs()
+    blob = pack_archive(
+        sd,
+        meta,
+        num_pairs=cfg.num_pairs,
+        hidden_dim=cfg.hidden_dim,
+        num_hidden_layers=cfg.num_hidden_layers,
+        output_height=cfg.output_height,
+        output_width=cfg.output_width,
+    )
+
+    inflate_one_video(blob, tmp_path, device="cpu")
+
+    frames = sorted(tmp_path.glob("*.png"))
+    assert len(frames) == cfg.num_pairs * 2
+    assert frames[0].read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_substrate_forward_shape():

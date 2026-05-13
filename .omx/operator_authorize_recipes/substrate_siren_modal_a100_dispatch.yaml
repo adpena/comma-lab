@@ -7,6 +7,9 @@ platform: modal
 gpu: "${MODAL_GPU:-A100}"
 min_vram_gb: 40
 video_input_strategy: per_dispatch_local_copy
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
 canary_status: post_canary_dependent
 canary_dependency: sane_hnerv
 
@@ -36,6 +39,7 @@ risk: |
 envelope_status: "FITS $20 envelope at p50 fallback"
 
 remote_driver: scripts/remote_lane_substrate_siren.sh
+readiness_gate: tools/audit_siren_substrate_readiness.py --fail-if-not-ready
 timeout_hours: 4.0
 
 required_input_files:
@@ -62,6 +66,7 @@ env_overrides:
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:
+  - tools/audit_siren_substrate_readiness.py
   - scripts/remote_lane_substrate_siren.sh
   - upstream/videos/0.mkv
   - experiments/train_substrate_siren.py

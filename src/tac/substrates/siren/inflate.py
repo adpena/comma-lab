@@ -16,12 +16,38 @@ L4 budget: <= 100 LOC, <= 2 external deps (torch, brotli; numpy is torch transit
 from __future__ import annotations
 
 import sys
+import struct
+import zlib
 from pathlib import Path
 
 import torch
 
 from .architecture import SirenConfig, SirenSubstrate
 from .archive import parse_archive
+
+
+def _png_chunk(tag: bytes, data: bytes) -> bytes:
+    body = tag + data
+    return (
+        struct.pack(">I", len(data))
+        + body
+        + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
+    )
+
+
+def _write_png_rgb(path: Path, rgb_uint8) -> None:
+    """Write an HWC uint8 RGB array as PNG using only the standard library."""
+    h, w, c = rgb_uint8.shape
+    if c != 3:
+        raise ValueError(f"expected RGB array with 3 channels, got {c}")
+    raw = b"".join(b"\x00" + rgb_uint8[row].tobytes() for row in range(h))
+    payload = (
+        b"\x89PNG\r\n\x1a\n"
+        + _png_chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+        + _png_chunk(b"IDAT", zlib.compress(raw, level=6))
+        + _png_chunk(b"IEND", b"")
+    )
+    path.write_bytes(payload)
 
 
 def inflate_one_video(
@@ -51,8 +77,6 @@ def inflate_one_video(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    from PIL import Image  # type: ignore[import-not-found]
-
     with torch.no_grad():
         for pair_idx in range(cfg.num_pairs):
             idx_tensor = torch.tensor([pair_idx], device=device, dtype=torch.long)
@@ -61,7 +85,7 @@ def inflate_one_video(
                 frame_idx = 2 * pair_idx + off
                 arr = (rgb[0].clamp(0.0, 1.0).permute(1, 2, 0).cpu().numpy() * 255.0)
                 arr = arr.round().clip(0, 255).astype("uint8")
-                Image.fromarray(arr).save(output_dir / f"{frame_idx}.png")
+                _write_png_rgb(output_dir / f"{frame_idx}.png", arr)
 
 
 def main_cli() -> int:
