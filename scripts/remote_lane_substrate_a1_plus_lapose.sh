@@ -61,6 +61,35 @@ if [ ! -f "$DISPATCH_CLAIMS_PATH" ]; then
     log "FATAL: dispatch-claims ledger missing at $DISPATCH_CLAIMS_PATH"
     exit 21
 fi
+CLAIM_PYTHON="${PYBIN:-}"
+if [ -z "$CLAIM_PYTHON" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then
+    CLAIM_PYTHON="$WORKSPACE/.venv/bin/python"
+fi
+if [ -z "$CLAIM_PYTHON" ]; then
+    CLAIM_PYTHON="python3"
+fi
+CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
+"$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
+    --claims-path "$DISPATCH_CLAIMS_PATH" \
+    --format json > "$CLAIM_SUMMARY_JSON" || {
+    log "FATAL: claim summary failed for $DISPATCH_CLAIMS_PATH"
+    exit 21
+}
+"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY' || {
+    log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
+    exit 21
+}
+import json
+import sys
+summary_path, lane_id, job_id = sys.argv[1:4]
+payload = json.loads(open(summary_path, encoding="utf-8").read())
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
+        raise SystemExit(0)
+print(f"missing active claim lane={lane_id} job={job_id}", file=sys.stderr)
+raise SystemExit(1)
+PY
+log "stage_0_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
 
 # Stage 0b: NVDEC probe (best-effort).
 if [ -x "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
