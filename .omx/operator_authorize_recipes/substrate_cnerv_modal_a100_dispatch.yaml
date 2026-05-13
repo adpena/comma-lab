@@ -1,22 +1,27 @@
 schema_version: 1
 name: substrate_cnerv_modal_a100_dispatch
 lane_id: lane_substrate_cnerv_20260512
-summary: CNeRV TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — remote driver missing).
+summary: CNeRV TRADITION 2 substrate first-anchor dispatch on Modal A100 (DEFERRED — TIER manifest pending council review).
 
 dispatch_enabled: false
 research_only: false
 substrate_tradition: TRADITION_2
 defer_reason: |
-  scripts/remote_lane_substrate_cnerv_as_renderer.sh does NOT exist (Catalog
-  #163-pattern gap). The trainer experiments/train_cnerv_as_renderer.py exists
-  and exposes a complete argparse, but the canonical Modal/Vast.ai remote
-  driver script that bootstraps deps + threads required-input files + emits
-  inflate.sh + harvest hooks is missing. Per Catalog #146/#163, dispatch is
-  REFUSED until the remote driver lands.
+  Remote driver scripts/remote_lane_substrate_cnerv.sh LANDED 2026-05-12
+  (WAVE-6-FOLLOWUP-CNERV) per the canonical sane_hnerv pattern (Catalog #2
+  set -euo pipefail; Catalog #11 NVDEC probe; Catalog #163 sentinel-sourced
+  bootstrap; driver-version-pinned torch via bootstrap_runtime_deps;
+  Catalog #152 required-input file existence pre-dispatch validation;
+  heartbeat + watchdog + lane-claim terminal-status update; cost-band
+  anchor emission). Remaining blocker: TIER_<N>_OPERATOR_REQUIRED_FLAGS
+  manifest in experiments/train_cnerv_as_renderer.py (Catalog #151) plus
+  the trainer's scaffold-only gate at line 131 — non-smoke training raises
+  SystemExit until operator-approved gating lands per CLAUDE.md
+  "Design decisions — non-negotiable".
 
 dispatch_blockers:
-  - remote_driver_missing
   - tier_manifest_required_for_catalog_151_compliance
+  - trainer_scaffold_only_non_smoke_systemexit_gate
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -34,21 +39,19 @@ literature_anchor: "CNeRV — content-aware NeRV with conditional latent stem (H
 
 risk: |
   TRADITION 2 substrate. Trainer experiments/train_cnerv_as_renderer.py exists
-  with full argparse (see required_input_files below), but the canonical
-  remote driver scripts/remote_lane_substrate_cnerv_as_renderer.sh has not
-  been built. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
-  against" + Catalog #146 (Phase 1 trainer runtime contract), dispatching
-  without a fail-closed remote driver risks: (a) Modal-container-side path
-  mismatches, (b) missing dep bootstrap, (c) NVDEC-probe-not-run silent CPU
-  fallback, (d) no harvest hook for .spawn() result-cache TTL.
+  with full argparse (see required_input_files below), and the canonical
+  remote driver scripts/remote_lane_substrate_cnerv.sh now exists. Dispatch
+  still fails closed because the trainer predates the Catalog #151
+  TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest and non-smoke training is still
+  scaffold-gated.
 
   TIER manifest gap: experiments/train_cnerv_as_renderer.py predates Catalog
   #151 TIER_<N>_OPERATOR_REQUIRED_FLAGS pattern. Adding the manifest is an
   architecture decision that needs council review (NOT done unilaterally per
   CLAUDE.md "Design decisions" non-negotiable).
-envelope_status: "DEFERRED: remote driver gap blocks dispatch before GPU spend"
+envelope_status: "DEFERRED: TIER manifest + non-smoke trainer gate block dispatch before GPU spend"
 
-remote_driver: scripts/remote_lane_substrate_cnerv_as_renderer.sh  # MISSING
+remote_driver: scripts/remote_lane_substrate_cnerv.sh
 timeout_hours: 4.0
 
 required_input_files:
@@ -95,24 +98,27 @@ dependencies:
   - experiments/train_cnerv_as_renderer.py
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
   - submissions/cnerv_substrate/inflate.{py,sh} (existing per lane registry evidence)
-  - "[MISSING] scripts/remote_lane_substrate_cnerv_as_renderer.sh"
+  - scripts/remote_lane_substrate_cnerv.sh (LANDED 2026-05-12 WAVE-6-FOLLOWUP-CNERV)
 
 reactivation_criteria: |
-  1. scripts/remote_lane_substrate_cnerv_as_renderer.sh built per the canonical
-     pattern (sources scripts/remote_archive_only_eval.sh with
-     REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 sentinel per Catalog #163; runs
-     bootstrap_runtime_deps; calls trainer with required inputs validated).
+  1. scripts/remote_lane_substrate_cnerv.sh — DONE 2026-05-12 (sources
+     scripts/remote_archive_only_eval.sh with REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1
+     sentinel per Catalog #163; runs bootstrap_runtime_deps with
+     driver-version-pinned torch; Catalog #152 --video-path existence check;
+     NVDEC probe per Catalog #11; heartbeat + lane-claim terminal-status).
   2. TIER_<N>_OPERATOR_REQUIRED_FLAGS manifest landed in the trainer (council
      review required per CLAUDE.md design-decision non-negotiable).
-  3. Local smoke verifies inflate.sh emits a contest-compliant 0.bin per
+  3. Trainer scaffold-only gate at experiments/train_cnerv_as_renderer.py:131
+     replaced with operator-approved non-smoke training path (council review).
+  4. Local smoke verifies inflate.sh emits a contest-compliant 0.bin per
      Catalog #146.
-  4. Catalog #152 validates --video-path resolves before dispatch.
 
 notes: |
   TRADITION 2 substrate (per .omx/research/substrate_tradition_taxonomy_20260512.md).
   Lane id `lane_cnerv_as_renderer` registered at L1 with submissions/cnerv_substrate/
-  inflate.{py,sh} + format_id 0x67. The trainer is production-ready but the
-  Modal remote driver is missing.
+  inflate.{py,sh} + format_id 0x67. The remote Modal driver is present, but
+  this recipe intentionally refuses dispatch until the trainer manifest and
+  non-smoke training gate are resolved.
 
   Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when remote driver lands,
   must register harvest hook within 24h via tools/harvest_modal_calls.py.
