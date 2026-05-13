@@ -14,8 +14,9 @@ import argparse
 import subprocess
 import sys
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
+from typing import Any
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -25,6 +26,15 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.optimization.proxy_candidate_contract import (  # noqa: E402
+    apply_proxy_evidence_boundary,
+    ordered_unique,
+    validate_proxy_candidate,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    read_single_stored_member_archive,
+    sha256_hex,
+)
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 DEFAULT_SOURCE_ARCHIVE = (
@@ -36,6 +46,52 @@ DEFAULT_OUTPUT_ROOT = REPO_ROOT / "experiments/results"
 BUILDER = REPO_ROOT / "experiments/build_pr106_latent_sidecar.py"
 SCORE_TABLE_FILENAME = "score_table.npy"
 SCORE_TABLE_MANIFEST_FILENAME = "score_table_manifest.json"
+MANIFEST_AUDIT_SCHEMA = "pr106_latent_score_table_materialization_audit_v1"
+BUILDER_METADATA_AUDIT_SCHEMA = "pr106_latent_score_table_builder_metadata_audit_v1"
+SCORE_TABLE_MANIFEST_REQUIRED_FIELDS = (
+    "manifest_schema",
+    "producer",
+    "score_claim",
+    "ready_for_builder",
+    "ready_for_exact_eval_dispatch",
+    "dispatch_attempted",
+    "remote_jobs_dispatched",
+    "source_archive_path",
+    "source_archive_bytes",
+    "source_archive_sha256",
+    "source_zero_bin_sha256",
+    "candidate_grid_path",
+    "candidate_grid_sha256",
+    "candidate_grid_npy_sha256",
+    "score_table_npy_path",
+    "score_table_npy_bytes",
+    "score_table_npy_sha256",
+    "delta_radius",
+    "latent_dim",
+    "candidate_count",
+    "n_pairs",
+    "score_table_shape",
+    "objective",
+    "pair_marginal_semantics",
+    "noop_candidate_index",
+    "strict_improvement_pair_count",
+    "best_improvement_min",
+    "best_improvement_mean",
+    "best_improvement_max",
+    "device",
+    "torch_version",
+    "cuda_version",
+    "elapsed_seconds",
+    "lane_claim_verified",
+    "lane_claim",
+    "dispatch_blockers",
+)
+MATERIALIZATION_DISPATCH_BLOCKERS = (
+    "kaggle_score_table_materialization_is_proxy_evidence_boundary",
+    "requires_lane_dispatch_claim_before_exact_eval",
+    "requires_exact_cuda_auth_eval_on_materialized_archive",
+    "requires_adjudicated_component_recompute_before_score_claim",
+)
 
 
 def default_run_id() -> str:
@@ -98,6 +154,161 @@ def _artifact(path: Path) -> dict[str, object]:
     }
 
 
+def _manifest_mapping(path: Path) -> Mapping[str, Any]:
+    payload = read_json(path)
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"score-table manifest must be a JSON object: {path}")
+    return payload
+
+
+def _authority_flags(payload: Mapping[str, Any]) -> dict[str, object]:
+    keys = (
+        "score_claim",
+        "ready_for_builder",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_attempted",
+        "remote_jobs_dispatched",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+    )
+    return {key: payload.get(key) for key in keys if key in payload}
+
+
+def _source_payload_sha256(source_archive: Path) -> str | None:
+    try:
+        member = read_single_stored_member_archive(source_archive.read_bytes())
+    except Exception:
+        return None
+    return sha256_hex(member.payload)
+
+
+def audit_score_table_manifest(
+    *,
+    source_archive: Path,
+    score_table_npy: Path,
+    score_table_manifest: Path,
+) -> dict[str, object]:
+    """Return deterministic custody audit metadata for the Kaggle table manifest.
+
+    This audit is deliberately stricter than the builder's minimum contract:
+    missing Kaggle custody fields are recorded as dispatch blockers even when
+    the builder can still reduce the table into bytes.
+    """
+
+    manifest = _manifest_mapping(score_table_manifest)
+    missing_fields = [
+        field for field in SCORE_TABLE_MANIFEST_REQUIRED_FIELDS if field not in manifest
+    ]
+    warnings: list[str] = []
+    blockers: list[str] = []
+    if missing_fields:
+        blockers.append("score_table_manifest_missing_custody_fields")
+    if manifest.get("manifest_schema") != "pr106_latent_score_table_manifest_v1":
+        blockers.append("score_table_manifest_schema_mismatch")
+    if manifest.get("producer") != "experiments/build_pr106_latent_score_table.py":
+        blockers.append("score_table_manifest_producer_mismatch")
+    if manifest.get("score_claim") is not False:
+        blockers.append("score_table_manifest_score_claim_not_false")
+    if manifest.get("ready_for_builder") is not True:
+        blockers.append("score_table_manifest_ready_for_builder_not_true")
+    if manifest.get("ready_for_exact_eval_dispatch") is True:
+        blockers.append("score_table_manifest_claims_exact_eval_dispatch_ready")
+    if manifest.get("dispatch_attempted") is True or manifest.get("remote_jobs_dispatched") is True:
+        blockers.append("score_table_manifest_claims_dispatch_attempted")
+    if manifest.get("lane_claim_verified") is not True:
+        blockers.append("score_table_manifest_lane_claim_not_verified")
+
+    score_table_sha256 = sha256_file(score_table_npy)
+    score_table_bytes = int(score_table_npy.stat().st_size)
+    score_table_sha256_matches = manifest.get("score_table_npy_sha256") == score_table_sha256
+    score_table_bytes_match = manifest.get("score_table_npy_bytes") == score_table_bytes
+    if not score_table_sha256_matches:
+        blockers.append("score_table_manifest_score_table_npy_sha256_mismatch_or_missing")
+    if not score_table_bytes_match:
+        blockers.append("score_table_manifest_score_table_npy_bytes_mismatch_or_missing")
+
+    source_archive_sha256 = sha256_file(source_archive)
+    source_archive_bytes = int(source_archive.stat().st_size)
+    source_payload_sha256 = _source_payload_sha256(source_archive)
+    source_archive_sha256_matches = manifest.get("source_archive_sha256") == source_archive_sha256
+    source_archive_bytes_match = manifest.get("source_archive_bytes") == source_archive_bytes
+    source_payload_sha256_matches = (
+        source_payload_sha256 is not None
+        and manifest.get("source_zero_bin_sha256") == source_payload_sha256
+    )
+    if not source_archive_sha256_matches and not source_payload_sha256_matches:
+        blockers.append("score_table_manifest_source_archive_payload_mismatch_or_missing")
+    elif not source_archive_sha256_matches and source_payload_sha256_matches:
+        warnings.append("source_archive_zip_sha256_differs_but_payload_sha256_matches")
+    if not source_archive_bytes_match:
+        warnings.append("source_archive_bytes_missing_or_not_matching_local_archive")
+
+    if not isinstance(manifest.get("dispatch_blockers"), list):
+        blockers.append("score_table_manifest_dispatch_blockers_missing_or_invalid")
+
+    blockers = ordered_unique(blockers)
+    warnings = ordered_unique(warnings)
+    return {
+        "schema": MANIFEST_AUDIT_SCHEMA,
+        "subject": repo_relative(score_table_manifest, REPO_ROOT),
+        "authority_flags": _authority_flags(manifest),
+        "required_custody_fields": list(SCORE_TABLE_MANIFEST_REQUIRED_FIELDS),
+        "missing_custody_fields": missing_fields,
+        "score_table_npy": {
+            "path": repo_relative(score_table_npy, REPO_ROOT),
+            "bytes": score_table_bytes,
+            "sha256": score_table_sha256,
+            "manifest_bytes": manifest.get("score_table_npy_bytes"),
+            "manifest_sha256": manifest.get("score_table_npy_sha256"),
+            "bytes_match": score_table_bytes_match,
+            "sha256_match": score_table_sha256_matches,
+        },
+        "source_archive": {
+            "path": repo_relative(source_archive, REPO_ROOT),
+            "bytes": source_archive_bytes,
+            "sha256": source_archive_sha256,
+            "single_member_payload_sha256": source_payload_sha256,
+            "manifest_bytes": manifest.get("source_archive_bytes"),
+            "manifest_sha256": manifest.get("source_archive_sha256"),
+            "manifest_zero_bin_sha256": manifest.get("source_zero_bin_sha256"),
+            "bytes_match": source_archive_bytes_match,
+            "archive_sha256_match": source_archive_sha256_matches,
+            "single_member_payload_sha256_match": source_payload_sha256_matches,
+        },
+        "warnings": warnings,
+        "blockers": blockers,
+        "dispatch_ready": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def audit_builder_metadata(build_metadata: Mapping[str, Any]) -> dict[str, object]:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    score_table_section = build_metadata.get("score_table")
+    if build_metadata.get("score_claim") is not False:
+        blockers.append("builder_metadata_score_claim_not_false")
+    if build_metadata.get("ready_for_exact_eval_dispatch") is True:
+        blockers.append("builder_metadata_claims_exact_eval_dispatch_ready")
+    if build_metadata.get("search_mode") != "score_table":
+        blockers.append("builder_metadata_search_mode_not_score_table")
+    if not isinstance(score_table_section, Mapping):
+        blockers.append("builder_metadata_score_table_section_missing")
+    elif score_table_section.get("score_table_manifest_validated") is not True:
+        blockers.append("builder_metadata_score_table_manifest_not_validated")
+    if not isinstance(build_metadata.get("dispatch_blockers"), list):
+        warnings.append("builder_metadata_dispatch_blockers_missing_or_invalid")
+    return {
+        "schema": BUILDER_METADATA_AUDIT_SCHEMA,
+        "authority_flags": _authority_flags(build_metadata),
+        "warnings": ordered_unique(warnings),
+        "blockers": ordered_unique(blockers),
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def materialize_candidate(
     *,
     source_archive: Path,
@@ -115,6 +326,11 @@ def materialize_candidate(
         score_table_root=score_table_root,
         score_table_npy=score_table_npy,
         score_table_manifest=score_table_manifest,
+    )
+    score_table_manifest_audit = audit_score_table_manifest(
+        source_archive=source_archive,
+        score_table_npy=npy_path,
+        score_table_manifest=manifest_path,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     command = [
@@ -159,8 +375,22 @@ def materialize_candidate(
         raise RuntimeError("builder metadata search_mode must be score_table")
     if build_metadata.get("score_table", {}).get("score_table_manifest_validated") is not True:
         raise RuntimeError("builder did not validate the score-table manifest")
+    builder_metadata_audit = audit_builder_metadata(build_metadata)
+    audit_blockers = ordered_unique(
+        [
+            *MATERIALIZATION_DISPATCH_BLOCKERS,
+            *[str(item) for item in score_table_manifest_audit["blockers"]],
+            *[str(item) for item in builder_metadata_audit["blockers"]],
+        ]
+    )
+    audit_warnings = ordered_unique(
+        [
+            *[str(item) for item in score_table_manifest_audit["warnings"]],
+            *[str(item) for item in builder_metadata_audit["warnings"]],
+        ]
+    )
 
-    materialization = {
+    materialization = apply_proxy_evidence_boundary({
         "schema": "pr106_latent_score_table_candidate_materialization_v1",
         "lane_id": "lane_pr106_latent_sidecar",
         "score_claim": False,
@@ -168,6 +398,11 @@ def materialize_candidate(
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotion_requires": "contest_cuda_adjudication_on_materialized_archive",
+        "score_claim_blockers": audit_blockers,
+        "exact_eval_dispatch_blockers": audit_blockers,
+        "audit_warnings": audit_warnings,
+        "score_table_manifest_audit": score_table_manifest_audit,
+        "builder_metadata_audit": builder_metadata_audit,
         "source_archive": _artifact(source_archive),
         "score_table_npy": _artifact(npy_path),
         "score_table_manifest": _artifact(manifest_path),
@@ -190,7 +425,13 @@ def materialize_candidate(
             "Claim lane_pr106_latent_sidecar, run exact contest-CUDA auth eval on "
             "outputs.archive, then adjudicate component fields before any score claim."
         ),
-    }
+    }, dispatch_blockers=audit_blockers)
+    proxy_violations = validate_proxy_candidate(materialization)
+    if proxy_violations:
+        raise RuntimeError(
+            "materialization manifest leaked proxy evidence authority: "
+            + ", ".join(proxy_violations)
+        )
     manifest_out = output_dir / "materialization_manifest.json"
     write_json(manifest_out, materialization)
     materialization["outputs"]["materialization_manifest"] = _artifact(manifest_out)

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import subprocess
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,60 @@ def _load_tool():
         "tools/materialize_pr106_latent_score_table_candidate.py",
         "materialize_pr106_latent_score_table_candidate_test",
     )
+
+
+def _stored_zip(path: Path, payload: bytes = b"payload") -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        info.external_attr = 0o644 << 16
+        zf.writestr(info, payload)
+
+
+def _complete_score_table_manifest(source_archive: Path, npy: Path) -> dict[str, object]:
+    with zipfile.ZipFile(source_archive) as zf:
+        payload = zf.read("0.bin")
+    return {
+        "manifest_schema": "pr106_latent_score_table_manifest_v1",
+        "producer": "experiments/build_pr106_latent_score_table.py",
+        "score_claim": False,
+        "ready_for_builder": True,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "remote_jobs_dispatched": False,
+        "source_archive_path": str(source_archive),
+        "source_archive_bytes": source_archive.stat().st_size,
+        "source_archive_sha256": hashlib.sha256(source_archive.read_bytes()).hexdigest(),
+        "source_zero_bin_sha256": hashlib.sha256(payload).hexdigest(),
+        "candidate_grid_path": "candidate_grid.npy",
+        "candidate_grid_sha256": "a" * 64,
+        "candidate_grid_npy_sha256": "b" * 64,
+        "score_table_npy_path": str(npy),
+        "score_table_npy_bytes": npy.stat().st_size,
+        "score_table_npy_sha256": hashlib.sha256(npy.read_bytes()).hexdigest(),
+        "delta_radius": 2,
+        "latent_dim": 28,
+        "candidate_count": 113,
+        "n_pairs": 600,
+        "score_table_shape": [600, 113],
+        "objective": "100*seg_dist + sqrt(10*pose_dist), without rate constant",
+        "pair_marginal_semantics": "one latent perturbation scored against the official two-frame pair",
+        "noop_candidate_index": 0,
+        "strict_improvement_pair_count": 0,
+        "best_improvement_min": 0.0,
+        "best_improvement_mean": 0.0,
+        "best_improvement_max": 0.0,
+        "device": "cuda",
+        "torch_version": "test",
+        "cuda_version": "test",
+        "elapsed_seconds": 1.0,
+        "lane_claim_verified": True,
+        "lane_claim": {"lane_id": "lane_pr106_latent_sidecar"},
+        "dispatch_blockers": [
+            "requires_archive_build_from_table",
+            "requires_exact_cuda_auth_eval_on_built_archive",
+        ],
+    }
 
 
 def test_resolves_nested_kaggle_score_table_layout(tmp_path: Path) -> None:
@@ -107,9 +163,16 @@ def test_materializer_runs_builder_and_writes_nonpromotional_manifest(monkeypatc
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["target_modes"] == ["contest_exact_eval_planning"]
+    assert "score_table_manifest_missing_custody_fields" in payload["dispatch_blockers"]
+    assert payload["score_table_manifest_audit"]["score_claim"] is False
+    assert payload["score_table_manifest_audit"]["ready_for_exact_eval_dispatch"] is False
+    assert "source_archive_sha256" in payload["score_table_manifest_audit"]["missing_custody_fields"]
+    assert "score_table_manifest_missing_custody_fields" in payload["score_claim_blockers"]
     assert payload["outputs"]["archive"]["sha256"]
     written = read_json(output_dir / "materialization_manifest.json")
     assert written["outputs"]["materialization_manifest"]["sha256"]
+    assert written["ready_for_exact_eval_dispatch"] is False
 
 
 def test_materializer_refuses_promotional_builder_metadata(monkeypatch, tmp_path: Path) -> None:
@@ -148,3 +211,94 @@ def test_materializer_refuses_promotional_builder_metadata(monkeypatch, tmp_path
             top_k=600,
             python_executable="python",
         )
+
+
+def test_manifest_audit_clears_missing_custody_blocker_for_complete_manifest(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    source_archive = tmp_path / "archive.zip"
+    _stored_zip(source_archive)
+    npy = tmp_path / "score_table.npy"
+    npy.write_bytes(b"npy")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(manifest, _complete_score_table_manifest(source_archive, npy))
+    output_dir = tmp_path / "out"
+
+    def fake_run(command, **_kwargs):
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "sidecar_archive.zip").write_bytes(b"candidate")
+        write_json(
+            output_dir / "build_metadata.json",
+            {
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+                "search_mode": "score_table",
+                "dispatch_blockers": ["requires_exact_cuda_auth_eval"],
+                "score_table": {"score_table_manifest_validated": True},
+            },
+        )
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    payload = module.materialize_candidate(
+        source_archive=source_archive,
+        output_dir=output_dir,
+        score_table_root=tmp_path,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+        delta_radius=2,
+        top_k=600,
+        python_executable="python",
+    )
+
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["score_table_manifest_audit"]["missing_custody_fields"] == []
+    assert "score_table_manifest_missing_custody_fields" not in payload["exact_eval_dispatch_blockers"]
+    assert "requires_exact_cuda_auth_eval_on_materialized_archive" in payload["dispatch_blockers"]
+
+
+def test_materializer_downgrades_builder_exact_ready_claim(monkeypatch, tmp_path: Path) -> None:
+    module = _load_tool()
+    source_archive = tmp_path / "archive.zip"
+    _stored_zip(source_archive)
+    npy = tmp_path / "score_table.npy"
+    npy.write_bytes(b"npy")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(manifest, _complete_score_table_manifest(source_archive, npy))
+    output_dir = tmp_path / "out"
+
+    def fake_run(command, **_kwargs):
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "sidecar_archive.zip").write_bytes(b"candidate")
+        write_json(
+            output_dir / "build_metadata.json",
+            {
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": True,
+                "search_mode": "score_table",
+                "dispatch_blockers": [],
+                "score_table": {"score_table_manifest_validated": True},
+            },
+        )
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    payload = module.materialize_candidate(
+        source_archive=source_archive,
+        output_dir=output_dir,
+        score_table_root=tmp_path,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+        delta_radius=2,
+        top_k=600,
+        python_executable="python",
+    )
+
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "builder_metadata_claims_exact_eval_dispatch_ready" in payload["dispatch_blockers"]
+    assert payload["builder_metadata_audit"]["authority_flags"]["ready_for_exact_eval_dispatch"] is True
