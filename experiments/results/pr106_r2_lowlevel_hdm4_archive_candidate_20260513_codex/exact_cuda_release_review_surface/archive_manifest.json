@@ -1,0 +1,22 @@
+{
+  "archive_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+  "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+  "archive_size_bytes": 186492,
+  "candidate_label": "HDM4",
+  "job_id": "pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex",
+  "lane_id": "hnerv_hdm4_q_brotli_split_exact_eval",
+  "member_count": 1,
+  "members": [
+    {
+      "compress_size": 186384,
+      "crc": 3975715519,
+      "file_size": 186384,
+      "name": "0.bin",
+      "sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d"
+    }
+  ],
+  "schema": "pre_submission_archive_manifest_v1",
+  "score_claim": false,
+  "score_claim_basis": "release-review custody only; score evidence remains contest_auth_eval.json",
+  "tool": "tools/materialize_hdm_release_review_surface.py"
+}

@@ -1,0 +1,640 @@
+{
+  "archive": {
+    "bytes": 186492,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 186384,
+        "crc": 3975715519,
+        "file_size": 186384,
+        "local_header": {
+          "compress_size": 186384,
+          "compress_type": 0,
+          "crc32": 3975715519,
+          "extra_len": 0,
+          "file_size": 186384,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "0.bin",
+          "version_needed": 20
+        },
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+    "sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "anchor_proof": {
+      "archive": {
+        "bytes": 186492,
+        "members": [
+          {
+            "compress_size": 186384,
+            "crc": 3975715519,
+            "file_size": 186384,
+            "local_header": {
+              "compress_size": 186384,
+              "compress_type": 0,
+              "crc32": 3975715519,
+              "extra_len": 0,
+              "file_size": 186384,
+              "flag_bits": 0,
+              "mod_date": 33,
+              "mod_time": 0,
+              "name": "0.bin",
+              "version_needed": 20
+            },
+            "local_header_name": "0.bin",
+            "name": "0.bin",
+            "sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
+            "unsafe_reason": null
+          }
+        ],
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+        "sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f"
+      },
+      "auth_eval": {
+        "contest_auth_eval_elapsed_seconds": 71.309273215,
+        "cuda_version": "12.4",
+        "device": "cuda",
+        "eval_command_sanitized": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "archive.zip",
+          "--inflate-sh",
+          "submissions/pr103_pr106_final_runtime/inflate.sh",
+          "--upstream-dir",
+          "upstream",
+          "--device",
+          "cuda"
+        ],
+        "evaluate_elapsed_seconds": 29.609887463,
+        "evidence_grade": "contest-CUDA",
+        "gpu_driver": "580.95.05",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_elapsed_seconds": 31.199252696000002,
+        "samples": 600,
+        "tool": "experiments/contest_auth_eval.py",
+        "torch_version": "2.5.1+cu124",
+        "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "auth_eval_local_custody_ignored_by_git": true,
+      "auth_eval_local_custody_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json",
+      "record_score_source": "tools.auth_eval_records.parse_auth_eval_payload",
+      "runtime": {
+        "runtime_file_count": 9,
+        "runtime_files": [
+          {
+            "bytes": 1474,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/archive_manifest.json",
+            "sha256": "526ddddf39f7464be025c264d6d19dd64de7f9600800c09e5155121b12dac1fc"
+          },
+          {
+            "bytes": 9705,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/contest_auth_eval.json",
+            "sha256": "df916e652c50753e40be9b44f1e61190b4afe23032ececa20fb7c3b5d28089a4"
+          },
+          {
+            "bytes": 11038,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+            "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+          },
+          {
+            "bytes": 1053,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+            "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+          },
+          {
+            "bytes": 24082,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/pre_submission_compliance.contest_final.json",
+            "sha256": "3365f95b3448f0d0bf795b46f83d850709e6d1c4be73e9bc392ce61dd8cf7171"
+          },
+          {
+            "bytes": 2309,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
+            "sha256": "2b343cb5ab15bbb74160f45da3c4b3321edc17ba1440847371a3cf07a07352fd"
+          },
+          {
+            "bytes": 21084,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/codec.py",
+            "sha256": "a9e65b4f2902e5935d8f031a642ac4ac98be1b56f20f8292dfda4627b77f9d1a"
+          },
+          {
+            "bytes": 2197,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          },
+          {
+            "bytes": 8240,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/pr101_grammar.py",
+            "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+          }
+        ],
+        "runtime_tree_sha256": "eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df",
+        "runtime_tree_sha256_candidates": {
+          "provenance.inflate_runtime_manifest.runtime_tree_sha256": "eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df"
+        }
+      },
+      "schema": "pre_submission_compliance_anchor_proof_v1",
+      "score_basis": {
+        "archive_bytes": 186492,
+        "archive_rate_unscaled": 0.0049670947154264,
+        "avg_posenet_dist": 3.236e-05,
+        "avg_segnet_dist": 0.0006426,
+        "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+        "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+        "report_reconstructed_score": 0.20642625334307507,
+        "score": 0.20642625334307507,
+        "score_delta_vs_report_reconstruction": 0.0
+      }
+    },
+    "exists": true,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json",
+    "record": {
+      "archive_bytes": 186492,
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "avg_posenet_dist": 3.236e-05,
+      "avg_segnet_dist": 0.0006426,
+      "cpu_leaderboard_reproduction_eligible": false,
+      "device": "cuda",
+      "evidence_grade": "contest-CUDA",
+      "gpu_t4_match": true,
+      "hardware_compliance_blocker": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_unscaled": 0.0049670947154264,
+      "samples": 600,
+      "score": 0.20642625334307507,
+      "score_axis": "contest_cuda",
+      "score_claim_valid": true
+    },
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df"
+    },
+    "runtime_tree_pruned_candidates": {
+      "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files": "0d490a84a189bcba35f5bf703ddb9124e315ac713938ed9c9787c24a53b63b8a",
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files": "94a4154c777c2e114589a64c916ff0514108103475e7b62513ecc00ade7b16e2"
+    },
+    "strict_formula": {
+      "archive_bytes": 186492,
+      "archive_rate_unscaled": 0.0049670947154264,
+      "avg_posenet_dist": 3.236e-05,
+      "avg_segnet_dist": 0.0006426,
+      "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+      "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+      "report_reconstructed_score": 0.20642625334307507,
+      "score": 0.20642625334307507,
+      "score_delta_vs_report_reconstruction": 0.0
+    }
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='0.bin' local='0.bin' local_reason=None",
+      "name": "zip_local_header_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_local_header_metadata_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_payload_readable:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f actual=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186492 actual=186492",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json",
+      "name": "auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f actual=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186492 actual=186492",
+      "name": "auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical score/components/formula consistent",
+      "name": "auth_eval_schema_metric_consistency",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "auth_eval_has_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "record=0.20642625334307507 recomputed=0.20642625334307507",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "strict=0.20642625334307507 record=0.20642625334307507 delta=0.0",
+      "name": "auth_eval_strict_formula_score_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True claim=True exact_cuda_eval_complete=True",
+      "name": "auth_eval_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires explicit exact_cuda_eval_complete=true, score_claim_valid=true, lane_tag=[contest-CUDA], score_axis=contest_cuda in the auth-eval JSON; promotion eligibility is decided by this compliance gate, not raw contest_auth_eval.py",
+      "name": "auth_eval_explicit_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df'}",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df'}",
+      "name": "auth_eval_runtime_tree_expected_match",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=4e287e64b3fd897292d76778b6e601a06b913d825d09d5a239bff48a31ca5664",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['0d490a84a189bcba35f5bf703ddb9124e315ac713938ed9c9787c24a53b63b8a', '4e287e64b3fd897292d76778b6e601a06b913d825d09d5a239bff48a31ca5664'] auth_eval_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': '94a4154c777c2e114589a64c916ff0514108103475e7b62513ecc00ade7b16e2', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '0d490a84a189bcba35f5bf703ddb9124e315ac713938ed9c9787c24a53b63b8a'}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f actual=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186492 actual=186492",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='0.bin' actual='0.bin'",
+      "name": "archive_manifest_member_0_name_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186384 actual=186384",
+      "name": "archive_manifest_member_0_file_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186384 actual=186384",
+      "name": "archive_manifest_member_0_compress_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=3975715519 actual=3975715519",
+      "name": "archive_manifest_member_0_crc_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d' actual='7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d'",
+      "name": "archive_manifest_member_0_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "218ae16f3f13b722",
+      "name": "report_mentions_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "186492",
+      "name": "report_mentions_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-lane-id",
+      "name": "contest_final_expected_lane_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-job-id",
+      "name": "contest_final_expected_job_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/state/active_lane_dispatch_claims.md",
+      "name": "dispatch_claims_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=hnerv_hdm4_q_brotli_split_exact_eval job_id=pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex matching_rows=3 latest_matching_status='completed_contest_cuda_modal_auth_eval_recovered'",
+      "name": "dispatch_claim_terminal_row",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=hnerv_hdm4_q_brotli_split_exact_eval job_id=pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex matching_rows=3 has_prior_nonterminal_matching_row=True",
+      "name": "dispatch_claim_prior_active_row",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "exists": true,
+    "has_prior_nonterminal_matching_row": true,
+    "latest_matching_row": "| 2026-05-13T07:44:51Z | codex:gpt-5.5 | hnerv_hdm4_q_brotli_split_exact_eval | modal | pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex | 2026-05-13T07:44:51Z | completed_contest_cuda_modal_auth_eval_recovered | Modal auth eval recovered; passed=True; result_json=/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex/modal_cuda_auth_eval_result.json; archive_sha=218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f; archive_bytes=186492; score_recomputed=0.20642625334307507; axis=cuda; hardware_substrate=linux_x86_64_t4; posterior_update=accepted; posterior_n=24; posterior_reason=accepted |",
+    "latest_matching_status": "completed_contest_cuda_modal_auth_eval_recovered",
+    "matching_rows": 3,
+    "path": ".omx/state/active_lane_dispatch_claims.md",
+    "rows": 639
+  },
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.sh",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.py",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/src",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive_manifest.json"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 11038,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.py",
+        "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+      },
+      {
+        "bytes": 1053,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.sh",
+        "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+      },
+      {
+        "bytes": 21084,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/src/codec.py",
+        "sha256": "a9e65b4f2902e5935d8f031a642ac4ac98be1b56f20f8292dfda4627b77f9d1a"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "0d490a84a189bcba35f5bf703ddb9124e315ac713938ed9c9787c24a53b63b8a",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "exact_cuda_release_review_surface",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 5,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface",
+    "runtime_tree_sha256": "4e287e64b3fd897292d76778b6e601a06b913d825d09d5a239bff48a31ca5664",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}

@@ -56,3 +56,65 @@ the scored archive hash and byte count.
 3. Re-run strict pre-submission compliance against that surface.
 4. Promote only after the compliance JSON is clean and linked from the custody
    ledger.
+
+## Supersession: release-review surface closed
+
+Generated a candidate-specific release-review surface without modifying the
+scored runtime source under `submissions/pr106_latent_sidecar_r2_pr101_grammar`:
+
+- Release-review surface:
+  `experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/`
+- Release materializer:
+  `tools/materialize_hdm_release_review_surface.py`
+- Release materializer manifest:
+  `experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/pre_submission_compliance.release_review_manifest.json`
+- Strict compliance JSON:
+  `experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/pre_submission_compliance.contest_final.json`
+
+The materializer copies the runtime files from the source runtime and verifies
+their byte counts and SHA-256 values against the exact-CUDA auth-eval runtime
+manifest before writing the review surface. Custody files
+(`archive_manifest.json`, `contest_auth_eval.json`, `report.txt`, and
+`pre_submission_compliance.*`) are kept outside the runtime-match hash by the
+existing compliance checker rule.
+
+Strict command executed:
+
+```bash
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --submission-dir experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface \
+  --archive experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip \
+  --auth-eval-json experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json \
+  --require-auth-eval \
+  --require-t4-equivalent \
+  --require-submission-runtime-match \
+  --contest-final \
+  --expect-single-member 0.bin \
+  --expected-archive-sha256 218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f \
+  --expected-archive-size-bytes 186492 \
+  --expected-runtime-tree-sha256 eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df \
+  --expected-lane-id hnerv_hdm4_q_brotli_split_exact_eval \
+  --expected-job-id pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex \
+  --public-scan-path experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip \
+  --public-scan-path experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.sh \
+  --public-scan-path experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.py \
+  --public-scan-path experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/src \
+  --public-scan-path experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt \
+  --public-scan-path experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive_manifest.json \
+  --json-out experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/pre_submission_compliance.contest_final.json \
+  --strict
+```
+
+Result: `passed=true`, `54` checks, `0` error failures, `0` warning failures.
+
+Scope notes:
+
+- No scored runtime bytes were changed.
+- No exact eval rerun is required for this custody-only release-review surface.
+- This closes the exact-CUDA release-surface compliance issue for HDM4.
+- This does not add a paired `contest-CPU` artifact; do not use this memo to
+  infer CPU-axis readiness.
+- Six-hook wire-in: not score-affecting; sensitivity map, Pareto constraint,
+  bit allocator, dispatch hook, posterior update, and probe-disambiguator are
+  N/A for this custody-only materialization. The empirical anchor already
+  remains the exact-CUDA auth-eval JSON named above.

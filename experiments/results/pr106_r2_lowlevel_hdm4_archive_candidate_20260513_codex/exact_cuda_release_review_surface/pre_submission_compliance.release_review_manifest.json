@@ -1,0 +1,120 @@
+{
+  "archive": {
+    "archive_path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+    "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+    "archive_size_bytes": 186492,
+    "candidate_label": "HDM4",
+    "job_id": "pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex",
+    "lane_id": "hnerv_hdm4_q_brotli_split_exact_eval",
+    "member_count": 1,
+    "members": [
+      {
+        "compress_size": 186384,
+        "crc": 3975715519,
+        "file_size": 186384,
+        "name": "0.bin",
+        "sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d"
+      }
+    ],
+    "schema": "pre_submission_archive_manifest_v1",
+    "score_claim": false,
+    "score_claim_basis": "release-review custody only; score evidence remains contest_auth_eval.json",
+    "tool": "tools/materialize_hdm_release_review_surface.py"
+  },
+  "auth_eval_json": {
+    "bytes": 10413,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json",
+    "sha256": "3d4958f8b5ca59dd6da27d14ad8234249b8290205032bde976f1c7685904fccc",
+    "source_path": "experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex/contest_auth_eval.json"
+  },
+  "candidate_label": "HDM4",
+  "compliance_command": [
+    ".venv/bin/python",
+    "scripts/pre_submission_compliance_check.py",
+    "--submission-dir",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface",
+    "--archive",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+    "--auth-eval-json",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json",
+    "--require-auth-eval",
+    "--require-t4-equivalent",
+    "--require-submission-runtime-match",
+    "--contest-final",
+    "--expect-single-member",
+    "0.bin",
+    "--expected-archive-sha256",
+    "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+    "--expected-archive-size-bytes",
+    "186492",
+    "--expected-runtime-tree-sha256",
+    "eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df",
+    "--expected-lane-id",
+    "hnerv_hdm4_q_brotli_split_exact_eval",
+    "--expected-job-id",
+    "pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex",
+    "--public-scan-path",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive.zip",
+    "--public-scan-path",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.sh",
+    "--public-scan-path",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/inflate.py",
+    "--public-scan-path",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/src",
+    "--public-scan-path",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt",
+    "--public-scan-path",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/archive_manifest.json",
+    "--json-out",
+    "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/pre_submission_compliance.contest_final.json",
+    "--strict"
+  ],
+  "job_id": "pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex",
+  "lane_id": "hnerv_hdm4_q_brotli_split_exact_eval",
+  "report": {
+    "bytes": 1488,
+    "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/report.txt",
+    "sha256": "ac29563a5586d42b37af314f9334b482a76cd6ffdb885d7bc229b82d788d0158"
+  },
+  "runtime_files_verified_against_auth_eval": [
+    {
+      "bytes": 11038,
+      "mode": "0644",
+      "relative_path": "inflate.py",
+      "sha256": "60055bced3ab608d0e93ba83e18fa5bc662746cfa273ad50d5960c34028d1fb3"
+    },
+    {
+      "bytes": 1053,
+      "mode": "0755",
+      "relative_path": "inflate.sh",
+      "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+    },
+    {
+      "bytes": 21084,
+      "mode": "0644",
+      "relative_path": "src/codec.py",
+      "sha256": "a9e65b4f2902e5935d8f031a642ac4ac98be1b56f20f8292dfda4627b77f9d1a"
+    },
+    {
+      "bytes": 2197,
+      "mode": "0644",
+      "relative_path": "src/model.py",
+      "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+    },
+    {
+      "bytes": 8240,
+      "mode": "0644",
+      "relative_path": "src/pr101_grammar.py",
+      "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+    }
+  ],
+  "runtime_tree": {
+    "runtime_content_tree_sha256": "f7126d0ec3199bdc76a831d01c929139fb1bab373808a2dc8de088cf7a1121eb",
+    "runtime_file_count": 9,
+    "runtime_tree_sha256": "eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df"
+  },
+  "schema": "hdm_release_review_surface_manifest_v1",
+  "source_runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+  "submission_dir": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface",
+  "tool": "tools/materialize_hdm_release_review_surface.py"
+}

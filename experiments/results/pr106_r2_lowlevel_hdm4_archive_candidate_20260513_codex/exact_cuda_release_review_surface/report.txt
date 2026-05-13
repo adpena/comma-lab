@@ -1,0 +1,37 @@
+HDM4 exact-CUDA release-review surface
+
+lane_id            : hnerv_hdm4_q_brotli_split_exact_eval
+job_id             : pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex
+archive_sha256     : 218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f
+archive_size_bytes : 186492
+member_count       : 1
+runtime_tree_sha256: eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df
+auth_eval_json     : experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/exact_cuda_release_review_surface/contest_auth_eval.json
+
+Custody
+=======
+This surface copies runtime files byte-for-byte from the source runtime
+and verifies them against the exact-CUDA auth-eval runtime manifest.
+archive_manifest.json, contest_auth_eval.json, report.txt, and
+pre_submission_compliance.* are custody files and are excluded from
+the pre-submission runtime-match hash by the compliance checker.
+
+Empirical [contest-CUDA] anchor
+===============================
+archive_size_bytes: 186492
+avg_posenet_dist: 3.236e-05
+avg_segnet_dist: 0.0006426
+canonical_score: 0.20642625334307507
+evidence_grade: contest-CUDA
+exact_cuda_eval_complete: True
+final_score: 0.21
+lane_tag: [contest-CUDA]
+n_samples: 600
+score_axis: contest_cuda
+score_claim_valid: True
+
+Submission-readiness status
+===========================
+Not asserted by this report alone. Submission readiness requires
+scripts/pre_submission_compliance_check.py --contest-final --strict
+to pass against this surface.
