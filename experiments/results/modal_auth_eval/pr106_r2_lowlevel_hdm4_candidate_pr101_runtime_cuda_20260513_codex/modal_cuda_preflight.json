@@ -1,0 +1,32 @@
+{
+  "app": "comma-auth-eval",
+  "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+  "archive_size_bytes": 186492,
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "device_required": "cuda",
+  "inflate_device_policy": "auto",
+  "inflate_env_overrides": [],
+  "inflate_sh_rel": "inflate.sh",
+  "nvidia_dali_import_ok": true,
+  "nvidia_dali_version": "1.52.0",
+  "nvidia_smi_path": "/usr/bin/nvidia-smi",
+  "nvidia_smi_query": "Tesla T4, 580.95.05",
+  "promotion_eligible": false,
+  "python": "3.11.12 (main, May 21 2025, 23:34:13) [GCC 12.2.0]",
+  "schema_version": 1,
+  "score_claim": false,
+  "scorer_device": "cuda",
+  "source_repo_commit": "43e7487c9b240158e9a9f7e4de673c4b58ed0482",
+  "started_at_utc": "2026-05-13T07:43:29Z",
+  "submission_dir_zip_sha256": "a7b22af0b8c60d688194460a4138f926589125894ee486c1a7a8ab4747d7f5ea",
+  "tool": "experiments/modal_auth_eval.py",
+  "torch_cuda_available": true,
+  "torch_cuda_capability": [
+    7,
+    5
+  ],
+  "torch_cuda_device_count": 1,
+  "torch_cuda_device_name": "Tesla T4",
+  "torch_cuda_version": "12.4",
+  "torch_version": "2.5.1+cu124"
+}

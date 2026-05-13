@@ -82,12 +82,26 @@ def test_frontier_entropy_ranking_can_target_internal_score_lowering_frontier() 
         "promotion_authority": False,
     }
 
-    manifest = build_frontier_entropy_gap_ranking(scorecard, frontier_mode="score_lowering")
+    manifest = build_frontier_entropy_gap_ranking(
+        scorecard,
+        candidate_manifests=[_hdm_candidate_manifest(internal_row)],
+        frontier_mode="score_lowering",
+    )
 
     assert manifest["frontier_mode"] == "score_lowering"
     assert manifest["current_frontier"]["label"] == "PR106-R2-lowlevel"
-    assert manifest["next_rate_only_action"]["target_section"] == "decoder_compact_brotli_streams"
+    assert manifest["next_rate_only_action"]["action_id"] == (
+        "review_current_exact_lossless_brotli_control_before_promotion"
+    )
     assert manifest["next_rate_only_action"]["dispatch_allowed"] is False
+    assert manifest["exact_lossless_control_actions"][0]["review_status"] == (
+        "ready_for_promotion_review_existing_exact_custody"
+    )
+    assert manifest["exact_lossless_control_actions"][0]["review_contract"] == (
+        "hnerv_hdm_decoder_recode_manifest"
+    )
+    assert manifest["exact_lossless_control_actions"][0]["total_byte_delta"] == -10
+    assert manifest["exact_lossless_control_actions"][0]["rate_score_delta_if_components_equal"] < 0
     assert "frontier_mode: `score_lowering`" in render_markdown(manifest)
 
 
@@ -242,6 +256,29 @@ def _candidate_manifest() -> dict:
                     "byte_delta": -10,
                 }
             ],
+        },
+    }
+
+
+def _hdm_candidate_manifest(row: dict) -> dict:
+    candidate_bytes = int(row["archive_bytes"])
+    return {
+        "candidate_archive_sha256": row["archive_sha256"],
+        "candidate_archive_bytes": candidate_bytes,
+        "source_archive_sha256": "1" * 64,
+        "source_archive_bytes": candidate_bytes + 10,
+        "source_label": "PR106-R2-lowlevel-source",
+        "candidate_rate_score_delta_if_runtime_supported_and_components_equal": (
+            -10 * 25 / 37_545_489
+        ),
+        "decoder_raw_equivalence": {
+            "raw_equal": True,
+            "q_roundtrip_equal": True,
+            "scale_roundtrip_equal": True,
+        },
+        "runtime_adapter_payload_identity": {
+            "payload_identity_proven": True,
+            "restored_payload_matches_source": True,
         },
     }
 

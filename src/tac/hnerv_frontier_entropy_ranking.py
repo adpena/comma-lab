@@ -366,18 +366,13 @@ def _exact_control_actions(
     for manifest in candidate_manifests:
         if manifest.get("candidate_archive_sha256") != frontier_sha:
             continue
-        raw_equivalence = manifest.get("brotli_raw_equivalence")
-        raw_equivalence_closed = (
-            isinstance(raw_equivalence, Sequence)
-            and not isinstance(raw_equivalence, (str, bytes, bytearray))
-            and bool(raw_equivalence)
-            and all(isinstance(row, Mapping) and row.get("raw_equal") is True for row in raw_equivalence)
-        )
         audit = manifest.get("candidate_diff_audit")
         audit_blockers = (
             list(audit.get("blockers") or []) if isinstance(audit, Mapping) else []
         )
-        ready = raw_equivalence_closed and not audit_blockers
+        raw_equivalence_closed = _raw_equivalence_closed(manifest)
+        total_byte_delta = _candidate_total_byte_delta(manifest, audit)
+        ready = raw_equivalence_closed and total_byte_delta is not None and not audit_blockers
         controls.append(
             {
                 "action_id": "review_existing_exact_lossless_repack_control",
@@ -388,15 +383,10 @@ def _exact_control_actions(
                 "candidate_archive_sha256": manifest.get("candidate_archive_sha256"),
                 "source_archive_bytes": manifest.get("source_archive_bytes"),
                 "candidate_archive_bytes": manifest.get("candidate_archive_bytes"),
-                "total_byte_delta": (
-                    audit.get("total_byte_delta") if isinstance(audit, Mapping) else None
-                ),
-                "rate_score_delta_if_components_equal": (
-                    audit.get("rate_score_delta_if_components_equal")
-                    if isinstance(audit, Mapping)
-                    else None
-                ),
+                "total_byte_delta": total_byte_delta,
+                "rate_score_delta_if_components_equal": _candidate_rate_delta(manifest, audit),
                 "raw_equivalence_closed": raw_equivalence_closed,
+                "review_contract": _candidate_review_contract(manifest, audit),
                 "review_status": (
                     "ready_for_promotion_review_existing_exact_custody"
                     if ready
@@ -417,6 +407,67 @@ def _exact_control_actions(
             str(row.get("target_label") or ""),
         ),
     )
+
+
+def _raw_equivalence_closed(manifest: Mapping[str, Any]) -> bool:
+    """Return whether a candidate manifest proves lossless payload equivalence."""
+    raw_equivalence = manifest.get("brotli_raw_equivalence")
+    if (
+        isinstance(raw_equivalence, Sequence)
+        and not isinstance(raw_equivalence, (str, bytes, bytearray))
+        and bool(raw_equivalence)
+        and all(isinstance(row, Mapping) and row.get("raw_equal") is True for row in raw_equivalence)
+    ):
+        return True
+
+    decoder_equivalence = manifest.get("decoder_raw_equivalence")
+    runtime_identity = manifest.get("runtime_adapter_payload_identity")
+    if not isinstance(runtime_identity, Mapping):
+        runtime_identity = manifest.get("runtime_adapter_proof")
+    if not isinstance(decoder_equivalence, Mapping) or not isinstance(runtime_identity, Mapping):
+        return False
+    return (
+        decoder_equivalence.get("raw_equal") is True
+        and decoder_equivalence.get("q_roundtrip_equal") is True
+        and decoder_equivalence.get("scale_roundtrip_equal") is True
+        and runtime_identity.get("payload_identity_proven") is True
+        and runtime_identity.get("restored_payload_matches_source") is True
+    )
+
+
+def _candidate_total_byte_delta(
+    manifest: Mapping[str, Any],
+    audit: Any,
+) -> int | None:
+    if isinstance(audit, Mapping) and isinstance(audit.get("total_byte_delta"), int):
+        return int(audit["total_byte_delta"])
+    source_bytes = manifest.get("source_archive_bytes")
+    candidate_bytes = manifest.get("candidate_archive_bytes")
+    if isinstance(source_bytes, int) and isinstance(candidate_bytes, int):
+        return candidate_bytes - source_bytes
+    decoder_delta = manifest.get("candidate_decoder_section_byte_delta")
+    return int(decoder_delta) if isinstance(decoder_delta, int) else None
+
+
+def _candidate_rate_delta(
+    manifest: Mapping[str, Any],
+    audit: Any,
+) -> float | None:
+    if isinstance(audit, Mapping) and _is_number(audit.get("rate_score_delta_if_components_equal")):
+        return float(audit["rate_score_delta_if_components_equal"])
+    direct = manifest.get("candidate_rate_score_delta_if_runtime_supported_and_components_equal")
+    if _is_number(direct):
+        return float(direct)
+    byte_delta = _candidate_total_byte_delta(manifest, audit)
+    return _rate_score(byte_delta)
+
+
+def _candidate_review_contract(manifest: Mapping[str, Any], audit: Any) -> str:
+    if isinstance(audit, Mapping):
+        return "legacy_candidate_diff_audit"
+    if isinstance(manifest.get("decoder_raw_equivalence"), Mapping):
+        return "hnerv_hdm_decoder_recode_manifest"
+    return "unknown_candidate_manifest"
 
 
 def _entropy_gap_ranking(

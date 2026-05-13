@@ -1,0 +1,28 @@
+{
+  "artifact_names": [
+    "contest_auth_eval.json",
+    "contest_auth_eval.stderr.log",
+    "contest_auth_eval.stdout.log",
+    "inflated_outputs_manifest.json",
+    "modal_cuda_auth_eval_validation.json",
+    "modal_cuda_preflight.json",
+    "provenance.json",
+    "report.txt"
+  ],
+  "avg_posenet_dist": 3.236e-05,
+  "avg_segnet_dist": 0.0006426,
+  "call_id": "fc-01KRG4MNWZTHNMP56ZWKS5S0A1",
+  "evidence_grade": "contest-CUDA",
+  "inflate_device_policy": "auto",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex",
+  "passed": true,
+  "promotion_eligible": false,
+  "recovered_at_utc": "2026-05-13T07:44:51Z",
+  "result_json": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex/modal_cuda_auth_eval_result.json",
+  "returncode": 0,
+  "schema_version": "modal_auth_eval_recover_summary_v1",
+  "score_axis": "contest_cuda",
+  "score_claim": true,
+  "score_recomputed_from_components": 0.20642625334307507,
+  "status": "recovered"
+}

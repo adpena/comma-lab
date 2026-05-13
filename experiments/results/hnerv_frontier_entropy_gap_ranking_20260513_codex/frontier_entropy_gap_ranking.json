@@ -1,15 +1,15 @@
 {
   "combined_entropy_gap_groups": [],
   "current_frontier": {
-    "archive_bytes": 186615,
-    "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
-    "eval_artifact": "experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm3_candidate_pr101_runtime_cuda_20260513_codex/contest_auth_eval.json",
+    "archive_bytes": 186492,
+    "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+    "eval_artifact": "experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex/contest_auth_eval.json",
     "evidence_grade": "A++",
-    "frontier_scope": "exact_local_cuda_custody",
-    "label": "PR106-R2-lowlevel-HDM3",
-    "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
-    "runtime_tree_sha256": "43c286c56247fa7d82eb3142c6e9565a69a1ab50bef616f773b35fbd1a0ef54d",
-    "score": 0.2065081539943091
+    "frontier_scope": "exact_local_cuda_custody_candidate_manifest",
+    "label": "PR106-R2-lowlevel-HDM4",
+    "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
+    "runtime_tree_sha256": "eb4d136b4a7d8050c062c66ccab031b21d8b3c450007cf3543338e81c877e9df",
+    "score": 0.20642625334307507
   },
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -21,29 +21,51 @@
     "requires_exact_cuda_auth_eval"
   ],
   "entropy_gap_ranking": [],
-  "exact_lossless_control_actions": [],
+  "exact_lossless_control_actions": [
+    {
+      "action_id": "review_existing_exact_lossless_repack_control",
+      "blockers": [],
+      "candidate_archive_bytes": 186492,
+      "candidate_archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "candidate_manifest": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/manifest.with_tool_run.json",
+      "dispatch_allowed": false,
+      "dispatch_attempted": false,
+      "rate_score_delta_if_components_equal": -9.1222677e-05,
+      "raw_equivalence_closed": true,
+      "ready_for_exact_eval_dispatch": false,
+      "required_next_artifact": "operator_promotion_review_note_for_existing_exact_archive_sha",
+      "review_contract": "hnerv_hdm_decoder_recode_manifest",
+      "review_status": "ready_for_promotion_review_existing_exact_custody",
+      "score_claim": false,
+      "source_archive_bytes": 186629,
+      "source_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "source_label": "pr106_r2_lowlevel",
+      "target_label": "PR106-R2-lowlevel-HDM4",
+      "total_byte_delta": -137
+    }
+  ],
   "frontier_byte_mass_ranking": [
     {
-      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
       "dispatch_attempted": false,
-      "entropy_bits_per_byte": 7.99804,
-      "label": "PR106-R2-lowlevel-HDM3",
+      "entropy_bits_per_byte": 7.998504,
+      "label": "PR106-R2-lowlevel-HDM4",
       "optimization_role": "decoder_weight_stream",
-      "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
-      "rate_mass_score_if_removed": 0.113271264092,
+      "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
+      "rate_mass_score_if_removed": 0.113189363441,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "section": "inner_decoder_packed_brotli",
-      "section_bytes": 170113,
-      "section_sha256": "149a41ecf4d1614757c9369838e3a7cb9f03a648fe9b61a2317e9b7f2996b256"
+      "section_bytes": 169990,
+      "section_sha256": "76a1156369b6f3a54c011261137684ec1b4f70331e2d4335dea8761e5d28aa06"
     },
     {
-      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
       "dispatch_attempted": false,
       "entropy_bits_per_byte": 7.985386,
-      "label": "PR106-R2-lowlevel-HDM3",
+      "label": "PR106-R2-lowlevel-HDM4",
       "optimization_role": "latent_stream",
-      "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
+      "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
       "rate_mass_score_if_removed": 0.010553198548,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
@@ -52,12 +74,12 @@
       "section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
     },
     {
-      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
       "dispatch_attempted": false,
       "entropy_bits_per_byte": 7.429261,
-      "label": "PR106-R2-lowlevel-HDM3",
+      "label": "PR106-R2-lowlevel-HDM4",
       "optimization_role": "sidecar_or_correction_stream",
-      "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
+      "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
       "rate_mass_score_if_removed": 0.000350907668,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
@@ -66,12 +88,12 @@
       "section_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6"
     },
     {
-      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
       "dispatch_attempted": false,
       "entropy_bits_per_byte": 1.0,
-      "label": "PR106-R2-lowlevel-HDM3",
+      "label": "PR106-R2-lowlevel-HDM4",
       "optimization_role": "sidecar_or_correction_stream",
-      "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
+      "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
       "rate_mass_score_if_removed": 1.331718e-06,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
@@ -80,26 +102,26 @@
       "section_sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41"
     },
     {
-      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
       "dispatch_attempted": false,
       "entropy_bits_per_byte": 2.251629,
-      "label": "PR106-R2-lowlevel-HDM3",
+      "label": "PR106-R2-lowlevel-HDM4",
       "optimization_role": "control_or_metadata",
-      "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
+      "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
       "rate_mass_score_if_removed": 3.995154e-06,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "section": "pr106_sidecar_header_fe_fmt_len_u32",
       "section_bytes": 6,
-      "section_sha256": "c0d40b5b0147c8695ab900e290d9e450239441fa29bbd5621aeabdb747d20807"
+      "section_sha256": "3b8c65001ad578961c9e0527ac1b2aad603c3756508b94d6d9cf119f367301ee"
     },
     {
-      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
       "dispatch_attempted": false,
       "entropy_bits_per_byte": 1.459148,
-      "label": "PR106-R2-lowlevel-HDM3",
+      "label": "PR106-R2-lowlevel-HDM4",
       "optimization_role": "control_or_metadata",
-      "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
+      "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
       "rate_mass_score_if_removed": 3.995154e-06,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
@@ -108,33 +130,33 @@
       "section_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09"
     },
     {
-      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
       "dispatch_attempted": false,
       "entropy_bits_per_byte": 2.0,
-      "label": "PR106-R2-lowlevel-HDM3",
+      "label": "PR106-R2-lowlevel-HDM4",
       "optimization_role": "control_or_metadata",
-      "payload_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
+      "payload_sha256": "7197c76fb92b7f1a3ce6f1695360412e02915dd2cc4030bf3397f69fa504f47d",
       "rate_mass_score_if_removed": 2.663436e-06,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "section": "inner_packed_header_ff_len24",
       "section_bytes": 4,
-      "section_sha256": "5196cd3e7b079990527695553be2683aff54fd65f2d4b72de34c1d32c2d4ec14"
+      "section_sha256": "b07007cb2d770cfafa669a20e03ac88ed2534000d1ea6e9f8484044429b5eb50"
     }
   ],
   "frontier_mode": "score_lowering",
   "gpu_required": false,
   "next_entropy_research_action": null,
   "next_rate_only_action": {
-    "action_id": "build_byte_different_recode_for_largest_current_frontier_section",
+    "action_id": "review_current_exact_lossless_brotli_control_before_promotion",
     "dispatch_allowed": false,
     "dispatch_attempted": false,
-    "rationale": "largest current exact-frontier section is the deterministic rate target",
+    "rationale": "existing exact CUDA custody already covers the byte-different lossless repack; review/promotion is the next rate-only step, not another dispatch",
     "ready_for_exact_eval_dispatch": false,
-    "required_next_artifact": "old_new_section_sha256_and_charged_byte_diff_manifest",
+    "required_next_artifact": "operator_promotion_review_note_for_existing_exact_archive_sha",
     "score_claim": false,
-    "target_label": "PR106-R2-lowlevel-HDM3",
-    "target_section": "inner_decoder_packed_brotli"
+    "target_label": "PR106-R2-lowlevel-HDM4",
+    "target_section": "decoder_packed_brotli"
   },
   "planning_only": true,
   "ready_for_exact_eval_dispatch": false,
@@ -147,18 +169,25 @@
       "experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/scorecard.json",
       "--frontier-mode",
       "score_lowering",
+      "--candidate-manifest",
+      "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/manifest.with_tool_run.json",
       "--json-out",
       "experiments/results/hnerv_frontier_entropy_gap_ranking_20260513_codex/frontier_entropy_gap_ranking.json",
       "--md-out",
       "experiments/results/hnerv_frontier_entropy_gap_ranking_20260513_codex/frontier_entropy_gap_ranking.md"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "43ae761032522b86c3e8bd32a2020b219df3b99ea47b72d54e695c7c355446b1",
+    "canonical_payload_without_tool_manifest_sha256": "79b0aebe438ae6915e79c9527e36c3fdd9b6d774f9bf0ecd408032e18088ace1",
     "dispatch_attempted": false,
     "input_files": [
       {
-        "bytes": 137422,
+        "bytes": 195843,
         "path": "experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/scorecard.json",
-        "sha256": "9be3050673deafa32b8f138a645f6b22c141382e1dd66ed2267445458a2fdbf2"
+        "sha256": "d84d4dc01d5f3c504e838d3ab5ee5045d17ebb09ec35822e6c2f69e606afe591"
+      },
+      {
+        "bytes": 18191,
+        "path": "experiments/results/pr106_r2_lowlevel_hdm4_archive_candidate_20260513_codex/manifest.with_tool_run.json",
+        "sha256": "d09dbeca05508f095ff1401badd950d847b28031034ed276431ff28c83a4ff81"
       }
     ],
     "output_path": "experiments/results/hnerv_frontier_entropy_gap_ranking_20260513_codex/frontier_entropy_gap_ranking.json",
