@@ -99,11 +99,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -240,7 +239,7 @@ def _build_real_scorer_targets(
     (512x384) so the surrogate learns a 1:1 mimic at the scorer's native
     spatial dims.
     """
-    from tac.camera import CAMERA_H, CAMERA_W, SEGNET_INPUT_H, SEGNET_INPUT_W
+    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
     from tac.quantization import Uint8STE
     from tac.scorer import load_default_scorers
 
@@ -423,13 +422,13 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     config = ScorerSurrogateConfig.council_canonical()
 
-    print(f"[cpu_hinton] starting CPU-only Hinton distillation training")
+    print("[cpu_hinton] starting CPU-only Hinton distillation training")
     print(f"[cpu_hinton] device={device} epochs={args.epochs} "
           f"n_pairs={args.n_pairs} ema_decay={args.ema_decay}")
 
     # ── Step 1: Build distillation set via REAL scorers on CPU ────────────
     if args.smoke:
-        print(f"[cpu_hinton] SMOKE mode: synthetic pairs (4 pairs, 1 epoch)")
+        print("[cpu_hinton] SMOKE mode: synthetic pairs (4 pairs, 1 epoch)")
         pairs_uint8 = _make_synthetic_pairs_for_smoke(
             n_pairs=args.n_pairs, seed=args.seed,
         )
@@ -451,8 +450,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             n_pairs=args.n_pairs + args.n_heldout_pairs,
             seed=args.seed,
         )
-        print(f"[cpu_hinton] running real SegNet + PoseNet on CPU "
-              f"to produce distillation targets")
+        print("[cpu_hinton] running real SegNet + PoseNet on CPU "
+              "to produce distillation targets")
         rgb_for_seg, yuv6_pairs, seg_targets, pose_targets = (
             _build_real_scorer_targets(
                 pairs_uint8, upstream_dir=args.upstream_dir,
@@ -474,7 +473,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(f"[cpu_hinton] split: train={n_train} heldout={n_heldout}")
 
     # ── Step 2: Random-init baseline gradient norm ────────────────────────
-    print(f"[cpu_hinton] measuring random-init baseline gradient norm")
+    print("[cpu_hinton] measuring random-init baseline gradient norm")
     seg_random, pose_random = load_pretrained_distilled_scorer_pair(
         config=config,
         seg_base_channels=args.seg_base_channels,
@@ -568,7 +567,7 @@ def main(argv: Optional[list[str]] = None) -> int:
               f"seg_kl={avg_seg:.6f} pose_mse={avg_pose:.6f}")
 
     # ── Step 5: Apply EMA shadow + measure trained gradient norm ─────────
-    print(f"[cpu_hinton] applying EMA shadow + measuring trained surrogate")
+    print("[cpu_hinton] applying EMA shadow + measuring trained surrogate")
     seg_student_orig_state = {k: v.clone() for k, v in seg_student.state_dict().items()}
     pose_student_orig_state = {k: v.clone() for k, v in pose_student.state_dict().items()}
     seg_student.load_state_dict(seg_ema)
@@ -584,7 +583,7 @@ def main(argv: Optional[list[str]] = None) -> int:
           f"total={total_grad_trained:.6e}")
 
     # ── Step 6: Held-out agreement check ─────────────────────────────────
-    print(f"[cpu_hinton] measuring held-out agreement vs real scorer targets")
+    print("[cpu_hinton] measuring held-out agreement vs real scorer targets")
     agreement = _measure_agreement(
         seg_student, pose_student,
         heldout_rgb_for_seg, heldout_yuv6_pairs,

@@ -303,7 +303,7 @@ def main() -> int:
     except TrustRootMalformed as e:
         trust_status = f"ERROR: trust root malformed: {e}"
 
-    print(f"=== Lane C compliance attestation written ===")
+    print("=== Lane C compliance attestation written ===")
     print(f"  delta.bin:    {args.delta_bin}")
     print(f"  delta size:   {len(blob):,} bytes")
     print(f"  delta sha256: {sha}")

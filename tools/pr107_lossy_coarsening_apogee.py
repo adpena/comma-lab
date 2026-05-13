@@ -47,7 +47,6 @@ from pathlib import Path
 
 import brotli
 import numpy as np
-import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -63,9 +62,7 @@ from tac.codec.rel_err import REL_ERR_FORM_KEY, RelErrForm, compute_rel_err  # n
 # Use the upstream PR107 codec verbatim for parse + the CD1 reference shape.
 from codec import (  # type: ignore # noqa: E402
     parse_archive,
-    quantize_state_dict,
     zigzag_encode_i8,
-    N_QUANT,
 )
 
 TOOL_NAME = "tools/pr107_lossy_coarsening_apogee.py"

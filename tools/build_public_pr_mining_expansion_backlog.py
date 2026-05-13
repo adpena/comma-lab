@@ -24,14 +24,12 @@ Hard guarantees (per CLAUDE.md non-negotiables):
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

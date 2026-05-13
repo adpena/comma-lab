@@ -168,7 +168,7 @@ def measure_multi_pass(
         n_zeroed += (syms.size - surviving_vals.size)
     brotli_b = assemble_and_brotli(payloads, scales)
     return {
-        "mode": f"multi_pass_post_hoc",
+        "mode": "multi_pass_post_hoc",
         "final_alpha": final_alpha,
         "passes": n_passes,
         "per_pass_alpha": per_pass_alpha,
@@ -274,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     args.output_json.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     print(f"manifest: {args.output_json}\n")
-    print(f"  alpha | passes | fraction_zeroed | archive_bytes | delta_vs_1p")
+    print("  alpha | passes | fraction_zeroed | archive_bytes | delta_vs_1p")
     for r in manifest["results"]:
         d = r.get("delta_vs_single_pass_bytes", 0)
         print(f"  {r['final_alpha']:>5.2f} | {r['passes']:>6d} | {r['fraction_zeroed']:>14.4f} | {r['archive_bytes']:>13,} | {d:>+12,} B")

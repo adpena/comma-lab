@@ -92,7 +92,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print(f"OK profile.deterministic=True")
+    print("OK profile.deterministic=True")
 
     eval_rt = prof.get("eval_roundtrip")
     if eval_rt is not True:
@@ -103,7 +103,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print(f"OK profile.eval_roundtrip=True")
+    print("OK profile.eval_roundtrip=True")
 
     # 4. Sanity: configure_reproducibility actually applies. Smoke-test by
     # importing it and invoking — catches any regressions in the function
@@ -116,13 +116,13 @@ def main() -> int:
         return 1
     # After configure_reproducibility, cudnn must be deterministic + non-bench.
     if torch.backends.cudnn.benchmark is True:
-        print(f"FATAL: cudnn.benchmark=True after configure_reproducibility", file=sys.stderr)
+        print("FATAL: cudnn.benchmark=True after configure_reproducibility", file=sys.stderr)
         return 1
     if torch.backends.cudnn.deterministic is False:
-        print(f"FATAL: cudnn.deterministic=False after configure_reproducibility",
+        print("FATAL: cudnn.deterministic=False after configure_reproducibility",
               file=sys.stderr)
         return 1
-    print(f"OK cudnn.{{deterministic=True, benchmark=False}}")
+    print("OK cudnn.{deterministic=True, benchmark=False}")
 
     print(f"\nDETERMINISM_OK profile={profile_name}")
     return 0

@@ -69,14 +69,11 @@ import hashlib
 import json
 import os
 import platform
-import shutil
 import subprocess
 import sys
-import tempfile
 import time
-import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -323,7 +320,7 @@ def _run_one_eval(spec: CandidateSpec, output_root: Path,
             predicted_contest_cpu_gha=None,
             drift_flag="NA",
             promotion_verdict="EVAL_FAILED",
-            eval_failure_reason=f"no inflate.sh found (tried adjacent + robust_current)",
+            eval_failure_reason="no inflate.sh found (tried adjacent + robust_current)",
             output_dir=str(cand_out),
             report_text=None,
         )
@@ -834,14 +831,14 @@ def main() -> int:
     print(f"[sweep] results: {output_dir / 'results.jsonl'}")
 
     summary = _summarize(results)
-    print(f"\n[sweep] SUMMARY")
-    print(f"  ─────────────────────────────────────────────────────────────")
+    print("\n[sweep] SUMMARY")
+    print("  ─────────────────────────────────────────────────────────────")
     print(f"  evaluated:     {summary['n_evaluated']}")
     print(f"  failed:        {summary['n_failed']}")
     print(f"  by verdict:    {summary['verdict_counts']}")
     # Per-candidate table with explicit DRIFT-FLAG vs OK column
     if results:
-        print(f"\n  per-candidate table (sorted by macos_cpu_score asc):")
+        print("\n  per-candidate table (sorted by macos_cpu_score asc):")
         print(f"  {'candidate_id':<48} {'macos_cpu':>11} {'pred_gha':>10} "
               f"{'drift':>20} {'tag':<25} {'verdict':<22}")
         print(f"  {'-'*48} {'-'*11} {'-'*10} {'-'*20} {'-'*25} {'-'*22}")
@@ -874,9 +871,9 @@ def main() -> int:
     if summary["drift_flagged_candidates"]:
         print(f"  DRIFT-FLAGGED (POTENTIAL_NEW_CLASS): "
               f"{summary['drift_flagged_candidates']}")
-        print(f"    (per CLAUDE.md: investigate calibration anchor; one of (a) "
-              f"new arch class needing its own ε bound, (b) corrupt archive, "
-              f"(c) prior_anchor stale.)")
+        print("    (per CLAUDE.md: investigate calibration anchor; one of (a) "
+              "new arch class needing its own ε bound, (b) corrupt archive, "
+              "(c) prior_anchor stale.)")
     return 0
 
 

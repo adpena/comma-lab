@@ -181,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
     args.output_json.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     print(f"\nmanifest: {args.output_json}")
-    print(f"\n  alpha | fraction_zeroed | archive_bytes")
+    print("\n  alpha | fraction_zeroed | archive_bytes")
     for r in sorted(manifest["rows"], key=lambda r: r["alpha"]):
         print(f"  {r['alpha']:>5.2f} | {r['fraction_zeroed']:>14.4f} | {r['archive_bytes']:>14,}")
     print(f"\nbest_alpha: {manifest['best_alpha']}, archive_bytes: {manifest['best_archive_bytes']:,} B")
@@ -203,9 +203,9 @@ def main(argv: list[str] | None = None) -> int:
             f.write(json.dumps(evidence_row) + "\n")
         print(f"\nevidence row appended: {args.output_evidence}")
 
-    print(f"\nNOTE: byte-anchor only. SCORE impact of post-hoc sparsity is unknown")
-    print(f"and requires retraining + [contest-CUDA] auth eval. Catalog row")
-    print(f"sparsity_alpha_0.7_imp_retrain remains DEFERRED for score promotion.")
+    print("\nNOTE: byte-anchor only. SCORE impact of post-hoc sparsity is unknown")
+    print("and requires retraining + [contest-CUDA] auth eval. Catalog row")
+    print("sparsity_alpha_0.7_imp_retrain remains DEFERRED for score promotion.")
     return 0
 
 

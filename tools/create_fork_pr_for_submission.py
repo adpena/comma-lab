@@ -55,7 +55,6 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
 
 DEFAULT_FORK_REPO = "adpena/comma_video_compression_challenge"
 DEFAULT_BASE_BRANCH = "master"

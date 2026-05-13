@@ -48,16 +48,13 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import hashlib
-import io
 import json
-import struct
 import sys
 import zipfile
 from pathlib import Path
 
 import brotli
 import numpy as np
-import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -71,7 +68,6 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from pr107_lossy_coarsening_apogee import (  # type: ignore  # noqa: E402
     parse_pr107_archive_to_tensors,
-    encode_at_budget,
     build_archive_bin,
     build_cd1_payload,
     PR107_BASELINE_ARCHIVE_BYTES,

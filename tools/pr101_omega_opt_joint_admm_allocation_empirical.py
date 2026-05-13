@@ -83,10 +83,6 @@ from tac.codec.cost_curves import (  # noqa: E402
     greedy_uniform_per_tensor_budget_sparsity,
     precompute_per_tensor_sparsity_curves,
 )
-from tac.codec.per_tensor_codecs import (  # noqa: E402
-    encode_brotli_only,
-    encode_sparsity_alpha,
-)
 from tac.optimization.lagrangian_per_tensor_allocation import (  # noqa: E402
     LagrangianPerTensorAllocator,
 )
@@ -252,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.state_dict.is_file():
         raise SystemExit(f"state_dict not found: {args.state_dict}")
 
-    print(f"Path B step 5: Joint-ADMM Lagrangian-allocation empirical anchor")
+    print("Path B step 5: Joint-ADMM Lagrangian-allocation empirical anchor")
     manifest = run_experiment(args.state_dict, args.alphas, args.rms_targets)
 
     ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")

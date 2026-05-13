@@ -76,12 +76,9 @@ if str(REPO_ROOT / "src") not in sys.path:
 if str(REPO_ROOT / "tools") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "tools"))
 
-import numpy as np
 import torch
 
 from tac.pr101_split_brotli_codec import (
-    DECODER_BLOB_LEN,
-    FIXED_STATE_SCHEMA,
     LATENT_BLOB_LEN,
     decode_decoder_compact,
     encode_decoder_compact,

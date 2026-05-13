@@ -38,7 +38,6 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
-import math
 import struct
 import sys
 import time

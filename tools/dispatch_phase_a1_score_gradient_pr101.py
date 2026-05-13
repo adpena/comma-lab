@@ -37,7 +37,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import os
 import shlex
 import subprocess
 import sys
@@ -338,7 +337,7 @@ def build_batch_command(args: argparse.Namespace, instance_job_id: str) -> str:
             'export WORKSPACE="$PWD"',
             'export TAC_UPSTREAM_DIR="$PWD/upstream"',
             'export PYTHONPATH="$PWD/src:$PWD/upstream:$PWD"',
-            f'export LOG_DIR="$OUT_DIR"',
+            'export LOG_DIR="$OUT_DIR"',
             *env_exports,
             "mkdir -p .omx/state",
             (

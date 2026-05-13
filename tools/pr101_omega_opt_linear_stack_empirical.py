@@ -59,7 +59,6 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     FIXED_STATE_SCHEMA,
-    N_QUANT,
 )
 
 TOOL_NAME = "tools/pr101_omega_opt_linear_stack_empirical.py"
@@ -306,23 +305,23 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"\nmanifest: {args.output_json}\n")
     print(f"Stack composition: arch_shrink_x{args.shrink_ratio} → IMP α={args.sparsity_alpha} → lossy_coarsening → brotli")
-    print(f"\nElement count flow:")
+    print("\nElement count flow:")
     print(f"  original: {manifest['n_orig_elements']:,}")
     print(f"  after arch_shrink: {manifest['n_shrunk_elements']:,} ({100*manifest['n_shrunk_elements']/manifest['n_orig_elements']:.1f}%)")
     print(f"  nonzero after sparsity: {manifest['n_nonzero_after_sparsity']:,} ({100*manifest['n_nonzero_after_sparsity']/manifest['n_orig_elements']:.1f}% of original)")
-    print(f"\nByte flow:")
+    print("\nByte flow:")
     print(f"  raw payload: {manifest['raw_payload_bytes']:,}")
     print(f"  brotli: {manifest['brotli_bytes']:,}")
     print(f"  + archive overhead: {manifest['archive_bytes']:,}")
-    print(f"\nCompare to:")
-    print(f"  PR101 brotli baseline: 178,144 B")
+    print("\nCompare to:")
+    print("  PR101 brotli baseline: 178,144 B")
     delta = manifest["archive_bytes"] - 178_144
     print(f"  delta: {delta:+,} B")
-    print(f"  Ω-OPT linear stack PREDICTION: 18,000 B (renderer only) [predicted, no anchor before this]")
+    print("  Ω-OPT linear stack PREDICTION: 18,000 B (renderer only) [predicted, no anchor before this]")
     delta_pred = manifest["archive_bytes"] - 18_000
     print(f"  delta vs prediction: {delta_pred:+,} B")
-    print(f"\nPer the metacognitive protocol: this is a BYTE ANCHOR, not a SCORE anchor.")
-    print(f"The Ω-OPT 0.130 score prediction requires retrain + contest-CUDA.")
+    print("\nPer the metacognitive protocol: this is a BYTE ANCHOR, not a SCORE anchor.")
+    print("The Ω-OPT 0.130 score prediction requires retrain + contest-CUDA.")
 
     if args.output_evidence:
         evidence_row = {

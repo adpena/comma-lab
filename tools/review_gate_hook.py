@@ -193,10 +193,10 @@ def main() -> int:
 
     if has_blocking:
         print(f"{RED}{BOLD}Commit blocked by review policy.{RST}")
-        print(f"  Fix issues:    python tools/review_tracker.py mark-file <file> --status reviewed")
-        print(f"  Check policy:  python tools/review_tracker.py policy-check <file>")
-        print(f"  Override:      REVIEW_GATE_OVERRIDE=1 git commit ...")
-        print(f"  Disable:       REVIEW_GATE_ENABLED=0 git commit ...")
+        print("  Fix issues:    python tools/review_tracker.py mark-file <file> --status reviewed")
+        print("  Check policy:  python tools/review_tracker.py policy-check <file>")
+        print("  Override:      REVIEW_GATE_OVERRIDE=1 git commit ...")
+        print("  Disable:       REVIEW_GATE_ENABLED=0 git commit ...")
         print()
         return 1
 

@@ -609,10 +609,10 @@ def main() -> int:
             )
         else:
             print(
-                f"\n[finding] no variant beats A1 baseline. "
-                f"Per HNeRV-parity discipline lesson 13: DEFERRED-pending-research, "
-                f"NOT killed. PR101's bias correction IS optimal-or-tied for A1's "
-                f"score-gradient-trained substrate among tested variants.",
+                "\n[finding] no variant beats A1 baseline. "
+                "Per HNeRV-parity discipline lesson 13: DEFERRED-pending-research, "
+                "NOT killed. PR101's bias correction IS optimal-or-tied for A1's "
+                "score-gradient-trained substrate among tested variants.",
                 flush=True,
             )
     return 0

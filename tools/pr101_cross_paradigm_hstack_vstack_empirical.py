@@ -116,7 +116,6 @@ def _stack3_admm_continuous_k_then_op1(
 
     Returns a dict with bytes_admm_only, bytes_admm_then_op1, achieved_rel_err.
     """
-    import brotli
     import numpy as np
     import torch
 
@@ -131,10 +130,8 @@ def _stack3_admm_continuous_k_then_op1(
     sys.path.insert(0, str(REPO_ROOT / "tools"))
     from pr101_lossy_coarsening_analytical import (  # type: ignore[import-not-found]
         TensorBlob,
-        encode_with_per_tensor_K,
     )
     from pr101_omega_opt_admm_x_lossy_coarsening_empirical import (  # type: ignore[import-not-found]
-        K_RANGE,
         bisect_admm_for_global_rms,
         precompute_per_tensor_K_curves,
     )

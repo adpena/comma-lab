@@ -69,7 +69,7 @@ import json
 import math
 import sys
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import combinations
 from pathlib import Path
@@ -393,7 +393,7 @@ def _predict_score_delta(
     }
     if len(composition) == 1:
         delta = per_surrogate_score_delta[composition[0]]
-        mech = f"single-surrogate midpoint of source-memo predicted band"
+        mech = "single-surrogate midpoint of source-memo predicted band"
         return delta, mech
 
     cos_vals = [

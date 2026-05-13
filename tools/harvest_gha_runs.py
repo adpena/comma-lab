@@ -104,7 +104,7 @@ def download_artifact(run_id: int, submission_name: str, repo: str, dest_dir: Pa
         sys.exit(3)
     report_path = dest_dir / "report.txt"
     if not report_path.exists():
-        sys.stderr.write(f"[fatal] artifact missing report.txt\n")
+        sys.stderr.write("[fatal] artifact missing report.txt\n")
         sys.exit(3)
     return report_path
 

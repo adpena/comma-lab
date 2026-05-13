@@ -204,7 +204,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.state_dict.is_file():
         raise SystemExit(f"state_dict not found: {args.state_dict}")
 
-    print(f"Path B step 3: per-tensor brotli HStack-of-VStacks empirical anchor")
+    print("Path B step 3: per-tensor brotli HStack-of-VStacks empirical anchor")
     print(f"  state_dict: {args.state_dict}")
     manifest = run_experiment(args.state_dict)
 
@@ -224,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  PER-TENSOR + sidechan:                                              {manifest['per_tensor_optimum_with_overhead_bytes']:>8,} B")
     print(f"  Net savings:          {manifest['savings_net_bytes']:+,} bytes ({manifest['savings_pct']:+.3f}%)")
     print(f"  Divergence:           {manifest['n_tensors_diverged_from_joint_best']}/{manifest['n_tensors']} tensors picked non-joint-best")
-    print(f"\n  Choice distribution (per-tensor selections):")
+    print("\n  Choice distribution (per-tensor selections):")
     for choice, count in sorted(manifest["per_tensor_choice_distribution"].items(), key=lambda kv: -kv[1]):
         print(f"    {choice:30s}  {count:>3} tensors")
 

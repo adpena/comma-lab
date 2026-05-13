@@ -556,7 +556,7 @@ def check_entity_policy(con, qualified_name: str, file_path: str,
             issues.append(f"approver '{a}' is L{principal.get('level', 1)}, needs L{req_level}+")
 
     if req_human and not any(get_principal(a, policy).get("human", False) for a in approvers):
-        issues.append(f"requires at least one human approver")
+        issues.append("requires at least one human approver")
 
     return {
         "met": len(issues) == 0,
@@ -1322,7 +1322,7 @@ def cmd_report() -> None:
 
     lines = [
         f"# Code Review Tracker Report — {now}\n",
-        f"## Summary\n",
+        "## Summary\n",
         f"- **Total entities**: {total}",
         f"- **Reviewed**: {reviewed} ({reviewed/total*100:.0f}%)",
         f"- **Unreviewed**: {stats.get('unreviewed', 0)}",
@@ -1729,7 +1729,7 @@ def cmd_greenup(file_patterns: list[str], reviewer: str = "council",
         )
         print(f"  Would mark {count_to_mark} entities as reviewed across {len(matched_files)} files.")
         try:
-            confirm = input(f"  Proceed? [y/N]: ").strip().lower()
+            confirm = input("  Proceed? [y/N]: ").strip().lower()
         except EOFError:
             confirm = "y"  # non-interactive (piped input) — allow
         if confirm not in ("y", "yes"):

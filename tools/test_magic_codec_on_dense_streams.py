@@ -103,7 +103,7 @@ import argparse
 import hashlib
 import json
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
@@ -112,7 +112,6 @@ import numpy as np
 
 from tac.packet_compiler.magic_codec import (
     MagicCodecError,
-    MagicCodecResult,
     SelectionStrategy,
     StreamHint,
     StreamType,

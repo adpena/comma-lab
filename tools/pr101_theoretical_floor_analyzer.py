@@ -200,7 +200,7 @@ def render_summary(manifest: dict) -> str:
     lines.append("")
     if excess_pct < 5.0:
         lines.append(f"  Brotli sits {excess_pct:.1f}% above IID Shannon floor — encoder lane SATURATED.")
-        lines.append(f"  Architecture lane (sparsity, arch_shrink) has 5-10x more headroom.")
+        lines.append("  Architecture lane (sparsity, arch_shrink) has 5-10x more headroom.")
     return "\n".join(lines)
 
 

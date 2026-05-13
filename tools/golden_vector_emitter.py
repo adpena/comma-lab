@@ -37,9 +37,7 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import hashlib
-import importlib
 import json
-import struct
 import sys
 from pathlib import Path
 

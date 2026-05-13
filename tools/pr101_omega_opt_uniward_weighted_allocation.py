@@ -63,7 +63,6 @@ from tac.codec.cost_curves import (  # noqa: E402
 )
 from tac.optimization.lagrangian_per_tensor_allocation import (  # noqa: E402
     LagrangianPerTensorAllocator,
-    UniwardWeightedAllocator,
     compute_local_variance_proxy as _canonical_local_variance,
     compute_uniward_weights as _canonical_uniward_weights,
 )
@@ -79,7 +78,6 @@ from pr101_lossy_coarsening_analytical import (  # noqa: E402
     TensorBlob,
     encode_with_per_tensor_K,
     find_best_K_for_tensor,
-    ARCHIVE_OVERHEAD_BYTES,
 )
 
 TOOL_NAME = "tools/pr101_omega_opt_uniward_weighted_allocation.py"
@@ -341,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.state_dict.is_file():
         raise SystemExit(f"state_dict not found: {args.state_dict}")
 
-    print(f"Path B step 7: Fridrich UNIWARD-weighted Lagrangian per-tensor allocation")
+    print("Path B step 7: Fridrich UNIWARD-weighted Lagrangian per-tensor allocation")
     manifest = run_experiment(args.state_dict, args.rms_targets)
 
     ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")

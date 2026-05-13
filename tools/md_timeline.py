@@ -21,7 +21,6 @@ import json
 import os
 import re
 import subprocess
-import sys
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse

@@ -198,8 +198,8 @@ def main(argv: list[str] | None = None) -> int:
         for f in findings:
             print(f"{f.path}:{f.lineno}: {f.target_name} = {f.literal_value}", file=sys.stderr)
             print(f"  → {f.line_text}", file=sys.stderr)
-            print(f"  → missing provenance tag (one of [contest-defined], [calibration:<src>], "
-                  f"[empirical:<artifact>], [heuristic:<reason>])", file=sys.stderr)
+            print("  → missing provenance tag (one of [contest-defined], [calibration:<src>], "
+                  "[empirical:<artifact>], [heuristic:<reason>])", file=sys.stderr)
         if findings:
             print(f"\n[PCC10] {len(findings)} untagged numeric literal(s) in prediction logic "
                   f"across {len({f.path for f in findings})} file(s).", file=sys.stderr)

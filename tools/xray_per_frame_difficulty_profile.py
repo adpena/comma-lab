@@ -52,8 +52,6 @@ import argparse
 import datetime as dt
 import hashlib
 import json
-import math
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -380,8 +378,8 @@ def _build_markdown_report(profile: dict[str, Any], *, generated_at: str, state_
         "",
         "## Component summary",
         "",
-        f"| Field | Mean | Std | Min | Max |",
-        f"|---|---:|---:|---:|---:|",
+        "| Field | Mean | Std | Min | Max |",
+        "|---|---:|---:|---:|---:|",
         f"| segnet_entropy | {s['segnet_entropy_mean']:.4f} | {s['segnet_entropy_std']:.4f} | {s['segnet_entropy_min']:.4f} | {s['segnet_entropy_max']:.4f} |",
         f"| posenet_variance | {s['posenet_variance_mean']:.6e} | {s['posenet_variance_std']:.6e} | {s['posenet_variance_min']:.6e} | {s['posenet_variance_max']:.6e} |",
         f"| combined_difficulty | {s['combined_difficulty_mean']:.4f} | {s['combined_difficulty_std']:.4f} | {combined.min():.4f} | {combined.max():.4f} |",

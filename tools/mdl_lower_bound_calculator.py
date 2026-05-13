@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -448,13 +447,13 @@ def main() -> int:
     }
     args.output.write_text(json.dumps(payload, indent=2))
 
-    print(f"\n=== MDL Lower Bound Calculator (Phase A0) ===")
+    print("\n=== MDL Lower Bound Calculator (Phase A0) ===")
     print(f"Weights: {result.weights_path}")
     print(f"  n_elements: {result.n_elements}")
     print(f"  n_tensors:  {result.n_tensors}")
     print(f"  quantization: {result.quantization}")
     print(f"  hyperprior:   {result.hyperprior_config}")
-    print(f"\nByte decomposition:")
+    print("\nByte decomposition:")
     print(f"  iid floor (per-tensor sum):   {result.weight_stream_iid_floor_bytes:>10,.0f} B")
     print(f"  joint floor (lo, deployable): {result.weight_stream_joint_floor_bytes_lo:>10,.0f} B")
     print(f"  joint floor (hi, conservative): {result.weight_stream_joint_floor_bytes_hi:>10,.0f} B")
@@ -471,10 +470,10 @@ def main() -> int:
         print(f"\n[GATE G8] RED — realistic floor {result.total_realistic_bytes:,.0f} B > 165 KB. Phase C dispatch BLOCKED.")
         gate_status = "RED"
     elif result.total_realistic_bytes <= 145_000:
-        print(f"\n[GATE G8] GREEN-AGGRESSIVE — realistic floor ≤ 145 KB. Track 1 sub-0.17 highly probable.")
+        print("\n[GATE G8] GREEN-AGGRESSIVE — realistic floor ≤ 145 KB. Track 1 sub-0.17 highly probable.")
         gate_status = "GREEN_AGGRESSIVE"
     else:
-        print(f"\n[GATE G8] GREEN — realistic floor in [145, 165] KB. Phase C predicted band 0.155-0.165.")
+        print("\n[GATE G8] GREEN — realistic floor in [145, 165] KB. Phase C predicted band 0.155-0.165.")
         gate_status = "GREEN"
     payload["gate_g8_status"] = gate_status
     args.output.write_text(json.dumps(payload, indent=2))

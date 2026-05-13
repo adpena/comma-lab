@@ -15,7 +15,6 @@ import json
 import lzma
 import sys
 import zipfile
-from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 

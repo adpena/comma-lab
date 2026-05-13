@@ -1102,7 +1102,7 @@ def candidate_substrate_ids_from_ranking(path: Path) -> dict[str, tuple[str, ...
     payload = json.loads(path.read_text(encoding="utf-8"))
     if "ranked_dispatches" not in payload:
         raise ValueError(
-            f"substrate composition ranking JSON missing 'ranked_dispatches'"
+            "substrate composition ranking JSON missing 'ranked_dispatches'"
         )
     out: dict[str, tuple[str, ...]] = {}
     for raw in payload["ranked_dispatches"]:

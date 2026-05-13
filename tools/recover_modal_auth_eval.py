@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 try:
@@ -87,7 +86,7 @@ def _auth_eval_artifact_path(summary: dict) -> Path | None:
 
 def _terminal_notes(summary: dict, metadata: dict, posterior_note: str = "") -> str:
     parts = [
-        f"Modal auth eval recovered",
+        "Modal auth eval recovered",
         f"passed={summary.get('passed')}",
         f"result_json={summary.get('result_json')}",
     ]

@@ -75,11 +75,10 @@ Cross-references
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import datetime as _dt
 import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
@@ -92,7 +91,6 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.continual_learning import (  # noqa: E402  (after path bootstrap)
-    AUTHORITATIVE_TAGS,
     ContestResult,
     contest_result_from_auth_eval_payload,
     DEFAULT_POSTERIOR_PATH,

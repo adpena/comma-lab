@@ -67,14 +67,12 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from pr101_lossy_coarsening_analytical import (  # noqa: E402
-    ARCHIVE_OVERHEAD_BYTES,
     PR101_BROTLI_BASELINE_BYTES,
     TensorBlob,
     collect_tensors,
     encode_with_per_tensor_K,
     find_best_K_for_tensor,
 )
-from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA  # noqa: E402
 
 TOOL_NAME = "tools/pr101_sensitivity_aware_quantization.py"
 SCHEMA_VERSION = "pr101_sensitivity_aware_quantization.v1"

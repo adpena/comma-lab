@@ -76,7 +76,6 @@ import json
 import shutil
 import struct
 import sys
-import zipfile
 from pathlib import Path
 from typing import Sequence
 
@@ -90,14 +89,12 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from tac.pr101_split_brotli_codec import (  # noqa: E402
-    DECODER_BLOB_LEN,
     FIXED_STATE_SCHEMA,
     LATENT_BLOB_LEN,
     N_QUANT,
     _quantize_tensor,
     auto_select_byte_maps,
     encode_decoder_compact,
-    decode_decoder_compact,
 )
 
 # Reuse staging helpers from the canonical Lightning build script.

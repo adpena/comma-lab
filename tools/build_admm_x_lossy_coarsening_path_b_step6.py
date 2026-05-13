@@ -76,7 +76,6 @@ import importlib.util
 import json
 import struct
 import sys
-import zipfile
 from pathlib import Path
 
 import brotli
@@ -531,9 +530,9 @@ def main(argv: list[str] | None = None) -> int:
         f"(archive={archive_bytes:,} B, sha256={archive_sha[:16]}...)"
     )
     print(
-        f"[admm-build] DONE. CPU build complete. ready_for_exact_eval_dispatch=False; "
-        f"cuda_eval_worth_testing=True. Coordinate with Subagent BSF for Lightning "
-        f"bootstrap fix before dispatching."
+        "[admm-build] DONE. CPU build complete. ready_for_exact_eval_dispatch=False; "
+        "cuda_eval_worth_testing=True. Coordinate with Subagent BSF for Lightning "
+        "bootstrap fix before dispatching."
     )
     return 0
 

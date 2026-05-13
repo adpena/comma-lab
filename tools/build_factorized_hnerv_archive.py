@@ -62,7 +62,6 @@ import torch
 # submissions/factorized_hnerv_v1/src/codec.py for inflate-time use).
 from tac.codec.factorized_hnerv_codec import (
     FIXED_STATE_SCHEMA,
-    FactorizedHnervCodecError,
     FactorizedSectionPlan,
     WIRE_FORMAT_VERSION,
     encode_factorized_section,

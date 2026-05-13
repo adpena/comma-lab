@@ -82,7 +82,6 @@ from pr101_lossy_coarsening_analytical import (  # noqa: E402
     TensorBlob,
     find_best_K_for_tensor,
     encode_with_per_tensor_K,
-    ARCHIVE_OVERHEAD_BYTES,
 )
 
 TOOL_NAME = "tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py"
@@ -263,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.state_dict.is_file():
         raise SystemExit(f"state_dict not found: {args.state_dict}")
 
-    print(f"Path B step 6: ADMM × continuous lossy_coarsening empirical anchor")
+    print("Path B step 6: ADMM × continuous lossy_coarsening empirical anchor")
     manifest = run_experiment(args.state_dict, args.rms_targets)
 
     ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")

@@ -65,12 +65,10 @@ from tac.lane_c_compliance import (  # noqa: E402
     AttestationMismatch,
     AttestationMissing,
     AttestationSignatureInvalid,
-    INTERNAL_PROMOTION_TOKEN,
     TrustRootMalformed,
     TrustRootMissing,
     attestation_path_for,
     compute_blob_sha256,
-    load_attestation,
     verify_attestation_for_blob,
 )
 
@@ -142,7 +140,6 @@ def main() -> int:
         COMPLIANCE_PENDING,
         COMPLIANCE_REJECTED,
         MAGIC,
-        SCHEMA_VERSION,
         unpack_sparse_delta,
     )
     try:
@@ -223,7 +220,7 @@ def main() -> int:
         print(f"FATAL: {e}", file=sys.stderr)
         return 3
 
-    print(f"[promote] attestation VERIFIED:")
+    print("[promote] attestation VERIFIED:")
     print(f"  approver:     {attestation.approver}")
     print(f"  signed at:    {attestation.signed_at_utc}")
     print(f"  signed by:    {attestation.signed_by_user}")
@@ -292,7 +289,7 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(promoted_blob)
     print()
-    print(f"=== Promotion complete ===")
+    print("=== Promotion complete ===")
     print(f"  Pending δ sha:  {pending_sha}")
     print(f"  Promoted δ:     {args.output}")
     print(f"  Promoted sha:   {promoted_sha}")
@@ -304,7 +301,7 @@ def main() -> int:
     print("  python tools/sign_lane_c_compliance.py \\")
     print(f"      --delta-bin {args.output} \\")
     print(f"      --approver {attestation.approver} \\")
-    print(f"      --ruling-text \"<re-confirm ruling for promoted bytes>\" \\")
+    print("      --ruling-text \"<re-confirm ruling for promoted bytes>\" \\")
     print("      --private-key ~/.config/pact/lane_c_signing_key.pem")
     print()
     print("THEN bundle into the archive:")

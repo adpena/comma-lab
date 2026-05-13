@@ -26,10 +26,8 @@ from __future__ import annotations
 import argparse
 import ast
 import importlib.util
-import io
 import json
 import sys
-from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence

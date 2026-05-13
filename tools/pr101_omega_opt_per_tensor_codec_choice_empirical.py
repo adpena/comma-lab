@@ -227,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.state_dict.is_file():
         raise SystemExit(f"state_dict not found: {args.state_dict}")
 
-    print(f"Path B step 4: per-tensor codec-CHOICE HStack-of-VStacks empirical anchor")
+    print("Path B step 4: per-tensor codec-CHOICE HStack-of-VStacks empirical anchor")
     manifest = run_experiment(args.state_dict, args.alphas, args.rel_err_budgets)
 
     ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -240,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"\nmanifest: {args.output_json}\n")
     print(f"  Baseline (all-lossless per-tensor brotli): {manifest['baseline_lossless_per_tensor_brotli_bytes']:,} B")
-    print(f"\n  HStack frontier (per-tensor codec choice):")
+    print("\n  HStack frontier (per-tensor codec choice):")
     print(f"  {'rel_err_budget':>14s} | {'achieved':>10s} | {'bytes':>10s} | {'+sidechan':>10s} | {'savings':>10s} | {'sparsified':>4s}/{manifest['n_tensors']}")
     for sel in manifest["frontier_at_rel_err_budgets"]:
         print(

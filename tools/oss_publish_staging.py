@@ -394,9 +394,9 @@ def stage_oss_publish(
     write_json(manifest_dst, manifest)
 
     print(f"[oss-stage] copied {len(copied)} files ({sum(c['bytes'] for c in copied)} bytes total) → {out_dir}", file=sys.stderr)
-    print(f"[oss-stage] wrote MANIFEST.json + README.md + LICENSE + .gitignore", file=sys.stderr)
+    print("[oss-stage] wrote MANIFEST.json + README.md + LICENSE + .gitignore", file=sys.stderr)
     print(f"[oss-stage] readme source: {readme_source}", file=sys.stderr)
-    print(f"[oss-stage] next steps printed in MANIFEST.json", file=sys.stderr)
+    print("[oss-stage] next steps printed in MANIFEST.json", file=sys.stderr)
     return manifest
 
 
