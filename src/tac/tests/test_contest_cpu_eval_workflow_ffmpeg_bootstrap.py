@@ -34,6 +34,7 @@ def test_parity_ffmpeg_bootstrap_preserves_required_color_contract() -> None:
     assert "BtbN/FFmpeg-Builds" in script
     assert "FFMPEG_BIN" in script
     assert "--allow-missing-contract" in script
+    assert "tail -3 >&2" in script
 
 
 def test_renderer_inflate_mode_does_not_require_ffmpeg_for_empty_filelist(

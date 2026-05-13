@@ -89,7 +89,7 @@ install_btbn() {
   mkdir -p "$INSTALL_ROOT"
   for i in 1 2 3; do
     log "downloading BtbN ffmpeg master attempt $i"
-    curl -fL --retry 5 --retry-delay 3 -o "$tmp" "$url" 2>&1 | tail -3
+    curl -fL --retry 5 --retry-delay 3 -o "$tmp" "$url" 2>&1 | tail -3 >&2
     local actual
     actual="$(stat -c%s "$tmp" 2>/dev/null || wc -c < "$tmp" 2>/dev/null || echo 0)"
     if [ "$actual" -gt 50000000 ]; then

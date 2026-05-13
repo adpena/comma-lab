@@ -224,3 +224,16 @@ anchor:
   gate only to runtime modes that can actually reach the ffmpeg decode path.
   Renderer modes still require `uv` and fail closed later if renderer
   dependencies are missing.
+
+## Follow-up: lane_g_v3 GHA CPU Retry4
+
+- GHA run: `25771219590`.
+- Classification: `failed_gha_cpu_eval_toolchain_stdout_contamination`. This
+  is also a pre-score infrastructure failure.
+- Root cause: the reusable `ensure_parity_ffmpeg.sh` printed curl progress from
+  the BtbN download to stdout while the workflow captured stdout as
+  `SELECTED_FFMPEG`. The selected binary path became a multi-line progress log
+  plus the real path, so the workflow failed with `File name too long`.
+- Fix: BtbN download progress now goes to stderr; stdout is reserved for the
+  single selected ffmpeg path. The focused regression test asserts this stdout
+  purity rule.
