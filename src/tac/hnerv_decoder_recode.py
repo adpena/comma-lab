@@ -5,8 +5,10 @@ from __future__ import annotations
 import dataclasses
 import io
 import math
+import os
 import struct
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from itertools import pairwise
 from typing import Any
 
@@ -59,6 +61,7 @@ SCHEMA_VERSION = 1
 HDM4_RECIPE_ID = 1
 HDM4_RECIPE_NAME = "conv3x3_then_1x1_then_bias_tail_dp4"
 HDM4_SPLIT_POINTS = (6, 9, 26, 28)
+HDM5_SCHEMA_VERSION = 1
 
 
 class HnervDecoderRecodeError(ValueError):
@@ -93,6 +96,14 @@ class PackedDecoderRaw:
     @property
     def scale_stream(self) -> bytes:
         return b"".join(record.scale_f32 for record in self.records)
+
+
+@dataclasses.dataclass(frozen=True)
+class Hdm5OrderFamily:
+    family_id: int
+    name: str
+    records: tuple[PackedDecoderRecord, ...]
+    rationale: str
 
 
 def parse_packed_decoder_brotli(decoder_brotli: bytes) -> PackedDecoderRaw:
@@ -131,16 +142,40 @@ def parse_packed_decoder_brotli(decoder_brotli: bytes) -> PackedDecoderRaw:
     return parsed
 
 
+def parse_decoder_section_for_recode(decoder_section: bytes) -> tuple[PackedDecoderRaw, bytes, str]:
+    """Parse a legacy/HDM decoder section for lossless recode planning.
+
+    This keeps profiler/search tools apples-to-apples with the current archive
+    surface: an HDM4 release packet must be compared from its consumed HDM4
+    bytes, not accidentally rejected or converted to a nearby legacy Brotli
+    substrate before profiling.
+    """
+
+    if decoder_section.startswith(b"HDM3"):
+        parsed = decode_hdm3_q_brotli_split_fixture(decoder_section)
+        return parsed, parsed.to_raw(), "hdm3_q_brotli_split"
+    if decoder_section.startswith(b"HDM4"):
+        parsed = decode_hdm4_q_brotli_split_fixture(decoder_section)
+        return parsed, parsed.to_raw(), "hdm4_q_brotli_split"
+    parsed = parse_packed_decoder_brotli(decoder_section)
+    return parsed, parsed.to_raw(), "legacy_brotli_packed_decoder"
+
+
 def build_structural_recode_profile(
     packed: PackedHnervPayload,
     *,
     source_label: str,
     source_archive_sha256: str,
+    include_hdm5_search: bool = False,
+    hdm5_max_parts: int = 8,
+    hdm5_workers: int | None = None,
+    hdm5_top_k: int = 16,
 ) -> dict[str, Any]:
     """Profile lossless structural recodes for a PR106-style decoder section."""
 
-    parsed = parse_packed_decoder_brotli(packed.decoder_packed_brotli)
-    source_raw = parsed.to_raw()
+    parsed, source_raw, source_decoder_codec = parse_decoder_section_for_recode(
+        packed.decoder_packed_brotli
+    )
     source_brotli = packed.decoder_packed_brotli
     entropy_summary = _entropy_summary(parsed, source_section_bytes=len(source_brotli))
     variants = [
@@ -196,7 +231,7 @@ def build_structural_recode_profile(
         variants,
         source_section_bytes=len(source_brotli),
     )
-    return {
+    profile = {
         "schema_version": SCHEMA_VERSION,
         "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
         "score_claim": False,
@@ -205,6 +240,7 @@ def build_structural_recode_profile(
         "ready_for_exact_eval_dispatch": False,
         "source_label": source_label,
         "source_archive_sha256": source_archive_sha256,
+        "source_decoder_section_codec": source_decoder_codec,
         "source_decoder_section_sha256": sha256_bytes(source_brotli),
         "source_decoder_section_bytes": len(source_brotli),
         "source_decoder_raw_sha256": sha256_bytes(source_raw),
@@ -223,6 +259,17 @@ def build_structural_recode_profile(
             "requires_exact_cuda_auth_eval",
         ],
     }
+    if include_hdm5_search:
+        profile["hdm5_search"] = search_hdm5_q_brotli_split_recipes(
+            parsed,
+            baseline_section_bytes=len(source_brotli),
+            hdm4_section_bytes=len(encode_hdm4_q_brotli_split_fixture(parsed)[0]),
+            quality=11,
+            max_parts=hdm5_max_parts,
+            workers=hdm5_workers,
+            top_k=hdm5_top_k,
+        )
+    return profile
 
 
 def _context_overhead_plan(
@@ -1167,6 +1214,268 @@ def encode_hdm4_q_brotli_split_fixture(
     }
 
 
+def encode_hdm5_q_brotli_split_planning_fixture(
+    parsed: PackedDecoderRaw,
+    *,
+    ordered_record_names: tuple[str, ...],
+    split_points: tuple[int, ...],
+    quality: int = 11,
+) -> tuple[bytes, dict[str, Any]]:
+    """Encode a planning-only self-describing HDM5 q-Brotli split fixture.
+
+    HDM5 is deliberately conservative: the payload stores the exact record
+    permutation plus split endpoints, so byte accounting does not depend on a
+    future runtime hard-coding a recipe ID. If this self-describing fixture
+    cannot beat HDM4 bytes, a runtime-specialized HDM5 packet should not be
+    promoted without new evidence.
+    """
+
+    ordered_records = _ordered_records_from_names(parsed, ordered_record_names)
+    split_points = _validate_split_points(split_points, record_count=len(ordered_records))
+    compressed_parts: list[bytes] = []
+    previous = 0
+    for split in split_points:
+        q_stream = b"".join(record.q_zz_u8 for record in ordered_records[previous:split])
+        compressed = brotli.compress(q_stream, quality=quality)
+        if len(compressed) > 0xFFFFFF:
+            raise HnervDecoderRecodeError("HDM5 q Brotli chunk exceeds len24")
+        compressed_parts.append(compressed)
+        previous = split
+
+    schema_index_by_name = {name: index for index, (name, _shape) in enumerate(PACKED_STATE_SCHEMA)}
+    order_indices = bytes(schema_index_by_name[record.name] for record in ordered_records)
+    scale_stream = parsed.scale_stream
+    out = io.BytesIO()
+    out.write(b"HDM5")
+    out.write(bytes([HDM5_SCHEMA_VERSION]))
+    out.write(bytes([len(ordered_records)]))
+    out.write(bytes([len(split_points)]))
+    out.write(order_indices)
+    out.write(bytes(split_points))
+    for compressed in compressed_parts:
+        out.write(len(compressed).to_bytes(3, "little"))
+    for compressed in compressed_parts:
+        out.write(compressed)
+    out.write(scale_stream)
+    payload = out.getvalue()
+    restored = decode_hdm5_q_brotli_split_planning_fixture(payload)
+    if restored.to_raw() != parsed.to_raw():
+        raise HnervDecoderRecodeError("HDM5 q Brotli split fixture failed raw roundtrip")
+
+    header_bytes = 4 + 1 + 1 + 1 + len(order_indices) + len(split_points) + 3 * len(split_points)
+    return payload, {
+        "header_bytes": header_bytes,
+        "brotli_quality": quality,
+        "split_points": list(split_points),
+        "part_count": len(split_points),
+        "q_brotli_bytes": sum(len(part) for part in compressed_parts),
+        "q_chunk_bytes": [len(part) for part in compressed_parts],
+        "q_stream_bytes": sum(len(record.q_zz_u8) for record in ordered_records),
+        "raw_scale_bytes": len(scale_stream),
+        "record_order_metadata_bytes": len(order_indices),
+        "split_metadata_bytes": len(split_points),
+        "length_prefix_bytes": 3 * len(split_points),
+        "ordered_record_names": [record.name for record in ordered_records],
+        "self_describing_order": True,
+        "planning_only": True,
+    }
+
+
+def search_hdm5_q_brotli_split_recipes(
+    parsed: PackedDecoderRaw,
+    *,
+    baseline_section_bytes: int | None = None,
+    hdm4_section_bytes: int | None = None,
+    quality: int = 11,
+    max_parts: int = 8,
+    workers: int | None = None,
+    top_k: int = 16,
+) -> dict[str, Any]:
+    """Search deterministic HDM5 record orders and contiguous Brotli partitions.
+
+    The search is exact for each declared order family: every contiguous segment
+    cost is measured with Brotli, and dynamic programming chooses the minimum
+    byte partition for each part count. It emits planning evidence only; a
+    runtime, archive build, no-op proof, and exact eval remain mandatory.
+    """
+
+    if max_parts < 1:
+        raise HnervDecoderRecodeError("HDM5 max_parts must be positive")
+    families = _hdm5_order_families(parsed)
+    hdm4_bytes = (
+        int(hdm4_section_bytes)
+        if hdm4_section_bytes is not None
+        else len(encode_hdm4_q_brotli_split_fixture(parsed, quality=quality)[0])
+    )
+    baseline_bytes = int(baseline_section_bytes) if baseline_section_bytes is not None else hdm4_bytes
+    effective_workers = _resolve_hdm5_workers(workers)
+    family_rows: list[dict[str, Any]] = []
+    all_candidates: list[dict[str, Any]] = []
+    for family in families:
+        rows = _search_hdm5_family(
+            parsed,
+            family,
+            quality=quality,
+            max_parts=max_parts,
+            workers=effective_workers,
+            baseline_section_bytes=baseline_bytes,
+            hdm4_section_bytes=hdm4_bytes,
+        )
+        family_best = min(rows, key=lambda row: (int(row["bytes"]), int(row["part_count"])))
+        family_rows.append(
+            {
+                "family_id": family.family_id,
+                "family_name": family.name,
+                "rationale": family.rationale,
+                "best_candidate": family_best,
+                "candidate_count": len(rows),
+            }
+        )
+        all_candidates.extend(rows)
+
+    all_candidates.sort(
+        key=lambda row: (
+            int(row["bytes"]),
+            int(row["part_count"]),
+            int(row["family_id"]),
+            str(row["family_name"]),
+        )
+    )
+    best = all_candidates[0]
+    best_fixed_recipe_projection = min(
+        all_candidates,
+        key=lambda row: (
+            int(row["fixed_recipe_projected_bytes"]),
+            int(row["part_count"]),
+            int(row["family_id"]),
+            str(row["family_name"]),
+        ),
+    )
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "tool": "tac.hnerv_decoder_recode.search_hdm5_q_brotli_split_recipes",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "archive_ready": False,
+        "ready_for_exact_eval_dispatch": False,
+        "planning_only": True,
+        "codec": "HDM5_planning_self_describing_order_split_q_brotli_raw_scales",
+        "quality": quality,
+        "max_parts": max_parts,
+        "workers": effective_workers,
+        "order_family_count": len(families),
+        "candidate_count": len(all_candidates),
+        "baseline_section_bytes": baseline_bytes,
+        "hdm4_section_bytes": hdm4_bytes,
+        "best_candidate": best,
+        "best_fixed_recipe_projection": best_fixed_recipe_projection,
+        "top_candidates": all_candidates[: max(1, int(top_k))],
+        "family_summaries": family_rows,
+        "verdict": (
+            "hdm5_self_describing_candidate_beats_hdm4_plan_runtime_next"
+            if int(best["byte_delta_vs_hdm4_section"]) < 0
+            else "hdm5_fixed_recipe_candidate_beats_hdm4_plan_runtime_next"
+            if int(best_fixed_recipe_projection["fixed_recipe_projected_byte_delta_vs_hdm4_section"]) < 0
+            else "hdm5_self_describing_search_does_not_beat_hdm4"
+        ),
+        "dispatch_blockers": [
+            "planning_only_hdm5_search",
+            "requires_runtime_decoder_implementation_if_positive",
+            "requires_archive_builder_and_payload_diff_if_positive",
+            "requires_exact_cuda_auth_eval_if_positive",
+        ],
+    }
+
+
+def decode_hdm5_q_brotli_split_planning_fixture(payload: bytes) -> PackedDecoderRaw:
+    """Decode a self-describing HDM5 planning fixture."""
+
+    if payload[:4] != b"HDM5":
+        raise HnervDecoderRecodeError("invalid HDM5 q Brotli split fixture magic")
+    cursor = 4
+    version = _read_payload_exact(payload, cursor, 1, "HDM5 version")[0]
+    cursor += 1
+    if version != HDM5_SCHEMA_VERSION:
+        raise HnervDecoderRecodeError(f"unsupported HDM5 version: {version}")
+    record_count = _read_payload_exact(payload, cursor, 1, "HDM5 record_count")[0]
+    cursor += 1
+    if record_count != len(PACKED_STATE_SCHEMA):
+        raise HnervDecoderRecodeError("HDM5 record count mismatch")
+    part_count = _read_payload_exact(payload, cursor, 1, "HDM5 part_count")[0]
+    cursor += 1
+    if part_count < 1 or part_count > record_count:
+        raise HnervDecoderRecodeError("HDM5 part count out of range")
+    order_indices = _read_payload_exact(payload, cursor, record_count, "HDM5 order_indices")
+    cursor += record_count
+    if sorted(order_indices) != list(range(record_count)):
+        raise HnervDecoderRecodeError("HDM5 order indices are not a schema permutation")
+    split_points = tuple(
+        _read_payload_exact(payload, cursor, part_count, "HDM5 split_points")
+    )
+    cursor += part_count
+    split_points = _validate_split_points(split_points, record_count=record_count)
+    lengths = []
+    for index in range(part_count):
+        lengths.append(
+            int.from_bytes(
+                _read_payload_exact(payload, cursor, 3, f"HDM5 q_brotli_len24_{index}"),
+                "little",
+            )
+        )
+        cursor += 3
+
+    ordered_schema = tuple(PACKED_STATE_SCHEMA[index] for index in order_indices)
+    ordered_records: list[PackedDecoderRecord] = []
+    split_start = 0
+    for index, (length, split_end) in enumerate(zip(lengths, split_points, strict=True)):
+        compressed = _read_payload_exact(payload, cursor, length, f"HDM5 q_brotli_{index}")
+        cursor += length
+        try:
+            q_chunk = brotli.decompress(compressed)
+        except brotli.error as exc:
+            raise HnervDecoderRecodeError(
+                f"HDM5 q stream chunk {index} brotli decode failed: {exc}"
+            ) from exc
+        schema_slice = ordered_schema[split_start:split_end]
+        expected = sum(math.prod(shape) for _name, shape in schema_slice)
+        if len(q_chunk) != expected:
+            raise HnervDecoderRecodeError("HDM5 q chunk length mismatch")
+        q_cursor = 0
+        for name, shape in schema_slice:
+            value_count = math.prod(shape)
+            ordered_records.append(
+                PackedDecoderRecord(
+                    name=name,
+                    shape=shape,
+                    q_zz_u8=q_chunk[q_cursor : q_cursor + value_count],
+                    scale_f32=b"",
+                )
+            )
+            q_cursor += value_count
+        split_start = split_end
+    scale_len = 4 * len(PACKED_STATE_SCHEMA)
+    scale_stream = _read_payload_exact(payload, cursor, scale_len, "HDM5 scale_stream")
+    cursor += scale_len
+    if cursor != len(payload):
+        raise HnervDecoderRecodeError("HDM5 fixture has trailing bytes")
+
+    by_name = {record.name: record for record in ordered_records}
+    records = []
+    for index, (name, shape) in enumerate(PACKED_STATE_SCHEMA):
+        record = by_name.get(name)
+        if record is None or record.shape != shape:
+            raise HnervDecoderRecodeError(f"HDM5 decoded schema mismatch for {name}")
+        records.append(
+            PackedDecoderRecord(
+                name=name,
+                shape=shape,
+                q_zz_u8=record.q_zz_u8,
+                scale_f32=scale_stream[index * 4 : index * 4 + 4],
+            )
+        )
+    return PackedDecoderRaw(records=tuple(records))
+
+
 def decode_global_prev_symbol_context_range_fixture(payload: bytes) -> PackedDecoderRaw:
     """Decode an HDC2 global previous-symbol context fixture."""
 
@@ -1472,6 +1781,245 @@ def _hdm4_ordered_schema(recipe_id: int) -> tuple[tuple[str, tuple[int, ...]], .
     )
 
 
+def _resolve_hdm5_workers(workers: int | None) -> int:
+    if workers is not None:
+        return max(1, int(workers))
+    return max(1, min(8, (os.cpu_count() or 1)))
+
+
+def _ordered_records_from_names(
+    parsed: PackedDecoderRaw,
+    ordered_record_names: tuple[str, ...],
+) -> tuple[PackedDecoderRecord, ...]:
+    if len(ordered_record_names) != len(PACKED_STATE_SCHEMA):
+        raise HnervDecoderRecodeError("HDM5 ordered names length does not match schema")
+    schema_names = [name for name, _shape in PACKED_STATE_SCHEMA]
+    if sorted(ordered_record_names) != sorted(schema_names):
+        raise HnervDecoderRecodeError("HDM5 ordered names are not a schema permutation")
+    record_by_name = {record.name: record for record in parsed.records}
+    ordered = []
+    for name in ordered_record_names:
+        record = record_by_name.get(name)
+        if record is None:
+            raise HnervDecoderRecodeError(f"HDM5 missing record {name}")
+        expected_shape = _shape_for_record_name(name)
+        if record.shape != expected_shape:
+            raise HnervDecoderRecodeError(f"HDM5 shape mismatch for {name}")
+        ordered.append(record)
+    return tuple(ordered)
+
+
+def _validate_split_points(
+    split_points: tuple[int, ...],
+    *,
+    record_count: int,
+) -> tuple[int, ...]:
+    if not split_points:
+        raise HnervDecoderRecodeError("HDM5 split points must not be empty")
+    previous = 0
+    for point in split_points:
+        if point <= previous or point > record_count:
+            raise HnervDecoderRecodeError("HDM5 split points must be strictly increasing")
+        previous = point
+    if split_points[-1] != record_count:
+        raise HnervDecoderRecodeError("HDM5 final split point must equal record count")
+    return tuple(int(point) for point in split_points)
+
+
+def _hdm5_order_families(parsed: PackedDecoderRaw) -> tuple[Hdm5OrderFamily, ...]:
+    record_by_name = {record.name: record for record in parsed.records}
+
+    def order_from_schema(schema: tuple[tuple[str, tuple[int, ...]], ...]) -> tuple[PackedDecoderRecord, ...]:
+        return tuple(record_by_name[name] for name, _shape in schema)
+
+    def entropy(record: PackedDecoderRecord) -> float:
+        return float(_symbol_entropy_summary(record.q_zz_u8)["entropy_bits_per_symbol"])
+
+    def mean_symbol(record: PackedDecoderRecord) -> float:
+        if not record.q_zz_u8:
+            return 0.0
+        return float(sum(record.q_zz_u8) / len(record.q_zz_u8))
+
+    candidates: list[tuple[str, str, tuple[PackedDecoderRecord, ...]]] = [
+        (
+            "packed_size_desc",
+            "source packed schema order, largest tensors first",
+            tuple(parsed.records),
+        ),
+        (
+            "architecture_forward",
+            "model declaration order from FIXED_STATE_SCHEMA",
+            order_from_schema(FIXED_STATE_SCHEMA),
+        ),
+        (
+            "hdm4_role_order",
+            "current HDM4 role order: 3x3 conv, 1x1 conv, bias tail",
+            order_from_schema(_hdm4_ordered_schema(HDM4_RECIPE_ID)),
+        ),
+        (
+            "architecture_reverse",
+            "reverse model declaration order tests tail-to-head locality",
+            tuple(reversed(order_from_schema(FIXED_STATE_SCHEMA))),
+        ),
+        (
+            "q_entropy_ascending",
+            "data-driven grouping from low-entropy tensors to high-entropy tensors",
+            tuple(sorted(parsed.records, key=lambda record: (entropy(record), record.name))),
+        ),
+        (
+            "q_entropy_descending",
+            "data-driven grouping from high-entropy tensors to low-entropy tensors",
+            tuple(sorted(parsed.records, key=lambda record: (-entropy(record), record.name))),
+        ),
+        (
+            "q_mean_symbol_ascending",
+            "data-driven grouping by average quantized symbol value",
+            tuple(sorted(parsed.records, key=lambda record: (mean_symbol(record), record.name))),
+        ),
+    ]
+    seen: set[tuple[str, ...]] = set()
+    families: list[Hdm5OrderFamily] = []
+    for name, rationale, records in candidates:
+        key = tuple(record.name for record in records)
+        if key in seen:
+            continue
+        seen.add(key)
+        families.append(
+            Hdm5OrderFamily(
+                family_id=len(families),
+                name=name,
+                records=records,
+                rationale=rationale,
+            )
+        )
+    return tuple(families)
+
+
+def _search_hdm5_family(
+    parsed: PackedDecoderRaw,
+    family: Hdm5OrderFamily,
+    *,
+    quality: int,
+    max_parts: int,
+    workers: int,
+    baseline_section_bytes: int,
+    hdm4_section_bytes: int,
+) -> list[dict[str, Any]]:
+    record_count = len(family.records)
+    max_parts = min(max_parts, record_count)
+    q_stream = b"".join(record.q_zz_u8 for record in family.records)
+    offsets = [0]
+    cursor = 0
+    for record in family.records:
+        cursor += len(record.q_zz_u8)
+        offsets.append(cursor)
+
+    segment_costs = _hdm5_segment_costs(
+        q_stream,
+        offsets=tuple(offsets),
+        quality=quality,
+        workers=workers,
+    )
+    dp: list[list[tuple[int, tuple[int, ...]] | None]] = [
+        [None for _ in range(record_count + 1)] for _ in range(max_parts + 1)
+    ]
+    for end in range(1, record_count + 1):
+        dp[1][end] = (segment_costs[(0, end)], (end,))
+    for part_count in range(2, max_parts + 1):
+        for end in range(part_count, record_count + 1):
+            best: tuple[int, tuple[int, ...]] | None = None
+            for previous in range(part_count - 1, end):
+                previous_row = dp[part_count - 1][previous]
+                if previous_row is None:
+                    continue
+                candidate_cost = previous_row[0] + segment_costs[(previous, end)]
+                candidate_splits = previous_row[1] + (end,)
+                if best is None or (candidate_cost, candidate_splits) < best:
+                    best = (candidate_cost, candidate_splits)
+            dp[part_count][end] = best
+
+    rows: list[dict[str, Any]] = []
+    for part_count in range(1, max_parts + 1):
+        best = dp[part_count][record_count]
+        if best is None:
+            continue
+        q_brotli_bytes, split_points = best
+        payload, stats = encode_hdm5_q_brotli_split_planning_fixture(
+            parsed,
+            ordered_record_names=tuple(record.name for record in family.records),
+            split_points=split_points,
+            quality=quality,
+        )
+        if len(payload) != stats["header_bytes"] + q_brotli_bytes + len(parsed.scale_stream):
+            raise HnervDecoderRecodeError("HDM5 search byte accounting mismatch")
+        fixed_recipe_header_bytes = 5 + stats["length_prefix_bytes"]
+        fixed_recipe_projected_bytes = (
+            q_brotli_bytes + stats["raw_scale_bytes"] + fixed_recipe_header_bytes
+        )
+        rows.append(
+            {
+                "variant": "hdm5_q_brotli_split_search_self_describing",
+                "codec": "HDM5_planning_self_describing_order_split_q_brotli_raw_scales",
+                "score_claim": False,
+                "archive_ready": False,
+                "ready_for_exact_eval_dispatch": False,
+                "raw_equal": decode_hdm5_q_brotli_split_planning_fixture(payload).to_raw()
+                == parsed.to_raw(),
+                "family_id": family.family_id,
+                "family_name": family.name,
+                "family_rationale": family.rationale,
+                "part_count": part_count,
+                "split_points": list(split_points),
+                "bytes": len(payload),
+                "sha256": sha256_bytes(payload),
+                "byte_delta_vs_baseline_section": len(payload) - baseline_section_bytes,
+                "byte_delta_vs_hdm4_section": len(payload) - hdm4_section_bytes,
+                "q_brotli_bytes": q_brotli_bytes,
+                "header_bytes": stats["header_bytes"],
+                "fixed_recipe_header_bytes": fixed_recipe_header_bytes,
+                "fixed_recipe_projected_bytes": fixed_recipe_projected_bytes,
+                "fixed_recipe_projected_byte_delta_vs_hdm4_section": (
+                    fixed_recipe_projected_bytes - hdm4_section_bytes
+                ),
+                "fixed_recipe_projected_byte_delta_vs_baseline_section": (
+                    fixed_recipe_projected_bytes - baseline_section_bytes
+                ),
+                "fixed_recipe_projection_contract": (
+                    "planning_only_assumes_runtime_hardcodes_order_and_split_recipe"
+                ),
+                "record_order_metadata_bytes": stats["record_order_metadata_bytes"],
+                "split_metadata_bytes": stats["split_metadata_bytes"],
+                "length_prefix_bytes": stats["length_prefix_bytes"],
+                "raw_scale_bytes": stats["raw_scale_bytes"],
+                "q_chunk_bytes": stats["q_chunk_bytes"],
+                "ordered_record_names": stats["ordered_record_names"],
+                "planning_only": True,
+            }
+        )
+    return rows
+
+
+def _hdm5_segment_costs(
+    q_stream: bytes,
+    *,
+    offsets: tuple[int, ...],
+    quality: int,
+    workers: int,
+) -> dict[tuple[int, int], int]:
+    record_count = len(offsets) - 1
+    segments = [(start, end) for start in range(record_count) for end in range(start + 1, record_count + 1)]
+
+    def measure(segment: tuple[int, int]) -> tuple[tuple[int, int], int]:
+        start, end = segment
+        payload = q_stream[offsets[start] : offsets[end]]
+        return segment, len(brotli.compress(payload, quality=quality))
+
+    if workers <= 1:
+        return dict(measure(segment) for segment in segments)
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        return dict(executor.map(measure, segments))
+
+
 def _encode_context_symbol_stream(stream: list[int]) -> tuple[dict[str, Any], int]:
     counts = Counter(stream)
     symbols = sorted(counts)
@@ -1622,11 +2170,15 @@ __all__ = [
     "decode_global_prev_symbol_mixed_context_fixture",
     "decode_hdm3_q_brotli_split_fixture",
     "decode_hdm4_q_brotli_split_fixture",
+    "decode_hdm5_q_brotli_split_planning_fixture",
     "decode_prev_symbol_context_range_fixture",
     "encode_global_prev_symbol_context_range_fixture",
     "encode_global_prev_symbol_mixed_context_fixture",
     "encode_hdm3_q_brotli_split_fixture",
     "encode_hdm4_q_brotli_split_fixture",
+    "encode_hdm5_q_brotli_split_planning_fixture",
     "encode_prev_symbol_context_range_fixture",
+    "parse_decoder_section_for_recode",
     "parse_packed_decoder_brotli",
+    "search_hdm5_q_brotli_split_recipes",
 ]

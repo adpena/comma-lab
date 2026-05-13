@@ -13,12 +13,17 @@ from tac.hnerv_decoder_recode import (
     decode_global_prev_symbol_context_range_fixture,
     decode_global_prev_symbol_mixed_context_fixture,
     decode_hdm3_q_brotli_split_fixture,
+    decode_hdm5_q_brotli_split_planning_fixture,
     decode_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_mixed_context_fixture,
     encode_hdm3_q_brotli_split_fixture,
+    encode_hdm4_q_brotli_split_fixture,
+    encode_hdm5_q_brotli_split_planning_fixture,
     encode_prev_symbol_context_range_fixture,
+    parse_decoder_section_for_recode,
     parse_packed_decoder_brotli,
+    search_hdm5_q_brotli_split_recipes,
 )
 from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv, write_stored_single_member_zip
 from tac.packet_compiler.pr106_sidecar_packet import (
@@ -239,6 +244,187 @@ def test_hdm3_q_brotli_split_fixture_roundtrips_and_reduces_raw_q_bytes() -> Non
     assert stats["raw_scale_bytes"] == len(parsed.scale_stream)
     assert stats["q_brotli_bytes"] < len(parsed.q_stream)
     assert len(payload) == 7 + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
+
+
+def test_parse_decoder_section_for_recode_accepts_hdm4_source_sections() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
+
+    restored, raw, codec = parse_decoder_section_for_recode(hdm4_payload)
+
+    assert codec == "hdm4_q_brotli_split"
+    assert raw == parsed.to_raw()
+    assert restored.to_raw() == parsed.to_raw()
+
+
+def test_hdm5_planning_fixture_roundtrips_with_self_describing_byte_accounting() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    ordered_names = tuple(name for name, _shape in reversed(PACKED_STATE_SCHEMA))
+    split_points = (4, 12, len(PACKED_STATE_SCHEMA))
+
+    payload, stats = encode_hdm5_q_brotli_split_planning_fixture(
+        parsed,
+        ordered_record_names=ordered_names,
+        split_points=split_points,
+        quality=5,
+    )
+    restored = decode_hdm5_q_brotli_split_planning_fixture(payload)
+
+    assert payload.startswith(b"HDM5")
+    assert restored.to_raw() == parsed.to_raw()
+    assert stats["planning_only"] is True
+    assert stats["self_describing_order"] is True
+    assert stats["record_order_metadata_bytes"] == len(PACKED_STATE_SCHEMA)
+    assert stats["split_metadata_bytes"] == len(split_points)
+    assert stats["length_prefix_bytes"] == 3 * len(split_points)
+    assert len(payload) == (
+        stats["header_bytes"] + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
+    )
+
+
+def test_hdm5_search_is_planning_only_and_compares_against_hdm4() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
+
+    search = search_hdm5_q_brotli_split_recipes(
+        parsed,
+        baseline_section_bytes=len(hdm4_payload),
+        hdm4_section_bytes=len(hdm4_payload),
+        quality=5,
+        max_parts=3,
+        workers=1,
+        top_k=4,
+    )
+
+    assert search["score_claim"] is False
+    assert search["planning_only"] is True
+    assert search["archive_ready"] is False
+    assert search["ready_for_exact_eval_dispatch"] is False
+    assert search["hdm4_section_bytes"] == len(hdm4_payload)
+    assert search["candidate_count"] >= search["order_family_count"]
+    assert len(search["top_candidates"]) == 4
+    best = search["best_candidate"]
+    assert best["raw_equal"] is True
+    assert best["byte_delta_vs_hdm4_section"] == best["bytes"] - len(hdm4_payload)
+    assert best["record_order_metadata_bytes"] == len(PACKED_STATE_SCHEMA)
+    assert best["fixed_recipe_projected_bytes"] <= best["bytes"]
+    assert search["best_fixed_recipe_projection"]["fixed_recipe_projection_contract"] == (
+        "planning_only_assumes_runtime_hardcodes_order_and_split_recipe"
+    )
+    assert search["best_fixed_recipe_projection"]["fixed_recipe_projected_bytes"] <= best[
+        "fixed_recipe_projected_bytes"
+    ]
+
+
+def test_hdm5_search_is_deterministic_across_serial_and_parallel_workers() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
+
+    serial = search_hdm5_q_brotli_split_recipes(
+        parsed,
+        baseline_section_bytes=len(hdm4_payload),
+        hdm4_section_bytes=len(hdm4_payload),
+        quality=5,
+        max_parts=4,
+        workers=1,
+        top_k=5,
+    )
+    parallel = search_hdm5_q_brotli_split_recipes(
+        parsed,
+        baseline_section_bytes=len(hdm4_payload),
+        hdm4_section_bytes=len(hdm4_payload),
+        quality=5,
+        max_parts=4,
+        workers=2,
+        top_k=5,
+    )
+
+    assert parallel["best_candidate"] == serial["best_candidate"]
+    assert parallel["top_candidates"] == serial["top_candidates"]
+    assert parallel["family_summaries"] == serial["family_summaries"]
+
+
+def test_hdm5_planning_fixture_rejects_non_permutation_order_indices() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    ordered_names = tuple(name for name, _shape in PACKED_STATE_SCHEMA)
+    payload, _stats = encode_hdm5_q_brotli_split_planning_fixture(
+        parsed,
+        ordered_record_names=ordered_names,
+        split_points=(len(PACKED_STATE_SCHEMA),),
+        quality=5,
+    )
+    broken = bytearray(payload)
+    broken[8] = broken[7]
+
+    import pytest
+
+    with pytest.raises(Exception, match="order indices are not a schema permutation"):
+        decode_hdm5_q_brotli_split_planning_fixture(bytes(broken))
+
+
+def test_structural_recode_profile_can_search_from_hdm4_archive_surface() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
+    packed = parse_ff_packed_brotli_hnerv(_packed_payload(hdm4_payload))
+
+    profile = build_structural_recode_profile(
+        packed,
+        source_label="fixture-hdm4",
+        source_archive_sha256="b" * 64,
+        include_hdm5_search=True,
+        hdm5_max_parts=3,
+        hdm5_workers=1,
+        hdm5_top_k=3,
+    )
+
+    assert profile["source_decoder_section_codec"] == "hdm4_q_brotli_split"
+    assert profile["source_decoder_section_bytes"] == len(hdm4_payload)
+    assert profile["hdm5_search"]["score_claim"] is False
+    assert profile["hdm5_search"]["best_candidate"]["raw_equal"] is True
+    assert "best_fixed_recipe_projection" in profile["hdm5_search"]
+
+
+def test_profile_hnerv_decoder_structural_recode_cli_includes_hdm5_search(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
+    write_stored_single_member_zip(
+        archive,
+        member_name="x",
+        payload=_packed_payload(hdm4_payload),
+    )
+    json_out = tmp_path / "profile.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "profile_hnerv_decoder_structural_recode.py"),
+            "--source-archive",
+            str(archive),
+            "--source-label",
+            "fixture-hdm4-cli",
+            "--include-hdm5-search",
+            "--hdm5-max-parts",
+            "2",
+            "--hdm5-workers",
+            "1",
+            "--hdm5-top-k",
+            "2",
+            "--json-out",
+            str(json_out),
+        ],
+        check=True,
+        text=True,
+    )
+
+    payload = json.loads(json_out.read_text())
+    assert payload["source_label"] == "fixture-hdm4-cli"
+    assert payload["source_decoder_section_codec"] == "hdm4_q_brotli_split"
+    assert payload["hdm5_search"]["score_claim"] is False
+    assert payload["hdm5_search"]["planning_only"] is True
+    assert len(payload["hdm5_search"]["top_candidates"]) == 2
 
 
 def test_mixed_global_context_fixture_rejects_schema_record_count_mismatch() -> None:

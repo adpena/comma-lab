@@ -24,6 +24,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-archive", type=Path, required=True)
     parser.add_argument("--source-label", required=True)
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument(
+        "--include-hdm5-search",
+        action="store_true",
+        help="Run the explicit planning-only HDM5 order/partition search.",
+    )
+    parser.add_argument(
+        "--hdm5-max-parts",
+        type=int,
+        default=8,
+        help="Maximum contiguous q-Brotli chunks considered by the HDM5 DP search.",
+    )
+    parser.add_argument(
+        "--hdm5-workers",
+        type=int,
+        default=None,
+        help="Thread workers for HDM5 segment compression; default caps at local CPU/8.",
+    )
+    parser.add_argument(
+        "--hdm5-top-k",
+        type=int,
+        default=16,
+        help="Number of HDM5 planning candidates retained in the report.",
+    )
     return parser.parse_args(argv)
 
 
@@ -34,6 +57,10 @@ def main(argv: list[str] | None = None) -> int:
         view.packed,
         source_label=args.source_label,
         source_archive_sha256=view.archive.archive_sha256,
+        include_hdm5_search=args.include_hdm5_search,
+        hdm5_max_parts=args.hdm5_max_parts,
+        hdm5_workers=args.hdm5_workers,
+        hdm5_top_k=args.hdm5_top_k,
     )
     profile["source_payload_kind"] = view.payload_kind
     profile["source_decoder_section_name"] = (
