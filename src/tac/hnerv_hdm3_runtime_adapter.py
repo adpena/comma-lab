@@ -14,6 +14,7 @@ custody for runtime parity, but exact CUDA auth eval remains the score truth.
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,11 @@ from tac.hnerv_lowlevel_packer import (
     PackedHnervPayload,
     parse_ff_packed_brotli_hnerv,
     sha256_bytes,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_MAGIC,
+    emit_pr106_sidecar_packet,
+    parse_pr106_sidecar_packet,
 )
 from tac.repo_io import json_text, write_json
 
@@ -52,6 +58,45 @@ def restore_hdm3_payload_to_legacy_brotli(
     decoder bytes and rewrapped as a legacy Brotli decoder section. Unknown
     decoder sections fail closed instead of falling through to public inflate.
     """
+    if payload and payload[0] == PR106_SIDECAR_MAGIC:
+        packet = parse_pr106_sidecar_packet(payload)
+        restored_inner, inner_proof = restore_hdm3_payload_to_legacy_brotli(
+            packet.pr106_bytes,
+            brotli_quality=brotli_quality,
+            require_hdm3=require_hdm3,
+        )
+        restored_packet = emit_pr106_sidecar_packet(
+            replace(packet, pr106_bytes=restored_inner)
+        )
+        proof = {
+            **inner_proof,
+            "mode": f"pr106_sidecar_wrapper_{inner_proof['mode']}",
+            "proof_scope": "pr106_sidecar_wrapper_inner_payload_normalization",
+            "input_payload_sha256": sha256_bytes(payload),
+            "input_payload_bytes": len(payload),
+            "output_payload_sha256": sha256_bytes(restored_packet),
+            "output_payload_bytes": len(restored_packet),
+            "payload_changed": restored_packet != payload,
+            "wrapper_format_id": packet.format_id,
+            "wrapper_sidecar_kind": packet.sidecar_kind,
+            "wrapper_sidecar_payload_sha256": sha256_bytes(packet.sidecar_payload),
+            "wrapper_sidecar_payload_bytes": len(packet.sidecar_payload),
+            "wrapper_framing_meta_sha256": (
+                sha256_bytes(packet.framing_meta) if packet.framing_meta is not None else None
+            ),
+            "wrapper_framing_meta_bytes": (
+                len(packet.framing_meta) if packet.framing_meta is not None else 0
+            ),
+            "wrapper_sidecar_preserved": parse_pr106_sidecar_packet(
+                restored_packet
+            ).sidecar_payload == packet.sidecar_payload,
+            "inner_payload_proof": inner_proof,
+        }
+        proof["ready_for_public_runtime_inflate"] = bool(
+            inner_proof.get("ready_for_public_runtime_inflate")
+            and proof["wrapper_sidecar_preserved"]
+        )
+        return restored_packet, proof
 
     packed = parse_ff_packed_brotli_hnerv(payload)
     decoder = packed.decoder_packed_brotli

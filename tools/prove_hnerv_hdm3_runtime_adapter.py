@@ -25,8 +25,12 @@ from tac.hnerv_hdm3_runtime_adapter import (  # noqa: E402
 from tac.hnerv_lowlevel_packer import (  # noqa: E402
     HnervLowlevelPackError,
     parse_ff_packed_brotli_hnerv,
-    read_strict_single_member_zip,
+    read_packed_archive_view,
     sha256_bytes,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_SIDECAR_MAGIC,
+    parse_pr106_sidecar_packet,
 )
 from tac.repo_io import repo_relative, sha256_file, write_json  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
@@ -50,16 +54,18 @@ def build_proof(
     output_dir: Path,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    source = read_strict_single_member_zip(source_archive)
-    candidate = read_strict_single_member_zip(candidate_archive)
-    source_packed = parse_ff_packed_brotli_hnerv(source.payload)
-    candidate_packed = parse_ff_packed_brotli_hnerv(candidate.payload)
+    source_view = read_packed_archive_view(source_archive)
+    candidate_view = read_packed_archive_view(candidate_archive)
+    source = source_view.archive
+    candidate = candidate_view.archive
+    source_packed = source_view.packed
+    candidate_packed = candidate_view.packed
     source_raw = brotli.decompress(source_packed.decoder_packed_brotli)
     restored_payload, adapter_proof = restore_hdm3_payload_to_legacy_brotli(
         candidate.payload,
         require_hdm3=True,
     )
-    restored_packed = parse_ff_packed_brotli_hnerv(restored_payload)
+    restored_packed = _packed_from_member_payload(restored_payload)
     restored_raw = brotli.decompress(restored_packed.decoder_packed_brotli)
     restored_payload_path = output_dir / "candidate_hdm3_restored_legacy_payload.bin"
     restored_payload_path.write_bytes(restored_payload)
@@ -105,6 +111,7 @@ def build_proof(
         "source_archive_sha256": source.archive_sha256,
         "source_archive_bytes": source.archive_bytes,
         "source_member_name": source.member_name,
+        "source_payload_kind": source_view.payload_kind,
         "source_payload_sha256": source_payload_sha,
         "source_payload_bytes": len(source.payload),
         "source_decoder_section_sha256": source_decoder_section_sha,
@@ -113,6 +120,7 @@ def build_proof(
         "candidate_archive_sha256": candidate.archive_sha256,
         "candidate_archive_bytes": candidate.archive_bytes,
         "candidate_member_name": candidate.member_name,
+        "candidate_payload_kind": candidate_view.payload_kind,
         "candidate_decoder_section_sha256": sha256_bytes(candidate_packed.decoder_packed_brotli),
         "candidate_decoder_section_bytes": len(candidate_packed.decoder_packed_brotli),
         "candidate_decoder_section_is_hdm3": candidate_packed.decoder_packed_brotli.startswith(b"HDM3"),
@@ -151,6 +159,13 @@ def build_proof(
     }
     write_json(output_dir / "runtime_adapter_proof.json", proof)
     return proof
+
+
+def _packed_from_member_payload(payload: bytes):
+    if payload and payload[0] == PR106_SIDECAR_MAGIC:
+        packet = parse_pr106_sidecar_packet(payload)
+        return parse_ff_packed_brotli_hnerv(packet.pr106_bytes)
+    return parse_ff_packed_brotli_hnerv(payload)
 
 
 def _dispatch_blockers(inflate_output_parity_proven: bool) -> list[str]:

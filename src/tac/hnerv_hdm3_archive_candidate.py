@@ -25,10 +25,8 @@ from tac.hnerv_decoder_recode import (
 )
 from tac.hnerv_lowlevel_packer import (
     PackedHnervPayload,
-    parse_ff_packed_brotli_hnerv,
-    read_strict_single_member_zip,
+    read_packed_archive_view,
     sha256_bytes,
-    write_stored_single_member_zip,
 )
 from tac.repo_io import read_json, repo_relative, sha256_file, write_json
 
@@ -82,8 +80,9 @@ def build_hdm3_archive_candidate(
     output_root.mkdir(parents=True, exist_ok=True)
     repo = Path(repo_root) if repo_root is not None else Path.cwd()
 
-    source = read_strict_single_member_zip(source_path)
-    packed = parse_ff_packed_brotli_hnerv(source.payload)
+    view = read_packed_archive_view(source_path)
+    source = view.archive
+    packed = view.packed
     parsed_decoder = parse_packed_decoder_brotli(packed.decoder_packed_brotli)
     source_raw = brotli.decompress(packed.decoder_packed_brotli)
     if parsed_decoder.to_raw() != source_raw:
@@ -113,21 +112,20 @@ def build_hdm3_archive_candidate(
     candidate_payload_sha = ""
     ready_for_archive_preflight = False
     if not archive_build_blockers:
-        candidate_payload = PackedHnervPayload(
+        candidate_packed = PackedHnervPayload(
             header=packed.header,
             decoder_packed_brotli=hdm3_stream,
             latents_and_sidecar_brotli=packed.latents_and_sidecar_brotli,
-        ).to_bytes()
-        candidate_archive_path = output_root / f"{_slug(source_label)}_hdm3_archive_candidate.zip"
-        write_stored_single_member_zip(
-            candidate_archive_path,
-            member_name=source.member_name,
-            payload=candidate_payload,
+            header_format=packed.header_format,
         )
+        candidate_payload = view.emit_payload(candidate_packed)
+        candidate_archive_path = output_root / f"{_slug(source_label)}_hdm3_archive_candidate.zip"
+        view.write_archive(candidate_archive_path, candidate_payload)
         candidate_archive_sha = sha256_file(candidate_archive_path)
         candidate_archive_bytes = candidate_archive_path.stat().st_size
         candidate_payload_sha = sha256_bytes(candidate_payload)
-        checked = parse_ff_packed_brotli_hnerv(candidate_payload)
+        checked_view = read_packed_archive_view(candidate_archive_path)
+        checked = checked_view.packed
         if checked.decoder_packed_brotli != hdm3_stream:
             archive_build_blockers.append("candidate_decoder_section_not_hdm3_stream")
         if checked.latents_and_sidecar_brotli != packed.latents_and_sidecar_brotli:
@@ -158,8 +156,11 @@ def build_hdm3_archive_candidate(
         "source_archive_bytes": source.archive_bytes,
         "source_member_name": source.member_name,
         "source_member_bytes": source.member_bytes,
+        "source_payload_kind": view.payload_kind,
         "source_payload_sha256": sha256_bytes(source.payload),
         "source_payload_bytes": len(source.payload),
+        "source_hnerv_payload_sha256": sha256_bytes(view.hnerv_payload),
+        "source_hnerv_payload_bytes": len(view.hnerv_payload),
         "source_decoder_section_sha256": sha256_bytes(packed.decoder_packed_brotli),
         "source_decoder_section_bytes": len(packed.decoder_packed_brotli),
         "source_decoder_raw_sha256": sha256_bytes(source_raw),
@@ -177,6 +178,12 @@ def build_hdm3_archive_candidate(
         ),
         "candidate_payload_sha256": candidate_payload_sha,
         "candidate_payload_bytes": len(candidate_payload) if candidate_payload is not None else None,
+        "candidate_hnerv_payload_sha256": (
+            sha256_bytes(candidate_packed.to_bytes()) if candidate_payload is not None else ""
+        ),
+        "candidate_hnerv_payload_bytes": (
+            len(candidate_packed.to_bytes()) if candidate_payload is not None else None
+        ),
         "candidate_archive_path": (
             repo_relative(candidate_archive_path, repo) if candidate_archive_path is not None else ""
         ),
@@ -195,6 +202,7 @@ def build_hdm3_archive_candidate(
         "section_replacement_proof": {
             "contract": "hnerv_hdm3_single_section_replacement_v1",
             "replaced_section": "decoder_packed_brotli",
+            "source_payload_kind": view.payload_kind,
             "header_rewritten": True,
             "latents_and_sidecar_preserved": True,
             "zip_member_preserved": candidate_archive_path is not None,

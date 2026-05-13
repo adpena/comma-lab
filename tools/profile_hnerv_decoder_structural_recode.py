@@ -15,10 +15,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.hnerv_decoder_recode import build_structural_recode_profile  # noqa: E402
-from tac.hnerv_lowlevel_packer import (  # noqa: E402
-    parse_ff_packed_brotli_hnerv,
-    read_strict_single_member_zip,
-)
+from tac.hnerv_lowlevel_packer import read_packed_archive_view  # noqa: E402
 from tac.repo_io import json_text  # noqa: E402
 
 
@@ -32,12 +29,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    source = read_strict_single_member_zip(args.source_archive)
-    packed = parse_ff_packed_brotli_hnerv(source.payload)
+    view = read_packed_archive_view(args.source_archive)
     profile = build_structural_recode_profile(
-        packed,
+        view.packed,
         source_label=args.source_label,
-        source_archive_sha256=source.archive_sha256,
+        source_archive_sha256=view.archive.archive_sha256,
+    )
+    profile["source_payload_kind"] = view.payload_kind
+    profile["source_decoder_section_name"] = (
+        "inner_decoder_packed_brotli"
+        if view.payload_kind == "pr106_sidecar_wrapper"
+        else "decoder_packed_brotli"
     )
     text = json_text(profile)
     if args.json_out:

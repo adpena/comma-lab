@@ -21,6 +21,11 @@ from tac.hnerv_decoder_recode import (
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv, write_stored_single_member_zip
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_FORMAT_BROTLI,
+    PR106SidecarPacket,
+    emit_pr106_sidecar_packet,
+)
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -291,6 +296,46 @@ def test_profile_hnerv_decoder_structural_recode_cli(tmp_path: Path) -> None:
     payload = json.loads(json_out.read_text())
     assert payload["source_label"] == "fixture"
     assert payload["score_claim"] is False
+    assert payload["source_payload_kind"] == "raw_ff_hnerv"
+    assert payload["source_decoder_section_name"] == "decoder_packed_brotli"
+    assert payload["best_variant"]["raw_equal"] is True
+
+
+def test_profile_hnerv_decoder_structural_recode_cli_supports_pr106_sidecar(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    inner = _packed_payload(brotli.compress(_synthetic_decoder_raw(), quality=5))
+    sidecar = emit_pr106_sidecar_packet(
+        PR106SidecarPacket(
+            format_id=PR106_SIDECAR_FORMAT_BROTLI,
+            pr106_bytes=inner,
+            sidecar_payload=brotli.compress(b"\x00\x00", quality=5),
+        )
+    )
+    write_stored_single_member_zip(archive, member_name="0.bin", payload=sidecar)
+    json_out = tmp_path / "profile.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "profile_hnerv_decoder_structural_recode.py"),
+            "--source-archive",
+            str(archive),
+            "--source-label",
+            "fixture-sidecar",
+            "--json-out",
+            str(json_out),
+        ],
+        check=True,
+        text=True,
+    )
+
+    payload = json.loads(json_out.read_text())
+    assert payload["source_label"] == "fixture-sidecar"
+    assert payload["score_claim"] is False
+    assert payload["source_payload_kind"] == "pr106_sidecar_wrapper"
+    assert payload["source_decoder_section_name"] == "inner_decoder_packed_brotli"
     assert payload["best_variant"]["raw_equal"] is True
 
 

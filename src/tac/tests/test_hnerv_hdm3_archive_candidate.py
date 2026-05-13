@@ -19,8 +19,15 @@ from tac.hnerv_hdm3_archive_candidate import (
 )
 from tac.hnerv_lowlevel_packer import (
     parse_ff_packed_brotli_hnerv,
+    read_packed_archive_view,
     read_strict_single_member_zip,
     write_stored_single_member_zip,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_FORMAT_BROTLI,
+    PR106SidecarPacket,
+    emit_pr106_sidecar_packet,
+    parse_pr106_sidecar_packet,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -98,6 +105,39 @@ def test_build_hdm3_archive_candidate_is_byte_closed_but_not_dispatch_ready(
         infos = zf.infolist()
     assert [info.filename for info in infos] == ["x"]
     assert infos[0].date_time == (1980, 1, 1, 0, 0, 0)
+
+
+def test_build_hdm3_archive_candidate_preserves_pr106_sidecar_wrapper(
+    tmp_path: Path,
+) -> None:
+    source_archive = _source_sidecar_archive(tmp_path)
+    source_view = read_packed_archive_view(source_archive)
+    source_packet = parse_pr106_sidecar_packet(source_view.archive.payload)
+    source_raw = brotli.decompress(source_view.packed.decoder_packed_brotli)
+
+    manifest = build_hdm3_archive_candidate(
+        source_archive=source_archive,
+        output_dir=tmp_path / "out",
+        source_label="PR106 R2 sidecar",
+        repo_root=REPO,
+    )
+
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_archive_preflight"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["source_payload_kind"] == "pr106_sidecar_wrapper"
+    assert manifest["candidate_rate_positive"] is True
+    candidate_archive = Path(manifest["candidate_archive_path"])
+    assert candidate_archive.exists()
+    candidate_view = read_packed_archive_view(candidate_archive)
+    candidate_packet = parse_pr106_sidecar_packet(candidate_view.archive.payload)
+    assert candidate_view.payload_kind == "pr106_sidecar_wrapper"
+    assert candidate_packet.format_id == source_packet.format_id
+    assert candidate_packet.sidecar_payload == source_packet.sidecar_payload
+    assert candidate_view.packed.decoder_packed_brotli.startswith(b"HDM3")
+    assert candidate_view.packed.latents_and_sidecar_brotli == source_view.packed.latents_and_sidecar_brotli
+    restored = decode_hdm3_q_brotli_split_fixture(candidate_view.packed.decoder_packed_brotli)
+    assert restored.to_raw() == source_raw
 
 
 def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(
@@ -258,6 +298,27 @@ def _source_archive(tmp_path: Path) -> Path:
         source_archive,
         member_name="x",
         payload=_packed_payload(decoder_brotli, latents),
+    )
+    return source_archive
+
+
+def _source_sidecar_archive(tmp_path: Path) -> Path:
+    raw = _synthetic_context_decoder_raw()
+    decoder_brotli = brotli.compress(raw, quality=0)
+    latents = brotli.compress(b"latents" * 100, quality=5)
+    inner = _packed_payload(decoder_brotli, latents)
+    source_archive = tmp_path / "source_sidecar.zip"
+    sidecar = emit_pr106_sidecar_packet(
+        PR106SidecarPacket(
+            format_id=PR106_SIDECAR_FORMAT_BROTLI,
+            pr106_bytes=inner,
+            sidecar_payload=brotli.compress(b"\x00\x00", quality=5),
+        )
+    )
+    write_stored_single_member_zip(
+        source_archive,
+        member_name="0.bin",
+        payload=sidecar,
     )
     return source_archive
 
