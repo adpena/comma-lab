@@ -45661,21 +45661,21 @@ def check_substrate_trainer_does_not_hardcode_hardware_substrate(
 # #166. Catalog #166 enforces that the dispatch-time HEAD parity ledger
 # remains wired in ``experiments/modal_train_lane.py``; Catalog #191
 # enforces that the Modal-dispatch caller (``tools/operator_authorize.py``
-# specifically the ``_dispatch_modal`` function) THREADS ``--sentinel-files``
-# and ``--require-clean-head`` to the modal_train_lane CLI. Without these
-# flags, the Catalog #166 fail-closed sentinel-mismatch protection
-# (rc=13 at modal_train_lane.py:327-342) is structurally INACTIVE — only
-# the warn-only HEAD-mismatch ledger remains, which does NOT block stale
-# code from running on a paid GPU.
+# specifically the ``_dispatch_modal`` function) THREADS ``--sentinel-files``,
+# ``--require-clean-head``, and the recipe ``--lane-id`` to the
+# modal_train_lane CLI. Without these flags, the Catalog #166 fail-closed
+# sentinel-mismatch protection (rc=13 at modal_train_lane.py:327-342) is
+# structurally INACTIVE, or the Modal direct claim can split away from the
+# operator-approved lane id.
 #
 # Fix surface: ``tools/operator_authorize.py::_dispatch_modal`` builds the
-# modal CLI cmd with ``--sentinel-files <auto-discovered + recipe-declared>``
-# and ``--require-clean-head`` already wired.
+# modal CLI cmd with ``--sentinel-files <auto-discovered + recipe-declared>``,
+# ``--require-clean-head``, and ``--lane-id <recipe.lane_id>`` already wired.
 #
 # This STRICT gate verifies the function body contains BOTH wire-up tokens
-# (literal string ``"--sentinel-files"`` AND ``"--require-clean-head"``)
-# in the call-construction context. There is no waiver — removing either
-# flag re-enables the bug class. Same as Catalog #166 (no waiver).
+# (literal strings ``"--sentinel-files"``, ``"--require-clean-head"``, and
+# ``"--lane-id"``) in the call-construction context. There is no waiver —
+# removing any flag re-enables the bug class. Same as Catalog #166 (no waiver).
 #
 # Sister of Catalog #166 (HEAD-parity ledger surface) + Catalog #167
 # (smoke-before-full pattern). Together they close the failure modes:
@@ -45691,6 +45691,7 @@ _CHECK_191_DISPATCHER_PATH = "tools/operator_authorize.py"
 _CHECK_191_REQUIRED_TOKENS: tuple[str, ...] = (
     "--sentinel-files",
     "--require-clean-head",
+    "--lane-id",
     "_modal_sentinel_files",
 )
 
@@ -45706,10 +45707,12 @@ def check_modal_dispatch_threads_sentinel_files_per_catalog_166(
 
     The check verifies ``tools/operator_authorize.py`` exists and contains
     every required contract surface in ``_CHECK_191_REQUIRED_TOKENS``. The
-    bug class: removing either ``--sentinel-files`` or ``--require-clean-head``
+    bug class: removing ``--sentinel-files``, ``--require-clean-head``, or
+    ``--lane-id``
     from the modal cmd construction silently disables Catalog #166's
-    fail-closed protection — paid GPU dispatch proceeds on a stale snapshot
-    while only the warn-only HEAD ledger records the post-mortem evidence.
+    fail-closed protection or splits dispatch custody across inferred lane ids
+    — paid GPU dispatch proceeds on a stale snapshot or cannot be matched to
+    the operator-approved claim.
 
     Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #2.
     """
@@ -45736,8 +45739,9 @@ def check_modal_dispatch_threads_sentinel_files_per_catalog_166(
                     f"{_CHECK_191_DISPATCHER_PATH}: missing required "
                     f"wire-up surface `{surface}` — Catalog #191 requires "
                     "the Modal dispatcher to thread sentinel-files / "
-                    "require-clean-head into the modal_train_lane CLI so "
-                    "Catalog #166's fail-closed gate fires."
+                    "require-clean-head / lane-id into the modal_train_lane "
+                    "CLI so Catalog #166's fail-closed gate fires and claim "
+                    "custody remains single-lane."
                 )
     if verbose:
         if violations:
@@ -45757,11 +45761,13 @@ def check_modal_dispatch_threads_sentinel_files_per_catalog_166(
             "check_modal_dispatch_threads_sentinel_files_per_catalog_166 "
             f"found {len(violations)} contract violation(s). The Modal "
             "dispatcher (`tools/operator_authorize.py::_dispatch_modal`) "
-            "must thread `--sentinel-files` and `--require-clean-head` to "
+            "must thread `--sentinel-files`, `--require-clean-head`, and "
+            "`--lane-id` to "
             "the modal_train_lane CLI so Catalog #166's fail-closed "
-            "sentinel-mismatch gate (rc=13) fires. Without these flags, "
-            "stale code on the worker only emits a warn banner — paid GPU "
-            "spend proceeds.\n  "
+            "sentinel-mismatch gate (rc=13) fires and dispatch claims remain "
+            "attached to the operator-approved lane. Without these flags, "
+            "stale code on the worker only emits a warn banner or claim "
+            "custody splits across lane ids — paid GPU spend proceeds.\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

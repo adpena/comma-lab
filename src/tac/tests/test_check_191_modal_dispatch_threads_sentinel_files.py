@@ -5,10 +5,11 @@ SIREN PRE-DISPATCH AUDIT 2026-05-13 CRITICAL #2 self-protect.
 Bug class: ``tools/operator_authorize.py::_dispatch_modal`` builds the
 modal CLI cmd. Catalog #166's fail-closed sentinel-mismatch protection
 (rc=13 at modal_train_lane.py:327-342) fires ONLY when
-``--sentinel-files`` is non-empty AND ``--require-clean-head`` is set.
-Removing either flag silently disables Catalog #166's protection —
-paid GPU dispatch proceeds on stale snapshots while only the warn-only
-HEAD-mismatch ledger records post-mortem evidence.
+``--sentinel-files`` is non-empty, ``--require-clean-head`` is set, and
+``--lane-id`` is threaded from the operator-approved recipe. Removing either
+stale-code flag silently disables Catalog #166's protection. Removing
+``--lane-id`` recreates split custody: the operator claim and Modal direct claim
+can use different lane ids for the same paid GPU job.
 
 Sister of Catalog #166 (HEAD-parity ledger surface).
 """
@@ -91,8 +92,22 @@ def test_missing_helper_function_is_violation(tmp_path):
     assert any("_modal_sentinel_files" in v for v in vs)
 
 
-def test_all_three_surfaces_missing_yields_three_violations(tmp_path):
-    """All three contract surfaces flagged independently."""
+def test_missing_lane_id_flag_is_violation(tmp_path):
+    """Dispatcher without `--lane-id` can split operator and Modal custody."""
+    root = _write_dispatcher(tmp_path,
+        "def _dispatch_modal(...):\n"
+        "    cmd = ['--sentinel-files', files, '--require-clean-head']\n"
+        "    return subprocess.call(cmd)\n"
+        "def _modal_sentinel_files(): return ''\n"
+    )
+    vs = check_modal_dispatch_threads_sentinel_files_per_catalog_166(
+        repo_root=root, strict=False, verbose=False,
+    )
+    assert any("--lane-id" in v for v in vs)
+
+
+def test_all_four_surfaces_missing_yields_four_violations(tmp_path):
+    """All four contract surfaces flagged independently."""
     root = _write_dispatcher(tmp_path,
         "def _dispatch_modal(...):\n"
         "    cmd = ['modal', 'run']\n"
@@ -101,7 +116,7 @@ def test_all_three_surfaces_missing_yields_three_violations(tmp_path):
     vs = check_modal_dispatch_threads_sentinel_files_per_catalog_166(
         repo_root=root, strict=False, verbose=False,
     )
-    assert len(vs) == 3
+    assert len(vs) == 4
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -109,7 +124,7 @@ def test_all_three_surfaces_missing_yields_three_violations(tmp_path):
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def test_all_three_surfaces_present_is_accepted(tmp_path):
+def test_all_four_surfaces_present_is_accepted(tmp_path):
     """Canonical dispatcher with all surfaces present is OK."""
     root = _write_dispatcher(tmp_path,
         "def _modal_sentinel_files(recipe):\n"
@@ -120,6 +135,7 @@ def test_all_three_surfaces_present_is_accepted(tmp_path):
         "    cmd = [\n"
         "        'modal', 'run', '--detach',\n"
         "        '--require-clean-head',\n"
+        "        '--lane-id', recipe.lane_id,\n"
         "        '--sentinel-files', files,\n"
         "    ]\n"
         "    return subprocess.call(cmd)\n"
@@ -151,7 +167,7 @@ def test_strict_mode_silent_on_clean_dispatcher(tmp_path):
     root = _write_dispatcher(tmp_path,
         "def _modal_sentinel_files(): return ''\n"
         "def _dispatch_modal(...):\n"
-        "    cmd = ['--sentinel-files', '--require-clean-head']\n"
+        "    cmd = ['--sentinel-files', '--require-clean-head', '--lane-id']\n"
     )
     vs = check_modal_dispatch_threads_sentinel_files_per_catalog_166(
         repo_root=root, strict=True, verbose=False,
@@ -168,7 +184,7 @@ def test_live_repo_has_zero_violations():
     """STRICT @ 0 invariant: live repo has zero violations.
 
     Ensures `tools/operator_authorize.py::_dispatch_modal` continues to
-    thread sentinel-files and require-clean-head.
+    thread sentinel-files, require-clean-head, and lane-id.
     """
     vs = check_modal_dispatch_threads_sentinel_files_per_catalog_166(
         repo_root=None, strict=False, verbose=False,

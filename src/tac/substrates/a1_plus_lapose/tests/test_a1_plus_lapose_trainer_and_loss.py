@@ -219,8 +219,9 @@ def test_loss_weights_defaults_match_contest_constants() -> None:
     assert w.beta_seg == 100.0
     assert math.isclose(w.gamma_pose, math.sqrt(10.0), rel_tol=1e-6)
     assert w.contest_normalizer == 37_545_489.0
-    # D6.B operator-fallback: pose marginal at PR106 frontier is 2.71x
-    assert w.pose_weight_scale == 2.71
+    # Default is non-arbitrary contest-formula weighting; operating-point
+    # tilts such as PR106's 2.71x must be explicit CLI choices.
+    assert w.pose_weight_scale == 1.0
 
 
 def test_loss_refuses_eval_roundtrip_false() -> None:

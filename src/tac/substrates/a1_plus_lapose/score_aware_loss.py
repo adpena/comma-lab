@@ -33,12 +33,13 @@ class A1PlusLaposeLossWeights:
     alpha_rate: float = 25.0
     beta_seg: float = 100.0
     gamma_pose: float = CONTEST_POSE_SQRT_WEIGHT
-    pose_weight_scale: float = 2.71
-    """At PR106 r2 / A1 frontier operating point (pose_avg ~ 3.4e-5) the
-    pose marginal sensitivity is 2.71x SegNet's per CLAUDE.md "SegNet vs
-    PoseNet importance" section. Setting pose_weight_scale=2.71 by
-    default (NOT 1.0 like sane_hnerv) is the operator-fallback D6.B
-    decision: composition substrate exploits this flipped marginal."""
+    pose_weight_scale: float = 1.0
+    """Optional operating-point pose tilt.
+
+    The default is the contest formula (1.0). PR106 r2 / A1 frontier analysis
+    suggested a 2.71x pose marginal at one operating point, but that is an
+    explicit experiment knob, not a default dispatch assumption.
+    """
     contest_normalizer: float = 37_545_489.0
 
 

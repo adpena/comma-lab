@@ -670,6 +670,8 @@ def _dispatch_modal(
         "experiments/modal_train_lane.py",
         "--lane-script",
         lane_script,
+        "--lane-id",
+        recipe.lane_id,
         "--label",
         instance_job_id,
         "--gpu",

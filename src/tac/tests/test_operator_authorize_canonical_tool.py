@@ -80,6 +80,39 @@ def test_operator_authorize_modal_recipe_claims_before_dispatch(monkeypatch) -> 
     assert events == ["preflight", "claim", "dispatch"]
 
 
+def test_operator_authorize_modal_dispatch_threads_recipe_lane_id(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    recipe = op.Recipe(
+        name="unit_modal",
+        path=op.RECIPES_DIR / "unit_modal.yaml",
+        raw={
+            "lane_id": "lane_substrate_siren_20260512",
+            "platform": "modal",
+            "gpu": "A100",
+            "timeout_hours": 1.0,
+            "remote_driver": "scripts/remote_lane_substrate_siren.sh",
+            "modal": {
+                "lane_script": "scripts/remote_lane_substrate_siren.sh",
+            },
+        },
+    )
+    monkeypatch.setattr(
+        op.subprocess,
+        "call",
+        lambda cmd, cwd=None: calls.append([str(part) for part in cmd]) or 0,
+    )
+
+    rc = op._dispatch_modal(recipe, "unit_job_001", "DISPATCH_INSTANCE_JOB_ID=unit_job_001")
+
+    assert rc == 0
+    assert len(calls) == 1
+    cmd = calls[0]
+    assert "--lane-id" in cmd
+    assert cmd[cmd.index("--lane-id") + 1] == "lane_substrate_siren_20260512"
+    assert "--label" in cmd
+    assert cmd[cmd.index("--label") + 1] == "unit_job_001"
+
+
 def test_operator_authorize_prevalidates_before_claim(monkeypatch) -> None:
     events: list[str] = []
     monkeypatch.setattr(op, "_predict_cost_band", lambda **_: _band())

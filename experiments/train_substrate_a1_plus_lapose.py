@@ -315,8 +315,11 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="SegNet distortion coefficient (contest evaluate.py: 100.0).")
     p.add_argument("--gamma-pose", type=float, default=math.sqrt(10.0),
                    help="Pose-axis weight (contest evaluate.py: sqrt(10)).")
-    p.add_argument("--pose-weight-scale", type=float, default=2.71,
-                   help="Operator-fallback D6.B: 2.71x SegNet's marginal at PR106 frontier.")
+    p.add_argument("--pose-weight-scale", type=float, default=1.0,
+                   help=(
+                       "Opt-in pose marginal tilt. Default 1.0 preserves the "
+                       "contest formula; PR106-derived 2.71x is experimental."
+                   ))
 
     # Modes
     p.add_argument("--device", type=str, default="cuda")

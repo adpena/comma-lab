@@ -8,15 +8,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 SOURCE = REPO_ROOT / "experiments" / "modal_train_lane.py"
 
 
-def test_modal_train_lane_disables_lane_local_exact_eval() -> None:
+def test_modal_train_lane_keeps_wrapper_non_promotional_but_allows_inline_custody_eval() -> None:
     text = SOURCE.read_text()
     assert '"T1_RUN_CONTEST_CUDA_AUTH_EVAL": "0"' in text
     assert '"SCPP_RUN_CONTEST_CUDA_AUTH_EVAL": "0"' in text
     assert '"RUN_CONTEST_EVAL": "0"' in text
     assert "refusing exact CUDA auth-eval from modal_train_lane.py" in text
-    assert "Use the canonical claimed exact-eval dispatcher instead" in text
+    assert "Lane-local auth-eval subprocesses are allowed only when" in text
+    assert "wrapper_score_claim" in text
+    assert "inline_auth_eval_contract_required" in text
     assert "MODAL_ALLOW_EXACT_CUDA_AUTH_EVAL" not in text
-    assert "env.update(env_overrides)" in text
+    assert "env.update({str(k): _modal_workspace_env(v)" in text
+    assert 'readonly = "/workspace/pact"' in text
     assert 'if env.get("MODAL_ALLOW_EXACT_CUDA_AUTH_EVAL"' not in text
 
 

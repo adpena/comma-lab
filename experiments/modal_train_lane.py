@@ -3,10 +3,10 @@
 Why: 2026-04-29 night session showed Vast.ai 4090 NVDEC bad-host rate ≈ 85%.
 ~$5 burned across 5 dispatch rounds for 0 trained lanes. Modal is useful for
 build/training work after repeated Vast.ai NVDEC host failures.
-This wrapper is a training/build substrate only. It disables lane-local exact
-CUDA auth-eval paths because Modal training containers do not provide a
-promotion-grade NVDEC gate here. Any score must be produced later by the
-canonical exact-eval dispatch/recovery stack.
+This wrapper is a training/build substrate only. The wrapper itself never
+promotes a score. Lane-local auth-eval subprocesses are allowed only when the
+trainer parses the auth-eval evidence contract and keeps promotion blocked
+until the separate CPU/pack/compliance gates land.
 
 Pattern mirrors `experiments/modal_auth_eval.py` (commit 11d56896).
 
@@ -343,12 +343,23 @@ def _run_lane_inner(
     volume_dir = Path("/modal_results") / label
     volume_dir.mkdir(parents=True, exist_ok=True)
 
+    def _modal_workspace_env(value: object) -> str:
+        """Map recipe paths from the read-only Modal mount to the writable copy."""
+        text = str(value)
+        readonly = "/workspace/pact"
+        if text == readonly:
+            return str(workspace)
+        if text.startswith(readonly + "/"):
+            return str(workspace) + text[len(readonly):]
+        return text
+
     # Build env. PATH/LD_LIBRARY_PATH point to the actual extracted ffmpeg dir
     # (not a phantom /opt/ffmpeg-master). PYBIN is propagated to bash + child
     # python invocations so probe_nvdec.sh + lane scripts inherit it.
-    # Modal training wrappers are not an exact-eval surface. Force all known
-    # lane-local auth-eval switches off; exact CUDA eval must use the canonical
-    # claimed auth-eval dispatch path with a real NVDEC/CUDA gate.
+    # Modal training wrappers are not a promotion surface. Generic legacy
+    # exact-eval toggles stay disabled, but modern substrate trainers may run
+    # contest_auth_eval.py inline as a fail-closed smoke/full custody check
+    # when they parse the resulting evidence contract themselves.
     env = {
         **os.environ,
         "WORKSPACE": str(workspace),
@@ -378,7 +389,7 @@ def _run_lane_inner(
         # are no-ops since Modal manages instance lifecycle.
         "AUTO_DESTROY_VAST": "0",
     }
-    env.update(env_overrides)
+    env.update({str(k): _modal_workspace_env(v) for k, v in env_overrides.items()})
     exact_eval_switches = (
         "T1_RUN_CONTEST_CUDA_AUTH_EVAL",
         "SCPP_RUN_CONTEST_CUDA_AUTH_EVAL",
@@ -1022,8 +1033,8 @@ def main(
         "gpu": gpu,
         "max_seconds": max_seconds,
         "call_id": call_id,
-        "auth_eval_device": "cpu",
-        "auth_eval_advisory_only": True,
+        "wrapper_score_claim": False,
+        "inline_auth_eval_contract_required": True,
         "score_claim": False,
         "promotion_eligible": False,
         "live_volume": RESULTS_VOL,

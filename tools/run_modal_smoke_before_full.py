@@ -203,6 +203,63 @@ def _epoch_env_var_from_recipe(recipe_text: str) -> str | None:
     return None
 
 
+def _lane_id_from_recipe(recipe_text: str) -> str:
+    for line in recipe_text.splitlines():
+        if line.startswith("lane_id:"):
+            return line.split(":", 1)[1].strip().strip("\"'")
+    return "lane_unknown"
+
+
+def _close_smoke_claim(
+    *,
+    repo_root: Path,
+    recipe_text: str,
+    instance_job_id: str,
+    operator_handle: str,
+    status: str,
+    notes: str,
+) -> None:
+    """Append a terminal row for the smoke claim before same-lane full dispatch."""
+    if not instance_job_id:
+        print(
+            "[smoke-before-full] WARN: cannot close smoke claim; "
+            "instance_job_id was not parsed",
+            file=sys.stderr,
+        )
+        return
+    cmd = [
+        sys.executable,
+        "tools/claim_lane_dispatch.py",
+        "claim",
+        "--lane-id",
+        _lane_id_from_recipe(recipe_text),
+        "--platform",
+        "modal",
+        "--instance-job-id",
+        instance_job_id,
+        "--agent",
+        f"{operator_handle}:run_modal_smoke_before_full",
+        "--status",
+        status,
+        "--notes",
+        notes,
+        "--force",
+    ]
+    proc = subprocess.run(
+        cmd,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        print(
+            "[smoke-before-full] WARN: failed to append terminal smoke claim "
+            f"status={status}: {proc.stderr[-800:]}",
+            file=sys.stderr,
+        )
+
+
 def _spawn_smoke_dispatch(
     recipe_path: Path,
     *,
@@ -212,8 +269,8 @@ def _spawn_smoke_dispatch(
     smoke_timeout_hours: float,
     operator_handle: str,
     repo_root: Path,
-) -> str:
-    """Invoke the operator_authorize CLI in smoke mode and return the call_id.
+) -> tuple[str, str]:
+    """Invoke the operator_authorize CLI in smoke mode.
 
     The smoke override is implemented by exporting:
       * MODAL_GPU=<smoke_gpu>      (T4 default; cheaper than A100 for smoke)
@@ -270,6 +327,11 @@ def _spawn_smoke_dispatch(
         if "call_id=" in line and "fc-" in line:
             call_id = line.split("call_id=", 1)[1].strip()
             break
+    instance_job_id = ""
+    for line in proc.stdout.splitlines():
+        if "instance_job_id=" in line:
+            instance_job_id = line.split("instance_job_id=", 1)[1].strip()
+            break
     if not call_id:
         # Fall back to the sentinel file the dispatcher writes.
         for sentinel_dir in (repo_root / "experiments" / "results").glob(
@@ -285,8 +347,15 @@ def _spawn_smoke_dispatch(
             file=sys.stderr,
         )
         raise SystemExit(2)
-    print(f"[smoke-before-full] SMOKE call_id={call_id}")
-    return call_id
+    if not instance_job_id:
+        print(
+            "[smoke-before-full] FATAL: could not extract smoke instance_job_id "
+            "from dispatcher",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+    print(f"[smoke-before-full] SMOKE call_id={call_id} instance_job_id={instance_job_id}")
+    return call_id, instance_job_id
 
 
 def _wait_for_smoke_completion(
@@ -535,7 +604,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     # Smoke phase
-    call_id = _spawn_smoke_dispatch(
+    call_id, smoke_instance_job_id = _spawn_smoke_dispatch(
         recipe_path,
         epoch_env_var=epoch_env_var,
         smoke_epochs=args.smoke_epochs,
@@ -557,6 +626,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     except TimeoutError as exc:
         print(f"[smoke-before-full] {exc!s}", file=sys.stderr)
+        _close_smoke_claim(
+            repo_root=repo_root,
+            recipe_text=recipe_text,
+            instance_job_id=smoke_instance_job_id,
+            operator_handle=args.operator_handle,
+            status="failed_modal_smoke_timeout",
+            notes=str(exc)[:200],
+        )
         return 4
 
     # Per CLAUDE.md SIREN audit 2026-05-13 DEFECT #2 + #8: resolve the
@@ -572,6 +649,14 @@ def main(argv: list[str] | None = None) -> int:
     green, diagnostic = _validate_smoke_result(result, plausible_band=smoke_band)
     print(f"[smoke-before-full] SMOKE verdict: {diagnostic}")
     if not green:
+        _close_smoke_claim(
+            repo_root=repo_root,
+            recipe_text=recipe_text,
+            instance_job_id=smoke_instance_job_id,
+            operator_handle=args.operator_handle,
+            status="failed_modal_smoke_red",
+            notes=diagnostic[:200],
+        )
         print(
             "[smoke-before-full] FATAL: SMOKE RED - refusing full canary. "
             "Fix the integration first, then re-run.",
@@ -580,10 +665,26 @@ def main(argv: list[str] | None = None) -> int:
         return 5
 
     if args.smoke_only:
+        _close_smoke_claim(
+            repo_root=repo_root,
+            recipe_text=recipe_text,
+            instance_job_id=smoke_instance_job_id,
+            operator_handle=args.operator_handle,
+            status="completed_modal_smoke_green",
+            notes="smoke green; --smoke-only requested",
+        )
         print("[smoke-before-full] --smoke-only set; not firing full. Done.")
         return 0
 
     # Full phase
+    _close_smoke_claim(
+        repo_root=repo_root,
+        recipe_text=recipe_text,
+        instance_job_id=smoke_instance_job_id,
+        operator_handle=args.operator_handle,
+        status="completed_modal_smoke_green",
+        notes="smoke green; terminal row closes smoke claim before full same-lane dispatch",
+    )
     print(
         "[smoke-before-full] SMOKE GREEN - proceeding with FULL canary "
         f"(recipe={args.recipe})"

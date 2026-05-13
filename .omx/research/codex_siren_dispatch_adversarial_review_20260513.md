@@ -141,3 +141,96 @@ Results:
    tests.
 4. Keep all CUDA/CPU comparisons axis-labelled; there is no universal CPU-better
    or CUDA-better rule.
+
+---
+
+## Supersession: SIREN/A1+LAPose dispatch-chain hardening after BUILD-RESUME
+
+Date: 2026-05-13 later pass.
+
+The earlier note that A1+LAPose had no trainer/recipe/remote driver is now
+superseded by the local BUILD-RESUME commits through `d4adab79` plus this
+hardening pass. The A1+LAPose path has a trainer, recipe, remote driver,
+operator wrapper, archive grammar, and focused tests, but it still needs a
+claimed smoke/full exact-eval anchor before any score claim.
+
+### CRITICAL fixed: Modal recipe paths could overwrite writable workspace paths
+
+`experiments/modal_train_lane.py` copied the repo to writable `/tmp/pact`, then
+blindly applied recipe `env_overrides`. Recipes such as SIREN and A1+LAPose use
+`/workspace/pact/...` paths for operator readability; on Modal that mount is
+read-only. The blind override could send output/checkpoint/result writes back to
+the read-only mount and fail after GPU startup.
+
+Fixed by mapping env override values rooted at `/workspace/pact` to the Modal
+writable workspace before launching the lane script. This keeps recipes
+provider-readable while preserving the runtime write contract.
+
+### CRITICAL fixed: Modal authorizer could split lane custody
+
+`tools/operator_authorize.py::_dispatch_modal` did not pass the recipe
+`lane_id` to `experiments/modal_train_lane.py`. The direct Modal claim could
+therefore use an inferred lane such as `remote_lane_substrate_siren` while the
+operator-approved claim used `lane_substrate_siren_20260512`.
+
+Fixed by threading `--lane-id <recipe.lane_id>` into the Modal launcher. Catalog
+#191 now treats `--lane-id` as a strict required Modal-dispatch surface alongside
+`--sentinel-files` and `--require-clean-head`.
+
+### CRITICAL fixed: SIREN remote driver did not verify active claim identity
+
+`scripts/remote_lane_substrate_siren.sh` checked that a claims ledger existed
+but did not verify that an active row matched both `LANE_ID` and
+`DISPATCH_INSTANCE_JOB_ID`. A split or stale claim could reach GPU work.
+
+Fixed by generating a JSON claim summary at stage 0 and refusing before NVDEC
+probe/training unless the active claim matches both lane and job id.
+
+### DEFECT fixed: smoke-before-full could block its own full dispatch
+
+`tools/run_modal_smoke_before_full.py` launched the smoke with the same recipe
+lane id as the full dispatch, but did not append a terminal claim row before
+starting the full phase. The full claim could conflict with the green smoke row.
+
+Fixed by parsing the smoke `instance_job_id` from `operator_authorize.py` output
+and appending a terminal row on timeout, smoke-red, smoke-only-green, and
+smoke-green-before-full paths.
+
+### DEFECT fixed: A1+LAPose default pose tilt was non-arbitrary-hostile
+
+The A1+LAPose trainer and loss defaulted `pose_weight_scale=2.71`, a
+PR106/A1 operating-point hypothesis. Preflight correctly rejected that as a
+hidden default divergence from the contest formula. The default is now `1.0`;
+the 2.71 pose tilt remains an explicit experimental CLI choice.
+
+### DEFECT fixed outside git-tracked research state: Catalog #125 memory format
+
+The A1+LAPose companion memory declared the probe-disambiguator hook in bolded
+Markdown form that Check #125 did not count. The memory line now contains the
+literal `probe_disambiguator:` declaration, clearing strict preflight.
+
+### Partner signal preserved
+
+The D4 deeper council memo
+`.omx/research/grand_council_pose_axis_non_hnerv_a1_plus_lapose_d4_deeper_20260513.md`
+is preserved as durable research signal. It binds A1+LAPose D4 to the as-built
+D4.B single-stage trailer format and records D4.A/D4.D reactivation criteria.
+
+### Verification
+
+Commands run:
+
+```text
+.venv/bin/python -m py_compile experiments/modal_train_lane.py tools/operator_authorize.py tools/run_modal_smoke_before_full.py experiments/train_substrate_a1_plus_lapose.py src/tac/substrates/a1_plus_lapose/score_aware_loss.py
+.venv/bin/python -m pytest -q src/tac/tests/test_modal_train_lane_hardening.py src/tac/tests/test_run_modal_smoke_before_full.py src/tac/tests/test_operator_authorize_canonical_tool.py src/tac/tests/test_check_191_modal_dispatch_threads_sentinel_files.py src/tac/tests/test_siren_substrate_readiness.py src/tac/substrates/a1_plus_lapose/tests/test_a1_plus_lapose_archive.py src/tac/substrates/a1_plus_lapose/tests/test_a1_plus_lapose_trainer_and_loss.py
+.venv/bin/python tools/audit_siren_substrate_readiness.py --json --fail-if-not-ready
+/usr/bin/time -p .venv/bin/python -m tac.preflight
+```
+
+Results:
+
+- focused pytest suite: 57 passed;
+- SIREN readiness audit: passed; local contract ready, score claim false,
+  promotion eligible false, ready for exact eval false until dispatch;
+- strict preflight: passed in `real 9.16s`, under the 30s budget;
+- no remote/GPU dispatch was launched by this review.
