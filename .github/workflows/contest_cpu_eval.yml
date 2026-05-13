@@ -69,6 +69,8 @@ jobs:
       # Canonical CPU torch wheel index — matches CI lane-1.
       INFLATE_TORCH_SPEC: 'torch==2.5.1'
       UV_INDEX_STRATEGY: 'unsafe-best-match'
+      UPSTREAM_REPO_URL: 'https://github.com/commaai/comma_video_compression_challenge.git'
+      UPSTREAM_COMMIT: '11ad728f563d8970929e8947a1cf6124ee6303e4'
 
     steps:
       - name: Checkout repo at the dispatched ref
@@ -145,6 +147,16 @@ jobs:
           echo "archive_sha256=${ARCHIVE_SHA}" >> "$GITHUB_ENV"
           echo "archive_bytes=${ARCHIVE_BYTES}" >> "$GITHUB_ENV"
           echo "Archive: ${ARCHIVE_PATH} (${ARCHIVE_BYTES} bytes, sha256=${ARCHIVE_SHA})"
+
+      - name: Fetch pinned upstream scorer snapshot
+        run: |
+          set -euo pipefail
+          rm -rf upstream
+          git clone --no-tags --depth 1 "${UPSTREAM_REPO_URL}" upstream
+          git -C upstream fetch --no-tags --depth 1 origin "${UPSTREAM_COMMIT}"
+          git -C upstream checkout --detach "${UPSTREAM_COMMIT}"
+          test "$(git -C upstream rev-parse HEAD)" = "${UPSTREAM_COMMIT}"
+          git -C upstream status --short
 
       - name: Verify upstream/inflate inputs exist
         run: |

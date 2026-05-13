@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -17,6 +16,17 @@ def test_contest_cpu_eval_workflow_uses_canonical_parity_ffmpeg_bootstrap() -> N
     assert "--path-file \"${GITHUB_PATH}\"" in workflow
     assert "--allow-missing-contract" in workflow
     assert "apt-get install -y ffmpeg" not in workflow
+
+
+def test_contest_cpu_eval_workflow_fetches_pinned_upstream_snapshot() -> None:
+    workflow = (REPO_ROOT / ".github/workflows/contest_cpu_eval.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "UPSTREAM_REPO_URL" in workflow
+    assert "UPSTREAM_COMMIT" in workflow
+    assert "git clone --no-tags --depth 1" in workflow
+    assert "git -C upstream checkout --detach" in workflow
+    assert "11ad728f563d8970929e8947a1cf6124ee6303e4" in workflow
 
 
 def test_parity_ffmpeg_bootstrap_preserves_required_color_contract() -> None:

@@ -237,3 +237,16 @@ anchor:
 - Fix: BtbN download progress now goes to stderr; stdout is reserved for the
   single selected ffmpeg path. The focused regression test asserts this stdout
   purity rule.
+
+## Follow-up: lane_g_v3 GHA CPU Retry5
+
+- GHA run: `25771307665`.
+- Classification: `failed_gha_cpu_eval_missing_upstream_checkout`. This is a
+  pre-score infrastructure failure.
+- Progress: retry5 passed parity ffmpeg bootstrap, CPU torch install, and
+  committed archive custody before failing.
+- Root cause: `upstream/` is intentionally gitignored in this repo, but the
+  workflow still assumed `upstream/evaluate.py` was present after checkout.
+- Fix: the workflow now clones the official comma challenge repository and
+  checks out pinned upstream commit
+  `11ad728f563d8970929e8947a1cf6124ee6303e4` before verifying scorer inputs.

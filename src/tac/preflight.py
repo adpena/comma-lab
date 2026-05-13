@@ -2266,6 +2266,48 @@ def preflight_all(
         check_ast_walker_handles_both_assign_and_annassign(
             strict=True, verbose=verbose,
         )
+        # 2026-05-12 Catalog #169 (WAVE-7-MED-FIX, REVIEW-OMNI A2-1):
+        # CompressAI primitives (factorized_prior, balle_hyperprior,
+        # cheng2020) MUST stay registered in
+        # ``canonical_primitive_inventory()`` per FIX-J landing. Strict
+        # from byte one - live count: 0 (3 rows already registered).
+        check_compressai_primitives_registered_in_canonical_inventory(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #170 (WAVE-7-MED-FIX, REVIEW-OMNI NV5):
+        # Substrate operator-authorize recipes MUST declare a
+        # ``min_vram_gb`` integer floor. Initial landing: warn-only;
+        # legacy recipes will be backfilled in a separate wave per
+        # CLAUDE.md "Strict-flip atomicity rule" (no live=0 yet).
+        check_substrate_recipes_declare_min_vram_gb_floor(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #171 (WAVE-7-MED-FIX, REVIEW-OMNI NV9):
+        # Substrate operator-authorize recipes MUST declare
+        # ``video_input_strategy`` (per_dispatch_local_copy /
+        # readonly_mmap / shared_volume_no_contention_expected). Initial
+        # landing: warn-only; legacy recipes will be backfilled.
+        check_substrate_recipes_declare_video_input_strategy(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #172 (WAVE-7-MED-FIX, REVIEW-OMNI NV2):
+        # Substrate trainers MUST either declare ``--enable-autocast-fp16``
+        # argparse flag (canonical T1 Balle pattern @ commit b0ef91a3) OR
+        # carry a file-level ``# AUTOCAST_FP16_WAIVED:<reason>`` waiver.
+        # Initial landing: warn-only; backport-or-waive sweep is a separate
+        # engineering wave.
+        check_substrate_trainers_declare_autocast_fp16_support(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-12 Catalog #173 (WAVE-7-MED-FIX, REVIEW-OMNI C4):
+        # Substrate operator-authorize recipes MUST declare
+        # ``canary_status`` (canary / post_canary_dependent /
+        # independent_substrate). ``post_canary_dependent`` recipes also
+        # need ``canary_dependency: <substrate_id>``. Initial landing:
+        # warn-only; legacy recipes will be backfilled.
+        check_substrate_dispatch_honors_canary_first_ordering(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-12 Catalog #154 (T1-D state-hygiene wave): the canonical
         # GC helper for `experiments/results/` is
         # `tools/gc_experiments_results.py`. Any new tool/script that
@@ -42089,6 +42131,477 @@ def check_ast_walker_handles_both_assign_and_annassign(
             "the AST-extractor type-annotation-syntax bypass class anchored "
             "by 2026-05-12 META-CATALOG-152-FIX (12 substrate trainer "
             "manifests silently false-OK):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# WAVE-7-MED-FIX: 5 Catalog # gates closing 5 of 6 REVIEW-OMNI Medium findings
+# (M6 = C5 sensitivity-map artifact reader DEFERRED-pending-council per
+# CLAUDE.md "Design decisions" non-negotiable; ~50 LOC ranking change is a
+# council-grade tradeoff). Source review:
+# ``.omx/research/review_omni_fields_medal_nvidia_grade_20260512.md``.
+# ============================================================================
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #169 - check_compressai_primitives_registered_in_canonical_inventory
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Medium A2-1 (Ballé): CompressAI primitives (factorized_prior,
+# balle_hyperprior, cheng2020) MUST stay registered in
+# ``tac.composition.registry.canonical_primitive_inventory()``. FIX-J
+# (2026-05-12) landed the 3 rows but a future refactor that drops them
+# would silently make the composition matrix lose 3 codec primitives.
+# Catalog #169 prevents that regression.
+_CHECK_169_REQUIRED_PRIMITIVE_IDS: tuple[str, ...] = (
+    "compressai_factorized_prior",
+    "compressai_balle_hyperprior",
+    "compressai_cheng2020",
+)
+
+
+def check_compressai_primitives_registered_in_canonical_inventory(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #169. REVIEW-OMNI Medium A2-1 self-protection. Ensures the
+    3 CompressAI codec primitives stay registered in
+    ``canonical_primitive_inventory()``. Direct importer-side check (no AST
+    scan needed since the source-of-truth is the function's return value).
+    """
+    violations: list[str] = []
+    try:
+        from tac.composition.registry import canonical_primitive_inventory
+    except ImportError as exc:
+        violations.append(
+            f"could not import canonical_primitive_inventory: {exc!s}"
+        )
+    else:
+        try:
+            inv = canonical_primitive_inventory()
+        except Exception as exc:
+            violations.append(
+                f"canonical_primitive_inventory() raised {type(exc).__name__}: {exc!s}"
+            )
+        else:
+            present = {row.primitive_id for row in inv}
+            for required_id in _CHECK_169_REQUIRED_PRIMITIVE_IDS:
+                if required_id not in present:
+                    violations.append(
+                        f"missing primitive `{required_id}` in canonical_primitive_inventory(); "
+                        "CompressAI codec rows must stay registered (FIX-J landing 2026-05-12)"
+                    )
+    if verbose:
+        if violations:
+            print(
+                f"  [compressai-primitives-registered] {len(violations)} violation(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [compressai-primitives-registered] OK "
+                "(3 CompressAI primitive rows present)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_compressai_primitives_registered_in_canonical_inventory found "
+            f"{len(violations)} violation(s). Catalog #169 prevents regression "
+            "of REVIEW-OMNI Medium A2-1 (Ballé) — CompressAI codecs must stay "
+            "in the composition primitive registry (FIX-J landed 2026-05-12):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #170 - check_substrate_recipes_declare_min_vram_gb_floor
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Medium NV5 (Carmack): Council C OOM fix not validated across
+# substrate trainers. Substrate trainers may OOM at 384x512 resolution on
+# T4 (16GB) or even A10G (22GB shared). Each substrate operator-authorize
+# recipe MUST declare ``min_vram_gb`` (top-level integer field) so the
+# dispatch path can refuse instances below the declared minimum. Same-line
+# waiver inside the recipe: ``# MIN_VRAM_GB_OK:<reason>`` for substrates
+# that intentionally have no minimum (e.g. proxy / smoke variants).
+_CHECK_170_RECIPE_DIR = ".omx/operator_authorize_recipes"
+_CHECK_170_RECIPE_GLOB = "substrate_*_modal_*_dispatch.yaml"
+_CHECK_170_FIELD = "min_vram_gb"
+_CHECK_170_WAIVER_RE = re.compile(r"#\s*MIN_VRAM_GB_OK:\s*(?!<reason>)\S+")
+# The recipe MUST declare an integer GB floor (>= 1). 0 is treated as
+# "CPU-only" and refused (substrate trainers always need CUDA).
+_CHECK_170_FIELD_RE = re.compile(
+    rf"^\s*{re.escape(_CHECK_170_FIELD)}\s*:\s*([0-9]+)\s*(#.*)?$",
+    re.MULTILINE,
+)
+
+
+def check_substrate_recipes_declare_min_vram_gb_floor(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #170. REVIEW-OMNI Medium NV5. Refuses substrate
+    operator-authorize recipes that don't declare a ``min_vram_gb``
+    integer floor (>= 1) at the top level.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    recipes_dir = root / _CHECK_170_RECIPE_DIR
+    violations: list[str] = []
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-recipe-min-vram-gb] OK "
+                "(no operator_authorize_recipes dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(recipes_dir.glob(_CHECK_170_RECIPE_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_170_WAIVER_RE.search(text):
+            continue
+        m = _CHECK_170_FIELD_RE.search(text)
+        if m is None:
+            violations.append(
+                f"{rel}: missing top-level `{_CHECK_170_FIELD}: <int_gb>` "
+                "field (Council C OOM-fix coverage). Add the field OR a "
+                "`# MIN_VRAM_GB_OK:<reason>` waiver."
+            )
+            continue
+        try:
+            value = int(m.group(1))
+        except ValueError:
+            violations.append(
+                f"{rel}: `{_CHECK_170_FIELD}` value not parseable as int"
+            )
+            continue
+        if value < 1:
+            violations.append(
+                f"{rel}: `{_CHECK_170_FIELD}: {value}` is below 1 GB; "
+                "substrate trainers require CUDA (>= 1GB VRAM minimum)"
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-recipe-min-vram-gb] {len(violations)} "
+                f"violation(s) across {scanned} substrate recipe(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-recipe-min-vram-gb] OK "
+                f"({scanned} substrate recipe(s); all declare {_CHECK_170_FIELD})"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_recipes_declare_min_vram_gb_floor found "
+            f"{len(violations)} violation(s). Catalog #170 closes REVIEW-OMNI "
+            "Medium NV5 (Council C OOM-fix coverage gap):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #171 - check_substrate_recipes_declare_video_input_strategy
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Medium NV9 (Carmack): ``upstream/videos/0.mkv`` concurrent-
+# dispatch FS read contention. At 4-6 simultaneous Modal/Lightning
+# dispatches, FS read of ``0.mkv`` from a shared volume contends. Each
+# substrate operator-authorize recipe MUST declare
+# ``video_input_strategy`` (one of: ``per_dispatch_local_copy``,
+# ``readonly_mmap``, ``shared_volume_no_contention_expected``).
+# Same-line waiver: ``# VIDEO_INPUT_STRATEGY_OK:<reason>``.
+_CHECK_171_FIELD = "video_input_strategy"
+_CHECK_171_VALID_VALUES: tuple[str, ...] = (
+    "per_dispatch_local_copy",
+    "readonly_mmap",
+    "shared_volume_no_contention_expected",
+)
+_CHECK_171_WAIVER_RE = re.compile(
+    r"#\s*VIDEO_INPUT_STRATEGY_OK:\s*(?!<reason>)\S+"
+)
+_CHECK_171_FIELD_RE = re.compile(
+    rf"^\s*{re.escape(_CHECK_171_FIELD)}\s*:\s*\"?([a-zA-Z_]+)\"?\s*(#.*)?$",
+    re.MULTILINE,
+)
+
+
+def check_substrate_recipes_declare_video_input_strategy(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #171. REVIEW-OMNI Medium NV9. Refuses substrate
+    operator-authorize recipes that don't declare ``video_input_strategy``
+    with a recognized value.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    recipes_dir = root / _CHECK_170_RECIPE_DIR
+    violations: list[str] = []
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-recipe-video-input-strategy] OK "
+                "(no operator_authorize_recipes dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(recipes_dir.glob(_CHECK_170_RECIPE_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_171_WAIVER_RE.search(text):
+            continue
+        m = _CHECK_171_FIELD_RE.search(text)
+        if m is None:
+            violations.append(
+                f"{rel}: missing top-level `{_CHECK_171_FIELD}: <strategy>` "
+                f"field (one of {list(_CHECK_171_VALID_VALUES)}). Concurrent "
+                "Modal/Lightning dispatches sharing `upstream/videos/0.mkv` "
+                "may contend FS reads. Add the field OR a "
+                "`# VIDEO_INPUT_STRATEGY_OK:<reason>` waiver."
+            )
+            continue
+        value = m.group(1).strip()
+        if value not in _CHECK_171_VALID_VALUES:
+            violations.append(
+                f"{rel}: `{_CHECK_171_FIELD}: {value}` is not a recognized "
+                f"strategy (must be one of {list(_CHECK_171_VALID_VALUES)})"
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-recipe-video-input-strategy] {len(violations)} "
+                f"violation(s) across {scanned} substrate recipe(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-recipe-video-input-strategy] OK "
+                f"({scanned} substrate recipe(s); all declare strategy)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_recipes_declare_video_input_strategy found "
+            f"{len(violations)} violation(s). Catalog #171 closes REVIEW-OMNI "
+            "Medium NV9 (concurrent FS contention on `upstream/videos/0.mkv`):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #172 - check_substrate_trainers_declare_autocast_fp16_support
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Medium NV2 (Hotz): Substrate trainers don't use
+# ``torch.autocast(FP16)`` + GradScaler. Engineering speed gap vs T1 Balle
+# is 4-6x. Backporting the canonical pattern is a separate engineering
+# wave. This META gate refuses any new ``experiments/train_substrate_*.py``
+# trainer that does not (a) declare an ``--enable-autocast-fp16`` flag in
+# its argparse OR (b) carry a file-level
+# ``# AUTOCAST_FP16_WAIVED:<reason>`` waiver explicitly tagging it as a
+# known engineering gap (sister of the existing Tier 1 backport queue).
+# Detection is grep-based (no AST walk needed) because both the flag name
+# and the waiver token are string-literal markers.
+_CHECK_172_TRAINER_GLOB = "train_substrate_*.py"
+_CHECK_172_FLAG_TOKEN = "--enable-autocast-fp16"
+_CHECK_172_FILE_WAIVER_RE = re.compile(
+    r"#\s*AUTOCAST_FP16_WAIVED:\s*(?!<reason>)\S+"
+)
+
+
+def check_substrate_trainers_declare_autocast_fp16_support(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #172. REVIEW-OMNI Medium NV2. Refuses substrate trainers
+    that neither declare ``--enable-autocast-fp16`` nor carry a file-level
+    ``# AUTOCAST_FP16_WAIVED:<reason>`` waiver.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    experiments_dir = root / "experiments"
+    violations: list[str] = []
+    if not experiments_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-trainer-autocast-fp16] OK "
+                "(no experiments dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(experiments_dir.glob(_CHECK_172_TRAINER_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_172_FILE_WAIVER_RE.search(text):
+            continue
+        if _CHECK_172_FLAG_TOKEN in text:
+            continue
+        violations.append(
+            f"{rel}: substrate trainer neither declares `{_CHECK_172_FLAG_TOKEN}` "
+            "argparse flag nor carries a file-level "
+            "`# AUTOCAST_FP16_WAIVED:<reason>` waiver. Engineering-speed gap "
+            "vs T1 Balle pattern (commit b0ef91a3, 4-6x slowdown). Backport "
+            "the canonical autocast wrapper OR explicitly waive."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-trainer-autocast-fp16] {len(violations)} "
+                f"violation(s) across {scanned} substrate trainer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-trainer-autocast-fp16] OK "
+                f"({scanned} substrate trainer(s); all declared or waived)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainers_declare_autocast_fp16_support found "
+            f"{len(violations)} violation(s). Catalog #172 closes REVIEW-OMNI "
+            "Medium NV2 (4-6x engineering-speed gap; canonical pattern in "
+            "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py "
+            "@ commit b0ef91a3):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #173 - check_substrate_dispatch_honors_canary_first_ordering
+# ─────────────────────────────────────────────────────────────────────────
+# REVIEW-OMNI Medium C4 (Quantizr/Fridrich): sane_hnerv had 5 failed
+# first-anchor attempts; treating sane_hnerv as just-one-of-N in parallel
+# fan-out is a Race-mode rigor inversion violation at the wrong moment
+# (no contest race active 2026-05-12). Canary-first ordering is correct.
+#
+# Formalized as a YAML field on each substrate recipe:
+# ``canary_status`` (one of: ``canary``, ``post_canary_dependent``,
+# ``independent_substrate``). A ``post_canary_dependent`` recipe MUST
+# also declare ``canary_dependency: <substrate_id>`` so the dispatch
+# path can verify the canary has at least one successful contest-CUDA
+# anchor before firing. Same-line waiver:
+# ``# CANARY_FIRST_OK:<reason>`` for substrates that legitimately have
+# no canary dependency.
+_CHECK_173_FIELD = "canary_status"
+_CHECK_173_VALID_VALUES: tuple[str, ...] = (
+    "canary",
+    "post_canary_dependent",
+    "independent_substrate",
+)
+_CHECK_173_DEPENDENCY_FIELD = "canary_dependency"
+_CHECK_173_WAIVER_RE = re.compile(
+    r"#\s*CANARY_FIRST_OK:\s*(?!<reason>)\S+"
+)
+_CHECK_173_FIELD_RE = re.compile(
+    rf"^\s*{re.escape(_CHECK_173_FIELD)}\s*:\s*\"?([a-zA-Z_]+)\"?\s*(#.*)?$",
+    re.MULTILINE,
+)
+_CHECK_173_DEP_FIELD_RE = re.compile(
+    rf"^\s*{re.escape(_CHECK_173_DEPENDENCY_FIELD)}\s*:\s*\"?([a-zA-Z0-9_]+)\"?\s*(#.*)?$",
+    re.MULTILINE,
+)
+
+
+def check_substrate_dispatch_honors_canary_first_ordering(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #173. REVIEW-OMNI Medium C4. Refuses substrate recipes that
+    don't declare ``canary_status`` (and ``canary_dependency`` for
+    ``post_canary_dependent`` recipes).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    recipes_dir = root / _CHECK_170_RECIPE_DIR
+    violations: list[str] = []
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(
+                "  [substrate-recipe-canary-first] OK "
+                "(no operator_authorize_recipes dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(recipes_dir.glob(_CHECK_170_RECIPE_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_173_WAIVER_RE.search(text):
+            continue
+        m = _CHECK_173_FIELD_RE.search(text)
+        if m is None:
+            violations.append(
+                f"{rel}: missing top-level `{_CHECK_173_FIELD}: <status>` "
+                f"field (one of {list(_CHECK_173_VALID_VALUES)}). Per "
+                "REVIEW-OMNI C4: substrate fan-out without canary-first "
+                "ordering is a Race-mode rigor inversion violation. Add the "
+                "field OR a `# CANARY_FIRST_OK:<reason>` waiver."
+            )
+            continue
+        value = m.group(1).strip()
+        if value not in _CHECK_173_VALID_VALUES:
+            violations.append(
+                f"{rel}: `{_CHECK_173_FIELD}: {value}` is not a recognized "
+                f"value (must be one of {list(_CHECK_173_VALID_VALUES)})"
+            )
+            continue
+        if value == "post_canary_dependent":
+            dep_m = _CHECK_173_DEP_FIELD_RE.search(text)
+            if dep_m is None:
+                violations.append(
+                    f"{rel}: `{_CHECK_173_FIELD}: post_canary_dependent` "
+                    f"requires a `{_CHECK_173_DEPENDENCY_FIELD}: <substrate_id>` "
+                    "sibling field naming the canary substrate it depends on."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-recipe-canary-first] {len(violations)} "
+                f"violation(s) across {scanned} substrate recipe(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [substrate-recipe-canary-first] OK "
+                f"({scanned} substrate recipe(s); all declare canary status)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_dispatch_honors_canary_first_ordering found "
+            f"{len(violations)} violation(s). Catalog #173 closes REVIEW-OMNI "
+            "Medium C4 (sane_hnerv canary-first ordering):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
