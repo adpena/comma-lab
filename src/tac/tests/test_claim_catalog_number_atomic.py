@@ -14,7 +14,6 @@ from __future__ import annotations
 import importlib.util
 import multiprocessing as mp
 import sys
-import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -147,7 +146,7 @@ def test_log_records_each_claim(tmp_path: Path) -> None:
     mod.claim_one()
     mod.claim_one()
     assert log.exists()
-    lines = [l for l in log.read_text().splitlines() if l.strip()]
+    lines = [line for line in log.read_text().splitlines() if line.strip()]
     assert len(lines) == 2
     # Each line must be valid JSON with the expected schema.
     import json
@@ -157,3 +156,90 @@ def test_log_records_each_claim(tmp_path: Path) -> None:
         assert "claimed" in rec
         assert "next_will_be" in rec
         assert rec["next_will_be"] == rec["claimed"] + 1
+
+
+# -----------------------------------------------------------------------------
+# CANON-1.E hardening - tests for --commit-via-serializer git-transactional
+# claim mode (LANDED 2026-05-12).
+# -----------------------------------------------------------------------------
+
+
+def test_canon_1_e_cli_rejects_commit_without_reason() -> None:
+    """--commit-via-serializer requires --reason; bare invocation rc=2."""
+    import subprocess
+    spec_path = REPO / "tools" / "claim_catalog_number.py"
+    proc = subprocess.run(
+        [sys.executable, str(spec_path), "claim", "--commit-via-serializer"],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 2
+    assert "--reason" in proc.stderr
+
+
+def test_canon_1_e_module_exports_commit_helper(tmp_path: Path) -> None:
+    """The new _commit_state_via_serializer helper is exposed at module scope."""
+    state = tmp_path / "next_catalog_number.txt"
+    log = tmp_path / "catalog-claim.log"
+    mod = _load_module(state, log)
+    assert hasattr(mod, "_commit_state_via_serializer")
+    assert callable(mod._commit_state_via_serializer)
+
+
+def test_canon_1_e_serializer_path_constant_present(tmp_path: Path) -> None:
+    """Module exposes SERIALIZER_PATH pointing at the canonical helper."""
+    state = tmp_path / "next_catalog_number.txt"
+    log = tmp_path / "catalog-claim.log"
+    mod = _load_module(state, log)
+    assert hasattr(mod, "SERIALIZER_PATH")
+    assert mod.SERIALIZER_PATH.name == "subagent_commit_serializer.py"
+    assert mod.SERIALIZER_PATH.parent.name == "tools"
+
+
+def test_canon_1_e_commit_raises_when_serializer_missing(tmp_path: Path) -> None:
+    """If the serializer is absent, _commit_state_via_serializer raises."""
+    state = tmp_path / "next_catalog_number.txt"
+    log = tmp_path / "catalog-claim.log"
+    mod = _load_module(state, log)
+    # Initialize the state file first; the helper reads it for the sha.
+    mod.claim_one()
+    # Point SERIALIZER_PATH at a non-existent file.
+    mod.SERIALIZER_PATH = tmp_path / "nonexistent_serializer.py"
+    import pytest
+    with pytest.raises(RuntimeError, match="serializer not found"):
+        mod._commit_state_via_serializer(claimed_n=999, reason="test")
+
+
+def test_canon_1_e_log_marks_committed_when_serializer_succeeds(tmp_path: Path) -> None:
+    """When the serializer commit succeeds, the log records committed_via_serializer=True.
+
+    Uses a fake serializer script that exits 0 to verify the success path
+    appends the expected log entry without depending on a real git commit.
+    """
+    state = tmp_path / "next_catalog_number.txt"
+    log = tmp_path / "catalog-claim.log"
+    mod = _load_module(state, log)
+    # Initialize the state file with one real claim to populate it.
+    mod.claim_one()
+    # Point SERIALIZER_PATH at a fake script that always exits 0.
+    fake = tmp_path / "fake_serializer.py"
+    fake.write_text("import sys; sys.exit(0)\n")
+    mod.SERIALIZER_PATH = fake
+    # Also redirect REPO_ROOT so subprocess cwd doesn't escape tmp.
+    mod.REPO_ROOT = tmp_path
+    # Ensure relative-path computation works: state must be under REPO_ROOT.
+    state_in_repo = tmp_path / ".omx" / "state" / "next_catalog_number.txt"
+    state_in_repo.parent.mkdir(parents=True, exist_ok=True)
+    state_in_repo.write_text("999\n")
+    mod.STATE_PATH = state_in_repo
+    mod._commit_state_via_serializer(claimed_n=998, reason="test reason")
+    import json
+    entries = [
+        json.loads(line)
+        for line in log.read_text().splitlines()
+        if line.strip()
+    ]
+    last = entries[-1]
+    assert last.get("committed_via_serializer") is True
+    assert last.get("reason") == "test reason"
+    assert last.get("claimed") == 998
