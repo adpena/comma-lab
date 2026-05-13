@@ -234,3 +234,32 @@ Results:
   promotion eligible false, ready for exact eval false until dispatch;
 - strict preflight: passed in `real 9.16s`, under the 30s budget;
 - no remote/GPU dispatch was launched by this review.
+
+### Modal smoke recovery after push
+
+After the code hardening landed, the pre-existing SIREN Modal smoke claim was
+harvested through the canonical lane recovery path:
+
+```text
+.venv/bin/python experiments/modal_recover_lane.py --label substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep
+```
+
+Recovered result:
+
+- Modal call id: `fc-01KRGTEM56EXCV94Q7DC1HF0PB`;
+- status: `failed_modal_training_timeout`;
+- return code: `124`;
+- elapsed: `3601s`;
+- artifacts saved under
+  `experiments/results/lane_substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep_modal`;
+- advisory score only: `2.26` on `device=mps`, explicitly non-promotable;
+- no `[contest-CUDA]` claim, no ranking claim, no lane retirement claim.
+
+The three previously-active Modal claim rows for this smoke were closed with
+terminal `failed_modal_training_timeout` rows. Post-close claim summary:
+`active_count=0`.
+
+Interpretation: this is an infrastructure/config/runtime timeout signal, not a
+SIREN model result. It reinforces the fixes above: smoke/full dispatch must run
+through lane-id-preserving custody, active-claim verification, writable Modal
+paths, and exact contest-CUDA smoke validation before any full spend.
