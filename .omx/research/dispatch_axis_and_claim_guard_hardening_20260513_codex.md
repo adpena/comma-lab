@@ -44,6 +44,35 @@ the 2026-05-13 frontier substrate landings:
 
 Result: `92 passed`.
 
+Follow-up P1 exact-readiness guard:
+
+```bash
+.venv/bin/python -m pytest \
+  src/tac/tests/test_optimizer_exact_readiness.py \
+  tests/test_parallel_dispatch_top_k_exact_ready_audit.py -q
+```
+
+Result: `24 passed`.
+
+## P1 Follow-Up: Non-Promotional HLM1 Reference
+
+HLM1 exact CUDA remains preserved as a reviewed score-lowering reference:
+
+- score: `0.20638030907530963`
+- label: `hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513`
+- status: non-promotional result-review input, not an unqualified active
+  dispatch frontier
+
+The active promotable score frontier used by exact-readiness and
+parallel-dispatch defaults is now HDM4:
+
+- score: `0.20642625334307507`
+- label: `pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex`
+
+This prevents non-promotional HLM1 evidence from silently blocking dispatch of
+future candidates that could be promotable between HDM4 and HLM1, while keeping
+HLM1 visible as exact-CUDA review signal.
+
 ## Status
 
 No remote GPU dispatch was launched by this hardening pass. These are guardrail

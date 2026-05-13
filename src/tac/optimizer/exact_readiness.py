@@ -27,11 +27,18 @@ TOOL_NAME = "tools/promote_optimizer_candidate_for_exact_eval.py"
 PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
 ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
 ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
-ACTIVE_SCORE_FRONTIER_SCORE = 0.20638030907530963
-ACTIVE_SCORE_FRONTIER_LABEL = "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
+ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE = 0.20638030907530963
+ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL = (
+    "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
+)
+ACTIVE_SCORE_FRONTIER_SCORE = 0.20642625334307507
+ACTIVE_SCORE_FRONTIER_LABEL = "pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex"
 # Backward-compatible name used by dispatch gates for score comparisons.
-# Archive-byte comparisons still use ACTIVE_FLOOR_ARCHIVE_BYTES, which is the
-# separate rate-only PR103-on-PR106 byte floor.
+# Score comparisons use the active promotable CUDA frontier. The lower HLM1
+# exact-CUDA reference is preserved above as non-promotional evidence and must
+# not silently become the dispatch floor. Archive-byte comparisons still use
+# ACTIVE_FLOOR_ARCHIVE_BYTES, which is the separate rate-only PR103-on-PR106
+# byte floor.
 ACTIVE_FLOOR_SCORE = ACTIVE_SCORE_FRONTIER_SCORE
 SHA256_HEX = frozenset("0123456789abcdef")
 PREDICTED_SCORE_FIELDS = frozenset(
@@ -1117,6 +1124,10 @@ def json_dumps(payload: Any) -> str:
 
 __all__ = [
     "ACTIVE_FLOOR_ARCHIVE_BYTES",
+    "ACTIVE_FLOOR_SCORE",
+    "ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE",
+    "ACTIVE_RATE_ONLY_FLOOR_SCORE",
+    "ACTIVE_SCORE_FRONTIER_SCORE",
     "ExactReadinessError",
     "QUEUE_SCHEMA",
     "promote_candidate_for_exact_eval",

@@ -74,10 +74,16 @@ _LIGHTNING_DISPATCH = REPO / "tools" / "lightning_dispatch_pr106_stack.py"
 _VASTAI_DISPATCH = REPO / "scripts" / "launch_lane_on_vastai.py"
 DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
 DEFAULT_ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
-DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE = 0.20638030907530963
-DEFAULT_ACTIVE_SCORE_FRONTIER_LABEL = "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
-# Backward-compatible flag/default name. Score comparisons use the active score
-# frontier; archive-byte comparisons use the separate rate-only byte floor.
+DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE = 0.20638030907530963
+DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL = (
+    "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
+)
+DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE = 0.20642625334307507
+DEFAULT_ACTIVE_SCORE_FRONTIER_LABEL = "pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex"
+# Backward-compatible flag/default name. Score comparisons use the active
+# promotable score frontier; archive-byte comparisons use the separate
+# rate-only byte floor. The lower HLM1 exact-CUDA reference is preserved as
+# non-promotional evidence, not as an unqualified dispatch floor.
 DEFAULT_ACTIVE_FLOOR_SCORE = DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 BLOCKED_EVIDENCE_SEMANTICS = {
     "prediction_only_forensic",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import stat
 import subprocess
@@ -27,6 +28,21 @@ def _write_archive(path: Path) -> tuple[int, str]:
         zf.writestr(info, b"payload", compress_type=zipfile.ZIP_STORED)
     raw = path.read_bytes()
     return len(raw), hashlib.sha256(raw).hexdigest()
+
+
+def test_parallel_dispatch_floor_preserves_hlm1_as_nonpromotional_reference() -> None:
+    spec = importlib.util.spec_from_file_location(
+        "parallel_dispatch_top_k_floor_test",
+        TOOL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20638030907530963
+    assert module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE == 0.20642625334307507
+    assert module.DEFAULT_ACTIVE_FLOOR_SCORE == module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 
 
 def test_parallel_dispatch_refuses_stale_exact_ready_terminal_claim(tmp_path: Path) -> None:
