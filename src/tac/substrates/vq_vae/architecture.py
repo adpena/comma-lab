@@ -29,8 +29,17 @@ Architecture (council-sketch 2026-05-12; not yet empirical-anchored):
 Council notes:
 - Total param target: ~180K (~10K encoder + ~10K decoder + ~4K codebook K=512,D=8
   + ~156K per-pair indices stored as part of the archive, not as model params)
-- Codebook EMA decay 0.99 per van den Oord persistent-buffer form (NOT the
-  weight EMA 0.997 -- codebooks adapt faster than weights by design).
+- Codebook adaptation: STE-gradient only (Bengio 2013) at L0 SKETCH; van den Oord
+  persistent N_c/m_c EMA buffer form (decay=0.99) is DEFERRED-pending-substrate-
+  engineering. The ``codebook_ema_decay=0.99`` config field is reserved for the
+  future EMA-buffer implementation (R4 finding Z-8.1, 2026-05-13). Promotion
+  past L0 SKETCH requires either implementing the persistent N_c/m_c buffers
+  (register_buffer("ema_cluster_size", torch.zeros(K)) +
+  register_buffer("ema_w", torch.zeros(K, D)) updated BEFORE quantize per
+  training step) OR explicit operator decision to ship the STE-gradient-only
+  variant. Per CLAUDE.md "Comment-only contracts are FORBIDDEN" — see van den
+  Oord council seat verdict in
+  feedback_review_zeta_r4_LANDED_20260513.md Finding Z-8.1.
 - Encoder/decoder weight EMA 0.997 per CLAUDE.md "EMA — non-negotiable".
 
 CLAUDE.md compliance:
@@ -80,7 +89,14 @@ class VqVaeConfig:
     output_width: int = _CONTEST_W
 
     codebook_ema_decay: float = 0.99
-    """van den Oord persistent codebook EMA decay (NOT weight EMA 0.997)."""
+    """Reserved for van den Oord persistent N_c/m_c codebook EMA decay (NOT
+    weight EMA 0.997). DEFERRED-pending-substrate-engineering at L0 SKETCH —
+    the architecture currently updates the codebook via STE gradient only (no
+    register_buffer for ema_cluster_size / ema_w). Per R4 finding Z-8.1
+    (2026-05-13): this field is honest config-reservation for the future EMA
+    buffer implementation; current trainer does NOT consume it. See
+    feedback_review_zeta_r4_LANDED_20260513.md Finding Z-8.1 for the van den
+    Oord + Tao + Filler verdict."""
 
     commitment_cost: float = 0.25
     """Commitment loss weight (encoder pulled towards chosen codebook entry)."""
@@ -156,9 +172,15 @@ class VqVaeSubstrate(nn.Module):
     Forward signature mirrors sane_hnerv for trainer interop:
         forward(pair_indices) -> (rgb_0, rgb_1), each (B, 3, H, W).
 
-    The codebook is a persistent ``nn.Parameter`` updated jointly via the
-    straight-through estimator (Bengio 2013) and a van den Oord EMA buffer in
-    the trainer (decay=0.99, NOT the weight EMA 0.997).
+    The codebook is a trainable ``nn.Parameter`` updated via the
+    straight-through estimator (Bengio 2013) at L0 SKETCH. The van den Oord
+    persistent N_c/m_c EMA buffer form (decay=0.99) is DEFERRED-pending-
+    substrate-engineering per R4 finding Z-8.1 (2026-05-13): the
+    ``cfg.codebook_ema_decay`` config field is reserved for the future buffer
+    implementation but the current architecture does NOT register the
+    ``ema_cluster_size`` / ``ema_w`` buffers nor consume the decay during
+    training. Per CLAUDE.md "Comment-only contracts are FORBIDDEN", this
+    docstring is the authoritative description.
     """
 
     def __init__(self, cfg: VqVaeConfig) -> None:

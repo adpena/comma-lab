@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 # ruff: noqa: E402,I001
+# HNERV_INFLATE_LOC_BUDGET_WAIVED:multi_sidechannel_composition_runtime — this
+# adapter dispatches across 4 sidechannel decoders (latent + yshift + lrl1 +
+# wavelet) layered into one packet; the composition fan-out is structural and
+# cannot be expressed in <=200 LOC without per-sidechannel module imports
+# (which inflate.py forbids per HNeRV parity discipline lesson 4's <=2 runtime
+# dep closure). Refactor path: extract sidechannel decoders into
+# submissions/pr106_stacked/decode_{latent,yshift,lrl1,wavelet}.py modules
+# imported by inflate.py; planned for FIX-WAVE-Z bounded refactor (1-2h per
+# file). Reviewable in 30 seconds requires the refactor, not just the waiver.
 """Inflate pr106_stacked: PR106 HNeRV decoder + composable subset of all
 4 score-aware sidechannels (latent + yshift + lrl1 + wavelet-WR01) layered
 into a single archive.

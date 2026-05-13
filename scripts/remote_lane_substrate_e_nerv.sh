@@ -232,6 +232,13 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # E_NERV_PHASE_B_AUTH_MEMO env var which adds --auth-eval --phase-b-auth-memo
 # explicitly.
 log "stage_4_trainer_invoke_begin video=$E_NERV_VIDEO_PATH epochs=$E_NERV_EPOCHS device=$E_NERV_DEVICE smoke=$E_NERV_SMOKE"
+# R4 finding Z-3.2 (2026-05-13): operator-visible scaffold acknowledgement.
+# The trainer experiments/train_e_nerv_as_renderer.py:154 raises SystemExit on
+# non-smoke; this log line ensures dispatch harvest can detect scaffold-only
+# state without parsing trainer source. See feedback_review_zeta_r4_LANDED_20260513.md.
+if [ "${E_NERV_SMOKE:-0}" != "1" ]; then
+    log "stage_4_scaffold_only_acknowledged trainer=experiments/train_e_nerv_as_renderer.py:154 scaffold_only=true non_smoke_path=raises_SystemExit"
+fi
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 
 # Build the optional flag list dynamically.

@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+# HNERV_INFLATE_LOC_BUDGET_WAIVED:lrl1_low_rank_decoder_inline_section_closure —
+# this adapter contains the inline LRL1 (Local-Region L1 luma low-rank
+# correction) decoder section closure: magic 0xFB + uint24 PR106 length prefix
+# + per-frame low-rank correction unpack/dequant + frame post-processing. The
+# low-rank correction decoder cannot be modularized without breaking the
+# byte-bound guarantee against the candidate archive in
+# experiments/results/pr106_lrl1_sidechannel_*. Refactor path: extract
+# _lrl1_decoder.py with byte-parity tests; planned for FIX-WAVE-Z.
 """Inflate pr106_lrl1_sidechannel: PR106 HNeRV decoder + per-frame Local-Region L1
 (LRL1) luma low-rank correction sidechannel.
 

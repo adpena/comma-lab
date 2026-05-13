@@ -6,8 +6,13 @@ siren, grayscale_lut"). The Vector-Quantized Variational AutoEncoder family
 Learning") replaces continuous latents with a **discrete codebook** of K
 embeddings. The encoder produces a per-frame spatial grid; each grid cell is
 quantized to its nearest codebook entry; the decoder consumes the index grid.
-The codebook is maintained via van den Oord's persistent EMA buffer form
-(decay=0.99 per CLAUDE.md "EMA — non-negotiable" codebook exception).
+At L0 SKETCH the codebook is updated via the straight-through estimator
+(Bengio 2013) only; van den Oord's persistent N_c/m_c EMA buffer form
+(decay=0.99 per CLAUDE.md "EMA — non-negotiable" codebook exception) is
+DEFERRED-pending-substrate-engineering per R4 finding Z-8.1 (2026-05-13).
+The ``codebook_ema_decay`` config field is reserved for the future buffer
+implementation; the current architecture does NOT register ``ema_cluster_size``
+/ ``ema_w`` buffers.
 
 The substrate is score-aware: gradients flow through the straight-through
 estimator (Bengio 2013) of the codebook quantizer, then through the decoder,
