@@ -1,0 +1,362 @@
+{
+  "archive": {
+    "byte_delta_vs_packetir_source": -151,
+    "candidate_archive_bytes": 186629,
+    "candidate_archive_path": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/pr106_r2_pr101_grammar_hnerv_brotli_repack_candidate.zip",
+    "candidate_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+    "official_rate_score_delta_if_components_equal": -0.00010054470192144788,
+    "source_archive_bytes": 186780,
+    "source_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
+  },
+  "axes": {
+    "axis_gap": {
+      "cpu_minus_cuda_score": 0.021446497253930025,
+      "cpu_score": 0.22796397327358284,
+      "cuda_score": 0.2065174760196528,
+      "interpretation": "axis divergence only; never convert CPU to CUDA or CUDA to CPU"
+    },
+    "contest_cpu": {
+      "archive_bytes": 186629,
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "avg_posenet_dist": 0.00016402,
+      "avg_segnet_dist": 0.00063196,
+      "claim_valid": false,
+      "evidence_grade": "contest-CPU",
+      "exact_cuda_eval_complete": false,
+      "finite_score": true,
+      "lane_tag": "[contest-CPU]",
+      "n_samples": 600,
+      "promotion_blockers": [],
+      "promotion_eligible": false,
+      "rank_or_kill_blockers": [],
+      "recomputed_score": 0.22796397327358284,
+      "score": 0.22796397327358284,
+      "score_axis": "contest_cpu",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "score_source_key": "canonical_score"
+    },
+    "contest_cuda": {
+      "archive_bytes": 186629,
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "avg_posenet_dist": 3.236e-05,
+      "avg_segnet_dist": 0.0006426,
+      "claim_valid": true,
+      "evidence_grade": "contest-CUDA",
+      "exact_cuda_eval_complete": true,
+      "finite_score": true,
+      "lane_tag": "[contest-CUDA]",
+      "n_samples": 600,
+      "promotion_blockers": [
+        "raw_auth_eval_does_not_verify_submission_policy_gates",
+        "cpu_leaderboard_reproduction_not_adjudicated",
+        "pre_submission_compliance_check_not_recorded"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_blockers": [
+        "raw_auth_eval_not_rank_or_kill_authority",
+        "requires_adjudicated_cuda_cpu_policy_review"
+      ],
+      "recomputed_score": 0.2065174760196528,
+      "score": 0.2065174760196528,
+      "score_axis": "contest_cuda",
+      "score_claim": true,
+      "score_claim_valid": true,
+      "score_source_key": "canonical_score"
+    }
+  },
+  "blockers": [],
+  "checks": [
+    {
+      "blocking": true,
+      "evidence": {
+        "dispatch_attempted": false,
+        "score_claim": false
+      },
+      "failure_class": "ok",
+      "id": "candidate_result_is_nonclaiming_static_artifact",
+      "passed": true,
+      "requirement": "PacketIR/static result must not claim score or dispatch by itself"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "actual_bytes": 186629,
+        "actual_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "expected_bytes": 186629,
+        "expected_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "path": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/pr106_r2_pr101_grammar_hnerv_brotli_repack_candidate.zip"
+      },
+      "failure_class": "ok",
+      "id": "candidate_archive_file_matches_packetir_result",
+      "passed": true,
+      "requirement": "candidate archive on disk must match PacketIR result SHA and bytes"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "audit_blockers": [],
+        "candidate_archive_bytes": 186629,
+        "source_archive_bytes": 186780,
+        "total_byte_delta": -151
+      },
+      "failure_class": "ok",
+      "id": "candidate_diff_audit_closed_and_rate_positive",
+      "passed": true,
+      "requirement": "candidate diff audit must be blocker-free and byte-smaller than its source"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "all_payload_bytes_accounted": true,
+        "runtime_consumption_claim": false,
+        "unconsumed_trailing_bytes": 0
+      },
+      "failure_class": "ok",
+      "id": "packetir_consumed_byte_proof_complete",
+      "passed": true,
+      "requirement": "PacketIR proof must account for every payload byte without overstating runtime consumption"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "emitted_candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+        "found": true,
+        "matches_exact_candidate_archive": false,
+        "matches_packetir_source_archive": true,
+        "name": "pr101_ranked_no_op_sidecar_format_0x02",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_decoder_implemented": true,
+        "score_claim": false
+      },
+      "failure_class": "ok",
+      "id": "recode_profile_keeps_candidate_nonpromotable_before_exact_eval",
+      "passed": true,
+      "requirement": "profile/emitted candidate or direct PacketIR source row must be non-claiming and exact-eval-blocked"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "archive_bytes": 186629,
+        "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "avg_posenet_dist": 3.236e-05,
+        "avg_segnet_dist": 0.0006426,
+        "claim_valid": true,
+        "evidence_grade": "contest-CUDA",
+        "exact_cuda_eval_complete": true,
+        "finite_score": true,
+        "lane_tag": "[contest-CUDA]",
+        "n_samples": 600,
+        "promotion_blockers": [
+          "raw_auth_eval_does_not_verify_submission_policy_gates",
+          "cpu_leaderboard_reproduction_not_adjudicated",
+          "pre_submission_compliance_check_not_recorded"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_blockers": [
+          "raw_auth_eval_not_rank_or_kill_authority",
+          "requires_adjudicated_cuda_cpu_policy_review"
+        ],
+        "recomputed_score": 0.2065174760196528,
+        "score": 0.2065174760196528,
+        "score_axis": "contest_cuda",
+        "score_claim": true,
+        "score_claim_valid": true,
+        "score_source_key": "canonical_score"
+      },
+      "failure_class": "ok",
+      "id": "cuda_eval_is_valid_contest_cuda_score_claim",
+      "passed": true,
+      "requirement": "CUDA artifact must pass score-claim parser and component recomputation"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "candidate_archive_bytes": 186629,
+        "candidate_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "cuda_archive_bytes": 186629,
+        "cuda_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d"
+      },
+      "failure_class": "ok",
+      "id": "cuda_eval_archive_matches_candidate",
+      "passed": true,
+      "requirement": "CUDA auth eval must score the exact candidate archive"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "archive_bytes": 186629,
+        "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "avg_posenet_dist": 0.00016402,
+        "avg_segnet_dist": 0.00063196,
+        "claim_valid": false,
+        "evidence_grade": "contest-CPU",
+        "exact_cuda_eval_complete": false,
+        "finite_score": true,
+        "lane_tag": "[contest-CPU]",
+        "n_samples": 600,
+        "promotion_blockers": [],
+        "promotion_eligible": false,
+        "rank_or_kill_blockers": [],
+        "recomputed_score": 0.22796397327358284,
+        "score": 0.22796397327358284,
+        "score_axis": "contest_cpu",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "score_source_key": "canonical_score"
+      },
+      "failure_class": "ok",
+      "id": "cpu_eval_is_axis_labeled_diagnostic_not_cuda_claim",
+      "passed": true,
+      "requirement": "CPU artifact must stay on contest-CPU axis and not become CUDA score authority"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "candidate_archive_bytes": 186629,
+        "candidate_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+        "cpu_archive_bytes": 186629,
+        "cpu_archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d"
+      },
+      "failure_class": "ok",
+      "id": "cpu_eval_archive_matches_candidate",
+      "passed": true,
+      "requirement": "CPU auth eval must score the same candidate archive before comparing axes"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "packetir_source_archive_bytes": 186780,
+        "packetir_source_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+        "source_eval": {
+          "archive_bytes": 186780,
+          "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+          "avg_posenet_dist": 3.236e-05,
+          "avg_segnet_dist": 0.0006426,
+          "claim_valid": true,
+          "evidence_grade": "contest-CUDA",
+          "exact_cuda_eval_complete": true,
+          "finite_score": true,
+          "lane_tag": "[contest-CUDA]",
+          "n_samples": 600,
+          "promotion_blockers": [
+            "raw_auth_eval_does_not_verify_submission_policy_gates",
+            "cpu_leaderboard_reproduction_not_adjudicated",
+            "pre_submission_compliance_check_not_recorded"
+          ],
+          "promotion_eligible": false,
+          "rank_or_kill_blockers": [
+            "raw_auth_eval_not_rank_or_kill_authority",
+            "requires_adjudicated_cuda_cpu_policy_review"
+          ],
+          "recomputed_score": 0.20661802072157426,
+          "score": 0.2066181354574151,
+          "score_axis": "contest_cuda",
+          "score_claim": true,
+          "score_claim_valid": true,
+          "score_source_key": "canonical_score"
+        }
+      },
+      "failure_class": "ok",
+      "id": "source_cuda_eval_matches_packetir_source",
+      "passed": true,
+      "requirement": "source CUDA baseline must be the PacketIR source archive, not an inferred neighbor"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "archive_bytes": 186423,
+        "archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+        "avg_posenet_dist": 3.236e-05,
+        "avg_segnet_dist": 0.0006426,
+        "claim_valid": true,
+        "evidence_grade": "contest-CUDA",
+        "exact_cuda_eval_complete": true,
+        "finite_score": true,
+        "lane_tag": "[contest-CUDA]",
+        "n_samples": 600,
+        "promotion_blockers": [
+          "raw_auth_eval_does_not_verify_submission_policy_gates",
+          "cpu_leaderboard_reproduction_not_adjudicated",
+          "pre_submission_compliance_check_not_recorded"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_blockers": [
+          "raw_auth_eval_not_rank_or_kill_authority",
+          "requires_adjudicated_cuda_cpu_policy_review"
+        ],
+        "recomputed_score": 0.20638030907530963,
+        "score": 0.20638030907530963,
+        "score_axis": "contest_cuda",
+        "score_claim": true,
+        "score_claim_valid": true,
+        "score_source_key": "canonical_score"
+      },
+      "failure_class": "ok",
+      "id": "current_best_cuda_eval_is_valid_reference",
+      "passed": true,
+      "requirement": "current-best reference must be a valid contest-CUDA score claim"
+    }
+  ],
+  "classification": "exact_measured_not_current_frontier",
+  "comparisons": {
+    "byte_delta_vs_packetir_source": -151,
+    "delta_vs_current_best_cuda": 0.0001371669443431811,
+    "delta_vs_source_cuda": -0.00010065943776227382,
+    "improves_packetir_source_cuda": true,
+    "not_current_frontier": true
+  },
+  "dispatch_attempted": false,
+  "duplicate_dispatch_blockers": [
+    "same_candidate_archive_already_exact_evaluated",
+    "candidate_not_current_frontier_on_contest_cuda"
+  ],
+  "input_paths": {
+    "candidate_archive": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/pr106_r2_pr101_grammar_hnerv_brotli_repack_candidate.zip",
+    "candidate_result": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/result.json",
+    "cpu_eval": "experiments/results/modal_auth_eval_cpu/pr106_r2_pr101_grammar_lowlevel_repack_cpu_20260513_codex/contest_auth_eval.json",
+    "cuda_eval": "experiments/results/modal_auth_eval/pr106_r2_pr101_grammar_lowlevel_repack_cuda_20260513_codex/contest_auth_eval.json",
+    "current_best_cuda_eval": "experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513/contest_auth_eval.json",
+    "recode_profile": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/recode_profile.json",
+    "source_cuda_eval": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_pr101_grammar_20260511T180000Z/contest_auth_eval.json"
+  },
+  "interpretation": "This closure joins existing exact-eval artifacts. It does not authorize promotion, rank/kill decisions outside the stated axes, or another dispatch of the same archive SHA.",
+  "lane_id": "pr106_r2_packetir_pr101_grammar_lowlevel_closure",
+  "new_score_claim": false,
+  "packetir": {
+    "candidate_diff_audit_blockers": [],
+    "consumed_byte_proof": {
+      "all_payload_bytes_accounted": true,
+      "proof_scope": "packet_ir_parser_accounting_not_runtime_inflate_consumption",
+      "runtime_consumption_claim": false,
+      "unconsumed_trailing_bytes": 0
+    }
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "do_not_dispatch_same_candidate_archive_sha256_again",
+    "reactivate_only_if_a_new_runtime_consumed_recode_has_smaller_exact_cuda_score_than_current_best",
+    "reactivate_if_component_distortion_improves_enough_to_beat_current_best_after_exact_cuda_eval",
+    "reactivate_if_a PacketIR candidate clears runtime_decoder_implemented plus exact CUDA closure and is not already measured"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "recorded_at_utc": "2026-05-13T22:02:56+00:00",
+  "schema": "packetir_exact_eval_closure_v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "tac.packetir_exact_closure",
+  "warnings": [
+    {
+      "evidence": {
+        "candidate_score": 0.2065174760196528,
+        "current_best_score": 0.20638030907530963,
+        "delta_vs_current_best": 0.0001371669443431811
+      },
+      "id": "candidate_exact_cuda_closed_but_not_current_frontier",
+      "message": "candidate improved its PacketIR source line but is worse than the current exact-CUDA reference",
+      "severity": "info"
+    }
+  ]
+}

@@ -1,0 +1,392 @@
+{
+  "adversarial_claim_check": {
+    "interpretation": "Negative or positive byte deltas here are sidecar payload-rate signals only. A score claim requires a runtime that consumes the candidate grammar, a byte-closed archive, no-op proof, and exact contest eval on the emitted packet.",
+    "verdict": "planning_only_no_score_claim"
+  },
+  "best_lossless_candidate": {
+    "applicable": true,
+    "candidate_exact_eval_blockers": [
+      "runtime_decode_apply_proof_required_for_new_candidate_archive",
+      "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+      "exact_cuda_auth_eval_missing",
+      "contest_auth_eval_adjudication_missing"
+    ],
+    "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+    "candidate_packet_ir_all_payload_bytes_accounted": true,
+    "candidate_packet_ir_identity_passed": true,
+    "candidate_packet_ir_payload_sha256": "8c9f259e497033e0e22971ebd9f3b899fe644ae234998664f3edc3a790706b0e",
+    "charged_sidecar_bytes": 533,
+    "delta_bytes_vs_current_charged_sidecar": -42,
+    "emitted_candidate_archive_bytes": 186780,
+    "emitted_candidate_archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.archive.zip",
+    "emitted_candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+    "emitted_candidate_manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.manifest.json",
+    "encoded_payload_bytes": 527,
+    "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+    "framing_meta_bytes": 6,
+    "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+    "lossless_semantic_equivalence_proven": true,
+    "name": "pr101_ranked_no_op_sidecar_format_0x02",
+    "notes": [
+      "existing_pr106_r2_pr101_grammar_runtime_consumed_format"
+    ],
+    "promotion_eligible": false,
+    "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_decoder_implemented": true,
+    "score_claim": false,
+    "sidecar_format_id": "0x02"
+  },
+  "best_runtime_consumed_candidate": {
+    "applicable": true,
+    "candidate_exact_eval_blockers": [
+      "runtime_decode_apply_proof_required_for_new_candidate_archive",
+      "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+      "exact_cuda_auth_eval_missing",
+      "contest_auth_eval_adjudication_missing"
+    ],
+    "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+    "candidate_packet_ir_all_payload_bytes_accounted": true,
+    "candidate_packet_ir_identity_passed": true,
+    "candidate_packet_ir_payload_sha256": "8c9f259e497033e0e22971ebd9f3b899fe644ae234998664f3edc3a790706b0e",
+    "charged_sidecar_bytes": 533,
+    "delta_bytes_vs_current_charged_sidecar": -42,
+    "emitted_candidate_archive_bytes": 186780,
+    "emitted_candidate_archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.archive.zip",
+    "emitted_candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+    "emitted_candidate_manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.manifest.json",
+    "encoded_payload_bytes": 527,
+    "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+    "framing_meta_bytes": 6,
+    "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+    "lossless_semantic_equivalence_proven": true,
+    "name": "pr101_ranked_no_op_sidecar_format_0x02",
+    "notes": [
+      "existing_pr106_r2_pr101_grammar_runtime_consumed_format"
+    ],
+    "promotion_eligible": false,
+    "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_decoder_implemented": true,
+    "score_claim": false,
+    "sidecar_format_id": "0x02"
+  },
+  "best_runtime_consumed_candidate_legacy_name": true,
+  "best_runtime_decoder_implemented_candidate": {
+    "applicable": true,
+    "candidate_exact_eval_blockers": [
+      "runtime_decode_apply_proof_required_for_new_candidate_archive",
+      "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+      "exact_cuda_auth_eval_missing",
+      "contest_auth_eval_adjudication_missing"
+    ],
+    "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+    "candidate_packet_ir_all_payload_bytes_accounted": true,
+    "candidate_packet_ir_identity_passed": true,
+    "candidate_packet_ir_payload_sha256": "8c9f259e497033e0e22971ebd9f3b899fe644ae234998664f3edc3a790706b0e",
+    "charged_sidecar_bytes": 533,
+    "delta_bytes_vs_current_charged_sidecar": -42,
+    "emitted_candidate_archive_bytes": 186780,
+    "emitted_candidate_archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.archive.zip",
+    "emitted_candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+    "emitted_candidate_manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.manifest.json",
+    "encoded_payload_bytes": 527,
+    "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+    "framing_meta_bytes": 6,
+    "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+    "lossless_semantic_equivalence_proven": true,
+    "name": "pr101_ranked_no_op_sidecar_format_0x02",
+    "notes": [
+      "existing_pr106_r2_pr101_grammar_runtime_consumed_format"
+    ],
+    "promotion_eligible": false,
+    "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_decoder_implemented": true,
+    "score_claim": false,
+    "sidecar_format_id": "0x02"
+  },
+  "candidate_rows": [
+    {
+      "applicable": true,
+      "candidate_exact_eval_blockers": [
+        "runtime_decode_apply_proof_required_for_new_candidate_archive",
+        "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_auth_eval_adjudication_missing"
+      ],
+      "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+      "candidate_packet_ir_all_payload_bytes_accounted": true,
+      "candidate_packet_ir_identity_passed": true,
+      "candidate_packet_ir_payload_sha256": "8c9f259e497033e0e22971ebd9f3b899fe644ae234998664f3edc3a790706b0e",
+      "charged_sidecar_bytes": 533,
+      "delta_bytes_vs_current_charged_sidecar": -42,
+      "emitted_candidate_archive_bytes": 186780,
+      "emitted_candidate_archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.archive.zip",
+      "emitted_candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "emitted_candidate_manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.manifest.json",
+      "encoded_payload_bytes": 527,
+      "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+      "framing_meta_bytes": 6,
+      "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+      "lossless_semantic_equivalence_proven": true,
+      "name": "pr101_ranked_no_op_sidecar_format_0x02",
+      "notes": [
+        "existing_pr106_r2_pr101_grammar_runtime_consumed_format"
+      ],
+      "promotion_eligible": false,
+      "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_decoder_implemented": true,
+      "score_claim": false,
+      "sidecar_format_id": "0x02"
+    },
+    {
+      "applicable": true,
+      "candidate_exact_eval_blockers": [
+        "runtime_decode_apply_proof_required_for_new_candidate_archive",
+        "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_auth_eval_adjudication_missing"
+      ],
+      "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+      "candidate_packet_ir_all_payload_bytes_accounted": false,
+      "candidate_packet_ir_identity_passed": false,
+      "candidate_packet_ir_payload_sha256": null,
+      "charged_sidecar_bytes": 539,
+      "delta_bytes_vs_current_charged_sidecar": -36,
+      "encoded_payload_bytes": 539,
+      "encoded_payload_sha256": "2c1569f38dce03db4c41f6169a169190d19951310f4a45dd919f9d91fb501416",
+      "framing_meta_bytes": 0,
+      "framing_meta_sha256": null,
+      "lossless_semantic_equivalence_proven": true,
+      "name": "vocab_bitpack_dim_delta_raw",
+      "notes": [
+        "candidate_requires_new_runtime_decoder"
+      ],
+      "promotion_eligible": false,
+      "rate_score_delta_if_runtime_consumed": -2.397092231239817e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_decoder_implemented": false,
+      "score_claim": false,
+      "sidecar_format_id": null
+    },
+    {
+      "applicable": true,
+      "candidate_exact_eval_blockers": [
+        "runtime_decode_apply_proof_required_for_new_candidate_archive",
+        "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_auth_eval_adjudication_missing"
+      ],
+      "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+      "candidate_packet_ir_all_payload_bytes_accounted": false,
+      "candidate_packet_ir_identity_passed": false,
+      "candidate_packet_ir_payload_sha256": null,
+      "charged_sidecar_bytes": 547,
+      "delta_bytes_vs_current_charged_sidecar": -28,
+      "encoded_payload_bytes": 547,
+      "encoded_payload_sha256": "412ebfd39004959e2448484d3ad74abbd85d0379746efda2ebea185b36ee82c6",
+      "framing_meta_bytes": 0,
+      "framing_meta_sha256": null,
+      "lossless_semantic_equivalence_proven": true,
+      "name": "vocab_bitpack_dim_delta_brotli_q11",
+      "notes": [
+        "candidate_requires_new_runtime_decoder"
+      ],
+      "promotion_eligible": false,
+      "rate_score_delta_if_runtime_consumed": -1.8644050687420796e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_decoder_implemented": false,
+      "score_claim": false,
+      "sidecar_format_id": null
+    },
+    {
+      "applicable": true,
+      "candidate_exact_eval_blockers": [
+        "runtime_decode_apply_proof_required_for_new_candidate_archive",
+        "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_auth_eval_adjudication_missing"
+      ],
+      "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+      "candidate_packet_ir_all_payload_bytes_accounted": true,
+      "candidate_packet_ir_identity_passed": true,
+      "candidate_packet_ir_payload_sha256": "52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d",
+      "charged_sidecar_bytes": 575,
+      "delta_bytes_vs_current_charged_sidecar": 0,
+      "emitted_candidate_archive_bytes": 186822,
+      "emitted_candidate_archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/current_pr100_dim_delta_brotli_q11.archive.zip",
+      "emitted_candidate_archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "emitted_candidate_manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/current_pr100_dim_delta_brotli_q11.manifest.json",
+      "encoded_payload_bytes": 575,
+      "encoded_payload_sha256": "acf58d03f708b0d297f9d32c2f47cefda3526f6665e19e9d0dee8073874c9d27",
+      "framing_meta_bytes": 0,
+      "framing_meta_sha256": null,
+      "lossless_semantic_equivalence_proven": true,
+      "name": "current_pr100_dim_delta_brotli_q11",
+      "notes": [
+        "current_runtime_consumed_format"
+      ],
+      "promotion_eligible": false,
+      "rate_score_delta_if_runtime_consumed": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_decoder_implemented": true,
+      "score_claim": false,
+      "sidecar_format_id": "0x01"
+    },
+    {
+      "applicable": true,
+      "candidate_exact_eval_blockers": [
+        "runtime_decode_apply_proof_required_for_new_candidate_archive",
+        "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_auth_eval_adjudication_missing"
+      ],
+      "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+      "candidate_packet_ir_all_payload_bytes_accounted": false,
+      "candidate_packet_ir_identity_passed": false,
+      "candidate_packet_ir_payload_sha256": null,
+      "charged_sidecar_bytes": 598,
+      "delta_bytes_vs_current_charged_sidecar": 23,
+      "encoded_payload_bytes": 598,
+      "encoded_payload_sha256": "f939537931bbbf1b7d1c387ed8b51323fe329436c591001a13dad47399d53a7f",
+      "framing_meta_bytes": 0,
+      "framing_meta_sha256": null,
+      "lossless_semantic_equivalence_proven": true,
+      "name": "split_dim_stream_delta_stream_brotli_q11",
+      "notes": [
+        "candidate_requires_new_runtime_decoder"
+      ],
+      "promotion_eligible": false,
+      "rate_score_delta_if_runtime_consumed": 1.5314755921809942e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_decoder_implemented": false,
+      "score_claim": false,
+      "sidecar_format_id": null
+    },
+    {
+      "applicable": true,
+      "candidate_exact_eval_blockers": [
+        "runtime_decode_apply_proof_required_for_new_candidate_archive",
+        "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
+        "exact_cuda_auth_eval_missing",
+        "contest_auth_eval_adjudication_missing"
+      ],
+      "candidate_manifest_schema": "pr106_sidecar_recode_candidate_manifest_v1",
+      "candidate_packet_ir_all_payload_bytes_accounted": false,
+      "candidate_packet_ir_identity_passed": false,
+      "candidate_packet_ir_payload_sha256": null,
+      "charged_sidecar_bytes": 1357,
+      "delta_bytes_vs_current_charged_sidecar": 782,
+      "encoded_payload_bytes": 1357,
+      "encoded_payload_sha256": "ff71d346db225884d0ea1fd1465a9efb778936ddf7f5f37cbe0140f189942dd1",
+      "framing_meta_bytes": 0,
+      "framing_meta_sha256": null,
+      "lossless_semantic_equivalence_proven": true,
+      "name": "sparse_indexed_nonzero_brotli_q11",
+      "notes": [
+        "candidate_requires_new_runtime_decoder"
+      ],
+      "promotion_eligible": false,
+      "rate_score_delta_if_runtime_consumed": 0.000520701701341538,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_decoder_implemented": false,
+      "score_claim": false,
+      "sidecar_format_id": null
+    }
+  ],
+  "created_at_utc": "2026-05-13T21:54:44Z",
+  "current_charged_sidecar_bytes": 575,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "candidate_runtime_decoder_missing_for_noncurrent_rows",
+    "missing_no_op_runtime_consumption_proof_for_new_grammar",
+    "missing_exact_contest_eval_for_any_candidate"
+  ],
+  "emitted_runtime_candidate_manifests": [
+    {
+      "archive_bytes": 186780,
+      "archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.archive.zip",
+      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "candidate_name": "pr101_ranked_no_op_sidecar_format_0x02",
+      "manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.manifest.json",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 186822,
+      "archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/current_pr100_dim_delta_brotli_q11.archive.zip",
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "candidate_name": "current_pr100_dim_delta_brotli_q11",
+      "manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/current_pr100_dim_delta_brotli_q11.manifest.json",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    }
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr106_latent_sidecar_recode_profile_v1",
+  "score_claim": false,
+  "semantic_arrays": {
+    "delta_q_sha256": "616ee8fbee1e4770ee5574372efc8637fbf8b6f4c450c3c4c9cd47ee20ad6a53",
+    "delta_q_unique": [
+      -2,
+      -1,
+      1,
+      2
+    ],
+    "dim_sha256": "a55bd9bdecb4a462e166cf0f8363bcb5578e8be61339a97639859173aa5098c3",
+    "dim_unique": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27
+    ],
+    "n_corrected_pairs": 600,
+    "n_noop_pairs": 0,
+    "n_pairs": 600
+  },
+  "source": {
+    "archive_bytes": 186822,
+    "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+    "framing_meta_bytes": 0,
+    "framing_meta_sha256": null,
+    "member_bytes": 186714,
+    "member_name": "0.bin",
+    "member_sha256": "52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d",
+    "mode": "sidecar_archive",
+    "path": "submissions/pr106_latent_sidecar_r2/archive.zip",
+    "pr106_inner_payload_bytes": 186131,
+    "pr106_inner_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+    "sidecar_format_id": "0x01",
+    "sidecar_kind": "brotli_dim_delta",
+    "sidecar_payload_bytes": 575,
+    "sidecar_payload_sha256": "acf58d03f708b0d297f9d32c2f47cefda3526f6665e19e9d0dee8073874c9d27"
+  },
+  "tool": "tools/profile_pr106_latent_sidecar_recode.py"
+}
