@@ -8,16 +8,16 @@
 
 ## Selected Frontier
 
-- label: `PR106-R2-lowlevel`
-- score: `0.2065174760196528`
-- archive_bytes: `186629`
-- archive_sha256: `287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d`
-- eval_artifact: `experiments/results/modal_auth_eval/pr106_r2_pr101_grammar_lowlevel_repack_cuda_20260513_codex/contest_auth_eval.json`
+- label: `PR106-R2-lowlevel-HDM3`
+- score: `0.2065081539943091`
+- archive_bytes: `186615`
+- archive_sha256: `8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093`
+- eval_artifact: `experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm3_candidate_pr101_runtime_cuda_20260513_codex/contest_auth_eval.json`
 
 ## Next Rate-Only Action
 
 - action_id: `build_byte_different_recode_for_largest_current_frontier_section`
-- target_label: `PR106-R2-lowlevel`
+- target_label: `PR106-R2-lowlevel-HDM3`
 - target_section: `inner_decoder_packed_brotli`
 - required_next_artifact: `old_new_section_sha256_and_charged_byte_diff_manifest`
 - dispatch_allowed: `false`
@@ -27,7 +27,7 @@
 
 | rank | section | role | bytes | entropy b/B | rate mass |
 |---:|---|---|---:|---:|---:|
-| 1 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 170127 | 7.998224 | 0.113280586118 |
+| 1 | `inner_decoder_packed_brotli` | `decoder_weight_stream` | 170113 | 7.99804 | 0.113271264092 |
 | 2 | `inner_latents_and_sidecar_brotli` | `latent_stream` | 15849 | 7.985386 | 0.010553198548 |
 | 3 | `sidecar_payload_pr101_ranked_no_op` | `sidecar_or_correction_stream` | 527 | 7.429261 | 0.000350907668 |
 | 4 | `sidecar_len_u16` | `sidecar_or_correction_stream` | 2 | 1.0 | 1.331718e-06 |

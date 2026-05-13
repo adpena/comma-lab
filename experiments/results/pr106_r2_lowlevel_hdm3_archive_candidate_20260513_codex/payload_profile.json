@@ -1,0 +1,72 @@
+[
+  {
+    "archive": "experiments/results/pr106_r2_lowlevel_hdm3_archive_candidate_20260513_codex/pr106_r2_lowlevel_hdm3_archive_candidate.zip",
+    "archive_bytes": 186615,
+    "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+    "evidence_grade": "forensic_byte_profile",
+    "kind": "pr106_sidecar_wrapper",
+    "member_bytes": 186507,
+    "member_name": "0.bin",
+    "member_sha256": "c22a9507869a720bb57ccdfae39f7a9afd2981ff5dc7d1ee36922af5a5dafcef",
+    "score_claim": false,
+    "sections": [
+      {
+        "bytes": 6,
+        "end": 6,
+        "entropy_bits_per_byte": 2.251629,
+        "name": "pr106_sidecar_header_fe_fmt_len_u32",
+        "sha256": "c0d40b5b0147c8695ab900e290d9e450239441fa29bbd5621aeabdb747d20807",
+        "start": 0
+      },
+      {
+        "bytes": 4,
+        "end": 10,
+        "entropy_bits_per_byte": 2.0,
+        "name": "inner_packed_header_ff_len24",
+        "sha256": "5196cd3e7b079990527695553be2683aff54fd65f2d4b72de34c1d32c2d4ec14",
+        "start": 6
+      },
+      {
+        "bytes": 170113,
+        "end": 170123,
+        "entropy_bits_per_byte": 7.99804,
+        "name": "inner_decoder_packed_brotli",
+        "sha256": "149a41ecf4d1614757c9369838e3a7cb9f03a648fe9b61a2317e9b7f2996b256",
+        "start": 10
+      },
+      {
+        "bytes": 15849,
+        "end": 185972,
+        "entropy_bits_per_byte": 7.985386,
+        "name": "inner_latents_and_sidecar_brotli",
+        "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "start": 170123
+      },
+      {
+        "bytes": 2,
+        "end": 185974,
+        "entropy_bits_per_byte": 1.0,
+        "name": "sidecar_len_u16",
+        "sha256": "d26b715881de3752c4e857a13e1e3d00d65ff80c57cdfcb81bc2753cfc8f7a41",
+        "start": 185972
+      },
+      {
+        "bytes": 527,
+        "end": 186501,
+        "entropy_bits_per_byte": 7.429261,
+        "name": "sidecar_payload_pr101_ranked_no_op",
+        "sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+        "start": 185974
+      },
+      {
+        "bytes": 6,
+        "end": 186507,
+        "entropy_bits_per_byte": 1.459148,
+        "name": "sidecar_framing_meta_pr101",
+        "sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+        "start": 186501
+      }
+    ],
+    "zip_overhead_bytes": 108
+  }
+]

@@ -132,3 +132,36 @@ Follow-up fix:
   dictionaries under the exact PR101-grammar runtime.
 - The corrected exact-eval command must use the PR101-grammar runtime via
   `--submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh`.
+
+## 2026-05-13 Corrected Exact CUDA Result
+
+The corrected Modal T4 dispatch used the matching PR106-R2 PR101-grammar
+runtime and passed exact CUDA path validation:
+
+- Lane id: `pr106_r2_lowlevel_hdm3_sidecar_pr101_runtime_exact_cuda`
+- Instance/job id:
+  `pr106_r2_lowlevel_hdm3_candidate_pr101_runtime_cuda_20260513_codex`
+- Modal call id: `fc-01KRG0WVJQ0W6ASF1RZY29W26K`
+- Result artifact:
+  `experiments/results/modal_auth_eval/pr106_r2_lowlevel_hdm3_candidate_pr101_runtime_cuda_20260513_codex/contest_auth_eval.json`
+- Evidence grade: `contest-CUDA`
+- GPU: `Tesla T4`
+- Archive bytes: `186615`
+- Archive SHA-256:
+  `8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093`
+- Runtime tree SHA-256:
+  `43c286c56247fa7d82eb3142c6e9565a69a1ab50bef616f773b35fbd1a0ef54d`
+- Inflated raw aggregate SHA-256:
+  `5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993`
+- `avg_segnet_dist`: `0.0006426`
+- `avg_posenet_dist`: `0.00003236`
+- Recomputed canonical score: `0.2065081539943091 [contest-CUDA T4]`
+
+This is a byte-only score lowering from `0.2065174760196528` to
+`0.2065081539943091`. The raw aggregate SHA matches the source lowlevel replay,
+so the observed score movement is exactly the 14 charged archive bytes removed
+by HDM3. It remains promotion-ineligible until the normal adjudication/policy
+gates run, but it is valid internal exact-CUDA score-lowering evidence.
+
+The HNeRV frontier scorecard was refreshed so the internal score-lowering
+frontier is now `PR106-R2-lowlevel-HDM3`.
