@@ -352,20 +352,80 @@ def frontier_eligible_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def current_frontier(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
-    eligible = frontier_eligible_rows(rows)
-    if not eligible:
-        return None
-    row = min(eligible, key=lambda item: float(item["score"]))
+_SCORE_LOWERING_BLOCKER_MARKERS = (
+    "score_claim_invalid",
+    "regression_triggered",
+    "lane_status_",
+    "paper_claim_grade_",
+    "evidence_grade_",
+)
+
+
+def _blocks_internal_score_lowering(row: dict[str, Any]) -> bool:
+    """Return whether adjudication blockers invalidate internal score routing.
+
+    Canonical/public frontier promotion is intentionally stricter than the
+    internal score-lowering frontier. A promotion-ineligible exact CUDA row can
+    still guide byte-closed follow-up work, but negative/regression/invalid
+    adjudication remains excluded from all optimizer routing.
+    """
+    blockers = row.get("canonicality_blockers") or []
+    if not isinstance(blockers, list):
+        return True
+    return any(
+        isinstance(blocker, str) and blocker.startswith(_SCORE_LOWERING_BLOCKER_MARKERS)
+        for blocker in blockers
+    )
+
+
+def score_lowering_eligible_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rows eligible to route internal exact score-lowering work.
+
+    This is not a submission/public-frontier gate. It requires exact CUDA A++
+    evidence and a numeric score, but it deliberately tolerates promotion-only
+    blockers such as an adjudication-required candidate packet. Severe blockers
+    remain excluded so regression negatives cannot steer optimizer work.
+    """
+    return [
+        row
+        for row in rows
+        if row.get("evidence_grade") == "A++"
+        and isinstance(row.get("score"), int | float)
+        and not _blocks_internal_score_lowering(row)
+    ]
+
+
+def _frontier_from_row(row: dict[str, Any], *, scope_key: str = "frontier_scope") -> dict[str, Any]:
     return {
         "label": row["label"],
         "score": row.get("score"),
         "archive_bytes": row.get("archive_bytes"),
         "archive_sha256": row.get("archive_sha256"),
-        "frontier_scope": row.get("frontier_scope"),
+        "frontier_scope": row.get(scope_key),
         "evidence_grade": row.get("evidence_grade"),
         "eval_artifact": row.get("eval_artifact"),
     }
+
+
+def current_frontier(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    eligible = frontier_eligible_rows(rows)
+    if not eligible:
+        return None
+    row = min(eligible, key=lambda item: float(item["score"]))
+    return _frontier_from_row(row)
+
+
+def score_lowering_frontier(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    eligible = score_lowering_eligible_rows(rows)
+    if not eligible:
+        return None
+    row = min(eligible, key=lambda item: float(item["score"]))
+    frontier = _frontier_from_row(row)
+    frontier["frontier_scope"] = "internal_exact_cuda_score_lowering"
+    frontier["promotion_authority"] = False
+    frontier["canonical_frontier_eligible"] = row.get("canonical_frontier_eligible") is True
+    frontier["canonicality_blockers"] = row.get("canonicality_blockers") or []
+    return frontier
 
 
 def _rate_mass_score(bytes_: Any) -> float | None:
@@ -374,14 +434,18 @@ def _rate_mass_score(bytes_: Any) -> float | None:
     return 25.0 * bytes_ / 37_545_489
 
 
-def hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Rank exact-evaluable byte targets by frontier proximity before byte mass."""
-    frontier = current_frontier(rows)
+def _byte_mass_ranking(
+    frontier: dict[str, Any] | None,
+    eligible_rows: list[dict[str, Any]],
+    gap_key: str,
+    primary_priority: str,
+) -> list[dict[str, Any]]:
+    """Rank byte targets by a supplied frontier and eligible row set."""
     if not frontier or not isinstance(frontier.get("score"), int | float):
         return []
     frontier_score = float(frontier["score"])
     targets: list[dict[str, Any]] = []
-    for row in frontier_eligible_rows(rows):
+    for row in eligible_rows:
         score = float(row["score"])
         score_gap = score - frontier_score
         for section in row.get("payload_sections") or row.get("top_payload_sections") or []:
@@ -393,7 +457,7 @@ def hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, A
             if role == "control_or_metadata":
                 priority = "low"
             elif row.get("label") == frontier["label"]:
-                priority = "current_frontier_primary"
+                priority = primary_priority
             else:
                 priority = "near_frontier_secondary"
             targets.append(
@@ -404,7 +468,7 @@ def hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, A
                     "section_bytes": section_bytes,
                     "section_sha256": section.get("sha256"),
                     "entropy_bits_per_byte": section.get("entropy_bits_per_byte"),
-                    "score_gap_to_current_frontier": round(score_gap, 12),
+                    gap_key: round(score_gap, 12),
                     "frontier_label": frontier["label"],
                     "frontier_score": frontier_score,
                     "archive_sha256": row.get("archive_sha256"),
@@ -422,8 +486,8 @@ def hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, A
     return sorted(
         targets,
         key=lambda item: (
-            float(item["score_gap_to_current_frontier"]),
-            0 if item["priority"] == "current_frontier_primary" else 1,
+            float(item[gap_key]),
+            0 if item["priority"] == primary_priority else 1,
             -(item["section_bytes"] if isinstance(item["section_bytes"], int) else -1),
             str(item["label"]),
             str(item["section"]),
@@ -431,8 +495,35 @@ def hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, A
     )
 
 
+def hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rank canonical exact-evaluable byte targets by frontier proximity before byte mass."""
+    return _byte_mass_ranking(
+        frontier=current_frontier(rows),
+        eligible_rows=frontier_eligible_rows(rows),
+        gap_key="score_gap_to_current_frontier",
+        primary_priority="current_frontier_primary",
+    )
+
+
 def next_exact_evaluable_target(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     for target in hidden_gem_byte_mass_ranking(rows):
+        if target.get("priority") != "low":
+            return target
+    return None
+
+
+def score_lowering_hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rank byte targets against the internal exact-CUDA score-lowering frontier."""
+    return _byte_mass_ranking(
+        frontier=score_lowering_frontier(rows),
+        eligible_rows=score_lowering_eligible_rows(rows),
+        gap_key="score_gap_to_score_lowering_frontier",
+        primary_priority="internal_score_lowering_frontier_primary",
+    )
+
+
+def next_score_lowering_exact_evaluable_target(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for target in score_lowering_hidden_gem_byte_mass_ranking(rows):
         if target.get("priority") != "low":
             return target
     return None
@@ -624,6 +715,74 @@ def render_markdown(rows: list[dict[str, Any]]) -> str:
                     priority=target["priority"],
                 )
             )
+    internal_frontier = score_lowering_frontier(rows)
+    internal_next_target = next_score_lowering_exact_evaluable_target(rows)
+    internal_ranking = score_lowering_hidden_gem_byte_mass_ranking(rows)
+    if internal_frontier:
+        blockers = internal_frontier.get("canonicality_blockers") or []
+        blocker_text = ", ".join(str(item) for item in blockers) if blockers else "none"
+        lines.extend(
+            [
+                "",
+                "## Internal Score-Lowering Frontier",
+                "",
+                "| label | score | bytes | canonical eligible | blockers | archive sha |",
+                "|---|---:|---:|---:|---|---|",
+                "| {label} | {score:.12f} | {bytes_} | {canonical} | {blockers} | `{sha}` |".format(
+                    label=internal_frontier["label"],
+                    score=internal_frontier["score"],
+                    bytes_=internal_frontier.get("archive_bytes"),
+                    canonical=str(internal_frontier.get("canonical_frontier_eligible")).lower(),
+                    blockers=blocker_text,
+                    sha=str(internal_frontier.get("archive_sha256") or "")[:16],
+                ),
+                "",
+                "This is an internal exact-CUDA score-lowering route, not promotion",
+                "authority. It can point byte-closed optimizer work at a lower exact",
+                "score even when public/canonical adjudication blockers remain.",
+            ]
+        )
+    if internal_next_target:
+        lines.extend(
+            [
+                "",
+                "## Next Internal Score-Lowering Target",
+                "",
+                "| frontier | target label | section | role | bytes | score gap | required next gate |",
+                "|---|---|---|---|---:|---:|---|",
+                "| {frontier} | {label} | `{section}` | `{role}` | {bytes_} | {gap:.12f} | {gate} |".format(
+                    frontier=internal_next_target["frontier_label"],
+                    label=internal_next_target["label"],
+                    section=internal_next_target["section"],
+                    role=internal_next_target["optimization_role"],
+                    bytes_=internal_next_target["section_bytes"],
+                    gap=internal_next_target["score_gap_to_score_lowering_frontier"],
+                    gate=internal_next_target["exact_evaluable_next_gate"],
+                ),
+            ]
+        )
+    if internal_ranking:
+        lines.extend(
+            [
+                "",
+                "## Internal Score-Lowering Byte-Mass Ranking",
+                "",
+                "| rank | label | section | role | bytes | score gap | priority |",
+                "|---:|---|---|---|---:|---:|---|",
+            ]
+        )
+        for rank, target in enumerate(internal_ranking[:12], start=1):
+            lines.append(
+                "| {rank} | {label} | `{section}` | `{role}` | {bytes_} | {gap:.12f} | `{priority}` |".format(
+                    rank=rank,
+                    label=target["label"],
+                    section=target["section"],
+                    role=target["optimization_role"],
+                    bytes_=target["section_bytes"],
+                    gap=target["score_gap_to_score_lowering_frontier"],
+                    priority=target["priority"],
+                )
+            )
     manifests = payload_section_manifests(rows)
     if manifests:
         lines.extend(
@@ -703,6 +862,7 @@ def main() -> int:
         "interpretation_guardrails": [
             "lossless_brotli_repack_rows_are_local_byte_controls_not_categorical_frontier_claims",
             "categorical_or_range_coded_hnerv_rows_supersede_only_with_lower_exact_cuda_custody_score",
+            "score_lowering_frontier_is_internal_exact_cuda_routing_not_public_promotion_authority",
         ],
         "payload_equivalence_groups": payload_equivalence_groups(rows),
         "payload_section_manifests": payload_section_manifests(rows),
@@ -710,6 +870,9 @@ def main() -> int:
         "current_frontier": current_frontier(rows),
         "next_exact_evaluable_target": next_exact_evaluable_target(rows),
         "hidden_gem_byte_mass_ranking": hidden_gem_byte_mass_ranking(rows),
+        "score_lowering_frontier": score_lowering_frontier(rows),
+        "next_score_lowering_exact_evaluable_target": next_score_lowering_exact_evaluable_target(rows),
+        "score_lowering_hidden_gem_byte_mass_ranking": score_lowering_hidden_gem_byte_mass_ranking(rows),
         "rows": sorted(rows, key=lambda item: item["score"] if item["score"] is not None else 999),
     }
     args.json_out.parent.mkdir(parents=True, exist_ok=True)

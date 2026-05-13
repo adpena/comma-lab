@@ -8,15 +8,18 @@ import pytest
 
 from experiments.build_hnerv_frontier_scorecard import (
     candidate_indexes,
+    current_frontier,
     followup_targets,
     hidden_gem_byte_mass_ranking,
     inspect_single_member_archive,
     next_exact_evaluable_target,
+    next_score_lowering_exact_evaluable_target,
     payload_equivalence_groups,
     payload_section_manifests,
     profile_indexes,
     render_markdown,
     row_from_eval,
+    score_lowering_frontier,
     section_optimization_role,
     sha256_bytes,
 )
@@ -257,6 +260,89 @@ def test_exact_negative_adjudication_is_not_frontier_eligible(tmp_path: Path) ->
     assert "lane_status_REGRESSION_REVIEW_REQUIRED" in row["canonicality_blockers"]
     assert "canonical |" in render_markdown([row])
     assert "| apogee_int4 | A++ | no |" in render_markdown([row])
+
+
+def test_promotion_blocked_exact_row_can_route_internal_score_lowering(tmp_path: Path) -> None:
+    canonical_dir = tmp_path / "canonical"
+    blocked_dir = tmp_path / "blocked"
+    canonical_dir.mkdir()
+    blocked_dir.mkdir()
+    canonical_info = _write_archive(canonical_dir / "archive.zip", "x", b"canonical-payload")
+    blocked_payload = b"\xff\x08\x00\x00lower-score-decoder-latent"
+    blocked_info = _write_archive(blocked_dir / "archive.zip", "x", blocked_payload)
+    canonical_eval = _write_eval(canonical_dir, canonical_info, score=0.250)
+    blocked_eval = _write_eval(
+        blocked_dir,
+        blocked_info,
+        score=0.240,
+        extra={"promotion_eligible": False},
+    )
+    profile_path = tmp_path / "profiles.json"
+    profile_path.write_text(
+        json.dumps(
+            [
+                {
+                    **blocked_info,
+                    "kind": "pr101_microcodec",
+                    "sections": [
+                        _section("decoder_compact_brotli_streams", 4, 24, blocked_payload),
+                        _section("latent_sidecar_brotli_streams", 24, len(blocked_payload), blocked_payload),
+                    ],
+                }
+            ]
+        )
+    )
+    indexes = profile_indexes([profile_path])
+
+    canonical_row = row_from_eval("canonical_public", canonical_eval, indexes)
+    blocked_row = row_from_eval("pr106_r2_internal", blocked_eval, indexes)
+    rows = [canonical_row, blocked_row]
+
+    assert blocked_row["canonical_frontier_eligible"] is False
+    assert blocked_row["canonicality_blockers"] == ["promotion_ineligible"]
+    assert current_frontier(rows)["label"] == "canonical_public"
+    assert score_lowering_frontier(rows)["label"] == "pr106_r2_internal"
+    assert score_lowering_frontier(rows)["promotion_authority"] is False
+
+    target = next_score_lowering_exact_evaluable_target(rows)
+    assert target["label"] == "pr106_r2_internal"
+    assert target["priority"] == "internal_score_lowering_frontier_primary"
+    assert target["score_gap_to_score_lowering_frontier"] == 0.0
+
+    md = render_markdown(rows)
+    assert "Internal Score-Lowering Frontier" in md
+    assert "internal exact-CUDA score-lowering route, not promotion" in md
+    assert "| pr106_r2_internal | 0.240000000000 |" in md
+
+
+def test_negative_exact_row_cannot_route_internal_score_lowering(tmp_path: Path) -> None:
+    canonical_dir = tmp_path / "canonical"
+    negative_dir = tmp_path / "negative"
+    canonical_dir.mkdir()
+    negative_dir.mkdir()
+    canonical_info = _write_archive(canonical_dir / "archive.zip", "x", b"canonical")
+    negative_info = _write_archive(negative_dir / "archive.zip", "x", b"negative")
+    canonical_eval = _write_eval(canonical_dir, canonical_info, score=0.250)
+    negative_eval = _write_eval(
+        negative_dir,
+        negative_info,
+        score=0.240,
+        extra={
+            "adjudication_provenance": {
+                "lane_status": "REGRESSION_REVIEW_REQUIRED",
+                "promotion_eligible": False,
+                "regression_triggered": True,
+            },
+        },
+    )
+
+    canonical_row = row_from_eval("canonical_public", canonical_eval, profile_indexes([]))
+    negative_row = row_from_eval("negative_lower_score", negative_eval, profile_indexes([]))
+    rows = [canonical_row, negative_row]
+
+    assert current_frontier(rows)["label"] == "canonical_public"
+    assert score_lowering_frontier(rows)["label"] == "canonical_public"
+    assert next_score_lowering_exact_evaluable_target(rows) is None
 
 
 def _write_archive(path: Path, member_name: str, payload: bytes) -> dict[str, object]:
