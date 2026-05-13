@@ -1112,6 +1112,167 @@ def candidate_substrate_ids_from_ranking(path: Path) -> dict[str, tuple[str, ...
     return out
 
 
+# ── macOS-CPU advisory proxy ranking integration ────────────────────────
+
+
+MACOS_CPU_ADVISORY_PROXY_EVIDENCE_TAG = "macos_cpu_advisory"
+
+
+def load_candidates_from_macos_cpu_advisory_manifest(
+    path: Path,
+    *,
+    default_estimated_dispatch_cost_usd: float = 0.0,
+    default_expected_information_gain: float = 0.0,
+) -> list[CandidateRow]:
+    """Load CandidateRow rows from a macOS-CPU advisory-signal manifest.
+
+    Operator routing 2026-05-13 ("training is the real roadblock; we can
+    prepare and run things on macos and cpu"). Per CLAUDE.md PR107
+    empirical calibration (|Δ| ≤ 6e-6 vs GHA Linux x86_64 contest-CPU on
+    the same exact archive), macOS-CPU is a free first-class advisory
+    proxy that lets the autopilot RANK candidates BEFORE any GPU spend.
+
+    The loaded rows participate in EIG-per-dollar ranking BUT carry:
+      - notes prefixed with ``[macOS-CPU advisory; ranking-only]``
+      - blockers extended with the manifest's ``dispatch_blockers`` so
+        the operator sees every reason a row cannot promote
+      - ``predicted_score_delta`` derived from ``projected_contest_cpu_score_p50``
+        when present, else from ``score_macos_cpu`` directly.
+
+    Per CLAUDE.md Catalog #127 (`check_authoritative_tag_requires_custody_metadata`)
+    the manifest's evidence_tag ``[macOS-CPU advisory only]`` is already
+    routed to ``refused_class="macos_substrate"`` by the custody validator.
+    Promotion requires a paired ``[contest-CPU GHA Linux x86_64]`` anchor;
+    the loader DOES NOT lift that gate.
+    """
+    if not path.is_file():
+        raise FileNotFoundError(f"macOS-CPU advisory manifest not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    expected_schema_prefix = "macos_cpu_advisory_signal_manifest"
+    schema = str(payload.get("schema") or "")
+    if not schema.startswith(expected_schema_prefix):
+        raise ValueError(
+            f"macOS-CPU advisory manifest at {path!s} has unexpected schema "
+            f"{schema!r}; expected schema starting with {expected_schema_prefix!r}"
+        )
+
+    # Per CLAUDE.md "Forbidden score claims" + Catalog #192: refuse manifests
+    # claiming promotability. The autopilot ranker never lifts these gates.
+    for flag in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        if payload.get(flag, False):
+            raise ValueError(
+                f"macOS-CPU advisory manifest has {flag}=True; refusing to "
+                "consume in autopilot ranker (per CLAUDE.md Catalog #192 + "
+                "'Forbidden score claims')"
+            )
+
+    base_blockers = list(payload.get("dispatch_blockers", []))
+    rows: list[CandidateRow] = []
+    for raw in payload.get("rows", []):
+        if raw.get("score_claim", False):
+            raise ValueError(
+                f"manifest row {raw.get('variant_id')!r} has score_claim=True; "
+                "refuse to consume"
+            )
+        if raw.get("promotion_eligible", False) or raw.get(
+            "ready_for_exact_eval_dispatch", False
+        ):
+            raise ValueError(
+                f"manifest row {raw.get('variant_id')!r} has "
+                "promotion_eligible or ready_for_exact_eval_dispatch True; refuse"
+            )
+        # Predicted score delta: prefer the projected contest-CPU score
+        # band's p50 anchor (calibrated). Otherwise use score_macos_cpu
+        # directly. Either way the row's notes record that the prediction
+        # is non-authoritative.
+        projected_p50 = raw.get("projected_contest_cpu_score_p50")
+        score_macos_cpu = raw.get("score_macos_cpu")
+        if projected_p50 is not None:
+            predicted_score = float(projected_p50)
+        elif score_macos_cpu is not None:
+            predicted_score = float(score_macos_cpu)
+        else:
+            # No score → can't rank by score; skip with a notes record.
+            continue
+
+        family = str(raw.get("family") or "")
+        variant_id = str(raw.get("variant_id") or "")
+        if not family or not variant_id:
+            continue
+
+        # Treat the projected score as the predicted_score_delta absolute
+        # value. Most-negative-is-best ranking still works since smaller
+        # contest scores are better.
+        row_blockers = list(base_blockers) + list(raw.get("dispatch_blockers", []))
+        # Dedup blockers preserving insertion order.
+        seen: set[str] = set()
+        deduped_blockers: list[str] = []
+        for b in row_blockers:
+            if b in seen:
+                continue
+            seen.add(b)
+            deduped_blockers.append(b)
+
+        archive_sha = str(raw.get("archive_sha256") or "")
+        archive_bytes = int(raw.get("archive_bytes") or 0)
+        band_low = raw.get("projected_contest_cpu_score_low")
+        band_high = raw.get("projected_contest_cpu_score_high")
+        notes_lines = [
+            "[macOS-CPU advisory; ranking-only]",
+            f"proxy_evidence: {MACOS_CPU_ADVISORY_PROXY_EVIDENCE_TAG}",
+            f"hardware_substrate: {raw.get('hardware_substrate') or payload.get('hardware_substrate')!r}",
+            f"score_macos_cpu: {score_macos_cpu!r}",
+            f"projected_contest_cpu_score: p50={projected_p50!r} "
+            f"low={band_low!r} high={band_high!r}",
+            f"archive_bytes: {archive_bytes}",
+            f"archive_sha256: {archive_sha or '(missing)'}",
+            "promotion_blocked: requires paired [contest-CPU GHA Linux x86_64] anchor",
+        ]
+        rows.append(
+            CandidateRow(
+                candidate_id=f"macos_cpu_advisory__{family}__{variant_id}",
+                family=family,
+                predicted_score_delta=predicted_score,
+                expected_information_gain=default_expected_information_gain,
+                estimated_dispatch_cost_usd=default_estimated_dispatch_cost_usd,
+                blockers=deduped_blockers,
+                notes="\n".join(notes_lines),
+            )
+        )
+    return rows
+
+
+def tag_halt_events_with_proxy_evidence(
+    halt_events: list["HaltEvent"],
+    *,
+    candidates: list[CandidateRow],
+) -> list["HaltEvent"]:
+    """Annotate halt events whose source candidate carries macOS-CPU advisory notes.
+
+    Per operator routing 2026-05-13: when a halt event's underlying candidate
+    came from the macOS-CPU advisory manifest, surface that fact in the halt
+    event's decision_notes so the operator can see at a glance which
+    rankings depend on the proxy. The autopilot's dispatch journal will
+    therefore tag the entry with ``proxy_evidence="macos_cpu_advisory"``.
+
+    Mutates the halt events in place AND returns them for chaining.
+    """
+    cid_to_proxy: dict[str, str] = {}
+    for c in candidates:
+        if "[macOS-CPU advisory; ranking-only]" in (c.notes or ""):
+            cid_to_proxy[c.candidate_id] = MACOS_CPU_ADVISORY_PROXY_EVIDENCE_TAG
+    for evt in halt_events:
+        tag = cid_to_proxy.get(evt.candidate_id)
+        if tag is None:
+            continue
+        marker = f"proxy_evidence={tag}"
+        if marker not in evt.decision_notes:
+            sep = "; " if evt.decision_notes else ""
+            evt.decision_notes = f"{evt.decision_notes}{sep}{marker}"
+    return halt_events
+
+
 def filter_composition_incompatible_dispatches(
     candidates: list[CandidateRow],
     *,

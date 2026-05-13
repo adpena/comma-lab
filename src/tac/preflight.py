@@ -2601,6 +2601,23 @@ def preflight_all(
         check_modal_dispatch_threads_sentinel_files_per_catalog_166(
             strict=True, verbose=verbose,
         )
+        # 2026-05-13 Catalog #192 (operator cascade reframe 2026-05-13 — macOS
+        # CPU first-class advisory proxy wiring): refuse any persisted artifact
+        # under .omx/state/, experiments/results/, reports/ that combines
+        # evidence_grade="macOS-CPU-advisory" (or evidence_tag carrying
+        # "[macOS-CPU advisory") with score_claim=True / promotion_eligible=True
+        # / ready_for_exact_eval_dispatch=True. macOS-CPU is wired as a FREE
+        # ranking-only proxy; per CLAUDE.md "Submission auth eval — BOTH CPU
+        # AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE" promotion requires a
+        # paired [contest-CPU GHA Linux x86_64] anchor. Sister of Catalog #127
+        # (call-site custody validator); #192 enforces the same contract at
+        # persisted-artifact level. STRICT-FLIPPED 2026-05-13 - live count
+        # at landing: 0 (no advisory rows exist yet; the manifest builder
+        # refuses promoted rows at construction time per CLAUDE.md "Strict-
+        # flip atomicity rule").
+        check_macos_cpu_advisory_not_promoted_without_linux_verification(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -45768,6 +45785,225 @@ def check_modal_dispatch_threads_sentinel_files_per_catalog_166(
             "attached to the operator-approved lane. Without these flags, "
             "stale code on the worker only emits a warn banner or claim "
             "custody splits across lane ids — paid GPU spend proceeds.\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #192 — check_macos_cpu_advisory_not_promoted_without_linux_verification
+#
+# Operator routing 2026-05-13 ("training is the real roadblock; we can prepare
+# and run things on macos and cpu"). macOS-CPU is wired in this session as a
+# first-class FREE advisory proxy for the contest-CPU axis. Per CLAUDE.md
+# "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT
+# HARDWARE" non-negotiable, macOS-CPU is NEVER 1:1 contest-compliant — it is
+# advisory only, and promotion requires a paired [contest-CPU GHA Linux
+# x86_64] anchor.
+#
+# This STRICT gate refuses any persisted artifact under tracked-source paths
+# (.omx/state/, experiments/results/, reports/, src/tac/, tools/, scripts/,
+# experiments/) that combines evidence_grade="macOS-CPU-advisory" (or
+# evidence_tag containing "[macOS-CPU advisory") with score_claim=true,
+# promotion_eligible=true, or ready_for_exact_eval_dispatch=true.
+#
+# Scan strategy:
+#   - Walk .omx/state/, experiments/results/, reports/ for JSON / JSONL files
+#     mentioning "macOS-CPU-advisory" OR "[macOS-CPU advisory" — fast text
+#     pre-filter avoids parsing every JSON file in the tree.
+#   - For each match, parse JSON / JSONL row(s) and flag any row pairing
+#     advisory evidence with any of the three promotability flags True.
+#   - Same-line waiver `# MACOS_CPU_ADVISORY_PROMOTED_OK:<reason>` honored
+#     inside text files (manifests can carry inline waivers via comment-like
+#     keys, but the JSON parser does not see those — the waiver applies only
+#     to source code in src/tac/ / tools/ / scripts/ that explicitly enables
+#     a promotion path after paired Linux x86_64 verification lands).
+#
+# Live count at landing: 0 (no advisory rows exist yet; the manifest builder
+# refuses to write a promoted row at construction time). STRICT @ 0 per
+# CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# non-negotiable + the "Strict-flip atomicity rule".
+#
+# Sister of:
+#   - Catalog #127 (`check_authoritative_tag_requires_custody_metadata`):
+#     enforces the tag + axis + hardware_substrate triple at CALL sites.
+#     Catalog #192 enforces the same contract at PERSISTED ARTIFACT level.
+#   - Catalog #128 / #131 (locked writes to shared state): macOS-CPU
+#     manifests written via :func:`append_manifest_row_to_jsonl` honor
+#     the canonical write protocol.
+#   - Catalog #175 (cost-band anchor writers declare outcome): macOS-CPU
+#     advisory rows never feed the cost-band posterior — explicit blocker.
+#
+# Memory: `feedback_macos_cpu_autopilot_wiring_landed_20260513.md`.
+# Lane: `lane_macos_cpu_autopilot_wiring_20260513`.
+# ----------------------------------------------------------------------------
+
+_CHECK_192_ADVISORY_GRADE_TOKEN = "macOS-CPU-advisory"
+_CHECK_192_ADVISORY_TAG_TOKEN = "[macOS-CPU advisory"
+_CHECK_192_WAIVER_TOKEN = "MACOS_CPU_ADVISORY_PROMOTED_OK:"
+_CHECK_192_SCAN_ROOTS: tuple[str, ...] = (
+    ".omx/state",
+    "experiments/results",
+    "reports",
+)
+_CHECK_192_FILE_SUFFIXES: tuple[str, ...] = (".json", ".jsonl")
+_CHECK_192_PROMOTABILITY_FLAGS: tuple[str, ...] = (
+    "score_claim",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+)
+_CHECK_192_MAX_FILE_BYTES: int = 32 * 1024 * 1024  # skip ≥32 MB to keep dev scope bounded
+
+
+def _check_192_iter_candidate_files(root: Path) -> list[Path]:
+    """Return JSON/JSONL paths under any of _CHECK_192_SCAN_ROOTS."""
+    out: list[Path] = []
+    for rel in _CHECK_192_SCAN_ROOTS:
+        sub = root / rel
+        if not sub.is_dir():
+            continue
+        try:
+            for p in sub.rglob("*"):
+                if not p.is_file():
+                    continue
+                if p.suffix.lower() not in _CHECK_192_FILE_SUFFIXES:
+                    continue
+                try:
+                    if p.stat().st_size > _CHECK_192_MAX_FILE_BYTES:
+                        continue
+                except OSError:
+                    continue
+                out.append(p)
+        except OSError:
+            continue
+    return out
+
+
+def _check_192_row_is_violation(row: object) -> list[str]:
+    """Return list of human-readable violation reasons for one parsed row."""
+    if not isinstance(row, dict):
+        return []
+    evidence_grade = str(row.get("evidence_grade") or "")
+    evidence_tag = str(row.get("evidence_tag") or "")
+    is_advisory = (
+        _CHECK_192_ADVISORY_GRADE_TOKEN in evidence_grade
+        or _CHECK_192_ADVISORY_TAG_TOKEN in evidence_tag
+    )
+    if not is_advisory:
+        return []
+    violations: list[str] = []
+    for flag in _CHECK_192_PROMOTABILITY_FLAGS:
+        val = row.get(flag)
+        if val is True or (isinstance(val, str) and val.lower() == "true"):
+            violations.append(
+                f"row carries evidence_grade={evidence_grade!r} / "
+                f"evidence_tag={evidence_tag!r} AND {flag}=True. macOS-CPU "
+                "advisory rows MUST keep all three promotability flags False "
+                "until a paired [contest-CPU GHA Linux x86_64] anchor lands. "
+                "Per CLAUDE.md Catalog #192."
+            )
+    return violations
+
+
+def check_macos_cpu_advisory_not_promoted_without_linux_verification(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #192. Refuse advisory rows + promoted flags in persisted artifacts.
+
+    See module-level header above. The check walks ``.omx/state/``,
+    ``experiments/results/``, and ``reports/`` for JSON / JSONL files that
+    mention the macOS-CPU advisory grade or tag and reject any row that pairs
+    the advisory evidence with ``score_claim=true``, ``promotion_eligible=true``,
+    or ``ready_for_exact_eval_dispatch=true``.
+
+    A whole-file waiver token ``# MACOS_CPU_ADVISORY_PROMOTED_OK:<reason>`` is
+    honored when the file is a ``.md`` / ``.txt`` companion. JSON manifests
+    cannot use comment-style waivers — they must just keep the flags False.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    scanned = 0
+    parsed_rows = 0
+
+    for path in _check_192_iter_candidate_files(root):
+        rel = str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        # Fast text pre-filter to avoid parsing every JSON.
+        if (
+            _CHECK_192_ADVISORY_GRADE_TOKEN not in text
+            and _CHECK_192_ADVISORY_TAG_TOKEN not in text
+        ):
+            continue
+        # File-level waiver token (rare; for explicitly-superseded artifacts).
+        if _CHECK_192_WAIVER_TOKEN in text:
+            continue
+
+        suffix = path.suffix.lower()
+        rows_iter: list[object] = []
+        try:
+            if suffix == ".jsonl":
+                for line in text.splitlines():
+                    s = line.strip()
+                    if not s:
+                        continue
+                    try:
+                        rows_iter.append(json.loads(s))
+                    except (ValueError, TypeError):
+                        continue
+            else:
+                payload = json.loads(text)
+                if isinstance(payload, list):
+                    rows_iter.extend(payload)
+                elif isinstance(payload, dict):
+                    # Also check the top-level dict itself.
+                    rows_iter.append(payload)
+                    # And conventional nested-rows keys.
+                    for nested_key in ("rows", "observations", "anchors", "ranking_atoms"):
+                        nested = payload.get(nested_key)
+                        if isinstance(nested, list):
+                            rows_iter.extend(nested)
+        except (ValueError, TypeError):
+            continue
+
+        for row in rows_iter:
+            parsed_rows += 1
+            row_violations = _check_192_row_is_violation(row)
+            for v in row_violations:
+                violations.append(f"{rel}: {v}")
+
+    if verbose:
+        if violations:
+            print(
+                f"  [macos-cpu-advisory-promotion] {len(violations)} "
+                f"violation(s) across {scanned} JSON/JSONL file(s) "
+                f"({parsed_rows} row(s) parsed):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:220]}")
+        else:
+            print(
+                f"  [macos-cpu-advisory-promotion] OK "
+                f"({scanned} JSON/JSONL file(s) scanned, "
+                f"{parsed_rows} row(s) parsed; 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_macos_cpu_advisory_not_promoted_without_linux_verification "
+            f"found {len(violations)} persisted advisory row(s) flagged "
+            "score_claim=True / promotion_eligible=True / "
+            "ready_for_exact_eval_dispatch=True without a paired "
+            "[contest-CPU GHA Linux x86_64] anchor. Per CLAUDE.md "
+            "'Submission auth eval — BOTH CPU AND CUDA, ON 1:1 "
+            "CONTEST-COMPLIANT HARDWARE' non-negotiable + Catalog #192 "
+            "the macOS-CPU advisory axis is non-promotable until the "
+            "paired Linux x86_64 result lands:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
