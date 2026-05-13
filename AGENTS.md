@@ -110,6 +110,46 @@ public-release hygiene, or partner worktree state. It is not allowed as a reason
 to avoid high-upside deconstruction, exact replay, low-level binary analysis,
 or risky but contest-faithful experiments.
 
+## Long-Burn Campaign Default — NON-NEGOTIABLE
+
+When the operator asks for aggressive score lowering, no meat left on the bone,
+no holds barred, no budget/time limit, funded reproduction, or frontier escape,
+do not collapse that into more meta-review. Treat every plausible floor-breaking
+representation family as a managed campaign unless a dated ledger records a
+real blocker.
+
+A campaign is stronger than a lane. It must own:
+
+- a `lane_id` and dispatch-claim plan;
+- source evidence and hypothesis for score movement;
+- a timing-smoke command that measures seconds/epoch or seconds/candidate;
+- a full-run command with resumable checkpoint and harvest paths;
+- live-rate cost model, not stale hand estimates;
+- byte-closed archive/export/inflate plan for promotion;
+- stop/continue thresholds at smoke, mid-stage, export, and exact-eval gates.
+
+Budget uncertainty is not a blocker. If cost is unknown, the next action is a
+timing smoke that turns uncertainty into measured GPU-hours. Missing final
+archive grammar blocks promotion and score claims; it does not by itself block a
+clearly tagged non-promotional timing smoke or source-faithful reproduction
+probe. Older budget caps, no-dispatch memos, or no-GPU notes are superseded by a
+newer explicit operator directive to fund or launch a named campaign, while the
+claim lifecycle, provider import probe, artifact custody, and exact-eval axis
+rules remain mandatory.
+
+Visible high-EV ideas such as PR95/HNeRV, NeRV-family replacements, SIREN/FINER/
+WIRE/BACON, Ballé/CompressAI, Cool-Chic/C3, wavelet residuals, RAFT/ego-motion,
+LA-pose/telescopic foveation, SABOR, S2SBS, arithmetic/range/ANS compiler
+passes, or scorer-inverse representations must be converted within the same
+session into either a campaign ledger plus timing-smoke/launch decision or an
+explicit blocker. `research_only=true` is not a resting state for frontier work:
+if the signal is promising, the same memo must name the next byte-closed
+prototype or campaign gate.
+
+If `.omx/state/RACE_MODE_ACTIVE.flag` exists, campaign actuation outranks
+additional grand-council text unless that text directly writes launchable
+commands, hardens the actuator, or records a blocker that prevents spend.
+
 ## Public Frontier Watch And Intake — NON-NEGOTIABLE
 
 During active contest windows or post-deadline replay windows, keep the public

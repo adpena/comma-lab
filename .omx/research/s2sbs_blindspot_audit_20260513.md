@@ -3,15 +3,15 @@
 - Lane: `lane_s2sbs_blindspot_audit_20260513` (Phase 2)
 - Council source: commit 896f1d79 (TRIPLET phi, O3)
 - Evidence grade: **[macOS-CPU advisory]** — research signal only
-- `score_claim=false`, `promotion_eligible=false`, `ready_for_exact_eval_dispatch=false`
-- Timestamp UTC: 2026-05-13T17:55:36Z
+- `research_only=true`, `score_claim=false`, `promotion_eligible=false`, `ready_for_exact_eval_dispatch=false`
+- Timestamp UTC: 2026-05-13T17:58:24Z
 - Host: Primary
 - Repo HEAD: `3074f7f6e6b6e859df6b2574fa39b1b613525fcc`
 - Video: `/Users/adpena/Projects/pact/upstream/videos/0.mkv` sha256=`2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9`
 - SegNet weights sha256=`68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6`
 - PoseNet weights sha256=`0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576`
 - Sampled pairs: 6 (12 frames)
-- JSON: `experiments/results/lane_s2sbs_blindspot_audit_20260513_20260513T175535Z/blindspot_capacity.json`
+- JSON: `experiments/results/lane_s2sbs_blindspot_audit_20260513_20260513T175824Z/blindspot_capacity.json`
 
 ## Architectural derivation
 
@@ -100,10 +100,9 @@
 | 0.50 | 0.000020 | 4.300e-06 | 1.0000 | 73726.5 | 1.0000 | 73726.5 |
 | 0.75 | 0.000031 | 9.676e-06 | 1.3219 | 97460.1 | 1.3219 | 97460.1 |
 | 1.00 | 0.000042 | 1.717e-05 | 1.5849 | 116851.2 | 0.0000 | 0.0 |
+| 1.25 | 0.000055 | 2.674e-05 | 1.8073 | 133245.3 | 0.0000 | 0.0 |
 | 1.50 | 0.000073 | 3.841e-05 | 1.9999 | 147445.2 | 0.0000 | 0.0 |
 | 2.00 | 0.000100 | 6.785e-05 | 2.3217 | 171174.0 | 0.0000 | 0.0 |
-| 4.00 | 0.000189 | 2.629e-04 | 3.1693 | 233668.0 | 0.0000 | 0.0 |
-| 8.00 | 0.000383 | 9.847e-04 | 4.0859 | 301245.0 | 0.0000 | 0.0 |
 
 ## Aggregate
 

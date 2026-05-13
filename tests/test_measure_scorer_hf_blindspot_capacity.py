@@ -5,7 +5,6 @@ from pathlib import Path
 
 import torch
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL_PATH = REPO_ROOT / "tools/measure_scorer_hf_blindspot_capacity.py"
 

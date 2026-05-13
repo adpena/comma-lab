@@ -61,6 +61,46 @@ Translation table when the loop fires:
 - Task #309 ("HIGH-THROUGHPUT DISPATCH agent: parallel GPU orchestration") sat **pending** the entire May 4 race window. That task class is a NON-NEGOTIABLE priority-1 — if a similar task exists in any backlog, it must be claimed before any new validation-gate work.
 - Any PR that adds a new ranking/predictor/sanity-gate primitive MUST link to the parallel-actuator file that consumes its output. If no such consumer exists, the PR description must explicitly state "actuator deferred — no race window currently active" with the operator's signoff on the deferral.
 
+## Long-burn score-lowering campaign default — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+When the operator says aggressive score lowering, no meat left on the bone, no
+holds barred, funded reproduction, no budget/time limit, or escape the HNeRV
+local minimum, do not answer with another research-only council loop. Convert
+each plausible floor-breaking family into a campaign unless a dated ledger
+records a real blocker.
+
+A campaign must include:
+
+1. `lane_id` plus dispatch-claim plan.
+2. Source evidence and score-lowering hypothesis.
+3. Timing-smoke command that measures seconds/epoch or seconds/candidate.
+4. Full-run command with resumable checkpoints and harvest path.
+5. Live provider rate/cost model.
+6. Byte-closed archive/export/inflate plan for promotion.
+7. Stop/continue thresholds for smoke, mid-stage, export, and exact eval.
+
+Budget uncertainty is not a reason to defer. If cost is unknown, run or prepare
+the smallest faithful timing smoke so cost becomes measured GPU-hours. Missing
+final archive grammar blocks promotion and score claims; it does not block a
+clearly tagged non-promotional timing smoke, source-faithful reproduction probe,
+or campaign wiring pass. Older `$` caps, no-GPU notes, or no-dispatch memos are
+superseded by a newer explicit operator directive to fund or launch a named
+campaign, while claim lifecycle, provider import probes, artifact custody,
+contest compliance, and CPU/CUDA axis separation remain mandatory.
+
+Visible high-EV directions such as PR95/HNeRV reproduction, NeRV-family
+replacements, SIREN/FINER/WIRE/BACON, Ballé/CompressAI, Cool-Chic/C3, wavelets,
+RAFT/ego-motion, LA-pose/telescopic foveation, SABOR, S2SBS, arithmetic/range/
+ANS compiler passes, and scorer-inverse representations must become either a
+campaign ledger plus timing-smoke/launch decision in the same session or an
+explicit blocker. `research_only=true` is not a resting state for frontier work:
+if the signal is promising, name the next byte-closed prototype or campaign
+gate.
+
+If `.omx/state/RACE_MODE_ACTIVE.flag` exists, campaign actuation outranks new
+grand-council text unless that text directly writes launchable commands, hardens
+the actuator, or records the blocker preventing spend.
+
 ## HNeRV / leaderboard-implementation parity discipline — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** `feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md` (operator-mandated retrospective, 2026-05-09). Cross-refs `.omx/research/representation_integration_gap_audit_20260508_codex.md` (codex parallel finding) + `feedback_substrate_vs_codec_composition_meta_pattern_20260508.md` (claude-side framing) + `feedback_grand_council_fields_medal_phase2_floor_REBASELINE_with_integration_discipline_20260509.md` (Phase 2 floor rebaseline).
@@ -1345,6 +1385,13 @@ A candidate may be promoted only after:
 - AWS: $100 total (free credits)
 - Azure: $200 total (free credits, need `az login`)
 - Modal: $30/mo free credits
+
+These legacy caps are accidental-spend guards for ordinary turns, not a reason
+to refuse an explicit funded campaign directive. If the operator authorizes a
+named no-limit or separately funded campaign, immediately replace this table
+with a live provider quote, campaign-specific ceiling, lane claim, and staged
+smoke/full-run approval record. Do not keep using stale caps as the governing
+budget after a newer operator funding decision.
 
 ### Deployment rules
 - **Always use `modal run --detach`** for long-running experiments (prevents disconnect kill).

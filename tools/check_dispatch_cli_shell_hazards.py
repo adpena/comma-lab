@@ -35,6 +35,13 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+_THIS_FILE = Path(__file__).resolve()
+_TOOLS_DIR = _THIS_FILE.parent
+_REPO_ROOT_CANDIDATE = _TOOLS_DIR.parent
+for _path in (str(_REPO_ROOT_CANDIDATE), str(_TOOLS_DIR)):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
+
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover - direct script execution

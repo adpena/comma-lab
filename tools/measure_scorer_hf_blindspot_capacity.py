@@ -44,12 +44,12 @@ import math
 import socket
 import sys
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import torch  # noqa: F401 — only imported for type annotations
+    import torch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "upstream"))
@@ -137,7 +137,7 @@ def _git_head_sha() -> str:
 
 def _load_scorers(device):
     """Returns (segnet, posenet) both eval(), on device, with safetensors loaded."""
-    from modules import SegNet, PoseNet, segnet_sd_path, posenet_sd_path
+    from modules import PoseNet, SegNet, posenet_sd_path, segnet_sd_path
     from safetensors.torch import load_file
 
     seg = SegNet().eval().to(device)
@@ -161,7 +161,8 @@ def _decode_frames(video_path: Path, n_pairs: int, seq_len: int = 2):
     CPU, and yuv420_to_rgb is the contest scorer's CPU-side RGB contract.
     """
     import torch
-    from frame_utils import AVVideoDataset, camera_size, seq_len as upstream_seq_len
+    from frame_utils import AVVideoDataset, camera_size
+    from frame_utils import seq_len as upstream_seq_len
 
     if n_pairs <= 0:
         raise ValueError(f"n_pairs must be positive, got {n_pairs}")
@@ -233,7 +234,7 @@ def _shifted_fft_conjugate_coord(yy: int, xx: int, height: int, width: int) -> t
     return ((2 * cy - yy) % height, (2 * cx - xx) % width)
 
 
-def _hf_hermitian_coordinate_pairs(mask: "torch.Tensor") -> list[tuple[tuple[int, int], tuple[int, int]]]:
+def _hf_hermitian_coordinate_pairs(mask: torch.Tensor) -> list[tuple[tuple[int, int], tuple[int, int]]]:
     """Unique HF coordinate pairs for a real-valued inverse FFT perturbation."""
     pairs = []
     seen = set()
@@ -291,7 +292,7 @@ def _make_hf_perturbation(
     return pert  # (C, H, W) float
 
 
-def _segnet_argmax(seg, pair_bthwc: "torch.Tensor"):
+def _segnet_argmax(seg, pair_bthwc: torch.Tensor):
     """pair_bthwc: (B, T, H, W, 3) float [0..255]. Returns argmax map and logits.
 
     Returns:
@@ -310,7 +311,7 @@ def _segnet_argmax(seg, pair_bthwc: "torch.Tensor"):
     return argmax, logits
 
 
-def _posenet_pose(pose, pair_bthwc: "torch.Tensor"):
+def _posenet_pose(pose, pair_bthwc: torch.Tensor):
     """Returns first-6-pose dim per batch element."""
     import einops
     import torch
@@ -405,7 +406,7 @@ def run_audit(args) -> AuditResult:
     res.video_path = str(video_path)
     res.video_sha256 = _sha256_file(video_path)
 
-    from modules import segnet_sd_path, posenet_sd_path
+    from modules import posenet_sd_path, segnet_sd_path
     res.segnet_sd_sha256 = _sha256_file(Path(str(segnet_sd_path)))
     res.posenet_sd_sha256 = _sha256_file(Path(str(posenet_sd_path)))
 
@@ -461,8 +462,8 @@ def run_audit(args) -> AuditResult:
     nyq_seg_h, nyq_seg_w = 192, 256
     # half-bandwidth in shifted-FFT coords at camera scale that bilinear-resamples
     # to the FULL Nyquist of the segnet stem (so its image survives the resize):
-    hbw_cam_h = int(round(nyq_seg_h * cam_h / seg_h / 2))
-    hbw_cam_w = int(round(nyq_seg_w * cam_w / seg_w / 2))
+    hbw_cam_h = round(nyq_seg_h * cam_h / seg_h / 2)
+    hbw_cam_w = round(nyq_seg_w * cam_w / seg_w / 2)
     nyquist_cam_hw = (2 * hbw_cam_h, 2 * hbw_cam_w)
     res.config_description["nyquist_cam_window_hw_zeroed_in_pert"] = list(nyquist_cam_hw)
 
@@ -508,7 +509,6 @@ def run_audit(args) -> AuditResult:
     posenet_baseline["mean_norm"] = baseline_pose.norm(dim=-1).mean().item()
 
     pixels_per_segnet_frame = 384 * 512
-    pixels_per_cam_frame = cam_h * cam_w
     # The perturbation is applied at CAM_SIZE (874x1164), but the bilinear-resize
     # to (384, 512) means freq bins above the camera-scale LF window collapse to
     # a single SegNet-input pixel. The realizable byte budget is bounded by:
@@ -746,7 +746,7 @@ def _prbs_stuff_demo(seg, pose, pair_one, target_delta, prbs_bits, nyquist_cam_h
     for ((yy, xx), _) in used_pairs:
         real_part = F_recov[yy, xx].real.item()
         recovered_bits.append(1 if real_part > 0 else 0)
-    n_err = sum(1 for a, b in zip(bits, recovered_bits) if a != b)
+    n_err = sum(1 for a, b in zip(bits, recovered_bits, strict=True) if a != b)
     ber = n_err / max(1, len(bits))
     bsc_capacity = max(0.0, 1.0 - _binary_entropy2(ber)) if ber < 0.5 else 0.0
 
@@ -798,9 +798,9 @@ def _render_memo(res: AuditResult, json_path: Path) -> str:
     lines = []
     lines.append("# phi3 S2SBS — Stride-2-Stem Byte-Stuffing Blindspot Audit")
     lines.append("")
-    lines.append(f"- Lane: `lane_s2sbs_blindspot_audit_20260513` (Phase 2)")
-    lines.append(f"- Council source: commit 896f1d79 (TRIPLET phi, O3)")
-    lines.append(f"- Evidence grade: **[macOS-CPU advisory]** — research signal only")
+    lines.append("- Lane: `lane_s2sbs_blindspot_audit_20260513` (Phase 2)")
+    lines.append("- Council source: commit 896f1d79 (TRIPLET phi, O3)")
+    lines.append("- Evidence grade: **[macOS-CPU advisory]** — research signal only")
     lines.append("- `research_only=true`, `score_claim=false`, `promotion_eligible=false`, `ready_for_exact_eval_dispatch=false`")
     lines.append(f"- Timestamp UTC: {res.timestamp_utc}")
     lines.append(f"- Host: {res.host}")
