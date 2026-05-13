@@ -50,12 +50,15 @@ import numpy as np
 import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
 APOGEE_SRC = (
     REPO_ROOT
     / "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto"
     / "source/submissions/apogee/src"
 )
 sys.path.insert(0, str(APOGEE_SRC))
+
+from tac.codec.rel_err import REL_ERR_FORM_KEY, RelErrForm, compute_rel_err  # noqa: E402
 
 # Use the upstream PR107 codec verbatim for parse + the CD1 reference shape.
 from codec import (  # type: ignore # noqa: E402
@@ -225,25 +228,28 @@ def encode_at_budget(blobs: list[TensorBlob], budget: float, brotli_quality: int
     """Apply per-tensor K search at given rel_err budget; report bytes + diagnostics."""
     Ks: list[int] = []
     rounded_chunks: list[np.ndarray] = []
-    abs_orig_total = 0.0
-    abs_err_total = 0.0
+    orig_chunks: list[np.ndarray] = []
     for tb in blobs:
         K, _ = find_best_K_for_tensor(tb.raw_int8, budget)
         Ks.append(K)
         s = tb.raw_int8.astype(np.float64)
         rounded = np.round(s / K) * K
+        orig_chunks.append(s)
         rounded_chunks.append(rounded)
-        abs_orig_total += float(np.abs(s).sum())
-        abs_err_total += float(np.abs(rounded - s).sum())
 
     cd1_payload = build_cd1_payload(blobs, rounded_chunks)
     decoder_brotli = brotli.compress(cd1_payload, quality=brotli_quality)
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 0 else 0.0
+    rel_err = compute_rel_err(
+        np.concatenate(rounded_chunks),
+        np.concatenate(orig_chunks),
+        mode=RelErrForm.L1_RATIO,
+    )
 
     return {
         "budget": budget,
         "Ks": Ks,
         "rel_err": rel_err,
+        REL_ERR_FORM_KEY: RelErrForm.L1_RATIO.value,
         "cd1_payload_bytes": len(cd1_payload),
         "decoder_brotli_bytes": len(decoder_brotli),
         "decoder_brotli": decoder_brotli,

@@ -60,6 +60,7 @@ import numpy as np
 import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
 APOGEE_SRC = (
     REPO_ROOT
     / "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto"
@@ -77,6 +78,7 @@ from pr107_lossy_coarsening_apogee import (  # type: ignore  # noqa: E402
     PR107_BASELINE_BIN_BYTES,
 )
 from codec import parse_archive  # type: ignore  # noqa: E402
+from tac.codec.rel_err import REL_ERR_FORM_KEY, RelErrForm, compute_rel_err  # noqa: E402
 
 TOOL_NAME = "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
 SCHEMA_VERSION = "pr107_lossy_coarsening_brotli_optuna_stack.v1"
@@ -210,19 +212,21 @@ def build_candidate(
     # Step 1: K-coarsening at given budget
     Ks: list[int] = []
     rounded_chunks: list[np.ndarray] = []
-    abs_orig_total = 0.0
-    abs_err_total = 0.0
+    orig_chunks: list[np.ndarray] = []
     for tb in blobs:
         from pr107_lossy_coarsening_apogee import find_best_K_for_tensor  # noqa
         K, _ = find_best_K_for_tensor(tb.raw_int8, budget)
         Ks.append(K)
         s = tb.raw_int8.astype(np.float64)
         rounded = np.round(s / K) * K
+        orig_chunks.append(s)
         rounded_chunks.append(rounded)
-        abs_orig_total += float(np.abs(s).sum())
-        abs_err_total += float(np.abs(rounded - s).sum())
 
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 0 else 0.0
+    rel_err = compute_rel_err(
+        np.concatenate(rounded_chunks),
+        np.concatenate(orig_chunks),
+        mode=RelErrForm.L1_RATIO,
+    )
     cd1_payload = build_cd1_payload(blobs, rounded_chunks)
 
     # Step 2: brotli optimization
@@ -240,6 +244,7 @@ def build_candidate(
     return {
         "budget": budget,
         "rel_err": rel_err,
+        REL_ERR_FORM_KEY: RelErrForm.L1_RATIO.value,
         "Ks": Ks,
         "cd1_payload_bytes": len(cd1_payload),
         "decoder_brotli_bytes_default": brotli_result["default_bytes"],

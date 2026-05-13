@@ -52,6 +52,7 @@ from tac.codec.frame_conditional import (  # noqa: E402
     estimate_encoded_bytes,
     sha256_hex,
 )
+from tac.codec.rel_err import REL_ERR_FORM_KEY, RelErrForm, compute_rel_err  # noqa: E402
 
 
 def load_difficulty_profile(json_path: Path) -> dict[int, float]:
@@ -91,8 +92,16 @@ def probe_strategy(
     encoded_again = encode_frame_conditional(latents, cfg)
     determinism_ok = sha256_hex(encoded_again) == encoded_sha
 
-    # Reconstruction error.
-    rel_err = np.abs(decoded - latents) / (np.abs(latents).max(axis=1, keepdims=True) + 1e-9)
+    # Reconstruction error. This probe arbitrates by worst per-frame bound
+    # rather than global RMS because frame-conditional quantization can hide a
+    # small hard-frame cliff inside an otherwise good mean.
+    per_frame_rel_err = np.asarray(
+        [
+            compute_rel_err(decoded[i], latents[i], mode=RelErrForm.MAX_RATIO)
+            for i in range(decoded.shape[0])
+        ],
+        dtype=np.float64,
+    )
 
     # Side-info overhead (header + q_bits + abs_max).
     n_frames = len(difficulty_profile)
@@ -111,9 +120,11 @@ def probe_strategy(
         "estimated_matches_actual": estimated_bytes == len(encoded),
         "encoded_sha256": encoded_sha,
         "encode_determinism_ok": determinism_ok,
-        "reconstruction_rel_err_mean": float(rel_err.mean()),
-        "reconstruction_rel_err_max": float(rel_err.max()),
-        "reconstruction_rel_err_p99": float(np.percentile(rel_err, 99)),
+        "reconstruction_rel_err_mean": float(per_frame_rel_err.mean()),
+        "reconstruction_rel_err_max": float(per_frame_rel_err.max()),
+        "reconstruction_rel_err_p99": float(np.percentile(per_frame_rel_err, 99)),
+        REL_ERR_FORM_KEY: RelErrForm.MAX_RATIO.value,
+        "rel_err_scope": "per_frame",
         "side_info_bytes": side_info_bytes,
         "archive_bytes_delta_vs_a1": archive_bytes_delta,
     }

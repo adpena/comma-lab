@@ -60,6 +60,7 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
     decode_decoder_compact,
     pack_brotli_stream,
 )
+from tac.codec.rel_err import REL_ERR_FORM_KEY, RelErrForm, compute_rel_err  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/build_a2_sensitivity_weighted_pr101_packet.py"
@@ -668,6 +669,8 @@ def _encode_rounded_decoder_blob(
     tensor_rows: list[dict[str, Any]] = []
     abs_orig_total = 0.0
     abs_err_total = 0.0
+    raw_chunks: list[np.ndarray] = []
+    clipped_chunks: list[np.ndarray] = []
     for idx, ((name, shape), k) in enumerate(zip(FIXED_STATE_SCHEMA, selected_ks, strict=True)):
         if name not in state or not torch.is_tensor(state[name]):
             raise PacketClosureBlocked(
@@ -678,6 +681,8 @@ def _encode_rounded_decoder_blob(
         raw = qt.q_i8.astype(np.float64)
         rounded = np.round(raw / k) * k
         clipped = rounded.clip(-N_QUANT, N_QUANT).astype(np.int8)
+        raw_chunks.append(raw)
+        clipped_chunks.append(clipped.astype(np.float64))
         abs_err = float(np.abs(clipped.astype(np.float64) - raw).sum())
         abs_orig = float(np.abs(raw).sum())
         abs_err_total += abs_err
@@ -704,12 +709,17 @@ def _encode_rounded_decoder_blob(
         streams.append(pack_brotli_stream(window_raw, quality=brotli_quality))
         start = end
     decoder_blob = b"".join(streams)
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err = compute_rel_err(
+        np.concatenate(clipped_chunks),
+        np.concatenate(raw_chunks),
+        mode=RelErrForm.L1_RATIO,
+    )
     return decoder_blob, {
         "brotli_quality": brotli_quality,
         "decoder_blob_bytes": len(decoder_blob),
         "decoder_blob_sha256": _sha256_bytes(decoder_blob),
         "rel_err_l1_quantized_proxy": rel_err,
+        REL_ERR_FORM_KEY: RelErrForm.L1_RATIO.value,
         "abs_err_sum": abs_err_total,
         "abs_orig_sum": abs_orig_total,
         "tensor_rows": tensor_rows,
