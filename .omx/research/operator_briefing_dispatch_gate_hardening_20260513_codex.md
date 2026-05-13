@@ -21,13 +21,17 @@ empirically, and its one-liner still contains `<path/to/...>` placeholders.
   `ready_for_exact_eval_dispatch` fail-closed fields for generic consumers.
 - JSON active lists now filter on `dispatch_routing.active`, not only predicted
   score band.
+- Wired all-lanes preflight Gate #28 to parse operator briefing JSON and fail
+  if any active worklist row bypasses dispatch readiness, gate satisfaction, or
+  placeholder checks.
 
 ## Verification
 
 ```bash
 .venv/bin/python -m ruff check tools/operator_briefing.py src/tac/tests/test_operator_briefing.py
-.venv/bin/python -m pytest -q src/tac/tests/test_operator_briefing.py src/tac/tests/test_score_target_filter.py
+.venv/bin/python -m pytest -q src/tac/tests/test_operator_briefing.py src/tac/tests/test_score_target_filter.py src/tac/tests/test_all_lanes_operator_briefing_gate.py
 .venv/bin/python tools/operator_briefing.py --json --top 3 --skip-provider-readiness
+.venv/bin/python tools/all_lanes_preflight.py
 ```
 
 Observed:

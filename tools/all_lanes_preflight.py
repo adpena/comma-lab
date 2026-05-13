@@ -82,6 +82,9 @@ Currently runs:
             while remaining non-promotable without full-frame parity)
   Gate #27: tools/claim_lane_dispatch.py summary
            (refuse stale active dispatch claims before more dispatch work)
+  Gate #28: tools/operator_briefing.py --json
+           (operator briefing active lists must use dispatch readiness, not
+            score-band plausibility alone)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -111,6 +114,7 @@ import concurrent.futures
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -225,6 +229,7 @@ PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_gramm
 PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
 PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f"
 CLAIM_LANE_DISPATCH = TOOLS / "claim_lane_dispatch.py"
+OPERATOR_BRIEFING = TOOLS / "operator_briefing.py"
 PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY = (
     REPO / "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
 )
@@ -534,6 +539,126 @@ def _run_active_dispatch_claims_gate() -> tuple[bool, str]:
             f"unparsable_timestamp={unparsable}\n{output}",
         )
     return True, f"active dispatch claims: PASS ({output.strip()})"
+
+
+_OPERATOR_PLACEHOLDER_RE = re.compile(r"<[^>\n]+>")
+
+
+def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str]:
+    failures: list[str] = []
+    groups = (
+        ("supplementary_lanes", "active_supplementary_lanes"),
+        ("gated_lanes", "active_gated_lanes"),
+        ("composition_lanes", "active_composition_lanes"),
+    )
+    for all_key, active_key in groups:
+        rows = payload.get(all_key)
+        active_rows = payload.get(active_key)
+        if not isinstance(rows, list):
+            failures.append(f"{all_key}_missing_or_not_list")
+            continue
+        if not isinstance(active_rows, list):
+            failures.append(f"{active_key}_missing_or_not_list")
+            active_rows = []
+        expected_active_ids: set[str] = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                failures.append(f"{all_key}_contains_non_object_row")
+                continue
+            lane_id = str(row.get("lane_id") or "<missing>")
+            dispatch = row.get("dispatch_routing")
+            if not isinstance(dispatch, dict):
+                failures.append(f"{all_key}:{lane_id}:dispatch_routing_missing")
+                continue
+            dispatch_active = dispatch.get("active") is True
+            if row.get("ready_for_operator_dispatch") is not dispatch_active:
+                failures.append(
+                    f"{all_key}:{lane_id}:ready_for_operator_dispatch_mismatch"
+                )
+            if row.get("ready_for_exact_eval_dispatch") is True and not dispatch_active:
+                failures.append(
+                    f"{all_key}:{lane_id}:exact_eval_ready_without_operator_dispatch"
+                )
+            one_liner = row.get("one_liner")
+            has_placeholder = isinstance(one_liner, str) and bool(
+                _OPERATOR_PLACEHOLDER_RE.search(one_liner)
+            )
+            if has_placeholder and dispatch_active:
+                failures.append(f"{all_key}:{lane_id}:active_with_operator_placeholder")
+            if (
+                row.get("gate_condition")
+                and row.get("gate_ready") is not True
+                and dispatch_active
+            ):
+                failures.append(f"{all_key}:{lane_id}:active_with_unsatisfied_gate")
+            if dispatch.get("status") == "dispatch_gate_blocked" and not dispatch.get("blockers"):
+                failures.append(f"{all_key}:{lane_id}:blocked_dispatch_without_blockers")
+            if dispatch_active:
+                expected_active_ids.add(lane_id)
+        observed_active_ids: set[str] = set()
+        for row in active_rows:
+            if not isinstance(row, dict):
+                failures.append(f"{active_key}_contains_non_object_row")
+                continue
+            lane_id = str(row.get("lane_id") or "<missing>")
+            observed_active_ids.add(lane_id)
+            dispatch = row.get("dispatch_routing")
+            if not isinstance(dispatch, dict) or dispatch.get("active") is not True:
+                failures.append(f"{active_key}:{lane_id}:active_row_not_dispatch_active")
+            if row.get("ready_for_operator_dispatch") is not True:
+                failures.append(f"{active_key}:{lane_id}:active_row_not_operator_ready")
+            one_liner = row.get("one_liner")
+            if isinstance(one_liner, str) and _OPERATOR_PLACEHOLDER_RE.search(one_liner):
+                failures.append(f"{active_key}:{lane_id}:active_row_has_placeholder")
+            if row.get("gate_condition") and row.get("gate_ready") is not True:
+                failures.append(f"{active_key}:{lane_id}:active_row_has_unsatisfied_gate")
+        if observed_active_ids != expected_active_ids:
+            failures.append(
+                f"{active_key}_does_not_match_dispatch_routing:"
+                f"observed={sorted(observed_active_ids)} expected={sorted(expected_active_ids)}"
+            )
+    return failures
+
+
+def _run_operator_briefing_dispatch_gate() -> tuple[bool, str]:
+    """Ensure briefing active lists cannot bypass dispatch gate semantics."""
+
+    proc = _run_subprocess(
+        [
+            sys.executable,
+            str(OPERATOR_BRIEFING),
+            "--json",
+            "--top",
+            "3",
+            "--skip-provider-readiness",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    output = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        return False, output
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        return False, f"operator briefing emitted invalid JSON: {exc}: {output[:500]}"
+    failures = _operator_briefing_dispatch_failures(payload)
+    if failures:
+        return False, "operator briefing dispatch routing failed: " + "; ".join(failures)
+    counts = {
+        "active_supplementary": len(payload.get("active_supplementary_lanes") or []),
+        "active_gated": len(payload.get("active_gated_lanes") or []),
+        "active_composition": len(payload.get("active_composition_lanes") or []),
+    }
+    return (
+        True,
+        "operator briefing dispatch routing: PASS "
+        f"(active_supplementary={counts['active_supplementary']} "
+        f"active_gated={counts['active_gated']} "
+        f"active_composition={counts['active_composition']}; "
+        "active rows require dispatch_routing.active=true and "
+        "ready_for_operator_dispatch=true)",
+    )
 
 
 def _run_hidden_gems_gate() -> tuple[bool, str]:
@@ -2610,6 +2735,7 @@ def main(argv: list[str] | None = None) -> int:
         PR91_HPM1_READINESS_ARTIFACT,
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
+        OPERATOR_BRIEFING,
         *[lane["tool"] for lane in lanes],
     ]:
         if not tool.is_file():
@@ -2858,6 +2984,14 @@ def main(argv: list[str] | None = None) -> int:
             _run_active_dispatch_claims_gate,
             "  ✓ Gate #27: active dispatch claims closed — PASSED",
             "  ✗ Gate #27: active dispatch claims closed — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            28,
+            "operator briefing dispatch routing",
+            _run_operator_briefing_dispatch_gate,
+            "  ✓ Gate #28: operator briefing dispatch routing — PASSED",
+            "  ✗ Gate #28: operator briefing dispatch routing — FAILED",
         ),
     ]
     lane_steps = [
