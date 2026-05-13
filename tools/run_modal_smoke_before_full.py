@@ -210,6 +210,43 @@ def _lane_id_from_recipe(recipe_text: str) -> str:
     return "lane_unknown"
 
 
+def _expected_auth_artifact_markers(
+    recipe_text: str,
+    *,
+    instance_job_id: str = "",
+) -> tuple[str, ...]:
+    """Return path markers that identify auth JSONs from this smoke run.
+
+    Modal returns a flat artifact map keyed by repo-relative paths. The worker
+    may copy historical ``experiments/results`` files into the writable
+    workspace, so accepting any key containing ``auth_eval`` can validate stale
+    score evidence. Recipe output-dir env overrides are the stable way to find
+    the lane-local auth JSON path without hardcoding one substrate.
+    """
+
+    import re
+
+    markers: list[str] = []
+    if instance_job_id:
+        markers.append(f"results/{instance_job_id}/")
+        markers.append(instance_job_id)
+    for match in re.finditer(
+        r"^\s+[A-Z0-9_]*OUTPUT_DIR\s*:\s*/workspace/pact/([^\n#]+)",
+        recipe_text,
+        re.MULTILINE,
+    ):
+        rel = match.group(1).strip().strip("\"'")
+        if rel:
+            markers.append(rel.rstrip("/") + "/")
+    out: list[str] = []
+    seen: set[str] = set()
+    for marker in markers:
+        if marker and marker not in seen:
+            seen.add(marker)
+            out.append(marker)
+    return tuple(out)
+
+
 def _close_smoke_claim(
     *,
     repo_root: Path,
@@ -405,6 +442,7 @@ def _validate_smoke_result(
     result: dict,
     *,
     plausible_band: tuple[float, float] = SMOKE_PLAUSIBLE_SCORE_BAND,
+    required_artifact_markers: tuple[str, ...] = (),
 ) -> tuple[bool, str]:
     """Return ``(green, diagnostic)``.
 
@@ -425,11 +463,23 @@ def _validate_smoke_result(
     if result.get("timed_out"):
         return False, "SMOKE timed_out=True (training did not finish in budget)"
     artifacts = result.get("artifacts", {})
-    auth_keys = [
+    all_auth_keys = [
         k for k in artifacts
         if "auth_eval" in k.lower() and k.lower().endswith(".json")
     ]
+    auth_keys = [
+        k for k in all_auth_keys
+        if not required_artifact_markers
+        or any(marker in k for marker in required_artifact_markers)
+    ]
     if not auth_keys:
+        if all_auth_keys and required_artifact_markers:
+            return False, (
+                "SMOKE artifacts contained auth-eval JSONs, but none were "
+                "from the current smoke output path; refusing stale evidence. "
+                f"required_markers={required_artifact_markers}; "
+                f"auth_keys={sorted(all_auth_keys)[:8]}"
+            )
         return False, (
             "SMOKE artifacts missing auth_eval_*.json - did the trainer "
             "reach the auth-eval stage?"
@@ -646,7 +696,15 @@ def main(argv: list[str] | None = None) -> int:
         f"(default={SMOKE_PLAUSIBLE_SCORE_BAND}; "
         f"override_from_recipe={smoke_band != SMOKE_PLAUSIBLE_SCORE_BAND})"
     )
-    green, diagnostic = _validate_smoke_result(result, plausible_band=smoke_band)
+    artifact_markers = _expected_auth_artifact_markers(
+        recipe_text,
+        instance_job_id=smoke_instance_job_id,
+    )
+    green, diagnostic = _validate_smoke_result(
+        result,
+        plausible_band=smoke_band,
+        required_artifact_markers=artifact_markers,
+    )
     print(f"[smoke-before-full] SMOKE verdict: {diagnostic}")
     if not green:
         _close_smoke_claim(

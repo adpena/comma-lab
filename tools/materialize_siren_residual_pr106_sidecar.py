@@ -132,13 +132,18 @@ def _build_l2_encoded_siren_residual_blob(
     byte_budget: int,
     max_k: int,
     sparse_wire: bool,
+    saliency_map_path: Path | None = None,
+    saliency_power: float = 1.0,
+    saliency_floor: float = 0.0,
 ) -> tuple[bytes, dict[str, object]]:
     """Select top low-frequency FFT residual coefficients from decoded/GT raw frames.
 
     This is the deterministic SIREN bridge from scaffold to score-moving bytes:
     it fits the residual ``gt - decoded`` in the frequency basis consumed by
-    ``submissions/pr106_siren_residual_sidecar/inflate.py``. It is still a
-    proxy encoder, not a score claim; exact CPU/CUDA eval decides promotion.
+    ``submissions/pr106_siren_residual_sidecar/inflate.py``. If a saliency
+    map is provided, the residual is weighted before the FFT so the byte budget
+    goes to scorer-relevant atoms instead of raw L2 energy. It is still a proxy
+    encoder, not a score claim; exact CPU/CUDA eval decides promotion.
     """
 
     import numpy as np
@@ -181,6 +186,12 @@ def _build_l2_encoded_siren_residual_blob(
         )
     if max_k < 0:
         raise MaterializerError(f"--max-k must be >= 0; got {max_k}")
+    if saliency_power <= 0.0:
+        raise MaterializerError(f"--saliency-power must be > 0; got {saliency_power}")
+    if not (0.0 <= saliency_floor <= 1.0):
+        raise MaterializerError(
+            f"--saliency-floor must be in [0, 1]; got {saliency_floor}"
+        )
 
     max_dense_coefs = min(0xFFFF, (byte_budget - 6) // PER_COEF_BYTES)
     if max_dense_coefs <= 0:
@@ -212,6 +223,56 @@ def _build_l2_encoded_siren_residual_blob(
         mode="r",
         shape=(n_gt, CAMERA_H, CAMERA_W, RGB_CHANNELS),
     )
+    saliency_mm = None
+    saliency_shape: tuple[int, ...] = ()
+    saliency_dtype = ""
+    saliency_sha = ""
+    if saliency_map_path is not None:
+        if not saliency_map_path.is_file():
+            raise MaterializerError(f"saliency map missing: {saliency_map_path}")
+        saliency_mm = np.load(saliency_map_path, mmap_mode="r")
+        saliency_shape = tuple(int(v) for v in saliency_mm.shape)
+        saliency_dtype = str(saliency_mm.dtype)
+        saliency_sha = sha256_file(saliency_map_path)
+        if saliency_mm.ndim not in (3, 4):
+            raise MaterializerError(
+                f"saliency map must have shape (T,H,W), (T,H,W,1), "
+                f"or (T,H,W,3); got {saliency_shape}"
+            )
+        if saliency_shape[0] < n_to_use:
+            raise MaterializerError(
+                f"saliency map has only {saliency_shape[0]} frames; "
+                f"need {n_to_use}"
+            )
+        if saliency_shape[1:3] != (CAMERA_H, CAMERA_W):
+            raise MaterializerError(
+                f"saliency spatial shape {saliency_shape[1:3]} != "
+                f"{(CAMERA_H, CAMERA_W)}"
+            )
+        if saliency_mm.ndim == 4 and saliency_shape[3] not in (1, RGB_CHANNELS):
+            raise MaterializerError(
+                f"saliency channel dimension must be 1 or {RGB_CHANNELS}; "
+                f"got {saliency_shape[3]}"
+            )
+
+    def _saliency_weights(frame_idx: int) -> np.ndarray | None:
+        if saliency_mm is None:
+            return None
+        sal = np.asarray(saliency_mm[frame_idx], dtype=np.float64)
+        if sal.ndim == 3 and sal.shape[2] == 1:
+            sal = sal[..., 0]
+        if not np.isfinite(sal).all():
+            raise MaterializerError(
+                f"saliency map contains non-finite values at frame {frame_idx}"
+            )
+        sal = np.maximum(sal, 0.0)
+        max_sal = float(sal.max()) if sal.size else 0.0
+        if max_sal <= 0.0:
+            return np.zeros_like(sal, dtype=np.float64)
+        weights = (sal / max_sal) ** saliency_power
+        if saliency_floor:
+            weights = saliency_floor + (1.0 - saliency_floor) * weights
+        return weights.astype(np.float64, copy=False)
 
     # Atoms, not lone complex bins. Because inflate uses real(ifft2(...)),
     # non-self-conjugate real residual modes must be emitted as conjugate
@@ -307,6 +368,12 @@ def _build_l2_encoded_siren_residual_blob(
             gt_mm[frame_idx].astype(np.float64)
             - decoded_mm[frame_idx].astype(np.float64)
         )
+        weights = _saliency_weights(frame_idx)
+        if weights is not None:
+            if weights.ndim == 2:
+                residual = residual * weights[..., None]
+            else:
+                residual = residual * weights
         spectrum = np.fft.fft2(residual, axes=(0, 1))
         values = spectrum[flat_rows, flat_cols, :]
         magnitudes = np.abs(values).ravel()
@@ -502,6 +569,13 @@ def _build_l2_encoded_siren_residual_blob(
         "byte_budget": float(byte_budget),
         "max_k": float(max_k),
         "sparse_wire": float(1.0 if sparse_wire else 0.0),
+        "saliency_weighted": bool(saliency_map_path is not None),
+        "saliency_map_path": str(saliency_map_path) if saliency_map_path else "",
+        "saliency_map_sha256": saliency_sha,
+        "saliency_map_shape": list(saliency_shape),
+        "saliency_map_dtype": saliency_dtype,
+        "saliency_power": float(saliency_power),
+        "saliency_floor": float(saliency_floor),
     }
     return residual_bytes, diag
 
@@ -548,6 +622,33 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=0,
         help="(l2_encoded only) Residual byte budget; must fit at least one coefficient.",
+    )
+    parser.add_argument(
+        "--saliency-map-npy",
+        type=Path,
+        default=None,
+        help=(
+            "(l2_encoded only) Optional scorer/surrogate saliency map .npy "
+            "with shape (T,874,1164), (T,874,1164,1), or (T,874,1164,3). "
+            "Residuals are weighted before FFT so selected SIREN atoms target "
+            "score-relevant pixels. This is proxy guidance only; no score "
+            "claim is emitted."
+        ),
+    )
+    parser.add_argument(
+        "--saliency-power",
+        type=float,
+        default=1.0,
+        help="(l2_encoded only) Exponent applied to normalized saliency weights.",
+    )
+    parser.add_argument(
+        "--saliency-floor",
+        type=float,
+        default=0.0,
+        help=(
+            "(l2_encoded only) Floor blended into normalized saliency weights. "
+            "0.0 permits hard masking; 1.0 disables saliency weighting."
+        ),
     )
     parser.add_argument(
         "--decoded-axis",
@@ -616,6 +717,9 @@ def main(argv: list[str] | None = None) -> int:
                 byte_budget=args.byte_budget,
                 max_k=args.max_k,
                 sparse_wire=args.encoding == "sparse",
+                saliency_map_path=args.saliency_map_npy,
+                saliency_power=args.saliency_power,
+                saliency_floor=args.saliency_floor,
             )
             encoder_diagnostics.update(
                 {

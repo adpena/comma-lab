@@ -406,6 +406,71 @@ def test_siren_l2_encoded_non_dc_uses_conjugate_pair_atom(
     }
 
 
+def test_siren_l2_encoded_saliency_map_steers_score_relevant_frame(
+    fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / "siren_saliency_decoded.raw"
+    gt_raw = tmp_path / "siren_saliency_gt.raw"
+    saliency_path = tmp_path / "saliency.npy"
+    decoded = np.zeros((2, 874, 1164, 3), dtype=np.uint8)
+    gt = decoded.copy()
+    gt[..., 0] = 1
+    decoded.tofile(decoded_raw)
+    gt.tofile(gt_raw)
+    saliency = np.zeros((2, 874, 1164), dtype=np.uint8)
+    saliency[1, :, :] = 255
+    np.save(saliency_path, saliency)
+
+    out = tmp_path / "siren_l2_saliency"
+    result = _run_materializer(
+        MATERIALIZERS["siren"],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(out),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--saliency-map-npy",
+            str(saliency_path),
+            "--n-frames",
+            "2",
+            "--byte-budget",
+            "15",
+            "--max-k",
+            "0",
+            "--decoded-axis",
+            "synthetic_test",
+            "--decoded-inflate-device",
+            "synthetic",
+        ],
+    )
+
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    archive_zip = out / "siren_pr106_residual_sidecar_archive.zip"
+    with zipfile.ZipFile(archive_zip, mode="r") as zf:
+        parsed = parse_archive(zf.read(PR106_BIN_MEMBER_NAME))
+    _scale, n_coefs = struct.unpack_from("<fH", parsed.residual_bytes, 0)
+    assert n_coefs == 1
+    frame_idx, k_row, k_col, channel, real_q, imag_q = struct.unpack_from(
+        "<HhhBbb",
+        parsed.residual_bytes,
+        6,
+    )
+    assert (frame_idx, k_row, k_col, channel) == (1, 0, 0, 0)
+    assert real_q == 127
+    assert imag_q == 0
+    manifest = json.loads((out / "materialization_manifest.json").read_text())
+    diagnostics = manifest["extra"]["l2_encoder_diagnostics"]
+    assert diagnostics["saliency_weighted"] is True
+    assert diagnostics["saliency_map_sha256"]
+    assert diagnostics["score_claim_eligible"] is False
+
+
 def test_siren_l2_encoded_sparse_path_is_not_double_repacked(
     fake_pr106_archive: Path, tmp_path: Path
 ) -> None:

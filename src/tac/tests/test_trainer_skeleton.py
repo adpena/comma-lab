@@ -273,6 +273,62 @@ def test_require_contest_cuda_auth_eval_claim_accepts_valid_claim(tmp_path: Path
     assert claim.score == payload["canonical_score"]
 
 
+def test_require_contest_cuda_auth_eval_claim_accepts_matching_archive_sha(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "contest_auth_eval_cuda.json"
+    path.write_text(
+        json.dumps(_component_coherent_payload(archive_sha256="zipsha")),
+        encoding="utf-8",
+    )
+
+    claim, _payload = ts.require_contest_cuda_auth_eval_claim(
+        path,
+        archive_sha256="zipsha",
+        substrate_tag="testsub",
+    )
+
+    assert claim.score_axis == "contest_cuda"
+
+
+def test_require_contest_cuda_auth_eval_claim_rejects_wrong_scored_object(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "contest_auth_eval_cuda.json"
+    path.write_text(
+        json.dumps(_component_coherent_payload(archive_sha256="payloadbinsha")),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="wrong scored object"):
+        ts.require_contest_cuda_auth_eval_claim(
+            path,
+            archive_sha256="archivezipsha",
+            substrate_tag="testsub",
+        )
+
+
+def test_require_contest_cuda_auth_eval_claim_checks_nested_provenance_sha(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "contest_auth_eval_cuda.json"
+    path.write_text(
+        json.dumps(
+            _component_coherent_payload(
+                provenance={"archive_sha256": "payloadbinsha"}
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="wrong scored object"):
+        ts.require_contest_cuda_auth_eval_claim(
+            path,
+            archive_sha256="archivezipsha",
+            substrate_tag="testsub",
+        )
+
+
 def test_require_contest_cuda_auth_eval_claim_rejects_diagnostic_cuda(tmp_path: Path) -> None:
     path = tmp_path / "diagnostic_auth_eval.json"
     path.write_text(

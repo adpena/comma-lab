@@ -23,6 +23,7 @@ cost_band:
   gpu_key: A100
 
 predicted_score_target: 0.145
+predicted_band: [0.130, 0.165]
 predicted_delta: "-0.048 vs PR101 0.193 [predicted; council Phase 5]"
 predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md#siren"
 literature_anchor: "Sitzmann, Martel, Bergman, Lindell, Wetzstein — 'Implicit Neural Representations with Periodic Activation Functions' NeurIPS 2020"

@@ -71,6 +71,7 @@ Usage (full; CUDA-required; threads from operator wrapper)::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -912,6 +913,8 @@ def _full_main(args: argparse.Namespace) -> int:
         # 11. Build the SRV1 archive bytes from the EMA shadow
         archive_sha = ""
         archive_bytes = 0
+        payload_bin_sha = ""
+        payload_bin_bytes = 0
         archive_zip_path = args.output_dir / "archive.zip"
         if not args.skip_archive_build:
             print(f"[full] building archive from {ckpt_best_path} ...")
@@ -935,9 +938,12 @@ def _full_main(args: argparse.Namespace) -> int:
                 output_width=cfg.output_width,
             )
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
-            archive_sha = _sha256_bytes(bin_bytes)
-            archive_bytes = len(bin_bytes)
-            print(f"[full] wrote 0.bin ({archive_bytes} bytes, sha256={archive_sha})")
+            payload_bin_sha = _sha256_bytes(bin_bytes)
+            payload_bin_bytes = len(bin_bytes)
+            print(
+                f"[full] wrote 0.bin "
+                f"({payload_bin_bytes} bytes, sha256={payload_bin_sha})"
+            )
 
             # Emit contest-compliant runtime alongside the bin
             submission_dir = args.output_dir / "submission"
@@ -948,7 +954,12 @@ def _full_main(args: argparse.Namespace) -> int:
                 bin_bytes=bin_bytes,
                 submission_dir=submission_dir,
             )
-            print(f"[full] wrote {archive_zip_path}")
+            archive_bytes = archive_zip_path.stat().st_size
+            archive_sha = hashlib.sha256(archive_zip_path.read_bytes()).hexdigest()
+            print(
+                f"[full] wrote {archive_zip_path} "
+                f"({archive_bytes} bytes, sha256={archive_sha})"
+            )
             _stage(f"archive_built_bytes_{archive_bytes}")
 
         # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
@@ -989,6 +1000,11 @@ def _full_main(args: argparse.Namespace) -> int:
                     substrate_tag="siren",
                 )
                 contest_cuda_score = claim.score
+                auth_eval_score = claim.score
+                auth_eval_score_axis = claim.score_axis
+                auth_eval_lane_tag = claim.lane_tag
+                auth_eval_score_claim_valid = claim.score_claim_valid
+                auth_eval_exact_cuda_complete = claim.exact_cuda_eval_complete
                 print(
                     f"[full] {claim.lane_tag or '[contest-CUDA]'} score = "
                     f"{contest_cuda_score} (source={claim.source_key}, "
@@ -1116,6 +1132,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "train_elapsed_sec": float(train_elapsed_sec),
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            "payload_bin_sha256": payload_bin_sha,
+            "payload_bin_bytes": payload_bin_bytes,
             "auth_eval_score": auth_eval_score,
             "auth_eval_score_axis": auth_eval_score_axis,
             "auth_eval_lane_tag": auth_eval_lane_tag,

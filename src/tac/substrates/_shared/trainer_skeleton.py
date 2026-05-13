@@ -367,6 +367,18 @@ def require_contest_cuda_auth_eval_claim(
             f"evidence_grade={payload.get('evidence_grade')!r}, "
             f"archive_sha256={archive_sha256})."
         )
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+    scored_archive_sha256 = payload.get("archive_sha256") or provenance.get(
+        "archive_sha256"
+    )
+    if archive_sha256 and scored_archive_sha256 and scored_archive_sha256 != archive_sha256:
+        raise RuntimeError(
+            f"[{substrate_tag}] auth eval scored archive SHA "
+            f"{scored_archive_sha256} but trainer expected {archive_sha256}; "
+            "refusing to attach a contest-CUDA claim to the wrong scored object."
+        )
     return claim, payload
 
 

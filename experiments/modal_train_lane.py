@@ -428,6 +428,7 @@ def _run_lane_inner(
 
     print(f"[modal-train-lane] starting lane: {lane_script} (label={label})")
     t0 = time.monotonic()
+    artifact_mtime_floor = time.time() - 5.0
 
     log_path = workspace / f"modal_lane_{label}.log"
     timed_out = False
@@ -543,7 +544,10 @@ def _run_lane_inner(
             if rel_str in artifacts:
                 continue
             try:
-                size = fp.stat().st_size
+                st = fp.stat()
+                size = st.st_size
+                if st.st_mtime < artifact_mtime_floor:
+                    continue
                 # 500MB threshold — covers final .bin (~300KB) AND mid-training
                 # .pt checkpoints (50-200MB) AND large .mkv masks. Anything
                 # bigger is almost certainly intermediate state we don't need.

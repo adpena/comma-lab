@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 
 from tac.auth_eval_result import recompute_contest_score_from_payload
-from tools.run_modal_smoke_before_full import _validate_smoke_result
+from tools.run_modal_smoke_before_full import (
+    _expected_auth_artifact_markers,
+    _resolve_smoke_band,
+    _validate_smoke_result,
+)
 
 
 def _auth_payload(*, score_axis: str = "contest_cuda") -> dict:
@@ -72,3 +76,65 @@ def test_smoke_validation_scans_all_auth_eval_artifacts() -> None:
 
     assert green is True
     assert "z_contest_auth_eval_cuda.json" in diagnostic
+
+
+def test_smoke_validation_rejects_stale_auth_eval_artifact_when_marker_required() -> None:
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "experiments/results/old/contest_auth_eval_cuda.json": json.dumps(
+                    _auth_payload()
+                ),
+                "submissions/robust_current/auth_eval_renderer_fp4.json": json.dumps(
+                    _auth_payload()
+                ),
+            },
+        },
+        required_artifact_markers=("lane_substrate_siren_results/output/",),
+    )
+
+    assert green is False
+    assert "refusing stale evidence" in diagnostic
+
+
+def test_smoke_validation_accepts_current_output_marker() -> None:
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "experiments/results/old/contest_auth_eval_cuda.json": json.dumps(
+                    _auth_payload()
+                ),
+                "lane_substrate_siren_results/output/contest_auth_eval_cuda.json": json.dumps(
+                    _auth_payload()
+                ),
+            },
+        },
+        required_artifact_markers=("lane_substrate_siren_results/output/",),
+    )
+
+    assert green is True
+    assert "lane_substrate_siren_results/output/contest_auth_eval_cuda.json" in diagnostic
+
+
+def test_expected_auth_artifact_markers_parse_workspace_output_dir() -> None:
+    recipe = """
+env_overrides:
+  SIREN_OUTPUT_DIR: /workspace/pact/lane_substrate_siren_results/output
+"""
+
+    markers = _expected_auth_artifact_markers(recipe, instance_job_id="job123")
+
+    assert "job123" in markers
+    assert "results/job123/" in markers
+    assert "lane_substrate_siren_results/output/" in markers
+
+
+def test_resolve_smoke_band_reads_siren_recipe_prediction_band() -> None:
+    lo, hi = _resolve_smoke_band("predicted_band: [0.130, 0.165]\n")
+
+    assert lo == 0.1125
+    assert hi == 0.1825

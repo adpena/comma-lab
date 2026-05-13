@@ -274,7 +274,7 @@ def test_load_calibration_model_falls_back_to_placeholder(tmp_path: Path) -> Non
 
 
 def test_load_calibration_model_picks_up_sister_subagent_output(tmp_path: Path) -> None:
-    sister_dir = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_20260513T120000Z"
+    sister_dir = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_20260513T120000Z"  # FAKE_LANE_OK:test fixture timestamped sister output path
     sister_dir.mkdir(parents=True)
     sister_payload = {
         "schema": "macos_cpu_to_contest_cpu_drift_calibration.empirical.v1",
@@ -295,11 +295,11 @@ def test_load_calibration_model_picks_up_sister_subagent_output(tmp_path: Path) 
 
 def test_load_calibration_model_picks_latest_when_multiple_exist(tmp_path: Path) -> None:
     import time
-    dir_a = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_20260513T100000Z"
+    dir_a = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_20260513T100000Z"  # FAKE_LANE_OK:test fixture timestamped sister output path
     dir_a.mkdir(parents=True)
     (dir_a / "calibration_model.json").write_text(json.dumps({"anchor_count": 1, "drift_p90_abs": 1e-5}))
     time.sleep(0.05)
-    dir_b = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_20260513T110000Z"
+    dir_b = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_20260513T110000Z"  # FAKE_LANE_OK:test fixture timestamped sister output path
     dir_b.mkdir(parents=True)
     (dir_b / "calibration_model.json").write_text(json.dumps({"anchor_count": 9, "drift_p90_abs": 5e-5}))
     result = load_calibration_model(search_root=tmp_path)
@@ -307,7 +307,7 @@ def test_load_calibration_model_picks_latest_when_multiple_exist(tmp_path: Path)
 
 
 def test_load_calibration_model_malformed_falls_back(tmp_path: Path) -> None:
-    sister_dir = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_x"
+    sister_dir = tmp_path / "lane_macos_cpu_proxy_empirical_validation_20260513_x"  # FAKE_LANE_OK:test fixture malformed sister output path
     sister_dir.mkdir(parents=True)
     (sister_dir / "calibration_model.json").write_text("not valid json {{{")
     result = load_calibration_model(search_root=tmp_path)

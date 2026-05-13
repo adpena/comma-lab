@@ -159,7 +159,8 @@ def test_live_cli_json_is_fail_closed_but_locally_ready() -> None:
 def test_live_trainer_requires_contest_cuda_auth_eval_claim() -> None:
     text = (REPO / "experiments/train_substrate_siren.py").read_text(encoding="utf-8")
 
-    assert "parse_auth_eval_score_claim" in text
-    assert 'required_score_axis="contest_cuda"' in text
-    assert "No [contest-CUDA] score claim" in text
-    assert "raise RuntimeError(diagnostic)" in text
+    assert "require_contest_cuda_auth_eval_claim" in text
+    assert "archive_sha256=archive_sha" in text
+    assert 'substrate_tag="siren"' in text
+    assert "auth_eval_score_claim_valid = claim.score_claim_valid" in text
+    assert "auth_eval_exact_cuda_complete = claim.exact_cuda_eval_complete" in text
