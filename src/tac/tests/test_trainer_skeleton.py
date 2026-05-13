@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from src.tac.substrates._shared import trainer_skeleton as ts
+from tac.substrates._shared import trainer_skeleton as ts
 
 # ---------------------------------------------------------------------------
 # REPO_ROOT + constants

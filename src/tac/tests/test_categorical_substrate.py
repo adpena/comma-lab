@@ -1,30 +1,30 @@
 """Tests for src.tac.categorical_substrate (categorical full-RGB substrate)."""
+
 from __future__ import annotations
 
 import pytest
 import torch
 import torch.nn as nn
 
-from src.tac.categorical_substrate import (
+from tac.categorical_substrate import (
     ARCHIVE_GRAMMAR,
     CAMERA_H,
     CAMERA_W,
     CATEGORICAL_FORMAT_ID,
     CATEGORICAL_FORMAT_VERSION,
     CATEGORICAL_MAGIC,
-    CategoricalRenderer,
-    CategoricalSubstrateConfig,
-    CodebookCollapseError,
     NUM_CLASSES,
     SEGNET_IN_H,
     SEGNET_IN_W,
+    CategoricalRenderer,
+    CategoricalSubstrateConfig,
+    CodebookCollapseError,
     _class_entropy,
     _eval_roundtrip_uint8_clamp,
     export_to_archive,
     parse_archive_sections,
     train_step,
 )
-
 
 # ── Constants + grammar ──────────────────────────────────────────────────
 

@@ -3,28 +3,28 @@
 Covers: TokenRendererV62, ShrinkSingleNeRV, HPACMini, FiLMPortabilityGuard,
 PPMd codec, train_step contract, export/parse roundtrip, archive grammar.
 """
-from __future__ import annotations
 
+from __future__ import annotations
 
 import pytest
 import torch
 import torch.nn as nn
 
-from src.tac.anr_token_renderer import (
+from tac.anr_token_renderer import (
     ANR_FORMAT_ID,
     ANR_FORMAT_VERSION,
     ANR_MAGIC,
-    ANRTokenRendererConfig,
     ARCHIVE_GRAMMAR,
     CAMERA_H,
     CAMERA_W,
     FEAT_H,
     FEAT_W,
-    FiLMPortabilityGuard,
-    HPACMini,
     NUM_CLASSES,
     SEGNET_IN_H,
     SEGNET_IN_W,
+    ANRTokenRendererConfig,
+    FiLMPortabilityGuard,
+    HPACMini,
     ShrinkSingleNeRV,
     TokenRendererV62,
     _eval_roundtrip_uint8_clamp,
@@ -34,7 +34,6 @@ from src.tac.anr_token_renderer import (
     parse_archive_sections,
     train_step,
 )
-
 
 # ── Constants ────────────────────────────────────────────────────────────
 
@@ -99,7 +98,7 @@ def test_config_rejects_wrong_slave_channel_count():
 
 
 def test_config_rejects_hpac_P_not_divisor():
-    with pytest.raises(ValueError, match="hpac_P=.*must divide"):
+    with pytest.raises(ValueError, match=r"hpac_P=.*must divide"):
         ANRTokenRendererConfig(hpac_P=7)
 
 
@@ -295,7 +294,7 @@ def test_portability_guard_pass_after_bake():
 def test_portability_guard_raises_before_bake():
     master = TokenRendererV62(num_pairs=4)
     guard = FiLMPortabilityGuard()
-    with pytest.raises(RuntimeError, match="before master.bake_film_table"):
+    with pytest.raises(RuntimeError, match=r"before master\.bake_film_table"):
         guard.check(master)
 
 
@@ -543,7 +542,6 @@ class _MockPoseNet(nn.Module):
 
 def test_train_step_rejects_eval_roundtrip_false():
     """CLAUDE.md non-negotiable: eval_roundtrip=False is forbidden."""
-    cfg = ANRTokenRendererConfig(num_pairs=2)
     master = TokenRendererV62(num_pairs=2)
     slave = ShrinkSingleNeRV(num_pairs=2)
     tokens = torch.zeros(1, SEGNET_IN_H, SEGNET_IN_W, dtype=torch.long)
@@ -560,7 +558,6 @@ def test_train_step_rejects_eval_roundtrip_false():
 
 
 def test_train_step_rejects_wrong_token_shape():
-    cfg = ANRTokenRendererConfig(num_pairs=2)
     master = TokenRendererV62(num_pairs=2)
     slave = ShrinkSingleNeRV(num_pairs=2)
     tokens = torch.zeros(1, 50, 50, dtype=torch.long)  # wrong
@@ -647,7 +644,6 @@ def test_no_mps_fallback_default_in_config():
 
 def test_lesson5_full_rgb_renderer_not_mask_only():
     """HNeRV parity lesson 5: output is full RGB to camera resolution."""
-    cfg = ANRTokenRendererConfig(num_pairs=2)
     master = TokenRendererV62(num_pairs=2)
     slave = ShrinkSingleNeRV(num_pairs=2)
     tokens = torch.zeros(1, SEGNET_IN_H, SEGNET_IN_W, dtype=torch.long)
