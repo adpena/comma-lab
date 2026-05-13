@@ -34334,8 +34334,14 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_claim_status",
     "lane_claim_preflight",
     "lane_id_missing",
+    "lane_id_mismatch",
     "lane_id_claim_template",
     "lane_dispatch_claim_required_before_gpu_or_remote_eval",
+    # Pretrained driving-prior codebook entry names. These are dictionary keys
+    # / array attribute names in `tac.substrates.pretrained_driving_prior.
+    # codebook` — they describe semantic content of the codebook (lane
+    # curvature PCA basis vectors), not lane_id references.
+    "lane_curvature_pca",
     # Test / placeholder names. Real lane_ids should not collide with these.
     "lane_dispatch_claim_missing",
     "lane_test",

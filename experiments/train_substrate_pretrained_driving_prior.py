@@ -1,3 +1,4 @@
+# NO_GRAD_WAIVED:scaffold-only-trainer-Phase-2-not-yet-implemented-no-eval-scorer-forwards-on-this-path
 """Trainer for the pre-trained driving prior substrate.
 
 Phase 1: distill the codebook OFFLINE from a public dashcam dataset (or
