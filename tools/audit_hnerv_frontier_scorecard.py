@@ -86,6 +86,70 @@ def _audit_score_row(row: dict[str, Any], repo_root: Path) -> list[str]:
     return blockers
 
 
+_INTERNAL_SCORE_LOWERING_BLOCKER_MARKERS = (
+    "score_claim_invalid",
+    "regression_triggered",
+    "lane_status_",
+    "paper_claim_grade_",
+    "evidence_grade_",
+)
+
+
+def _internal_score_lowering_blocked(row: dict[str, Any]) -> bool:
+    blockers = row.get("canonicality_blockers") or []
+    if not isinstance(blockers, list):
+        return True
+    return any(
+        isinstance(blocker, str)
+        and blocker.startswith(_INTERNAL_SCORE_LOWERING_BLOCKER_MARKERS)
+        for blocker in blockers
+    )
+
+
+def _audit_internal_score_lowering_frontier(
+    payload: dict[str, Any],
+    labels: dict[str, dict[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    frontier = payload.get("score_lowering_frontier")
+    target = payload.get("next_score_lowering_exact_evaluable_target")
+    ranking = payload.get("score_lowering_hidden_gem_byte_mass_ranking")
+    present = any(item is not None for item in (frontier, target, ranking))
+    if not present:
+        return blockers
+    if not isinstance(frontier, dict):
+        return ["score_lowering_frontier_not_object"]
+
+    label = frontier.get("label")
+    if not isinstance(label, str) or label not in labels:
+        blockers.append("score_lowering_frontier_label_missing_from_rows")
+        return blockers
+    row = labels[label]
+    if row.get("evidence_grade") != "A++":
+        blockers.append(f"{label}_score_lowering_frontier_not_Aplusplus")
+    if not isinstance(row.get("score"), int | float):
+        blockers.append(f"{label}_score_lowering_frontier_missing_numeric_score")
+    elif frontier.get("score") != row.get("score"):
+        blockers.append(f"{label}_score_lowering_frontier_score_mismatch")
+    if frontier.get("archive_sha256") != row.get("archive_sha256"):
+        blockers.append(f"{label}_score_lowering_frontier_archive_sha_mismatch")
+    if frontier.get("promotion_authority") is not False:
+        blockers.append(f"{label}_score_lowering_frontier_promotion_authority_not_false")
+    if frontier.get("frontier_scope") != "internal_exact_cuda_score_lowering":
+        blockers.append(f"{label}_score_lowering_frontier_scope_invalid")
+    if _internal_score_lowering_blocked(row):
+        blockers.append(f"{label}_score_lowering_frontier_uses_severe_blocked_row")
+
+    if ranking is not None and not isinstance(ranking, list):
+        blockers.append("score_lowering_hidden_gem_byte_mass_ranking_not_list")
+    if target is not None:
+        if not isinstance(target, dict):
+            blockers.append("next_score_lowering_exact_evaluable_target_not_object")
+        elif target.get("frontier_label") != label:
+            blockers.append("next_score_lowering_exact_evaluable_target_frontier_mismatch")
+    return blockers
+
+
 def audit_scorecard(payload: dict[str, Any], *, repo_root: Path = REPO_ROOT) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     rows = payload.get("rows")
@@ -184,11 +248,29 @@ def audit_scorecard(payload: dict[str, Any], *, repo_root: Path = REPO_ROOT) -> 
     if "latent_stream" not in manifest_roles and "sidecar_or_correction_stream" not in manifest_roles:
         blockers.append("missing_latent_or_sidecar_section_manifest")
 
+    blockers.extend(_audit_internal_score_lowering_frontier(payload, labels))
+
+    score_lowering_frontier = payload.get("score_lowering_frontier")
+    next_score_lowering_target = payload.get("next_score_lowering_exact_evaluable_target")
     summary = {
         "row_count": len(rows),
         "payload_equivalence_group_count": len(groups),
         "followup_target_count": len(targets),
         "payload_section_manifest_count": len(manifests),
+        "score_lowering_frontier_label": (
+            score_lowering_frontier.get("label") if isinstance(score_lowering_frontier, dict) else None
+        ),
+        "score_lowering_frontier_score": (
+            score_lowering_frontier.get("score") if isinstance(score_lowering_frontier, dict) else None
+        ),
+        "next_score_lowering_target": (
+            {
+                "label": next_score_lowering_target.get("label"),
+                "section": next_score_lowering_target.get("section"),
+            }
+            if isinstance(next_score_lowering_target, dict)
+            else None
+        ),
         "canonical_labels": [
             row.get("label")
             for row in rows
@@ -242,12 +324,19 @@ def main(argv: list[str] | None = None) -> int:
     elif not report.ready:
         print(report.render_text())
     else:
+        extra = ""
+        if report.summary.get("score_lowering_frontier_label"):
+            extra = (
+                f", internal score-lowering={report.summary['score_lowering_frontier_label']} "
+                f"({report.summary['score_lowering_frontier_score']})"
+            )
         print(
             report.render_text(
                 pass_detail=(
                     f"({report.summary['row_count']} rows, "
                     f"{report.summary['payload_equivalence_group_count']} payload groups, "
-                    f"{report.summary['followup_target_count']} follow-up targets)"
+                    f"{report.summary['followup_target_count']} follow-up targets"
+                    f"{extra})"
                 )
             )
         )

@@ -291,7 +291,7 @@ REVERSE_ENGINEERING_RELEASE_MANIFEST = (
 )
 HNERV_SCORECARD = (
     REPO
-    / "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json"
+    / "experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/scorecard.json"
 )
 PR106X_ARCHIVE = (
     REPO
@@ -706,7 +706,11 @@ def _run_reverse_engineering_release_gate() -> tuple[bool, str]:
 
 
 def _run_hnerv_scorecard_gate() -> tuple[bool, str]:
-    proc = _run_subprocess([sys.executable, str(HNERV_SCORECARD_AUDIT)], capture_output=True, text=True)
+    proc = _run_subprocess(
+        [sys.executable, str(HNERV_SCORECARD_AUDIT), "--scorecard", str(HNERV_SCORECARD)],
+        capture_output=True,
+        text=True,
+    )
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 

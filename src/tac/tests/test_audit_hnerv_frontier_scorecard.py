@@ -159,6 +159,96 @@ def test_audit_scorecard_blocks_formula_and_runtime_custody_drift() -> None:
     assert "PR106x_invalid_runtime_tree_sha256" in blockers
 
 
+def test_audit_scorecard_accepts_internal_score_lowering_frontier() -> None:
+    payload = _valid_scorecard()
+    row = {
+        "label": "PR106-R2-lowlevel",
+        "evidence_grade": "A++",
+        "canonical_frontier_eligible": False,
+        "canonicality_blockers": ["promotion_ineligible"],
+        "profile_match_key": "archive_sha256",
+        "archive_sha256": "9" * 64,
+        "payload_sha256": "8" * 64,
+        **_score_fields(186_629, 0.0006426, 0.00003236),
+    }
+    payload["rows"].append(row)
+    payload["payload_section_manifests"].append(
+        {
+            "label": "PR106-R2-lowlevel",
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "sections": [
+                {
+                    "name": "decoder_compact_brotli_streams",
+                    "bytes": 162_164,
+                    "sha256": "7" * 64,
+                    "optimization_role": "decoder_weight_stream",
+                }
+            ],
+        }
+    )
+    payload["score_lowering_frontier"] = {
+        "label": "PR106-R2-lowlevel",
+        "score": row["score"],
+        "archive_bytes": row["archive_bytes"],
+        "archive_sha256": row["archive_sha256"],
+        "frontier_scope": "internal_exact_cuda_score_lowering",
+        "evidence_grade": "A++",
+        "eval_artifact": row["eval_artifact"],
+        "promotion_authority": False,
+        "canonical_frontier_eligible": False,
+        "canonicality_blockers": ["promotion_ineligible"],
+    }
+    payload["next_score_lowering_exact_evaluable_target"] = {
+        "frontier_label": "PR106-R2-lowlevel",
+        "label": "PR106-R2-lowlevel",
+        "section": "decoder_compact_brotli_streams",
+    }
+    payload["score_lowering_hidden_gem_byte_mass_ranking"] = [
+        {
+            "frontier_label": "PR106-R2-lowlevel",
+            "label": "PR106-R2-lowlevel",
+            "section": "decoder_compact_brotli_streams",
+        }
+    ]
+
+    blockers, summary = audit.audit_scorecard(payload)
+
+    assert blockers == []
+    assert summary["score_lowering_frontier_label"] == "PR106-R2-lowlevel"
+    assert summary["next_score_lowering_target"] == {
+        "label": "PR106-R2-lowlevel",
+        "section": "decoder_compact_brotli_streams",
+    }
+
+
+def test_audit_scorecard_blocks_internal_frontier_on_regression_row() -> None:
+    payload = _valid_scorecard()
+    row = {
+        "label": "bad-lower-score",
+        "evidence_grade": "A++",
+        "canonical_frontier_eligible": False,
+        "canonicality_blockers": ["promotion_ineligible", "regression_triggered"],
+        "profile_match_key": "archive_sha256",
+        "archive_sha256": "9" * 64,
+        "payload_sha256": "8" * 64,
+        **_score_fields(180_000, 0.0001, 0.00001),
+    }
+    payload["rows"].append(row)
+    payload["score_lowering_frontier"] = {
+        "label": "bad-lower-score",
+        "score": row["score"],
+        "archive_bytes": row["archive_bytes"],
+        "archive_sha256": row["archive_sha256"],
+        "frontier_scope": "internal_exact_cuda_score_lowering",
+        "promotion_authority": False,
+    }
+
+    blockers, _summary = audit.audit_scorecard(payload)
+
+    assert "bad-lower-score_score_lowering_frontier_uses_severe_blocked_row" in blockers
+
+
 def test_cli_json_reports_no_score_claim(tmp_path: Path) -> None:
     scorecard = tmp_path / "scorecard.json"
     scorecard.write_text(json.dumps(_valid_scorecard()), encoding="utf-8")
