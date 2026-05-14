@@ -913,11 +913,17 @@ def _format_dispatch_claim_summary() -> str:
         if isinstance(summary.get("invalid_lane_id"), list)
         else []
     )
+    unparsable = (
+        summary.get("unparsable_timestamp")
+        if isinstance(summary.get("unparsable_timestamp"), list)
+        else []
+    )
     lines = [
         "Read-only claim state from tools/claim_lane_dispatch.py summary.",
         f"  active: {summary.get('active_count', len(active))}",
         f"  stale_nonterminal: {summary.get('stale_nonterminal_count', len(stale))}",
         f"  terminal_latest: {summary.get('terminal_latest_count', '<unknown>')}",
+        f"  unparsable_timestamp: {summary.get('unparsable_timestamp_count', len(unparsable))}",
         f"  invalid_lane_id: {summary.get('invalid_lane_id_count', len(invalid_lane_id))}",
     ]
     if active:
@@ -940,6 +946,16 @@ def _format_dispatch_claim_summary() -> str:
                 f"job={row.get('instance_job_id', '<missing>')} "
                 f"status={row.get('status', '<missing>')}"
             )
+    if unparsable:
+        lines.append("  UNPARSABLE TIMESTAMPS: repair live claim rows before any dispatch.")
+        for row in unparsable:
+            lines.append(
+                "    - "
+                f"lane_id={row.get('lane_id', '<missing>')} "
+                f"job={row.get('instance_job_id', '<missing>')} "
+                f"timestamp={row.get('timestamp_utc', '<missing>')} "
+                f"status={row.get('status', '<missing>')}"
+            )
     if invalid_lane_id:
         lines.append("  INVALID LANE IDS: repair claim ledger before any dispatch.")
         for row in invalid_lane_id:
@@ -949,8 +965,8 @@ def _format_dispatch_claim_summary() -> str:
                 f"job={row.get('instance_job_id', '<missing>')} "
                 f"status={row.get('status', '<missing>')}"
             )
-    if not active and not stale and not invalid_lane_id:
-        lines.append("  No active or stale nonterminal claims.")
+    if not active and not stale and not unparsable and not invalid_lane_id:
+        lines.append("  No active, stale, unparsable, or invalid live claims.")
     historical = _dispatch_claim_historical_summary()
     if historical.get("_error"):
         lines.append(
@@ -964,13 +980,13 @@ def _format_dispatch_claim_summary() -> str:
         )
         if historical_invalid or historical_unparsable:
             lines.append(
-                "  Historical claim hygiene: WARNING — archived/non-live rows "
+                "  All-history claim hygiene: WARNING — live+archived rows "
                 f"invalid_lane_id={historical_invalid} "
                 f"unparsable_timestamp={historical_unparsable}; "
-                "not a live duplicate-dispatch blocker"
+                "live blockers are listed above"
             )
         else:
-            lines.append("  Historical claim hygiene: PASS")
+            lines.append("  All-history claim hygiene: PASS")
     return "\n".join(lines)
 
 
@@ -1156,6 +1172,12 @@ def _format_constrained_coord_search_status() -> str:
 # Compact roll-up of which phases have actionable next-step output, so the
 # operator can navigate "what should I dispatch next" without re-reading the
 # whole briefing.
+def _packet_is_terminal(packet: dict[str, object]) -> bool:
+    return bool(packet.get("terminal_exact_eval_evidence_blockers")) or (
+        packet.get("dispatch_action") == "terminal_exact_eval_evidence_stop"
+    )
+
+
 def _dispatch_readiness() -> dict[str, object]:
     """Structured per-phase dispatch readiness used by JSON and human output."""
     exact_ready_audit = _exact_ready_queue_audit()
@@ -1165,13 +1187,12 @@ def _dispatch_readiness() -> dict[str, object]:
         packet
         for packet in exact_packets
         if packet.get("ready_for_submit") is True
-        and not packet.get("terminal_exact_eval_evidence_blockers")
+        and not _packet_is_terminal(packet)
     ]
     terminal_packets = [
         packet
         for packet in exact_packets
-        if packet.get("terminal_exact_eval_evidence_blockers")
-        or packet.get("dispatch_action") == "terminal_exact_eval_evidence_stop"
+        if _packet_is_terminal(packet)
     ]
     blocked_packets = [
         packet

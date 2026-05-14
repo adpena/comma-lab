@@ -174,9 +174,9 @@ score lowering.
 
 ## Next Score-Lowering Route
 
-1. Keep HLM1 as a non-promotional `[contest-CUDA]` reference only; HDM4 remains
-   the active exact dispatch frontier until explicit operator promotion changes
-   that status.
+1. Keep HLM1 as a non-promotional `[contest-CUDA]` reference only.
+   HDM4 remains the active exact dispatch frontier for this route until
+   explicit operator promotion changes that status.
 2. Do not repeat generic sidecar recoding on this source; the best available
    consumed grammar is only `42` bytes.
 3. If latent sidecars continue, move from fixed per-pair sidecar grammar to a

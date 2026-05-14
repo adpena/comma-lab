@@ -175,7 +175,7 @@ def test_operator_briefing_dispatch_gate_rejects_missing_structured_readiness() 
         "exact_eval_packets": [
             {
                 "lane_id": "terminal_packet",
-                "terminal_exact_eval_evidence_blockers": ["same_lane_terminal_negative"],
+                "dispatch_action": "terminal_exact_eval_evidence_stop",
                 "repeat_dispatch_allowed": False,
                 "ready_for_submit": False,
                 "commands": {},
@@ -234,30 +234,64 @@ def test_terminal_substrate_claims_missing_evidence_detects_pr95plus_gap() -> No
         }
     ]
 
-    missing = module._terminal_substrate_claims_missing_evidence(rows, "{}\n")
+    missing = module._terminal_substrate_claims_missing_evidence(rows, set())
 
     assert missing
     assert "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513" in missing[0]
 
 
-def test_terminal_substrate_claims_accepts_grouped_evidence_row() -> None:
+def test_terminal_substrate_claims_require_exact_job_status_coverage() -> None:
     module = _load_all_lanes_module()
     rows = [
         {
             "timestamp_utc": "2026-05-13T22:08:18Z",
             "platform": "modal",
             "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
-            "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch",
+            "instance_job_id": (
+                "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_"
+                "20260513T215933Z__smoke__100ep"
+            ),
             "status": "failed_modal_training_rc_13",
         }
     ]
 
-    missing = module._terminal_substrate_claims_missing_evidence(
-        rows,
-        '{"covered_terminal_lane_ids":["lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513"]}\n',
+    lane_only = {
+        (
+            "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+            "different_job_same_lane",
+            "failed_modal_training_rc_13",
+        )
+    }
+    exact = {
+        (
+            "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+            "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_"
+            "20260513T215933Z__smoke__100ep",
+            "failed_modal_training_rc_13",
+        )
+    }
+
+    assert module._terminal_substrate_claims_missing_evidence(rows, lane_only)
+    assert module._terminal_substrate_claims_missing_evidence(rows, exact) == []
+
+
+def test_terminal_claim_coverage_from_jsonl_reads_exact_claims(tmp_path: Path) -> None:
+    module = _load_all_lanes_module()
+    evidence = tmp_path / "evidence.jsonl"
+    evidence.write_text(
+        '{"covered_terminal_claims":[{'
+        '"lane_id":"lane_a",'
+        '"instance_job_id":"job_a",'
+        '"status":"failed_modal_training_rc_13"'
+        '}],'
+        '"covered_terminal_lane_ids":["lane_a"]}\n'
+        '{"covered_terminal_lane_ids":["lane_b"]}\n',
+        encoding="utf-8",
     )
 
-    assert missing == []
+    assert module._terminal_claim_coverage_from_jsonl(evidence) == {
+        ("lane_a", "job_a", "failed_modal_training_rc_13")
+    }
 
 
 def test_hlm1_frontier_prose_guard_allows_nonpromotional_reference(tmp_path: Path) -> None:
@@ -272,8 +306,25 @@ def test_hlm1_frontier_prose_guard_allows_nonpromotional_reference(tmp_path: Pat
         "HLM1 is the current exact frontier used by optimizer routing.\n",
         encoding="utf-8",
     )
+    (research / "bad_paragraph.md").write_text(
+        "HLM1 at 0.206 is preserved.\n"
+        "It is the current local exact floor.\n",
+        encoding="utf-8",
+    )
+    (research / "handoff.md").write_text(
+        "HLM1 is a non-promotional reference only.\n"
+        "HDM4 is the active exact dispatch frontier.\n",
+        encoding="utf-8",
+    )
+    (research / "historical.md").write_text(
+        "Superseded historical note.\n\n"
+        "HLM1 is the current exact frontier used by optimizer routing.\n",
+        encoding="utf-8",
+    )
 
     violations = module._hlm1_frontier_prose_violations(tmp_path)
 
-    assert len(violations) == 1
-    assert "bad.md:1" in violations[0]
+    assert len(violations) == 2
+    assert any("bad.md:1" in violation for violation in violations)
+    assert any("bad_paragraph.md:2" in violation for violation in violations)
+    assert not any("handoff.md" in violation for violation in violations)

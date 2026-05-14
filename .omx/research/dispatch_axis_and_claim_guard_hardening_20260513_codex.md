@@ -150,3 +150,24 @@ Verification:
 ```
 
 Result: `24 passed`.
+
+## P1 Follow-Up: Fresh Bug-Hunter Edge Tightening
+
+Recursive read-only review of commit `9bc9acd5f` found four edge cases. These
+are now closed:
+
+- `tools/operator_briefing.py` lists live `unparsable_timestamp` rows directly
+  and labels the non-live scan as all-history hygiene instead of implying
+  archive-only status.
+- `tools/all_lanes_preflight.py` Gate #29 now parses JSONL and requires exact
+  `(lane_id, instance_job_id, status)` terminal-claim coverage. Raw text and
+  lane-only matches no longer satisfy the guard.
+- `tools/all_lanes_preflight.py` treats
+  `dispatch_action=="terminal_exact_eval_evidence_stop"` as terminal even when
+  a packet omits explicit terminal blocker strings.
+- The HLM1 prose guard now scans paragraph windows, skips explicitly
+  superseded/historical ledgers, and allows the explicit HLM1
+  non-promotional-to-HDM4 handoff.
+
+`reports/cathedral_autopilot_evidence.jsonl` now includes an exact terminal
+claim coverage row for the 2026-05-13 Modal substrate-smoke failures.

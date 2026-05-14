@@ -643,12 +643,14 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                 continue
             lane_id = str(packet.get("lane_id") or "<missing>")
             terminal_blockers = packet.get("terminal_exact_eval_evidence_blockers")
+            terminal_action = packet.get("dispatch_action") == "terminal_exact_eval_evidence_stop"
+            terminal_packet = bool(terminal_blockers) or terminal_action
             repeat_allowed = packet.get("repeat_dispatch_allowed")
             ready = packet.get("ready_for_submit")
             commands = packet.get("commands")
-            if ready is not True or terminal_blockers:
+            if ready is not True or terminal_packet:
                 terminal_or_blocked_packets += 1
-            if terminal_blockers:
+            if terminal_packet:
                 if repeat_allowed is not False:
                     failures.append(
                         f"exact_eval_packets:{lane_id}:"
@@ -800,9 +802,36 @@ def _claim_rows_from_markdown(path: Path) -> list[dict[str, str]]:
     return rows
 
 
+def _terminal_claim_coverage_from_jsonl(evidence_path: Path) -> set[tuple[str, str, str]]:
+    coverage: set[tuple[str, str, str]] = set()
+    if not evidence_path.is_file():
+        return coverage
+    for line in evidence_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        claims = payload.get("covered_terminal_claims")
+        if not isinstance(claims, list):
+            continue
+        for claim in claims:
+            if not isinstance(claim, dict):
+                continue
+            lane_id = str(claim.get("lane_id") or "")
+            job_id = str(claim.get("instance_job_id") or "")
+            status = str(claim.get("status") or "")
+            if lane_id and job_id and status:
+                coverage.add((lane_id, job_id, status))
+    return coverage
+
+
 def _terminal_substrate_claims_missing_evidence(
     claim_rows: list[dict[str, str]],
-    evidence_text: str,
+    evidence_coverage: set[tuple[str, str, str]],
     *,
     earliest_timestamp_utc: str = "2026-05-13T00:00:00Z",
 ) -> list[str]:
@@ -829,7 +858,7 @@ def _terminal_substrate_claims_missing_evidence(
             or lane_id.startswith("lane_a1_plus")
         ):
             continue
-        if lane_id in evidence_text or job_id in evidence_text:
+        if (lane_id, job_id, status) in evidence_coverage:
             continue
         missing.append(f"{timestamp} lane_id={lane_id} job={job_id} status={status}")
     return missing
@@ -839,12 +868,8 @@ def _run_terminal_dispatch_evidence_gate() -> tuple[bool, str]:
     """Ensure recent terminal substrate dispatches are not lost outside evidence ledgers."""
 
     claim_rows = _claim_rows_from_markdown(REPO / ".omx/state/active_lane_dispatch_claims.md")
-    evidence_text = (
-        CATHEDRAL_AUTOPILOT_EVIDENCE.read_text(encoding="utf-8")
-        if CATHEDRAL_AUTOPILOT_EVIDENCE.is_file()
-        else ""
-    )
-    missing = _terminal_substrate_claims_missing_evidence(claim_rows, evidence_text)
+    evidence_coverage = _terminal_claim_coverage_from_jsonl(CATHEDRAL_AUTOPILOT_EVIDENCE)
+    missing = _terminal_substrate_claims_missing_evidence(claim_rows, evidence_coverage)
     if missing:
         return (
             False,
@@ -859,6 +884,17 @@ _HLM1_FRONTIER_DRIFT_PATTERNS = (
     re.compile(r"\b(current|active)\b.*\b(frontier|floor)\b.*\bHLM1\b", re.IGNORECASE),
     re.compile(r"optimizer routing still uses lower HLM1", re.IGNORECASE),
 )
+_ACTIVE_FRONTIER_OR_FLOOR_RE = re.compile(
+    r"\b(current|active)\b.*\b(frontier|floor)\b|\b(frontier|floor)\b.*\b(current|active)\b",
+    re.IGNORECASE,
+)
+_HISTORICAL_LEDGER_MARKERS = (
+    "historical artifact",
+    "frozen historical",
+    "archival",
+    "superseded",
+    "do not replay",
+)
 
 
 def _hlm1_frontier_prose_violations(root: Path = REPO) -> list[str]:
@@ -866,13 +902,28 @@ def _hlm1_frontier_prose_violations(root: Path = REPO) -> list[str]:
     violations: list[str] = []
     for path in sorted((root / ".omx/research").glob("*.md")):
         text = path.read_text(encoding="utf-8")
+        head = "\n".join(text.splitlines()[:10]).lower()
+        if any(marker in head for marker in _HISTORICAL_LEDGER_MARKERS):
+            continue
+        paragraph_has_hlm1 = False
         for lineno, line in enumerate(text.splitlines(), start=1):
-            if "HLM1" not in line and "hlm1" not in line:
+            if not line.strip():
+                paragraph_has_hlm1 = False
+                continue
+            line_mentions_hlm1 = "HLM1" in line or "hlm1" in line
+            paragraph_has_hlm1 = paragraph_has_hlm1 or line_mentions_hlm1
+            if not paragraph_has_hlm1:
                 continue
             lowered = line.lower()
             if any(token in lowered for token in allowed):
                 continue
-            if any(pattern.search(line) for pattern in _HLM1_FRONTIER_DRIFT_PATTERNS):
+            # A paragraph can legitimately say "HLM1 is non-promotional; HDM4
+            # is the active frontier." Do not flag that HDM4 handoff line.
+            if "hdm4" in lowered and not line_mentions_hlm1:
+                continue
+            if any(pattern.search(line) for pattern in _HLM1_FRONTIER_DRIFT_PATTERNS) or (
+                not line_mentions_hlm1 and _ACTIVE_FRONTIER_OR_FLOOR_RE.search(line)
+            ):
                 violations.append(f"{path.relative_to(root)}:{lineno}: {line.strip()[:180]}")
     return violations
 

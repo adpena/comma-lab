@@ -433,6 +433,7 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
             "active_count": 1,
             "stale_nonterminal_count": 0,
             "terminal_latest_count": 3,
+            "unparsable_timestamp_count": 1,
             "invalid_lane_id_count": 1,
             "active": [
                 {
@@ -445,6 +446,14 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
                 }
             ],
             "stale_nonterminal": [],
+            "unparsable_timestamp": [
+                {
+                    "lane_id": "lane_bad_time",
+                    "instance_job_id": "bad-time-job",
+                    "timestamp_utc": "not-a-time",
+                    "status": "failed_modal_smoke_red",
+                }
+            ],
             "invalid_lane_id": [
                 {
                     "lane_id": "0",
@@ -466,9 +475,12 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
 
     text = mod._format_dispatch_claim_summary()
 
+    assert "unparsable_timestamp: 1" in text
+    assert "UNPARSABLE TIMESTAMPS" in text
+    assert "lane_bad_time" in text
     assert "invalid_lane_id: 1" in text
     assert "INVALID LANE IDS" in text
-    assert "Historical claim hygiene: WARNING" in text
+    assert "All-history claim hygiene: WARNING" in text
     assert "invalid_lane_id=4" in text
     assert "lane_id=0" in text
     assert "ACTIVE CONFLICT GUARD" in text
@@ -491,7 +503,7 @@ def test_dispatch_readiness_blocks_when_every_exact_packet_is_terminal(monkeypat
             {
                 "lane_id": "terminal_packet",
                 "ready_for_submit": False,
-                "terminal_exact_eval_evidence_blockers": ["same_lane_terminal_negative"],
+                "dispatch_action": "terminal_exact_eval_evidence_stop",
             }
         ],
     )
