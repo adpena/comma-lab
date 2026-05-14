@@ -118,12 +118,12 @@ Expected: PASS.
 
 - [ ] **Step 1: Run `state doctor` against the live repo**
 
-Run: `python3 -m src.comma_lab.cli state doctor --repo-root /Users/adpena/Projects/pact`
+Run: `python3 -m src.comma_lab.cli state doctor --repo-root <repo-root>`
 Expected: it reports the live `1.51` vs `1.33` split-brain and stale managed-session records.
 
 - [ ] **Step 2: Run `state sync` to repair canonical mirrors**
 
-Run: `python3 -m src.comma_lab.cli state sync --repo-root /Users/adpena/Projects/pact`
+Run: `python3 -m src.comma_lab.cli state sync --repo-root <repo-root>`
 Expected: canonical summary and markdown/state docs update to `1.33`.
 
 - [ ] **Step 3: Mark stale local managed-session manifests by observed fact**
@@ -132,7 +132,7 @@ Update managed-session manifests whose processes are gone to a terminal status s
 
 - [ ] **Step 4: Re-run `state doctor`**
 
-Run: `python3 -m src.comma_lab.cli state doctor --repo-root /Users/adpena/Projects/pact`
+Run: `python3 -m src.comma_lab.cli state doctor --repo-root <repo-root>`
 Expected: no canonical drift findings remain.
 
 ### Task 4: Publish/report boundary hardening

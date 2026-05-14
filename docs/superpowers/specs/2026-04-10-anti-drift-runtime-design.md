@@ -13,10 +13,10 @@ The design makes one machine-readable promoted-result record the root truth, reg
 
 The immediate regression is concrete:
 
-- [reports/results.jsonl](/Users/adpena/Projects/pact/reports/results.jsonl) already contains the authoritative `1.33` promoted result
-- [reports/timeline.jsonl](/Users/adpena/Projects/pact/reports/timeline.jsonl) already contains the `1.33` promotion event
-- [reports/raw/2026-04-10-dilated-h64-authoritative/robust_current-dilated-h64-authoritative-cpu-report.txt](/Users/adpena/Projects/pact/reports/raw/2026-04-10-dilated-h64-authoritative/robust_current-dilated-h64-authoritative-cpu-report.txt) is the authoritative evidence
-- but [reports/raw/robust_current-current_workflow-cpu-summary.json](/Users/adpena/Projects/pact/reports/raw/robust_current-current_workflow-cpu-summary.json) and [reports/latest.md](/Users/adpena/Projects/pact/reports/latest.md) still claim `1.51`
+- [reports/results.jsonl](../../../reports/results.jsonl) already contains the authoritative `1.33` promoted result
+- [reports/timeline.jsonl](../../../reports/timeline.jsonl) already contains the `1.33` promotion event
+- [reports/raw/2026-04-10-dilated-h64-authoritative/robust_current-dilated-h64-authoritative-cpu-report.txt](../../../reports/raw/2026-04-10-dilated-h64-authoritative/robust_current-dilated-h64-authoritative-cpu-report.txt) is the authoritative evidence
+- but [reports/raw/robust_current-current_workflow-cpu-summary.json](../../../reports/raw/robust_current-current_workflow-cpu-summary.json) and [reports/latest.md](../../../reports/latest.md) still claim `1.51`
 
 That kind of drift is unacceptable at promotion and publication boundaries.
 
@@ -84,15 +84,15 @@ There are two distinct durability classes:
 
 This record becomes the source for:
 
-- [reports/raw/robust_current-current_workflow-cpu-summary.json](/Users/adpena/Projects/pact/reports/raw/robust_current-current_workflow-cpu-summary.json)
-- [reports/raw/robust_current-current_workflow-cpu-report.txt](/Users/adpena/Projects/pact/reports/raw/robust_current-current_workflow-cpu-report.txt)
-- [reports/results.jsonl](/Users/adpena/Projects/pact/reports/results.jsonl)
-- [reports/timeline.jsonl](/Users/adpena/Projects/pact/reports/timeline.jsonl)
-- [reports/latest.md](/Users/adpena/Projects/pact/reports/latest.md)
-- [.omx/state/current_focus.md](/Users/adpena/Projects/pact/.omx/state/current_focus.md)
-- [.omx/state/next_experiments.md](/Users/adpena/Projects/pact/.omx/state/next_experiments.md)
-- [.omx/research/findings.md](/Users/adpena/Projects/pact/.omx/research/findings.md)
-- [.ralph/run_log.md](/Users/adpena/Projects/pact/.ralph/run_log.md)
+- [reports/raw/robust_current-current_workflow-cpu-summary.json](../../../reports/raw/robust_current-current_workflow-cpu-summary.json)
+- [reports/raw/robust_current-current_workflow-cpu-report.txt](../../../reports/raw/robust_current-current_workflow-cpu-report.txt)
+- [reports/results.jsonl](../../../reports/results.jsonl)
+- [reports/timeline.jsonl](../../../reports/timeline.jsonl)
+- [reports/latest.md](../../../reports/latest.md)
+- [.omx/state/current_focus.md](../../../.omx/state/current_focus.md)
+- [.omx/state/next_experiments.md](../../../.omx/state/next_experiments.md)
+- [.omx/research/findings.md](../../../.omx/research/findings.md)
+- [.ralph/run_log.md](../../../.ralph/run_log.md)
 
 ## Projection Pipeline
 
