@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Six-panel multipane analysis visualization for TTO frames.
 
 Generates a side-by-side comparison of ground truth vs reconstructed frames

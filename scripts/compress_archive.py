@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compress the renderer archive for rate savings.
 
 Technique 3 from the eureka list: reduce archive.zip from ~184KB to ~100KB

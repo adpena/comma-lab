@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Self-compressing postfilter with learnable per-channel bit-depth.
 
 Szabolcs Csefalvay's insight (arXiv 2301.13142): instead of uniform int8

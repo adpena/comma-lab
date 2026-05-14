@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Checks 67/68/69 — proactive bug-detection regression tests."""
 
 from __future__ import annotations

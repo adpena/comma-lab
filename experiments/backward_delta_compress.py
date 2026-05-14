@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Backward Delta Compression: anchor frame + temporal deltas.
 
 Radically different paradigm from mask-based rendering:

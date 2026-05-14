@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F8: PoseNet SE(3) Lie-algebra coordinate primitive.
 
 Per deep_math §2.6 and the Mallat seat in zen_floor: PoseNet's 6-D output is

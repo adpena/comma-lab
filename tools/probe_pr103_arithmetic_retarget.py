@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe one PR103 arithmetic histogram retarget without emitting an archive."""
 
 from __future__ import annotations

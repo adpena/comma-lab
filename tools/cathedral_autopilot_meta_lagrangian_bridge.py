@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B1 wiring: cathedral_autopilot recommendations -> MetaLagrangianSearch.
 
 Converts cathedral_autopilot's catalog-recommended techniques into the

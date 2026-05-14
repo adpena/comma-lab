@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Emit a proxy-safe scorer penultimate-feature saliency smoke manifest."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Demo: run the 5 dynamic-learning derivers on PR106's HNeRV decoder
 weights (and latents), compare against PR101's hardcoded constants, and
 report per-deriver byte savings.

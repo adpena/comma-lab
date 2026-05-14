@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Reusable loss-function primitives for tac trainers.
 
 The historical single-file ``tac.losses`` implementation now lives in

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #147 — Lightning submit `cancel_pending_job_locked`
 only safe pre-network.
 

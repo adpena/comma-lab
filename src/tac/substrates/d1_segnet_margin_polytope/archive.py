@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 archive grammar — D1POLY1 monolithic 0.bin sidecar.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons:

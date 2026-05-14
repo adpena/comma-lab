@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the canonical xray primitive registry."""
 
 from __future__ import annotations

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 Path B step 7 — Fridrich UNIWARD-weighted Lagrangian per-tensor allocation.
 
 Background (CLAUDE.md "Fridrich inverse steganalysis"):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Screen local QMA9 context-backoff byte candidates.
 
 This is a planning-only byte screen. It decodes PR84/PR81 QMA9 range-mask

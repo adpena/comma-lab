@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Pose-Space TTO: optimize FiLM conditioning vectors per pair.
 
 Instead of pixel-level TTO (707M values, 40 min on 4090), optimize the

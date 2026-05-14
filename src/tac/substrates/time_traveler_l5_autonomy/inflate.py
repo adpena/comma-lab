@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Time-Traveler L5 Autonomy inflate runtime — contest raw-output contract.
 
 Loads the TT5L archive, rebuilds the world model state, decodes per-pair side

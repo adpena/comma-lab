@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane Q-FAITHFUL: 1:1 Quantizr PR #55 architecture replica.
 
 Per Round 26 convention, every test asserts a magnitude/sign anchor —

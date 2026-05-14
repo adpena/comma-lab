@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Build the sane_hnerv archive from a trained checkpoint.
 
 Operator-callable build tool per the Fields-medal grand council substrate

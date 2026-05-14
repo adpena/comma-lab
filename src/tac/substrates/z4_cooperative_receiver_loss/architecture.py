@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z4 cooperative-receiver substrate composition — A1+Z3 substrate, loss-only intervention.
 
 Per the Time-Traveler L5 staircase Step 2 design, Z4 is a LOSS-ONLY

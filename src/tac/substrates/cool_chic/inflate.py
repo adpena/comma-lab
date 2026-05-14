@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """cool_chic inflate runtime — <= 100 LOC; mirrors sane_hnerv/inflate.py style.
 
 Contest-runtime image of the substrate. ``submissions/cool_chic/inflate.py``

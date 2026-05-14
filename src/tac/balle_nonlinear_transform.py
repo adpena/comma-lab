@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """T18 — Ballé 2024 nonlinear transform coding.
 
 Council provenance

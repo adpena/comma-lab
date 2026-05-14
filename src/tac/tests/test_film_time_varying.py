@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.film_time_varying`` (T15 scaffold)."""
 from __future__ import annotations
 

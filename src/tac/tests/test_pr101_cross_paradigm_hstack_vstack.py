@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for cross-paradigm CodecPipeline composition + the
 ``tools/pr101_cross_paradigm_hstack_vstack_empirical.py`` driver.
 

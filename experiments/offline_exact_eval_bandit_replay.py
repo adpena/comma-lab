@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Deterministic offline replay controller for exact-eval lane cards.
 
 This tool ranks unevaluated candidate configs for the next CUDA exact-eval

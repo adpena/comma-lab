@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile Python loop hotpaths for vectorization triage.
 
 This is an engineering profiler, not score evidence. It statically scans

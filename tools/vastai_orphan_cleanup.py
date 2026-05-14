@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Detect and (optionally) destroy orphaned Vast.ai instances.
 
 Reads the canonical `.omx/state/vastai_active_instances.json` tracker

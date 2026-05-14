@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compute break-even readiness for WR01 HNeRV wavelet apply transforms."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-loss convergence detector for SAGA-style auto warm-up.
 
 Replaces the hand-coded ``--self-compress-lambda-ramp-start-frac=0.3``

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression: Apogee intN Pareto output must remain forensic-only."""
 from __future__ import annotations
 

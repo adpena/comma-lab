@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Comma2k19LocalStreamer — dynamic chunk streamer with JSONL access log.
 
 Operator pivot 2026-05-14 (lane

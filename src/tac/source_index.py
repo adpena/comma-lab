@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared source-tree inventory and parser cache for developer scanners.
 
 This module is intentionally Python-first. It gives preflight-style scanners a

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Retired Modal nuclear launcher.
 
 This compatibility stub exists so historical imports fail closed instead of

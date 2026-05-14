@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Langevin SDE optimizer for substrate polish phase (beat-PR95 design Idea 2).
 
 This module implements the discretized Langevin stochastic differential equation

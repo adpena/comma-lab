@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 residual codec — int8-quantize + brotli-pack per-pair photometric residual.
 
 The photometric residual ``frame_0_gt - warp(frame_1)`` is small (video

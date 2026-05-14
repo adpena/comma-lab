@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lock-in tests for half-frame mask warp at inflate (Quantizr paradigm).
 
 The archive ships only 600 odd-frame (t+1) masks. At inflate, the missing

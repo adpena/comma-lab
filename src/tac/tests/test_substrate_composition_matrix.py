@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.optimization.substrate_composition_matrix`.
 
 Per CLAUDE.md "Recursive adversarial review protocol": these tests were

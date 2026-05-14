@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Tropical-Decomposition LoRA adapter."""
 
 from __future__ import annotations

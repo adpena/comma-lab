@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Fridrich Constrained Renderer Training -- the path to sub-0.50.
 
 Trains a mask-conditioned SPADE renderer with:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """``tac.paradigm_delta_epsilon_zeta`` — PARADIGM-δεζ Phase 1 scaffold.
 
 This package implements the **Phase 1 Track 1 (T1)** end-to-end Ballé-hyperprior

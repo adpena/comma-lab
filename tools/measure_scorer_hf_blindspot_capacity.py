@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Measure SegNet + PoseNet high-frequency blindspot capacity (S2SBS audit).
 
 Lane: lane_s2sbs_blindspot_audit_20260513

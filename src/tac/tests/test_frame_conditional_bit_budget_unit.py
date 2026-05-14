@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.codec.frame_conditional_bit_budget``.
 
 Covers the 10 properties enumerated in the council prescription:

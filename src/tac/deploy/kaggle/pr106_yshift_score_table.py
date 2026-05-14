@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Kaggle bundle writer for the PR106 y-shift score-table lane.
 
 The lane itself is provider-neutral in :mod:`tac.deploy.pr106_yshift`.  This

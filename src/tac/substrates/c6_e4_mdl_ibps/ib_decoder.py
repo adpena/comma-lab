@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """IBDecoder — reconstructs frames from low-dim latent z.
 
 Per the C6 across-class shift hypothesis: the decoder is the architectural

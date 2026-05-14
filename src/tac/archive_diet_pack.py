@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CPU-only archive diet packer for renderer / SegMap submission archives.
 
 Draft target path: src/tac/archive_diet_pack.py

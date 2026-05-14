@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Replay PR91 HPM1 mask tokens locally and fail closed on parity gaps."""
 
 from __future__ import annotations

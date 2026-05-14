@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B2 — Phantom byte-proxy claim scanner.
 
 Bug class: an evidence row claims ``empirical_archive_bytes=N`` from

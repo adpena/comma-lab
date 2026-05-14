@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Checks 58, 59, 60, 61 — deep hardening pass 3 dimension 2.
 
 Memory: feedback_deep_hardening_pass_3_patterns_20260428.

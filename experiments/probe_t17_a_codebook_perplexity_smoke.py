@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """T17-A probe scaffold — VQ codebook perplexity smoke (Phase 2 pre-design).
 
 This is a SCAFFOLD ONLY. It does not dispatch any GPU job, does not load

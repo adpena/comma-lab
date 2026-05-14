@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the STC boundary-mask codec (Lane STC v1).
 
 Mirrors the test list in

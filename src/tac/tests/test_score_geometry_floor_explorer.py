@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.score_geometry_floor_explorer what-if floor reduction techniques."""
 from __future__ import annotations
 

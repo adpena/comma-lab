@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Test lane_pr106_latent_sidecar wire formats + parser invariants.
 
 Lane PR106-latent-sidecar gates against:

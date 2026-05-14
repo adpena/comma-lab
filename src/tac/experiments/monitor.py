@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """tac monitor — live training dashboard from telemetry JSONL files.
 
 Reads telemetry_*.jsonl files from experiment output directories and

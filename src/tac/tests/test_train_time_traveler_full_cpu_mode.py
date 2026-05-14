@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``--full-cpu`` mode in time-traveler L5 autonomy trainer.
 
 Operator approved 2026-05-13. Per CLAUDE.md "Submission auth eval — BOTH CPU

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/check_evidence_implementation_matches_model_spec.py.
 
 Bug class: implementation-vs-model gap (audit memo

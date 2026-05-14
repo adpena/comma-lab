@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit PR85 non-mask self-compression and single-blob overhead.
 
 This is a local static profiler. It slices the PR85 single-member ``x`` bundle

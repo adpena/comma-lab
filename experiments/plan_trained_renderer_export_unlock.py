@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan the trained-renderer export unlock for C067 Block-FP self-compression.
 
 This is a local-only readiness scanner.  It inspects known trained renderer,

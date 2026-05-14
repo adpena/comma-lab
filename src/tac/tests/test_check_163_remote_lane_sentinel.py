@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #163 — remote_lane sentinel sourcing rule.
 
 Bug class: WWW4 dispatch (Modal A100 fc-01KREXK209TRX7ED5ZRVXHY1VT,

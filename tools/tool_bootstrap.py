@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bootstrap helpers for repository-local tools.
 
 Root-level tools should not each hand-roll repo-root discovery and `sys.path`

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for BlockNeRV-as-renderer substrate (Phase A scaffold).
 
 Mirrors the structure of test_lane_12_v2_nerv_as_renderer.py per CLAUDE.md

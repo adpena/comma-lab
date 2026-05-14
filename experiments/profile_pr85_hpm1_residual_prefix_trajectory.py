@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile PR85 QMA9 -> PR91 HPM1 residual re-encode prefixes.
 
 This is a planning-only local profiler. It reads the decoded PR85 QMA9 token

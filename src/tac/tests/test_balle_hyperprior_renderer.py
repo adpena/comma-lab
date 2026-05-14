@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 20 — Ballé hyperprior tests.
 
 Per Phase 3 Lane 20 spec (memory project_phases_2_3_4_*):

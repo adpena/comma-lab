@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F7: SegNet logit-margin polytope primitive.
 
 Per deep_math §2.5 + the D1 substrate, the SegNet distortion is

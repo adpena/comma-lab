@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware Lagrangian for the Time-Traveler L5 Autonomy substrate.
 
 L = alpha * B / N + beta * d_seg + gamma * sqrt(d_pose) + delta * H_pred

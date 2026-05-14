@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """SVD analysis of the per-pair Jacobian J = dPose/dPixel.
 
 Even though applying a single-step pseudoinverse correction fails (the

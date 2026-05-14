@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/gc_experiments_results.py`` and Catalog #154
 (``check_experiments_results_gc_helper_is_canonical``).
 

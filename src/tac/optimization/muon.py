@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Muon optimizer - Newton-Schulz orthogonalized momentum (Keller Jordan, 2024).
 
 Mathematical formulation

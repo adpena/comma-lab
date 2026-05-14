@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Byte-closed contract for categorical CLADE/SPADE/openpilot mask priors."""
 
 from __future__ import annotations

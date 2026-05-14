@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Radial zoom warp — information-theoretic minimum for PoseNet ego-motion.
 
 The PoseNet Jacobian has effective rank 1.008 (verified empirically in

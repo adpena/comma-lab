@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the Time-Traveler L5 Autonomy substrate end-to-end on contest video.
 
 PAIR T operator directive 2026-05-13 — reverse-engineered architecture from

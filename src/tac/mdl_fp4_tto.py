@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """MDL/FP4 TTO (Test-Time Optimization) under MDL objective.
 
 This module operationalises the handoff P3 keep-live "Self-compression: MDL/FP4

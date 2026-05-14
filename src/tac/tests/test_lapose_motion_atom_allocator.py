@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.lapose_motion_atom_allocator`` — LAPose inverse-dynamics
 motion atom allocator sidecar.
 

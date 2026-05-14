@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: zero-argument audit tool — only writes reports/silent_defaults.md
 """Audit argparse defaults that may silently override profile values.
 

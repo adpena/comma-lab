@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # pyc-recovery pass2: rehydrated from git blob 960bf56b34bdc2aad35623c6362c56fcc0f65ee8 via `git fsck --lost-found`
 # original path: experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py
 # OUR source dropped during commit 66c59aae filter-repo cleanup; .pyc was sole orphan left.

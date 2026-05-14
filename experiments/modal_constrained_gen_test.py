@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Test constrained gen timing on Modal T4 — is it within 30-min budget?"""
 import modal
 

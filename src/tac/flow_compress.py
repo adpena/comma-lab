@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DCT-based flow compression for archive storage (Fridrich's proposal).
 
 Compresses dense per-pair optical flow into low-rank DCT coefficients.

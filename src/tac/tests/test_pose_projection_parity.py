@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Check 42: pose-projection train/inference parity.
 
 Catches the BUG-1 class from Lane M-V2 audit (memory:

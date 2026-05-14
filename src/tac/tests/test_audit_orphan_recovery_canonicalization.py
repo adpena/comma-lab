@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from tools.audit_orphan_recovery_canonicalization import (

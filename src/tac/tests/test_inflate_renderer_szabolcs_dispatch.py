@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Magic-byte dispatch tests for SZv1 routing in inflate_renderer.py.
 
 Mirrors ``test_inflate_renderer_lane_i_dispatch.py`` but for Lane SZ:

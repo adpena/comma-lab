@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR97 H3 wire-format grammar primitives.
 
 Covers round-trip identity, golden-vector pinning, edge cases (empty

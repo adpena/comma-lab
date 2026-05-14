@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical CLI for the deterministic submission-packet compiler.
 
 This is the **single canonical CLI entry point** for the

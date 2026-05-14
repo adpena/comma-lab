@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for tac.sjkl_basis recovered from runbook spec."""
 
 from __future__ import annotations

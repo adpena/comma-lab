@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-3 MEDIUM 1 fix — local NVDEC probe is opt-in.
 
 Bug class (codex round-3 MEDIUM 1, 2026-05-09): the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 4 final integration — Optimal Stack Orchestrator.
 
 This module is the **integration deliverable** of the 6-month plan

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #174 — check_subagent_commit_serializer_always_uses_expected_content_sha256.
 
 FIX-WAVE-1 R1 Medium #1 (2026-05-13). The 2026-05-12 8c9a5e7f commit-swap

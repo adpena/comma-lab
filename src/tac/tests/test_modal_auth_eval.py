@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for experiments/modal_auth_eval.py.
 
 We do NOT invoke Modal in these tests — that requires a Modal account, billing

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Non-promotable custom mask codec probe.
 
 This is a bounded, dependency-free diagnostic scaffold for custom overfit mask

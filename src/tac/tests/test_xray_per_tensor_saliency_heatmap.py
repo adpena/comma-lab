@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/xray_per_tensor_saliency_heatmap.py."""
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Cathedral autopilot autonomous loop — typed-atom queue → Pareto → dispatch.
 
 Sister of :mod:`tools.cathedral_autopilot` (the per-invocation planner). This

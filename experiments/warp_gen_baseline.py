@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Warp-Gen Deterministic Baseline: pure analytical, no neural network.
 
 Hotz's idea: establish an analytical floor using optical flow warping.

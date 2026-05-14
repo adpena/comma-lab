@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical submission archive builder and validator.
 
 This is the SINGLE SOURCE OF TRUTH for what goes into archive.zip.

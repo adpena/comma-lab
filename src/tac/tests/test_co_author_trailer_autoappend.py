@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for FIX-3 Co-Authored-By trailer auto-append (META-META 2026-05-08).
 
 The serializer auto-appends the canonical Co-Authored-By trailer to every commit

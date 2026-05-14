@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CompressAI Ballé-family hyperprior packet-compiler adapter.
 
 This module wraps the three hyperprior variants from CompressAI as typed

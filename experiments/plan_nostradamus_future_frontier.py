@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan contest-faithful counter-moves from public PR frontier signals.
 
 This is a read-only planning tool. It can consume saved GitHub PR API JSON,

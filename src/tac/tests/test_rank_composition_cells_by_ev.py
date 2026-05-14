@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/rank_composition_cells_by_ev.py.
 
 Per the floor-v3 commit ``27a7950fd`` requirement: ensure the EV ranker

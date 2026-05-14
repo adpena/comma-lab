@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.wavelet — 2D DWT + score-aware subband coding substrate (L0 SKETCH).
 
 Per operator approval 2026-05-12 ("land 2 non-NeRV substrate L0 SKETCHes"). The

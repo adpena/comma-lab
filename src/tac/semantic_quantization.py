@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Adaptive semantic quantization — per-class bit-depth allocation (Trick 18).
 
 For SPADE/CLADE-based renderers, different semantic classes have different

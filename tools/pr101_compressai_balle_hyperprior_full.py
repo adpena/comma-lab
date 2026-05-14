@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 FULL CompressAI ScaleHyperprior reactivation — anchors the
 ``compressai_balle_hyperprior`` row with the architecture the adversarial
 audit (2026-05-07, ``feedback_adversarial_audit_4_falsifications_DEFERRED_not_killed_20260507.md``)

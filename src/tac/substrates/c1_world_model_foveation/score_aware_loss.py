@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware Lagrangian for the C1 world-model + foveation substrate.
 
 L = alpha * B/N + beta * d_seg + gamma * sqrt(d_pose)

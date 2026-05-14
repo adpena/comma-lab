@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Run a `scripts/remote_lane_*.sh` on Modal T4 / A10G — reliable training surface.
 
 Why: 2026-04-29 night session showed Vast.ai 4090 NVDEC bad-host rate ≈ 85%.

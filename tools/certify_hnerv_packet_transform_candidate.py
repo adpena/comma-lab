@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Certify a grammar-preserving HNeRV packet transform candidate."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Mask extraction, encoding, and decoding for the GPU-lane submission.
 
 The GPU-lane pipeline replaces traditional video compression with:

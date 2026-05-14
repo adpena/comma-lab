@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Mask-Conditioned SIREN Experiment — the dinner conversation turned into code.
 
 A SIREN network whose weights ARE the compressed video, conditioned on

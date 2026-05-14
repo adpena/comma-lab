@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fast offline signal table from archive bytes and component traces.
 
 This CLI performs no inflate, scorer, CUDA, remote, or dispatch work. It joins

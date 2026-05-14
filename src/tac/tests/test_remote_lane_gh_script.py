@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_gh_ghost_renderer.sh.
 
 Lane GH = Ghost-module renderer (Han et al. CVPR 2020) from-scratch retrain.

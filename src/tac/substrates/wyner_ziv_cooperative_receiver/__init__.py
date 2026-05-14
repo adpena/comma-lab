@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wyner-Ziv cooperative-receiver substrate (alien-tech N3).
 
 Per ``feedback_expert_team_signal_processing_alien_tech_landed_20260513.md``

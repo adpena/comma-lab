@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI: structural tests for scripts/remote_lane_si_saliency_inversion.sh.
 
 The script can't be executed locally (it requires CUDA + a Vast.ai-style

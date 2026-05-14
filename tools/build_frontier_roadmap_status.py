@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a live-safe roadmap status from the cross-paradigm frontier queue.
 
 This is an operator artifact. It does not build archives, dispatch jobs, or

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for DP1 canonical composition API (``compose_with``/``decompose``).
 
 Per CLAUDE.md "Subagent coherence-by-default" + "Beauty, simplicity, and

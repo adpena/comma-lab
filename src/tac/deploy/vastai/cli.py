@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CLI entry point for Vast.ai deployment.
 
 Dispatches subcommands to :class:`VastClient` and :class:`BudgetTracker`.

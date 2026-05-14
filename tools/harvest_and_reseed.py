@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Harvest contest-CUDA results and reseed the meta-Lagrangian calibration anchors.
 
 This is the third leg of the parallel-dispatch loop:

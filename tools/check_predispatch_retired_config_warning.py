@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B6 — Pre-dispatch retired-config redispatch scanner.
 
 Bug class: a config previously dispatched with

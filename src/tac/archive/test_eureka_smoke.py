@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Smoke tests for Eureka #5-9 implementations.
 
 Runs without real scorer models -- uses mock scorers with correct interfaces.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Run canonical CPU contest auth eval on Modal Linux x86_64 container.
 
 This is the CPU sister of ``experiments/modal_auth_eval.py``. It provides the

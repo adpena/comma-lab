@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Lane J-JBL (Jaccard Metric Loss + Boundary Label
 Smoothing distillation, ``tac.losses_jbl``).
 

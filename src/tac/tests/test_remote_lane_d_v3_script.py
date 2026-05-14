@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_d_v3_full_engineering.sh.
 
 Lane D-V3 = dilated-h64 half-frame retrain stacking V2's higher LR floor

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Predict CPU score from CUDA score per architecture-class drift profile.
 
 WHEN TO USE: when a CUDA-only auth eval result has landed and you need to

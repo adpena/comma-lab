@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Bit-level archive optimizer — payload-side bit-level optimization.
 
 Per Phase 3 Lane 15 spec (memory `project_phases_2_3_4_*` §"Lane 15 Bit-level

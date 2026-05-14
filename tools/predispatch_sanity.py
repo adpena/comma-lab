@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Pre-dispatch sanity gate — fail-closed ladder before any paid GPU dispatch.
 
 Council Q3 prescription (`feedback_grand_council_predictor_calibration_no_arbitrariness_20260505.md`).

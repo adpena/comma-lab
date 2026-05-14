@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compare public PR79 inflate custody with robust_current on identical bytes.
 
 This is a local forensic tool. It does not run the contest scorer and it does

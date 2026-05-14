@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Categorical full-renderer trainer — Phase A.
 
 Per CLAUDE.md non-negotiables this trainer:

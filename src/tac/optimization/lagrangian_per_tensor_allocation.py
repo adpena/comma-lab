@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical Lagrangian per-tensor allocator.
 
 This module is the SINGLE canonical home for the per-tensor allocation

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 19 β-variant — sensitivity-weighted SegNet logit-margin loss.
 
 Paradigm β extension of :mod:`tac.losses_logit_margin`. Vanilla Lane 19

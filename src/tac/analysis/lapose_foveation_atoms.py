@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """LA-POSE-guided foveation transport atoms for planning ledgers.
 
 The rows emitted here are byte-bearing planning atoms, not archive evidence.

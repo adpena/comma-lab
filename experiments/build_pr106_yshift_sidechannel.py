@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: I001
 """Build a pr106_yshift_sidechannel archive on top of a PR106 packed archive.
 

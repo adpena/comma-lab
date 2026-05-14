@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #193 tests for substrate auth-eval score-claim boundaries."""
 
 from __future__ import annotations

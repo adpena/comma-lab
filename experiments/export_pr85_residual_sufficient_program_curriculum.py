@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Export PR85 residual sufficient-program density as a training curriculum.
 
 This is a local planning/export tool only. It consumes the PR85 residual

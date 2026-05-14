@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Modal training harvest summary helpers.
 
 Bulk harvest is repeatedly re-run to close old provider state. Already

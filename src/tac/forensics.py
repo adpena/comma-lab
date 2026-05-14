@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Forensic analysis tools for detecting scorer-visible artifacts.
 
 These tools reveal what the SegNet and PoseNet scorers actually see,

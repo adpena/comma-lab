@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Live fleet dashboard — monitors all training processes and checkpoints.
 
 Opens a browser with auto-refreshing stats. No dependencies beyond stdlib.

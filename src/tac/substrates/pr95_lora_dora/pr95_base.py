@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Byte-faithful re-port of PR95 hnerv_muon `src/model.py` (55 LOC original).
 
 Source: experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py

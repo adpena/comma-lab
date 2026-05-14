@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Single-instance lane diagnosis: SSH, heartbeat, recent logs, archive bytes.
 
 This tool answers the most common operator question — "what is lane X

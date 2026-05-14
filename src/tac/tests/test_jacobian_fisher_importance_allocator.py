@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Jacobian/Fisher importance-weighted allocator primitive."""
 
 from __future__ import annotations

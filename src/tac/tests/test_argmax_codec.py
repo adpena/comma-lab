@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Property tests for the lossless argmax mask codec.
 
 Yousfi council recommendation #8 (2026-04-26). The codec must be

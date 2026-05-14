@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DPW1 charged archive grammar for a driving-prior world-model scaffold.
 
 The monolithic ``0.bin`` placeholder grammar is:

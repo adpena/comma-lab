@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Zen-state frontier optimization primitives.
 
 This module converts the 2026-05-13 zen-state frontier ledgers into reusable

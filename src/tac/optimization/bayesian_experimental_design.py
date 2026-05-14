@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bayesian experimental design for exact CUDA candidate selection.
 
 This module is planning-only. It ranks candidate archives/configs by closed-form

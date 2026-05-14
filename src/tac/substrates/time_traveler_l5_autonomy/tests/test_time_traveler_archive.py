@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Time-Traveler L5 Autonomy archive grammar (TT5L)."""
 
 from __future__ import annotations

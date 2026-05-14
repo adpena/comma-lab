@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Select the next static-ready HNeRV entropy frontier candidate."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression test for the Lane PD pose-delta wiring in compress_archive.py.
 
 The encode-side wiring landed in commit 2d913687 added:

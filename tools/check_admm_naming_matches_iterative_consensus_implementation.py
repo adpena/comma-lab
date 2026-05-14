@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B4 — Naming-vs-implementation drift scanner ("ADMM-named-but-not-ADMM").
 
 Bug class: a class/function/file named "ADMM" or "primal_dual" implements

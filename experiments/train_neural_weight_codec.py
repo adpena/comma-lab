@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane J-NWC: train a neural weight codec on a corpus of renderer checkpoints.
 
 Reference: arXiv 2510.11234 — "Neural Weight Compression for Language Models".

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 multi-pass IMP composition — Path B step 2 empirical anchor for the
 second level of the PARADIGM-Ω-OPT design (multi-pass IMP-cycle, predicted
 0.115).

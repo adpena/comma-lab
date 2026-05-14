@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from tac.analysis.lapose_lite_inputs import inputs_from_pair_metric_payload

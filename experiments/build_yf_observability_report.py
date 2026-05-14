@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic observability artifacts for Yousfi-Fridrich optimization.
 
 The report is a human-facing control-plane artifact. It summarizes exact eval

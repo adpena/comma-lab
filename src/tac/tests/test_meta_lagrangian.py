@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Acceptance tests for tac.optimizer.meta_lagrangian.
 
 Exercises the full pipeline: distortion proxy + predictor + Lagrangian +

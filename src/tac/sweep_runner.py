@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bayesian hyperparameter sweep framework (Optuna-backed).
 
 CLAUDE.md mandates "no arbitrariness, engineering+scientific+algorithmic rigor"

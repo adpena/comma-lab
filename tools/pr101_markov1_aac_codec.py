@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Markov-1 adaptive arithmetic coding encoder/decoder for PR101 weights.
 
 This is an implemented Markov-1 AAC round-trip probe, not an oracle-floor

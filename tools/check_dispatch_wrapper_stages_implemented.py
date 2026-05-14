@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PCC11 — Catch dispatch wrappers whose `# Stage N:` comments aren't implemented.
 
 Council Q5-B4 prescription. The wave_deploy script anti-pattern (comment-only

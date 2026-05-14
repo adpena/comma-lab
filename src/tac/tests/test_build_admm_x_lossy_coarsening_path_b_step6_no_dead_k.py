@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py``.
 
 REVIEW-ENG C2 closure: the original Path B step 6 wire format reserves 28

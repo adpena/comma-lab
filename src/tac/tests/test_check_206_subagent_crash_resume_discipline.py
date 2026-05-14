@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #206 — subagent crash-resume checkpoint discipline.
 
 Empirical anchor 2026-05-14: Wyner-Ziv research subagent crashed mid-session

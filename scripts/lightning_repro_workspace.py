@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prepare an auditable, reproducible Lightning Studio workspace.
 
 This is the OSS/reproducible replacement for one-off ``rsync`` snippets. It

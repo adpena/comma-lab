@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic planning helpers for categorical mask candidates.
 
 The construction plan produced here is intentionally not dispatch evidence.

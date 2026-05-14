@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-V2 — Lagrangian QAT loop with per-WEIGHT learnable bit-depth.
 
 This is the mathematically-optimal evolution of Lane Ω-V1.

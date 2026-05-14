@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Joint-ADMM — 4-stream NON-CONVEX coordinator gate test.
 
 Council F Part C SAFE-LOCAL gate

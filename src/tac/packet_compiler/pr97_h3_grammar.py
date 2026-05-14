@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR97 H3 wire-format grammar — reusable byte-grammar primitives.
 
 This module extracts the REUSABLE WIRE-FORMAT pieces from the PR97 public

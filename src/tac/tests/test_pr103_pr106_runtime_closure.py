@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for PR103 AC runtime closure inside PR106 packed envelopes."""
 
 from __future__ import annotations

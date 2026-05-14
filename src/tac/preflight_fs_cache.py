@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Process-wide filesystem cache for preflight checks.
 
 Preflight runs ~50 file-scanning checks; >19 of them call `Path.rglob("*.py")`

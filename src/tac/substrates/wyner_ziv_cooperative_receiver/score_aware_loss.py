@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware Lagrangian for the Wyner-Ziv cooperative-receiver substrate.
 
 L = alpha * B / N + beta * d_seg + gamma * sqrt(d_pose) + delta * R_WZ

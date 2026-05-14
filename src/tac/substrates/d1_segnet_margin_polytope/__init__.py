@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 — SegNet margin polytope encoder substrate (sub-0.188 path #1, lowest cost).
 
 D1 operationalizes the SegNet argmax-margin manifold from

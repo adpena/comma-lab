@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ANR substrate trainer — TokenRendererV62 master + ShrinkSingleNeRV slave +
 HPACMini context model, jointly trained against the contest video with
 score-aware Lagrangian and eval_roundtrip.

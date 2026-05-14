@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.pr101_split_brotli_codec_derivers``.
 
 Each test pins a contract spec'd in

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Trick 28: Multi-resolution generation with scorer-aware upsampling.
 
 Compress at half resolution (~4x rate savings), then upsample with a

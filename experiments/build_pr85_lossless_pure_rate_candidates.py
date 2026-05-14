@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR85 lossless pure-rate candidates.
 
 This lane is deliberately narrow and local-only. It starts from the verified

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Offline codebook distillation from public dashcam datasets.
 
 This module runs at BUILD time (or as a separate $0 step) — NEVER at dispatch

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane GH: regression tests for GhostConv2d + use_ghost wiring.
 
 Council brief 2026-04-27. Lane GH attacks rate via Ghost convolutions

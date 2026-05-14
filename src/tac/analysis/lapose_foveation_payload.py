@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only byte payloads for LA-POSE foveation tuple atoms.
 
 The payload here is byte-closed at the local artifact level: selected

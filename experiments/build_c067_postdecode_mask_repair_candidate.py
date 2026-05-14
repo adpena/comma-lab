@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a charged postdecode AMR1 mask-repair candidate for C067.
 
 This builder consumes C067 runtime members plus a lossy legacy ``masks.mkv``

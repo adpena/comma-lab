@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build strict runtime-consumption proof for a monolithic packet candidate.
 
 This tool does not run inflate or score anything. It converts runtime evidence

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for the Mallat wavelet-coefficient importance proxy.
 
 Sister of ``test_pr101_sensitivity_aware_quantization_unit.py``. Verifies that

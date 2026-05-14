@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #202 — check_catalog_202_bypass_requires_paired_env_attestation.
 
 STRICT preflight gate that refuses any state of ``tools/operator_authorize.py``

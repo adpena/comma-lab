@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Meta-Lagrangian optimizer for extreme automated Shannon-floor search.
 
 Integrates:

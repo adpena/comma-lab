@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.self_compress_nn — δ Self-Compress NN (L0 SKETCH).
 
 The Fields-medal grand council 2026-05-12 DEFERRED-pending-criterion scaffold

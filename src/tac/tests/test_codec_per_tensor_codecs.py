@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.codec.per_tensor_codecs``.
 
 The byte counts are not asserted exactly (brotli is not byte-stable across

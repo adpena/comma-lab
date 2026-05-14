@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for canonical adapter composition primitives."""
 
 from __future__ import annotations

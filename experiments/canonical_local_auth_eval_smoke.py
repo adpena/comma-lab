@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical LOCAL end-to-end auth-eval smoke test.
 
 Closes the gap between STATIC preflight checks and PIPELINE OUTCOMES.

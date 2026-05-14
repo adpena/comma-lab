@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR93 ``flatpup`` pose-codec primitives — reusable byte-grammar pieces.
 
 This module extracts the REUSABLE pose-axis byte-grammar primitives from the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Schema checks for component sensitivity artifacts.
 
 This module validates the custody envelope around PoseNet, SegNet, and combined

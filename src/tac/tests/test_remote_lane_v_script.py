@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_v_quantizr_replica_88k_halfframe.sh.
 
 Lane V = Quantizr-replica (88K params + DSConv + FiLM + KL distill T=2.0)

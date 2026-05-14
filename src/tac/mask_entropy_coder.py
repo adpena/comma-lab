@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Custom entropy coder for 5-class segmentation masks.
 
 Exploits three properties of our data that AV1 cannot fully leverage:

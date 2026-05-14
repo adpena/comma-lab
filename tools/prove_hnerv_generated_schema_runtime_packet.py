@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove standalone runtime-style consumption of one HNGP archive member.
 
 This is a non-score proof tool. It does not import or run the scorer, does not

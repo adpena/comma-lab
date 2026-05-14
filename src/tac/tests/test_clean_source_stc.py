@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Lane STC clean-source pipeline (no AV1 roundtrip).
 
 These tests validate the load-bearing claims of the clean-source build path

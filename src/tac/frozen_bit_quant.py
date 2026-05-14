@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω FrozenBitFakeQuant — per-element bit-depth STE fake-quantization.
 
 Given a weight tensor W and a SAME-SHAPE uint8 tensor `bits` specifying the

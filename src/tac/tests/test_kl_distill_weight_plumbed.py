@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round 7 Defect #2 regression — KL-distill weight is operator-controllable.
 
 Council Round 7 §6.2 caught that ``experiments/train_segmap.py`` exposed

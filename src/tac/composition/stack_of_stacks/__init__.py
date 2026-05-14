@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Stack-of-stacks composition (beat-PR95 design Idea 3).
 
 The stack-of-stacks composer turns the empirically-measured primitives

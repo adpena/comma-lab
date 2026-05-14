@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Synthetic tests for Lane RAFT/radial pose 6-DoF decomposition.
 
 All tests run on synthetic flow fields with known basis coefficients;

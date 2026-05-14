@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the meta-bug preflight checks (CLAUDE.md FORBIDDEN PATTERNS).
 
 Each pattern below has bitten this project at least once and cost real GPU

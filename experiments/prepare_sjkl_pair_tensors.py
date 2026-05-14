@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prepare frame-pair tensors for SJ-KL residual build.
 
 Recovery note: this script was lost when subagent worktrees were auto-cleaned

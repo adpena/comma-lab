@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dispatch CUDA direct-FD component-sensitivity shards on Modal.
 
 This is a queue-diversity fallback for the May 3 contest push. It is

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Losslessly repack a single-member Brotli payload archive.
 
 This is a byte-only transform for public-floor-style archives whose only ZIP

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω water-fill bit allocator (per-weight bit-depth from Hessian importance).
 
 Given a per-weight Fisher importance tensor I(w_ij) and a total bit budget B,

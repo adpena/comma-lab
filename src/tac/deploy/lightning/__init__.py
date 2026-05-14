@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lightning AI Studio deployment helpers.
 
 Lightning Studios are PERSISTENT (unlike Modal `.spawn()` 24h cache TTL or

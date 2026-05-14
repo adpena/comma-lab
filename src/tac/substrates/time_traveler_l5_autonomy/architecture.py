@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Time-Traveler L5 Autonomy architecture — differentiable world model.
 
 Implements the five first-principles design moves from the

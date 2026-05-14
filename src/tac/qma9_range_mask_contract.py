@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-time helpers for PR81/QMA9 semantic range-mask payloads.
 
 The helpers in this module are intentionally score-agnostic. They parse and

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B5 — Inflate wire format dead-bytes scanner.
 
 Bug class: ``inflate.py`` reads N-byte side-info from the wire format that's

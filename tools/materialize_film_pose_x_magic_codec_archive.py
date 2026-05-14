@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Materialize a film_pose_conditioning × magic_codec composition probe archive.
 
 Per grand council Cluster 1 verdict 2026-05-12 (BUILD-ONE-PROBE; subagent

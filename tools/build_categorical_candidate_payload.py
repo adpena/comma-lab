@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a byte-closed local categorical payload candidate.
 
 The output is a local archive/readiness artifact only. It never dispatches GPU

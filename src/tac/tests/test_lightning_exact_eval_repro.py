@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for credential-safe Lightning exact-eval orchestration."""
 from __future__ import annotations
 

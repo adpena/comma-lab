@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed compress-time harness scaffold for HNeRV WR01 wavelet atoms.
 
 The harness records deterministic source custody and alpha-wavelet configuration

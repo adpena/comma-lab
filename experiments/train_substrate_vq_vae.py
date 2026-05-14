@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the vq_vae substrate end-to-end on contest video.
 
 Operator-callable training script per the WAVE-1-A operator-orchestrated

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.foveation_field`` — telescopic foveation field sidecar.
 
 Per CLAUDE.md HNeRV parity discipline lessons 8 (eval_roundtrip-aware),

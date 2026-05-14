@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the 4 PCC5-PCC8 loop-session permanent extinction checks.
 
 Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md.

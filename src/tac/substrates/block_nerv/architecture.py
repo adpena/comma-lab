@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """block_nerv architecture — Per-Pair Block-Decoder NeRV substrate (L0 SKETCH).
 
 Shared SIREN+PixelShuffle base + per-pair low-rank LoRA deltas applied to

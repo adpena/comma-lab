@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed PR85 probe for a PR90/QFQ4-style model serializer transfer.
 
 This tool is intentionally local-only. It may write a candidate archive only

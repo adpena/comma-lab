@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed PR101-style HNeRV schema-packing candidate."""
 
 from __future__ import annotations

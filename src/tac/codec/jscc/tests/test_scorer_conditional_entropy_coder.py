@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.codec.jscc`` — SE-4 scorer-conditional entropy coder.
 
 Lane: ``lane_implement_iglt_ternary_jscc_kc3_canonical_20260513``.

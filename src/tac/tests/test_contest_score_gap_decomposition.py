@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.contest_score_gap_decomposition``."""
 
 from __future__ import annotations

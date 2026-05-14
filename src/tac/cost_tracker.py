@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Compute cost tracking for all platforms.
 
 Every experiment records: platform, GPU, cost/hr, runtime, total cost.

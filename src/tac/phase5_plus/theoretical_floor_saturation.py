@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 5+ theoretical floor saturation (CONJECTURE-ONLY).
 
 This module is the publication-grade moonshot scaffold per the EXTREME-OBSESSION

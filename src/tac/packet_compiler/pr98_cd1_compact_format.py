@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR98 CD1 compact decoder-format primitive.
 
 This module ports the **CD1 compact archive grammar** from PR98 public

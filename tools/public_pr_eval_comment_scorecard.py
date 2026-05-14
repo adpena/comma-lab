@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a scorecard from GitHub-hosted PR auth-eval comments.
 
 The contest bot can leave multiple eval comments on the same public PR, often

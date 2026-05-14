@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fridrich-inspired loss terms for inverse steganalysis.
 
 Implements techniques from Fridrich's body of work on making changes

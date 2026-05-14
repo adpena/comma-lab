@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 r"""Dispatch all 4 SegNet boundary smoothing variants to GHA CPU eval in
 parallel. Wraps ``tools/dispatch_cpu_eval_via_github_actions.py`` per variant.
 

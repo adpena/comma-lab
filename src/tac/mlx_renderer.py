@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """MLX port of MaskRenderer for Phase 1 pre-training on Apple Silicon.
 
 Benchmarks show MLX is 4.7x faster than PyTorch MPS for forward+backward

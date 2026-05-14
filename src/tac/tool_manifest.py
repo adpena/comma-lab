@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic run manifests for repository-local JSON tools."""
 
 from __future__ import annotations

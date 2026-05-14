@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 Wyner-Ziv frame-0 substrate test suite.
 
 30+ tests covering:

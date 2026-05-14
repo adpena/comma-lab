@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the D1 SegNet margin polytope encoder substrate (sub-0.188 path #1).
 
 Source memo: ``.omx/research/deep_math_geometry_manifolds_synthesis_20260514.md``

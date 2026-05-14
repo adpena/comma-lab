@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the per-architecture-class CUDA/CPU drift calibration registry.
 
 Covers:

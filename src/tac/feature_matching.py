@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Feature matching loss on intermediate scorer activations.
 
 Provides richer gradients than output-only MSE by matching activations at

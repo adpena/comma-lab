@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Local raw-output parity harness for public PR75 versus robust_current.
 
 This tool is forensic only.  It does not run the scorer, does not dispatch

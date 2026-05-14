@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PD-V2 (arithmetic-coded pose deltas) regression tests.
 
 Covers (per the task spec from the grand-council stacking codex):

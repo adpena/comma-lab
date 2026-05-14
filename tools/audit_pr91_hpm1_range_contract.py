@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit a local PR91/HPM1 range uint32 contract diagnostic manifest."""
 
 from __future__ import annotations

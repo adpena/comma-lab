@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a private Kaggle proxy-sweep kernel for PR101-style config search.
 
 This tool only prepares a Kaggle script-kernel directory. It never launches a

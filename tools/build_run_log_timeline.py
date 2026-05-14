@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Extract run log entries into a structured JSON timeline for the site.
 
 Parses .ralph/run_log.md into timestamped entries, extracts scores from

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-tensor cost-curve precompute and budget-greedy selectors.
 
 Curve types

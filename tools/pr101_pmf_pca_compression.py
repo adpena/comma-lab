@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PCA-based PMF compression falsification probe for PR101.
 
 The 28 per-tensor PMFs form a 28x255 matrix M where each row is a

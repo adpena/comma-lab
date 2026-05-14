@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from pathlib import Path
 
 SCRIPT = Path("scripts/remote_lane_q_faithful_jointgen.sh")

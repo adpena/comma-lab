@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane S engineering tests — Self-Compressing renderer codec.
 
 Covers:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PoseNet shared-input CPU/CUDA layer-drift xray (handoff P5 deliverable 2).
 
 Per CLAUDE.md "MPS auth eval is NOISE" + "Submission auth eval — BOTH CPU AND

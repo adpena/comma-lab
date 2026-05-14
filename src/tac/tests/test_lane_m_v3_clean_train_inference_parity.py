@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane M-V3-clean train/inference parity tests.
 
 Lane M-V2 scored 1.84 [contest-CUDA] with BUG-1: optimization-time

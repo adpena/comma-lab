@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR95 hnerv_muon brownfield substrate — LoRA/DoRA adapters on frozen base.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lesson 7

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Checks 48, 49, 50 — the killed-lanes forensic audit preflight checks.
 
 Reference: project_killed_lanes_forensic_audit_20260428.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CompressAI Cheng-2020 (anchor + attention) packet-compiler adapter.
 
 This module wraps the Cheng-Sun-Maeda-Tanaka CVPR 2020 entropy-model

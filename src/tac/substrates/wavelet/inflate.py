@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """wavelet inflate runtime — <= 100 LOC; mirrors sane_hnerv/inflate.py style.
 
 Contest-runtime image of the substrate. ``submissions/wavelet/inflate.py`` will

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe same-runtime PR103 LC-AC rendered-frame parity."""
 
 from __future__ import annotations

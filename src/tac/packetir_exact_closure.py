@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Exact-eval closure review for PacketIR-derived archive candidates.
 
 PacketIR/profile tools can prove byte accounting, but they cannot by

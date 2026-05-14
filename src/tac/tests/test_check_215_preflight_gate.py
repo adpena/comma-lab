@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #215 preflight gate tests.
 
 The gate refuses substrate operator-authorize recipes whose full-run GPU is

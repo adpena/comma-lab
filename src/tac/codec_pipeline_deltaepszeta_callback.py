@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """δεζ pipeline-aware training callback — Phase 2.
 
 Per the four-way stack composition contract

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 Wyner-Ziv frame-0 substrate (deep-math M7) — sub-0.188 path #3.
 
 Per ``.omx/research/deep_math_geometry_manifolds_synthesis_20260514.md`` §3.5

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a compact scorecard for public HNeRV frontier intake.
 
 The scorecard joins exact CUDA replay artifacts with forensic payload profiles.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #157 — check_commit_serializer_pre_lock_hash_against_head.
 
 2026-05-12 (subagent F, Part 4) — commit-swap class permanent fix.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Kaggle bundle writer for the PR106 latent-sidecar score-table lane."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Vast.ai client: SSH, rsync, and instance lifecycle management.
 
 Encapsulates all interaction with the ``vastai`` CLI and remote instances.

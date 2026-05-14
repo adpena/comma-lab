@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan PMG-HOTSPOT-v1 predictive mask grammar candidates.
 
 This is a deterministic planning surface only. It screens row-span predictive

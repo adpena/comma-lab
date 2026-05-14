@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR81 ``qzs3`` Quantizr packet-compiler primitives.
 
 Covers FP4 codebook round-trip, nibble packing, ROUTER_ACTION packing,

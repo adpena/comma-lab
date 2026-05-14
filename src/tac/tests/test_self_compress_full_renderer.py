@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 2 tests for zeta full-renderer self-compression."""
 from __future__ import annotations
 

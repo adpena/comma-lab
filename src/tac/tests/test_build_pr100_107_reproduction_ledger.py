@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.build_pr100_107_reproduction_ledger``."""
 
 from __future__ import annotations

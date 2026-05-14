@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Merge harvested direct finite-difference component-sensitivity shards.
 
 This is the lightweight post-harvest path for Lightning shard outputs. It

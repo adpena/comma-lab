@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # pyc-recovery pass2: rehydrated from git blob 314f65501f759b128d6b575ec17aec4703e14b5e via `git fsck --lost-found`
 # original path: experiments/preflight_candidate_manifest_dispatch_readiness.py
 # This is OUR source, dropped during commit 66c59aae filter-repo cleanup; the .pyc was the only

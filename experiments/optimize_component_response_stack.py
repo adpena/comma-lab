@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Optimize offline stack candidates from official component-response evidence.
 
 This is a deterministic planning tool. It does not run scorers, build

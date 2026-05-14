@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan a CPU-only sub-0.17 HNeRV weight-cutting candidate.
 
 This tool emits a construction plan, not a candidate archive. It focuses on

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """MDL closed-form lower bound calculator for Track 1 substrate design.
 
 Phase A0 deliverable. Computes Bayesian-MDL lower bound `L(model) + L(data | model)`

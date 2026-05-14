@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Multi-control hint encoder for mask-conditioned renderers.
 
 The encoder follows the ControlNet-style zero-initialized adapter pattern:

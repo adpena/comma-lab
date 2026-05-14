@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 1 import + dataclass-validation tests for epsilon paradigm.
 
 Tests live within Phase 1 scope:

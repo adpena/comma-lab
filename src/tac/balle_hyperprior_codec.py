@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 20 — Production Ballé hyperprior codec for qint streams.
 
 This module implements the **production codec** for Lane 20: a real arithmetic

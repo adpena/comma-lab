@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane RAFT/radial pose — calibrated 6-DoF flow-basis decomposition.
 
 Per Phase 3 Lane 18 spec (memory `project_phases_2_3_4_*` §"Lane 18 RAFT/radial pose")

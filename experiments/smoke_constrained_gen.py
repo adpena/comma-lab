@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Smoke test for constrained generation — runs locally on MPS/CPU.
 
 Verifies the full pipeline:

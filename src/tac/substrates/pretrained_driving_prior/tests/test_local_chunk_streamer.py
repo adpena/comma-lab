@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Comma2k19LocalStreamer (operator pivot 2026-05-14).
 
 Per operator directive *"or instead of downloading just configure a local

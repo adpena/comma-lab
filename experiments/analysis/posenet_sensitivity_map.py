@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PoseNet Sensitivity Map: full Jacobian analysis per pair.
 
 Computes the Jacobian of PoseNet's 6D pose output w.r.t. input pixels for each

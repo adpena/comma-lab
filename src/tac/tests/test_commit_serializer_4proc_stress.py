@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """4-process concurrent stress test for tools/subagent_commit_serializer.py.
 
 2026-05-12 (subagent F, Part 4) — commit-swap class permanent fix.

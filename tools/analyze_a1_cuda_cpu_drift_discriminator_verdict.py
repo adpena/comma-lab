@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 r"""Compute the CUDA-CPU drift mechanism verdict from the 4 A1 discriminator
 variants' paired CPU+CUDA eval results.
 

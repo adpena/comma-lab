@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane CG: calibrated camera geometry helpers (EON intrinsics, ray-casting,
 homography → SE(3) decomposition).
 

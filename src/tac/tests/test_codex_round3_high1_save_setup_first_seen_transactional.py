@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-3 HIGH 1 fix — `_save_setup_first_seen` transactional replace.
 
 Bug class (codex round-3 HIGH 1, 2026-05-09): the previous

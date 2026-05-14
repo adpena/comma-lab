@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """FP4 robustness audit: measure float→FP4 round-trip error on a trained ckpt.
 
 Direct test of the R-FP4-fix without re-training: take a real, trained float

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 tiny_nn Transformer PMF predictor — faithful 1:1 architecture-class test.
 
 Background (2026-05-08 implementation-vs-model audit):

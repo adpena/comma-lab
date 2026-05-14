@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #186 — `check_catalog_claim_committed_via_serializer` tests.
 
 The check refuses bare ``tools/claim_catalog_number.py claim`` invocations

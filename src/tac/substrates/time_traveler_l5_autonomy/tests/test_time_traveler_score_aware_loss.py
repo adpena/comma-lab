@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Time-Traveler L5 Autonomy score-aware loss."""
 
 from __future__ import annotations

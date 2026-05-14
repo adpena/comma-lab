@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical xray primitive registry.
 
 Maps primitive ``name`` strings to :class:`XRayPrimitiveSpec` rows.

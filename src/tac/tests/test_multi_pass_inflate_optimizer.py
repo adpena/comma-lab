@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 8 multi-pass inflate optimizer — inner loop MVP tests.
 
 Council Y3→G3 promotion (2026-04-29) prescribes 3 inner-loop tests:

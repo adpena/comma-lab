@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic contest problem-space manifest.
 
 The output is a machine-readable coordinate system for optimization, not score

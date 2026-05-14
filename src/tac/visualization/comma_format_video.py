@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate a 6-panel comma-challenge-style comparison video.
 
 Replicates the exact visual format from the comma.ai video compression

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for T19 — adaptive-ρ ADMM step (Boyd grand-council eureka).
 
 Per Fields-medal council 2026-05-09 (Boyd shower-thought): the existing

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Memory-safe relaunch supervisor for the macOS-CPU advisory canvas sweep.
 
 This tool is deliberately advisory-only infrastructure. It does not create a

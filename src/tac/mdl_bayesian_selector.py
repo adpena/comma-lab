@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """MDL/Bayesian per-tensor codec selector.
 
 Closes Task #308 sub-component (per-tensor optimal codec via Bayesian model

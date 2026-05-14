@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Extract the PR101 HNeRV decoder state_dict from a public archive.zip.
 
 This is a thin operator-facing CLI over

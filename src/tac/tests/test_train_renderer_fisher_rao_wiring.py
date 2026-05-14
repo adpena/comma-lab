@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # LOSS_CONVERGENCE_NOT_REQUIRED: CLI/static wiring test for the opt-in
 # Fisher-Rao SegNet training surrogate.
 """Train-renderer wiring tests for the Fisher-Rao SegNet surrogate."""

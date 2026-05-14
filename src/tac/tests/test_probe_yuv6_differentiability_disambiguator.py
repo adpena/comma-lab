@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the YUV6 differentiability disambiguator CLI."""
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 r"""Build 4 A1 discriminator variants that isolate the CUDA-CPU drift mechanism.
 
 The CUDA-CPU drift on HNeRV-cluster archives is empirically calibrated

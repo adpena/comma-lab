@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """self_compress_nn archive grammar — monolithic single-file ``0.bin`` (δ).
 
 Catalog #124 STRICT archive-grammar 8 fields are declared in the package

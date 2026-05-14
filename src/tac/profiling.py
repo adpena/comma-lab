@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Stage-level timer profiling for pipeline hot-spot analysis.
 
 Usage::

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # FAKE_LANE_OK_FILE: this test file constructs fake representation-lane
 # fixtures (lane_test_nerv, lane_pose_dc3, lane_c30_xyz, lane_arc3_v2, etc.)
 # to exercise Check #124's classification + field-discovery logic. Per Check #126

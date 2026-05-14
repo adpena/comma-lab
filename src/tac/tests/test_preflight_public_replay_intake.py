@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # pyc-recovery pass2: rehydrated from git blob 9616858a3100cf3fadca1c72a858663c75591697 via `git fsck --lost-found`
 # original path: src/tac/tests/test_preflight_public_replay_intake.py
 # OUR source dropped during commit 66c59aae filter-repo cleanup; .pyc was sole orphan left.

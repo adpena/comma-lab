@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Phase 1 packet compiler CLI — dezeta-Phase-1 checkpoint -> byte-closed packet.
 
 This is the thin CLI wrapper around ``tac.phase1_packet_compiler``. It exists

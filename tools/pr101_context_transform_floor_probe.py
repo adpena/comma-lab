@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Context-transform entropy floor probe for PR101 quantized weights.
 
 This tool asks whether deterministic representation transforms can expose

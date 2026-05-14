@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: I001
 """Profile PR79/PR77 local lossless-packer candidates and emit one S3 recommendation.
 

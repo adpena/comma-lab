@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Loss functions for task-aware codec training.
 
 All losses operate on frame pairs in (1, 2, H, W, 3) HWC format and

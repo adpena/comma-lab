@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #148 — `tac.vastai_tracker` mutating writers must use
 the strict loader.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 8 — Multi-pass compress-time optimizer over the canonical archive pipeline.
 
 Compress-time iteration with score-feedback: encode → inflate-and-eval →

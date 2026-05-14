@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Frontier smoke tests: SIREN memorization, Fridrich constrained gen, self-compression.
 
 Three viability tests for sub-0.50 score techniques. Each answers a specific

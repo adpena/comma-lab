@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit public PR91/HPM1 HPAC runtime device-contract sources."""
 
 from __future__ import annotations

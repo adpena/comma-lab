@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile PR106 latent sidecar top-k selector Pareto points.
 
 This is a planning-only tool. It reads an existing PR106 latent score table,

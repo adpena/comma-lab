@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed Lane 12 L2 unblock readiness planner.
 
 This tool audits existing Lane 12 / Alpha-Geo evidence and reports whether the

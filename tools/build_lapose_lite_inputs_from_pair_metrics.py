@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic LA-POSE-lite inputs from CUDA pair metric metadata."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.deploy.cloud_bootstrap — canonical tac wheel bootstrap module."""
 from __future__ import annotations
 

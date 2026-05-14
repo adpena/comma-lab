@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.composition.sinkhorn_ot_mixing — entropic OT mixing."""
 
 from __future__ import annotations

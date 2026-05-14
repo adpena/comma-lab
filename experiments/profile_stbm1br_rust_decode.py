@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile Rust STBM1BR decode parity against the Python reference.
 
 This is a local CPU-only custody/timing tool. It does not dispatch remote work

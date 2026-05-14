@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bit-depth STE surrogate regression tests — Rounds 4, 6 & 7.
 
 Round 4 (HAWQ residual surrogate): the bit-depth gradient must produce

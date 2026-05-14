@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR91 ``hpac_coder_hybrid`` packet-compiler primitives.
 
 Covers universal AC wrapper round-trip, QM0/QH0 magic grammar, hi-lo split

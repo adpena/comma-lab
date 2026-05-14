@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Ego-motion flow module — precomputed affine flow for PoseNet optimization.
 
 The PoseNet scorer measures 6-DOF pose change between consecutive frames.

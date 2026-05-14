@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Rank composition cells by EV/$ using posterior + alien-tech ΔS bands.
 
 Per the floor-v3 commit ``27a7950fd`` requirement to identify highest-EV

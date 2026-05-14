@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR85 side-channel lossless recode candidates.
 
 This is a local byte-screening tool. It parses the public PR85 single-member

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Modal training cost-band anchor helpers (compat shim).
 
 The canonical implementation now lives in ``tac.cost_band_calibration`` so

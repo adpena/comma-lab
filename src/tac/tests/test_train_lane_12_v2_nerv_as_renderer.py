@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``experiments/train_lane_12_v2_nerv_as_renderer.py``.
 
 Coverage scope (production trainer for Lane 12-v2 NeRV-as-renderer):

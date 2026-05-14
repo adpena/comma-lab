@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Hamiltonian dynamics for pixel-space optimization (phase-space formulation).
 
 Yousfi's shower insight: treat each pixel as a particle in a potential field

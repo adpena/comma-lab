@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B4 — ADMM naming-vs-implementation drift scanner.
 
 Files/classes/functions named ``admm`` or ``primal_dual`` must contain real

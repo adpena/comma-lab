@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z4 cooperative-receiver substrate tests — 25+ tests covering all 5 modules.
 
 Test groups:

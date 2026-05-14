@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-free inflate helper for Coord-MLP residual sidecar bytes."""
 
 from __future__ import annotations

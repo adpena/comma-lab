@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe pre-coarsening entropy coders for PR101/PR106 HNeRV int8 weights.
 
 This is a no-score, CPU-only byte accounting tool. It reads exact public

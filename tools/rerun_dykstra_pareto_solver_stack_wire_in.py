@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Dykstra alternating-projections solver on the solver-stack wire-in
 Pareto constraints manifest.
 

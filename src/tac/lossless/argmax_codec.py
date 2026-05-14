@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lossless codec for 5-class argmax segmentation masks.
 
 Yousfi council recommendation #8 (2026-04-26). Estimated +0.05–0.10 score

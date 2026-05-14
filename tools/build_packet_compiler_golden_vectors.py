@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic golden vectors for the submission packet compiler.
 
 The vectors are a Python-reference conformance surface for future Rust, Zig,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CRF optimization sweep for the comma video compression challenge.
 
 Core logic extracted from experiments/crf_search.py for use via ``tac crf-search``.

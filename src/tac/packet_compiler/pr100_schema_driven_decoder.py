@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR100 schema-driven decoder storage grammar.
 
 This module ports the **schema-driven decoder storage grammar** from PR100

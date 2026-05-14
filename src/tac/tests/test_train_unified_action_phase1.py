@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/train_unified_action_phase1.py.
 
 Covers:

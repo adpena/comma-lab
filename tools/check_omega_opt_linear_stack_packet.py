@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Validate an Omega-OPT linear-stack packet manifest.
 
 This checker is intentionally local and scoreless: it only verifies that a

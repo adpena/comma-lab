@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Mask compression sweep: find Pareto-optimal mask size vs score.
 
 Runs full e2e pipeline (inflate_renderer.py → upstream evaluate.py) for each

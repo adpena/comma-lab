@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for HARDEN-2026-05-08 preflight checks.
 
 Each new check has two tests: one positive (clean tree -> 0 violations on

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """DSNeRV-as-renderer — production trainer with diffusion supervision.
 
 Per operator directive 2026-05-11 (NeRV-family expansion). Wires a

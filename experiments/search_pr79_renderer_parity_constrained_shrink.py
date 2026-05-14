@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Search PR79 renderer shrink candidates with parity-before-archive gates.
 
 This is a local-only screen.  It applies small tensor-local renderer

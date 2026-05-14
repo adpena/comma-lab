@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/bit_allocator.py — Lane Ω water-fill bit allocator.
 
 Pins these properties:

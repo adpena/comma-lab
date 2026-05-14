@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Repack PR106 HNeRV decoder via water-filling codec v2 + arithmetic terminal.
 
 Lane Ω-W-V3 step 3/3 (revival_plan_01_water_filling_codec_v2_pr106_decoder).

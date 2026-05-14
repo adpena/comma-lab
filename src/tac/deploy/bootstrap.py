@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Python entry point for canonical remote bootstraps.
 
 DX #10 (2026-04-26): the three remote bootstrap shell scripts

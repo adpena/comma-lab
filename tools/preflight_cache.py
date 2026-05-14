@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic local cache for expensive preflight smoke checks.
 
 The cache is intentionally local state under ``.omx/state``. It accelerates

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke test for ``experiments/train_szabolcs.py`` argparse + CLI shape.
 
 Two halves:

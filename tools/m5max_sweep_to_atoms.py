@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Convert M5 Max sweep results into typed atoms for solver consumption.
 
 Reads ``results.jsonl`` from a ``tools/sweep_m5max_hnerv_cluster.py`` run and

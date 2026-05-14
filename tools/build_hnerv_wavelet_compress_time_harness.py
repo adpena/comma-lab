@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build fail-closed WR01 compress-time harness and planning manifests."""
 
 from __future__ import annotations

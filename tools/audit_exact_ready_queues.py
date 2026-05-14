@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit generated exact-ready queues against terminal lane-claim evidence."""
 
 from __future__ import annotations

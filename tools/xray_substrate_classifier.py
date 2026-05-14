@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Xray substrate classifier — archive bytes → substrate class via magic-byte signatures.
 
 Given an archive zip path, this tool classifies the substrate class by:

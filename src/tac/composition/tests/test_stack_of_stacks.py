@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.composition.stack_of_stacks``.
 
 Covers Inner / Middle / Outer composition layers + roundtrip identity +

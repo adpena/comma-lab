@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane CG tests: calibrated camera geometry helpers.
 
 The tests cover the EON intrinsics matrix, pixel-to-ray inversion, and the

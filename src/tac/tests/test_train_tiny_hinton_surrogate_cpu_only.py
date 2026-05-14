@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/train_tiny_hinton_surrogate_cpu_only.py.
 
 Per CLAUDE.md "Recursive adversarial review protocol": cover (a) training

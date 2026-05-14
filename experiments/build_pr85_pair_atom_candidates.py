@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build or fail-close PR85 pair-atom archive candidates.
 
 The scorer-gradient PR85 plan ranks pair indices by first-order opportunity; it

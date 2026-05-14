@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/diagnose_lane.py — covers parsing helpers and exit logic.
 
 Network calls (Vast.ai, SSH) are NOT exercised; instead the helpers that

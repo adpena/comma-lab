@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """One-liner Lightning Studio dispatch for PR106-anchor stack lanes.
 
 Wraps the 6-gate `scripts/launch_lightning_batch_job.py exact-eval` boilerplate

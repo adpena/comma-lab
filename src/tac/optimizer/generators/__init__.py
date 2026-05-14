@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Concrete sweep candidate generators for tac.optimizer.sweep_plugin.
 
 Importing this package registers every shipped generator with the global

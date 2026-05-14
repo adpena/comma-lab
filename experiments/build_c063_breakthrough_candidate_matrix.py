@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a C-063 breakthrough candidate matrix.
 
 This is a local, non-dispatch planner/builder for the public-floor basin.  It

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical Vast.ai interaction script for pact-lab.
 
 Hardened CLI for safe Vast.ai instance lifecycle management. Replaces ad-hoc

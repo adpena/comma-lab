@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan CMG3/postfilter pixel-repair atoms from exact mask residuals.
 
 This is a deterministic, planning-only ledger generator. It compares a source

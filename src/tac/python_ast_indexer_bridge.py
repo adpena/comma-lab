@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Optional Rust bridge for preflight Python AST indexing.
 
 The Python preflight implementation remains the oracle. This bridge only uses

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Competition state -- single source of truth for all strategies and configs.
 
 Updated after every experiment. Read by all scripts. The tripartite pact

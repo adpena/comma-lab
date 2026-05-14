@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #218 — substrate reconstruct methods must support a
 mini-batch / no-grad path.
 

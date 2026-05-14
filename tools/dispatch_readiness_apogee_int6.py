@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Forensic readiness audit for apogee_int6.
 
 This recovered tool used to advertise a dispatch one-liner from local

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Gate 8 — Exact-evidence gate (score/promotion custody contract).
 
 Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``

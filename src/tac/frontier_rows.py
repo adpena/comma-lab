@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared deterministic row schema for cross-paradigm frontier inventories."""
 
 from __future__ import annotations

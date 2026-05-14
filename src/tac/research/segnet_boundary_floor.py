@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Empirical SegNet boundary-band floor measurement (Tao's proposal).
 
 Before pouring more compute into the SegNet attack lane, measure the

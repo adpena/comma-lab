@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/bulk_backfill_anchors_into_posterior.py.
 
 Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" +

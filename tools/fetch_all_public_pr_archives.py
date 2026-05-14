@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fetch ALL scored PR archives + sources from the comma video compression challenge.
 
 Per user mandate 2026-05-05 ("don't we have repo for all 090+ PRs? we should if

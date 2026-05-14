@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Local-only byte-squeeze screen around the C091/PR75 public anchor.
 
 This worker emits deterministic candidate archives and manifests for lossless

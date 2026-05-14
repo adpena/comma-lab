@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Telescopic foveation field — per-frame attention-warp residual sidecar.
 
 Lane: ``lane_pose_axis_telescopic_foveation_field_full_scaffold`` (Phase 3

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """φ1 SABOR boundary audit — SegNet argmax-stable interior measurement.
 
 First-principles hypothesis (Grand Council 2026-05-13):

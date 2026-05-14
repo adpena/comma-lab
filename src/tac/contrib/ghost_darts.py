@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane GH-DARTS — Ghost convolution ratio search via DARTS.
 
 Lane GH ships :class:`GhostConv2d` (Han et al. CVPR 2020) with

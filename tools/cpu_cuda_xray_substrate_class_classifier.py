@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """P5 xray substrate-class classifier (per-layer drift signature across substrates).
 
 Per operator amplification 2026-05-11 ("push xray"), this tool extends the

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a monolithic replacement manifest from materialized CodecOp bytes."""
 
 from __future__ import annotations

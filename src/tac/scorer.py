@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer interface for task-aware codec post-filters.
 
 A Scorer wraps one or more frozen perception networks and provides:

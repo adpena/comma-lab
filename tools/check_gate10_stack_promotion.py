@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Gate 10 — Stack promotion gate (HStack/VStack/cross-paradigm).
 
 Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``

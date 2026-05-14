@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Finance & HFT optimization algorithms for scorer-optimal pixel generation.
 
 Cross-disciplinary transfer from quantitative finance and high-frequency trading

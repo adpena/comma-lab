@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Closed-form Shannon-floor lower bound for the contest score.
 
 Computes the analytical information-theoretic lower bound on archive

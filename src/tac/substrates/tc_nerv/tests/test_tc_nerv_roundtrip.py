@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 ENCODE_INFLATE_ROUNDTRIP + Catalog #139 no_op_proof for tc_nerv.
 
 Mirrors ``sane_hnerv/tests/test_sane_hnerv_roundtrip.py`` adapted for the

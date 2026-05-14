@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for F3: tac.xray.bilinear_resize_nullspace."""
 
 from __future__ import annotations

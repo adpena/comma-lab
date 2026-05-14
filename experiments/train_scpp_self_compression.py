@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SC++ 5-stage self-compression trainer (Phase 2/3 lane).
 
 This script trains an SC++ substrate (``tac.scpp_substrate.SCPPSubstrate``)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a planning-only entropy-rate decomposition from stream counts."""
 
 from __future__ import annotations

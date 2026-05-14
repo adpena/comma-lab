@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit staged orphan-recovery deletions for canonical tracked replacements.
 
 The pyc recovery tree is allowed to shrink only after recovered source has

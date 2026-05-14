@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Gate 4 — Export-first gate (declare export format BEFORE long training).
 
 Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``

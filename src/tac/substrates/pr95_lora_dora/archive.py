@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """LoRA/DoRA adapter TRAILER codec for PR95 hnerv_muon archives.
 
 Archive grammar (declared at design time per Catalog #124):

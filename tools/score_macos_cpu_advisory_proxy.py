@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """macOS-CPU smoke ranker CLI: free first-class advisory proxy eval.
 
 Operator routing 2026-05-13 ("training is the real roadblock; we can prepare

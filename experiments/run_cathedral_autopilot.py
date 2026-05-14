@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cathedral autopilot — beautiful end-to-end Pareto sweep on synthetic substrate.
 
 Demonstrates that the cathedral actually OPTIMIZES (not just measures):

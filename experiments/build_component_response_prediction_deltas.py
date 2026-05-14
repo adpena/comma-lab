@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic map-projected predictions for component response plans.
 
 This tool prepares the ``predicted_delta`` payload consumed by

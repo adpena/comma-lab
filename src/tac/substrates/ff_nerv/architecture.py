@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ff_nerv architecture — Frequency-domain NeRV (L0 SKETCH).
 
 The substrate predicts band-limited 2D DCT coefficient grids per frame-pair;

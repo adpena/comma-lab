@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic readiness audit for Paradigm-alpha mask codec candidates.
 
 The April 30 mask-overhaul audit is now stale in important places: wavelet and

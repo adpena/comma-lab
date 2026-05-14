@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Comprehensive MLX optimization benchmark for M5 Max.
 
 Tests all optimization targets on the ACTUAL renderer pipeline:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Public PR mining expansion backlog builder.
 
 Goes one level deeper than the text-level mechanism index

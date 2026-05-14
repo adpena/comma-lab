@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Certify CUDA component-sensitivity maps after official response gates.
 
 This tool deliberately does not edit source maps. It copies tensor values into

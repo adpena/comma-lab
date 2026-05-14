@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane J-IMP — single Iterative Magnitude Pruning cycle.
 
 Each invocation runs ONE IMP cycle:

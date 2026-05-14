@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """SKETCH: Repack PR106 HNeRV decoder via int4 signed block-FP (parallel to OWV2 repack).
 
 Lane #04 partial-revival empirical comparison vs Lane Ω-W-V3.

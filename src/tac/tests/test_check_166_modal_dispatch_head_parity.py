@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #166: Modal dispatch HEAD-parity ledger tests.
 
 PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive Modal A100

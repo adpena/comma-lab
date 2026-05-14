@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # pyc-recovery pass2: rehydrated from git blob 3791a1ee111cb8c8b0d66ccb67b4d01632470be6 via `git fsck --lost-found`
 # original path: scripts/build_contest_submission_packet.py
 # This is OUR source, dropped during commit 66c59aae filter-repo cleanup; the .pyc was the only

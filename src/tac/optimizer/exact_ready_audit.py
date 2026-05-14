@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Audit generated exact-ready queues against terminal dispatch evidence."""
 
 from __future__ import annotations

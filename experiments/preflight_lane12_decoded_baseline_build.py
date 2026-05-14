@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed decoded-baseline build preflight for Lane 12 NeRV.
 
 This tool proves the local inputs for a future build-only Lane 12 run without

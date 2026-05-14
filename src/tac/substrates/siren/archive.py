@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """siren archive grammar SRV1 — monolithic single-file ``0.bin``.
 
 Catalog #124 STRICT archive-grammar 8 fields are declared in the package

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """T10 — IB-Lagrangian co-trained auxiliary scorer trainer (Phase 3 prereq).
 
 Phase 2 pre-design pass (2026-05-09) consensus + readiness pre-stage

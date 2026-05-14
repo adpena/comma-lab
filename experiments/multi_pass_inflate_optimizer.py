@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane 8 (Phase 1) — multi-pass inflate optimizer for compress-time UNLIMITED.
 
 The 6-month plan's Lane 8 envisions a compress-time iteration loop that

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # FAKE_LANE_OK_FILE: this test file's purpose is to verify Check #126 by
 # constructing dozens of fake lane_id fixtures inside synthetic git repos.
 # Per-line waivers would be noise and would mask real future violations.

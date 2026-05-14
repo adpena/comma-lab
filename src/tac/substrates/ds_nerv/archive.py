@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ds_nerv archive grammar — monolithic single-file ``0.bin`` (DSV1).
 
 Catalog #124 STRICT archive-grammar 8 fields declared in package

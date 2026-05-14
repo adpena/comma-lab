@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR #63-style Torch FP4 payload codec for JointFrameGenerator.
 
 The public qpose14 submission stores a ``torch.save`` dictionary with

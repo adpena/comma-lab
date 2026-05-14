@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Exact-eval readiness gate for optimizer candidate queues.
 
 Optimizer, Optuna, CMA-ES, Kaggle, M5, and local proxy rows are useful for

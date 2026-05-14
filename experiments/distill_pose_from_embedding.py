@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane M-V3 (Path A): distill a pose-from-embedding MLP at compress time.
 
 The MLP learns to predict the renderer's 6-DOF FiLM pose conditioning from

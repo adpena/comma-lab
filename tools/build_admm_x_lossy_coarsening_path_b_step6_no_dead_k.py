@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 # ROUNDTRIP_SELF_TEST: _local_smoke_roundtrip imports the staged no-K inflate.py,
 # parses the emitted archive, and checks q_i8 * fp16 scale reconstruction.

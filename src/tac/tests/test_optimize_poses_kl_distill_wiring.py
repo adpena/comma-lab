@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane G regression: verify optimize_poses.py KL-distill SegNet-only wiring is REAL.
 
 Lane G (KL-distill pose TTO) was blocked because the canonical

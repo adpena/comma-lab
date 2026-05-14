@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CLI for the deterministic submission-packet compiler oracle."""
 from __future__ import annotations
 

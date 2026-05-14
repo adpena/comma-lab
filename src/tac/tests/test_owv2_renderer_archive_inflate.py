@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """OWV2 multi-tensor renderer archive — inflate-side round-trip tests.
 
 Tests the new ``OWV2`` magic-byte handler in

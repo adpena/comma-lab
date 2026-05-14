@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic PR85 side-channel ablation archives.
 
 The archives produced here are attribution candidates only. They keep PR85's

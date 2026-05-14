@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Planning-only PR85 fixed-runtime readiness preflight.
 
 This helper answers one narrow question: what still blocks replaying the

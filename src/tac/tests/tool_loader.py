@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared test helpers for importing repository-local tool scripts."""
 
 from __future__ import annotations

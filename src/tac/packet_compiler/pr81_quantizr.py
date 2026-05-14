@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR81 ``qzs3`` Quantizr primitives — FP4 codebook + ROUTER_ACTION packing.
 
 Two primitives land here, extracted from

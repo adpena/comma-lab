@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove local runtime consumption for the PR101 Kaggle proxy packet.
 
 This is a local-only proof. It reads the runtime packet manifest emitted by

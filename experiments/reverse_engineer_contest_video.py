@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Reverse-engineer the fixed contest video into overfit-planning metadata.
 
 This script does not run the scorer and makes no score claim. It records the

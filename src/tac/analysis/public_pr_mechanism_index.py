@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Index public PR writeups into device-labeled mechanism evidence.
 
 This module is intentionally evidence-only. It parses local public-PR mirrors

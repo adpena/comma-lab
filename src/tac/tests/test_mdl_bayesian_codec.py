@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Synthetic tests for Lane MDL/Bayesian codec-comparison framework.
 
 All tests run on synthetic / hand-computed numbers; no GPU, no real archives.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Normalize HDM3 HNeRV payloads before delegating to public PR106 inflate."""
 
 from __future__ import annotations

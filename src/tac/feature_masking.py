@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Training-time bottleneck feature masking for Tuna-2 style lanes."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for DSNeRV-as-renderer (diffusion-supervised) substrate."""
 from __future__ import annotations
 

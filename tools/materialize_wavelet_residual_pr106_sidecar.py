@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a byte-closed PR106 + wavelet residual sidecar candidate.
 
 Per CLAUDE.md HNeRV parity discipline + operator directive 2026-05-11

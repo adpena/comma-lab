@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C091-native pose-manifold big-move candidates.
 
 This tool is local-only. It does not dispatch GPU work and does not claim a

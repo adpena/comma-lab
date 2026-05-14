@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lossless compression subsystem for commavq-style experiments."""
 
 from .arithmetic import (

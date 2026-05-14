@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Attach byte-closed HNeRV low-level packet custody to rate-recode profiles."""
 
 from __future__ import annotations

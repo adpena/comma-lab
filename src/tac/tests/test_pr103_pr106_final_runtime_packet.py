@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR103-on-PR106 final runtime packet."""
 
 from __future__ import annotations

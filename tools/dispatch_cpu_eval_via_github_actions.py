@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Dispatch a contest-faithful CPU auth eval on the comma_video_compression_challenge
 fork via GitHub Actions.
 

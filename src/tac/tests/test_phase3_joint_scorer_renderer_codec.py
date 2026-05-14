@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Phase 3 joint scorer-renderer-codec scaffold.
 
 These tests cover the SCAFFOLD ONLY — they do not exercise the future

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane DI: compress-time openpilot supercombo feature extraction.
 
 Supercombo is allowed only before archive creation.  This module extracts a

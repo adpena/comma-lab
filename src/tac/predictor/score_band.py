@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Predictor score-band module with refusal modes (council 22/0 verdict 2026-05-05).
 
 CALIBRATION SOURCES (each constant tagged per `tools/check_calibration_provenance.py`

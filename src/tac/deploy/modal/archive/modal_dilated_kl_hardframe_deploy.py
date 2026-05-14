@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Retired Modal dilated KL hard-frame launcher.
 
 This compatibility stub exists so historical imports fail closed instead of

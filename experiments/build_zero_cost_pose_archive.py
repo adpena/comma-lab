@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane LM-A: build a zero-archive-cost pose archive from a Lane A archive.
 
 This is a STANDALONE tool that takes the verified Lane A archive (renderer +

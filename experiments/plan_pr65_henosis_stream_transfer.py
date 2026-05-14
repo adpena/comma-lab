@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan local PR65/Henosis stream-transfer candidates on the C091 frontier.
 
 This tool is intentionally local-only.  It verifies strict ZIP custody for the

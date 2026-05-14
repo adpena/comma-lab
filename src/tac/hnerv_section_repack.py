@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only HNeRV payload-section repack targets.
 
 This module consumes the HNeRV frontier scorecard section manifests and emits

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check 57: lane scripts must use canonical git sync.
 
 Memory: feedback_canonical_git_sync_pattern_20260428

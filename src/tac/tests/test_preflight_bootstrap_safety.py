@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight_bootstrap_safety — the static gate that prevents
 re-living the LANE-B silent-failure cascade (2026-04-26, 6.5h + ~$2 wasted).
 """

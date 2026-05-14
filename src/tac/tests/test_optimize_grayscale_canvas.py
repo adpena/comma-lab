@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane AL — unit tests for src/tac/optimize_grayscale_canvas.py.
 
 Smoke-level coverage:

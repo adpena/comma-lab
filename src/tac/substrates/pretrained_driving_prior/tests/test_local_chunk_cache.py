@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the canonical Comma2k19LocalCache (DP1 auto-download).
 
 Per Catalog #213 every Comma2k19 chunk fetch MUST route through this class.

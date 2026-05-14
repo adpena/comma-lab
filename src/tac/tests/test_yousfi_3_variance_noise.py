@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Property tests for Yousfi trick #3: spatially-adaptive quantization noise.
 
 Trick #3 (UNIWARD-aligned variance-weighted noise) injects per-pixel

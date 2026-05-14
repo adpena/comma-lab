@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.z4_cooperative_receiver_loss — Time-Traveler L5 staircase Step 2.
 
 Per the grand council MAXIMIZE-VALUE decision (Time-Traveler PEER seat) at

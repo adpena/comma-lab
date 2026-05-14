@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Kaggle T1 Ballé parallel-sweep harness.
 
 Covers per-harness invariants:

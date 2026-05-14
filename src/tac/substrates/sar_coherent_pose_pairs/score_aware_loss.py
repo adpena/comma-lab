@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware Lagrangian for the SAR coherent pose-pair substrate.
 
 L = alpha * B / N + beta * d_seg + gamma * sqrt(d_pose) + delta * H_temporal

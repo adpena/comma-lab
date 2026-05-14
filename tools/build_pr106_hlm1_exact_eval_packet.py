@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed exact-eval operator packet for PR106 HLM1 recodes.
 
 The packet is dispatch authority only for the static handoff shape: archive

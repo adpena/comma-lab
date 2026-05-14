@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C1 world-model + foveation substrate scaffold tests.
 
 Verifies structure-parity, world-model unroll determinism, foveation map

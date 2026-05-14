@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Constriction with a SHARED PMF across all 28 tensors.
 
 The per-tensor PMF approach (cf.

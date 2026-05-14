@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """AWS-specific experiment config overrides (stub).
 
 Reuses the base ExperimentConfig from tac.deploy.base with AWS pricing.

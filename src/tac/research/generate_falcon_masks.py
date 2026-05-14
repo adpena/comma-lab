@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate Falcon Perception segmentation masks for dashcam video keyframes.
 
 Extracts every 20th frame (60 keyframes from 1200 frames), runs Falcon Perception

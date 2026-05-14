@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Lane Omega Fisher profiler mask decoding."""
 from __future__ import annotations
 

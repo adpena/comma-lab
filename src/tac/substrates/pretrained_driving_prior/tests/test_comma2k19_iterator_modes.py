@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the three Comma2k19FrameIterator modes (DP1 auto-load).
 
 Mode 1 (synthetic stub): unchanged from L1 scaffold (backward compat).

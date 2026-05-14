@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.codec_pipeline_kl_pose.Op_KLPoseStream``.
 
 Verifies:

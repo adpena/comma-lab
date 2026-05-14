@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Hardening tests for the A1 per-pair latent sidecar builder."""
 
 from __future__ import annotations

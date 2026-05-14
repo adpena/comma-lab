@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ds_nerv inflate runtime — <= 100 LOC; DSV1 monolithic-archive consumer.
 
 Forward path:

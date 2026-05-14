@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Build per-tensor delta-epsilon-zeta training targets from Shannon analysis.
 
 Per Grand Council 2026-05-07 verdict, the strategic follow-on after

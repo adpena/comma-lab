@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip + structural test for B1 cell: magic_codec_x_hessian_block_fp on A1.
 
 Catalog #91 ENCODE_INFLATE_ROUNDTRIP coverage. Sequential composition:

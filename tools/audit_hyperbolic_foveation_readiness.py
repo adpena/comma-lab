@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit charged hyperbolic foveation parameters for non-score readiness."""
 
 from __future__ import annotations

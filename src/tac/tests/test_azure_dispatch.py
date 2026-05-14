@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.deploy.azure.azure_dispatch — Azure dispatch wiring.
 
 Strategy: the actual ``az`` CLI is mocked via ``subprocess.run`` patching;

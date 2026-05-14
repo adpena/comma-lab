@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """GCP deployment scaffold.
 
 The package exists so provider-agnostic deploy checks can reason about GCP

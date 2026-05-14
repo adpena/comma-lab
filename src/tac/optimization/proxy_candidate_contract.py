@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical false-authority contract for proxy candidate rows.
 
 Optuna, CMA-ES, Kaggle, macOS CPU, and other proxy surfaces are valuable for

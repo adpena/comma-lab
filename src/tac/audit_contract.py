@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical local-audit result contract.
 
 Audit tools in this repository are custody and readiness guards. They should

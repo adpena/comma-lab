@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Experiment 1: Fridrich Constrained Gen -- PROPER (not smoke test).
 
 Run on Lightning T4:

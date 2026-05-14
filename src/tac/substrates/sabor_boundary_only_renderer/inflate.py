@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SABOR inflate runtime — ≤ 200 LOC (substrate_engineering exception).
 
 Contest-runtime image of the substrate. ``submissions/sabor.../inflate.py``

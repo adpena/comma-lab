@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.packet_compiler.custom_binary_container``.
 
 Mirrors the Rust sister-crate unit tests in

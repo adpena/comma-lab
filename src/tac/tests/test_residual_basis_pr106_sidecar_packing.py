@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Conformance tests for the PR106 + non-HNeRV residual sidecar packing grammar.
 
 Covers ``tac.residual_basis.pr106_sidecar_packing``:

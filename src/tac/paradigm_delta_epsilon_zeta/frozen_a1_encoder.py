@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Frozen A1 encoder loader for PARADIGM-δεζ Track 1.
 
 The A1 lane (``track1_phase_a1_score_gradient``) optimised a per-pair latent

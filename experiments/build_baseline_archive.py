@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a baseline submission archive from canonical components.
 
 Council 2026-04-27 strategic pivot: the saved "baseline_dilated_h64_0_90"

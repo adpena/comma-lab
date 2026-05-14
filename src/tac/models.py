@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pydantic data models for structured results throughout tac.
 
 Every function that returns structured data should return one of these

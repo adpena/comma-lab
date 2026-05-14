@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.substrates._shared.smoke_auth_eval_gate.
 
 Per CLAUDE.md "Auth eval EVERYWHERE" non-negotiable + HNeRV parity lesson L13

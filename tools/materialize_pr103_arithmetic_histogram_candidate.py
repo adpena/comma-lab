@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a fail-closed PR103 arithmetic histogram candidate archive."""
 
 from __future__ import annotations

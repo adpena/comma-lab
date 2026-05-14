@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused tests for PR101 A1 CPU-only anchor tools."""
 from __future__ import annotations
 

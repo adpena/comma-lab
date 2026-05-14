@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prepare a local handoff plan for trained-renderer transplants.
 
 This is a deterministic dry-run planner. It does not build archives, contact

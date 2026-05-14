@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """A1 CUDA-axis refire scaffold ($0 GPU, planning only).
 
 Per CLAUDE.md "Frontier target" + `reports/phase_a_pareto_20260508.md`:

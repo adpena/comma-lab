@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.composition.distillation_chain — Distillation chain."""
 
 from __future__ import annotations

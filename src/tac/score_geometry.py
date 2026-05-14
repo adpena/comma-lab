@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pure-Python score-geometry helpers for the contest objective.
 
 The contest score is:

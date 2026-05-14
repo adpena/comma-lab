@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 CompressAI Balle hyperprior — FIXED reactivation.
 
 Background

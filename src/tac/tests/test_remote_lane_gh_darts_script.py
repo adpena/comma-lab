@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Script-structure tests for scripts/remote_lane_gh_darts_ratio.sh.
 
 Pins every CLAUDE.md non-negotiable on the new DARTS-search bootstrap:

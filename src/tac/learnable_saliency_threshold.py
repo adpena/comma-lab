@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI-V2 — LEARNABLE saliency threshold via Lagrangian on bit budget.
 
 Lane SI-V1 hard-coded ``threshold_quantile=0.5``: bottom-half saliency

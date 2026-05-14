@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Alpha real-archive evaluator custody guards."""
 from __future__ import annotations
 

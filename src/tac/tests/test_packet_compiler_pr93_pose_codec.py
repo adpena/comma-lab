@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR93 ``flatpup`` pose-codec packet-compiler primitives.
 
 Covers round-trip identity, golden-vector pinning, magic constants, and

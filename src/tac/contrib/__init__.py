@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cross-domain optimization algorithms contributed during the comma.ai challenge.
 
 These modules implement optimization algorithms from physics, biology, chemistry,

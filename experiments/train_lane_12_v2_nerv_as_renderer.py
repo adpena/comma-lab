@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane 12-v2 NeRV-as-renderer — production trainer.
 
 Per operator directive 2026-05-11 + CLAUDE.md HNeRV parity discipline lesson 5

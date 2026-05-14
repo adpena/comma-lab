@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Typed activation-family contract for SIREN/INR substrate variants.
 
 The full SIREN substrate keeps one archive/trainer contract while allowing

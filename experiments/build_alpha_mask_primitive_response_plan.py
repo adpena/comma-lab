@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic Alpha mask primitive component-response plans.
 
 This generator prepares fast exact-eval sweeps over Alpha mask geometry

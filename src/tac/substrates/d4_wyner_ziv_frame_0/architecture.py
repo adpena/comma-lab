@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 substrate architecture — frame_1 + motion + residual → frame_0.
 
 Per deep-math memo §3.5 + §6 D4 the WynerZivFrame0Substrate composes:

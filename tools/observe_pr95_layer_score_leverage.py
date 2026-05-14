@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Ablation observability: zero each PR95 layer; measure forward-output impact.
 
 For each weight tensor in PR95's parsed state_dict, temporarily zero it (in a

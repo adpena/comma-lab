@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Composability smoke tests for the CodecPipeline orchestrator.
 
 Verifies that landed CodecOps chain cleanly when wrapped in a

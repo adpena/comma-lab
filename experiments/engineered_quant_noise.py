@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Engineered Quantization Noise: flip SegNet argmax via targeted perturbation.
 
 Eureka 6: SegNet distortion = argmax disagreement. Small pixel perturbations

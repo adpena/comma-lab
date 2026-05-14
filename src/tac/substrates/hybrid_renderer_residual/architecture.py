@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """hybrid_renderer_residual architecture — γ HNeRV-class renderer + residual basis.
 
 Per the Fields-medal grand council 2026-05-12 γ candidate (§4.1 + §8):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR91 HPM1 + QRGB transfer candidates.
 
 This tool is intentionally local-only. It consumes explicit PR85 QRGB

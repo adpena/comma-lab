@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.sensitivity_map.axis_weights`` (COUNCIL-A1 landing 2026-05-12).
 
 Covers

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a local PR75/P6 lossless-resweep plus qpost bias micro-stack.
 
 This builder is local-only. It preserves the decoded members of the current

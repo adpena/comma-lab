@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the new `mark_pending_failed_unknown_billing_locked` helper.
 
 Bug class: codex round 7+8 HIGH 1 (2026-05-09). The previous Lightning

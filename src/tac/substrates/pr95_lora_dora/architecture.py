@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """LoRA / DoRA adapter wrappers over PR95's frozen HNeRVDecoder.
 
 Mathematical contract (per Hu et al. 2021 LoRA, Liu et al. 2024 DoRA, Meng

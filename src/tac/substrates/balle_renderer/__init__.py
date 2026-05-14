@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.balle_renderer — Ballé-hyperprior-as-renderer substrate (β).
 
 The Fields-medal grand council 2026-05-12 PARALLEL DEFERRED scaffold per the

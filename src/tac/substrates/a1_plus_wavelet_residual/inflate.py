@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Contest-compliant inflate runtime for A1 + wavelet residual composition.
 
 Reads ``archive_dir/x`` (or 0.bin / archive.zip), splits it into

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Lane Joint-ADMM proximal wrapper for pose_delta_codec (Lane PD).
 

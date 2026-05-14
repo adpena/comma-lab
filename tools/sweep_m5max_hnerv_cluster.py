@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """M5 Max parallel CPU sweep harness for HNeRV-cluster archives.
 
 This tool exploits the empirically-verified ε ≤ 6×10⁻⁶ bound between Apple

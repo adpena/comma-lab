@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """GPU Lane Dual Smoke Test: Fridrich Constrained Gen vs Tiny DP-SIMS
 
 Run on Lightning T4:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``check_no_inflate_time_multipass`` (Check 92).
 
 The check forbids any reference to Lane 8's ``MultiPassCompressor`` /

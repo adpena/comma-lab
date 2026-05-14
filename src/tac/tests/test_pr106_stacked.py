@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for pr106_stacked — composable subset of all 4 score-aware sidechannels.
 
 Covers:

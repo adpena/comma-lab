@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the prototype QBF1 JointFrameGenerator block-FP container."""
 
 from __future__ import annotations

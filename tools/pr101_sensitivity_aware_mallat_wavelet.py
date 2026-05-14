@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 sensitivity-aware per-tensor quantization with Mallat wavelet
 importance proxy (Phase A3-alt, council reactivation criterion #2 from
 ``feedback_pr101_sensitivity_aware_xavier_l2_proxy_DEFERRED_pending_real_hessian_20260508.md``).

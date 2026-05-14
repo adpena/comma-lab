@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Per-pair sensitivity diagnostic for the Time-Traveler L5 Autonomy substrate.
 
 PAIR T directive 2026-05-13: this tool ranks the 600 contest pairs by their

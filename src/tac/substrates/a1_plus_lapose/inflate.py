@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Contest-compliant inflate runtime for A1 + LAPose composition.
 
 Reads ``archive_dir/x`` (the monolithic single-zip-member blob), splits it

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.psd_lumaskip_renderer.PSDLumaSkipPostFilter``.
 
 Phase A council-approved scaffold (2026-04-30,

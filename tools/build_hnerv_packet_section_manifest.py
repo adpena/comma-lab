@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit or validate no-score parser-section manifests for public HNeRV packets."""
 
 from __future__ import annotations

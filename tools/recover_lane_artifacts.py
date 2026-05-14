@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Recover archive-relevant artifacts from a Vast.ai instance BEFORE destroying it.
 
 PROBLEM (2026-04-28): Lane RM-d crashed at the auth-eval stage AFTER 3.5h of

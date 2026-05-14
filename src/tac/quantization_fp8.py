@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane F-V5: Hardware FP8 quantization (e4m3fn) via torchao when available.
 
 Lane F regressed (+0.44 vs baseline) because FP4 is not hardware-supported on

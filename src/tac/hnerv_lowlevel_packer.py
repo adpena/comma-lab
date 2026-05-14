@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Low-level HNeRV payload repacking helpers.
 
 The public HNeRV frontier includes a compact single-member ZIP grammar whose

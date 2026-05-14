@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dedicated tests for the SABOR boundary-only renderer substrate.
 
 Covers (per CLAUDE.md "13 HNeRV parity-discipline lessons" — at least 20

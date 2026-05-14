@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W-V3 — sensitivity-weighted renderer archive.
 
 Ω-W-V3 is the β fix for the Ω-W-V2 failure mode: uniform renderer-weight

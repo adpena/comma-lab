@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke + alert-detection tests for scripts/lane_watchdog.py.
 
 DX #9 (2026-04-26): the watchdog catches the SHIRAZ failure mode (16h of

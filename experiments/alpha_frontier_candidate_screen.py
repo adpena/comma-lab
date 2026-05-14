@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Local Alpha frontier candidate screen.
 
 This is a deterministic, contest-safe, non-promotable screening helper for

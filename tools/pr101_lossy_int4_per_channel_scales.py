@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 lossy int4 with per-output-channel scales — reactivation of
 audit criterion #2 for the lossy_int4 lane.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.wavelet_mask_codec — Lane Wavelet (paradigm α2)."""
 from __future__ import annotations
 

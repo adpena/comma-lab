@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Authoritative evaluation for the comma video compression challenge.
 
 This package provides the canonical, platform-agnostic evaluation pipeline.

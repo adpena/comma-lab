@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Parameter-space score-gradient saliency for HNeRV-class decoders.
 
 Per Track 4 reactivation criterion #1 (memory:

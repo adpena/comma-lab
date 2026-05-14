@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """task-aware-codec (tac) — Learned post-filters for task-aware video compression.
 
 Train tiny CNN post-filters that correct decoded video frames by backpropagating

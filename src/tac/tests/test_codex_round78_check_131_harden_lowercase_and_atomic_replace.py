@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the codex round-8 MEDIUM in-place hardening of Catalog #131.
 
 Bug class: codex round 8 MEDIUM (2026-05-09). The previous Catalog #131

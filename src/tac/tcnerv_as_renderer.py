@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """TCNeRV-as-renderer — temporal-convolutional NeRV substrate.
 
 Per operator directive 2026-05-11 (NeRV-family expansion alternative direction)

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Frozen KL/distillation policy schema and provenance serializer.
 
 This module is intentionally independent of the training entry points. It

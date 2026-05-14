@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused conformance tests for the sparse PacketIR codec.
 
 Tests cover the 3 primitives + serialisation round-trips + edge cases +

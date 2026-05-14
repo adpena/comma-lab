@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Run Alpha-Geo-0 stale-pose isolation with deterministic archive custody.
 
 This experiment keeps the exact Lane 12 ``masks.nrv`` payload and renderer,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """AWS EC2 spot instance lifecycle management (stub).
 
 This module will manage EC2 spot instances for tac experiments.

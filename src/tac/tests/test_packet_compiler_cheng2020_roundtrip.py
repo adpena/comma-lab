@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip + golden-vector tests for the CompressAI Cheng-2020 adapter.
 
 Sister to ``src/tac/packet_compiler/cheng2020.py``. Catalog #91 accepts

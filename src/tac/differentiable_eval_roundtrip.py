@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR #95-faithful eval-roundtrip + autograd-preserving rgb_to_yuv6 for inner-loop training.
 
 This module is the **canonical replication** of two findings from the binary

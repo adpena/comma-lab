@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 Wyner-Ziv frame-0 inflate runtime — contest raw-output contract.
 
 Loads the WZF01 archive, verifies the base substrate sha, asks the base

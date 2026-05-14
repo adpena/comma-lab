@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Aggregate Phase A ablation anchors into a single operator-readable summary.
 
 Phase A council prescription (from `.omx/research/grand_council_extreme_rigor_track_1_20260508.md`)

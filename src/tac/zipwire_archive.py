@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Header-only ZIP archive inspection with optional Rust acceleration.
 
 This module is a narrow bridge to ``runtime-rs/crates/zipwire``. It preserves a

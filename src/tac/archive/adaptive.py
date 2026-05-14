@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Adaptive hyperparameter system for task-aware codec training.
 
 Derives optimal training weights from the current operating point instead of

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """KL pose-axis distillation loss — T20 lateral leap (coherence council 2026-05-09).
 
 Per the portfolio coherence audit

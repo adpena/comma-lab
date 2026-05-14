@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 20 — Ballé 2018 hyperprior + entropy bottleneck for renderer.bin.
 
 Per Phase 3 Lane 20 spec (memory project_phases_2_3_4_*) and Round 5 Council E

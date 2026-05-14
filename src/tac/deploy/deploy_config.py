@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Provider-agnostic training configuration for the asymmetric warp renderer.
 
 This is the single source of truth for all experiment hyperparameters.

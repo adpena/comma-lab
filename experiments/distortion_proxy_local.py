@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Local distortion proxy — CPU-only estimator for the predictor's high-rel_err gate.
 
 Council Q3 prescription. The predictor (`tac.predictor.score_band`) REFUSES to

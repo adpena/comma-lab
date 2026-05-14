@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane OS-A: openpilot supercombo seeding for pose TTO.
 
 This module produces a (N_pairs, 6) PoseNet-convention pose tensor at COMPRESS

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round 7 Defect #3 regression — qat_finetune Phase A→B EMA shadow staleness.
 
 Council Round 7 §6.3 identified that ``experiments/qat_finetune.py`` constructs

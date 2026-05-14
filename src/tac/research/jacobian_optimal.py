@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Compute the mathematical minimum PoseNet distortion achievable by pixel correction.
 
 This is NOT a training run. It's a closed-form optimization that computes,

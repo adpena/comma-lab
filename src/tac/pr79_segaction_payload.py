@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Typed parser for PR79/qpose14-r55 SegAction packed payloads.
 
 The public PR79 family stores a single ZIP member named ``p`` whose wire order

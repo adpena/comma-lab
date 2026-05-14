@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a scorer-backed PR106 yshift candidate table.
 
 This is a compress-time profiler for

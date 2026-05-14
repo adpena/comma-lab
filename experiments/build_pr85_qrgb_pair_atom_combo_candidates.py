@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic PR85 QRGB pair-atom combo archives.
 
 This tool is intentionally local-only.  It combines already-lowered PR85 QRGB

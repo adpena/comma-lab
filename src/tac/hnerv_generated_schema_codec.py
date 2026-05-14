@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic codec for generated-schema HNeRV state dicts.
 
 This is the runtime-payload contract for architecture-shrink planning:

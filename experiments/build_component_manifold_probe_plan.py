@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a non-promotable component-manifold probe plan from exact eval JSONs.
 
 The output is a planning artifact for local rate-distortion geometry. It treats

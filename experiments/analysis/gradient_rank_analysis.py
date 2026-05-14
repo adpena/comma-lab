@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Gradient Rank Analysis: PoseNet output vs embedding Jacobian.
 
 THE key figure for the paper: PoseNet has a 6-dimensional output but a

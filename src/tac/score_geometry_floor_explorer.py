@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """What-if Shannon-floor explorer for weight-reducing techniques.
 
 The empirical Shannon floor (``tac.score_geometry_shannon_floor``) is the

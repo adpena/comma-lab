@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """End-to-end tests for the Lane M-V3 (Path A) pose-from-embedding
 inflate dispatch.
 

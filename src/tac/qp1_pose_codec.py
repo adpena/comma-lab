@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """QP1 pose codec — PR #67 EthanYang qpose14_qzs3 byte-identical.
 
 PR #67's archive (rank-1 leaderboard ~0.31) ships poses as ~1140 bytes

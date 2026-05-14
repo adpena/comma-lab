@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C091-native tile-action atoms from exact component traces.
 
 This is a local planning tool. It does not dispatch GPU jobs and it does not

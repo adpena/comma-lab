@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Visualize a single introspection record OR a CUDA-vs-CPU drift comparison.
 
 Per CLAUDE.md "no /tmp paths in persisted artifacts": the caller passes an

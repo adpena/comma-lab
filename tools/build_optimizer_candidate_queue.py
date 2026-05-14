@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed ``top_k`` queue from optimizer/sweep artifacts.
 
 This is an adapter, not a dispatcher. It accepts local planning artifacts from

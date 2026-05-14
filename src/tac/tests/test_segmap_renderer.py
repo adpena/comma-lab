@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Selfcomp SegMap renderer + trainer.
 
 The 6 mandated tests in the work-scope blueprint:

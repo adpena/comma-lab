@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR103 ``hnerv_lc_ac`` arithmetic-schema custody helpers.
 
 This module profiles the public PR103 range-coded payload as a codec/custody

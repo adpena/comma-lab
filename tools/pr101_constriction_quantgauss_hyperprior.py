@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Balle-style QuantizedGaussian hyperprior on PR101 weights.
 
 Per the joint-entropy subagent verdict (memo

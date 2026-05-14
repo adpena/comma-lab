@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for handoff P5 CPU/CUDA xray tools.
 
 Covers `tools/cpu_cuda_xray_segnet_layer_drift.py`,

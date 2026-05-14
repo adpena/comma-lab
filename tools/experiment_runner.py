@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: zero-argument runner — reads queue from experiments/job_queue.json
 """Experiment runner — automated training loop with job queue.
 

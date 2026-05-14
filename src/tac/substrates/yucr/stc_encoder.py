@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """YUCR STC encoder — UNIWARD water-fill on the cost-map orthogonal complement.
 
 Filler 2011 (IEEE TIFS) syndrome-trellis-codes minimize ``sum(C * n)`` for

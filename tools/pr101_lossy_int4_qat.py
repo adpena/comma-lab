@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 lossy int4 + Quantization-Aware Training (QAT) — research-path
 reactivation against the naive-PTQ non-dispatchable config (37.42% rel_err).
 

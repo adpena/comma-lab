@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for the SegNet boundary-smoothing dispatch wrapper."""
 from __future__ import annotations
 

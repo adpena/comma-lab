@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane AL — Analog Latent canvas optimizer.
 
 EUREKA insight (gpt-5.5 grand council 2026-04-29 11am):

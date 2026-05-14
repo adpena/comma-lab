@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Strict PR101 archive to HNeRV decoder state loader.
 
 The public PR101 ``hnerv_ft_microcodec`` archive stores a single ZIP member

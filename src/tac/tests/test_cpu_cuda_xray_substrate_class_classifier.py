@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/cpu_cuda_xray_substrate_class_classifier.py``.
 
 Per CLAUDE.md "Beauty, simplicity, and DX" + the substrate-class-boundary

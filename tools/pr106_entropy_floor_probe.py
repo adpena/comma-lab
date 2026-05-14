@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Entropy-floor probe for PR106/frontier HNeRV payloads.
 
 This is a planning and adversarial-validation tool. It reads a PR106-style

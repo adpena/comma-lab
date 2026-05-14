@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR95 ``cat_entropy_v2`` training-loss primitive.
 
 Covers:

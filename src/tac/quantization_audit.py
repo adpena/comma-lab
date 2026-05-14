@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """INT8 dequantization drift measurement.
 
 Audits layerwise fp32->int8 quantization error for saved best-checkpoint

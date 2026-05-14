@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Curriculum module smoke tests (Phase 2 deliverable).
 
 Verifies the 8-stage PR95 curriculum primitives are wired correctly and

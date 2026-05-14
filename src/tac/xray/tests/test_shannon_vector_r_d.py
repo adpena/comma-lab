@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for F2: tac.xray.shannon_vector_r_d."""
 
 from __future__ import annotations

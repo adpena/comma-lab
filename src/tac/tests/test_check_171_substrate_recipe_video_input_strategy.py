@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #171 (WAVE-7-MED-FIX, REVIEW-OMNI NV9) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 Carmack — `upstream/videos/0.mkv`

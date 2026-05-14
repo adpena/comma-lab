@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.riemannian_pose_optimizer.RiemannianSGD``.
 
 The optimiser is the integration point between SE(3) primitives in

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan + harvest cross-machine variance probes for the same archive bytes.
 
 Closes A1 PR Council Round 1 finding F6 (CRITICAL — frontier margin

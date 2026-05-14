@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Op_RAFTPoseStream - Phase 2 keystone pose-stream codec for the canonical
 :class:`tac.codec_pipeline.CodecPipeline`.
 

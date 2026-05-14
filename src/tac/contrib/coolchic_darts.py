@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane I-DARTS — Cool-Chic dim search via DARTS.
 
 :class:`tac.contrib.coolchic_renderer.CoolChicLatentRenderer` (Lane I)

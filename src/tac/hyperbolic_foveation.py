@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Invertible Telescope-style hyperbolic foveation.
 
 The operator is a radial, origin-centered geometry wrap intended to live after

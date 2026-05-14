@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Joint-ADMM — 4-stream INTERIOR-OPTIMUM coordinator test.
 
 Round 8 F6 / Round 9 §3 strengthening

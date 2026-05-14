@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #216 P1 fix — subagent commit serializer staged-content verification.
 
 Bug class anchor 2026-05-14: D4-OOM-FIX commit ``5d0ec061d`` (Catalog #218

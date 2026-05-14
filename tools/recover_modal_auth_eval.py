@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Recover artifacts from a detached Modal auth-eval dispatch.
 
 The CUDA and CPU Modal auth-eval wrappers can launch with ``--detach`` so the

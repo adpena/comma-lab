@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Compliance tests: verify our code matches the official scorer exactly.
 
 These tests compare our implementations against the upstream reference

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane GH-DARTS — Ghost convolution ratio search.
 
 Verifies:

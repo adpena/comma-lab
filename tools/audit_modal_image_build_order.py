@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit Modal image method ordering and repo import path contracts.
 
 Modal local mounts (``Image.add_local_file`` / ``Image.add_local_dir``) must be

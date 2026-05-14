@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Terminate orphaned MCP helper processes for contest/eval work.
 
 This is intentionally narrow. It targets only known MCP helper command tokens

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """SKETCH: int4 signed block-FP variant (PR106 revival path).
 
 Per memory feedback_block_fp_codec_pr106_unviable_at_default_ternary_20260504.md,

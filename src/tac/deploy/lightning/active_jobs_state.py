@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared `.omx/state/lightning_active_jobs.json` writer with fcntl serialization.
 
 Per CLAUDE.md non-negotiable + catalog #131 (proactive custody+concurrency

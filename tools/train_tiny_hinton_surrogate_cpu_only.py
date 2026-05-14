@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CPU-trained tiny Hinton-distilled SegNet+PoseNet surrogate (forward-only KL distill).
 
 Per W's DEFERRED reactivation analysis (2026-05-11) — see memory file

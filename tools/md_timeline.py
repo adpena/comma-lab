@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Markdown Timeline Viewer — git-powered diff scrubber.
 
 A local web tool that lets you:

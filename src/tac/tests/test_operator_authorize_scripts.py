@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the operator-authorize one-command scripts.
 
 Per the operator one-touch authorization toolkit landing 2026-05-11

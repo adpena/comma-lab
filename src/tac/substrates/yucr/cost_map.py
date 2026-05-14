@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """YUCR cost-map computation — Atick-Redlich orthogonal-complement projector.
 
 The cost map ``C(x, y)`` is the per-pixel inverse-detectability of the

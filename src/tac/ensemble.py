@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-pair ensemble selection: best-of-N frame selection.
 
 Given N candidate frame sets from different generators/configs, selects the

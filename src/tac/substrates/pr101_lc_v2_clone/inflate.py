@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """pr101_lc_v2_clone inflate runtime — PR101-mirror, <= 200 LOC waiver.
 
 This file is the contest-runtime image of the substrate. It is imported by

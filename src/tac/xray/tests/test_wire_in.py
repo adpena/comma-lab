@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the canonical solver-stack wire-in surface."""
 
 from __future__ import annotations

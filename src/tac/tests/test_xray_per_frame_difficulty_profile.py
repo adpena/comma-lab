@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/xray_per_frame_difficulty_profile.py.
 
 Per CLAUDE.md `forbidden_score_claims`: this profile is `[diagnostic; ...]`,

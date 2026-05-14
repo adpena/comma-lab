@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """GT-Initialized Sparse Patch TTO: the path to sub-0.2 auth score.
 
 Core insight: Start from GT video (score=0.0000 by definition) and perturb

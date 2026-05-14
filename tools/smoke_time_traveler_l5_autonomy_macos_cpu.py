@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """macOS-CPU SMOKE HARNESS for the Time-Traveler L5 Autonomy substrate.
 
 PAIR T directive 2026-05-13: this is the $0-GPU companion runner for sister

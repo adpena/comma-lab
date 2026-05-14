@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Provider-neutral PR106 latent-sidecar score-table dispatch contract."""
 from __future__ import annotations
 

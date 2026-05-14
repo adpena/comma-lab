@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build LA-POSE motion records from CUDA component-response evidence."""
 
 from __future__ import annotations

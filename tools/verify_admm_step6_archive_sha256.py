@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: thin verification harness; no flags needed.
 """Verify Path B step 6 ADMM archive can be rebuilt deterministically.
 

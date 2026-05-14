@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Trainer for the pre-trained driving prior substrate.
 
 Phase 1: distill the codebook OFFLINE from a public dashcam dataset (or

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local-only PR85 QH0/QM0 serializer candidates.
 
 The tool only rewrites the PR85 model segment when the decoded model payload is

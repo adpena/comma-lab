@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F12b: Gibson 1950 ego-motion-matched foveation analyzer.
 
 Per zen_floor council 2026-05-13 and Time-Traveler L5 architecture: in

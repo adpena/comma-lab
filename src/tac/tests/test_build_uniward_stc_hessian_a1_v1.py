@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 UNIWARD/Hessian byte-candidate builder."""
 from __future__ import annotations
 

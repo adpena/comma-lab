@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed readiness planner for PR101 frame-conditional A5 packets.
 
 The A5 byte anchor proves a typed side-info wire contract and a local byte

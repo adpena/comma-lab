@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane CG: calibrated viewing-ray positional encoding.
 
 The encoding is derived analytically from fixed comma camera intrinsics rather

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CLI-level dispatch guards for tools/meta_lagrangian_search_cli.py."""
 from __future__ import annotations
 

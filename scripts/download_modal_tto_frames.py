@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Download tto_frames.pt from Modal volume and preserve permanently.
 
 Downloads TTO output frames from Modal volumes before access expires.

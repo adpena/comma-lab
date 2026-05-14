@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical GT-scorer-output cache for substrate trainer hot loops (O1).
 
 Why this exists

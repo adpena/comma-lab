@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """ara_compile.py — Agent-Native Research Artifact compiler for the pact lab.
 
 Implements the Ara Compiler paradigm from arXiv 2604.24658

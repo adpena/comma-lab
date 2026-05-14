@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Contest objective coupling for the comma video compression challenge.
 

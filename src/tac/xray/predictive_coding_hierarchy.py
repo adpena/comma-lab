@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F12a: Rao-Ballard 1999 predictive-coding hierarchy analyzer.
 
 Wraps the existing :class:`tac.codec.cooperative_receiver.PredictiveCodingWeights`

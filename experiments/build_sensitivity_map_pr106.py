@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build per-channel β-Fisher sensitivity map for PR106 HNeRV decoder.
 
 Lane Ω-W-V3 step 2 of 3 (revival_plan_08_sensitivity_map_pr106_producer +

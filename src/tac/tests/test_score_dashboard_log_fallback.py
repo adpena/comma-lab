@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression test for tools/score_dashboard.py auth_eval.log fallback path.
 
 After commit dbb0032d, the dashboard scans `auth_eval.log` files in dirs not

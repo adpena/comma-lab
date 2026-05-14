@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #182 (WAVE-7-LOW-FIX, REVIEW-OMNI NV10) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 — per-substrate ``target_modes``

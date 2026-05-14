@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Custom binary container format — RESEARCH-ONLY.
 
 Status: ``score_claim=false``, ``promotion_eligible=false``,

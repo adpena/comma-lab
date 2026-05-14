@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dynamic-learning derivers for the PR101 split-Brotli + byte-map codec.
 
 Replaces PR101's hardcoded constants — `DECODER_STORAGE_ORDER`,

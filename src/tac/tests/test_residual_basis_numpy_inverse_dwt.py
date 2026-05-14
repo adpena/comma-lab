@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.residual_basis.numpy_inverse_dwt`.
 
 PyWavelets is used as the round-trip ORACLE only. The module-under-test

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan or run public-PR CPU auth eval replay from the reproduction ledger.
 
 This is intentionally separate from CUDA promotion. CPU replay is useful for

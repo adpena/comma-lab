@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a PMG-HOTSPOT CMG3 residual mask candidate archive.
 
 This converts a planning-only PMG-HOTSPOT manifest into exact archive bytes by

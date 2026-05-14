@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Post-filter architectures for task-aware video compression.
 
 All architectures share:

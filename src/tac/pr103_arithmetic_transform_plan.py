@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed PR103 arithmetic-transform planning helpers.
 
 The PR103 ``hnerv_lc_ac`` schema profiler proves that the public merged range

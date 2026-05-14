@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Search PR75-preserving renderer shrink candidates with local parity gates.
 
 This is a local archive-builder and preflight orchestrator. It preserves every

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Track 4 from Fields-medal Grand Council (commit 9b44c2f6): UNIWARD + STC +
 Hessian-aware bit allocation on the EXISTING A1 latent-aligned archive.
 

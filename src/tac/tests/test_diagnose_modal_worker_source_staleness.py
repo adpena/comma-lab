@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/diagnose_modal_worker_source_staleness.py``.
 
 Coverage targets:

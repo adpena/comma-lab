@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/canonical_cross_paradigm_stack_orchestrator.py``.
 
 Coverage (per parent task spec; smoke-runs of the four canonical examples):

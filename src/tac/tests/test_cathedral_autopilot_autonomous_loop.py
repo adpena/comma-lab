@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/cathedral_autopilot_autonomous_loop.py.
 
 Covers:

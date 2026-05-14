@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cool-Chic residual basis SCAFFOLD over PR106 r2 decoded RGB.
 
 Cool-Chic (Ladune et al., 2023, "Cool-Chic: Coordinate-based Low Complexity

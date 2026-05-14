@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z4 cooperative-receiver archive grammar — Z4CR1 monolithic single-file ``0.bin``.
 
 Per CLAUDE.md HNeRV parity discipline L2 (export-first) + L3 (monolithic 0.bin)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: I001
 """Scan for the 2026-04-30 Lightning PyPI compromise indicators.
 

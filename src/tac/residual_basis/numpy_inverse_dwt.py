@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Numpy-only Haar inverse-DWT primitives.
 
 This module clears the L1 promotion blocker named in

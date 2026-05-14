@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Payload entropy-density map — Stream 5 IMAGINATION-MODE [macOS-CPU advisory].
 
 Operator directive 2026-05-13 AGGRESSIVE LOCAL HARDWARE SWEEP Stream 5.

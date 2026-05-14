@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.codec.pr101_polymorphic``.
 
 Per CLAUDE.md "Subagent coherence-by-default" + lesson 12 (single-LOC-per-LOC

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the balle_renderer substrate (β) end-to-end on contest video.
 
 Operator-callable training script per the Fields-medal grand council substrate

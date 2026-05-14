@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a planning-only HDC2 combined entropy reduction manifest."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Zero-archive-cost 6-DOF pose conditioning derived from lane-mark masks.
 
 Lane M+: convert SegNet lane-marking displacement (already in masks.mkv) to a

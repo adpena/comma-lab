@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Atomic lane-dispatch claim helper.
 
 Use before paid remote work:

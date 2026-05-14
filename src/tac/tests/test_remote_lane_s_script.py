@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_s_self_compress.sh.
 
 Lane S = Self-Compressing renderer (Szabolcs 2301.13142) anchored on Lane A

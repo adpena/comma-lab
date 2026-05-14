@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Dispatcher for T1 — Ballé hyperprior + 128K decoder end-to-end.
 
 This is the claim-safe **planning surface** for T1 per CLAUDE.md

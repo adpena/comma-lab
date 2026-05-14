@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Preflight Check 56 — verify_vast_instances dual-threshold guard.
 
 - Check 56: ``check_verify_vast_setup_stuck_dual_threshold`` —

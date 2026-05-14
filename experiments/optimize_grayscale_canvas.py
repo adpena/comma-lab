@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane AL — drive the Analog-Latent canvas SGD optimization end to end.
 
 Workflow

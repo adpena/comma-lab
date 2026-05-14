@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates — score-aware representation/codec substrates.
 
 A "substrate" in pact terminology is a representation that simultaneously

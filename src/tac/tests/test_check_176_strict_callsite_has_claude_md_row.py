@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #176 — check_strict_preflight_callsites_have_claude_md_catalog_row.
 
 FIX-WAVE-2 R2-1 (2026-05-13). META-meta gate: every strict=True callsite

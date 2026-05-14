@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Wave-1.5 R(D)-joint coordinate-descent pose refinement.
 
 Port of `reports/raw/leaderboard_intel_20260501/pr67_line_search.py` (PR #67

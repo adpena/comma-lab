@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Convert per-weight Fisher importance into an OWV3 sensitivity map.
 
 Input schema is the artifact emitted by ``experiments/profile_hessian_per_weight.py``:

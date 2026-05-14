@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CLI wrapper for deterministic archive byte attribution."""
 
 from __future__ import annotations

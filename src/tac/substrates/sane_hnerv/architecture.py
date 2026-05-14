@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """sane_hnerv architecture — Score-Aware NeRV Extended substrate.
 
 Frame-conditional implicit renderer mirroring the leaderboard PR101 / PR100

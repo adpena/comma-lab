@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane Ω-V3: explicit rate-distortion frontier sweep over Lagrangian
 target_bits values.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.run_bilevel_optimization`` : magic-autopilot driver."""
 
 from __future__ import annotations

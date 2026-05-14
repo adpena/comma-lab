@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """DARTS-SuperNet search over the time-traveler L5 autonomy architecture axes.
 
 Per operator directive 2026-05-13 OPT4: build differentiable architecture

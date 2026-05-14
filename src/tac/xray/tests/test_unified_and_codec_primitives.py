@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for F11/F12a/F12b: unified-action + codec-primitive xray classes."""
 
 from __future__ import annotations

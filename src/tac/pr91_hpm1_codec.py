@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Local fail-closed PR91 HPM1 mask replay and re-encode helpers.
 
 The functions in this module are forensic/preflight tooling only. They never

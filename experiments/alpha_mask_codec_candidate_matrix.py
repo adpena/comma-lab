@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic Alpha mask codec candidate matrix.
 
 This tool is planning evidence only. It reads one archive mask member with

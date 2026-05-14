@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 per-pair latent sidecar resampling helper."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bridge ``JCSPTensorStreamSpec`` planning specs to runnable ``StreamSource``.
 
 ``model_to_jcsp_streams`` already decomposes a model into per-tensor planning

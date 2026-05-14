@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Leaderboard-move detector for the comma video compression challenge.
 
 Polls the upstream challenge README, extracts the canonical TABLE-START/TABLE-END

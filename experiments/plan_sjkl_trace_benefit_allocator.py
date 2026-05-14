@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan local-only SJ-KL trace benefit-per-byte successors.
 
 This planner consumes exact CUDA auth JSON, component traces, and local SJ-KL

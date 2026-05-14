@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Compatibility alias for the canonical Time-Traveler substrate.
 
 The canonical implementation is ``tac.substrates.time_traveler_l5_autonomy``.

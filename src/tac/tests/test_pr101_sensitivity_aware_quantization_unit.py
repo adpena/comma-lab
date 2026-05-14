@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for the sensitivity-aware quantization allocator (no state_dict load)."""
 from __future__ import annotations
 

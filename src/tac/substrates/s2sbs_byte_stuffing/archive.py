@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """S2SBS_AR/S2S1 monolithic archive grammar.
 
 Wire format (one ``0.bin`` payload):

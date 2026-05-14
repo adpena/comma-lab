@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tuna-2 x-prediction reconstruction loss helpers."""
 from __future__ import annotations
 

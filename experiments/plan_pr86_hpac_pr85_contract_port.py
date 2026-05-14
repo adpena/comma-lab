@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan the PR86 HPAC contract port onto the PR85 QMA9 mask stream.
 
 This is a deterministic, build-only preflight. It reads already-captured PR86

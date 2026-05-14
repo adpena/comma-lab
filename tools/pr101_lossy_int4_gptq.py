@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 lossy int4 + GPTQ (Hessian-aware sequential calibrated quantization)
 — audit criterion #4 for the lossy_int4 lane.
 

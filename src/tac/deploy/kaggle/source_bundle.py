@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared Kaggle source-bundle helpers for score-table kernels."""
 from __future__ import annotations
 

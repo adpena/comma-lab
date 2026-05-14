@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane STC archive builder — boundary-coded mask payload.
 
 Takes a Lane A or Lane G anchor archive (renderer.bin + masks.mkv +

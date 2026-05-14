@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Codex R5-2 #4 regression: Lane C δ approval requires external attestation.
 
 Trust model the gate enforces:

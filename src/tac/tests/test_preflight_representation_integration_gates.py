@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # FAKE_LANE_OK_FILE: this test file constructs fake lane_id fixtures for gate scanners
 """Tests for representation-integration gates 1-10 (codex audit, 2026-05-08).
 

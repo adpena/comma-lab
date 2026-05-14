@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tropical-Decomposition LoRA (TD-LoRA) — composition/stacking primitive.
 
 Tropical-Decomposition LoRA replaces the vanilla LoRA adapter

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Export a trained szabolcs renderer to the SZv1 archive format.
 
 Pipeline

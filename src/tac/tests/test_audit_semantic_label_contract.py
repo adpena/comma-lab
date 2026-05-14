@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the active semantic-label contract audit tool."""
 
 from __future__ import annotations

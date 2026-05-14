@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """cool_chic architecture — per-frame latent grids + shared synthesis MLP + AR prior.
 
 L0 SKETCH scaffold per operator approval 2026-05-12. The Cool-Chic family

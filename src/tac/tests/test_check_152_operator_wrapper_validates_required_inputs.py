@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dedicated tests for Catalog #152
 (`check_operator_wrapper_validates_required_input_files_pre_dispatch`)
 and the canonical wrapper-side validator tool

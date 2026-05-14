@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cross-disciplinary optimization algorithms for scorer-optimal frame generation.
 
 Implements 16 optimization algorithms from physics, biology, chemistry, geophysics,

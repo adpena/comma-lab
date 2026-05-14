@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Runtime-closure helpers for PR103 AC decoder bytes inside a PR106 envelope.
 
 The PR103 arithmetic decoder section is not self-describing: its variable

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #185 — `check_strict_flipped_catalog_entries_have_live_count_zero`
 tests.
 

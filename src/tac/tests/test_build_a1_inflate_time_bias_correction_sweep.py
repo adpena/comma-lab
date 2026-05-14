@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 inflate-time bias-correction sweep builder."""
 from __future__ import annotations
 

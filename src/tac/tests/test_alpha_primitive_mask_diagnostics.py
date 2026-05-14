@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Alpha primitive mask diagnostics."""
 from __future__ import annotations
 

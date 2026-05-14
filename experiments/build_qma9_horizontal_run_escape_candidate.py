@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a local QMA9 horizontal run-tail escape byte screen.
 
 This is a planning-only prototype. It decodes a bounded PR84/PR81 QMA9 frame

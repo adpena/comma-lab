@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared training utilities for CPU and GPU lanes.
 
 Provides signal handling, JSONL telemetry, formatted epoch logging,

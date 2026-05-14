@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Check 64 (canonical E2E smoke proof).
 
 Closes the structural gap surfaced by Lane RM-d's 0.mkv crash: 63 STATIC

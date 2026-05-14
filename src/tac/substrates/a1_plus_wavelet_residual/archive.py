@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wire format for the A1 + wavelet residual composition substrate.
 
 The composition substrate appends a sidecar blob (magic-byte trailer D4.B

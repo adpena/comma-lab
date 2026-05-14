@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Netflix-inspired learned pre-processor before codec encoding.
 
 Technique 1: A small CNN that adjusts pixel values BEFORE AV1 encoding.

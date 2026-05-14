@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Rank the next non-queued public-floor breakthrough opportunities.
 
 This planner is deliberately local-only. It reads existing C091/PR75 public

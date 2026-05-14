@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-3 MEDIUM 2 fix — active_jobs corrupt-state strict load + quarantine.
 
 Bug class (codex round-3 MEDIUM 2, 2026-05-09): the previous

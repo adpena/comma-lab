@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """DALI vs PyAV mask validation (P0 blocker #4).
 
 Decodes GT video frames via both PyAV (CPU) and DALI (GPU), runs SegNet

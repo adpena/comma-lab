@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``experiments/train_mnerv_as_renderer.py`` + ``tac.mnerv_as_renderer``.
 
 Coverage (substrate + trainer):

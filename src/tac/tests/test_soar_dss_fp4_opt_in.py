@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for SOAR Decoupled Scale Storage (DSS) opt-in.
 
 Source: Bao et al. 2026 arXiv:2605.12245v1 §4.2 + Algorithm 1.

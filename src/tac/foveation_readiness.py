@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Readiness custody for charged hyperbolic foveation parameter payloads."""
 
 from __future__ import annotations

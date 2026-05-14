@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Experiment roadmap for Yousfi's final push.
 
 Structured catalog of every planned experiment across CPU and GPU lanes,

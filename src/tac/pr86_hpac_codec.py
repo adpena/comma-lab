@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed local PR86 HPAC replay and byte-parity helpers.
 
 This module is deliberately local-only: it never runs contest eval, never

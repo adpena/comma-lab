@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit public publish surfaces for broken or private links.
 
 The static mode is deterministic and suitable for preflight/tests. The live

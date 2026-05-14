@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """OWV3 sensitivity-weighted renderer archive tests."""
 from __future__ import annotations
 

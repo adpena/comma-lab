@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """``tac.phase3`` — Phase 3 joint scorer-renderer-codec scaffold (DESIGN-ONLY).
 
 This package implements the **Phase 3 joint training of (auxiliary scorer +

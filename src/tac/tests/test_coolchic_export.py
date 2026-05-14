@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round-trip + dispatch tests for CCh1 (Cool-Chic) and C3R1 (C3 residual)
 export/load paths in `tac.renderer_export`.
 

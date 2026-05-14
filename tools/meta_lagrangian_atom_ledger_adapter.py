@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Adapt bilevel atom-ledger JSONL into meta-Lagrangian candidate rows.
 
 This is a narrow bridge between ``experiments/results/bilevel_atom_ledger.jsonl``

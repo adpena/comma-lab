@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 pre-stage anchor: arch_shrink × Lagrangian × UNIWARD composed stack.
 
 Background

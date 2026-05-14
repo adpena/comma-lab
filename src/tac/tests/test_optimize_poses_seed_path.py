@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the --seed-poses-path flag added to experiments/optimize_poses.py.
 
 CLAUDE.md non-negotiable: NEVER invent CLI flags. These tests verify the flag

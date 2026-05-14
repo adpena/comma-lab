@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z4 cooperative-receiver inflate runtime — contest raw-output contract.
 
 Loads the Z4CR1 archive, reconstructs the decoder from the stored state_dict,

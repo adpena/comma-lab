@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """T15 — Time-varying FiLM modulator trainer (T1-clone derivative).
 
 Phase 2 pre-design pass (2026-05-09) consensus + readiness pre-stage

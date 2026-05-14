@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic QH0/QM0 record parser and serializer.
 
 This module is intentionally narrow: it preserves the reviewed PR85/QH0 record

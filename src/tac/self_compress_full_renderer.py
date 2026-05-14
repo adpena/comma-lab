@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PARADIGM-zeta - full-renderer self-compression NN (Phase 1 scaffold).
 
 This module is the **Phase 1 scaffold** for the zeta paradigm in the PARADIGM-deltaepsilonzeta

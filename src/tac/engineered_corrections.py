@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane EC: Engineered Corrections (canonical tac-side API).
 
 Lane EC produces small per-frame correction deltas that ship with the

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Static PR81/QMA9 semantic range-mask intake profiler.
 
 This tool is local planning/forensics only. It parses charged archive bytes,

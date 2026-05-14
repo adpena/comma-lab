@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Time-Traveler L5 Autonomy substrate (TT5L).
 
 Reverse-engineered from the operator's "time traveler from the future who solved

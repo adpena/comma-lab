@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for tools/pr101_lossy_int4_awq.py — audit criterion #5.
 
 Covers:

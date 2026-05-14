@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight_dead_resolvers — the 2026-04-27 R5 scanner that
 catches the pose_dim / segnet_uncertainty_weighted_loss / uncertainty_loss_floor
 bug class (silent dead resolvers + stale .pyc-masked dead imports).

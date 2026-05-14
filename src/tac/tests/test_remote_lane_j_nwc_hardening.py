@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static guards for Lane J-NWC/NWCS remote-script hardening."""
 from __future__ import annotations
 

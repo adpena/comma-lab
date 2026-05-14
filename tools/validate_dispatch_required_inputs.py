@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Validate that every `required_input_file=True` flag declared in a trainer's
 ``TIER_N_OPERATOR_REQUIRED_FLAGS`` manifest points to an EXISTING FILE PATH
 BEFORE the GPU dispatch fires. This is the canonical wrapper-side validator

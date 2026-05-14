@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static guard for HNeRV-family trainer parity contracts.
 
 The public PR95/PR100/PR101 lineage only became score-competitive when the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Provider-agnostic deployment contracts and static guardrails.
 
 This module is deliberately small: provider actuators own their platform API

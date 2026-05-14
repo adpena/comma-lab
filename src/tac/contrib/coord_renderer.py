@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Coordinate-based neural field renderer (INRIA COOL approach).
 
 Instead of a convolutional U-Net, this renderer uses a per-pixel MLP:

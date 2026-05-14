@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.composition.hypernetwork — Hypernetwork composer."""
 
 from __future__ import annotations

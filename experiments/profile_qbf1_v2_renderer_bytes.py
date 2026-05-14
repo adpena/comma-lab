@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CPU-only QBF1-v2 renderer byte feasibility profile.
 
 This script emits empirical/readiness JSON only.  It does not build an archive,

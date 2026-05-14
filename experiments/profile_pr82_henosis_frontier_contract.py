@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Static PR82/Henosis Frontier archive anatomy profiler.
 
 This is a planning-only profiler. It reads the public PR82 intake archive and

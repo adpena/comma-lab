@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``RealPairBatchSource.iter_batches`` Lane 12-v2 batch source.
 
 Per HIGH 3 in the comprehensive adversarial review (commit 7e9d970e), the

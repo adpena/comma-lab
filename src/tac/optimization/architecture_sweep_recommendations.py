@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Normalize CPU/MPS architecture sweep manifests into planning recommendations.
 
 This module is intentionally score-claim hostile. It accepts cheap local

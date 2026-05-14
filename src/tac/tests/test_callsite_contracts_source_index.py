@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused source-index regression for callsite contract preflight."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check PCC3: stats.json producers must carry an internal-
 consistency assertion comparing elapsed-like wall-clock to epochs-like
 iteration count BEFORE the json.dump call.

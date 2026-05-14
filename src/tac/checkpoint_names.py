@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical checkpoint name registry.
 
 ONE source of truth for which checkpoint filenames the deploy/inflate paths

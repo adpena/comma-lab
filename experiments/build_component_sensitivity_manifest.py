@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a custody-checked component_sensitivity_v1 manifest.
 
 This script does not compute scorer gradients. It assembles the artifacts

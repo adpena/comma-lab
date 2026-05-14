@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a byte-closed monolithic HNeRV section-replacement candidate."""
 
 from __future__ import annotations

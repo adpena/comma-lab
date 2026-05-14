@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for `tac.losses` numerical contracts.
 
 Centerpiece: `kl_distill_segnet_only` reduction was `batchmean` on a

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer basin parity gate - local readiness evidence for apogee_intN candidates.
 
 Implements one of three accepted predispatch evidence types in

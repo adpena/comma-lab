@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile AQv1 qint coding against its zero-order entropy floor."""
 
 from __future__ import annotations

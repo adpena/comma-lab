@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Synthetic tests for paradigm ε — Self-Compressing NN joint width × precision.
 
 All tests are CPU-only; no scorer load; no GPU. Math/integration only.

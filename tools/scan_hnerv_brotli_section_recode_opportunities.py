@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Scan public HNeRV packet sections for no-score Brotli recode opportunities."""
 
 from __future__ import annotations

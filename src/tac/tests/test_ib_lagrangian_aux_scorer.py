@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.ib_lagrangian_aux_scorer`` (T10 scaffold).
 
 Per CLAUDE.md "Recursive adversarial review protocol" + the operator's

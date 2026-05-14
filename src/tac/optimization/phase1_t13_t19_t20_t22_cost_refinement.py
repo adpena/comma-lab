@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 1 trainer T13/T19/T20/T22 cost estimation refinement.
 
 Per OO landing 2026-05-11 (`feedback_github_release_tag_license_audit_

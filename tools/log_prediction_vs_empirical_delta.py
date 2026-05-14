@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prediction-vs-empirical delta logger.
 
 Closes the prediction loop introduced by the solver-stack wire-in

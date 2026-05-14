@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused train/inflate plumbing tests for SegMap learnable class targets."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Architecture tests for the PR95 LoRA/DoRA substrate.
 
 Covers LoRAAdapter init, DoRAAdapter init, PR95LoRADoRADecoder integration,

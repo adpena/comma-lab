@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cooperative-receiver primitive package.
 
 Exports two distinct primitives that together capture the alien-tech

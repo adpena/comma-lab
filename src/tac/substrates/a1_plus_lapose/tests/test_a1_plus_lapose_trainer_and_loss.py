@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Trainer + score-aware-loss + dispatch-readiness tests for A1 + LAPose.
 
 Per CLAUDE.md "Recursive adversarial review protocol" — ≥15 dedicated tests

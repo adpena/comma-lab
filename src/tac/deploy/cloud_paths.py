@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Provider-agnostic cloud path resolution and uv bootstrap.
 
 All experiment runners import from this module for platform-specific paths

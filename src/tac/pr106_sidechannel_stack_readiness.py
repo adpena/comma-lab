@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only readiness for the PR106 sidechannel stack.
 
 This module turns the local latent/yshift/LRL1/WR01 scaffolds into one

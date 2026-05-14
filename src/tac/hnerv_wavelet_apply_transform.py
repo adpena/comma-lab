@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Offline WR01 wavelet transforms for PR106-style HNeRV sections.
 
 This module consumes a byte-closed WR01 sidechannel candidate, applies the

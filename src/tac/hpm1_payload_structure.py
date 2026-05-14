@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic structural inventory for HPM1 mask payloads.
 
 This module deliberately stops at byte-structure custody. It can prove that an

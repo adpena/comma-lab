@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compression-floor ladder for PR101 weights.
 
 Computes Shannon-source-coding-theorem floors at increasing model

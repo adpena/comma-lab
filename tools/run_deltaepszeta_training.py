@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """delta-epsilon-zeta-aware training driver - Phase 3 keystone.
 
 Per Grand Council bilevel-optimization deliberation

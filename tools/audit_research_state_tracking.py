@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CLI wrapper for comma-lab research-state tracking audits.
 
 # no-argparse-OK: thin re-export of comma_lab.research_state.main(), which owns

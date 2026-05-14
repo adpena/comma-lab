@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/cathedral_autopilot_meta_lagrangian_bridge.py."""
 from __future__ import annotations
 

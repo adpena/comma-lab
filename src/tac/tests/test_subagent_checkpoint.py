@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/subagent_checkpoint.py — crash-resume checkpoint tool.
 
 Memory ref: feedback_subagent_crash_resume_discipline_landed_20260514.md.

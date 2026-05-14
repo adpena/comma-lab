@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """H15 Coord-MLP residual sidecar substrate readiness surface.
 
 The package provides a charged sidecar byte contract and a deterministic,

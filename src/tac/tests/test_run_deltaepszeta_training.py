@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/run_deltaepszeta_training.py``.
 
 Coverage:

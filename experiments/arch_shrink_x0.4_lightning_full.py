@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """arch_shrink_x0.4_quantizr_class — FULL Lightning T4 dispatch.
 
 Trains the Quantizr-class ~88K-element renderer (profile

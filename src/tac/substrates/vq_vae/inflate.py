@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """vq_vae inflate runtime — <= 100 LOC; mirrors sane_hnerv style.
 
 Contest-runtime image of the substrate. ``submissions/vq_vae/inflate.py`` will

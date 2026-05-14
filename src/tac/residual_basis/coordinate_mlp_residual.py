@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Generic coordinate-MLP residual basis SCAFFOLD over PR106 r2 decoded RGB.
 
 A coordinate-MLP is the GENERIC pattern that subsumes SIREN, NeRV, HNeRV,

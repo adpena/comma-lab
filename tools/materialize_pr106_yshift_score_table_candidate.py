@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a PR106 y-shift score-table output into a byte-closed candidate."""
 from __future__ import annotations
 

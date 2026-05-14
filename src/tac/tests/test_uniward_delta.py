@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane C UNIWARD δ codec + apply path.
 
 CPU-only. No Vast.ai, no scorer loading, no GT video. These tests cover

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-band predictor with refusal modes.
 
 Council 22/0 verdict 2026-05-05 (`feedback_grand_council_predictor_calibration_no_arbitrariness_20260505.md`):

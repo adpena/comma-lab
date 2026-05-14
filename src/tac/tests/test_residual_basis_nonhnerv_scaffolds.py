@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the 4 non-HNeRV residual basis scaffolds.
 
 Covers:

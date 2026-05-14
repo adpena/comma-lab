@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.tc_nerv — Temporal-Consistency NeRV (substrate L0 SKETCH).
 
 Sibling of ``sane_hnerv`` (primary substrate α) at L0 SKETCH per task #522 KK

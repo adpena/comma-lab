@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed score/dispatch authority helpers.
 
 Planning, smoke, proxy, and diagnostic artifacts are allowed to guide work,

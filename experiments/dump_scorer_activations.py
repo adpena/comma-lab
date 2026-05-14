@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CLI to dump PoseNet/SegNet per-layer activations for a frame pair.
 
 Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane FC — SegMap + FiLM-Canvas hybrid renderer.
 
 EUREKA #5 (grand council, 2026-04-29):

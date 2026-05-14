@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Lane W: per-pair sensitivity profiler.
 
 Loads a renderer + poses + masks (typically Lane A's anchor artifacts),

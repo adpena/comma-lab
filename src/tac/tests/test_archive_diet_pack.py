@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/archive_diet_pack.py — CPU-only archive diet packer.
 
 Designed by codex gpt-5.5 xhigh under Stage 3 of the orchestrated workflow.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR106 + per-pair latent-correction sidecar archive.
 
 Pattern: ports PR100's hnerv_lc_v2 sidecar idea (1.2KB per-pair correction blob)

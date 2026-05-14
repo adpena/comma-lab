@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Synthetic tests for Alpha-Geo-0 NeRV geometry diagnostics.
 
 These tests keep the diagnostic on CPU integer tensors. They do not import or

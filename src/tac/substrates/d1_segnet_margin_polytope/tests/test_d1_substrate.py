@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 substrate test suite.
 
 Per CLAUDE.md "Beauty, simplicity, and developer experience" + "Apples-to-

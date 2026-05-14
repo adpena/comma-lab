@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for tac.deploy.lightning.LightningDispatcher + scripts/launch_lane_lightning.py.
 
 We do NOT invoke real SSH in these tests. We verify:

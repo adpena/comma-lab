@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Joint-source rate-distortion lower bounds for temporally-correlated streams.
 
 Eureka mechanism (Fields-medal council, 2026-05-09):

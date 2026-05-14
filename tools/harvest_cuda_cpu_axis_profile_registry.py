@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Harvest paired contest-CPU/CUDA auth-eval artifacts into the drift registry.
 
 The per-architecture CUDA/CPU profile registry is a learning system, but it

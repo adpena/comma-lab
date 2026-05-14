@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Archive grammar tests for the PR95 LoRA/DoRA TRAILER codec.
 
 Per HNeRV parity lesson 11 (no-op detector): tests verify that the trailer

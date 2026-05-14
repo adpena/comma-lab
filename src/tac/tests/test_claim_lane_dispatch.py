@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/claim_lane_dispatch recovered from .pyc cache + spec."""
 
 from __future__ import annotations

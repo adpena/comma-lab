@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build strict PR85 correction-stream recode candidates.
 
 This is a local-only byte-screening worker for Dalton's PR85 correction atom

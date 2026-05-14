@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Magic codec — per-stream auto-selector + meta-codec over the packet_compiler primitives.
 
 The **magic codec** auto-selects the optimal byte-grammar primitive per typed

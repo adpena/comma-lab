@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Measure PoseNet's honest linear trust radius in pixel units.
 
 Karpathy's specific request: pick a random direction `d`, scan `alpha`

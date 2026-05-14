@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z5 predictive-coding world-model substrate composition.
 
 Per the Time-Traveler L5 staircase Step 3 design, Z5 builds on Z4's

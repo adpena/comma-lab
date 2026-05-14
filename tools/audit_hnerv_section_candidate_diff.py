@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit HNeRV section candidate diffs for no-op-resistant byte proof."""
 
 from __future__ import annotations

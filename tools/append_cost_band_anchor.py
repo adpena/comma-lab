@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Append one cost-band measurement anchor to the posterior at
 ``.omx/state/cost_band_posterior.jsonl``.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/build_a1_frame_conditional_codec_variant.py +
 tools/probe_frame_conditional_quantization_disambiguator.py.
 

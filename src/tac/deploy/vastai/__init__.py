@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Vast.ai deployment module for tac experiments.
 
 Public API:

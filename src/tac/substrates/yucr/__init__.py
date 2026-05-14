@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """YUCR — Yousfi-UNIWARD-Cooperative-Receiver substrate.
 
 YUCR unifies two seemingly distinct results from compression theory and

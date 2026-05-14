@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """T10 — IB-Lagrangian co-trained learned auxiliary scorer (Phase 2 prerequisite).
 
 Council provenance

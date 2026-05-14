@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # RESEARCH_SCAFFOLDING_NOT_WIRED: no pipeline.py dispatch exists. This module
 # is a codec-selection analysis tool, not a byte-producing codec. It consumes
 # pre-computed L_total accountings from sibling codecs and produces a ranking.

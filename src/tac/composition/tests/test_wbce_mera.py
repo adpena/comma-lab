@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Wasserstein-Barycenter Checkpoint Ensemble + MERA Quantizer."""
 
 from __future__ import annotations

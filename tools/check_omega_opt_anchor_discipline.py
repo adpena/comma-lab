@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Scan Omega-OPT claim surfaces for exact-anchor promotion discipline.
 
 The Omega-OPT nested score numbers are hypotheses until a matching 1:1

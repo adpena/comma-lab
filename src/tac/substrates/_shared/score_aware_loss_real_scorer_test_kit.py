@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared real-scorer regression helpers for substrate score-aware losses.
 
 These helpers defend the WWW4-class scorer-shape bug without paying the full

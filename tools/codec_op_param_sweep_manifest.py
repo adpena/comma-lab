@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CodecOp parameter-sweep manifest builder.
 
 The cathedral has CodecOps (e.g. ``Op_KLPoseStream``, ``Op_RAFTPoseStream``)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Emit the 2032 driving-prior scorer-saliency readiness manifest."""
 
 from __future__ import annotations

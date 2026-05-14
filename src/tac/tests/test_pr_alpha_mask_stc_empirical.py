@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for ``tools/pr_alpha_mask_stc_empirical.py``.
 
 The full empirical needs the canonical ``masks.mkv``; here we synthesize a

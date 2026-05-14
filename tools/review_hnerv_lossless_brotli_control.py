@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Review the existing PR106x low-level Brotli exact-control evidence."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Jacobian/Fisher importance-weighted quantization allocator.
 
 This module is a CPU-side planning primitive for the "pixel is weight is

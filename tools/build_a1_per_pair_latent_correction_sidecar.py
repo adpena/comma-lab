@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 r"""Re-search the per-pair latent correction sidecar against A1's substrate.
 
 Background (from forensics dossier

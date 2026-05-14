@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Predictive mask-grammar empirical byte probe.
 
 This is a planning and byte-screen tool only. It consumes an already-decoded

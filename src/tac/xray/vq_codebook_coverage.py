@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F5: VQ-VAE codebook coverage primitive.
 
 van den Oord shower-thought (zen_floor §13): a VQ-VAE codebook of size

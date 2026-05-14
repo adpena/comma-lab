@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Property tests for Yousfi trick #5 (ScanNet-style spatial uncertainty maps).
 
 Covers:

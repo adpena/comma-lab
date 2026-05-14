@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed delta-epsilon-zeta PR106/HNeRV candidate plan.
 
 This tool is a narrow bridge between the existing per-tensor Shannon target

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """grayscale_lut architecture — analog grayscale stream + FiLM-conditioned RGB decoder.
 
 L0 SKETCH scaffold per operator approval 2026-05-12. The grayscale-LUT family

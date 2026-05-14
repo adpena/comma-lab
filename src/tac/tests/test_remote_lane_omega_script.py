@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_omega_hessian_qat.sh.
 
 Lane Ω = per-weight Hessian-aware bit-budget quantization anchored on Lane A

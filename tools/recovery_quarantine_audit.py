@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Classify recovered/quarantined files without moving or deleting them.
 
 This is a signal-preservation tool. It compares a quarantine tree against the

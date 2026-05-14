@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile the public PR85 adaptive masking bundle without executing inflate.
 
 This is a custody and reverse-engineering helper only.  It parses the single

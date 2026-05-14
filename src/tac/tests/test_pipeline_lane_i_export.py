@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Verify `experiments/pipeline.py` `step_export` correctly dispatches on
 the Lane I (Cool-Chic / C3 residual) variants.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Semantic-label contracts for comma/openpilot-derived mask lanes.
 
 The contest SegNet path uses five class channels. comma10k documents those

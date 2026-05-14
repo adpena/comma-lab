@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a byte-closed CDO1 decoded-mask overlay candidate archive.
 
 The CDO1 payload is a charged sidecar applied after the base mask stream is

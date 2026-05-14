@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Second-order Volterra-style stacking interaction model.
 
 The ``tac.score_geometry`` module treats each axis (seg, pose, bytes)

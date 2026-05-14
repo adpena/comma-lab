@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.diagnostics.scorer_introspection and cuda_cpu_drift.
 
 Per CLAUDE.md "MPS auth eval is NOISE" and "Submission auth eval — BOTH CPU

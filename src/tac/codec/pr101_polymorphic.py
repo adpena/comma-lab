@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR101 polymorphic codec primitive — port to ``tac.codec``.
 
 PR101 (`hnerv_ft_microcodec`, SajayR, gold) ships a *polymorphic* sidecar codec

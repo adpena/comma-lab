@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.jcsp_stream_builder``.
 
 Adversarial-coverage angles:

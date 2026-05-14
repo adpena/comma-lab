@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """T18-B probe scaffold — Balle nonlinear-transform HARD GATE byte savings.
 
 This is a SCAFFOLD ONLY. No GPU dispatch, no scorer load, no archive build,

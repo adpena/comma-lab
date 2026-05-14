@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Queue Alpha-Geo-0 pose regeneration as a reproducible Lightning Batch job."""
 from __future__ import annotations
 

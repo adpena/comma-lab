@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ANR TokenRendererV62 + ShrinkSingleNeRV full substrate port — Phase A scaffold.
 
 Per handoff P3 long-tail "ANR/HPAC token programs" + operator directive 2026-05-11

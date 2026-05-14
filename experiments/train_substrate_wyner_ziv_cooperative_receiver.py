@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the Wyner-Ziv cooperative-receiver substrate end-to-end on contest video.
 
 Per the alien-tech expert team memo (`feedback_expert_team_signal_processing_alien_tech_landed_20260513.md`),

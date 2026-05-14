@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Probe T7 / T8 / T11 SegNet-loss-surrogate sub-additivity ($0 GPU).
 
 Coherence council §3.A LIVE production risk: T7 (Fisher-Rao geodesic),

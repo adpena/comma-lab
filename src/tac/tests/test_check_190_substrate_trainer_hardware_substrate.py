@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #190 — check_substrate_trainer_does_not_hardcode_hardware_substrate.
 
 SIREN PRE-DISPATCH AUDIT 2026-05-13 CRITICAL #1 self-protect.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cross-primitive integration tests for the 5 new composition primitives.
 
 These tests prove the primitives compose with EACH OTHER (closed under

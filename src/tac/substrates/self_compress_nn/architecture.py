@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """self_compress_nn architecture — δ MDL weight clustering + renderer.
 
 Per the Fields-medal grand council 2026-05-12 δ candidate (§4.1 + §8):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the ff_nerv substrate end-to-end on contest video.
 
 Operator-callable training script per the Fields-medal grand council substrate

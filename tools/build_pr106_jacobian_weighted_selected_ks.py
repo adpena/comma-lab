@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR106 Jacobian-weighted selected-K planning manifest.
 
 This is a CPU-safe selected-K producer.  It requires a future CUDA-authored,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a QZS3/QP1 archive plus a counted PR65-style qpost sidecar.
 
 This is a build-only transform.  It copies the base top-submission-style

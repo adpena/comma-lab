@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Stream 1 manifest builder — 4 substrate macOS-CPU smoke verdicts.
 
 Operator directive 2026-05-13 LOCAL HARDWARE MAXIMIZATION SWEEP Stream 1.

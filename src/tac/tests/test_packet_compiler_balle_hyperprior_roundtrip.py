@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip + golden-vector tests for the CompressAI Ballé-hyperprior adapter.
 
 Sister to ``src/tac/packet_compiler/balle_hyperprior.py``. Catalog #91

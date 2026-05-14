@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """End-to-end tests for the Lane LM-A zero-cost-poses inflate path.
 
 Lane LM-A wires

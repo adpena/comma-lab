@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe bounded PR85/QMA9 -> PR91 HPM1 semantic-symbol bridges."""
 
 from __future__ import annotations

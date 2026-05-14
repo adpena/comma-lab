@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.codec.factorized_hnerv_codec`.
 
 Coverage targets per task spec:

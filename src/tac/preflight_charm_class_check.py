@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """STRICT preflight check: ChARM-class files must actually implement
 channel-conditional autoregression — not just declare a context net.
 

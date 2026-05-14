@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """ASCII visualization of contest score topology near an operating point.
 
 Operator visceral map: render the (d_pose, d_seg) plane around a focal

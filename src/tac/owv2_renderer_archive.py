@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W-V2 — multi-tensor renderer archive (OWV2 magic).
 
 This module wraps :func:`tac.water_filling_codec_v2.encode_omega_w_v2` /

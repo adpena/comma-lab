@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PD — Pose-delta encoder/decoder (Schmidhuber eureka, 2026-04-29).
 
 Selfcomp / Quantizr / our Lane A all ship a per-frame-pair pose tensor of

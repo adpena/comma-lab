@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SE(3) Lie group operations for Riemannian pose optimization (Lane RM).
 
 This module implements the matrix Lie group SE(3) = SO(3) ⋉ ℝ³ with the

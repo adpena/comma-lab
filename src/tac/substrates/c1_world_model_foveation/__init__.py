@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C1 world-model + foveation substrate (long-term campaign L1 scaffold).
 
 Per ``~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_long_term_multi_year_campaigns_landed_20260514.md``

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Small contest-overfit renderer for the pre-trained driving prior substrate.
 
 The renderer is intentionally TINY (under 50K params at FP16 ≈ 25-40 KB

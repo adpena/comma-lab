@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Stack-of-stacks composition byte format + composer API.
 
 This module implements Idea 3 from the beat-PR95 design memo. The composer

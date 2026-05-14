@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only wavelet residual atoms for HNeRV payload sections.
 
 The wavelet hidden gem is useful only if it produces charged, auditable bytes.

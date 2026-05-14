@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DARTS-SuperNet for the time-traveler L5 autonomy architecture search.
 
 Operator directive 2026-05-13 OPT4 (queued; firing now per "aggressive after

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deploy GPU renderer smoke tests to Modal A10G.
 
 Uses precomputed data volume + tac source. Runs training via subprocess

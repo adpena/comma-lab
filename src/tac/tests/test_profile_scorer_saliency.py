@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI: tests for experiments/profile_scorer_saliency.py.
 
 We don't actually invoke the script (it requires CUDA + the upstream

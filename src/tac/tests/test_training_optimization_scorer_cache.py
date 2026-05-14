@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.training_optimization.scorer_cache`` (O1).
 
 The GT scorer cache is the highest-EV optimization on the audit: it

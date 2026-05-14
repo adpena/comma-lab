@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Magic-byte dispatch tests for `submissions/robust_current/inflate_renderer.py`
 on Lane I (Cool-Chic / C3 residual) renderers.
 

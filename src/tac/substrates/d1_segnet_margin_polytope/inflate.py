@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 inflate runtime — sidecar margin-map dequant + L2 polytope overlay.
 
 Per HNeRV parity L4: inflate.py <= 200 LOC substrate-engineering waiver.

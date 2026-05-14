@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.auto_promote_contest_cuda`` — auto-promotion automation."""
 
 from __future__ import annotations

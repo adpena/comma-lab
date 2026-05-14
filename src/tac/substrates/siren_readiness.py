@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed readiness audit for the SIREN substrate first anchor.
 
 This module is intentionally text/manifest based. It must be cheap enough for

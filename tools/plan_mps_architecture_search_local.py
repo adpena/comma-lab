@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """MPS architecture search planner — [MPS-research-signal] only.
 
 Operator directive 2026-05-13 LOCAL HARDWARE MAXIMIZATION SWEEP Stream 3.

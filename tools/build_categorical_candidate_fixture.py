@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic fixture for categorical candidate readiness tooling."""
 
 from __future__ import annotations

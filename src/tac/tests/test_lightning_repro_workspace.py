@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for deterministic Lightning Studio workspace preparation."""
 from __future__ import annotations
 

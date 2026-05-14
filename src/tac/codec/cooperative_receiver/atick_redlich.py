@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Atick-Redlich cooperative-receiver primitive (efficient-coding 1990/1992).
 
 The Atick-Redlich efficient-coding theorem states that under a fixed downstream

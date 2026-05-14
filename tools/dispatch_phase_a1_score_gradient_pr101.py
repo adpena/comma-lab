@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Dispatch Phase A1 (track1_phase_a1_score_gradient) to a remote GPU.
 
 Phase A1: score-gradient supervision PR101 fine-tune. Council priority: 22/22

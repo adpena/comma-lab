@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Azure VM-spot dispatch — wire Azure as a 4th GPU dispatch platform.
 
 Mirrors the Vast.ai pattern (provision → SSH → run lane → harvest →

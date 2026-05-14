@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane OS-A standalone: produce seed_poses.pt from openpilot supercombo.
 
 Usage::

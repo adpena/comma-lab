@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Loader drift xray — PyAV (CPU) vs DALI (CUDA) decoded RGB (handoff P5 D3).
 
 Per CLAUDE.md "MPS auth eval is NOISE" + "Submission auth eval — BOTH CPU AND

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 1 import + adaptive-lambda + dataclass-validation tests for delta paradigm.
 
 Tests live within Phase 1 scope:

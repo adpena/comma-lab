@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane 19 β-variant — sensitivity-weighted logit-margin loss."""
 from __future__ import annotations
 

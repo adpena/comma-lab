@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """balle_renderer inflate runtime — <= 200 LOC waiver per HNeRV L4 NEEDS-WORK (β).
 
 This file is the contest-runtime image of the β substrate. It is imported by

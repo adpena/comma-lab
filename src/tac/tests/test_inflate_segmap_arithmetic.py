@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane SH arithmetic SegMap inflate parity."""
 
 from __future__ import annotations

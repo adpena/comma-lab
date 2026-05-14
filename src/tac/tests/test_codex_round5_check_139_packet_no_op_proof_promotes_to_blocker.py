@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-5 catalog #139 — packet-compiler no_op_proof must promote to blocker.
 
 Bug class (codex round-5 HIGH 1, 2026-05-09): the previous

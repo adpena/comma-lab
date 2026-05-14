@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Composition cell registry: (substrate x primitive x order) tuples.
 
 Per operator directive 2026-05-12 ("stacking and composition on everything"),

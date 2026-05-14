@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """launch_lane_azure.py — Azure VM-spot dispatch with retry, analog to
 ``launch_lane_with_retry.py``.
 

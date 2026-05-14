@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 200-param tiny_nn implementation - capacity-faithful, PMF-partial.
 
 The 2026-05-08 implementation-vs-model audit found:

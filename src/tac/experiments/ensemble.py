@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Checkpoint ensemble via weight-space averaging.
 
 Core logic extracted from experiments/ensemble_checkpoints.py for use via ``tac ensemble``.

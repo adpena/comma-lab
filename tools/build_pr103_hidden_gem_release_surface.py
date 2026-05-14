@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a consolidated release surface for the PR103 AC hidden-gem candidate.
 
 The source artifact was intentionally local-only: archive/report at the root,

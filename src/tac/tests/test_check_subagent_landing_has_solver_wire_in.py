@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight Catalog #125:
 ``check_subagent_landing_has_solver_wire_in``.
 

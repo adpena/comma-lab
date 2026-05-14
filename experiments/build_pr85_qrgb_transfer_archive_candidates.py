@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build byte-closed PR85 archives from grounded PR90 QRGB transfer actions.
 
 This is a local archive builder only. It consumes the pair-action evidence

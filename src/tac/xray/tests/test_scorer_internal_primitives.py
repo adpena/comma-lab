@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for scorer-internal xray primitives: F7/F8/F9."""
 
 from __future__ import annotations

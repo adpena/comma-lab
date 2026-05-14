@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Preflight check: runtime-executed file references in shell scripts must resolve.
 
 Problem class: subagent worktrees that build a wrapper script + the helpers it

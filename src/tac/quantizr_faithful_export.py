@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """QFAI export/load helpers for Lane Q-FAITHFUL JointFrameGenerator checkpoints.
 
 The QFAI format is intentionally simple — just enough header to allow the

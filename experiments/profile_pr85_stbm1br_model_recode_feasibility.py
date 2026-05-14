@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile model-only PR85/STBM1BR recode feasibility.
 
 This is a local guard for the PR85_STBM1BR frontier archive. It reuses the

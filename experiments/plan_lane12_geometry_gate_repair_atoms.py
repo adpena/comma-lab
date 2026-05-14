@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan local-only Lane 12 geometry-gate repair atoms.
 
 The planner consumes existing Alpha-Geo geometry packets, primitive-contract

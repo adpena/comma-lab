@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build lossless PR85 QH1 model-repack candidates for byte screening.
 
 QH1 is a lossless wrapper around PR85's decoded QH0 renderer bytes.  The

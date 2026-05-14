@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SAFE STUB: experiments/repack_quantizr_faithful_qzs3_archive.py
 
 Recovery note: this module was lost when subagent worktrees were

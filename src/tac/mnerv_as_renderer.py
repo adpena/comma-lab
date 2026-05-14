@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """MNeRV-as-renderer — multi-scale hierarchical NeRV substrate.
 
 Per operator directive 2026-05-11 + CLAUDE.md HNeRV parity discipline + Mallat

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Train mini-scorers: distill PoseNet+SegNet into tiny models for inflate-time TTO.
 
 The pivotal experiment: if mini-scorers achieve >98% agreement with full scorers,

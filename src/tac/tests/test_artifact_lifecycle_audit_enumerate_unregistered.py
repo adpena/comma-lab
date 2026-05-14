@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for FIX-4 META gate enumerate-unregistered (META-META 2026-05-08).
 
 ``audit_unregistered_long_lived_artifacts()`` enumerates tracked files under

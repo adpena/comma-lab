@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Reusable Modal auth-eval dispatch and recovery helpers.
 
 The experiment entry points own provider-specific images and archive upload.

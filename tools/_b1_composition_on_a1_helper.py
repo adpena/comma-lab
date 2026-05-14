@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared helper for WAVE-5-B1 composition-cell archive builders on A1 substrate.
 
 This module exposes the building blocks for the 4 WAVE-5 B1 composition

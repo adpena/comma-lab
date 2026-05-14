@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for runtime guards added in deep hardening pass 3 dimension 3.
 
 - experiments/contest_auth_eval.py: _validate_archive_members whitelist

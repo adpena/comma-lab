@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build an optimized training bundle for any cloud platform.
 
 Creates a self-contained directory with everything needed to train,

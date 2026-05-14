@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for PoseNet target extraction and supervised TTO.
 
 Tests the round-trip: extract -> save -> load -> verify, and the

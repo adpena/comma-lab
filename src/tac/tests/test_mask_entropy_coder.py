@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip tests for ``tac.mask_entropy_coder``.
 
 Check 46 contract: lossless 5-class mask codec must satisfy

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pre-trained driving-prior world-model scaffold for the 2032 lane.
 
 This is a lightweight, scorer-free L0 substrate contract. It makes the future

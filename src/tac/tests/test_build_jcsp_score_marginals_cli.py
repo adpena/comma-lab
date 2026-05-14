@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``experiments/build_jcsp_score_marginals.py`` CLI.
 
 Covers happy paths and error modes:

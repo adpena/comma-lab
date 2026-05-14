@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Training loop for task-aware codec post-filters.
 
 Provides a class-based Trainer that composes:

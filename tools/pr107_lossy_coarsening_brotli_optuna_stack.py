@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR107 (apogee) STACK candidate: lossy_coarsening + Optuna brotli-param search.
 
 This tool produces multiple candidate archives at varying rel_err budgets (0.05,

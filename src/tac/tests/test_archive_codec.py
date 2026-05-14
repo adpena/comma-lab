@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip tests for ``tac.archive_codec``.
 
 Check 46 contract: any quantizer/encoder must demonstrate

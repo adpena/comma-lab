@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit a strict runtime-consumption proof for a monolithic packet candidate.
 
 This is a CPU-only, non-score proof path. It does not run the scorer, dispatch

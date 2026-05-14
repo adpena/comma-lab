@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.xray.base canonical primitive protocol + result dataclass."""
 
 from __future__ import annotations

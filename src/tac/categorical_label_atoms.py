@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic typed label atoms for categorical mask candidates."""
 
 from __future__ import annotations

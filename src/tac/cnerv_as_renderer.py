@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CNeRV-as-renderer — fully-Convolutional NeRV substrate.
 
 Per operator directive 2026-05-11 ("all nerv-family"). CNeRV replaces

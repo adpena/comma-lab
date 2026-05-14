@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #199 — check_operator_authorize_bypass_requires_session_budget.
 
 (Filename retains 198 prefix per the orchestrator's prompt — Catalog #199 was

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/build_pr106_uniward_runtime_packet.py``.
 
 Subagent BUILD-PR106-UNIWARD-RUNTIME landed this build tool to close the

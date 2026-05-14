@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Harvest Kaggle T1 Ballé sweep kernels — sister of ``tools/harvest_modal_calls.py``.
 
 Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" this is

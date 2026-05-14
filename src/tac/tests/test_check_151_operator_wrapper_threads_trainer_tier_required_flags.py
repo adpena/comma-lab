@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dedicated tests for Catalog #151
 (`check_operator_wrapper_threads_trainer_tier_required_flags`).
 

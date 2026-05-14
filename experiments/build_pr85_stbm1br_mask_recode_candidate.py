@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build the PR85 STBM1BR lossless mask-recode candidate.
 
 This is a local-only, fail-closed builder.  It replaces only PR85's mask

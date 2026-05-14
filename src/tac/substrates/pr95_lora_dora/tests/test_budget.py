@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Closed-form byte and break-even tests for PR95 LoRA/DoRA."""
 
 from __future__ import annotations

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit bounded Brotli saturation for an HNeRV decoder section."""
 
 from __future__ import annotations

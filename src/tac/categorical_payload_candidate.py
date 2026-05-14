@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic builder for local categorical payload candidates.
 
 The builder materializes a byte-closed local archive from an existing

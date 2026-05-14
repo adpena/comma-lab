@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for canonical top-submission reverse-engineering tooling."""
 from __future__ import annotations
 

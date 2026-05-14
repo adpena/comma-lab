@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/pr101_omega_opt_uniward_weighted_allocation.py``.
 
 The full empirical sweep requires the PR101 decoder state-dict; here we

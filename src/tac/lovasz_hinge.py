@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lovász hinge mask geometry — convex envelope of IoU/argmax disagreement.
 
 T11 — Dykstra (CO-LEAD) eureka shower-thought (Fields-medal council 2026-05-09).

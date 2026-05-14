@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 17 — IMP 10-cycle orchestrator tests.
 
 Per Phase 3 Lane 17 spec (memory project_phases_2_3_4_*):

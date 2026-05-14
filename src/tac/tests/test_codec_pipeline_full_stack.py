@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.codec_pipeline_full_stack` - Op 4 full-stack orchestrator.
 
 Coverage (>= 8 tests per parent task spec):

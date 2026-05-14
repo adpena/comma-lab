@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: I001
 """Submit or dry-run official Lightning Batch Jobs for pact lanes/evals."""
 from __future__ import annotations

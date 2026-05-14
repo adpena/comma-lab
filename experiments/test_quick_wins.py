@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Smoke test for the 3 quick wins: per-class weights, feature matching, multi-pass.
 
 Run on MPS:

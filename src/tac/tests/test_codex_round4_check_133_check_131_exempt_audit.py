@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-4 catalog #133 — Catalog #131 accept-list audit.
 
 Bug class (codex round-4 HIGH 1, 2026-05-09): Catalog #131's

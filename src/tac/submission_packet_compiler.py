@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic submission-packet compiler oracle.
 
 This module is the Python reference for future Rust/Zig/C/ASM packet tooling.

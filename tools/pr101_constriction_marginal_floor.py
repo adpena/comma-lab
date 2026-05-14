@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Empirical marginal-floor encoder using constriction range coder.
 
 This is the operational counterpart to ``compute_shannon_floor``.

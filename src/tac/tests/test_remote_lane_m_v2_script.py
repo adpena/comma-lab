@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_m_v2_radial_zoom_proper.sh.
 
 Lane M-V2 = radial-zoom pose engineering audit retry. Anchored on Lane A

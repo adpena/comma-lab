@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical solver-stack wire-in surface for xray primitives.
 
 Per CLAUDE.md "Subagent coherence-by-default" 6-hook NON-NEGOTIABLE, every

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical xray primitive base protocol + result dataclass.
 
 This module defines the foundation every ``tac.xray.*`` primitive implements.

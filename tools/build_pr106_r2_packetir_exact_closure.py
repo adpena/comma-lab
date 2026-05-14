@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build an exact-eval closure record for the PR106/R2 PacketIR candidate."""
 
 from __future__ import annotations

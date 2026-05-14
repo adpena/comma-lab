@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer manifold geometry for task-aware compression (Tao's contribution).
 
 The set of frames producing identical scorer output forms a manifold M in

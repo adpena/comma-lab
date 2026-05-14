@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Runtime-sidecar consumption proof for PR106/R2 sidecar packets.
 
 This module deliberately stops before full-frame inflate or scoring. It imports

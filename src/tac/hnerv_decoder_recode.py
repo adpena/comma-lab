@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only structural recode probes for PR106-style HNeRV decoders."""
 
 from __future__ import annotations

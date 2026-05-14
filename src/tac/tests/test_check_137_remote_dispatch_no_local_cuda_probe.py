@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #137 — remote dispatch runbooks must NOT default to local CUDA probe.
 
 Defense-in-depth on codex round-3 MEDIUM 1 (2026-05-09): the round-3 fix patched

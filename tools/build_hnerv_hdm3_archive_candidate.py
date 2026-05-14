@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed HDM3 HNeRV archive candidate."""
 
 from __future__ import annotations

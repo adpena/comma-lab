@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the L2 score-aware residual encoders (wavelet / c3 / cool_chic).
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons

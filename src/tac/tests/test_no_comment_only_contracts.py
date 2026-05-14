@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for PCC2 — `check_no_comment_only_contracts`.
 
 Bug class: a placeholder/stub function carries a comment promising the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/dispatch_advisor.py."""
 from __future__ import annotations
 

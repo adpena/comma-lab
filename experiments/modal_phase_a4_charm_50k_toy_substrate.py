@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dispatch Phase A4 (track1_phase_a4_charm_50k_toy) on Modal T4 with ChARM byte-roundtrip eval.
 
 Council priority: Round 1 second-choice 7/10 (after A1 9/10 first-choice) — Decision 1

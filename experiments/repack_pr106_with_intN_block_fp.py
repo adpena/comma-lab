@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Repack PR106 HNeRV decoder via signed intN block-FP (parameterized 4..8).
 
 Generalization of experiments/repack_pr106_with_int4_block_fp.py to take

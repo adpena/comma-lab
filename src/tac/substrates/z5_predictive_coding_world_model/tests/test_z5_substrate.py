@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z5 predictive-coding world-model substrate tests — 25+ tests across 6 module groups.
 
 Test groups:

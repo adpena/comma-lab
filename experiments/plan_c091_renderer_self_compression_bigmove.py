@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C091-native renderer/QZS3 self-compression big moves locally.
 
 This is an orchestration helper around the existing PR75 renderer-shrink

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.hybrid_renderer_residual — γ Hybrid renderer + residual basis (L0 SKETCH).
 
 The Fields-medal grand council 2026-05-12 DEFERRED-pending-criterion scaffold per

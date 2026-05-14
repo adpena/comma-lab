@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.lane_mark_pose — zero-archive-cost 6-DOF pose conditioning.
 
 These tests pin the property invariants of the inflate-time analytical pose

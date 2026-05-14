@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a lossless single-member renderer payload archive.
 
 This is a no-retraining, byte-only transform.  It reads an existing renderer

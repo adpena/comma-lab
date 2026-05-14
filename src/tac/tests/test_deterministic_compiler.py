@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.packet_compiler.deterministic_compiler`.
 
 Coverage matrix:

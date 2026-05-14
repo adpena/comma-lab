@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Measure PR101 Markov transition-table side-information costs.
 
 The Markov oracle floor is not deployable unless the decoder has the same

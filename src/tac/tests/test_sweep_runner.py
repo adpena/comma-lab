@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/sweep_runner.py — the canonical Bayesian sweep harness.
 
 Coverage:

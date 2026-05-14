@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR85 STBM1BR plus PR92 RMB1 randmulti lossless recode candidate.
 
 This local builder replaces only the ``randmulti`` segment in the current

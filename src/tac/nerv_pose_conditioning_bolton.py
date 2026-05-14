@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """NeRV pose-conditioning bolt-on — FiLM-style modulation across substrates.
 
 Per operator directive 2026-05-11 (NeRV-family expansion bolt-on #2) +

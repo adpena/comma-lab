@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression test for the Lightning $1.55 catastrophe (2026-05-05).
 
 Eight Lightning dispatches failed at the first ``cd`` because

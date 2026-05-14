@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Domain-specific optimization solvers for video compression scoring.
 
 Yousfi's cross-domain solver toolkit: each solver applies rigorous domain

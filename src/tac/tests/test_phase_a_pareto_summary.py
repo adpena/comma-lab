@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Phase A Pareto summary solver/planner annotations."""
 from __future__ import annotations
 

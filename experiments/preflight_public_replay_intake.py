@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: I001
 # pyc-recovery pass2: rehydrated from git blob bca3af5700822210f92d708931694a289f7b3b33 via `git fsck --lost-found`
 # original path: experiments/preflight_public_replay_intake.py

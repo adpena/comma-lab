@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane EC: structural tests for scripts/remote_lane_ec_engineered_corrections.sh.
 
 Lane-EC-specific properties:

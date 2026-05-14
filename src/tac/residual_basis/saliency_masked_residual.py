@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Saliency-masked residual encoder upgrade (L2 score-aware composition layer).
 
 Per W's DEFERRED reactivation criterion #2 (memory

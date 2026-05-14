@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #209 — DP1 contest-video-leakage caller-routing gate tests.
 
 Verifies ``tac.preflight.check_no_contest_video_leakage_in_distillation_callers``:

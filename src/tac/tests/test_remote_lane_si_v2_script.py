@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI-V2: structural tests for scripts/remote_lane_si_v2_learnable_threshold.sh.
 
 V2-specific properties:

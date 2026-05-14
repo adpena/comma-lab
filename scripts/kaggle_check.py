@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Check all Kaggle kernel statuses and show errors for failed kernels.
 
 Usage:

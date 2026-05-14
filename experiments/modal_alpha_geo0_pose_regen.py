@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dispatch Alpha-Geo-0 pose regeneration plus canonical CUDA auth eval on Modal.
 
 This is the non-Vast path for the Lane 12 Alpha-Geo-0 stale-pose isolation

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/learnable_class_weights.py — Lane PS-V2.
 
 Round 10 (2026-04-27) replaced the softmax(raw_logits)+variance penalty

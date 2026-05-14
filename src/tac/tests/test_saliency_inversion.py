@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI: tests for the saliency-inversion primitives.
 
 We use small mock scorers (a few conv layers) so the tests run on CPU

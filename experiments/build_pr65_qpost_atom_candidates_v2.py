@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Expand PR65 qpost atom-subset candidates for the C-089/QP1 frontier.
 
 This is a local planner/builder only.  It delegates byte-closed archive

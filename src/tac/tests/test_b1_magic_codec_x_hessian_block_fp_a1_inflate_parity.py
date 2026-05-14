@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Inflate-parity test for B1 Cell 4: magic_codec x hessian_block_fp on A1.
 
 Catalog #91 paired-roundtrip coverage for the inflate adapter

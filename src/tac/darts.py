@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DARTS (Differentiable Architecture Search) — generic framework.
 
 Implements the bilevel-optimization formulation from Liu, Simonyan, Yang

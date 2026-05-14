@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Grand Council Synthesis — 2026-04-12
 
 Full council: Yousfi, Fridrich, Karpathy, Tao, LeCun, Dykstra, Contrarian,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for TrainConfig pydantic validation."""
 import pytest
 from pydantic import ValidationError

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit PR91/HPM1 replay readiness without dispatching scorer work."""
 
 from __future__ import annotations

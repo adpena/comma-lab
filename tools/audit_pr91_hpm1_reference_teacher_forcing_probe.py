@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe PR91/HPM1 teacher forcing and classify the next entropy failure row."""
 
 from __future__ import annotations

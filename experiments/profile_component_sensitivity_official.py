@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Produce official component-response curves from canonical archive evals.
 
 This is intentionally narrower than ``profile_component_sensitivity.py``. It

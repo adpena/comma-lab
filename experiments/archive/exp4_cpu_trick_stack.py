@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Experiment 4: CPU Trick Stacking -- score every trick independently and stacked.
 
 Run on Lightning T4:

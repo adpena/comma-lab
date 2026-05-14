@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the stack-of-stacks composition substrate (beat-PR95 Idea 3).
 
 Design memo: ``.omx/research/beat_pr95_curriculum_substrate_training_design_20260513.md``

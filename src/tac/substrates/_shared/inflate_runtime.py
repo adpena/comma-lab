@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared contest inflate helpers for substrate runtimes.
 
 Substrate renderers commonly produce RGB tensors at scorer resolution

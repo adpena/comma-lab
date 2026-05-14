@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Frame-conditional bit-budget allocator (Track 1 council prescription, Decision 5).
 
 Idea

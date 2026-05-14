@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR #101 (hnerv_ft_microcodec) split-Brotli + per-tensor byte-map decoder codec.
 
 This is a 1:1 port of PR101's ``submissions/hnerv_ft_microcodec/src/codec.py``

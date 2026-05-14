@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for FIX-2 atomic catalog-number claim (META-META 2026-05-08).
 
 Verifies that ``tools/claim_catalog_number.py`` serializes concurrent claims

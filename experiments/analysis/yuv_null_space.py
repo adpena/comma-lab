@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """YUV Null Space Exploitation: identify pixels invisible to PoseNet.
 
 PoseNet's preprocess_input converts RGB to YUV6 with 4:2:0 chroma subsampling.

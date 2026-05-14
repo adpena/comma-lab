@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic rank-1 pose compression via a tiny polynomial model.
 
 Lane GP targets the contest observation that PoseNet's useful pose Jacobian is

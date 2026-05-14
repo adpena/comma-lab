@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 + wavelet residual architecture / head."""
 from __future__ import annotations
 

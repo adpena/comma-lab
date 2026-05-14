@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check 65 — lane classes must have a pipeline proof.
 
 These tests use a tmp repo skeleton so we can mutate scripts/ + .omx/state/

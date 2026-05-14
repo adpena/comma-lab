@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed C067 geometry-safe mask/topology planner.
 
 This tool is a non-training, no-dispatch gate for C067 mask/topology variants

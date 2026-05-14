@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.codec.a6_selfcomp_blockfp_hyperprior_compose``.
 
 Tests are organised by the contract sections in the module docstring:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pipeline fail-closed tests for the JCSP integration gate."""
 
 from __future__ import annotations

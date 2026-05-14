@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/contest_auth_eval.py — the canonical generic
 contest-compliant auth evaluator.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SAR coherent pose-pair substrate inflate runtime — contest raw-output.
 
 Loads the SARC archive, rebuilds the renderer + pose codec state, decodes

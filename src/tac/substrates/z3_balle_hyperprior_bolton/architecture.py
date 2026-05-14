@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z3 Ballé hyperprior bolt-on architecture.
 
 Per zen-floor band v2 council (`feedback_zen_floor_band_v2_post_z1_ablation_20260514.md`)

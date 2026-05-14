@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Byte-equivalence tests for QZS3 weight codec vs PR #67's unpacker.
 
 These complement test_quantizr_faithful_renderer.py which checks our own

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR105 ``kitchen_sink`` packed-state-schema size-sorted helper."""
 
 from __future__ import annotations

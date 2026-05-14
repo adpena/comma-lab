@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_pose_tto_only_bootstrap.sh.
 
 LANE-B (2026-04-26) burned 6.5h + $2 because the bootstrap had three

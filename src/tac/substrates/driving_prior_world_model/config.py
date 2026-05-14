@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Typed config for the driving-prior world-model scaffold.
 
 This package is an L0 research-only substrate scaffold. It intentionally

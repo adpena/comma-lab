@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SAR coherent pose-pair substrate archive grammar — SARC monolithic 0.bin.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the unified 5-strategy sign-encoding taxonomy.
 
 Covers:

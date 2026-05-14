@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """FFNeRV-as-renderer — production trainer.
 
 Per operator directive 2026-05-11 (NeRV-family expansion). Mirrors Lane 12-v2

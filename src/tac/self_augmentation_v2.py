@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SAUG-V2: Cosmos HighSigmaStrategy-style input noise.
 
 Sigmas are raw standard deviations in the same units as the tensor passed to

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """W/I/A decisions implementation regression tests (2026-05-12).
 
 Tests for `feedback_wia_decisions_impl_landed_20260512`:

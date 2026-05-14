@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Scan PR91/HPM1 first-failure probability contracts without dispatch."""
 
 from __future__ import annotations

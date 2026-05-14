@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F11: Unified action principle primitive (GR-style variational objective).
 
 Per deep_math §5.4 + ``feedback_unified_lagrangian_action_principle_GR_style_20260509``,

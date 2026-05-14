@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR77 tile-delta action-transfer candidates on PR79 S2 archives.
 
 This is a deterministic local profiler/builder only. It converts the public

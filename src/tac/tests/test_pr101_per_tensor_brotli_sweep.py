@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/pr101_per_tensor_brotli_sweep.py."""
 from __future__ import annotations
 

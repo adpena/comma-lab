@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit unique recovery custody snapshots for no-signal-loss preservation.
 
 The recovery cleanup produced two local forensic surfaces that should not be

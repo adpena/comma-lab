@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Real-PR101 ChARM/range-coder probe over quantized HNeRV decoder weights.
 
 This is a CPU-only byte probe, not a contest score claim. It answers the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.diagnostics.decoder_drift_introspection``."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Structure tests for scripts/remote_lane_qat_sweep.sh.
 
 Same hardness as test_remote_lane_a_sweep_script.py, adapted for QAT-specific

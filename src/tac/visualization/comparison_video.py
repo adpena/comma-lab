@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate a side-by-side SegNet overlay comparison video.
 
 Produces a two-panel video matching the comma challenge README GIF format:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke test for ``experiments/build_omega3_block_fp_archive.py``.
 
 Synthesizes a minimal QFAI-format source archive (JFG state-dict) on disk,

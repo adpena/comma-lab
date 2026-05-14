@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a static exact-eval packet for HNeRV low-level Brotli candidates.
 
 This is a local custody/readiness tool. It writes deterministic static packet

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic archive-member substitution for CodecOp byte streams.
 
 This module is deliberately narrow: it replaces one physical ZIP member with a

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Research-source bindings for planning-only optimization math.
 
 The objects here are not evidence of contest score movement. They bind paper

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR85 QMA9 alternate-grammar/table-reduction screens.
 
 This is a local-only byte screen. It compiles the audited PR85 replay

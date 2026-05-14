@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke test for tools/operator_briefing.py orchestrator.
 
 The orchestrator delegates to apogee_intN_pareto + score_dashboard +

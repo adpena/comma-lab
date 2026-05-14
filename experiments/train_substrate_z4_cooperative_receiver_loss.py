@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the Z4 cooperative-receiver-loss substrate (Time-Traveler L5 staircase Step 2).
 
 Per `.omx/research/campaign_z4_cooperative_receiver_loss_20260514.md` and

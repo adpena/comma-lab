@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lossless PR106 fixed-latent recode primitives.
 
 PR106-style HNeRV packets store the fixed 600x28 latent stream as one Brotli

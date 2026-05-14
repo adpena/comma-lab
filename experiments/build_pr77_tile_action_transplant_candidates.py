@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR77 fixed-slice tile-action transplant candidates.
 
 This is a deterministic byte-screening builder only. It transplants PR77's

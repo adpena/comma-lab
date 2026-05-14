@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PS — per-class SegNet weighting unit tests.
 
 What Lane PS adds:

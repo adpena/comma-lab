@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for variable-rate per-frame mask encoding and difficulty map computation.
 
 Variable-rate encoding allocates more bits to hard frames (lower CRF)

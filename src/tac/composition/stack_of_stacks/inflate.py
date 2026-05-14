@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Inflate-time runtime for the stack-of-stacks composition format.
 
 This module is the contest-faithful sister of :mod:`compose`. It parses

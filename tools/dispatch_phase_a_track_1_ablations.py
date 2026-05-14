@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase A Track 1 ablations dispatch wrapper.
 
 Per CLAUDE.md "parallel-dispatch is a FIRST-CLASS DELIVERABLE", this wrapper

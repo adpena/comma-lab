@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Differentiable bit-depth learning (Fridrich approach).
 
 Learns per-layer optimal bit allocation via Gumbel-softmax over candidate

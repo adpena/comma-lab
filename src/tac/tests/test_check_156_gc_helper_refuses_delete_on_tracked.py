@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #156 — check_gc_helper_refuses_delete_on_tracked_paths.
 
 2026-05-12 (subagent F, Wave 1) — sister gate of Catalog #154. Where #154

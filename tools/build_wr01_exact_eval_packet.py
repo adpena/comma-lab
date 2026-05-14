@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic WR01/HNeRV exact-eval operator packet."""
 
 from __future__ import annotations

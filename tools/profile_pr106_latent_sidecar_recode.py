@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile lossless PR106 latent-sidecar recode candidates.
 
 This is a byte-closed planning tool. It decodes a PR106 latent-sidecar payload

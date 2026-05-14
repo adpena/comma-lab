@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.score_geometry_shannon_floor — closed-form information floor."""
 from __future__ import annotations
 

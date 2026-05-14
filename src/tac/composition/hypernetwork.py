@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Hypernetwork Composer — composition/stacking primitive.
 
 Ha-Dai-Le 2016 ("HyperNetworks", https://arxiv.org/abs/1609.09106) showed

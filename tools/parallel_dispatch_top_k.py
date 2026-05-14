@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Parallel-dispatch actuator for exact-eval-ready ranked candidates.
 
 This tool is intentionally strict. It refuses prediction-only, forensic,

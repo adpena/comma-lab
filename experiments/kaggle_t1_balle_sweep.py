@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Kaggle parallel-sweep harness for the T1 Ballé end-to-end trainer.
 
 This is the kernel script that runs on a Kaggle T4 (free tier). It is the

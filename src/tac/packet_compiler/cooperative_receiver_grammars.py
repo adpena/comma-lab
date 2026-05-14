@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Packet grammar registry for cooperative-receiver substrate work.
 
 This module is the single small registry that keeps new first-principles

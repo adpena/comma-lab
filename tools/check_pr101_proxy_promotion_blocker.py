@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail closed when a PR101 proxy packet is mistaken for promotion evidence.
 
 This checker is deliberately local-only. It joins the PR101 proxy runtime

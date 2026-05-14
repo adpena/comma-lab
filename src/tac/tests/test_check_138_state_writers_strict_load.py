@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #138 — state writers must use strict load on mutating path.
 
 Defense-in-depth on codex round-3 MEDIUM 2 (2026-05-09): the round-3 fix patched

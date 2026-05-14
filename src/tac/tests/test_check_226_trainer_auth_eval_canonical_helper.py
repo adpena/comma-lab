@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #226 — check_trainer_auth_eval_uses_canonical_helper.
 
 Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"

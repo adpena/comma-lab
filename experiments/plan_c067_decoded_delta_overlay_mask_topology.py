@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan local-only C067 decoded-baseline delta/overlay mask candidates.
 
 This planner keeps the C067 decoded mask tensor as the global geometry source

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/check_lane_smoke_signal_nontrivial.py (PCC9).
 
 The CRITICAL test reproduces the apogee_int4-class failure mode from the

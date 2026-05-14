@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile contest archive byte accounting and self-compression opportunities.
 
 This tool is empirical analysis only. It does not inflate frames, load scorers,

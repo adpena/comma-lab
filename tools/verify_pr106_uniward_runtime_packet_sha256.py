@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: thin verification harness; no flags needed.
 """Verify PR106 UNIWARD-Lagrangian runtime packet rebuilds deterministically.
 

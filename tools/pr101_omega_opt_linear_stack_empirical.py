@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 Ω-OPT linear stack empirical byte composition — Path B step 1.
 
 Per the operator's "Path B" choice and the Ω-OPT-paradigm-audit memo

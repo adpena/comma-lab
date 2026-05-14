@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C067 micro AV1 mask reencode trust-region candidates.
 
 This is a deterministic planning and byte-screen tool.  It reads a C067-style

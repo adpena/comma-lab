@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Per-section entropy density vs encoded-bytes heatmap.
 
 WHEN TO USE: when planning what byte-level section to attack next on a

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Average top-K int8 checkpoint weights for smoother quantization.
 
 Instead of picking the single best epoch, this averages the fp32 weights

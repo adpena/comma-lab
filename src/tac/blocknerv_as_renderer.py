@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """BlockNeRV-as-renderer — tile-decomposed NeRV substrate.
 
 Per operator directive 2026-05-11 (NeRV-family expansion) + CLAUDE.md HNeRV

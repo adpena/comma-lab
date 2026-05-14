@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane CG tests: calibrated viewing-ray positional encoding."""
 from __future__ import annotations
 

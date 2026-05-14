@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Evidence-derived LA-POSE motion record construction.
 
 This module bridges exact/component CUDA artifacts into LA-POSE-style motion

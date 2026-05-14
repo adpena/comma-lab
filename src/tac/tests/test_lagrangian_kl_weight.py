@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.lagrangian_kl_weight.KLWeightProportionalController.
 
 (Historically named ``LearnableKLWeight`` — the alias is kept and these

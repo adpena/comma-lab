@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Structural regression tests for the three Lane V2 Lagrangian-control scripts.
 
 Pinned scripts (each replaces a hand-derived constant with a Lagrangian-controlled

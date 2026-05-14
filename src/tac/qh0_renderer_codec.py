@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """QH0/QM0 renderer codec for PR85-style JointFrameGenerator payloads.
 
 The public PR85/PR89 family stores a Quantizr-faithful

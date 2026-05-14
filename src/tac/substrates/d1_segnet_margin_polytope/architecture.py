@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 sidecar architecture — composes with a frozen base substrate.
 
 D1 is a **SIDECAR** like YUCR: it does not own a renderer. The margin-map

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Conformance tests for ``tac.residual_basis.pr106_materializer_helpers``.
 
 Covers:

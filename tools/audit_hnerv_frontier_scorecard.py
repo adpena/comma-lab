@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit the public HNeRV frontier scorecard for routing readiness.
 
 The scorecard is a local planning artifact. This audit does not claim scores or

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a CMG3 non-background row-run mask candidate archive.
 
 This builder defaults the decoded mask canvas to class 0 and stores only the

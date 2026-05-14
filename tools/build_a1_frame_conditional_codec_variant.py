@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build A1 frame-conditional codec variants for M5 Max + GHA dispatch.
 
 Per HNeRV parity discipline lesson 2 (export-first design) and lesson 11

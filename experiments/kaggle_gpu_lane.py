@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """GPU Lane Experiment: Coupled Trajectory + Fridrich Constrained Optimization
 
 Run on Kaggle P100 (16GB VRAM). This is the viability test for the GPU lane.

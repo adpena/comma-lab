@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src.tac.categorical_substrate (categorical full-RGB substrate)."""
 
 from __future__ import annotations

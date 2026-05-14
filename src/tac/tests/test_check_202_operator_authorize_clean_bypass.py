@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #202 whole-tree clean-check bypass attestation."""
 
 from __future__ import annotations

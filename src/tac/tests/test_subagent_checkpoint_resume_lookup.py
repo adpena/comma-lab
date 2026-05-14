@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Codex finding #3 predecessor-resume query paths.
 
 Empirical anchor 2026-05-14: when a subagent crashes mid-session (Anthropic

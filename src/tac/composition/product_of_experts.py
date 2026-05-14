@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Product-of-Experts Gating — composition/stacking primitive.
 
 Hinton 1999 ("Products of Experts", https://www.cs.toronto.edu/~hinton/poe.html)

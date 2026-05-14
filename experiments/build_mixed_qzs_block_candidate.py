@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic mixed/local QZS block-allocation candidates.
 
 Mixed per-tensor QZS block allocation uses the charged MQZ1 renderer wire

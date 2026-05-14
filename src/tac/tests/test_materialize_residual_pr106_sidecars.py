@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """End-to-end tests for the 5 per-family ``tools/materialize_*_residual_pr106_sidecar.py``.
 
 Each materializer is exercised through ``runpy``-style subprocess invocation

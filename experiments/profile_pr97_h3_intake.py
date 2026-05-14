@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # pyc-recovery pass2: rehydrated from git blob ffffbf6c848e34b9d06efe6453893131c5e96c90 via `git fsck --lost-found`
 # original path: experiments/profile_pr97_h3_intake.py
 # This is OUR source, dropped during commit 66c59aae filter-repo cleanup; the .pyc was the only

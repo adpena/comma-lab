@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 CROSS-TENSOR Ballé hyperprior — the LAST audit criterion for the
 ``compressai_balle_hyperprior`` lane (per ``feedback_implementation_vs_model_gap_audit_20260508.md``
 and ``feedback_pr101_compressai_balle_full_reactivation_FALSIFIED_with_capacity_20260507.md``).

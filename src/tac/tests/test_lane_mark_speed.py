@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for lane-mark-speed module — derives per-pair zoom scalars from masks.
 
 The Hotz analytical move: lane-mark centroids encode vehicle speed via radial

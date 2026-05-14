@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit a categorical compression candidate manifest before exact eval."""
 
 from __future__ import annotations

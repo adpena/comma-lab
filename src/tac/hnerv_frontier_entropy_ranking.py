@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Rank HNeRV frontier byte mass against entropy-gap planning targets.
 
 This module is a local planning surface. It joins the exact-replay scorecard,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR85-family archives stacked with PR89's charged final-bias atom.
 
 PR89's public archive keeps PR85's single-member ``x`` payload byte-identical

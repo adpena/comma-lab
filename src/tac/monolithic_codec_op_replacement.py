@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bridge materialized CodecOp bytes into monolithic section replacements.
 
 This module deliberately emits the existing ``--replacement-manifest`` shape

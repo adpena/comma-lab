@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.codec_pipeline_kl_latent.Op_KLLatent``.
 
 Verifies the same contract as test_codec_pipeline_kl_pose but generalized

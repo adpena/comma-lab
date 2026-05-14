@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Wavelet — Daubechies/Haar wavelet-domain mask codec (Mallat lineage).
 
 Per Phase 2 paradigm shift α candidate α2 (Grand Council #294 battleplan):

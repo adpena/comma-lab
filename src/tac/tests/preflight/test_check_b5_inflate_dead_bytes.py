@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B5 — inflate wire-format dead-bytes scanner.
 
 Variables read via struct.unpack/read in inflate.py must be loaded in

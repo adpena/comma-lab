@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a planning-only PR85 side-channel attribution profile.
 
 This helper is static forensics only. It parses the public PR85 single-member

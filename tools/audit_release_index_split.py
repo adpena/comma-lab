@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit the git index/worktree split before public-release commits.
 
 This guard protects a common dirty-worktree failure mode:

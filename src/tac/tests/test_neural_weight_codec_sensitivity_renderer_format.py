@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused tests for the NWCS renderer container format."""
 
 from __future__ import annotations

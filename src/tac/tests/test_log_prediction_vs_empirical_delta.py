@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tools.log_prediction_vs_empirical_delta`.
 
 Coverage:

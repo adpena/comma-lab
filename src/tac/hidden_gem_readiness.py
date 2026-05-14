@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic readiness audit for hidden-gem registry entries.
 
 The hidden-gem registry is a planning surface, not score evidence. This module

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.composition.registry` + :mod:`tac.composition.enumerate`.
 
 Per operator directive 2026-05-12 ("stacking and composition on

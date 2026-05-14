@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Quantization-Aware Training (QAT) fine-tuning for FP4 deployment.
 
 Implements progressive quantization following Bit-by-Bit (ICLR 2026)

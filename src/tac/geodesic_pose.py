@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane GE: compact one-dimensional geodesic pose compression.
 
 PoseNet's useful signal is effectively rank-1, so this module stores only

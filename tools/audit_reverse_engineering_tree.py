@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit reverse_engineering/ for clean custody and promotion decisions."""
 
 from __future__ import annotations

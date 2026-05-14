@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Auto-promotion: scan for contest-CUDA artifacts → auto-mark lane gates + auto-update reports.
 
 Per priority-list item #4 from the cathedral roadmap rollup

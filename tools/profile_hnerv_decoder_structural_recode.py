@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile lossless structural recodes for a PR106-style HNeRV decoder."""
 
 from __future__ import annotations

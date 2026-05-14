@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 + wavelet residual archive grammar.
 
 Per CLAUDE.md "HNeRV parity discipline" lessons L3 (archive grammar) +

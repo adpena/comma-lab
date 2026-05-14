@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic QMA9 range-mask transfer candidates or manifests.
 
 This is a local construction tool only. It can encode a raw semantic mask with

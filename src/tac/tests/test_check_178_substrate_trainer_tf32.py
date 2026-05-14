@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #178 (WAVE-7-LOW-FIX, REVIEW-OMNI NV1) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 Carmack — Substrate trainers

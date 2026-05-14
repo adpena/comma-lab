@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane 17 IMP β-variant — sensitivity-weighted pruning."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unified trick stacking engine for inflate-time optimizations.
 
 Orchestrates ALL inflate-time tricks in the correct order. Each trick

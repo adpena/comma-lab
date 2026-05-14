@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Static PR86 HPAC/token anatomy and PR85 transplant planner.
 
 This tool is intentionally local-only. It does not run scorer code, does not

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Block-FP codec for JointFrameGenerator (Wave-Ω Ω-3 transplant).
 
 This module implements a per-block exponent-shift quantizer for the canonical

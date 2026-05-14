@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """GR-style unified action principle for the contest pipeline (T7-T22 + Lane-12-v2 + A1).
 
 Per ``feedback_unified_lagrangian_action_principle_GR_style_20260509`` the

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 theoretical-floor analyzer — task #397 (engineering hygiene).
 
 Reports the canonical Shannon-floor stack for the PR101 substrate, per

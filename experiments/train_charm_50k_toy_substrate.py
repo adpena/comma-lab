@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase A4 — ChARM 2020 co-trained 50K-param toy substrate trainer.
 
 # EXPORT_FORMAT: charm_2020_co_trained_int8_residuals

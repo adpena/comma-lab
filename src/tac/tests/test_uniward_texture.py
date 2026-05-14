@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI-V3 tests: UNIWARD texture-probability masks."""
 from __future__ import annotations
 

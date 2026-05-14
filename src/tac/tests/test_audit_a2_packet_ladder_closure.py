@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A2 packet-ladder closure audit CLI."""
 from __future__ import annotations
 

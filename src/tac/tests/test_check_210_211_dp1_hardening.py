@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #210 + #211 DP1 hardening preflight gates.
 
 Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"

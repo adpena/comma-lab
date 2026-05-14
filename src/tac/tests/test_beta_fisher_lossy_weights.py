@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for beta-Fisher lossy-coarsening tensor weight export."""
 
 from __future__ import annotations

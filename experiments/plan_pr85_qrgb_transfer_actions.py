@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan PR90 QRGB residual controls as PR85 action evidence.
 
 This is a deterministic, local-only planner. It parses PR90's packed QRGB

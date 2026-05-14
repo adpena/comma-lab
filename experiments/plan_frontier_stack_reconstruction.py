@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a contest-faithful frontier stack reconstruction plan.
 
 This tool is local-only. It inventories current public/frontier archives,

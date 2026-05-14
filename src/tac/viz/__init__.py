@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Visualization modules for TTO analysis and diagnostics.
 
 This package provides reusable visualization functions designed to be

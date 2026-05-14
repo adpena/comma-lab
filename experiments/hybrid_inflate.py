@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Hybrid inflate: renderer for easy pairs + constrained gen for hard pairs.
 
 The top 20% hardest pairs (by PoseNet difficulty) get optimized via

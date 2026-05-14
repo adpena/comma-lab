@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile native QMA9 metadata/decode timing without score claims.
 
 This tool is a local CPU-only observability helper for PR85/PR92-style QMA9

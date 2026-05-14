@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `experiments/line_search_pose_refinement.py` (Wave-1.5).
 
 Verifies the R(D)-joint coordinate-descent objective + the deterministic

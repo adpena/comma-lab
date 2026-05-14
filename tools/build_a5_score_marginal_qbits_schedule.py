@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build conservative A5 q-bit schedules from per-pair score marginals."""
 
 from __future__ import annotations

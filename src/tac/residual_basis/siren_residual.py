@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SIREN sinusoidal-activation coordinate-MLP residual basis SCAFFOLD.
 
 SIREN (Sitzmann et al., 2020, "Implicit Neural Representations with Periodic

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Recover artifacts from a spawned Modal lane training run.
 
 Companion to `experiments/modal_train_lane.py`. When a lane is dispatched

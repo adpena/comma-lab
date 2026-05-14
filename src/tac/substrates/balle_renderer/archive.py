@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """balle_renderer archive grammar — monolithic single-file ``0.bin`` (β).
 
 Catalog #124 STRICT archive-grammar 8 fields are declared in the package

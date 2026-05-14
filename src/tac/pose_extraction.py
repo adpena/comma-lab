@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """GT pose extraction utility for FiLM-conditioned renderer.
 
 Extracts PoseNet outputs from GT frame pairs and saves them for use as

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane MM archive builder — Selfcomp grayscale-LUT mask re-encoding.
 
 Takes the canonical Lane A archive (renderer.bin + masks.mkv +

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wasserstein-Barycenter Checkpoint Ensemble + MERA Quantizer (WBCE-MERA).
 
 This primitive composes THREE techniques into one canonical pipeline:

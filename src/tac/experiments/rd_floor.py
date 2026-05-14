@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Empirical rate/distortion floor analysis.
 
 Core logic extracted from experiments/rate_distortion_floor.py for use via ``tac rd-floor``.

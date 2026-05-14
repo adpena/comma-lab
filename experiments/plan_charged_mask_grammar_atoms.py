@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan charged mask-grammar atoms from a public-floor one-blob archive.
 
 This is a deterministic, CPU-only planning tool.  It extracts the charged

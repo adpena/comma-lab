@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for TCNeRV-as-renderer (temporal-conv) substrate."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Visualize the scorer-conditional MDL ablation bytemap.
 
 Reads `<archive_name>_mdl_ablation.json` from Z1 ablation output and emits

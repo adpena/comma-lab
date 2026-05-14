@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """FIX-B Wave 3 unblock: regression tests for tac.losses package re-exports.
 
 The historical single-file ``tac.losses`` was split into the

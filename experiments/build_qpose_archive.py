@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a PR #67 ``qpose14_qzs3``-shaped candidate archive.
 
 PR #67 (rank-1 leaderboard ~0.31) ships a single-blob archive ``p`` (zipped

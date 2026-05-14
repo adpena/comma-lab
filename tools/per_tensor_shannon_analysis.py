@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-tensor Shannon-floor empirical analysis on a PR106-style HNeRV state_dict.
 
 This tool answers — in information-theoretic terms — the question

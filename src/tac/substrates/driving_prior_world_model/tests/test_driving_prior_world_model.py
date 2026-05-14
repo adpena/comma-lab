@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip and custody tests for the DPW1 scaffold."""
 
 from __future__ import annotations

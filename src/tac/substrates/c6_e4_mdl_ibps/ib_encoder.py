@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """IBEncoder — variational q(z | frames) per Tishby-Zaslavsky 2015 IB.
 
 Per the C6 across-class shift hypothesis: the encoder maps source video frames

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fridrich steganalysis-inspired optimization for task-aware compression.
 
 The competition IS inverse steganalysis. The scorer IS a detector. The null

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed Omega-OPT linear-stack packet manifest contract.
 
 This module describes the first Omega-OPT 1:1 prototype as a byte-closed

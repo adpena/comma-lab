@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round 11 Finding 2 (2026-04-28, anti-arbitrariness) — integration tests
 proving that ``--use-learnable-pair-weights`` and
 ``--use-learnable-segnet-class-weights`` ACTUALLY ADAPT the lambdas during

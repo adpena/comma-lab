@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codec-axis xray primitives: F5/F6/F10."""
 
 from __future__ import annotations

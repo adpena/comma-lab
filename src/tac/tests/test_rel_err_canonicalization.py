@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pinning tests for canonical ``rel_err`` definition + allocator-side guard.
 
 The canonical definition is RMS = ``sqrt(mean(diff²)) / sqrt(mean(orig²+ε))``.

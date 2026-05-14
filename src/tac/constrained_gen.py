@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Constrained optimization frame generator -- Yousfi GPU breakthrough.
 
 Generate scorer-optimal frames via constrained gradient descent from noise.

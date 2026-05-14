@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Checkpoint verification utilities.
 
 Prevents wrong-checkpoint bugs by running a quick sanity check before

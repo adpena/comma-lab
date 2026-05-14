@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """grayscale_lut score-aware Lagrangian — L = alpha*B/N + beta*d_seg + gamma*sqrt(d_pose).
 
 Per CLAUDE.md HNeRV parity discipline L6 + L8: the score-domain Lagrangian must

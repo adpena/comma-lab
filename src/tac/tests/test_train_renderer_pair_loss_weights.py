@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # LOSS_CONVERGENCE_NOT_REQUIRED: this is a CLI-wiring test for
 # --pair-loss-weights argparse plumbing (per feedback_dead_flag_wiring_pattern),
 # NOT a loss-function mathematical test. Convergence checks live in the

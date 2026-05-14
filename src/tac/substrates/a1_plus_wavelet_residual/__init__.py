@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """A1 + wavelet residual sidecar substrate.
 
 Composition substrate that appends a Mallat wavelet residual sidecar to the

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """lossy_coarsening_analytical — Lightning Job harvest companion.
 
 Polls the Lightning Studio Job submitted by

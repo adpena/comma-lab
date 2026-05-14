@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic ZIP byte attribution for contest archive research.
 
 The profiler is intentionally byte-only: it does not extract archive payloads,

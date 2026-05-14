@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the cathedral autopilot end-to-end wire to QQ's substrate
 composition matrix ranking.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dedicated tests for the pre-trained driving prior substrate scaffold.
 
 Coverage targets (≥18 dedicated tests per scaffold mandate):

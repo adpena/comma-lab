@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Track-B Omega-1 CUDA scorer wiring smoke tests.
 
 Exercises the direct-pixel SegNet + PoseNet differentiable score_fn integration in

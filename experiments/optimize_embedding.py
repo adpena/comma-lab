@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Embedding-Space TTO: optimize the renderer's shared class embedding.
 
 The renderer's AsymmetricPairGenerator has a shared nn.Embedding(5, 6) between

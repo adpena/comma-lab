@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 HStack-of-VStacks empirical anchor — Path B step 3 of the
 PARADIGM-Ω-OPT design (per-component independent optimization, predicted 0.110).
 

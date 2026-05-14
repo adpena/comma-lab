@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Codex R5-2 #3 regression: brotli must be available in inflate.sh's
 runtime in a CLEAN CONTEST ENVIRONMENT.
 

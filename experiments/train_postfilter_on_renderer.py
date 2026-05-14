@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Stacked Pipeline: Renderer → Postfilter (residual correction CNN).
 
 After the renderer produces frames, a tiny residual CNN corrects remaining

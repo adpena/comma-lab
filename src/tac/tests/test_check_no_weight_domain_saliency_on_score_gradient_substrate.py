@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight Catalog #123:
 ``check_no_weight_domain_saliency_on_score_gradient_substrate``.
 

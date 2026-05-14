@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Time-Traveler L5 Autonomy macOS-CPU smoke harness.
 
 PAIR T directive 2026-05-13. Per CLAUDE.md "Subagent commits MUST use

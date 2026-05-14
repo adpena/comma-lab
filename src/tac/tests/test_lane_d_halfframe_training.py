@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane D: dilated-h64 retrain for half-frame masks — pinning tests.
 
 Council 2026-04-27 (5/0). The dilated-h64 baseline renderer collapses on

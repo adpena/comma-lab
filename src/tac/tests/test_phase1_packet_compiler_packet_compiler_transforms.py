@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``compile_phase1_packet(packet_compiler_transforms=...)``.
 
 This is the integration surface added by the PR101/PR103 reusable primitives

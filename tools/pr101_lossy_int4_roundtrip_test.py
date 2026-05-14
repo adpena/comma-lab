@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 lossy int4 archive roundtrip distortion test — decides whether
 the 100,799 B int4 anchor (block_size=1024) is precise enough to dispatch
 for [contest-CUDA] auth eval.

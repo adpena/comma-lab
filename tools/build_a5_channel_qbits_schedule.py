@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build an A5 per-channel q-bit schedule by exact discrete DP.
 
 The schedule is CPU-prep only. It does not run inflate, does not invoke the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #191 — check_modal_dispatch_threads_sentinel_files_per_catalog_166.
 
 SIREN PRE-DISPATCH AUDIT 2026-05-13 CRITICAL #2 self-protect.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Path B regression tests for the PR95++ smoke auth-eval gate.
 
 Per CLAUDE.md "Auth eval EVERYWHERE" non-negotiable + HNeRV parity lesson L13

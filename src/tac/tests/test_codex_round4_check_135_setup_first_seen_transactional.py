@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-4 catalog #135 — SETUP-first-seen lost-update fix.
 
 Bug class (codex round-4 MEDIUM 2, 2026-05-09): the round-3 fix made

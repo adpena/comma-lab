@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F9: Per-pair score decomposition primitive.
 
 Per deep_math §4.1, the contest score decomposes as

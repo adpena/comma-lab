@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR64 ``unified_brotli`` pose-velocity-only codec.
 
 Covers round-trip identity, golden-vector pinning, PR64 source-recipe parity,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for scripts/verify_vast_instances.py SETUP-stuck cost-leak fix.
 
 R31 cross-cutting concern: a TRULY hung setup_full.sh (deadlocked, never

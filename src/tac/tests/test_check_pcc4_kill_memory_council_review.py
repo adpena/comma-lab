@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Check PCC4 (KILL/FALSIFIED memory files require
 Grand Council adversarial review).
 

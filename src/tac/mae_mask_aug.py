@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane MAE-V: Masked Autoencoder-style mask augmentation (He et al. 2021).
 
 Replaces a fraction of mask patches with a learnable "mask token" during

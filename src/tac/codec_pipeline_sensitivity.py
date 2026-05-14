@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """beta paradigm - sensitivity-aware substrate-transform :class:`CodecOp`.
 
 Composition mode (per the four-way-stack composition contract,

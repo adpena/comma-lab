@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Read-only dispatch dry-run for PR106 sidechannel builder readiness.
 
 This is a $0 local guard. It does not dispatch, does not touch provider state,

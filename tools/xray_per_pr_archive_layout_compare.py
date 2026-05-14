@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Side-by-side per-archive byte-section layout xray (schema-agnostic).
 
 WHEN TO USE: when comparing 2+ archives at byte level — e.g. PR101 vs PR102

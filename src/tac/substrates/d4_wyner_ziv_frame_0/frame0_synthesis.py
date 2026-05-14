@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 frame-0 synthesis — warp frame_1 + add photometric residual.
 
 The core operation:

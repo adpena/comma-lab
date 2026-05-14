@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Analyze the active PR103-on-PR106 floor archive without making score claims."""
 
 from __future__ import annotations

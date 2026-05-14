@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 12-v2 NeRV-as-renderer inflate (≤ 100 LOC, ≤ 2 deps).
 
 Reads ``0.bin`` per ARCHIVE_GRAMMAR in the design memo §2 and reconstructs

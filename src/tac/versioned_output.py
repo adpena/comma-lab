@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Versioned output utility: write timestamped files and maintain a latest symlink.
 
 Every data visualization / report / experiment script should use

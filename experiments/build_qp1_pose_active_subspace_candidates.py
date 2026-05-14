@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local QP1 pose active-subspace candidates for the current PR75/C-089 stack.
 
 This is a local candidate/screen builder only.  It preserves the source

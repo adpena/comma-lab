@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Daubechies-8 (db4) wavelet residual energy for UNIWARD variance maps.
 
 Daubechies-8 (db4) chosen for compatibility with steganalysis literature.

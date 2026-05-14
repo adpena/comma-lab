@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Check Modal TTO experiment progress.
 
 Downloads the incremental stdout log and shows latest batch progress.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dual-layer Filler-Pevný 2010 STC + magnitude-residual codec for mask deltas.
 
 Background

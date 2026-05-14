@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """End-to-end smoke test for the argmax_rle codec.
 
 Decodes the highest-fidelity AV1 mask file we have (CRF30 — closest

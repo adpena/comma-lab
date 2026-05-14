@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.residual_basis.hinton_distilled_scorer_surrogate`.
 
 Per W's DEFERRED reactivation criterion #1 + N D2 council verdict + Phase 3

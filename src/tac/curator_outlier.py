@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cosmos Curator-style soft-DTW outlier scoring for pair weighting.
 
 Lane WC uses only SegNet feature geometry. It intentionally does not accept

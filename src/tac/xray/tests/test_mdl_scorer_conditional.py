@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for F1: tac.xray.mdl_scorer_conditional.
 
 The structural-tier MDL estimator wraps tac.analysis.scorer_conditional_mdl.

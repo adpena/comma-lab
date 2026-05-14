@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_omega_v2_lagrangian.sh.
 
 Lane Ω-V2 = Lagrangian dual ascent on per-WEIGHT learnable bit-depth, anchored

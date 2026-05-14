@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for log_incremental_distillation_streaming (operator pivot 2026-05-14).
 
 Streaming-mode companion to test_log_incremental_distillation. Uses

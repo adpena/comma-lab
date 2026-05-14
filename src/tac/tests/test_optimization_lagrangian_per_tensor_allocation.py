@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.optimization.lagrangian_per_tensor_allocation``."""
 from __future__ import annotations
 

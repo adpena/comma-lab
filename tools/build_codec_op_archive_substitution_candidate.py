@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic CodecOp archive-substitution candidate.
 
 This is a physical ZIP-member replacement tool. It refuses packed payload

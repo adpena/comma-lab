@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Rao-Ballard predictive-coding-hierarchy primitive (1999).
 
 The Rao-Ballard predictive-coding theorem describes a top-down hierarchy in

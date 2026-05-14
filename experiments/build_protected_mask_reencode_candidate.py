@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic protected/foveated mask reencode candidates.
 
 This is a local, non-scoring candidate builder for the post-C-063 mask branch.

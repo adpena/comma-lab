@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lock-in tests for the 2026-04-26 DEN-V2 loader-format-safety bug class.
 
 Bug: experiments/engineered_quant_noise.py imported `load_renderer` from

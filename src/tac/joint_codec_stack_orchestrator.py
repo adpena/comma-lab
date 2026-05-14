@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # ROUNDTRIP_NOT_REQUIRED: orchestrator composes child codecs (each with its own roundtrip test); does not implement encode/decode itself
 """PARADIGM-γ — Joint Codec Stack Pipeline (JCSP) orchestrator.
 

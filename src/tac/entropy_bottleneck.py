@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Entropy bottleneck rate model for renderer training.
 
 Implements a lightweight factorized entropy model inspired by Ballé et al.

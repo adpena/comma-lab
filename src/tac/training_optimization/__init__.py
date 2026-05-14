@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical Tier-1 training-optimization helpers.
 
 This package lands the three canonical helpers identified in

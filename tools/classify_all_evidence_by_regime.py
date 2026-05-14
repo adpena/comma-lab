@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Walk all evidence dirs, classify each candidate by score-geometry regime.
 
 For every (d_seg, d_pose, archive_bytes) triple we can extract from

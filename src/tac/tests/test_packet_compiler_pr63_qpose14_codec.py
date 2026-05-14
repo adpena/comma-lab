@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR63 ``qpose14`` codec primitives.
 
 Covers the two PR63 primitives: the uint16-view int16 pose codec and the

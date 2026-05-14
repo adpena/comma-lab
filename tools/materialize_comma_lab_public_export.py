@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a sanitized public comma-lab export tree.
 
 This creates a fresh out-of-tree copy from tracked git blobs, not from the

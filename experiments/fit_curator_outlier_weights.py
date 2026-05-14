@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fit Lane WC Curator outlier weights from SegNet feature geometry."""
 
 from __future__ import annotations

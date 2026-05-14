@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Test apogee_v2 0.bin parser round-trip on real PR106 weights.
 
 Lane Ω-W-V3 step 4 hardening — verifies submissions/apogee_v2/inflate.py's

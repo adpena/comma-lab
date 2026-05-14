@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight_shell_lane_arity (Check 72).
 
 This is the structural fix for BUG CLASS A — invented CLI flags inside

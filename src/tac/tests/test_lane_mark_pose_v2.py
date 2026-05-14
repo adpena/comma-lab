@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.lane_mark_pose_v2 — endpoint tracking zero-cost pose path.
 
 V1 covered (test_lane_mark_pose.py): centroid math, dim-0 dominance,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Meta-Lagrangian search engine for extreme automated Shannon-floor optimization.
 
 Combines the predictor + distortion proxy + predispatch sanity gate into a

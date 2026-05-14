@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit A2 packet-ladder closure artifacts before exact-eval dispatch.
 
 This is an operator-visible guard for the A2 hardening class: packet builders

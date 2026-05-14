@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Paper-alignment metadata for LA-Pose-inspired planning tools."""
 
 from __future__ import annotations

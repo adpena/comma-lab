@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a CMG3A adaptive nonzero-row-run mask candidate archive.
 
 CMG3A keeps the existing CMG3 ``nonzero_row_runs_topk_v1`` wire mode but

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit staged public-release surfaces for private operator leakage.
 
 This intentionally scans only files staged for commit under public-facing

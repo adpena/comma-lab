@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the SegNet boundary smoothing GHA harvester."""
 from __future__ import annotations
 

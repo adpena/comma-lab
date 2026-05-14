@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a generated-schema HNeRV codec blob from a state dict."""
 from __future__ import annotations
 

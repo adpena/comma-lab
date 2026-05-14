@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed Omega-OPT nested optimization claim contracts.
 
 The Omega-OPT score numbers are research hypotheses until a matching 1:1

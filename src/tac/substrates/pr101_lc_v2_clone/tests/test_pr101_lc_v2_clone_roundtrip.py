@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 ENCODE_INFLATE_ROUNDTRIP tests for pr101_lc_v2_clone.
 
 The tests prove (in order):

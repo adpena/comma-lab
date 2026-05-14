@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C1 world-model + foveation inflate runtime -- contest raw-output contract.
 
 Loads the C1WMFV1 archive, rehydrates the world-model + decoder + foveation

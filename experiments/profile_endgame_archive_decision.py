@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CLI wrapper for PR85-family endgame archive decision profiling."""
 
 from __future__ import annotations

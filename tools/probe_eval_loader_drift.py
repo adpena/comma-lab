@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe evaluator loader drift between CUDA DALI/NVDEC and CPU PyAV.
 
 The public scorer changes two things between ``--device cuda`` and

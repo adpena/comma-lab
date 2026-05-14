@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for T20 — KL pose-axis distillation loss.
 
 Per coherence council 2026-05-09 (operator-approved §3.A redundancy-fix):

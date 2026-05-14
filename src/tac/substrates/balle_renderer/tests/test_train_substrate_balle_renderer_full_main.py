@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """OD-SUBSTRATE-3 follow-up Option A wired ``_full_main`` test suite for β.
 
 These tests verify the wired contract WITHOUT dispatching GPU. They cover:

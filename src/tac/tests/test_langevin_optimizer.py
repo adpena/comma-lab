@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.optimization.langevin_optimizer`` (beat-PR95 Idea 2 scaffold).
 
 Coverage:

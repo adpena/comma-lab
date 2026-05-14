@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Karpathy channel-width sweep: find the optimal base_ch/mid_ch for AsymmetricPairGenerator.
 
 Reads experiments/configs/h_sweep.json and plans one Modal training run per

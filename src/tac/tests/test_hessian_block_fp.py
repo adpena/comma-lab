@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.hessian_block_fp — Hessian-weighted bit allocation."""
 from __future__ import annotations
 

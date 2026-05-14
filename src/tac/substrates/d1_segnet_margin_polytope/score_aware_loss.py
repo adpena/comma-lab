@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 score-aware loss — margin-preserving hinge + canonical scorer pair.
 
 Per CLAUDE.md Catalog #164 every substrate score-aware loss MUST route

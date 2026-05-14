@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PoseNet target extraction for supervised test-time optimization.
 
 Pre-computes PoseNet outputs on ground truth frame pairs and stores them

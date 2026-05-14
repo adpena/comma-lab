@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a C091-relative local matrix for PR75/PR77 action-pose candidates.
 
 The tool does not generate or dispatch remote jobs. It validates existing

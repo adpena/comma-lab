@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane J-NWC neural weight compression codec.
 
 Each test asserts SIGN/VALUE per Round 26 finding (anti-arbitrariness):

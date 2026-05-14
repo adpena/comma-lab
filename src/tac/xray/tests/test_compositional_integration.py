@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Compositional integration tests: pairs of xray primitives produce
 consistent / cross-reinforcing results.
 

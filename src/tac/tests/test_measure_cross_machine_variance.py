@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/measure_cross_machine_variance.py.
 
 Covers F6 fix per A1 PR Council Round 1: cross-machine variance probe

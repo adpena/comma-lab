@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static runtime-contract audit for public PR91/HPM1 HPAC replay."""
 
 from __future__ import annotations

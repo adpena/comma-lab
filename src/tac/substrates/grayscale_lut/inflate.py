@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """grayscale_lut inflate runtime — <= 100 LOC; mirrors sane_hnerv style.
 
 Contest-runtime image of the substrate. ``submissions/grayscale_lut/inflate.py``

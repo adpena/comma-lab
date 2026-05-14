@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wavelet residual basis SCAFFOLD over PR106 r2 decoded RGB frames.
 
 This module is a research-signal-only Level 0 (SKETCH) scaffold per

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Local pose-safety preflight for renderer transplants.
 
 This profiler compares the source runtime renderer against a transplanted

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Golden-vector emitter for codec roundtrip validation — closes task #396.
 
 Produces canonical input/output byte vectors that any codec implementation

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/pr101_kalle_fold_nn_literature_shapes.py``.
 
 Covers the FAITHFUL implementation contract per

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """LAPose inverse-dynamics motion-atom allocator — pose-axis residual sidecar.
 
 Lane: ``lane_pose_axis_lapose_motion_atom_allocator_full_scaffold`` (Phase 3

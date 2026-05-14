@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 17 — IMPS archive tests.
 
 Per Council design (.omx/research/council_lane_17_imp_design_20260430.md):

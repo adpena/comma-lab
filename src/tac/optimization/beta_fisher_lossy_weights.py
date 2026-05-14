@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware per-tensor weights for lossy coarsening allocators.
 
 The existing Lagrangian per-tensor allocator already accepts a non-negative

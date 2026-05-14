@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Categorical mask grammar FULL RGB renderer — Phase A scaffold.
 
 Per handoff P3 long-tail "PR85/86/91 mask/action grammars" + operator directive

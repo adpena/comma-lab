@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a PR106 latent score-table output into a byte-closed candidate.
 
 This tool is the local bridge between long-running Kaggle CUDA table jobs and

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane 12-v2 NeRV-as-renderer Phase A scaffold.
 
 Coverage:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.track_registry — single source of truth for landed tracks.
 
 Covers:

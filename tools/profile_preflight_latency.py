@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile local preflight and test-adjacent latency without dispatching jobs.
 
 The profiler is intentionally observational: it does not change preflight

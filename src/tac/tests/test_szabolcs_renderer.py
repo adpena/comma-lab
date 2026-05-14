@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 1 tests for the Lane SZ szabolcs-cs PR#56 renderer replica.
 
 Covers:

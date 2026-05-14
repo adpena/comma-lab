@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR79/PR77 next-byte archive candidates.
 
 This is a deterministic byte-screening generator only.  It preserves the PR79

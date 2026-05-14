@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F3: Bilinear-resize left-nullspace primitive.
 
 The contest scorer's first preprocessing step is a low-rank linear projection:

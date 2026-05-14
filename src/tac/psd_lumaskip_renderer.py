@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PSD-LumaSkip postfilter — PoseNet-aware luma-skip variant of PSD.
 
 This module implements the Lane PSD-LumaSkip architecture approved by the

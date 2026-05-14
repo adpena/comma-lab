@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PD pose-delta codec roundtrip + sentinel-detection tests."""
 from __future__ import annotations
 

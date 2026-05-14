@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Distilled dashcam-statistical codebook — 5-10 KB tiny prior.
 
 The codebook is a compact, FROZEN structure of driving-distribution primitives

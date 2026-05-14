@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 A6 byte-anchor — Selfcomp block-FP × Ballé hyperprior compose.
 
 Council R6 (Selfcomp + Ballé seats). The compose hypothesis: per-block scale

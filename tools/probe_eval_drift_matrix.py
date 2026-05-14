@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed 2x2 evaluator drift diagnostic matrix.
 
 This is a diagnostic harness, not a scorer. It keeps the public evaluator's

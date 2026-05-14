@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a local A5 PR101 runtime-consumption packet scaffold.
 
 This tool is local-only. It does not run inflate end-to-end, does not invoke

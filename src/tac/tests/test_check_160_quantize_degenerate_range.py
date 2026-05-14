@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #161 — `check_quantize_degenerate_range_clamped_correctly` tests.
 
 (Originally landed as Catalog #160 then renumbered to #161 by FIX-A

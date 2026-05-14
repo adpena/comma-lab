@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/xray_archive_section_entropy_heatmap.py.
 
 Per CLAUDE.md test discipline: 15-25 tests, all pass.

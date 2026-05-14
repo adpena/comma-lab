@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane M-V2 regression: verify optimize_poses.py saves (N, 6) with
 frozen baseline padding for dims 1-5 in --pose-mode radial-zoom.
 

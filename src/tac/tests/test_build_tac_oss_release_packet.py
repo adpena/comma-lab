@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/build_tac_oss_release_packet.py — sanitization gate exercises.
 
 Covers per CLAUDE.md "Public Disclosure Hygiene":

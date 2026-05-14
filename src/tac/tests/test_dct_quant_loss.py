@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Property tests for dct_quant_loss (Fridrich council #1, 2026-04-26).
 
 The DCT-quant loss is a JPEG-Q-table-weighted DCT-domain residual loss. It

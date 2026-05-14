@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a scorer-backed PR106 latent-sidecar candidate table.
 
 This is the compress-time profiler for

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan rel-error-safe factorized HNeRV rank schedules.
 
 This is a CPU-only planning tool. It loads a HNeRV substrate state_dict,

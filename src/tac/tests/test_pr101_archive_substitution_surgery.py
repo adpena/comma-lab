@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.pr101_archive_substitution_surgery``.
 
 Verifies:

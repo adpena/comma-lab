@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for component sensitivity artifact validation."""
 from __future__ import annotations
 

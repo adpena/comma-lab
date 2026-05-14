@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Runtime smoke test for the autocast FP16 + GradScaler path landed in
 `experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py`
 commit b0ef91a3.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Adapters from existing ledger artifacts into meta-Lagrangian atom rows.
 
 The adapter is intentionally conservative: it reads local evidence ledgers and

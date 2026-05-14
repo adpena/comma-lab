@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """LA-POSE-style motion atom planning for contest-faithful water filling."""
 
 from __future__ import annotations

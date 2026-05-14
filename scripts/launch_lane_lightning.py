@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """launch_lane_lightning.py — dispatch a lane on Lightning AI Studio.
 
 Wraps `tac.deploy.lightning.LightningDispatcher` to make Lightning Studio

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical Vast.ai deployment — ONE command, profile-driven, tmux-managed.
 
 Replaces all ad-hoc launch_*.sh scripts. Enforces:

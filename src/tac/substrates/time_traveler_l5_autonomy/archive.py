@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Time-Traveler L5 Autonomy archive grammar — TT5L monolithic 0.bin.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons:

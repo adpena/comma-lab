@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Inflate runtime tests for the PR95 LoRA/DoRA substrate.
 
 Per HNeRV parity lessons 9 (runtime closure) + 11 (no-op detector): tests

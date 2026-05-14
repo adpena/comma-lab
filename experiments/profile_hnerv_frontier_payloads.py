@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile byte layout for public HNeRV frontier archives.
 
 This is a deconstruction tool, not a scorer. It reads a contest archive,

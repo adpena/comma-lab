@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C067/apogee multi-resolution stack candidates.
 
 This planner is bounded and planning-only.  It inspects existing C067 fixed-

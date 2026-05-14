@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-gradient saliency computation (PoseNet/SegNet gradient maps).
 
 Backpropagates through the scoring function to find which pixels matter most.

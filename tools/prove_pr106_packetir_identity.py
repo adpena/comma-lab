@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove PR106/R2 sidecar PacketIR identity without claiming score.
 
 This is the operator-facing wrapper around

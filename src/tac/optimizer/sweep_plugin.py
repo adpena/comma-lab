@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Plugin interface for closed-loop sweep candidate generators.
 
 `tools/feedback_loop_sweep.py` was originally apogee_intN-specific: the

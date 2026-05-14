@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Diffusion-based decoder for mask-conditioned frame synthesis.
 
 Architecture: DDPM denoising diffusion model conditioned on segmentation masks.

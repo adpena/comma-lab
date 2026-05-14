@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the C1 world-model + foveation substrate (long-term campaign L1 scaffold).
 
 Per the C1 long-term campaign ledger

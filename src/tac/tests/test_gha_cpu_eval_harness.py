@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/trigger_gha_cpu_eval.py + tools/harvest_gha_cpu_eval.py.
 
 These cover the queue-infrastructure layer that wraps the existing canonical

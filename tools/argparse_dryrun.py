@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Argparse dry-run helper: load a Python script's parser + simulate parse.
 
 Bug class extincted (2026-05-01): `experiments/train_renderer.py` crashed

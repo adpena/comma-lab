@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed macOS-CPU advisory-signal manifest.
 
 This is the sanctioned path for using local macOS-CPU as a free first-class

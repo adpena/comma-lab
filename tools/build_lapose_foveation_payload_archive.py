@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a byte-closed local LFV1 foveation payload archive.
 
 The output is a local fail-closed archive/readiness artifact only. It never

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 1 packet compiler — dezeta-Phase-1 checkpoint -> byte-closed contest packet.
 
 This module is the missing bridge identified by the 2026-05-09 comprehensive

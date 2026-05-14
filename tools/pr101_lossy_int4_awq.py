@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 lossy int4 + AWQ (Activation-aware Weight Quantization)
 — audit criterion #5 for the lossy_int4 lane.
 

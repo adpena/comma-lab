@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 analytical lossy coarsening — byte/roundtrip proxy against the PR101
 brotli baseline at controlled rel_err.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W-V3 stub-mode local smoke: Stages 1 + 3 + parser-roundtrip.
 
 The Lane Ω-W-V3 wrapper (scripts/remote_lane_omega_w_v3_pr106.sh) has 4 stages:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Experiment 5: Auth Scorer Setup -- verify bat00 and Lightning scoring infra.
 
 Run on Lightning T4:

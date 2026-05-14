@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 r"""Constrained coordinate search around PR101's verified inflate-time bias.
 
 Per the convergent finding from the codex adversarial review of HNeRV lessons

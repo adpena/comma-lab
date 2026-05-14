@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Filler-STC pose codec regression tests.
 
 Covers (per the Decision-4 council-alternative spec):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Check 91 (pose-basis-fit kill).
 
 Lane GP v3 (89.67 [Modal-T4-CPU]) was killed 2026-04-30 per Council #271

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 lossy int4 quantization block-size sweep — anchors the
 ``lossy_int4_quantization`` row in cathedral_autopilot's catalog.
 

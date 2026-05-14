@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused tests for the PR106 sidechannel dispatch dry-run.
 
 The tool is intentionally read-only: these tests exercise source/argparse

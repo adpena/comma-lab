@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build the default local scorer-surface shaking plan.
 
 The plan is CPU-only, deterministic, and planning-only. It ranks pixel/frame/

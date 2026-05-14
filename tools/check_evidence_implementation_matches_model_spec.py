@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: thin CLI wrapper for the preflight scanner
 """Scan cathedral_autopilot evidence rows for implementation-vs-model-spec gaps.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed readiness contract for public PR91/HPM1 replay recovery."""
 
 from __future__ import annotations

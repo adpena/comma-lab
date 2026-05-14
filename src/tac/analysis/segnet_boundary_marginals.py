@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SegNet boundary and logit-margin feature helpers.
 
 These helpers are analysis primitives for A5-style bit allocation. They do not

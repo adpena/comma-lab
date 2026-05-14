@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for the silent-defaults audit tool.
 
 DX #1 (2026-04-26): the audit tool is the first line of defence against

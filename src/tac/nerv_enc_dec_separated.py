@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """NeRV-Enc/Dec separated bolt-on — explicit encoder/decoder split for any NeRV.
 
 Per operator directive 2026-05-11 (NeRV-family expansion bolt-on #1) +

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/auth_eval_local.py.
 
 These tests verify the local-eval wrapper without invoking GPU. Subprocess

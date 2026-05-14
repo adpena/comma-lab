@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan scorer-weighted pose residual atoms for a frontier archive.
 
 The planner is intentionally non-promotable. It reads CUDA-cross-checked

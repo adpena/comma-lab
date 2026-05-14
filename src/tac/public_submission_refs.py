@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical public submission references for contest provenance.
 
 These identifiers are metadata only. They let training, analysis, deploy, and

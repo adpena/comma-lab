@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for D1 L2 INTEGRATION overlay + margin-map shrink helpers."""
 
 from __future__ import annotations

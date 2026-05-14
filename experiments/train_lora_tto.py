@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """LoRA TTO: Low-Rank Adaptation at compress time for per-video specialization.
 
 Instead of full TTO (optimizing all pixels) or full model TTO (287K params),

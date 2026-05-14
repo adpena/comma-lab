@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #159 — `check_claude_md_catalog_text_matches_preflight_strict_value` tests.
 
 The check refuses CLAUDE.md catalog entries whose strictness text claim

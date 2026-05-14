@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove PR106/R2 sidecar bytes are consumed by the submission runtime decoder.
 
 This is a no-score, no-promotion proof. It imports the selected submission

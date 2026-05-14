@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR106 latent-sidecar score-table selection helpers.
 
 This module is scorer-free and archive-emission-free. It lowers an already

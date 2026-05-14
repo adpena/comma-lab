@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Provider-neutral PR106 y-shift score-table dispatch contract.
 
 This module contains only the score-affecting lane contract shared by cloud

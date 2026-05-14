@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PD-V2 — Arithmetic-coded pose-delta encoder/decoder (2026-04-29).
 
 Builds on Lane PD V1 (``src/tac/pose_delta_codec.py``) by entropy-coding the

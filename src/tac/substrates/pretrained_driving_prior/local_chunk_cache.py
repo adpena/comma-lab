@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Local cache + auto-downloader for Comma2k19 dashcam chunks.
 
 This module unblocks DP1 Phase 2 dispatch without the operator manually

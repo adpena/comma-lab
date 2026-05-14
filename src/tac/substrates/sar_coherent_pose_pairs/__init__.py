@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """L2 SAR coherent pose-pair integration substrate (SARC).
 
 Reverse-engineered from the alien-tech ``feedback_expert_team_signal_processing_

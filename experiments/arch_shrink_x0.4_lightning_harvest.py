@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """arch_shrink_x0.4_quantizr_class — Lightning Job harvest companion.
 
 Polls the Lightning Studio Job submitted by

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for typed distillation-stage chain metadata.
 
 This covers the substrate-level stage-sequence schema in

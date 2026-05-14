@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for FP4 quantization robustness fixes (R-FP4-fix 2026-04-25).
 
 Trend report observation: float SegNet 0.54 → 0.28 over 15 epochs while the

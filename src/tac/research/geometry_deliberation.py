@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Geometry of the scorer iso-score surface: council deliberation.
 
 Assembled by YassineYousfi with contributions from:

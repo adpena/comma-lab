@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a strict, charged CMG1 mask-grammar prototype artifact.
 
 By default this emits the original standalone build-only scaffold.  With

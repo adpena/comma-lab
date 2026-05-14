@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed preflight for trained renderer Block-FP transplants.
 
 This tool is local infrastructure for the C067 trained/self-compressed

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the score-aware frame-conditional codec module.
 
 Per HNeRV parity discipline lesson 1: the difficulty signal is score-aware.

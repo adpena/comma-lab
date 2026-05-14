@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane B-alt 2026-04-27: build_baseline_archive --use-brotli wiring tests.
 
 Verifies the brotli flag is exposed, threaded through to the archive build,

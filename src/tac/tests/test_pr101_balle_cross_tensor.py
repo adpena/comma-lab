@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/pr101_balle_cross_tensor_hyperprior.py``.
 
 Covers the FINAL audit criterion for the ``compressai_balle_hyperprior`` lane

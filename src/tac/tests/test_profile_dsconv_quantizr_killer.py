@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane K profile (`dsconv_quantizr_killer`) — pinning tests.
 
 Council brief 2026-04-27. Lane A holds the 1.15 [contest-CUDA] frontier with

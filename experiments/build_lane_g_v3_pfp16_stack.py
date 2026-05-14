@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build Lane G v3 + Lane PFP16 stacked archive (no GPU).
 
 Loads Lane G v3's `optimized_poses.pt` (15,620 B fp32 pickle), re-encodes it

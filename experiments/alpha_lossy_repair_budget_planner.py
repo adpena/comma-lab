@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan Alpha lossy-geometry plus sparse-repair byte budgets.
 
 This empirical planner consumes two existing non-promotable Alpha artifacts:

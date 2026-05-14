@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Adapter-composition primitives for LoRA/DoRA and tropical gates.
 
 The objects here are deterministic contracts around adapter records.  They do

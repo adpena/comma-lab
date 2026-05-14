@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/promote_frontier_archive.py.
 
 Covers F2 fix per A1 PR Council Round 1: dual-axis paired evidence promotion

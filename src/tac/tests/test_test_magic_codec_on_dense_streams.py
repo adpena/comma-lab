@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/test_magic_codec_on_dense_streams.py``.
 
 Per CLAUDE.md "Beauty, simplicity, and DX" + dense-streams research-signal

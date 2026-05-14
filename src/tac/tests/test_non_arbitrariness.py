@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.non_arbitrariness — generalized probe-disambiguator primitive.
 
 Mirrors the test discipline of probe_seg_loss_surrogate_disambiguator: cover

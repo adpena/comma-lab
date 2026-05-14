@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Joint Pair Generator Training — mask-conditioned frame pair generation.
 
 Council-approved architecture: Y-shaped U-Net that takes (mask1, mask2) and

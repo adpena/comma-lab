@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compare CUDA component traces against a reference archive.
 
 This is the offline bridge from exact per-pair scorer traces to repair-atom

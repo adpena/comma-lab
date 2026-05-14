@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """CMA-style Monte Carlo search over a tiny layer-scale manifold.
 
 Full CMA-ES over all post-filter weights is expensive and awkward to fit into

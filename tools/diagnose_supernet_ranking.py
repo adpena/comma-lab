@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Diagnose a DARTS-SuperNet search provenance: which sub-architecture won?
 
 Reads the provenance JSON produced by

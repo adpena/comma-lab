@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate a new canonical remote_lane_*.sh skeleton.
 
 Bakes in EVERY canonical pattern enforced by preflight:

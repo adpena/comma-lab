@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Ballé 2018 ScaleHyperprior wrapper for PARADIGM-δεζ T1.
 
 This module wraps ``compressai.entropy_models.EntropyBottleneck`` +

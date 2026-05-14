@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.codec.dual_layer_stc_av1_codec``.
 
 Verifies lossless encode/decode roundtrip on:

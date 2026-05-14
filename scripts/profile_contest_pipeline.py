@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile the exact contest evaluation pipeline stage by stage.
 
 Replicates the EXACT pipeline from upstream evaluate.sh and eval.yml:

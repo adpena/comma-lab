@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a planning-only field-equation plan from a meta-Lagrangian ledger."""
 
 from __future__ import annotations

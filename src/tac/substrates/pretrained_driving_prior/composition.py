@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DP1 canonical composition API — the reuse harness for downstream substrates.
 
 DP1 is the **canonical pretraining lane** that downstream substrates compose

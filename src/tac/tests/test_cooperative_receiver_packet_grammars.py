@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from tac.packet_compiler.cooperative_receiver_grammars import (

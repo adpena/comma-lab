@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Per-instance health verify for Vast.ai active fleet.
 
 For each registered instance in `.omx/state/vastai_active_instances.json`:

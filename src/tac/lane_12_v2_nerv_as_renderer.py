@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 12-v2 NeRV-as-renderer — Phase A scaffold.
 
 Lane 12-v1 (`src/tac/nerv_mask_codec.py`) was a coordinate-MLP that output

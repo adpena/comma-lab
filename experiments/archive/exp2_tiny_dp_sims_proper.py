@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Experiment 2: Tiny DP-SIMS -- PROPER training run (not smoke test).
 
 Run on Lightning T4:

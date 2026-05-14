@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Alpha mask residual planner."""
 from __future__ import annotations
 

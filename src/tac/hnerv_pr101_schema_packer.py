@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR101-style schema-driven packing for PR106 HNeRV decoder sections.
 
 PR101's decoder win is not generic Brotli recompression: it stores tensors in a

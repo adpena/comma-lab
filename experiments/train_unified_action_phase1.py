@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Phase 1 trainer wired to ``tac.unified_action.S_total`` (GR-style action).
 
 This trainer is the **migration path** from per-track trainer scripts

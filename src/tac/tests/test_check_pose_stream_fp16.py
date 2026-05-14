@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check 96 — Lane PFP16 pose-stream fp16-or-smaller discipline.
 
 Verifies the regression behaviour of `check_pose_stream_uses_fp16_or_smaller`:

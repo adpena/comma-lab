@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for PR106 latent-sidecar scorer-table producer scaffolding."""
 from __future__ import annotations
 

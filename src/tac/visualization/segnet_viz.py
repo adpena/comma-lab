@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate SegNet visualization data for the segnet-comparison.html page.
 
 Produces a JSON file with per-frame SegNet class predictions for:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for catalog #130 + #131 — proactive META-class audit preflight gates.
 
 Memory: ``feedback_proactive_custody_concurrency_audit_landed_20260509.md``.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Provider-agnostic tac package bootstrap.
 
 Modeled after the stdlib ``ensurepip`` module: calling :func:`bootstrap` with

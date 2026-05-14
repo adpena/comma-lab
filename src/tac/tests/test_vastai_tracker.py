@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.vastai_tracker.
 
 Per CLAUDE.md non-negotiable + memory feedback_oneshot_vastai_subagent_failure_pattern:

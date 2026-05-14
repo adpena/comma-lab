@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip tests for ``tac.network_codec``.
 
 Check 46 contract: every public encoder must demonstrate

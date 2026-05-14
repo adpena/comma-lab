@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Closed-loop feedback sweep scaffold: rank -> dispatch-ready filter -> harvest.
 
 This is retained as a recovered research scaffold, but it is fail-closed by

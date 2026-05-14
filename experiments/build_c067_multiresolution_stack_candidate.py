@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit a deterministic C067/apogee multi-resolution stack build manifest.
 
 This is a planning-to-build bridge, not an archive composer. It consumes the

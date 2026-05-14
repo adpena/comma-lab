@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # NO_GRAD_WAIVED:scaffold-only-trainer-Phase-2-not-yet-implemented-eval-scorer-forwards-wrapped-in-inference_mode-inside-_run_val_loop
 # AUTOCAST_FP16_WAIVED:opt-in-via-CLI-flag-default-OFF-until-paired-anchor-validates-numerics
 # TORCH_COMPILE_WAIVED:opt-in-via-CLI-flag-default-OFF-until-Inductor-graph-breaks-validated-per-substrate

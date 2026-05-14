@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware Lagrangian for the PR95 LoRA/DoRA substrate.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lesson 6

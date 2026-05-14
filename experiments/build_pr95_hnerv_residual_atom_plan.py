@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR95-family HNeRV residual-atom planning artifacts."""
 
 from __future__ import annotations

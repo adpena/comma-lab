@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Contract tests for the Lane G v3 + OWV3 Fisher stack launcher."""
 from __future__ import annotations
 

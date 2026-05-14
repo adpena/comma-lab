@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B2 — phantom byte-proxy claim scanner.
 
 Every evidence row that sets ``empirical_archive_bytes`` must satisfy ONE of:

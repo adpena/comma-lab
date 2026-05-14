@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Claim, stage, and dispatch the PR106 yshift score-table lane on Lightning.
 
 This is the canonical launcher for

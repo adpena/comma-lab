@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Parity tests: substrate inflate.py select_inflate_device == canonical.
 
 Per CLAUDE.md "Beauty, simplicity, and developer experience" + Catalog #205

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.optimization.autopilot_dispatch_ranking`.
 
 Per CLAUDE.md "Recursive adversarial review protocol": these tests cover

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/claim_lane_dispatch.py prune`` (T1-E state hygiene wave).
 
 Memory: ``feedback_state_hygiene_gc_and_prune_landed_20260512.md``.

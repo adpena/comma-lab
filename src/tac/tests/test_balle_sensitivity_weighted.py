@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane 20 β-variant — sensitivity-conditioned Ballé hyperprior."""
 from __future__ import annotations
 

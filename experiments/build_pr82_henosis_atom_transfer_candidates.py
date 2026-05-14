@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic PR82/Henosis atom-transfer candidates.
 
 This tool is local-only.  It mines PR82 postprocess and P1D1 pose-control

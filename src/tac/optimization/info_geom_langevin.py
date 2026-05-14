@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical information-geometric Langevin primitives.
 
 This module is a small public facade over the existing

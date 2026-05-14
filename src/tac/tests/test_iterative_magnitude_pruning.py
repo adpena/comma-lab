@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane J-IMP iterative magnitude pruning module.
 
 Per Round 26 finding: every test asserts SIGN/VALUE, not just shape, so

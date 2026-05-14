@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane STC CLEAN-SOURCE archive builder.
 
 The original Lane STC build (``experiments/build_lane_stc_archive.py``) takes

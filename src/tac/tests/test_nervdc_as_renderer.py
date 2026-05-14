@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for NeRVdc-as-renderer substrate (NeRV-family completion)."""
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compare packed HNeRV payload sections for a source/candidate archive pair."""
 
 from __future__ import annotations

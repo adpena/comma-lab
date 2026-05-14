@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SC++ (Selfcomp ++) self-compression substrate (Phase 3 lane).
 
 This module is the **packetized, contest-shippable** self-compression substrate

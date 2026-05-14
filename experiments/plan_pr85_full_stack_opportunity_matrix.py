@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a planning-only PR85 full-stack opportunity matrix.
 
 The planner consumes already-produced local artifacts, ranks stackable

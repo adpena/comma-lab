@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a planning-only LFV1 payload from LA-POSE foveation atom rows."""
 
 from __future__ import annotations

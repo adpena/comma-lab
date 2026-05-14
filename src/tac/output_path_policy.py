@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared output-path policy for durable experiment artifacts.
 
 Tools and trainers may use temporary scratch internally, but any path that is

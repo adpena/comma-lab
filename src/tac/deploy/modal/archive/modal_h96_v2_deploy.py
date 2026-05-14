@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Retired Modal h96 v2 launcher.
 
 This compatibility stub exists so historical imports fail closed instead of

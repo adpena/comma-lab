@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan local runtime readiness for predictive mask grammar archives.
 
 This is a local-only readiness planner for the C067 sub-0.24 path. It reads the

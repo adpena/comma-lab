@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """block_nerv archive grammar — monolithic single-file ``0.bin`` (BNV1).
 
 L0 SKETCH archive grammar; Catalog #124 8-field declaration is the

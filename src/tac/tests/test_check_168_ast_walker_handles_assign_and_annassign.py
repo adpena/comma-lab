@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #168 ``check_ast_walker_handles_both_assign_and_annassign``.
 
 META-CLASS gate that refuses any AST extractor function that filters by

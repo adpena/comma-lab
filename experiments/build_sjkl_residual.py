@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a sjkl.bin residual payload from prepared pair tensors + scorer.
 
 Recovery note: this script was lost when subagent worktrees were auto-cleaned

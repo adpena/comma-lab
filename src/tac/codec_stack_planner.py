@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic HStack/VStack/multipass codec planning primitives.
 
 This module is deliberately scoreless. It describes candidate codec-stack

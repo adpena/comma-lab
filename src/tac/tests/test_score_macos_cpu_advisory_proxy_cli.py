@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/score_macos_cpu_advisory_proxy.py`` CLI.
 
 Per operator routing 2026-05-13. The CLI runs ``inflate.sh`` + ``upstream/

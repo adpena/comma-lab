@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Byte and break-even math for the PR95 LoRA/DoRA adapter lane.
 
 This module is deliberately pure-Python: it does not load PR95, torch, the

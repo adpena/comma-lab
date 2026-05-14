@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Named training profiles for tac.
 
 Each profile is a dict of TrainConfig overrides. Use with:

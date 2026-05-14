@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI: Saliency-Inversion compression weighting.
 
 Premise (Fridrich UNIWARD, recalled in `project_council_shower_thoughts`):

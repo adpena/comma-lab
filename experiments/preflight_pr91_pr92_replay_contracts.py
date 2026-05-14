@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed PR91/HPM1 and PR92/RMB1 replay contract preflight.
 
 This tool is local-only. It does not load scorers, dispatch remote jobs, or

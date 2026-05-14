@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """HiNeRV-as-renderer — production trainer with multi-scale auxiliary loss.
 
 Per operator directive 2026-05-11 (NeRV-family expansion). Wires per-stage

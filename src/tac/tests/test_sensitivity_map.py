@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Sensitivity-map contract tests for OWV3."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for experiments/train_scpp_self_compression.py.
 
 These tests exercise the trainer in --smoke mode with very short stage

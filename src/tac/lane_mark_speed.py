@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane-marking-derived per-pair zoom scalar (Hotz analytical, zero archive cost).
 
 Per project_lane_marking_speed_estimation.md and project_posenet_rank1_discovery.md:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Semantic-label regression tests for constrained-gen pose heuristics."""
 
 from __future__ import annotations

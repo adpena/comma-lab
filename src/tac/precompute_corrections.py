@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pre-compute expensive scorer-derived corrections at compress time (Eureka 1+2).
 
 At compress time we have unlimited CPU/GPU and access to the ground-truth video.

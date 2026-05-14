@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CNeRV-as-renderer — production trainer (NeRV-family completion).
 
 Per operator directive 2026-05-11. Mirrors Lane 12-v2. CNeRV replaces

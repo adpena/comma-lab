@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic offline queue for optimizer-guided candidates.
 
 The output is a ranked planning queue for Modal/Kaggle/M5 prefilters.  It does

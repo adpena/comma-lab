@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_os_supercombo_seed_tto.sh.
 
 Lane OS-A = openpilot supercombo seeded pose TTO. Mirrors Lane A with

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """A1 + LAPose composition substrate.
 
 A1 (PR101 score-gradient-finetuned, 178262 B, sha256 87ec7ca5...) supplies the

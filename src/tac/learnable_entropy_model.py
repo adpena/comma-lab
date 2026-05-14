@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PARADIGM-epsilon - MDL/Bayesian learned entropy prior codec (Phase 1 scaffold).
 
 This module is the **Phase 1 scaffold** for the epsilon paradigm in the PARADIGM-deltaepsilonzeta

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F6: Wavelet high-frequency energy primitive.
 
 Mallat 1989 shower-thought (zen_floor §13): wavelets diagonalize spatial

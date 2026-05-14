@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Generated HNeRV architecture schemas for architecture-shrink lanes.
 
 The public PR100-PR106 HNeRV family hardcodes a 28-tensor state schema for

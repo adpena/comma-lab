@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical ``torch.autocast`` wrapper for substrate trainers (Catalog #172).
 
 Why this exists

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the 5-phase Quantizr-adapted QAT schedule in train_renderer.py.
 
 Quantizr R2 C3 architectural fix (2026-04-26): WILDE/DEN profile comments

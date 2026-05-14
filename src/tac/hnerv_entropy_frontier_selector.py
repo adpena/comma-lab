@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic HNeRV entropy-frontier candidate selection.
 
 This module ranks local HNeRV entropy/archive candidates by archive bytes while

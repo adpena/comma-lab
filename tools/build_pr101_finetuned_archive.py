@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a PR101 archive from a fine-tuned HNeRV decoder state_dict.
 
 Phase A1 (track1_phase_a1_score_gradient) closure tool. Takes the EMA checkpoint

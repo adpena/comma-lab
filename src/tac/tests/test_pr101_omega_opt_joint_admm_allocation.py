@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/pr101_omega_opt_joint_admm_allocation_empirical.py``.
 
 Verifies:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical camera model and coordinate conventions for comma driving video.
 
 All modules in tac must use these conventions:

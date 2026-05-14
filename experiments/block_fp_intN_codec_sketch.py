@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """SKETCH: signed int-N block-FP variant (parameterized; supports int3..int8).
 
 Generalizes experiments/block_fp_int4_codec_sketch.py to arbitrary signed bit width.

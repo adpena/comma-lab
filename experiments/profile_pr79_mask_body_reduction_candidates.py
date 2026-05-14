@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile local PR79/S2 mask-body byte reduction candidates.
 
 This is a local byte-screening and preflight tool only.  It does not dispatch

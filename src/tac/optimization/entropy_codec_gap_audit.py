@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Audit entropy-codec gaps without building candidate archives.
 
 This module compares observed byte streams against three local rate floors:

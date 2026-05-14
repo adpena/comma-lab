@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Distillation Chain — composition/stacking primitive.
 
 Hinton-Vinyals-Dean 2014 ("Distilling the Knowledge in a Neural Network",

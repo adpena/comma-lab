@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Extract HNeRV decoder weights from PR106 belt_and_suspenders archive (0.bin).
 
 Reads the PR106 archive.zip → unpacks single-member 0.bin → parses the packed

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PCC10 — Anti-arbitrariness scanner for prediction-logic magic numbers.
 
 Council Q4 prescription. Every numeric literal bound to an identifier that

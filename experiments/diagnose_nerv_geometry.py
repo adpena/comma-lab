@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Alpha-Geo-0 CPU geometry diagnostics for NeRV mask streams.
 
 This compares a decoded candidate mask stream against the decoded baseline

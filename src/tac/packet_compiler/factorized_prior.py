@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CompressAI ``FactorizedPrior`` (Ballé 2018 baseline) packet-compiler adapter.
 
 This module wraps :class:`compressai.models.FactorizedPrior` (Ballé, Laparra,

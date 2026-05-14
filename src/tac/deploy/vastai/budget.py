@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Budget tracking for Vast.ai experiments.
 
 Reads/writes ``experiments/results/vastai/budget.json`` and enforces a hard

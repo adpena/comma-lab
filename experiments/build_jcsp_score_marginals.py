@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CLI to produce a JCSP score-marginals artifact from a model checkpoint.
 
 The γ-JCSP dispatch path in ``experiments/pipeline.py`` requires a

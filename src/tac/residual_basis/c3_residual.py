@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C3 (Compressed Conditional Content) residual basis SCAFFOLD over PR106 r2 decoded RGB.
 
 C3 (Kim et al., 2024, "C3: High-performance and low-complexity neural compression

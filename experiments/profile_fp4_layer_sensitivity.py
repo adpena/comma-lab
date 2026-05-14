@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane F-V4 Phase 1 — per-layer FP4 sensitivity profiler.
 
 For each Conv2d / Linear weight in a renderer, quantize ONLY that one layer

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Data loading utilities for task-aware codec training.
 
 Handles video decoding, frame pair construction, and saliency weight loading

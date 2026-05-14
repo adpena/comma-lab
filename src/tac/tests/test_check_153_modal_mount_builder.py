@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #153 ``check_modal_dispatcher_uses_canonical_mount_builder``.
 
 Refuses ``experiments/modal_*.py`` files that hand-curate Modal mounts

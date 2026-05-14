@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Pre-dispatch frame-parity + no-op pixel-delta proofs for HDM8 postfilter modes.
 
 Per codex frame-exploit research (.omx/research/segnet_posenet_frame_exploit_latest_research_20260514_codex.md

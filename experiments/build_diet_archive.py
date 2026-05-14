@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Build a diet variant of an existing submission archive.
 
 Usage:

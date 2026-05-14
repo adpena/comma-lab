@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Record the exact local PR91/HPM1 entropy grammar failure without dispatch."""
 
 from __future__ import annotations

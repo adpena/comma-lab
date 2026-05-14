@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Small deterministic IO helpers for local tooling.
 
 These helpers intentionally avoid provider state and process mutation. They are

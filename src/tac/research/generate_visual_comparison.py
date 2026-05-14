@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Generate visual comparison frames for the writeup.
 
 Creates side-by-side PNG images showing:

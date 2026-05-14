@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Remote-script plumbing tests for SegMap LCT archive custody."""
 
 from __future__ import annotations

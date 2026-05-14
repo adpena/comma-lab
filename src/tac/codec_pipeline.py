@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Composable codec pipeline — canonical orchestrator for the four-way stack.
 
 Per the user's "do canonicalization and composability" directive 2026-05-07:

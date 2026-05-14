@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tc_nerv architecture — Temporal-Consistency NeRV substrate (L0 SKETCH).
 
 Sibling of ``sane_hnerv``. Same SIREN + PixelShuffle + per-pair latent

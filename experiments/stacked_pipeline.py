@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Stacked Pipeline: end-to-end chain of all generation methods.
 
 Chains the following stages:

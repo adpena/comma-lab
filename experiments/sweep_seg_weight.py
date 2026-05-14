@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane T2-RATIO: bounded sweep above the historical SegNet weight cap.
 
 INTENTIONAL_OVERRIDE: CLAUDE.md marks ``segnet_loss_weight > 100`` as

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan compressed-byte water-fill policies for C067 postdecode mask repair.
 
 This is an offline selector for charged AMR1 postdecode mask-repair atoms. It

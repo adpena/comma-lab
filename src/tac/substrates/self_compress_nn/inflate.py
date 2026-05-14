@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """self_compress_nn inflate runtime — <= 200 LOC waiver per HNeRV L4 FAIL (δ).
 
 This file is the contest-runtime image of the δ substrate. It is imported by

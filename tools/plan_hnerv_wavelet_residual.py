@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit a planning-only wavelet residual atom manifest for HNeRV payloads."""
 
 from __future__ import annotations

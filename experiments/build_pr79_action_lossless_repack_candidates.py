@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR79 lossless seg_tile_actions repack candidates.
 
 This is a local byte-screening tool only.  It preserves PR79 decoded

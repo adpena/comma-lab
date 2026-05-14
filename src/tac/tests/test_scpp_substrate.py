@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.scpp_substrate — SC++ self-compression substrate."""
 from __future__ import annotations
 

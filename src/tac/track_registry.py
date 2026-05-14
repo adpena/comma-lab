@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Centralized registry of all landed tracks (T7-T22 + Lane-12-v2 + A1).
 
 Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable: "Every stackable

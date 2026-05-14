@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed candidate queue adapter for optimizer and sweep outputs.
 
 The queue schema here is intentionally smaller than a new optimizer. It turns

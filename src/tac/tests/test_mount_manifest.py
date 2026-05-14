@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.deploy.modal.mount_manifest``.
 
 Coverage targets per the T1-A landing memo:

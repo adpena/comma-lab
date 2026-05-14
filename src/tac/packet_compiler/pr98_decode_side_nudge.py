@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR98 decode-side nudge — per-frame per-channel constant offsets.
 
 Council deliberation 3 (OOO commit 328bf2f9, UNANIMOUS 10/10 vote for

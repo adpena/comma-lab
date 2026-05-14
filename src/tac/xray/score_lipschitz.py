@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F4: Score-vs-archive Lipschitz constant estimator.
 
 Tao shower-thought (deep_math §13): the contest score

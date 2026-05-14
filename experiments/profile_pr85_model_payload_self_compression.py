@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile PR85 model-payload self-compression opportunities.
 
 This is a local static profiler. It slices the charged PR85 ``model`` segment

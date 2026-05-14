@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan non-promotable multimask reconciliation atoms.
 
 This deterministic planner compares a source decoded-mask tensor with one or

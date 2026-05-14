@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware ternary quantization-aware training helpers.
 
 The helpers in this module quantize tensors to ``{-scale, 0, +scale}`` with a

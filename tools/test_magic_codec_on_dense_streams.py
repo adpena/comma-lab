@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Test the magic codec on TRAINER-FRESH dense streams (not entropy-saturated).
 
 Per operator amplification 2026-05-11 ("push magic codec further") + council §B

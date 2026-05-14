@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Explicit Rust bridge for STBM1BR semantic mask decode.
 
 This module intentionally does not auto-discover or build a native decoder.

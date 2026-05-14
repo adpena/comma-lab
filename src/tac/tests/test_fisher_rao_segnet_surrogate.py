@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the opt-in Fisher-Rao SegNet training surrogate."""
 
 from __future__ import annotations

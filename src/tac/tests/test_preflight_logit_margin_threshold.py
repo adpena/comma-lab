@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check 93: Lane 19 (logit-margin) callers pass explicit threshold=.
 
 Per CLAUDE.md FORBIDDEN PATTERNS / silent-default bug class:

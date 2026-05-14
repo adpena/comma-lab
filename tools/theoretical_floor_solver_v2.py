@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fields-medal theoretical floor solver v2 — score-domain Lagrangian + IB + W1 + Fisher.
 
 Implements the math from the Grand Council Fields-Medal Theoretical Floor

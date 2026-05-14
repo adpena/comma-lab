@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Modal actuator for T1 Ballé hyperprior end-to-end.
 
 This file graduates T1 from a remote-command plan to a real Modal job path

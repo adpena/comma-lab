@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Differentiable Shannon-entropy loss terms for delta-epsilon-zeta joint substrate training.
 
 Per Grand Council 2026-05-07 verdict (`.omx/research/grand_council_pr106_substrate_findings_zig_default_20260507.md`),

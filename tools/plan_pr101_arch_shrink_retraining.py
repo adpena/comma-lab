@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan PR101 architecture-shrink and rate-shaped retraining candidates.
 
 This is a deterministic CPU-only planning tool. It converts the current PR101

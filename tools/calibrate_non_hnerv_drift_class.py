@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Calibrate a non-HNeRV architecture-class CUDA/CPU drift profile.
 
 Sister of the HNeRV-cluster bootstrap landed 2026-05-08 in

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Deterministically repack a one-member contest archive under a new name."""
 
 from __future__ import annotations

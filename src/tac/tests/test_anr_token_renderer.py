@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src.tac.anr_token_renderer (ANR full substrate scaffold).
 
 Covers: TokenRendererV62, ShrinkSingleNeRV, HPACMini, FiLMPortabilityGuard,

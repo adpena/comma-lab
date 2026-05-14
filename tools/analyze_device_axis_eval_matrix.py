@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Summarize scorer-device x inflate-device auth-eval artifacts.
 
 This is a diagnostic/xray tool. It never promotes, ranks, or kills lanes. It

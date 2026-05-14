@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-4 catalog #134 — Phase3DispatchGate fail-closed.
 
 Bug class (codex round-4 MEDIUM 1, 2026-05-09): the previous

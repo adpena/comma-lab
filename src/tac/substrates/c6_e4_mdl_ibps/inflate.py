@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C6 MDL-IBPS inflate runtime — contest raw-output contract.
 
 Loads the IBPS1 archive, reconstructs the decoder from the stored state_dict,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Shannon's Optimal Capacity Allocation Analysis.
 
 Analyzes the comma.ai video compression challenge scoring formula:

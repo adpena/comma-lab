@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-3 HIGH 2 fix — Check #130 no longer accepts bare `blockers`/`errors`.
 
 Bug class (codex round-3 HIGH 2, 2026-05-09): the previous

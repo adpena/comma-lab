@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Strip torch.nn.utils.parametrize hooks from saved state_dicts.
 
 When a model is saved while `torch.nn.utils.parametrize` hooks are attached

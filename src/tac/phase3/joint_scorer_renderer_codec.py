@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 3 joint scorer-renderer-codec scaffold (DESIGN-ONLY).
 
 Implements the SCAFFOLD ONLY — no GPU dispatch path. The full trainer is

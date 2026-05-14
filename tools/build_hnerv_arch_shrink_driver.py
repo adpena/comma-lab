@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build generated-schema HNeRV architecture-shrink training artifacts.
 
 This is the concrete handoff between rate-side planning and actual training.

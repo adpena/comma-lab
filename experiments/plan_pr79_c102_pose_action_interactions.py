@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan PR79/C102 pose-action interaction atoms from existing evidence.
 
 This is a planning-only analyzer. It consumes exact component traces plus

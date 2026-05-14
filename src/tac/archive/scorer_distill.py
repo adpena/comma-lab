@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer distillation heads — lightweight proxies for PoseNet/SegNet (Trick 21).
 
 Train tiny heads that mimic the frozen scorers' behavior from intermediate

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning manifests for HNeRV HDC2 combined entropy-overhead reduction."""
 
 from __future__ import annotations

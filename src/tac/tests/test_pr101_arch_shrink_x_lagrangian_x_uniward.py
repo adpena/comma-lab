@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/pr101_arch_shrink_x_lagrangian_x_uniward_empirical.py``.
 
 The full empirical sweep requires the PR101 decoder state-dict; here we

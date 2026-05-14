@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #136 — custody-validator accept lists must be CONCRETE only.
 
 Defense-in-depth on codex round-3 HIGH 2 (2026-05-09): the round-3 fix patched

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Architecture for the A1 + LAPose composition substrate.
 
 The base renderer is A1's PR101-derived HNeRVDecoder (frozen). The

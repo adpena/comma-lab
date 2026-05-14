@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 post-hoc sparsity sweep — anchors the
 ``sparsity_alpha_0.7_imp_retrain`` row in cathedral_autopilot's catalog.
 

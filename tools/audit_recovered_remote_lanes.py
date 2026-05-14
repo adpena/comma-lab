@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit recovered remote lane scripts for canonical custody markers.
 
 Recovered lane scripts are useful only if operators can tell whether they are

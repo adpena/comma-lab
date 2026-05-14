@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane I-DARTS — Cool-Chic dim search.
 
 Verifies:

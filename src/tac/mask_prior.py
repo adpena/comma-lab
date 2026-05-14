@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Mask class-frequency prior (Lane MOS).
 
 Per the Cosmos research synthesis (memory: project_cosmos_mae_lyra_telescope_synthesis_20260428

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Inspect PR101/PR106 frontier archive physical and parser-proven layout.
 
 Legacy filename retained because task notes referred to "PR106 archive

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Alpha INR/TinyNeRV readiness scaffold."""
 from __future__ import annotations
 

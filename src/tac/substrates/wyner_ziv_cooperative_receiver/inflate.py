@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wyner-Ziv cooperative-receiver inflate runtime — contest raw-output contract.
 
 Loads the WZ1 archive, rebuilds the renderer + side-info predictor, decodes

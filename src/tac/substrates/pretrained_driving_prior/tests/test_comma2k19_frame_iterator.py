@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the canonical Comma2k19FrameIterator (DP1 Phase 2).
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L1

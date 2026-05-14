@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/seed_poses_from_openpilot.py (Lane OS-A standalone tool).
 
 These tests verify the CLI contract: argparse flags, fallback path, output

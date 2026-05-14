@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove runtime closure for PR103 AC decoder bytes inside a PR106 archive.
 
 This tool emits the missing section-length/ac-fallback metadata needed by a

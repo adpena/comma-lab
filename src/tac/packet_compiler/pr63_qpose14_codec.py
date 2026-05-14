@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR63 ``qpose14`` pose codec primitives — reusable byte-grammar pieces.
 
 This module extracts the REUSABLE byte-grammar primitives from the PR63

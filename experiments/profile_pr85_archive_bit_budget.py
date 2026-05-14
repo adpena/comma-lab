@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile the PR85 archive bit budget without making score claims."""
 
 from __future__ import annotations

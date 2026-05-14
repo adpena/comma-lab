@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build C101/top192-native seg_tile_actions atom candidates.
 
 This is a local archive builder only. It preserves the exact C101/top192 mask,

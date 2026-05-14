@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ROUNDTRIP_SELF_TEST: _smoke_roundtrip_no_dead_k and _smoke_roundtrip_cplx_op1
 # verify emitted archive sections through the staged inflate parsers.
 """PR101 unified-winners cross-paradigm empirical stack.

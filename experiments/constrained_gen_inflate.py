@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Contest-compliant inflate script for constrained generation from noise.
 
 This is the INFLATE-TIME version that runs within the 30-min total budget

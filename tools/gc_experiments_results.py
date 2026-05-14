@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical garbage-collector for ``experiments/results/`` (T1-D).
 
 Per the 2026-05-12 state-hygiene wave (cluster 3 of the streamline pass),

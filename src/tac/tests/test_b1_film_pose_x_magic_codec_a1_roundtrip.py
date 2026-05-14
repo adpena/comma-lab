@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip + structural test for B1 cell: film_pose_x_magic_codec on A1.
 
 Per CLAUDE.md Catalog #91 (`check_encoder_decoder_dequantization_roundtrip_tested`):

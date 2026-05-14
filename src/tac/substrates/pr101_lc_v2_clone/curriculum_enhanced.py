@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR95++ meta-stack-of-stacks enhanced curriculum primitives.
 
 This module is the engineering-improvement sister of

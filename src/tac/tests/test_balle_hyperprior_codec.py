@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 20 — Production Ballé hyperprior codec tests.
 
 Covers ``tac.balle_hyperprior_codec`` (the production arithmetic-coding

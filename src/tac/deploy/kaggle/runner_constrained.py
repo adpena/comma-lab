@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Constrained generation runner — provider-agnostic.
 
 Works on Kaggle, Modal, Lightning, or locally. Platform is auto-detected via

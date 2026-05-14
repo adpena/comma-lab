@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR85 QMA9 QRG1 row-run grammar byte-screen candidates.
 
 This is a planning/local-byte-screen path only. It reads the exact PR85 QMA9

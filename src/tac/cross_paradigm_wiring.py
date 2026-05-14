@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Typed runtime contract for cross-paradigm pipeline flags.
 
 This module is intentionally deterministic and side-effect free: it inspects

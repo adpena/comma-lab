@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Structural validation for ``scripts/remote_lane_sz_phase2_full.sh``.
 
 Per CLAUDE.md non-negotiables:

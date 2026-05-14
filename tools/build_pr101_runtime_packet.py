@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Assemble a deterministic PR101 HNeRV runtime packet for a candidate archive.
 
 This is local custody tooling only. It copies a candidate ``archive.zip`` next

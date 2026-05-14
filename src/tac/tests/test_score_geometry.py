@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the closed-form contest score geometry analyzer."""
 from __future__ import annotations
 

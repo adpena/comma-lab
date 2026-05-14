@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #172 (WAVE-7-MED-FIX, REVIEW-OMNI NV2) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 Hotz — Substrate trainers don't

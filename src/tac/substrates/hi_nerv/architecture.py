@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """hi_nerv architecture — Hierarchical NeRV with multi-scale latents (L0 SKETCH).
 
 Per-frame implicit renderer with a 3-scale latent pyramid. The decoder runs

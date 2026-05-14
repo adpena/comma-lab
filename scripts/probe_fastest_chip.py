@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe Vast.ai supply for the fastest available training chip.
 
 Per the FAST CHIP DIRECTIVE (feedback_fast_chip_directive_no_waiting_20260501.md):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.deploy.kaggle.runner.
 
 Covers: find_tac_wheel, resolve_training_script, resolve_supervision_assets,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Meta-Lagrangian search CLI — extreme automated Shannon-floor candidate raising.
 
 Walks a candidate spec (JSON list, or auto-generated from the apogee bit-width

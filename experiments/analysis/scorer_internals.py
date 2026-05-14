@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Scorer Internal Analysis: layer-by-layer activation comparison GT vs TTO.
 
 Hooks all conv layers in both SegNet and PoseNet, then computes per-layer

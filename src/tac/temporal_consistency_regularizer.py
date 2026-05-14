@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Temporal-consistency regularizer — T22 lateral leap (coherence council 2026-05-09).
 
 Per the portfolio coherence audit

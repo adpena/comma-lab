@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR106 cross-substrate port of Path B step 5/6 + UNIWARD per-tensor Lagrangian.
 
 Background

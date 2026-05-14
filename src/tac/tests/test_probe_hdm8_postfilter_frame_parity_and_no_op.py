@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/probe_hdm8_postfilter_frame_parity_and_no_op.py``."""
 
 from __future__ import annotations

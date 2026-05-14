@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bridge audit: tac.score_geometry (torch-free) vs tac.contest_rate_distortion_system (torch).
 
 Both modules implement the same contest objective:

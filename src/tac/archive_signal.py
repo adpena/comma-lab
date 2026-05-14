@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Offline archive-byte and component-trace signal ranking.
 
 This module is intentionally diagnostic-only.  It reads existing JSON artifacts

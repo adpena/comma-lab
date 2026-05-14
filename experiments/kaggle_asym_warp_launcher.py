@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Kaggle kernel bootstrap for asymmetric warp renderer training.
 
 Intentionally minimal — all Kaggle logic lives in tac.deploy.kaggle.runner

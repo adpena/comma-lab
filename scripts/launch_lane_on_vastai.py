@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical parent-shell launcher for Vast.ai lane scripts (v2 — harness-friendly).
 
 Built 2026-04-28, hardened V2 same day after harness-incompatibility discovery

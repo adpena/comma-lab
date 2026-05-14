@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane HM: analytical road-plane homography motion.
 
 This replaces the learned motion CNN with a differentiable perspective-zoom

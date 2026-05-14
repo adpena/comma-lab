@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR100 schema-driven decoder grammar (schema-elision V2)."""
 
 from __future__ import annotations

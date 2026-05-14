@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for joint-source R(D) lower bounds (Berger 1971 §4.5).
 
 Eureka mechanism — Fields-medal council 2026-05-09. The module under test

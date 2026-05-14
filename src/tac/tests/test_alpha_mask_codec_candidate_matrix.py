@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Alpha mask codec candidate matrix."""
 from __future__ import annotations
 

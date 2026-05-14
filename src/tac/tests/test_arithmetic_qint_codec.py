@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SH arithmetic codec roundtrip + entropy regression tests."""
 from __future__ import annotations
 

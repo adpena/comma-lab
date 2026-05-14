@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane W: tests for experiments/profile_pair_sensitivity.py.
 
 Verifies the profiler's CLI surface, weight tensor invariants, and

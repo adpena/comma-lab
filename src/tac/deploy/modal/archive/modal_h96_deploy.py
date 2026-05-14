@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deploy h=96 training to Modal A10G GPU.
 
 Installs tac as a package, uses precomputed data volume, runs training

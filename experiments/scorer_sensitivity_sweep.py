@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Yousfi's scorer-Jacobian sensitivity sweep.
 
 Unlike pixel-level sensitivity (Hotz), this measures how quantization noise

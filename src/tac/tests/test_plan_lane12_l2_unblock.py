@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the fail-closed Lane 12 L2 unblock readiness planner."""
 from __future__ import annotations
 

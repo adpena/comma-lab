@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Convert CodecOp entropy-floor reports into planning-only atom rows.
 
 This adapter bridges PR101 entropy-floor artifacts into the meta-Lagrangian /

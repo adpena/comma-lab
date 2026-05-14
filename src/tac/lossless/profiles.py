@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Named lossless experiment profiles for commavq-style work."""
 
 from __future__ import annotations

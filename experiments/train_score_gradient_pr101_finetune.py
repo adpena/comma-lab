@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase A1 — Score-gradient supervision PR101 fine-tune.
 
 Council priority: 22/22 ENDORSE, UNANIMOUS HIGHEST PRIORITY (Quantizr/Carmack/Hinton).

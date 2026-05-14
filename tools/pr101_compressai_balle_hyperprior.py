@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 Balle-class hyperprior codec — anchors the
 ``compressai_balle_hyperprior`` row in cathedral_autopilot's catalog.
 

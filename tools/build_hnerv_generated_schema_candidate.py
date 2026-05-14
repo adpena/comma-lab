@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic non-score HNGP archive wrapper."""
 
 from __future__ import annotations

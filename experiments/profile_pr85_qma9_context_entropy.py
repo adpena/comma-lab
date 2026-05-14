@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile PR85 QMA9 token/context entropy for local planning.
 
 This is a planning-only profiler over the decoded PR85 mask token tensor. It

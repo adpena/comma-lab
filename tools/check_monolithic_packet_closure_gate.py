@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed exact-dispatch gate for monolithic packet candidates."""
 
 from __future__ import annotations

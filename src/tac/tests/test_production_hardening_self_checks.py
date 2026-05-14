@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for production-hardening self-check methods landed in defense-in-depth pass.
 
 Per CLAUDE.md "production hardening + polish + defense-in-depth" landing

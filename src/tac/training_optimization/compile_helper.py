@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical ``torch.compile`` wrapper for substrate trainers (Catalog #179).
 
 Why this exists

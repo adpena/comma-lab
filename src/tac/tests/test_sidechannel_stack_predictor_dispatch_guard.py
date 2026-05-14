@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dispatch-readiness guards for tools/sidechannel_stack_predictor.py."""
 from __future__ import annotations
 

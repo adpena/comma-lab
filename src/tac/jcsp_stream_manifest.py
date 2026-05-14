@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Typed manifest rows for byte-bearing JCSP archive members.
 
 The JCSP builder already produces byte-closed ``jcsp.bin`` archive members and

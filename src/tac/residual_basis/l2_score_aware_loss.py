@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared score-aware proxy Lagrangian for L2 residual-basis encoders.
 
 This module is the **canonical inner-loop objective** for the per-family L2

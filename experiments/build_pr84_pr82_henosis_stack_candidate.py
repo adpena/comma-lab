@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR84/QMA9 + PR82/Henosis stack candidates.
 
 This is a local custody and byte-accounting tool.  It never invokes the scorer

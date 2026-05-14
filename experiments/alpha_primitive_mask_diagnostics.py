@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Deterministic Alpha primitive mask diagnostics.
 
 This is a bounded, contest-safe, non-promotable diagnostic helper for Alpha

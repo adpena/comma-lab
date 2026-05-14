@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """launch_lane_with_retry.py — phase1+phase2 with auto-retry on Vast.ai failures.
 
 Wraps `launch_lane_on_vastai.py phase1` + the phase2 split (wait+scp+extract+launch).

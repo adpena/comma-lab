@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a deduplicated public PR archive corpus upload view.
 
 The raw intake tree intentionally preserves contestant source checkouts and

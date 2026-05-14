@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run --quiet --
+# SPDX-License-Identifier: MIT
 """PR101-substrate Filler-STC pose-codec byte-anchor tool.
 
 Decision-4 council-alternative empirical anchor (`.omx/research/grand_council

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile and safely repack PR95 HNeRV Muon single-payload archives.
 
 This is a forensic/deconstruction tool. It parses the public PR95 archive wire

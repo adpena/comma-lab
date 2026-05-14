@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Phase 5+ theoretical-floor saturation scaffold.
 
 These tests cover the SKETCH-CONJECTURE-ONLY scaffold — they verify that the

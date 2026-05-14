@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan byte and distortion requirements for sub-0.24 frontier targets.
 
 This is a control-plane planner, not score evidence. It consumes exact CUDA

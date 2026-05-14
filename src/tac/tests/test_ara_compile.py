@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for tools/ara_compile.py.
 
 Per CLAUDE.md the Ara compiler is read-mostly and conservative; these tests

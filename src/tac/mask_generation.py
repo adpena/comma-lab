@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate per-frame importance masks using ML segmentation.
 
 Uses Falcon Perception for text-prompted segmentation and SAM 3 (or SAM 2

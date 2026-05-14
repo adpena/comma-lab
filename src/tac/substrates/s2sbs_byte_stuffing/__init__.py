@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """S2SBS — Stride-2-Stem Byte-Stuffing substrate.
 
 Substrate-engineering L0/L1 scaffold exploiting the empirically measured

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PARADIGM-γ Module γ — Arithmetic terminal layer (canonical).
 
 The "arithmetic terminal" is the FINAL layer in the canonical codec

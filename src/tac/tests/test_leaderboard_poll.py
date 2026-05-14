@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/leaderboard_poll.py — uses a recorded README fixture.
 
 The fixture (`fixtures/leaderboard_readme_20260505.md`) is a real snapshot of

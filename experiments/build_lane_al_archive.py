@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane AL archive builder — Analog Latent canvas → grayscale.mkv.
 
 Takes ``optimized_grayscale.npy`` (uint8, (N, H, W)) produced by

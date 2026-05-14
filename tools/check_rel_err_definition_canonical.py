@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """rel_err — canonical-definition discipline scanner.
 
 Bug class: re-implementing ``rel_err`` inline silently in heterogeneous

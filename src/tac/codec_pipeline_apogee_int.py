@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Op 3: apogee_intN substrate-transform CodecOp.
 
 Per the canonical four-way stack composition contract

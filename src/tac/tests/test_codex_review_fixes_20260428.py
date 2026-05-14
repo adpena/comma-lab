@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Codex 5-finding adversarial review fixes (2026-04-28).
 
 Coverage:

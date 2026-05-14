@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Ego-NeRV-as-renderer — Egocentric pose-conditioning NeRV substrate.
 
 Per operator directive 2026-05-11 ("all nerv-family"). Ego-NeRV

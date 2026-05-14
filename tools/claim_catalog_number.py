@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Atomically claim the next CLAUDE.md catalog number.
 
 Background - the bug class this prevents

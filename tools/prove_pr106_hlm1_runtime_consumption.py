@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove a PR106 HLM archive's fixed-latent section is runtime-consumed."""
 
 from __future__ import annotations

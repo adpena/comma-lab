@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Analyze PR90 topband masks as a PR85 QMA9 mask-prior transfer.
 
 This is a local, planning-only analyzer. It reads the public PR90 intake archive

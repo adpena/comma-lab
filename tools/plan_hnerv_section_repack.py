@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a planning-only HNeRV section repack target table."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_f_v3_fp4_qat_int8warmup.sh.
 
 Lane F-V3 = FP4 QAT engineering audit retry (V3): INT8 warmup phase

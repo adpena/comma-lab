@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.contest_score_pareto_3axis``.
 
 3-axis Pareto on the contest objective (d_seg, d_pose, B). Verifies:

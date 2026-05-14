@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Empirical measurement of the SJ-KL Fisher matrix rank.
 
 Wave-Ω-1 design step 1 (per Council #2 Section 5.3 + subagent prompt).

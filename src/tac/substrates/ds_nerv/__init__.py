@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.ds_nerv — Depth-separable NeRV (substrate L0 SKETCH).
 
 Per-frame implicit renderer using depth-separable convolutions throughout

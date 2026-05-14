@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: E402
 """Phase A2 sensitivity-weighted lossy coarsening.
 

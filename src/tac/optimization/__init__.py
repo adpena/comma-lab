@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Optimization and allocation utilities for contest archive atoms.
 
 This package ranks, allocates, and composes charged archive atoms. It consumes

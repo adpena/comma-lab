@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic LA-POSE-lite inputs from contest pair metrics.
 
 Lane W pair metrics are general scorer telemetry, not Lane-W-only state. This

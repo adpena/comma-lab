@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Watch running Vast.ai instances and surface stalls / idle GPU burn.
 
 DX #9 (2026-04-26): the SHIRAZ post-mortem proved tmux-session existence is

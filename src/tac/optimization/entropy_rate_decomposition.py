@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only entropy-rate decomposition for contest byte streams.
 
 This module estimates entropy floors from observed symbol counts and optional

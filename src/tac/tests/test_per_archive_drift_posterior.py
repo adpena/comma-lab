@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.per_archive_drift_posterior — Bayesian per-archive drift posterior.
 
 Covers:

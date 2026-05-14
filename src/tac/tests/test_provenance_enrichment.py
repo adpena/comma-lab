@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Verify _capture_provenance() captures every DX #6 enrichment field.
 
 Fridrich + Quantizr R2 sign-off: a CUDA score reproduction must be

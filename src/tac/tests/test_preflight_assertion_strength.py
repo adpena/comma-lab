@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight checks 44, 45, 46, 47 (assertion-strength meta-bugs).
 
 Reference: Round 22 bit-STE sign-bug post-mortem. Council reviews 12/13/14/18

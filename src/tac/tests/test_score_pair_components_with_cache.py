@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``score_pair_components_with_cache`` (O1 wire-in).
 
 The cache-aware wrapper is the canonical entry point substrate trainers

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Diagnostic component-trace runner — per-pair PoseNet + SegNet decomposition.
 
 Produces ``component_trace.json`` with the per-pair posenet (``p_i``) and segnet

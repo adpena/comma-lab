@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SH — deterministic arithmetic-coding primitives for qint streams.
 
 This module provides pure, deterministic arithmetic/range-coding helpers for

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``scripts/deferred_dispatch_playbook_pr103_pr106_standalone_20260507.sh``.
 
 Bug-hunter v2 (new MEDIUM): the playbook previously warned but did not fail

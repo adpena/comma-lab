@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """macOS-CPU advisory-signal manifests for free first-class proxy ranking.
 
 Operator routing 2026-05-13 ("training is the real roadblock; we can prepare

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build beta-Fisher score-aware weights for lossy-coarsening K allocation.
 
 This is a CPU-only bridge from existing sensitivity/Fisher artifacts to the

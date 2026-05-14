@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic Alpha grayscale mask replacement archive.
 
 This is the first contest-evaluable Alpha archive shape:

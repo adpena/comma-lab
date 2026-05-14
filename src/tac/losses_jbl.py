@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane J-JBL: Jaccard Metric Loss + Boundary Label Smoothing distillation.
 
 Implements the Jack-from-skunkworks Cycle 1 TOP-1 SegNet attack

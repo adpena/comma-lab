@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane Maturity Harness — canonical CLI for the lane registry.
 
 Tracks every lane's level (0/1/2/3) status against the 8-gate Level-3

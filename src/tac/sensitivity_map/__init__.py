@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-sensitivity map contract for β / Ω-W-V3.
 
 This module intentionally does not compute scorer gradients itself. It defines

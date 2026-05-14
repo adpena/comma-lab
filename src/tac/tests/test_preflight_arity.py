@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight_arity, preflight_profiles, and codebase drift checks.
 
 These tests pin down the exact bug class (SHIRAZ A100 disaster) so it cannot

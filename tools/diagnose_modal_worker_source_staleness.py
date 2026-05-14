@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Diagnose Modal worker source-staleness vs local HEAD.
 
 PHASE-B1-PIVOT bug-class anchor (2026-05-12):

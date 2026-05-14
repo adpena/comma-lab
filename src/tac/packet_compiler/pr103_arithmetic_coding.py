@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR103 arithmetic-coding — reusable byte-level entropy-coder primitives.
 
 This module extracts the REUSABLE arithmetic-coding pieces from the PR103

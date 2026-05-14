@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py``.
 
 Verifies the composition of:

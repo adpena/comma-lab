@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Reconcile Vast.ai live state against local dispatch trackers.
 
 This is intentionally non-destructive. It compares:

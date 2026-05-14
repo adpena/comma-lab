@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-architecture-class CUDA/CPU drift calibration registry.
 
 This is the **adaptive learning layer** that complements the static

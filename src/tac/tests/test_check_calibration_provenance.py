@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/check_calibration_provenance.py (PCC10).
 
 Per council Q4: every numeric literal bound to a prediction-logic identifier

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared byte-grammar for byte-closed PR106 + non-HNeRV residual sidecar archives.
 
 This module is the *common substrate* for the five per-family residual sidecar

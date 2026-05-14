@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Forensic decomposition of the score gap between PR106 and medal-band PRs.
 
 Per dual-path investigation

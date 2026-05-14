@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """lane_c_keygen.py — generate an Ed25519 keypair for Lane C trust root.
 
 Codex R5-3 #1 (2026-04-27): the Lane C compliance gate uses Ed25519

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from tac.deploy.cloud_bootstrap import BOOTSTRAP_STUB

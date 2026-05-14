@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build per-pair SegNet boundary and margin marginals for A5 allocation."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 logit-margin map — the canonical geometric-nullspace primitive.
 
 The SegNet logit margin ``m(x, y) = top1_logit(x, y) - top2_logit(x, y) >= 0``

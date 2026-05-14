@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip + golden-vector tests for the CompressAI FactorizedPrior adapter.
 
 Sister to ``src/tac/packet_compiler/factorized_prior.py``. Catalog #91

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical evaluation for task-aware codec post-filters.
 
 ONE evaluation path. Matches the official scorer exactly.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.optimization.phase1_t13_t19_t20_t22_cost_refinement.
 
 Per CLAUDE.md "Forbidden score claims": these tests verify that every

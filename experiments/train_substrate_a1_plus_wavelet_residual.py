@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the A1 + wavelet residual sidecar composition substrate (D3.C freeze-A1).
 
 META-COUNCIL memo: ``.omx/research/meta_council_decision_attribution_audit_20260513.md``

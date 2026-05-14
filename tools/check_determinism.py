@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Determinism preflight for remote training.
 
 Run BEFORE pipeline.py / train_renderer.py to verify:

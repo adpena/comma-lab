@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # RESEARCH_SCAFFOLDING_NOT_WIRED: no compress-time training harness or
 # pipeline.py dispatch exists. Reactivation criteria: (1) add a
 # --use-scnn flag to step_compress_weights that wraps the channel-gate

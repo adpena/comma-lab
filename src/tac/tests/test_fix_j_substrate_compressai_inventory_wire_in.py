@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """FIX-J: substrate + CompressAI canonical inventory wire-in dedicated tests.
 
 Per LOOPCLOSE 2026-05-12 finding, 8+ substrate-scaffold packages (Fields-medal

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.training_optimization.compile_helper`` (O3).
 
 The compile helper is the canonical wrapper for substrate trainer

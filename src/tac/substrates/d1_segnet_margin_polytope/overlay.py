@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 L2 INTEGRATION overlay — per-pixel polytope-aware noise application.
 
 The L1 SCAFFOLD landed the encoder, archive grammar, and runtime custody

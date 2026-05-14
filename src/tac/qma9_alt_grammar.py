@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Local PR85 QMA9 alternate-grammar screening helpers.
 
 This module intentionally does not modify or import the contest inflate

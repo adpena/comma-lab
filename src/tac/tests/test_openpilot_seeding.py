@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.openpilot_seeding (Lane OS-A core module).
 
 These tests pin the contracts of the supercombo loader, the YUV preprocessing,

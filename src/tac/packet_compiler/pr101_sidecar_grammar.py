@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR101 sidecar grammar — reusable byte-grammar primitives.
 
 This module extracts the REUSABLE byte-grammar pieces from the PR101 public

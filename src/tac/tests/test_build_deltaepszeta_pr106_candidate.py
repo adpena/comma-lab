@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``experiments.build_deltaepszeta_pr106_candidate``."""
 
 from __future__ import annotations

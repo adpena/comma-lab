@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic PR75/minp P6 stream-mix candidates.
 
 This is a local byte-screening tool only.  It mixes encoded PR75/minp public

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the adaptive-analyzer wrapper that bridges the profile registry
 to cathedral_autopilot, meta-Lagrangian, and theoretical_floor solvers."""
 from __future__ import annotations

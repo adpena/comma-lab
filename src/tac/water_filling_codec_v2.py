@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W-V2 — water-fill + arithmetic terminal on Selfcomp/block-FP weights.
 
 V2 layers a static-histogram arithmetic coder ON TOP of V1's per-channel

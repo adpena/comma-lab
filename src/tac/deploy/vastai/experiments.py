@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Experiment registry for Vast.ai deployments.
 
 Defines all known experiment configurations as :class:`ExperimentConfig`

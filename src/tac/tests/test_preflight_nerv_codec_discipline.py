@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check 95: Lane 12 NeRV mask codec training-path discipline.
 
 Per CLAUDE.md non-negotiables (EMA, no-MPS, no-bare-round, auth-eval-everywhere)

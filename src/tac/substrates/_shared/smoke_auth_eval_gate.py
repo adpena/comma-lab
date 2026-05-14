@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical smoke/full auth-eval gate for substrate trainers.
 
 Per CLAUDE.md "Auth eval EVERYWHERE" non-negotiable + HNeRV parity discipline

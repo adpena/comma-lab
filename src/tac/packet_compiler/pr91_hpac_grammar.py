@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR91 ``hpac_coder_hybrid`` grammar primitives — universal AC wrapper +
 QM0/QH0 weight-block grammar.
 

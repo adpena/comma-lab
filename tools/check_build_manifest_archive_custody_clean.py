@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B3 — Build-manifest archive custody check.
 
 Bug class: a ``build_manifest.json`` references ``archive_relpath`` but the

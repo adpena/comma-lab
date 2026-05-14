@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane K-DARTS — DSConv channel-dim search.
 
 Verifies:

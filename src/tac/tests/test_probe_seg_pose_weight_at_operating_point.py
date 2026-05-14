@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the council A-1 probe-disambiguator.
 
 Verifies operating-point-aware seg/pose weight derivation against the

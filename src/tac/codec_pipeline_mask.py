@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """alpha-paradigm mask-encoder bakeoff CodecPipeline ops.
 
 Per the four-way stack composition contract

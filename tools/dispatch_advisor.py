@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Score-geometry dispatch advisor: per-candidate axis-priority recommendations.
 
 Closes the gap from the May 4 race postmortem where we had every primitive

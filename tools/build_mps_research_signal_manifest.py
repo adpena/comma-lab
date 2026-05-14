@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed MPS research-signal manifest.
 
 This is the sanctioned path for using local Apple MPS as a free discovery

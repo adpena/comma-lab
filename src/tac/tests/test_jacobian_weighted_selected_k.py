@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Jacobian-weighted selected-K producer scaffold."""
 
 from __future__ import annotations

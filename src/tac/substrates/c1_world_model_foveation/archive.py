@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C1 archive grammar -- C1WMFV1 monolithic 0.bin (substrate-engineering scope).
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons:

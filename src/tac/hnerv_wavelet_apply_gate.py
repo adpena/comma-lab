@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Readiness gate for score-relevant WR01 wavelet apply transforms.
 
 WR01 sidechannels are now byte-closed and runtime-consumed, but the current

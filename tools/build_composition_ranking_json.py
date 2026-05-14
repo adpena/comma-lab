@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """FIX-C bridge: composition-cell enumeration → autopilot ranking JSON.
 
 Per ZZZZZ integration audit 2026-05-12, the cathedral autopilot's

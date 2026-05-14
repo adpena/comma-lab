@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: I001
 """Compose a pr106_stacked archive from pre-built sister-lane archives.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed HNeRV entropy candidate-packet readiness manifests."""
 
 from __future__ import annotations

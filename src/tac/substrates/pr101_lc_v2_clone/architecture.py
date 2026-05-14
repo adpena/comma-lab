@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """pr101_lc_v2_clone architecture — byte-faithful PR101 HNeRV-LC-v2 decoder clone.
 
 Mirrors ``submissions/hnerv_ft_microcodec/src/model.py`` from PR101's public

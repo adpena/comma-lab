@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane 12 — NeRV mask codec trainer.
 
 Trains a tiny coordinate-MLP (``tac.nerv_mask_codec.NeRVMaskCodec``) to overfit

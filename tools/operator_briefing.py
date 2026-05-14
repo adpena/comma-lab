@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Operator briefing: runs the dispatch trio in sequence — one command, full state.
 
 Phases:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Stream 5 IMAGINATION MODE — Score-Equivalence-Class enumerator on A1.
 
 Operator directive 2026-05-13 AGGRESSIVE LOCAL HARDWARE SWEEP Stream 5

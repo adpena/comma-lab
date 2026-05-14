@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Catalog #207 ``--force`` rmtree namespace + manifest guard.
 
 Empirical anchor 2026-05-14: Codex finding HIGH —

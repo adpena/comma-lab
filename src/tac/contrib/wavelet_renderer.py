@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wavelet-domain renderer: segment masks -> RGB frames via iDWT synthesis.
 
 Architecture inspired by INRIA DP-SIMS-Lite: instead of predicting RGB pixels

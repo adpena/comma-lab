@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Contest-compliance audit for a submission archive.
 
 Single-call audit of any archive.zip we might submit. Reports:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate a 3-panel YUV Y00 channel comparison GIF showing what PoseNet sees.
 
 PoseNet processes YUV 4:2:0, not RGB. The upstream frame_utils.py has

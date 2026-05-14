@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-Jacobian Karhunen-Loève (SJ-KL) basis: residual encoding via
 Fisher-information eigenvectors of the scorer.
 

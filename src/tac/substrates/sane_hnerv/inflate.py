@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """sane_hnerv inflate runtime — <= 100 LOC; PR101-mirror style.
 
 This file is the contest-runtime image of the substrate. It is imported by

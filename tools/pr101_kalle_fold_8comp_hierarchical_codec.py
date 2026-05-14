@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 kalle-fold 8-component HIERARCHICAL mixture codec — reactivation
 of the kalle_fold_mixture_canonical_shapes catalog row per the
 2026-05-07 adversarial audit (memo

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Lane PA helper: initialize SegMap.frame_affine_embedding from PoseNet output.
 
 EUREKA #1 (grand council session, 2026-04-29):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #158 — `check_deterministic_compiler_canonical_use`.
 
 The gate refuses packet-compilation surfaces that bypass the canonical

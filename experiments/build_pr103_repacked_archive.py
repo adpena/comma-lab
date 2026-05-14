@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Repack a PR106-format archive's decoder section using PR103's arithmetic codec.
 
 Workflow:

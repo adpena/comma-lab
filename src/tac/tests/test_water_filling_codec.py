@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane Ω-W water-filling Lagrangian bit-budget allocator.
 
 Test coverage matches docs/paper/water_filling_design_20260429.md §3.2:

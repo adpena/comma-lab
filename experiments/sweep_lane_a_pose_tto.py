@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bayesian sweep for Lane A pose TTO.
 
 Lane A baseline (hand-tuned, scored 1.15 [contest-CUDA] on 2026-04-27):

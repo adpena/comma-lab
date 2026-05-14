@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round 6 MEDIUM 1 fix: SETUP-first-seen single transaction.
 
 Catalog #144 — refuses split observed/left transactions for SETUP-first-seen.

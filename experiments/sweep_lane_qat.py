@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bayesian sweep for Lane F-V3 (FP4 QAT).
 
 Lane F-V3 baseline (hand-tuned, scored band [1.30, 1.80] [contest-CUDA]):

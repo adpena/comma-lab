@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for quantization correctness and round-trip fidelity."""
 import tempfile
 

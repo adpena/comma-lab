@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Alpha mask primitive component-response plan generation."""
 from __future__ import annotations
 

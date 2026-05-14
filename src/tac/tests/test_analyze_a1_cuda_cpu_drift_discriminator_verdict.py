@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 CUDA-CPU drift discriminator verdict analyzer."""
 from __future__ import annotations
 

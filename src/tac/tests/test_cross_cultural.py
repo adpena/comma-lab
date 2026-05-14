@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for cross-cultural research techniques (techniques 3, 5, 6, 7, 8, 9, 10, 11, 12).
 
 Each technique is tested for:

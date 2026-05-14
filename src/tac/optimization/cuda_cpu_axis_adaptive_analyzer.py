@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Adaptive-analyzer wrapper around the per-architecture-class profile registry.
 
 This module is the **integration adapter** that lets the existing solvers

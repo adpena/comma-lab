@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic fixed-slice segment-mix archive candidates.
 
 This tool is build-only. It composes single-member public fixed-slice archives

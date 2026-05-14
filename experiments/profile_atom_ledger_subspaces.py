@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile planning-only atom ledgers into active subspace summaries.
 
 This tool is intentionally non-promotable. It turns CMG/Yousfi-Fridrich atom

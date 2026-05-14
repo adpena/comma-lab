@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #177 — check_cost_band_posterior_rows_have_outcome_field.
 
 FIX-WAVE-2 R2-3 (2026-05-13). Read-side defense-in-depth sister of

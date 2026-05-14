@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """vq_vae architecture — discrete codebook + tiny encoder/decoder.
 
 L0 SKETCH scaffold per operator approval 2026-05-12. The VQ-VAE (van den Oord

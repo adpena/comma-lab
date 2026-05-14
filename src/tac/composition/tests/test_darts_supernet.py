@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.composition.darts_supernet.
 
 Covers (per CLAUDE.md "Subagent coherence-by-default" + the directive's

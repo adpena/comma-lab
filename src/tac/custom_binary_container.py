@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PACT_BC_v1 custom binary container for archive byte analysis.
 
 Byte budget analysis

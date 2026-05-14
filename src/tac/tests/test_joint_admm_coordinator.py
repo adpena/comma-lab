@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Joint-ADMM coordinator — convergence + KKT + restart + scorer-rule tests.
 
 Per memory `project_phases_2_3_4_design_implementation_math_provenance_20260429`

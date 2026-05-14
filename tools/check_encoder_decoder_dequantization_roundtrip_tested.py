@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B1 — Encoder/decoder dequantization roundtrip test scanner.
 
 Bug class: encoder uses ``(rounded / N) * scale`` while paired runtime decoder

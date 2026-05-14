@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Run contest_auth_eval LOCALLY against any recovered/local archive.
 
 This is the operator's "what is this archive worth?" tool. It accepts either a

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Typed distillation-STAGE chain metadata for composition substrates.
 
 The chain model here records teacher-to-student SUBSTRATE stages without

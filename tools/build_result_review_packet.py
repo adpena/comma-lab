@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a result-review packet for returned exact/proxy evidence.
 
 This tool is intentionally conservative. It does not promote, rank, or kill a

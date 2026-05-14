@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z5 predictive-coding world-model inflate runtime — contest raw-output contract.
 
 Loads the Z5PCWM1 archive, reconstructs encoder + decoder + predictor from

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Score-tracking dashboard: sorted view of every contest_auth_eval.json on disk.
 
 Scans `experiments/results/**/contest_auth_eval*.json` (and adjudicated variants),

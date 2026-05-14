@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """siren architecture — sinusoidal-init coordinate-based MLP.
 
 L0 SKETCH scaffold per operator approval 2026-05-12. SIREN (Sitzmann et al.,

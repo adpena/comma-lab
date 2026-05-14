@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #219 — MDL-density STRICT preflight gate on L2+ archive
 promotion.
 

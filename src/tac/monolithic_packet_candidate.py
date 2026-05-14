@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Build deterministic candidates by replacing parser-proven monolithic sections."""
 
 from __future__ import annotations

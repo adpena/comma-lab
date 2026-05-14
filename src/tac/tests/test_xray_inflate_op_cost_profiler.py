@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/xray_inflate_op_cost_profiler.py."""
 from __future__ import annotations
 

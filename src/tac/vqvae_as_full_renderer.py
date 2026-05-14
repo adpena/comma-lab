@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """VQ-VAE-as-full-renderer substrate.
 
 Per operator directive 2026-05-11 + HNeRV parity discipline lesson 5 (full

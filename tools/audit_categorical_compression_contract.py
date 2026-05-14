@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit the canonical categorical compression contract as JSON."""
 
 from __future__ import annotations

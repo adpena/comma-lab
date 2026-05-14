@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Rate-distortion lower bound for PoseNet distortion via MINE estimator.
 
 Research-grade experiment (panel #4). The question: given our current

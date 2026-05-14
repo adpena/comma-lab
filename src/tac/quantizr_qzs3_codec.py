@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # ROUNDTRIP_NOT_REQUIRED: this codec roundtrip is exercised end-to-end by
 # the contest inflate.sh -> evaluate.py path on every archive built via
 # scripts/remote_lane_q_faithful_jointgen.sh (Stage 6 contest_auth_eval).

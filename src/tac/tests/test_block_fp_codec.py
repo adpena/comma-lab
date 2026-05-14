@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round-trip + bits/weight tests for ``tac.block_fp_codec``.
 
 These tests are the contract for the szabolcs Phase 2 weight format. They

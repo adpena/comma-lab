@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static and behavior checks for the Modal Alpha-Geo-0 pose-regeneration path."""
 from __future__ import annotations
 

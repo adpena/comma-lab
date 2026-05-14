@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DSNeRV-as-renderer — diffusion-supervised NeRV substrate.
 
 Per operator directive 2026-05-11 (NeRV-family expansion) + CLAUDE.md HNeRV

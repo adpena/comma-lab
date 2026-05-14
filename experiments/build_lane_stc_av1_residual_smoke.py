@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane STC-AV1-RESIDUAL smoke (codex top-1 STC redesign at 78% endorsement).
 
 The current Lane STC implementation tries to be a full lossless mask codec

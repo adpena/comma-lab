@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared cloud entry helpers for tac-backed training scripts.
 
 These helpers own the checkpoint, metadata, and output conventions used by

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build promotable J-NWC/J-NWCS sensitivity input artifacts.
 
 This script converts a validated ``component_sensitivity_v1`` manifest into

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Apply the distilled codebook as a soft prior during contest-video training.
 
 The codebook is FROZEN; the renderer + per-pair residual carry gradient. The

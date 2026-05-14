@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lock-in tests for Lane LR — Low-Rank pose adaptation (`tac.lora_pose`).
 
 Covers:

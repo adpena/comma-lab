@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Estimate compression-based dependence between archive sections and signals.
 
 The tool is read-only with respect to input artifacts and emits JSON to stdout.

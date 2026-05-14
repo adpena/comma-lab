@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 12 NeRV clean-inflate dependency closure checks.
 
 These tests cover the narrow boundary between the `.nrv` mask payload and the

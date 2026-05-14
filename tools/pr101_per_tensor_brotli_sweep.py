@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Per-tensor brotli parameter sweep for PR101's quantized weights.
 
 Global brotli sweeps (cf. tools/codec_op_cma_search.py) constrain ALL

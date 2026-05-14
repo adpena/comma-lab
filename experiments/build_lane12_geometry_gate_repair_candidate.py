@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build byte-closed Lane 12 geometry-gate CDO1 repair candidates.
 
 This bridge consumes the local-only Lane 12 geometry atom plan and materializes

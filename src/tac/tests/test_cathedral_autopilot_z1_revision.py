@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Z1 empirical revision wire-in inside the cathedral
 autopilot ranker (2026-05-14 — `feedback_z1_mdl_ablation_landed_20260514.md`
 operator decision #4).

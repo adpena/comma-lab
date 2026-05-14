@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Selfcomp ``SegMap`` renderer (mask -> RGB) + matching trainer.
 
 The ``SegMap`` architecture is the rate-attack core of the Selfcomp PR

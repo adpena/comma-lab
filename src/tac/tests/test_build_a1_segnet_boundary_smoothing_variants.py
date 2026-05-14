@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 SegNet boundary smoothing inflate-time variants builder."""
 from __future__ import annotations
 

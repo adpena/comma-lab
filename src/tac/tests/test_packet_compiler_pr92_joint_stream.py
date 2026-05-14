@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR92 ``qzs3_range_joint_r258`` packet-compiler primitives.
 
 Covers RMC1 composite framing, RSA1 + RSB1 side-action grammars, golden

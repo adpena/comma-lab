@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/predispatch_sanity.py — the 5-gate ladder before any paid GPU dispatch.
 
 The CRITICAL test reproduces the exact apogee_int4 failure mode: with only PR106

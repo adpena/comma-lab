@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.jcsp_score_marginals``.
 
 Adversarial-coverage angles:

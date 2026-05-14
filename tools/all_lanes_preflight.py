@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """All-lanes preflight: run every available dispatch dry-run in sequence.
 
 Single command for full pre-dispatch confidence across every launch-ready

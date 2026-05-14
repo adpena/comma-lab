@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate three strategy-specific Falcon Perception mask sets.
 
 Strategies:

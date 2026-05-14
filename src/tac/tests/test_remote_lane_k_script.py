@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_k_dsconv_quantizr_killer.sh.
 
 Lane K = DSConv Quantizr-killer (88K params from-scratch retrain) anchored on

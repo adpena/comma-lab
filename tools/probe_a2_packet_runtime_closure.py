@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe A2 PR101 packet-local runtime closure without running scorers.
 
 This is a CPU-prep guard for packets produced by

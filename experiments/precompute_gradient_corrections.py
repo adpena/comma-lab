@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Pre-Computed Gradient Corrections: one-step TTO without scorer at inflate time.
 
 At COMPRESS time (unlimited budget):

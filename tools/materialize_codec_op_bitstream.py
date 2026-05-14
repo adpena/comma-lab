@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a deterministic CodecOp bitstream golden vector.
 
 The input is a CodecOp encode-result/manifest-like JSON object. If that JSON

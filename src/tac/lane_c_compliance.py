@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane C δ compliance attestation utilities (Codex R5-2 #4 fix, 2026-04-27).
 
 The Lane C δ pipeline is scorer-derived; Yousfi PR #35 strict-scorer-rule

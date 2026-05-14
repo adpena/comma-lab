@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PoseNet Sensitivity Map: per-pixel gradient magnitude through PoseNet.
 
 Computes the Jacobian of PoseNet's pose output w.r.t. input pixels for each

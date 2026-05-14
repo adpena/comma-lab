@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.codec_pipeline_deltaepszeta_callback`.
 
 Coverage:

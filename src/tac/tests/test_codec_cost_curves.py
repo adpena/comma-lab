@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.codec.cost_curves``."""
 from __future__ import annotations
 

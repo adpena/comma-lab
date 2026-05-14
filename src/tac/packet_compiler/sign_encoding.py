@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unified 5-strategy sign-encoding taxonomy — PR96 / PR101 / PR103.
 
 This module unifies the sign-encoding strategies used across PR96

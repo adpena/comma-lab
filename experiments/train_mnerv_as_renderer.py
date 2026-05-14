@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """MNeRV-as-renderer — production trainer.
 
 Per operator directive 2026-05-11 + HNeRV parity discipline lesson 5 (full RGB

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """T15 — Time-varying (per-pair pose-conditioned) FiLM modulators.
 
 Council provenance

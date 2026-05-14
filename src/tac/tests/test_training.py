@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for training loop, checkpoint save/load, resume, and boundary masks."""
 import math
 import tempfile

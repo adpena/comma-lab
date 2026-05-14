@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #181 (WAVE-7-LOW-FIX, REVIEW-OMNI NV8) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 — pyav decode -> CUDA upload

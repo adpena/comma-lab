@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit PR102 zero-byte HNeRV tuning custody.
 
 PR102's archive payload is declared to be unchanged from PR100; its score

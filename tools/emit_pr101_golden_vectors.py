@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit cross-language conformance golden vectors for PR101 codec primitives.
 
 Per the codex parallel-session contract (memo

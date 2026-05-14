@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Jacobian-weighted selected-K producer scaffold.
 
 This module consumes an externally produced per-tensor or per-channel

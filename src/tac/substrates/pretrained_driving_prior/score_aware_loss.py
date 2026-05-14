@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware Lagrangian for the pre-trained driving prior substrate.
 
     L = alpha * B / N + beta * d_seg + gamma * sqrt(d_pose) + delta_prior * L_prior

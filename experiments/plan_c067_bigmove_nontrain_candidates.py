@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Triage C067 non-training big-move structural candidates.
 
 This planner only reads existing local artifacts. It does not load scorers,

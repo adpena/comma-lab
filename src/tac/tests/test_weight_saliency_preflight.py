@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Track 4 weight-domain saliency preflight guard."""
 
 from __future__ import annotations

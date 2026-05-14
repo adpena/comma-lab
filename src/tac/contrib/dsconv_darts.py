@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane K-DARTS — depthwise-separable channel-dim search via DARTS.
 
 Lane K (DSCONV_QUANTIZR_KILLER, profile :data:`tac.profiles.PROFILES`)

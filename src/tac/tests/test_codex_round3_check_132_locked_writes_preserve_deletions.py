@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-3 catalog #132 — locked writes must preserve caller deletions.
 
 Bug class (codex round-3 HIGH 1, 2026-05-09): a locked-save helper that

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Variable-rate per-frame mask encoding with difficulty-based CRF allocation.
 
 Instead of uniform CRF for all frames, allocates more bits (lower CRF)

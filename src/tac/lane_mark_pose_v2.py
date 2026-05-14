@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane LM-V2 — endpoint-tracking zero-archive-cost pose conditioning.
 
 V1 oversight (memory project_lane_marking_speed_estimation): the centroid

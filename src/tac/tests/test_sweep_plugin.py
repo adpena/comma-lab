@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.optimizer.sweep_plugin and the apogee_intN plugin extraction.
 
 Covers:

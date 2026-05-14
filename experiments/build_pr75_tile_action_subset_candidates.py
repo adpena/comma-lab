@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build C067 + PR75 tile-action subset candidates.
 
 The builder is empirical planning only: it uses component traces to rank the

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile smaller sufficient programs for the PR85 mask token stream.
 
 This is a local planning profiler only. It searches for non-arbitrary residual

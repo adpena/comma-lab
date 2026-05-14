@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a no-dispatch PR102 public exact-replay readiness artifact.
 
 The tool validates the source-sized intake manifest for PR102, verifies local

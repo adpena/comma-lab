@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Check 41: remote_lane_*.sh heartbeat loop.
 
 Catches the silent-non-start failure mode (W/K/OS-V2 on 2026-04-28).

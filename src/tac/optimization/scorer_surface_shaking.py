@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-surface shaking plans for exact-eval score lowering.
 
 This module is a deterministic planner for aggressive local exploration near a

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """hi_nerv inflate runtime — <= 100 LOC; HIV1 monolithic-archive consumer.
 
 Forward path:

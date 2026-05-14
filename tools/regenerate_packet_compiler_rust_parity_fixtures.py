@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Regenerate the binary input fixtures consumed by Rust parity tests.
 
 # no-argparse-OK: parameterless regenerator; no operator options to surface.

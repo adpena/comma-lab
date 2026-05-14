@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane J-NWCS: Sensitivity-aware Neural Weight Compression.
 
 Composition of three existing techniques:

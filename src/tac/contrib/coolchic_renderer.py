@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Low-complexity overfitted renderers inspired by Cool-Chic and C3.
 
 These are experimental GPU-lane modules:

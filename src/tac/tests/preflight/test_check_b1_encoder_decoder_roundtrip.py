@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B1 — encoder/decoder dequantization roundtrip scanner.
 
 Bug class: encoder uses ``(rounded / N) * scale``, decoder uses

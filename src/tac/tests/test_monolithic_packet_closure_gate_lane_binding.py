@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for monolithic-packet closure-gate lane binding.
 
 Codex HIGH finding #2 (2026-05-08): the previous gate accepted any active

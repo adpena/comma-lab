@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Build a mask-class-frequency prior from GT masks (Lane MOS).
 
 CLI::

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR #103 (hnerv_lc_ac) arithmetic coding + adaptive lgwin codec port.
 
 This is a 1:1 port of PR103's ``submissions/hnerv_lc_ac/inflate.py`` decoder

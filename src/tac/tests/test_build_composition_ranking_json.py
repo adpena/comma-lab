@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.build_composition_ranking_json``.
 
 Per FIX-C operator scope 2026-05-12 + CLAUDE.md "Recursive adversarial

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Acceptance tests for `tac.predictor.score_band` (council Q1 prescription).
 
 The CRITICAL test is `test_apogee_int4_with_only_pr106_anchor_REFUSES`:

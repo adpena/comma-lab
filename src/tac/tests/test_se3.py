@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.se3`` — SE(3) Lie-group primitives for Lane RM.
 
 These tests pin the mathematical contracts that the Riemannian SGD path

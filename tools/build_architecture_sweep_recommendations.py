@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed CPU/MPS architecture sweep recommendation manifest.
 
 The output is a planner artifact only. It never marks rows dispatchable or

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """OD-SUBSTRATE-4 wired ``_full_main`` test suite.
 
 These tests verify the wired contract WITHOUT dispatching GPU. They cover:

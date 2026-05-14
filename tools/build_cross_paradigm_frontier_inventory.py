@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic cross-paradigm frontier inventory.
 
 The output is an orchestration artifact, not a score ledger. It separates exact

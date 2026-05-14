@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Paradigm chorus: exercise alpha/beta/gamma/dezeta + Op1-4 cathedral.
 
 Per user 2026-05-07 ("we are leaving meat on the bone with current HNeRV

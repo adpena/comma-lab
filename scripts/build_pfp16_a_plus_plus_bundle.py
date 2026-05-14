@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Assemble the PFP16 A++ deploy/paper evidence bundle."""
 from __future__ import annotations
 

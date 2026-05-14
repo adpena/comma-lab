@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Visualization tools for the comma video compression challenge.
 
 Provides CLI-invocable modules for generating comparison videos, GIFs,

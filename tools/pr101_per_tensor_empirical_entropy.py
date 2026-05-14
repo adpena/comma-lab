@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compute per-tensor empirical entropy from PR101's quantized weights.
 
 Uses ``tac.pr101_split_brotli_codec._quantize_tensor`` to apply the same

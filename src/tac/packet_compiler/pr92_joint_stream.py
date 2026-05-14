@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR92 ``qzs3_range_joint_r258`` RMC1 / RSA1 / RSB1 joint-stream primitives.
 
 PR92's ``submissions/qzs3_range_joint_r258/inflate.py`` upgraded PR81 with

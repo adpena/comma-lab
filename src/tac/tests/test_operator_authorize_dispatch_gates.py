@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Operator-authorize dispatch-gate tests.
 
 The recipe is the operator-facing dispatch contract. If a recipe declares

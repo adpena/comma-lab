@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR98 CD1 compact-format primitive (schema-elision V1)."""
 
 from __future__ import annotations

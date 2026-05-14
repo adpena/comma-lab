@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/learnable_saliency_threshold.py — Lane SI-V2.
 
 Pins:

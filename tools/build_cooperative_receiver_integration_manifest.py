@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Write the cooperative-receiver solver integration manifest.
 
 This is the operator-visible bridge from research campaigns into autopilot,

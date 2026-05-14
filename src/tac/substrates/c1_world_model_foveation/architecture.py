@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C1 substrate architecture -- world-model + foveated decoder.
 
 Per the C1 long-term campaign ledger

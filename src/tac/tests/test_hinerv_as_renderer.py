@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for HiNeRV-as-renderer (hierarchical) substrate."""
 from __future__ import annotations
 

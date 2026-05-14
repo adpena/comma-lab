@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a non-promotable Track 2 custom-decoder identity packet.
 
 The scaffold proves byte-closed packet custody before any custom-decoder

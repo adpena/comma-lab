@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip tests for ``tac.entropy_archive``.
 
 Check 46 contract: every public quantizer/encoder must demonstrate

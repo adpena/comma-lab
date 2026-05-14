@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan PR85 correction side-channel atom policies.
 
 This is a planning-only ledger builder. It parses the PR85 single-member

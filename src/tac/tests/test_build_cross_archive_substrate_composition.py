@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for T9 cross-archive substrate composition tool.
 
 Council coverage:

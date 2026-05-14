@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """NUCLEAR #1: Mask encoding sweep across codecs + CRFs.
 
 Quantizr ships a 293KB archive at score 0.33. Our 2.01 score is dominated by

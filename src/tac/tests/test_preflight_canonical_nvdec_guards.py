@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Preflight Checks 54 & 55 — canonical NVDEC workflow guards.
 
 - Check 54: ``check_phase2_launch_polls_setup_log`` —

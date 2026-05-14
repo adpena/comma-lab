@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/check_dispatch_wrapper_stages_implemented.py (PCC11).
 
 The CRITICAL test reproduces the council Q5-B4 example: a wrapper with

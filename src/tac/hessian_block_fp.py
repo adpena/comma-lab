@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Hessian-weighted block-FP bit allocation via water-filling.
 
 This module operationalises the Selfcomp grand-council position (CLAUDE.md

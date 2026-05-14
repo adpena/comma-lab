@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SAUG (Lyra-style self-augmentation) — pose and mask perturbation.
 
 This module implements the V1 self-augmentation lane: Gaussian pose noise

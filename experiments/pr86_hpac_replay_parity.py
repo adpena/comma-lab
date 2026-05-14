@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Bounded PR86 HPAC replay/parity diagnostic.
 
 This is a local, non-promotable probe for the public PR86 archive intake. It

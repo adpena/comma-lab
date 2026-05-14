@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Phase 3 inflate scaffold (DESIGN-ONLY).
 
 Per CLAUDE.md HNeRV parity discipline L4: inflate.py LOC budget ≤ 200.

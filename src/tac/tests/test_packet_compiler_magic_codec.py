@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Magic-codec auto-selector tests.
 
 Per CLAUDE.md "Recursive adversarial review protocol" + magic-codec landing

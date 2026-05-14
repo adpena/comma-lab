@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Quantization utilities for task-aware codec post-filters.
 
 Supports:

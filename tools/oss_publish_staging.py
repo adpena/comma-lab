@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Stage the tac OSS-publish subset into a clean directory tree.
 
 This script COPIES the OSS-relevant subset of the repo into an out-of-tree

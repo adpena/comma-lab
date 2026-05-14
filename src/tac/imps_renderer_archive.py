@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 17 / Lane J-IMP — sparse-CSR multi-tensor renderer archive (IMPS magic).
 
 This module wraps the per-tensor sparse-CSR codec from

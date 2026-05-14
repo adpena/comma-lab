@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """sign_lane_c_compliance.py — write a SIGNED Lane C δ.bin compliance attestation.
 
 Codex R5-3 #1 fix (2026-04-27): attestations now carry a mandatory Ed25519

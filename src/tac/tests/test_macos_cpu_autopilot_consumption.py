@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for autopilot consumption of macOS-CPU advisory manifests.
 
 Per operator routing 2026-05-13: the autopilot dispatch ranker is wired to

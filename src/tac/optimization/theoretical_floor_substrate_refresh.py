@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Theoretical floor analyzer refresh with substrate composition matrix.
 
 Per operator directive 2026-05-11 ("wiring and integration") + LL Hinton-

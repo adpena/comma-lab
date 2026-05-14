@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane J-IMP — Iterative Magnitude Pruning (LTH stabilized).
 
 10-cycle Frankle-Carbin Iterative Magnitude Pruning with Frankle-2019

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.optimization.cross_paradigm_composition_examples``.
 
 Per CLAUDE.md "Recursive adversarial review protocol": these tests cover the

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Mini-TTO inflate: proof of concept for inflate-time TTO with mini-scorers.
 
 Validates the full pipeline:

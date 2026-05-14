@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """T17 — Shared VQ-VAE codebook (renderer + quantizer + auxiliary scorer).
 
 Council provenance

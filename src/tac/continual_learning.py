@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Continual-learning posterior orchestration layer.
 
 Per the operator framing 2026-05-09 ("non-arbitrariness and increasing continual

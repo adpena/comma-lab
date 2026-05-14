@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 r"""Harvest GHA CPU eval results for the SegNet boundary smoothing sweep.
 
 Usage:

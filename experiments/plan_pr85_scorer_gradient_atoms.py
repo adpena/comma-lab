@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan PR85 scorer-gradient atom opportunities from existing artifacts.
 
 This tool is compression-time only. It consumes exact auth-eval JSON plus

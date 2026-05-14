@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tools.per_tensor_shannon_analysis`.
 
 Coverage:

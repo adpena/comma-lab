@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_lr_lora_pose_tto.sh.
 
 Lane LR = Low-Rank pose adaptation. Anchored on Lane A's verified

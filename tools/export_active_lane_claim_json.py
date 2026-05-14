@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Export the newest active Level-2 dispatch claim as JSON.
 
 This is a read-only bridge from `.omx/state/active_lane_dispatch_claims.md` to

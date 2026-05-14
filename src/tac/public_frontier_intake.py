@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static intake and byte diffing for public frontier archives.
 
 This module is intentionally offline and byte-only. It validates ZIP custody,

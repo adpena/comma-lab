@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for PR106 yshift scorer-table producer scaffolding.
 
 These tests intentionally avoid loading CUDA scorers. They cover the deterministic

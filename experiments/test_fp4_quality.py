@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """DEPRECATED — FP4 quality is now measured through the canonical auth-eval path.
 
 Codex R5-2 Finding #2 (2026-04-27): this smoke-test script imported three

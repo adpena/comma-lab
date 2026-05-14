@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 motion models — SE(3) parametric AND optical-flow non-parametric.
 
 Per the probe-disambiguator contract (Catalog #125 hook #6) BOTH motion modes

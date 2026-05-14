@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe to arbitrate between the 3 frame-conditional quantization strategies.
 
 Per the operator-approved non-arbitrariness rule (CLAUDE.md design-tension

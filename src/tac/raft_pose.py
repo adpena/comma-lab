@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """RAFT-derived pose-dim0 estimation for compress-time lane experiments."""
 from __future__ import annotations
 

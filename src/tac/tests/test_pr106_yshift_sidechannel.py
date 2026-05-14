@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for pr106_yshift_sidechannel — wire format + roundtrip + builder.
 
 Covers:

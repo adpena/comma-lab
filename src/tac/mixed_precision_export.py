@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Int4 per-tensor quantization + LZMA2 compression for extreme weight compression.
 
 Weight analysis shows ~27% of weights carry 90% of signal energy, while ~37%

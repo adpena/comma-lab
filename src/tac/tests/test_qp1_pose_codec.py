@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round-trip + byte-equality tests for QP1 pose codec.
 
 Asserts:

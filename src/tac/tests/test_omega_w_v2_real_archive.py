@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W-V2 — REAL archive byte-savings validation on Lane G v3 renderer.bin.
 
 Council F Part B SAFE-LOCAL validation

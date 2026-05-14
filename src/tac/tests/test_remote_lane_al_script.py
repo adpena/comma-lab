@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane AL — structural tests for scripts/remote_lane_al_analog_latent.sh.
 
 Mirrors the Lane EC test pattern (Check 43 — every CLI flag emitted by

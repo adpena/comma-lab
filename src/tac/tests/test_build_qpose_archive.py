@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """End-to-end test: build_qpose_archive composes a structurally valid PR #67
 single-blob archive, and PR #67's inflate decodes its slices without error.
 

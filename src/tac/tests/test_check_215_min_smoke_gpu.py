@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #215 P0 fix — recipe-level smoke GPU minimum.
 
 The SIREN smoke timeout on 2026-05-13 (label

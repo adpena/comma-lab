@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the SAR coherent pose-pair substrate (SARC) end-to-end on contest video.
 
 Per the floor-v3 commit ``27a7950fd`` (`.omx/research/adjusted_theoretical_

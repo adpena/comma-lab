@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """YUCR inflate runtime — sidecar dequantization + STC noise application.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L4:

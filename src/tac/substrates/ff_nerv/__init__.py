@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.ff_nerv — Frequency-domain NeRV (substrate L0 SKETCH).
 
 Per-frame implicit renderer operating in 2D DCT frequency space; the

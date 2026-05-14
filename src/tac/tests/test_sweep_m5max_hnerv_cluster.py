@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/sweep_m5max_hnerv_cluster.py and tools/m5max_sweep_to_atoms.py.
 
 Pure-logic tests that do NOT actually invoke upstream/evaluate.py (which

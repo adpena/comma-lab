@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Axis-level reweighting API for the sensitivity-map composition stack.
 
 This module is the canonical home of the OPERATING-POINT-AWARE per-axis

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from pathlib import Path
 
 from tac.preflight import check_no_unconditional_ensurepip

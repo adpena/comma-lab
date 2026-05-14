@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane D-V3 (annealed half-frame + KL distill weight fix) — profile +
 schedule + KL-weight + LR-floor + Phase-0 instrumentation contract tests.
 

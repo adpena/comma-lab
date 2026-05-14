@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed tests for the robust_current JCSP runtime bridge."""
 from __future__ import annotations
 

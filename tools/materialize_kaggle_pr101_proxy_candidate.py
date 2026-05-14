@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a completed PR101 Kaggle proxy candidate for local handoff.
 
 This tool is deliberately bounded: it reads a completed Kaggle proxy

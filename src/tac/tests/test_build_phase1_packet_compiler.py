@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Phase 1 packet compiler.
 
 Coverage:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Empirical AV-decode dump for the decoder-drift third-axis investigation.
 
 Reads N frames from upstream/videos/0.mkv via the EXACT path that

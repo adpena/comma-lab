@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local C102-native PR79 action-subset candidates.
 
 This worker is byte-screening only. It keeps C102 mask, renderer, and pose

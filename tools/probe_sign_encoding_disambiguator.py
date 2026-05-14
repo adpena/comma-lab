@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Sign-encoding probe-disambiguator.
 
 For each tensor in a target state-dict, sweep all 5 sign-encoding

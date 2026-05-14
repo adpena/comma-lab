@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #213 ``check_comma2k19_downloads_route_through_canonical_cache``.
 
 The gate refuses any caller under ``src/tac/`` / ``tools/`` / ``experiments/`` /

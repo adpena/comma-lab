@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared substrate-level utilities (test kits, helpers).
 
 Per CLAUDE.md "Beauty, simplicity, and developer experience": one place for

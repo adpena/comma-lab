@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cross-frame attention for temporal coherence in neural renderers (Trick 20).
 
 Patch-based cross-attention module that attends from current-frame features

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Runtime adapter for HDM3 HNeRV decoder-section candidates.
 
 HDM3 stores the fixed-schema HNeRV decoder q stream as Brotli(q_bytes) plus raw

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Evidence-contract helpers for score-lowering candidate planners.
 
 The functions in this module are pure schema checks. They do not run evals,

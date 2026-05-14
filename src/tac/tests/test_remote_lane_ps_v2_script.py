@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PS-V2: structural tests for scripts/remote_lane_ps_v2_learnable_class_weights.sh.
 
 V2-specific properties (the load-bearing ones for Lane PS-V2):

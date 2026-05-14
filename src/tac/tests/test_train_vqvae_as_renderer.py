@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``experiments/train_vqvae_as_renderer.py`` + ``tac.vqvae_as_full_renderer``.
 
 Coverage (substrate + trainer):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/build_sjkl_residual.py — recovery + smoke verification."""
 
 from __future__ import annotations

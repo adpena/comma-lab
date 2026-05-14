@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Bulk back-fill orphaned authoritative anchors into the continual-learning posterior.
 
 Per XX's posterior validation finding 2026-05-11

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Explicit SIREN/INR dispatch-contract taxonomy.
 
 The SIREN family can enter the contest packet through three materially

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit Git history for canonical files missing from the current checkout.
 
 This is a recovery helper, not a cleanup tool. It scans historical Git paths,

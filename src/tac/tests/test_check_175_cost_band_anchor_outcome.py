@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #175 — check_cost_band_anchor_writers_declare_outcome.
 
 FIX-WAVE-1 R1 Medium #6 (2026-05-13). Defense-in-depth gate over the

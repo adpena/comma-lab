@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-faithful proxy evaluation logic.
 
 Mimics the real evaluator's pipeline as closely as possible:

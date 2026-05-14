@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared helpers for the 5 per-family PR106 + non-HNeRV residual materializers.
 
 Each per-family tool at ``tools/materialize_<family>_residual_pr106_sidecar.py``:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build C067-anchored IMP bridge archive candidates.
 
 This is a bridge between the old Lane J IMP work and the current C067 public

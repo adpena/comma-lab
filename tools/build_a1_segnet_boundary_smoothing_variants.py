@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 r"""Build N variants of A1's submission_dir with SegNet boundary smoothing
 baked into ``inflate.py`` after the canonical PR101-inherited bias correction.
 

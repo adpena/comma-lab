@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Factorized HNeRV runtime codec.
 
 Implements **per-tensor SVD low-rank factorization** for the PR101/PR106/PR107

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Live fleet telemetry dashboard with WebSocket push.
 
 Real-time experiment monitoring: live epoch counters, score trajectories,

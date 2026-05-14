@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """TTO Step-vs-Improvement Curve Experiment.
 
 Measures the diminishing-returns relationship between TTO step count and

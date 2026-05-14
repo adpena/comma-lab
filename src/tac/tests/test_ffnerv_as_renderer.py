@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for FFNeRV-as-renderer substrate."""
 from __future__ import annotations
 

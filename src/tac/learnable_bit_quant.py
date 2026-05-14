@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-V2 — per-WEIGHT learnable bit-depth via Lagrangian dual ascent.
 
 The mathematically-optimal evolution of Lane Ω-V1's water-fill heuristic.

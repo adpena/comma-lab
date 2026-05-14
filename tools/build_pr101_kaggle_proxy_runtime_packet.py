@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a PR101 Kaggle-proxy runtime packet without claiming score.
 
 This consumes the archive-builder handoff emitted by

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe the L2 SAR/coherent-integration pose-spectrum hypothesis.
 
 This is a zero-spend planning probe. It reads precomputed PoseNet targets and

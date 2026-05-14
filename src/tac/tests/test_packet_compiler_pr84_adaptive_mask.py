@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR84 adaptive-context mask packet-compiler primitive.
 
 Covers round-trip identity over varying contexts, golden-vector pinning,

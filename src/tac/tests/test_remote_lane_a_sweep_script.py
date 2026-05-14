@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Structure tests for scripts/remote_lane_a_sweep.sh.
 
 This template-cum-orchestrator script is the canonical Lane A-Sweep entry.

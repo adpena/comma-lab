@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """A1 sub-frontier enumeration — macOS-CPU advisory only.
 
 Operator directive 2026-05-13 LOCAL HARDWARE MAXIMIZATION SWEEP Stream 4.

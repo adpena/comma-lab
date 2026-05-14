@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for tac.parametrize_strip — the canonical strip helper.
 
 Caused by `project_lane_i_crashed_parametrize_strip_20260428` (Lane I lost

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Promotion review for exact HNeRV lossless-control rows.
 
 This module is intentionally narrow: it reviews an already evaluated

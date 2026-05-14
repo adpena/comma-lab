@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed PR86 HPAC replay/parity intake adjudicator.
 
 This diagnostic consumes the already-captured public PR86 intake artifacts and

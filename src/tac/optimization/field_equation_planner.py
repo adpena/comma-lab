@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only field-equation layer for cross-paradigm archive atoms.
 
 The planner treats candidate archive edits as small perturbation atoms around

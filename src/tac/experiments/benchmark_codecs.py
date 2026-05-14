@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Benchmark mask encoding strategies: AV1 vs VVC vs lossless alternatives.
 
 Core logic extracted from experiments/benchmark_mask_codecs.py for use via

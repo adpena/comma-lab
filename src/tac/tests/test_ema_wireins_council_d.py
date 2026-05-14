@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Council D EMA wire-ins (Check 88) — 2026-04-29 PM.
 
 Council D audit at .omx/research/council_ema_audit_20260429.md identified 5

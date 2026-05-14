@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/recover_lane_artifacts.py.
 
 These tests exercise the artifact-recovery flow without requiring a live

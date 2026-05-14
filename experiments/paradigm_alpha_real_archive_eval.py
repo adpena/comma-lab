@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Paradigm α — Mask payload overhaul: real-archive empirical evaluator.
 
 Decodes an exact archive's masks.mkv into a (T, H, W) int64 mask

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """S2SBS architecture — HF Hermitian-FFT byte channel + base renderer.
 
 The substrate exploits the empirically-measured HF blindspot of the

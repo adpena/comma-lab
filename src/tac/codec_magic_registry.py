@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical magic-byte registry for tac codecs.
 
 Single source of truth for every 4-byte magic prefix used by any tac codec

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lightning Studio environment defaults.
 
 Public code must not carry operator-specific Studio names, user IDs, or direct

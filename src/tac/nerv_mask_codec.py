@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 12 — NeRV / Cool-Chic mask codec (van den Oord + Mallat lead).
 
 Per Phase 2 Lane 12 spec (memory project_phases_2_3_4_*):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Average fp32 weights across multiple trained post-filter candidates.
 
 The simplest possible ensemble: take the fp32 weights of N candidate

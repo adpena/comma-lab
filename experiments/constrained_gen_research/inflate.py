@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Constrained generation inflate: gradient descent from masks + pose targets.
 
 Instead of storing compressed video frames (~150KB), this approach stores only

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR101 GOLD ``decoder_byte_maps`` sign-encoding strategy selector.
 
 This module ports the **per-tensor sign-encoding strategy primitive**

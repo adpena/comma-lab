@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.codec.syndrome_trellis_codec``.
 
 Verifies binary STC encode/decode roundtrip, ternary split/join roundtrip,

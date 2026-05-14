@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Artifact lifecycle classification + provenance-vs-state guard layer.
 
 Meta-class prevention for the codex-discovered class spanning 5 findings (2026-05-08):

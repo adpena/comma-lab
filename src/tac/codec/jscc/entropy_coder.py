@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-conditional entropy coder (range-coder variant).
 
 Mathematical formulation

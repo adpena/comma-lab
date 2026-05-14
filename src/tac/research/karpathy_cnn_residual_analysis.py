@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Measure what our trained CNN post-filter actually does to pixels.
 
 Karpathy's revised hypothesis after the Jacobian failure:

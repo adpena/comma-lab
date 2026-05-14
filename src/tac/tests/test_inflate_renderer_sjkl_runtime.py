@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Runtime tests for optional sjkl.bin robust_current integration."""
 
 from __future__ import annotations

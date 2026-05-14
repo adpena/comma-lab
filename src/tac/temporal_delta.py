@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Temporal delta renderer — frame[t] as frame[t-1] + delta[t] (Trick 15).
 
 Instead of generating each frame independently from its mask, predict

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Bit-level PR85-family archive comparison and rate Lagrangian profile.
 
 This is a local-only observability tool. It parses PR85/PR91-style single

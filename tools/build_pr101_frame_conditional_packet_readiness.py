@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed packet-readiness manifest for A5 PR101 frame budgets."""
 
 from __future__ import annotations

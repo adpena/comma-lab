@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Readiness guards for engineered correction atoms.
 
 Engineered corrections are score-affecting bytes. This module validates the

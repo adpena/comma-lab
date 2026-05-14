@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Contest-faithful design scaffold for 2026-05-05 external-source review.
 
 The registry is intentionally static and import-light. It records implementation

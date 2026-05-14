@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Adaptive arithmetic coding planning bound for PR101.
 
 The deepest answer to "compress the PMF overhead": don't transmit a PMF

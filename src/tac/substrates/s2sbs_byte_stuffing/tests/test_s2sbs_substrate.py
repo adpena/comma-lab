@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dedicated tests for the S2SBS substrate (Council F O3, 2026-05-13)."""
 
 from __future__ import annotations

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a plain-HNeRV candidate by applying WR01 atoms offline."""
 
 from __future__ import annotations

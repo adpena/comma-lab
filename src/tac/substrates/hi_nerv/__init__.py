@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.hi_nerv — Hierarchical NeRV (substrate L0 SKETCH).
 
 Per-frame implicit renderer with a 3-scale latent pyramid; coarse-to-fine

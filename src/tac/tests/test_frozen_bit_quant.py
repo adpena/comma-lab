@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/frozen_bit_quant.py — Lane Ω FrozenBitFakeQuant.
 
 Pins these properties:

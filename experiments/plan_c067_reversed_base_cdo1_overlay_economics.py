@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan reversed-base CDO1 overlay economics for C067 mask compression.
 
 This local-only planner asks whether a smaller decoded-mask base (for example

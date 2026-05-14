@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """128K-parameter Quantizr-class FiLM-conditioned decoder for PARADIGM-δεζ T1.
 
 Architecture

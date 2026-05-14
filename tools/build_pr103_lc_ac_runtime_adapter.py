@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic PR103 ``hnerv_lc_ac`` runtime adapter."""
 
 from __future__ import annotations

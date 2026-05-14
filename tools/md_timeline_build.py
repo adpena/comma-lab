@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build static timeline data from git history across multiple machines.
 
 Extracts markdown file history from local and remote git repos,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a SJ-KL-charged archive from a C067-style source archive + sjkl.bin.
 
 Recovery note: this script was lost when subagent worktrees were auto-cleaned

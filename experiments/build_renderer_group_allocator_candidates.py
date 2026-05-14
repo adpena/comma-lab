@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local renderer tensor/group allocation candidates for PR75 archives.
 
 This is a local-only archive builder and policy profiler. It preserves every

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C067 hotspot-preserving mask-geometry atom policies.
 
 This is a deterministic, planning-only compiler over existing CMG/PMG/Yousfi-

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Hardening tests for tools/materialize_magic_codec_archive.py."""
 
 from __future__ import annotations

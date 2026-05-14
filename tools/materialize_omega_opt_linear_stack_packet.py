@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a fail-closed Omega-OPT linear-stack packet manifest.
 
 This CLI emits the operator-facing packet scaffold for the Omega-OPT linear

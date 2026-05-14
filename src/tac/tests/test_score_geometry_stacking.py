@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.score_geometry_stacking — Volterra-style cross-axis interaction."""
 from __future__ import annotations
 

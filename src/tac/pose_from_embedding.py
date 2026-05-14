@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane M-V3: PoseNet-embedding-space pose distillation (Path A).
 
 Strategic premise

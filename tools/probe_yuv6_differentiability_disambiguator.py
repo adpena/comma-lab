@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Non-arbitrariness probe: arbitrate between yuv6 routing modes.
 
 Per CLAUDE.md "Design tensions: ship both interpretations, let math/empirics

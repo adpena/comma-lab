@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-layer CUDA-vs-CPU drift comparator.
 
 Given two :class:`IntrospectionRecord` objects captured for the same architecture

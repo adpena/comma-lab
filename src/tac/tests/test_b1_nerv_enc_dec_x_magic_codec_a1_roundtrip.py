@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip + structural test for B1 cell: nerv_enc_dec_x_magic_codec on A1.
 
 Catalog #91 ENCODE_INFLATE_ROUNDTRIP coverage. This cell composes

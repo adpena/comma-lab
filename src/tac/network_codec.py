@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Network-IS-the-codec: a tiny neural network whose weights ARE the compressed video.
 
 The radical approach for the GPU lane: instead of storing compressed video +

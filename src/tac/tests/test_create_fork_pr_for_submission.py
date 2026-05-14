@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for tools/create_fork_pr_for_submission.py.
 
 Tests focus on the pure-function helpers (validation, URL parsing, manifest

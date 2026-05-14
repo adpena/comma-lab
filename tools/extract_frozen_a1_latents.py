@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Extract the canonical A1 latent table into ``extracted_frozen_latents.pt``.
 
 The A1 archive's latents live inside the binary blob, decoded at inflate

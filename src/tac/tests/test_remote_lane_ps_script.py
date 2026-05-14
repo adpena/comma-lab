@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_ps_per_class_segnet.sh.
 
 Lane PS = per-class SegNet weighting on the auxiliary KL distill loss.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.vqvae_mask_codec — Lane VQ-VAE (paradigm α3)."""
 from __future__ import annotations
 

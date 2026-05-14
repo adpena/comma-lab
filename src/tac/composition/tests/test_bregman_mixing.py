@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.composition.bregman_mixing — Bregman-divergence mixing."""
 
 from __future__ import annotations

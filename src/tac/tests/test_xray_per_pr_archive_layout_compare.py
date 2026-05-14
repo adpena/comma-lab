@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/xray_per_pr_archive_layout_compare.py."""
 from __future__ import annotations
 

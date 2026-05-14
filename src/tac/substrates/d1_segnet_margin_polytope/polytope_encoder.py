@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D1 polytope encoder — Newton-step-distance reverse-water-fill on the margin map.
 
 Per the deep-math memo §3.6, the safe-perturbation polytope at pixel

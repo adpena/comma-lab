@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Depth-aware motion predictor: geometric parallax flow from per-class depth + 6-DOF camera.
 
 Computes optical flow analytically from learned per-class depth priors and

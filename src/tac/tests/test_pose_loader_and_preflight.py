@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lock-in tests for the 2026-04-26 SHIRAZ-class bugs.
 
 Two bug classes burned ~21h of A100 time on 2026-04-26:

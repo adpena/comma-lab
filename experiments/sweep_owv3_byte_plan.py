@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Deterministic OWV3 byte-plan sweep.
 
 This sweep is deliberately byte-only. It builds candidate archives from the

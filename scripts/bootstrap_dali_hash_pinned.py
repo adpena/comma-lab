@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Bootstrap the exact DALI wheel set from direct hash-pinned wheels.
 
 This is the non-Lightning companion to the Lightning exact-eval bootstrap.

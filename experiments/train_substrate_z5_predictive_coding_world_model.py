@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the Z5 predictive-coding world-model substrate (Time-Traveler L5 staircase Step 3).
 
 Per `.omx/research/campaign_z5_predictive_coding_world_model_20260514.md` and

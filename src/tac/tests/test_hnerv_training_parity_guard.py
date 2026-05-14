@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the reusable HNeRV trainer parity guard."""
 
 from __future__ import annotations

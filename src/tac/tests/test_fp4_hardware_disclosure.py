@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Check 40: FP4 hardware-disclosure markers.
 
 Catches the Lane F bug class — production FakeQuantFP4 instantiation in code

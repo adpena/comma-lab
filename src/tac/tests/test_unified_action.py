@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.unified_action — GR-style unified action skeleton.
 
 Per ``feedback_unified_lagrangian_action_principle_GR_style_20260509`` the

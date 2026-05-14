@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static hardening checks for experiments/modal_train_lane.py."""
 
 from __future__ import annotations

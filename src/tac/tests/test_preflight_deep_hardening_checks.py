@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Preflight Checks 51, 52, 53 (deep DX hardening pass 2026-04-28).
 
 - Check 51: check_no_bare_except — bare `except:` and `except Exception: pass`

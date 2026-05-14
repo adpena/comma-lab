@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/audit_archive.py contest-compliance auditor."""
 from __future__ import annotations
 

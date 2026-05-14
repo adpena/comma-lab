@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR79/S2 plus selective PR65 pose candidates.
 
 This tool is local-only.  It keeps the PR79/S2 mask, renderer, and action

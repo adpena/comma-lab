@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed runtime skeleton for LA-POSE foveation tuple payloads.
 
 This module is intentionally not a contest decoder. The local LFV1 archive

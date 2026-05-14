@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.raft_pose_stream`` — RAFT optical flow pose stream sidecar.
 
 Per CLAUDE.md HNeRV parity discipline lessons + no-op detector + byte budget +

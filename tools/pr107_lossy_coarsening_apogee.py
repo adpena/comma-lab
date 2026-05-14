@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR107 (apogee) per-tensor analytical lossy coarsening — adapter of
 ``tools/pr101_lossy_coarsening_analytical.py`` for PR107's archive layout.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 kalle-fold mixture codec — FAITHFUL NN-WEIGHT-LITERATURE SHAPES.
 
 This is the 1:1 faithful re-implementation of the

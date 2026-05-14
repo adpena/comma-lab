@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/xray_cpu_cuda_drift_per_arch_class.py."""
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR75/C088-preserving renderer shrink candidates.
 
 This is a local archive builder only. It preserves every non-renderer logical

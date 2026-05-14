@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Schema-elision probe-disambiguator (V1 / V2 / V2+V3).
 
 For a target state-dict, encode under V1 (PR98 CD1 compact), V2 (PR100

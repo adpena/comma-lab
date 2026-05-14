@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PCC9 — Catch lanes promoted to L2 with zero-delta smoke evidence.
 
 Council Q2 prescription (`feedback_grand_council_predictor_calibration_no_arbitrariness_20260505.md`).

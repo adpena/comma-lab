@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize an HDM exact-eval release-review surface.
 
 The HDM3/HDM4 archive builder can create a static wrapper surface, but final

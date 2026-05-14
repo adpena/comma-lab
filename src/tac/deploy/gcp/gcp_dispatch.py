@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed GCP dispatch scaffold.
 
 This module intentionally does not create Compute Engine VMs. It records the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-conditional JSCC byte allocation plus a deterministic Huffman coder.
 
 The coder is intentionally small: it provides a concrete lossless prototype

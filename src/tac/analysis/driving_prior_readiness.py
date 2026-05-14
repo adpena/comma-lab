@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Readiness manifest for the 2032 driving-prior saliency recommendation.
 
 This module operationalizes the fdfc347f 2032 driving-prior recommendation as

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Typed packet-section transform bridge for contest archive candidates.
 
 This module connects parser-section custody manifests to deterministic packet

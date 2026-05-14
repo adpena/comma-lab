@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Runtime-consumption proof for PR106 HLM1 fixed-latent recodes.
 
 This is deliberately narrower than full-frame parity or scoring. It imports the

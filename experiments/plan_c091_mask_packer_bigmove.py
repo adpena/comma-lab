@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C091/PR75 mask-packer big moves without dispatching GPU work.
 
 This tool is a deterministic local byte screen.  It does not load scorer

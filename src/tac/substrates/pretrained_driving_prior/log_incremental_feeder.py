@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Log-incremental codebook distillation schedule.
 
 Operator directive 2026-05-14 (verbatim): *"you can download the dataset locally

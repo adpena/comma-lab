@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """D4 DALI loader-drift capture on Modal Linux x86_64 GPU (T4).
 
 Closes the P5 4-cell device-axis matrix loader-drift cell. Per the

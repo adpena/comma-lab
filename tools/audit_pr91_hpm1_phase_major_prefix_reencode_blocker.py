@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit the fail-closed PR91/HPM1 phase-major prefix re-encode blocker."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SAR coherent pose-pair integration substrate — architecture.
 
 Implements three first-principles design moves from the L2 ledger §2:

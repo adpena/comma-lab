@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a byte-closed PR106 + SIREN residual sidecar candidate.
 
 See ``submissions/pr106_siren_residual_sidecar/inflate.py`` for the wire format.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #167: smoke-before-full pattern tests.
 
 PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive 2000-epoch

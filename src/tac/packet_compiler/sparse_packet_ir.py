@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Sparse PacketIR codec — three orthogonal-composable sparse residual primitives.
 
 This module closes the wire-format ceiling identified by O's 2026-05-11 L2

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω Phase 1 — per-weight Fisher importance profiler driven by hard-pair score.
 
 For a renderer (default: Lane A's renderer.bin) and a set of pose / mask

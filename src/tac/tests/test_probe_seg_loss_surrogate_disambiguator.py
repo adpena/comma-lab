@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for tools/probe_seg_loss_surrogate_disambiguator.py.
 
 Pins:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pin the cross-paradigm flag → guard-site contract in experiments/pipeline.py.
 
 Background: 4 commits (999211e5 / 9bdd3d56 / 77dc808a / 80455cf8) registered

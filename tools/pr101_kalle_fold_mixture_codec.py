@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 kalle-fold mixture-of-canonical-shapes codec — anchors the
 ``kalle_fold_mixture_canonical_shapes`` row in cathedral_autopilot's
 catalog.

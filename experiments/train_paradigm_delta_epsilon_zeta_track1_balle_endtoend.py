@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PARADIGM-δεζ Track 1 — Ballé hyperprior + 128K decoder end-to-end trainer.
 
 This is the Phase 1 trainer for T1. It takes the frozen A1

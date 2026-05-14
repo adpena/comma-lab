@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """LoRA (Low-Rank Adaptation) for MaskRenderer TTO at compress time.
 
 Instead of full-model TTO (optimizing all 287K params) or per-pixel TTO

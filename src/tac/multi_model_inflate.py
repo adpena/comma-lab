@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Multi-model inflation: dispatch different postfilters to different frames (Eureka 4).
 
 The key insight: a single postfilter cannot optimally correct ALL frames.

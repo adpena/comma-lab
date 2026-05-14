@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Integration test for PARADIGM-β dispatch path in step_compress_weights.
 
 Wired 2026-05-06 (commit 107f6fea). This test exercises the full β path:

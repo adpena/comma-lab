@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane EC-V2: Greedy Pareto-frontier correction selector.
 
 Lane EC-V2 (Pareto-dominant variant) replaces the V1 fixed-budget top-K

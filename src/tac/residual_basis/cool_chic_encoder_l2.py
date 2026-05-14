@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """L2 score-aware Cool-Chic hierarchical residual encoder over PR106 r2 decoded RGB.
 
 This is the **Level 2 score-aware encoder** for the ``cool_chic`` non-HNeRV

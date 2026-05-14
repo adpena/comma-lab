@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit local preserved-orphan shadows against canonical tracked files.
 
 The filter-repo and pyc-recovery passes intentionally parked a few source-like

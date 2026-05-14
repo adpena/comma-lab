@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Fisher-proxy observability: per-parameter leverage density for PR95.
 
 Computes diag(F)_i = E_z[ ||d/d theta_i  L(decoder(z))||^2 ] using a uniform

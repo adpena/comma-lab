@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B6 — retired-config redispatch guard scanner.
 
 Every retired evidence row must carry dispatch_blockers containing

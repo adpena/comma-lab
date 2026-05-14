@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Neural renderer: segment masks → RGB frames for GPU-lane submission.
 
 Pipeline:

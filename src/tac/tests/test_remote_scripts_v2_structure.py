@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Structural tests for the V2 remote bootstrap scripts.
 
 CLAUDE.md non-negotiables on every remote script:

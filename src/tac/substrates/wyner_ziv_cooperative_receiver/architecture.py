@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wyner-Ziv cooperative-receiver architecture (alien-tech N3).
 
 Implements the DISCUS construction (Pradhan-Ramchandran 2003) of Wyner-Ziv

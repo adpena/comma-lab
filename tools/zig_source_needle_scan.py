@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build and run the Zig exact-substring source scanner.
 
 The Zig binary is a native acceleration leaf for source/preflight scans. It is

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """L2 score-aware wavelet residual encoder over PR106 r2 decoded RGB frames.
 
 This is the **Level 2 score-aware encoder** for the ``wavelet`` non-HNeRV

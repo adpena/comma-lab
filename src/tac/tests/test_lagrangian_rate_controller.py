@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.learnable_bit_quant.LagrangianRateController`` — the
 true primal-dual rate controller introduced by Bug 2 (codex Round 3 +
 Round 4).

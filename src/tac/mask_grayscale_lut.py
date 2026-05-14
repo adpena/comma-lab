@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Selfcomp grayscale-LUT mask codec — lane MM rate-attack primitive.
 
 The Selfcomp paradigm (https://github.com/.../selfcomp inflate.py L25-29 +

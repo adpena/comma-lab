@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ds_nerv architecture — Depth-separable NeRV (L0 SKETCH).
 
 Per-frame implicit renderer using depthwise-separable convolutions

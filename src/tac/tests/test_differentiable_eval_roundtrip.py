@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.differentiable_eval_roundtrip``.
 
 Coverage: PR #95 / PR #106 binary-forensics replication of (a) eval_roundtrip

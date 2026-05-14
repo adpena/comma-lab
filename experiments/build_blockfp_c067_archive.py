@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local QBF1 block-FP renderer transplants from a C067 archive.
 
 This is a byte-screen builder only. It decodes the logical ``renderer.bin``

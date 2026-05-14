@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F1: Scorer-conditional MDL estimator (canonical xray primitive).
 
 Promotes the one-off ``tools/mdl_scorer_conditional_ablation.py`` driver into a

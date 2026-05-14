@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check 103 (PCC1): IMP dispatch must invoke train_distill.
 
 Bug class this guards: stub-pretending-to-be-real (the IMP cycle 0 = 1.98

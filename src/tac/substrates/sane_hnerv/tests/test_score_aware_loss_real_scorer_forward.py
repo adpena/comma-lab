@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for the WWW4 dispatch shape-mismatch bug 2026-05-12.
 
 WWW4 (Modal A100, fc-01KREXK209TRX7ED5ZRVXHY1VT) crashed at SegNet

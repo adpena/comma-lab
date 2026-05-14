@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build OWV3 0120 + PFP16 orthogonal-stack archive.
 
 Composes ON TOP of the deploy champion (owv3_0120, 1.0024 [contest-CUDA RTX 4090]):

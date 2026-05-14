@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Probe: SE(3) parametric vs optical-flow non-parametric motion for D4.
 
 Per Catalog #125 hook #6 + the design-tension memo

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR105 ``kitchen_sink`` packed-state-schema size-sorted helper.
 
 This module extracts the REUSABLE size-sort helper from the PR105 public

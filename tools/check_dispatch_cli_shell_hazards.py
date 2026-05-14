@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Scan for dispatch CLI and shell portability hazards.
 
 This guard covers sprint-expensive bug classes:

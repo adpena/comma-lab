@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR79/S2-compatible PR65 postprocess atom candidates.
 
 This is a local-only builder.  It mines typed PR65/Henosis qpost atoms, writes

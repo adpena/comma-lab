@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/learnable_bit_quant.py — Lane Ω-V2 LearnablePerElementBitDepth.
 
 Pins:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.pr103_arithmetic_codec`.
 
 Coverage:

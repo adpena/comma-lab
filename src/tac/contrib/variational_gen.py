@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Variational frame generation via Euler-Lagrange + Lagrangian dual optimization.
 
 Euler's contribution: The frame generation problem is a calculus of variations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Archive-as-codebook: tile-based texture codec with scorer correction (Trick 35).
 
 Instead of storing full RGB frames or running a neural renderer, encode

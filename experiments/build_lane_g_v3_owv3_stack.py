@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build Lane G v3 + Ω-W-V3 stacked archive.
 
 This builder swaps only `renderer.bin`; Lane G v3 `masks.mkv` and

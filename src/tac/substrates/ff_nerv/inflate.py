@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ff_nerv inflate runtime — <= 100 LOC; FFV1 monolithic-archive consumer.
 
 Forward path:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic CodecOp bitstream materialization.
 
 ``codec_op_admm_adapter`` and the CodecOp search tools intentionally emit

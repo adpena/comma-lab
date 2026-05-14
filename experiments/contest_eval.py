@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Contest-compliant end-to-end evaluation.
 
 Single command: archive.zip → extract → inflate → upstream evaluate.py → score.

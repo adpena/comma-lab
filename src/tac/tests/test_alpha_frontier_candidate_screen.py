@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the local Alpha frontier candidate screen."""
 from __future__ import annotations
 

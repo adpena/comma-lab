@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical tac CLI.
 
 Provides the top-level command router for the lossy and lossless namespaces.

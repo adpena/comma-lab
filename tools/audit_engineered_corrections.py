@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit engineered-correction artifacts for local patch readiness."""
 
 from __future__ import annotations

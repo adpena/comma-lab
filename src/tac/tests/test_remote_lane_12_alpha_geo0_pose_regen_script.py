@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static safety checks for the Alpha-Geo-0 pose-regeneration lane."""
 from __future__ import annotations
 

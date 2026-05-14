@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Authoritative evaluation of a renderer checkpoint.
 
 Platform-agnostic. Works on any machine with PyTorch + upstream scorer.

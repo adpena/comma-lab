@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.scorer_basin_parity`.
 
 These tests use synthetic stub modules (no real upstream PoseNet/SegNet, no

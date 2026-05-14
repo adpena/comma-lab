@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """wavelet architecture — 2D DWT subbands + score-aware synthesis MLP.
 
 L0 SKETCH scaffold per operator approval 2026-05-12. The substrate stores per-pair

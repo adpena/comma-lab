@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR93 lowpass-luma residual codec primitive.
 
 Covers encode→decode round-trip on the 3-channel (linear) and 6-channel

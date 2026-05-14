@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.optimization.bit_allocator_end_to_end``.
 
 Per CLAUDE.md "Recursive adversarial review protocol" these tests cover the

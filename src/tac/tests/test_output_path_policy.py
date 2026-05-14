@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for durable output-path policy helpers."""
 
 from __future__ import annotations

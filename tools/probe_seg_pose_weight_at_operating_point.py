@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Probe-disambiguator for (seg, pose) loss-weight ratio at the current operating point.
 
 Council decision A-1 (2026-05-12, OOO commit 328bf2f9, 8/10 FOR Option C):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Analyze paired public PR CPU/CUDA auth-eval comment drift.
 
 This is a diagnosis tool, not a score claimant. It consumes the external

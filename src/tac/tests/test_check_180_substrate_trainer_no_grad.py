@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #180 (WAVE-7-LOW-FIX, REVIEW-OMNI NV4) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 Carmack — Eval-time scorer

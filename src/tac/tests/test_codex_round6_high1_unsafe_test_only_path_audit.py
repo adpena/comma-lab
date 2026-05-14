@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round 6 HIGH 1 fix: unsafe_test_only path audit.
 
 Catalog #142 — refuses ``Phase3DispatchGate(unsafe_test_only=True)`` from

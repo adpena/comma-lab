@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 r"""Harvest GHA CPU eval results for the A1 inflate-time bias correction sweep.
 
 Usage:

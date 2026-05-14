@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR95-family HNeRV single-member archive wire helpers.
 
 Public PR95/PR98-style HNeRV archives use one stored ZIP member named

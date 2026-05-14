@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic corpus manifests for Lane J-NWC codec training."""
 
 from __future__ import annotations

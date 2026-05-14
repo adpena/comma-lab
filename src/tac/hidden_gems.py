@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Static registry of partially built hidden-gem techniques.
 
 This module is intentionally read-only and import-light. It makes unfinished

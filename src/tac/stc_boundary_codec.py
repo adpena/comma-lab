@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane STC — boundary-focused mask-class codec (Stage 2 implementation).
 
 Replaces the AV1 monochrome ``masks.mkv`` payload with a deterministic,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Repack PR67/QZS3/QP1 fixed slices into a PR64-style outer Brotli payload.
 
 This is a deterministic, byte-only transform for line-search archives whose

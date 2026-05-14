@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe whether PR91/HPM1 spatial group traversal explains the first failure."""
 
 from __future__ import annotations

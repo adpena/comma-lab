@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a byte-closed PR106 + Cool-Chic residual sidecar candidate.
 
 See ``submissions/pr106_cool_chic_residual_sidecar/inflate.py`` for the wire

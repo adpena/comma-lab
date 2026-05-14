@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused helpers for round-3 Lightning job harvest scripts.
 
 These helpers are intentionally side-effect light: they derive candidate

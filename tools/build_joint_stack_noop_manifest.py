@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Write the PARADIGM-gamma typed no-op stack fixture manifest.
 
 This tool creates an integration contract only. It does not build an archive,

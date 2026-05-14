@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """apogee_intN candidate generator (concrete plugin).
 
 Mirrors the original `_generator_apogee_intn()` that lived inside

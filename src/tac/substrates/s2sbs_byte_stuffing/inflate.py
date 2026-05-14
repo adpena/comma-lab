@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-free S2SBS_AR/S2S1 inflate smoke runtime.
 
 Reads ``0.bin`` from the contest archive directory, regenerates each

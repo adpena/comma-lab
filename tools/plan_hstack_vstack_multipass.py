@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit a deterministic HStack/VStack/multipass hyperprior repair plan.
 
 This is a planning tool only. It produces no score claim, performs no dispatch,

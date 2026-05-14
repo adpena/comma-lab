@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: git hook entrypoint — controlled via env vars (PREFLIGHT_HOOK_ENABLED/REVIEW_GATE_ENABLED/etc)
 """Pre-commit / pre-push hook: runs preflight + ruff undefined-name check.
 

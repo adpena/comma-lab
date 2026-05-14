@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Fail-closed audit for public-PR replay fidelity.
 
 This compares a public PR intake archive and public metadata against a local

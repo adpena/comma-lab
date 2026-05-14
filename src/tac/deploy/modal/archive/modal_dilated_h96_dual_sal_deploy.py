@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Retired Modal dilated h96 dual-saliency launcher.
 
 This compatibility stub exists so historical imports fail closed instead of

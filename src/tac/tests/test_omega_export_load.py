@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for OMG1 export/load (Lane Ω per-weight Hessian-quantized renderer).
 
 Pins:

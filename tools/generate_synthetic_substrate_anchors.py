@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate synthetic substrate-class anchors (research-signal only, NOT empirical).
 
 Per operator amplification 2026-05-11 ("compiler" + "wiring and integration"):

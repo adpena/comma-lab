@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for shared substrate inflate runtime helpers."""
 
 from __future__ import annotations

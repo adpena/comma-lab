@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Forensic stack predictor for PR106-anchor lanes.
 
 Given:

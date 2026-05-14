@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan PMG residual economics against sub-0.24 geometry targets.
 
 This local-only planner reads existing PMG/CMG3 archive manifests and computes

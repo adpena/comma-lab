@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """FP4 quantization with codebook for extreme weight compression.
 
 The competitor (mask2mask, score 0.60) uses a clever 4-bit scheme:

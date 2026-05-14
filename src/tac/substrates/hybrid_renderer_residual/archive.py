@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """hybrid_renderer_residual archive grammar — monolithic single-file ``0.bin`` (γ).
 
 Catalog #124 STRICT archive-grammar 8 fields are declared in the package

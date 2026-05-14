@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """YUCR score-aware loss — composes UNIWARD cost-map term with canonical scorer pair.
 
 Per CLAUDE.md Catalog #164 every substrate score-aware loss MUST route

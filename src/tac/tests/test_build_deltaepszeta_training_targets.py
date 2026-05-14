@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.build_deltaepszeta_training_targets``."""
 
 from __future__ import annotations

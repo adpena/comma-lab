@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical parser/serializer for PR85 single-member ``x`` bundles.
 
 PR85 uses a compact archive grammar: one ZIP member named ``x`` whose body is a

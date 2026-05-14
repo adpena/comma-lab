@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #170 (WAVE-7-MED-FIX, REVIEW-OMNI NV5) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 Carmack — Council C OOM fix not

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PARADIGM-α mask payload empirical: Filler STC vs AV1/entropy-coder baseline.
 
 Background (CLAUDE.md "Tomáš Filler"):

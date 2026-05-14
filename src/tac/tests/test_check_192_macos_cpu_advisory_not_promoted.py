@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #192 -- macOS-CPU advisory must not be promoted.
 
 Per CLAUDE.md operator routing 2026-05-13 + "Submission auth eval — BOTH

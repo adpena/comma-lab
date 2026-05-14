@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Write the cooperative-receiver campaign queue.
 
 This is a planning artifact, not a dispatch launcher.  Rows are forced through

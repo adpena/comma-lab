@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane 17 — IMP 10-cycle iterative magnitude pruning orchestrator.
 
 Per Phase 3 Lane 17 spec (memory project_phases_2_3_4_*) and Round 5 Council E

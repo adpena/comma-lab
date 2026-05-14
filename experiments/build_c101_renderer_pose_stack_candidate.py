@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build C-101 renderer x C091/C101 pose-waterfill stack archives.
 
 This is a local archive builder only. It preserves the charged mask, action,

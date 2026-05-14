@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 ENCODE_INFLATE_ROUNDTRIP test for sane_hnerv.
 
 The test proves the encode/decode contract of the monolithic 0.bin archive

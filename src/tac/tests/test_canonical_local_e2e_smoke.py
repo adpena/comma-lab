@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/canonical_local_auth_eval_smoke.py.
 
 The smoke tool is the deliverable that closes the static-vs-pipeline

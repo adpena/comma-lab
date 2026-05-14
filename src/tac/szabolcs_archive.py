@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SZv1 archive packer / unpacker for the szabolcs no-masks paradigm.
 
 Layout

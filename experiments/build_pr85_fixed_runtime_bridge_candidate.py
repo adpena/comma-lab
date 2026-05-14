@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR85 fixed-runtime bridge candidate archives.
 
 This tool does not run inflate, load scorers, claim a score, dispatch remote

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SZ — szabolcs-cs PR#56 paradigm replica.
 
 This module implements the architecture from szabolcs-cs's PR #56 (score 0.36)

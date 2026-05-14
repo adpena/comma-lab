@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Ego-Motion Pre-Computation — Research Roadmap Item #1.
 
 Validates and exercises the full ego-motion precomputation pipeline:

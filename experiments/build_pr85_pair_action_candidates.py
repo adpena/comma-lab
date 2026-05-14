@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lower PR85 pair-gradient planning signal into explicit pair-action specs.
 
 This tool is a deterministic, local-only bridge between scorer-gradient or

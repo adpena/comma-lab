@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Local byte-closed archive candidates for LFV1 foveation tuple payloads.
 
 The builder packages an existing deterministic ``LFV1`` tuple payload with a

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Archive-diet pipeline (2026-04-29).
 
 Reduces submission archive byte count via lossless / near-lossless

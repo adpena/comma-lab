@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W — Water-filling Lagrangian bit-budget allocator.
 
 Operationalises the Shannon reverse-water-filling formula (Cover & Thomas 10.4.2)

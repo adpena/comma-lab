@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Phase 3 — Joint scorer-renderer-codec trainer (substrate-engineering).
 
 Per ``feedback_fields_medal_grand_council_all_phases_design_deliberate_implement_20260509.md``

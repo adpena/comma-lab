@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:
 # Read .omx/research/council_lane_gp_v4_design_20260430.md before adding
 # ANY new smooth-basis pose-fit experiment. Lane GP v3 (89.67 [Modal-T4-CPU])

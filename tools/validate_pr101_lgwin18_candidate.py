@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Validate an existing PR101 Brotli ``lgwin=18`` archive candidate.
 
 This is a local byte-custody and decoder-parity guard. It compares a canonical

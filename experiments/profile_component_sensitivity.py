@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CUDA component sensitivity producer for beta/OWV3/NWCS promotion gates.
 
 This profiler emits the artifacts consumed by

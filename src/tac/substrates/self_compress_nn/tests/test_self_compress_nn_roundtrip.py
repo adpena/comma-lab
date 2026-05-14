@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 + #139 ENCODE_INFLATE_ROUNDTRIP test for self_compress_nn (δ).
 
 The δ substrate roundtrip proves:

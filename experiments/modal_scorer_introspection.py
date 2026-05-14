@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Run scorer-activation introspection on Modal Linux x86_64 GPU (T4).
 
 This wrapper carries the P5 CPU/CUDA xray diagnostic over to a GPU host so the

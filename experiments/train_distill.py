@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Distillation training: teach the renderer to reproduce TTO frames in one forward pass.
 
 This is THE path to contest-compliant sub-0.33. The v7 TTO achieved auth=0.37

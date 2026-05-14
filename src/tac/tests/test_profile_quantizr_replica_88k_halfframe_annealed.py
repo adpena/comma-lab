@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane V-V2 (annealed half-frame Quantizr-replica) — profile + annealing
 contract tests.
 

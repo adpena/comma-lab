@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic PR75-minp stream ablation archives.
 
 This is a local candidate builder only.  It mixes decoded/runtime-equivalent

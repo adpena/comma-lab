@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Classify the PR91/HPM1 first entropy failure with a suffix row scan."""
 
 from __future__ import annotations

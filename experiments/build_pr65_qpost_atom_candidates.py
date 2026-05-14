@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build tiny PR65 qpost atom-subset candidates on a C-089-style archive.
 
 This is a local-only planner/builder.  It treats PR65/Henosis postprocess

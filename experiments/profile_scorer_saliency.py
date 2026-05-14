@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane SI: profile PoseNet + SegNet saliency on Lane A's rendered frames.
 
 Outputs a torch.save() dict:

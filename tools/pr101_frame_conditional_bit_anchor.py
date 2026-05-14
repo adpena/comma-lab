@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 frame-conditional bit-budget byte-anchor (Track 1 council Decision 5).
 
 Method (CPU-prep only, no scorer load, no contest-CUDA)

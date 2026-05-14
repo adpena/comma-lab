@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Script-structure tests for scripts/remote_lane_k_darts_channels.sh."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for swap_renderer_convs_with_learnable_bits — Lane Ω-V2 splice helper.
 
 Mirrors test_self_compress_renderer.py's swap-helper tests but for the

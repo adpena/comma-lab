@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical per-tensor codec encoders for PR101 Path-B and cross-paradigm tools.
 
 Three primitive encoders share the same call contract ``(symbols, ...) ->

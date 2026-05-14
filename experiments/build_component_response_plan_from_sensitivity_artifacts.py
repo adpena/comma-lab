@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build an official component-response plan from CUDA sensitivity artifacts.
 
 This is a deterministic glue tool for the post-harvest path:

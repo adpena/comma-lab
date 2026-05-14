@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Analysis artifacts and feature builders for scorer-aware compression.
 
 This package is for measured or derived telemetry that describes the contest

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_g_v3_corrected_kl_weight.sh.
 
 Lane G V3 corrected = pose TTO + KL distill SegNet auxiliary, with the

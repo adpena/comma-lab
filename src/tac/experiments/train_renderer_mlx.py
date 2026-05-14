@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Phase 1 pre-training for MaskRenderer in MLX (4.7x faster than PyTorch MPS).
 
 Phase 1 uses only L1 + edge loss (no scorer models). The scorer models are

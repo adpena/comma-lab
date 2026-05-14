@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a local PR106 sidechannel-stack readiness atom ledger."""
 
 from __future__ import annotations

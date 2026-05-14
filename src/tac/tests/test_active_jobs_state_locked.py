@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.deploy.lightning.active_jobs_state — locked transactional API.
 
 Covers the proactive META-class custody+concurrency audit (catalog #131,

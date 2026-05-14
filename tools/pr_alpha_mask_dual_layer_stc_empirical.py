@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Empirical: Filler-Pevný 2010 dual-layer STC + magnitude-residual codec.
 
 Reactivation criterion (per

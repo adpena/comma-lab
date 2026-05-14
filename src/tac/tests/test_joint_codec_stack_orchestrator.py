@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Research-grade custody checks for the PARADIGM-gamma JCSP orchestrator."""
 from __future__ import annotations
 

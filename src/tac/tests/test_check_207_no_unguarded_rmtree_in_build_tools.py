@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #207 — no unguarded ``shutil.rmtree`` in build tools.
 
 Empirical anchor 2026-05-14: codex finding HIGH —

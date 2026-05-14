@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """BlockNeRV-as-renderer — production trainer.
 
 Per operator directive 2026-05-11 (NeRV-family expansion) + CLAUDE.md HNeRV

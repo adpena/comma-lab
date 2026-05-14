@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Cathedral autopilot RECOMMENDER - ranked technique selection from evidence.
 
 Complement (not duplicate) of the existing rate-distortion autopilot at

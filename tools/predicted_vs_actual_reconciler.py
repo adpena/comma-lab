@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Predicted-vs-actual reconciliation for apogee_intN dispatches.
 
 Joins:

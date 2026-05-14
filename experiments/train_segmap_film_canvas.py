@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Train SegMap with Lane FC FiLM-Canvas hybrid (EUREKA #5).
 
 Variant of experiments/train_segmap.py that uses

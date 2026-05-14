@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Precompute all heavy data locally, save to disk for Modal upload.
 
 Modal should spend 100% of GPU time on training, 0% on data loading.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-target routing helpers for contest candidate worklists.
 
 These helpers do not make score claims. They only keep operator worklists

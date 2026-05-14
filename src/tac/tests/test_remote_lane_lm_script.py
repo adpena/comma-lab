@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_lm_zero_cost_poses.sh.
 
 Lane LM-A = zero-archive-cost poses computed at inflate from lane-mark mask

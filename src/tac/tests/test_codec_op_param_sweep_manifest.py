@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.codec_op_param_sweep_manifest``.
 
 The sweep manifest keeps rich CodecOp provenance, while the optional

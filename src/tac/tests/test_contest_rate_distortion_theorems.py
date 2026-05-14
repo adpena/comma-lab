@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Theorem-style identity tests for the contest rate-distortion system.
 
 These tests verify the *mathematical properties* of the contest objective

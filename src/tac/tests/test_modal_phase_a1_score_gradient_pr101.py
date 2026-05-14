@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 import ast
 import json
 import subprocess

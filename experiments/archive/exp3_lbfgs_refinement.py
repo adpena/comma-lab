@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Experiment 3: L-BFGS Refinement -- polish step after GPU generation.
 
 Run on Lightning T4:

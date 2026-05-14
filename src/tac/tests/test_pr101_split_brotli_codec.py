@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.pr101_split_brotli_codec`.
 
 Coverage:

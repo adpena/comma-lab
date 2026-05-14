@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane J-NWC end-to-end pipeline.
 
 Covers the producer/consumer wiring that sits ABOVE the WeightCodec module

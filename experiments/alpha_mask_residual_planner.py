@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan bounded Alpha mask residual alternatives from a candidate manifest.
 
 This tool consumes an ``alpha_mask_candidate_builder`` manifest plus its

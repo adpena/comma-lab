@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Alpha INR/TinyNeRV readiness audit.
 
 This is a deterministic, local-only scaffold for the next Alpha mask

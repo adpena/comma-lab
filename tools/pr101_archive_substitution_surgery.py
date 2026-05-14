@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 archive-substitution surgery: replace the decoder_blob in a PR101
 archive.zip with a re-encoded blob from the cathedral's CodecOp wrapper.
 

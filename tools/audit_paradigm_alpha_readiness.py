@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit Paradigm-alpha mask codec readiness against the live checkout."""
 
 from __future__ import annotations

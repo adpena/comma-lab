@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """E-NeRV-as-renderer — Encoder-NeRV substrate (NeRV-family completion).
 
 Per operator directive 2026-05-11 ("all nerv-family"). Sister to KK's

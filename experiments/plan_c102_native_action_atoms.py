@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C102-native tile-action atoms from public action priors.
 
 This is a local planning-only tool. It mines PR75/PR77 action records and exact

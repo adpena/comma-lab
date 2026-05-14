@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic offline candidate generation for optimizer-guided sweeps.
 
 This module is a reusable planning scaffold for low-dimensional

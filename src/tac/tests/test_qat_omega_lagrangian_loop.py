@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for the Lane Ω-V2 Lagrangian QAT loop.
 
 This is a STRUCTURAL smoke test, not a real QAT run — we exercise the

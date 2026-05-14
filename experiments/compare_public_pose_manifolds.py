@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compare public pose manifolds against the C102 QP1 frontier.
 
 This is a local planning tool. It decodes QP1-compatible pose streams from the

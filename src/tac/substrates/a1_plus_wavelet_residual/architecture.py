@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Architecture for the A1 + wavelet residual sidecar substrate.
 
 The base renderer is A1's PR101-fine-tuned HNeRVDecoder (frozen verbatim).

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic archive perturbation variants for official response curves.
 
 This tool prepares inputs for ``experiments/profile_component_sensitivity_official.py``.

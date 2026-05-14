@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR95 hnerv_muon 8-stage curriculum primitives — byte-faithful port.
 
 This module is the substrate-engineering companion to ``architecture.py`` +

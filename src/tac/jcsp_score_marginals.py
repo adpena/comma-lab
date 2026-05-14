@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-tensor score-marginals harness for γ-JCSP dispatch.
 
 The ADMM coordinator and sequential codec stack need a per-tensor

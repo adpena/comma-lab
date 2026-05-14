@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """promote_lane_c_to_approved.py — re-emit a pending δ.bin as approved.
 
 Codex R5-3 #2 fix (2026-04-27): the ONLY tool that may write

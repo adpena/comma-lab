@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_m_v3_pose_from_embedding.sh.
 
 Lane M-V3 (Path A) = pose-from-embedding distillation. Anchored on Lane A

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #173 (WAVE-7-MED-FIX, REVIEW-OMNI C4) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 Quantizr/Fridrich — sane_hnerv

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.sabor_boundary_only_renderer — Stable-Argmax Boundary-Only Renderer.
 
 L0 SKETCH substrate per operator directive 2026-05-13 (PAIR T+OPT3). Grand

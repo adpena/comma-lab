@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #208 — check_docs_no_local_absolute_paths.
 
 OSS v0.2.0-rc1 release prep audit finding D-2 self-protect (2026-05-14).

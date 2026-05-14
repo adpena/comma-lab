@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/pr106_archive_substitution_surgery.py."""
 from __future__ import annotations
 

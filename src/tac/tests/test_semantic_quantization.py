@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Roundtrip tests for ``tac.semantic_quantization``.
 
 Check 46 contract: ``unquantize(quantize(x)) ≈ x`` to a known tolerance.

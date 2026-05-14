@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Physical and logical layout inspection for public frontier archives.
 
 The medal-band HNeRV submissions are generally single-member ZIP packets. That

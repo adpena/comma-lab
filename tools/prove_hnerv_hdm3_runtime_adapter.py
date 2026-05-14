@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove HDM3 runtime-adapter parity against a source HNeRV archive."""
 
 from __future__ import annotations

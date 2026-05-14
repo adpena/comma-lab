@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """WAVE-A-2 (2026-05-12): substrate taxonomy + inventory wire-in tests.
 
 Covers CANON-1.A + CANON-1.J from the canonicalization ledger

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Harvest dispatched Modal call IDs before their result cache expires.
 
 Default execution is read-only. Pass ``--execute`` to contact Modal, write

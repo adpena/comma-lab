@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize PR101 non-local sweep packets with exact-readiness custody.
 
 This is a local-only actuator. It does not dispatch GPU/provider jobs, invoke

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Hardening tests for tac library: profiles, adaptive weights, losses, architecture coverage."""
 import math
 import warnings

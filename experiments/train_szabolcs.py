@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Train the szabolcs no-masks SegMap renderer (Lane SZ Phase 2).
 
 Pipeline (matches /tmp/szabolcs_re/inflate.py at training time)

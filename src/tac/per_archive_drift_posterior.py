@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-archive drift posterior — Bayesian update of CUDA/CPU drift PER ARCHIVE.
 
 Sister-extension of :mod:`tac.optimization.cuda_cpu_axis_profile_registry`

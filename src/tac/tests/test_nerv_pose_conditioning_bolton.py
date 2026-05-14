@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for FiLM-style pose-conditioning bolt-on."""
 from __future__ import annotations
 

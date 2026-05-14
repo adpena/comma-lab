@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.research — Internal research utilities (not part of the public API).
 
 This package contains experiment analysis scripts, council synthesis documents,

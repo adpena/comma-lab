@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Property-based fuzz tests for archive codecs.
 
 The Round 19 INT4_LZMA2 corruption disaster (3.6GB raw byte corruption that

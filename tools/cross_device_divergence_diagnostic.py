@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Cross-device divergence diagnostic — Stream 1 [macOS-CPU advisory] + [MPS-research-signal].
 
 Operator directive 2026-05-13 AGGRESSIVE LOCAL HARDWARE SWEEP.

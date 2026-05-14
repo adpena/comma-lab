@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bounded Brotli saturation audits for packed HNeRV decoder sections.
 
 This module is a local byte-custody profiler. It recodes the exact

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Stream 3 — local Pareto curve from existing macOS-CPU + contest-CPU evals.
 
 Operator directive 2026-05-13 AGGRESSIVE LOCAL HARDWARE SWEEP Stream 3.

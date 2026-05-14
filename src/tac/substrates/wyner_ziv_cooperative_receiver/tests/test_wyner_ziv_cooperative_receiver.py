@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Wyner-Ziv cooperative-receiver substrate (alien-tech N3).
 
 Covers architecture, archive grammar, inflate runtime, score-aware loss,

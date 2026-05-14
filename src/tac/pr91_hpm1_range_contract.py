@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Local PR91/HPM1 range uint32 re-emission diagnostics.
 
 This module is forensic tooling only. It loads the public PR91 HPM1 payload and

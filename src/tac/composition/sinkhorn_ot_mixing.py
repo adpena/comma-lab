@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Sinkhorn-Cuturi Entropic OT Mixing — composition/stacking primitive.
 
 Cuturi 2013 ("Sinkhorn Distances: Lightspeed Computation of Optimal Transport")

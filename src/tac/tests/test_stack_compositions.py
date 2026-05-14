@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane J-NWCS × Lane EC composition regression tests.
 
 Per Round 26/28 magnitude-anchor convention, every test asserts a SIGN/VALUE

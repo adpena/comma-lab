@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dead code from the comma.ai video compression challenge.
 
 These modules were conclusively killed during competition research:

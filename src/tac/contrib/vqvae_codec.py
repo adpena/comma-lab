@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """VQ-VAE codec: learned discrete latent representation for video frames.
 
 Instead of: GT -> SegNet -> 5-class masks -> AV1 -> renderer -> RGB

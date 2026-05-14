@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # ROUNDTRIP_NOT_REQUIRED: this is a RENDERER (image-decoder), not an
 # encoder/quantizer. The "quantizr" in the name refers to the contestant
 # Jimmy "Quantizr" who wrote PR #55; nothing in this module quantizes.

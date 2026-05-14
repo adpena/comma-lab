@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bit-allocator end-to-end wire (composition matrix + magic codec + sparse PacketIR + Hinton + autopilot ranking).
 
 Per operator amplification 2026-05-11 ("compiler and insanely low level" +

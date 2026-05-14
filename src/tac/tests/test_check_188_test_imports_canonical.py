@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #188 — check_test_imports_use_tac_not_src_tac.
 
 FIX-WAVE-10/R11 import-canonicalization self-protect, 2026-05-13.

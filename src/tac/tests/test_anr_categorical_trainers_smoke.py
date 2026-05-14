@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Trainer smoke tests for ANR + categorical substrates.
 
 These tests exercise the trainer ENTRY POINT contract (argparse,

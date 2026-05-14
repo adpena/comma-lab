@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Parallel chunked inference for CPU inflate (Eureka 5).
 
 On modern CPUs with 4-16 cores, postfilter inference is embarrassingly

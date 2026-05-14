@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for integration boundaries — every bug in this project lived here.
 
 These tests verify that data flows correctly BETWEEN components:

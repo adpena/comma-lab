@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build the local-only PR85 STBM1BR + QRGB randmulti stack candidate.
 
 This builder deliberately does not reuse the QRGB transfer builder's source

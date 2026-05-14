@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build byte-closed C067 multimask reconciliation candidates.
 
 This bridges ``plan_multimask_reconciliation_atoms.py`` to an existing contest

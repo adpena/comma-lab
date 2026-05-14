@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 lossy mixed-precision int4/int6/int8 — audit criterion #3 for
 the lossy_int4 lane.
 

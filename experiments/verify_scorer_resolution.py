@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """
 Verify Eureka 3: Scorer Resolution Exploit
 

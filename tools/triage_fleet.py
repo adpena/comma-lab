@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Single-command fleet triage: health, burn, runway, redeploy recommendations.
 
 Wraps `scripts/verify_vast_instances.py` and adds:

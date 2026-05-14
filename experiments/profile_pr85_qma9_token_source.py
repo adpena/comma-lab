@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Extract and profile the PR85 QMA9 mask-token source.
 
 This is a local custody/planning tool for future PR85-owned entropy coding.

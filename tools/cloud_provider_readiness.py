@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Provider readiness inventory for score-lowering compute.
 
 This tool is deliberately read-only: it does not create kernels, VMs, buckets,

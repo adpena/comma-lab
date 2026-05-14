@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CMA-ES (or random-search fallback) over CodecOp parameter space.
 
 Implements the WIRE verdict from the codegen/genetic/evolutionary

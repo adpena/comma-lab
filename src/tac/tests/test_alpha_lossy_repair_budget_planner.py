@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Alpha lossy repair budget planner."""
 from __future__ import annotations
 

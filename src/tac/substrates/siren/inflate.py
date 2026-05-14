@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """siren inflate runtime — contest raw-output contract.
 
 Contest-runtime image of the substrate. ``submissions/siren/inflate.py`` will

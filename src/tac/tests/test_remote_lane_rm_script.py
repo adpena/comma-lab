@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for ``scripts/remote_lane_rm_riemannian_pose_tto.sh``.
 
 Lane RM = Riemannian SE(3) geometric pose optimization. Anchored on

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Centralized Vast.ai instance tracker.
 
 Per CLAUDE.md non-negotiable + memory `feedback_oneshot_vastai_subagent_failure_pattern`:

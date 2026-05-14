@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """wavelet archive grammar WLV1 — monolithic single-file ``0.bin``.
 
 Catalog #124 STRICT archive-grammar 8 fields are declared in the package

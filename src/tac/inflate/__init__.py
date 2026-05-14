@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.inflate — reusable inflate templates for Lane submissions.
 
 Each module here mirrors the layout that ships into ``submissions/<lane>/inflate.py``.

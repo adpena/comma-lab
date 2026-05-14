@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.training_optimization.autocast_helper`` (O2).
 
 The autocast helper is the canonical wrapper for substrate trainer

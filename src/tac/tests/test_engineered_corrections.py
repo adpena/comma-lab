@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lock-in tests for the engineered SegNet corrections feature
 (`experiments/engineered_quant_noise.py` + inflate-side application).
 

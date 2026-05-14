@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """INT4 smoke test: quantize dilated h=64 model to uniform 4-bit and compare with INT8.
 
 Technique 5 from cross-cultural research survey.

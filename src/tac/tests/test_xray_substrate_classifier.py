@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/xray_substrate_classifier.py``.
 
 Per CLAUDE.md "Recursive adversarial review protocol" + the substrate-classifier

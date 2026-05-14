@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.z5_predictive_coding_world_model — Time-Traveler L5 staircase Step 3.
 
 Per the grand council MAXIMIZE-VALUE decision (Time-Traveler PEER seat) at

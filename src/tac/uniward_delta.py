@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane C: UNIWARD δ-injection on rendered frames at compress-time.
 
 Detector-informed embedding in the Yousfi-2022 sense, on a contest where the

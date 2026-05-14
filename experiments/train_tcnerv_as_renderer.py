@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """TCNeRV-as-renderer — production trainer with temporal-conv on latent stream.
 
 Per operator directive 2026-05-11 (NeRV-family expansion). Wires temporal

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lock-in tests for Lane LR-V2 — LEARNABLE-rank LoRA pose adaptation.
 
 V1 covered (test_lora_pose.py): rank=R is FROZEN at construction time. The

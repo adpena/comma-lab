@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Deterministic shared-model PMF probe for PR101 decoder weights.
 
 This is a CPU-only research artifact builder. It fits a compact shared PMF

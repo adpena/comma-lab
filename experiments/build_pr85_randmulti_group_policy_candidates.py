@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR85 randmulti group-policy archive candidates.
 
 This turns the planning-only output from

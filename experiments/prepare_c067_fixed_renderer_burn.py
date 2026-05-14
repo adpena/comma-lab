@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prepare fixed C067 inputs and command shapes for renderer-only training.
 
 This is a local/no-dispatch helper. It extracts the exact C067 logical runtime

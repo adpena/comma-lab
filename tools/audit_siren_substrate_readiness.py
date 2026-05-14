@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Operator-facing SIREN substrate first-anchor readiness gate."""
 
 from __future__ import annotations

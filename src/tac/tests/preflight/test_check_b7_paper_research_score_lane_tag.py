@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B7 — paper/research lane-tag extension.
 
 ``check_scores_have_lane_tag_paper_research`` extends the existing

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 17 — Real-archive empirical smoke (CPU-only, deterministic).
 
 [empirical:reports/lane_17_imp_real_archive.json]

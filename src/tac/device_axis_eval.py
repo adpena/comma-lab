@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Reusable custody logic for CPU/CUDA auth-eval device-axis comparisons.
 
 The contest stack has two separate questions that should not be conflated:

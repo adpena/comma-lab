@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Colab/Kaggle-ready training script for PixelShuffle+Dilated hybrid.
 
 Designed for free-tier GPU (T4, 16GB VRAM). Self-contained — downloads

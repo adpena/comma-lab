@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Migrate pre-NV7 cost-band posterior anchors: tag failed-dispatch rows.
 
 The Modal A100 anchor ``fc-01KREXK209TRX7ED5ZRVXHY1VT`` (14.77 sec rc=1 from

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B8 — pr101 cross-paradigm torch.load(weights_only=False) allowlist.
 
 Cross-paradigm tools (tools/pr101_*.py, tools/build_admm_*.py,

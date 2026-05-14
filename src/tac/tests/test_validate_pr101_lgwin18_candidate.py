@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused tests for ``tools/validate_pr101_lgwin18_candidate.py``."""
 from __future__ import annotations
 

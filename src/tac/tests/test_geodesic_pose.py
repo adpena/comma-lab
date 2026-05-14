@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane GE tests: degree-12 geodesic pose compression."""
 from __future__ import annotations
 

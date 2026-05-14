@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Search local geometry-safe PR75 mask byte-cut candidates.
 
 The tool is intentionally local-only.  It reads a single-member PR75/QP1

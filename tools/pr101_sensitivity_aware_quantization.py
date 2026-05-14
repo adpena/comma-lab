@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 sensitivity-aware per-tensor quantization (Phase A2).
 
 Council mandate (commit 231abcee, `.omx/research/grand_council_extreme_rigor_track_1_20260508.md`):

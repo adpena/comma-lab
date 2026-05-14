@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Charged label-prior payload manifest for categorical candidates."""
 
 from __future__ import annotations

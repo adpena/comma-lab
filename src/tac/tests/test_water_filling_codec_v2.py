@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W-V2 — codec regression tests.
 
 Covers the 5 council-mandated test classes from the V2 design spec:

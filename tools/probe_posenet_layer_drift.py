@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe PoseNet layer-by-layer device drift.
 
 This tool is a diagnostic tracer for the public scorer, not a score claimant.

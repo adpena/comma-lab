@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR93 lowpass-luma residual codec — reusable byte-grammar primitive.
 
 This module extracts the REUSABLE LOW-FREQUENCY LUMA RESIDUAL primitive from

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Syndrome-trellis coding (STC) for ternary mask-delta payloads.
 
 Background (CLAUDE.md "Tomáš Filler — Fridrich's other student"):

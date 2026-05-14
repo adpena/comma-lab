@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Kaggle kernel bootstrap for constrained generation inflate experiment.
 
 Pre-registered hypothesis: Constrained optimization from noise scores < 0.80 proxy.

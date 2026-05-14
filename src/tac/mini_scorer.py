@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Mini-scorer distillation — tiny PoseNet/SegNet mimics for inflate-time TTO.
 
 The contest's Yousfi rule requires scorer weights to be inside the archive.

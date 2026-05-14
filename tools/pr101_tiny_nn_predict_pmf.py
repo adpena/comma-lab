@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Tiny neural PMF/context smoke probe for PR101 quantized decoder weights.
 
 This asks a narrow compression question: can a very small deterministic neural

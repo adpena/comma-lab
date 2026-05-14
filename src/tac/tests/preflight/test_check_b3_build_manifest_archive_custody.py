@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for B3 — build_manifest archive custody scanner.
 
 Every build_manifest.json with archive_relpath + archive_sha256 must satisfy

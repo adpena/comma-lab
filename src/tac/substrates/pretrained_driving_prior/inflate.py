@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pre-trained driving prior inflate runtime — contest raw-output contract.
 
 Loads the DP1 archive, dequantizes the frozen codebook, loads the

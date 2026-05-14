@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Integration tests: L2 encoders + Hinton-distilled scorer + saliency masking.
 
 Per W's DEFERRED reactivation criteria #1+#2 + N D2 council verdict +

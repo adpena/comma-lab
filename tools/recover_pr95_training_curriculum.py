@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Recover PR95 hnerv_muon curriculum facts and full-run campaign estimates.
 
 This is a deterministic forensic helper. It reads local PR95 source files and

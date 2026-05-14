@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan paired CPU and CUDA auth evals for the same archive/runtime.
 
 CUDA remains the internal promotion/ranking gate. CPU replay is a separate

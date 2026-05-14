@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Experimental entropy-coded archive helpers.
 
 This module explores arithmetic-coded archive components and learned-probability

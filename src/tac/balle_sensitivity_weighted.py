@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 20 β-variant — sensitivity-conditioned Ballé hyperprior σ prediction.
 
 Paradigm β extension of :mod:`tac.balle_hyperprior_codec` (full-Ballé mode).

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cross-paradigm adapters for meta-Lagrangian atom planning.
 
 The adapters in this module intentionally stop at planning rows. They do not

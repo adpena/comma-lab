@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Byte-level endgame decision support for PR85-family archives.
 
 This module is local and deterministic. It validates ZIP custody, slices

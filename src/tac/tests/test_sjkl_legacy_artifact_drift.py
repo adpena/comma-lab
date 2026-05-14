@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Legacy SJ-KL artifact compatibility — documents known drift.
 
 Two real sjkl.bin artifacts produced 2026-05-02 (via lightning_batch

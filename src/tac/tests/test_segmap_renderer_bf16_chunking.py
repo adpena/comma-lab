@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Council C OOM-class deep fixes (DF2 bf16 + DF3 scorer chunking).
 
 Memory: .omx/research/council_oom_class_deep_fix_20260429.md.

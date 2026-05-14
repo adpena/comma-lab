@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-5 catalog #140 — `_save_*` writers must own their lock end-to-end.
 
 Bug class (codex round-5 HIGH 2, 2026-05-09):

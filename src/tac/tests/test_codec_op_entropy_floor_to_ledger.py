@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.codec_op_entropy_floor_to_ledger``."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PARADIGM-delta - joint scorer-aware codec retrain (Phase 1 scaffold).
 
 This module is the **Phase 1 scaffold** for the delta paradigm in the PARADIGM-deltaepsilonzeta

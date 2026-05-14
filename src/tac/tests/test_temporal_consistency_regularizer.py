@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for T22 — temporal-consistency regularizer.
 
 Per coherence council 2026-05-09: T22 closes the temporal gap left by

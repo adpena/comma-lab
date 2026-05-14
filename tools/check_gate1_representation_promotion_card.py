@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Gate 1 — Representation promotion card discipline.
 
 Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``

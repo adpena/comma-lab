@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """RAFT optical flow pose stream — pose-axis residual sidecar (full scaffold).
 
 Lane: ``lane_pose_axis_raft_pose_stream_full_scaffold`` (Phase 3

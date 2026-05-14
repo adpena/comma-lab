@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """block_nerv inflate runtime — <= 100 LOC; sane_hnerv-mirror style.
 
 L0 SKETCH inflate runtime; per-pair LoRA tensors are copied into the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Run a 100-epoch Modal smoke BEFORE the full operator-authorize dispatch.
 
 PHASE-B1-PIVOT bug-class anchor (2026-05-12). Two consecutive 2000-epoch

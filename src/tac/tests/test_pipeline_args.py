@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Test that pipeline.py subprocess calls match the target scripts' argparse.
 
 Instead of fragile string splitting, we extract the actual subprocess commands

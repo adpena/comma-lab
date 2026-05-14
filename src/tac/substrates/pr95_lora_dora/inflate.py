@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Inflate runtime for PR95 + LoRA/DoRA TRAILER archives.
 
 Substrate-engineering opt-out per Catalog #124; LOC budget ≤200.

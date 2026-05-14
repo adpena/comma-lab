@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 20 — Real-archive empirical measurement on Lane G v3 anchor.
 
 Walks an FP4A renderer.bin, extracts the per-layer FP4 nibble stream (the

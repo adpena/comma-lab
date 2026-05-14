@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dispatch Phase A1 (track1_phase_a1_score_gradient) on Modal T4 with CUDA auth eval.
 
 Council priority: 22/22 ENDORSE, UNANIMOUS HIGHEST PRIORITY (Quantizr/Carmack/Hinton).

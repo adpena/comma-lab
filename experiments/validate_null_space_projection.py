@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Validate adaptive per-pixel YUV null space projection.
 
 Verifies that:

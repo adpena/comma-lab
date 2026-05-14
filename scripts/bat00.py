@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical bat00 interaction script — handles PowerShell quoting correctly.
 
 Runs commands on bat00 (Windows + WSL2) via Tailscale SSH without

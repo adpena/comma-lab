@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Archive pruning: strip unnecessary bytes from archive.zip.
 
 Every byte saved reduces the rate term in the scoring formula:

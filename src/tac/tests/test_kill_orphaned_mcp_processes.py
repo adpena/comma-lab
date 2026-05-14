@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from scripts.kill_orphaned_mcp_processes import parse_ps_rows
 
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/prepare_sjkl_pair_tensors.py — recovery + smoke verification."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical contract for categorical mask-compression research surfaces."""
 
 from __future__ import annotations

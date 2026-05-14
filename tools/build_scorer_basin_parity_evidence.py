@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build scorer-basin-parity readiness-evidence JSON for apogee_intN candidates.
 
 This is one of three accepted evidence types for ``predispatch_sanity.py``

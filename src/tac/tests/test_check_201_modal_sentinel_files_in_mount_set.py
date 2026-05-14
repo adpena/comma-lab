@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #201 ``check_modal_sentinel_files_are_in_mount_set``.
 
 STRICT preflight gate that refuses any string-literal sentinel path in

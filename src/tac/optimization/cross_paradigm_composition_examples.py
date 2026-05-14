@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cross-paradigm composition example archives (concrete demonstrations of QQ orthogonal pairs).
 
 Per operator amplification 2026-05-11 ("compiler" + "wiring and integration"

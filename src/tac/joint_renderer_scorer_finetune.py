@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # ROUNDTRIP_NOT_REQUIRED: this is a TRAINING-TIME framework that produces a
 # specialized renderer checkpoint. The byte-encoding round-trip is the
 # downstream codec's responsibility (FP4, block-FP, Self-Compress NN).

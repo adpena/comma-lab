@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Hinton-distilled SegNet + PoseNet surrogate for L2 residual encoders.
 
 Per W's DEFERRED reactivation criterion #1 (memory

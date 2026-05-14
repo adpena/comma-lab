@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.optimization.macos_cpu_advisory_signal``.
 
 Per CLAUDE.md operator routing 2026-05-13 + the cascade reframe directive:

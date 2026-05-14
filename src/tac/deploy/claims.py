@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Provider-neutral lane-dispatch claim helpers.
 
 Cloud actuators own provider APIs. This module owns the shared command shape

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical CUDA→CPU axis calibration helper.
 
 The contest leaderboard ranks by ``--device cpu`` evaluation, NOT ``--device

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bregman-Divergence Mixing — composition/stacking primitive.
 
 Bregman divergences (Bregman 1967) generalise squared-Euclidean distance to

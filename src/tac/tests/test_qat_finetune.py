@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for qat_finetune.py FP4 export/load round-trip.
 
 Companion to test_qat_finetune_loader.py (which covers .pt loader Bug 1).

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compatibility CLI for provider-neutral cloud training bundles.
 
 The canonical implementation lives in :mod:`tac.deploy.build_bundle` and the

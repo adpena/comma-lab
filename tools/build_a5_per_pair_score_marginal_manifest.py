@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build advisory per-pair score-marginal evidence for the PR101 A5 packet."""
 
 from __future__ import annotations

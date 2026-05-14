@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for the PR95++ enhanced curriculum surface.
 
 Each of the 11 enhancements has at least one positive test (it activates

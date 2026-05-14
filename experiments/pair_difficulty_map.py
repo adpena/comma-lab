@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Per-pair PoseNet/SegNet difficulty map for adaptive TTO budget allocation.
 
 Computes per-pair PoseNet MSE and SegNet disagreement for ALL 600 pairs

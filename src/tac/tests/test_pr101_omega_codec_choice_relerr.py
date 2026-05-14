@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for PR101 omega codec-choice proxy aggregation."""
 from __future__ import annotations
 

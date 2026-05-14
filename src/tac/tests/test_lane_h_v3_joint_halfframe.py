@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane H-V3 (half-frame revival via JOINT warp-expansion training).
 
 Five tests with magnitude anchors per Round 26 convention. Lane H-V3 design:

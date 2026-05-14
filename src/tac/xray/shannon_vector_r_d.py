@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F2: Shannon 1959 vector R(D) lower bound estimator.
 
 The contest score is a vector-distortion function:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/cathedral_autopilot.py."""
 from __future__ import annotations
 

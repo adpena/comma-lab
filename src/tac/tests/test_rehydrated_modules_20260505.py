@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke tests for the 6 modules rehydrated 2026-05-05.
 
 Each rehydrated module ships its public API surface (constants, error classes,

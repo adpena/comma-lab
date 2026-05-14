@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical deterministic submission-packet compiler.
 
 This module is the **single canonical entry point** for deterministic packet

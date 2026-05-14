@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Empirical CMG2 mask-stream byte probe.
 
 This tool is deliberately not a scorer and not a submission builder.  It takes

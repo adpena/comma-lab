@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.packet_compiler.magic_codec_dense_streams``.
 
 Per CLAUDE.md "Recursive adversarial review protocol" + Catalog #91 (encoder/

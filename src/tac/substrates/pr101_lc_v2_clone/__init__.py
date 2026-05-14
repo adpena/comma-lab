@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.pr101_lc_v2_clone — forensic apples-to-apples PR101 GOLD clone.
 
 L0 SKETCH substrate, ``research_only=true``. The clone re-implements PR101's

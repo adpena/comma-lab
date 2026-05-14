@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit dirty nested git checkouts used as local custody snapshots.
 
 Public PR intakes and raw Kaggle ingests are often tracked as gitlinks. A

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Dispatch dry-run for Lane Ω-W-V3: validate the lane WOULD succeed locally
 without burning $0.30 on Vast.ai.
 

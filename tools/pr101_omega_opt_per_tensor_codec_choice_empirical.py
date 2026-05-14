@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 per-tensor codec-CHOICE HStack — Path B step 4 empirical anchor.
 
 The Ω-OPT HStack-of-VStacks predicted -5bp savings did NOT materialize at

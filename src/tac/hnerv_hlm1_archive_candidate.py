@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Archive-candidate builder for PR106 HLM1 fixed-latent recodes."""
 
 from __future__ import annotations

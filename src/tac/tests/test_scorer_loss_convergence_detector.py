@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.scorer_loss_convergence_detector.
 
 Verifies the OLS-slope plateau detector on synthetic loss curves and

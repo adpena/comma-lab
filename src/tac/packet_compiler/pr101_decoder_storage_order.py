@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR101 GOLD ``decoder_storage_order`` permutation + split-brotli boundaries.
 
 This module ports the **storage-order permutation primitive** from the PR101

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Real-scorer regression for hi_nerv score-aware loss (WAVE-A-1 sister).
 
 Defends against re-introduction of the WWW4 5D-vs-4D shape mismatch.

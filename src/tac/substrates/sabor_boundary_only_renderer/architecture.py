@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SABOR boundary-only renderer architecture.
 
 The substrate factors a per-pair frame into:

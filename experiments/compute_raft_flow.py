@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Compute dense optical flow from GT video using RAFT-Small.
 
 Produces per-pair flow fields that can be used as fixed warp in the

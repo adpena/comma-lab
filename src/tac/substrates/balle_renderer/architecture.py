@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """balle_renderer architecture — Ballé hyperprior + lightweight renderer (β).
 
 Per the Fields-medal grand council 2026-05-12 β candidate (§2.10 Ballé LEAD,

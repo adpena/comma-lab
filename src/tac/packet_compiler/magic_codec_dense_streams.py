@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Magic codec dense streams — per-stream codec auto-selection over a typed bundle.
 
 This module extends :mod:`tac.packet_compiler.magic_codec` from per-stream

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """16-substrate x 16-substrate composition orthogonality matrix.
 
 Per operator directive 2026-05-11 ("wiring and integration") + the 16

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the A1 + wavelet residual score-aware Lagrangian.
 
 Covers the CLAUDE.md non-negotiables:

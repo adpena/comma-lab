@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #145: preflight CLI default `--scope`.
 
 Catalog #145 — refuses any change to ``parser.add_argument("--scope",

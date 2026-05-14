@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.siren — Sinusoidal-init MLP coordinate-based substrate (L0 SKETCH).
 
 Per operator approval 2026-05-12 ("3 non-NeRV substrate L0 SKETCHes — vq_vae,

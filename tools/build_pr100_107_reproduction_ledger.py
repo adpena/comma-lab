@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a PR100-PR107 reproduction/deconstruction custody ledger.
 
 This is a control-plane tool, not a score tool. It inspects local public-PR

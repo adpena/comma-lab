@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for `_resolve_pr101_codec_dir` in `tools/build_pr101_finetuned_archive.py`.
 
 PR101 intake clones (`experiments/results/public_pr101_intake_*/source/...`) place

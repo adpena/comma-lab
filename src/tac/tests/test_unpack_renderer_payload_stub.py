@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the recovery-stub submissions/robust_current/unpack_renderer_payload.py.
 
 Covers the safe-stub behavior: API contract preserved, fail-loud on real payloads

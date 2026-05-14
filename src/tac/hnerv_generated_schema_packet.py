@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic HNGP v1 packets for generated-schema HNeRV artifacts.
 
 HNGP v1 is a monolithic, non-score packet scaffold:

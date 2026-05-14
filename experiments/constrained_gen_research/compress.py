@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Constrained generation compress: extract masks + pose targets from GT video.
 
 Runs the frozen SegNet on GT frames to extract segmentation masks, and the

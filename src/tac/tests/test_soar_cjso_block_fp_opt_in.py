@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for SOAR Closed-form Joint Scale Optimization (CJSO) opt-in.
 
 Source: Bao et al. 2026 arXiv:2605.12245v1 §4.1 eqs (5) and (6).

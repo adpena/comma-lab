@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Round 3 council-prescribed preflight checks 82+83.
 
 Check 82 — check_callsite_contracts_satisfied: catches the Lane GP class of

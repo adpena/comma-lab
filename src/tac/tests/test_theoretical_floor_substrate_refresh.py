@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.optimization.theoretical_floor_substrate_refresh`."""
 
 from __future__ import annotations

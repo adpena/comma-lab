@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for learnable Selfcomp grayscale-LUT class targets."""
 from __future__ import annotations
 

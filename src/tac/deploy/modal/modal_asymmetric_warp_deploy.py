@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deploy asymmetric warp renderer training + auth eval to Modal T4.
 
 Council-approved configuration for the Fridrich constrained renderer

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pre-trained driving prior archive grammar — DP1 monolithic 0.bin.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons:

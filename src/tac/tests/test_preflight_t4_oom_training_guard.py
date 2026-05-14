@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for preflight_t4_oom_training_guard (Check 73).
 
 Closes BUG CLASS B (the 2026-04-29 Modal incident): a remote_lane_*.sh

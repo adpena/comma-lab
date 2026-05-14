@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR85 fixed-runtime bridge sparse-action candidates.
 
 This is a build-only local candidate generator. It starts from the expanded

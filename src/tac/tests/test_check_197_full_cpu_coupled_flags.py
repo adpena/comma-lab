@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #197 — check_full_cpu_requires_explicit_advisory_waiver.
 
 Operator approved 2026-05-13. Self-protection for the

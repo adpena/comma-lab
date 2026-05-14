@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Harvest the PR106 latent score-table Kaggle kernel through canonical ingest."""
 from __future__ import annotations
 

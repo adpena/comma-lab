@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Coord-MLP residual sidecar archive contract.
 
 This module is the lightweight H15 readiness surface: it defines charged

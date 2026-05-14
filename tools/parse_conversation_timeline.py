@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Extract a research narrative timeline from Claude Code conversation transcripts.
 
 Parses JSONL transcripts (Claude Code sessions and OMX agent logs) to produce

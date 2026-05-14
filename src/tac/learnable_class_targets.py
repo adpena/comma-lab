@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane LCT — learnable CLASS_TARGETS for the grayscale-LUT mask codec.
 
 van den Oord (VQ-VAE/WaveNet) prescription via senior engineer review:

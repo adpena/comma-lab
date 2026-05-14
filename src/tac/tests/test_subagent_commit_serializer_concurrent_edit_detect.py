@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for FIX-1 concurrent-edit-leak detection (META-META 2026-05-08).
 
 The serializer hashes the working-tree content of the --files BEFORE acquiring

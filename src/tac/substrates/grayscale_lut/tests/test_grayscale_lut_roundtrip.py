@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 + #139 roundtrip tests for the grayscale_lut substrate."""
 
 from __future__ import annotations

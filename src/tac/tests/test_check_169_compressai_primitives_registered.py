@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #169 (WAVE-7-MED-FIX, REVIEW-OMNI A2-1) tests.
 
 Bug-class anchor: REVIEW-OMNI 2026-05-12 noted that CompressAI primitives

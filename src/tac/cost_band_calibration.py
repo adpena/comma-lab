@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cost-band self-calibration posterior.
 
 The "calibration of calibration" answer: instead of hand-deriving cost-band

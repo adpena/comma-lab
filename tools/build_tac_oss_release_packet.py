@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build the tac OSS release packet — sanitized, manifest-stamped, SHA-locked.
 
 Sister of `tools/oss_publish_staging.py` but **release-grade**: instead of

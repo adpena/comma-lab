@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 8 multi-pass — real-archive empirical smoke (offline / no GPU).
 
 Loads the Lane G v3 anchor archive (`experiments/results/lane_g_v3_landed/

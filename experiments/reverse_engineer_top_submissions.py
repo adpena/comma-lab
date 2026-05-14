@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical reverse-engineering anatomy for public top submissions.
 
 The output is deterministic for a fixed pair of PR checkouts: no timestamps,

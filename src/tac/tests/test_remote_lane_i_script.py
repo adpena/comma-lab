@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_i_coolchic_masks.sh.
 
 Lane I = Cool-Chic renderer (CCh1 magic) anchored on Lane A. Predicted

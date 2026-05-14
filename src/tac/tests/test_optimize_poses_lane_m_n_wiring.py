@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane M + Lane N regression: verify optimize_poses.py pose-mode + L∞ wiring.
 
 Lane M (radial-zoom-only pose mode): per memory

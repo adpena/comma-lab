@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Harvest a [contest-CPU] GHA eval.yml workflow_dispatch result.
 
 Counterpart to ``tools/trigger_gha_cpu_eval.py``. Reads the dispatch_metadata.json

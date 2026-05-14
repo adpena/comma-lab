@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer introspection and CUDA-vs-CPU drift diagnostics.
 
 Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT

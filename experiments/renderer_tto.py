@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Renderer + TTO: test-time optimization on renderer output frames.
 
 The pivotal experiment: take our auth=0.87 renderer output and refine it

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for PR106 cross-substrate Lagrangian per-tensor allocation port.
 
 Verifies the Path B step 5/6 + UNIWARD mechanism transfers from PR101 to PR106:

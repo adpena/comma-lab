@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """YUCR archive grammar — YUCR1 monolithic 0.bin sidecar.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ROUNDTRIP_TESTED:src/tac/tests/test_b1_nerv_enc_dec_x_magic_codec_a1_roundtrip.py
 """Build B1 composition cell: nerv_enc_dec_separated x magic_codec on A1.
 

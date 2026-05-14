@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a CMG2 spatial-downsample mask candidate archive.
 
 This is a contest-faithful archive builder, not a score claim. It replaces the

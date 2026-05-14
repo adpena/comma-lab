@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a would-dispatch table + report from an autopilot dry-run report.
 
 Per the operator one-touch authorization toolkit Deliverable 2 (2026-05-11):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dispatch-closure guard for monolithic HNeRV packet candidates.
 
 This module is intentionally JSON-artifact based: candidate builders, runtime

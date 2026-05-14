@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR101 GOLD ``conv4_storage_perms`` per-tensor 4D-axis permutation primitive.
 
 This module ports the **4D-axis permutation primitive** from the PR101

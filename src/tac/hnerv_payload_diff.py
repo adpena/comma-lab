@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """No-op-resistant section diffs for packed HNeRV archives."""
 
 from __future__ import annotations

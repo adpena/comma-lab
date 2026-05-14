@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Check 66 regression — `git reset --hard` in remote_lane_*.sh."""
 
 from __future__ import annotations

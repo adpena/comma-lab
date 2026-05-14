@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round-5 catalog #141 — cross-module state-helper calls must thread paths.
 
 Bug class (codex round-5 HIGH 3, 2026-05-09): ``azure_dispatch.py``

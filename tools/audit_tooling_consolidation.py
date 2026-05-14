@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Inventory duplicate helper patterns across local audit/preflight tooling.
 
 This is a planning audit, not a style gate. It identifies repeated local

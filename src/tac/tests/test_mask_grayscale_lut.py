@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Selfcomp grayscale-LUT mask codec."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared canonical parser for contest_auth_eval-style JSON artifacts."""
 
 from __future__ import annotations

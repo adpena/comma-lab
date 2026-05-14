@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DP-SIMS-inspired semantic image synthesis renderer.
 
 Adapted from DP-SIMS (CVPR 2024, arxiv 2312.13314) — current SOTA for

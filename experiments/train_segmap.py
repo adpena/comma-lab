@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Train SegMap renderer (Selfcomp 0.38 paradigm clone).
 
 Forks the structure of `experiments/train_distill.py` but uses the new

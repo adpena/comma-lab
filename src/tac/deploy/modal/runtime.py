@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared Modal runtime contracts for contest CUDA work.
 
 Lane-specific Modal actuators should own lane parameters, custody metadata,

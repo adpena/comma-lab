@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR98 decode-side nudge primitive.
 
 Covers:

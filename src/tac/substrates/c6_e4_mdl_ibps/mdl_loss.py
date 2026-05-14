@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """IBMDLLoss — Information Bottleneck variational upper bound (Tishby-Zaslavsky).
 
 Per the C6 across-class shift hypothesis: the substrate minimizes a joint

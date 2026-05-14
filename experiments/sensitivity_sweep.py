@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Per-layer quantization sensitivity sweep (Hotz approach).
 
 For each parameter group, quantize to {2, 3, 4, 6, 8} bits while keeping

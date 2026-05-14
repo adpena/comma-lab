@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Per-tensor saliency-vs-bytes heatmap.
 
 WHEN TO USE: when you have a saliency dict from

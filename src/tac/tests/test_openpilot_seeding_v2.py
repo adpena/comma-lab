@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.openpilot_seeding V2 fixes (Lane OS-V2).
 
 V2 fixes 8 issues identified in the V1 audit:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile PR81/QMA9 range-mask arithmetic coding at bitstream level.
 
 This tool is local forensics only. It reads charged archive bytes, runs a

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Install a hardened Lightning AI SSH alias.
 
 This intentionally replaces the ad hoc Lightning UI one-liner for contest

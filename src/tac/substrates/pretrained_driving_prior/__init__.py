@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pre-trained driving prior substrate (DP1).
 
 Distills a TINY (5-10 KB) frozen dashcam-statistical codebook from publicly

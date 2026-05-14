@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """
 Run all saliency-weighted post-filter training variants in a single process.
 Loads data and scorers ONCE, then trains all variants sequentially.

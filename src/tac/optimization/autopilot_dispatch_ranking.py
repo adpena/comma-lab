@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Cathedral autopilot dispatch ranking using substrate composition matrix.
 
 Per operator directive 2026-05-11 ("wiring and integration" + "autopilot")

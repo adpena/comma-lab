@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Local Q-FAITHFUL successor pose/geometry dispatch gate.
 
 This preflight is intentionally local-only. It inspects candidate provenance

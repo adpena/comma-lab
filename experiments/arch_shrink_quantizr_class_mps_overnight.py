@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Arch-shrink Quantizr-class MPS overnight training scaffold.
 
 Tranche-A3.1 from the cathedral_autopilot prescription. Trains a small

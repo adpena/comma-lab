@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane W-V2: structural tests for scripts/remote_lane_w_v2_learnable_hardness.sh.
 
 Locks in the bug-class compliance from CLAUDE.md non-negotiables:

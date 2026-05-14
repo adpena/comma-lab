@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan Yousfi-Fridrich atom-field allocations from planning ledgers.
 
 This tool has two linked outputs:

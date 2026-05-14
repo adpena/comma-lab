@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 ENCODE_INFLATE_ROUNDTRIP test for wavelet substrate.
 
 Mirrors src/tac/substrates/sane_hnerv/tests/test_sane_hnerv_roundtrip.py shape:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Auditable Lightning Batch Jobs helpers.
 
 This module is intentionally separate from ``lightning_dispatch.py``. The

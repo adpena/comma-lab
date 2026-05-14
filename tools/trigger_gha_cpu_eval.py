@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Trigger a [contest-CPU] GHA workflow_dispatch on the fork eval.yml workflow.
 
 This is the QUEUE-INFRASTRUCTURE TRIGGER PHASE. It builds on (does NOT

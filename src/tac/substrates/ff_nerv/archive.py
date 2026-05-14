@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ff_nerv archive grammar — monolithic single-file ``0.bin`` (FFV1).
 
 Catalog #124 STRICT archive-grammar 8 fields are declared in the package

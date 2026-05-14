@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan full-pipeline self-compression and packing next waves for C089.
 
 This tool is local planning only. It profiles archive bytes, normalizes nearby

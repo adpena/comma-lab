@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/profile_hessian_per_weight.py — Lane Ω Phase 1.
 
 These tests do NOT call the full profiler (which requires upstream scorers,

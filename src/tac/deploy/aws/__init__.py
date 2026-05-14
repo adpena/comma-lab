@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """AWS deployment module for tac experiments (stub).
 
 Not yet implemented. Structure mirrors the Vast.ai module so that future

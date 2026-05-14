@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_d_v2_halfframe_retrain_lr_fix.sh.
 
 Lane D-V2 = half-frame retrain retry with LR-floor fix. V1 plateaued at

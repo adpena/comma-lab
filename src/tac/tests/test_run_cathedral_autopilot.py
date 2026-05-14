@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``experiments/run_cathedral_autopilot``."""
 
 from __future__ import annotations

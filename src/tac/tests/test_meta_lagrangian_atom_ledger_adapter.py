@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools.meta_lagrangian_atom_ledger_adapter``."""
 
 from __future__ import annotations

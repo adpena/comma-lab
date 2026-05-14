@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic PR75/minp and C089 lossless micro-packer candidates.
 
 This is a local byte-screening tool.  It emits deterministic single-member

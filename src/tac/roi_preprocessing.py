@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """ROI-based video preprocessing for the comma video compression challenge.
 
 Degrades non-important regions of dashcam video BEFORE encoding so the encoder

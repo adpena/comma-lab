@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Technique 12: ACE Decorrelated Gradient Batching.
 
 Instead of processing frame pairs sequentially, batch random spatial crops

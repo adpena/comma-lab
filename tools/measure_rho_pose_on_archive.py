@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Measure ρ_pose on a contest archive (Phase 2 pre-condition).
 
 Phase 2 pre-condition surfaced by the 2026-05-11 grand council "Insight 2"

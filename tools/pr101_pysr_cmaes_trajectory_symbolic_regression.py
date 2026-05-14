@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PySR symbolic regression on CMA-ES / Optuna PR101 brotli-param trajectory.
 
 Implements the WIRE verdict from the cmaes-adjacent-libraries hypernerd

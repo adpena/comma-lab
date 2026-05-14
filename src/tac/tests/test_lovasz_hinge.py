@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for T11 — Lovász hinge mask geometry (Dykstra eureka).
 
 Per Fields-medal council 2026-05-09 (Dykstra CO-LEAD shower-thought):

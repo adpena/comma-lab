@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Streaming same-runtime PR106/R2 frame parity proof.
 
 This compares two PR106 sidecar archives through one selected submission

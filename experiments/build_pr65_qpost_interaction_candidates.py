@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build local PR65 qpost x PR75 action interaction candidates.
 
 This worker is local-only.  It combines reviewed PR65 qpost bias atoms with

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-free DPW1 inflate/apply helpers."""
 
 from __future__ import annotations

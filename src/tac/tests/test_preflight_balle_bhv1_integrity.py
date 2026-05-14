@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Check 91: Lane 20 (Ballé hyperprior) BHv1 wire-format integrity.
 
 Per CLAUDE.md non-negotiables applied to the Lane 20 production codec at

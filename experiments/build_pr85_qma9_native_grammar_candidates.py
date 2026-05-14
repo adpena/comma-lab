@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR85 QMA9-native grammar byte candidates or a fail-closed proof.
 
 This is a local-only builder for runtime-supported QMA9 reductions.  It does

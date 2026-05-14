@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build the private Kaggle bundle for PR106 latent score-table CUDA work."""
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Local forensic dry-run for apogee_intN.
 
 This lane is byte-only unless a separate scorer-basin distortion model or exact

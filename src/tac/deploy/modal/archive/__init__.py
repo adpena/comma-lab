@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Retired Modal deployment archive namespace.
 
 Do not add executable score-lowering dispatch scripts here. Provider launch

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.residual_basis.saliency_masked_residual`.
 
 Per W's DEFERRED reactivation criterion #2 + N D2 council verdict + Catalog

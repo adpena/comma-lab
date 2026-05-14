@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan exact-eval-ready pose-manifold water-fill candidates.
 
 This planner consumes exact eval JSONs, component traces, optional per-pair

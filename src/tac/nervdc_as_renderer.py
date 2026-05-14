@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """NeRVdc-as-renderer — NeRV with explicit decoder-conditioning substrate.
 
 Per operator directive 2026-05-11 ("all nerv-family"). NeRVdc adds

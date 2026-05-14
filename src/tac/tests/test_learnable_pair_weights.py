@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for src/tac/learnable_pair_weights.py — Lane W-V2.
 
 Round 10 (2026-04-27) replaced the softplus(raw)+rate-Lagrangian

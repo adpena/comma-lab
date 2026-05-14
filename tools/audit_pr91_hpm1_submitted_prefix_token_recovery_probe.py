@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Recover the deterministic local PR91/HPM1 submitted token prefix."""
 
 from __future__ import annotations

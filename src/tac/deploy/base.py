@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared deployment primitives for all cloud platforms.
 
 Defines ExperimentConfig and other dataclasses that are platform-agnostic.

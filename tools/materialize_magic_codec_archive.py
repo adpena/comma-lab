@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Materialize a magic-codec archive from a source archive.
 
 Per CLAUDE.md "Deterministic packet compiler" non-negotiable, this tool is

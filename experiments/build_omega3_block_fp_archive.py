@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a Wave-Omega Omega-3 block-FP JointFrameGenerator archive.
 
 Pipeline (per blueprint Phase 3):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """List static hidden-gem techniques without dispatching GPU work."""
 
 from __future__ import annotations

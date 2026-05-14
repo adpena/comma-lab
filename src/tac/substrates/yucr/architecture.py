@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """YUCR sidecar architecture — composes with a frozen base substrate.
 
 YUCR is a **SIDECAR**: it does not own a renderer. The cost-map computation

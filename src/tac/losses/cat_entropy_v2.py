@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Size-weighted soft-histogram categorical-entropy regularizer (PR95 cat_entropy_v2).
 
 Council deliberation 2 (OOO commit 328bf2f9, 8/10 FOR cat_entropy_v2 FIRST):

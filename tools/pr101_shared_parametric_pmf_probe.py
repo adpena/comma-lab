@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Shared-model PMF probe for PR101 quantized decoder weights.
 
 This is a CPU-only planning probe for the shared-model entropy path. It tests

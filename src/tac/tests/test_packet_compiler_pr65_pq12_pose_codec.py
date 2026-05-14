@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the PR65 ``henosis`` PQ12 pose codec.
 
 Covers the 12-bit / 3-byte / 2-value packing grammar from PR65.

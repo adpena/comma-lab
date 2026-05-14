@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/pr101_tiny_nn_lstm.py.
 
 Validates:

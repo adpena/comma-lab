@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SZv1 round-trip tests for ``tac.szabolcs_archive`` + ``tac.contrib.szabolcs_renderer``.
 
 Validates:

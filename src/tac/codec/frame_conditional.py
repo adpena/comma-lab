@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Frame-conditional codec — score-aware difficulty-driven bit allocation.
 
 Per HNeRV parity discipline lesson 1 (`feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md`)

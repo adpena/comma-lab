@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane Ω-W CLI driver — water-filling Lagrangian export.
 
 Loads a SegMap inference checkpoint (anchor-trained), builds a calibration

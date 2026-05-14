@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Static AST-based inflate.py op-cost xray.
 
 WHEN TO USE: when looking for cheap byte-level wins inside an inflate.py

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for F4: tac.xray.score_lipschitz."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Integration tests: xray primitives wire into existing solver-stack surfaces.
 
 These tests verify the wire-in CONTRACT, not the consumer's internal

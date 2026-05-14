@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Auto-create a draft fork PR with a submission_dir for GHA CPU eval.
 
 Background — the bug class this fixes

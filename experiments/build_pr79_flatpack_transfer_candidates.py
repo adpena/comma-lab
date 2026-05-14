@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Byte-screen PR73-style flatpack transfer on PR79/C102 fixed-slice archives.
 
 This is contest-faithful local screening only.  It does not dispatch GPU jobs

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic HDM3 HNeRV decoder-section archive candidates.
 
 HDM3 is a byte-level decoder-section fixture: fixed-schema q-stream Brotli plus

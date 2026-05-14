@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build CMG2 foveated/hard-pair AMR1 residual candidate archives.
 
 This is a deterministic byte-screen scaffold.  It starts from an existing CMG2

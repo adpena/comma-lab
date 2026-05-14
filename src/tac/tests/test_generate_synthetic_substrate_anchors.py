@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tools/generate_synthetic_substrate_anchors.py``.
 
 Per CLAUDE.md "Recursive adversarial review protocol" + "Forbidden score

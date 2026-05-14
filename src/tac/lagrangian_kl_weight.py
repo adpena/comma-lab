@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Proportional ratio controller for the KL-distillation auxiliary weight.
 
 Replaces the hand-derived ``--kl-distill-weight`` constant in

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR64 ``unified_brotli`` pose-velocity-only codec — reusable byte grammar.
 
 This module extracts the REUSABLE pose-axis byte-grammar primitive from the

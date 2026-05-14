@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane VQ-VAE — Discrete codebook mask codec (van den Oord lineage).
 
 Per Phase 2 paradigm shift α candidate α3 (Grand Council #294 battleplan):

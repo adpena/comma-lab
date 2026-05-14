@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for canonical comma10k / contest SegNet semantic labels."""
 
 from __future__ import annotations

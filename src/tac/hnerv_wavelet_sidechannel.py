@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Charged wavelet sidechannel candidate bytes for HNeRV payloads.
 
 This module is the bridge from planning-only wavelet atoms to auditable archive

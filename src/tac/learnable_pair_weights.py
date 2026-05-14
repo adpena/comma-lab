@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane W-V2 — continuous LEARNABLE per-pair loss weights.
 
 Lane W-V1 used a hard top-K + uniform weight (K=30, weight=5.0) heuristic

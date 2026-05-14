@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed environment checks for Lightning harvest companions."""
 
 from __future__ import annotations

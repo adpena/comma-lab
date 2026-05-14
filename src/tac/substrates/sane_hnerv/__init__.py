@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.sane_hnerv — Score-Aware NeRV Extended (substrate α).
 
 The Fields-medal grand council 2026-05-12 PRIMARY-shipped substrate per the

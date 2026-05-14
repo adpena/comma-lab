@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a local PR103 LC-AC candidate packet for compliance checks."""
 
 from __future__ import annotations

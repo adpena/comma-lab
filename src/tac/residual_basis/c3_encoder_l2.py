@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """L2 score-aware C3 (conditional residual) encoder over PR106 r2 decoded RGB.
 
 This is the **Level 2 score-aware encoder** for the ``c3`` non-HNeRV residual

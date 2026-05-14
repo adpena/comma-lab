@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #150 — Phase B `auth_memo_path` MUST be repo-relative.
 
 Bug class: codex round 8 HIGH 2 (2026-05-09). Per CLAUDE.md "Design decisions

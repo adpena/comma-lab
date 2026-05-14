@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Deterministically profile contest archive byte budgets.
 
 This is an empirical archive-inspection tool only. It does not inflate frames,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Harvest and validate a PR106 yshift score-table Lightning Batch run."""
 from __future__ import annotations
 

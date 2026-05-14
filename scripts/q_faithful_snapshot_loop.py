@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # pyc-recovery pass2: rehydrated from git blob e1977a5e01a22dc46f1ff4de485d4a3578010127 via `git fsck --lost-found`
 # original path: scripts/q_faithful_snapshot_loop.py
 # This is OUR source, dropped during commit 66c59aae filter-repo cleanup; the .pyc was the only

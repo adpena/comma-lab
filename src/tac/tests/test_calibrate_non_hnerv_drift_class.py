@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/calibrate_non_hnerv_drift_class.py — non-HNeRV drift calibration.
 
 Covers:

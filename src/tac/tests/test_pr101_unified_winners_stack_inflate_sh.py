@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression test for the generated unified-winners ``inflate.sh``.
 
 Codex HIGH finding #1 (2026-05-08): the previous wrapper used a 2-arg

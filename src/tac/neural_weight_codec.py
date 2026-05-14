@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane J-NWC: Neural Weight Compression for renderer.bin.
 
 Reference: arXiv 2510.11234 — "Neural Weight Compression for Language Models"

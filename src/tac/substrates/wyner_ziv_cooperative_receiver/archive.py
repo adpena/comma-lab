@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wyner-Ziv cooperative-receiver archive grammar — WZ1 monolithic 0.bin.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons:

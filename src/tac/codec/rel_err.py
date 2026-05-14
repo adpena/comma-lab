@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical relative-error helper for codec curve dataflow.
 
 Background

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane MAE-V integration tests for train_renderer wiring.
 
 Pins the contract that:

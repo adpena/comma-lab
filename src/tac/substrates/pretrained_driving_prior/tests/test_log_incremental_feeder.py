@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the log-incremental distillation schedule (DP1 auto-load).
 
 Per operator directive 2026-05-14 "log incremental generator": the canonical

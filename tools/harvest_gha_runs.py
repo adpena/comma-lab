@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Poll one or more GHA workflow runs to completion and harvest the result.
 
 Used to recover from a disowned-subprocess case where the dispatcher's poll

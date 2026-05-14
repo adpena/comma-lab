@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Test-Time Optimization (TTO) for task-aware codec post-filters.
 
 Adapts a pre-trained postfilter model to specific test video content at

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Adjudicate a contest_auth_eval.json result without regex-log scraping.
 
 Remote lane scripts should treat ``experiments/contest_auth_eval.py`` as the

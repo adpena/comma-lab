@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan one fail-closed PR103 arithmetic transform target."""
 
 from __future__ import annotations

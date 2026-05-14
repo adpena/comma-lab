@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Analysis-time scorer penultimate-feature saliency probes.
 
 This module is intentionally proxy-only. It may inspect scorer architectures

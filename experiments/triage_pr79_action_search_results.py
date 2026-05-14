@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Triage recovered PR79 action-search artifacts before exact-eval dispatch.
 
 This is a custody helper, not a scorer. It converts a recovered Modal result

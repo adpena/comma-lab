@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #164 — substrate score-aware loss must call
 ``<scorer>.preprocess_input(...)`` before ``<scorer>(...)`` forward.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lightning AI Studio dispatch - persistent SSH + tmux + SCP harvest.
 
 This is the legacy/manual Lightning path. Official Lightning Batch Jobs should

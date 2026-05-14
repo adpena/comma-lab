@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Inventory PR91/HPM1 semantic decode readiness without dispatching eval."""
 
 from __future__ import annotations

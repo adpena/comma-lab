@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """T9 — cross-archive substrate composition (Phase 2 building block).
 
 Source-of-finding

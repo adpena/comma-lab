@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """lossy_coarsening_analytical — FULL Lightning T4 [contest-CUDA] auth eval.
 
 Takes the PR101 frontier archive, applies the

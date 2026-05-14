@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Filler-STC pose codec — Decision 4 council-alternative to lane_pd_v2.
 
 Council reference (`.omx/research/grand_council_extreme_rigor_track_1_20260508.md`):

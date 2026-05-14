@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 ENCODE_INFLATE_ROUNDTRIP + Catalog #139 no_op_proof for ff_nerv.
 
 Proves the encode/decode contract of the FFV1 monolithic 0.bin grammar: a

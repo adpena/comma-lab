@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Generic serialization/deserialization for DP-SIMS renderers.
 
 Exports a trained DPSIMSRenderer (~500K params) to a compact binary format

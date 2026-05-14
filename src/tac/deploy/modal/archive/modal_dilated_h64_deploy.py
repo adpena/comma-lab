@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deploy the dilated h64 trainer to Modal A10G.
 
 Installs tac as a package, uses precomputed data volume, runs training

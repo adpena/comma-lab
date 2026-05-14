@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a fail-closed PR107 CPU-axis lossy-coarsening candidate matrix.
 
 This is a read-only planner/manifest tool. It consumes existing PR107 CPU

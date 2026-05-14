@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bilevel optimization driver : the magic-autopilot conductor.
 
 Per Grand Council 2026-05-07 verdict

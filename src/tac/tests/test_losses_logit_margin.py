@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 19 — SegNet logit-margin boundary loss tests.
 
 Per Phase 2 Lane 19 spec (memory project_phases_2_3_4_*):

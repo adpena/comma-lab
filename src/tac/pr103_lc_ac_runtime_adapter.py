@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Runtime-adapter builder for PR103 ``hnerv_lc_ac`` section-length changes."""
 
 from __future__ import annotations

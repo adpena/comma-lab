@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane → expected renderer/state-dict magic-byte registry.
 
 Bug class extincted (2026-05-01): Q-FAITHFUL v1/v2 dispatches CRASHED in

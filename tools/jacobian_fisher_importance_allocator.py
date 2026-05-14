@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Run the generic Jacobian/Fisher importance allocator on JSON inputs.
 
 The tool is intentionally thin: it reads byte/error candidate curves and an

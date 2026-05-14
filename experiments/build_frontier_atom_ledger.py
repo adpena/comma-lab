@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a deterministic atom ledger for current frontier packer work.
 
 The ledger converts exact CUDA candidates, byte-only packer provenance, and

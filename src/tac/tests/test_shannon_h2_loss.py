@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.shannon_h2_loss`.
 
 Coverage:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Prove the PR103-on-PR106 final runtime packet without running the scorer."""
 
 from __future__ import annotations

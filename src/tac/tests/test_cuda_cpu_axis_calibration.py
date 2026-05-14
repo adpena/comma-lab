@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the CUDA→CPU axis calibration helper."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Prototype QBF1 block-FP container for JointFrameGenerator state dicts.
 
 QBF1 is a readiness artifact for an archive-local renderer payload, not a

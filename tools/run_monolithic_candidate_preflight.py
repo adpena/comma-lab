@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Read-only preflight for an existing monolithic packet candidate manifest.
 
 This wrapper intentionally consumes only JSON artifacts that already exist. It

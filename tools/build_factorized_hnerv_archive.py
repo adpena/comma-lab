@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Build a factorized_hnerv_v1 candidate archive from a PR101/PR106/PR107 substrate.
 
 Inputs:

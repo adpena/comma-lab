@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Joint Pair Generator — Y-shaped U-Net for mask-conditioned frame pair generation.
 
 Architecture:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # EMA_WAIVED: codec calibrator (qint→σ predictor), not a renderer training path; output is a side-info table not a checkpoint shipped in archive
 # PROFILE_KEY_RESOLVED: balle_block_size, balle_z_dim, balle_hidden_dim, balle_ema_decay, balle_num_chunks_lite, balle_max_total_freq
 # (Lane 20 profile keys consumed via CLI flag overrides — defaults match profile values;

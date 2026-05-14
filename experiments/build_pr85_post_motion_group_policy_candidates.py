@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build PR85 post/motion group-policy archive candidates.
 
 This is a deterministic byte-closed builder for PR85 partial side-channel

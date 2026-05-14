@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Deterministic scorer-free renderer for the DPW1 placeholder archive."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/profile_fp4_layer_sensitivity.py — Lane F-V4 Phase 1.
 
 Pin the structural properties of the per-layer FP4 sensitivity profiler

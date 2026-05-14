@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for qat_finetune.py loader fixes.
 
 Mirrors pipeline.step_export's parametrize-strip + build_renderer dispatch

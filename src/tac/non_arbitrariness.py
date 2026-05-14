@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Non-arbitrariness probe primitive — generalized from probe_seg_loss_surrogate_disambiguator.
 
 Per ``feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509``

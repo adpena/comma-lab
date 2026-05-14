@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Byte-level qpose/QZS3 archive-family forensics.
 
 This is a local reverse-engineering tool only. It does not run the scorer,

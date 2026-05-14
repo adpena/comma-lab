@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Op_KLPoseStream — Karhunen-Loève basis pose-stream codec.
 
 First tractable Hilbert-manifold subitem from the

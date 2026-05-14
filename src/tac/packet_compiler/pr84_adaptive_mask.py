@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR84 ``adaptive_range_mask`` adaptive-context primitive.
 
 PR84's ``adaptive_range_mask/inflate.py`` upgrades PR81's fixed-context

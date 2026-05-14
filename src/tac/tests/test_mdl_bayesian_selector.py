@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the per-tensor MDL/Bayesian codec selector (Task #308 sub-component)."""
 from __future__ import annotations
 

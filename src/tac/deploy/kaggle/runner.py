@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Kaggle environment setup and training launch for the asymmetric warp renderer.
 
 All Kaggle-specific logic lives here so it can be tested and reviewed independently

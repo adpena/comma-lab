@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C6 MDL-IBPS substrate composition — encoder + decoder + per-pair latent.
 
 Per the C6 across-class shift hypothesis, the substrate composes:

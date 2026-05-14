@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 import torch
 
 from tac.contrib.multi_control_hint_encoder import MultiControlHintEncoder

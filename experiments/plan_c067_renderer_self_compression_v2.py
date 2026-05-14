@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan C067 renderer self-compression v2 byte probes.
 
 This tool is planning/profiling only. It reads an existing C067-compatible

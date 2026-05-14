@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Local QRG1 row-run grammar for PR85 QMA9 mask-token byte screens.
 
 QRG1 is a planning-only format. It encodes the decoded PR85/QMA9 uint8 token

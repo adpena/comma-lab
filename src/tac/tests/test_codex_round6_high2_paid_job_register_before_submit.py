@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for codex round 6 HIGH 2 fix: create-pending-row-before-submit.
 
 Catalog #143 — refuses ``Job.run(...)`` Lightning paid-submit callers

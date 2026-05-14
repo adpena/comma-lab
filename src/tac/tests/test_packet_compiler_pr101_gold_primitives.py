@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the 3 PR101 GOLD primitives ported to ``tac.packet_compiler``.
 
 Covers:

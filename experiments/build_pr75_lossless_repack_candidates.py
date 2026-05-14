@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build lossless C082/PR75 fixed-slice repack candidates.
 
 This is a local byte-screening tool.  It preserves decoded masks, renderer,

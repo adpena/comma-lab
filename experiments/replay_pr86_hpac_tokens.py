@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Replay public PR86 HPAC tokens locally and fail closed on byte-parity gaps."""
 
 from __future__ import annotations

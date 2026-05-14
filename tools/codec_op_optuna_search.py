@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Optuna TPE wrapper as alternative to CMA-ES on integer-only param spaces.
 
 Per the cmaes-adjacent-libraries hypernerd verdict (memo

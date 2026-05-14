@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """``tac.phase5_plus`` — Phase 5+ theoretical floor saturation (CONJECTURE-ONLY).
 
 This package is the **publication moonshot** scaffold per the EXTREME-OBSESSION

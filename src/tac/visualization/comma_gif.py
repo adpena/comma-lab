@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generate a 512x384 animated GIF replicating the comma.ai challenge README format.
 
 Produces a pixel-perfect 2x2 grid matching the original comma challenge

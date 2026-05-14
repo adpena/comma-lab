@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Information-Geometric Langevin Training (IGLT) optimizer.
 
 Mathematical formulation (per the source memo Domain 2 derivation):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SE4R scorer-conditional range-coder archive-section format.
 
 The SE4R archive section is a self-describing binary blob with the layout:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build deterministic PR77-action / C089-pose mixed container candidates.
 
 This is a local byte-screening builder only. It targets the gap that the

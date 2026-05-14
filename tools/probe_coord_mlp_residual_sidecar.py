@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Emit a proxy-safe H15 Coord-MLP residual sidecar smoke manifest."""
 
 from __future__ import annotations

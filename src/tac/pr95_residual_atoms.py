@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Planning-only residual atom tools for PR95-family HNeRV latent streams."""
 
 from __future__ import annotations

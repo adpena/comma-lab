@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for catalog #127 + #128 (codex round-2 HIGH 2 + MEDIUM fix gates).
 
 Catalog #127 — `check_authoritative_tag_requires_custody_metadata`

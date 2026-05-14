@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Lane C: optimize a sparse, UNIWARD-weighted, L∞-bounded δ to add to
 renderer output at inflate-time. Detector-informed embedding (Yousfi 2022)
 on a contest where the detector IS the scorer.

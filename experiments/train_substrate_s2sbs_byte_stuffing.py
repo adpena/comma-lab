@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the S2SBS (Stride-2-Stem Byte-Stuffing) substrate.
 
 Council F O3 directive 2026-05-13 — PAIR T+OPT3. φ3 audit:

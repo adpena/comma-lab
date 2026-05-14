@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 post-hoc arch_shrink byte sweep — anchors the
 ``arch_shrink_x0.4_quantizr_class`` row in cathedral_autopilot's catalog.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """hybrid_renderer_residual inflate runtime — <= 200 LOC waiver per HNeRV L4 NEEDS-WORK (γ).
 
 This file is the contest-runtime image of the γ substrate. It is imported by

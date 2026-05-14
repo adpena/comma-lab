@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Constrained generation from noise using mini-scorers.
 
 Fourth lane: no renderer needed. Directly optimize pixel values from a noise

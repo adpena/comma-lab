@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #220 — substrate scaffold byte addition without
 operational score-improvement mechanism.
 

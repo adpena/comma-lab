@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR101 Neural Weight Codec (NWC) — 1D-specific learned hyperprior with
 shared encoder/decoder + per-tensor conditioning.
 

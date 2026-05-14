@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Block-floating-point ternary codec for Lane SZ (szabolcs paradigm).
 
 This module replicates the on-disk block-FP weight format that

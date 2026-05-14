@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for the corrected ChARM 50K toy rate math.
 
 Codex review (2026-05-08), summarized in

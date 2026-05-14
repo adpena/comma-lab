@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """CLI wrapper for 6-panel analysis visualization.
 
 Loads TTO frames from a ``.pt`` file and generates analysis panels

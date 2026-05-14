@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile PR103 hnerv_lc_ac arithmetic schema and fail-closed readiness."""
 
 from __future__ import annotations

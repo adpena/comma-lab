@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-conditional JSCC codec primitives.
 
 This package exposes two complementary scorer-conditional codecs:

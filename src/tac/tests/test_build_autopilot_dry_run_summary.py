@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tools/build_autopilot_dry_run_summary.py."""
 from __future__ import annotations
 

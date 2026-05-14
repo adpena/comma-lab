@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """PR106 archive-substitution surgery: replace decoder_packed_brotli or
 latents_and_sidecar_brotli sections in a PR106-shaped archive.
 

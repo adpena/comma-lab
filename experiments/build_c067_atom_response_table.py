@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build C067 atom-response taxonomy tables from existing artifacts.
 
 This is a deterministic, non-GPU synthesis tool. It reads already-produced

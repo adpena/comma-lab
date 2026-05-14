@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Select safe renderer payload bytes for official component-response plans.
 
 The companion perturbation-plan builder can mutate any archive byte. This

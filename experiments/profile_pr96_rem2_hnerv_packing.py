@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile and safely repack the public PR96 rem2_HNeRV archive.
 
 The emitted archives are byte-only candidates: member payload bytes are

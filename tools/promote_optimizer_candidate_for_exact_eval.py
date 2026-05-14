@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Promote one optimizer queue row after byte-closed exact-eval readiness checks.
 
 This is a local custody gate, not a dispatcher and not a score promoter. It

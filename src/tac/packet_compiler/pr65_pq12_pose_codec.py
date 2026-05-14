@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR65 ``henosis`` PQ12 pose codec — 12-bit / 3-byte / 2-value packed grammar.
 
 This module extracts the REUSABLE 12-bit-per-value packed pose codec from the

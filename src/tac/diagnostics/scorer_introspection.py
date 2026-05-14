@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Per-layer observational introspection for SegNet and PoseNet ("neon dye").
 
 This module attaches `register_forward_hook`s to every descendant `nn.Module`

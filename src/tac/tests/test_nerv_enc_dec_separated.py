@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for NeRV-Enc/Dec separated bolt-on."""
 from __future__ import annotations
 

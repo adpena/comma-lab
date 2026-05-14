@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Readiness checks for byte-closed categorical compression candidates."""
 
 from __future__ import annotations

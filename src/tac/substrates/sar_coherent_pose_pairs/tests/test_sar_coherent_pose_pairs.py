@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the L2 SAR coherent pose-pair substrate (SARC).
 
 Covers (a) architecture instantiation + parameter-count predictions, (b) SAR

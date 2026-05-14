@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for ``tac.shared_vq_codebook`` (T17 scaffold)."""
 from __future__ import annotations
 

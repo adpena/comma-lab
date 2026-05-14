@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CLI driver for `tac.archive_diet_pack.diet_pack`.
 
 Usage:

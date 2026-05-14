@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Contest packet compiler/checker CLI.
 
 This is a stable operator-facing alias for the deterministic packet compiler

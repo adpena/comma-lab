@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for experiments/build_sjkl_c067_archive.py — recovery + roundtrip verification."""
 
 from __future__ import annotations

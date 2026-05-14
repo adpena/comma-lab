@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for tac.preflight_runtime_refs.check_shell_script_runtime_refs_resolve."""
 
 from __future__ import annotations

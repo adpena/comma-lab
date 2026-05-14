@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Inspect a Modal FunctionCall without blocking on terminal recovery."""
 
 from __future__ import annotations

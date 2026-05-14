@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane LR — Low-Rank pose adaptation for compress-time pose-space TTO.
 
 Per memory `project_posenet_rank1_discovery`, the PoseNet Jacobian is rank ≈

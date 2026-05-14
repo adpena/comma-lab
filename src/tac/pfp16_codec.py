@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PFP16 — Pose Float-16 cast codec (Lane GP v4 Hotz-option successor).
 
 Lane GP v4 scoped smooth-basis retirement review (2026-04-30,

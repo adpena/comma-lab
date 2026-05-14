@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Azure GPU dispatch — VM-spot pattern (mirrors Vast.ai).
 
 This package wires Azure as a 4th dispatch platform alongside Vast.ai +

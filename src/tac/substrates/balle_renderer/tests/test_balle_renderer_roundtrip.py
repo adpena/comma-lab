@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #91 + #139 ENCODE_INFLATE_ROUNDTRIP test for balle_renderer (β).
 
 The β substrate roundtrip proves:

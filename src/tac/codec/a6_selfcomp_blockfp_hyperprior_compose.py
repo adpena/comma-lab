@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """A6 Council ablation — Selfcomp block-FP × Ballé-style hyperprior compose.
 
 Composition contract

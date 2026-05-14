@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build a byte-different HNeRV archive carrying charged wavelet atoms."""
 
 from __future__ import annotations

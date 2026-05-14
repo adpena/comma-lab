@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unit tests for tac.pose_from_embedding (Lane M-V3 Path A).
 
 The module ships a 2-layer MLP that distills `(PoseNet 12-dim embedding,

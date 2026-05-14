@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Build the PR106 UNIWARD-Lagrangian byte-closed runtime packet.
 
 CUDA-PRESTAGE flagged Candidate 2 (PR106 UNIWARD-Lagrangian @ rms=0.05 → 150,460 B

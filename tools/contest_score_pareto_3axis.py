@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """3-axis contest-score Pareto frontier.
 
 Extends the 1-axis ``apogee_intN_pareto.py`` (rate-only with a categorical

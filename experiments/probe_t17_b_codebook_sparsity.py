@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """T17-B probe scaffold — VQ codebook sparsity gate (Phase 2 pre-design).
 
 This is a SCAFFOLD ONLY. It does not dispatch any GPU job, does not load

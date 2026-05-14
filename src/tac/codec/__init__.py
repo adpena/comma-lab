@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """``tac.codec`` — codec primitives.
 
 Subpackage home for entropy / channel / source codec building blocks that are

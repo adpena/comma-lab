@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Kaggle Auth Eval: Asymmetric Warp Renderer
 
 Self-contained Kaggle notebook for authoritative evaluation of the

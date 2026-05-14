@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Run canonical CUDA contest auth eval on Modal T4.
 
 This wrapper is intentionally thin: Modal only supplies the CUDA host. The

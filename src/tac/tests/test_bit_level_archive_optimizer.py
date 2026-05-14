@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Synthetic tests for Lane Bit-level archive optimizer.
 
 All tests on synthetic / hand-crafted archives; no GPU, no real Lane G v3 archive.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a reversed-base CDO1 economics row as a byte-closed archive.
 
 The economics planner is intentionally local-only: it prices candidate base

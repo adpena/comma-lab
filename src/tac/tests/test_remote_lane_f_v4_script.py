@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for scripts/remote_lane_f_v4_mixed_precision_fp4.sh.
 
 Lane F-V4 = mixed-precision FP4 QAT + per-layer sensitivity profiling.

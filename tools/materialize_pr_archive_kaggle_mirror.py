@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Materialize a Kaggle mirror view for the public PR archive corpus.
 
 Hugging Face remains the canonical host for the file-heavy corpus. Kaggle is a

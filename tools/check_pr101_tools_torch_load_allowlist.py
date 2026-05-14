@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """B8 — torch.load(weights_only=False) allowlist for cross-paradigm tools.
 
 Bug class: ``torch.load(<path>, weights_only=False)`` without an explicit

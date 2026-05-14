@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed readiness contracts for alpha mask codec training harnesses.
 
 This module does not train NeRV, wavelet, VQ-VAE, or grayscale-LUT mask

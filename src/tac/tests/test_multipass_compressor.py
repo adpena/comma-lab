@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 8 — multi-pass compressor regression tests.
 
 Covers (per the task spec from `.omx/research/council_lane_8_multipass_design_20260430.md`):

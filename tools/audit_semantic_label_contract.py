@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit the active semantic-label contract and selected live callsites."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Lane 12 decoded-baseline build preflight."""
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit untracked source/research artifacts that may represent signal loss.
 
 The repository intentionally has large rebuildable artifacts, provider state,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """MPS research-signal manifests for cheap curve discovery.
 
 Local Apple MPS is useful for discovering proxy curve shapes, smoke failures,

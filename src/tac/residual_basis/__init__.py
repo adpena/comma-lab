@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Residual basis primitives for non-HNeRV score-table generation.
 
 This package hosts SCAFFOLD-level (Level 0 SKETCH) residual-basis lanes that

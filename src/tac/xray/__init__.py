@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical xray (archive/substrate/scorer analysis) primitive package.
 
 Per operator directive 2026-05-14 ("keep enhancing xray capabilities and add

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ChARM 2020 range coder — bit-exact byte stream from per-symbol conditional PMFs.
 
 This module turns the differentiable rate predictions emitted by the ChARM 2020

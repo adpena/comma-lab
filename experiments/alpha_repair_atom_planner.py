@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Rank Alpha AMR1 sparse-repair atoms by byte cost and hard-pair priors.
 
 This planner is intentionally non-promotable. It decodes an Alpha candidate

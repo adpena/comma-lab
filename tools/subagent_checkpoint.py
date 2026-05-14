@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Subagent crash-resume checkpoint tool.
 
 Background — the bug class this prevents

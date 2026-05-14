@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Modal training dispatch-claim recovery helpers.
 
 Training jobs are not score-claim surfaces, but their provider lifecycle still

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane 17 IMP β-variant — sensitivity-weighted iterative magnitude pruning.
 
 Paradigm β extension of :mod:`tac.iterative_magnitude_pruning`. Standard IMP

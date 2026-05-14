@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Plan low-dimensional ego-motion field atoms from optimized poses.
 
 This is a deterministic planning artifact. It does not build an archive,

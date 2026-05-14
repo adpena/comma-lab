@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """FP4 Archive Rate Optimization: quantize distilled renderer to 4-bit.
 
 Quantizes the distilled renderer to FP4 (4-bit floating point) with custom

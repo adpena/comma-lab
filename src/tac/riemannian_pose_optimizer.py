@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Riemannian SGD on SE(3) for Lane RM pose TTO.
 
 This optimiser implements the Riemannian gradient descent recipe of

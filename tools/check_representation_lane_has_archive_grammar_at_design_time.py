@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Standalone wrapper for preflight catalog #124.
 
 The canonical implementation lives in ``tac.preflight`` so the normal

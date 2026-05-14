@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical compression pipeline: video -> trained renderer -> optimized archive.
 
 Production-grade pipeline for the comma.ai video compression challenge.

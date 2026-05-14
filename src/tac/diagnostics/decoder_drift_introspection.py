@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """DALI vs PyAV decoder-drift introspection.
 
 Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" and "MPS auth eval is

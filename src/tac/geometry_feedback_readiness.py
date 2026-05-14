@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed readiness contract for geometry-feedback lanes.
 
 Geometry signals such as LA-POSE-style atoms, telescopic foveation fields,

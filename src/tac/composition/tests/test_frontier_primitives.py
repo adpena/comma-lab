@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Focused tests for canonical frontier composition primitives."""
 
 from __future__ import annotations

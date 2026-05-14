@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #205 - check_inflate_py_uses_canonical_select_inflate_device tests.
 
 A1 council Round 1 finding F1/F11 (CRITICAL, 2026-05-13). Inline

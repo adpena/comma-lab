@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Generic contest-compliant auth evaluation for ANY submission archive.
 
 This is the CANONICAL tool for verifying any submission against the contest

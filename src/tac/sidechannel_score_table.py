@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Shared helpers for PR106 sidechannel score-table producers.
 
 These utilities keep compress-time scorer-table scripts aligned on custody,

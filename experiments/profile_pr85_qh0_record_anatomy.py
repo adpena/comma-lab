@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Profile PR85 QH0 renderer records without making score claims.
 
 The PR85 model segment is already tight under outer Brotli.  This profiler

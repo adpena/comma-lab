@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the Rao-Ballard predictive-coding-hierarchy primitive."""
 
 from __future__ import annotations

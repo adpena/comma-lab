@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane J-NWCS regression tests.
 
 Each test asserts a SIGN/VALUE behavior, not just presence/finiteness

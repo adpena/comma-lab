@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Allow ``python -m tac`` to invoke the CLI."""
 import os
 import sys

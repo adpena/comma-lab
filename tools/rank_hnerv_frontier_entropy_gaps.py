@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Rank HNeRV frontier byte mass against entropy-gap targets."""
 
 from __future__ import annotations

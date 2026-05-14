@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """pr101_lc_v2_clone archive grammar — byte-faithful PR101 0.bin layout.
 
 Catalog #124 STRICT archive-grammar 8 fields are declared in the package

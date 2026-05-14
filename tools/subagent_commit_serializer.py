@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: thin CLI wrapper that forwards positional args to git
 """Serialize concurrent subagent commits via a file lock.
 

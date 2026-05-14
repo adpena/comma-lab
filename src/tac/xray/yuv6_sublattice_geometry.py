@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """F10: YUV6 sublattice geometry primitive.
 
 The contest scorer's PoseNet preprocessing applies ``rgb_to_yuv6`` (per

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane V (Quantizr-replica 88K half-frame) — profile pinning tests.
 
 Council 2026-04-27. Lane V is the BIGGEST single swing in the council's

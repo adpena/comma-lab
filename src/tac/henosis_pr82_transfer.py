@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR82/Henosis atom-transfer helpers.
 
 The helpers in this module are intentionally scorer-free. They parse the

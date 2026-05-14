@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """apogee_intN Pareto frontier analysis: which bit-width to dispatch?
 
 Reads every `experiments/results/apogee_int*_repack_*/repack_metadata.json`,

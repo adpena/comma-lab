@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane W: structural tests for scripts/remote_lane_w_hard_pair_self_compress.sh.
 
 Locks in the bug-class compliance from CLAUDE.md non-negotiables:

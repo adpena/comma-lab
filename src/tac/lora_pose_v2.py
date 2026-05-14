@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane LR-V2 — LEARNABLE-rank pose adaptation.
 
 V1 oversight (memory ``project_posenet_rank1_discovery``): rank=1 was

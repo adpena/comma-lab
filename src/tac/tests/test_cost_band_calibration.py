@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for `tac.cost_band_calibration` (the calibration-of-calibration posterior).
 
 Covers:

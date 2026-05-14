@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane PS-V2 — LEARNABLE per-class SegNet weights via Lagrangian on
 per-class distortion equalisation.
 

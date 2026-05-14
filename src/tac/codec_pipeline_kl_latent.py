@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Op_KLLatent — Karhunen-Loève basis codec for arbitrary 2D latent matrices.
 
 Generalization of :class:`tac.codec_pipeline_kl_pose.Op_KLPoseStream` from

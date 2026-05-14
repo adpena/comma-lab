@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Enumerate (substrate x primitive x order) composition cells.
 
 Per operator directive 2026-05-12 ("stacking and composition on everything"),

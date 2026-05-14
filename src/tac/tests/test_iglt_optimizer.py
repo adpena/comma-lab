@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.optimization.iglt`` (IGLT canonical landing).
 
 Coverage:

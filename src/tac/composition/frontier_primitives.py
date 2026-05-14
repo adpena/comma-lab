@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical composition primitives for checkpoint and vector mixtures.
 
 This module is intentionally small and substrate-agnostic.  It provides the

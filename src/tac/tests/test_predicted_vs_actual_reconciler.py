@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Smoke + schema test for tools/predicted_vs_actual_reconciler.py.
 
 The reconciler joins repack_metadata.json (predicted_band) with

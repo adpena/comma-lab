@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for :mod:`tac.codec_op_admm_adapter`.
 
 The bridge is planning-only: it may feed CodecOp byte/RMS evidence into

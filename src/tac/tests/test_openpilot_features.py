@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Lane DI tests: openpilot supercombo feature extraction and distillation."""
 from __future__ import annotations
 

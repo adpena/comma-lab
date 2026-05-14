@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Charged runtime consumer for categorical payload candidates.
 
 This module is packaged inside local candidate archives. It is still not a

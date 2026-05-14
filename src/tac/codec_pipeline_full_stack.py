@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Op 4: full-stack composition orchestrator.
 
 Per the canonical four-way-stack composition contract

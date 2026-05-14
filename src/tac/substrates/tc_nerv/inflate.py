@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tc_nerv inflate runtime — <= 100 LOC; sane_hnerv-mirror style.
 
 L0 SKETCH inflate runtime. The tc_table section is NOT consumed by inflate

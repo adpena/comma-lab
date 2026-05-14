@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for Check 39: undeployed archive-artifact producers.
 
 Catches the recurring "code-shipped-never-deployed" failure mode (Lane EC sat

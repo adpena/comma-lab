@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Promote a verified dual-axis frontier archive into tracked custody.
 
 Closes A1 PR Council Round 1 finding F2 (CRITICAL — frontier archive lives

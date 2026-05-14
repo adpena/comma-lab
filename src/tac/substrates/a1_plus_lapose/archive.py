@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Wire format for the A1 + LAPose composition substrate.
 
 The composition substrate appends a sidecar blob to A1's existing wire

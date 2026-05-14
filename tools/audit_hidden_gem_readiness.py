@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Audit hidden-gem registry rows against live repo files."""
 
 from __future__ import annotations

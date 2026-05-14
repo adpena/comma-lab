@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for ``tac.score_gradient_param_saliency``.
 
 The full pipeline test (decoder + scorers + GT video) is GPU-bound and runs

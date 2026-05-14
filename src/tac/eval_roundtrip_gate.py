@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Centralised eval_roundtrip enforcement gate.
 
 CLAUDE.md non-negotiable: `eval_roundtrip` MUST default True everywhere.

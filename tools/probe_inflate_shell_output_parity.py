@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Probe exact inflate.sh output parity between two contest packets."""
 
 from __future__ import annotations

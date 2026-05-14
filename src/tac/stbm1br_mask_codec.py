@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Standalone decoder for PR90 ``STBM1BR`` semantic topband mask segments.
 
 The public PR90 qrepro archive stores its semantic masks as::

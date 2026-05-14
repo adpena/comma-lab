@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for pr106_lrl1_sidechannel — wire format + roundtrip + builder + apply.
 
 Covers:

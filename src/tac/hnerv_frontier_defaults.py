@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Current HNeRV frontier-routing constants.
 
 These constants are routing defaults only. Promotion still requires the
