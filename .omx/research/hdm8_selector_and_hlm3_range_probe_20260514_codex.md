@@ -129,14 +129,90 @@ Result: `28 passed`.
 
 ## Next Actions
 
-1. Rebuild the selector packet after committing current HLM3 source changes so
-   transparency records a clean source tree.
-2. If Modal CUDA infrastructure is healthy, claim lane
-   `hnerv_hdm8_film_grain_sidecar_exact_eval` and run the exact-CUDA command
-   from the packet manifest.
-3. If CUDA selector regresses, classify it as a transfer failure from MPS proxy
-   to contest CUDA, not as evidence against postfilter selectors generally.
-4. Do not spend more wall-clock on HLM2 fixed-latent transforms for this exact
+1. Treat the charged selector exact-CUDA result below as a negative transfer
+   result from MPS proxy to contest CUDA.
+2. Do not promote MPS-derived HDM8 selectors without a CUDA-gated PoseNet
+   constraint or a cheap component predictor calibrated on exact CUDA anchors.
+3. Do not spend more wall-clock on HLM2 fixed-latent transforms for this exact
    archive unless a new coder charges model cost below the current sparse
    delta-position stream.
 
+## Exact CUDA Selector Result Review
+
+Clean-source v2 packet:
+
+- source head: `a2112a81736a48d02949b515d48a1d72b5423faa`
+- source dirty: `false`
+- packet artifact: `experiments/results/hdm8_selector_charged_mps_aggressive_v2_20260514_codex/archive.zip`
+- packet bytes: `187366`
+- packet sha256: `793747837bb1d71987e4a7055f35e25620f8eb530e6f297cc2020e5e00f1d798`
+- runtime: `experiments/results/hdm8_selector_charged_mps_aggressive_v2_20260514_codex/submission_dir`
+- modal-uploaded runtime tree sha256: `3753e2d66b880cbda3742b924a3f268f351e03a06a8b4cd33d083fce57619b9f`
+
+Exact CUDA command:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py \
+  --archive experiments/results/hdm8_selector_charged_mps_aggressive_v2_20260514_codex/archive.zip \
+  --submission-dir experiments/results/hdm8_selector_charged_mps_aggressive_v2_20260514_codex/submission_dir \
+  --inflate-sh inflate.sh \
+  --gpu T4 \
+  --output-dir experiments/results/modal_auth_eval/exact_eval_hdm8_selector_charged_mps_aggressive_v2_20260514T211907Z \
+  --expected-runtime-tree-sha256 3753e2d66b880cbda3742b924a3f268f351e03a06a8b4cd33d083fce57619b9f \
+  --detach \
+  --provider-detach-ack \
+  --lane-id hnerv_hdm8_film_grain_sidecar_exact_eval \
+  --instance-job-id exact_eval_hdm8_selector_charged_mps_aggressive_v2_20260514T211907Z \
+  --claim-agent codex:gpt-5.5 \
+  --claim-notes "HDM8 charged selector exact CUDA eval; archive_sha256=793747837bb1d71987e4a7055f35e25620f8eb530e6f297cc2020e5e00f1d798; source_head=a2112a81736a48d02949b515d48a1d72b5423faa; proxy_axis=local-mps; charged_proxy_delta=-0.011065803013818848"
+```
+
+Recovered artifact:
+
+- output dir: `experiments/results/modal_auth_eval/exact_eval_hdm8_selector_charged_mps_aggressive_v2_20260514T211907Z`
+- call id: `fc-01KRM5QFCKKF543ETAQANF9TZN`
+- result: `modal_cuda_auth_eval_result.json`
+- contest artifact: `contest_auth_eval.json`
+- inflated output aggregate sha256: `0968f37ba36498e8c5efcfbe5dc6702910cfd400fdf5c3b13bcb1d7808cc98bb`
+- GPU: `Tesla T4`
+- sample count: `600`
+- evidence grade: `[contest-CUDA]`
+
+Exact result:
+
+- score: `0.2161099173824375`
+- rounded score: `0.22`
+- avg SegNet distance: `0.0006426`
+- avg PoseNet distance: `0.00007339`
+- archive bytes: `187366`
+- promotion eligible: `false`
+
+Compared to the current HDM8/HLM2 CUDA floor:
+
+- reference score: `0.20636166502462222`
+- reference avg SegNet distance: `0.0006426`
+- reference avg PoseNet distance: `0.00003236`
+- reference bytes: `186395`
+- score delta: `+0.00974825235781529`
+- byte delta: `+971`
+- byte-term delta: `+0.0006465490434816284`
+- SegNet-term delta: `0`
+- PoseNet-term delta: `+0.009101703314333673`
+
+Classification:
+
+- `legitimate_exact_cuda_negative_for_this_selector_packet`
+- `mps_proxy_to_cuda_transfer_failure`
+- `posenet_regression_dominates`
+- `segnet_not_improved_on_exact_cuda`
+- `not_a_global_postfilter_lane_retirement`
+
+Reactivation criteria:
+
+1. Selector search must optimize a CUDA-calibrated objective or include a
+   PoseNet-preservation constraint before exact-CUDA dispatch.
+2. Any future MPS-only candidate must pass a cheap CUDA component predictor, a
+   small exact-CUDA prefix probe, or a same-runtime component sensitivity check.
+3. Postfilter packets remain worth exploring only if charged selector bytes are
+   amortized by a component improvement larger than the `+0.00065` byte-term
+   cost observed here.
