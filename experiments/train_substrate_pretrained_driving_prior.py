@@ -922,6 +922,9 @@ def _full_main(args: argparse.Namespace) -> int:
     from tac.substrates._shared.trainer_skeleton import (
         require_contest_cuda_auth_eval_claim,
     )
+    from tac.substrates._shared.smoke_auth_eval_gate import (
+        gate_auth_eval_call as _canon_gate_auth_eval_call,
+    )
     from tac.substrates.pretrained_driving_prior import (
         DashcamPriorLoss,
         DistillationConfig,
@@ -1344,6 +1347,7 @@ def _full_main(args: argparse.Namespace) -> int:
             _stage(f"archive_built_bytes_{archive_bytes}")
 
         # 12. CUDA auth eval (when not opted out)
+        # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
         contest_cuda_score: float | None = None
         auth_eval_path: Path | None = None
         if (
@@ -1353,51 +1357,24 @@ def _full_main(args: argparse.Namespace) -> int:
         ):
             print("[full] launching CUDA auth eval")
             auth_eval_path = output_dir / "contest_auth_eval_cuda.json"
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--archive",
-                str(archive_zip_path),
-                "--inflate-sh",
-                str(output_dir / "submission" / "inflate.sh"),
-                "--upstream-dir",
-                str(upstream_dir),
-                "--device",
-                "cuda",
-                "--json-out",
-                str(auth_eval_path),
-            ]
-            try:
-                proc = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=3600, check=False
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=output_dir / "submission" / "inflate.sh",
+                upstream_dir=upstream_dir,
+                output_json=auth_eval_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="pretrained_driving_prior",
+                device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
+                print(
+                    f"[full] [contest-CUDA] = {contest_cuda_score} "
+                    f"(axis={auth_result['auth_eval_score_axis']}, "
+                    f"lane_tag={auth_result['auth_eval_lane_tag']}, "
+                    f"archive_sha={archive_sha[:12]})"
                 )
-                if proc.returncode == 0:
-                    try:
-                        claim, _ae = require_contest_cuda_auth_eval_claim(
-                            auth_eval_path,
-                            archive_sha256=archive_sha,
-                            substrate_tag="pretrained_driving_prior",
-                        )
-                        contest_cuda_score = claim.score
-                        print(
-                            f"[full] [contest-CUDA] = {contest_cuda_score} "
-                            f"(archive_sha={archive_sha[:12]})"
-                        )
-                    except Exception as exc:
-                        raise RuntimeError(
-                            f"could not validate DP1 contest-CUDA auth eval: {exc}"
-                        ) from exc
-                else:
-                    print(
-                        f"[full] auth eval rc={proc.returncode}; "
-                        f"stderr={proc.stderr[-1500:]}",
-                        file=sys.stderr,
-                    )
-            except subprocess.TimeoutExpired as exc:
-                print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
-                raise RuntimeError(
-                    "CUDA auth eval timed out; refusing DP1 contest-CUDA claim"
-                ) from exc
             _stage("auth_eval_cuda_done")
 
         # 13. Continual-learning posterior anchor (Catalog #128 atomic-locked)

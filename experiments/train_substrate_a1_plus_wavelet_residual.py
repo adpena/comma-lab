@@ -95,6 +95,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+    build_optimized_training_context as _build_optimized_training_context,
+)
+from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
 from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
@@ -105,6 +108,9 @@ from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
 )
 from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
+)
+from tac.substrates._shared.smoke_auth_eval_gate import (  # noqa: E402
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 
 
@@ -246,6 +252,14 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
         "default": "16",
     },
+    "--enable-gt-scorer-cache": {
+        "env": "A1_PLUS_WAVELET_ENABLE_GT_SCORER_CACHE",
+        "rationale": (
+            "F3/GTScorerCache; caches frozen GT PoseNet+SegNet targets once "
+            "and reuses indexed batches in the score-aware hot loop"
+        ),
+        "default": "true",
+    },
 }
 
 
@@ -327,6 +341,19 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Enable torch.autocast('cuda', dtype=float16). Catalog #172.")
     p.add_argument("--enable-torch-compile", action="store_true",
                    help="Wrap residual head in torch.compile. Catalog #179.")
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_true",
+        default=True,
+        help="Enable canonical GTScorerCache for frozen GT scorer targets.",
+    )
+    p.add_argument(
+        "--disable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_false",
+        help="Disable GTScorerCache and recompute GT scorer targets per step.",
+    )
     p.add_argument("--enable-tf32", action="store_true",
                    help="Enable TF32 matmul on Ampere+ GPUs. Catalog #178.")
 
@@ -778,6 +805,20 @@ def _full_main(args: argparse.Namespace) -> int:
             f"est_int8_bytes={head.estimated_sidecar_bytes()}"
         )
         _stage(f"head_built_{n_params}_params")
+        opt_ctx = _build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=gt_pair_tensor,
+            substrate_model=head,
+            device=device,
+        )
+        head = opt_ctx.substrate_model
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
 
         ema = EMA(head, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
@@ -831,9 +872,19 @@ def _full_main(args: argparse.Namespace) -> int:
                 ).clamp(0.0, 255.0)
                 pred_a = pred_pairs[:, 0]
                 pred_b = pred_pairs[:, 1]
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                        pair_idxs, device=device
+                    )
+                    gt_seg_already_probs = gt_cache.seg_already_probs
                 loss, _parts = loss_fn(
                     pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
                     apply_eval_roundtrip=True, noise_std=args.noise_std,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
                 if not torch.isfinite(loss):
                     nan_strike += 1
@@ -856,7 +907,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 try:
                     val_lag = _run_val_loop(
                         head, loss_fn, gt_pair_tensor, a1_pair_tensor,
-                        val_indices_pool, archive_bytes_proxy, device,
+                        val_indices_pool, archive_bytes_proxy, gt_cache, device,
                     )
                 finally:
                     head.load_state_dict(live_state)
@@ -911,8 +962,16 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage("archive_emitted")
 
         if not args.skip_auth_eval and device.type == "cuda":
-            _run_contest_auth_eval_cuda(
-                submission_dir, args.upstream_dir, auth_eval_json_path
+            # Auth eval ([contest-CUDA] inline; canonical helper Catalog #226)
+            _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=submission_dir / "archive.zip",
+                inflate_sh=submission_dir / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_json_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="a1_plus_wavelet_residual",
+                device=device,
             )
             _stage("auth_eval_cuda_done")
     finally:
@@ -943,6 +1002,9 @@ def _full_main(args: argparse.Namespace) -> int:
         "best_epoch": best_epoch,
         "epochs": args.epochs,
         "device": str(device),
+        "trainer_proxy_axis": opt_ctx.eval_axis_label,
+        "trainer_proxy_promotion_requirement": opt_ctx.promotion_requirement,
+        "gt_scorer_cache_enabled": gt_cache is not None,
         "council_verdicts": {
             "D1": "residual sidecar (operator-pre-approved default)",
             "D2": "int8 + brotli, ≤500B target (operator-pre-approved)",
@@ -970,7 +1032,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def _run_val_loop(
     head, loss_fn, gt_pair_tensor, a1_pair_tensor, val_indices_pool,
-    archive_bytes_proxy, device,
+    archive_bytes_proxy, gt_cache, device,
 ) -> float:
     """Validation forward pass — eval-time torch.inference_mode (Catalog #180)."""
     import torch
@@ -988,10 +1050,19 @@ def _run_val_loop(
             ).clamp(0.0, 255.0)
             pred_a = pred_pair[:, 0]
             pred_b = pred_pair[:, 1]
+            idx = torch.tensor([int(pair_id)], device=device, dtype=torch.long)
+            gt_pose_batch = gt_seg_batch = None
+            gt_seg_already_probs = None
+            if gt_cache is not None:
+                gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
+                gt_seg_already_probs = gt_cache.seg_already_probs
             try:
                 loss, _ = loss_fn(
                     pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
                     apply_eval_roundtrip=True, noise_std=0.0,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
                 losses.append(float(loss.detach().cpu()))
             except Exception as exc:
@@ -1114,34 +1185,9 @@ def _write_runtime(submission_dir: Path, a1_archive: Path) -> None:
     (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
 
 
-def _run_contest_auth_eval_cuda(
-    submission_dir: Path, upstream_dir: Path, output_json: Path
-) -> None:
-    """Run contest_auth_eval.py --device cuda on the submission_dir."""
-    cmd = [
-        sys.executable, str(CONTEST_AUTH_EVAL_SCRIPT),
-        "--archive", str(submission_dir / "archive.zip"),
-        "--inflate-sh", str(submission_dir / "inflate.sh"),
-        "--upstream-dir", str(upstream_dir),
-        "--device", "cuda",
-        "--json-out", str(output_json),
-    ]
-    print(f"[auth_eval] {' '.join(cmd)}")
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"contest_auth_eval.py failed rc={proc.returncode}; "
-            f"stderr_tail={proc.stderr[-2000:]}"
-        )
-    from tac.auth_eval_result import parse_auth_eval_score_claim
-
-    payload = json.loads(output_json.read_text(encoding="utf-8"))
-    claim = parse_auth_eval_score_claim(payload, required_score_axis="contest_cuda")
-    if claim is None:
-        raise RuntimeError(
-            "contest_auth_eval.py completed but did not produce a valid "
-            "contest_cuda score claim; refusing silent diagnostic-only success"
-        )
+# Catalog #226: _run_contest_auth_eval_cuda was removed in favor of the
+# canonical helper `_canon_gate_auth_eval_call` invoked inline at the call
+# site in `_full_main`.
 
 
 # ---------------------------------------------------------------------------

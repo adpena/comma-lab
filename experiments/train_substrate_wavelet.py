@@ -99,6 +99,9 @@ from typing import Any
 # compiler not yet landed). The helper migration is a pure code cleanup;
 # it does NOT affect the deferred-status semantics.
 from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _build_optimized_training_context,
+)
+from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canonical_decode_real_pairs,
 )
 from tac.substrates._shared.trainer_skeleton import (
@@ -124,6 +127,9 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canonical_vendor_shared_inflate_runtime,
+)
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 
 # ---------------------------------------------------------------------------
@@ -343,6 +349,19 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Skip the final auth-eval subprocess.")
     p.add_argument("--skip-archive-build", action="store_true",
                    help="Skip building the archive.zip.")
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_true",
+        default=True,
+        help="Enable canonical GTScorerCache for frozen GT scorer targets.",
+    )
+    p.add_argument(
+        "--disable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_false",
+        help="Disable GTScorerCache for memory/debug runs.",
+    )
 
     return p
 
@@ -714,6 +733,21 @@ def _full_main(args: argparse.Namespace) -> int:
         print(f"[full] wavelet params: {model.num_parameters():,}")
         _stage("model_built")
 
+        opt_ctx = _build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=pair_tensor,
+            substrate_model=model,
+            device=device,
+        )
+        model = opt_ctx.substrate_model
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
+
         # 6. EMA shadow (CLAUDE.md non-negotiable)
         ema = EMA(model, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
@@ -778,12 +812,20 @@ def _full_main(args: argparse.Namespace) -> int:
                 bit_lh = _subband_bit_proxy(model.coeff_lh[idx])
                 bit_hl = _subband_bit_proxy(model.coeff_hl[idx])
                 bit_hh = _subband_bit_proxy(model.coeff_hh[idx])
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
+                    gt_seg_already_probs = gt_cache.seg_already_probs
                 loss, parts = loss_fn(
                     rgb_0_255, rgb_1_255, gt_0, gt_1,
                     archive_bytes_proxy,
                     (bit_ll, bit_lh, bit_hl, bit_hh),
                     apply_eval_roundtrip=True,
                     noise_std=args.noise_std,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
                 if not torch.isfinite(loss):
                     nan_strike += 1
@@ -825,6 +867,13 @@ def _full_main(args: argparse.Namespace) -> int:
                     bit_lh_v = _subband_bit_proxy(model.coeff_lh[val_indices])
                     bit_hl_v = _subband_bit_proxy(model.coeff_hl[val_indices])
                     bit_hh_v = _subband_bit_proxy(model.coeff_hh[val_indices])
+                    val_gt_pose_batch = val_gt_seg_batch = None
+                    val_gt_seg_already_probs = None
+                    if gt_cache is not None:
+                        val_gt_pose_batch, val_gt_seg_batch = gt_cache.lookup(
+                            val_indices, device=device
+                        )
+                        val_gt_seg_already_probs = gt_cache.seg_already_probs
                     val_loss, _val_parts = loss_fn(
                         rgb_0_v * 255.0, rgb_1_v * 255.0,
                         pair_tensor[val_indices, 0],
@@ -833,6 +882,9 @@ def _full_main(args: argparse.Namespace) -> int:
                         (bit_ll_v, bit_lh_v, bit_hl_v, bit_hh_v),
                         apply_eval_roundtrip=True,
                         noise_std=args.noise_std,
+                        gt_pose_batch=val_gt_pose_batch,
+                        gt_seg_batch=val_gt_seg_batch,
+                        gt_seg_already_probs=val_gt_seg_already_probs,
                     )
                 val_lag = float(val_loss.detach().item())
                 model.load_state_dict(orig_state)
@@ -949,60 +1001,30 @@ def _full_main(args: argparse.Namespace) -> int:
             print(f"[full] wrote {archive_zip_path}")
             _stage(f"archive_built_bytes_{archive_bytes}")
 
-        # 12. CUDA auth eval
+        # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
         auth_eval_result_path: Path | None = None
         contest_cuda_score: float | None = None
         if not args.skip_auth_eval and archive_zip_path.is_file():
             print("[full] launching CUDA auth eval ...")
             auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--archive", str(archive_zip_path),
-                "--inflate-sh", str(args.output_dir / "submission" / "inflate.sh"),
-                "--upstream-dir", str(args.upstream_dir),
-                "--device", "cuda",
-                "--json-out", str(auth_eval_result_path),
-            ]
-            try:
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
-                if proc.returncode != 0:
-                    print(
-                        f"[full] auth eval rc={proc.returncode}; stderr=\n{proc.stderr[-2000:]}",
-                        file=sys.stderr,
-                    )
-                    raise RuntimeError(
-                        f"CUDA auth eval failed rc={proc.returncode}; refusing "
-                        "wavelet contest-CUDA score claim."
-                    )
-                else:
-                    try:
-                        from tac.substrates._shared.trainer_skeleton import (
-                            require_contest_cuda_auth_eval_claim,
-                        )
-
-                        claim, _ae = require_contest_cuda_auth_eval_claim(
-                            auth_eval_result_path,
-                            archive_sha256=archive_sha,
-                            substrate_tag="wavelet",
-                        )
-                        contest_cuda_score = claim.score
-                        print(
-                            f"[full] [contest-CUDA] score = {contest_cuda_score} "
-                            f"(source={claim.source_key}, "
-                            f"archive_sha256={archive_sha})"
-                        )
-                    except Exception as exc:
-                        raise RuntimeError(
-                            "could not validate wavelet contest-CUDA auth eval "
-                            f"JSON: {exc}"
-                        ) from exc
-            except subprocess.TimeoutExpired as exc:
-                print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
-                raise RuntimeError(
-                    "CUDA auth eval timed out; refusing wavelet "
-                    "contest-CUDA score claim."
-                ) from exc
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_result_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="wavelet",
+                device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
+                print(
+                    f"[full] [contest-CUDA] score = {contest_cuda_score} "
+                    f"(axis={auth_result['auth_eval_score_axis']}, "
+                    f"lane_tag={auth_result['auth_eval_lane_tag']}, "
+                    f"archive_sha256={archive_sha})"
+                )
             _stage("auth_eval_cuda_done")
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)

@@ -106,6 +106,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 
 # ---------------------------------------------------------------------------
 # Module paths + constants (council memo + CLAUDE.md anchors)
@@ -972,11 +975,18 @@ def _full_main(args: argparse.Namespace) -> int:
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_emitted")
 
-        # 13. Auth eval ([contest-CUDA] inline; CPU axis handled by operator wrapper)
+        # 13. Auth eval ([contest-CUDA] inline; canonical helper Catalog #226)
         auth_eval_json_path = args.output_dir / "auth_eval.json"
         if not args.skip_auth_eval and device.type == "cuda":
-            _run_contest_auth_eval_cuda(
-                submission_dir, args.upstream_dir, auth_eval_json_path
+            _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=submission_dir / "archive.zip",
+                inflate_sh=submission_dir / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_json_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="a1_plus_lapose",
+                device=device,
             )
             _stage("auth_eval_cuda_done")
     finally:
@@ -1188,37 +1198,9 @@ def _write_runtime(
     (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
 
 
-def _run_contest_auth_eval_cuda(
-    submission_dir: Path, upstream_dir: Path, output_json: Path
-) -> None:
-    """Run contest_auth_eval.py --device cuda on the submission_dir."""
-    cmd = [
-        sys.executable, str(CONTEST_AUTH_EVAL_SCRIPT),
-        "--archive", str(submission_dir / "archive.zip"),
-        "--inflate-sh", str(submission_dir / "inflate.sh"),
-        "--upstream-dir", str(upstream_dir),
-        "--device", "cuda",
-        "--json-out", str(output_json),
-    ]
-    print(f"[auth_eval] {' '.join(cmd)}")
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"contest_auth_eval.py failed rc={proc.returncode}; "
-            f"stderr_tail={proc.stderr[-2000:]}"
-        )
-    from tac.auth_eval_result import parse_auth_eval_score_claim
-
-    payload = json.loads(output_json.read_text(encoding="utf-8"))
-    claim = parse_auth_eval_score_claim(
-        payload,
-        required_score_axis="contest_cuda",
-    )
-    if claim is None:
-        raise RuntimeError(
-            "contest_auth_eval.py completed but did not produce a valid "
-            "contest_cuda score claim; refusing silent diagnostic-only success"
-        )
+# Catalog #226: _run_contest_auth_eval_cuda was removed in favor of the
+# canonical helper `_canon_gate_auth_eval_call` invoked inline at the call
+# site in `_full_main`.
 
 
 # ---------------------------------------------------------------------------
