@@ -20,6 +20,7 @@ import pr106_entropy_floor_probe as probe  # type: ignore  # noqa: E402
 from tac.hnerv_decoder_recode import (  # noqa: E402
     PACKED_STATE_SCHEMA,
     encode_hdm4_q_brotli_split_fixture,
+    encode_hdm7_q_brotli_len_elided_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_lowlevel_packer import write_stored_single_member_zip  # noqa: E402
@@ -160,6 +161,29 @@ def test_hdm4_decoder_section_is_decoded_for_entropy_probe(tmp_path: Path) -> No
     )
 
     assert report["source"]["decoder_section_codec"] == "hdm4_q_brotli_split"
+    assert report["source"]["decoder_raw_bytes"] == len(raw)
+    assert report["groups"][0]["current_storage_label"] == "decoder_section_encoded"
+    assert report["score_claim"] is False
+
+
+def test_hdm7_decoder_section_is_decoded_for_entropy_probe(tmp_path: Path) -> None:
+    raw = _synthetic_decoder_raw()
+    decoder_brotli = brotli.compress(raw, quality=5)
+    parsed = parse_packed_decoder_brotli(decoder_brotli)
+    decoder_hdm7, _stats = encode_hdm7_q_brotli_len_elided_fixture(parsed)
+    latents_brotli = brotli.compress(_synthetic_fixed_latents_raw(), quality=5)
+    payload = b"\xff" + len(decoder_hdm7).to_bytes(3, "little") + decoder_hdm7 + latents_brotli
+    archive = tmp_path / "archive.zip"
+    write_stored_single_member_zip(archive, member_name="0.bin", payload=payload)
+
+    report = probe.build_report_from_archive(
+        archive,
+        pr101_reference_archive_bytes=None,
+        active_floor_archive_bytes=None,
+        active_floor_label=None,
+    )
+
+    assert report["source"]["decoder_section_codec"] == "hdm7_q_brotli_len_elided_split"
     assert report["source"]["decoder_raw_bytes"] == len(raw)
     assert report["groups"][0]["current_storage_label"] == "decoder_section_encoded"
     assert report["score_claim"] is False

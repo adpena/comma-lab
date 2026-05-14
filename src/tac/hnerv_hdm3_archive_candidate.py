@@ -22,9 +22,11 @@ from tac.hnerv_decoder_recode import (
     decode_hdm3_q_brotli_split_fixture,
     decode_hdm4_q_brotli_split_fixture,
     decode_hdm6_q_brotli_tuned_fixture,
+    decode_hdm7_q_brotli_len_elided_fixture,
     encode_hdm3_q_brotli_split_fixture,
     encode_hdm4_q_brotli_split_fixture,
     encode_hdm6_q_brotli_tuned_fixture,
+    encode_hdm7_q_brotli_len_elided_fixture,
     parse_decoder_section_for_recode,
 )
 from tac.hnerv_lowlevel_packer import (
@@ -39,6 +41,7 @@ TOOL = "tac.hnerv_hdm3_archive_candidate.build_hdm3_archive_candidate"
 HDM3_VARIANT_NAME = "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
 HDM4_VARIANT_NAME = "hdm4_q_brotli_split_fixed_recipe_dp4_plus_raw_scales"
 HDM6_VARIANT_NAME = "hdm6_q_brotli_split_fixed_recipe_tuned_lgwin_plus_raw_scales"
+HDM7_VARIANT_NAME = "hdm7_q_brotli_split_fixed_recipe_tuned_lgwin_final_len_elided_plus_raw_scales"
 RATE_SCORE_PER_BYTE = 25.0 / 37_545_489
 EXACT_PACKET_READINESS_FILENAME = "hdm3_exact_eval_packet_readiness.json"
 STATIC_RELEASE_SURFACE_DIRNAME = "exact_eval_static_release_surface"
@@ -54,6 +57,7 @@ RUNTIME_TREE_CLOSURE_FILENAME = "hdm3_runtime_tree_closure.json"
 HDM3_EXACT_EVAL_LANE_ID = "hnerv_hdm3_q_brotli_split_exact_eval"
 HDM4_EXACT_EVAL_LANE_ID = "hnerv_hdm4_q_brotli_split_exact_eval"
 HDM6_EXACT_EVAL_LANE_ID = "hnerv_hdm6_q_brotli_tuned_exact_eval"
+HDM7_EXACT_EVAL_LANE_ID = "hnerv_hdm7_final_len_elided_exact_eval"
 HDM3_RUNTIME_INFLATE = "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh"
 HDM3_UPSTREAM_DIR = "upstream"
 CONTEST_AUTH_EVAL_RUNTIME_MANIFEST_SOURCE = (
@@ -94,8 +98,17 @@ def _decoder_recode_variant(name: str) -> dict[str, Any]:
             "encode": encode_hdm6_q_brotli_tuned_fixture,
             "decode": decode_hdm6_q_brotli_tuned_fixture,
         }
+    if key == "hdm7":
+        return {
+            "key": "hdm7",
+            "variant_name": HDM7_VARIANT_NAME,
+            "candidate_id": "pr106_r2_hdm7_decoder_final_len_elided_3byte",
+            "lane_id": HDM7_EXACT_EVAL_LANE_ID,
+            "encode": encode_hdm7_q_brotli_len_elided_fixture,
+            "decode": decode_hdm7_q_brotli_len_elided_fixture,
+        }
     raise HnervHdm3ArchiveCandidateError(
-        f"unsupported decoder recode variant {name!r}; expected hdm3, hdm4, or hdm6"
+        f"unsupported decoder recode variant {name!r}; expected hdm3, hdm4, hdm6, or hdm7"
     )
 
 
@@ -240,11 +253,15 @@ def build_hdm3_archive_candidate(
         ),
         "candidate_archive_sha256": candidate_archive_sha,
         "candidate_archive_bytes": candidate_archive_bytes,
+        "candidate_archive_byte_delta": (
+            candidate_archive_bytes - source.archive_bytes if candidate_archive_bytes is not None else None
+        ),
         "candidate_member_name": source.member_name if candidate_archive_path is not None else "",
         "decoder_recode_stats": recode_stats,
         "hdm3_stats": recode_stats if variant["key"] == "hdm3" else {},
         "hdm4_stats": recode_stats if variant["key"] == "hdm4" else {},
         "hdm6_stats": recode_stats if variant["key"] == "hdm6" else {},
+        "hdm7_stats": recode_stats if variant["key"] == "hdm7" else {},
         "decoder_raw_equivalence": {
             "contract": "hnerv_hdm_decoder_raw_equivalence_v1",
             "decoder_recode_key": variant["key"],

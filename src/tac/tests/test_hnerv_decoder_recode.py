@@ -6,14 +6,17 @@ import sys
 from pathlib import Path
 
 import brotli
+import pytest
 
 from tac.hnerv_decoder_recode import (
+    HnervDecoderRecodeError,
     PACKED_STATE_SCHEMA,
     build_structural_recode_profile,
     decode_global_prev_symbol_context_range_fixture,
     decode_global_prev_symbol_mixed_context_fixture,
     decode_hdm3_q_brotli_split_fixture,
     decode_hdm6_q_brotli_tuned_fixture,
+    decode_hdm7_q_brotli_len_elided_fixture,
     decode_hdm5_q_brotli_split_planning_fixture,
     decode_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_context_range_fixture,
@@ -21,6 +24,7 @@ from tac.hnerv_decoder_recode import (
     encode_hdm3_q_brotli_split_fixture,
     encode_hdm4_q_brotli_split_fixture,
     encode_hdm6_q_brotli_tuned_fixture,
+    encode_hdm7_q_brotli_len_elided_fixture,
     encode_hdm5_q_brotli_split_planning_fixture,
     encode_prev_symbol_context_range_fixture,
     parse_decoder_section_for_recode,
@@ -158,6 +162,25 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     assert hdm6["header_bytes"] == 17
     assert len(hdm6["brotli_params_by_chunk"]) == 4
     assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in hdm6
+    hdm7 = next(
+        row
+        for row in profile["variants"]
+        if row["variant"]
+        == "hdm7_q_brotli_split_fixed_recipe_tuned_lgwin_final_len_elided_plus_raw_scales"
+    )
+    assert hdm7["codec"] == "HDM7_fixed_recipe_tuned_q_brotli_final_len_elided_raw_scales"
+    assert hdm7["parity_fixture"] is True
+    assert hdm7["archive_ready"] is False
+    assert hdm7["raw_equal"] is True
+    assert hdm7["q_roundtrip_equal"] is True
+    assert hdm7["scale_roundtrip_equal"] is True
+    assert hdm7["q_stream_bytes"] == profile["q_stream_bytes"]
+    assert hdm7["raw_scale_bytes"] == profile["scale_stream_bytes"]
+    assert hdm7["header_bytes"] == 14
+    assert hdm7["elided_len24_bytes"] == 3
+    assert hdm7["q_chunk_bytes"] == hdm6["q_chunk_bytes"]
+    assert hdm7["bytes"] == hdm6["bytes"] - 3
+    assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in hdm7
     plan = profile["context_overhead_plan"]
     assert plan["score_claim"] is False
     assert plan["planning_only"] is True
@@ -288,6 +311,43 @@ def test_hdm6_tuned_q_brotli_fixture_roundtrips_with_fixed_recipe_params() -> No
     assert len(payload) == stats["header_bytes"] + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
 
 
+def test_hdm7_tuned_q_brotli_fixture_roundtrips_with_final_length_elided() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    hdm6_payload, hdm6_stats = encode_hdm6_q_brotli_tuned_fixture(parsed)
+    payload, stats = encode_hdm7_q_brotli_len_elided_fixture(parsed)
+    restored = decode_hdm7_q_brotli_len_elided_fixture(payload)
+
+    assert payload.startswith(b"HDM7")
+    assert restored.to_raw() == parsed.to_raw()
+    assert restored.q_stream == parsed.q_stream
+    assert restored.scale_stream == parsed.scale_stream
+    assert stats["header_bytes"] == 14
+    assert stats["recipe_id"] == 1
+    assert stats["split_points"] == [6, 9, 26, 28]
+    assert stats["q_chunk_bytes"] == hdm6_stats["q_chunk_bytes"]
+    assert stats["derived_final_chunk_bytes"] == hdm6_stats["q_chunk_bytes"][-1]
+    assert stats["final_chunk_len_elided"] is True
+    assert stats["elided_len24_bytes"] == 3
+    assert stats["brotli_params_by_chunk"] == hdm6_stats["brotli_params_by_chunk"]
+    assert len(payload) == len(hdm6_payload) - 3
+    assert len(payload) == stats["header_bytes"] + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
+
+
+def test_hdm7_len_elision_fails_closed_when_final_chunk_cannot_exist() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    payload, stats = encode_hdm7_q_brotli_len_elided_fixture(parsed)
+    scale_len = stats["raw_scale_bytes"]
+    final_len = stats["derived_final_chunk_bytes"]
+    payload = payload[: len(payload) - scale_len - final_len] + payload[-scale_len:]
+
+    with pytest.raises(
+        HnervDecoderRecodeError,
+        match="HDM7 derived final q Brotli chunk length must be positive",
+    ):
+        decode_hdm7_q_brotli_len_elided_fixture(payload)
+
+
 def test_parse_decoder_section_for_recode_accepts_hdm4_source_sections() -> None:
     parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
     hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
@@ -306,6 +366,17 @@ def test_parse_decoder_section_for_recode_accepts_hdm6_source_sections() -> None
     restored, raw, codec = parse_decoder_section_for_recode(hdm6_payload)
 
     assert codec == "hdm6_q_brotli_tuned_split"
+    assert raw == parsed.to_raw()
+    assert restored.to_raw() == parsed.to_raw()
+
+
+def test_parse_decoder_section_for_recode_accepts_hdm7_source_sections() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm7_payload, _stats = encode_hdm7_q_brotli_len_elided_fixture(parsed)
+
+    restored, raw, codec = parse_decoder_section_for_recode(hdm7_payload)
+
+    assert codec == "hdm7_q_brotli_len_elided_split"
     assert raw == parsed.to_raw()
     assert restored.to_raw() == parsed.to_raw()
 

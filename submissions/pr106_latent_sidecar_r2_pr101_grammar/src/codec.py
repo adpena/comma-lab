@@ -110,7 +110,7 @@ def decode_packed_decoder(data):
     try:
         raw = brotli.decompress(data)
     except brotli.error as legacy_error:
-        if data[:4] in (b"HDM3", b"HDM4", b"HDM6"):
+        if data[:4] in (b"HDM3", b"HDM4", b"HDM6", b"HDM7"):
             raw = decode_hdm_decoder_raw(data)
         else:
             raw = decode_pr101_schema_decoder_raw(data, legacy_error=legacy_error)
@@ -190,9 +190,9 @@ def decode_pr101_schema_decoder_raw(data, *, legacy_error=None):
 
 
 def decode_hdm_decoder_raw(data):
-    """Decode HDM3/HDM4/HDM6 fixed-schema q-Brotli/raw-scale decoder bytes.
+    """Decode HDM3/HDM4/HDM6/HDM7 fixed-schema q-Brotli/raw-scale decoder bytes.
 
-    HDM3, HDM4, and HDM6 are lossless section recodes for the same packed
+    HDM3, HDM4, HDM6, and HDM7 are lossless section recodes for the same packed
     HNeRV decoder contract. Unknown or malformed HDM bytes fail closed.
     """
     if data[:4] == b"HDM3":
@@ -201,6 +201,8 @@ def decode_hdm_decoder_raw(data):
         return decode_hdm4_decoder_raw(data)
     if data[:4] == b"HDM6":
         return decode_hdm6_decoder_raw(data)
+    if data[:4] == b"HDM7":
+        return decode_hdm7_decoder_raw(data)
     raise ValueError("invalid HDM decoder magic")
 
 
@@ -367,6 +369,87 @@ def decode_hdm6_decoder_raw(data):
     return b"".join(raw_parts) + scale_stream
 
 
+def decode_hdm7_decoder_raw(data):
+    """Decode HDM7 tuned split q-Brotli/raw-scale decoder bytes.
+
+    HDM7 stores HDM6's first three len24 chunk lengths; the fourth is derived
+    from total payload length minus the fixed raw-scale trailer.
+    """
+    if data[:4] != b"HDM7":
+        raise ValueError("invalid HDM7 decoder magic")
+    cursor = 4
+    recipe_id = read_exact(data, cursor, 1, "HDM7 recipe_id")[0]
+    cursor += 1
+    if recipe_id != 1:
+        raise ValueError(f"unsupported HDM7 recipe id: {recipe_id}")
+    split_points = (6, 9, 26, 28)
+    lengths = []
+    for index in range(len(split_points) - 1):
+        lengths.append(
+            int.from_bytes(
+                read_exact(data, cursor, 3, f"HDM7 q_brotli_len24_{index}"),
+                "little",
+            )
+        )
+        cursor += 3
+    chunks = []
+    for index, length in enumerate(lengths):
+        compressed = read_exact(data, cursor, length, f"HDM7 q_brotli_{index}")
+        cursor += length
+        try:
+            chunks.append(brotli.decompress(compressed))
+        except brotli.error as exc:
+            raise ValueError(f"HDM7 q stream chunk {index} brotli decode failed: {exc}") from exc
+    scale_len = 4 * len(PACKED_STATE_SCHEMA)
+    final_len = len(data) - cursor - scale_len
+    if final_len <= 0:
+        raise ValueError("HDM7 derived final q stream chunk length must be positive")
+    compressed = read_exact(data, cursor, final_len, "HDM7 q_brotli_final")
+    cursor += final_len
+    try:
+        chunks.append(brotli.decompress(compressed))
+    except brotli.error as exc:
+        raise ValueError(f"HDM7 q stream chunk {len(chunks)} brotli decode failed: {exc}") from exc
+    scale_stream = read_exact(data, cursor, scale_len, "HDM7 scale_stream")
+    cursor += scale_len
+    if cursor != len(data):
+        raise ValueError("HDM7 decoder has trailing bytes")
+
+    ordered_schema = sorted(
+        PACKED_STATE_SCHEMA,
+        key=lambda item: (
+            0 if len(item[1]) == 4 and item[1][2:] == (3, 3)
+            else 1 if len(item[1]) == 4
+            else 2 if item[0].endswith(".bias")
+            else 3,
+            -int(np.prod(item[1])),
+            item[0],
+        ),
+    )
+    records_by_name = {}
+    split_start = 0
+    for chunk, split_end in zip(chunks, split_points):
+        schema_slice = ordered_schema[split_start:split_end]
+        expected = sum(int(np.prod(shape)) for _, shape in schema_slice)
+        if len(chunk) != expected:
+            raise ValueError("HDM7 q chunk length mismatch")
+        q_cursor = 0
+        for name, shape in schema_slice:
+            value_count = int(np.prod(shape))
+            records_by_name[name] = chunk[q_cursor:q_cursor + value_count]
+            q_cursor += value_count
+        split_start = split_end
+    if len(records_by_name) != len(PACKED_STATE_SCHEMA):
+        raise ValueError("HDM7 decoded record count mismatch")
+    raw_parts = []
+    for name, shape in PACKED_STATE_SCHEMA:
+        q = records_by_name.get(name)
+        if q is None or len(q) != int(np.prod(shape)):
+            raise ValueError(f"HDM7 decoded schema mismatch for {name}")
+        raw_parts.append(q)
+    return b"".join(raw_parts) + scale_stream
+
+
 def decompress_concatenated_brotli_streams(payload, n_streams):
     outputs = []
     cursor = 0
@@ -400,6 +483,8 @@ def decode_mapped_u8(values, byte_map):
 
 
 def read_exact(payload, cursor, size, label):
+    if size < 0:
+        raise ValueError(f"negative read size at {label}")
     end = cursor + size
     if end > len(payload):
         raise ValueError(f"truncated PR101 schema decoder at {label}")

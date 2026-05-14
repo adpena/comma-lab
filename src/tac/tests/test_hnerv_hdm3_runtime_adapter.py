@@ -13,6 +13,7 @@ from tac.hnerv_decoder_recode import (
     encode_hdm3_q_brotli_split_fixture,
     encode_hdm4_q_brotli_split_fixture,
     encode_hdm6_q_brotli_tuned_fixture,
+    encode_hdm7_q_brotli_len_elided_fixture,
 )
 from tac.hnerv_hdm3_runtime_adapter import (
     HnervHdm3RuntimeAdapterError,
@@ -164,6 +165,30 @@ def test_restore_hdm6_payload_to_legacy_brotli_preserves_raw_decoder_and_latents
     assert proof["ready_for_public_runtime_inflate"] is True
 
 
+def test_restore_hdm7_payload_to_legacy_brotli_preserves_raw_decoder_and_latents() -> None:
+    raw = _synthetic_decoder_raw()
+    hdm7, _stats = encode_hdm7_q_brotli_len_elided_fixture(
+        _parsed_decoder_from_legacy_brotli(brotli.compress(raw, quality=0))
+    )
+    latents = brotli.compress(b"latent-sidecar" * 200, quality=5)
+    payload = PackedHnervPayload(
+        header=b"\xff\x00\x00\x00",
+        decoder_packed_brotli=hdm7,
+        latents_and_sidecar_brotli=latents,
+    ).to_bytes()
+
+    restored, proof = restore_hdm3_payload_to_legacy_brotli(payload, require_hdm3=True)
+
+    restored_packed = parse_ff_packed_brotli_hnerv(restored)
+    assert restored != payload
+    assert brotli.decompress(restored_packed.decoder_packed_brotli) == raw
+    assert restored_packed.latents_and_sidecar_brotli == latents
+    assert proof["mode"] == "hdm7_restored_to_legacy_brotli"
+    assert proof["decoder_raw_equal"] is True
+    assert proof["latents_and_sidecar_preserved"] is True
+    assert proof["ready_for_public_runtime_inflate"] is True
+
+
 def test_restore_unknown_decoder_fails_closed() -> None:
     payload = PackedHnervPayload(
         header=b"\xff\x00\x00\x00",
@@ -171,7 +196,10 @@ def test_restore_unknown_decoder_fails_closed() -> None:
         latents_and_sidecar_brotli=b"latents",
     ).to_bytes()
 
-    with pytest.raises(HnervHdm3RuntimeAdapterError, match="neither HDM3/HDM4/HDM6 nor legacy Brotli"):
+    with pytest.raises(
+        HnervHdm3RuntimeAdapterError,
+        match="neither HDM3/HDM4/HDM6/HDM7 nor legacy Brotli",
+    ):
         restore_hdm3_payload_to_legacy_brotli(payload)
 
 
@@ -395,6 +423,73 @@ def test_prove_runtime_adapter_accepts_hdm4_source_to_hdm6_candidate(
     assert proof["ready_for_public_runtime_inflate"] is True
     assert proof["ready_for_exact_eval_dispatch"] is False
     assert "exact_inflate_output_parity_missing" in proof["remaining_dispatch_blockers"]
+
+
+def test_prove_runtime_adapter_accepts_hdm6_source_to_hdm7_candidate(
+    tmp_path: Path,
+) -> None:
+    raw = _synthetic_decoder_raw()
+    source_decoder = brotli.compress(raw, quality=10)
+    parsed = _parsed_decoder_from_legacy_brotli(source_decoder)
+    hdm6, _hdm6_stats = encode_hdm6_q_brotli_tuned_fixture(parsed)
+    hdm7, _hdm7_stats = encode_hdm7_q_brotli_len_elided_fixture(parsed)
+    latents = brotli.compress(bytes(600 * 28 * 2 + 28 * 4), quality=5)
+    source_archive = tmp_path / "source_hdm6.zip"
+    candidate_archive = tmp_path / "candidate_hdm7.zip"
+    write_stored_single_member_zip(
+        source_archive,
+        member_name="x",
+        payload=PackedHnervPayload(
+            header=b"\xff\x00\x00\x00",
+            decoder_packed_brotli=hdm6,
+            latents_and_sidecar_brotli=latents,
+        ).to_bytes(),
+    )
+    write_stored_single_member_zip(
+        candidate_archive,
+        member_name="x",
+        payload=PackedHnervPayload(
+            header=b"\xff\x00\x00\x00",
+            decoder_packed_brotli=hdm7,
+            latents_and_sidecar_brotli=latents,
+        ).to_bytes(),
+    )
+    json_out = tmp_path / "runtime_adapter_proof_hdm7.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "prove_hnerv_hdm3_runtime_adapter.py"),
+            "--source-archive",
+            str(source_archive),
+            "--candidate-archive",
+            str(candidate_archive),
+            "--output-dir",
+            str(tmp_path / "out_hdm7"),
+            "--json-out",
+            str(json_out),
+            "--runtime-dir",
+            str(REPO / "submissions" / "pr106_latent_sidecar_r2_pr101_grammar"),
+        ],
+        check=True,
+        text=True,
+    )
+
+    proof = json.loads(json_out.read_text(encoding="utf-8"))
+    assert proof["source_decoder_section_codec"] == "hdm6_q_brotli_tuned_split"
+    assert proof["candidate_decoder_section_codec"] == "hdm7_q_brotli_len_elided_split"
+    assert proof["candidate_decoder_section_is_hdm7"] is True
+    assert proof["candidate_decoder_section_is_hdm"] is True
+    assert proof["candidate_decoder_raw_matches_source"] is True
+    assert proof["latents_and_sidecar_match_source"] is True
+    assert proof["restored_payload_matches_source"] is False
+    assert proof["inflate_output_parity_proven_by_payload_identity"] is False
+    assert proof["inflate_output_parity_proven_by_lossless_decoder_equivalence"] is True
+    assert proof["submission_runtime_parse_exercised"] is True
+    assert proof["submission_runtime_candidate_parse_claim"] is True
+    assert proof["submission_runtime_equivalence_claim"] is True
+    assert proof["ready_for_public_runtime_inflate"] is True
+    assert proof["ready_for_exact_eval_dispatch"] is False
 
 
 def _parsed_decoder_from_legacy_brotli(decoder_brotli: bytes):

@@ -31,14 +31,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-label", required=True)
     parser.add_argument(
         "--decoder-recode-variant",
-        choices=("hdm3", "hdm4", "hdm6"),
+        choices=("hdm3", "hdm4", "hdm6", "hdm7"),
         default="hdm3",
         help="Lossless decoder-section recode to materialize.",
     )
     parser.add_argument(
         "--allow-rate-regression",
         action="store_true",
-        help="Materialize the archive even when the HDM3 decoder section is not smaller.",
+        help="Materialize the archive even when the selected decoder section is not smaller.",
     )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument(

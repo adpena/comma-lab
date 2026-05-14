@@ -22,7 +22,7 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
-      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, AV discriminator raw custody, T1 Modal guard harvest, T1 full-path smoke harvest, Kaggle proxy local materialization, HNeRV frontier section-profile refresh, PR103 hidden-gem release-surface portable-wrapper consolidation, Kaggle PR101 bias-refine proxy materialization, PR106 exhaustive Brotli release-surface custody, optimizer-guided PR101/A1 bias-refine 0127 runtime packet custody, factorized PR107 HNeRV packet-surface closure, Kaggle PR101 bias-refine harvest/runtime packet custody, Kaggle PR106 latent radius-2 score-table harvest/runtime packet custody, recursive no-signal-loss hardening 2026-05-13, PR106 sidecar GHA CPU-pairing dispatch materialization, PR95++ dependency-failure Modal smoke custody 2026-05-14, and SAR/Wyner-Ziv cooperative-receiver local smoke runtime custody 2026-05-14; durable signal is summarized in .omx/research ledgers.",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, AV discriminator raw custody, T1 Modal guard harvest, T1 full-path smoke harvest, Kaggle proxy local materialization, HNeRV frontier section-profile refresh, PR103 hidden-gem release-surface portable-wrapper consolidation, Kaggle PR101 bias-refine proxy materialization, PR106 exhaustive Brotli release-surface custody, optimizer-guided PR101/A1 bias-refine 0127 runtime packet custody, factorized PR107 HNeRV packet-surface closure, Kaggle PR101 bias-refine harvest/runtime packet custody, Kaggle PR106 latent radius-2 score-table harvest/runtime packet custody, recursive no-signal-loss hardening 2026-05-13, PR106 sidecar GHA CPU-pairing dispatch materialization, PR95++ dependency-failure Modal smoke custody 2026-05-14, SAR/Wyner-Ziv cooperative-receiver local smoke runtime custody 2026-05-14, and HDM7 final-length-elision HNeRV candidate custody 2026-05-14; durable signal is summarized in .omx/research ledgers.",
       "path": "experiments/results/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
@@ -1724,6 +1724,12 @@
       "disposition": "ignore_rebuildable",
       "note": "exact: HDM6 tuned-Brotli candidate static release surface is rebuildable from the tracked builder, runtime adapter, and candidate manifest; canonical signal is in .omx/research/hnerv_hdm6_tuned_brotli_candidate_20260514_codex.md.",
       "path": "experiments/results/pr106_r2_hdm4_hlm2_hdm6_candidate_20260514_codex/exact_eval_static_release_surface/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: HDM7 final-length-elision candidate static release surface is rebuildable from the tracked builder, runtime adapter, and candidate manifest; canonical signal is the HDM7 candidate manifest and exact-eval review artifacts.",
+      "path": "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/exact_eval_static_release_surface/inflate.sh"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",
