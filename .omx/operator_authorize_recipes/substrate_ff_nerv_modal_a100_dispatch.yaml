@@ -19,6 +19,14 @@ dispatch_blockers:
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
 min_vram_gb: 40
+# Catalog #215 (FIX-HARDEN-OPT 2026-05-14 P0): A100 full-run requires
+# matching smoke-phase compute class. SIREN smoke timed out on T4 default
+# (rc=124 at 3601s wall-clock 2026-05-13); coordinate-MLP / NeRV-family
+# substrates won't complete 100-epoch smoke on T4 within timeout. Declaring
+# min_smoke_gpu pins the smoke phase to A100 too; the CLI --smoke-gpu T4
+# default is overridden. Backfilled by RECIPE-CANON-BACKFILL-SUBAGENT
+# 2026-05-14 (lane_recipe_canon_backfill_sweep_20260514).
+min_smoke_gpu: "A100"
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
