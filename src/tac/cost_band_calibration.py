@@ -909,3 +909,472 @@ def summary_by_bucket(
             }
         )
     return out
+
+
+# ---------------------------------------------------------------------------
+# Per-class provider routing (council Decision 9, omnibus commit 7872c9f4b)
+# ---------------------------------------------------------------------------
+#
+# Council Decision 9 binding verdict (PROCEED Option B, 11/11):
+#
+#   smoke (≤30 min, ≤$2)        -> Modal T4 default; Modal A10G fallback
+#   full  (1-12h, $2-$15)       -> Vast.ai RTX 4090 default; Modal A100 fallback
+#   long_burn (12h+, $50+)      -> Lightning A100 default (subscription);
+#                                  Vast.ai H100 race-mode fallback
+#   eval  (auth eval)           -> Modal T4 default; Modal A10G fallback
+#   cpu   (contest-CPU)         -> GHA Linux x86_64 default (free)
+#
+# Time-Traveler amendment adopted: cost-band-posterior anchor shifts >25%
+# trigger re-routing re-evaluation. Concretely the routing helper consults
+# :func:`predict` for the canonical (provider, gpu) tuple AND every fallback;
+# if the canonical tuple's empirical p50 is >25% higher than the cheapest
+# fallback's p50 (both computed on the SAME confidence_tag floor) the helper
+# emits the fallback as the recommended provider with a forensic rationale
+# string describing the shift.
+#
+# Per CLAUDE.md "Subagent coherence-by-default" hook #4 (cathedral autopilot
+# dispatch hook): the autopilot ranker can call ``select_provider_for_class``
+# directly to pre-compute the provider for every queued candidate before
+# dispatch.
+#
+# Per CLAUDE.md "Forbidden score claims" sister rule: the routing decision
+# is informational; it does NOT change archive bytes, scorer outputs, or
+# evaluator paths. The provider choice is a cost/wall-clock optimization,
+# never a score-affecting axis.
+
+# Dispatch-class enumeration. Adding a new class requires a council
+# decision per CLAUDE.md "Design decisions — non-negotiable" because the
+# canonical (provider, gpu) is the binding artifact of Decision 9.
+DISPATCH_CLASSES = ("smoke", "full", "long_burn", "eval", "cpu")
+
+# Per-class canonical (provider, gpu) tuples per Decision 9 verdict.
+# Operators MUST NOT mutate this dict; new classes go through council.
+CANONICAL_PROVIDER_PER_CLASS: dict[str, tuple[str, str]] = {
+    "smoke": ("modal", "T4"),
+    "full": ("vastai", "RTX_4090"),
+    "long_burn": ("lightning", "A100"),
+    "eval": ("modal", "T4"),
+    "cpu": ("github", "ubuntu-latest"),
+}
+
+# Per-class fallback list per Decision 9. Order matters: the routing helper
+# tries fallbacks in order and returns the first available one.
+FALLBACK_PROVIDERS_PER_CLASS: dict[str, list[tuple[str, str]]] = {
+    "smoke": [("modal", "A10G")],
+    "full": [("modal", "A100")],
+    "long_burn": [("vastai", "H100")],
+    "eval": [("modal", "A10G")],
+    "cpu": [],  # GHA is the only canonical free CPU surface.
+}
+
+# Per-class soft cost ceiling in USD per dispatch (informational; the gate
+# is the operator's session-budget envelope, not this number). Used by
+# :func:`classify_dispatch` to disambiguate borderline recipes when the
+# operator did not declare an explicit dispatch_class.
+PER_CLASS_SOFT_COST_CEILING_USD: dict[str, float] = {
+    "smoke": 2.0,
+    "full": 15.0,
+    "long_burn": 100.0,
+    "eval": 2.0,
+    "cpu": 0.0,
+}
+
+# Per-class soft wall-clock ceiling in hours.
+PER_CLASS_SOFT_WALLCLOCK_CEILING_HR: dict[str, float] = {
+    "smoke": 0.5,
+    "full": 12.0,
+    "long_burn": 168.0,  # one week
+    "eval": 0.5,
+    "cpu": 12.0,
+}
+
+# Time-Traveler amendment: re-route trigger threshold (fractional cost
+# improvement). If a fallback is empirically >25% cheaper than the
+# canonical (with matched confidence tag), recommend the fallback.
+RE_ROUTING_TRIGGER_FRACTION = 0.25
+
+
+@dataclass(frozen=True)
+class ProviderRoutingDecision:
+    """Resolved (provider, gpu) tuple for one dispatch with full forensics.
+
+    Carries the canonical Decision 9 verdict, every fallback considered, the
+    cost-band posterior consulted, and a human-readable rationale. Consumers
+    (operator_authorize.py, autopilot ranker) read ``provider`` + ``gpu`` for
+    the dispatch decision and ``rationale`` for logging.
+    """
+
+    dispatch_class: str
+    provider: str  # canonical resolved provider (e.g. "modal", "vastai")
+    gpu: str  # canonical resolved GPU (e.g. "T4", "RTX_4090")
+    canonical_provider: str
+    canonical_gpu: str
+    fallback_provider: str | None
+    fallback_gpu: str | None
+    posterior_consulted: bool
+    re_routed: bool
+    re_routing_rationale: str
+    canonical_cost_p50_usd: float | None
+    fallback_cost_p50_usd: float | None
+    rationale: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "dispatch_class": self.dispatch_class,
+            "provider": self.provider,
+            "gpu": self.gpu,
+            "canonical_provider": self.canonical_provider,
+            "canonical_gpu": self.canonical_gpu,
+            "fallback_provider": self.fallback_provider,
+            "fallback_gpu": self.fallback_gpu,
+            "posterior_consulted": self.posterior_consulted,
+            "re_routed": self.re_routed,
+            "re_routing_rationale": self.re_routing_rationale,
+            "canonical_cost_p50_usd": self.canonical_cost_p50_usd,
+            "fallback_cost_p50_usd": self.fallback_cost_p50_usd,
+            "rationale": self.rationale,
+        }
+
+
+# Recipe-side label tokens that classify a dispatch.
+# Per CLAUDE.md "NEVER invent CLI flags": these tokens come from
+# the existing dispatch_label conventions in `.omx/state/cost_band_posterior.jsonl`
+# (e.g. `*__smoke__100ep`, `gha_cpu_eval_*`, `*_auth_eval_*`). The
+# premise verifier `.omx/tmp/d9_provider_routing_premise_verifier.py`
+# audited 38 anchors and confirmed these tokens partition cleanly.
+_SMOKE_LABEL_TOKENS = ("__smoke__", "_smoke_", "smoke_v", "_probe_")
+_LONG_BURN_LABEL_TOKENS = ("long_burn", "longburn")
+_EVAL_LABEL_TOKENS = ("auth_eval", "_cpu_eval_", "_cuda_eval_", "gha_cpu_eval")
+
+
+def classify_dispatch(
+    *,
+    dispatch_label: str | None = None,
+    epochs: int | None = None,
+    estimated_wall_clock_sec: float | None = None,
+    estimated_cost_usd: float | None = None,
+    explicit_dispatch_class: str | None = None,
+) -> str:
+    """Classify a dispatch into one of :data:`DISPATCH_CLASSES`.
+
+    Order of resolution:
+
+    1. ``explicit_dispatch_class`` if provided (operator override).
+    2. ``dispatch_label`` token match (most specific signal).
+    3. Wall-clock + cost soft ceilings (fallback).
+    4. ``"full"`` as the safe default for ambiguous recipes.
+
+    Returns one of :data:`DISPATCH_CLASSES`. Never raises; defaults to
+    ``"full"`` so the routing helper has a safe per-class canonical.
+    """
+    if explicit_dispatch_class:
+        cls = explicit_dispatch_class.strip().lower()
+        if cls in DISPATCH_CLASSES:
+            return cls
+        # Unknown explicit class: fall through to label-based inference
+        # rather than raising, so a typo doesn't crash the routing call.
+
+    label = (dispatch_label or "").lower()
+    if any(tok in label for tok in _EVAL_LABEL_TOKENS):
+        return "eval"
+    if any(tok in label for tok in _LONG_BURN_LABEL_TOKENS):
+        return "long_burn"
+    if any(tok in label for tok in _SMOKE_LABEL_TOKENS):
+        return "smoke"
+
+    # Numeric inference. Per the premise verifier's auditing, label tokens
+    # cover 28/38 of the historical posterior; numeric inference covers
+    # the rest (recipes that pre-date the smoke-before-full label
+    # convention OR whose dispatch_label uses a custom format).
+    if estimated_wall_clock_sec is not None:
+        if estimated_wall_clock_sec >= PER_CLASS_SOFT_WALLCLOCK_CEILING_HR["full"] * 3600.0:
+            return "long_burn"
+        if estimated_wall_clock_sec <= PER_CLASS_SOFT_WALLCLOCK_CEILING_HR["smoke"] * 3600.0:
+            # Sub-30-min dispatches are smokes by default. Epochs <= 200 is a
+            # secondary signal that catches recipes whose wall-clock estimate
+            # is missing.
+            return "smoke"
+    if epochs is not None and epochs <= 200:
+        return "smoke"
+    if estimated_cost_usd is not None:
+        if estimated_cost_usd <= PER_CLASS_SOFT_COST_CEILING_USD["smoke"]:
+            return "smoke"
+        if estimated_cost_usd >= PER_CLASS_SOFT_COST_CEILING_USD["long_burn"]:
+            return "long_burn"
+
+    return "full"
+
+
+def _provider_label(provider: str, gpu: str) -> str:
+    return f"{provider}/{gpu}"
+
+
+def _consult_posterior_for_provider(
+    provider: str,
+    gpu: str,
+    *,
+    epochs_bucket_value: int,
+    posterior_path: Path | None = None,
+) -> tuple[float | None, str]:
+    """Return ``(p50_cost_usd, confidence_tag)`` for one provider.
+
+    Returns ``(None, "no_anchors")`` when no successful anchors exist;
+    callers should NOT compare across confidence tags ("empirical_posterior"
+    vs "weak_posterior" vs "hand_calibrated_fallback") because the bands
+    are not comparable.
+    """
+    pred = predict(
+        provider,
+        gpu,
+        epochs_bucket_value,
+        all_flags_on=True,
+        posterior_path=posterior_path,
+    )
+    if pred.confidence_tag == "hand_calibrated_fallback":
+        return None, pred.confidence_tag
+    return pred.p50_cost_usd, pred.confidence_tag
+
+
+def select_provider_for_class(
+    dispatch_class: str,
+    *,
+    recipe_meta: dict[str, Any] | None = None,
+    posterior_path: Path | None = None,
+    consult_posterior: bool = True,
+    epochs_for_posterior: int = 3000,
+) -> ProviderRoutingDecision:
+    """Resolve the (provider, gpu) tuple for one dispatch class.
+
+    Implements council Decision 9 binding verdict (PROCEED Option B + Time-
+    Traveler amendment). Returns a :class:`ProviderRoutingDecision` with full
+    forensic context (canonical, fallback, posterior consulted, re-routing
+    rationale).
+
+    Args:
+        dispatch_class: One of :data:`DISPATCH_CLASSES`. Unknown classes
+            default to ``"full"`` with a rationale note.
+        recipe_meta: Optional recipe dict; if it carries an explicit
+            ``provider``/``gpu`` pair OR a ``provider: auto`` marker, the
+            routing helper honors the operator's choice (auto = use Decision
+            9 canonical; explicit = pass-through with a recipe-override
+            rationale).
+        posterior_path: Override for the posterior JSONL (tests only).
+        consult_posterior: Whether to consult the cost-band posterior for
+            dynamic re-routing per the Time-Traveler amendment. Default
+            True; tests may set False to assert the canonical decision.
+        epochs_for_posterior: Epochs bucket to query the posterior with.
+            Defaults to 3000 (T1 Balle canonical).
+
+    Returns:
+        :class:`ProviderRoutingDecision`. Consumers read ``provider`` +
+        ``gpu`` for the dispatch decision; ``rationale`` for forensics.
+
+    Per Catalog #175 + #177 (cost-band outcome discipline) the helper only
+    consults SUCCESSFUL_DISPATCH anchors via :func:`predict`. Per Catalog
+    #199 + #202 (operator-authorize bypass discipline) the helper does NOT
+    bypass any operator-authorize gate; recipe-side overrides are honored
+    so the operator's explicit choice always wins.
+    """
+    # Resolve the dispatch class. Unknown classes -> "full" with rationale.
+    if dispatch_class not in DISPATCH_CLASSES:
+        return ProviderRoutingDecision(
+            dispatch_class="full",
+            provider=CANONICAL_PROVIDER_PER_CLASS["full"][0],
+            gpu=CANONICAL_PROVIDER_PER_CLASS["full"][1],
+            canonical_provider=CANONICAL_PROVIDER_PER_CLASS["full"][0],
+            canonical_gpu=CANONICAL_PROVIDER_PER_CLASS["full"][1],
+            fallback_provider=None,
+            fallback_gpu=None,
+            posterior_consulted=False,
+            re_routed=False,
+            re_routing_rationale="",
+            canonical_cost_p50_usd=None,
+            fallback_cost_p50_usd=None,
+            rationale=(
+                f"unknown dispatch_class={dispatch_class!r}; "
+                f"defaulted to 'full' canonical per Decision 9 safe-default"
+            ),
+        )
+
+    canon_provider, canon_gpu = CANONICAL_PROVIDER_PER_CLASS[dispatch_class]
+
+    # Recipe-side override: operator may explicitly set `provider:` and `gpu:`
+    # in the recipe to opt out of auto-routing. Per CLAUDE.md "Subagent
+    # coherence-by-default" anti-fragmentation primitive: the routing helper
+    # NEVER silently overrides the operator's explicit choice. ``provider: auto``
+    # means "use the Decision 9 canonical".
+    recipe_meta = recipe_meta or {}
+    recipe_provider = recipe_meta.get("provider") or recipe_meta.get("platform")
+    recipe_gpu = recipe_meta.get("gpu")
+    if recipe_provider and str(recipe_provider).strip().lower() not in {"auto", "none"}:
+        # Operator explicitly chose this provider; pass-through.
+        return ProviderRoutingDecision(
+            dispatch_class=dispatch_class,
+            provider=str(recipe_provider).strip().lower(),
+            gpu=str(recipe_gpu or canon_gpu),
+            canonical_provider=canon_provider,
+            canonical_gpu=canon_gpu,
+            fallback_provider=None,
+            fallback_gpu=None,
+            posterior_consulted=False,
+            re_routed=False,
+            re_routing_rationale="",
+            canonical_cost_p50_usd=None,
+            fallback_cost_p50_usd=None,
+            rationale=(
+                f"recipe explicitly set provider={recipe_provider!r} gpu={recipe_gpu!r}; "
+                f"Decision 9 canonical for class={dispatch_class!r} would be "
+                f"{_provider_label(canon_provider, canon_gpu)} (not used)"
+            ),
+        )
+
+    # Auto-routing path. Consult posterior if requested.
+    if not consult_posterior:
+        return ProviderRoutingDecision(
+            dispatch_class=dispatch_class,
+            provider=canon_provider,
+            gpu=canon_gpu,
+            canonical_provider=canon_provider,
+            canonical_gpu=canon_gpu,
+            fallback_provider=None,
+            fallback_gpu=None,
+            posterior_consulted=False,
+            re_routed=False,
+            re_routing_rationale="",
+            canonical_cost_p50_usd=None,
+            fallback_cost_p50_usd=None,
+            rationale=(
+                f"Decision 9 canonical {_provider_label(canon_provider, canon_gpu)} "
+                f"for class={dispatch_class!r}; posterior consultation skipped per caller"
+            ),
+        )
+
+    # Time-Traveler amendment: consult posterior for canonical AND every fallback.
+    canon_p50, canon_tag = _consult_posterior_for_provider(
+        canon_provider,
+        canon_gpu,
+        epochs_bucket_value=epochs_for_posterior,
+        posterior_path=posterior_path,
+    )
+    fallbacks = FALLBACK_PROVIDERS_PER_CLASS.get(dispatch_class, [])
+    best_fallback: tuple[str, str] | None = None
+    best_fallback_p50: float | None = None
+    best_fallback_tag: str | None = None
+    for fb_provider, fb_gpu in fallbacks:
+        fb_p50, fb_tag = _consult_posterior_for_provider(
+            fb_provider,
+            fb_gpu,
+            epochs_bucket_value=epochs_for_posterior,
+            posterior_path=posterior_path,
+        )
+        if fb_p50 is None:
+            continue
+        if best_fallback_p50 is None or fb_p50 < best_fallback_p50:
+            best_fallback = (fb_provider, fb_gpu)
+            best_fallback_p50 = fb_p50
+            best_fallback_tag = fb_tag
+
+    # Re-routing decision per Time-Traveler amendment. Trigger only when
+    # BOTH canonical AND fallback have empirical p50s (matched confidence
+    # floor) and fallback is >25% cheaper.
+    re_routed = False
+    re_routing_rationale = ""
+    chosen_provider = canon_provider
+    chosen_gpu = canon_gpu
+
+    if (
+        canon_p50 is not None
+        and best_fallback_p50 is not None
+        and canon_p50 > 0.0
+        and best_fallback is not None
+        # Matched confidence floor: both at least "weak_posterior"
+        # (not "hand_calibrated_fallback" — those are not real anchors).
+        and canon_tag in {"empirical_posterior", "weak_posterior"}
+        and best_fallback_tag in {"empirical_posterior", "weak_posterior"}
+    ):
+        cost_shift = (canon_p50 - best_fallback_p50) / canon_p50
+        if cost_shift > RE_ROUTING_TRIGGER_FRACTION:
+            re_routed = True
+            chosen_provider, chosen_gpu = best_fallback
+            re_routing_rationale = (
+                f"Time-Traveler amendment trigger: canonical "
+                f"{_provider_label(canon_provider, canon_gpu)} p50=${canon_p50:.2f} "
+                f"vs fallback {_provider_label(*best_fallback)} p50=${best_fallback_p50:.2f}; "
+                f"shift={cost_shift * 100:.1f}% > {RE_ROUTING_TRIGGER_FRACTION * 100:.0f}% threshold; "
+                f"re-routed to fallback"
+            )
+
+    if re_routed:
+        rationale = re_routing_rationale
+    else:
+        rationale = (
+            f"Decision 9 canonical {_provider_label(canon_provider, canon_gpu)} "
+            f"for class={dispatch_class!r}; "
+            f"posterior canon_p50="
+            f"{('$%.2f' % canon_p50) if canon_p50 is not None else 'no_anchors'} "
+            f"({canon_tag}); fallback="
+            f"{_provider_label(*best_fallback) if best_fallback else 'none'} "
+            f"p50="
+            f"{('$%.2f' % best_fallback_p50) if best_fallback_p50 is not None else 'no_anchors'}"
+        )
+
+    return ProviderRoutingDecision(
+        dispatch_class=dispatch_class,
+        provider=chosen_provider,
+        gpu=chosen_gpu,
+        canonical_provider=canon_provider,
+        canonical_gpu=canon_gpu,
+        fallback_provider=best_fallback[0] if best_fallback else None,
+        fallback_gpu=best_fallback[1] if best_fallback else None,
+        posterior_consulted=True,
+        re_routed=re_routed,
+        re_routing_rationale=re_routing_rationale,
+        canonical_cost_p50_usd=canon_p50,
+        fallback_cost_p50_usd=best_fallback_p50,
+        rationale=rationale,
+    )
+
+
+def select_provider_for_recipe(
+    recipe_meta: dict[str, Any],
+    *,
+    posterior_path: Path | None = None,
+    consult_posterior: bool = True,
+) -> ProviderRoutingDecision:
+    """Convenience wrapper: classify + select for one recipe meta dict.
+
+    The recipe meta is the same dict that ``operator_authorize.Recipe.raw``
+    carries: it may contain ``dispatch_class`` (explicit), ``dispatch_label``,
+    ``cost_band.epochs``, and the canonical ``platform``/``provider`` +
+    ``gpu`` keys. This helper threads them into :func:`classify_dispatch`
+    and :func:`select_provider_for_class`.
+    """
+    explicit_class = recipe_meta.get("dispatch_class")
+    dispatch_label = recipe_meta.get("dispatch_label") or recipe_meta.get("label")
+    cost_band = recipe_meta.get("cost_band", {}) or {}
+    epochs = cost_band.get("epochs") or recipe_meta.get("epochs")
+    if isinstance(epochs, str):
+        try:
+            epochs = int(epochs)
+        except ValueError:
+            epochs = None
+    estimated_wall_clock_sec = cost_band.get("estimated_wall_clock_sec")
+    estimated_cost_usd = cost_band.get("estimated_cost_usd")
+
+    dispatch_class = classify_dispatch(
+        dispatch_label=dispatch_label,
+        epochs=int(epochs) if isinstance(epochs, int) else None,
+        estimated_wall_clock_sec=
+            float(estimated_wall_clock_sec) if isinstance(estimated_wall_clock_sec, (int, float)) else None,
+        estimated_cost_usd=
+            float(estimated_cost_usd) if isinstance(estimated_cost_usd, (int, float)) else None,
+        explicit_dispatch_class=str(explicit_class) if explicit_class else None,
+    )
+
+    return select_provider_for_class(
+        dispatch_class,
+        recipe_meta=recipe_meta,
+        posterior_path=posterior_path,
+        consult_posterior=consult_posterior,
+        epochs_for_posterior=int(epochs) if isinstance(epochs, int) and epochs > 0 else 3000,
+    )

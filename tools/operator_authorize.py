@@ -93,6 +93,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RECIPES_DIR = REPO_ROOT / ".omx/operator_authorize_recipes"
 VENV_PYTHON = REPO_ROOT / ".venv/bin/python"
 
+# D9 per-class provider routing (council Decision 9 binding verdict).
+# Imported lazily inside _resolve_routing_decision so this module loads
+# even if tac.cost_band_calibration is unavailable in tests.
+
 
 def _python_bin() -> str:
     """Return the venv python if present, else system python3."""
@@ -1418,6 +1422,97 @@ def _native_dispatch_preflight(recipe: Recipe) -> None:
             )
 
 
+def _resolve_routing_decision(recipe: Recipe) -> dict[str, Any] | None:
+    """Consult the D9 per-class routing API for one recipe.
+
+    Council Decision 9 (binding verdict, omnibus commit 7872c9f4b):
+    per-class canonical routing with cost-band-posterior dynamic
+    re-routing (Time-Traveler amendment).
+
+    Returns a routing decision dict (from
+    :func:`tac.cost_band_calibration.select_provider_for_recipe`) or
+    ``None`` if the routing API is unavailable. The caller logs the
+    decision; the operator's explicit ``platform:`` choice in the recipe
+    YAML still wins (the routing decision flags this as a recipe override
+    via its ``rationale`` string). This preserves backward compatibility
+    with every existing recipe while making the canonical routing visible
+    at dispatch time.
+
+    Operators may opt into auto-routing by setting either:
+      - ``platform: auto`` (recipe-side opt-in to canonical Decision 9
+        provider — the routing helper resolves the platform AND gpu and
+        the dispatch is rerouted)
+      - ``dispatch_class: <smoke|full|long_burn|eval|cpu>`` (explicit
+        class override; auto-routing applies the canonical for that class)
+    """
+    try:
+        from tac.cost_band_calibration import select_provider_for_recipe
+
+        decision = select_provider_for_recipe(
+            recipe.raw,
+            consult_posterior=True,
+        )
+        return decision.as_dict()
+    except Exception as exc:  # pragma: no cover - defensive
+        print(
+            f"[operator-authorize] D9 routing API unavailable; passing through "
+            f"recipe.platform={recipe.platform!r} (error: {exc})",
+            file=sys.stderr,
+        )
+        return None
+
+
+def _maybe_apply_auto_routing(recipe: Recipe) -> Recipe:
+    """If the recipe declares ``platform: auto``, resolve to canonical via D9.
+
+    Returns a possibly-mutated Recipe: the in-memory raw dict has
+    ``platform`` and ``gpu`` rewritten to the routing decision's resolved
+    pair when ``platform: auto`` is the operator's declared intent. The
+    routing decision is recorded under ``raw["_d9_routing_decision"]`` for
+    forensic audit.
+
+    When the recipe carries an explicit ``platform: <provider>`` (the
+    legacy default, e.g. ``platform: modal``), this helper is a no-op:
+    the operator's explicit choice wins per CLAUDE.md "Subagent
+    coherence-by-default" anti-fragmentation primitive.
+    """
+    raw_platform = (recipe.raw.get("platform") or "").strip().lower()
+    if raw_platform != "auto":
+        # Operator explicitly chose this platform; record D9's
+        # recommendation for forensics but do NOT mutate.
+        decision = _resolve_routing_decision(recipe)
+        if decision is not None:
+            recipe.raw["_d9_routing_decision"] = decision
+            print(
+                f"[operator-authorize] D9 routing: class="
+                f"{decision['dispatch_class']!r} canonical="
+                f"{decision['canonical_provider']}/{decision['canonical_gpu']} "
+                f"(operator chose {recipe.platform}/{recipe.gpu}; pass-through)"
+            )
+        return recipe
+
+    decision = _resolve_routing_decision(recipe)
+    if decision is None:
+        raise SystemExit(
+            "[operator-authorize] FATAL: recipe declared platform=auto but "
+            "the D9 routing API is unavailable; cannot resolve canonical "
+            "provider/gpu. Either install tac.cost_band_calibration or "
+            "declare an explicit platform: in the recipe."
+        )
+    recipe.raw["platform"] = decision["provider"]
+    recipe.raw["gpu"] = decision["gpu"]
+    recipe.raw["_d9_routing_decision"] = decision
+    print(
+        f"[operator-authorize] D9 routing: class={decision['dispatch_class']!r} "
+        f"-> {decision['provider']}/{decision['gpu']} "
+        f"(canonical={decision['canonical_provider']}/{decision['canonical_gpu']}, "
+        f"re_routed={decision['re_routed']})"
+    )
+    if decision.get("rationale"):
+        print(f"[operator-authorize] D9 rationale: {decision['rationale']}")
+    return recipe
+
+
 def _run_dispatch(
     recipe: Recipe,
     instance_job_id: str,
@@ -1425,7 +1520,16 @@ def _run_dispatch(
     timeout_hours_override: float | None = None,
     cost_band_epochs_override: int | None = None,
 ) -> int:
-    """Route to the appropriate platform dispatcher."""
+    """Route to the appropriate platform dispatcher.
+
+    D9 per-class provider routing (council Decision 9, omnibus commit
+    7872c9f4b) is consulted before the platform-keyed dispatch fork.
+    Recipes declaring ``platform: auto`` are auto-routed to the canonical
+    Decision 9 provider/gpu; recipes with an explicit ``platform:`` value
+    pass through unchanged but the routing recommendation is logged for
+    forensics. See :func:`_maybe_apply_auto_routing`.
+    """
+    recipe = _maybe_apply_auto_routing(recipe)
     env_overrides = _build_env_overrides(recipe, instance_job_id)
     platform = recipe.platform
     if platform == "modal":
