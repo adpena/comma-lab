@@ -1908,6 +1908,16 @@ def preflight_all(
         check_comma2k19_downloads_route_through_canonical_cache(
             strict=True, verbose=verbose,
         )
+        # 2026-05-14 Catalog #218 - D4 OOM fix self-protection: substrate
+        # reconstruct methods (``reconstruct_pair`` etc.) must support a
+        # mini-batch ``pair_indices`` / ``chunk_size`` kwarg OR run under
+        # a ``torch.no_grad`` / ``torch.inference_mode`` context. STRICT
+        # @ 0 because the D4 substrate (the empirical anchor) gained the
+        # ``pair_indices`` kwarg in the same commit batch. Memory:
+        # feedback_d4_oom_fix_minibatch_landed_20260514.md.
+        check_substrate_reconstruct_methods_support_mini_batch(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -2525,6 +2535,16 @@ def preflight_all(
         # research_substrate). Initial landing: warn-only; legacy
         # recipes will be backfilled.
         check_substrate_recipes_declare_target_modes(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #215 (FIX-HARDEN-OPT P0): substrate recipes
+        # whose full-run GPU is A100/H100/L40S must also declare
+        # `min_smoke_gpu` so the smoke phase compute-class matches the
+        # recipe-design intent (SIREN smoke timeout anchor 2026-05-13).
+        # Initial landing: warn-only; 26 legacy recipes are violations and
+        # will be backfilled in a separate wave per CLAUDE.md
+        # "Strict-flip atomicity rule".
+        check_modal_smoke_recipe_min_gpu_class_consistent(
             strict=False, verbose=verbose,
         )
         # 2026-05-13 Catalog #193: substrate trainers must not update CUDA
@@ -49487,6 +49507,379 @@ def check_comma2k19_downloads_route_through_canonical_cache(
             "way DP1 archives meet Catalog #210 provenance requirements.\n  "
             + "\n  ".join(v[:300] for v in violations[:8])
         )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #215 - check_modal_smoke_recipe_min_gpu_class_consistent
+# ─────────────────────────────────────────────────────────────────────────
+# P0 fix 2026-05-14 (FIX-HARDEN-OPT). The SIREN smoke timeout
+# 2026-05-13T14:04:10Z (label substrate_siren_modal_a100_dispatch_..._smoke,
+# rc=124, ~3601s wall-clock) showed the smoke-before-full wrapper defaults
+# to T4 even when the recipe's full-run GPU is A100. T4 is too slow for
+# compute-heavy substrates (SIREN coordinate-MLP, D4 residual-codec) at the
+# smoke epoch count (100 epochs), so the smoke times out and the operator
+# never gets the cheap integration validation that smoke-before-full is
+# designed to provide.
+#
+# The fix lives in ``tools/run_modal_smoke_before_full.py``: recipes can
+# declare ``min_smoke_gpu: "<class>"`` and the smoke wrapper honors it over
+# a CLI downgrade. This WARN-ONLY-INITIAL preflight gate enforces
+# RECIPE-LEVEL CONSISTENCY: a recipe whose full-run GPU is one of
+# A100/H100/L40S must also declare ``min_smoke_gpu``. Same-line waiver
+# ``# MIN_SMOKE_GPU_OK:<reason>`` (placeholder ``<reason>`` literal
+# rejected) for recipes that explicitly opt to run smoke on T4.
+
+_CHECK_215_RECIPE_DIR = ".omx/operator_authorize_recipes"
+_CHECK_215_RECIPE_GLOB = "substrate_*_modal_*_dispatch.yaml"
+_CHECK_215_REQUIRE_MIN_SMOKE_GPU_FULL_CLASSES: frozenset[str] = frozenset(
+    {"A100", "H100", "L40S"}
+)
+_CHECK_215_VALID_SMOKE_CLASSES: frozenset[str] = frozenset(
+    {"T4", "L4", "A10G", "L40S", "A100", "H100"}
+)
+_CHECK_215_GPU_FIELD_RE = re.compile(
+    r'^gpu\s*:\s*"?(?:\${MODAL_GPU:-)?([A-Za-z0-9_]+)\}?"?\s*(?:#.*)?$',
+    re.MULTILINE,
+)
+_CHECK_215_MIN_SMOKE_GPU_FIELD_RE = re.compile(
+    r'^min_smoke_gpu\s*:\s*"?([A-Za-z0-9_]+)"?\s*(?:#.*)?$',
+    re.MULTILINE,
+)
+_CHECK_215_WAIVER_RE = re.compile(
+    r"#\s*MIN_SMOKE_GPU_OK:\s*(?!<reason>)\S+"
+)
+
+
+def check_modal_smoke_recipe_min_gpu_class_consistent(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #215. P0 FIX-HARDEN-OPT 2026-05-14. Refuses substrate
+    recipes whose full-run GPU is A100/H100/L40S WITHOUT declaring
+    ``min_smoke_gpu``. Same-line ``# MIN_SMOKE_GPU_OK:<reason>`` waiver
+    accepts the recipe (placeholder ``<reason>`` rejected).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    recipes_dir = root / _CHECK_215_RECIPE_DIR
+    violations: list[str] = []
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(
+                "  [modal-smoke-recipe-min-gpu-class-consistent] OK "
+                "(no operator_authorize_recipes dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    for path in sorted(recipes_dir.glob(_CHECK_215_RECIPE_GLOB)):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        if _CHECK_215_WAIVER_RE.search(text):
+            continue
+        m = _CHECK_215_GPU_FIELD_RE.search(text)
+        if m is None:
+            continue
+        full_gpu = m.group(1).strip()
+        if full_gpu not in _CHECK_215_REQUIRE_MIN_SMOKE_GPU_FULL_CLASSES:
+            continue
+        m2 = _CHECK_215_MIN_SMOKE_GPU_FIELD_RE.search(text)
+        if m2 is None:
+            violations.append(
+                f"{rel}: full-run gpu={full_gpu!r} requires "
+                f"`min_smoke_gpu: <class>` so the smoke phase compute-class "
+                f"matches recipe-design intent (SIREN/D4 anchor: smoke "
+                f"timeout on T4 default). Add `min_smoke_gpu: \"{full_gpu}\"` "
+                f"OR a `# MIN_SMOKE_GPU_OK:<reason>` waiver."
+            )
+            continue
+        declared = m2.group(1).strip()
+        if declared not in _CHECK_215_VALID_SMOKE_CLASSES:
+            violations.append(
+                f"{rel}: min_smoke_gpu={declared!r} not in valid set "
+                f"{sorted(_CHECK_215_VALID_SMOKE_CLASSES)}"
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [modal-smoke-recipe-min-gpu-class-consistent] "
+                f"{len(violations)} violation(s) across {scanned} substrate "
+                f"recipe(s) (strict={strict})"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [modal-smoke-recipe-min-gpu-class-consistent] OK "
+                f"({scanned} substrate recipe(s) scanned)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_smoke_recipe_min_gpu_class_consistent found "
+            f"{len(violations)} violation(s). Catalog #215 closes the "
+            "smoke-GPU-class-mismatch bug class (SIREN 2026-05-13 timeout):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #218 — check_substrate_reconstruct_methods_support_mini_batch
+#
+# D4 OOM fix self-protection (2026-05-14). Bug class: substrate reconstruct
+# methods that accept a per-pair batch tensor (e.g. ``reconstruct_pair``,
+# ``synthesize_frame_0``, ``archive_build_pass``) without supporting any of
+# (a) ``pair_indices`` / ``chunk_size`` / ``indices`` mini-batch kwarg,
+# (b) internal chunking helper invocation, or (c) ``torch.no_grad`` /
+# ``torch.inference_mode`` context. Such methods force callers into the
+# full-N-pair forward path which OOMs on T4 (14.56 GB) when N is the
+# contest pair count (600 pairs) — anchored at
+# fc-01KRK9RKD3QV4C276Y5KXFMF65 (D4 Modal T4 smoke 2026-05-14 13:10:25Z
+# rc=1 elapsed 121s; CUDA OOM at synthesize_frame_0 F.interpolate residual
+# upsample with 600-pair batch needing ~13 GB activation memory).
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# + "Strict-flip atomicity rule" — STRICT-from-byte-one because the D4
+# substrate (the empirical anchor) gained the ``pair_indices`` kwarg in the
+# same commit batch.
+#
+# Sister of Catalog #154 (`check_experiments_results_gc_helper_is_canonical`)
+# + Catalog #207 (`check_no_unguarded_rmtree_in_build_tools`) — same pattern
+# of "force callers into the canonical bounded-memory path" applied to a
+# different bug class (full-batch reconstruction OOM instead of unguarded
+# rmtree).
+#
+# Lane: lane_d4_oom_fix_minibatch_reconstruct_20260514.
+# ----------------------------------------------------------------------------
+
+# Method/function-name tokens that trigger the gate. These are the canonical
+# substrate "rebuild the per-pair output from per-pair parameters" surfaces
+# that scale with num_pairs.
+_CHECK_218_METHOD_NAME_TOKENS = (
+    "reconstruct_pair",
+    "reconstruct_pairs",
+    "reconstruct_batch",
+    "archive_build_pass",
+)
+
+# Per-function-body acceptance tokens. ANY of these in the body satisfies
+# the gate (the method either supports a mini-batch kwarg OR operates under
+# an inference-mode context OR delegates to a sister chunking helper).
+_CHECK_218_BODY_ACCEPT_TOKENS = (
+    "torch.no_grad",
+    "torch.inference_mode",
+    "@torch.no_grad",
+    "@torch.inference_mode",
+    "no_grad()",
+    "inference_mode()",
+)
+
+# Argument-name tokens that recognize a mini-batch kwarg in the function
+# signature. ANY of these in the signature satisfies the gate.
+_CHECK_218_SIGNATURE_KWARG_TOKENS = (
+    "pair_indices",
+    "chunk_size",
+    "indices",
+    "batch_indices",
+    "minibatch_indices",
+)
+
+# Same-line waiver. Placeholder literal "<reason>" is rejected so the
+# docstring above cannot self-waive.
+_CHECK_218_WAIVER_RE = re.compile(
+    r"#\s*RECONSTRUCT_BATCH_OOM_OK:\s*([^\s<].*)"
+)
+
+# Substrate files that are out-of-scope (smoke-only fixtures, helpers that
+# delegate, etc.). Add narrowly with rationale.
+_CHECK_218_FILE_ALLOWLIST: frozenset[str] = frozenset()
+
+
+def _check_218_iter_substrate_architecture_files(
+    repo_root: Path,
+) -> list[Path]:
+    """Return ``src/tac/substrates/*/architecture.py`` + sister surfaces."""
+    files: list[Path] = []
+    substrates_dir = repo_root / "src" / "tac" / "substrates"
+    if substrates_dir.exists():
+        for arch in substrates_dir.glob("*/architecture.py"):
+            if arch.is_file():
+                files.append(arch)
+        # Also scan frame-synthesis-style helpers that take a batch.
+        for synth in substrates_dir.glob("*/frame*_synthesis.py"):
+            if synth.is_file():
+                files.append(synth)
+        for synth in substrates_dir.glob("*/synthesis.py"):
+            if synth.is_file():
+                files.append(synth)
+    return sorted(files)
+
+
+def _check_218_function_body_text(
+    src: str, func_node: ast.AST
+) -> str:
+    """Return the source text of a function body via line range."""
+    if not isinstance(
+        func_node, (ast.FunctionDef, ast.AsyncFunctionDef)
+    ):
+        return ""
+    start = func_node.lineno - 1
+    end = getattr(func_node, "end_lineno", None) or len(src.splitlines())
+    return "\n".join(src.splitlines()[start:end])
+
+
+def _check_218_signature_has_minibatch_kwarg(
+    func_node: ast.AST,
+) -> bool:
+    """Return True if the function signature accepts a mini-batch kwarg."""
+    if not isinstance(
+        func_node, (ast.FunctionDef, ast.AsyncFunctionDef)
+    ):
+        return False
+    arg_names: list[str] = []
+    arg_names.extend(a.arg for a in func_node.args.args)
+    arg_names.extend(a.arg for a in func_node.args.kwonlyargs)
+    if func_node.args.vararg is not None:
+        arg_names.append(func_node.args.vararg.arg)
+    if func_node.args.kwarg is not None:
+        arg_names.append(func_node.args.kwarg.arg)
+    return any(name in _CHECK_218_SIGNATURE_KWARG_TOKENS for name in arg_names)
+
+
+def _check_218_function_name_matches(func_node: ast.AST) -> bool:
+    """Return True if the function name matches one of the canonical
+    per-pair-batch reconstruct method patterns."""
+    if not isinstance(
+        func_node, (ast.FunctionDef, ast.AsyncFunctionDef)
+    ):
+        return False
+    name = func_node.name
+    return any(tok in name for tok in _CHECK_218_METHOD_NAME_TOKENS)
+
+
+def _check_218_collect_violations_in_file(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """AST-walk one file and emit one violation per unprotected reconstruct."""
+    rel = path.relative_to(repo_root)
+    rel_posix = rel.as_posix()
+    if rel_posix in _CHECK_218_FILE_ALLOWLIST:
+        return []
+    try:
+        src = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    try:
+        tree = ast.parse(src, filename=str(path))
+    except SyntaxError:
+        return []
+    src_lines = src.splitlines()
+    violations: list[str] = []
+
+    for node in ast.walk(tree):
+        if not _check_218_function_name_matches(node):
+            continue
+        # Acceptance: signature kwarg OR body inference-mode context.
+        if _check_218_signature_has_minibatch_kwarg(node):
+            continue
+        # Decorator acceptance: @torch.no_grad / @torch.inference_mode on
+        # the function itself is equivalent to wrapping the body in a
+        # no_grad context.
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            decorator_match = False
+            for dec in node.decorator_list:
+                dec_inner = dec.func if isinstance(dec, ast.Call) else dec
+                if isinstance(dec_inner, ast.Attribute):
+                    if dec_inner.attr in ("no_grad", "inference_mode"):
+                        decorator_match = True
+                        break
+                elif isinstance(dec_inner, ast.Name):
+                    if dec_inner.id in ("no_grad", "inference_mode"):
+                        decorator_match = True
+                        break
+            if decorator_match:
+                continue
+        body_text = _check_218_function_body_text(src, node)
+        if any(tok in body_text for tok in _CHECK_218_BODY_ACCEPT_TOKENS):
+            continue
+        # Check def-line waiver.
+        line_no = getattr(node, "lineno", None) or 0
+        line_text = src_lines[line_no - 1] if 0 < line_no <= len(src_lines) else ""
+        if _CHECK_218_WAIVER_RE.search(line_text):
+            continue
+        violations.append(
+            f"{rel_posix}:{line_no} substrate reconstruct method "
+            f"{node.name!r} accepts a per-pair batch without "
+            f"``pair_indices`` / ``chunk_size`` / ``indices`` kwarg AND "
+            f"without a ``torch.no_grad`` / ``torch.inference_mode`` body "
+            f"context. Per Catalog #218 (D4 OOM fix self-protect): the "
+            f"full-N-pair forward forces callers into a ~13 GB activation "
+            f"memory path that OOMs T4 (14.56 GB). Add a `pair_indices` "
+            f"kwarg (canonical pattern: see "
+            f"`src/tac/substrates/d4_wyner_ziv_frame_0/architecture.py::"
+            f"reconstruct_pair`) OR wrap the body in `torch.no_grad()` for "
+            f"non-trainable archive-build passes, OR add a same-line "
+            f"`# RECONSTRUCT_BATCH_OOM_OK:<reason>` waiver on the def line. "
+            f"See CLAUDE.md Catalog #218."
+        )
+    return violations
+
+
+def check_substrate_reconstruct_methods_support_mini_batch(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #218 — refuse substrate reconstruct methods that don't
+    support a mini-batch / no-grad path.
+
+    Per the 2026-05-14 D4 OOM anchor (fc-01KRK9RKD3QV4C276Y5KXFMF65), a
+    ``reconstruct_pair(frame_1)`` that requires the full 600-pair batch
+    blows past T4 GPU memory at the F.interpolate residual upsample.
+    The fix landed a ``pair_indices`` kwarg in the same commit batch;
+    this STRICT gate keeps the bug class extinct across all future
+    substrates that ship a per-pair reconstruct surface.
+
+    Sister of Catalog #154 + #207 (canonical-path-enforcement gates).
+    Memory: feedback_d4_oom_fix_minibatch_landed_20260514.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = _check_218_iter_substrate_architecture_files(root)
+    violations: list[str] = []
+    for path in files:
+        violations.extend(_check_218_collect_violations_in_file(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-reconstruct-mini-batch] WARN: "
+                f"{len(violations)} unprotected reconstruct method(s) "
+                f"across {len(files)} substrate file(s) (strict={strict})"
+            )
+        else:
+            print(
+                f"  [substrate-reconstruct-mini-batch] OK "
+                f"({len(files)} substrate file(s) scanned)"
+            )
+
+    if violations and strict:
+        msg = (
+            f"check_substrate_reconstruct_methods_support_mini_batch: "
+            f"{len(violations)} reconstruct method(s) lack mini-batch "
+            f"or inference-mode protection (Catalog #218 — D4 OOM "
+            f"self-protect); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
     return violations
 
 
