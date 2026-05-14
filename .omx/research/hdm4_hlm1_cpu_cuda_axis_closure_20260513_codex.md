@@ -123,8 +123,9 @@ sourcecommit rerun above supersedes it for durable claims.
 ## Frontier Context And Release Compliance Refresh
 
 Operator reminder on 2026-05-13: the public frontier cluster is about `0.19`,
-so HLM1 at `0.20638030907530963 [contest-CUDA]` is not enough. It is the current
-local exact `[contest-CUDA]` floor, not the target floor.
+so HLM1 at `0.20638030907530963 [contest-CUDA]` is not enough. It is a local
+non-promotional exact `[contest-CUDA]` reference, not the active dispatch
+frontier and not the target floor.
 
 Axis facts remain non-convertible:
 

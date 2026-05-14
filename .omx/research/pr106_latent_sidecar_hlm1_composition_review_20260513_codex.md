@@ -164,8 +164,8 @@ method failure:
 
 - HLM1 is a valid pure rate transform on the harvested sidecar archive.
 - The sidecar bytes are runtime-consumed and frame-equivalent after HLM1.
-- The composed archive is `330` bytes larger than the current HLM1 frontier
-  archive (`186753 - 186423`).
+- The composed archive is `330` bytes larger than the HLM1 non-promotional
+  reference archive (`186753 - 186423`).
 - Even granting the rate-only delta from the diagnostic sidecar artifact, the
   composition is not expected to beat `0.20638030907530963 [contest-CUDA]`.
 
@@ -174,7 +174,9 @@ score lowering.
 
 ## Next Score-Lowering Route
 
-1. Keep HLM1 as the current exact `[contest-CUDA]` frontier.
+1. Keep HLM1 as a non-promotional `[contest-CUDA]` reference only; HDM4 remains
+   the active exact dispatch frontier until explicit operator promotion changes
+   that status.
 2. Do not repeat generic sidecar recoding on this source; the best available
    consumed grammar is only `42` bytes.
 3. If latent sidecars continue, move from fixed per-pair sidecar grammar to a

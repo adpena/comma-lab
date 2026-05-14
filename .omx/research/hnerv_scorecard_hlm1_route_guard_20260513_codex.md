@@ -35,12 +35,13 @@ hnerv frontier scorecard: PASS (12 rows, 2 payload groups, 36 follow-up targets,
 
 ## Canonicality Boundary
 
-The HLM1 row is intentionally an internal score-lowering frontier, not public
-promotion authority. The eval artifact still carries explicit
+The HLM1 row is intentionally an internal non-promotional score-lowering
+reference, not public promotion authority. The eval artifact still carries explicit
 `promotion_blockers`, so `experiments/build_hnerv_frontier_scorecard.py` now
 treats a nonempty `promotion_blockers` list as a canonical-frontier blocker.
 This preserves the public/canonical frontier while still allowing exact-CUDA
-optimizer routing through the lower HLM1 artifact.
+analysis to use the lower HLM1 artifact without treating it as the active
+dispatch floor.
 
 ## Refreshed Targets
 

@@ -815,6 +815,11 @@ def _dispatch_claim_summary() -> dict[str, object]:
     return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json", "--live-only"])
 
 
+def _dispatch_claim_historical_summary() -> dict[str, object]:
+    """Return all-history claim hygiene without using it as a live dispatch blocker."""
+    return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json"])
+
+
 def _latest_provider_readiness_artifact() -> Path | None:
     if PROVIDER_READINESS_LATEST.is_file():
         return PROVIDER_READINESS_LATEST
@@ -946,6 +951,26 @@ def _format_dispatch_claim_summary() -> str:
             )
     if not active and not stale and not invalid_lane_id:
         lines.append("  No active or stale nonterminal claims.")
+    historical = _dispatch_claim_historical_summary()
+    if historical.get("_error"):
+        lines.append(
+            "  Historical claim hygiene: UNKNOWN — "
+            f"{historical.get('_error')}"
+        )
+    else:
+        historical_invalid = int(historical.get("invalid_lane_id_count", 0) or 0)
+        historical_unparsable = int(
+            historical.get("unparsable_timestamp_count", 0) or 0
+        )
+        if historical_invalid or historical_unparsable:
+            lines.append(
+                "  Historical claim hygiene: WARNING — archived/non-live rows "
+                f"invalid_lane_id={historical_invalid} "
+                f"unparsable_timestamp={historical_unparsable}; "
+                "not a live duplicate-dispatch blocker"
+            )
+        else:
+            lines.append("  Historical claim hygiene: PASS")
     return "\n".join(lines)
 
 
@@ -1131,20 +1156,56 @@ def _format_constrained_coord_search_status() -> str:
 # Compact roll-up of which phases have actionable next-step output, so the
 # operator can navigate "what should I dispatch next" without re-reading the
 # whole briefing.
-def _format_dispatch_readiness() -> str:
-    """Roll up actionable next-step status across phases."""
-    lines = ["Per-phase dispatch readiness (current session):"]
-    # Phase 1: pre-dispatch frontier — always actionable if PARETO emits rows
-    lines.append("  Phase 1 (pre-dispatch Pareto):              "
-                 "READY — see Phase 1 frontier table above")
+def _dispatch_readiness() -> dict[str, object]:
+    """Structured per-phase dispatch readiness used by JSON and human output."""
     exact_ready_audit = _exact_ready_queue_audit()
     stale_rows = int(exact_ready_audit.get("stale_ready_row_count") or 0)
+    exact_packets = _exact_eval_packet_summaries()
+    ready_packets = [
+        packet
+        for packet in exact_packets
+        if packet.get("ready_for_submit") is True
+        and not packet.get("terminal_exact_eval_evidence_blockers")
+    ]
+    terminal_packets = [
+        packet
+        for packet in exact_packets
+        if packet.get("terminal_exact_eval_evidence_blockers")
+        or packet.get("dispatch_action") == "terminal_exact_eval_evidence_stop"
+    ]
+    blocked_packets = [
+        packet
+        for packet in exact_packets
+        if packet.get("ready_for_submit") is not True
+        or packet.get("terminal_exact_eval_evidence_blockers")
+    ]
     if stale_rows:
-        lines.append("  Phase 1 exact-ready queue hygiene:          "
-                     f"BLOCKED — {stale_rows} row(s) carry terminal/live-custody blockers")
+        phase1_status = "BLOCKED"
+        phase1_reason = f"{stale_rows} exact-ready queue row(s) carry blockers"
+    elif ready_packets:
+        phase1_status = "READY"
+        phase1_reason = f"{len(ready_packets)} exact-eval packet(s) ready"
+    elif exact_packets and len(blocked_packets) == len(exact_packets):
+        phase1_status = "BLOCKED"
+        phase1_reason = "all exact-eval packets are blocked or terminal"
     else:
-        lines.append("  Phase 1 exact-ready queue hygiene:          "
-                     "READY — no terminal/live-custody blockers")
+        phase1_status = "PENDING"
+        phase1_reason = "no exact-eval packet is ready"
+    phase1 = {
+        "status": phase1_status,
+        "reason": phase1_reason,
+        "n_exact_eval_packets": len(exact_packets),
+        "n_ready_exact_eval_packets": len(ready_packets),
+        "n_terminal_exact_eval_packets": len(terminal_packets),
+        "n_blocked_exact_eval_packets": len(blocked_packets),
+        "stale_ready_row_count": stale_rows,
+    }
+    if stale_rows:
+        queue_status = "BLOCKED"
+        queue_reason = f"{stale_rows} row(s) carry terminal/live-custody blockers"
+    else:
+        queue_status = "READY"
+        queue_reason = "no terminal/live-custody blockers"
     # Phase 4 / Phase 5: gated lanes — read PHASE_4_GATED_LANES count
     try:
         n_gated = len(PHASE_4_GATED_LANES)
@@ -1154,10 +1215,6 @@ def _format_dispatch_readiness() -> str:
         n_comp = len(PHASE_5_COMPOSITION_LANES)
     except NameError:
         n_comp = 0
-    lines.append(f"  Phase 4 (gated next-tick):                  "
-                 f"{n_gated} lane(s) gated; check entry conditions before dispatch")
-    lines.append(f"  Phase 5 (meta-composition):                 "
-                 f"{n_comp} compose-stack(s) tracked")
     # Phase 7: constrained-coord-search
     glob_root = REPO_ROOT / "experiments" / "results"
     cc_rollups = sorted(
@@ -1165,14 +1222,72 @@ def _format_dispatch_readiness() -> str:
         reverse=True,
     )
     if cc_rollups:
-        lines.append(f"  Phase 7 (constrained-coord-search):         "
-                     f"READY — {len(cc_rollups)} rollup(s); top-5 to GHA next")
+        phase7_status = "READY"
+        phase7_reason = f"{len(cc_rollups)} rollup(s); top-5 to GHA next"
     else:
-        lines.append("  Phase 7 (constrained-coord-search):         "
-                     "PENDING — sister subagent a8522fca grid not landed")
+        phase7_status = "PENDING"
+        phase7_reason = "sister subagent a8522fca grid not landed"
+    return {
+        "schema": "pact.operator_dispatch_readiness.v1",
+        "phase_1_exact_eval_packets": phase1,
+        "phase_1_exact_ready_queue_hygiene": {
+            "status": queue_status,
+            "reason": queue_reason,
+            "stale_ready_row_count": stale_rows,
+        },
+        "phase_4_gated_next_tick": {
+            "status": "GATED",
+            "n_lanes": n_gated,
+            "reason": "check entry conditions before dispatch",
+        },
+        "phase_5_meta_composition": {
+            "status": "TRACKED",
+            "n_stacks": n_comp,
+            "reason": "compose-stacks tracked",
+        },
+        "phase_7_constrained_coord_search": {
+            "status": phase7_status,
+            "reason": phase7_reason,
+            "n_rollups": len(cc_rollups),
+        },
+        "recommendation": (
+            "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "
+            "reference Phase 6 xray toolkit for diagnosis"
+        ),
+    }
+
+
+def _format_dispatch_readiness() -> str:
+    """Roll up actionable next-step status across phases."""
+    readiness = _dispatch_readiness()
+    lines = ["Per-phase dispatch readiness (current session):"]
+    phase1 = readiness["phase_1_exact_eval_packets"]
+    lines.append(
+        "  Phase 1 (exact-eval packets):               "
+        f"{phase1['status']} — {phase1['reason']}"
+    )
+    queue = readiness["phase_1_exact_ready_queue_hygiene"]
+    lines.append(
+        "  Phase 1 exact-ready queue hygiene:          "
+        f"{queue['status']} — {queue['reason']}"
+    )
+    phase4 = readiness["phase_4_gated_next_tick"]
+    lines.append(
+        "  Phase 4 (gated next-tick):                  "
+        f"{phase4['n_lanes']} lane(s) gated; {phase4['reason']}"
+    )
+    phase5 = readiness["phase_5_meta_composition"]
+    lines.append(
+        "  Phase 5 (meta-composition):                 "
+        f"{phase5['n_stacks']} compose-stack(s) tracked"
+    )
+    phase7 = readiness["phase_7_constrained_coord_search"]
+    lines.append(
+        "  Phase 7 (constrained-coord-search):         "
+        f"{phase7['status']} — {phase7['reason']}"
+    )
     lines.append("")
-    lines.append("Recommendation: prefer M5 Max parallel coarse-rank ($0) before "
-                 "paid GHA promotion; reference Phase 6 xray toolkit for diagnosis.")
+    lines.append(f"Recommendation: {readiness['recommendation']}.")
     return "\n".join(lines)
 
 
@@ -1231,6 +1346,8 @@ def main(argv: list[str] | None = None) -> int:
         out = {
             "target_score": args.target_score,
             "dispatch_claim_summary": _dispatch_claim_summary(),
+            "dispatch_claim_historical_summary": _dispatch_claim_historical_summary(),
+            "dispatch_readiness": _dispatch_readiness(),
         }
         if not args.skip_provider_readiness:
             out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)

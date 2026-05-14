@@ -85,6 +85,12 @@ Currently runs:
   Gate #28: tools/operator_briefing.py --json
            (operator briefing active lists must use dispatch readiness, not
             score-band plausibility alone)
+  Gate #29: terminal dispatch no-signal-loss evidence
+           (recent terminal Modal substrate-smoke claims must appear in
+            reports/cathedral_autopilot_evidence.jsonl)
+  Gate #30: HLM1 non-promotional frontier prose guard
+           (control ledgers must not call HLM1 the active floor/frontier
+            without the non-promotional qualifier)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -230,6 +236,7 @@ PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc
 PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f"
 CLAIM_LANE_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 OPERATOR_BRIEFING = TOOLS / "operator_briefing.py"
+CATHEDRAL_AUTOPILOT_EVIDENCE = REPO / "reports" / "cathedral_autopilot_evidence.jsonl"
 PR106_R2_SAME_RUNTIME_FULL_FRAME_PARITY = (
     REPO / "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
 )
@@ -512,26 +519,30 @@ def _run_active_dispatch_claims_gate() -> tuple[bool, str]:
     """
 
     proc = _run_subprocess(
-        [sys.executable, str(CLAIM_LANE_DISPATCH), "summary", "--live-only"],
+        [
+            sys.executable,
+            str(CLAIM_LANE_DISPATCH),
+            "summary",
+            "--format",
+            "json",
+            "--live-only",
+        ],
         capture_output=True,
         text=True,
     )
     output = proc.stdout + proc.stderr
     if proc.returncode != 0:
         return False, output
-    counts: dict[str, int] = {}
-    for token in output.strip().split():
-        if "=" not in token:
-            continue
-        key, raw = token.split("=", 1)
-        try:
-            counts[key] = int(raw)
-        except ValueError:
-            continue
-    active = counts.get("active", 0)
-    stale = counts.get("stale_nonterminal", 0)
-    unparsable = counts.get("unparsable_timestamp", 0)
-    invalid_lane_id = counts.get("invalid_lane_id", 0)
+    try:
+        live_summary = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        return False, f"dispatch claim live summary was not JSON: {exc}\n{output}"
+    if not isinstance(live_summary, dict):
+        return False, "dispatch claim live summary was not a JSON object"
+    active = int(live_summary.get("active_count", 0) or 0)
+    stale = int(live_summary.get("stale_nonterminal_count", 0) or 0)
+    unparsable = int(live_summary.get("unparsable_timestamp_count", 0) or 0)
+    invalid_lane_id = int(live_summary.get("invalid_lane_id_count", 0) or 0)
     if active or stale or unparsable or invalid_lane_id:
         return (
             False,
@@ -539,7 +550,42 @@ def _run_active_dispatch_claims_gate() -> tuple[bool, str]:
             f"active={active} stale_nonterminal={stale} "
             f"unparsable_timestamp={unparsable} invalid_lane_id={invalid_lane_id}\n{output}",
         )
-    return True, f"active dispatch claims: PASS ({output.strip()})"
+    historical_proc = _run_subprocess(
+        [sys.executable, str(CLAIM_LANE_DISPATCH), "summary", "--format", "json"],
+        capture_output=True,
+        text=True,
+    )
+    historical_note = "historical_claim_hygiene=unknown"
+    if historical_proc.returncode == 0:
+        try:
+            historical_summary = json.loads(historical_proc.stdout)
+        except json.JSONDecodeError:
+            historical_note = "historical_claim_hygiene=warning non_json_summary"
+        else:
+            if isinstance(historical_summary, dict):
+                historical_invalid = int(
+                    historical_summary.get("invalid_lane_id_count", 0) or 0
+                )
+                historical_unparsable = int(
+                    historical_summary.get("unparsable_timestamp_count", 0) or 0
+                )
+                historical_note = (
+                    "historical_claim_hygiene="
+                    + (
+                        "warning "
+                        if historical_invalid or historical_unparsable
+                        else "pass "
+                    )
+                    + f"invalid_lane_id={historical_invalid} "
+                    + f"unparsable_timestamp={historical_unparsable}"
+                )
+    return (
+        True,
+        "active dispatch claims: PASS "
+        f"(active={active} stale_nonterminal={stale} "
+        f"unparsable_timestamp={unparsable} invalid_lane_id={invalid_lane_id}; "
+        f"{historical_note})",
+    )
 
 
 _OPERATOR_PLACEHOLDER_RE = re.compile(r"<[^>\n]+>")
@@ -564,10 +610,33 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                 continue
             if value:
                 failures.append(f"dispatch_claim_summary:{field}:{value}")
+    historical_summary = payload.get("dispatch_claim_historical_summary")
+    if not isinstance(historical_summary, dict):
+        failures.append("dispatch_claim_historical_summary_missing_or_not_object")
+    else:
+        for field in ("unparsable_timestamp_count", "invalid_lane_id_count"):
+            try:
+                int(historical_summary.get(field, 0) or 0)
+            except (TypeError, ValueError):
+                failures.append(f"dispatch_claim_historical_summary:{field}:not_integer")
+    dispatch_readiness = payload.get("dispatch_readiness")
+    if not isinstance(dispatch_readiness, dict):
+        failures.append("dispatch_readiness_missing_or_not_object")
+    else:
+        if dispatch_readiness.get("schema") != "pact.operator_dispatch_readiness.v1":
+            failures.append("dispatch_readiness:bad_schema")
+        phase1 = dispatch_readiness.get("phase_1_exact_eval_packets")
+        if not isinstance(phase1, dict):
+            failures.append("dispatch_readiness:phase_1_exact_eval_packets_missing")
+        else:
+            status = phase1.get("status")
+            if status not in {"READY", "BLOCKED", "PENDING"}:
+                failures.append("dispatch_readiness:phase_1_exact_eval_packets_bad_status")
     exact_packets = payload.get("exact_eval_packets")
     if not isinstance(exact_packets, list):
         failures.append("exact_eval_packets_missing_or_not_list")
     else:
+        terminal_or_blocked_packets = 0
         for packet in exact_packets:
             if not isinstance(packet, dict):
                 failures.append("exact_eval_packets_contains_non_object_row")
@@ -577,6 +646,8 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
             repeat_allowed = packet.get("repeat_dispatch_allowed")
             ready = packet.get("ready_for_submit")
             commands = packet.get("commands")
+            if ready is not True or terminal_blockers:
+                terminal_or_blocked_packets += 1
             if terminal_blockers:
                 if repeat_allowed is not False:
                     failures.append(
@@ -600,6 +671,16 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                             failures.append(
                                 f"exact_eval_packets:{lane_id}:ready_missing_{key}_command"
                             )
+        if exact_packets and terminal_or_blocked_packets == len(exact_packets):
+            phase1 = (
+                dispatch_readiness.get("phase_1_exact_eval_packets")
+                if isinstance(dispatch_readiness, dict)
+                else {}
+            )
+            if isinstance(phase1, dict) and phase1.get("status") == "READY":
+                failures.append(
+                    "dispatch_readiness:phase_1_ready_while_all_exact_packets_blocked"
+                )
     readiness_artifacts = payload.get("non_dispatchable_readiness_artifacts")
     if not isinstance(readiness_artifacts, list):
         failures.append("non_dispatchable_readiness_artifacts_missing_or_not_list")
@@ -690,6 +771,121 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                 f"observed={sorted(observed_active_ids)} expected={sorted(expected_active_ids)}"
             )
     return failures
+
+
+_CLAIM_TABLE_KEYS = (
+    "timestamp_utc",
+    "agent",
+    "lane_id",
+    "platform",
+    "instance_job_id",
+    "predicted_eta_utc",
+    "status",
+    "notes",
+)
+
+
+def _claim_rows_from_markdown(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        return []
+    rows: list[dict[str, str]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or "---" in stripped or "timestamp_utc" in stripped:
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) < len(_CLAIM_TABLE_KEYS):
+            continue
+        rows.append(dict(zip(_CLAIM_TABLE_KEYS, cells[: len(_CLAIM_TABLE_KEYS)], strict=True)))
+    return rows
+
+
+def _terminal_substrate_claims_missing_evidence(
+    claim_rows: list[dict[str, str]],
+    evidence_text: str,
+    *,
+    earliest_timestamp_utc: str = "2026-05-13T00:00:00Z",
+) -> list[str]:
+    missing: list[str] = []
+    for row in claim_rows:
+        timestamp = row.get("timestamp_utc", "")
+        platform = row.get("platform", "")
+        status = row.get("status", "")
+        lane_id = row.get("lane_id", "")
+        job_id = row.get("instance_job_id", "")
+        if timestamp < earliest_timestamp_utc:
+            continue
+        if platform != "modal":
+            continue
+        if not status.startswith("failed_"):
+            continue
+        if not (
+            "substrate_" in job_id
+            or lane_id.startswith("lane_substrate")
+            or lane_id.startswith("lane_pr95_meta_stack")
+            or lane_id.startswith("lane_time_traveler")
+            or lane_id.startswith("lane_sabor")
+            or lane_id.startswith("lane_s2sbs")
+            or lane_id.startswith("lane_a1_plus")
+        ):
+            continue
+        if lane_id in evidence_text or job_id in evidence_text:
+            continue
+        missing.append(f"{timestamp} lane_id={lane_id} job={job_id} status={status}")
+    return missing
+
+
+def _run_terminal_dispatch_evidence_gate() -> tuple[bool, str]:
+    """Ensure recent terminal substrate dispatches are not lost outside evidence ledgers."""
+
+    claim_rows = _claim_rows_from_markdown(REPO / ".omx/state/active_lane_dispatch_claims.md")
+    evidence_text = (
+        CATHEDRAL_AUTOPILOT_EVIDENCE.read_text(encoding="utf-8")
+        if CATHEDRAL_AUTOPILOT_EVIDENCE.is_file()
+        else ""
+    )
+    missing = _terminal_substrate_claims_missing_evidence(claim_rows, evidence_text)
+    if missing:
+        return (
+            False,
+            "terminal substrate dispatch claims missing cathedral evidence rows:\n  "
+            + "\n  ".join(missing[:20]),
+        )
+    return True, "terminal substrate dispatch evidence: PASS"
+
+
+_HLM1_FRONTIER_DRIFT_PATTERNS = (
+    re.compile(r"\bHLM1\b.*\b(current|active)\b.*\b(frontier|floor)\b", re.IGNORECASE),
+    re.compile(r"\b(current|active)\b.*\b(frontier|floor)\b.*\bHLM1\b", re.IGNORECASE),
+    re.compile(r"optimizer routing still uses lower HLM1", re.IGNORECASE),
+)
+
+
+def _hlm1_frontier_prose_violations(root: Path = REPO) -> list[str]:
+    allowed = ("non-promotional", "not the active", "not active", "demoted")
+    violations: list[str] = []
+    for path in sorted((root / ".omx/research").glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if "HLM1" not in line and "hlm1" not in line:
+                continue
+            lowered = line.lower()
+            if any(token in lowered for token in allowed):
+                continue
+            if any(pattern.search(line) for pattern in _HLM1_FRONTIER_DRIFT_PATTERNS):
+                violations.append(f"{path.relative_to(root)}:{lineno}: {line.strip()[:180]}")
+    return violations
+
+
+def _run_hlm1_frontier_prose_gate() -> tuple[bool, str]:
+    violations = _hlm1_frontier_prose_violations(REPO)
+    if violations:
+        return (
+            False,
+            "HLM1 is a non-promotional reference; stale active frontier/floor prose found:\n  "
+            + "\n  ".join(violations[:20]),
+        )
+    return True, "HLM1 non-promotional frontier prose guard: PASS"
 
 
 def _run_operator_briefing_dispatch_gate() -> tuple[bool, str]:
@@ -3064,6 +3260,22 @@ def main(argv: list[str] | None = None) -> int:
             _run_operator_briefing_dispatch_gate,
             "  ✓ Gate #28: operator briefing dispatch routing — PASSED",
             "  ✗ Gate #28: operator briefing dispatch routing — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            29,
+            "terminal dispatch evidence coverage",
+            _run_terminal_dispatch_evidence_gate,
+            "  ✓ Gate #29: terminal dispatch evidence coverage — PASSED",
+            "  ✗ Gate #29: terminal dispatch evidence coverage — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            30,
+            "HLM1 non-promotional frontier prose",
+            _run_hlm1_frontier_prose_gate,
+            "  ✓ Gate #30: HLM1 non-promotional frontier prose — PASSED",
+            "  ✗ Gate #30: HLM1 non-promotional frontier prose — FAILED",
         ),
     ]
     lane_steps = [

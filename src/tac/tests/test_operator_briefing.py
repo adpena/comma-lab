@@ -84,6 +84,13 @@ def test_briefing_json_composite_has_all_three_keys():
     out = json.loads(proc.stdout)
     assert out["target_score"] == 0.19
     assert out["dispatch_claim_summary"]["schema"] == "pact.dispatch_claim_summary.v1"
+    assert out["dispatch_claim_historical_summary"]["schema"] == "pact.dispatch_claim_summary.v1"
+    assert out["dispatch_readiness"]["schema"] == "pact.operator_dispatch_readiness.v1"
+    assert out["dispatch_readiness"]["phase_1_exact_eval_packets"]["status"] in {
+        "READY",
+        "BLOCKED",
+        "PENDING",
+    }
     assert "provider_readiness" in out
     assert out["provider_readiness"].get("score_claim") is False
     assert "pareto" in out
@@ -447,16 +454,54 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
             ],
         },
     )
+    monkeypatch.setattr(
+        mod,
+        "_dispatch_claim_historical_summary",
+        lambda: {
+            "schema": "pact.dispatch_claim_summary.v1",
+            "invalid_lane_id_count": 4,
+            "unparsable_timestamp_count": 0,
+        },
+    )
 
     text = mod._format_dispatch_claim_summary()
 
     assert "invalid_lane_id: 1" in text
     assert "INVALID LANE IDS" in text
+    assert "Historical claim hygiene: WARNING" in text
+    assert "invalid_lane_id=4" in text
     assert "lane_id=0" in text
     assert "ACTIVE CONFLICT GUARD" in text
     assert "lane_id=lane_a1_cuda" in text
     assert "job=job-123" in text
     assert "platform=lightning" in text
+
+
+def test_dispatch_readiness_blocks_when_every_exact_packet_is_terminal(monkeypatch):
+    mod = _load_briefing_module()
+    monkeypatch.setattr(
+        mod,
+        "_exact_ready_queue_audit",
+        lambda: {"stale_ready_row_count": 0},
+    )
+    monkeypatch.setattr(
+        mod,
+        "_exact_eval_packet_summaries",
+        lambda: [
+            {
+                "lane_id": "terminal_packet",
+                "ready_for_submit": False,
+                "terminal_exact_eval_evidence_blockers": ["same_lane_terminal_negative"],
+            }
+        ],
+    )
+
+    readiness = mod._dispatch_readiness()
+    text = mod._format_dispatch_readiness()
+
+    assert readiness["phase_1_exact_eval_packets"]["status"] == "BLOCKED"
+    assert "all exact-eval packets are blocked or terminal" in text
+    assert "Phase 1 (pre-dispatch Pareto):              READY" not in text
 
 
 def test_provider_readiness_formatter_preserves_proxy_boundary(monkeypatch):

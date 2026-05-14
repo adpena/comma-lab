@@ -108,3 +108,45 @@ above.
 
 No remote GPU dispatch was launched by this hardening pass. These are guardrail
 and evidence-custody fixes only.
+
+## P1 Follow-Up: Historical Hygiene + No-Signal-Loss Gates
+
+Second-pass bug-hunter review found three remaining signal-loss risks:
+
+1. historical malformed claim rows were invisible when operator/preflight used
+   `summary --live-only`;
+2. Phase 8 dispatch readiness was human-only and could call Phase 1 `READY`
+   while every exact-eval packet was terminal or blocked;
+3. PR95++ and related Modal substrate-smoke terminal failures were not present
+   in `reports/cathedral_autopilot_evidence.jsonl`.
+
+Fixes landed:
+
+- `tools/operator_briefing.py` now emits
+  `dispatch_claim_historical_summary` and `dispatch_readiness` in JSON, and the
+  human briefing derives Phase 8 text from the same structured readiness
+  object.
+- `tools/all_lanes_preflight.py` keeps live claim hygiene as a hard dispatch
+  blocker, but separately surfaces historical malformed-claim hygiene as a
+  warning so archived corruption is not lost.
+- `tools/all_lanes_preflight.py` adds terminal Modal substrate-smoke evidence
+  coverage and HLM1 non-promotional prose guards.
+- `reports/cathedral_autopilot_evidence.jsonl` now contains a grouped
+  no-score terminal-dispatch evidence row for PR95++, SIREN, time-traveler,
+  SABOR, S2SBS, A1+LAPose, A1+wavelet, and sane-HNeRV smoke failures from
+  2026-05-13.
+- The HLM1 control ledgers now label HLM1 as a non-promotional reference and
+  HDM4 as the active exact dispatch frontier, including
+  `.omx/research/pr106_latent_sidecar_hlm1_composition_review_20260513_codex.md`,
+  `.omx/research/hnerv_scorecard_hlm1_route_guard_20260513_codex.md`, and
+  `.omx/research/hdm4_hlm1_cpu_cuda_axis_closure_20260513_codex.md`.
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest \
+  src/tac/tests/test_operator_briefing.py \
+  src/tac/tests/test_all_lanes_operator_briefing_gate.py -q
+```
+
+Result: `24 passed`.

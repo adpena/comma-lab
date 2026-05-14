@@ -30,6 +30,14 @@ def _base_briefing_payload() -> dict[str, object]:
             "unparsable_timestamp_count": 0,
             "invalid_lane_id_count": 0,
         },
+        "dispatch_claim_historical_summary": {
+            "unparsable_timestamp_count": 0,
+            "invalid_lane_id_count": 0,
+        },
+        "dispatch_readiness": {
+            "schema": "pact.operator_dispatch_readiness.v1",
+            "phase_1_exact_eval_packets": {"status": "PENDING"},
+        },
         "exact_eval_packets": [],
         "non_dispatchable_readiness_artifacts": [
             {
@@ -150,6 +158,36 @@ def test_operator_briefing_dispatch_gate_rejects_invalid_claim_summary() -> None
     assert "dispatch_claim_summary:invalid_lane_id_count:1" in failures
 
 
+def test_operator_briefing_dispatch_gate_rejects_missing_structured_readiness() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "dispatch_readiness": {
+            "schema": "pact.operator_dispatch_readiness.v1",
+            "phase_1_exact_eval_packets": {"status": "READY"},
+        },
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+        "exact_eval_packets": [
+            {
+                "lane_id": "terminal_packet",
+                "terminal_exact_eval_evidence_blockers": ["same_lane_terminal_negative"],
+                "repeat_dispatch_allowed": False,
+                "ready_for_submit": False,
+                "commands": {},
+            }
+        ],
+    }
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert "dispatch_readiness:phase_1_ready_while_all_exact_packets_blocked" in failures
+
+
 def test_operator_briefing_dispatch_gate_rejects_terminal_packet_commands() -> None:
     module = _load_all_lanes_module()
     payload = {
@@ -179,3 +217,63 @@ def test_operator_briefing_dispatch_gate_rejects_terminal_packet_commands() -> N
     )
     assert "exact_eval_packets:terminal_packet:terminal_evidence_ready_for_submit" in failures
     assert "exact_eval_packets:terminal_packet:terminal_evidence_commands_not_suppressed" in failures
+
+
+def test_terminal_substrate_claims_missing_evidence_detects_pr95plus_gap() -> None:
+    module = _load_all_lanes_module()
+    rows = [
+        {
+            "timestamp_utc": "2026-05-13T22:08:18Z",
+            "platform": "modal",
+            "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+            "instance_job_id": (
+                "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_"
+                "20260513T215933Z__smoke__100ep"
+            ),
+            "status": "failed_modal_training_rc_13",
+        }
+    ]
+
+    missing = module._terminal_substrate_claims_missing_evidence(rows, "{}\n")
+
+    assert missing
+    assert "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513" in missing[0]
+
+
+def test_terminal_substrate_claims_accepts_grouped_evidence_row() -> None:
+    module = _load_all_lanes_module()
+    rows = [
+        {
+            "timestamp_utc": "2026-05-13T22:08:18Z",
+            "platform": "modal",
+            "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+            "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch",
+            "status": "failed_modal_training_rc_13",
+        }
+    ]
+
+    missing = module._terminal_substrate_claims_missing_evidence(
+        rows,
+        '{"covered_terminal_lane_ids":["lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513"]}\n',
+    )
+
+    assert missing == []
+
+
+def test_hlm1_frontier_prose_guard_allows_nonpromotional_reference(tmp_path: Path) -> None:
+    module = _load_all_lanes_module()
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    (research / "ok.md").write_text(
+        "HLM1 is a non-promotional reference, not the active frontier.\n",
+        encoding="utf-8",
+    )
+    (research / "bad.md").write_text(
+        "HLM1 is the current exact frontier used by optimizer routing.\n",
+        encoding="utf-8",
+    )
+
+    violations = module._hlm1_frontier_prose_violations(tmp_path)
+
+    assert len(violations) == 1
+    assert "bad.md:1" in violations[0]
