@@ -40,6 +40,7 @@ def _score_fields(archive_bytes: int, seg: float, pose: float) -> dict:
         "score_pose_contribution": math.sqrt(10.0 * pose),
         "score_rate_contribution": 25.0 * archive_bytes / 37_545_489,
         "runtime_tree_sha256": "f" * 64,
+        "runtime_content_tree_sha256": "1" * 64,
         "eval_artifact": "tools/audit_hnerv_frontier_scorecard.py",
     }
 
@@ -233,12 +234,18 @@ def test_required_eval_must_be_visible_and_selected_when_lower(tmp_path: Path) -
                 "archive_size_bytes": 186_423,
                 "avg_posenet_dist": 0.00003236,
                 "avg_segnet_dist": 0.0006426,
+                "score_pose_contribution": score_fields["score_pose_contribution"],
+                "score_rate_contribution": score_fields["score_rate_contribution"],
+                "score_seg_contribution": score_fields["score_seg_contribution"],
                 "n_samples": 600,
                 "provenance": {
                     "archive_sha256": archive_sha,
                     "device": "cuda",
                     "gpu_t4_match": True,
-                    "inflate_runtime_manifest": {"runtime_tree_sha256": "f" * 64},
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "f" * 64,
+                        "runtime_content_tree_sha256": "1" * 64,
+                    },
                 },
                 "score_recomputed_from_components": score_fields["score"],
             },

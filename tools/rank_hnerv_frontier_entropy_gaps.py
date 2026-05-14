@@ -19,16 +19,11 @@ from tac.hnerv_frontier_entropy_ranking import (  # noqa: E402
     build_frontier_entropy_gap_ranking,
     render_markdown,
 )
+from tac.hnerv_frontier_defaults import HNERV_ACTIVE_SCORECARD  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
-DEFAULT_SCORECARD = (
-    REPO_ROOT
-    / "experiments"
-    / "results"
-    / "hnerv_frontier_scorecard_refresh_20260513_codex"
-    / "scorecard.json"
-)
+DEFAULT_SCORECARD = HNERV_ACTIVE_SCORECARD
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

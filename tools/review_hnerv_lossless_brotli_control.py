@@ -20,20 +20,16 @@ from tac.hnerv_lossless_control_promotion_review import (  # noqa: E402
     inspect_single_member_archive,
     render_markdown,
 )
+from tac.hnerv_frontier_defaults import (  # noqa: E402
+    HNERV_ACTIVE_ENTROPY_RANKING,
+    HNERV_ACTIVE_SCORECARD,
+)
 from tac.repo_io import json_text, read_json, repo_relative  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
 DEFAULT_RESULT_ROOT = REPO_ROOT / "experiments" / "results"
-DEFAULT_SCORECARD = (
-    DEFAULT_RESULT_ROOT
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
-    / "scorecard.json"
-)
-DEFAULT_RANKING = (
-    DEFAULT_RESULT_ROOT
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
-    / "frontier_entropy_gap_ranking.json"
-)
+DEFAULT_SCORECARD = HNERV_ACTIVE_SCORECARD
+DEFAULT_RANKING = HNERV_ACTIVE_ENTROPY_RANKING
 DEFAULT_CANDIDATE = (
     DEFAULT_RESULT_ROOT
     / "hnerv_lowlevel_repack_pr106x_20260506_codex"

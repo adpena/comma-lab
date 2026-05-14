@@ -193,6 +193,7 @@ from tac.geometry_feedback_readiness import (  # noqa: E402
     geometry_feedback_contract_failures,
 )
 from tac.deploy.claims import is_terminal_status as is_dispatch_claim_terminal_status  # noqa: E402
+from tac.hnerv_frontier_defaults import HNERV_ACTIVE_SCORECARD  # noqa: E402
 from tac.repo_io import json_text, sha256_bytes  # noqa: E402
 from tac.source_index import SourceIndex  # noqa: E402
 
@@ -241,6 +242,12 @@ PR106_R2_HLM1_XMEMBER_ARCHIVE = (
     / "pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip"
 )
 PR106_R2_HLM1_XMEMBER_ARCHIVE_SHA256 = "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f"
+PR106_R2_HLM2_XMEMBER_ARCHIVE = (
+    REPO
+    / "experiments/results/pr106_r2_hdm4_hlm2_latent_candidate_20260514_codex"
+    / "pr106_r2_hdm4_hlm1_xmember_hlm2_latent_candidate.zip"
+)
+PR106_R2_HLM2_XMEMBER_ARCHIVE_SHA256 = "2c6e5f8d71f687227a28a9a378dc5edfc3215b762015042203b6bf58bfee9378"
 CLAIM_LANE_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 OPERATOR_BRIEFING = TOOLS / "operator_briefing.py"
 CATHEDRAL_AUTOPILOT_EVIDENCE = REPO / "reports" / "cathedral_autopilot_evidence.jsonl"
@@ -316,8 +323,7 @@ REVERSE_ENGINEERING_RELEASE_MANIFEST = (
     REPO / ".omx/research/reverse_engineering_release_manifest_20260505_codex.json"
 )
 HNERV_SCORECARD = (
-    REPO
-    / "experiments/results/hnerv_frontier_scorecard_refresh_20260513_codex/scorecard.json"
+    HNERV_ACTIVE_SCORECARD
 )
 HNERV_SCORECARD_REQUIRED_EVALS = (
     (
@@ -332,6 +338,13 @@ HNERV_SCORECARD_REQUIRED_EVALS = (
         REPO
         / "experiments/results/modal_auth_eval/"
         / "hnerv_hlm1_xmember_modal_t4_20260514/"
+        / "contest_auth_eval.json",
+    ),
+    (
+        "PR106-R2-HDM4-HLM2-XMEMBER",
+        REPO
+        / "experiments/results/modal_auth_eval/"
+        / "hnerv_hlm2_xmember_modal_t4_20260514T065903Z/"
         / "contest_auth_eval.json",
     ),
 )
@@ -880,6 +893,19 @@ def _terminal_claim_coverage_from_jsonl(evidence_path: Path) -> set[tuple[str, s
             continue
         if not isinstance(payload, dict):
             continue
+        lane_id = str(payload.get("lane_id") or "")
+        job_id = str(payload.get("job_name") or payload.get("instance_job_id") or "")
+        status = str(payload.get("dispatch_claim_latest_status") or "")
+        if (
+            lane_id
+            and job_id
+            and status
+            and payload.get("exact_result_review_packet")
+            and payload.get("score_claim") is False
+            and payload.get("promotion_eligible") is False
+            and payload.get("dispatch_claim_terminal_status_recorded") is True
+        ):
+            coverage.add((lane_id, job_id, status))
         claims = payload.get("covered_terminal_claims")
         if not isinstance(claims, list):
             continue
@@ -903,6 +929,7 @@ def _terminal_substrate_claims_missing_evidence(
     evidence_coverage: set[tuple[str, str, str]],
     *,
     earliest_timestamp_utc: str = "2026-05-13T00:00:00Z",
+    exact_eval_earliest_timestamp_utc: str = "2026-05-14T06:00:00Z",
 ) -> list[str]:
     missing: list[str] = []
     for row in claim_rows:
@@ -914,8 +941,12 @@ def _terminal_substrate_claims_missing_evidence(
             continue
         if not _is_terminal_dispatch_status(status):
             continue
+        exact_cuda_status = status.startswith("completed_contest_cuda_modal_auth_eval")
+        if exact_cuda_status and timestamp < exact_eval_earliest_timestamp_utc:
+            continue
         if not (
             "substrate_" in job_id
+            or exact_cuda_status
             or lane_id.startswith("lane_substrate")
             or lane_id.startswith("lane_pr95_meta_stack")
             or lane_id.startswith("lane_time_traveler")
@@ -1274,8 +1305,14 @@ def _run_reverse_engineering_release_gate() -> tuple[bool, str]:
 def _run_hnerv_scorecard_gate() -> tuple[bool, str]:
     cmd = [sys.executable, str(HNERV_SCORECARD_AUDIT), "--scorecard", str(HNERV_SCORECARD)]
     for label, path in HNERV_SCORECARD_REQUIRED_EVALS:
-        if path.is_file():
-            cmd.extend(["--required-eval", f"{label}={path.relative_to(REPO)}"])
+        if not path.is_file():
+            display_path = path.relative_to(REPO) if path.is_relative_to(REPO) else path
+            return (
+                False,
+                "missing required HNeRV scorecard eval artifact: "
+                f"{label}={display_path}",
+            )
+        cmd.extend(["--required-eval", f"{label}={path.relative_to(REPO)}"])
     proc = _run_subprocess(
         cmd,
         capture_output=True,
@@ -2577,8 +2614,49 @@ def _pr106_same_runtime_full_frame_parity_status() -> tuple[list[str], str]:
     return failures, note
 
 
+def _pr106_hlm_runtime_consumption_failures(
+    label: str,
+    manifest: dict[str, object],
+    *,
+    expected_codec: str,
+    expected_archive_sha256: str,
+) -> list[str]:
+    failures: list[str] = []
+    expected_fields = {
+        "schema": "pr106_hlm_runtime_consumption_proof_v1",
+        "proof_scope": "runtime_codec_hlm_fixed_latent_decode_not_full_frame",
+        "latent_section_codec": expected_codec,
+        "archive_sha256": expected_archive_sha256,
+        "runtime_hlm_decode_matches_canonical": True,
+        "runtime_hlm_valid_mutation_changes_raw": True,
+        "runtime_hlm_decode_consumption_claim": True,
+        "full_frame_inflate_output_parity_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": [],
+    }
+    for field, expected in expected_fields.items():
+        if manifest.get(field) != expected:
+            failures.append(
+                f"{label}:hlm_runtime_{field}_drift "
+                f"expected {expected!r}, got {manifest.get(field)!r}"
+            )
+    if not isinstance(manifest.get("latent_section_bytes"), int):
+        failures.append(f"{label}:hlm_runtime_latent_section_bytes_missing")
+    if not isinstance(manifest.get("latent_section_sha256"), str):
+        failures.append(f"{label}:hlm_runtime_latent_section_sha256_missing")
+    mutation = manifest.get("runtime_hlm_valid_mutation")
+    if not isinstance(mutation, dict) or not mutation.get("mutation_kind"):
+        failures.append(f"{label}:hlm_runtime_valid_mutation_manifest_missing")
+    return failures
+
+
 def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
     from tac.packet_compiler import prove_pr106_sidecar_runtime_decode_consumption
+    from tac.packet_compiler.pr106_hlm1_runtime_consumption import (
+        prove_pr106_hlm_runtime_consumption,
+    )
 
     failures: list[str] = []
     observed_formats: list[str] = []
@@ -2612,6 +2690,14 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
             PR106_R2_PR101_RUNTIME,
             "0x02",
             PR106_R2_HLM1_XMEMBER_ARCHIVE_SHA256,
+            PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256,
+        ),
+        (
+            "r2_hlm2_xmember_pr101_grammar",
+            PR106_R2_HLM2_XMEMBER_ARCHIVE,
+            PR106_R2_PR101_RUNTIME,
+            "0x02",
+            PR106_R2_HLM2_XMEMBER_ARCHIVE_SHA256,
             PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256,
         ),
     ):
@@ -2649,6 +2735,25 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
             )
         )
 
+    try:
+        hlm2_manifest = prove_pr106_hlm_runtime_consumption(
+            archive_path=PR106_R2_HLM2_XMEMBER_ARCHIVE,
+            runtime_dir=PR106_R2_PR101_RUNTIME,
+            repo_root=REPO,
+            allowed_codecs=("hlm2",),
+        )
+    except Exception as exc:
+        failures.append(f"r2_hlm2_xmember_pr101_grammar: HLM2 proof raised {type(exc).__name__}: {exc}")
+    else:
+        failures.extend(
+            _pr106_hlm_runtime_consumption_failures(
+                "r2_hlm2_xmember_pr101_grammar",
+                hlm2_manifest,
+                expected_codec="hlm2",
+                expected_archive_sha256=PR106_R2_HLM2_XMEMBER_ARCHIVE_SHA256,
+            )
+        )
+
     parity_failures, parity_note = _pr106_same_runtime_full_frame_parity_status()
     failures.extend(parity_failures)
 
@@ -2659,6 +2764,7 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
         f"(format_ids={','.join(observed_formats)}; PacketIR identity parse-emit "
         "accounts for every payload byte; runtime decodes/applies sidecar bytes; "
         "expected archive/runtime SHA custody is enforced; "
+        "HLM2 runtime codec consumes the fixed-latent section; "
         "runtime-consumption manifests intentionally remain non-promotable; "
         f"{parity_note}; "
         "score_claim=false; ready_for_exact_eval_dispatch=false)"

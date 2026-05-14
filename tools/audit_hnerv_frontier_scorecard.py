@@ -15,16 +15,11 @@ from pathlib import Path
 from typing import Any
 
 from tac.audit_contract import AuditReport, audit_exit_code
+from tac.hnerv_frontier_defaults import HNERV_ACTIVE_SCORECARD
 from tac.repo_io import json_text, read_json
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SCORECARD = (
-    REPO_ROOT
-    / "experiments"
-    / "results"
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
-    / "scorecard.json"
-)
+DEFAULT_SCORECARD = HNERV_ACTIVE_SCORECARD
 CONTEST_ORIGINAL_BYTES = 37_545_489
 SCORE_TOLERANCE = 1e-6
 
@@ -59,6 +54,9 @@ def _audit_score_row(row: dict[str, Any], repo_root: Path) -> list[str]:
     for key in ("archive_sha256", "payload_sha256", "runtime_tree_sha256"):
         if not _valid_sha(row.get(key)):
             blockers.append(f"{label}_invalid_{key}")
+    runtime_content = row.get("runtime_content_tree_sha256")
+    if runtime_content is not None and not _valid_sha(runtime_content):
+        blockers.append(f"{label}_invalid_runtime_content_tree_sha256")
     eval_artifact = row.get("eval_artifact")
     if not isinstance(eval_artifact, str) or not eval_artifact:
         blockers.append(f"{label}_missing_eval_artifact")
@@ -109,6 +107,7 @@ def _internal_score_lowering_blocked(row: dict[str, Any]) -> bool:
 def _audit_internal_score_lowering_frontier(
     payload: dict[str, Any],
     labels: dict[str, dict[str, Any]],
+    repo_root: Path,
 ) -> list[str]:
     blockers: list[str] = []
     frontier = payload.get("score_lowering_frontier")
@@ -139,6 +138,7 @@ def _audit_internal_score_lowering_frontier(
         blockers.append(f"{label}_score_lowering_frontier_scope_invalid")
     if _internal_score_lowering_blocked(row):
         blockers.append(f"{label}_score_lowering_frontier_uses_severe_blocked_row")
+    blockers.extend(_audit_score_row(row, repo_root))
 
     if ranking is not None and not isinstance(ranking, list):
         blockers.append("score_lowering_hidden_gem_byte_mass_ranking_not_list")
@@ -243,6 +243,31 @@ def _audit_required_eval_rows(
             blockers.append(f"{label}_required_eval_row_missing_score")
         elif abs(float(row_score) - score) > SCORE_TOLERANCE:
             blockers.append(f"{label}_required_eval_score_mismatch")
+        if row.get("archive_bytes") != eval_payload.get("archive_size_bytes"):
+            blockers.append(f"{label}_required_eval_archive_bytes_mismatch")
+        numeric_checks = {
+            "avg_segnet_dist": "avg_segnet_dist",
+            "avg_posenet_dist": "avg_posenet_dist",
+            "score_seg_contribution": "score_seg_contribution",
+            "score_pose_contribution": "score_pose_contribution",
+            "score_rate_contribution": "score_rate_contribution",
+        }
+        for row_key, eval_key in numeric_checks.items():
+            row_value = row.get(row_key)
+            eval_value = eval_payload.get(eval_key)
+            if isinstance(row_value, int | float) and isinstance(eval_value, int | float):
+                if abs(float(row_value) - float(eval_value)) > SCORE_TOLERANCE:
+                    blockers.append(f"{label}_required_eval_{row_key}_mismatch")
+            else:
+                blockers.append(f"{label}_required_eval_{row_key}_missing")
+        runtime_manifest = provenance.get("inflate_runtime_manifest")
+        runtime_manifest = runtime_manifest if isinstance(runtime_manifest, dict) else {}
+        if row.get("runtime_tree_sha256") != runtime_manifest.get("runtime_tree_sha256"):
+            blockers.append(f"{label}_required_eval_runtime_tree_sha_mismatch")
+        eval_content_sha = runtime_manifest.get("runtime_content_tree_sha256")
+        if eval_content_sha is not None:
+            if row.get("runtime_content_tree_sha256") != eval_content_sha:
+                blockers.append(f"{label}_required_eval_runtime_content_tree_sha_mismatch")
         rel_path = str(path.relative_to(repo_root)) if path.is_relative_to(repo_root) else str(path)
         if row.get("eval_artifact") != rel_path:
             blockers.append(f"{label}_required_eval_artifact_mismatch")
@@ -358,7 +383,7 @@ def audit_scorecard(
     if "latent_stream" not in manifest_roles and "sidecar_or_correction_stream" not in manifest_roles:
         blockers.append("missing_latent_or_sidecar_section_manifest")
 
-    blockers.extend(_audit_internal_score_lowering_frontier(payload, labels))
+    blockers.extend(_audit_internal_score_lowering_frontier(payload, labels, repo_root))
     blockers.extend(_audit_required_eval_rows(payload, labels, required_evals, repo_root))
 
     score_lowering_frontier = payload.get("score_lowering_frontier")

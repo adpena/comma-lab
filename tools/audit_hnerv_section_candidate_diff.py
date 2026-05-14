@@ -19,15 +19,10 @@ from tac.hnerv_section_repack import (  # noqa: E402
     build_section_repack_plan,
     candidate_diff_from_scorecard_manifests,
 )
+from tac.hnerv_frontier_defaults import HNERV_ACTIVE_SCORECARD  # noqa: E402
 from tac.repo_io import json_text, read_json  # noqa: E402
 
-DEFAULT_SCORECARD = (
-    REPO_ROOT
-    / "experiments"
-    / "results"
-    / "public_hnerv_frontier_payload_profiles_20260504_codex"
-    / "scorecard.json"
-)
+DEFAULT_SCORECARD = HNERV_ACTIVE_SCORECARD
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

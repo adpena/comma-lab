@@ -40,7 +40,7 @@ def test_parallel_dispatch_floor_preserves_hlm1_as_nonpromotional_reference() ->
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
 
-    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20638030907530963
+    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20637231876787215
     assert module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE == 0.20642625334307507
     assert module.DEFAULT_ACTIVE_FLOOR_SCORE == module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 

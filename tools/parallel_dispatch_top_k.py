@@ -49,6 +49,14 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from tac.auth_eval_result import parse_auth_eval_score_claim  # noqa: E402
+from tac.hnerv_frontier_defaults import (  # noqa: E402
+    ACTIVE_FLOOR_ARCHIVE_BYTES,
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL,
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE,
+    ACTIVE_RATE_ONLY_FLOOR_SCORE,
+    ACTIVE_SCORE_FRONTIER_LABEL,
+    ACTIVE_SCORE_FRONTIER_SCORE,
+)
 from tac.optimizer.exact_ready_audit import audit_exact_ready_queue  # noqa: E402
 from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
 
@@ -72,17 +80,19 @@ class DispatchResult:
 
 _LIGHTNING_DISPATCH = REPO / "tools" / "lightning_dispatch_pr106_stack.py"
 _VASTAI_DISPATCH = REPO / "scripts" / "launch_lane_on_vastai.py"
-DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
-DEFAULT_ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
-DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE = 0.20638030907530963
-DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL = (
-    "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513"
+DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES = ACTIVE_FLOOR_ARCHIVE_BYTES
+DEFAULT_ACTIVE_RATE_ONLY_FLOOR_SCORE = ACTIVE_RATE_ONLY_FLOOR_SCORE
+DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE = (
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE
 )
-DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE = 0.20642625334307507
-DEFAULT_ACTIVE_SCORE_FRONTIER_LABEL = "pr106_r2_lowlevel_hdm4_candidate_pr101_runtime_cuda_20260513_codex"
+DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL = (
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL
+)
+DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE = ACTIVE_SCORE_FRONTIER_SCORE
+DEFAULT_ACTIVE_SCORE_FRONTIER_LABEL = ACTIVE_SCORE_FRONTIER_LABEL
 # Backward-compatible flag/default name. Score comparisons use the active
 # promotable score frontier; archive-byte comparisons use the separate
-# rate-only byte floor. The lower HLM1 exact-CUDA reference is preserved as
+# rate-only byte floor. The lower exact-CUDA reference is preserved as
 # non-promotional evidence, not as an unqualified dispatch floor.
 DEFAULT_ACTIVE_FLOOR_SCORE = DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 BLOCKED_EVIDENCE_SEMANTICS = {

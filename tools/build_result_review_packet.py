@@ -151,22 +151,43 @@ def _score_recompute(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _runtime_custody(payload: dict[str, Any]) -> dict[str, Any]:
     manifest = _nested_get(payload, "provenance", "inflate_runtime_manifest")
+    inflate_script_sha = str(_nested_get(payload, "provenance", "inflate_script_sha256") or "")
+    inflated = _nested_get(payload, "provenance", "inflated_output_manifest")
+    inflated_payload = inflated.get("payload") if isinstance(inflated, dict) else {}
+    inflated_payload = inflated_payload if isinstance(inflated_payload, dict) else {}
     if not isinstance(manifest, dict):
         return {
             "runtime_manifest_present": False,
             "runtime_tree_sha256": "",
+            "runtime_content_tree_sha256": "",
             "runtime_file_count": None,
             "payload_closure_fields_present": False,
+            "inflate_script_sha256": inflate_script_sha,
+            "inflated_output_manifest_sha256": str(
+                inflated.get("sha256") if isinstance(inflated, dict) else ""
+            ),
+            "inflated_output_aggregate_sha256": str(
+                inflated_payload.get("aggregate_sha256") or ""
+            ),
         }
     files = manifest.get("files")
     return {
         "runtime_manifest_present": True,
         "runtime_tree_sha256": str(manifest.get("runtime_tree_sha256") or ""),
+        "runtime_content_tree_sha256": str(manifest.get("runtime_content_tree_sha256") or ""),
         "runtime_file_count": _int_or_none(manifest.get("runtime_file_count")),
         "runtime_files_listed": isinstance(files, list) and len(files) > 0,
         "external_dependency_roots": manifest.get("external_dependency_roots", []),
+        "inflate_script_sha256": inflate_script_sha,
+        "inflated_output_manifest_sha256": str(
+            inflated.get("sha256") if isinstance(inflated, dict) else ""
+        ),
+        "inflated_output_aggregate_sha256": str(
+            inflated_payload.get("aggregate_sha256") or ""
+        ),
         "payload_closure_fields_present": bool(
             manifest.get("runtime_tree_sha256")
+            and manifest.get("runtime_content_tree_sha256")
             and isinstance(files, list)
             and len(files) > 0
         ),
@@ -292,6 +313,8 @@ def build_packet(
         "source_json_path": str(auth_eval_json),
         "source_json_sha256": _sha256_file(auth_eval_json),
         "score_claim": False,
+        "score_axis": "contest_cuda" if exact_cuda else "contest_cpu" if exact_cpu else "non_cuda_review",
+        "score_claim_valid": exact_cuda,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -391,6 +414,10 @@ def evidence_row_from_packet(
             else "[non-CUDA review]"
         ),
         "score_claim": False,
+        "score_axis": "contest_cuda" if exact_cuda else "contest_cpu" if exact_cpu else "non_cuda_review",
+        "score_claim_valid": exact_cuda,
+        "exact_cuda_evidence": exact_cuda,
+        "exact_cpu_evidence": exact_cpu,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -413,6 +440,26 @@ def evidence_row_from_packet(
         "dispatch_claim_latest_status": dispatch_claim_state.get("latest_status"),
         "dispatch_claim_terminal_status_recorded": dispatch_claim_state.get(
             "terminal_status_recorded"
+        ),
+        "runtime_tree_sha256": (
+            packet.get("runtime_custody", {}).get("runtime_tree_sha256")
+            if isinstance(packet.get("runtime_custody"), dict) else None
+        ),
+        "runtime_content_tree_sha256": (
+            packet.get("runtime_custody", {}).get("runtime_content_tree_sha256")
+            if isinstance(packet.get("runtime_custody"), dict) else None
+        ),
+        "inflate_script_sha256": (
+            packet.get("runtime_custody", {}).get("inflate_script_sha256")
+            if isinstance(packet.get("runtime_custody"), dict) else None
+        ),
+        "inflated_output_manifest_sha256": (
+            packet.get("runtime_custody", {}).get("inflated_output_manifest_sha256")
+            if isinstance(packet.get("runtime_custody"), dict) else None
+        ),
+        "inflated_output_aggregate_sha256": (
+            packet.get("runtime_custody", {}).get("inflated_output_aggregate_sha256")
+            if isinstance(packet.get("runtime_custody"), dict) else None
         ),
         "family_falsified": bool(packet.get("family_falsified") is True),
         "method_family_retired": bool(packet.get("method_family_retired") is True),

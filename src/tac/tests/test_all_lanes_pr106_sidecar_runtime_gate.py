@@ -29,10 +29,11 @@ def test_pr106_sidecar_runtime_consumption_gate_passes_current_archives() -> Non
     passed, output = module._run_pr106_sidecar_runtime_consumption_gate()
 
     assert passed is True
-    assert "format_ids=0x01,0x02" in output
+    assert "format_ids=0x01,0x02,0x02,0x02" in output
     assert "PacketIR identity parse-emit accounts for every payload byte" in output
     assert "runtime decodes/applies sidecar bytes" in output
     assert "expected archive/runtime SHA custody is enforced" in output
+    assert "HLM2 runtime codec consumes the fixed-latent section" in output
     assert "runtime-consumption manifests intentionally remain non-promotable" in output
     assert "same-runtime full-frame parity manifest" in output
     assert "score_claim=false" in output
@@ -133,7 +134,9 @@ def test_pr106_sidecar_runtime_consumption_gate_threads_expected_archive_sha256(
 ) -> None:
     module = _load_all_lanes_module()
     packet_compiler = module.sys.modules["tac.packet_compiler"]
+    hlm_runtime = module.sys.modules["tac.packet_compiler.pr106_hlm1_runtime_consumption"]
     seen: list[str | None] = []
+    seen_hlm: list[tuple[Path, tuple[str, ...]]] = []
 
     def fake_proof(
         *,
@@ -201,6 +204,34 @@ def test_pr106_sidecar_runtime_consumption_gate_threads_expected_archive_sha256(
         fake_proof,
     )
 
+    def fake_hlm_proof(
+        *,
+        archive_path: Path,
+        runtime_dir: Path,
+        repo_root: Path,
+        allowed_codecs: tuple[str, ...],
+    ) -> dict[str, object]:
+        seen_hlm.append((archive_path, allowed_codecs))
+        return {
+            "schema": "pr106_hlm_runtime_consumption_proof_v1",
+            "proof_scope": "runtime_codec_hlm_fixed_latent_decode_not_full_frame",
+            "archive_sha256": module.PR106_R2_HLM2_XMEMBER_ARCHIVE_SHA256,
+            "latent_section_codec": "hlm2",
+            "latent_section_bytes": 15776,
+            "latent_section_sha256": "f" * 64,
+            "runtime_hlm_decode_matches_canonical": True,
+            "runtime_hlm_valid_mutation": {"mutation_kind": "hlm2_meta_byte_xor_0x01"},
+            "runtime_hlm_valid_mutation_changes_raw": True,
+            "runtime_hlm_decode_consumption_claim": True,
+            "full_frame_inflate_output_parity_claim": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "blockers": [],
+        }
+
+    monkeypatch.setattr(hlm_runtime, "prove_pr106_hlm_runtime_consumption", fake_hlm_proof)
+
     passed, output = module._run_pr106_sidecar_runtime_consumption_gate()
 
     assert passed is True, output
@@ -208,7 +239,21 @@ def test_pr106_sidecar_runtime_consumption_gate_threads_expected_archive_sha256(
         module.PR106_R2_ARCHIVE_SHA256,
         module.PR106_R2_PR101_ARCHIVE_SHA256,
         module.PR106_R2_HLM1_XMEMBER_ARCHIVE_SHA256,
+        module.PR106_R2_HLM2_XMEMBER_ARCHIVE_SHA256,
     ]
+    assert seen_hlm == [(module.PR106_R2_HLM2_XMEMBER_ARCHIVE, ("hlm2",))]
+
+
+def test_hnerv_scorecard_gate_fails_closed_on_missing_required_eval(monkeypatch, tmp_path) -> None:
+    module = _load_all_lanes_module()
+    missing = tmp_path / "missing_contest_auth_eval.json"
+    monkeypatch.setattr(module, "HNERV_SCORECARD_REQUIRED_EVALS", (("MISSING-HLM2", missing),))
+
+    passed, output = module._run_hnerv_scorecard_gate()
+
+    assert passed is False
+    assert "missing required HNeRV scorecard eval artifact" in output
+    assert "MISSING-HLM2" in output
 
 
 def test_pr106_sidecar_runtime_consumption_gate_rejects_promotable_manifest(monkeypatch) -> None:

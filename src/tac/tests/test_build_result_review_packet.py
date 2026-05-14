@@ -39,9 +39,15 @@ def _auth_eval_payload() -> dict:
             "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cuda"],
             "inflate_runtime_manifest": {
                 "runtime_tree_sha256": "b" * 64,
+                "runtime_content_tree_sha256": "c" * 64,
                 "runtime_file_count": 2,
                 "files": [{"relative_path": "inflate.sh"}, {"relative_path": "inflate.py"}],
                 "external_dependency_roots": [],
+            },
+            "inflate_script_sha256": "d" * 64,
+            "inflated_output_manifest": {
+                "sha256": "e" * 64,
+                "payload": {"aggregate_sha256": "f" * 64},
             },
         },
     }
@@ -77,8 +83,13 @@ def test_builds_negative_exact_cuda_review_packet(tmp_path: Path) -> None:
     assert packet["family_falsified"] is False
     assert packet["rank_or_kill_eligible"] is False
     assert packet["exact_cuda_evidence"] is True
+    assert packet["score_axis"] == "contest_cuda"
+    assert packet["score_claim_valid"] is True
     assert packet["score_recomputation"]["matches_reported"] is True
     assert packet["runtime_custody"]["payload_closure_fields_present"] is True
+    assert packet["runtime_custody"]["runtime_content_tree_sha256"] == "c" * 64
+    assert packet["runtime_custody"]["inflate_script_sha256"] == "d" * 64
+    assert packet["runtime_custody"]["inflated_output_aggregate_sha256"] == "f" * 64
     assert packet["dispatch_claim_state"]["matching_claim_count"] == 1
     assert packet["dispatch_claim_state"]["latest_status"] == "completed_score_0.351719"
     assert packet["dispatch_claim_state"]["terminal_status_recorded"] is True
@@ -89,11 +100,17 @@ def test_builds_negative_exact_cuda_review_packet(tmp_path: Path) -> None:
         timestamp_utc="2026-05-08T00:00:00Z",
     )
     assert row["evidence_grade"] == "[contest-CUDA A-negative]"
+    assert row["score_axis"] == "contest_cuda"
+    assert row["score_claim_valid"] is True
+    assert row["exact_cuda_evidence"] is True
     assert row["contest_dispatch_verdict"] == "measured_config_retired_exact_cuda_negative"
     assert row["empirical_archive_bytes"] == 156_404
     assert row["score_contest_cuda"] == packet["canonical_score"]
     assert row["rate"] == packet["score_recomputation"]["rate_term"]
     assert row["rate_term"] == packet["score_recomputation"]["rate_term"]
+    assert row["runtime_content_tree_sha256"] == "c" * 64
+    assert row["inflate_script_sha256"] == "d" * 64
+    assert row["inflated_output_aggregate_sha256"] == "f" * 64
     assert row["archive_rate_ratio"] == pytest.approx(
         packet["score_recomputation"]["rate_term"] / 25.0
     )

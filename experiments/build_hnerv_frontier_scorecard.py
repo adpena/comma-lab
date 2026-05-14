@@ -228,6 +228,9 @@ def row_from_eval(
         "runtime_tree_sha256": (provenance.get("inflate_runtime_manifest") or {}).get(
             "runtime_tree_sha256"
         ),
+        "runtime_content_tree_sha256": (
+            provenance.get("inflate_runtime_manifest") or {}
+        ).get("runtime_content_tree_sha256"),
         "profile_kind": profile.get("kind"),
         "profile_match_key": profile_match_key,
         "profile_archive_sha256": profile.get("archive_sha256"),

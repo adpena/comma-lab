@@ -19,15 +19,10 @@ from tac.hnerv_lowlevel_packer import (  # noqa: E402
     REPACKABLE_SECTIONS,
     build_lowlevel_brotli_repack_candidate,
 )
+from tac.hnerv_frontier_defaults import HNERV_ACTIVE_SCORECARD  # noqa: E402
 from tac.repo_io import json_text, read_json  # noqa: E402
 
-DEFAULT_SCORECARD = (
-    REPO_ROOT
-    / "experiments"
-    / "results"
-    / "hnerv_frontier_scorecard_refresh_20260513_codex"
-    / "scorecard.json"
-)
+DEFAULT_SCORECARD = HNERV_ACTIVE_SCORECARD
 DEFAULT_JOBS = max(1, min(os.cpu_count() or 1, 8))
 
 
