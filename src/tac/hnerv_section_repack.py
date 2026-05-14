@@ -32,6 +32,15 @@ ROLE_PRIORITY = {
     "control_or_metadata": 4,
     "opaque_payload_stream": 5,
 }
+RAW_EQUIVALENCE_SECTION_NAMES = frozenset(
+    {
+        "decoder_packed_brotli",
+        "inner_decoder_packed_brotli",
+        "latents_and_sidecar_brotli",
+        "inner_latents_and_sidecar_brotli",
+    }
+)
+SAME_RUNTIME_FULL_FRAME_PARITY_SCHEMA = "pr106_same_runtime_streaming_frame_parity_v1"
 
 
 class HnervSectionPlanError(ValueError):
@@ -178,6 +187,8 @@ def audit_candidate_section_diff(
     candidate_diff: Mapping[str, Any],
     *,
     require_raw_equivalence: bool = False,
+    require_byte_reduction: bool = False,
+    require_same_runtime_full_frame_parity: bool = False,
 ) -> dict[str, Any]:
     """Audit a future section-transform diff against a section-repack plan.
 
@@ -229,8 +240,15 @@ def audit_candidate_section_diff(
         audited_rows.append(row)
     if changed_count == 0:
         blockers.append("candidate_diff_has_no_changed_sections")
+    if require_byte_reduction:
+        blockers.extend(_audit_byte_reduction(audited_rows))
     if require_raw_equivalence:
         blockers.extend(_audit_raw_equivalence(candidate_diff, audited_rows))
+    parity_summary, parity_blockers = _audit_same_runtime_full_frame_parity(
+        candidate_diff,
+        required=require_same_runtime_full_frame_parity,
+    )
+    blockers.extend(parity_blockers)
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": "tac.hnerv_section_repack.audit_candidate_section_diff",
@@ -249,6 +267,8 @@ def audit_candidate_section_diff(
         "changed_section_count": changed_count,
         "total_byte_delta": total_byte_delta,
         "rate_score_delta_if_components_equal": round(total_byte_delta * RATE_SCORE_PER_BYTE, 12),
+        "byte_reduction_required": require_byte_reduction,
+        "same_runtime_full_frame_parity": parity_summary,
         "sections": audited_rows,
     }
 
@@ -417,6 +437,19 @@ def _is_sha256(value: object) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
+def _audit_byte_reduction(
+    audited_rows: Iterable[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    for row in audited_rows:
+        if int(row.get("byte_delta") or 0) >= 0:
+            blockers.append(
+                "candidate_section_not_smaller:"
+                f"{row.get('label')}:{row.get('section_name')}"
+            )
+    return blockers
+
+
 def _audit_raw_equivalence(
     candidate_diff: Mapping[str, Any],
     audited_rows: Iterable[Mapping[str, Any]],
@@ -437,7 +470,7 @@ def _audit_raw_equivalence(
         by_name[name] = row
     for audited in audited_rows:
         section_name = str(audited.get("section_name") or "")
-        if section_name not in {"decoder_packed_brotli", "latents_and_sidecar_brotli"}:
+        if section_name not in RAW_EQUIVALENCE_SECTION_NAMES:
             continue
         raw = by_name.get(section_name)
         if raw is None:
@@ -457,11 +490,119 @@ def _audit_raw_equivalence(
     return blockers
 
 
+def _audit_same_runtime_full_frame_parity(
+    candidate_diff: Mapping[str, Any],
+    *,
+    required: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    proof = candidate_diff.get("same_runtime_full_frame_parity")
+    if not isinstance(proof, Mapping):
+        return (
+            {
+                "provided": False,
+                "valid": False,
+                "schema": None,
+                "device_axis_label": None,
+            },
+            ["same_runtime_full_frame_parity_missing"] if required else [],
+        )
+
+    blockers: list[str] = []
+    source_archive = proof.get("source_archive")
+    candidate_archive = proof.get("candidate_archive")
+    source = proof.get("source")
+    candidate = proof.get("candidate")
+    source_archive_sha = _nested_string(source_archive, "sha256")
+    candidate_archive_sha = _nested_string(candidate_archive, "sha256")
+    source_stream_sha = _nested_string(source, "streaming_raw_sha256")
+    candidate_stream_sha = _nested_string(candidate, "streaming_raw_sha256")
+
+    if proof.get("schema") != SAME_RUNTIME_FULL_FRAME_PARITY_SCHEMA:
+        blockers.append("same_runtime_full_frame_parity_schema_mismatch")
+    if proof.get("proof_scope") != "same_runtime_streaming_full_frame_hash":
+        blockers.append("same_runtime_full_frame_parity_scope_mismatch")
+    if proof.get("score_claim") is not False:
+        blockers.append("same_runtime_full_frame_parity_score_claim_not_false")
+    if proof.get("contest_axis_claim") is not False:
+        blockers.append("same_runtime_full_frame_parity_contest_axis_claim_not_false")
+    if proof.get("full_frame_inflate_output_parity_claim") is not True:
+        blockers.append("same_runtime_full_frame_parity_claim_not_true")
+    if proof.get("streaming_output_sha256_equal") is not True:
+        blockers.append("same_runtime_full_frame_parity_streaming_sha_not_equal")
+    if proof.get("streaming_output_total_bytes_equal") is not True:
+        blockers.append("same_runtime_full_frame_parity_total_bytes_not_equal")
+    if not _is_sha256(source_archive_sha):
+        blockers.append("same_runtime_full_frame_parity_source_archive_sha_invalid")
+    elif source_archive_sha != candidate_diff.get("source_archive_sha256"):
+        blockers.append("same_runtime_full_frame_parity_source_archive_sha_mismatch")
+    if not _is_sha256(candidate_archive_sha):
+        blockers.append("same_runtime_full_frame_parity_candidate_archive_sha_invalid")
+    elif candidate_archive_sha != candidate_diff.get("candidate_archive_sha256"):
+        blockers.append("same_runtime_full_frame_parity_candidate_archive_sha_mismatch")
+    if not _is_sha256(source_stream_sha) or not _is_sha256(candidate_stream_sha):
+        blockers.append("same_runtime_full_frame_parity_streaming_sha_invalid")
+    elif source_stream_sha != candidate_stream_sha:
+        blockers.append("same_runtime_full_frame_parity_streaming_sha_mismatch")
+    if _nested_bool(source, "full_frame_digest") is not True:
+        blockers.append("same_runtime_full_frame_parity_source_not_full_frame")
+    if _nested_bool(candidate, "full_frame_digest") is not True:
+        blockers.append("same_runtime_full_frame_parity_candidate_not_full_frame")
+    if _nested_int(source, "n_pairs_hashed") != _nested_int(source, "n_pairs_total"):
+        blockers.append("same_runtime_full_frame_parity_source_not_all_pairs")
+    if _nested_int(candidate, "n_pairs_hashed") != _nested_int(candidate, "n_pairs_total"):
+        blockers.append("same_runtime_full_frame_parity_candidate_not_all_pairs")
+
+    return (
+        {
+            "provided": True,
+            "valid": not blockers,
+            "schema": proof.get("schema") if isinstance(proof.get("schema"), str) else None,
+            "device_axis_label": proof.get("device_axis_label")
+            if isinstance(proof.get("device_axis_label"), str)
+            else None,
+            "proof_scope": proof.get("proof_scope")
+            if isinstance(proof.get("proof_scope"), str)
+            else None,
+            "source_archive_sha256": source_archive_sha,
+            "candidate_archive_sha256": candidate_archive_sha,
+            "streaming_output_sha256_equal": proof.get("streaming_output_sha256_equal"),
+            "streaming_output_total_bytes_equal": proof.get(
+                "streaming_output_total_bytes_equal"
+            ),
+            "blockers": blockers,
+        },
+        blockers,
+    )
+
+
+def _nested_string(value: Any, key: str) -> str | None:
+    if not isinstance(value, Mapping):
+        return None
+    found = value.get(key)
+    return found if isinstance(found, str) else None
+
+
+def _nested_bool(value: Any, key: str) -> bool | None:
+    if not isinstance(value, Mapping):
+        return None
+    found = value.get(key)
+    return found if isinstance(found, bool) else None
+
+
+def _nested_int(value: Any, key: str) -> int | None:
+    if not isinstance(value, Mapping):
+        return None
+    found = value.get(key)
+    return found if isinstance(found, int) else None
+
+
 __all__ = [
     "RATE_SCORE_PER_BYTE",
+    "RAW_EQUIVALENCE_SECTION_NAMES",
     "ROLE_ACTIONS",
     "ROLE_PRIORITY",
     "SCHEMA_VERSION",
+    "SAME_RUNTIME_FULL_FRAME_PARITY_SCHEMA",
     "HnervSectionPlanError",
     "audit_candidate_section_diff",
     "build_section_repack_plan",

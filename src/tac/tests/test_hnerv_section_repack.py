@@ -227,6 +227,120 @@ def test_audit_hnerv_section_candidate_diff_cli_blocks_noop_repack(tmp_path: Pat
     assert "candidate_diff_has_no_changed_sections" in payload["blockers"]
 
 
+def test_inner_decoder_candidate_guard_accepts_bound_raw_and_full_frame_parity() -> None:
+    plan = build_section_repack_plan(_inner_scorecard(), labels=["PR106-R2"])
+    source = next(row for row in plan["rows"] if row["section_name"] == "inner_decoder_packed_brotli")
+
+    audit = audit_candidate_section_diff(
+        plan,
+        _inner_decoder_candidate_diff(source),
+        require_raw_equivalence=True,
+        require_byte_reduction=True,
+        require_same_runtime_full_frame_parity=True,
+    )
+
+    assert audit["ready_for_archive_preflight"] is True
+    assert audit["ready_for_exact_eval_dispatch"] is False
+    assert audit["blockers"] == []
+    assert audit["changed_section_count"] == 1
+    assert audit["total_byte_delta"] == -7
+    assert audit["same_runtime_full_frame_parity"]["valid"] is True
+    assert audit["same_runtime_full_frame_parity"]["device_axis_label"] == "local-cpu-streaming-runtime"
+
+
+def test_inner_decoder_candidate_guard_fails_closed_without_full_frame_parity() -> None:
+    plan = build_section_repack_plan(_inner_scorecard(), labels=["PR106-R2"])
+    source = next(row for row in plan["rows"] if row["section_name"] == "inner_decoder_packed_brotli")
+    diff = _inner_decoder_candidate_diff(source)
+    diff.pop("same_runtime_full_frame_parity")
+
+    audit = audit_candidate_section_diff(
+        plan,
+        diff,
+        require_raw_equivalence=True,
+        require_byte_reduction=True,
+        require_same_runtime_full_frame_parity=True,
+    )
+
+    assert audit["ready_for_archive_preflight"] is False
+    assert "same_runtime_full_frame_parity_missing" in audit["blockers"]
+
+
+def test_decoder_candidate_byte_reduction_guard_rejects_growth() -> None:
+    plan = build_section_repack_plan(_inner_scorecard(), labels=["PR106-R2"])
+    source = next(row for row in plan["rows"] if row["section_name"] == "inner_decoder_packed_brotli")
+    diff = _inner_decoder_candidate_diff(source)
+    diff["sections"][0]["candidate_bytes"] = source["section_bytes"] + 1
+
+    audit = audit_candidate_section_diff(
+        plan,
+        diff,
+        require_raw_equivalence=True,
+        require_byte_reduction=True,
+        require_same_runtime_full_frame_parity=True,
+    )
+
+    assert audit["ready_for_archive_preflight"] is False
+    assert "candidate_section_not_smaller:PR106-R2:inner_decoder_packed_brotli" in audit["blockers"]
+
+
+def test_audit_hnerv_section_candidate_diff_cli_threads_strict_decoder_flags(
+    tmp_path: Path,
+) -> None:
+    scorecard = tmp_path / "scorecard.json"
+    diff_path = tmp_path / "diff.json"
+    audit_out = tmp_path / "audit.json"
+    scorecard_payload = _inner_scorecard()
+    source = scorecard_payload["payload_section_manifests"][0]["sections"][2]
+    scorecard.write_text(json.dumps(scorecard_payload), encoding="utf-8")
+    diff_path.write_text(
+        json.dumps(
+            {
+                "source_archive_sha256": "a" * 64,
+                "candidate_archive_sha256": "f" * 64,
+                "sections": [
+                    {
+                        "label": "PR106-R2",
+                        "section_name": "inner_decoder_packed_brotli",
+                        "source_section_sha256": source["sha256"],
+                        "candidate_section_sha256": "1" * 64,
+                        "source_bytes": source["bytes"],
+                        "candidate_bytes": source["bytes"] - 7,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_hnerv_section_candidate_diff.py"),
+            "--scorecard",
+            str(scorecard),
+            "--source-label",
+            "PR106-R2",
+            "--candidate-diff-json",
+            str(diff_path),
+            "--json-out",
+            str(audit_out),
+            "--require-raw-equivalence",
+            "--require-byte-reduction",
+            "--require-same-runtime-full-frame-parity",
+            "--fail-if-blocked",
+        ],
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1
+    payload = json.loads(audit_out.read_text())
+    assert payload["ready_for_archive_preflight"] is False
+    assert "brotli_raw_equivalence_missing" in payload["blockers"]
+    assert "same_runtime_full_frame_parity_missing" in payload["blockers"]
+
+
 def _scorecard() -> dict:
     return {
         "schema_version": 1,
@@ -290,3 +404,129 @@ def _scorecard_pair() -> dict:
     candidate["archive_sha256"] = "f" * 64
     payload["payload_section_manifests"] = [source, candidate]
     return payload
+
+
+def _inner_scorecard() -> dict:
+    return {
+        "schema_version": 1,
+        "tool": "build_hnerv_frontier_scorecard",
+        "score_truth": "exact_cuda_auth_eval_json",
+        "payload_section_manifests": [
+            {
+                "label": "PR106-R2",
+                "archive_sha256": "a" * 64,
+                "archive_bytes": 123,
+                "zip_member": "x",
+                "payload_sha256": "b" * 64,
+                "member_bytes": 100,
+                "profile_match_key": "member_sha256",
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "sections": [
+                    {
+                        "index": 0,
+                        "name": "pr106_sidecar_header_fe_fmt_len_u32",
+                        "start": 0,
+                        "end": 6,
+                        "bytes": 6,
+                        "sha256": "c" * 64,
+                        "entropy_bits_per_byte": 2.0,
+                        "optimization_role": "control_or_metadata",
+                    },
+                    {
+                        "index": 1,
+                        "name": "inner_packed_header_ff_len24",
+                        "start": 6,
+                        "end": 10,
+                        "bytes": 4,
+                        "sha256": "b" * 64,
+                        "entropy_bits_per_byte": 2.0,
+                        "optimization_role": "control_or_metadata",
+                    },
+                    {
+                        "index": 2,
+                        "name": "inner_decoder_packed_brotli",
+                        "start": 10,
+                        "end": 100,
+                        "bytes": 90,
+                        "sha256": "d" * 64,
+                        "entropy_bits_per_byte": 7.5,
+                        "optimization_role": "decoder_weight_stream",
+                    },
+                    {
+                        "index": 3,
+                        "name": "inner_latents_and_sidecar_brotli",
+                        "start": 100,
+                        "end": 106,
+                        "bytes": 6,
+                        "sha256": "e" * 64,
+                        "entropy_bits_per_byte": 6.1,
+                        "optimization_role": "latent_stream",
+                    },
+                ],
+            }
+        ],
+    }
+
+
+def _inner_decoder_candidate_diff(source: dict) -> dict:
+    return {
+        "source_archive_sha256": "a" * 64,
+        "candidate_archive_sha256": "f" * 64,
+        "sections": [
+            {
+                "label": "PR106-R2",
+                "section_name": "inner_decoder_packed_brotli",
+                "source_section_sha256": source["section_sha256"],
+                "candidate_section_sha256": "1" * 64,
+                "source_bytes": source["section_bytes"],
+                "candidate_bytes": source["section_bytes"] - 7,
+            }
+        ],
+        "brotli_raw_equivalence": [
+            {
+                "section_name": "inner_decoder_packed_brotli",
+                "raw_equal": True,
+                "source_raw_sha256": "9" * 64,
+                "candidate_raw_sha256": "9" * 64,
+                "raw_bytes": 1234,
+            }
+        ],
+        "same_runtime_full_frame_parity": _same_runtime_full_frame_parity(
+            source_archive_sha256="a" * 64,
+            candidate_archive_sha256="f" * 64,
+        ),
+    }
+
+
+def _same_runtime_full_frame_parity(
+    *,
+    source_archive_sha256: str,
+    candidate_archive_sha256: str,
+) -> dict:
+    digest = "8" * 64
+    stream = {
+        "schema": "pr106_runtime_full_frame_streaming_digest_v1",
+        "score_claim": False,
+        "full_frame_digest": True,
+        "streaming_raw_sha256": digest,
+        "total_bytes": 3662409600,
+        "n_pairs_hashed": 600,
+        "n_pairs_total": 600,
+    }
+    return {
+        "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+        "proof_scope": "same_runtime_streaming_full_frame_hash",
+        "device_axis_label": "local-cpu-streaming-runtime",
+        "score_claim": False,
+        "contest_axis_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "full_frame_inflate_output_parity_claim": True,
+        "streaming_output_sha256_equal": True,
+        "streaming_output_total_bytes_equal": True,
+        "source_archive": {"sha256": source_archive_sha256},
+        "candidate_archive": {"sha256": candidate_archive_sha256},
+        "source": dict(stream),
+        "candidate": dict(stream),
+    }

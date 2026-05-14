@@ -42,6 +42,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Exit nonzero if the section diff is blocked.",
     )
+    parser.add_argument(
+        "--require-raw-equivalence",
+        action="store_true",
+        help=(
+            "Require brotli/section raw-equivalence proof for decoder/latent "
+            "sections before archive preflight."
+        ),
+    )
+    parser.add_argument(
+        "--require-byte-reduction",
+        action="store_true",
+        help="Require every audited changed section to be smaller than source.",
+    )
+    parser.add_argument(
+        "--require-same-runtime-full-frame-parity",
+        action="store_true",
+        help=(
+            "Require a same-runtime full-frame streaming parity proof bound to "
+            "the source and candidate archive SHA-256s."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -59,7 +80,13 @@ def main(argv: list[str] | None = None) -> int:
         )
     else:
         raise SystemExit("provide --candidate-label or --candidate-diff-json")
-    audit = audit_candidate_section_diff(plan, candidate_diff)
+    audit = audit_candidate_section_diff(
+        plan,
+        candidate_diff,
+        require_raw_equivalence=args.require_raw_equivalence,
+        require_byte_reduction=args.require_byte_reduction,
+        require_same_runtime_full_frame_parity=args.require_same_runtime_full_frame_parity,
+    )
     text = json_text(audit)
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
