@@ -1,0 +1,46 @@
+{
+  "archive_bytes": 225622,
+  "archive_sha256": "e15803c02c5523cb1e968d7e1feaf83dce41e55966ed46bbb797ac1b5cade5e8",
+  "archive_zip_bytes": 224481,
+  "archive_zip_sha256": "a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607",
+  "auth_eval_evidence_grade": "skipped",
+  "auth_eval_score": null,
+  "best_loss_proxy": 52.4235590616862,
+  "cfg": {
+    "beta_ib": 0.01,
+    "decoder_channels": [
+      24,
+      20,
+      16,
+      12,
+      8,
+      6
+    ],
+    "decoder_embed_dim": 32,
+    "decoder_initial_grid_h": 3,
+    "decoder_initial_grid_w": 4,
+    "decoder_num_upsample_blocks": 6,
+    "decoder_sin_freq": 30.0,
+    "encoder_input_channels": 3,
+    "encoder_sin_freq": 30.0,
+    "latent_dim": 24,
+    "latent_init_std": 0.02,
+    "num_pairs": 600,
+    "output_height": 384,
+    "output_width": 512
+  },
+  "epochs": 5,
+  "git_head": "<unknown>",
+  "hardware_substrate": "linux_x86_64_t4",
+  "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
+  "param_breakdown": {
+    "decoder": 78818,
+    "encoder": 35664,
+    "latents": 14400,
+    "total": 128882
+  },
+  "smoke": false,
+  "substrate_tag": "c6_e4_mdl_ibps",
+  "trained_at_utc": "2026-05-14T14:57:14Z",
+  "training_seconds": 296.6557528972626
+}

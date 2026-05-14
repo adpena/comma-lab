@@ -1,0 +1,201 @@
+{
+  "timestamp_utc": "2026-05-14T17:22:54.215837+00:00",
+  "device": "mps",
+  "pair_samples": 8,
+  "byte_samples_per_section": 200,
+  "significance_threshold": 0.0001,
+  "scorer_batch_size": 4,
+  "byte_offsets": [],
+  "pair_indices_file": null,
+  "seed": 777,
+  "archives": [
+    {
+      "name": "smoke_decoder_15987",
+      "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_15987/archive.zip",
+      "sha256": "4cfa777a5a3aec5a69a3c8bb087566e76fb48cdc39daace69179ccee6f75ad69",
+      "size_bytes": 224481,
+      "included_sections": [],
+      "excluded_sections": [
+        "encoder_blob"
+      ],
+      "pair_indices": [
+        40,
+        234,
+        276,
+        344,
+        377,
+        456,
+        550,
+        589
+      ],
+      "decision_grade": false,
+      "baseline_seg": 0.5028871148824692,
+      "baseline_pose": 0.41387882456183434,
+      "baseline_score_components": 52.32311268899822,
+      "mdl_scorer_extracted_bytes_lo": 0,
+      "mdl_scorer_extracted_bytes_hi": 0,
+      "mdl_density_lo": 0.0,
+      "mdl_density_hi": 0.0,
+      "zen_floor_band_recommendation": "[0.003, 0.010] \u2014 Shannon zen-floor confirmed; staircase HIGH-EV",
+      "elapsed_seconds": 3.814697265625e-06
+    },
+    {
+      "name": "smoke_decoder_21093",
+      "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_21093/archive.zip",
+      "sha256": "969a6ff44926460196e745971ab325a73a3711c556b2b0a89571a6105531afcd",
+      "size_bytes": 224481,
+      "included_sections": [],
+      "excluded_sections": [
+        "encoder_blob"
+      ],
+      "pair_indices": [
+        40,
+        234,
+        276,
+        344,
+        377,
+        456,
+        550,
+        589
+      ],
+      "decision_grade": false,
+      "baseline_seg": 0.5028871148824692,
+      "baseline_pose": 0.35563936829566956,
+      "baseline_score_components": 52.174551800404,
+      "mdl_scorer_extracted_bytes_lo": 0,
+      "mdl_scorer_extracted_bytes_hi": 0,
+      "mdl_density_lo": 0.0,
+      "mdl_density_hi": 0.0,
+      "zen_floor_band_recommendation": "[0.003, 0.010] \u2014 Shannon zen-floor confirmed; staircase HIGH-EV",
+      "elapsed_seconds": 5.9604644775390625e-06
+    },
+    {
+      "name": "smoke_decoder_28936",
+      "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_28936/archive.zip",
+      "sha256": "5326c23d37130f46c993f712fc801dff3f38bcd8b63070d28c13f0a5ac0560d2",
+      "size_bytes": 224481,
+      "included_sections": [],
+      "excluded_sections": [
+        "encoder_blob"
+      ],
+      "pair_indices": [
+        40,
+        234,
+        276,
+        344,
+        377,
+        456,
+        550,
+        589
+      ],
+      "decision_grade": false,
+      "baseline_seg": 0.5028871148824692,
+      "baseline_pose": 0.285786010324955,
+      "baseline_score_components": 51.97923214864996,
+      "mdl_scorer_extracted_bytes_lo": 0,
+      "mdl_scorer_extracted_bytes_hi": 0,
+      "mdl_density_lo": 0.0,
+      "mdl_density_hi": 0.0,
+      "zen_floor_band_recommendation": "[0.003, 0.010] \u2014 Shannon zen-floor confirmed; staircase HIGH-EV",
+      "elapsed_seconds": 4.0531158447265625e-06
+    },
+    {
+      "name": "smoke_decoder_34576",
+      "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_34576/archive.zip",
+      "sha256": "086419e7d168b3bc62a7f82ef2e01e10b7886c96b708b1700157f2d085bd94c0",
+      "size_bytes": 224481,
+      "included_sections": [],
+      "excluded_sections": [
+        "encoder_blob"
+      ],
+      "pair_indices": [
+        40,
+        234,
+        276,
+        344,
+        377,
+        456,
+        550,
+        589
+      ],
+      "decision_grade": false,
+      "baseline_seg": 0.5028871148824692,
+      "baseline_pose": 0.26624445989727974,
+      "baseline_score_components": 51.920411399067774,
+      "mdl_scorer_extracted_bytes_lo": 0,
+      "mdl_scorer_extracted_bytes_hi": 0,
+      "mdl_density_lo": 0.0,
+      "mdl_density_hi": 0.0,
+      "zen_floor_band_recommendation": "[0.003, 0.010] \u2014 Shannon zen-floor confirmed; staircase HIGH-EV",
+      "elapsed_seconds": 5.9604644775390625e-06
+    },
+    {
+      "name": "smoke_decoder_43437",
+      "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_43437/archive.zip",
+      "sha256": "8448df8ddb071c6e6935690574c7258ce1f9469e7110dfe863436c573cb68c19",
+      "size_bytes": 224481,
+      "included_sections": [],
+      "excluded_sections": [
+        "encoder_blob"
+      ],
+      "pair_indices": [
+        40,
+        234,
+        276,
+        344,
+        377,
+        456,
+        550,
+        589
+      ],
+      "decision_grade": false,
+      "baseline_seg": 0.5028871148824692,
+      "baseline_pose": 0.3878299295902252,
+      "baseline_score_components": 52.25805130044345,
+      "mdl_scorer_extracted_bytes_lo": 0,
+      "mdl_scorer_extracted_bytes_hi": 0,
+      "mdl_density_lo": 0.0,
+      "mdl_density_hi": 0.0,
+      "zen_floor_band_recommendation": "[0.003, 0.010] \u2014 Shannon zen-floor confirmed; staircase HIGH-EV",
+      "elapsed_seconds": 5.245208740234375e-06
+    },
+    {
+      "name": "smoke_decoder_top5_stack",
+      "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_top5_stack/archive.zip",
+      "sha256": "45df6c6ce061becd3b3403d3f2bf6279d818d10d72b58854a6730865adff762e",
+      "size_bytes": 224481,
+      "included_sections": [],
+      "excluded_sections": [
+        "encoder_blob"
+      ],
+      "pair_indices": [
+        40,
+        234,
+        276,
+        344,
+        377,
+        456,
+        550,
+        589
+      ],
+      "decision_grade": false,
+      "baseline_seg": 0.5028871148824692,
+      "baseline_pose": 0.5553363859653473,
+      "baseline_score_components": 52.645269117428406,
+      "mdl_scorer_extracted_bytes_lo": 0,
+      "mdl_scorer_extracted_bytes_hi": 0,
+      "mdl_density_lo": 0.0,
+      "mdl_density_hi": 0.0,
+      "zen_floor_band_recommendation": "[0.003, 0.010] \u2014 Shannon zen-floor confirmed; staircase HIGH-EV",
+      "elapsed_seconds": 2.86102294921875e-06
+    }
+  ],
+  "notes": [
+    "[MDL-ablation-MPS]",
+    "[mathematical-derivation]",
+    "Per CLAUDE.md 'MPS auth eval is NOISE': MPS forward passes do NOT produce authoritative absolute scores.",
+    "decision_grade=False; MPS is screening-only and must be replayed for routing.",
+    "Rate term excluded from score_components; archive size constant across ablations.",
+    "Per CLAUDE.md 'KILL is LAST RESORT': zen-floor band update is INFORMATIONAL, not falsifying."
+  ]
+}

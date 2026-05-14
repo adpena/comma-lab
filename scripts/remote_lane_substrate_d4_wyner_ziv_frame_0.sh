@@ -18,8 +18,8 @@
 #   - .omx/research/deep_math_geometry_manifolds_synthesis_20260514.md §3.5 + §6 D4
 #   - Wyner & Ziv 1976; Slepian & Wolf 1973; Lucas-Kanade 1981; Rodrigues 1840
 #
-# Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_D4_WZF0_DONE marker).
+# Score-tagging: [contest-CUDA] appears in the completion-log line only after
+# a custody-valid contest-CUDA auth-eval JSON is parsed.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity - non-negotiable".
 set -euo pipefail
@@ -35,14 +35,14 @@ PROVENANCE="$LOG_DIR/provenance.json"
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 D4_WYNER_ZIV_FRAME_0_VIDEO_PATH="${D4_WYNER_ZIV_FRAME_0_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR="${D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR:-$OUTPUT_DIR}"
-D4_WYNER_ZIV_FRAME_0_EPOCHS="${D4_WYNER_ZIV_FRAME_0_EPOCHS:-2000}"
+D4_WYNER_ZIV_FRAME_0_EPOCHS="${D4_WYNER_ZIV_FRAME_0_EPOCHS:-50}"
 D4_WYNER_ZIV_FRAME_0_UPSTREAM_DIR="${D4_WYNER_ZIV_FRAME_0_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 D4_WYNER_ZIV_FRAME_0_DEVICE="${D4_WYNER_ZIV_FRAME_0_DEVICE:-cuda}"
 D4_WYNER_ZIV_FRAME_0_MOTION_MODE="${D4_WYNER_ZIV_FRAME_0_MOTION_MODE:-se3_parametric}"
 D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_H="${D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_H:-48}"
 D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_W="${D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_W:-64}"
 D4_WYNER_ZIV_FRAME_0_BASE_ARCHIVE_PATH="${D4_WYNER_ZIV_FRAME_0_BASE_ARCHIVE_PATH:-}"
-D4_WYNER_ZIV_FRAME_0_MAX_PAIRS="${D4_WYNER_ZIV_FRAME_0_MAX_PAIRS:-}"
+D4_WYNER_ZIV_FRAME_0_MAX_PAIRS="${D4_WYNER_ZIV_FRAME_0_MAX_PAIRS:-200}"
 
 DISPATCH_INSTANCE_JOB_ID="${D4_WYNER_ZIV_FRAME_0_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${D4_WYNER_ZIV_FRAME_0_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -152,7 +152,7 @@ cat > "$PROVENANCE" <<EOF
 EOF
 
 # Stage 4: invoke trainer.
-log "stage_4_trainer_begin motion_mode=$D4_WYNER_ZIV_FRAME_0_MOTION_MODE epochs=$D4_WYNER_ZIV_FRAME_0_EPOCHS"
+log "stage_4_trainer_begin motion_mode=$D4_WYNER_ZIV_FRAME_0_MOTION_MODE epochs=$D4_WYNER_ZIV_FRAME_0_EPOCHS max_pairs=$D4_WYNER_ZIV_FRAME_0_MAX_PAIRS"
 TRAINER_PY="$WORKSPACE/experiments/train_substrate_d4_wyner_ziv_frame_0.py"
 if [ ! -f "$TRAINER_PY" ]; then
     log "FATAL: trainer missing at $TRAINER_PY"
@@ -179,6 +179,46 @@ fi
     ${MAX_PAIRS_ARGS[@]+"${MAX_PAIRS_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
-# Stage 5: emit completion marker (operator + autopilot consume).
-log "LANE_D4_WZF0_DONE [contest-CUDA] output_dir=$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR"
-echo "LANE_D4_WZF0_DONE [contest-CUDA] $LANE_ID $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+# Stage 5: emit completion marker (operator + autopilot consume). A training
+# artifact is not a contest-CUDA score claim unless the auth-eval boundary parses.
+AUTH_EVAL_JSON=""
+for candidate in \
+    "$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR/contest_auth_eval.json" \
+    "$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR/contest_auth_eval_cuda.json" \
+    "$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR/auth_eval.json"; do
+    if [ -f "$candidate" ]; then
+        AUTH_EVAL_JSON="$candidate"
+        break
+    fi
+done
+
+AUTH_EVAL_SCORE=""
+if [ -n "$AUTH_EVAL_JSON" ]; then
+    if AUTH_EVAL_SCORE="$(PYTHONPATH="$WORKSPACE/src${PYTHONPATH:+:$PYTHONPATH}" "$PYBIN_RESOLVED" - "$AUTH_EVAL_JSON" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from tac.auth_eval_result import parse_auth_eval_score_claim
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+claim = parse_auth_eval_score_claim(
+    payload,
+    required_score_axis="contest_cuda",
+    require_component_recompute=True,
+)
+if claim is None:
+    raise SystemExit("auth eval JSON is not a custody-valid contest-CUDA score claim")
+print(f"{claim.score:.12g}")
+PY
+)"; then
+        log "LANE_D4_WZF0_DONE [contest-CUDA] score=$AUTH_EVAL_SCORE auth_eval=$AUTH_EVAL_JSON output_dir=$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR"
+        echo "LANE_D4_WZF0_DONE [contest-CUDA] $LANE_ID score=$AUTH_EVAL_SCORE auth_eval=$AUTH_EVAL_JSON $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+    else
+        log "LANE_D4_WZF0_DONE [training-artifact] auth_eval_not_custody_valid=$AUTH_EVAL_JSON output_dir=$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR"
+        echo "LANE_D4_WZF0_DONE [training-artifact] $LANE_ID auth_eval_not_custody_valid=$AUTH_EVAL_JSON $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+    fi
+else
+    log "LANE_D4_WZF0_DONE [training-artifact] auth_eval_missing output_dir=$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR"
+    echo "LANE_D4_WZF0_DONE [training-artifact] $LANE_ID auth_eval_missing $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+fi

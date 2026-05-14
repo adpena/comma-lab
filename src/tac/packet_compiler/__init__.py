@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Reusable packet-compiler byte grammar primitives.
 
 This package is intentionally narrow. It exposes only implemented, tested
@@ -89,6 +90,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_PR101_RANKED_SCHEMA,
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     PR106_SIDECAR_MAGIC,
     PR106_SUPPORTED_SIDECAR_FORMATS,
     PR106SidecarRecodeCandidate,
@@ -99,6 +101,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     canonicalize_brotli_dim_delta_sidecar_arrays,
     decode_brotli_dim_delta_sidecar_payload,
     decode_pr101_ranked_sidecar_payload_to_dim_delta,
+    decode_pr101_rank_elided_sidecar_payload_to_dim_delta,
     decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_sidecar_packet,
     emit_pr106_sidecar_recode_candidate_archive,
@@ -114,6 +117,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     pr106_sidecar_mutation_manifest,
     pr106_sidecar_recode_candidate_manifest,
     read_single_stored_member_archive,
+    reexpand_pr101_rank_elided_sidecar_payload,
 )
 from tac.packet_compiler.pr106_latent_sidecar_selection import (
     build_latent_candidate_grid as build_pr106_latent_candidate_grid,

@@ -1,0 +1,16 @@
+{
+  "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
+  "tag": "substrate_c6_e4_mdl_ibps",
+  "trainer": "experiments/train_substrate_c6_e4_mdl_ibps.py",
+  "recipe": ".omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml",
+  "video_path": "/tmp/pact/upstream/videos/0.mkv",
+  "output_dir": "/tmp/pact/lane_substrate_c6_e4_mdl_ibps_results/output",
+  "epochs": "5",
+  "batch_size": "4",
+  "lr": "5e-4",
+  "latent_dim": "24",
+  "beta_ib": "0.01",
+  "device": "cuda",
+  "dispatch_instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep",
+  "started_at_utc": "2026-05-14T14:50:38Z"
+}

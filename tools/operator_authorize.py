@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Canonical operator-authorize entry point (FIX-G: T1-C wrapper unification).
 
 Per simplification audit `a2a901c4f43d66a74` (operator approved 2026-05-12),
@@ -83,6 +84,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -1102,6 +1104,65 @@ def _modal_sentinel_files(recipe: Recipe) -> str:
     return ",".join(out)
 
 
+def _run_modal_dispatch_process(
+    cmd: list[str],
+) -> subprocess.CompletedProcess[str]:
+    """Run the Modal CLI while capturing output for pre-spawn retry checks."""
+
+    return subprocess.run(
+        cmd,
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _print_modal_dispatch_output(proc: subprocess.CompletedProcess[str]) -> None:
+    if proc.stdout:
+        print(proc.stdout, end="" if proc.stdout.endswith("\n") else "\n")
+    if proc.stderr:
+        print(
+            proc.stderr,
+            end="" if proc.stderr.endswith("\n") else "\n",
+            file=sys.stderr,
+        )
+
+
+def _load_modal_mount_retry_helpers() -> tuple[Any, Any, Any]:
+    """Import reusable Modal upload-race helpers from the deploy layer."""
+
+    src_dir = str(REPO_ROOT / "src")
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+    from tac.deploy.modal.mount_manifest import (
+        modal_mount_upload_cli_retry_settings,
+        modal_output_indicates_mount_upload_race,
+        modal_output_indicates_spawned_call,
+    )
+
+    return (
+        modal_mount_upload_cli_retry_settings,
+        modal_output_indicates_mount_upload_race,
+        modal_output_indicates_spawned_call,
+    )
+
+
+def _modal_mount_upload_retry_settings() -> tuple[int, float]:
+    settings_fn, _race_fn, _spawn_fn = _load_modal_mount_retry_helpers()
+    return settings_fn()
+
+
+def _modal_output_indicates_mount_upload_race(output: str) -> bool:
+    _settings_fn, race_fn, _spawn_fn = _load_modal_mount_retry_helpers()
+    return bool(race_fn(output))
+
+
+def _modal_output_indicates_spawned_call(output: str) -> bool:
+    _settings_fn, _race_fn, spawn_fn = _load_modal_mount_retry_helpers()
+    return bool(spawn_fn(output))
+
+
 def _dispatch_modal(
     recipe: Recipe,
     instance_job_id: str,
@@ -1178,7 +1239,43 @@ def _dispatch_modal(
     if modal_cfg.get("cost_band_all_flags_on", False):
         cmd.append("--cost-band-all-flags-on")
     print(f"[operator-authorize] dispatching: {' '.join(cmd)}")
-    return subprocess.call(cmd, cwd=str(REPO_ROOT))
+    max_attempts, retry_sleep_seconds = _modal_mount_upload_retry_settings()
+    last_rc = 1
+    for attempt in range(1, max_attempts + 1):
+        if attempt > 1:
+            print(
+                "[operator-authorize] Catalog #165 Modal mount-upload retry "
+                f"{attempt}/{max_attempts} for instance_job_id={instance_job_id}"
+            )
+        proc = _run_modal_dispatch_process(cmd)
+        _print_modal_dispatch_output(proc)
+        last_rc = proc.returncode
+        if proc.returncode == 0:
+            return 0
+        combined_output = f"{proc.stdout}\n{proc.stderr}"
+        if _modal_output_indicates_spawned_call(combined_output):
+            return proc.returncode
+        if not _modal_output_indicates_mount_upload_race(combined_output):
+            return proc.returncode
+        if attempt >= max_attempts:
+            print(
+                "[operator-authorize] FATAL: Modal mount set remained unstable "
+                f"after {max_attempts} pre-spawn attempt(s); failing closed. "
+                "Catalog #165 was not bypassed, and no retry is attempted "
+                "after a Modal call_id appears.",
+                file=sys.stderr,
+            )
+            return proc.returncode
+        print(
+            "[operator-authorize] Catalog #165 detected a pre-spawn Modal "
+            "mount upload race; waiting for source mtimes to settle before "
+            f"retrying in {retry_sleep_seconds:.1f}s.",
+            file=sys.stderr,
+        )
+        if retry_sleep_seconds > 0:
+            time.sleep(retry_sleep_seconds)
+    return last_rc
+
 
 
 def _dispatch_vastai(

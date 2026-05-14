@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # ruff: noqa: I001
 """Strict pre-submission compliance gate for contest release packets.
 
@@ -71,6 +72,18 @@ SUBMISSION_RUNTIME_CUSTODY_FILENAMES = {
     "report.txt",
 }
 SUBMISSION_RUNTIME_CUSTODY_PREFIXES = ("pre_submission_compliance.",)
+POST_DEADLINE_POLICY_MIN_CHARS = 80
+POST_DEADLINE_POLICY_CONTEXT_RE = re.compile(
+    r"\b(score|leaderboard|top\s*#?\s*1|#1|frontier|novel|innovative|new\s+idea|"
+    r"not\s+on\s+the\s+leaderboard)\b",
+    re.IGNORECASE,
+)
+SOURCE_REPO_RE = re.compile(r"https://github\.com/adpena/[A-Za-z0-9_.-]+")
+OSS_REPRO_RE = re.compile(
+    r"\b(oss|open\s*source|mit|apache|source\s+code|deterministic|reproducib|"
+    r"runtime\s+tree|commit)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -1280,6 +1293,158 @@ def inspect_public_hygiene(paths: list[Path]) -> tuple[dict[str, Any], list[Chec
     return {"scan_paths": [_rel(path) for path in paths], "hits": hits}, checks
 
 
+def _load_policy_statement(args: argparse.Namespace, submission_dir: Path) -> tuple[str, str | None]:
+    inline = getattr(args, "competitive_or_innovative_statement", None)
+    if inline:
+        return str(inline), "inline"
+    file_arg = getattr(args, "competitive_or_innovative_statement_file", None)
+    if file_arg:
+        return Path(file_arg).read_text(encoding="utf-8"), _rel(Path(file_arg))
+    for name in (
+        "competitive_or_innovative.md",
+        "pr_body.md",
+        "PR_BODY.md",
+    ):
+        candidate = submission_dir / name
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8"), _rel(candidate)
+    return "", None
+
+
+def inspect_post_deadline_submission_policy(
+    args: argparse.Namespace,
+    submission_dir: Path,
+) -> tuple[dict[str, Any], list[Check]]:
+    """Validate comma's post-deadline PR-template policy field.
+
+    As of 2026-05-07, the upstream PR template asks whether a late submission is
+    competitive or innovative. This check keeps a contest-final packet from
+    being technically valid but PR-policy-incomplete.
+    """
+
+    checks: list[Check] = []
+    required = bool(
+        args.contest_final or getattr(args, "require_competitive_or_innovative_statement", False)
+    )
+    text, source = _load_policy_statement(args, submission_dir)
+    stripped = text.strip()
+    lower = stripped.lower()
+    has_mode = "competitive" in lower or "innovative" in lower
+    has_context = bool(POST_DEADLINE_POLICY_CONTEXT_RE.search(stripped))
+    long_enough = len(stripped) >= POST_DEADLINE_POLICY_MIN_CHARS
+    if required:
+        _add(
+            checks,
+            "post_deadline_policy_statement_present",
+            bool(stripped),
+            (
+                "contest-final packets must include the PR-template "
+                "`competitive or innovative` answer"
+            ),
+        )
+        _add(
+            checks,
+            "post_deadline_policy_statement_names_mode",
+            has_mode,
+            "statement must explicitly say competitive and/or innovative",
+        )
+        _add(
+            checks,
+            "post_deadline_policy_statement_has_frontier_context",
+            has_context,
+            "statement must explain score/leaderboard competitiveness or novelty",
+        )
+        _add(
+            checks,
+            "post_deadline_policy_statement_substantive",
+            long_enough,
+            (
+                f"statement length={len(stripped)} chars; minimum "
+                f"{POST_DEADLINE_POLICY_MIN_CHARS}"
+            ),
+        )
+    else:
+        _add(
+            checks,
+            "post_deadline_policy_statement_optional",
+            True,
+            "not required for this non-final packet",
+            severity="info",
+        )
+    return {
+        "required": required,
+        "source": source,
+        "chars": len(stripped),
+        "names_mode": has_mode,
+        "has_frontier_context": has_context,
+        "statement_preview": stripped[:240],
+    }, checks
+
+
+def _submission_public_text(submission_dir: Path) -> tuple[str, list[str]]:
+    names = (
+        "README.md",
+        "WRITEUP.md",
+        "report.txt",
+        "competitive_or_innovative.md",
+        "pr_body.md",
+        "PR_BODY.md",
+        "archive_manifest.json",
+    )
+    chunks: list[str] = []
+    sources: list[str] = []
+    for name in names:
+        path = submission_dir / name
+        if not path.is_file():
+            continue
+        chunks.append(path.read_text(encoding="utf-8", errors="ignore"))
+        sources.append(_rel(path))
+    return "\n\n".join(chunks), sources
+
+
+def inspect_public_source_reproducibility(
+    submission_dir: Path,
+    *,
+    required: bool,
+) -> tuple[dict[str, Any], list[Check]]:
+    """Validate public repo links and reproducibility claims for final packets."""
+
+    checks: list[Check] = []
+    text, sources = _submission_public_text(submission_dir)
+    repo_links = sorted(set(SOURCE_REPO_RE.findall(text)))
+    has_repro_context = bool(OSS_REPRO_RE.search(text))
+    if required:
+        _add(
+            checks,
+            "public_source_repo_link_present",
+            bool(repo_links),
+            "contest-final packet must link public source repo(s)",
+        )
+        _add(
+            checks,
+            "public_source_reproducibility_context_present",
+            has_repro_context,
+            (
+                "contest-final packet must mention OSS/open-source, deterministic "
+                "reproducibility, source code, commit, archive SHA, or runtime tree"
+            ),
+        )
+    else:
+        _add(
+            checks,
+            "public_source_reproducibility_optional",
+            True,
+            "not required for this non-final packet",
+            severity="info",
+        )
+    return {
+        "required": required,
+        "sources": sources,
+        "repo_links": repo_links,
+        "has_reproducibility_context": has_repro_context,
+    }, checks
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--submission-dir", type=Path, required=True)
@@ -1301,6 +1466,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--expected-lane-id")
     parser.add_argument("--expected-job-id")
+    parser.add_argument("--competitive-or-innovative-statement")
+    parser.add_argument("--competitive-or-innovative-statement-file", type=Path)
+    parser.add_argument("--require-competitive-or-innovative-statement", action="store_true")
     parser.add_argument("--public-scan-path", type=Path, action="append", default=[])
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--strict", action="store_true")
@@ -1378,6 +1546,15 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     )
     sections["report"] = report_record
     checks.extend(report_checks)
+    policy_record, policy_checks = inspect_post_deadline_submission_policy(args, submission_dir)
+    sections["post_deadline_submission_policy"] = policy_record
+    checks.extend(policy_checks)
+    source_repro_record, source_repro_checks = inspect_public_source_reproducibility(
+        submission_dir,
+        required=args.contest_final,
+    )
+    sections["public_source_reproducibility"] = source_repro_record
+    checks.extend(source_repro_checks)
     if args.contest_final:
         _add(
             checks,

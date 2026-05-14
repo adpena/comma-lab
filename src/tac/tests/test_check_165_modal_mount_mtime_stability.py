@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #165 (FIX-I, D2): Modal mount-set mtime-stability check tests.
 
 Coverage targets per the FIX-I landing memo:
@@ -13,6 +14,7 @@ Coverage targets per the FIX-I landing memo:
   triggers the check
 - the check fires BEFORE any ``add_local_*`` call (no torn upload)
 - file-size-only change (no mtime change) still detected
+- same-size content rewrite with restored mtime_ns still detected
 - max_retries=0 -> single check, succeed-on-stable
 - recursive directory walk picks up changes inside subdirs
 - sleep_fn is invoked exactly N times when stable on attempt N
@@ -22,6 +24,8 @@ Coverage targets per the FIX-I landing memo:
 - per-call mtime_stability_window_seconds threads through
 - the stability check is called BEFORE trainer required_input_file validation
   (so a torn trainer manifest does not produce a misleading missing-file error)
+- the stability check is called BEFORE trainer import side effects
+  (so a torn trainer module is not imported before the guard)
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ from tac.deploy.modal.mount_manifest import (
     MountUploadRaceError,
     _hash_mount_set_fingerprint,
     build_training_image,
+    stabilize_mount_set_for_modal_upload,
     verify_mount_set_mtime_stability,
 )
 
@@ -113,6 +118,67 @@ def test_changing_paths_eventually_stable(tmp_path: Path) -> None:
     )
     # Stable on attempt 2: attempt1=hash-before, sleep1 (mutates), hash-after=changed;
     # attempt2=hash-before, sleep2 (noop), hash-after=stable => 2 sleep calls total.
+    assert state["calls"] == 2
+
+
+def test_stabilizer_retries_transient_mtime_change_then_stable(
+    tmp_path: Path,
+) -> None:
+    """Bounded stabilizer tolerates a transient writer, then returns stable."""
+
+    f = tmp_path / "transient.py"
+    f.write_text("v0")
+    state = {"calls": 0}
+
+    def fake_sleep(_seconds: float) -> None:
+        state["calls"] += 1
+        if state["calls"] == 1:
+            f.write_text("v1-after-transient-writer")
+            os.utime(f, (time.time() + 1.0, time.time() + 1.0))
+
+    attempt = stabilize_mount_set_for_modal_upload(
+        [f],
+        window_seconds=0.0,
+        max_attempts=3,
+        max_retries_per_attempt=1,
+        cooldown_seconds=0.0,
+        sleep_fn=fake_sleep,
+    )
+
+    assert attempt == 2
+    assert state["calls"] == 2
+
+
+def test_stabilizer_fails_closed_after_max_attempts(
+    tmp_path: Path,
+) -> None:
+    """Persistent writers remain refused after the bounded retry budget."""
+
+    f = tmp_path / "persistent.py"
+    f.write_text("v0")
+    state = {"calls": 0}
+
+    def fake_sleep(_seconds: float) -> None:
+        state["calls"] += 1
+        f.write_text(f"v{state['calls']}-still-changing")
+        os.utime(
+            f,
+            (
+                time.time() + float(state["calls"]),
+                time.time() + float(state["calls"]),
+            ),
+        )
+
+    with pytest.raises(MountUploadRaceError, match="did not stabilize"):
+        stabilize_mount_set_for_modal_upload(
+            [f],
+            window_seconds=0.0,
+            max_attempts=2,
+            max_retries_per_attempt=1,
+            cooldown_seconds=0.0,
+            sleep_fn=fake_sleep,
+        )
+
     assert state["calls"] == 2
 
 
@@ -274,7 +340,7 @@ def test_default_window_and_retries_constants() -> None:
 
 
 def test_hash_fingerprint_changes_on_mtime(tmp_path: Path) -> None:
-    """The underlying hash function distinguishes (mtime, size) tuples."""
+    """The underlying hash function distinguishes metadata changes."""
 
     f = tmp_path / "f.txt"
     f.write_text("hi")
@@ -292,13 +358,57 @@ def test_hash_fingerprint_changes_on_size(tmp_path: Path) -> None:
     f = tmp_path / "f.txt"
     f.write_text("short")
     h1, _ = _hash_mount_set_fingerprint([f])
-    # Append data + force same mtime as before: hash must still differ
-    # because we hash (mtime, size). The size moved.
+    # Append data + force same mtime as before: hash must still differ because
+    # the metadata/content fingerprint includes size.
     st1 = f.stat()
     f.write_text("much longer than before by far")
     os.utime(f, (st1.st_mtime, st1.st_mtime))
     h2, _ = _hash_mount_set_fingerprint([f])
     assert h1 != h2
+
+
+def test_hash_fingerprint_changes_on_same_size_content_with_restored_mtime_ns(
+    tmp_path: Path,
+) -> None:
+    """Content changes are detected even when size and mtime_ns are restored."""
+
+    f = tmp_path / "f.txt"
+    f.write_text("abcdefgh")
+    st1 = f.stat()
+    h1, _ = _hash_mount_set_fingerprint([f])
+
+    f.write_text("ijklmnop")
+    os.utime(f, ns=(st1.st_atime_ns, st1.st_mtime_ns))
+
+    h2, _ = _hash_mount_set_fingerprint([f])
+    assert f.stat().st_size == st1.st_size
+    assert f.stat().st_mtime_ns == st1.st_mtime_ns
+    assert h1 != h2
+
+
+def test_content_rewrite_same_size_restored_mtime_ns_detected(
+    tmp_path: Path,
+) -> None:
+    """A same-length rewrite with restored mtime_ns still fails closed."""
+
+    f = tmp_path / "rewritten.py"
+    f.write_text("value = 1\n")
+    stable_stat = f.stat()
+    state = {"calls": 0}
+
+    def fake_sleep(_s: float) -> None:
+        state["calls"] += 1
+        f.write_text("value = 2\n")
+        os.utime(f, ns=(stable_stat.st_atime_ns, stable_stat.st_mtime_ns))
+
+    with pytest.raises(MountUploadRaceError):
+        verify_mount_set_mtime_stability(
+            [f],
+            window_seconds=0.0,
+            max_retries=1,
+            sleep_fn=fake_sleep,
+        )
+    assert state["calls"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -613,5 +723,49 @@ def test_check_runs_before_trainer_required_input_validation(
             mtime_stability_check=True,
             mtime_stability_window_seconds=0.0,
             mtime_stability_max_retries=1,
+            mtime_stability_stabilization_attempts=1,
             mtime_stability_sleep_fn=fake_sleep,
         )
+    assert image.dirs == []
+    assert image.files == []
+
+
+def test_check_runs_before_trainer_import_side_effects(
+    tmp_path: Path,
+) -> None:
+    """A racing mount set is refused before importing trainer code."""
+
+    root = _make_fake_repo(tmp_path)
+    marker = tmp_path / "trainer_imported.marker"
+    trainer = tmp_path / "side_effect_trainer.py"
+    trainer.write_text(
+        "from pathlib import Path\n"
+        f"Path({str(marker)!r}).write_text('imported')\n"
+        "TIER_1_OPERATOR_REQUIRED_FLAGS = {}\n"
+    )
+
+    image = FakeImage()
+    racing = root / "src" / "racing.py"
+    racing.write_text("v0")
+    state = {"v": 0}
+
+    def fake_sleep(_s: float) -> None:
+        state["v"] += 1
+        racing.write_text(f"v{state['v']}-changed")
+        os.utime(racing, (time.time() + state["v"], time.time() + state["v"]))
+
+    with pytest.raises(MountUploadRaceError):
+        build_training_image(
+            image,
+            repo_root=root,
+            trainer_module_path=trainer,
+            mtime_stability_check=True,
+            mtime_stability_window_seconds=0.0,
+            mtime_stability_max_retries=1,
+            mtime_stability_stabilization_attempts=1,
+            mtime_stability_sleep_fn=fake_sleep,
+        )
+
+    assert not marker.exists()
+    assert image.dirs == []
+    assert image.files == []

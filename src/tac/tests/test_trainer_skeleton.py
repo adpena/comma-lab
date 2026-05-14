@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for the canonical substrate-trainer skeleton helpers.
 
 Lane: lane_canon_dedup_1_20260513
@@ -219,13 +220,19 @@ def test_module_exports_are_stable() -> None:
     """Catch accidental __all__ drift that would break new substrates."""
     expected = {
         "EVAL_HW",
+        "OPTIMIZATION_FLAGS_MANIFEST",
+        "OptimizedTrainingContext",
         "REPO_ROOT",
         "StageLog",
+        "TRAINER_PROXY_AXIS_LABEL",
+        "TRAINER_PROXY_PROMOTION_REQUIREMENT",
+        "build_optimized_training_context",
         "decode_real_pairs",
         "detect_hardware_substrate",
         "device_or_die",
         "git_head_sha",
         "load_upstream_yuv420_to_rgb",
+        "merge_optimization_flags",
         "pin_seeds",
         "require_contest_cuda_auth_eval_claim",
         "sha256_bytes",

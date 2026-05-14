@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Fail-closed helpers for contest auth-eval result JSON.
 
 The auth-eval result is the boundary between proxy work and score claims. A
@@ -8,8 +9,9 @@ or provenance ``score_claim=true``.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 
 CONTEST_UNCOMPRESSED_BYTES = 37_545_489.0
@@ -56,6 +58,32 @@ def _first_finite(payload: Mapping[str, Any], keys: tuple[str, ...]) -> tuple[fl
         if value is not None:
             return value, key
     return None
+
+
+def _device_type(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text.startswith("cuda"):
+        return "cuda"
+    if text.startswith("mps"):
+        return "mps"
+    if text.startswith("cpu"):
+        return "cpu"
+    return text
+
+
+def _actual_device(payload: Mapping[str, Any]) -> str:
+    provenance = payload.get("provenance")
+    prov = provenance if isinstance(provenance, Mapping) else {}
+    value = (
+        prov.get("actual_device")
+        if prov.get("actual_device") is not None
+        else payload.get("actual_device")
+        if payload.get("actual_device") is not None
+        else prov.get("device")
+        if prov.get("device") is not None
+        else payload.get("device")
+    )
+    return str(value or "")
 
 
 def recompute_contest_score_from_payload(payload: Mapping[str, Any]) -> float | None:
@@ -166,6 +194,13 @@ def parse_auth_eval_score_claim(
     score_axis = str(payload.get("score_axis") or "")
     if required_score_axis is not None and score_axis != required_score_axis:
         return None
+    evidence_axis = str(payload.get("evidence_axis") or "")
+    if required_score_axis is not None and evidence_axis and evidence_axis != required_score_axis:
+        return None
+    if required_score_axis == "contest_cuda":
+        actual_device = _actual_device(payload)
+        if actual_device and _device_type(actual_device) != "cuda":
+            return None
     score_claim = payload.get("score_claim") is True
     score_claim_valid = payload.get("score_claim_valid") is True
     if not (score_claim and score_claim_valid):

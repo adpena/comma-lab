@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z3 Ballé hyperprior bolt-on inflate runtime.
 
 Reads a Z3 composition archive (= A1 archive bytes + optional Z3HP1 sidecar)
@@ -85,6 +86,7 @@ def reconstruct_a1_latents(archive_bytes: bytes) -> tuple[bytes, torch.Tensor | 
         shape=(len(weights_int8),),
     )
     pos = 0
+    loaded_state = {}
     for name, param in mlp.state_dict().items():
         n = param.numel()
         if pos + n > state_floats.numel():
@@ -92,8 +94,15 @@ def reconstruct_a1_latents(archive_bytes: bytes) -> tuple[bytes, torch.Tensor | 
                 f"Z3HP1 weights blob too short at {name}: need {n}, "
                 f"have {state_floats.numel() - pos}"
             )
-        param.copy_(state_floats[pos : pos + n].view(param.shape))
+        loaded_state[name] = (
+            state_floats[pos : pos + n].view(param.shape).to(param.dtype)
+        )
         pos += n
+    if pos != state_floats.numel():
+        raise ValueError(
+            f"Z3HP1 weights blob has trailing {state_floats.numel() - pos} values"
+        )
+    mlp.load_state_dict(loaded_state)
     mlp.eval()
     # Decode w_hat (the side-info hyper-latents).
     w_hat_arr = np.frombuffer(w_hat_int8, dtype=np.int8).reshape(

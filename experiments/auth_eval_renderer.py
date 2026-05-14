@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MIT
 """Authoritative evaluation for renderer checkpoints.
 
 Standalone script that runs the full inflate -> score pipeline for any
@@ -54,6 +55,7 @@ import argparse
 import json
 import math
 import os
+import platform
 import struct
 import sys
 import time
@@ -73,6 +75,96 @@ SEG_W, SEG_H = 512, 384
 NUM_FRAMES = 1200
 NUM_PAIRS = NUM_FRAMES // 2  # 600 contest pairs (non-overlapping seq_len=2)
 EXPECTED_RAW_BYTES = OUT_W * OUT_H * 3 * NUM_FRAMES
+
+
+def _device_type(device: str | None) -> str:
+    text = str(device or "").strip().lower()
+    if text.startswith("cuda"):
+        return "cuda"
+    if text.startswith("mps"):
+        return "mps"
+    if text.startswith("cpu"):
+        return "cpu"
+    return text or "cpu"
+
+
+def evidence_axis_for_device(
+    actual_device: str,
+    *,
+    platform_system: str | None = None,
+) -> str:
+    """Return the evidence axis implied by the device that actually ran.
+
+    Non-CUDA renderer auth-eval evidence is advisory at this call-site. Linux
+    CPU public-axis replay is handled by the separate contest-auth-eval flow.
+    """
+
+    device_type = _device_type(actual_device)
+    if device_type == "cuda":
+        return "contest_cuda"
+    if device_type == "mps":
+        return "mps_advisory"
+    system = (platform_system or platform.system()).strip().lower()
+    if device_type == "cpu" and system == "darwin":
+        return "macos_cpu_advisory"
+    if device_type == "cpu" and system == "linux":
+        return "linux_cpu_advisory"
+    if device_type == "cpu":
+        return "cpu_advisory"
+    return f"{device_type}_advisory"
+
+
+def lane_tag_for_evidence_axis(evidence_axis: str) -> str:
+    return {
+        "contest_cuda": "[contest-CUDA]",
+        "linux_cpu_advisory": "[Linux-CPU advisory]",
+        "macos_cpu_advisory": "[macOS-CPU advisory]",
+        "mps_advisory": "[MPS advisory]",
+        "cpu_advisory": "[CPU advisory]",
+    }.get(evidence_axis, f"[{evidence_axis}]")
+
+
+def device_evidence_fields(
+    *,
+    requested_device: str,
+    actual_device: str,
+    device_fallback_occurred: bool,
+    device_fallback_reason: str | None = None,
+) -> dict[str, object]:
+    evidence_axis = evidence_axis_for_device(actual_device)
+    return {
+        "requested_device": str(requested_device),
+        "actual_device": str(actual_device),
+        "device": str(actual_device),
+        "evidence_axis": evidence_axis,
+        "score_axis": evidence_axis,
+        "lane_tag": lane_tag_for_evidence_axis(evidence_axis),
+        "device_fallback_occurred": bool(device_fallback_occurred),
+        "fallback_occurred": bool(device_fallback_occurred),
+        "device_fallback_reason": device_fallback_reason,
+        "platform_system": platform.system(),
+        "platform_machine": platform.machine(),
+    }
+
+
+def resolve_requested_actual_device(requested_device: str) -> dict[str, object]:
+    """Resolve the requested torch device while preserving fallback evidence."""
+
+    requested = str(requested_device or "cuda")
+    requested_type = _device_type(requested)
+    if requested_type == "cuda" and not torch.cuda.is_available():
+        return device_evidence_fields(
+            requested_device=requested,
+            actual_device="cpu",
+            device_fallback_occurred=True,
+            device_fallback_reason="cuda_unavailable",
+        )
+    return device_evidence_fields(
+        requested_device=requested,
+        actual_device=requested,
+        device_fallback_occurred=False,
+        device_fallback_reason=None,
+    )
 
 
 # ============================================================
@@ -532,6 +624,9 @@ def run_auth_eval(
     archive_size_override: int | None = None,
     output_dir: str | None = None,
     poses_path: str | None = None,
+    requested_device: str | None = None,
+    device_fallback_occurred: bool = False,
+    device_fallback_reason: str | None = None,
 ) -> dict:
     """Run the full authoritative evaluation pipeline.
 
@@ -550,15 +645,25 @@ def run_auth_eval(
     t_start = time.monotonic()
 
     if batch_size is None:
-        batch_size = 16 if device == "cuda" else 4
+        batch_size = 16 if _device_type(device) == "cuda" else 4
 
     upstream = _ensure_upstream(upstream_dir)
+    axis_fields = device_evidence_fields(
+        requested_device=requested_device or device,
+        actual_device=device,
+        device_fallback_occurred=device_fallback_occurred,
+        device_fallback_reason=device_fallback_reason,
+    )
 
     print(f"\n{'=' * 60}")
     print("  Authoritative Renderer Evaluation")
     print(f"  {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Checkpoint: {checkpoint}")
-    print(f"  Device: {device}")
+    print(f"  Requested device: {axis_fields['requested_device']}")
+    print(f"  Actual device: {axis_fields['actual_device']}")
+    print(f"  Evidence axis: {axis_fields['evidence_axis']}")
+    if axis_fields["device_fallback_occurred"]:
+        print(f"  Device fallback: {axis_fields['device_fallback_reason']}")
     print(f"  Batch size: {batch_size}")
     print(f"{'=' * 60}\n")
 
@@ -714,6 +819,7 @@ def run_auth_eval(
         "rate": float(rate),
         "archive_size_bytes": int(archive_size),
         "gt_size_bytes": int(gt_size),
+        **axis_fields,
     }
     print(f"RESULT_JSON: {_json.dumps(_result_payload, separators=(',', ':'))}")
 
@@ -730,10 +836,10 @@ def run_auth_eval(
         "score_rate": score_rate,
         "final_score": final_score,
         "n_frames": n_written,
-        "device": device,
         "config": config,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "elapsed_seconds": round(t_total, 1),
+        **axis_fields,
     }
 
     ckpt_stem = Path(checkpoint).stem
@@ -784,18 +890,28 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.device == "cuda" and not torch.cuda.is_available():
-        print("WARNING: CUDA not available, falling back to CPU")
-        args.device = "cpu"
+    device_resolution = resolve_requested_actual_device(args.device)
+    if device_resolution["device_fallback_occurred"]:
+        print(
+            "WARNING: CUDA not available, falling back to CPU "
+            f"(evidence_axis={device_resolution['evidence_axis']})"
+        )
 
     result = run_auth_eval(
         checkpoint=args.checkpoint,
         upstream_dir=args.upstream_dir,
-        device=args.device,
+        device=str(device_resolution["actual_device"]),
         batch_size=args.batch_size,
         archive_size_override=args.archive_size_bytes,
         output_dir=args.output_dir,
         poses_path=args.poses,
+        requested_device=str(device_resolution["requested_device"]),
+        device_fallback_occurred=bool(device_resolution["device_fallback_occurred"]),
+        device_fallback_reason=(
+            str(device_resolution["device_fallback_reason"])
+            if device_resolution["device_fallback_reason"] is not None
+            else None
+        ),
     )
 
     # Exit with non-zero if score is suspiciously high (sanity check)

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import pytest
@@ -245,9 +246,10 @@ def test_operator_authorize_modal_dispatch_threads_recipe_lane_id(monkeypatch) -
         },
     )
     monkeypatch.setattr(
-        op.subprocess,
-        "call",
-        lambda cmd, cwd=None: calls.append([str(part) for part in cmd]) or 0,
+        op,
+        "_run_modal_dispatch_process",
+        lambda cmd: calls.append([str(part) for part in cmd])
+        or op.subprocess.CompletedProcess(cmd, 0, "", ""),
     )
 
     rc = op._dispatch_modal(recipe, "unit_job_001", "DISPATCH_INSTANCE_JOB_ID=unit_job_001")
@@ -259,6 +261,92 @@ def test_operator_authorize_modal_dispatch_threads_recipe_lane_id(monkeypatch) -
     assert cmd[cmd.index("--lane-id") + 1] == "lane_substrate_siren_20260512"
     assert "--label" in cmd
     assert cmd[cmd.index("--label") + 1] == "unit_job_001"
+
+
+def test_operator_authorize_modal_dispatch_retries_transient_mount_upload_race(
+    monkeypatch,
+) -> None:
+    recipe = op.Recipe(
+        name="unit_modal",
+        path=op.RECIPES_DIR / "unit_modal.yaml",
+        raw={
+            "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
+            "platform": "modal",
+            "gpu": "T4",
+            "timeout_hours": 1.0,
+            "remote_driver": "scripts/remote_lane_substrate_d4_wyner_ziv_frame_0.sh",
+            "modal": {
+                "lane_script": "scripts/remote_lane_substrate_d4_wyner_ziv_frame_0.sh",
+            },
+        },
+    )
+    attempts: list[list[str]] = []
+    sleeps: list[float] = []
+
+    def fake_run(cmd: list[str]):
+        attempts.append([str(part) for part in cmd])
+        if len(attempts) == 1:
+            return op.subprocess.CompletedProcess(
+                cmd,
+                1,
+                "",
+                "MountUploadRaceError: Modal mount set fingerprint is unstable\n",
+            )
+        return op.subprocess.CompletedProcess(
+            cmd,
+            0,
+            "DISPATCHED via .spawn() - call_id=fc-unit\n",
+            "",
+        )
+
+    monkeypatch.setattr(op, "_run_modal_dispatch_process", fake_run)
+    monkeypatch.setattr(op, "_modal_mount_upload_retry_settings", lambda: (3, 0.0))
+    monkeypatch.setattr(op.time, "sleep", lambda s: sleeps.append(s))
+
+    rc = op._dispatch_modal(recipe, "unit_job_002", "")
+
+    assert rc == 0
+    assert len(attempts) == 2
+    assert sleeps == []
+
+
+def test_operator_authorize_modal_dispatch_fails_closed_after_mount_retry_budget(
+    monkeypatch,
+) -> None:
+    recipe = op.Recipe(
+        name="unit_modal",
+        path=op.RECIPES_DIR / "unit_modal.yaml",
+        raw={
+            "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
+            "platform": "modal",
+            "gpu": "T4",
+            "timeout_hours": 1.0,
+            "remote_driver": "scripts/remote_lane_substrate_d4_wyner_ziv_frame_0.sh",
+            "modal": {
+                "lane_script": "scripts/remote_lane_substrate_d4_wyner_ziv_frame_0.sh",
+            },
+        },
+    )
+    attempts: list[list[str]] = []
+
+    def fake_run(cmd: list[str]):
+        attempts.append([str(part) for part in cmd])
+        return op.subprocess.CompletedProcess(
+            cmd,
+            1,
+            "",
+            "experiments/train_substrate_d4_wyner_ziv_frame_0.py "
+            "was modified during build process\n",
+        )
+
+    monkeypatch.setattr(op, "_run_modal_dispatch_process", fake_run)
+    monkeypatch.setattr(op, "_modal_mount_upload_retry_settings", lambda: (2, 0.0))
+    monkeypatch.setattr(op.time, "sleep", lambda _s: None)
+
+    rc = op._dispatch_modal(recipe, "unit_job_003", "")
+
+    assert rc == 1
+    assert len(attempts) == 2
 
 
 def test_operator_authorize_prevalidates_before_claim(monkeypatch) -> None:

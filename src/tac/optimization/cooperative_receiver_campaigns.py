@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical cooperative-receiver campaign queue.
 
 The time-traveler, Bell/NSA, and Fields-medalist ledgers all converged on the
@@ -18,6 +19,7 @@ from typing import Any
 
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
+    ordered_unique,
     validate_proxy_candidate,
 )
 
@@ -45,6 +47,13 @@ class CooperativeReceiverCandidate:
     implementation_surface: str
     source_citations: tuple[str, ...]
     rank_hint: int
+    lane_class: str = "substrate_engineering"
+    campaign_tier: str = "medium_term"
+    expected_horizon_weeks: str = "TBD"
+    timeline_status: str = "operator_routable"
+    dependency_gate: str = "byte_closed_archive_and_exact_eval_required"
+    operator_decision_required: bool = False
+    lane_id: str | None = None
 
     def as_row(self) -> dict[str, Any]:
         """Return a proxy-safe JSON row for operator queues."""
@@ -53,10 +62,27 @@ class CooperativeReceiverCandidate:
             raise ValueError(f"{self.campaign_id}: predicted_delta_low > high")
         midpoint = (self.predicted_delta_low + self.predicted_delta_high) / 2.0
         cost_mid = max((self.estimated_cost_usd_low + self.estimated_cost_usd_high) / 2.0, 0.10)
+        cost_band = [
+            self.estimated_cost_usd_low,
+            self.estimated_cost_usd_high,
+        ]
+        timeline_metadata = {
+            "campaign_tier": self.campaign_tier,
+            "expected_horizon_weeks": self.expected_horizon_weeks,
+            "timeline_status": self.timeline_status,
+            "dependency_gate": self.dependency_gate,
+            "operator_decision_required": self.operator_decision_required,
+        }
         row = {
             "campaign_id": self.campaign_id,
             "candidate_id": self.campaign_id,
-            "lane_id": f"lane_{self.campaign_id}",
+            "lane_id": self.lane_id or f"lane_{self.campaign_id}",
+            "lane_class": self.lane_class,
+            "campaign_tier": self.campaign_tier,
+            "expected_horizon_weeks": self.expected_horizon_weeks,
+            "timeline_status": self.timeline_status,
+            "dependency_gate": self.dependency_gate,
+            "operator_decision_required": self.operator_decision_required,
             "lineage": self.lineage,
             "source_commit": self.source_commit,
             "source_memo": self.source_memo,
@@ -68,10 +94,15 @@ class CooperativeReceiverCandidate:
             ],
             "predicted_delta_evidence": "prediction_only_cross_domain_derivation",
             "estimated_dispatch_cost_usd": cost_mid,
-            "estimated_cost_usd_band": [
-                self.estimated_cost_usd_low,
-                self.estimated_cost_usd_high,
-            ],
+            "estimated_cost_usd_band": cost_band,
+            "cost_metadata": {
+                "estimated_cost_usd_low": self.estimated_cost_usd_low,
+                "estimated_cost_usd_mid": cost_mid,
+                "estimated_cost_usd_high": self.estimated_cost_usd_high,
+                "estimated_cost_usd_band": cost_band,
+                "cost_source": "campaign_ledger_planning_band",
+            },
+            "timeline_metadata": timeline_metadata,
             "ev_per_dollar_proxy": abs(midpoint) / cost_mid,
             "timing_smoke_command": self.timing_smoke_command,
             "byte_closed_packet_plan": self.byte_closed_packet_plan,
@@ -85,6 +116,14 @@ class CooperativeReceiverCandidate:
             "research_only": False,
             "evidence_semantics": "cooperative_receiver_campaign_planning_only",
             "score_lowering_hypothesis": self.hypothesis,
+            "dispatch_gating": {
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_requires_lane_claim": True,
+                "dispatch_requires_operator_authorization": True,
+                "dispatch_requires_byte_closed_archive": True,
+            },
             "dispatch_blockers": [
                 "byte_closed_archive_missing",
                 "exact_cuda_auth_eval_missing",
@@ -549,6 +588,233 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             ),
             rank_hint=14,
         ),
+        CooperativeReceiverCandidate(
+            campaign_id="c5_full_cooperative_receiver_substrate_campaign_20260514",
+            lane_id="lane_c5_full_cooperative_receiver_substrate_campaign_20260514",
+            lineage="long_term_campaign_roadmap",
+            source_commit="campaign_lane_c5_20260514",
+            source_memo=".omx/research/campaign_lane_c5_full_cooperative_receiver_substrate_20260514.md",
+            hypothesis=(
+                "Extend the D4 frame-0 Wyner-Ziv anchor into a full "
+                "frame-1 plus pair-conditional cooperative-receiver substrate "
+                "that operationalizes H(X|scorer) across both contest frames."
+            ),
+            predicted_delta_low=-0.060,
+            predicted_delta_high=-0.025,
+            estimated_cost_usd_low=30.00,
+            estimated_cost_usd_high=50.00,
+            timing_smoke_command=(
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
+                "tools/run_modal_smoke_before_full.py --recipe "
+                ".omx/operator_authorize_recipes/"
+                "substrate_c5_full_cooperative_receiver_modal_t4_dispatch.yaml "
+                "--smoke-epochs 100 --smoke-batch-size 4 --max-cost-usd 0.50"
+            ),
+            byte_closed_packet_plan=(
+                "Build the FullCooperativeReceiverArchive-C5 monolithic packet "
+                "with scorer-conditional decoder, frame-0/frame-1 side info, "
+                "pair residuals, arithmetic state, and <=200 LOC inflate."
+            ),
+            promotion_gate=(
+                "D4 success + C5 byte-consumption proof + paired "
+                "[contest-CUDA]/[contest-CPU] exact eval in the [0.13, 0.17] band"
+            ),
+            target_axis="cooperative_receiver_pair_conditional",
+            implementation_surface="experiments/train_substrate_c5_full_cooperative_receiver.py + future tac.substrates.c5_full_cooperative_receiver/",
+            source_citations=(
+                ".omx/research/campaign_lane_c5_full_cooperative_receiver_substrate_20260514.md",
+                ".omx/research/long_term_multi_year_campaign_roadmap_20260514.md",
+                "Atick-Redlich 1990 Neural Computation",
+                "Wyner-Ziv 1976 IEEE Transactions on Information Theory",
+                "Slepian-Wolf 1973 IEEE Transactions on Information Theory",
+            ),
+            rank_hint=15,
+            campaign_tier="medium_to_long_term",
+            expected_horizon_weeks="4-8",
+            timeline_status="post_D4_authorize_after_frame0_anchor",
+            dependency_gate="D4 frame-0 cooperative-receiver anchor must land successfully before C5 spend",
+        ),
+        CooperativeReceiverCandidate(
+            campaign_id="c4_queued_architectural_moves_campaign_20260514",
+            lane_id="lane_c4_queued_architectural_moves_campaign_20260514",
+            lineage="long_term_campaign_roadmap",
+            source_commit="campaign_lane_c4_20260514",
+            source_memo=".omx/research/campaign_lane_c4_queued_architectural_moves_20260514.md",
+            hypothesis=(
+                "Bundle the queued SC++, T10 IB, PR95 curriculum, NeRV-family, "
+                "L2 Hinton-distilled, cathedral autopilot, and magic-codec moves "
+                "as individually gated short-to-medium campaign rows instead of "
+                "leaving them as orphan task text."
+            ),
+            predicted_delta_low=-0.060,
+            predicted_delta_high=-0.020,
+            estimated_cost_usd_low=50.00,
+            estimated_cost_usd_high=150.00,
+            timing_smoke_command=(
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
+                "tools/cathedral_autopilot_autonomous_loop.py --max-concurrency 4 "
+                "--max-total-cost-usd 5 --candidate-source "
+                ".omx/state/autopilot_candidate_queue_solver_stack_wire_in_20260513.jsonl "
+                "--output reports/cathedral_autopilot_smoke_<timestamp>.jsonl"
+            ),
+            byte_closed_packet_plan=(
+                "Each C4 sub-move must lower through its own byte-closed packet "
+                "or declared training-time-only path; the umbrella row never "
+                "ships bytes by itself."
+            ),
+            promotion_gate=(
+                "Per-submove byte-closed archive/runtime proof or training-time-only "
+                "rationale + paired exact eval for score-affecting packets"
+            ),
+            target_axis="queued_architecture_portfolio",
+            implementation_surface="existing C4a-C4g lane surfaces plus cathedral autopilot queue",
+            source_citations=(
+                ".omx/research/campaign_lane_c4_queued_architectural_moves_20260514.md",
+                ".omx/research/long_term_multi_year_campaign_roadmap_20260514.md",
+            ),
+            rank_hint=16,
+            campaign_tier="short_to_medium_term",
+            expected_horizon_weeks="12-24",
+            timeline_status="NOW_partial_per_submove_operator_routable",
+            dependency_gate="per-submove smoke-before-full and lane-claim gates",
+        ),
+        CooperativeReceiverCandidate(
+            campaign_id="c7_darts_supernet_architecture_search_campaign_20260514",
+            lane_id="lane_c7_darts_supernet_architecture_search_campaign_20260514",
+            lineage="long_term_campaign_roadmap",
+            source_commit="campaign_lane_c7_20260514",
+            source_memo=".omx/research/campaign_lane_c7_darts_supernet_architecture_search_20260514.md",
+            hypothesis=(
+                "Run a DARTS-SuperNet over the substrate-family search space so "
+                "C5/C6 empirical anchors can inform discovered renderer and "
+                "residual architectures instead of relying only on manual variants."
+            ),
+            predicted_delta_low=-0.030,
+            predicted_delta_high=-0.005,
+            estimated_cost_usd_low=100.00,
+            estimated_cost_usd_high=300.00,
+            timing_smoke_command=(
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
+                "tools/run_modal_smoke_before_full.py --recipe "
+                ".omx/operator_authorize_recipes/"
+                "substrate_c7_darts_supernet_smoke_modal_a100_dispatch.yaml "
+                "--smoke-epochs 100 --smoke-batch-size 4 --search-space-size 8 "
+                "--max-cost-usd 1.00"
+            ),
+            byte_closed_packet_plan=(
+                "Every top-K discovered architecture gets a declared archive "
+                "grammar before full training, then exports a monolithic packet "
+                "with an architecture descriptor and scorer-free inflate."
+            ),
+            promotion_gate=(
+                "C5 or C6 empirical anchor + ranked top-K architectures + "
+                "top-1 byte-closed export + paired exact eval"
+            ),
+            target_axis="architecture_search_meta_campaign",
+            implementation_surface="experiments/train_substrate_c7_darts_supernet.py + future DARTS export contracts",
+            source_citations=(
+                ".omx/research/campaign_lane_c7_darts_supernet_architecture_search_20260514.md",
+                ".omx/research/long_term_multi_year_campaign_roadmap_20260514.md",
+                "Liu et al. 2019 DARTS",
+                "Pham et al. 2018 ENAS",
+            ),
+            rank_hint=17,
+            campaign_tier="medium_to_long_term",
+            expected_horizon_weeks="6-12",
+            timeline_status="post_C5_or_C6_anchor; stage0_smoke_optional_with_operator_funding",
+            dependency_gate="C5 or C6 anchor recommended before full search spend",
+            operator_decision_required=True,
+        ),
+        CooperativeReceiverCandidate(
+            campaign_id="c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+            lane_id="lane_c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+            lineage="long_term_campaign_roadmap",
+            source_commit="campaign_lane_c2_20260514",
+            source_memo=".omx/research/campaign_lane_c2_z7_mature_predictive_receiver_l5_20260514.md",
+            hypothesis=(
+                "Mature the full Time-Traveler L5 predictive receiver by "
+                "combining cooperative-receiver, predictive coding, foveation, "
+                "world model, and Tikhonov-regularized sub-100K parameter design."
+            ),
+            predicted_delta_low=-0.020,
+            predicted_delta_high=-0.010,
+            estimated_cost_usd_low=50.00,
+            estimated_cost_usd_high=100.00,
+            timing_smoke_command=(
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
+                "tools/run_modal_smoke_before_full.py --recipe "
+                ".omx/operator_authorize_recipes/"
+                "substrate_c2_z7_predictive_receiver_l5_iter1_modal_a100_dispatch.yaml "
+                "--smoke-epochs 100 --smoke-batch-size 4 --max-cost-usd 0.50"
+            ),
+            byte_closed_packet_plan=(
+                "Iterate the TimeTravelerArchive-C2-L5 mature grammar: world "
+                "model, foveation, per-pair prediction errors, hyperprior state, "
+                "arithmetic coding, and section offsets in one scored packet."
+            ),
+            promotion_gate=(
+                "C1 lands in-band + per-iteration improvements + mature L5 "
+                "archive roundtrip + paired [contest-CUDA]/[contest-CPU] exact eval"
+            ),
+            target_axis="mature_predictive_receiver_l5",
+            implementation_surface="experiments/train_substrate_c2_predictive_receiver_l5.py + future tac.substrates.c2_predictive_receiver_l5/",
+            source_citations=(
+                ".omx/research/campaign_lane_c2_z7_mature_predictive_receiver_l5_20260514.md",
+                ".omx/research/long_term_multi_year_campaign_roadmap_20260514.md",
+                ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md",
+            ),
+            rank_hint=18,
+            campaign_tier="long_term",
+            expected_horizon_weeks="8-12",
+            timeline_status="LATER_pending_C1_success_and_operator_cost_gate",
+            dependency_gate="C1 world-model-foveation campaign must land successfully before C2 full spend",
+            operator_decision_required=True,
+        ),
+        CooperativeReceiverCandidate(
+            campaign_id="c3_multi_year_zen_floor_sub_005_campaign_20260514",
+            lane_id="lane_c3_multi_year_zen_floor_sub_005_campaign_20260514",
+            lineage="long_term_campaign_roadmap",
+            source_commit="campaign_lane_c3_20260514",
+            source_memo=".omx/research/campaign_lane_c3_multi_year_zen_floor_sub_005_20260514.md",
+            hypothesis=(
+                "Preserve the multi-year sub-0.05 zen-floor pursuit as an "
+                "operator-strategic campaign that compounds mature L5 iteration, "
+                "production alignment, public release, and Shannon-vector-R(D) work."
+            ),
+            predicted_delta_low=-0.050,
+            predicted_delta_high=-0.020,
+            estimated_cost_usd_low=500.00,
+            estimated_cost_usd_high=2000.00,
+            timing_smoke_command=(
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
+                "tools/run_modal_smoke_before_full.py --recipe "
+                ".omx/operator_authorize_recipes/"
+                "substrate_c3_multi_year_iterN_modal_a100_dispatch.yaml "
+                "--smoke-epochs 100 --smoke-batch-size 4 --max-cost-usd 0.50"
+            ),
+            byte_closed_packet_plan=(
+                "Advance L5 archive generations from the C2 grammar toward "
+                "40-60 KB mature packets, with every generation declaring export "
+                "contracts before training and preserving production-generalized variants."
+            ),
+            promotion_gate=(
+                "C2 lands in-band + strategic operator authorization + generation "
+                "improvements + public/production custody + paired exact eval"
+            ),
+            target_axis="multi_year_zen_floor_and_production_alignment",
+            implementation_surface="future c3 generation loop + production regression/release tooling",
+            source_citations=(
+                ".omx/research/campaign_lane_c3_multi_year_zen_floor_sub_005_20260514.md",
+                ".omx/research/long_term_multi_year_campaign_roadmap_20260514.md",
+                "Shannon 1959 vector rate-distortion",
+            ),
+            rank_hint=19,
+            campaign_tier="multi_year",
+            expected_horizon_weeks="52-156",
+            timeline_status="operator_strategic_decision_after_C2_success",
+            dependency_gate="C2 mature L5 campaign must land successfully before C3",
+            operator_decision_required=True,
+        ),
     ]
 
 
@@ -590,14 +856,7 @@ def build_campaign_queue(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_ready_count": 0,
-        "source_commits": [
-            "1d62a114",
-            "27cd8b41",
-            "cbc6b48b",
-            "d1fb9f6a",
-            "fdfc347f",
-            "local_dpw1_substrate",
-        ],
+        "source_commits": ordered_unique(str(row["source_commit"]) for row in rows),
         "shared_receiver_knowledge": [
             "contest scorer architecture",
             "contest scorer weights",

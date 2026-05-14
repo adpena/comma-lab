@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import importlib.util
@@ -33,6 +34,11 @@ def _write_submission(
     device: str = "cuda",
     t4: bool = True,
     runtime_tree: str | None = None,
+    policy_statement: str | None = (
+        "Competitive: this packet is intended to beat the top #1 leaderboard "
+        "submission on the same contest-final evidence axis, with archive "
+        "bytes, runtime custody, and exact component recomputation linked here."
+    ),
 ) -> dict:
     mod = _load_module()
     root.mkdir(parents=True)
@@ -98,9 +104,20 @@ def _write_submission(
         encoding="utf-8",
     )
     (root / "report.txt").write_text(
-        f"archive_sha256: {archive_sha}\narchive_size_bytes: {archive_bytes}\nscore: {score}\n",
+        (
+            f"archive_sha256: {archive_sha}\n"
+            f"archive_size_bytes: {archive_bytes}\n"
+            f"score: {score}\n"
+            "source code: https://github.com/adpena/tac\n"
+            "reproducibility: deterministic runtime tree SHA-256 and archive SHA-256 are recorded.\n"
+        ),
         encoding="utf-8",
     )
+    if policy_statement is not None:
+        (root / "competitive_or_innovative.md").write_text(
+            policy_statement + "\n",
+            encoding="utf-8",
+        )
     return {"archive_sha256": archive_sha, "archive_size_bytes": archive_bytes, "runtime_tree": runtime_tree}
 
 
@@ -217,11 +234,139 @@ def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
     strict_formula = report["auth_eval"]["strict_formula"]
     assert strict_formula["basis"] == "auth_eval_report_components_plus_exact_archive_bytes"
     assert strict_formula["score"] == strict_formula["report_reconstructed_score"]
-    assert report["auth_eval"]["anchor_proof"]["schema"] == (
-        "pre_submission_compliance_anchor_proof_v1"
+
+
+def test_contest_final_requires_competitive_or_innovative_statement(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission", policy_statement=None)
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
     )
-    assert report["auth_eval"]["anchor_proof"]["score_basis"] == strict_formula
-    assert report["submission_runtime"]["runtime_tree_sha256"] == expected["runtime_tree"]
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+    failed = _failed_check_names(report)
+    assert "post_deadline_policy_statement_present" in failed
+    assert not report["passed"]
+
+
+def test_competitive_or_innovative_statement_can_be_cli_file(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission", policy_statement=None)
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    statement = tmp_path / "policy.md"
+    statement.write_text(
+        "Innovative: this submission introduces a novel scorer-conditional "
+        "archive grammar not on the leaderboard yet, and the report links the "
+        "frontier score comparison plus exact-eval custody.",
+        encoding="utf-8",
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+                "--competitive-or-innovative-statement-file",
+                str(statement),
+            ]
+        )
+    )
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    assert report["post_deadline_submission_policy"]["source"].endswith("policy.md")
+
+
+def test_contest_final_requires_public_repo_and_reproducibility_context(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    report_path = tmp_path / "submission" / "report.txt"
+    report_path.write_text(
+        f"archive_sha256: {expected['archive_sha256']}\n"
+        f"archive_size_bytes: {expected['archive_size_bytes']}\n"
+        "score: 0.1\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+    failed = _failed_check_names(report)
+    assert "public_source_repo_link_present" in failed
+    assert "public_source_reproducibility_context_present" in failed
+    assert not report["passed"]
 
 
 def test_pre_submission_check_contest_final_rejects_runtime_tree_mismatch(

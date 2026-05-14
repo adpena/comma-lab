@@ -1,8 +1,13 @@
+# SPDX-License-Identifier: MIT
 """Wire format for the Z3 Ballé hyperprior bolt-on composition substrate.
 
-The composition substrate appends a magic-byte trailer sidecar to A1's
-existing wire format. The full inner wire (single ZIP member ``x`` in
-archive.zip) is::
+The production score-moving Z3 contract is a latent replacement contract:
+Z3 must replace A1's latent bytes inside the inner ZIP member ``x`` and
+inflate must reconstruct latents before HNeRV decode. An append-only Z3HP1
+trailer is valid only as a research diagnostic because it adds bytes to A1
+instead of replacing the A1 latent stream.
+
+Legacy diagnostic inner wire (single ZIP member ``x`` in archive.zip)::
 
     [A1 wire format] (verbatim — uint32 LE decoder section total +
                        decoder blob + 15387 B latent blob + A1 sidecar blob)
@@ -36,16 +41,17 @@ Magic ``Z3H1`` distinct from ``WAV1`` (a1+wavelet) and ``LPA1`` (a1+lapose)
 so cross-substrate split operations refuse unknown magic loudly.
 
 NOTE: at the smoke validation stage (Step 1 staircase) the Z3HP1 sidecar
-is OPTIONAL: when bytes_saved < sidecar_overhead, the trainer SHOULD
-omit the sidecar and the archive == A1 archive (byte-identical). This
-mirrors Ballé 2018's side-info amortization principle: ship the
-hyperprior only when |y stream| > |w stream| + hyperprior weights.
+is OPTIONAL and research-only. When the latent-replacement contract is not
+implemented, the trainer MUST either omit the sidecar and emit byte-identical
+A1 bytes, or explicitly build an append-only diagnostic contract whose
+``byte_saving`` and exact-eval readiness flags are false.
 """
 
 from __future__ import annotations
 
 import struct
 from dataclasses import dataclass
+from typing import Any
 
 import brotli
 import torch
@@ -58,6 +64,15 @@ Z3HP1_HEADER_STRUCT = struct.Struct("<4sBHBBffff2s")
 
 A1_LATENT_DIM = 28
 A1_N_PAIRS = 600
+Z3_APPEND_ONLY_CONTRACT_BLOCKER = (
+    "append-only Z3HP1 trailer adds bytes to A1 and cannot realize predicted "
+    "byte savings; replace A1 latent_blob with a Z3-coded latent section before "
+    "marking this archive byte-saving or exact-eval-ready"
+)
+Z3_BYTE_IDENTICAL_CONTRACT_BLOCKER = (
+    "Z3 sidecar omitted; archive is byte-identical to A1 and carries no Z3 "
+    "score-moving payload"
+)
 
 
 @dataclass(frozen=True)
@@ -71,6 +86,45 @@ class Z3HP1SidecarMeta:
     quant_step: float
     min_sigma: float
     max_sigma: float
+
+
+@dataclass(frozen=True)
+class Z3CompositionArchiveContract:
+    """Typed authority contract for a Z3 composition payload.
+
+    ``payload_bytes`` is the inner ``x`` member content. Authority flags are
+    intentionally duplicated here so callers cannot accidentally treat an
+    append-only diagnostic packet as byte-saving or exact-eval-ready.
+    """
+
+    payload_bytes: bytes
+    layout: str
+    base_archive_bytes: int
+    z3hp1_sidecar_bytes: int
+    archive_bytes: int
+    byte_saving: bool
+    byte_savings_bytes: int
+    score_claim: bool
+    promotion_eligible: bool
+    ready_for_exact_eval_dispatch: bool
+    exact_eval_ready: bool
+    result_review_blockers: tuple[str, ...]
+
+    def as_manifest(self) -> dict[str, Any]:
+        """Return JSON-safe manifest fields for stats/provenance outputs."""
+        return {
+            "layout": self.layout,
+            "base_archive_bytes": self.base_archive_bytes,
+            "z3hp1_sidecar_bytes": self.z3hp1_sidecar_bytes,
+            "archive_bytes": self.archive_bytes,
+            "byte_saving": self.byte_saving,
+            "byte_savings_bytes": self.byte_savings_bytes,
+            "score_claim": self.score_claim,
+            "promotion_eligible": self.promotion_eligible,
+            "ready_for_exact_eval_dispatch": self.ready_for_exact_eval_dispatch,
+            "exact_eval_ready": self.exact_eval_ready,
+            "result_review_blockers": list(self.result_review_blockers),
+        }
 
 
 def encode_z3hp1_sidecar(
@@ -260,22 +314,71 @@ def split_composition_archive(archive_bytes: bytes) -> tuple[bytes, bytes]:
     return archive_bytes, b""
 
 
-def pack_composition_archive(
+def build_composition_archive_contract(
     a1_bytes: bytes,
     z3hp1_sidecar_bytes: bytes,
-) -> bytes:
-    """Pack a Z3 composition archive: A1 bytes + Z3HP1 trailer.
+) -> Z3CompositionArchiveContract:
+    """Build the fail-closed typed contract for a Z3 inner archive payload.
 
-    If ``z3hp1_sidecar_bytes`` is empty, returns ``a1_bytes`` unchanged
-    (byte-identical-to-A1 fallback per amortization principle).
+    Non-empty Z3HP1 currently means append-only diagnostic layout. It is
+    allowed as an artifact, but its authority flags are false by construction.
     """
     if not z3hp1_sidecar_bytes:
-        return a1_bytes
+        return Z3CompositionArchiveContract(
+            payload_bytes=a1_bytes,
+            layout="a1_byte_identical_fallback",
+            base_archive_bytes=len(a1_bytes),
+            z3hp1_sidecar_bytes=0,
+            archive_bytes=len(a1_bytes),
+            byte_saving=False,
+            byte_savings_bytes=0,
+            score_claim=False,
+            promotion_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            exact_eval_ready=False,
+            result_review_blockers=(Z3_BYTE_IDENTICAL_CONTRACT_BLOCKER,),
+        )
     if z3hp1_sidecar_bytes[:4] != Z3HP1_MAGIC:
         raise ValueError(
             f"z3hp1_sidecar_bytes does not start with magic {Z3HP1_MAGIC!r}"
         )
-    return a1_bytes + z3hp1_sidecar_bytes
+    # Full decode validates length prefixes and refuses trailing bytes.
+    decode_z3hp1_sidecar(z3hp1_sidecar_bytes)
+    payload = a1_bytes + z3hp1_sidecar_bytes
+    return Z3CompositionArchiveContract(
+        payload_bytes=payload,
+        layout="append_only_z3hp1_diagnostic",
+        base_archive_bytes=len(a1_bytes),
+        z3hp1_sidecar_bytes=len(z3hp1_sidecar_bytes),
+        archive_bytes=len(payload),
+        byte_saving=False,
+        byte_savings_bytes=0,
+        score_claim=False,
+        promotion_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+        exact_eval_ready=False,
+        result_review_blockers=(Z3_APPEND_ONLY_CONTRACT_BLOCKER,),
+    )
+
+
+def pack_composition_archive(
+    a1_bytes: bytes,
+    z3hp1_sidecar_bytes: bytes,
+    *,
+    allow_append_only_diagnostic: bool = False,
+) -> bytes:
+    """Pack a Z3 composition archive, fail-closed for append-only sidecars.
+
+    Empty sidecar returns A1 bytes unchanged. Non-empty sidecar raises unless
+    the caller explicitly sets ``allow_append_only_diagnostic=True``. That flag
+    is for smoke/research artifacts only and does not make the packet
+    byte-saving or exact-eval-ready; use ``build_composition_archive_contract``
+    when emitting provenance.
+    """
+    contract = build_composition_archive_contract(a1_bytes, z3hp1_sidecar_bytes)
+    if contract.layout == "append_only_z3hp1_diagnostic" and not allow_append_only_diagnostic:
+        raise ValueError(Z3_APPEND_ONLY_CONTRACT_BLOCKER)
+    return contract.payload_bytes
 
 
 def quantize_int8_with_scale(
@@ -317,7 +420,11 @@ __all__ = [
     "Z3HP1_HEADER_STRUCT",
     "Z3HP1_MAGIC",
     "Z3HP1_VERSION",
+    "Z3_APPEND_ONLY_CONTRACT_BLOCKER",
+    "Z3_BYTE_IDENTICAL_CONTRACT_BLOCKER",
+    "Z3CompositionArchiveContract",
     "Z3HP1SidecarMeta",
+    "build_composition_archive_contract",
     "decode_z3hp1_sidecar",
     "dequantize_int8_with_scale",
     "encode_z3hp1_sidecar",

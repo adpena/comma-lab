@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Unified solver integration for cooperative-receiver campaigns.
 
 The campaign queue is the score-lowering plan; this module makes it useful to
@@ -75,10 +76,20 @@ def build_autopilot_rows(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
     for row in rows:
         candidate = {
             "candidate_id": str(row["candidate_id"]),
+            "campaign_id": str(row["campaign_id"]),
+            "lane_id": str(row["lane_id"]),
+            "lane_class": str(row.get("lane_class") or ""),
+            "campaign_tier": str(row.get("campaign_tier") or ""),
             "family": "cooperative_receiver_campaign",
             "predicted_score_delta": float(row["predicted_score_delta"]),
             "expected_information_gain": abs(float(row["predicted_score_delta"])),
             "estimated_dispatch_cost_usd": float(row["estimated_dispatch_cost_usd"]),
+            "estimated_cost_usd_band": list(row.get("estimated_cost_usd_band") or []),
+            "cost_metadata": dict(row.get("cost_metadata") or {}),
+            "expected_horizon_weeks": str(row.get("expected_horizon_weeks") or ""),
+            "timeline_metadata": dict(row.get("timeline_metadata") or {}),
+            "dependency_gate": str(row.get("dependency_gate") or ""),
+            "operator_decision_required": bool(row.get("operator_decision_required") or False),
             "blockers": list(row.get("dispatch_blockers") or []),
             "notes": (
                 "[predicted; cooperative-receiver planning-only] "
@@ -119,6 +130,12 @@ def _campaign_row_to_atom(row: Mapping[str, Any]) -> dict[str, Any]:
         "evidence_source_path": str(row["source_memo"]),
         "evidence_source_sha256": _sha256_path(str(row["source_memo"])),
         "dispatch_blockers": list(row.get("dispatch_blockers") or []),
+        "campaign_id": str(row["campaign_id"]),
+        "lane_id": str(row["lane_id"]),
+        "lane_class": str(row.get("lane_class") or ""),
+        "campaign_tier": str(row.get("campaign_tier") or ""),
+        "timeline_metadata": dict(row.get("timeline_metadata") or {}),
+        "cost_metadata": dict(row.get("cost_metadata") or {}),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -144,6 +161,11 @@ def build_pareto_constraint_rows(rows: list[Mapping[str, Any]]) -> list[dict[str
             {
                 "campaign_id": str(row["campaign_id"]),
                 "candidate_id": str(row["candidate_id"]),
+                "lane_id": str(row["lane_id"]),
+                "lane_class": str(row.get("lane_class") or ""),
+                "campaign_tier": str(row.get("campaign_tier") or ""),
+                "timeline_metadata": dict(row.get("timeline_metadata") or {}),
+                "cost_metadata": dict(row.get("cost_metadata") or {}),
                 "pareto_scope": f"cooperative_receiver:{row['target_axis']}",
                 "pareto_eligible": False,
                 "pareto_frontier": False,

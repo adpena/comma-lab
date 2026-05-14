@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-domain Lagrangian for the S2SBS substrate.
 
 Per CLAUDE.md "eval_roundtrip — non-negotiable" + Catalog #164:
@@ -22,7 +23,7 @@ from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
     CONTEST_RATE_WEIGHT,
     CONTEST_SEG_WEIGHT,
-    score_pair_components,
+    score_pair_components_dispatch,
 )
 
 
@@ -75,6 +76,9 @@ class S2sbsScoreAwareLoss(torch.nn.Module):
         *,
         hf_perturbation: torch.Tensor | None = None,
         apply_eval_roundtrip: bool = True,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         if not apply_eval_roundtrip:
             raise ValueError(
@@ -86,13 +90,16 @@ class S2sbsScoreAwareLoss(torch.nn.Module):
 
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
-        seg_term, pose_term = score_pair_components(
+        seg_term, pose_term = score_pair_components_dispatch(
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )
         rate_term = self.weights.alpha_rate * archive_bytes_proxy / self.weights.contest_normalizer
         if hf_perturbation is None:

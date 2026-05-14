@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import math
@@ -119,6 +120,58 @@ def test_parse_score_claim_rejects_diagnostic_cuda_even_with_finite_score() -> N
         "exact_cuda_eval_complete": False,
         "score_claim": False,
         "score_claim_valid": False,
+    }
+    payload["canonical_score"] = recompute_contest_score_from_payload(payload)
+
+    assert (
+        parse_auth_eval_score_claim(
+            payload,
+            required_score_axis="contest_cuda",
+        )
+        is None
+    )
+
+
+def test_parse_score_claim_rejects_contest_cuda_label_with_cpu_actual_device() -> None:
+    payload = {
+        "avg_segnet_dist": 0.001,
+        "avg_posenet_dist": 0.0004,
+        "archive_size_bytes": 150_000,
+        "score_axis": "contest_cuda",
+        "evidence_axis": "contest_cuda",
+        "lane_tag": "[contest-CUDA]",
+        "evidence_grade": "contest-CUDA",
+        "exact_cuda_eval_complete": True,
+        "score_claim": True,
+        "score_claim_valid": True,
+        "requested_device": "cuda",
+        "actual_device": "cpu",
+        "device_fallback_occurred": True,
+    }
+    payload["canonical_score"] = recompute_contest_score_from_payload(payload)
+
+    assert (
+        parse_auth_eval_score_claim(
+            payload,
+            required_score_axis="contest_cuda",
+        )
+        is None
+    )
+
+
+def test_parse_score_claim_rejects_advisory_evidence_axis_for_cuda_claim() -> None:
+    payload = {
+        "avg_segnet_dist": 0.001,
+        "avg_posenet_dist": 0.0004,
+        "archive_size_bytes": 150_000,
+        "score_axis": "contest_cuda",
+        "evidence_axis": "macos_cpu_advisory",
+        "lane_tag": "[macOS-CPU advisory]",
+        "evidence_grade": "contest-CUDA",
+        "exact_cuda_eval_complete": True,
+        "score_claim": True,
+        "score_claim_valid": True,
+        "actual_device": "cuda",
     }
     payload["canonical_score"] = recompute_contest_score_from_payload(payload)
 

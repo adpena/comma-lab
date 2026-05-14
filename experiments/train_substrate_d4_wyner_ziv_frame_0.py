@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the D4 Wyner-Ziv frame-0 substrate end-to-end (deep-math M7).
 
 Per `.omx/research/deep_math_geometry_manifolds_synthesis_20260514.md` §6 D4
@@ -84,6 +85,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _build_optimized_training_context,
+)
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
 )
@@ -232,6 +236,14 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
         "default": "",
     },
+    "--enable-gt-scorer-cache": {
+        "env": "D4_WYNER_ZIV_FRAME_0_ENABLE_GT_SCORER_CACHE",
+        "rationale": (
+            "F3/GTScorerCache; caches frozen GT PoseNet+SegNet targets once "
+            "and reuses indexed batches in the score-aware hot loop"
+        ),
+        "default": "true",
+    },
 }
 
 
@@ -314,6 +326,19 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-archive-build", action="store_true")
     p.add_argument("--enable-autocast-fp16", action="store_true",
                    help="Catalog #172; deferred until canonical autocast wraps land.")
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_true",
+        default=True,
+        help="Enable canonical GTScorerCache for frozen GT scorer targets.",
+    )
+    p.add_argument(
+        "--disable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_false",
+        help="Disable GTScorerCache and recompute GT scorer targets per step.",
+    )
     p.add_argument("--enable-tf32", action="store_true",
                    help="Catalog #178; deferred until paired CPU/CUDA anchor lands.")
     return p
@@ -600,6 +625,7 @@ def _run_val_loop(
     gt_pair_tensor: "torch.Tensor",
     val_pair_indices: list[int],
     archive_bytes_proxy: "torch.Tensor",
+    gt_cache,
     device,
 ) -> float:
     """Validation pass with EMA shadow + torch.inference_mode (Catalog #180).
@@ -626,6 +652,13 @@ def _run_val_loop(
             rgb_1 = (f1_passthrough * 255.0).clamp(0.0, 255.0)
             gt_a = gt_pair_tensor[idx_tensor, 0]
             gt_b = gt_pair_tensor[idx_tensor, 1]
+            gt_pose_batch = gt_seg_batch = None
+            gt_seg_already_probs = None
+            if gt_cache is not None:
+                gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                    idx_tensor, device=device
+                )
+                gt_seg_already_probs = gt_cache.seg_already_probs
             try:
                 loss, _ = loss_fn(
                     reconstructed_rgb_0=rgb_0,
@@ -636,6 +669,9 @@ def _run_val_loop(
                     residual_coarse=substrate.residual_coarse,
                     apply_eval_roundtrip=True,
                     noise_std=0.0,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
             except Exception as exc:
                 print(f"[{SUBSTRATE_TAG}-val] WARN pair {pair_idx} val skipped: {exc!r}")
@@ -742,6 +778,20 @@ def _full_main(args: argparse.Namespace) -> int:
         n_params = sum(p.numel() for p in substrate.parameters())
         print(f"[{SUBSTRATE_TAG}-full] substrate params: {n_params:,}")
         _stage(f"substrate_built_{n_params}_params")
+        opt_ctx = _build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=gt_pair_tensor,
+            substrate_model=substrate,
+            device=device,
+        )
+        substrate = opt_ctx.substrate_model
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
 
         # 5. EMA shadow (Catalog #88).
         ema = EMA(substrate, decay=args.ema_decay)
@@ -830,6 +880,13 @@ def _full_main(args: argparse.Namespace) -> int:
                 rgb_1 = (f1_unchanged * 255.0).clamp(0.0, 255.0)
                 gt_0 = gt_pair_tensor[batch_idx_tensor, 0]
                 gt_1 = gt_pair_tensor[batch_idx_tensor, 1]
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                        batch_idx_tensor, device=device
+                    )
+                    gt_seg_already_probs = gt_cache.seg_already_probs
 
                 loss, parts = loss_fn(
                     reconstructed_rgb_0=rgb_0,
@@ -840,6 +897,9 @@ def _full_main(args: argparse.Namespace) -> int:
                     residual_coarse=substrate.residual_coarse,
                     apply_eval_roundtrip=True,
                     noise_std=args.noise_std,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
 
                 if not torch.isfinite(loss):
@@ -873,7 +933,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 try:
                     val_lag = _run_val_loop(
                         substrate, loss_fn, gt_pair_tensor, val_indices_pool,
-                        archive_bytes_proxy, device,
+                        archive_bytes_proxy, gt_cache, device,
                     )
                     ema_state_for_ckpt = {
                         k: v.detach().cpu().clone()
@@ -1034,6 +1094,9 @@ def _full_main(args: argparse.Namespace) -> int:
         "best_epoch": best_epoch,
         "epochs": args.epochs,
         "device": str(device),
+        "trainer_proxy_axis": opt_ctx.eval_axis_label,
+        "trainer_proxy_promotion_requirement": opt_ctx.promotion_requirement,
+        "gt_scorer_cache_enabled": gt_cache is not None,
         "motion_mode": args.motion_mode,
         "council_phase_2_unanimous_seal": True,
         "council_review_anchor": (

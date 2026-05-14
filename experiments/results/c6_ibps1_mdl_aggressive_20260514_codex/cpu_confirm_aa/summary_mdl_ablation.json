@@ -1,0 +1,81 @@
+{
+  "timestamp_utc": "2026-05-14T17:16:07.922991+00:00",
+  "device": "cpu",
+  "pair_samples": 24,
+  "byte_samples_per_section": 200,
+  "significance_threshold": 0.0001,
+  "byte_offsets": [
+    "decoder_blob:34576",
+    "decoder_blob:15987",
+    "decoder_blob:28936",
+    "decoder_blob:43437",
+    "decoder_blob:21093",
+    "decoder_blob:14786",
+    "decoder_blob:89550",
+    "decoder_blob:86325",
+    "decoder_blob:75281",
+    "decoder_blob:34858",
+    "decoder_blob:6668",
+    "decoder_blob:14316"
+  ],
+  "pair_indices_file": null,
+  "seed": 30101,
+  "archives": [
+    {
+      "name": "c6_cpu_confirm_aa",
+      "path": "experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep_modal/harvested_artifacts/lane_substrate_c6_e4_mdl_ibps_results/output/archive.zip",
+      "sha256": "a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607",
+      "size_bytes": 224481,
+      "included_sections": [
+        "decoder_blob"
+      ],
+      "excluded_sections": [
+        "encoder_blob"
+      ],
+      "pair_indices": [
+        23,
+        51,
+        103,
+        159,
+        180,
+        182,
+        243,
+        254,
+        276,
+        280,
+        289,
+        295,
+        326,
+        420,
+        421,
+        426,
+        445,
+        463,
+        500,
+        503,
+        507,
+        528,
+        548,
+        575
+      ],
+      "decision_grade": true,
+      "baseline_seg": 0.5060229897499084,
+      "baseline_pose": 0.5526899720231692,
+      "baseline_score_components": 52.95323489930518,
+      "mdl_scorer_extracted_bytes_lo": 145198.0,
+      "mdl_scorer_extracted_bytes_hi": 145198.0,
+      "mdl_density_lo": 0.6468164343530187,
+      "mdl_density_hi": 0.6468164343530187,
+      "zen_floor_band_recommendation": "[0.100, 0.150] \u2014 major architectural breakthrough needed for sub-0.10",
+      "elapsed_seconds": 509.55442214012146
+    }
+  ],
+  "notes": [
+    "[MDL-ablation-cpu]",
+    "[mathematical-derivation]",
+    "Per CLAUDE.md 'MPS auth eval is NOISE': MPS forward passes do NOT produce authoritative absolute scores.",
+    "decision_grade=True; MPS is screening-only and must be replayed for routing.",
+    "Rate term excluded from score_components; archive size constant across ablations.",
+    "Per CLAUDE.md 'KILL is LAST RESORT': zen-floor band update is INFORMATIONAL, not falsifying."
+  ]
+}

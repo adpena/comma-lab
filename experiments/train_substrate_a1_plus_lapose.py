@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the A1 + LAPose composition substrate (D1.D HIERARCHICAL).
 
 Council memo: ``.omx/research/grand_council_pose_axis_non_hnerv_a1_plus_lapose_20260513.md``
@@ -94,6 +95,9 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _build_optimized_training_context,
+)
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
@@ -255,6 +259,14 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
         "default": "64",
     },
+    "--enable-gt-scorer-cache": {
+        "env": "A1_PLUS_LAPOSE_ENABLE_GT_SCORER_CACHE",
+        "rationale": (
+            "F3/GTScorerCache; caches frozen GT PoseNet+SegNet targets once "
+            "and reuses indexed batches in the score-aware hot loop"
+        ),
+        "default": "true",
+    },
 }
 
 
@@ -334,6 +346,19 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Enable torch.autocast('cuda', dtype=float16). Catalog #172.")
     p.add_argument("--enable-torch-compile", action="store_true",
                    help="Wrap residual head in torch.compile. Catalog #179.")
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_true",
+        default=True,
+        help="Enable canonical GTScorerCache for frozen GT scorer targets.",
+    )
+    p.add_argument(
+        "--disable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_false",
+        help="Disable GTScorerCache and recompute GT scorer targets per step.",
+    )
     p.add_argument("--enable-tf32", action="store_true",
                    help="Enable TF32 matmul on Ampere+ GPUs. Catalog #178.")
 
@@ -822,6 +847,20 @@ def _full_main(args: argparse.Namespace) -> int:
         print(f"[full] LAPose head params: {n_params:,}  "
               f"est_int8_bytes={head.total_int8_bytes()}")
         _stage(f"head_built_{n_params}_params")
+        opt_ctx = _build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=gt_pair_tensor,
+            substrate_model=head,
+            device=device,
+        )
+        head = opt_ctx.substrate_model
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
 
         # 7. EMA shadow (Catalog #88)
         ema = EMA(head, decay=args.ema_decay)
@@ -884,9 +923,19 @@ def _full_main(args: argparse.Namespace) -> int:
                 ).clamp(0.0, 255.0)
                 pred_a = pred_pairs[:, 0]
                 pred_b = pred_pairs[:, 1]
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                        pair_idxs, device=device
+                    )
+                    gt_seg_already_probs = gt_cache.seg_already_probs
                 loss, parts = loss_fn(
                     pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
                     apply_eval_roundtrip=True, noise_std=args.noise_std,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
 
                 if not torch.isfinite(loss):
@@ -913,7 +962,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 try:
                     val_lag = _run_val_loop(
                         head, loss_fn, gt_pair_tensor, a1_pair_tensor, val_indices_pool,
-                        archive_bytes_proxy, device
+                        archive_bytes_proxy, gt_cache, device
                     )
                 finally:
                     head.load_state_dict(live_state)
@@ -1017,9 +1066,12 @@ def _full_main(args: argparse.Namespace) -> int:
         "lapose_atom_count": head.num_selected,
         "best_val_lag": best_val_lag,
         "best_epoch": best_epoch,
-        "epochs": args.epochs,
-        "device": str(device),
-        "d4_mode": args.d4_mode,
+            "epochs": args.epochs,
+            "device": str(device),
+            "trainer_proxy_axis": opt_ctx.eval_axis_label,
+            "trainer_proxy_promotion_requirement": opt_ctx.promotion_requirement,
+            "gt_scorer_cache_enabled": gt_cache is not None,
+            "d4_mode": args.d4_mode,
         "council_verdicts": {
             "D1": "D1.D HIERARCHICAL (8-2)",
             "D2": "D2.B bounded with D2.A target (10-0)",
@@ -1040,7 +1092,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def _run_val_loop(
     head, loss_fn, gt_pair_tensor, a1_pair_tensor, val_indices_pool,
-    archive_bytes_proxy, device
+    archive_bytes_proxy, gt_cache, device
 ) -> float:
     """Validation forward pass — eval-time torch.inference_mode (Catalog #180)."""
     import torch
@@ -1057,10 +1109,19 @@ def _run_val_loop(
             ).clamp(0.0, 255.0)
             pred_a = pred_pair[:, 0]
             pred_b = pred_pair[:, 1]
+            idx = torch.tensor([int(pair_id)], device=device, dtype=torch.long)
+            gt_pose_batch = gt_seg_batch = None
+            gt_seg_already_probs = None
+            if gt_cache is not None:
+                gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
+                gt_seg_already_probs = gt_cache.seg_already_probs
             try:
                 loss, _parts = loss_fn(
                     pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
                     apply_eval_roundtrip=True, noise_std=0.0,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
                 losses.append(float(loss.detach().cpu()))
             except Exception as exc:

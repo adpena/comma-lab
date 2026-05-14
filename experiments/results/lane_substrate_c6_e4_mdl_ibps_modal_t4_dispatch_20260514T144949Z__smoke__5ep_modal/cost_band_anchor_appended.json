@@ -1,0 +1,23 @@
+{
+  "all_flags_on": true,
+  "already_appended": false,
+  "appended": true,
+  "batch_size": 4,
+  "cost_estimate": true,
+  "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+  "dispatch_label": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep",
+  "elapsed_seconds": 400.41353004499996,
+  "epochs": 5,
+  "estimated_cost_usd": 0.06562332853515276,
+  "gpu": "T4",
+  "hourly_rate_usd": 0.59,
+  "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+  "outcome": "successful_dispatch",
+  "platform": "modal",
+  "posterior_path": null,
+  "promotion_eligible": false,
+  "returncode": 0,
+  "schema": "platform_training_cost_anchor_append_v1",
+  "score_claim": false,
+  "trainer": "experiments/train_substrate_c6_e4_mdl_ibps.py"
+}

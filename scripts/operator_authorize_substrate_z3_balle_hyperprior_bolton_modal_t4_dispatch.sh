@@ -8,9 +8,10 @@
 #
 # This wrapper routes through `tools/run_modal_smoke_before_full.py` per
 # Catalog #167 (`check_substrate_dispatch_uses_smoke_before_full_pattern`).
-# A 100-epoch ~$0.30 Modal T4 smoke fires FIRST, validates rc=0 + auth-eval
-# JSON present + score in plausible band [0.180, 0.200], and only proceeds
-# to the full 1000-epoch T4 dispatch on smoke-green.
+# The Z3 recipe is smoke_only/training_artifact_v1 until latent replacement
+# lands. The 100-epoch smoke validates a research-only artifact contract with
+# score_claim=false and does not green-light full dispatch or [contest-CUDA]
+# language from no-scorer output.
 #
 # Per Catalog #162 (`check_operator_authorize_canonical_use`) the full
 # dispatch ultimately delegates to `tools/operator_authorize.py --recipe`.

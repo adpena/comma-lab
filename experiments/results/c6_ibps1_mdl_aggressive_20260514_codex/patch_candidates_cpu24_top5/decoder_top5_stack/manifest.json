@@ -1,0 +1,55 @@
+{
+  "decision_grade_required": "exact auth eval after packet build",
+  "member_name": "0.bin",
+  "output_archive": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_top5_stack/archive.zip",
+  "output_archive_sha256": "6a2fd1bc41c930504438b9eed558c20d59ed7b4c96ffebbe4282b7885abec51d",
+  "output_archive_size": 224481,
+  "output_inner_sha256": "433c6ce94b8c336f3eaf9b95c2bc2690bb69b36fbee6a0052be862d28413cd14",
+  "patches": [
+    {
+      "absolute_offset": 100365,
+      "after": 178,
+      "before": 77,
+      "relative_offset": 34858,
+      "section": "decoder_blob",
+      "xor_value": 255
+    },
+    {
+      "absolute_offset": 151832,
+      "after": 78,
+      "before": 177,
+      "relative_offset": 86325,
+      "section": "decoder_blob",
+      "xor_value": 255
+    },
+    {
+      "absolute_offset": 131263,
+      "after": 196,
+      "before": 59,
+      "relative_offset": 65756,
+      "section": "decoder_blob",
+      "xor_value": 255
+    },
+    {
+      "absolute_offset": 66902,
+      "after": 102,
+      "before": 153,
+      "relative_offset": 1395,
+      "section": "decoder_blob",
+      "xor_value": 255
+    },
+    {
+      "absolute_offset": 106017,
+      "after": 166,
+      "before": 89,
+      "relative_offset": 40510,
+      "section": "decoder_blob",
+      "xor_value": 255
+    }
+  ],
+  "score_claim": false,
+  "source_archive": "experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep_modal/harvested_artifacts/lane_substrate_c6_e4_mdl_ibps_results/output/archive.zip",
+  "source_archive_sha256": "a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607",
+  "source_archive_size": 224481,
+  "source_inner_sha256": "e15803c02c5523cb1e968d7e1feaf83dce41e55966ed46bbb797ac1b5cade5e8"
+}

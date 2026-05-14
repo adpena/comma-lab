@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Z3 Ballé hyperprior bolt-on substrate package.
 
 Across-class staircase Step 1 per the zen-floor council
@@ -29,10 +30,14 @@ from tac.substrates.z3_balle_hyperprior_bolton.architecture import (
     total_balle_rate_bits,
 )
 from tac.substrates.z3_balle_hyperprior_bolton.archive import (
+    Z3_APPEND_ONLY_CONTRACT_BLOCKER,
+    Z3_BYTE_IDENTICAL_CONTRACT_BLOCKER,
+    Z3CompositionArchiveContract,
     Z3HP1_HEADER_STRUCT,
     Z3HP1_MAGIC,
     Z3HP1_VERSION,
     Z3HP1SidecarMeta,
+    build_composition_archive_contract,
     decode_z3hp1_sidecar,
     dequantize_int8_with_scale,
     encode_z3hp1_sidecar,
@@ -49,12 +54,16 @@ __all__ = [
     "A1_EVAL_W",
     "A1_LATENT_DIM",
     "A1_N_PAIRS",
+    "Z3_APPEND_ONLY_CONTRACT_BLOCKER",
+    "Z3_BYTE_IDENTICAL_CONTRACT_BLOCKER",
+    "Z3CompositionArchiveContract",
     "Z3HP1_HEADER_STRUCT",
     "Z3HP1_MAGIC",
     "Z3HP1_VERSION",
     "Z3HP1SidecarMeta",
     "Z3HyperpriorConfig",
     "Z3HyperpriorMLP",
+    "build_composition_archive_contract",
     "conditional_gaussian_rate_bits",
     "decode_z3hp1_sidecar",
     "dequantize_int8_with_scale",

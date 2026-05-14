@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the C6 MDL-IBPS substrate end-to-end (zen-Z1 LARGEST single bet).
 
 Per `.omx/research/campaign_lane_c6_e4_mdl_ibps_substrate_20260514.md` and
@@ -68,6 +69,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _build_optimized_training_context,
+)
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
 )
@@ -182,6 +186,14 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
         "default": "false",
     },
+    "--enable-gt-scorer-cache": {
+        "env": "C6_E4_MDL_IBPS_ENABLE_GT_SCORER_CACHE",
+        "rationale": (
+            "F3/GTScorerCache; caches frozen GT PoseNet+SegNet targets once "
+            "and reuses indexed batches in the score-aware hot loop"
+        ),
+        "default": "true",
+    },
 }
 
 
@@ -246,6 +258,19 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-archive-build", action="store_true")
     p.add_argument("--enable-autocast-fp16", action="store_true",
                    help="Catalog #172; pending canonical autocast backport")
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_true",
+        default=True,
+        help="Enable canonical GTScorerCache for frozen GT scorer targets.",
+    )
+    p.add_argument(
+        "--disable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_false",
+        help="Disable GTScorerCache and recompute GT scorer targets per step.",
+    )
     p.add_argument("--enable-tf32", action="store_true",
                    help="Catalog #178; opt-in")
     return p
@@ -561,6 +586,20 @@ def _full_main(args: argparse.Namespace) -> int:
     )
     substrate = MDLIBPSSubstrate(cfg).to(device)
     print(f"[c6-full] param breakdown: {substrate.num_parameters_breakdown()}")
+    opt_ctx = _build_optimized_training_context(
+        args,
+        scorers=(pose_scorer, seg_scorer),
+        gt_pairs=gt_pair_tensor,
+        substrate_model=substrate,
+        device=device,
+    )
+    substrate = opt_ctx.substrate_model
+    gt_cache = opt_ctx.gt_cache
+    if gt_cache is not None:
+        print(gt_cache.summary_line())
+        _stage("gt_scorer_cache_built")
+    else:
+        _stage("gt_scorer_cache_disabled")
 
     loss_fn = MDLIBPSScoreAwareLoss(
         seg_scorer,
@@ -600,6 +639,11 @@ def _full_main(args: argparse.Namespace) -> int:
             # Convert to byte domain for score-aware loss
             rgb_0_byte = rgb_0 * 255.0
             rgb_1_byte = rgb_1 * 255.0
+            gt_pose_batch = gt_seg_batch = None
+            gt_seg_already_probs = None
+            if gt_cache is not None:
+                gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
+                gt_seg_already_probs = gt_cache.seg_already_probs
             loss, parts = loss_fn(
                 reconstructed_rgb_0=rgb_0_byte,
                 reconstructed_rgb_1=rgb_1_byte,
@@ -609,6 +653,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 encoder_mu=mu,
                 encoder_logvar=logvar,
                 noise_std=args.noise_std,
+                gt_pose_batch=gt_pose_batch,
+                gt_seg_batch=gt_seg_batch,
+                gt_seg_already_probs=gt_seg_already_probs,
             )
             if not torch.isfinite(loss):
                 print(f"[c6-full] NON-FINITE LOSS at epoch {epoch} batch {i}; aborting")
@@ -739,6 +786,9 @@ def _full_main(args: argparse.Namespace) -> int:
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "result_review_blockers": result_review_blockers,
+        "trainer_proxy_axis": opt_ctx.eval_axis_label,
+        "trainer_proxy_promotion_requirement": opt_ctx.promotion_requirement,
+        "gt_scorer_cache_enabled": gt_cache is not None,
         "cfg": asdict(cfg),
         "param_breakdown": substrate.num_parameters_breakdown(),
         "hardware_substrate": _canon_detect_hardware_substrate(

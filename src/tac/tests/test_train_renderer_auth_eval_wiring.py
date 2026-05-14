@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Council R3 regression: verify train_renderer's auth-eval-on-best wiring is REAL.
 
 The previous wiring (R2) was dead code:
@@ -15,6 +16,7 @@ These tests verify the R3 fix actually:
 """
 from __future__ import annotations
 
+import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -54,6 +56,98 @@ def test_auth_eval_renderer_required_flags(auth_eval_argparse):
     assert not missing, (
         f"auth_eval_renderer.py is missing flags train_renderer expects: {missing}"
     )
+
+
+def _load_auth_eval_renderer_module():
+    module_name = "_auth_eval_renderer_axis_test"
+    sys.modules.pop(module_name, None)
+    spec = importlib.util.spec_from_file_location(
+        module_name,
+        REPO / "experiments" / "auth_eval_renderer.py",
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_auth_eval_renderer_reports_cuda_to_cpu_fallback_axis(monkeypatch):
+    """A CUDA request that resolves to CPU must expose advisory evidence."""
+    mod = _load_auth_eval_renderer_module()
+    monkeypatch.setattr(mod.torch.cuda, "is_available", lambda: False)
+
+    fields = mod.resolve_requested_actual_device("cuda")
+
+    assert fields["requested_device"] == "cuda"
+    assert fields["actual_device"] == "cpu"
+    assert fields["device_fallback_occurred"] is True
+    assert fields["fallback_occurred"] is True
+    assert fields["device_fallback_reason"] == "cuda_unavailable"
+    assert fields["evidence_axis"] != "contest_cuda"
+    assert str(fields["evidence_axis"]).endswith("_cpu_advisory")
+
+
+def test_train_renderer_rejects_cuda_auth_eval_cpu_fallback_result():
+    sys.path.insert(0, str(REPO / "src" / "tac" / "experiments"))
+    if "train_renderer" in sys.modules:
+        del sys.modules["train_renderer"]
+    from train_renderer import _enforce_auth_eval_axis_contract  # noqa: E402
+
+    payload = {
+        "requested_device": "cuda",
+        "actual_device": "cpu",
+        "evidence_axis": "linux_cpu_advisory",
+        "device_fallback_occurred": True,
+    }
+
+    with pytest.raises(RuntimeError, match="evidence axis rejected"):
+        _enforce_auth_eval_axis_contract(
+            payload,
+            requested_device="cuda",
+            allowed_axes={"contest_cuda"},
+        )
+
+
+def test_train_renderer_rejects_inconsistent_contest_cuda_from_cpu_fallback():
+    sys.path.insert(0, str(REPO / "src" / "tac" / "experiments"))
+    if "train_renderer" in sys.modules:
+        del sys.modules["train_renderer"]
+    from train_renderer import _enforce_auth_eval_axis_contract  # noqa: E402
+
+    payload = {
+        "requested_device": "cuda",
+        "actual_device": "cpu",
+        "evidence_axis": "contest_cuda",
+        "device_fallback_occurred": True,
+    }
+
+    with pytest.raises(RuntimeError, match="actual_device='cpu'"):
+        _enforce_auth_eval_axis_contract(
+            payload,
+            requested_device="cuda",
+            allowed_axes={"contest_cuda", "linux_cpu_advisory"},
+        )
+
+
+def test_train_renderer_can_explicitly_permit_advisory_axis():
+    sys.path.insert(0, str(REPO / "src" / "tac" / "experiments"))
+    if "train_renderer" in sys.modules:
+        del sys.modules["train_renderer"]
+    from train_renderer import _enforce_auth_eval_axis_contract  # noqa: E402
+
+    payload = {
+        "requested_device": "cuda",
+        "actual_device": "cpu",
+        "evidence_axis": "linux_cpu_advisory",
+        "device_fallback_occurred": True,
+    }
+
+    assert _enforce_auth_eval_axis_contract(
+        payload,
+        requested_device="cuda",
+        allowed_axes={"contest_cuda", "linux_cpu_advisory"},
+    ) is payload
 
 
 def test_train_renderer_does_not_pass_invented_flags():
@@ -159,8 +253,17 @@ def test_argparse_smoke_default_true():
     from train_renderer import parse_args  # noqa: E402
     a1 = parse_args(["--tag", "smoke"])
     assert a1.auth_eval_on_best is True
+    assert a1.auth_eval_device == "cuda"
+    assert a1.auth_eval_allow_axis is None
     a2 = parse_args(["--tag", "smoke", "--no-auth-eval-on-best"])
     assert a2.auth_eval_on_best is False
+    a3 = parse_args([
+        "--tag", "smoke",
+        "--auth-eval-device", "cpu",
+        "--auth-eval-allow-axis", "linux_cpu_advisory",
+    ])
+    assert a3.auth_eval_device == "cpu"
+    assert a3.auth_eval_allow_axis == ["linux_cpu_advisory"]
 
 
 def test_kl_distill_positive_weight_requires_explicit_segnet_aux_scope():

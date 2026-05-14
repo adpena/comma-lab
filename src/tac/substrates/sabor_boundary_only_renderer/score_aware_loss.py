@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SABOR score-aware Lagrangian.
 
 L = alpha * B / N + beta * d_seg + gamma * sqrt(d_pose) + delta * boundary_consistency
@@ -36,7 +37,7 @@ import torch
 
 from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
-    score_pair_components,
+    score_pair_components_dispatch,
 )
 
 
@@ -100,6 +101,9 @@ class SaborBoundaryOnlyScoreAwareLoss(torch.nn.Module):
         *,
         apply_eval_roundtrip: bool = True,
         noise_std: float = 0.5,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute the score-domain Lagrangian.
 
@@ -143,13 +147,16 @@ class SaborBoundaryOnlyScoreAwareLoss(torch.nn.Module):
         gt_rgb_0_scaled = gt_rgb_0 * 255.0
         gt_rgb_1_scaled = gt_rgb_1 * 255.0
 
-        seg_term, pose_term = score_pair_components(
+        seg_term, pose_term = score_pair_components_dispatch(
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0_scaled,
             gt_rgb_1=gt_rgb_1_scaled,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )
 
         rate_term = (

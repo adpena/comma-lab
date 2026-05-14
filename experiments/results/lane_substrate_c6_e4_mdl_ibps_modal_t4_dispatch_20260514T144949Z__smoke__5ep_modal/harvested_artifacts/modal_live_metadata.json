@@ -1,0 +1,11 @@
+{
+  "label": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep",
+  "lane_script": "scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh",
+  "synced_at": "2026-05-14T14:56:41Z",
+  "auth_eval_device": "cpu",
+  "auth_eval_advisory_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "volume": "comma-train-lane-results",
+  "volume_prefix": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep/"
+}

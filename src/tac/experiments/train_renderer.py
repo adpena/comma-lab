@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Training script for GPU-lane mask-conditioned renderer.
 
 Pipeline:
@@ -158,6 +159,114 @@ def _variant_supports_fp4a_export(variant: str | None) -> bool:
     if variant is None or variant == "":
         return True  # legacy default → build_renderer
     return variant in _VARIANTS_BUILD_RENDERER_FP4A_OK
+
+
+_AUTH_EVAL_AXIS_CHOICES: tuple[str, ...] = (
+    "contest_cuda",
+    "linux_cpu_advisory",
+    "macos_cpu_advisory",
+    "mps_advisory",
+    "cpu_advisory",
+)
+_AUTH_EVAL_DEFAULT_ALLOWED_AXES: frozenset[str] = frozenset({"contest_cuda"})
+
+
+def _auth_eval_device_type(device: object) -> str:
+    text = str(device or "").strip().lower()
+    if text.startswith("cuda"):
+        return "cuda"
+    if text.startswith("mps"):
+        return "mps"
+    if text.startswith("cpu"):
+        return "cpu"
+    return text or "cpu"
+
+
+def _auth_eval_allowed_axes(args: argparse.Namespace) -> frozenset[str]:
+    allowed = set(_AUTH_EVAL_DEFAULT_ALLOWED_AXES)
+    for axis in getattr(args, "auth_eval_allow_axis", None) or ():
+        allowed.add(str(axis))
+    return frozenset(allowed)
+
+
+def _auth_eval_result_payload_from_stdout(stdout: str) -> dict[str, object]:
+    payload: dict[str, object] | None = None
+    for line in stdout.splitlines():
+        if not line.startswith("RESULT_JSON:"):
+            continue
+        raw = line.split("RESULT_JSON:", 1)[1].strip()
+        try:
+            decoded = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                f"auth_eval_renderer emitted malformed RESULT_JSON: {exc}"
+            ) from exc
+        if not isinstance(decoded, dict):
+            raise RuntimeError(
+                "auth_eval_renderer RESULT_JSON must be a JSON object"
+            )
+        payload = decoded
+    if payload is None:
+        raise RuntimeError(
+            "auth_eval_renderer completed but emitted no RESULT_JSON line — "
+            "the run produced no authoritative score (CLAUDE.md violation)"
+        )
+    return payload
+
+
+def _auth_eval_truthy(value: object) -> bool:
+    return value is True or (
+        isinstance(value, str)
+        and value.strip().lower() in {"1", "true", "yes"}
+    )
+
+
+def _enforce_auth_eval_axis_contract(
+    payload: dict[str, object],
+    *,
+    requested_device: str,
+    allowed_axes: frozenset[str] | set[str] | tuple[str, ...] | list[str] | None = None,
+) -> dict[str, object]:
+    """Fail closed if auth-eval-on-best returned the wrong evidence axis."""
+
+    allowed = set(allowed_axes or _AUTH_EVAL_DEFAULT_ALLOWED_AXES)
+    requested = str(payload.get("requested_device") or requested_device or "")
+    actual = str(payload.get("actual_device") or payload.get("device") or "")
+    evidence_axis = str(payload.get("evidence_axis") or payload.get("score_axis") or "")
+    fallback_occurred = (
+        _auth_eval_truthy(payload.get("device_fallback_occurred"))
+        or _auth_eval_truthy(payload.get("fallback_occurred"))
+    )
+
+    if not evidence_axis:
+        raise RuntimeError(
+            "auth_eval_renderer RESULT_JSON did not report evidence_axis; "
+            "refusing to treat auth-eval-on-best as CUDA evidence."
+        )
+    if not actual:
+        raise RuntimeError(
+            "auth_eval_renderer RESULT_JSON did not report actual_device; "
+            "refusing to treat auth-eval-on-best as CUDA evidence."
+        )
+    if evidence_axis == "contest_cuda" and _auth_eval_device_type(actual) != "cuda":
+        raise RuntimeError(
+            "auth_eval_renderer reported evidence_axis=contest_cuda but "
+            f"actual_device={actual!r}; refusing inconsistent score axis."
+        )
+    if evidence_axis == "contest_cuda" and fallback_occurred:
+        raise RuntimeError(
+            "auth_eval_renderer reported evidence_axis=contest_cuda after a "
+            "device fallback; refusing inconsistent score axis."
+        )
+    if evidence_axis not in allowed:
+        raise RuntimeError(
+            "auth_eval_on_best evidence axis rejected: "
+            f"requested_device={requested!r}, actual_device={actual!r}, "
+            f"evidence_axis={evidence_axis!r}, fallback_occurred={fallback_occurred}. "
+            f"Allowed axes are {sorted(allowed)!r}. Explicitly permit advisory "
+            "axes only for non-promotional diagnostics."
+        )
+    return payload
 
 
 # Tier-1 operator-required CLI flags manifest. Catalog #151
@@ -734,6 +843,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--auth-eval-upstream-dir", type=str,
                    default=str(_upstream),
                    help="Path to upstream/ for auth eval (defaults to repo upstream).")
+    p.add_argument("--auth-eval-device", type=str, default="cuda",
+                   choices=("cuda", "cpu", "mps"),
+                   help="Device requested for auth_eval_renderer.py. Default cuda; "
+                        "non-cuda results are advisory unless their axis is "
+                        "explicitly allowed.")
+    p.add_argument("--auth-eval-allow-axis", action="append", default=None,
+                   choices=_AUTH_EVAL_AXIS_CHOICES,
+                   help="Additional evidence axis accepted for auth-eval-on-best. "
+                        "Default accepts only contest_cuda. Use only for "
+                        "non-promotional diagnostics.")
 
     # Lane W (2026-04-27): hard-pair weighted self-compression. The
     # per-pair weight tensor is produced by experiments/profile_pair_sensitivity.py
@@ -4088,9 +4207,10 @@ def train(args: argparse.Namespace):
     #   3. Call auth_eval_renderer with --checkpoint + --archive-size-bytes
     #      + --poses (only flags that exist per its argparse)
     #
-    # Falls back gracefully when no masks are provided (still produces a
-    # renderer-only auth score, which is at least HONEST about the rate
-    # bias rather than silently skipping).
+    # Axis integrity is checked from auth_eval_renderer's RESULT_JSON. A
+    # requested CUDA auth eval cannot be satisfied by CPU/MPS/advisory evidence
+    # unless the caller explicitly adds that axis for a non-promotional
+    # diagnostic run.
     if getattr(args, "auth_eval_on_best", False):
         import subprocess
         best_fp4 = out_dir / f"renderer_{args.tag}_best_fp4.pt"
@@ -4231,12 +4351,12 @@ def train(args: argparse.Namespace):
             sys.executable, "-u", str(auth_eval_script),
             "--checkpoint", str(best_fp4),
             "--upstream-dir", args.auth_eval_upstream_dir,
-            "--device", "cuda",
+            "--device", str(args.auth_eval_device),
             "--archive-size-bytes", str(archive_bytes),
             "--output-dir", str(out_dir),
             "--poses", str(args.auth_eval_poses),
         ]
-        print("\n[auth-eval] Launching CUDA auth eval against best checkpoint...")
+        print("\n[auth-eval] Launching auth eval against best checkpoint...")
         print(f"[auth-eval] cmd: {' '.join(cmd)}")
         try:
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
@@ -4249,15 +4369,19 @@ def train(args: argparse.Namespace):
                     f"auth_eval_renderer exited {proc.returncode}; "
                     f"see {out_dir} for output and stderr"
                 )
-            for line in proc.stdout.splitlines():
-                if line.startswith("RESULT_JSON:"):
-                    print(f"\n[auth-eval] {line}")
-                    break
-            else:
-                raise RuntimeError(
-                    "auth_eval_renderer completed but emitted no RESULT_JSON line — "
-                    "the run produced no authoritative score (CLAUDE.md violation)"
-                )
+            result_payload = _auth_eval_result_payload_from_stdout(proc.stdout)
+            _enforce_auth_eval_axis_contract(
+                result_payload,
+                requested_device=str(args.auth_eval_device),
+                allowed_axes=_auth_eval_allowed_axes(args),
+            )
+            print(
+                "\n[auth-eval] RESULT_JSON accepted: "
+                f"score={result_payload.get('final_score')} "
+                f"axis={result_payload.get('evidence_axis')} "
+                f"requested_device={result_payload.get('requested_device')} "
+                f"actual_device={result_payload.get('actual_device')}"
+            )
             print(f"[auth-eval] Result saved alongside checkpoint in {out_dir}")
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError(

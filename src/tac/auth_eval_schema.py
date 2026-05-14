@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Normalize contest auth-eval JSON schemas without weakening custody.
 
 The canonical evaluator emits ``canonical_score``, component distances, and
@@ -302,7 +303,15 @@ def eval_device(eval_data: dict[str, Any] | None) -> str | None:
     if not isinstance(eval_data, dict):
         return None
     prov = _provenance(eval_data)
-    device = prov.get("device") if prov.get("device") is not None else eval_data.get("device")
+    device = (
+        prov.get("actual_device")
+        if prov.get("actual_device") is not None
+        else eval_data.get("actual_device")
+        if eval_data.get("actual_device") is not None
+        else prov.get("device")
+        if prov.get("device") is not None
+        else eval_data.get("device")
+    )
     return str(device).strip().lower() if device is not None else None
 
 

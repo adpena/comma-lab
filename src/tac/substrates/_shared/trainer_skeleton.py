@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical substrate-trainer utilities.
 
 Per CLAUDE.md "Beauty, simplicity, and developer experience" + the
@@ -46,6 +47,7 @@ import os
 import random
 import shutil
 import subprocess
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -53,6 +55,187 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
 EVAL_HW: tuple[int, int] = (384, 512)
+
+TRAINER_PROXY_AXIS_LABEL = "[trainer-proxy; not contest-CPU or contest-CUDA]"
+TRAINER_PROXY_PROMOTION_REQUIREMENT = (
+    "[contest-CUDA] auth eval required before score/rank/promotion claims"
+)
+
+OPTIMIZATION_FLAGS_MANIFEST: dict[str, dict[str, Any]] = {
+    "--enable-autocast-fp16": {
+        "env": "ENABLE_AUTOCAST_FP16",
+        "default": False,
+        "rationale": (
+            "Catalog #172 Tier-1 speed path; wraps training forwards in "
+            "torch.autocast without changing inflate/runtime semantics"
+        ),
+    },
+    "--enable-torch-compile": {
+        "env": "ENABLE_TORCH_COMPILE",
+        "default": False,
+        "rationale": (
+            "Catalog #179 Tier-1 speed path; wraps substrate model with "
+            "torch.compile via canonical fallback helper"
+        ),
+    },
+    "--enable-gt-scorer-cache": {
+        "env": "ENABLE_GT_SCORER_CACHE",
+        "default": True,
+        "rationale": (
+            "F3/GTScorerCache Tier-1 speed path; precomputes frozen GT "
+            "PoseNet+SegNet targets once and indexes them per batch"
+        ),
+    },
+}
+
+
+@dataclass(frozen=True)
+class OptimizedTrainingContext:
+    """Canonical Tier-1 optimization bundle for substrate trainer hot loops.
+
+    The context is deliberately score-claim neutral: it may speed up trainer
+    proxy losses, but it never changes the contest auth-eval axis. Trainers
+    should continue to tag proxy losses as non-authoritative and require a
+    byte-closed [contest-CUDA] auth eval before promotion language.
+    """
+
+    gt_cache: Any | None
+    substrate_model: Any
+    score_fn: Any
+    autocast_cfg: Any
+    eval_axis_label: str = TRAINER_PROXY_AXIS_LABEL
+    promotion_requirement: str = TRAINER_PROXY_PROMOTION_REQUIREMENT
+
+
+def merge_optimization_flags(
+    trainer_tier_1_manifest: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Merge canonical Tier-1 optimization flags into a trainer manifest.
+
+    Trainer-specific entries intentionally win on key collision so a lane can
+    tighten a rationale/default while still inheriting the canonical surface.
+    """
+
+    return {**OPTIMIZATION_FLAGS_MANIFEST, **trainer_tier_1_manifest}
+
+
+def _resolve_scorer_pair(
+    scorers: Any | None,
+    *,
+    seg_scorer: Any | None,
+    pose_scorer: Any | None,
+) -> tuple[Any, Any]:
+    """Resolve ``(seg_scorer, pose_scorer)`` from common trainer shapes."""
+
+    if seg_scorer is not None and pose_scorer is not None:
+        return seg_scorer, pose_scorer
+    if isinstance(scorers, dict):
+        seg = scorers.get("seg_scorer") or scorers.get("segnet") or scorers.get("seg")
+        pose = (
+            scorers.get("pose_scorer")
+            or scorers.get("posenet")
+            or scorers.get("pose")
+        )
+        if seg is not None and pose is not None:
+            return seg, pose
+    if isinstance(scorers, (tuple, list)) and len(scorers) == 2:
+        first, second = scorers
+        first_name = type(first).__name__.lower()
+        second_name = type(second).__name__.lower()
+        if "seg" in first_name or "pose" in second_name:
+            return first, second
+        return second, first
+    raise ValueError(
+        "build_optimized_training_context needs scorers as "
+        "(pose_scorer, seg_scorer), (seg_scorer, pose_scorer), a dict with "
+        "seg/pose keys, or explicit seg_scorer= and pose_scorer=."
+    )
+
+
+def build_optimized_training_context(
+    args: Any,
+    scorers: Any | None = None,
+    gt_pairs: Any | None = None,
+    substrate_model: Any | None = None,
+    device: Any | None = None,
+    *,
+    seg_scorer: Any | None = None,
+    pose_scorer: Any | None = None,
+    target_pixels: Any | None = None,
+) -> OptimizedTrainingContext:
+    """Build the canonical Tier-1 optimization context for trainers.
+
+    ``gt_pairs``/``target_pixels`` must be shaped ``(N, 2, 3, H, W)`` when
+    GT caching is enabled. The returned cache stays on CPU and is looked up
+    by pair index inside trainer loops.
+    """
+
+    import functools
+    import torch
+
+    from tac.substrates.score_aware_common import score_pair_components_dispatch
+    from tac.training_optimization import (
+        AutocastConfig,
+        build_gt_scorer_cache,
+        compile_with_fallback,
+        resolve_autocast_dtype,
+    )
+
+    if device is None:
+        raise ValueError("build_optimized_training_context requires device")
+    resolved_device = device if isinstance(device, torch.device) else torch.device(device)
+    seg, pose = _resolve_scorer_pair(
+        scorers, seg_scorer=seg_scorer, pose_scorer=pose_scorer
+    )
+    target = target_pixels if target_pixels is not None else gt_pairs
+
+    gt_cache = None
+    if getattr(args, "enable_gt_scorer_cache", True):
+        if target is None:
+            raise ValueError(
+                "enable_gt_scorer_cache=True requires gt_pairs/target_pixels"
+            )
+        gt_cache = build_gt_scorer_cache(
+            target_pixels=target,
+            posenet=pose,
+            segnet=seg,
+            device=resolved_device,
+            segmentation_temperature=float(
+                getattr(args, "segmentation_temperature", 1.0)
+            ),
+            cache_chunk_size=int(getattr(args, "gt_scorer_cache_chunk_size", 16)),
+        )
+
+    optimized_model = substrate_model
+    if substrate_model is not None and getattr(args, "enable_torch_compile", False):
+        optimized_model = compile_with_fallback(
+            substrate_model,
+            enabled=True,
+            mode=str(getattr(args, "torch_compile_mode", "default")),
+            fallback_on_error=bool(getattr(args, "torch_compile_fallback", True)),
+            dynamic=getattr(args, "torch_compile_dynamic", None),
+        )
+
+    autocast_dtype = resolve_autocast_dtype(
+        getattr(args, "autocast_dtype", "fp16")
+    )
+    autocast_cfg = AutocastConfig(
+        enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+        dtype=autocast_dtype,
+        device_type=resolved_device.type,
+    )
+    score_fn = functools.partial(
+        score_pair_components_dispatch,
+        seg_scorer=seg,
+        pose_scorer=pose,
+    )
+
+    return OptimizedTrainingContext(
+        gt_cache=gt_cache,
+        substrate_model=optimized_model,
+        score_fn=score_fn,
+        autocast_cfg=autocast_cfg,
+    )
 
 # Canonical (axis, gpu_token) -> hardware_substrate map, aligned with
 # `tac.continual_learning.TAG_HARDWARE_REQUIREMENT` accepted-substrate set.
@@ -483,13 +666,19 @@ def decode_real_pairs(
 
 __all__ = [
     "EVAL_HW",
+    "OPTIMIZATION_FLAGS_MANIFEST",
+    "OptimizedTrainingContext",
     "REPO_ROOT",
     "StageLog",
+    "TRAINER_PROXY_AXIS_LABEL",
+    "TRAINER_PROXY_PROMOTION_REQUIREMENT",
+    "build_optimized_training_context",
     "decode_real_pairs",
     "detect_hardware_substrate",
     "device_or_die",
     "git_head_sha",
     "load_upstream_yuv420_to_rgb",
+    "merge_optimization_flags",
     "pin_seeds",
     "require_contest_cuda_auth_eval_claim",
     "sha256_bytes",

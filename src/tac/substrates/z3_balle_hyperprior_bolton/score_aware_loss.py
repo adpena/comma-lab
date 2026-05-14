@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Score-aware Ballé R+λD loss for the Z3 hyperprior bolt-on.
 
 Z3 is a BOLT-ON over the FROZEN A1 base: the A1 renderer + posenet/segnet
@@ -42,7 +43,7 @@ from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
     CONTEST_RATE_WEIGHT,
     CONTEST_SEG_WEIGHT,
-    score_pair_components,
+    score_pair_components_dispatch,
 )
 from tac.substrates.z3_balle_hyperprior_bolton.architecture import (
     A1_LATENT_DIM,
@@ -103,6 +104,9 @@ def z3_lagrangian(
     factorized_half_range: float = 16.0,
     n_pairs_normalizer: int = 600,
     contest_normalizer_bytes: float = 37_545_489.0,
+    gt_pose_batch: torch.Tensor | None = None,
+    gt_seg_batch: torch.Tensor | None = None,
+    gt_seg_already_probs: bool | None = None,
 ) -> dict[str, torch.Tensor]:
     """Full score-aware Ballé R+λD Lagrangian for Z3.
 
@@ -135,16 +139,28 @@ def z3_lagrangian(
 
     seg_dist: torch.Tensor | None = None
     pose_dist: torch.Tensor | None = None
-    if a1_pair_pred_rt is not None and gt_pair is not None:
+    cache_args_present = (
+        gt_pose_batch is not None
+        or gt_seg_batch is not None
+        or gt_seg_already_probs is not None
+    )
+    if a1_pair_pred_rt is not None and (gt_pair is not None or cache_args_present):
         rgb_0_rt, rgb_1_rt = a1_pair_pred_rt
-        gt_rgb_0, gt_rgb_1 = gt_pair
-        seg_dist, pose_dist = score_pair_components(
+        if gt_pair is None:
+            gt_rgb_0 = None
+            gt_rgb_1 = None
+        else:
+            gt_rgb_0, gt_rgb_1 = gt_pair
+        seg_dist, pose_dist = score_pair_components_dispatch(
             seg_scorer=seg_scorer,
             pose_scorer=pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )
 
     if seg_dist is None or pose_dist is None:

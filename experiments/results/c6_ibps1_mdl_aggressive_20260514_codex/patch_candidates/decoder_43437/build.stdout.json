@@ -1,0 +1,23 @@
+{
+  "decision_grade_required": "exact auth eval after packet build",
+  "member_name": "0.bin",
+  "output_archive": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_43437/archive.zip",
+  "output_archive_sha256": "8448df8ddb071c6e6935690574c7258ce1f9469e7110dfe863436c573cb68c19",
+  "output_archive_size": 224481,
+  "output_inner_sha256": "c0a62714931ead0ba3aeb298aa534a46ca656eb99597bece496058f601b22e1f",
+  "patches": [
+    {
+      "absolute_offset": 108944,
+      "after": 62,
+      "before": 193,
+      "relative_offset": 43437,
+      "section": "decoder_blob",
+      "xor_value": 255
+    }
+  ],
+  "score_claim": false,
+  "source_archive": "experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep_modal/harvested_artifacts/lane_substrate_c6_e4_mdl_ibps_results/output/archive.zip",
+  "source_archive_sha256": "a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607",
+  "source_archive_size": 224481,
+  "source_inner_sha256": "e15803c02c5523cb1e968d7e1feaf83dce41e55966ed46bbb797ac1b5cade5e8"
+}

@@ -92,6 +92,9 @@ from typing import Any
 # Replaces ~70 LOC of inlined helpers with a single import per the
 # 2026-05-13 substrate-trainer dedup migration wave.
 from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _build_optimized_training_context,
+)
+from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
 )
 from tac.substrates._shared.trainer_skeleton import (
@@ -502,11 +505,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--enable-gt-scorer-cache",
         action="store_true",
-        default=False,
+        default=True,
         help=(
-            "RESERVED (O1): GT-scorer-output cache; wire-in pending per-substrate "
-            "score_aware_loss API extension."
+            "Build the canonical GT-scorer-output cache once and reuse it "
+            "inside the score-aware training loop (F3/O1; enabled by default)."
         ),
+    )
+    p.add_argument(
+        "--disable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_false",
+        help="Disable the F3/O1 GTScorerCache path for memory/debug runs.",
     )
 
 
@@ -834,6 +843,21 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage("model_built")
         _stage(f"activation_family_{cfg.activation_family}")
 
+        opt_ctx = _build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=pair_tensor,
+            substrate_model=model,
+            device=device,
+        )
+        model = opt_ctx.substrate_model
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
+
         # 6. EMA shadow (CLAUDE.md non-negotiable)
         ema = EMA(model, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
@@ -891,10 +915,18 @@ def _full_main(args: argparse.Namespace) -> int:
                 gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
                 gt_0 = gt[:, 0]
                 gt_1 = gt[:, 1]
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
+                    gt_seg_already_probs = gt_cache.seg_already_probs
                 loss, parts = loss_fn(
                     rgb_0_255, rgb_1_255, gt_0, gt_1, archive_bytes_proxy,
                     apply_eval_roundtrip=True,
                     noise_std=args.noise_std,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
                 if not torch.isfinite(loss):
                     nan_strike += 1
@@ -934,6 +966,13 @@ def _full_main(args: argparse.Namespace) -> int:
                 model.eval()
                 with torch.no_grad():
                     rgb_0_v, rgb_1_v = model(val_indices)
+                    val_gt_pose_batch = val_gt_seg_batch = None
+                    val_gt_seg_already_probs = None
+                    if gt_cache is not None:
+                        val_gt_pose_batch, val_gt_seg_batch = gt_cache.lookup(
+                            val_indices, device=device
+                        )
+                        val_gt_seg_already_probs = gt_cache.seg_already_probs
                     val_loss, _val_parts = loss_fn(
                         rgb_0_v * 255.0,
                         rgb_1_v * 255.0,
@@ -942,6 +981,9 @@ def _full_main(args: argparse.Namespace) -> int:
                         archive_bytes_proxy,
                         apply_eval_roundtrip=True,
                         noise_std=args.noise_std,
+                        gt_pose_batch=val_gt_pose_batch,
+                        gt_seg_batch=val_gt_seg_batch,
+                        gt_seg_already_probs=val_gt_seg_already_probs,
                     )
                 val_lag = float(val_loss.detach().item())
                 # Restore live weights

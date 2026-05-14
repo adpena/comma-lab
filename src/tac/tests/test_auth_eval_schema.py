@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import io
@@ -7,6 +8,7 @@ from contextlib import redirect_stdout
 from tac.auth_eval_schema import (
     auth_eval_completion_summary,
     contest_formula_score,
+    eval_device,
     eval_metric_summary,
     main,
     required_contest_cuda_evidence_blockers,
@@ -247,6 +249,28 @@ def test_required_contest_cuda_evidence_blockers_rejects_cpu_axis_even_with_metr
     assert "evidence_semantics_not_contest_cuda_exact_auth_eval" in blockers
     assert "score_claim_valid_not_true" in blockers
     assert "promotion_eligible_not_true" not in blockers
+
+
+def test_eval_device_prefers_actual_device_over_requested_device() -> None:
+    assert (
+        eval_device(
+            {
+                "device": "cuda",
+                "requested_device": "cuda",
+                "actual_device": "cpu",
+            }
+        )
+        == "cpu"
+    )
+    assert (
+        eval_device(
+            {
+                "device": "cuda",
+                "provenance": {"actual_device": "mps"},
+            }
+        )
+        == "mps"
+    )
 
 
 def test_required_contest_cuda_evidence_blockers_do_not_require_promotion_eligibility() -> None:

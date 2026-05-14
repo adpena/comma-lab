@@ -1,0 +1,108 @@
+{
+  "generated_utc": "2026-05-14T16:46:59Z",
+  "scope": "PUBLIC-FRONTIER-WATCH-POSTDEADLINE",
+  "baseline_utc": "2026-05-05T22:47:20Z",
+  "score_claim": false,
+  "dispatch_attempted": false,
+  "official_sources": {
+    "leaderboard_url": "https://comma.ai/leaderboard",
+    "readme_url": "https://github.com/commaai/comma_video_compression_challenge/blob/master/README.md",
+    "master_commit": "d0013db5a97066414217667e82673254eff2347d",
+    "readme_blob_sha": "e6657cf4cbf9a98c5144d6dd3a3866f8efcc5b89"
+  },
+  "updated_prs_after_baseline": [
+    {
+      "pr": 108,
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/108",
+      "author": "andrei-minca",
+      "state": "closed",
+      "updated_utc": "2026-05-11T19:19:58Z",
+      "head_sha": "59c1bbd544bb2aa166656d24d7de117ad3e3e62e",
+      "archive_url": "https://github.com/user-attachments/files/27408563/archive.zip",
+      "archive_bytes": 442979,
+      "archive_sha256": "127b0b318ba2355cdac0d513f4027f0ca3297be4cba0f44e1ddb25cc70586804",
+      "classification": "non_frontier_closed_no_dispatch_change"
+    },
+    {
+      "pr": 105,
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/105",
+      "author": "valtterivalo",
+      "state": "merged",
+      "updated_utc": "2026-05-06T08:01:30Z",
+      "head_sha": "9376a6f86c76cb576b5f25afd8c789a8a727077f",
+      "archive_bytes": 177857,
+      "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+      "cuda_recomputed_score_from_comment": 0.230437255695,
+      "cpu_recomputed_score_from_comment": 0.197973979344,
+      "classification": "no_new_archive_postbaseline_research_signal_only"
+    },
+    {
+      "pr": 95,
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+      "author": "AaronLeslie138",
+      "state": "merged",
+      "updated_utc": "2026-05-06T01:44:12Z",
+      "head_sha": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+      "archive_bytes": 178417,
+      "archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+      "cuda_recomputed_score_from_comment": 0.230983351496,
+      "cpu_recomputed_score_from_comment": 0.19870480122,
+      "classification": "no_new_archive_postbaseline_control_arm_only"
+    },
+    {
+      "pr": 71,
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/71",
+      "author": "TomDousek",
+      "state": "merged",
+      "updated_utc": "2026-05-06T12:13:08Z",
+      "head_sha": "6aec739a588342302330812c30a972736ff8c45b",
+      "archive_bytes": 290732,
+      "archive_sha256": "2849248c0d391b1be5b586b8d2a4d66140013e6393f73d64d4be76d730d3ac12",
+      "cuda_recomputed_score_from_comment": 0.717388886008,
+      "classification": "non_frontier_writeup_logistics_only"
+    }
+  ],
+  "author_linked_sources": [
+    {
+      "name": "valtteri_kitchen_sink_storybook",
+      "url": "https://github.com/user-attachments/files/27357161/kitchen-sink.html",
+      "local_ignored_path": "experiments/results/public_frontier_watch_postdeadline_20260514_codex/kitchen-sink.html",
+      "bytes": 665437,
+      "sha256": "d8f5e279a1bbcde6b83d6c2c1a016a8e4bf150d9aabf71b690b49e975a4d0c78",
+      "classification": "research_signal_semantic_codec_selector_tail_not_new_frontier_archive"
+    },
+    {
+      "name": "aaron_blog_shell",
+      "url": "https://aaronleslie.dev/blog/comma-compression",
+      "local_ignored_path": "experiments/results/public_frontier_watch_postdeadline_20260514_codex/aaron-comma-compression.html",
+      "bytes": 1075,
+      "sha256": "a33978cb22cc8a863a39ad5980dafab36ee80c2bf855106212d889839efd9f11",
+      "classification": "static_js_shell_no_new_source_in_this_pass"
+    },
+    {
+      "name": "tom_visualization_page",
+      "url": "https://tomdousek.github.io/",
+      "local_ignored_path": "experiments/results/public_frontier_watch_postdeadline_20260514_codex/tomdousek-index.html",
+      "bytes": 9180,
+      "sha256": "20f836a256f8ad4e615472245414e7a27df213fcb4b1a48dd5701454e3dbd463",
+      "classification": "research_signal_uncertainty_boundary_ghostconv_non_frontier"
+    },
+    {
+      "name": "brady_writeup_shell",
+      "url": "https://comma-writeup.pages.dev/",
+      "local_ignored_path": "experiments/results/public_frontier_watch_postdeadline_20260514_codex/brady-writeup.html",
+      "bytes": 462,
+      "sha256": "8349eca1dae98a64b65880b631c87e646b7f5667a3ea1d6fb2ca2ded18dfcf73",
+      "classification": "static_js_shell_no_new_source_in_this_pass"
+    },
+    {
+      "name": "sajay_qrepro_readme",
+      "url": "https://github.com/SajayR/comma_video_compression_challenge/blob/cce857392701e73861ad513d34906faba523f719/submissions/qrepro/README.md",
+      "local_ignored_path": "experiments/results/public_frontier_watch_postdeadline_20260514_codex/sajay-qrepro-readme.md",
+      "bytes": 12601,
+      "sha256": "d20d37f20041f18f66e3a8ca2658d074cd274cb5d42c80ccc5c0c86589304832",
+      "classification": "research_signal_qrepro_non_frontier"
+    }
+  ],
+  "routing_decision": "no_new_leaderboard_movement_no_dispatch_or_build_change"
+}

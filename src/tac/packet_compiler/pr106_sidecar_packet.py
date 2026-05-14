@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """PR106 sidecar PacketIR parser and identity emitter.
 
 This module owns the byte-level wrapper used by PR106 latent-sidecar variants:
@@ -33,9 +34,11 @@ from tac.packet_compiler.pr101_sidecar_grammar import (
 PR106_SIDECAR_MAGIC = 0xFE
 PR106_SIDECAR_FORMAT_BROTLI = 0x01
 PR106_SIDECAR_FORMAT_PR101_GRAMMAR = 0x02
+PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED = 0x04
 PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
 )
 PR106_LATENT_N_PAIRS = 600
 PR106_LATENT_N_DIMS = 28
@@ -87,6 +90,8 @@ class PR106SidecarPacket:
             return "brotli_dim_delta"
         if self.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
             return "pr101_ranked_no_op"
+        if self.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+            return "pr101_ranked_no_op_rank_elided"
         return f"unknown_0x{self.format_id:02x}"
 
 
@@ -367,6 +372,69 @@ def decode_pr101_ranked_sidecar_payload_to_dim_delta(
     )
 
 
+def _rank_elided_expected_payload_bytes(
+    *,
+    noop_count: int,
+    dim_bytes: int,
+    noop_rank_bytes: int,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> int:
+    if not (0 <= int(noop_count) <= int(schema.n_pairs)):
+        raise ValueError(f"noop_count must be in [0, {schema.n_pairs}]")
+    n_valid = int(schema.n_pairs) - int(noop_count)
+    expected_huff_bytes = (n_valid * int(schema.huff_min_len) + 7) // 8
+    return int(dim_bytes) + expected_huff_bytes + int(noop_rank_bytes)
+
+
+def reexpand_pr101_rank_elided_sidecar_payload(
+    payload: bytes,
+    framing_meta: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[bytes, bytes]:
+    """Reconstruct the equivalent format-0x02 PR101 payload/meta from format 0x04."""
+
+    if len(framing_meta) != 5:
+        raise ValueError(
+            f"format_id=0x04 framing_meta must be 5 bytes; got {len(framing_meta)}"
+        )
+    noop_count, dim_bytes, noop_rank_bytes = struct.unpack("<HHB", framing_meta)
+    expected_payload_bytes = _rank_elided_expected_payload_bytes(
+        noop_count=int(noop_count),
+        dim_bytes=int(dim_bytes),
+        noop_rank_bytes=int(noop_rank_bytes),
+        schema=schema,
+    )
+    if len(payload) != expected_payload_bytes:
+        raise ValueError(
+            "format_id=0x04 rank-elided payload length mismatch: "
+            f"got {len(payload)} bytes; expected {expected_payload_bytes}"
+        )
+    source_payload = payload[:dim_bytes] + b"\x00" + payload[dim_bytes:]
+    source_meta = struct.pack("<HHBB", noop_count, dim_bytes, 1, noop_rank_bytes)
+    return source_payload, source_meta
+
+
+def decode_pr101_rank_elided_sidecar_payload_to_dim_delta(
+    payload: bytes,
+    framing_meta: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode PR106 format-0x04 rank-elided sidecar payload."""
+
+    expanded_payload, expanded_meta = reexpand_pr101_rank_elided_sidecar_payload(
+        payload,
+        framing_meta,
+        schema=schema,
+    )
+    return decode_pr101_ranked_sidecar_payload_to_dim_delta(
+        expanded_payload,
+        expanded_meta,
+        schema=schema,
+    )
+
+
 def decode_pr106_sidecar_packet_dim_delta(
     packet: PR106SidecarPacket,
     *,
@@ -380,6 +448,14 @@ def decode_pr106_sidecar_packet_dim_delta(
         if packet.framing_meta is None:
             raise ValueError("format_id=0x02 requires framing_meta")
         return decode_pr101_ranked_sidecar_payload_to_dim_delta(
+            packet.sidecar_payload,
+            packet.framing_meta,
+            schema=schema,
+        )
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+        if packet.framing_meta is None:
+            raise ValueError("format_id=0x04 requires framing_meta")
+        return decode_pr101_rank_elided_sidecar_payload_to_dim_delta(
             packet.sidecar_payload,
             packet.framing_meta,
             schema=schema,
@@ -885,31 +961,47 @@ def parse_pr106_sidecar_packet(
             framing_meta=None,
         )
 
-    if pos + 2 > len(payload):
-        raise ValueError("PR101 grammar sidecar truncated before payload_len")
-    (sidecar_len,) = struct.unpack_from("<H", payload, pos)
-    pos += 2
-    end_sidecar = pos + sidecar_len
-    if end_sidecar > len(payload):
-        raise ValueError(
-            f"PR101 grammar sidecar truncated: payload_len={sidecar_len} total={len(payload)}"
+    if format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+        if pos + 2 > len(payload):
+            raise ValueError("PR101 grammar sidecar truncated before payload_len")
+        (sidecar_len,) = struct.unpack_from("<H", payload, pos)
+        pos += 2
+        end_sidecar = pos + sidecar_len
+        if end_sidecar > len(payload):
+            raise ValueError(
+                f"PR101 grammar sidecar truncated: payload_len={sidecar_len} total={len(payload)}"
+            )
+        sidecar = payload[pos:end_sidecar]
+        pos = end_sidecar
+        if pos + 6 > len(payload):
+            raise ValueError("PR101 grammar sidecar truncated before framing_meta")
+        framing_meta = payload[pos : pos + 6]
+        pos += 6
+        if pos != len(payload):
+            raise ValueError(
+                f"PR101 grammar sidecar trailing bytes: pos={pos} total={len(payload)}"
+            )
+        return PR106SidecarPacket(
+            format_id=format_id,
+            pr106_bytes=pr106_bytes,
+            sidecar_payload=sidecar,
+            framing_meta=framing_meta,
         )
-    sidecar = payload[pos:end_sidecar]
-    pos = end_sidecar
-    if pos + 6 > len(payload):
-        raise ValueError("PR101 grammar sidecar truncated before framing_meta")
-    framing_meta = payload[pos : pos + 6]
-    pos += 6
-    if pos != len(payload):
-        raise ValueError(
-            f"PR101 grammar sidecar trailing bytes: pos={pos} total={len(payload)}"
+
+    if format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+        if len(payload) - pos < 5:
+            raise ValueError("rank-elided sidecar truncated before framing_meta")
+        sidecar = payload[pos:-5]
+        framing_meta = payload[-5:]
+        reexpand_pr101_rank_elided_sidecar_payload(sidecar, framing_meta)
+        return PR106SidecarPacket(
+            format_id=format_id,
+            pr106_bytes=pr106_bytes,
+            sidecar_payload=sidecar,
+            framing_meta=framing_meta,
         )
-    return PR106SidecarPacket(
-        format_id=format_id,
-        pr106_bytes=pr106_bytes,
-        sidecar_payload=sidecar,
-        framing_meta=framing_meta,
-    )
+
+    raise ValueError(f"unsupported PR106 sidecar format_id=0x{format_id:02X}")
 
 
 def _decode_brotli_sidecar_payload(payload: bytes) -> tuple[np.ndarray, np.ndarray]:
@@ -1064,7 +1156,10 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
     if len(packet.pr106_bytes) > 0xFFFF_FFFF:
         raise ValueError("PR106 inner payload too large for u32 length field")
-    if len(packet.sidecar_payload) > 0xFFFF:
+    if (
+        packet.format_id != PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED
+        and len(packet.sidecar_payload) > 0xFFFF
+    ):
         raise ValueError("sidecar payload too large for u16 length field")
     if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI and packet.framing_meta is not None:
         raise ValueError("format_id=0x01 must not carry framing_meta")
@@ -1075,17 +1170,33 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
             raise ValueError(
                 f"format_id=0x02 framing_meta must be 6 bytes; got {len(packet.framing_meta)}"
             )
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+        if packet.framing_meta is None:
+            raise ValueError("format_id=0x04 requires framing_meta")
+        reexpand_pr101_rank_elided_sidecar_payload(
+            packet.sidecar_payload,
+            packet.framing_meta,
+        )
 
-    out = io.BytesIO()
-    out.write(bytes([PR106_SIDECAR_MAGIC, packet.format_id]))
-    out.write(struct.pack("<I", len(packet.pr106_bytes)))
-    out.write(packet.pr106_bytes)
-    out.write(struct.pack("<H", len(packet.sidecar_payload)))
-    out.write(packet.sidecar_payload)
+    prefix = (
+        bytes([PR106_SIDECAR_MAGIC, packet.format_id])
+        + struct.pack("<I", len(packet.pr106_bytes))
+        + packet.pr106_bytes
+    )
     if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
         assert packet.framing_meta is not None
-        out.write(packet.framing_meta)
-    return out.getvalue()
+        return (
+            prefix
+            + struct.pack("<H", len(packet.sidecar_payload))
+            + packet.sidecar_payload
+            + packet.framing_meta
+        )
+    if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI:
+        return prefix + struct.pack("<H", len(packet.sidecar_payload)) + packet.sidecar_payload
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+        assert packet.framing_meta is not None
+        return prefix + packet.sidecar_payload + packet.framing_meta
+    raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
 
 
 def _consumed_section_row(
@@ -1147,15 +1258,19 @@ def pr106_sidecar_consumed_byte_proof(
         score_affecting=False,
     )
     add("pr106_payload", packet.pr106_bytes, score_affecting=True)
-    add(
-        "sidecar_len_le_u16",
-        struct.pack("<H", len(packet.sidecar_payload)),
-        score_affecting=False,
-    )
+    if packet.format_id != PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+        add(
+            "sidecar_len_le_u16",
+            struct.pack("<H", len(packet.sidecar_payload)),
+            score_affecting=False,
+        )
     add("sidecar_payload", packet.sidecar_payload, score_affecting=True)
-    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+    if packet.format_id in (
+        PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+        PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
+    ):
         if packet.framing_meta is None:
-            raise ValueError("format_id=0x02 requires framing_meta")
+            raise ValueError(f"format_id=0x{packet.format_id:02X} requires framing_meta")
         add("framing_meta", packet.framing_meta, score_affecting=True)
 
     emitted = emit_pr106_sidecar_packet(packet)

@@ -1,6 +1,8 @@
 schema_version: 1
 name: substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch
 lane_id: lane_z3_balle_hyperprior_bolton_recover_20260514
+smoke_only: true
+smoke_validation_contract: training_artifact_v1
 summary: |
   Z3 Ballé 2018 scale-hyperprior bolt-on on the FROZEN A1 base — across-class
   staircase Step 1 per zen-floor band v2 council
@@ -55,7 +57,7 @@ dispatch_contracts:
     archive_role: monolithic_z3hp1_sidecar_trailing_a1
     builder_surface: experiments/train_substrate_z3_balle_hyperprior_bolton.py
     status: active_recipe_contract
-    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+    exact_eval_path: blocked_until_latent_replacement_contract_lands
 
 cost_band:
   epochs: 1000
@@ -92,7 +94,9 @@ council_phase_5_prediction: 0.190
 risk: |
   Z3 hyperprior bolt-on smoke. Predicted band [0.183, 0.190] is a literature-
   prediction synthesis (Ballé 2018 + Z1 MDL ablation at 99.29% density), NOT
-  measurement.
+  measurement. The recipe is smoke_only with training_artifact_v1 validation
+  until the inner-x latent-replacement archive contract lands; append-only
+  Z3HP1 packets are research diagnostics and are not exact-eval-ready.
 
   Architectural risk:
   - At A1's 99.29% scorer-conditional MDL density the realistic delta is at

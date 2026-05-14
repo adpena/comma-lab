@@ -1,0 +1,200 @@
+{
+  "archive_name": "c6_cpu_confirm_aa",
+  "archive_path": "experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep_modal/harvested_artifacts/lane_substrate_c6_e4_mdl_ibps_results/output/archive.zip",
+  "archive_sha256": "a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607",
+  "archive_size_bytes": 224481,
+  "grammar": "ibps1",
+  "device": "cpu",
+  "pair_samples": 24,
+  "baseline_seg": 0.5060229897499084,
+  "baseline_pose": 0.5526899720231692,
+  "baseline_score_components": 52.95323489930518,
+  "pair_indices": [
+    23,
+    51,
+    103,
+    159,
+    180,
+    182,
+    243,
+    254,
+    276,
+    280,
+    289,
+    295,
+    326,
+    420,
+    421,
+    426,
+    445,
+    463,
+    500,
+    503,
+    507,
+    528,
+    548,
+    575
+  ],
+  "decision_grade": true,
+  "included_sections": [
+    "decoder_blob"
+  ],
+  "excluded_sections": [
+    "encoder_blob"
+  ],
+  "tier_a": [],
+  "tier_b": [
+    {
+      "section": "decoder_blob",
+      "length_bytes": 145198,
+      "n_samples": 12,
+      "n_inflate_failures": 0,
+      "n_significant": 12,
+      "significance_threshold": 0.0001,
+      "mean_abs_delta": 0.3779737152763036,
+      "std_abs_delta": 0.090451841402622,
+      "max_abs_delta": 0.5599296005230556,
+      "fraction_significant": 1.0,
+      "upper_bound_scorer_extracted_bits": 1161584.0,
+      "estimated_scorer_extracted_bits_lo": 1161584.0,
+      "samples": [
+        {
+          "section": "decoder_blob",
+          "byte_offset": 6668,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.1504228723545869,
+          "delta_score_components": -0.3452761833099416,
+          "elapsed_seconds": 48.416443824768066
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 14316,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.15027926179269946,
+          "delta_score_components": -0.34491820198367407,
+          "elapsed_seconds": 47.723188400268555
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 14786,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.13622022016594804,
+          "delta_score_components": -0.3101768698024543,
+          "elapsed_seconds": 44.08952498435974
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 15987,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.1350409543762604,
+          "delta_score_components": -0.30728962994999875,
+          "elapsed_seconds": 43.07233500480652
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 21093,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.18825541436672205,
+          "delta_score_components": -0.44191901067410555,
+          "elapsed_seconds": 42.17122483253479
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 28936,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.1187672230104605,
+          "delta_score_components": -0.2678546752683246,
+          "elapsed_seconds": 40.67890214920044
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 34576,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.13450905121862883,
+          "delta_score_components": -0.30598868586405814,
+          "elapsed_seconds": 40.500492095947266
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 34858,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.23191960683713353,
+          "delta_score_components": -0.5599296005230556,
+          "elapsed_seconds": 39.72044897079468
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 43437,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.1292814637223879,
+          "delta_score_components": -0.29324666618816764,
+          "elapsed_seconds": 41.17922592163086
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 75281,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.18629132459561026,
+          "delta_score_components": -0.4367816791513235,
+          "elapsed_seconds": 40.39151620864868
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 86325,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.21824897142748034,
+          "delta_score_components": -0.5221631101143629,
+          "elapsed_seconds": 41.13506007194519
+        },
+        {
+          "section": "decoder_blob",
+          "byte_offset": 89550,
+          "bit_offset": null,
+          "inflate_success": true,
+          "delta_seg": 0.0,
+          "delta_pose": -0.1721296037236849,
+          "delta_score_components": -0.40014027048617606,
+          "elapsed_seconds": 40.475855112075806
+        }
+      ]
+    }
+  ],
+  "tier_c": [],
+  "mdl_density_estimate_lo": 0.6468164343530187,
+  "mdl_density_estimate_hi": 0.6468164343530187,
+  "mdl_scorer_extracted_bytes_lo": 145198.0,
+  "mdl_scorer_extracted_bytes_hi": 145198.0,
+  "zen_floor_band_recommendation": "[0.100, 0.150] \u2014 major architectural breakthrough needed for sub-0.10",
+  "notes": [
+    "[MDL-ablation-cpu]",
+    "[mathematical-derivation]",
+    "\u0394score measurements only; absolute scores are NOT contest-CUDA / contest-CPU.",
+    "decision_grade=True; MPS is screening-only.",
+    "Rate term excluded from score_components; archive size constant across ablations.",
+    "Selected Tier A/B sections: decoder_blob."
+  ],
+  "timestamp_utc": "2026-05-14T17:16:07.922991+00:00",
+  "elapsed_seconds_total": 509.55442214012146
+}

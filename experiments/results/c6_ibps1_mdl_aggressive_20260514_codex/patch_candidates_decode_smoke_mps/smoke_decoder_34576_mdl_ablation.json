@@ -1,0 +1,45 @@
+{
+  "archive_name": "smoke_decoder_34576",
+  "archive_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates/decoder_34576/archive.zip",
+  "archive_sha256": "086419e7d168b3bc62a7f82ef2e01e10b7886c96b708b1700157f2d085bd94c0",
+  "archive_size_bytes": 224481,
+  "grammar": "ibps1",
+  "device": "mps",
+  "pair_samples": 8,
+  "baseline_seg": 0.5028871148824692,
+  "baseline_pose": 0.26624445989727974,
+  "baseline_score_components": 51.920411399067774,
+  "pair_indices": [
+    40,
+    234,
+    276,
+    344,
+    377,
+    456,
+    550,
+    589
+  ],
+  "decision_grade": false,
+  "included_sections": [],
+  "excluded_sections": [
+    "encoder_blob"
+  ],
+  "tier_a": [],
+  "tier_b": [],
+  "tier_c": [],
+  "mdl_density_estimate_lo": 0.0,
+  "mdl_density_estimate_hi": 0.0,
+  "mdl_scorer_extracted_bytes_lo": 0,
+  "mdl_scorer_extracted_bytes_hi": 0,
+  "zen_floor_band_recommendation": "[0.003, 0.010] \u2014 Shannon zen-floor confirmed; staircase HIGH-EV",
+  "notes": [
+    "[MDL-ablation-MPS]",
+    "[mathematical-derivation]",
+    "\u0394score measurements only; absolute scores are NOT contest-CUDA / contest-CPU.",
+    "decision_grade=False; MPS is screening-only.",
+    "Rate term excluded from score_components; archive size constant across ablations.",
+    "Selected Tier A/B sections: ibps1_header, decoder_blob, latent_blob, meta_blob."
+  ],
+  "timestamp_utc": "2026-05-14T17:23:13.768777+00:00",
+  "elapsed_seconds_total": 5.9604644775390625e-06
+}

@@ -19,10 +19,12 @@
 #   - Ballé et al. (2018) ICLR scale-hyperprior arXiv:1802.01436
 #   - feedback_zen_floor_band_v2_post_z1_ablation_20260514.md
 #
-# Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_Z3_BALLE_DONE marker). Per Catalog #204 the
-# output is written to /modal_results/${DISPATCH_INSTANCE_JOB_ID}/output for
-# durable provider custody when MODAL_RUNTIME=1.
+# Score-tagging: smoke/no-scorer artifacts are explicitly logged as
+# score_claim=false and never as [contest-CUDA]. A [contest-CUDA] marker is
+# allowed only when stats.json proves a valid contest_cuda score claim.
+# Per Catalog #204 the output is written to
+# /modal_results/${DISPATCH_INSTANCE_JOB_ID}/output for durable provider
+# custody when MODAL_RUNTIME=1.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity - non-negotiable".
 set -euo pipefail
@@ -192,5 +194,31 @@ fi
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # Stage 5: emit completion marker (operator + autopilot consume).
-log "LANE_Z3_BALLE_DONE [contest-CUDA] output_dir=$Z3_BALLE_OUTPUT_DIR smoke=$SMOKE_ONLY"
-echo "LANE_Z3_BALLE_DONE [contest-CUDA] $LANE_ID $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+EVIDENCE_STATUS="$("$PYBIN_RESOLVED" - "$Z3_BALLE_OUTPUT_DIR/stats.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+stats_path = Path(sys.argv[1])
+marker = "[training-artifact-no-score-claim]"
+score_claim = "score_claim=false"
+if stats_path.is_file():
+    try:
+        stats = json.loads(stats_path.read_text())
+    except json.JSONDecodeError:
+        stats = {}
+    if (
+        stats.get("auth_eval_score_claim_valid") is True
+        and stats.get("auth_eval_score_axis") == "contest_cuda"
+    ):
+        marker = "[contest-CUDA]"
+        score_claim = "score_claim=true"
+    elif stats.get("evidence_grade"):
+        marker = f"[{stats['evidence_grade']}]"
+print(f"{marker} {score_claim}")
+PY
+)"
+EVIDENCE_MARKER="${EVIDENCE_STATUS%% *}"
+SCORE_CLAIM_FLAG="${EVIDENCE_STATUS#* }"
+log "LANE_Z3_BALLE_DONE ${EVIDENCE_MARKER} output_dir=$Z3_BALLE_OUTPUT_DIR smoke=$SMOKE_ONLY ${SCORE_CLAIM_FLAG}"
+echo "LANE_Z3_BALLE_DONE ${EVIDENCE_MARKER} $LANE_ID ${SCORE_CLAIM_FLAG} $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"

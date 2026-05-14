@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import hashlib
@@ -10,8 +11,11 @@ import pytest
 from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
+    decode_pr106_sidecar_packet_dim_delta,
+    encode_pr101_ranked_sidecar_payload,
     mutate_pr106_sidecar_semantic_correction,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
@@ -451,3 +455,35 @@ def test_pr106_sidecar_packet_rejects_pr101_missing_framing_meta() -> None:
                 framing_meta=None,
             )
         )
+
+
+def test_pr106_sidecar_rank_elided_rejects_surplus_payload_bytes() -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    payload, framing_meta = encode_pr101_ranked_sidecar_payload(dims, deltas)
+    noop_count = int.from_bytes(framing_meta[0:2], "little")
+    dim_bytes = int.from_bytes(framing_meta[2:4], "little")
+    rank_bytes = framing_meta[4]
+    noop_rank_bytes = framing_meta[5]
+    assert rank_bytes == 1
+    rank_elided_payload = payload[:dim_bytes] + payload[dim_bytes + rank_bytes :]
+    rank_elided_meta = (
+        noop_count.to_bytes(2, "little")
+        + dim_bytes.to_bytes(2, "little")
+        + bytes([noop_rank_bytes])
+    )
+    rank_elided_packet = type(packet)(
+        format_id=PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
+        pr106_bytes=packet.pr106_bytes,
+        sidecar_payload=rank_elided_payload,
+        framing_meta=rank_elided_meta,
+    )
+    emitted = emit_pr106_sidecar_packet(rank_elided_packet)
+    reparsed = parse_pr106_sidecar_packet(emitted)
+    assert reparsed.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED
+    assert decode_pr106_sidecar_packet_dim_delta(reparsed)[0].shape == dims.shape
+
+    with pytest.raises(ValueError, match="payload length mismatch"):
+        parse_pr106_sidecar_packet(emitted[:-5] + b"x" + emitted[-5:])

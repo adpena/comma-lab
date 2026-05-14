@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Dedicated tests for the Z3 Ballé hyperprior bolt-on substrate.
 
 Covers: architecture forward, rate bits computation, archive encode/decode
@@ -10,6 +11,11 @@ NO score claim. NO real-scorer dispatch. NO MPS device.
 from __future__ import annotations
 
 import math
+import importlib.util
+import json
+import py_compile
+import zipfile
+from pathlib import Path
 
 import pytest
 import torch
@@ -23,6 +29,7 @@ from tac.substrates.z3_balle_hyperprior_bolton import (
     Z3HP1SidecarMeta,
     Z3HyperpriorConfig,
     Z3HyperpriorMLP,
+    build_composition_archive_contract,
     conditional_gaussian_rate_bits,
     decode_z3hp1_sidecar,
     dequantize_int8_with_scale,
@@ -252,7 +259,7 @@ def test_z3hp1_sidecar_residual_length_mismatch():
 # ---------------------------------------------------------------------------
 
 
-def test_pack_composition_archive_appends_sidecar():
+def test_pack_composition_archive_refuses_append_only_sidecar_by_default():
     a1_bytes = b"PRETEND_A1_ARCHIVE_v0" * 100  # arbitrary base bytes
     sidecar = encode_z3hp1_sidecar(
         hyperprior_weights_int8=b"\x00" * 8,
@@ -264,15 +271,51 @@ def test_pack_composition_archive_appends_sidecar():
         min_sigma=1e-3,
         max_sigma=16.0,
     )
-    composed = pack_composition_archive(a1_bytes, sidecar)
+    with pytest.raises(ValueError, match="append-only Z3HP1 trailer adds bytes"):
+        pack_composition_archive(a1_bytes, sidecar)
+
+
+def test_append_only_contract_is_diagnostic_not_byte_saving_or_exact_ready():
+    a1_bytes = b"PRETEND_A1_ARCHIVE_v0" * 100
+    sidecar = encode_z3hp1_sidecar(
+        hyperprior_weights_int8=b"\x00" * 8,
+        w_hat_int8=b"\x00" * (A1_N_PAIRS * 8),
+        residual_int8=b"\x00" * (A1_N_PAIRS * A1_LATENT_DIM),
+        hyper_dim=8,
+        int8_w_scale=1.0,
+        quant_step=1.0,
+        min_sigma=1e-3,
+        max_sigma=16.0,
+    )
+    contract = build_composition_archive_contract(a1_bytes, sidecar)
+    composed = pack_composition_archive(
+        a1_bytes,
+        sidecar,
+        allow_append_only_diagnostic=True,
+    )
     assert composed.startswith(a1_bytes)
     assert sidecar in composed
+    assert composed == contract.payload_bytes
+    assert contract.layout == "append_only_z3hp1_diagnostic"
+    assert contract.byte_saving is False
+    assert contract.byte_savings_bytes == 0
+    assert contract.score_claim is False
+    assert contract.promotion_eligible is False
+    assert contract.ready_for_exact_eval_dispatch is False
+    assert contract.exact_eval_ready is False
+    assert "append-only Z3HP1 trailer adds bytes" in contract.result_review_blockers[0]
 
 
-def test_pack_composition_archive_empty_sidecar_byte_identical():
+def test_empty_sidecar_contract_is_a1_identical_and_not_z3_ready():
     a1_bytes = b"A1_NO_SIDECAR" * 50
+    contract = build_composition_archive_contract(a1_bytes, b"")
     composed = pack_composition_archive(a1_bytes, b"")
     assert composed == a1_bytes
+    assert contract.payload_bytes == a1_bytes
+    assert contract.layout == "a1_byte_identical_fallback"
+    assert contract.byte_saving is False
+    assert contract.ready_for_exact_eval_dispatch is False
+    assert contract.promotion_eligible is False
 
 
 def test_pack_composition_archive_bad_sidecar_magic_raises():
@@ -292,7 +335,11 @@ def test_split_composition_archive_roundtrip():
         min_sigma=1e-3,
         max_sigma=16.0,
     )
-    composed = pack_composition_archive(a1_bytes, sidecar)
+    composed = pack_composition_archive(
+        a1_bytes,
+        sidecar,
+        allow_append_only_diagnostic=True,
+    )
     a1_recovered, sidecar_recovered = split_composition_archive(composed)
     assert a1_recovered == a1_bytes
     assert sidecar_recovered == sidecar
@@ -484,3 +531,90 @@ def test_architecture_under_loc_budget():
     # Architecture allows up to 350 LOC for bolt-on (the docstring counts but
     # let's be lenient with module-level docstrings + imports).
     assert loc <= 500, f"architecture.py LOC = {loc}, exceeds bolt-on ≤500 (incl docs)"
+
+
+# ---------------------------------------------------------------------------
+# Full trainer path
+# ---------------------------------------------------------------------------
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[5]
+
+
+def _load_trainer_module():
+    trainer_path = _repo_root() / "experiments" / "train_substrate_z3_balle_hyperprior_bolton.py"
+    spec = importlib.util.spec_from_file_location("_z3_trainer_under_test", trainer_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
+    """The Phase-2 full path must be executable without remote dispatch.
+
+    It currently emits the A1-byte-identical fallback and records the patchable
+    dispatch blocker because Z3HP1 is append-only until latent_blob replacement
+    lands.
+    """
+    trainer = _load_trainer_module()
+    out_dir = tmp_path / "z3_full"
+    args = trainer._build_parser().parse_args(
+        [
+            "--a1-archive-path",
+            str(_repo_root() / "submissions" / "a1" / "archive.zip"),
+            "--output-dir",
+            str(out_dir),
+            "--epochs",
+            "1",
+            "--batch-size",
+            "128",
+            "--device",
+            "cpu",
+            "--full-cpu",
+            "--advisory-cpu-explicitly-waived",
+            "--skip-auth-eval",
+        ]
+    )
+
+    assert trainer._full_main(args) == 0
+
+    stats = json.loads((out_dir / "stats.json").read_text(encoding="utf-8"))
+    assert stats["smoke"] is False
+    assert stats["sidecar_shipped"] is False
+    assert stats["archive_bytes"] == stats["base_archive_bytes"]
+    assert stats["byte_saving"] is False
+    assert stats["archive_contract"]["layout"] == "a1_byte_identical_fallback"
+    assert stats["archive_contract"]["ready_for_exact_eval_dispatch"] is False
+    assert stats["ready_for_exact_eval_dispatch"] is False
+    assert "append-only grammar cannot realize predicted byte savings" in stats["dispatch_blocker"]
+
+    with zipfile.ZipFile(_repo_root() / "submissions" / "a1" / "archive.zip") as zf:
+        a1_inner = zf.read("x")
+    with zipfile.ZipFile(out_dir / "archive.zip") as zf:
+        assert zf.namelist() == ["x"]
+        assert zf.read("x") == a1_inner
+
+    inflate_text = (out_dir / "submission_dir" / "inflate.py").read_text(
+        encoding="utf-8"
+    )
+    inflate_sh = (out_dir / "submission_dir" / "inflate.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "placeholder" not in inflate_text.lower()
+    assert "reconstruct_a1_latents" in inflate_text
+    assert "archive_dir / 'archive.zip'" not in inflate_text
+    assert '${DATA_DIR}/x' in inflate_sh
+    py_compile.compile(str(out_dir / "submission_dir" / "inflate.py"), doraise=True)
+
+
+def test_remote_z3_smoke_completion_marker_is_not_contest_cuda_by_default():
+    """No-scorer smoke completion must not be logged as [contest-CUDA]."""
+    script = (
+        _repo_root()
+        / "scripts"
+        / "remote_lane_substrate_z3_balle_hyperprior_bolton.sh"
+    ).read_text(encoding="utf-8")
+    assert "LANE_Z3_BALLE_DONE [contest-CUDA]" not in script
+    assert "score_claim=false" in script

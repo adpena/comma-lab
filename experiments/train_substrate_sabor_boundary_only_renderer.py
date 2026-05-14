@@ -69,6 +69,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _build_optimized_training_context,
+)
+from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _decode_real_pairs_canonical,
 )
 from tac.substrates._shared.trainer_skeleton import (
@@ -220,6 +223,17 @@ def _build_parser() -> argparse.ArgumentParser:
     # ---- Tier-1 engineering flags (waivers above) ----
     p.add_argument("--enable-autocast-fp16", action="store_true")
     p.add_argument("--enable-torch-compile", action="store_true")
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_true",
+        default=True,
+    )
+    p.add_argument(
+        "--disable-gt-scorer-cache",
+        dest="enable_gt_scorer_cache",
+        action="store_false",
+    )
     p.add_argument("--enable-tf32", action="store_true")
 
     return p
@@ -601,6 +615,21 @@ def _full_main(args: argparse.Namespace) -> int:
         print(f"[full] SABOR params: {model.num_parameters():,}")
         _stage("model_built_with_class_mean_init")
 
+        opt_ctx = _build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=pair_tensor,
+            substrate_model=model,
+            device=device,
+        )
+        model = opt_ctx.substrate_model
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
+
         # EMA shadow.
         ema = EMA(model, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
@@ -654,10 +683,18 @@ def _full_main(args: argparse.Namespace) -> int:
                 seg_b = seg_argmax_pair[idx]
                 rgb_0, rgb_1 = model(idx, mask_b, rgb_targets_b, seg_b)
                 gt = gt_pairs_unit[idx]
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
+                    gt_seg_already_probs = gt_cache.seg_already_probs
                 loss, _ = loss_fn(
                     rgb_0, rgb_1, gt[:, 0], gt[:, 1], archive_bytes_proxy,
                     mask_b, rgb_targets_b,
                     apply_eval_roundtrip=True, noise_std=args.noise_std,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
                 )
                 if not torch.isfinite(loss):
                     nan_strike += 1
@@ -686,7 +723,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 val_lag = _run_val_loop(
                     model, ema, loss_fn, gt_pairs_unit, boundary_mask_pair,
                     boundary_rgb_target, seg_argmax_pair, val_indices,
-                    archive_bytes_proxy, args.noise_std,
+                    archive_bytes_proxy, args.noise_std, gt_cache, device,
                 )
                 print(
                     f"[full] epoch {epoch + 1}/{args.epochs} "
@@ -895,7 +932,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
 def _run_val_loop(
     model, ema, loss_fn, gt_pairs_unit, boundary_mask_pair, boundary_rgb_target,
-    seg_argmax_pair, val_indices, archive_bytes_proxy, noise_std,
+    seg_argmax_pair, val_indices, archive_bytes_proxy, noise_std, gt_cache, device,
 ) -> float:
     """Snapshot+restore eval forward — Catalog #88 + Catalog #180."""
     import torch
@@ -910,9 +947,19 @@ def _run_val_loop(
             seg_b = seg_argmax_pair[val_indices]
             rgb_0, rgb_1 = model(val_indices, mask_b, rgb_t, seg_b)
             gt = gt_pairs_unit[val_indices]
+            val_gt_pose_batch = val_gt_seg_batch = None
+            val_gt_seg_already_probs = None
+            if gt_cache is not None:
+                val_gt_pose_batch, val_gt_seg_batch = gt_cache.lookup(
+                    val_indices, device=device
+                )
+                val_gt_seg_already_probs = gt_cache.seg_already_probs
             loss, _ = loss_fn(
                 rgb_0, rgb_1, gt[:, 0], gt[:, 1], archive_bytes_proxy,
                 mask_b, rgb_t, apply_eval_roundtrip=True, noise_std=noise_std,
+                gt_pose_batch=val_gt_pose_batch,
+                gt_seg_batch=val_gt_seg_batch,
+                gt_seg_already_probs=val_gt_seg_already_probs,
             )
             return float(loss.detach().item())
     finally:

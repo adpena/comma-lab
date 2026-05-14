@@ -1,0 +1,12 @@
+{
+  "already_appended": false,
+  "appended": true,
+  "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep",
+  "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
+  "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=400.41353004499996; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep_modal",
+  "platform": "modal",
+  "promotion_eligible": false,
+  "schema": "modal_training_terminal_claim_v1",
+  "score_claim": false,
+  "status": "completed_modal_training_recovered_no_score_claim"
+}

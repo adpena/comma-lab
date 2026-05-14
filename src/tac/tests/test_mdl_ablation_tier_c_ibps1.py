@@ -214,21 +214,28 @@ def test_run_tier_c_pr101_aliased_to_a1_dispatch():
     fake_ibps1.assert_not_called()
 
 
-def test_run_tier_c_pr106_returns_empty():
-    """PR106 grammar still returns [] (defer until PR106 Tier C lands)."""
+def test_run_tier_c_pr106_dispatches_via_grammar():
+    """PR106 grammar must route to the dedicated PR106 Tier C path."""
     mod = _load_module()
-    result = mod.run_tier_c(
-        inner_bytes=b"unused",
-        grammar="pr106",
-        pair_indices=[0, 1],
-        gt_pairs=None,
-        baseline_seg=0.001,
-        baseline_pose=0.0,
-        distortion_net=None,
-        device=None,
-        rng=None,
-    )
-    assert result == []
+    with mock.patch.object(mod, "_run_tier_c_pr106") as fake_pr106, \
+         mock.patch.object(mod, "_run_tier_c_ibps1") as fake_ibps1, \
+         mock.patch.object(mod, "_run_tier_c_a1") as fake_a1:
+        fake_pr106.return_value = ["ok"]
+        result = mod.run_tier_c(
+            inner_bytes=b"unused",
+            grammar="pr106",
+            pair_indices=[0, 1],
+            gt_pairs=None,
+            baseline_seg=0.001,
+            baseline_pose=0.0,
+            distortion_net=None,
+            device=None,
+            rng=None,
+        )
+    assert result == ["ok"]
+    fake_pr106.assert_called_once()
+    fake_ibps1.assert_not_called()
+    fake_a1.assert_not_called()
 
 
 def test_run_tier_c_unknown_grammar_returns_empty():
