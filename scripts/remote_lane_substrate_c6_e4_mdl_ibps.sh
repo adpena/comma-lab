@@ -217,4 +217,6 @@ PY
 
 # Stage 5: emit completion marker (operator + autopilot consume).
 log "LANE_C6_MDL_IBPS_DONE [contest-CUDA] output_dir=$C6_E4_MDL_IBPS_OUTPUT_DIR"
-echo "LANE_C6_MDL_IBPS_DONE [contest-CUDA] $LANE_ID $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+cat >> "$LOG_DIR/completion.log" <<EOF
+LANE_C6_MDL_IBPS_DONE [contest-CUDA] $LANE_ID $(date -u +%FT%TZ)
+EOF

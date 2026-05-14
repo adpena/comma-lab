@@ -120,3 +120,19 @@ def test_pcc11_only_scans_dispatch_wrappers(tmp_path: Path) -> None:
     (scripts / "random_helper.sh").write_text("# Stage 1: stale\necho TODO\n")
     violations = mod.scan(tmp_path, window=20)
     assert violations == [], "random_helper.sh should not be scanned"
+
+
+def test_pcc11_live_c1_c6_completion_stages_are_implemented() -> None:
+    """R1 META-2 regression: final marker stages must not be log/echo-only."""
+    mod = _load_module()
+    live_scripts = (
+        REPO_ROOT / "scripts" / "remote_lane_substrate_c1_world_model_foveation.sh",
+        REPO_ROOT / "scripts" / "remote_lane_substrate_c6_e4_mdl_ibps.sh",
+    )
+    violations = []
+    for script in live_scripts:
+        violations.extend(mod._scan_file(script, window=50))
+    assert violations == [], (
+        "expected C1/C6 remote wrapper stages to be implemented; got "
+        f"{[(v.path, v.stage_lineno, v.stage_label) for v in violations]}"
+    )

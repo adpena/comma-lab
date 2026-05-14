@@ -180,4 +180,6 @@ PYBIN_RESOLVED="$CLAIM_PYTHON"
 
 # Stage 5: emit completion marker.
 log "LANE_C1_WMF_DONE [smoke-no-scorer] output_dir=$C1_WORLD_MODEL_FOVEATION_OUTPUT_DIR"
-echo "LANE_C1_WMF_DONE [smoke-no-scorer] $LANE_ID $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+cat >> "$LOG_DIR/completion.log" <<EOF
+LANE_C1_WMF_DONE [smoke-no-scorer] $LANE_ID $(date -u +%FT%TZ)
+EOF
