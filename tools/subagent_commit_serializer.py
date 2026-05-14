@@ -336,6 +336,97 @@ def _git_add(files: list[str], env: dict) -> tuple[int, str]:
     return proc.returncode, (proc.stdout + proc.stderr).strip()
 
 
+def _hash_staged_files(files: list[str], env: dict) -> dict[str, str]:
+    """Catalog #216 (FIX-HARDEN-OPT 2026-05-14 P1).
+
+    Return SHA-256 of each file's STAGED content (what's currently in the
+    index, NOT the working tree). Uses `git cat-file --batch` on the blob
+    OID resolved from `git ls-files --stage <file>`. Honors env's
+    GIT_INDEX_FILE so this reads OUR temp index, not the real index.
+
+    Used by Catalog #216's staged-content verification: catches the case
+    where two subagents edited the same file in the working tree
+    independently and BOTH took their pre-lock snapshot AFTER both edits
+    were already present. The pre-lock + post-lock check sees the merged
+    content as stable, so the loser silently absorbs the winner's edits.
+    The new check verifies the STAGED content matches the caller's
+    declared post-edit sha — only one subagent can declare the merged
+    content; the other gets refused with rc=5 and must re-base.
+    """
+    out: dict[str, str] = {}
+    for f in files:
+        # Step 1: resolve blob OID from the index for this file.
+        try:
+            ls = subprocess.run(
+                ["git", "ls-files", "--stage", "--", f],
+                cwd=REPO_ROOT, env=env, capture_output=True, text=True,
+                check=False,
+            )
+        except OSError as exc:
+            out[f] = f"ERROR_LS_FILES:{type(exc).__name__}"
+            continue
+        if ls.returncode != 0 or not ls.stdout.strip():
+            out[f] = "NOT_STAGED"
+            continue
+        # Format: "<mode> <oid> <stage>\t<path>"
+        parts = ls.stdout.strip().split(maxsplit=2)
+        if len(parts) < 2 or len(parts[1]) != 40:
+            # Not a 40-char SHA-1 OID — index entry malformed.
+            out[f] = f"ERROR_LS_FILES_PARSE:{ls.stdout.strip()[:80]}"
+            continue
+        blob_oid = parts[1]
+        # Step 2: read blob content via `git cat-file blob`.
+        try:
+            cat = subprocess.run(
+                ["git", "cat-file", "blob", blob_oid],
+                cwd=REPO_ROOT, env=env, capture_output=True, check=False,
+            )
+        except OSError as exc:
+            out[f] = f"ERROR_CAT_FILE:{type(exc).__name__}"
+            continue
+        if cat.returncode != 0:
+            out[f] = f"ERROR_CAT_FILE_RC:{cat.returncode}"
+            continue
+        # SHA-256 the raw bytes (parity with _hash_working_tree_files).
+        out[f] = hashlib.sha256(cat.stdout).hexdigest()
+    return out
+
+
+def _staged_content_check(
+    expected: dict[str, str],
+    env: dict,
+) -> dict[str, tuple[str, str]]:
+    """Catalog #216 (FIX-HARDEN-OPT 2026-05-14 P1).
+
+    Verify each file's STAGED content sha matches what the caller declared
+    via `--expected-content-sha256`. Returns `{relpath: (expected, actual)}`
+    for any mismatch. Empty dict means all staged content matches.
+
+    Bug class anchor: 2026-05-14 commit `5d0ec061d` (D4-OOM-FIX Catalog #218)
+    absorbed FIX-HARDEN-OPT's Catalog #215 edits to `src/tac/preflight.py`.
+    Both subagents edited the same file. D4-OOM-FIX's `git add` packaged
+    BOTH edits under their commit body, and the subsequent FIX-HARDEN-OPT
+    commit `f7df40f33` showed `preflight.py` as already-clean (their edits
+    landed in the previous commit). The pre-lock + post-lock check
+    (Catalog #157) saw stable content because BOTH edits were already in
+    the working tree before either subagent took its pre-lock snapshot.
+
+    The staged-content check catches this by comparing the INDEX blob
+    against the caller's declared sha AFTER `git add`. Only the subagent
+    that declared the truly-merged sha can pass; the loser is refused
+    with rc=5 and must re-base on whichever winning content is in HEAD.
+    """
+    if not expected:
+        return {}
+    actual = _hash_staged_files(list(expected.keys()), env)
+    diffs: dict[str, tuple[str, str]] = {}
+    for path, want in expected.items():
+        got = actual.get(path, "MISSING")
+        if got != want:
+            diffs[path] = (want, got)
+    return diffs
+
+
 def _git_commit(message: str, env: dict, allow_empty: bool = False) -> tuple[int, str, str]:
     """Run `git commit -m <message>` against env's GIT_INDEX_FILE.
 
@@ -572,6 +663,44 @@ def main() -> int:
                 print(f"[subagent-commit-serializer] git add failed (rc={rc}):\n{msg}",
                       file=sys.stderr)
                 return rc
+
+        # Catalog #216 (FIX-HARDEN-OPT 2026-05-14 P1): POST-STAGE
+        # content verification. The pre-lock + post-lock check (Catalog #157)
+        # only catches working-tree edits DURING the lock-wait window. If
+        # both subagents edited the same file BEFORE either took its
+        # pre-lock snapshot, both see merged content as stable. The
+        # 2026-05-14 D4-OOM-FIX vs FIX-HARDEN-OPT preflight.py race
+        # (commit 5d0ec061d absorbed Catalog #215 edits) is the empirical
+        # anchor. Verify what's actually STAGED in the temp index matches
+        # the caller's declared post-edit sha; refuse with rc=5 on
+        # mismatch (separate from rc=4 = pre-lock working-tree mismatch).
+        if expected_content_shas and not args.no_stage:
+            staged_diffs = _staged_content_check(expected_content_shas, env)
+            if staged_diffs:
+                _append_log({
+                    **base_record,
+                    "outcome": "staged_content_sha_mismatch",
+                    "wait_seconds": wait_seconds,
+                    "staged_content_sha_diffs": {
+                        f: {"expected": want, "actual": got}
+                        for f, (want, got) in staged_diffs.items()
+                    },
+                    "temp_index": temp_index_path,
+                })
+                print(
+                    "[subagent-commit-serializer] REFUSED: post-stage "
+                    "content sha mismatch. The file currently STAGED in "
+                    "the index differs from the SHA the caller declared "
+                    "at the start of its work. A sister subagent's "
+                    "edits to the same file landed in HEAD between the "
+                    "caller's pre-lock snapshot and `git add` (the 5d0ec061d "
+                    "P1 anchor 2026-05-14 — D4-OOM-FIX absorbed Catalog #215 "
+                    "preflight.py edits). Re-base on the sister's landed "
+                    "work and retry with the merged-content sha. "
+                    f"Files affected: {list(staged_diffs.keys())!r}",
+                    file=sys.stderr,
+                )
+                return 5
 
         # Step 2: commit (pre-commit hook fires here, inherits GIT_INDEX_FILE)
         # final_message includes the FIX-3 Co-Authored-By trailer unless
