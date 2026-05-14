@@ -1837,13 +1837,31 @@ def preflight_all(
         # to propagate to in-flight subagents). STRICT-FLIP after backfill
         # sweep clears live count to 0. Memory:
         # feedback_subagent_crash_resume_discipline_landed_20260514.md.
+        # 2026-05-14 Catalog #206 - subagent crash-resume checkpoint discipline.
+        # STRICT-FLIPPED 2026-05-14 with cutoff
+        # ``_CHECK_206_DISCIPLINE_CUTOFF_UTC`` (11:00:00Z) per the codex
+        # 3-findings landing — legacy pre-cutoff commits exempt; post-cutoff
+        # subagent commits MUST carry a checkpoint trace. Strict-flip is
+        # atomic per CLAUDE.md "Strict-flip atomicity rule" because the
+        # cutoff is set immediately after the last pre-fix commit. Memory:
+        # feedback_codex_3_findings_fix_landed_20260514.md.
         _parallel.run(
             "check_subagent_dispatches_use_checkpoint_discipline",
             "[subagent-checkpoint-discipline]",
             lambda: check_subagent_dispatches_use_checkpoint_discipline(
-                strict=False, verbose=verbose,
+                strict=True, verbose=verbose,
             ),
-            strict=False,
+            strict=True,
+        )
+        # 2026-05-14 Catalog #207 - no unguarded shutil.rmtree in
+        # tools/build_*.py / tools/promote_*.py per codex 3-findings HIGH.
+        # STRICT @ 0 — the canonical guard ``_assert_rmtree_safe`` lands in
+        # tools/build_pr101_nonlocal_sweep_packets.py in the same
+        # commit-batch and the only callsite is the canonical helper itself
+        # (which is on the file allowlist). Memory:
+        # feedback_codex_3_findings_fix_landed_20260514.md.
+        check_no_unguarded_rmtree_in_build_tools(
+            strict=True, verbose=verbose,
         )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
@@ -2724,6 +2742,25 @@ def preflight_all(
         # self-protected against".
         check_inflate_py_uses_canonical_select_inflate_device(
             strict=True, verbose=verbose,
+        )
+        # Catalog #208 - check_docs_no_local_absolute_paths
+        # OSS v0.2.0-rc1 release prep audit finding D-2 self-protect
+        # (2026-05-14). Refuses any docs/**/*.md file containing local
+        # absolute path patterns (UNIX home, /private/var/, /tmp/, Windows
+        # home). Per CLAUDE.md "Public Disclosure Hygiene" non-negotiable.
+        # Sister of Catalog #109 (public PR intake clone pristineness).
+        # WARN-ONLY at landing: 14 pre-existing violations across 5 doc
+        # files OUTSIDE D-2 scope (docs/2026-04-07-comprehensive-handoff.md,
+        # docs/paper/SUBMISSION_CHECKLIST.md, docs/recovery_audit_session_
+        # 20260505.md, docs/remote_gpu_lane.md, docs/superpowers/plans/
+        # 2026-04-05-smarter-segmentation-main-roi.md). The 2 D-2 files
+        # (docs/superpowers/plans/2026-04-10-anti-drift-runtime-hardening.md
+        # + docs/superpowers/specs/2026-04-10-anti-drift-runtime-design.md)
+        # are sanitized in this commit batch. Strict-flip pending bulk
+        # backfill sweep per CLAUDE.md "Strict-flip atomicity rule".
+        # Anchor: OSS audit commit c293ba425.
+        check_docs_no_local_absolute_paths(
+            strict=False, verbose=verbose,
         )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
@@ -47949,6 +47986,27 @@ _CHECKPOINT_WAIVER_RE = re.compile(
     r"#\s*CHECKPOINT_DISCIPLINE_WAIVED:\s*([^\s<].*)"
 )
 
+# Catalog #206 STRICT-flip cutoff (2026-05-14 per codex 3-findings MEDIUM #2).
+# Commits whose serializer-log ``started_at_utc`` is BEFORE this ISO-8601
+# UTC timestamp are exempt (legacy backfill window per CLAUDE.md
+# "Strict-flip atomicity rule"); any subagent commit serialized AT OR AFTER
+# this cutoff that lacks a checkpoint trace will FAIL strict preflight.
+#
+# Cutoff chosen as 11:00:00Z 2026-05-14 — immediately AFTER the latest
+# pre-fix in-flight sister-subagent commits and BEFORE the codex 3-findings
+# fix landing commits. The originally-detected legacy violations + several
+# additional pre-cutoff sister-subagent commits are exempt; the strict-flip
+# is therefore atomic per CLAUDE.md rule (live count under cutoff == 0).
+# A 30-min safety margin is built in so sister subagents that are still
+# in flight when the strict-flip lands have time to gracefully complete.
+#
+# Sister fix landed in same commit-batch:
+# ``tools/claim_catalog_number.py --commit-via-serializer`` now emits a
+# ``# CHECKPOINT_DISCIPLINE_WAIVED:<reason>`` waiver in its commit body so
+# future catalog-claim commits do NOT trip this strict gate. Memory:
+# feedback_codex_3_findings_fix_landed_20260514.md.
+_CHECK_206_DISCIPLINE_CUTOFF_UTC = "2026-05-14T11:00:00Z"
+
 
 def _check_206_load_serializer_commits(repo_root: Path, last_n: int) -> set[str]:
     """Return the set of full SHAs that appear in the last ``last_n`` rows of
@@ -47984,6 +48042,43 @@ def _check_206_load_serializer_commits(repo_root: Path, last_n: int) -> set[str]
     # Last N rows. We collect the most-recent N committed SHAs across the
     # full log so the gate matches the same time window git log queries.
     return set(shas[-last_n:])
+
+
+def _check_206_load_serializer_started_at(
+    repo_root: Path, last_n: int
+) -> dict[str, str]:
+    """Return a mapping ``{sha_prefix: started_at_utc}`` for the last
+    ``last_n`` committed rows in the canonical serializer log.
+
+    Used by the cutoff filter so the strict gate only refuses commits whose
+    serializer-side ``started_at_utc`` is AT OR AFTER
+    ``_CHECK_206_DISCIPLINE_CUTOFF_UTC`` (legacy backfill window is exempt).
+    """
+    log_path = repo_root / _SERIALIZER_LOG_RELPATH
+    out: dict[str, str] = {}
+    if not log_path.exists():
+        return out
+    try:
+        rows: list[dict] = []
+        for raw in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                row = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if row.get("outcome") != "committed":
+                continue
+            sha = row.get("head_after")
+            ts = row.get("started_at_utc")
+            if isinstance(sha, str) and isinstance(ts, str) and len(sha) >= 7:
+                rows.append({"sha": sha, "ts": ts})
+        for row in rows[-last_n:]:
+            out[row["sha"]] = row["ts"]
+    except OSError:
+        return {}
+    return out
 
 
 def _check_206_iter_recent_commit_bodies(
@@ -48075,51 +48170,441 @@ def check_subagent_dispatches_use_checkpoint_discipline(
             )
         return []
 
+    # Cutoff filter (codex 3-findings MEDIUM #2): commits whose serializer
+    # ``started_at_utc`` is BEFORE the cutoff are legacy and exempt; commits
+    # AT OR AFTER the cutoff MUST comply. Strict-flip is atomic per
+    # CLAUDE.md "Strict-flip atomicity rule" because the cutoff is set
+    # immediately AFTER the last pre-fix commit.
+    started_at_map = _check_206_load_serializer_started_at(root, last_n_commits)
+
     bodies = _check_206_iter_recent_commit_bodies(root, last_n_commits)
     # The serializer log records short SHAs (9 chars); git log returns full
     # 40-char SHAs. Build a prefix-set for matching.
     serializer_prefixes = {s[:9] for s in serializer_shas}
+    # Map prefix → started_at so the cutoff lookup is O(1) per commit.
+    prefix_to_started_at = {s[:9]: ts for s, ts in started_at_map.items()}
     violations: list[str] = []
     scanned = 0
+    skipped_pre_cutoff = 0
     for sha, body in bodies:
         if sha[:9] not in serializer_prefixes:
+            continue
+        # Cutoff: legacy commits (pre-cutoff) are exempt. Commits MISSING a
+        # started_at_utc row are treated conservatively as legacy too —
+        # only post-cutoff commits with a recorded timestamp are eligible
+        # for strict refusal. This avoids surprise failures on tests/
+        # fixtures that omit the started_at_utc field.
+        ts = prefix_to_started_at.get(sha[:9])
+        if ts is None or ts < _CHECK_206_DISCIPLINE_CUTOFF_UTC:
+            skipped_pre_cutoff += 1
             continue
         scanned += 1
         if _check_206_body_has_checkpoint_signal(body):
             continue
         violations.append(
-            f"commit {sha[:10]} (subagent commit per serializer log) "
-            f"lacks checkpoint discipline trace; expected one of: "
+            f"commit {sha[:10]} (subagent commit per serializer log, "
+            f"started_at_utc={ts}) lacks checkpoint discipline trace; "
+            f"expected one of: "
             f"{', '.join(_CHECKPOINT_DISCIPLINE_TOKENS[:3])} "
             "in commit body, OR a same-line "
             "`# CHECKPOINT_DISCIPLINE_WAIVED:<reason>` waiver. "
             "See CLAUDE.md Catalog #206 + "
-            "feedback_subagent_crash_resume_discipline_landed_20260514.md."
+            "feedback_codex_3_findings_fix_landed_20260514.md."
         )
 
     if verbose:
         if violations:
             print(
                 f"  [subagent-checkpoint-discipline] WARN: "
-                f"{len(violations)}/{scanned} subagent commit(s) without "
-                f"checkpoint trace (strict={strict})"
+                f"{len(violations)}/{scanned} post-cutoff subagent commit(s) "
+                f"without checkpoint trace "
+                f"(skipped_pre_cutoff={skipped_pre_cutoff}, strict={strict}, "
+                f"cutoff={_CHECK_206_DISCIPLINE_CUTOFF_UTC})"
             )
         else:
             print(
                 f"  [subagent-checkpoint-discipline] OK "
-                f"({scanned} subagent commit(s) scanned)"
+                f"({scanned} post-cutoff subagent commit(s) scanned, "
+                f"{skipped_pre_cutoff} legacy pre-cutoff exempt)"
             )
 
     if violations and strict:
         msg = (
             f"check_subagent_dispatches_use_checkpoint_discipline: "
-            f"{len(violations)} subagent commit(s) missing checkpoint "
-            f"trace in last {last_n_commits} commits; first 3:\n  "
+            f"{len(violations)} post-cutoff subagent commit(s) missing "
+            f"checkpoint trace in last {last_n_commits} commits "
+            f"(cutoff={_CHECK_206_DISCIPLINE_CUTOFF_UTC}); first 3:\n  "
             + "\n  ".join(violations[:3])
         )
         raise PreflightError(msg)
     return violations
 
+
+# ----------------------------------------------------------------------------
+# Catalog #207 — check_no_unguarded_rmtree_in_build_tools
+#
+# Codex 3-findings fix HIGH (2026-05-14). Bug class: build/promote tools that
+# expose a ``--force`` (or equivalent) flag and call ``shutil.rmtree`` on a
+# user-controlled path WITHOUT prior namespace + tool-owned-manifest
+# validation. The empirical anchor was
+# ``tools/build_pr101_nonlocal_sweep_packets.py`` line 712-714: a typo such
+# as ``--out-dir . --force`` would have recursively deleted the entire repo.
+#
+# Sister of Catalog #154 (`check_experiments_results_gc_helper_is_canonical`)
+# which extincted the same bug class for the canonical experiments/results/
+# GC helper. Pattern: prefer manifest-driven cleanup over raw rmtree.
+# ----------------------------------------------------------------------------
+
+# Tokens that recognize a path-namespace / tool-owned-manifest validation in
+# the enclosing function body. ANY of these in the body satisfies the gate.
+_CHECK_207_GUARD_TOKENS = (
+    "_assert_rmtree_safe",
+    "assert_rmtree_safe",
+    "rmtree_within_namespace",
+    "ensure_within_namespace",
+    "ensure_under_results_namespace",
+    "validate_force_delete_path",
+    "guard_force_delete",
+    "UnsafeRmtreeRefusedError",
+)
+
+# Same-line waiver. The placeholder literal "<reason>" is rejected so the
+# docstring above cannot self-waive.
+_CHECK_207_WAIVER_RE = re.compile(
+    r"#\s*RMTREE_UNGUARDED_OK:\s*([^\s<].*)"
+)
+
+# Files that legitimately implement the canonical guard or define the
+# refusal exception.
+_CHECK_207_CANONICAL_HELPERS = frozenset({
+    "tools/build_pr101_nonlocal_sweep_packets.py",
+})
+
+
+def _check_207_iter_build_tool_files(
+    tools_dir: Path,
+) -> list[Path]:
+    """Return tools/build_*.py and tools/promote_*.py files."""
+    if not tools_dir.exists():
+        return []
+    files: list[Path] = []
+    for pattern in ("build_*.py", "promote_*.py"):
+        for path in tools_dir.glob(pattern):
+            if path.is_file():
+                files.append(path)
+    return sorted(files)
+
+
+def _check_207_function_body_text(
+    src: str, func_node: ast.AST
+) -> str:
+    """Return the source text of a function body via line range."""
+    if not isinstance(
+        func_node, (ast.FunctionDef, ast.AsyncFunctionDef)
+    ):
+        return ""
+    start = func_node.lineno - 1
+    end = getattr(func_node, "end_lineno", None) or len(src.splitlines())
+    return "\n".join(src.splitlines()[start:end])
+
+
+def _check_207_collect_violations_in_file(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """AST-walk one file and emit one violation per unguarded rmtree call.
+
+    Scope (intentionally narrow per the empirical bug class anchor): we
+    refuse only rmtree calls whose ENCLOSING function references a
+    ``--force``-style flag (the bug class signature). This avoids false
+    positives on the many legitimate rmtree calls that recursively clear
+    a freshly-created tmp/staging directory.
+    """
+    rel = path.relative_to(repo_root)
+    rel_posix = rel.as_posix()
+    if rel_posix in _CHECK_207_CANONICAL_HELPERS:
+        return []
+    try:
+        src = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    try:
+        tree = ast.parse(src, filename=str(path))
+    except SyntaxError:
+        return []
+    src_lines = src.splitlines()
+    violations: list[str] = []
+
+    _FORCE_FLAG_TOKENS = (
+        "args.force",
+        "arguments.force",
+        ".force",
+        "options.force",
+        "namespace.force",
+    )
+
+    def _is_rmtree_call(node: ast.AST) -> bool:
+        if not isinstance(node, ast.Call):
+            return False
+        func = node.func
+        if isinstance(func, ast.Attribute) and func.attr == "rmtree":
+            return True
+        if isinstance(func, ast.Name) and func.id == "rmtree":
+            return True
+        return False
+
+    def _walk_function(func_node: ast.AST) -> None:
+        if not isinstance(
+            func_node, (ast.FunctionDef, ast.AsyncFunctionDef)
+        ):
+            return
+        body_text = _check_207_function_body_text(src, func_node)
+        has_force_flag = any(tok in body_text for tok in _FORCE_FLAG_TOKENS)
+        if not has_force_flag:
+            return
+        for sub in ast.walk(func_node):
+            if not _is_rmtree_call(sub):
+                continue
+            line_no = getattr(sub, "lineno", None) or 0
+            line_text = src_lines[line_no - 1] if 0 < line_no <= len(src_lines) else ""
+            if _CHECK_207_WAIVER_RE.search(line_text):
+                continue
+            if any(tok in body_text for tok in _CHECK_207_GUARD_TOKENS):
+                continue
+            violations.append(
+                f"{rel_posix}:{line_no} unguarded shutil.rmtree() in "
+                f"function {func_node.name!r} (gated by user-controlled "
+                f"--force flag); expected one of "
+                f"{', '.join(_CHECK_207_GUARD_TOKENS[:3])} in the same "
+                f"function body, OR a same-line "
+                "`# RMTREE_UNGUARDED_OK:<reason>` waiver. "
+                "See CLAUDE.md Catalog #207 + Catalog #154 (sister gate)."
+            )
+
+    for node in ast.walk(tree):
+        _walk_function(node)
+    return violations
+
+
+def check_no_unguarded_rmtree_in_build_tools(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #207 — refuse build/promote tools that call ``shutil.rmtree``
+    without namespace + tool-owned-manifest validation.
+
+    Sister of Catalog #154 + Catalog #156. Memory:
+    feedback_codex_3_findings_fix_landed_20260514.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    tools_dir = root / "tools"
+    files = _check_207_iter_build_tool_files(tools_dir)
+    violations: list[str] = []
+    for path in files:
+        violations.extend(_check_207_collect_violations_in_file(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [no-unguarded-rmtree-in-build-tools] WARN: "
+                f"{len(violations)} unguarded rmtree call(s) across "
+                f"{len(files)} build/promote tool(s) (strict={strict})"
+            )
+        else:
+            print(
+                f"  [no-unguarded-rmtree-in-build-tools] OK "
+                f"({len(files)} build/promote tool(s) scanned)"
+            )
+
+    if violations and strict:
+        msg = (
+            f"check_no_unguarded_rmtree_in_build_tools: {len(violations)} "
+            f"unguarded shutil.rmtree call(s) in tools/build_*.py / "
+            f"tools/promote_*.py; first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
+    return violations
+
+
+# Catalog #208 — check_docs_no_local_absolute_paths
+#
+# OSS v0.2.0-rc1 release prep audit finding D-2 self-protect (2026-05-14).
+# Bug class: tracked docs files containing hardcoded local absolute paths
+# (e.g. `/Users/<operator>/Projects/pact/...`, `/home/<user>/`,
+# `C:\Users\<user>\...`, `/private/var/`, `/tmp/`) leak local environment
+# state into public-facing documentation. Per CLAUDE.md "Public Disclosure
+# Hygiene" non-negotiable: "Keep credentials, private infrastructure URLs,
+# local absolute paths, raw provider logs, unpublished operator state, and
+# account metadata out of GitHub/docs/site/public supplement surfaces."
+#
+# Anchor: OSS v0.2.0-rc1 audit commit c293ba425 found 2 tracked files
+# (docs/superpowers/plans/2026-04-10-anti-drift-runtime-hardening.md and
+# docs/superpowers/specs/2026-04-10-anti-drift-runtime-design.md) leaking
+# `/Users/adpena/Projects/pact/...` paths into the OSS release surface.
+# This STRICT gate refuses any docs/**/*.md state that re-introduces the
+# pattern.
+#
+# Sister of Catalog #109 (`check_public_pr_intake_clones_pristine` — public
+# PR intake clone source-provenance corruption gate) and the existing
+# FORBIDDEN_PATTERNS rule "Forbidden /tmp paths in any persisted artifact
+# (the transient-evidence trap)" — together they extinct the local-path
+# leak class across upstream-imported sources, public docs, and persisted
+# evidence ledgers.
+#
+# Detection: line-anchored regex match on the canonical local-absolute-path
+# patterns inside `.md` files under `docs/`. The patterns require a leading
+# `/` followed by a UNIX home-anchor (`Users/<word>/` or `home/<word>/`),
+# `/private/var/`, or `/tmp/`. Windows-style `C:\Users\<word>\` also caught.
+# Bare `/tmp/` is flagged everywhere; `/tmp/<path>` references inside a
+# heading (`## /tmp/ session artifacts`) are still flagged so the operator
+# must explicitly waive (no implicit doc-of-pattern exception).
+#
+# Acceptance:
+#   * Same-line `# DOCS_LOCAL_PATH_OK:<reason>` HTML comment OR markdown
+#     comment waiver (placeholder `<reason>` literal rejected to prevent
+#     self-waiver). Both `<!-- DOCS_LOCAL_PATH_OK:<reason> -->` and
+#     `# DOCS_LOCAL_PATH_OK:<reason>` forms accepted.
+#   * Demo block waiver: `<!-- DEMO_LOCAL_PATH_OK -->` HTML comment within
+#     3 lines preceding a code-fenced block allows literal local paths
+#     inside that block (rare; document-and-justify only).
+#
+# No file-level waiver. Per-line opt-out only so the operator must
+# explicitly mark every leak surface. Self-exempt: this file (carries the
+# patterns in regex/docstring) and the test fixture file (contains
+# verbatim violation samples).
+# ----------------------------------------------------------------------------
+
+_CHECK_208_LOCAL_PATH_RE = re.compile(
+    r"(?:"
+    r"/Users/[A-Za-z0-9_.+-]+/"  # macOS home
+    r"|/home/[A-Za-z0-9_.+-]+/"  # Linux home
+    r"|/private/var/"  # macOS /private/var/folders/...
+    r"|(?:^|[^A-Za-z0-9_./-])/tmp/"  # /tmp/ token (preceded by non-path char)
+    r"|C:\\Users\\[A-Za-z0-9_.+-]+\\"  # Windows home
+    r")"
+)
+
+_CHECK_208_WAIVER_RE = re.compile(
+    r"(?:<!--\s*DOCS_LOCAL_PATH_OK\s*:\s*\S|#\s*DOCS_LOCAL_PATH_OK\s*:\s*\S)"
+)
+_CHECK_208_WAIVER_PLACEHOLDER_RE = re.compile(
+    r"DOCS_LOCAL_PATH_OK\s*:\s*<reason>",
+    re.IGNORECASE,
+)
+_CHECK_208_DEMO_BLOCK_RE = re.compile(
+    r"<!--\s*DEMO_LOCAL_PATH_OK(?:\s*:\s*\S+)?\s*-->",
+)
+
+_CHECK_208_SELF_EXEMPT_FILES: tuple[str, ...] = (
+    "src/tac/preflight.py",
+    "src/tac/tests/test_check_208_docs_no_local_absolute_paths.py",
+)
+
+
+def check_docs_no_local_absolute_paths(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #208 — refuse docs/**/*.md state with hardcoded local paths.
+
+    Scans every `.md` file under `docs/` and refuses any line containing
+    a local absolute path pattern (UNIX home, /private/var/, /tmp/, or
+    Windows home). Same-line `# DOCS_LOCAL_PATH_OK:<reason>` or
+    `<!-- DOCS_LOCAL_PATH_OK:<reason> -->` waiver respected (placeholder
+    `<reason>` literal rejected). Code-fenced blocks preceded by a
+    `<!-- DEMO_LOCAL_PATH_OK -->` comment within 3 lines may contain
+    literal local paths inside the fence.
+
+    Per CLAUDE.md "Public Disclosure Hygiene" non-negotiable +
+    OSS v0.2.0-rc1 audit finding D-2 (commit c293ba425).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    docs_dir = root / "docs"
+    violations: list[str] = []
+    if not docs_dir.is_dir():
+        if verbose:
+            print("  [docs-local-path] OK (no docs/ directory)")
+        return violations
+
+    scanned = 0
+    for path in sorted(docs_dir.rglob("*.md")):
+        rel = path.relative_to(root).as_posix()
+        if rel in _CHECK_208_SELF_EXEMPT_FILES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        lines = text.splitlines()
+        in_demo_fence = False
+        demo_marker_pending = False
+        demo_marker_age = 0
+        for line_no, line in enumerate(lines, start=1):
+            # Track DEMO_LOCAL_PATH_OK marker freshness (3-line window).
+            if _CHECK_208_DEMO_BLOCK_RE.search(line):
+                demo_marker_pending = True
+                demo_marker_age = 0
+            elif demo_marker_pending:
+                demo_marker_age += 1
+                if demo_marker_age > 3:
+                    demo_marker_pending = False
+            # Detect code-fence open/close (` ``` `).
+            stripped = line.lstrip()
+            if stripped.startswith("```"):
+                if in_demo_fence:
+                    in_demo_fence = False
+                elif demo_marker_pending:
+                    in_demo_fence = True
+                    demo_marker_pending = False
+                # else: ordinary fence; not a demo waiver.
+            if in_demo_fence:
+                continue
+            if not _CHECK_208_LOCAL_PATH_RE.search(line):
+                continue
+            if _CHECK_208_WAIVER_RE.search(line) and not _CHECK_208_WAIVER_PLACEHOLDER_RE.search(line):
+                continue
+            violations.append(
+                f"{rel}:{line_no}: local absolute path leak. Replace with "
+                f"`<repo-root>/`, a relative path, or repo-relative markdown link. "
+                f"Acceptance: same-line `# DOCS_LOCAL_PATH_OK:<reason>` waiver "
+                f"(placeholder `<reason>` literal rejected) OR "
+                f"`<!-- DEMO_LOCAL_PATH_OK -->` 3-line-preceding marker for "
+                f"code-fenced shell demos. Line: {line.strip()[:200]}"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [docs-local-path] {len(violations)} violation(s) "
+                f"across {scanned} doc file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [docs-local-path] OK ({scanned} doc file(s) scanned)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_docs_no_local_absolute_paths found "
+            f"{len(violations)} violation(s). Public-facing docs must not "
+            "leak local environment paths (UNIX home, /private/var/, /tmp/, "
+            "Windows home). Per CLAUDE.md \"Public Disclosure Hygiene\" "
+            "non-negotiable. Replace with `<repo-root>/`, relative path, or "
+            "repo-relative markdown link. Add `# DOCS_LOCAL_PATH_OK:<reason>` "
+            "same-line waiver for rare intentional cases. See OSS v0.2.0-rc1 "
+            "audit commit c293ba425 (finding D-2).\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
 
 if __name__ == "__main__":
     import argparse
