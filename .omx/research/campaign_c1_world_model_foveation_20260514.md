@@ -154,6 +154,25 @@ The C1 multi-stage training schedule ($30-50 over 3-4 weeks) is gated by the tra
 
 Both probes run on CPU in seconds; verdicts are `[proxy]`-tagged per CLAUDE.md axis-discipline.
 
+## Real-video probe re-run findings (2026-05-14)
+
+Per the C1-SMOKE-PHASE-3-PREP op-routable Decision 3, both probe-disambiguators were re-run on REAL `upstream/videos/0.mkv` (sha `2611f5f3...d2fa9`) via newly-added `--target-video` flag. Lane `lane_c1_real_video_probe_disambiguator_rerun_20260514`. Verdict JSONs at `experiments/results/c1_probe_real_video_20260514T165411Z/`; deterministic reproducer at `.omx/tmp/c1_realvideo_probe_reproducer.sh`.
+
+| Probe | Synthetic verdict | Synthetic margin | Real-video verdict | Real-video margin |
+|---|---|---:|---|---:|
+| Probe-1 (world-model) | `independent_frame_baseline` | 30.03% | `independent_frame_baseline` | **91.40%** |
+| Probe-2 (foveation) | `tie` (uniform~learned) | 0.00% | **`ego_motion_radial`** | **57.03%** |
+
+**Result**:
+- Probe-1 CONFIRMS + SHARPENS the synthetic finding by 3.05x. World-model recurrence (Ha-Schmidhuber 2018; Hafner DreamerV3 2023) FALSIFIED for the C1 archive class on real driving content. Raw residuals: indep 0.0118 vs GRU 0.1378 vs LSTM 0.1823.
+- Probe-2 REVERSES the synthetic tie. Atick-Redlich 1990 ego-motion-radial premise REVALIDATED. The synthetic tie was an artifact of the synthetic radial Gaussian's perfect symmetry; real driving content has actual semantic structure that ego_motion_radial captures. Raw residuals at 1000-bit budget: ego_rad 0.0029 vs uniform 0.0068 vs learned 0.0068.
+
+**Architecture pivot** (operator-routable; recommended): drop `WorldModelModule` from `src/tac/substrates/c1_world_model_foveation/architecture.py` (or add `WorldModelRecurrenceMode.IDENTITY` zero-param mode); retain `FoveationStrategy.EGO_MOTION_RADIAL` as default. Revised C1 archive byte target **`[100, 120]` KB** (was [100, 180]); revised predicted ΔS **`[-0.02, -0.04]`** (was [-0.04, -0.06]); revised Phase 3 budget envelope **`$15-25`** (was $30-50).
+
+**Phase 3 unlock condition #4 (sister anchors)** unchanged. Conditions #1 (council unanimous PROCEED), #2 (Z1 MDL ablation on C1 archive), #3 (smoke dispatch validates plumbing), #5 (operator budget approval) are all NOW UNBLOCKED at the cost-reduced envelope.
+
+NOT a KILL per CLAUDE.md "KILL is LAST RESORT". Reactivation criterion for `world_model_recurrence`: any future probe target where recurrent residual beats independent by >5% margin reopens. See landing memo `feedback_c1_real_video_probe_rerun_landed_20260514.md` for full deterministic reproducibility table + 6-hook wire-in + 5 operator-routable decisions.
+
 ## Cross-references
 
 - `feedback_long_term_multi_year_campaigns_landed_20260514.md` -- the 7-campaign roadmap that anchors C1

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Probe: world-model recurrent vs independent-frame decoders for C1.
 
 Per Catalog #125 hook #6 + the design-tension memo
@@ -83,12 +84,94 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch  # noqa: E402
+import torch.nn.functional as F  # noqa: E402
 
 from tac.substrates.c1_world_model_foveation.architecture import (  # noqa: E402
     WorldModelConfig,
     WorldModelModule,
     WorldModelRecurrenceMode,
 )
+
+
+def _real_video_feature_target(
+    video_path: Path, n_frames: int, feature_dim: int
+) -> torch.Tensor:
+    """Extract a per-frame feature target from the real contest video.
+
+    The probe's synthetic target is a slowly-varying random walk in
+    ``feature_dim`` dimensions; the real-video analog is a low-dimensional
+    spatial summary of each decoded frame. We sample ``n_frames`` evenly
+    spaced frames from ``upstream/videos/0.mkv``, downsample each frame to
+    a coarse ``(feature_dim // 3) ~ ceil`` luma/chroma summary, and stack
+    into ``(n_frames, feature_dim)``.
+
+    Concretely: each frame is RGB ``(874, 1164, 3)``. We:
+      1. Mean over the 3 RGB channels (luma proxy).
+      2. ``F.adaptive_avg_pool2d`` to ``(grid_h, grid_w)`` where
+         ``grid_h * grid_w == feature_dim``.
+      3. Flatten to a ``(feature_dim,)`` row.
+
+    The result is a real-video stand-in for the synthetic stationary-ergodic
+    random walk: it has the same shape but reflects ACTUAL inter-frame
+    redundancy (slowly-varying driving content) rather than synthetic noise.
+
+    Returns
+    -------
+    target : torch.Tensor
+        Shape ``(n_frames, feature_dim)``, dtype float32. Centered to zero
+        mean per-column so the world-model + per-frame baseline both fit
+        from a comparable starting point (matches synthetic target which
+        is a zero-centered cumsum).
+    """
+    import av  # local import keeps probe lightweight when synthetic-only
+
+    # Pick a grid that factorizes feature_dim cleanly.
+    grid_h = max(1, int(round(feature_dim ** 0.5)))
+    while feature_dim % grid_h != 0:
+        grid_h -= 1
+        if grid_h < 1:
+            grid_h = 1
+            break
+    grid_w = feature_dim // grid_h
+
+    # Decode the full stream; we don't know total frames upfront (codec
+    # reports 0 for HEVC stream count in some packs). Buffer everything
+    # and uniformly subsample.
+    container = av.open(str(video_path))
+    luma_frames: list[torch.Tensor] = []
+    for frame in container.decode(video=0):
+        rgb = frame.to_ndarray(format="rgb24")  # (H, W, 3) uint8
+        luma = torch.from_numpy(rgb).float().mean(dim=2)  # (H, W)
+        luma_frames.append(luma)
+    container.close()
+
+    total = len(luma_frames)
+    if total == 0:
+        raise RuntimeError(f"video at {video_path} produced 0 decoded frames")
+
+    # Uniformly sample n_frames indices across the full stream.
+    if total >= n_frames:
+        step = total / n_frames
+        idxs = [min(total - 1, int(i * step)) for i in range(n_frames)]
+    else:
+        # Pad by replicating last frame (degenerate corner case for short clips).
+        idxs = list(range(total)) + [total - 1] * (n_frames - total)
+
+    rows: list[torch.Tensor] = []
+    for idx in idxs:
+        luma = luma_frames[idx].unsqueeze(0).unsqueeze(0)  # (1, 1, H, W)
+        pooled = F.adaptive_avg_pool2d(luma, (grid_h, grid_w))  # (1, 1, gh, gw)
+        rows.append(pooled.reshape(-1))  # (feature_dim,)
+
+    target = torch.stack(rows, dim=0)  # (n_frames, feature_dim)
+    # Center to zero-mean per-column so absolute scale doesn't dominate.
+    target = target - target.mean(dim=0, keepdim=True)
+    # Rescale so std matches the synthetic target's ~0.5 scale; this keeps
+    # the world-model + baseline AdamW hyperparams in the same regime.
+    std = target.std()
+    if std > 1e-6:
+        target = target * (0.5 / std)
+    return target
 
 
 def _independent_frame_baseline(
@@ -174,19 +257,36 @@ def run_probe(
     feature_dim: int = 32,
     epochs: int = 200,
     seed: int = 0,
+    target_video: Path | None = None,
 ) -> dict:
     """Run the probe and emit the verdict dict.
 
-    The target sequence is a synthetic stationary-ergodic signal that
-    mimics driving-video low-frequency dynamics: each frame's feature
-    vector is a slowly-varying random walk. This is the regime where
-    world-models should clearly outperform per-frame independent decoders.
+    When ``target_video`` is ``None`` (default), the target sequence is a
+    synthetic stationary-ergodic signal: each frame's feature vector is a
+    slowly-varying random walk. This is the regime where world-models
+    should clearly outperform per-frame independent decoders.
+
+    When ``target_video`` is provided (e.g. ``upstream/videos/0.mkv``), the
+    target is extracted from REAL contest video via
+    :func:`_real_video_feature_target` -- pyav-decoded luma frames pooled
+    to ``(feature_dim,)`` per frame, centered + rescaled to match the
+    synthetic target's ~0.5 std. The verdict's ``score_axis`` becomes
+    ``proxy_real_video`` (still ``evidence_grade=proxy`` per Catalog #127
+    -- this is a feature-space proxy, NOT a scorer call).
     """
     torch.manual_seed(seed)
-    # Synthetic target: slowly-varying random walk (mimics stationary-ergodic
-    # driving). Each frame is the previous + small noise.
-    steps = torch.randn(n_frames, feature_dim) * 0.05
-    target = steps.cumsum(dim=0)
+    if target_video is not None:
+        # Real-video feature target: pyav-decoded frames -> coarse luma grid.
+        target = _real_video_feature_target(target_video, n_frames, feature_dim)
+        target_source = "real_video"
+        target_video_path = str(target_video)
+    else:
+        # Synthetic target: slowly-varying random walk (mimics stationary-ergodic
+        # driving). Each frame is the previous + small noise.
+        steps = torch.randn(n_frames, feature_dim) * 0.05
+        target = steps.cumsum(dim=0)
+        target_source = "synthetic_random_walk"
+        target_video_path = None
 
     wm_gru = _world_model_fit(
         n_frames, latent_dim, epochs, target,
@@ -250,21 +350,34 @@ def run_probe(
         "verdict_rationale": rationale,
         "evidence_grade": "proxy",
         "score_claim_valid": False,
-        "score_axis": "proxy_synthetic",
+        "score_axis": (
+            "proxy_real_video" if target_source == "real_video" else "proxy_synthetic"
+        ),
+        "target_source": target_source,
+        "target_video_path": target_video_path,
         "ready_for_exact_eval_dispatch": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
-        "result_review_blockers": [
-            "smoke_proxy_synthetic_not_contest_video",
-            "no_scorer_load",
-            "non_promotable_evidence_grade",
-        ],
+        "result_review_blockers": (
+            [
+                "proxy_real_video_feature_space_not_scorer_output",
+                "no_scorer_load",
+                "non_promotable_evidence_grade",
+            ]
+            if target_source == "real_video"
+            else [
+                "smoke_proxy_synthetic_not_contest_video",
+                "no_scorer_load",
+                "non_promotable_evidence_grade",
+            ]
+        ),
         "config": {
             "n_frames": n_frames,
             "latent_dim": latent_dim,
             "feature_dim": feature_dim,
             "epochs": epochs,
             "seed": seed,
+            "target_video": target_video_path,
         },
         "lane_id": "lane_c1_world_model_foveation_campaign_l1_scaffold_20260514",
     }
@@ -283,7 +396,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--epochs", type=int, default=200)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument(
-        "--output", type=Path, default=None,
+        "--target-video", type=Path, default=None,
+        help=(
+            "Optional path to a real video (e.g. upstream/videos/0.mkv). "
+            "When set, the probe extracts a per-frame luma-pool feature "
+            "target via pyav instead of generating a synthetic random walk. "
+            "Verdict's score_axis becomes proxy_real_video; still "
+            "evidence_grade=proxy (no scorer call). Default: None (synthetic)."
+        ),
+    )
+    p.add_argument(
+        "--output", "--output-json", dest="output", type=Path, default=None,
         help="Optional output path for verdict JSON (sorted-keys, indented).",
     )
     args = p.parse_args(argv)
@@ -294,6 +417,7 @@ def main(argv: list[str] | None = None) -> int:
         feature_dim=args.feature_dim,
         epochs=args.epochs,
         seed=args.seed,
+        target_video=args.target_video,
     )
 
     out_json = json.dumps(verdict, sort_keys=True, indent=2)

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Probe: foveation strategy vs uniform quantization for C1.
 
 Per Catalog #125 hook #6 + the design-tension memo
@@ -69,6 +70,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch  # noqa: E402
+import torch.nn.functional as F  # noqa: E402
 
 from tac.substrates.c1_world_model_foveation.architecture import (  # noqa: E402
     FoveationMapModule,
@@ -77,6 +79,54 @@ from tac.substrates.c1_world_model_foveation.architecture import (  # noqa: E402
     WorldModelFoveationConfig,
     WorldModelRecurrenceMode,
 )
+
+
+def _real_video_radial_target(
+    video_path: Path, image_h: int, image_w: int, seed: int = 0
+) -> torch.Tensor:
+    """Extract a single representative frame target from the real contest video.
+
+    The probe's synthetic target is a radial Gaussian: high detail at the
+    image center, smooth periphery. The real-video analog is one ACTUAL
+    frame from ``upstream/videos/0.mkv`` downsampled to ``(image_h,
+    image_w)`` RGB. This tests whether the contest video's natural
+    saliency profile matches the radial premise (ego-motion vanishing
+    point near image center) or diverges from it (e.g. cluttered
+    instrument cluster at top, sky uniformity at top-left periphery,
+    actual semantic detail spread non-radially).
+
+    We sample the middle frame of the stream (frame at index ``total // 2``)
+    as a deterministic representative; ``seed`` is unused for the real-
+    video path but kept in the signature for synthetic API parity.
+
+    Returns
+    -------
+    target : torch.Tensor
+        Shape ``(1, 3, image_h, image_w)``, dtype float32, range ~[0, 1].
+        Matches the synthetic target's batch/channel/spatial layout
+        exactly so the downstream foveation-quantize simulation is
+        comparable.
+    """
+    import av  # local import keeps probe lightweight when synthetic-only
+
+    container = av.open(str(video_path))
+    frames: list[torch.Tensor] = []
+    for frame in container.decode(video=0):
+        rgb = frame.to_ndarray(format="rgb24")  # (H, W, 3) uint8
+        frames.append(torch.from_numpy(rgb).float() / 255.0)  # (H, W, 3) ~[0,1]
+    container.close()
+
+    total = len(frames)
+    if total == 0:
+        raise RuntimeError(f"video at {video_path} produced 0 decoded frames")
+
+    # Deterministic middle-frame pick (representative of "typical" driving
+    # content; not first frame which can carry timestamp burn-in artifacts).
+    mid = total // 2
+    rep = frames[mid]  # (H, W, 3)
+    rep = rep.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
+    pooled = F.adaptive_avg_pool2d(rep, (image_h, image_w))  # (1, 3, h, w)
+    return pooled
 
 
 def _make_radial_target(h: int, w: int, seed: int = 0) -> torch.Tensor:
@@ -146,9 +196,29 @@ def run_probe(
     image_w: int = 32,
     bit_budget: float = 1000.0,
     seed: int = 0,
+    target_video: Path | None = None,
 ) -> dict:
-    """Run the probe and emit the verdict dict."""
-    target = _make_radial_target(image_h, image_w, seed=seed)
+    """Run the probe and emit the verdict dict.
+
+    When ``target_video`` is ``None`` (default), the target is a synthetic
+    radial Gaussian (high center detail, smooth periphery) -- the regime
+    where ego-motion-radial foveation SHOULD win by construction.
+
+    When ``target_video`` is provided (e.g. ``upstream/videos/0.mkv``), the
+    target is the actual middle frame of the contest video downsampled to
+    ``(image_h, image_w)`` RGB via pyav + ``F.adaptive_avg_pool2d``. The
+    verdict's ``score_axis`` becomes ``proxy_real_video`` (still
+    ``evidence_grade=proxy`` per Catalog #127 -- this is a per-pixel
+    quantization proxy, NOT a scorer call).
+    """
+    if target_video is not None:
+        target = _real_video_radial_target(target_video, image_h, image_w, seed=seed)
+        target_source = "real_video"
+        target_video_path = str(target_video)
+    else:
+        target = _make_radial_target(image_h, image_w, seed=seed)
+        target_source = "synthetic_radial"
+        target_video_path = None
 
     results: dict[str, dict[str, float]] = {}
     for strategy_name, strategy in (
@@ -223,21 +293,35 @@ def run_probe(
         "verdict_rationale": rationale,
         "evidence_grade": "proxy",
         "score_claim_valid": False,
-        "score_axis": "proxy_synthetic",
+        "score_axis": (
+            "proxy_real_video" if target_source == "real_video" else "proxy_synthetic"
+        ),
+        "target_source": target_source,
+        "target_video_path": target_video_path,
         "ready_for_exact_eval_dispatch": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
-        "result_review_blockers": [
-            "smoke_proxy_synthetic_radial_not_contest_video",
-            "no_scorer_load",
-            "non_promotable_evidence_grade",
-            "untrained_learned_head_per_pixel_baseline",
-        ],
+        "result_review_blockers": (
+            [
+                "proxy_real_video_quantization_simulation_not_scorer_output",
+                "no_scorer_load",
+                "non_promotable_evidence_grade",
+                "untrained_learned_head_per_pixel_baseline",
+            ]
+            if target_source == "real_video"
+            else [
+                "smoke_proxy_synthetic_radial_not_contest_video",
+                "no_scorer_load",
+                "non_promotable_evidence_grade",
+                "untrained_learned_head_per_pixel_baseline",
+            ]
+        ),
         "config": {
             "image_h": image_h,
             "image_w": image_w,
             "bit_budget": bit_budget,
             "seed": seed,
+            "target_video": target_video_path,
         },
         "lane_id": "lane_c1_world_model_foveation_campaign_l1_scaffold_20260514",
     }
@@ -253,7 +337,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--image-w", type=int, default=32)
     p.add_argument("--bit-budget", type=float, default=1000.0)
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--output", type=Path, default=None)
+    p.add_argument(
+        "--target-video", type=Path, default=None,
+        help=(
+            "Optional path to a real video (e.g. upstream/videos/0.mkv). "
+            "When set, the probe downsamples the middle frame to "
+            "(image_h, image_w) RGB and uses it as the radial target "
+            "instead of the synthetic Gaussian. Verdict's score_axis "
+            "becomes proxy_real_video; still evidence_grade=proxy. "
+            "Default: None (synthetic radial Gaussian)."
+        ),
+    )
+    p.add_argument(
+        "--output", "--output-json", dest="output", type=Path, default=None,
+    )
     args = p.parse_args(argv)
 
     verdict = run_probe(
@@ -261,6 +358,7 @@ def main(argv: list[str] | None = None) -> int:
         image_w=args.image_w,
         bit_budget=args.bit_budget,
         seed=args.seed,
+        target_video=args.target_video,
     )
     out_json = json.dumps(verdict, sort_keys=True, indent=2)
     if args.output is not None:
