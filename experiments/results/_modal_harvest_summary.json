@@ -24,6 +24,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -51,6 +55,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -78,6 +86,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -105,6 +117,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -132,6 +148,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -159,6 +179,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -186,6 +210,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -213,6 +241,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -240,6 +272,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -267,6 +303,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -294,6 +334,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -321,6 +365,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -348,6 +396,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -375,6 +427,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -399,6 +455,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -426,6 +486,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -453,6 +517,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -480,6 +548,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -507,6 +579,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -531,6 +607,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -558,6 +638,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -585,6 +669,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -609,6 +697,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -636,6 +728,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -663,6 +759,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -690,6 +790,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -717,6 +821,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -741,6 +849,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -768,6 +880,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -795,6 +911,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -819,6 +939,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -845,6 +969,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -869,33 +997,288 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
     "label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep",
     "call_id": "fc-01KRHNMT4SEB794HFPH5GNTHFP",
+    "status": "already_harvested",
     "rc": 13,
     "elapsed_seconds": 0,
+    "timed_out": false,
     "n_artifacts": 1,
     "crash_kind": "RC_13",
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
       "appended": false,
+      "promotion_eligible": false,
       "reason": "result_missing_numeric_elapsed_seconds",
-      "score_claim": false,
-      "promotion_eligible": false
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep",
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=13; timed_out=False; elapsed_seconds=None; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_13"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
       "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
       "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep",
+      "status": "failed_modal_training_rc_13"
+    }
+  },
+  {
+    "label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010436Z__smoke__100ep",
+    "call_id": "fc-01KRJ07NVC73YPXTNGQX8T747P",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 8.181100604000001,
+    "timed_out": false,
+    "n_artifacts": 7,
+    "crash_kind": "RC_1",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 8,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010436Z__smoke__100ep",
+      "elapsed_seconds": 8.181100604000001,
+      "epochs": 100,
+      "estimated_cost_usd": 0.001340791487877778,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "failed_dispatch",
       "platform": "modal",
-      "status": "failed_modal_training_rc_13",
-      "score_claim": false,
+      "posterior_path": null,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=13; timed_out=False; elapsed_seconds=None; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep_modal"
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010436Z__smoke__100ep",
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=8.181100604000001; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010436Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010436Z__smoke__100ep",
+      "status": "failed_modal_training_rc_1"
+    }
+  },
+  {
+    "label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010731Z__smoke__100ep",
+    "call_id": "fc-01KRJ0K0Z3DZNTW3EEHRZTK6CZ",
+    "status": "already_harvested",
+    "rc": 13,
+    "elapsed_seconds": 0,
+    "timed_out": false,
+    "n_artifacts": 1,
+    "crash_kind": "RC_13",
+    "cost_band_anchor": {
+      "appended": false,
+      "promotion_eligible": false,
+      "reason": "result_missing_numeric_elapsed_seconds",
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010731Z__smoke__100ep",
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=13; timed_out=False; elapsed_seconds=None; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010731Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_13"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010731Z__smoke__100ep",
+      "status": "failed_modal_training_rc_13"
+    }
+  },
+  {
+    "label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T011305Z__smoke__100ep",
+    "call_id": "fc-01KRJ0VN7W7DDFB276QD9AR0NH",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 51.166245487,
+    "timed_out": false,
+    "n_artifacts": 9,
+    "crash_kind": "RC_1",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 8,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T011305Z__smoke__100ep",
+      "elapsed_seconds": 51.166245487,
+      "epochs": 100,
+      "estimated_cost_usd": 0.008385579121480554,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "failed_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T011305Z__smoke__100ep",
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=51.166245487; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T011305Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T011305Z__smoke__100ep",
+      "status": "failed_modal_training_rc_1"
+    }
+  },
+  {
+    "label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep",
+    "call_id": "fc-01KRJ15E7NYVDF77VF1ED1XBKS",
+    "status": "already_harvested",
+    "timed_out": false,
+    "n_artifacts": 0,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 8,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep",
+      "elapsed_seconds": 569.598997165,
+      "epochs": 100,
+      "estimated_cost_usd": 0.09335094675759721,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "failed_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep",
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=569.598997165; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep",
+      "status": "failed_modal_training_rc_1"
+    }
+  },
+  {
+    "label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T022923Z__smoke__100ep",
+    "call_id": "fc-01KRJ52PP723KBG6QE4JSERQGM",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 45.391772880999994,
+    "timed_out": false,
+    "n_artifacts": 11,
+    "crash_kind": "OK",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 8,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T022923Z__smoke__100ep",
+      "elapsed_seconds": 45.391772880999994,
+      "epochs": 100,
+      "estimated_cost_usd": 0.007439207222163888,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T022923Z__smoke__100ep",
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=45.391772880999994; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T022923Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
+      "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T022923Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
     }
   },
   {
@@ -940,6 +1323,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
       "status": "failed_modal_training_rc_1"
     }
   },
@@ -986,6 +1376,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "remote_lane_substrate_sane_hnerv",
+      "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -1031,6 +1428,64 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_timeout"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "remote_lane_substrate_siren",
+      "instance_job_id": "substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep",
+      "status": "failed_modal_training_timeout"
+    }
+  },
+  {
+    "label": "substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T030023Z__smoke__100ep",
+    "call_id": "fc-01KRJ6VKVR7KMKQVC55QXQK05V",
+    "rc": 124,
+    "elapsed_seconds": 3600.455630396,
+    "timed_out": true,
+    "n_artifacts": 9,
+    "crash_kind": "TIMEOUT",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": true,
+      "already_appended": false,
+      "score_claim": false,
+      "promotion_eligible": false,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T030023Z__smoke__100ep",
+      "trainer": "experiments/train_substrate_time_traveler_l5_autonomy.py",
+      "platform": "modal",
+      "gpu": "T4",
+      "epochs": 100,
+      "batch_size": 1,
+      "all_flags_on": true,
+      "elapsed_seconds": 3600.455630396,
+      "estimated_cost_usd": 0.5900746727593443,
+      "hourly_rate_usd": 0.59,
+      "outcome": "timed_out",
+      "returncode": 124,
+      "posterior_path": null,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=124; timed_out=True; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": true,
+      "already_appended": false,
+      "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+      "instance_job_id": "substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T030023Z__smoke__100ep",
+      "platform": "modal",
+      "status": "failed_modal_training_timeout",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=124; timed_out=True; elapsed_seconds=3600.455630396; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T030023Z__smoke__100ep_modal"
+    },
+    "terminal_evidence": {
+      "appended": true,
+      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+      "instance_job_id": "substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T030023Z__smoke__100ep",
+      "status": "failed_modal_training_timeout"
     }
   },
   {
@@ -1055,6 +1510,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1098,6 +1557,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_cheap_config_20260512T171203Z",
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -1124,6 +1590,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1151,6 +1621,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_full_ce1b4e2d_20260510T1333Z",
       "status": "failed_modal_training_rc_1"
     }
   },
@@ -1180,6 +1657,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_fullpath_smoke_b82164a7_20260510T1348Z",
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -1207,6 +1691,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z",
       "status": "completed_modal_training_recovered_no_score_claim"
     }
   },
@@ -1236,6 +1727,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_guard_1aac11aa_20260510T1301Z",
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -1263,6 +1761,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_guard_740778ba_20260510T1000Z",
       "status": "failed_modal_training_rc_1"
     }
   },
@@ -1292,6 +1797,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_guard_80b139c9_20260510T1240Z",
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -1319,6 +1831,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_guard_a3311268_20260510T0831Z",
       "status": "failed_modal_training_rc_1"
     }
   },
@@ -1348,6 +1867,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_guard_c0ea27df_20260510T0927Z",
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -1375,6 +1901,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_guard_c4100de4_20260510T0915Z",
       "status": "failed_modal_training_rc_1"
     }
   },
@@ -1405,6 +1938,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_124"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "t1_balle_128k_endtoend",
+      "instance_job_id": "t1_balle_modal_phase1_ab2d0f6_20260510T1437Z",
+      "status": "failed_modal_training_rc_124"
     }
   },
   {
@@ -1434,6 +1974,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_6"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_20260508T215443Z_modal",
+      "status": "failed_modal_training_rc_6"
     }
   },
   {
@@ -1460,6 +2007,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "failed_modal_training_unknown_returncode"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_20260508T222043Z_modal",
       "status": "failed_modal_training_unknown_returncode"
     }
   },
@@ -1490,6 +2044,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_20260508T230020Z_modal",
+      "status": "completed_modal_training_recovered_no_score_claim"
     }
   },
   {
@@ -1518,6 +2079,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex",
       "status": "completed_modal_training_recovered_no_score_claim"
     }
   },
@@ -1548,6 +2116,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal",
+      "status": "completed_modal_training_recovered_no_score_claim"
     }
   },
   {
@@ -1573,6 +2148,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "failed_modal_training_recovery_error_modulenotfounderror"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal",
       "status": "failed_modal_training_recovery_error_modulenotfounderror"
     }
   },
@@ -1603,6 +2185,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal",
+      "status": "failed_modal_training_rc_1"
     }
   },
   {
@@ -1631,6 +2220,13 @@
       "promotion_eligible": false,
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_modal_20260510T0738Z_codex",
       "status": "completed_modal_training_recovered_no_score_claim"
     }
   },
@@ -1661,6 +2257,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a1_score_gradient",
+      "instance_job_id": "track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal",
+      "status": "completed_modal_training_recovered_no_score_claim"
     }
   },
   {
@@ -1690,6 +2293,13 @@
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false,
       "status": "failed_modal_training_unknown_returncode"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "track1_phase_a4_charm_50k_toy",
+      "instance_job_id": "track1_phase_a4_charm_50k_toy_20260508T220839Z_modal",
+      "status": "failed_modal_training_unknown_returncode"
     }
   },
   {
@@ -1717,6 +2327,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1744,6 +2358,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1771,6 +2389,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1798,6 +2420,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1825,6 +2451,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1852,6 +2482,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   },
   {
@@ -1879,6 +2513,10 @@
       "reason": "metadata_missing_lane_id_or_instance_job_id",
       "schema": "modal_training_terminal_claim_v1",
       "score_claim": false
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "reason": "incomplete_terminal_claim"
     }
   }
 ]
