@@ -337,7 +337,7 @@ def log_incremental_distillation(
             max_frames=max(distill_cfg_template.max_frames, 32 * usable_chunk_count),
             allow_bdd100k_dataset_images=distill_cfg_template.allow_bdd100k_dataset_images,
         )
-        book = distill_codebook(cfg, frames=frames_iter)
+        book = distill_codebook(cfg, frames=frames_iter)  # COMMA2K19_LEAKAGE_VERIFIED_OK:frames_iter-came-from-Comma2k19FrameIterator-via-_default_frame_iterator-or-test-injected-factory
         # Measure.
         quality = float(quality_metric(book))
         marginal: float | None = None
@@ -538,7 +538,7 @@ def log_incremental_distillation_streaming(
             max_frames=max(distill_cfg_template.max_frames, len(cumulative_frames)),
             allow_bdd100k_dataset_images=distill_cfg_template.allow_bdd100k_dataset_images,
         )
-        book = distill_codebook(cfg, frames=iter(cumulative_frames))
+        book = distill_codebook(cfg, frames=iter(cumulative_frames))  # COMMA2K19_LEAKAGE_VERIFIED_OK:cumulative_frames-came-from-streamer-which-internally-runs-check_no_contest_video_leakage
         quality = float(quality_metric(book))
         marginal: float | None = None
         if last_quality is not None:
