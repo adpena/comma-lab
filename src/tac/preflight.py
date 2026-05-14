@@ -48,6 +48,7 @@ import threading
 import time
 import tokenize
 import tomllib
+from collections.abc import Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 from collections.abc import Iterator
@@ -51868,7 +51869,7 @@ _CHECK_233_WAIVER_PLACEHOLDER_REJECTS: frozenset[str] = frozenset({
 # is that the substrate's smoke produced rc=0 AND emitted parseable
 # auth-eval JSON; the gate accepts any of the textual signals as proof
 # the operator/subagent observed that outcome.
-_CHECK_233_SMOKE_GREEN_TOKENS: tuple[str, ...] = (
+_CHECK_233_SMOKE_GREEN_TOKENS: frozenset[str] = frozenset({
     "smoke_rc=0",
     "smoke rc=0",
     "smoke_green",
@@ -51884,11 +51885,11 @@ _CHECK_233_SMOKE_GREEN_TOKENS: tuple[str, ...] = (
     "smoke_artifact",
     "modal_smoke_done",
     "auth_eval_score_claim_valid=true",
-)
+})
 
 # Gate 2 — Tier C MDL density tokens. Aligned with Catalog #227 token set
 # but additionally accepts the canonical CLI invocation marker.
-_CHECK_233_TIER_C_TOKENS: tuple[str, ...] = (
+_CHECK_233_TIER_C_TOKENS: frozenset[str] = frozenset({
     "tier_c",
     "tier c",
     "Tier C",
@@ -51897,7 +51898,7 @@ _CHECK_233_TIER_C_TOKENS: tuple[str, ...] = (
     "mdl_scorer_conditional_ablation",
     "MDL_density",
     "mdl_density",
-)
+})
 
 # Gate 3 — 100ep auth-eval anchor tokens. Acceptance: any of these signals
 # proves a converged (non-smoke) auth-eval anchor landed on a byte-
@@ -51907,7 +51908,7 @@ _CHECK_233_TIER_C_TOKENS: tuple[str, ...] = (
 # canonical contract; we also accept "100ep" + "auth-eval" in the same
 # evidence body, AND any "[contest-CUDA]" or "[contest-CPU GHA Linux"
 # tag (which by definition implies a converged auth-eval anchor).
-_CHECK_233_AUTH_EVAL_100EP_TOKENS: tuple[str, ...] = (
+_CHECK_233_AUTH_EVAL_100EP_TOKENS: frozenset[str] = frozenset({
     "100ep",
     "100_ep",
     "100 epochs",
@@ -51924,7 +51925,7 @@ _CHECK_233_AUTH_EVAL_100EP_TOKENS: tuple[str, ...] = (
     "converged_auth_eval",
     "converged auth-eval",
     "converged auth_eval",
-)
+})
 
 # Gate 4 — Catalog #127 custody validation tokens. The lane's evidence
 # must reference either the validator surface (validate_custody /
@@ -51932,7 +51933,7 @@ _CHECK_233_AUTH_EVAL_100EP_TOKENS: tuple[str, ...] = (
 # pair so a future audit can confirm the (tag, axis, hardware) triple
 # matches Catalog #127's semantics. We accept either explicit validator
 # routing OR a paired axis+hardware-substrate declaration.
-_CHECK_233_CUSTODY_VALIDATOR_TOKENS: tuple[str, ...] = (
+_CHECK_233_CUSTODY_VALIDATOR_TOKENS: frozenset[str] = frozenset({
     "validate_custody",
     "validate_custody_verdict",
     "custody_match=true",
@@ -51953,6 +51954,88 @@ _CHECK_233_CUSTODY_VALIDATOR_TOKENS: tuple[str, ...] = (
     "hardware_substrate=linux_x86_64",
     "Catalog #127",
     "catalog_127",
+})
+
+_CHECK_233_SMOKE_GREEN_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"(?i)(?<![\w-])smoke[_\s-]*(?:rc|return[_\s-]*code)\s*[:=]\s*0(?![\w.-])"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])smoke[_\s-]*(?:green|passed|complete|completed|ok)"
+        r"\s*[:=]\s*(?:true|1|yes|pass|passed|green|ok|complete|completed)(?![\w.-])"
+    ),
+    re.compile(r"(?i)(?<![\w-])smoke[_-]?green(?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])smoke[_-]?(?:passed|complete(?:d)?|ok)(?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])smoke\s+rc\s*=\s*0\b"),
+    re.compile(
+        r"(?i)(?<![\w-])smoke\s+green\b(?!\s+(?:report|discussion|note|notes|section|memo))"
+    ),
+    re.compile(r"(?i)(?<![\w-])smoke\s+(?:passed|complete(?:d)?|ok)\b"),
+    re.compile(r"(?i)(?<![\w-])modal_smoke_done(?![\w-])"),
+    re.compile(
+        r"(?i)(?<![\w-])auth_eval_score_claim_valid\s*[:=]\s*true(?![\w.-])"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])smoke[_-]?artifact\s*[:=]\s*[A-Za-z0-9_./-]+"
+        r"(?:\.json|\.jsonl)(?![\w.-])"
+    ),
+)
+
+_CHECK_233_TIER_C_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"(?i)(?<![\w-])tier[_\s-]*c(?:[_\s-]*(?:mdl\s+)?density|[_\s-]*measured|\s+measured)(?![\w-])"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])tier\s+c\s+mdl\s+density\s+measured\b"
+    ),
+    re.compile(r"(?i)(?<![\w-])mdl[_\s-]*tier[_\s-]*c(?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])tier_c_density\s*[:=]\s*[-+]?\d"),
+    re.compile(r"(?i)(?<![\w-])mdl_scorer_conditional_ablation(?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])mdl_density\s*[:=]\s*[-+]?\d"),
+)
+
+_CHECK_233_AUTH_EVAL_100EP_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"(?i)(?<![\w-])auth[_-]?eval[_-]?score[_-]?axis\s*[:=]\s*"
+        r"[\"']?contest_(?:cuda|cpu)[\"']?(?![\w.-])"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])auth[_-]?eval\s*rc\s*[:=]\s*0\s+contest_(?:cuda|cpu)(?![\w-])"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])(?:100ep|100_ep|100\s+epochs)\b"
+        r"(?=[^.\n;]{0,80}\b(?:auth[_\s-]?eval|auth-eval)\b)"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])(?:auth[_\s-]?eval|auth-eval)\b"
+        r"(?=[^.\n;]{0,80}\b(?:100ep|100_ep|100\s+epochs)\b)"
+    ),
+    re.compile(r"(?<![\w-])\[contest-CUDA\](?![\w-])"),
+    re.compile(r"(?<![\w-])\[contest-CPU GHA Linux(?: x86_64)?\](?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])auth_eval_exact_cuda_complete(?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])exact_eval_complete(?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])auth_eval_complete(?![\w-])"),
+    re.compile(r"(?i)(?<![\w-])converged[_\s-]*(?:auth[_\s-]?eval|auth-eval)(?![\w-])"),
+)
+
+_CHECK_233_CUSTODY_VALIDATOR_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?i)(?<![\w-])validate_custody(?:_verdict)?(?:\(|\b)"),
+    re.compile(
+        r"(?i)(?<![\w-])custody_(?:match|validated)\s*[:=]\s*true(?![\w.-])"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])custody_status\s*[:=]\s*"
+        r"(?:validated|accepted|passed|pass|ok)(?![\w.-])"
+    ),
+    re.compile(r"(?i)(?<![\w-])Catalog\s+#127\b"),
+    re.compile(r"(?i)(?<![\w-])catalog_127(?![\w-])"),
+)
+
+_CHECK_233_EVIDENCE_GRADE_RE = re.compile(
+    r"(?i)(?<![\w-])evidence_grade\s*[:=]\s*[\"']?contest_(?:cuda|cpu)[\"']?(?![\w.-])"
+)
+_CHECK_233_HARDWARE_SUBSTRATE_RE = re.compile(
+    r"(?i)(?<![\w-])hardware_substrate\s*[:=]\s*[\"']?linux_x86_64(?:_[a-z0-9]+)?[\"']?(?![\w.-])"
 )
 
 
@@ -52032,33 +52115,58 @@ def _check_233_lane_has_waiver(text: str) -> tuple[bool, str]:
     return True, reason
 
 
-def _check_233_text_contains_any_token(text: str, tokens: tuple[str, ...]) -> bool:
-    """Case-insensitive token-substring membership check."""
+def _check_233_text_contains_any_token(text: str, tokens: Iterable[str]) -> bool:
+    """Case-insensitive literal-token match with identifier boundaries.
+
+    This helper is retained for token-audit tests. The production 4-gate
+    evaluator below uses gate-specific structured regexes so prose such as
+    ``"100ep vs 200ep tradeoffs"`` cannot satisfy the auth-eval gate.
+    """
     if not text:
         return False
-    lower = text.lower()
     for tok in tokens:
-        if tok.lower() in lower:
+        literal = re.escape(tok).replace(r"\ ", r"\s+")
+        if re.search(rf"(?i)(?<![\w-]){literal}(?![\w-])", text):
             return True
     return False
+
+
+def _check_233_text_matches_any_pattern(
+    text: str,
+    patterns: tuple[re.Pattern[str], ...],
+) -> bool:
+    """Return True when any structured Catalog #233 evidence pattern matches."""
+    if not text:
+        return False
+    return any(pattern.search(text) for pattern in patterns)
+
+
+def _check_233_custody_validated(text: str) -> bool:
+    """Return True if custody evidence is structured enough for Catalog #233."""
+    if _check_233_text_matches_any_pattern(
+        text, _CHECK_233_CUSTODY_VALIDATOR_PATTERNS
+    ):
+        return True
+    return (
+        _CHECK_233_EVIDENCE_GRADE_RE.search(text) is not None
+        and _CHECK_233_HARDWARE_SUBSTRATE_RE.search(text) is not None
+    )
 
 
 def _check_233_evaluate_4_gates(text: str) -> tuple[bool, bool, bool, bool]:
     """Return (smoke_green, tier_c_measured, auth_eval_100ep, custody_validated)
     booleans for a lane's concatenated registry text.
     """
-    smoke_green = _check_233_text_contains_any_token(
-        text, _CHECK_233_SMOKE_GREEN_TOKENS
+    smoke_green = _check_233_text_matches_any_pattern(
+        text, _CHECK_233_SMOKE_GREEN_PATTERNS
     )
-    tier_c_measured = _check_233_text_contains_any_token(
-        text, _CHECK_233_TIER_C_TOKENS
+    tier_c_measured = _check_233_text_matches_any_pattern(
+        text, _CHECK_233_TIER_C_PATTERNS
     )
-    auth_eval_100ep = _check_233_text_contains_any_token(
-        text, _CHECK_233_AUTH_EVAL_100EP_TOKENS
+    auth_eval_100ep = _check_233_text_matches_any_pattern(
+        text, _CHECK_233_AUTH_EVAL_100EP_PATTERNS
     )
-    custody_validated = _check_233_text_contains_any_token(
-        text, _CHECK_233_CUSTODY_VALIDATOR_TOKENS
-    )
+    custody_validated = _check_233_custody_validated(text)
     return smoke_green, tier_c_measured, auth_eval_100ep, custody_validated
 
 

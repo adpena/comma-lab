@@ -301,6 +301,32 @@ def test_evaluate_4_gates_three_of_four_still_fails():
     assert not custody
 
 
+def test_evaluate_4_gates_rejects_r2_false_positive_prose():
+    text = (
+        "See discussion of 100ep vs 200ep tradeoffs in the smoke green report; "
+        "tier c was measured; validate_custody verified; evidence_grade=contest_cuda"
+    )
+    smoke, tier_c, auth, custody = _check_233_evaluate_4_gates(text)
+    assert not (smoke and tier_c and auth and custody)
+    assert not auth
+
+
+def test_evaluate_4_gates_accepts_structured_key_value_evidence():
+    text = (
+        "smoke_green=true; tier_c_density=0.42; "
+        "auth_eval_score_axis=contest_cuda; custody_validated=true"
+    )
+    smoke, tier_c, auth, custody = _check_233_evaluate_4_gates(text)
+    assert smoke and tier_c and auth and custody
+
+
+def test_100ep_without_auth_eval_context_is_not_anchor():
+    smoke, tier_c, auth, custody = _check_233_evaluate_4_gates(
+        "100ep vs 200ep tradeoffs only"
+    )
+    assert not (smoke or tier_c or auth or custody)
+
+
 # ---------------------------------------------------------------------------
 # End-to-end gate behavior
 # ---------------------------------------------------------------------------
