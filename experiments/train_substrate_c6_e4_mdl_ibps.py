@@ -510,8 +510,16 @@ def _full_main(args: argparse.Namespace) -> int:
     def _stage(name: str) -> None:
         print(f"[c6-full] STAGE: {name} @ {_canon_utc_now_iso()}", flush=True)
 
-    # Device gate (no MPS per Catalog #1; CPU only with --full-cpu paired flag)
-    device = _canon_device_or_die(args.device, allow_cpu=args.full_cpu)
+    # Device gate (no MPS per Catalog #1; CPU only with --full-cpu paired
+    # flag per Catalog #197). The canonical helper permits CPU only when
+    # smoke=True; --full-cpu opt-in routes through the smoke gate but
+    # produces a non-promotable artifact (per CLAUDE.md "MPS auth eval is
+    # NOISE" + the paired-flag attestation that the bytes are advisory).
+    device = _canon_device_or_die(
+        args.device,
+        smoke=args.full_cpu,
+        substrate_tag=SUBSTRATE_TAG,
+    )
 
     _stage("patch_yuv6")
     patch_upstream_yuv6_globally()
@@ -521,13 +529,21 @@ def _full_main(args: argparse.Namespace) -> int:
 
     _stage("decode_video_pairs")
     max_pairs = args.max_pairs or N_PAIRS_FULL
-    pairs = _canon_decode_real_pairs(
+    # Returns torch.Tensor shape (N, 2, 3, 384, 512) float32 in [0, 255]
+    gt_pair_tensor = _canon_decode_real_pairs(
         args.video_path,
         n_pairs=max_pairs,
-        target_hw=EVAL_HW,
-        device=device,
-    )
-    n_pairs = pairs["frame_0"].shape[0]
+        substrate_tag=SUBSTRATE_TAG,
+        max_pairs=args.max_pairs,
+        repo_root=REPO_ROOT,
+    ).to(device)
+    n_pairs = int(gt_pair_tensor.shape[0])
+    # Split into (frame_0, frame_1) in unit range [0, 1] for encoder input.
+    # The score-aware loss expects [0, 255]; we'll multiply at loss time.
+    pairs = {
+        "frame_0": gt_pair_tensor[:, 0] / 255.0,  # (N, 3, 384, 512) in [0, 1]
+        "frame_1": gt_pair_tensor[:, 1] / 255.0,
+    }
     print(f"[c6-full] decoded {n_pairs} pairs at {EVAL_HW}")
 
     _stage("build_substrate")
