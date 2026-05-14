@@ -53,6 +53,16 @@ PARSER_WZF01 = "wzf01_wyner_ziv_frame_0"
 PARSER_WZF01_SHORT = "wzf01"
 PARSER_DP1 = "dp1_pretrained_driving_prior"
 PARSER_DP1_SHORT = "dp1"
+PARSER_C1WMFV1 = "c1wmfv1_world_model_foveation"
+PARSER_C1WMFV1_SHORT = "c1wmfv1"
+PARSER_WZ1 = "wz1_wyner_ziv_cooperative_receiver"
+PARSER_WZ1_SHORT = "wz1"
+PARSER_Z4CR1 = "z4cr1_cooperative_receiver_loss"
+PARSER_Z4CR1_SHORT = "z4cr1"
+PARSER_Z5PCWM1 = "z5pcwm1_predictive_coding_world_model"
+PARSER_Z5PCWM1_SHORT = "z5pcwm1"
+PARSER_TT5L = "tt5l_time_traveler_l5_autonomy"
+PARSER_TT5L_SHORT = "tt5l"
 PARSER_ALIASES = {
     PARSER_IBPS1_SHORT: PARSER_IBPS1,
     "c6_e4_mdl_ibps": PARSER_IBPS1,
@@ -66,6 +76,21 @@ PARSER_ALIASES = {
     PARSER_DP1_SHORT: PARSER_DP1,
     "pretrained_driving_prior": PARSER_DP1,
     "driving_prior": PARSER_DP1,
+    PARSER_C1WMFV1_SHORT: PARSER_C1WMFV1,
+    "c1_world_model_foveation": PARSER_C1WMFV1,
+    "world_model_foveation": PARSER_C1WMFV1,
+    PARSER_WZ1_SHORT: PARSER_WZ1,
+    "wyner_ziv_cooperative_receiver": PARSER_WZ1,
+    "cooperative_receiver": PARSER_WZ1,
+    PARSER_Z4CR1_SHORT: PARSER_Z4CR1,
+    "z4_cooperative_receiver_loss": PARSER_Z4CR1,
+    "cooperative_receiver_loss": PARSER_Z4CR1,
+    PARSER_Z5PCWM1_SHORT: PARSER_Z5PCWM1,
+    "z5_predictive_coding_world_model": PARSER_Z5PCWM1,
+    "predictive_coding_world_model": PARSER_Z5PCWM1,
+    PARSER_TT5L_SHORT: PARSER_TT5L,
+    "time_traveler_l5_autonomy": PARSER_TT5L,
+    "time_traveler": PARSER_TT5L,
 }
 PARSER_CHOICES = (
     PARSER_AUTO,
@@ -83,6 +108,16 @@ PARSER_CHOICES = (
     PARSER_WZF01_SHORT,
     PARSER_DP1,
     PARSER_DP1_SHORT,
+    PARSER_C1WMFV1,
+    PARSER_C1WMFV1_SHORT,
+    PARSER_WZ1,
+    PARSER_WZ1_SHORT,
+    PARSER_Z4CR1,
+    PARSER_Z4CR1_SHORT,
+    PARSER_Z5PCWM1,
+    PARSER_Z5PCWM1_SHORT,
+    PARSER_TT5L,
+    PARSER_TT5L_SHORT,
 )
 
 PR101_DECODER_BLOB_LEN = 162_164
@@ -148,6 +183,11 @@ IBPS1_MAGIC_PREFIX = b"IBPS"
 D1POLY1_MAGIC_PREFIX = b"D1PY"
 WZF01_MAGIC_PREFIX = b"WZF\x01"
 DP1_MAGIC_PREFIX = b"DP1\x00"
+C1WMFV1_MAGIC_PREFIX = b"WMF\x01"
+WZ1_MAGIC_PREFIX = b"WZ1\x00"
+Z4CR1_MAGIC_PREFIX = b"Z4CR"
+Z5PCWM1_MAGIC_PREFIX = b"Z5WM"
+TT5L_MAGIC_PREFIX = b"TT5L"
 
 
 class HnervPacketSectionManifestError(ValueError):
@@ -425,6 +465,24 @@ def _infer_parser(
         return PARSER_WZF01
     if "dp1_" in text or "pretrained_driving_prior" in text or "driving_prior" in text:
         return PARSER_DP1
+    if "c1wmfv1" in text or "c1_world_model_foveation" in text or "world_model_foveation" in text:
+        return PARSER_C1WMFV1
+    if (
+        "wyner_ziv_cooperative_receiver" in text
+        or "cooperative_receiver" in text and "z4" not in text
+        or "wz1_" in text
+    ):
+        return PARSER_WZ1
+    if "z4cr1" in text or "z4_cooperative_receiver_loss" in text or "cooperative_receiver_loss" in text:
+        return PARSER_Z4CR1
+    if (
+        "z5pcwm1" in text
+        or "z5_predictive_coding_world_model" in text
+        or "predictive_coding_world_model" in text
+    ):
+        return PARSER_Z5PCWM1
+    if "tt5l" in text or "time_traveler_l5_autonomy" in text or "time_traveler" in text:
+        return PARSER_TT5L
     if payload.startswith(A2K1_MAGIC):
         return PARSER_A2K1
     if payload.startswith(A5FC_MAGIC):
@@ -439,6 +497,16 @@ def _infer_parser(
         return PARSER_WZF01
     if payload.startswith(DP1_MAGIC_PREFIX):
         return PARSER_DP1
+    if payload.startswith(C1WMFV1_MAGIC_PREFIX):
+        return PARSER_C1WMFV1
+    if payload.startswith(WZ1_MAGIC_PREFIX):
+        return PARSER_WZ1
+    if payload.startswith(Z4CR1_MAGIC_PREFIX):
+        return PARSER_Z4CR1
+    if payload.startswith(Z5PCWM1_MAGIC_PREFIX):
+        return PARSER_Z5PCWM1
+    if payload.startswith(TT5L_MAGIC_PREFIX):
+        return PARSER_TT5L
     if "pr101" in text or "hnerv_ft_microcodec" in text:
         return PARSER_PR101
     if len(payload) >= 4 and payload[0] == 0xFF:
@@ -512,6 +580,16 @@ def _parse_sections(parser_name: str, payload: bytes) -> list[dict[str, Any]]:
         return _parse_wzf01_sections(payload)
     if parser_name == PARSER_DP1:
         return _parse_dp1_sections(payload)
+    if parser_name == PARSER_C1WMFV1:
+        return _parse_c1wmfv1_sections(payload)
+    if parser_name == PARSER_WZ1:
+        return _parse_wz1_sections(payload)
+    if parser_name == PARSER_Z4CR1:
+        return _parse_z4cr1_sections(payload)
+    if parser_name == PARSER_Z5PCWM1:
+        return _parse_z5pcwm1_sections(payload)
+    if parser_name == PARSER_TT5L:
+        return _parse_tt5l_sections(payload)
     raise HnervPacketSectionManifestError(f"unknown parser {parser_name!r}")
 
 
@@ -865,6 +943,146 @@ def _parse_dp1_sections(payload: bytes) -> list[dict[str, Any]]:
     return records
 
 
+def _parse_c1wmfv1_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.c1_world_model_foveation.archive import (
+            C1WMFV1_SECTION_ROLES,
+            parse_c1wmfv1_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"C1WMFV1 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_c1wmfv1_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"C1WMFV1 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=C1WMFV1_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
+def _parse_wz1_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.wyner_ziv_cooperative_receiver.archive import (
+            WZ1_SECTION_ROLES,
+            parse_wz1_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"WZ1 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_wz1_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"WZ1 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=WZ1_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
+def _parse_z4cr1_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.z4_cooperative_receiver_loss.archive import (
+            Z4CR1_SECTION_ROLES,
+            parse_z4cr1_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"Z4CR1 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_z4cr1_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"Z4CR1 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=Z4CR1_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
+def _parse_z5pcwm1_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.z5_predictive_coding_world_model.archive import (
+            Z5PCWM1_SECTION_ROLES,
+            parse_z5pcwm1_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"Z5PCWM1 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_z5pcwm1_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"Z5PCWM1 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=Z5PCWM1_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
+def _parse_tt5l_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.time_traveler_l5_autonomy.archive import (
+            TT5L_SECTION_ROLES,
+            parse_tt5l_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"TT5L canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_tt5l_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"TT5L parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=TT5L_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
 def _section_record(index: int, *, name: str, offset: int, data: bytes, role: str) -> dict[str, Any]:
     end = offset + len(data)
     return {
@@ -1149,6 +1367,16 @@ def _parser_confidence(parser_name: str) -> str:
         return "WZF01 magic plus canonical D4 Wyner-Ziv frame-0 section parser"
     if parser_name == PARSER_DP1:
         return "DP1 magic plus canonical pre-trained driving prior section parser"
+    if parser_name == PARSER_C1WMFV1:
+        return "C1WMFV1 magic plus canonical world-model-foveation section parser"
+    if parser_name == PARSER_WZ1:
+        return "WZ1 magic plus canonical Wyner-Ziv cooperative-receiver section parser"
+    if parser_name == PARSER_Z4CR1:
+        return "Z4CR1 magic plus canonical cooperative-receiver-loss section parser"
+    if parser_name == PARSER_Z5PCWM1:
+        return "Z5PCWM1 magic plus canonical predictive-coding-world-model section parser"
+    if parser_name == PARSER_TT5L:
+        return "TT5L magic plus canonical Time-Traveler L5 autonomy section parser"
     return "unknown"
 
 
@@ -1177,6 +1405,7 @@ __all__ = [
     "A2K1_MAGIC",
     "A5FC_MAGIC",
     "BATCH_SCHEMA",
+    "C1WMFV1_MAGIC_PREFIX",
     "CPLX1_MAGIC",
     "D1POLY1_MAGIC_PREFIX",
     "DP1_MAGIC_PREFIX",
@@ -1185,6 +1414,7 @@ __all__ = [
     "PARSER_A2K1",
     "PARSER_A5FC",
     "PARSER_AUTO",
+    "PARSER_C1WMFV1",
     "PARSER_CHOICES",
     "PARSER_CPLX1",
     "PARSER_D1POLY1",
@@ -1193,10 +1423,18 @@ __all__ = [
     "PARSER_PR101",
     "PARSER_PR103",
     "PARSER_PR106",
+    "PARSER_TT5L",
+    "PARSER_WZ1",
     "PARSER_WZF01",
+    "PARSER_Z4CR1",
+    "PARSER_Z5PCWM1",
     "SCHEMA_VERSION",
     "TOOL_NAME",
+    "TT5L_MAGIC_PREFIX",
+    "WZ1_MAGIC_PREFIX",
     "WZF01_MAGIC_PREFIX",
+    "Z4CR1_MAGIC_PREFIX",
+    "Z5PCWM1_MAGIC_PREFIX",
     "HnervPacketSectionManifestError",
     "build_packet_section_manifest",
     "build_packet_section_manifest_batch",

@@ -373,12 +373,124 @@ def parse_archive(blob: bytes) -> WynerZivArchive:
     )
 
 
+def parse_wz1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for WZ1 (Wyner-Ziv cooperative-receiver) grammar.
+
+    Canonical section-offset parser for WZ1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — WZ1 auto-detection by ``b"WZ1\\x00"`` magic prefix)
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``wz1_header`` — 35-byte header (control_or_metadata; fixed layout)
+    - ``renderer_blob`` — brotli q=9 compressed renderer state_dict
+      (decoder_weight_stream — the inflate-time renderer for Wyner-Ziv
+      cooperative-receiver class)
+    - ``side_info_predictor_blob`` — brotli q=9 compressed side-info predictor
+      + per-pair pose codes
+      (sidecar_or_correction_stream — DISCUS-style side-information at receiver)
+    - ``coset_indices_blob`` — brotli-compressed bit-packed per-pair coset
+      indices (entropy_model_or_range_stream — coset coding is the
+      Wyner-Ziv rate-distortion-with-side-info entropy primitive)
+    - ``meta_blob`` — sorted-keys JSON utf-8 (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for WZ1 byte layout
+    is :data:`WZ1_HEADER_FMT` + :data:`WZ1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no torch state_dict deserialization). It is
+    cheaper and is safe to call with brotli-tampered blobs (it never invokes
+    ``brotli.decompress``).
+
+    Raises ``ValueError`` on:
+
+    - short header (< 35 bytes)
+    - bad magic (!= ``b"WZ1\\x00"``)
+    - unsupported schema version (!= 1)
+    - archive size mismatch (declared end_meta != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift. The
+      exact-equality contract matches :func:`parse_archive`.
+    """
+    if len(archive_bytes) < WZ1_HEADER_SIZE:
+        raise ValueError(
+            f"wz1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {WZ1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        _num_pairs,
+        _hidden_dim,
+        _num_hidden_layers,
+        _side_info_hidden_dim,
+        _side_info_num_layers,
+        _output_h,
+        _output_w,
+        _pose_dim,
+        _coset_index_bits,
+        renderer_len,
+        side_info_len,
+        coset_len,
+        meta_len,
+    ) = struct.unpack(WZ1_HEADER_FMT, archive_bytes[:WZ1_HEADER_SIZE])
+    if magic != WZ1_MAGIC:
+        raise ValueError(
+            f"wz1 archive: bad magic {magic!r} (expected {WZ1_MAGIC!r})"
+        )
+    if version != WZ1_SCHEMA_VERSION:
+        raise ValueError(
+            f"wz1 archive: unsupported schema version {version} "
+            f"(expected {WZ1_SCHEMA_VERSION})"
+        )
+    end_header = WZ1_HEADER_SIZE
+    end_renderer = end_header + int(renderer_len)
+    end_side_info = end_renderer + int(side_info_len)
+    end_coset = end_side_info + int(coset_len)
+    end_meta = end_coset + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"wz1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "wz1_header": (0, WZ1_HEADER_SIZE),
+        "renderer_blob": (end_header, int(renderer_len)),
+        "side_info_predictor_blob": (end_renderer, int(side_info_len)),
+        "coset_indices_blob": (end_side_info, int(coset_len)),
+        "meta_blob": (end_coset, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for WZ1 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS`` / sister-substrate maps.
+#
+# Note: Wyner-Ziv class-shift design uses coset coding as the entropy model
+# (rate-distortion-with-side-info primitive); the side-info predictor is
+# a correction stream from the receiver's side-information channel.
+WZ1_SECTION_ROLES: dict[str, str] = {
+    "wz1_header": "control_or_metadata",
+    "renderer_blob": "decoder_weight_stream",
+    "side_info_predictor_blob": "sidecar_or_correction_stream",
+    "coset_indices_blob": "entropy_model_or_range_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 __all__ = [
     "WZ1_HEADER_FMT",
     "WZ1_HEADER_SIZE",
     "WZ1_MAGIC",
     "WZ1_SCHEMA_VERSION",
+    "WZ1_SECTION_ROLES",
     "WynerZivArchive",
     "pack_archive",
     "parse_archive",
+    "parse_wz1_archive_bytes",
 ]

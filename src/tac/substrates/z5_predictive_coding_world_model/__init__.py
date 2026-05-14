@@ -161,11 +161,15 @@ from tac.substrates.z5_predictive_coding_world_model.architecture import (
     PredictiveCodingSubstrate,
 )
 from tac.substrates.z5_predictive_coding_world_model.archive import (
+    Z5PCWM1_HEADER_FMT,
+    Z5PCWM1_HEADER_SIZE,
     Z5PCWM1_MAGIC,
     Z5PCWM1_SCHEMA_VERSION,
+    Z5PCWM1_SECTION_ROLES,
     PredictiveCodingArchive,
     pack_archive,
     parse_archive,
+    parse_z5pcwm1_archive_bytes,
 )
 from tac.substrates.z5_predictive_coding_world_model.score_aware_loss import (
     PredictiveCodingLossWeights,
@@ -183,8 +187,12 @@ __all__ = [
     "PredictiveCodingSubstrate",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
+    "Z5PCWM1_HEADER_FMT",
+    "Z5PCWM1_HEADER_SIZE",
     "Z5PCWM1_MAGIC",
     "Z5PCWM1_SCHEMA_VERSION",
+    "Z5PCWM1_SECTION_ROLES",
     "pack_archive",
     "parse_archive",
+    "parse_z5pcwm1_archive_bytes",
 ]

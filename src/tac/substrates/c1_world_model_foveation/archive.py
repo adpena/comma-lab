@@ -395,13 +395,136 @@ def deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     return _fp16_bytes_to_tensor_dict(blob)
 
 
+def parse_c1wmfv1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for C1WMFV1 (world-model + foveation) grammar.
+
+    Canonical section-offset parser for C1WMFV1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — C1WMFV1 auto-detection by ``b"WMF\\x01"`` magic prefix)
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``c1wmfv1_header`` — 39-byte header (control_or_metadata; fixed layout)
+    - ``world_model_blob`` — brotli q=9 compressed world-model state_dict
+      (GRU/LSTM/Transformer; decoder_weight_stream — class-shift recurrent
+      world-model is the across-class substrate primitive)
+    - ``decoder_blob`` — brotli q=9 compressed decoder state_dict
+      (decoder_weight_stream — the per-frame renderer head)
+    - ``z_init_blob`` — brotli q=9 compressed initial latent z_init
+      (latent_stream — recurrent rollout seed)
+    - ``foveation_meta_blob`` — brotli q=9 compressed foveation meta
+      (sidecar_or_correction_stream — JSON or learned-per-pixel head)
+    - ``residual_blob`` — brotli-compressed per-frame int8 residual surprise
+      (sidecar_or_correction_stream — predictive-coding residual)
+    - ``meta_blob`` — brotli q=9 compressed sorted-keys JSON
+      (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for C1WMFV1 byte layout
+    is :data:`C1WMFV1_HEADER_FMT` + :data:`C1WMFV1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no torch state_dict deserialization). It is
+    cheaper and is safe to call with brotli-tampered blobs (it never invokes
+    ``brotli.decompress``).
+
+    Raises ``ValueError`` on:
+
+    - short header (< 39 bytes)
+    - bad magic (!= ``b"WMF\\x01"``)
+    - unsupported schema version (!= 1)
+    - archive size mismatch (declared end_meta != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift. The
+      exact-equality contract matches :func:`parse_archive`.
+    """
+    if len(archive_bytes) < C1WMFV1_HEADER_SIZE:
+        raise ValueError(
+            f"c1wmfv1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {C1WMFV1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        num_pairs,
+        recurrence_mode,
+        foveation_strategy,
+        latent_dim,
+        output_h,
+        output_w,
+        wm_len,
+        decoder_len,
+        z_init_len,
+        fov_meta_len,
+        residual_len,
+        meta_len,
+    ) = struct.unpack(C1WMFV1_HEADER_FMT, archive_bytes[:C1WMFV1_HEADER_SIZE])
+    if magic != C1WMFV1_MAGIC:
+        raise ValueError(
+            f"c1wmfv1 archive: bad magic {magic!r} (expected {C1WMFV1_MAGIC!r})"
+        )
+    if version != C1WMFV1_SCHEMA_VERSION:
+        raise ValueError(
+            f"c1wmfv1 archive: unsupported schema version {version} "
+            f"(expected {C1WMFV1_SCHEMA_VERSION})"
+        )
+    end_header = C1WMFV1_HEADER_SIZE
+    end_wm = end_header + int(wm_len)
+    end_decoder = end_wm + int(decoder_len)
+    end_z_init = end_decoder + int(z_init_len)
+    end_fov_meta = end_z_init + int(fov_meta_len)
+    end_residual = end_fov_meta + int(residual_len)
+    end_meta = end_residual + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"c1wmfv1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "c1wmfv1_header": (0, C1WMFV1_HEADER_SIZE),
+        "world_model_blob": (end_header, int(wm_len)),
+        "decoder_blob": (end_wm, int(decoder_len)),
+        "z_init_blob": (end_decoder, int(z_init_len)),
+        "foveation_meta_blob": (end_z_init, int(fov_meta_len)),
+        "residual_blob": (end_fov_meta, int(residual_len)),
+        "meta_blob": (end_residual, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for C1WMFV1 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS`` / sister-substrate maps.
+#
+# Note: world_model_blob is decoder_weight_stream because in C1's
+# class-shift design, the recurrent world-model IS the substrate decoder
+# (rolls out per-pair frames from z_init + ego-motion). The per-frame
+# decoder_blob is the renderer head that turns world-model state into RGB.
+# Both are score-affecting at inflate; the foveation_meta + residual blobs
+# are sidecar/correction streams (foveation routing + predictive residual).
+C1WMFV1_SECTION_ROLES: dict[str, str] = {
+    "c1wmfv1_header": "control_or_metadata",
+    "world_model_blob": "decoder_weight_stream",
+    "decoder_blob": "decoder_weight_stream",
+    "z_init_blob": "latent_stream",
+    "foveation_meta_blob": "sidecar_or_correction_stream",
+    "residual_blob": "sidecar_or_correction_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 __all__ = [
     "C1WMFV1_HEADER_FMT",
     "C1WMFV1_HEADER_SIZE",
     "C1WMFV1_MAGIC",
     "C1WMFV1_SCHEMA_VERSION",
+    "C1WMFV1_SECTION_ROLES",
     "WorldModelFoveationArchive",
     "deserialize_state_dict",
     "pack_archive",
     "parse_archive",
+    "parse_c1wmfv1_archive_bytes",
 ]

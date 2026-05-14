@@ -386,12 +386,157 @@ def parse_archive(blob: bytes) -> PredictiveCodingArchive:
     )
 
 
+def parse_z5pcwm1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for Z5PCWM1 (predictive-coding world-model) grammar.
+
+    Canonical section-offset parser for Z5PCWM1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — Z5PCWM1 auto-detection by ``b"Z5WM"`` magic prefix)
+
+    Z5PCWM1 extends Z4CR1 by adding a predictor section and replacing the
+    per-pair-latent section with (latent_init + residuals + ego_motion). The
+    predictor implements Rao-Ballard 1999 predictive-coding world-model.
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``z5pcwm1_header`` — 39-byte header (control_or_metadata; fixed layout)
+    - ``encoder_blob`` — brotli q=9 compressed encoder state_dict
+      (training_provenance_only — parsed/loaded for provenance, but not
+      score-affecting at inflate because ``frames_for_encoder=None``)
+    - ``decoder_blob`` — brotli q=9 compressed decoder state_dict
+      (decoder_weight_stream — the inflate-time renderer)
+    - ``predictor_blob`` — brotli q=9 compressed predictor state_dict
+      (decoder_weight_stream — Rao-Ballard predictive-coding world-model
+      that rolls forward the latent state given ego-motion)
+    - ``latent_init_blob`` — int8 quantized initial latent z_0 (latent_stream)
+    - ``residuals_blob`` — int8 quantized per-pair residuals (latent_stream)
+    - ``ego_motion_blob`` — int8 quantized per-pair ego-motion vectors
+      (sidecar_or_correction_stream — ego-motion-conditional side info)
+    - ``meta_blob`` — sorted-keys JSON with predictive_coding_world_model_meta
+      provenance tag + per-section scale/zero_point (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for Z5PCWM1 byte layout
+    is :data:`Z5PCWM1_HEADER_FMT` + :data:`Z5PCWM1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no torch state_dict deserialization). It is
+    cheaper and is safe to call with brotli-tampered blobs.
+
+    Raises ``ValueError`` on:
+
+    - short header (< 39 bytes)
+    - bad magic (!= ``b"Z5WM"``)
+    - unsupported schema version (!= 1)
+    - latent_init_len != latent_dim
+    - residuals_len != num_pairs * latent_dim
+    - ego_motion_len != num_pairs * ego_motion_dim
+    - archive size mismatch (declared end_meta != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift.
+    """
+    if len(archive_bytes) < Z5PCWM1_HEADER_SIZE:
+        raise ValueError(
+            f"z5pcwm1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {Z5PCWM1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        ego_motion_dim,
+        num_pairs,
+        encoder_len,
+        decoder_len,
+        predictor_len,
+        latent_init_len,
+        residuals_len,
+        ego_motion_len,
+        meta_len,
+    ) = struct.unpack(Z5PCWM1_HEADER_FMT, archive_bytes[:Z5PCWM1_HEADER_SIZE])
+    if magic != Z5PCWM1_MAGIC:
+        raise ValueError(
+            f"z5pcwm1 archive: bad magic {magic!r} (expected {Z5PCWM1_MAGIC!r})"
+        )
+    if version != Z5PCWM1_SCHEMA_VERSION:
+        raise ValueError(
+            f"z5pcwm1 archive: unsupported schema version {version} "
+            f"(expected {Z5PCWM1_SCHEMA_VERSION})"
+        )
+    if latent_init_len != int(latent_dim):
+        raise ValueError(
+            f"z5pcwm1 archive: latent_init_len {latent_init_len} != "
+            f"latent_dim {latent_dim}"
+        )
+    expected_residuals = int(num_pairs) * int(latent_dim)
+    if residuals_len != expected_residuals:
+        raise ValueError(
+            f"z5pcwm1 archive: residuals_len {residuals_len} != "
+            f"num_pairs*latent_dim = {expected_residuals}"
+        )
+    expected_ego = int(num_pairs) * int(ego_motion_dim)
+    if ego_motion_len != expected_ego:
+        raise ValueError(
+            f"z5pcwm1 archive: ego_motion_len {ego_motion_len} != "
+            f"num_pairs*ego_motion_dim = {expected_ego}"
+        )
+    end_header = Z5PCWM1_HEADER_SIZE
+    end_encoder = end_header + int(encoder_len)
+    end_decoder = end_encoder + int(decoder_len)
+    end_predictor = end_decoder + int(predictor_len)
+    end_latent_init = end_predictor + int(latent_init_len)
+    end_residuals = end_latent_init + int(residuals_len)
+    end_ego = end_residuals + int(ego_motion_len)
+    end_meta = end_ego + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"z5pcwm1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "z5pcwm1_header": (0, Z5PCWM1_HEADER_SIZE),
+        "encoder_blob": (end_header, int(encoder_len)),
+        "decoder_blob": (end_encoder, int(decoder_len)),
+        "predictor_blob": (end_decoder, int(predictor_len)),
+        "latent_init_blob": (end_predictor, int(latent_init_len)),
+        "residuals_blob": (end_latent_init, int(residuals_len)),
+        "ego_motion_blob": (end_residuals, int(ego_motion_len)),
+        "meta_blob": (end_ego, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for Z5PCWM1 sections.
+#
+# Note: the predictor is decoder_weight_stream because in Rao-Ballard
+# predictive-coding the predictor IS part of the inference path — it rolls
+# latent state forward at every pair, and the inflate consumes its weights.
+# residuals + latent_init are latent_stream (predictive-coding residual
+# entropy); ego_motion is sidecar (side-information for predictor
+# conditioning).
+Z5PCWM1_SECTION_ROLES: dict[str, str] = {
+    "z5pcwm1_header": "control_or_metadata",
+    "encoder_blob": "training_provenance_only",
+    "decoder_blob": "decoder_weight_stream",
+    "predictor_blob": "decoder_weight_stream",
+    "latent_init_blob": "latent_stream",
+    "residuals_blob": "latent_stream",
+    "ego_motion_blob": "sidecar_or_correction_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 __all__ = [
     "PredictiveCodingArchive",
     "Z5PCWM1_HEADER_FMT",
     "Z5PCWM1_HEADER_SIZE",
     "Z5PCWM1_MAGIC",
     "Z5PCWM1_SCHEMA_VERSION",
+    "Z5PCWM1_SECTION_ROLES",
     "pack_archive",
     "parse_archive",
+    "parse_z5pcwm1_archive_bytes",
 ]

@@ -330,14 +330,129 @@ def dequantize_per_pair_residual(
     return torch.from_numpy(arr.copy())
 
 
+def parse_tt5l_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for TT5L (Time-Traveler L5 autonomy) grammar.
+
+    Canonical section-offset parser for TT5L inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — TT5L auto-detection by ``b"TT5L"`` magic prefix)
+
+    Time-Traveler L5 is the predictive-receiver class-shift substrate (the
+    "staircase Step 3+" end-asymptote per zen-floor band v2). World-model
+    state + per-pair Stage-2 side-info encode SE(3) lie + segboundary +
+    hf-residual + predict-residual per pair.
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``tt5l_header`` — 34-byte header (control_or_metadata; fixed layout)
+    - ``world_model_blob`` — brotli q=9 compressed world-model state_dict
+      (decoder_weight_stream — the trained renderer + foveation grid +
+      dynamics matrices + per-pair pose codes; this IS the substrate
+      decoder for the predictive-receiver class)
+    - ``per_pair_side_info_blob`` — brotli q=9 compressed int8 per-pair
+      side info (sidecar_or_correction_stream — DISCUS-style Stage-2
+      side info: SE(3) lie + segboundary + hf-residual + predict-residual)
+    - ``ac_state_blob`` — brotli q=9 compressed arithmetic-coder state
+      (entropy_model_or_range_stream — placeholder in v1; consumed by
+      future Stage-3 arithmetic-decode path)
+    - ``meta_blob`` — sorted-keys JSON utf-8 (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for TT5L byte layout
+    is :data:`TT5L_HEADER_FMT` + :data:`TT5L_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no torch state_dict deserialization). It is
+    cheaper and is safe to call with brotli-tampered blobs.
+
+    Raises ``ValueError`` on:
+
+    - short header (< 34 bytes)
+    - bad magic (!= ``b"TT5L"``)
+    - unsupported schema version (!= 1)
+    - archive size mismatch (declared end_meta != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift.
+    """
+    if len(archive_bytes) < TT5L_HEADER_SIZE:
+        raise ValueError(
+            f"tt5l archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {TT5L_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        _num_pairs,
+        _hidden_dim,
+        _num_hidden_layers,
+        _output_h,
+        _output_w,
+        _foveation_grid_h,
+        _foveation_grid_w,
+        _pose_dim,
+        _per_pair_bytes,
+        world_len,
+        side_len,
+        ac_len,
+        meta_len,
+    ) = struct.unpack(TT5L_HEADER_FMT, archive_bytes[:TT5L_HEADER_SIZE])
+    if magic != TT5L_MAGIC:
+        raise ValueError(
+            f"tt5l archive: bad magic {magic!r} (expected {TT5L_MAGIC!r})"
+        )
+    if version != TT5L_SCHEMA_VERSION:
+        raise ValueError(
+            f"tt5l archive: unsupported schema version {version} "
+            f"(expected {TT5L_SCHEMA_VERSION})"
+        )
+    end_header = TT5L_HEADER_SIZE
+    end_world = end_header + int(world_len)
+    end_side = end_world + int(side_len)
+    end_ac = end_side + int(ac_len)
+    end_meta = end_ac + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"tt5l archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "tt5l_header": (0, TT5L_HEADER_SIZE),
+        "world_model_blob": (end_header, int(world_len)),
+        "per_pair_side_info_blob": (end_world, int(side_len)),
+        "ac_state_blob": (end_side, int(ac_len)),
+        "meta_blob": (end_ac, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for TT5L sections.
+#
+# Note: world_model_blob is decoder_weight_stream because the Time-Traveler
+# world-model IS the substrate decoder in the predictive-receiver class.
+# Per-pair side info is sidecar (DISCUS-style Wyner-Ziv-correlated correction
+# stream). AC state is entropy_model_or_range_stream (arithmetic-coder).
+TT5L_SECTION_ROLES: dict[str, str] = {
+    "tt5l_header": "control_or_metadata",
+    "world_model_blob": "decoder_weight_stream",
+    "per_pair_side_info_blob": "sidecar_or_correction_stream",
+    "ac_state_blob": "entropy_model_or_range_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 __all__ = [
     "TT5L_HEADER_FMT",
     "TT5L_HEADER_SIZE",
     "TT5L_MAGIC",
     "TT5L_SCHEMA_VERSION",
+    "TT5L_SECTION_ROLES",
     "TimeTravelerArchive",
     "dequantize_per_pair_residual",
     "pack_archive",
     "parse_archive",
+    "parse_tt5l_archive_bytes",
     "quantize_per_pair_residual_int8",
 ]

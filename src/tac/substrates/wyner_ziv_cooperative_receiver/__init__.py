@@ -102,11 +102,15 @@ from tac.substrates.wyner_ziv_cooperative_receiver.architecture import (
     WynerZivSubstrate,
 )
 from tac.substrates.wyner_ziv_cooperative_receiver.archive import (
+    WZ1_HEADER_FMT,
+    WZ1_HEADER_SIZE,
     WZ1_MAGIC,
     WZ1_SCHEMA_VERSION,
+    WZ1_SECTION_ROLES,
     WynerZivArchive,
     pack_archive,
     parse_archive,
+    parse_wz1_archive_bytes,
 )
 from tac.substrates.wyner_ziv_cooperative_receiver.score_aware_loss import (
     WynerZivCooperativeReceiverLoss,
@@ -120,8 +124,11 @@ __all__ = [
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
     "SideInfoPredictor",
+    "WZ1_HEADER_FMT",
+    "WZ1_HEADER_SIZE",
     "WZ1_MAGIC",
     "WZ1_SCHEMA_VERSION",
+    "WZ1_SECTION_ROLES",
     "WynerZivArchive",
     "WynerZivConfig",
     "WynerZivCooperativeReceiverLoss",
@@ -129,4 +136,5 @@ __all__ = [
     "WynerZivSubstrate",
     "pack_archive",
     "parse_archive",
+    "parse_wz1_archive_bytes",
 ]

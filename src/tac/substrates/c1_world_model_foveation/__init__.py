@@ -138,12 +138,15 @@ from tac.substrates.c1_world_model_foveation.architecture import (
     FoveationStrategy,
 )
 from tac.substrates.c1_world_model_foveation.archive import (
+    C1WMFV1_HEADER_FMT,
     C1WMFV1_HEADER_SIZE,
     C1WMFV1_MAGIC,
     C1WMFV1_SCHEMA_VERSION,
+    C1WMFV1_SECTION_ROLES,
     WorldModelFoveationArchive,
     pack_archive,
     parse_archive,
+    parse_c1wmfv1_archive_bytes,
 )
 from tac.substrates.c1_world_model_foveation.score_aware_loss import (
     WorldModelFoveationLossWeights,
@@ -151,9 +154,11 @@ from tac.substrates.c1_world_model_foveation.score_aware_loss import (
 )
 
 __all__ = [
+    "C1WMFV1_HEADER_FMT",
     "C1WMFV1_HEADER_SIZE",
     "C1WMFV1_MAGIC",
     "C1WMFV1_SCHEMA_VERSION",
+    "C1WMFV1_SECTION_ROLES",
     "DECODER_LATENT_DIM",
     "EVAL_HW",
     "FOVEATION_BIT_ATTENUATION_DEFAULT",
@@ -172,4 +177,5 @@ __all__ = [
     "WorldModelRecurrenceMode",
     "pack_archive",
     "parse_archive",
+    "parse_c1wmfv1_archive_bytes",
 ]

@@ -65,11 +65,15 @@ from tac.substrates.time_traveler_l5_autonomy.architecture import (
     TimeTravelerSubstrate,
 )
 from tac.substrates.time_traveler_l5_autonomy.archive import (
+    TT5L_HEADER_FMT,
+    TT5L_HEADER_SIZE,
     TT5L_MAGIC,
     TT5L_SCHEMA_VERSION,
+    TT5L_SECTION_ROLES,
     TimeTravelerArchive,
     pack_archive,
     parse_archive,
+    parse_tt5l_archive_bytes,
 )
 from tac.substrates.time_traveler_l5_autonomy.score_aware_loss import (
     TimeTravelerLossWeights,
@@ -82,8 +86,11 @@ __all__ = [
     "PER_PAIR_SIDE_INFO_TARGET_BYTES",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
+    "TT5L_HEADER_FMT",
+    "TT5L_HEADER_SIZE",
     "TT5L_MAGIC",
     "TT5L_SCHEMA_VERSION",
+    "TT5L_SECTION_ROLES",
     "TimeTravelerArchive",
     "TimeTravelerConfig",
     "TimeTravelerLossWeights",
@@ -91,4 +98,5 @@ __all__ = [
     "TimeTravelerSubstrate",
     "pack_archive",
     "parse_archive",
+    "parse_tt5l_archive_bytes",
 ]

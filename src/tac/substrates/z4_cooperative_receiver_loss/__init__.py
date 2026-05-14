@@ -165,11 +165,15 @@ from tac.substrates.z4_cooperative_receiver_loss.architecture import (
     CooperativeReceiverSubstrate,
 )
 from tac.substrates.z4_cooperative_receiver_loss.archive import (
+    Z4CR1_HEADER_FMT,
+    Z4CR1_HEADER_SIZE,
     Z4CR1_MAGIC,
     Z4CR1_SCHEMA_VERSION,
+    Z4CR1_SECTION_ROLES,
     CooperativeReceiverArchive,
     pack_archive,
     parse_archive,
+    parse_z4cr1_archive_bytes,
 )
 from tac.substrates.z4_cooperative_receiver_loss.score_aware_loss import (
     CooperativeReceiverLossWeights,
@@ -186,8 +190,12 @@ __all__ = [
     "NUM_PAIRS",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
+    "Z4CR1_HEADER_FMT",
+    "Z4CR1_HEADER_SIZE",
     "Z4CR1_MAGIC",
     "Z4CR1_SCHEMA_VERSION",
+    "Z4CR1_SECTION_ROLES",
     "pack_archive",
     "parse_archive",
+    "parse_z4cr1_archive_bytes",
 ]

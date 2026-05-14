@@ -334,12 +334,127 @@ def parse_archive(blob: bytes) -> CooperativeReceiverArchive:
     )
 
 
+def parse_z4cr1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for Z4CR1 (cooperative-receiver loss) grammar.
+
+    Canonical section-offset parser for Z4CR1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — Z4CR1 auto-detection by ``b"Z4CR"`` magic prefix)
+
+    Z4CR1 is bytewise-compatible with sister C6 IBPS1 grammar (encoder +
+    decoder + per-pair z), differentiated at the META section level by the
+    ``cooperative_receiver_meta`` provenance tag (Atick-Redlich 1990
+    cooperative-receiver loss form).
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``z4cr1_header`` — 25-byte header (control_or_metadata; fixed layout)
+    - ``encoder_blob`` — brotli q=9 compressed encoder state_dict
+      (training_provenance_only — parsed/loaded for provenance, but not
+      score-affecting at inflate because ``frames_for_encoder=None``)
+    - ``decoder_blob`` — brotli q=9 compressed decoder state_dict
+      (decoder_weight_stream — the actual inflate-time consumer)
+    - ``latent_blob`` — int8 quantized per-pair latents (latent_stream)
+    - ``meta_blob`` — sorted-keys JSON with cooperative_receiver_meta
+      provenance tag + scale/zero_point (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for Z4CR1 byte layout
+    is :data:`Z4CR1_HEADER_FMT` + :data:`Z4CR1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no torch state_dict deserialization). It is
+    cheaper and is safe to call with brotli-tampered blobs (it never invokes
+    ``brotli.decompress``).
+
+    Raises ``ValueError`` on:
+
+    - short header (< 25 bytes)
+    - bad magic (!= ``b"Z4CR"``)
+    - unsupported schema version (!= 1)
+    - latent_len != num_pairs * latent_dim
+    - archive size mismatch (declared end_meta != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift. The
+      exact-equality contract matches :func:`parse_archive`.
+    """
+    if len(archive_bytes) < Z4CR1_HEADER_SIZE:
+        raise ValueError(
+            f"z4cr1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {Z4CR1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        encoder_len,
+        decoder_len,
+        latent_len,
+        meta_len,
+    ) = struct.unpack(Z4CR1_HEADER_FMT, archive_bytes[:Z4CR1_HEADER_SIZE])
+    if magic != Z4CR1_MAGIC:
+        raise ValueError(
+            f"z4cr1 archive: bad magic {magic!r} (expected {Z4CR1_MAGIC!r})"
+        )
+    if version != Z4CR1_SCHEMA_VERSION:
+        raise ValueError(
+            f"z4cr1 archive: unsupported schema version {version} "
+            f"(expected {Z4CR1_SCHEMA_VERSION})"
+        )
+    expected_latent_bytes = int(num_pairs) * int(latent_dim)
+    if latent_len != expected_latent_bytes:
+        raise ValueError(
+            f"z4cr1 archive: latent_len {latent_len} != num_pairs*latent_dim "
+            f"= {expected_latent_bytes}"
+        )
+    end_header = Z4CR1_HEADER_SIZE
+    end_encoder = end_header + int(encoder_len)
+    end_decoder = end_encoder + int(decoder_len)
+    end_latents = end_decoder + int(latent_len)
+    end_meta = end_latents + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"z4cr1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "z4cr1_header": (0, Z4CR1_HEADER_SIZE),
+        "encoder_blob": (end_header, int(encoder_len)),
+        "decoder_blob": (end_encoder, int(decoder_len)),
+        "latent_blob": (end_decoder, int(latent_len)),
+        "meta_blob": (end_latents, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for Z4CR1 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS``.
+#
+# Note: Z4CR1 inherits IBPS1's exact role taxonomy because the byte grammar
+# is bytewise-compatible. The cooperative-receiver provenance tag lives in
+# the meta_blob (control_or_metadata role).
+Z4CR1_SECTION_ROLES: dict[str, str] = {
+    "z4cr1_header": "control_or_metadata",
+    "encoder_blob": "training_provenance_only",
+    "decoder_blob": "decoder_weight_stream",
+    "latent_blob": "latent_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 __all__ = [
     "CooperativeReceiverArchive",
     "Z4CR1_HEADER_FMT",
     "Z4CR1_HEADER_SIZE",
     "Z4CR1_MAGIC",
     "Z4CR1_SCHEMA_VERSION",
+    "Z4CR1_SECTION_ROLES",
     "pack_archive",
     "parse_archive",
+    "parse_z4cr1_archive_bytes",
 ]
