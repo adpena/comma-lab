@@ -11,6 +11,7 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
+from tac.hdm8_selector_cuda_gate import HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_ARCHIVE_BYTES,
     ACTIVE_FLOOR_SCORE,
@@ -20,6 +21,7 @@ from tac.optimizer.exact_readiness import (
     ACTIVE_SCORE_FRONTIER_SCORE,
     promote_candidate_for_exact_eval,
 )
+from tac.optimizer.exact_ready_audit import audit_exact_ready_queue
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -121,6 +123,57 @@ def _make_queue(repo: Path, submission: Path, archive_bytes: int, archive_sha: s
     )
 
 
+def _hdm8_selector_gate(
+    *,
+    archive_sha: str,
+    archive_bytes: int,
+    passed: bool,
+) -> dict[str, object]:
+    return {
+        "schema": HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
+        "required": True,
+        "passed": passed,
+        "status": "passed_cuda_prefix_component_check" if passed else "blocked_mps_or_local_proxy_only",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": passed,
+        "rank_or_kill_eligible": False,
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": archive_bytes,
+        "evidence_axis": "modal-t4-cuda-proxy-prefix" if passed else "local-mps-proxy-prefix",
+        "component_deltas": {
+            "pose_delta": -0.0001 if passed else 0.001,
+            "seg_delta": 0.0,
+            "score_delta": -0.0001 if passed else 0.01,
+        },
+        "blockers": [] if passed else ["mps_or_local_proxy_axis_requires_cuda_component_probe"],
+    }
+
+
+def _mark_submission_as_hdm8_selector(
+    submission: Path,
+    *,
+    archive_sha: str,
+    archive_bytes: int,
+    gate_passed: bool,
+) -> None:
+    manifest_path = submission / "archive_manifest.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload.update(
+        {
+            "schema": "hdm8_film_grain_sidecar_archive_manifest_v1",
+            "selector_packed_in_archive": True,
+            "cuda_component_risk_gate_required": True,
+            "cuda_component_risk_gate": _hdm8_selector_gate(
+                archive_sha=archive_sha,
+                archive_bytes=archive_bytes,
+                passed=gate_passed,
+            ),
+        }
+    )
+    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
 def _write_pr101_runtime_proof(
     submission: Path,
     archive_sha: str,
@@ -187,6 +240,107 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["cpu_or_proxy_score_not_cuda_evidence"] is True
     assert row["cuda_gap_review_required_before_promotion"] is True
     assert promoted["evidence_boundary"]["cpu_or_proxy_score_not_cuda_evidence"] is True
+
+
+def test_refuses_hdm8_selector_without_passing_cuda_component_gate(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    _mark_submission_as_hdm8_selector(
+        submission,
+        archive_sha=archive_sha,
+        archive_bytes=archive_bytes,
+        gate_passed=False,
+    )
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "hdm8_selector_cuda_component_gate_not_passed" in result["report"]["blockers"]
+    assert (
+        "hdm8_selector_cuda_component_gate_has_blockers:"
+        "mps_or_local_proxy_axis_requires_cuda_component_probe"
+    ) in result["report"]["blockers"]
+    assert result["report"]["facts"]["cuda_component_risk_gate_required"] is True
+    assert (
+        result["report"]["facts"]["cuda_component_risk_gate_status"]
+        == "blocked_mps_or_local_proxy_only"
+    )
+
+
+def test_promotes_hdm8_selector_after_passing_cuda_component_gate(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    _mark_submission_as_hdm8_selector(
+        submission,
+        archive_sha=archive_sha,
+        archive_bytes=archive_bytes,
+        gate_passed=True,
+    )
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    assert row["cuda_component_risk_gate_required"] is True
+    assert row["cuda_component_risk_gate_status"] == "passed_cuda_prefix_component_check"
+    assert row["cuda_component_risk_gate"]["passed"] is True
+
+
+def test_exact_ready_audit_refuses_stale_hdm8_selector_gate_regression(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    _mark_submission_as_hdm8_selector(
+        submission,
+        archive_sha=archive_sha,
+        archive_bytes=archive_bytes,
+        gate_passed=True,
+    )
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+    exact_ready = tmp_path / "exact_ready_queue.json"
+    exact_ready.write_text(json.dumps(result["promoted_queue"], indent=2, sort_keys=True))
+    _mark_submission_as_hdm8_selector(
+        submission,
+        archive_sha=archive_sha,
+        archive_bytes=archive_bytes,
+        gate_passed=False,
+    )
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n",
+        encoding="utf-8",
+    )
+
+    audit = audit_exact_ready_queue(
+        exact_ready,
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert audit["stale_ready_rows"]
+    blockers = audit["stale_ready_rows"][0]["blockers"]
+    assert any(
+        blocker.startswith("ready_row_hdm8_selector_cuda_component_gate_not_passed")
+        for blocker in blockers
+    )
 
 
 def test_refuses_pr101_runtime_packet_without_runtime_consumption_proof(
@@ -355,6 +509,39 @@ def test_parallel_dispatch_harvest_accepts_current_run_contest_cuda_claim(
     assert result.score_axis == "contest_cuda"
     assert result.score_claim_source_key == "score_recomputed_from_components"
     assert tool._harvest_tag(result) == "[contest-CUDA]"
+
+
+def test_parallel_dispatch_refuses_required_hdm8_selector_gate_not_passed() -> None:
+    tool = _load_parallel_dispatch_tool()
+    archive_sha = "a" * 64
+
+    blockers = tool._candidate_blockers(
+        {
+            "candidate_id": "hdm8_selector",
+            "lane_id": "hnerv_hdm8_film_grain_sidecar_exact_eval",
+            "ready_for_exact_eval_dispatch": True,
+            "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+            "target_modes": ["contest_exact_eval"],
+            "score_claim": False,
+            "candidate_archive_sha256": archive_sha,
+            "candidate_archive_bytes": 187_366,
+            "cuda_component_risk_gate_required": True,
+            "cuda_component_risk_gate": _hdm8_selector_gate(
+                archive_sha=archive_sha,
+                archive_bytes=187_366,
+                passed=False,
+            ),
+        },
+        active_floor_archive_bytes=None,
+    )
+
+    assert any(
+        blocker.startswith(
+            "hdm8_selector_cuda_component_gate:"
+            "hdm8_selector_cuda_component_gate_not_passed"
+        )
+        for blocker in blockers
+    )
 
 
 def test_parallel_dispatch_harvest_ignores_stale_label_bound_auth_eval(

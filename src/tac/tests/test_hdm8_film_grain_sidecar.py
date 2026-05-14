@@ -352,12 +352,21 @@ def test_builder_materializes_selector_from_pair_proxy(tmp_path: Path) -> None:
     assert manifest["positive_proxy_candidate_for_cuda_probe"] is True
     assert manifest["ready_for_exact_cuda_after_positive_proxy"] is False
     assert manifest["cuda_transfer_policy"]["required_before_ranking"] == [
+        "cuda_component_risk_gate_passed",
+        "lane_dispatch_claim",
         "byte_closed_archive_runtime_exact_contest_cuda_auth_eval",
-        "non_positive_posenet_delta_on_contest_cuda",
-        "non_positive_charged_score_delta_on_contest_cuda",
     ]
+    assert manifest["cuda_component_risk_gate_required"] is True
+    assert manifest["cuda_component_risk_gate"]["passed"] is False
+    assert (
+        "mps_or_local_proxy_axis_requires_cuda_component_probe"
+        in manifest["cuda_component_risk_gate"]["blockers"]
+    )
     assert manifest["proxy"]["selector_config_bytes_if_charged"] > 0
     assert "selector_side_information_must_be_packed_into_archive_for_submission" in manifest[
+        "dispatch_blockers"
+    ]
+    assert "hdm8_selector_cuda_component_risk_gate_not_passed" in manifest[
         "dispatch_blockers"
     ]
     assert config["mode"] == "selector"
@@ -422,6 +431,8 @@ def test_builder_can_pack_selector_into_archive(tmp_path: Path) -> None:
     assert manifest["positive_proxy_candidate_for_cuda_probe"] is True
     assert manifest["ready_for_exact_cuda_after_positive_proxy"] is False
     assert manifest["cuda_transfer_policy"]["ready_for_exact_eval_dispatch"] is False
+    assert manifest["cuda_component_risk_gate_required"] is True
+    assert manifest["cuda_component_risk_gate"]["passed"] is False
     assert manifest["archive"]["selector_pack_manifest"]["selector_codec"] == "brotli"
     assert manifest["archive"]["selector_pack_manifest"]["format_id"] == "0x04"
     assert manifest["archive"]["selector_pack_manifest"]["selector_encoded_bytes"] <= manifest[
@@ -431,6 +442,66 @@ def test_builder_can_pack_selector_into_archive(tmp_path: Path) -> None:
     assert manifest["proxy"]["positive_charged"] is True
     assert manifest["proxy"]["delta_vs_none_charged"] < 0
     assert not any("selector_side_information" in b for b in manifest["dispatch_blockers"])
+    assert "hdm8_selector_cuda_component_risk_gate_not_passed" in manifest[
+        "dispatch_blockers"
+    ]
+
+
+def test_builder_cuda_prefix_selector_component_gate_can_pass(tmp_path: Path) -> None:
+    builder = _builder()
+    proxy = tmp_path / "cuda_pair_proxy.json"
+    proxy.write_text(
+        json.dumps(
+            {
+                "axis": "modal-t4-cuda-proxy-prefix",
+                "archive_bytes": 186395,
+                "n_pairs": 32,
+                "modes": [
+                    {
+                        "mode": "none",
+                        "score_proxy": 0.30,
+                        "avg_posenet_dist": 0.001,
+                        "avg_segnet_dist": 0.001,
+                        "pair_posenet_dist": [0.001] * 32,
+                        "pair_segnet_dist": [0.001] * 32,
+                    },
+                    {
+                        "mode": "even_bias:1",
+                        "score_proxy": 0.20,
+                        "avg_posenet_dist": 0.0001,
+                        "avg_segnet_dist": 0.001,
+                        "pair_posenet_dist": [0.0001] * 32,
+                        "pair_segnet_dist": [0.001] * 32,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = builder.build_packet(
+        archive=HDM8_ARCHIVE,
+        runtime_template=RUNTIME_DIR,
+        output_dir=tmp_path / "packet",
+        mode="ignored",
+        proxy_json=proxy,
+        selector_from_proxy_json=True,
+        pack_selector_into_archive=True,
+        require_positive_proxy=True,
+    )
+
+    assert manifest["cuda_component_risk_gate_required"] is True
+    assert manifest["cuda_component_risk_gate"]["passed"] is True
+    assert manifest["cuda_component_risk_gate"]["status"] == "passed_cuda_prefix_component_check"
+    assert manifest["ready_for_exact_cuda_after_positive_proxy"] is True
+    assert manifest["cuda_transfer_policy"]["ready_for_exact_eval_dispatch"] is True
+    assert "hdm8_selector_cuda_component_risk_gate_not_passed" not in manifest[
+        "dispatch_blockers"
+    ]
+    archive_manifest = json.loads(
+        (tmp_path / "packet" / "archive_manifest.json").read_text(encoding="utf-8")
+    )
+    assert archive_manifest["cuda_component_risk_gate"]["passed"] is True
 
 
 def test_builder_can_pack_uncompressed_selector_for_legacy_parser(tmp_path: Path) -> None:

@@ -9,6 +9,7 @@ and runtime custody gate proves that the candidate can enter the canonical
 
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import importlib.util
 import json
@@ -16,11 +17,11 @@ import math
 import os
 import re
 import time
-import datetime as dt
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.hdm8_selector_cuda_gate import validate_hdm8_selector_cuda_gate_context
 from tac.hnerv_frontier_defaults import (
     ACTIVE_FLOOR_ARCHIVE_BYTES,
     ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL,
@@ -73,7 +74,6 @@ CLEARABLE_SOURCE_BLOCKERS = frozenset(
         "gha_eval_required_before_exact_cuda_promotion",
         "operator_decision_required_before_gha_or_exact_cuda",
         "macos_cpu_is_not_contest_cuda_evidence",
-        "a1_runtime_variant_requires_cpu_or_cuda_eval",
     }
 )
 BLOCKED_SOURCE_BLOCKER_PREFIXES = (
@@ -590,7 +590,7 @@ def runtime_dependency_manifest(submission_dir: Path, repo_root: Path) -> dict[s
         raise RuntimeError(f"could not load contest_auth_eval from {module_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    runtime_manifest_fn = getattr(module, "_runtime_dependency_manifest")
+    runtime_manifest_fn = module._runtime_dependency_manifest
 
     return runtime_manifest_fn(
         submission_dir / "inflate.sh",
@@ -769,9 +769,7 @@ def readiness_blockers(
 
     if submission_dir is None and archive_path is not None:
         submission_dir = archive_path.parent
-    if submission_dir is None:
-        blockers.append("submission_dir_missing")
-    elif not submission_dir.is_dir():
+    if submission_dir is None or not submission_dir.is_dir():
         blockers.append("submission_dir_missing")
     facts["submission_dir"] = submission_dir
 
@@ -827,6 +825,15 @@ def readiness_blockers(
                                 blockers.append(f"archive_manifest_member_mismatch:{name}")
     facts["archive_manifest_path"] = manifest_path
     facts["archive_manifest"] = manifest_payload
+    gate_blockers, gate_facts = validate_hdm8_selector_cuda_gate_context(
+        row,
+        manifest_payload,
+        expected_archive_sha256=facts.get("archive_sha256")
+        if isinstance(facts.get("archive_sha256"), str)
+        else expected_sha,
+    )
+    blockers.extend(gate_blockers)
+    facts.update(gate_facts)
 
     runtime_manifest: dict[str, Any] | None = None
     if inflate_sh is not None and inflate_sh.is_file():
@@ -973,6 +980,13 @@ def promoted_row(
         "runtime_consumption_proof_schema": facts.get(
             "runtime_consumption_proof_schema"
         ),
+        "cuda_component_risk_gate_required": bool(
+            facts.get("hdm8_selector_cuda_component_gate_required")
+        ),
+        "cuda_component_risk_gate_status": facts.get(
+            "hdm8_selector_cuda_component_gate_status"
+        ),
+        "cuda_component_risk_gate": facts.get("hdm8_selector_cuda_component_gate"),
         "score_affecting_payload_changed": bool(
             as_bool(source_row.get("score_affecting_payload_changed"))
         ),
@@ -1100,6 +1114,15 @@ def promote_candidate_for_exact_eval(
             "runtime_consumption_proof_sha256": facts.get(
                 "runtime_consumption_proof_sha256"
             ),
+            "cuda_component_risk_gate_required": facts.get(
+                "hdm8_selector_cuda_component_gate_required"
+            ),
+            "cuda_component_risk_gate_status": facts.get(
+                "hdm8_selector_cuda_component_gate_status"
+            ),
+            "cuda_component_risk_gate_evidence_axis": facts.get(
+                "hdm8_selector_cuda_component_gate_evidence_axis"
+            ),
             "source_score_fields_stripped": sorted(
                 facts.get("stripped_source_score_fields") or []
             ),
@@ -1136,10 +1159,12 @@ def json_dumps(payload: Any) -> str:
 __all__ = [
     "ACTIVE_FLOOR_ARCHIVE_BYTES",
     "ACTIVE_FLOOR_SCORE",
+    "ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL",
     "ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE",
     "ACTIVE_RATE_ONLY_FLOOR_SCORE",
+    "ACTIVE_SCORE_FRONTIER_LABEL",
     "ACTIVE_SCORE_FRONTIER_SCORE",
-    "ExactReadinessError",
     "QUEUE_SCHEMA",
+    "ExactReadinessError",
     "promote_candidate_for_exact_eval",
 ]

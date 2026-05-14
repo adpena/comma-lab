@@ -9,7 +9,6 @@ import importlib.util
 import json
 import shutil
 import struct
-import sys
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -24,8 +23,16 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.repo_io import read_json, repo_relative, sha256_file, write_json  # noqa: E402
 from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest  # noqa: E402
+from tac.hdm8_selector_cuda_gate import (  # noqa: E402
+    DEFAULT_HDM8_CUDA_REFERENCE_RESULT,
+    DEFAULT_MAX_POSE_DELTA,
+    DEFAULT_MAX_SCORE_DELTA,
+    DEFAULT_MAX_SEG_DELTA,
+    DEFAULT_MIN_CUDA_PREFIX_PAIRS,
+    build_hdm8_selector_cuda_component_gate,
+)
+from tac.repo_io import read_json, repo_relative, sha256_file, write_json  # noqa: E402
 from tac.reproducibility import (  # noqa: E402
     collect_source_transparency,
     transparency_report_markdown,
@@ -76,6 +83,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Fail unless --proxy-json shows this exact mode beating none.",
     )
+    parser.add_argument(
+        "--cuda-component-reference-json",
+        type=Path,
+        default=REPO_ROOT / DEFAULT_HDM8_CUDA_REFERENCE_RESULT,
+        help="Contest-CUDA HDM8 baseline auth-eval JSON used for selector risk calibration.",
+    )
+    parser.add_argument(
+        "--candidate-exact-cuda-json",
+        type=Path,
+        default=None,
+        help="Optional candidate contest-CUDA auth-eval JSON for post-result component gating.",
+    )
+    parser.add_argument(
+        "--cuda-prefix-min-pairs",
+        type=int,
+        default=DEFAULT_MIN_CUDA_PREFIX_PAIRS,
+        help="Minimum Modal/CUDA prefix pairs required before selector dispatch gating can pass.",
+    )
+    parser.add_argument("--cuda-max-pose-delta", type=float, default=DEFAULT_MAX_POSE_DELTA)
+    parser.add_argument("--cuda-max-seg-delta", type=float, default=DEFAULT_MAX_SEG_DELTA)
+    parser.add_argument("--cuda-max-score-delta", type=float, default=DEFAULT_MAX_SCORE_DELTA)
     return parser.parse_args(argv)
 
 
@@ -426,6 +454,12 @@ def _packet_build_command_template(
     pack_selector_into_archive: bool,
     selector_codec: str,
     require_positive_proxy: bool,
+    cuda_component_reference_json: Path,
+    candidate_exact_cuda_json: Path | None,
+    cuda_prefix_min_pairs: int,
+    cuda_max_pose_delta: float,
+    cuda_max_seg_delta: float,
+    cuda_max_score_delta: float,
 ) -> list[str]:
     command = [
         ".venv/bin/python",
@@ -449,6 +483,25 @@ def _packet_build_command_template(
         command.append("--pack-selector-into-archive")
     if require_positive_proxy:
         command.append("--require-positive-proxy")
+    if cuda_component_reference_json != REPO_ROOT / DEFAULT_HDM8_CUDA_REFERENCE_RESULT:
+        command.extend(
+            [
+                "--cuda-component-reference-json",
+                repo_relative(cuda_component_reference_json, REPO_ROOT),
+            ]
+        )
+    if candidate_exact_cuda_json is not None:
+        command.extend(
+            ["--candidate-exact-cuda-json", repo_relative(candidate_exact_cuda_json, REPO_ROOT)]
+        )
+    if cuda_prefix_min_pairs != DEFAULT_MIN_CUDA_PREFIX_PAIRS:
+        command.extend(["--cuda-prefix-min-pairs", str(cuda_prefix_min_pairs)])
+    if cuda_max_pose_delta != DEFAULT_MAX_POSE_DELTA:
+        command.extend(["--cuda-max-pose-delta", str(cuda_max_pose_delta)])
+    if cuda_max_seg_delta != DEFAULT_MAX_SEG_DELTA:
+        command.extend(["--cuda-max-seg-delta", str(cuda_max_seg_delta)])
+    if cuda_max_score_delta != DEFAULT_MAX_SCORE_DELTA:
+        command.extend(["--cuda-max-score-delta", str(cuda_max_score_delta)])
     return command
 
 
@@ -463,11 +516,21 @@ def build_packet(
     pack_selector_into_archive: bool = False,
     selector_codec: str = "brotli",
     require_positive_proxy: bool = False,
+    cuda_component_reference_json: Path = REPO_ROOT / DEFAULT_HDM8_CUDA_REFERENCE_RESULT,
+    candidate_exact_cuda_json: Path | None = None,
+    cuda_prefix_min_pairs: int = DEFAULT_MIN_CUDA_PREFIX_PAIRS,
+    cuda_max_pose_delta: float = DEFAULT_MAX_POSE_DELTA,
+    cuda_max_seg_delta: float = DEFAULT_MAX_SEG_DELTA,
+    cuda_max_score_delta: float = DEFAULT_MAX_SCORE_DELTA,
 ) -> dict[str, Any]:
     archive = archive.resolve()
     runtime_template = runtime_template.resolve()
     output_dir = output_dir.resolve()
     proxy_json = proxy_json.resolve() if proxy_json is not None else None
+    cuda_component_reference_json = cuda_component_reference_json.resolve()
+    candidate_exact_cuda_json = (
+        candidate_exact_cuda_json.resolve() if candidate_exact_cuda_json is not None else None
+    )
     if not archive.exists():
         raise FileNotFoundError(f"archive not found: {archive}")
     if not runtime_template.exists():
@@ -564,9 +627,31 @@ def build_packet(
         "selector_pack_manifest": archive_pack_manifest,
         "score_claim": False,
     }
-    write_json(output_dir / "archive_manifest.json", archive_manifest)
+    selector_gate_required = mode == "selector"
+    cuda_component_risk_gate: dict[str, Any] | None = None
+    if selector_gate_required:
+        cuda_component_risk_gate = build_hdm8_selector_cuda_component_gate(
+            proxy=proxy,
+            candidate_archive_sha256=archive_manifest["archive_sha256"],
+            candidate_archive_bytes=archive_manifest["archive_bytes"],
+            repo_root=REPO_ROOT,
+            reference_result_path=cuda_component_reference_json,
+            candidate_exact_cuda_result_path=candidate_exact_cuda_json,
+            max_pose_delta=cuda_max_pose_delta,
+            max_seg_delta=cuda_max_seg_delta,
+            max_score_delta=cuda_max_score_delta,
+            min_cuda_prefix_pairs=cuda_prefix_min_pairs,
+        )
+        archive_manifest["cuda_component_risk_gate_required"] = True
+        archive_manifest["cuda_component_risk_gate"] = cuda_component_risk_gate
 
     positive_proxy_candidate = bool(proxy.get("positive"))
+    selector_cuda_gate_passed = bool(
+        cuda_component_risk_gate and cuda_component_risk_gate.get("passed") is True
+    )
+    ready_after_positive_proxy = bool(
+        selector_gate_required and positive_proxy_candidate and selector_cuda_gate_passed
+    )
     blockers: list[str] = []
     if mode == "none":
         blockers.append("postfilter_mode_none")
@@ -576,7 +661,12 @@ def build_packet(
         blockers.append("positive_proxy_requires_cuda_transfer_confirmation")
     if mode == "selector" and not pack_selector_into_archive:
         blockers.append("selector_side_information_must_be_packed_into_archive_for_submission")
+    if selector_gate_required and not selector_cuda_gate_passed:
+        blockers.append("hdm8_selector_cuda_component_risk_gate_not_passed")
     blockers.extend(["lane_dispatch_claim_missing", "exact_cuda_auth_eval_missing"])
+    archive_manifest["ready_for_exact_eval_dispatch"] = False
+    archive_manifest["dispatch_blockers"] = blockers
+    write_json(output_dir / "archive_manifest.json", archive_manifest)
 
     exact_cmd = [
         ".venv/bin/modal",
@@ -623,6 +713,12 @@ def build_packet(
         pack_selector_into_archive=pack_selector_into_archive,
         selector_codec=selector_codec,
         require_positive_proxy=require_positive_proxy,
+        cuda_component_reference_json=cuda_component_reference_json,
+        candidate_exact_cuda_json=candidate_exact_cuda_json,
+        cuda_prefix_min_pairs=cuda_prefix_min_pairs,
+        cuda_max_pose_delta=cuda_max_pose_delta,
+        cuda_max_seg_delta=cuda_max_seg_delta,
+        cuda_max_score_delta=cuda_max_score_delta,
     )
     source_transparency = collect_source_transparency(
         repo_root=REPO_ROOT,
@@ -648,7 +744,8 @@ def build_packet(
     )
     manifest: dict[str, Any] = {
         "schema": MANIFEST_SCHEMA,
-        "research_only": not bool(proxy.get("positive")),
+        "research_only": bool(selector_gate_required and not selector_cuda_gate_passed)
+        or not bool(proxy.get("positive")),
         "score_claim": False,
         "promotion_eligible": False,
         "dispatch_attempted": False,
@@ -696,24 +793,32 @@ def build_packet(
         "proxy": proxy,
         "static_packet_ready": True,
         "positive_proxy_candidate_for_cuda_probe": positive_proxy_candidate,
-        "ready_for_exact_cuda_after_positive_proxy": False,
+        "cuda_component_risk_gate_required": selector_gate_required,
+        "cuda_component_risk_gate": cuda_component_risk_gate,
+        "ready_for_exact_cuda_after_positive_proxy": ready_after_positive_proxy,
         "cuda_transfer_policy": {
             "schema": "hdm8_proxy_to_cuda_transfer_policy_v1",
             "proxy_axis": proxy.get("axis"),
             "positive_proxy_candidate_for_cuda_probe": positive_proxy_candidate,
-            "rankable_on_cuda": False,
+            "rankable_on_cuda": selector_cuda_gate_passed,
             "score_claim": False,
             "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            "ready_for_exact_eval_dispatch": selector_cuda_gate_passed,
+            "cuda_component_risk_gate": cuda_component_risk_gate,
             "required_before_ranking": [
+                "cuda_component_risk_gate_passed",
+                "lane_dispatch_claim",
                 "byte_closed_archive_runtime_exact_contest_cuda_auth_eval",
-                "non_positive_posenet_delta_on_contest_cuda",
-                "non_positive_charged_score_delta_on_contest_cuda",
             ],
             "blockers": [
                 "local_cpu_mps_proxy_not_score_truth",
                 "fes1_hdm8_proxy_selectors_observed_cuda_pose_regression",
                 "requires_exact_cuda_transfer_confirmation",
+                *(
+                    []
+                    if selector_cuda_gate_passed
+                    else ["requires_cuda_prefix_or_exact_cuda_component_risk_gate"]
+                ),
             ],
         },
         "ready_for_exact_eval_dispatch": False,
@@ -752,6 +857,12 @@ def main(argv: list[str] | None = None) -> int:
         pack_selector_into_archive=args.pack_selector_into_archive,
         selector_codec=args.selector_codec,
         require_positive_proxy=args.require_positive_proxy,
+        cuda_component_reference_json=args.cuda_component_reference_json,
+        candidate_exact_cuda_json=args.candidate_exact_cuda_json,
+        cuda_prefix_min_pairs=args.cuda_prefix_min_pairs,
+        cuda_max_pose_delta=args.cuda_max_pose_delta,
+        cuda_max_seg_delta=args.cuda_max_seg_delta,
+        cuda_max_score_delta=args.cuda_max_score_delta,
     )
     json_out = args.json_out or (args.output_dir / "packet_manifest.json")
     if json_out.resolve() != (args.output_dir.resolve() / "packet_manifest.json"):

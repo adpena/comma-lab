@@ -216,3 +216,50 @@ Reactivation criteria:
 3. Postfilter packets remain worth exploring only if charged selector bytes are
    amortized by a component improvement larger than the `+0.00065` byte-term
    cost observed here.
+
+## Fail-Closed CUDA Selector Gate Landing
+
+Implementation status: code and tests landed locally; no GPU spend and no score
+claim.
+
+New deterministic gate:
+
+- `src/tac/hdm8_selector_cuda_gate.py` defines
+  `hdm8_selector_cuda_component_risk_gate_v1`.
+- MPS/local-only HDM8 selector packets fail closed with
+  `mps_or_local_proxy_axis_requires_cuda_component_probe`.
+- CUDA-prefix selector evidence can pass only when PoseNet, SegNet, and charged
+  score deltas are all non-positive against the CUDA component baseline.
+- Candidate exact-CUDA JSON can also be consumed after eval; the known charged
+  MPS selector result fails this gate because PoseNet and score regress.
+
+Wire-in:
+
+- `tools/build_hdm8_film_grain_sidecar_packet.py` now writes
+  `cuda_component_risk_gate_required=true` and the gate payload into both the
+  packet manifest and archive manifest for selector packets.
+- `src/tac/optimizer/exact_readiness.py` refuses exact-ready promotion when an
+  HDM8 selector manifest lacks a passing gate.
+- `src/tac/optimizer/exact_ready_audit.py` re-checks live archive manifests so a
+  stale exact-ready queue cannot dispatch after the selector gate regresses.
+- `tools/parallel_dispatch_top_k.py` refuses ready rows that directly carry a
+  required but non-passing selector gate.
+
+Focused verification:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest \
+  src/tac/tests/test_hdm8_selector_cuda_gate.py \
+  src/tac/tests/test_hdm8_film_grain_sidecar.py \
+  src/tac/tests/test_optimizer_exact_readiness.py -q
+# 46 passed
+
+PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest \
+  src/tac/tests/test_modal_hdm8_postfilter_sweep.py -q
+# 11 passed
+```
+
+Remaining blocker: no new CUDA-prefix selector payload has passed the component
+gate yet. MPS-only selector positives are now research signals only until a
+Modal/CUDA prefix sweep or candidate exact-CUDA component result clears the
+gate.

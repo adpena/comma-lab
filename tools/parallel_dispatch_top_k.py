@@ -50,6 +50,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from tac.auth_eval_result import parse_auth_eval_score_claim  # noqa: E402
+from tac.hdm8_selector_cuda_gate import validate_hdm8_selector_cuda_gate_context  # noqa: E402
 from tac.hnerv_frontier_defaults import (  # noqa: E402
     ACTIVE_FLOOR_ARCHIVE_BYTES,
     ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL,
@@ -640,6 +641,15 @@ def _candidate_blockers(
     # gating predicate for the actuator.
     if candidate.get("ready_for_exact_eval_dispatch") is not True:
         blockers.append("candidate_not_ready_for_exact_eval_dispatch")
+    gate_blockers, _gate_facts = validate_hdm8_selector_cuda_gate_context(
+        candidate,
+        None,
+        expected_archive_sha256=_candidate_archive_sha256(candidate) or None,
+    )
+    blockers.extend(
+        f"hdm8_selector_cuda_component_gate:{blocker}"
+        for blocker in gate_blockers
+    )
     if not str(candidate.get("evidence_semantics") or "").strip():
         blockers.append("evidence_semantics_missing")
     evidence_text, searchable_evidence_text = _candidate_guard_text(

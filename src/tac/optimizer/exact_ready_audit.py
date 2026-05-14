@@ -9,6 +9,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.hdm8_selector_cuda_gate import validate_hdm8_selector_cuda_gate_context
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_SCORE,
     active_claim_conflicts,
@@ -96,6 +97,12 @@ def _row_submission_dir(row: Mapping[str, Any], *, repo_root: Path, queue_dir: P
 
 def _row_inflate_sh_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
     return resolve_path(row.get("inflate_sh_path"), repo_root=repo_root, queue_dir=queue_dir)
+
+
+def _row_archive_manifest_path(
+    row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path
+) -> Path | None:
+    return resolve_path(row.get("archive_manifest_path"), repo_root=repo_root, queue_dir=queue_dir)
 
 
 def _discover_packetir_exact_closure_records(repo_root: Path) -> dict[str, list[dict[str, Any]]]:
@@ -270,7 +277,11 @@ def _ready_row_live_custody_blockers(
             if not report_path.is_file():
                 blockers.append("ready_row_report_txt_missing")
 
-            manifest_path = default_manifest_path(submission_dir)
+            manifest_path = _row_archive_manifest_path(
+                row,
+                repo_root=repo_root,
+                queue_dir=queue_dir,
+            ) or default_manifest_path(submission_dir)
             facts["archive_manifest_path"] = repo_rel(manifest_path, repo_root)
             if not manifest_path.is_file():
                 blockers.append("ready_row_archive_manifest_missing")
@@ -311,6 +322,15 @@ def _ready_row_live_custody_blockers(
                                     blockers.append(
                                         f"ready_row_archive_manifest_member_mismatch:{name}"
                                     )
+                        gate_blockers, gate_facts = validate_hdm8_selector_cuda_gate_context(
+                            row,
+                            raw_manifest,
+                            expected_archive_sha256=actual_archive_sha,
+                        )
+                        blockers.extend(
+                            f"ready_row_{blocker}" for blocker in gate_blockers
+                        )
+                        facts.update(gate_facts)
             try:
                 runtime_manifest = runtime_dependency_manifest(submission_dir, repo_root)
             except (OSError, ValueError, RuntimeError, SyntaxError) as exc:
