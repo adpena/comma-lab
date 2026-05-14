@@ -594,6 +594,54 @@ def test_loss_rejects_unit_domain_rgb() -> None:
         )
 
 
+def test_loss_allows_cuda_interpolation_epsilon(monkeypatch) -> None:
+    import tac.differentiable_eval_roundtrip as eval_roundtrip
+    import tac.substrates.wyner_ziv_cooperative_receiver.score_aware_loss as wz_mod
+
+    monkeypatch.setattr(
+        eval_roundtrip, "apply_eval_roundtrip_during_training", lambda x: x
+    )
+    monkeypatch.setattr(
+        wz_mod,
+        "score_pair_components",
+        lambda **_kwargs: (torch.tensor(0.0), torch.tensor(0.0)),
+    )
+
+    seg = _MockScorer("seg")
+    pose = _MockScorer("pose")
+    loss_fn = WynerZivCooperativeReceiverLoss(seg, pose, WynerZivLossWeights())
+    rgb = torch.full((1, 3, 32, 32), 128.0)
+    gt = torch.full((1, 3, 32, 32), 128.0)
+    gt[0, 0, 0, 0] = 255.00001525878906
+    loss, parts = loss_fn(
+        rgb,
+        rgb,
+        gt,
+        gt,
+        torch.tensor(50_000.0),
+        apply_eval_roundtrip=True,
+        noise_std=0.0,
+    )
+    assert torch.isfinite(loss)
+    assert "loss_total" in parts
+
+
+def test_loss_rejects_real_rgb_overshoot() -> None:
+    seg = _MockScorer("seg")
+    pose = _MockScorer("pose")
+    loss_fn = WynerZivCooperativeReceiverLoss(seg, pose, WynerZivLossWeights())
+    with pytest.raises(ValueError, match=r"\[0, 255\]"):
+        loss_fn(
+            torch.full((1, 3, 32, 32), 255.01),
+            torch.full((1, 3, 32, 32), 255.0),
+            torch.full((1, 3, 32, 32), 128.0),
+            torch.full((1, 3, 32, 32), 128.0),
+            torch.tensor(50_000.0),
+            apply_eval_roundtrip=True,
+            noise_std=0.0,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Distinction from sister Atick-Redlich substrate
 # ---------------------------------------------------------------------------

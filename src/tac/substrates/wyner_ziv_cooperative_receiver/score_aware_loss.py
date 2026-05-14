@@ -48,6 +48,9 @@ from tac.substrates.score_aware_common import (
 )
 
 
+_RGB_255_DOMAIN_EPS = 1e-3
+
+
 def _validate_rgb_255_domain(name: str, tensor: torch.Tensor) -> None:
     """Fail closed when callers pass nonzero unit-domain RGB by mistake."""
 
@@ -56,7 +59,7 @@ def _validate_rgb_255_domain(name: str, tensor: torch.Tensor) -> None:
         raise ValueError(f"{name} must contain finite RGB values")
     min_value = float(detached.min().item())
     max_value = float(detached.max().item())
-    if min_value < 0.0 or max_value > 255.0:
+    if min_value < -_RGB_255_DOMAIN_EPS or max_value > 255.0 + _RGB_255_DOMAIN_EPS:
         raise ValueError(
             f"{name} must be in [0, 255]; got min={min_value} max={max_value}"
         )

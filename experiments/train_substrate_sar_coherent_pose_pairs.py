@@ -84,6 +84,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     require_contest_cuda_auth_eval_claim as _canon_require_contest_cuda_auth_eval_claim,
 )
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates._shared.trainer_skeleton import (
     sha256_bytes as _canon_sha256_bytes,
 )
@@ -833,31 +836,29 @@ def _full_main(args: argparse.Namespace) -> int:
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_emitted")
 
-        # 12. Auth eval ([contest-CUDA] inline).
+        # 12. Auth eval ([contest-CUDA] inline) through the canonical gate.
         auth_eval_json_path = args.output_dir / "auth_eval.json"
-        if not args.skip_auth_eval and device.type == "cuda":
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--submission-dir", str(submission_dir),
-                "--upstream-dir", str(args.upstream_dir),
-                "--result-json", str(auth_eval_json_path),
-                "--device", "cuda",
-            ]
-            print(f"[{SUBSTRATE_TAG}-full] launching auth eval: {' '.join(cmd)}")
-            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            if proc.returncode != 0:
-                raise RuntimeError(
-                    f"[{SUBSTRATE_TAG}-full] contest_auth_eval.py failed "
-                    f"rc={proc.returncode}; stdout_tail={proc.stdout[-2000:]}; "
-                    f"stderr_tail={proc.stderr[-2000:]}"
-                )
+        auth_result = _canon_gate_auth_eval_call(
+            args=args,
+            archive_zip=archive_zip_path,
+            inflate_sh=submission_dir / "inflate.sh",
+            upstream_dir=args.upstream_dir,
+            output_json=auth_eval_json_path,
+            contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+            substrate_tag=SUBSTRATE_TAG,
+            device=device,
+        )
+        if auth_result is not None:
+            # Defense-in-depth: keep the older archive-SHA check after the
+            # canonical gate validates score-axis and component recomputation.
             _canon_require_contest_cuda_auth_eval_claim(
                 auth_eval_json_path,
                 archive_sha256=archive_zip_sha,
                 substrate_tag=SUBSTRATE_TAG,
             )
             _stage("auth_eval_cuda_done_valid_claim")
+        else:
+            _stage("auth_eval_skipped_gate_refused")
     finally:
         unpatch_upstream_yuv6(yuv6_token)
         _stage("upstream_yuv6_unpatched")
