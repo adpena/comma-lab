@@ -172,14 +172,26 @@ def _validate_cell(name: str, value, *, allow_empty: bool = False, allow_space: 
 
 def _validate_lane_id(value: str) -> str:
     lane_id = _validate_cell("--lane-id", value, allow_space=False)
-    lane_id_lower = lane_id.lower()
-    if lane_id_lower in _RESERVED_LANE_IDS or not _LANE_ID_RE.fullmatch(lane_id):
+    if not _lane_id_is_valid(lane_id):
         raise SystemExit(
             "VALIDATION_ERROR: --lane-id must be a real canonical lane id "
             "(letters plus optional digits, dots, underscores, hyphens, or colons); "
             f"got {lane_id!r}"
         )
     return lane_id
+
+
+def _lane_id_is_valid(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    lane_id = value.strip()
+    if lane_id != value or not lane_id:
+        return False
+    lane_id_lower = lane_id.lower()
+    return (
+        lane_id_lower not in _RESERVED_LANE_IDS
+        and _LANE_ID_RE.fullmatch(lane_id) is not None
+    )
 
 
 def _validate_no_shell_argv0_expansion(name: str, value: str) -> None:
@@ -311,6 +323,7 @@ def _summarize_claims(
     stale_nonterminal: list[dict[str, object]] = []
     terminal_latest: list[dict[str, object]] = []
     unparsable_timestamp: list[dict[str, object]] = []
+    invalid_lane_id: list[dict[str, object]] = []
 
     for claim in _latest_claims_by_job(claims).values():
         row = asdict(claim)
@@ -319,6 +332,8 @@ def _summarize_claims(
         ts = _parse_utc(claim.timestamp_utc)
         if ts is None:
             unparsable_timestamp.append(row)
+        if not _lane_id_is_valid(claim.lane_id):
+            invalid_lane_id.append(row)
         if _is_terminal(claim.status):
             terminal_latest.append(row)
         elif ts is None or now_utc - ts > ttl:
@@ -329,6 +344,7 @@ def _summarize_claims(
     active.sort(key=lambda row: (str(row["lane_id"]), str(row["instance_job_id"])))
     stale_nonterminal.sort(key=lambda row: (str(row["lane_id"]), str(row["instance_job_id"])))
     terminal_latest.sort(key=lambda row: (str(row["lane_id"]), str(row["instance_job_id"])))
+    invalid_lane_id.sort(key=lambda row: (str(row["lane_id"]), str(row["instance_job_id"])))
     return {
         "schema": "pact.dispatch_claim_summary.v1",
         "now_utc": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -338,10 +354,12 @@ def _summarize_claims(
         "stale_nonterminal_count": len(stale_nonterminal),
         "terminal_latest_count": len(terminal_latest),
         "unparsable_timestamp_count": len(unparsable_timestamp),
+        "invalid_lane_id_count": len(invalid_lane_id),
         "active": active,
         "stale_nonterminal": stale_nonterminal,
         "terminal_latest": terminal_latest,
         "unparsable_timestamp": unparsable_timestamp,
+        "invalid_lane_id": invalid_lane_id,
     }
 
 
@@ -394,7 +412,8 @@ def _summary(args: argparse.Namespace) -> int:
         f"active={summary['active_count']} "
         f"stale_nonterminal={summary['stale_nonterminal_count']} "
         f"terminal_latest={summary['terminal_latest_count']} "
-        f"unparsable_timestamp={summary['unparsable_timestamp_count']}"
+        f"unparsable_timestamp={summary['unparsable_timestamp_count']} "
+        f"invalid_lane_id={summary['invalid_lane_id_count']}"
     )
     for row in summary["active"]:
         print(

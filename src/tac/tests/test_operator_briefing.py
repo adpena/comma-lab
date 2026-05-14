@@ -426,6 +426,7 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
             "active_count": 1,
             "stale_nonterminal_count": 0,
             "terminal_latest_count": 3,
+            "invalid_lane_id_count": 1,
             "active": [
                 {
                     # FAKE_LANE_OK: synthetic operator-briefing formatter fixture.
@@ -437,11 +438,21 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
                 }
             ],
             "stale_nonterminal": [],
+            "invalid_lane_id": [
+                {
+                    "lane_id": "0",
+                    "instance_job_id": "bad-job",
+                    "status": "refused_dispatch_bad_claim",
+                }
+            ],
         },
     )
 
     text = mod._format_dispatch_claim_summary()
 
+    assert "invalid_lane_id: 1" in text
+    assert "INVALID LANE IDS" in text
+    assert "lane_id=0" in text
     assert "ACTIVE CONFLICT GUARD" in text
     assert "lane_id=lane_a1_cuda" in text
     assert "job=job-123" in text

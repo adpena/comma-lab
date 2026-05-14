@@ -54,6 +54,17 @@ Follow-up P1 exact-readiness guard:
 
 Result: `24 passed`.
 
+Follow-up P1 no-signal-loss operator gates:
+
+```bash
+.venv/bin/python -m pytest \
+  src/tac/tests/test_claim_lane_dispatch.py \
+  src/tac/tests/test_operator_briefing.py \
+  src/tac/tests/test_all_lanes_operator_briefing_gate.py -q
+```
+
+Result: `44 passed`.
+
 ## P1 Follow-Up: Non-Promotional HLM1 Reference
 
 HLM1 exact CUDA remains preserved as a reviewed score-lowering reference:
@@ -72,6 +83,26 @@ parallel-dispatch defaults is now HDM4:
 This prevents non-promotional HLM1 evidence from silently blocking dispatch of
 future candidates that could be promotable between HDM4 and HLM1, while keeping
 HLM1 visible as exact-CUDA review signal.
+
+## P1 Follow-Up: Claim Summary + Operator Gate Coverage
+
+The claim helper now reports `invalid_lane_id_count` and invalid rows in both
+JSON and text summaries. `tools/all_lanes_preflight.py` fails closed on live
+invalid lane IDs, and `tools/operator_briefing.py` exposes the count in its
+read-only dispatch-claim section.
+
+`tools/all_lanes_preflight.py` now also verifies the operator briefing's exact
+eval packet and blocked readiness surfaces:
+
+- terminal exact-eval packets must suppress repeat-dispatch commands;
+- terminal exact-eval packets must not remain `ready_for_submit=true`;
+- non-dispatchable readiness artifacts must keep `ready_for_exact_eval_dispatch`
+  and `score_claim` false.
+
+The live `.omx/state/active_lane_dispatch_claims.md` row that had `lane_id=0`
+was corrected locally to `lane_time_traveler_l5_autonomy_substrate_20260513`.
+The state ledger is ignored advisory state, so the durable fix is the code gate
+above.
 
 ## Status
 

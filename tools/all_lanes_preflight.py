@@ -512,7 +512,7 @@ def _run_active_dispatch_claims_gate() -> tuple[bool, str]:
     """
 
     proc = _run_subprocess(
-        [sys.executable, str(CLAIM_LANE_DISPATCH), "summary"],
+        [sys.executable, str(CLAIM_LANE_DISPATCH), "summary", "--live-only"],
         capture_output=True,
         text=True,
     )
@@ -531,12 +531,13 @@ def _run_active_dispatch_claims_gate() -> tuple[bool, str]:
     active = counts.get("active", 0)
     stale = counts.get("stale_nonterminal", 0)
     unparsable = counts.get("unparsable_timestamp", 0)
-    if active or stale or unparsable:
+    invalid_lane_id = counts.get("invalid_lane_id", 0)
+    if active or stale or unparsable or invalid_lane_id:
         return (
             False,
             "dispatch claims are not clean before pre-dispatch work: "
             f"active={active} stale_nonterminal={stale} "
-            f"unparsable_timestamp={unparsable}\n{output}",
+            f"unparsable_timestamp={unparsable} invalid_lane_id={invalid_lane_id}\n{output}",
         )
     return True, f"active dispatch claims: PASS ({output.strip()})"
 
@@ -546,6 +547,77 @@ _OPERATOR_PLACEHOLDER_RE = re.compile(r"<[^>\n]+>")
 
 def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str]:
     failures: list[str] = []
+    claim_summary = payload.get("dispatch_claim_summary")
+    if not isinstance(claim_summary, dict):
+        failures.append("dispatch_claim_summary_missing_or_not_object")
+    else:
+        for field in (
+            "active_count",
+            "stale_nonterminal_count",
+            "unparsable_timestamp_count",
+            "invalid_lane_id_count",
+        ):
+            try:
+                value = int(claim_summary.get(field, 0) or 0)
+            except (TypeError, ValueError):
+                failures.append(f"dispatch_claim_summary:{field}:not_integer")
+                continue
+            if value:
+                failures.append(f"dispatch_claim_summary:{field}:{value}")
+    exact_packets = payload.get("exact_eval_packets")
+    if not isinstance(exact_packets, list):
+        failures.append("exact_eval_packets_missing_or_not_list")
+    else:
+        for packet in exact_packets:
+            if not isinstance(packet, dict):
+                failures.append("exact_eval_packets_contains_non_object_row")
+                continue
+            lane_id = str(packet.get("lane_id") or "<missing>")
+            terminal_blockers = packet.get("terminal_exact_eval_evidence_blockers")
+            repeat_allowed = packet.get("repeat_dispatch_allowed")
+            ready = packet.get("ready_for_submit")
+            commands = packet.get("commands")
+            if terminal_blockers:
+                if repeat_allowed is not False:
+                    failures.append(
+                        f"exact_eval_packets:{lane_id}:"
+                        "terminal_evidence_not_suppressing_repeat_dispatch"
+                    )
+                if ready is not False:
+                    failures.append(
+                        f"exact_eval_packets:{lane_id}:terminal_evidence_ready_for_submit"
+                    )
+                if commands:
+                    failures.append(
+                        f"exact_eval_packets:{lane_id}:terminal_evidence_commands_not_suppressed"
+                    )
+            if ready is True:
+                if not isinstance(commands, dict):
+                    failures.append(f"exact_eval_packets:{lane_id}:ready_missing_commands")
+                else:
+                    for key in ("claim", "submit", "harvest"):
+                        if not str(commands.get(key) or "").strip():
+                            failures.append(
+                                f"exact_eval_packets:{lane_id}:ready_missing_{key}_command"
+                            )
+    readiness_artifacts = payload.get("non_dispatchable_readiness_artifacts")
+    if not isinstance(readiness_artifacts, list):
+        failures.append("non_dispatchable_readiness_artifacts_missing_or_not_list")
+    else:
+        for artifact in readiness_artifacts:
+            if not isinstance(artifact, dict):
+                failures.append("non_dispatchable_readiness_artifacts_contains_non_object_row")
+                continue
+            kind = str(artifact.get("kind") or "<missing>")
+            if artifact.get("ready_for_exact_eval_dispatch") is not False:
+                failures.append(
+                    f"non_dispatchable_readiness_artifacts:{kind}:"
+                    "ready_for_exact_eval_dispatch_not_false"
+                )
+            if artifact.get("score_claim") is not False:
+                failures.append(
+                    f"non_dispatchable_readiness_artifacts:{kind}:score_claim_not_false"
+                )
     groups = (
         ("supplementary_lanes", "active_supplementary_lanes"),
         ("gated_lanes", "active_gated_lanes"),

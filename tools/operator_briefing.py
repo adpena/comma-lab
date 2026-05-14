@@ -812,7 +812,7 @@ def _run_json(script: Path, extra_args: list[str] | None = None) -> dict:
 
 def _dispatch_claim_summary() -> dict[str, object]:
     """Return the read-only dispatch-claim summary used to prevent duplicate evals."""
-    return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json"])
+    return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json", "--live-only"])
 
 
 def _latest_provider_readiness_artifact() -> Path | None:
@@ -903,11 +903,17 @@ def _format_dispatch_claim_summary() -> str:
         if isinstance(summary.get("stale_nonterminal"), list)
         else []
     )
+    invalid_lane_id = (
+        summary.get("invalid_lane_id")
+        if isinstance(summary.get("invalid_lane_id"), list)
+        else []
+    )
     lines = [
         "Read-only claim state from tools/claim_lane_dispatch.py summary.",
         f"  active: {summary.get('active_count', len(active))}",
         f"  stale_nonterminal: {summary.get('stale_nonterminal_count', len(stale))}",
         f"  terminal_latest: {summary.get('terminal_latest_count', '<unknown>')}",
+        f"  invalid_lane_id: {summary.get('invalid_lane_id_count', len(invalid_lane_id))}",
     ]
     if active:
         lines.append("  ACTIVE CONFLICT GUARD: do not dispatch duplicate active lanes.")
@@ -929,7 +935,16 @@ def _format_dispatch_claim_summary() -> str:
                 f"job={row.get('instance_job_id', '<missing>')} "
                 f"status={row.get('status', '<missing>')}"
             )
-    if not active and not stale:
+    if invalid_lane_id:
+        lines.append("  INVALID LANE IDS: repair claim ledger before any dispatch.")
+        for row in invalid_lane_id:
+            lines.append(
+                "    - "
+                f"lane_id={row.get('lane_id', '<missing>')} "
+                f"job={row.get('instance_job_id', '<missing>')} "
+                f"status={row.get('status', '<missing>')}"
+            )
+    if not active and not stale and not invalid_lane_id:
         lines.append("  No active or stale nonterminal claims.")
     return "\n".join(lines)
 

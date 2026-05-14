@@ -358,9 +358,30 @@ def test_summary_reports_active_and_stale_claims(claims_path, capsys):
     assert payload["active_count"] == 1
     assert payload["stale_nonterminal_count"] == 1
     assert payload["terminal_latest_count"] == 1
+    assert payload["invalid_lane_id_count"] == 0
     assert payload["active"][0]["lane_id"] == "fresh"
     assert payload["stale_nonterminal"][0]["lane_id"] == "old"
     assert payload["terminal_latest"][0]["lane_id"] == "done"
+
+
+def test_summary_reports_historical_invalid_lane_ids(claims_path, capsys):
+    claims_path.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-08T00:00:00Z | a | 0 | modal | j | | refused_dispatch_bad_claim | historical bad row |\n",
+        encoding="utf-8",
+    )
+
+    rc = cld.main([
+        "summary", "--claims-path", str(claims_path),
+        "--now-utc", "2026-05-08T12:00:00Z",
+        "--format", "json",
+    ])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["invalid_lane_id_count"] == 1
+    assert payload["invalid_lane_id"][0]["lane_id"] == "0"
 
 
 def test_summary_text_lists_active_without_mutating_claims(claims_path, capsys):
@@ -381,4 +402,5 @@ def test_summary_text_lists_active_without_mutating_claims(claims_path, capsys):
     assert after == before
     out = capsys.readouterr().out
     assert "CLAIM_SUMMARY active=1" in out
+    assert "invalid_lane_id=0" in out
     assert "ACTIVE lane_id=L job=j1 platform=gha status=active_dispatching agent=agent" in out
