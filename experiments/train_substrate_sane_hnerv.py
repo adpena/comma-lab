@@ -98,6 +98,16 @@ from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
 
+# Tier-1 optimization helpers (per CLAUDE.md TIER-1-OPT-BATCH landing 2026-05-14).
+# Opt-in via the --enable-autocast-fp16 / --enable-torch-compile CLI flags.
+# Defaults preserve historical behavior; the WAIVERS above remain because the
+# O1 GT-scorer cache backport requires per-substrate score_aware_loss API
+# extension (deferred to a follow-up wave).
+from tac.training_optimization import (
+    autocast_aware_forward as _autocast_aware_forward,
+    compile_with_fallback as _compile_with_fallback,
+)
+
 _SUBSTRATE_TAG = "sane_hnerv"
 
 
@@ -368,6 +378,39 @@ def _build_parser() -> argparse.ArgumentParser:
         "--skip-archive-build",
         action="store_true",
         help="Skip building the archive.zip (e.g. for trainer-only smoke).",
+    )
+    # Tier-1 optimization CLI surface (per TIER-1-OPT-BATCH 2026-05-14).
+    # Defaults preserve historical behavior; opt-in is operator-routed.
+    p.add_argument(
+        "--enable-autocast-fp16",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable FP16 autocast for the scorer/model forward "
+            "(1.5-2x speedup on Ampere/Hopper). Catalog #172. "
+            "CPU autocast forbidden per autocast_aware_forward contract."
+        ),
+    )
+    p.add_argument(
+        "--enable-torch-compile",
+        action="store_true",
+        default=False,
+        help=(
+            "Wrap the substrate model with torch.compile (Inductor; "
+            "1.5-2x per-step wall-clock on A100/Ampere+). Catalog #179. "
+            "Falls back to uncompiled on Inductor error."
+        ),
+    )
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        action="store_true",
+        default=False,
+        help=(
+            "RESERVED: pre-compute the GT scorer outputs once and reuse "
+            "across the hot loop (~50%% scorer compute savings). "
+            "Wire-in pending per-substrate score_aware_loss API extension; "
+            "currently parsed-but-not-yet-consumed."
+        ),
     )
 
     return p
@@ -707,6 +750,14 @@ def _full_main(args: argparse.Namespace) -> int:
             output_width=EVAL_HW[1],
         )
         model = SaneHnervSubstrate(cfg).to(device)
+        # Tier-1 O3: torch.compile wrap (no-op when flag=False). Falls back
+        # gracefully on Inductor error; substrate score-semantics preserved.
+        model = _compile_with_fallback(
+            model,
+            enabled=bool(getattr(args, "enable_torch_compile", False)),
+            mode="default",
+            fallback_on_error=True,
+        )
         print(f"[full] sane_hnerv params: {model.num_parameters():,}")
         _stage("model_built")
 
@@ -761,20 +812,28 @@ def _full_main(args: argparse.Namespace) -> int:
                 idx = perm[start : start + batch_size]
                 if idx.numel() == 0:
                     continue
-                rgb_0, rgb_1 = model(idx)
-                # Frames live in [0,1]; the score-aware loss + eval-roundtrip
-                # expect [0, 255]. Multiply at the boundary so the substrate
-                # output is gradient-clean.
-                rgb_0_255 = rgb_0 * 255.0
-                rgb_1_255 = rgb_1 * 255.0
-                gt = pair_tensor[idx]  # (B, 2, 3, H, W) already in [0, 255]
-                gt_0 = gt[:, 0]
-                gt_1 = gt[:, 1]
-                loss, parts = loss_fn(
-                    rgb_0_255, rgb_1_255, gt_0, gt_1, archive_bytes_proxy,
-                    apply_eval_roundtrip=True,
-                    noise_std=args.noise_std,
-                )
+                # Tier-1 O2: wrap forward + scoring in autocast (no-op when
+                # flag=False). Losses are recast to fp32 outside via tensor
+                # dtype management in the score-aware Lagrangian.
+                with _autocast_aware_forward(
+                    enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                    dtype=torch.float16,
+                    device=device,
+                ):
+                    rgb_0, rgb_1 = model(idx)
+                    # Frames live in [0,1]; the score-aware loss + eval-roundtrip
+                    # expect [0, 255]. Multiply at the boundary so the substrate
+                    # output is gradient-clean.
+                    rgb_0_255 = rgb_0 * 255.0
+                    rgb_1_255 = rgb_1 * 255.0
+                    gt = pair_tensor[idx]  # (B, 2, 3, H, W) already in [0, 255]
+                    gt_0 = gt[:, 0]
+                    gt_1 = gt[:, 1]
+                    loss, parts = loss_fn(
+                        rgb_0_255, rgb_1_255, gt_0, gt_1, archive_bytes_proxy,
+                        apply_eval_roundtrip=True,
+                        noise_std=args.noise_std,
+                    )
                 # NaN watchdog
                 if not torch.isfinite(loss):
                     nan_strike += 1
