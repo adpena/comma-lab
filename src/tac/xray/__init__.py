@@ -58,6 +58,13 @@ from tac.xray.registry import (
     specs_by_category,
     specs_by_hook,
 )
+from tac.xray.wire_in import (
+    XRayWireInBundle,
+    aggregate_hook_evidence_grade,
+    discover_primitives_by_hook,
+    instantiate_primitive,
+    wire_in_for_hook,
+)
 
 __all__ = [
     "CANONICAL_WIRE_IN_HOOKS",
@@ -69,9 +76,14 @@ __all__ = [
     "XRayPrimitive",
     "XRayPrimitiveResult",
     "XRayPrimitiveSpec",
+    "XRayWireInBundle",
+    "aggregate_hook_evidence_grade",
     "canonical_xray_primitive_inventory",
+    "discover_primitives_by_hook",
     "get_xray_primitive_spec",
+    "instantiate_primitive",
     "serialize_xray_inventory",
     "specs_by_category",
     "specs_by_hook",
+    "wire_in_for_hook",
 ]

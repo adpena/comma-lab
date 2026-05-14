@@ -1,5 +1,26 @@
 """Scorer-conditional MDL ablation (Z1, $0 GPU).
 
+**Canonical surface delegation note (2026-05-14, lane
+``lane_xray_canon_math_findings_wire_in_20260514``):**
+
+The STRUCTURAL tier of MDL ablation now has a canonical typed XRay primitive
+surface at :class:`tac.xray.mdl_scorer_conditional.ScorerConditionalMDLEstimator`.
+For programmatic / planner-integrated MDL density queries, prefer the
+canonical primitive — it returns a typed :class:`XRayPrimitiveResult` with
+non-empty ``wire_in_hooks_engaged`` so the solver stack (autopilot, Pareto,
+continual-learning) consumes it without further glue code:
+
+    from tac.xray import ScorerConditionalMDLEstimator
+    estimator = ScorerConditionalMDLEstimator()
+    result = estimator.compute(Path("submissions/a1/archive.zip"))
+    # result.primitive_value is a MDLDensityResult with per-section breakdown.
+
+This ad-hoc tool (``tools/mdl_scorer_conditional_ablation.py``) remains
+the one-stop CLI for the FULL three-tier ablation (structural + sampled
+byte-level + post-decode perturbation against real SegNet/PoseNet) which
+the canonical primitive intentionally does NOT wrap (Tier B / Tier C
+require scorer dispatch + are not yet in the typed contract).
+
 Empirically measures how many bits of each archive are EXTRACTED by the
 scorer (SegNet + PoseNet) vs IGNORED. The scorer-conditional MDL gives
 the empirical lower bound on `H(X | scorer_weights + architecture +
