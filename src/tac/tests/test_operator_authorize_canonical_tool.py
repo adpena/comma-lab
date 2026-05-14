@@ -193,6 +193,51 @@ def test_operator_authorize_allows_smoke_wrapper_epoch_override_for_smoke_only_r
     assert events == ["preflight", "claim", "dispatch"]
 
 
+def test_z3_operator_recipe_explicitly_selects_v2_latent_replacement() -> None:
+    recipe = op._load_recipe("substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch")
+
+    env_overrides = op._build_env_overrides(recipe, "unit_job_z3_v2")
+
+    assert "Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1" in env_overrides.split(",")
+    assert recipe.raw["active_dispatch_contract"] == "z3_v2_latent_replacement_a1_base"
+    assert recipe.raw["dispatch_contracts"][0]["archive_role"] == (
+        "z3hv2_section_replaces_a1_latent_blob"
+    )
+
+
+def test_z3_remote_driver_keeps_v2_latent_replacement_opt_in() -> None:
+    text = (
+        op.REPO_ROOT
+        / "scripts"
+        / "remote_lane_substrate_z3_balle_hyperprior_bolton.sh"
+    ).read_text()
+
+    default_ladder = (
+        'Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT="'
+        "${Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-0}\""
+    )
+    assert default_ladder in text
+    assert "V2_LATENT_REPLACEMENT_ARGS+=(--enable-v2-latent-replacement)" in text
+    assert (
+        '${V2_LATENT_REPLACEMENT_ARGS[@]+"${V2_LATENT_REPLACEMENT_ARGS[@]}"}'
+        in text
+    )
+    assert "Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-1" not in text
+
+
+def test_z4_z5_recipes_depend_on_current_z3_recover_lane() -> None:
+    stale = "lane_z3_balle_hyperprior_bolton_campaign_20260514"
+    current = "lane_z3_balle_hyperprior_bolton_recover_20260514"
+
+    for recipe_name in (
+        "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch.yaml",
+        "substrate_z5_predictive_coding_world_model_modal_t4_dispatch.yaml",
+    ):
+        text = (op.RECIPES_DIR / recipe_name).read_text()
+        assert stale not in text
+        assert current in text
+
+
 def test_operator_authorize_noop_recipe_skips_phantom_lane_claim(monkeypatch, capsys) -> None:
     claim_calls: list[dict[str, object]] = []
     dispatch_calls: list[tuple[op.Recipe, str]] = []

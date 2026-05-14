@@ -8,7 +8,7 @@ summary: |
 
   Mechanism (Atick & Redlich 1990 cooperative-receiver theorem):
 
-  Loss-only intervention on the Z3+A1 substrate. Trains against the contest's
+  Loss-only intervention on the Z3 v2 latent-replacement + A1 substrate. Trains against the contest's
   ACTUAL scorer distortions via canonical score_pair_components (Catalog #164)
   with a tunable pixel-MSE residual weight λ_pixel ∈ [0.0, 1.0]. The pure
   cooperative-receiver regime (λ_pixel=0) is the Atick-Redlich H(X|W+A+P)
@@ -16,7 +16,7 @@ summary: |
 
   Per Time-Traveler peer-seat council (`feedback_grand_council_maximize_value_landed_20260514.md`
   STAIRCASE 10/11): Step 2 cooperative-receiver loss is the dominant
-  marginal-value-per-byte intervention at the PR101+Z3 operating point
+  marginal-value-per-byte intervention at the PR101+Z3 v2 operating point
   (pose marginal 2.71x SegNet's per CLAUDE.md operating-point-aware rule).
 
   Predicted ΔS -0.005 to -0.010 vs Z3 baseline 0.193 → predicted score band
@@ -36,7 +36,7 @@ target_modes:
   - contest_generalized
   - research_substrate
 canary_status: post_canary_dependent
-canary_dependency: lane_z3_balle_hyperprior_bolton_campaign_20260514
+canary_dependency: lane_z3_balle_hyperprior_bolton_recover_20260514
 # Z4 is layered on top of Z3 (Balle hyperprior). Catalog #173 requires the
 # canary Z3 to have >= 1 successful contest-CUDA anchor before Z4 can fire.
 
@@ -69,7 +69,7 @@ literature_anchor: |
   Zen-floor field-medal council 2026-05-14: feedback_zen_floor_field_medal_grade_council_landed_20260514.md.
 
 risk: |
-  Z4 first-anchor dispatch. The substrate inherits Z3's byte grammar and
+  Z4 first-anchor dispatch. The substrate inherits Z3's v2 latent-replacement byte grammar and
   introduces ONLY a loss-axis change. The predicted [0.180, 0.188] band is
   a mathematical derivation from the Atick-Redlich cooperative-receiver
   theorem, not measurement.
@@ -172,5 +172,5 @@ notes: |
     feedback_zen_floor_field_medal_grade_council_landed_20260514.md (zen-floor band)
     feedback_long_term_multi_year_campaigns_landed_20260514.md (C5 staircase)
     src/tac/substrates/z4_cooperative_receiver_loss/__init__.py (Catalog #124 8 fields)
-    lane_z3_balle_hyperprior_bolton_campaign_20260514 (canary dependency)
+    lane_z3_balle_hyperprior_bolton_recover_20260514 (canary dependency; Z3 recipe now explicitly selects v2 latent replacement)
     lane_z5_predictive_coding_world_model_step3_20260514 (Step 3 sister)

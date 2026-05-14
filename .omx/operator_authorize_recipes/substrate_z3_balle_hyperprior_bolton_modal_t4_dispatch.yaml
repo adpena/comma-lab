@@ -4,8 +4,8 @@ lane_id: lane_z3_balle_hyperprior_bolton_recover_20260514
 smoke_only: true
 smoke_validation_contract: training_artifact_v1
 summary: |
-  Z3 Ballé 2018 scale-hyperprior bolt-on on the FROZEN A1 base — across-class
-  staircase Step 1 per zen-floor band v2 council
+  Z3 Ballé 2018 scale-hyperprior v2 latent-replacement bolt-on on the FROZEN
+  A1 base — across-class staircase Step 1 per zen-floor band v2 council
   (`feedback_zen_floor_band_v2_post_z1_ablation_20260514.md`) and the
   long-term campaign roadmap
   (`feedback_long_term_multi_year_campaigns_landed_20260514.md` Campaign C5
@@ -51,13 +51,13 @@ canary_dependency: substrate_a1
 # being available and unchanged. Per CLAUDE.md "HNeRV parity discipline" L7
 # the bolt-on budget is ≤ 350 LOC; substrate-engineering exemption NOT used.
 
-active_dispatch_contract: z3_hyperprior_bolt_on_a1_base
+active_dispatch_contract: z3_v2_latent_replacement_a1_base
 dispatch_contracts:
-  - id: z3_hyperprior_bolt_on_a1_base
-    archive_role: monolithic_z3hp1_sidecar_trailing_a1
+  - id: z3_v2_latent_replacement_a1_base
+    archive_role: z3hv2_section_replaces_a1_latent_blob
     builder_surface: experiments/train_substrate_z3_balle_hyperprior_bolton.py
     status: active_recipe_contract
-    exact_eval_path: blocked_until_latent_replacement_contract_lands
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
 
 cost_band:
   epochs: 1000
@@ -92,11 +92,12 @@ literature_anchor: |
 council_phase_5_prediction: 0.190
 
 risk: |
-  Z3 hyperprior bolt-on smoke. Predicted band [0.183, 0.190] is a literature-
+  Z3 hyperprior v2 latent-replacement smoke. Predicted band [0.183, 0.190] is a literature-
   prediction synthesis (Ballé 2018 + Z1 MDL ablation at 99.29% density), NOT
   measurement. The recipe is smoke_only with training_artifact_v1 validation
-  until the inner-x latent-replacement archive contract lands; append-only
-  Z3HP1 packets are research diagnostics and are not exact-eval-ready.
+  and explicitly sets Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1 so the remote
+  driver passes --enable-v2-latent-replacement to the trainer. Append-only
+  Z3HP1 remains the legacy default only when that env override is absent.
 
   Architectural risk:
   - At A1's 99.29% scorer-conditional MDL density the realistic delta is at
@@ -112,8 +113,9 @@ risk: |
     2880 + weights 1058 + header 37). A1's latent_blob is 15,387 bytes so
     amortization requires the conditional-Gaussian rate-y to come in below
     ~1300 bytes for the full 600 pairs. The trainer adopts the Ballé
-    amortization principle: ship the sidecar ONLY when bytes_saved >
-    overhead, else fall back to byte-identical-to-A1.
+    amortization principle through Z3HV2: replace A1's latent_blob only when
+    the replacement section is byte-saving; otherwise the artifact stays
+    non-promotional.
 
   Modal T4 training is diagnostic unless the auth-eval contract itself records
   score_axis=contest_cuda and score_claim_valid=true. CPU axis remains
@@ -145,8 +147,11 @@ sentinel_files:
   - src/tac/substrates/z3_balle_hyperprior_bolton/__init__.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/architecture.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/archive.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/archive_v2.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/inflate.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/inflate_v2.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/score_aware_loss.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/score_aware_loss_v2.py
   - src/tac/substrates/_shared/trainer_skeleton.py
   - src/tac/substrates/_shared/inflate_runtime.py
   - src/tac/substrates/score_aware_common.py
@@ -161,6 +166,7 @@ env_overrides:
   Z3_BALLE_UPSTREAM_DIR: /workspace/pact/upstream
   Z3_BALLE_DEVICE: cuda
   Z3_BALLE_HYPER_LATENT_DIM: "8"
+  Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT: "1"
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:
@@ -171,21 +177,26 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
-  Z3 Ballé hyperprior bolt-on first-anchor SMOKE dispatch recipe.
+  Z3 Ballé hyperprior v2 latent-replacement first-anchor SMOKE dispatch
+  recipe.
+
+  This recipe explicitly selects v2 by setting
+  Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1. The trainer and remote driver keep
+  legacy v1 append-only as their default for forensic comparison when this env
+  override is absent; operator-authorized Z3 dispatches use the realistic
+  latent-replacement path.
 
   Architecture: 1,764-param Ballé-2018 scale-hyperprior MLP (h_a: 28→16→8;
-  h_s: 8→16→28) with int8 weight quantization and brotli-compressed sidecar.
-  Sidecar overhead ~14,055B vs A1 latent_blob 15,387B → amortization budget
-  ~1,300B for the conditional-Gaussian rate-y term. Per the Ballé 2018
-  amortization principle, the sidecar is OMITTED when bytes_saved < overhead
-  (the archive is then byte-identical-to-A1 and the trainer reports
-  research_only=true).
+  h_s: 8→16→28) with int8 weight quantization and brotli-compressed Z3HV2
+  replacement section. The section is compared against A1 latent_blob 15,387B
+  under the Ballé 2018 amortization principle; byte-saving v2 artifacts replace
+  A1's latent_blob, while non-saving artifacts remain non-promotional.
 
   Per the long-term campaign C5 ranking, Z3 is the cheapest across-class
   validation that a literature-anchored class-shift mechanism reduces A1
   bytes without distortion regression. The smoke is the canonical empirical
-  test; full training (gated behind _full_main NotImplementedError) requires
-  Phase 2 council approval.
+  test; full training remains routed through smoke-before-full and active
+  lane-claim discipline.
 
   PHASE 2 COUNCIL APPROVED 6/6 unanimous 2026-05-14 per
   `.omx/research/z3_phase_2_council_20260514.md`

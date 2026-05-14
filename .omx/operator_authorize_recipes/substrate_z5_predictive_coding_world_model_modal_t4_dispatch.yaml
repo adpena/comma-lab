@@ -75,7 +75,7 @@ literature_anchor: |
 
 risk: |
   Z5 first-anchor dispatch. The substrate is a NOVEL world-model on top of
-  Z4 + Z3. Predicted [0.155, 0.180] band is a mathematical derivation from
+  Z4 + Z3 v2 latent replacement. Predicted [0.155, 0.180] band is a mathematical derivation from
   the Rao-Ballard predictive-coding hypothesis + Time-Traveler asymptote
   estimate, not measurement.
 
@@ -179,6 +179,6 @@ notes: |
     feedback_zen_floor_field_medal_grade_council_landed_20260514.md (zen-floor asymptote)
     feedback_long_term_multi_year_campaigns_landed_20260514.md (C5 staircase)
     src/tac/substrates/z5_predictive_coding_world_model/__init__.py (Catalog #124 8 fields)
-    lane_z3_balle_hyperprior_bolton_campaign_20260514 (Step 1 grandparent)
+    lane_z3_balle_hyperprior_bolton_recover_20260514 (Step 1 grandparent; Z3 recipe now explicitly selects v2 latent replacement)
     lane_z4_cooperative_receiver_loss_step2_20260514 (canary dependency; Step 2)
     lane_wyner_ziv_cooperative_receiver_substrate_20260513 (C5 mature DISCUS sister)

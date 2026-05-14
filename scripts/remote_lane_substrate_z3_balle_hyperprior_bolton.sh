@@ -57,6 +57,7 @@ Z3_BALLE_EPOCHS="${Z3_BALLE_EPOCHS:-1000}"
 Z3_BALLE_UPSTREAM_DIR="${Z3_BALLE_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 Z3_BALLE_DEVICE="${Z3_BALLE_DEVICE:-cuda}"
 Z3_BALLE_HYPER_LATENT_DIM="${Z3_BALLE_HYPER_LATENT_DIM:-8}"
+Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT="${Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-0}"
 
 # Smoke vs full ladder: SMOKE_ONLY=1 forces --smoke (default for v1).
 SMOKE_ONLY="${SMOKE_ONLY:-1}"
@@ -108,7 +109,7 @@ append_terminal_claim() {
         --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
         --agent "remote_lane_substrate_z3_balle_hyperprior_bolton" \
         --status "$status" \
-        --notes "remote_driver_terminal rc=$rc output_dir=$Z3_BALLE_OUTPUT_DIR smoke=$SMOKE_ONLY" \
+        --notes "remote_driver_terminal rc=$rc output_dir=$Z3_BALLE_OUTPUT_DIR smoke=$SMOKE_ONLY v2_latent_replacement=$Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT" \
         >> "$LOG_DIR/run.log" 2>&1 || {
         log "WARN: failed to append terminal dispatch claim status=$status"
     }
@@ -161,6 +162,7 @@ cat > "$PROVENANCE" <<EOF
   "epochs": "$Z3_BALLE_EPOCHS",
   "device": "$Z3_BALLE_DEVICE",
   "hyper_latent_dim": "$Z3_BALLE_HYPER_LATENT_DIM",
+  "enable_v2_latent_replacement": "$Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT",
   "smoke_only": "$SMOKE_ONLY",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "started_at_utc": "$(date -u +%FT%TZ)"
@@ -168,7 +170,7 @@ cat > "$PROVENANCE" <<EOF
 EOF
 
 # Stage 4: invoke trainer.
-log "stage_4_trainer_begin epochs=$Z3_BALLE_EPOCHS hyper_dim=$Z3_BALLE_HYPER_LATENT_DIM smoke=$SMOKE_ONLY"
+log "stage_4_trainer_begin epochs=$Z3_BALLE_EPOCHS hyper_dim=$Z3_BALLE_HYPER_LATENT_DIM smoke=$SMOKE_ONLY v2_latent_replacement=$Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT"
 TRAINER_PY="$WORKSPACE/experiments/train_substrate_z3_balle_hyperprior_bolton.py"
 if [ ! -f "$TRAINER_PY" ]; then
     log "FATAL: trainer missing at $TRAINER_PY"
@@ -182,6 +184,19 @@ if [ "$SMOKE_ONLY" = "1" ]; then
     SMOKE_FLAG_ARGS+=(--smoke)
 fi
 
+V2_LATENT_REPLACEMENT_ARGS=()
+case "$Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+        V2_LATENT_REPLACEMENT_ARGS+=(--enable-v2-latent-replacement)
+        ;;
+    0|false|FALSE|False|no|NO|No|off|OFF|Off|"")
+        ;;
+    *)
+        log "FATAL: invalid Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=$Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT; expected 0/1/true/false"
+        exit 24
+        ;;
+esac
+
 "$PYBIN_RESOLVED" "$TRAINER_PY" \
     --a1-archive-path "$Z3_BALLE_A1_ARCHIVE_PATH" \
     --video-path "$Z3_BALLE_VIDEO_PATH" \
@@ -191,6 +206,7 @@ fi
     --device "$Z3_BALLE_DEVICE" \
     --hyper-latent-dim "$Z3_BALLE_HYPER_LATENT_DIM" \
     ${SMOKE_FLAG_ARGS[@]+"${SMOKE_FLAG_ARGS[@]}"} \
+    ${V2_LATENT_REPLACEMENT_ARGS[@]+"${V2_LATENT_REPLACEMENT_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # Stage 5: emit completion marker (operator + autopilot consume).
@@ -220,5 +236,5 @@ PY
 )"
 EVIDENCE_MARKER="${EVIDENCE_STATUS%% *}"
 SCORE_CLAIM_FLAG="${EVIDENCE_STATUS#* }"
-log "LANE_Z3_BALLE_DONE ${EVIDENCE_MARKER} output_dir=$Z3_BALLE_OUTPUT_DIR smoke=$SMOKE_ONLY ${SCORE_CLAIM_FLAG}"
-echo "LANE_Z3_BALLE_DONE ${EVIDENCE_MARKER} $LANE_ID ${SCORE_CLAIM_FLAG} $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
+log "LANE_Z3_BALLE_DONE ${EVIDENCE_MARKER} output_dir=$Z3_BALLE_OUTPUT_DIR smoke=$SMOKE_ONLY v2_latent_replacement=$Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT ${SCORE_CLAIM_FLAG}"
+echo "LANE_Z3_BALLE_DONE ${EVIDENCE_MARKER} $LANE_ID ${SCORE_CLAIM_FLAG} v2_latent_replacement=$Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT $(date -u +%FT%TZ)" >> "$LOG_DIR/completion.log"
