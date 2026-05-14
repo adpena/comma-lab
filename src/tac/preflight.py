@@ -2240,6 +2240,15 @@ def preflight_all(
         check_modal_training_image_includes_hard_runtime_deps(
             strict=True, verbose=verbose,
         )
+        # Catalog #204 - check_pr95plus_modal_smoke_uses_durable_provider_output
+        # PR95++ enhanced-curriculum smoke 2026-05-14 reached training and then
+        # failed at inline contest_auth_eval because its json-out was under
+        # /tmp/pact. Keep smoke score custody durable by defaulting the lane
+        # output to /modal_results/<job>/output on Modal and requiring
+        # modal_train_lane.py to harvest that volume path.
+        check_pr95plus_modal_smoke_uses_durable_provider_output(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-12 Catalog #167 (PHASE-B1-PIVOT): operator-authorize
         # wrappers that fire a "full" Modal canary
         # (`cost_band.epochs >= 1000`) MUST route through
@@ -42554,6 +42563,103 @@ def check_modal_training_image_includes_hard_runtime_deps(
             f"{len(violations)} contract violation(s). Modal training images "
             "must include pyproject hard entropy/runtime dependencies before "
             "paid provider dispatch:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #204 - check_pr95plus_modal_smoke_uses_durable_provider_output
+# ----------------------------------------------------------------------------
+
+_CHECK_204_REMOTE_LANE_PATH = (
+    "scripts/remote_lane_substrate_pr101_lc_v2_clone_enhanced_curriculum.sh"
+)
+_CHECK_204_TRAINER_PATH = (
+    "experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py"
+)
+_CHECK_204_MODAL_DISPATCHER_PATH = "experiments/modal_train_lane.py"
+
+
+def check_pr95plus_modal_smoke_uses_durable_provider_output(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #204. Keep PR95++ Modal smoke auth-eval evidence off ``/tmp``.
+
+    The 2026-05-14 clean-head PR95++ smoke reached inline
+    ``contest_auth_eval.py`` and failed closed because the score JSON was under
+    ``/tmp/pact``. The correct fix is durable provider output, not the
+    diagnostic ``--allow-temp-work-dir`` bypass.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+
+    remote_path = root / _CHECK_204_REMOTE_LANE_PATH
+    if not remote_path.is_file():
+        violations.append(f"{_CHECK_204_REMOTE_LANE_PATH}: missing")
+        remote_text = ""
+    else:
+        remote_text = remote_path.read_text(encoding="utf-8")
+        if 'OUTPUT_DIR="${PR95PLUS_OUTPUT_DIR:-$LOG_DIR/output}"' in remote_text:
+            violations.append(
+                f"{_CHECK_204_REMOTE_LANE_PATH}: PR95PLUS output still defaults "
+                "to $LOG_DIR/output under the Modal /tmp workspace"
+            )
+        for snippet in (
+            'OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"',
+            'elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then',
+            'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"',
+        ):
+            if snippet not in remote_text:
+                violations.append(
+                    f"{_CHECK_204_REMOTE_LANE_PATH}: missing durable Modal "
+                    f"smoke contract snippet {snippet!r}"
+                )
+
+    trainer_path = root / _CHECK_204_TRAINER_PATH
+    if not trainer_path.is_file():
+        violations.append(f"{_CHECK_204_TRAINER_PATH}: missing")
+    else:
+        trainer_text = trainer_path.read_text(encoding="utf-8")
+        if "--allow-temp-work-dir" in trainer_text:
+            violations.append(
+                f"{_CHECK_204_TRAINER_PATH}: trainer must not pass "
+                "--allow-temp-work-dir for PR95++ smoke score custody"
+            )
+
+    modal_path = root / _CHECK_204_MODAL_DISPATCHER_PATH
+    if not modal_path.is_file():
+        violations.append(f"{_CHECK_204_MODAL_DISPATCHER_PATH}: missing")
+    else:
+        modal_text = modal_path.read_text(encoding="utf-8")
+        if "volume_dir," not in modal_text:
+            violations.append(
+                f"{_CHECK_204_MODAL_DISPATCHER_PATH}: Modal recovery artifact "
+                "scan_roots must include volume_dir so /modal_results outputs "
+                "are returned by modal_recover_lane.py"
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [pr95plus-durable-modal-output] {len(violations)} violation(s):")
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [pr95plus-durable-modal-output] OK "
+                "(PR95++ Modal smoke writes auth-eval custody under /modal_results)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_pr95plus_modal_smoke_uses_durable_provider_output found "
+            f"{len(violations)} contract violation(s). PR95++ Modal smoke must "
+            "write archive/runtime/auth-eval evidence under durable provider "
+            "storage and recover that path, not bypass temp-output custody:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

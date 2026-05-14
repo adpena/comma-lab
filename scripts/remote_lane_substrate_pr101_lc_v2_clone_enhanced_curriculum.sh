@@ -14,7 +14,6 @@ WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-}"
 LANE_ID="lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_pr95plus_results}"
-OUTPUT_DIR="${PR95PLUS_OUTPUT_DIR:-$LOG_DIR/output}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
 PR95PLUS_VIDEO_PATH="${PR95PLUS_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
@@ -33,6 +32,17 @@ DISPATCH_INSTANCE_JOB_ID="${PR95PLUS_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTAN
 DISPATCH_CLAIMS_PATH="${PR95PLUS_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
 HEARTBEAT_PID=""
+
+if [ -n "${PR95PLUS_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$PR95PLUS_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    # contest_auth_eval.py refuses score-grade evidence under /tmp. Modal
+    # workers run from /tmp/pact, so write archive/runtime/auth-eval work under
+    # the mounted result volume by default and let modal_train_lane.py harvest it.
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 
 log() { echo "[lane-pr95plus] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
@@ -95,6 +105,7 @@ if [ -z "${PYBIN:-}" ] || [ ! -x "$PYBIN" ]; then
     log "FATAL: PYBIN not set or not executable after bootstrap"
     exit 24
 fi
+export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
 
 GIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "no-git")
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")

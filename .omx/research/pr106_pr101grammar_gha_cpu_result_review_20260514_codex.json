@@ -1,0 +1,81 @@
+{
+  "baseline_score": 0.19284757743677347,
+  "canonical_score": 0.2279596481058085,
+  "cpu_leaderboard_reproduction_eligible": true,
+  "custody": {
+    "archive_bytes": 186629,
+    "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+    "command": [],
+    "device": "cpu",
+    "gpu_model": "",
+    "inflate_script": "",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:continue_with_all",
+      "instance_job_id": "gha_cpu_eval_pr106_pr101grammar_20260514T010608Z_20260514T010935Z",
+      "lane_id": "gha_cpu_eval_pr106_pr101grammar_20260514T010608Z",
+      "notes": "canonical_score=0.2279596481 [contest-CPU] run_id=25835645652 hardware=github-actions-ubuntu-latest-x86_64",
+      "platform": "github",
+      "predicted_eta_utc": "",
+      "status": "completed_gha_cpu_eval",
+      "timestamp_utc": "2026-05-14T01:17:05Z"
+    },
+    "latest_status": "completed_gha_cpu_eval",
+    "matching_claim_count": 2,
+    "terminal_status_recorded": true
+  },
+  "exact_cpu_evidence": true,
+  "exact_cuda_evidence": false,
+  "failure_class": "contest_cpu_public_leaderboard_anchor_cuda_pending",
+  "family_falsified": false,
+  "job_id": "gha_cpu_eval_pr106_pr101grammar_20260514T010608Z_20260514T010935Z",
+  "lane_id": "gha_cpu_eval_pr106_pr101grammar_20260514T010608Z",
+  "measured_config_status": "contest_cpu_result_reviewed",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "reopen only after a byte-closed PR101-grammar sidecar changes scorer-consumed payload or removes the 8KB overhead without worsening pose/seg",
+    "pair any next PR101-grammar CPU run with CUDA exact eval before internal promotion"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex:continue_with_all",
+  "runtime_custody": {
+    "payload_closure_fields_present": false,
+    "runtime_file_count": null,
+    "runtime_manifest_present": false,
+    "runtime_tree_sha256": ""
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_claim": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 9.056223770897986e-08,
+    "archive_bytes": 186629,
+    "available": true,
+    "avg_posenet_dist": 0.00016401,
+    "avg_segnet_dist": 0.00063193,
+    "matches_reported": false,
+    "rate_term": 0.12426859056223771,
+    "recomputed_score": 0.2279597386680462,
+    "reported_score": 0.2279596481058085
+  },
+  "source_json_path": "submissions/pr106_pr101grammar_20260514T010608Z/contest_auth_eval.cpu.json",
+  "source_json_sha256": "fa3152a55d0f50baada3cda61e5e73820ca245eb2bc7a062362e8e17accef819",
+  "technique": "pr106_r2_pr101_grammar_sidecar_cpu_eval",
+  "tool": "tools/build_result_review_packet.py"
+}

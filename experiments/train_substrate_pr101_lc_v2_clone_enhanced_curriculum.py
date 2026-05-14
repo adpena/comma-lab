@@ -749,7 +749,12 @@ def _run_contest_auth_eval_cuda(
     upstream_dir: Path,
     output_json: Path,
 ) -> dict[str, object]:
-    """Run the canonical contest auth eval and require a CUDA score claim."""
+    """Run the canonical contest auth eval and require a CUDA score claim.
+
+    The caller must choose ``output_json`` under durable repo/provider storage.
+    Modal smoke runs default to ``/modal_results/<job>/output`` via the remote
+    driver; a temp evidence bypass would make the smoke score non-custodial.
+    """
 
     cmd = [
         sys.executable,

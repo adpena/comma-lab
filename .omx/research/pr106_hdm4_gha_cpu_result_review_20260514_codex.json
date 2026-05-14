@@ -1,0 +1,81 @@
+{
+  "baseline_score": 0.19284757743677347,
+  "canonical_score": 0.2278683981058085,
+  "cpu_leaderboard_reproduction_eligible": true,
+  "custody": {
+    "archive_bytes": 186492,
+    "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+    "command": [],
+    "device": "cpu",
+    "gpu_model": "",
+    "inflate_script": "",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:continue_with_all",
+      "instance_job_id": "gha_cpu_eval_pr106_hdm4_20260514T010608Z_20260514T010948Z",
+      "lane_id": "gha_cpu_eval_pr106_hdm4_20260514T010608Z",
+      "notes": "canonical_score=0.2278683981 [contest-CPU] run_id=25835651930 hardware=github-actions-ubuntu-latest-x86_64",
+      "platform": "github",
+      "predicted_eta_utc": "",
+      "status": "completed_gha_cpu_eval",
+      "timestamp_utc": "2026-05-14T01:25:32Z"
+    },
+    "latest_status": "completed_gha_cpu_eval",
+    "matching_claim_count": 2,
+    "terminal_status_recorded": true
+  },
+  "exact_cpu_evidence": true,
+  "exact_cuda_evidence": false,
+  "failure_class": "contest_cpu_public_leaderboard_anchor_cuda_pending",
+  "family_falsified": false,
+  "job_id": "gha_cpu_eval_pr106_hdm4_20260514T010608Z_20260514T010948Z",
+  "lane_id": "gha_cpu_eval_pr106_hdm4_20260514T010608Z",
+  "measured_config_status": "contest_cpu_result_reviewed",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "reopen only after HDM4 sidecar removes overhead or improves scorer-consumed pose/seg enough to beat the CPU frontier",
+    "pair any next HDM4 sidecar CPU result with CUDA exact eval before internal promotion"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex:continue_with_all",
+  "runtime_custody": {
+    "payload_closure_fields_present": false,
+    "runtime_file_count": null,
+    "runtime_manifest_present": false,
+    "runtime_tree_sha256": ""
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_claim": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 1.1788565995596301e-07,
+    "archive_bytes": 186492,
+    "available": true,
+    "avg_posenet_dist": 0.00016401,
+    "avg_segnet_dist": 0.00063193,
+    "matches_reported": false,
+    "rate_term": 0.12417736788565997,
+    "recomputed_score": 0.22786851599146846,
+    "reported_score": 0.2278683981058085
+  },
+  "source_json_path": "submissions/pr106_hdm4_20260514T010608Z/contest_auth_eval.cpu.json",
+  "source_json_sha256": "1631c26c2f6792a0924ff8b18d5058204cbd2e5b2a6b867ba3f753b5fad40b25",
+  "technique": "pr106_r2_hdm4_sidecar_cpu_eval",
+  "tool": "tools/build_result_review_packet.py"
+}

@@ -525,6 +525,7 @@ def _run_lane_inner(
         workspace / "results",
         workspace / "experiments" / "results",
         workspace / "modal_worker_head_ledger.json",
+        volume_dir,
     ]
     # Also any */_results/ siblings of workspace root
     for child in workspace.iterdir():
