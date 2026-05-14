@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C6 MDL-IBPS archive grammar — IBPS1 monolithic single-file ``0.bin``.
 
 Per CLAUDE.md HNeRV parity discipline L2 (export-first) + L3 (monolithic 0.bin)
@@ -239,6 +240,114 @@ def pack_archive(
     return header + encoder_blob + decoder_blob + latent_bytes + meta_bytes
 
 
+def parse_ibps1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for IBPS1 (C6 MDL-IBPS) grammar.
+
+    Canonical section-offset parser for IBPS1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tools.mdl_scorer_conditional_ablation` (CLI three-tier ablation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — IBPS1 auto-detection by ``b"IBPS"`` magic prefix)
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``ibps1_header`` — 25-byte header (control_or_metadata; fixed layout)
+    - ``encoder_blob`` — brotli q=9 compressed encoder weights
+      (training_provenance_only — parsed/loaded for provenance, but not
+      score-affecting at inflate because ``frames_for_encoder=None``)
+    - ``decoder_blob`` — brotli q=9 compressed decoder weights
+      (decoder_weight_stream — the actual inflate-time consumer)
+    - ``latent_blob`` — int8 quantized per-pair latents (latent_stream)
+    - ``meta_blob`` — sorted-keys JSON with beta_ib, decoder_channels,
+      _lat_scale, _lat_zero_point (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for IBPS1 byte layout
+    is :data:`IBPS1_HEADER_FMT` + :data:`IBPS1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no torch state_dict deserialization). It is
+    cheaper and is safe to call with brotli-tampered blobs (it never invokes
+    ``brotli.decompress``).
+
+    Raises ``ValueError`` on:
+
+    - short header (< 25 bytes)
+    - bad magic (!= ``b"IBPS"``)
+    - unsupported schema version (!= 1)
+    - latent_len != num_pairs * latent_dim
+    - archive size mismatch (declared end_meta != len(archive_bytes)),
+      covering BOTH truncated archives (end_meta > len) and trailing-byte
+      schema drift (end_meta < len). The exact-equality contract matches
+      :func:`parse_archive` so the section-offset parser and the full
+      round-trip parser agree on what a valid IBPS1 archive looks like.
+    """
+    if len(archive_bytes) < IBPS1_HEADER_SIZE:
+        raise ValueError(
+            f"ibps1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {IBPS1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        encoder_len,
+        decoder_len,
+        latent_len,
+        meta_len,
+    ) = struct.unpack(IBPS1_HEADER_FMT, archive_bytes[:IBPS1_HEADER_SIZE])
+    if magic != IBPS1_MAGIC:
+        raise ValueError(
+            f"ibps1 archive: bad magic {magic!r} (expected {IBPS1_MAGIC!r})"
+        )
+    if version != IBPS1_SCHEMA_VERSION:
+        raise ValueError(
+            f"ibps1 archive: unsupported schema version {version} "
+            f"(expected {IBPS1_SCHEMA_VERSION})"
+        )
+    # int8 = 1 byte each
+    expected_latent_bytes = int(num_pairs) * int(latent_dim)
+    if latent_len != expected_latent_bytes:
+        raise ValueError(
+            f"ibps1 archive: latent_len {latent_len} != num_pairs*latent_dim "
+            f"= {expected_latent_bytes}"
+        )
+    end_header = IBPS1_HEADER_SIZE
+    end_encoder = end_header + int(encoder_len)
+    end_decoder = end_encoder + int(decoder_len)
+    end_latents = end_decoder + int(latent_len)
+    end_meta = end_latents + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"ibps1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "ibps1_header": (0, IBPS1_HEADER_SIZE),
+        "encoder_blob": (end_header, int(encoder_len)),
+        "decoder_blob": (end_encoder, int(decoder_len)),
+        "latent_blob": (end_decoder, int(latent_len)),
+        "meta_blob": (end_latents, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for IBPS1 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS`` / ``PR101_SECTION_ROLES``.
+IBPS1_SECTION_ROLES: dict[str, str] = {
+    "ibps1_header": "control_or_metadata",
+    "encoder_blob": "training_provenance_only",
+    "decoder_blob": "decoder_weight_stream",
+    "latent_blob": "latent_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 def parse_archive(blob: bytes) -> MDLIBPSArchive:
     """Parse IBPS1 0.bin bytes back into encoder + decoder + latents + meta."""
     if len(blob) < IBPS1_HEADER_SIZE:
@@ -308,7 +417,9 @@ __all__ = [
     "IBPS1_HEADER_SIZE",
     "IBPS1_MAGIC",
     "IBPS1_SCHEMA_VERSION",
+    "IBPS1_SECTION_ROLES",
     "MDLIBPSArchive",
     "pack_archive",
     "parse_archive",
+    "parse_ibps1_archive_bytes",
 ]

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Parser-section manifests for monolithic public HNeRV packets.
 
 The public HNeRV-family frontier archives are usually one charged ZIP member.
@@ -44,6 +45,28 @@ PARSER_PR106 = "pr106_ff_packed_hnerv"
 PARSER_A2K1 = "a2k1_variable_decoder_pr101"
 PARSER_A5FC = "a5fc_frame_conditional_pr101"
 PARSER_CPLX1 = "cplx1_op1_byte_maps"
+PARSER_IBPS1 = "ibps1_mdl_ibps"
+PARSER_IBPS1_SHORT = "ibps1"
+PARSER_D1POLY1 = "d1poly1_segnet_margin_polytope"
+PARSER_D1POLY1_SHORT = "d1poly1"
+PARSER_WZF01 = "wzf01_wyner_ziv_frame_0"
+PARSER_WZF01_SHORT = "wzf01"
+PARSER_DP1 = "dp1_pretrained_driving_prior"
+PARSER_DP1_SHORT = "dp1"
+PARSER_ALIASES = {
+    PARSER_IBPS1_SHORT: PARSER_IBPS1,
+    "c6_e4_mdl_ibps": PARSER_IBPS1,
+    "mdl_ibps": PARSER_IBPS1,
+    PARSER_D1POLY1_SHORT: PARSER_D1POLY1,
+    "d1_segnet_margin_polytope": PARSER_D1POLY1,
+    "d1_polytope": PARSER_D1POLY1,
+    PARSER_WZF01_SHORT: PARSER_WZF01,
+    "d4_wyner_ziv_frame_0": PARSER_WZF01,
+    "wyner_ziv_frame_0": PARSER_WZF01,
+    PARSER_DP1_SHORT: PARSER_DP1,
+    "pretrained_driving_prior": PARSER_DP1,
+    "driving_prior": PARSER_DP1,
+}
 PARSER_CHOICES = (
     PARSER_AUTO,
     PARSER_PR101,
@@ -52,6 +75,14 @@ PARSER_CHOICES = (
     PARSER_A2K1,
     PARSER_A5FC,
     PARSER_CPLX1,
+    PARSER_IBPS1,
+    PARSER_IBPS1_SHORT,
+    PARSER_D1POLY1,
+    PARSER_D1POLY1_SHORT,
+    PARSER_WZF01,
+    PARSER_WZF01_SHORT,
+    PARSER_DP1,
+    PARSER_DP1_SHORT,
 )
 
 PR101_DECODER_BLOB_LEN = 162_164
@@ -113,6 +144,10 @@ CPLX1_SECTION_ROLES = {
     "latent_blob": "latent_stream",
     "sidecar_blob": "sidecar_or_correction_stream",
 }
+IBPS1_MAGIC_PREFIX = b"IBPS"
+D1POLY1_MAGIC_PREFIX = b"D1PY"
+WZF01_MAGIC_PREFIX = b"WZF\x01"
+DP1_MAGIC_PREFIX = b"DP1\x00"
 
 
 class HnervPacketSectionManifestError(ValueError):
@@ -279,6 +314,7 @@ def _emit_packet_section_manifest(
     parser: str,
     repo_root: str | Path | None,
 ) -> dict[str, Any]:
+    parser = _normalize_parser_name(parser)
     if parser not in PARSER_CHOICES:
         raise HnervPacketSectionManifestError(f"unknown parser {parser!r}")
     archive = Path(archive_path)
@@ -367,6 +403,7 @@ def _infer_parser(
     member_name: str,
     payload: bytes,
 ) -> str:
+    requested = _normalize_parser_name(requested)
     if requested != PARSER_AUTO:
         return requested
     text = f"{label} {archive_path.as_posix()} {member_name}".lower()
@@ -380,12 +417,28 @@ def _infer_parser(
         return PARSER_A5FC
     if "cplx1" in text or "cplx" in text or "op1_finalizer" in text:
         return PARSER_CPLX1
+    if "ibps1" in text or "c6_e4_mdl_ibps" in text or "mdl_ibps" in text:
+        return PARSER_IBPS1
+    if "d1poly1" in text or "d1_segnet_margin_polytope" in text or "d1_polytope" in text:
+        return PARSER_D1POLY1
+    if "wzf01" in text or "d4_wyner_ziv_frame_0" in text or "wyner_ziv_frame_0" in text:
+        return PARSER_WZF01
+    if "dp1_" in text or "pretrained_driving_prior" in text or "driving_prior" in text:
+        return PARSER_DP1
     if payload.startswith(A2K1_MAGIC):
         return PARSER_A2K1
     if payload.startswith(A5FC_MAGIC):
         return PARSER_A5FC
     if payload.startswith(CPLX1_MAGIC):
         return PARSER_CPLX1
+    if payload.startswith(IBPS1_MAGIC_PREFIX):
+        return PARSER_IBPS1
+    if payload.startswith(D1POLY1_MAGIC_PREFIX):
+        return PARSER_D1POLY1
+    if payload.startswith(WZF01_MAGIC_PREFIX):
+        return PARSER_WZF01
+    if payload.startswith(DP1_MAGIC_PREFIX):
+        return PARSER_DP1
     if "pr101" in text or "hnerv_ft_microcodec" in text:
         return PARSER_PR101
     if len(payload) >= 4 and payload[0] == 0xFF:
@@ -397,6 +450,10 @@ def _infer_parser(
     if len(payload) >= PUBLIC_PR103_LAYOUT.fixed_bytes:
         return PARSER_PR103
     raise HnervPacketSectionManifestError("could not infer HNeRV packet parser")
+
+
+def _normalize_parser_name(parser_name: str) -> str:
+    return PARSER_ALIASES.get(parser_name, parser_name)
 
 
 def _parser_input_payload(
@@ -447,6 +504,14 @@ def _parse_sections(parser_name: str, payload: bytes) -> list[dict[str, Any]]:
         return _parse_a5fc_sections(payload)
     if parser_name == PARSER_CPLX1:
         return _parse_cplx1_sections(payload)
+    if parser_name == PARSER_IBPS1:
+        return _parse_ibps1_sections(payload)
+    if parser_name == PARSER_D1POLY1:
+        return _parse_d1poly1_sections(payload)
+    if parser_name == PARSER_WZF01:
+        return _parse_wzf01_sections(payload)
+    if parser_name == PARSER_DP1:
+        return _parse_dp1_sections(payload)
     raise HnervPacketSectionManifestError(f"unknown parser {parser_name!r}")
 
 
@@ -686,6 +751,118 @@ def _parse_cplx1_sections(payload: bytes) -> list[dict[str, Any]]:
         )
         for index, (name, offset, data) in enumerate(specs)
     ]
+
+
+def _parse_ibps1_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.c6_e4_mdl_ibps.archive import (
+            IBPS1_SECTION_ROLES,
+            parse_ibps1_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"IBPS1 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_ibps1_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"IBPS1 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=IBPS1_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
+def _parse_d1poly1_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.d1_segnet_margin_polytope.archive import (
+            D1POLY1_SECTION_ROLES,
+            parse_d1poly1_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"D1POLY1 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_d1poly1_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"D1POLY1 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=D1POLY1_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
+def _parse_wzf01_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.d4_wyner_ziv_frame_0.archive import (
+            WZF01_SECTION_ROLES,
+            parse_wzf01_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"WZF01 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_wzf01_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"WZF01 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=WZF01_SECTION_ROLES[name],
+            )
+        )
+    return records
+
+
+def _parse_dp1_sections(payload: bytes) -> list[dict[str, Any]]:
+    try:
+        from tac.substrates.pretrained_driving_prior.archive import (
+            DP1_SECTION_ROLES,
+            parse_dp1_archive_bytes,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        raise HnervPacketSectionManifestError(
+            f"DP1 canonical parser import failed: {exc}"
+        ) from exc
+    try:
+        section_map = parse_dp1_archive_bytes(payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(f"DP1 parse failed: {exc}") from exc
+    records = []
+    for index, (name, (offset, length)) in enumerate(section_map.items()):
+        records.append(
+            _section_record(
+                index,
+                name=name,
+                offset=offset,
+                data=payload[offset : offset + length],
+                role=DP1_SECTION_ROLES[name],
+            )
+        )
+    return records
 
 
 def _section_record(index: int, *, name: str, offset: int, data: bytes, role: str) -> dict[str, Any]:
@@ -964,6 +1141,14 @@ def _parser_confidence(parser_name: str) -> str:
         return "A5FC magic plus side-info and variable-width PR101 latent wire"
     if parser_name == PARSER_CPLX1:
         return "CPLX magic plus decoder section length and byte_maps JSON"
+    if parser_name == PARSER_IBPS1:
+        return "IBPS1 magic plus canonical C6 MDL-IBPS section parser"
+    if parser_name == PARSER_D1POLY1:
+        return "D1POLY1 magic plus canonical D1 SegNet margin polytope section parser"
+    if parser_name == PARSER_WZF01:
+        return "WZF01 magic plus canonical D4 Wyner-Ziv frame-0 section parser"
+    if parser_name == PARSER_DP1:
+        return "DP1 magic plus canonical pre-trained driving prior section parser"
     return "unknown"
 
 
@@ -993,17 +1178,25 @@ __all__ = [
     "A5FC_MAGIC",
     "BATCH_SCHEMA",
     "CPLX1_MAGIC",
+    "D1POLY1_MAGIC_PREFIX",
+    "DP1_MAGIC_PREFIX",
+    "IBPS1_MAGIC_PREFIX",
     "MANIFEST_SCHEMA",
     "PARSER_A2K1",
     "PARSER_A5FC",
     "PARSER_AUTO",
     "PARSER_CHOICES",
     "PARSER_CPLX1",
+    "PARSER_D1POLY1",
+    "PARSER_DP1",
+    "PARSER_IBPS1",
     "PARSER_PR101",
     "PARSER_PR103",
     "PARSER_PR106",
+    "PARSER_WZF01",
     "SCHEMA_VERSION",
     "TOOL_NAME",
+    "WZF01_MAGIC_PREFIX",
     "HnervPacketSectionManifestError",
     "build_packet_section_manifest",
     "build_packet_section_manifest_batch",

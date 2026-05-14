@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """tac.substrates.c6_e4_mdl_ibps — Minimum Description Length × Information Bottleneck Predictive Substrate.
 
 The zen-Z1 LARGEST single bet for substrate-class shift per
@@ -53,8 +54,11 @@ Catalog #124 archive-grammar 8 fields (declared inline so AST walker observes th
 - ``bolt_on_loc_budget``: ``lane_class=substrate_engineering`` (HNeRV parity L7);
   encoder + decoder + IB regularizer composition is substrate engineering
 - ``no_op_detector_planned``: emit/parse roundtrip preserves bytes byte-for-byte;
-  archive payload is structurally consumed by every section of inflate.py
-  (encoder → q(z|frames); decoder → reconstruct; z → input; meta → cfg)
+  decoder_blob + latent_blob are frame-affecting at inflate, meta/header are
+  parse/config gates, and encoder_blob is training/provenance-only because
+  inflate calls ``frames_for_encoder=None``. Encoder-only byte changes must not
+  be claimed as score-affecting without a future runtime path that consumes
+  q(z|frames).
 
 target_modes: ``contest_one_video_replay``, ``contest_generalized``, ``research_substrate``
 lane_class: ``substrate_engineering``
@@ -117,11 +121,15 @@ from tac.substrates.c6_e4_mdl_ibps.architecture import (
     MDLIBPSSubstrate,
 )
 from tac.substrates.c6_e4_mdl_ibps.archive import (
+    IBPS1_HEADER_FMT,
+    IBPS1_HEADER_SIZE,
     IBPS1_MAGIC,
     IBPS1_SCHEMA_VERSION,
+    IBPS1_SECTION_ROLES,
     MDLIBPSArchive,
     pack_archive,
     parse_archive,
+    parse_ibps1_archive_bytes,
 )
 from tac.substrates.c6_e4_mdl_ibps.ib_decoder import IBDecoder
 from tac.substrates.c6_e4_mdl_ibps.ib_encoder import IBEncoder
@@ -136,8 +144,11 @@ __all__ = [
     "IBDecoder",
     "IBEncoder",
     "IBMDLLoss",
+    "IBPS1_HEADER_FMT",
+    "IBPS1_HEADER_SIZE",
     "IBPS1_MAGIC",
     "IBPS1_SCHEMA_VERSION",
+    "IBPS1_SECTION_ROLES",
     "MDLIBPSArchive",
     "MDLIBPSConfig",
     "MDLIBPSLossWeights",
@@ -148,4 +159,5 @@ __all__ = [
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
     "pack_archive",
     "parse_archive",
+    "parse_ibps1_archive_bytes",
 ]

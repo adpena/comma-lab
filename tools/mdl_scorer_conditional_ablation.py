@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Scorer-conditional MDL ablation (Z1, $0 GPU).
 
 **Canonical surface delegation note (2026-05-14, lane
@@ -158,6 +159,13 @@ IBPS1_MAGIC = b"IBPS"
 IBPS1_HEADER_FMT = "<4sBHHIIII"  # magic(4) + ver(1) + ld(2) + np(2) + 4*u32
 IBPS1_HEADER_SIZE = struct.calcsize(IBPS1_HEADER_FMT)  # = 25
 
+# C6 IBPS1 carries an encoder checkpoint for training provenance, but the
+# inflate path consumes decoder/latent/meta bytes only. Do not spend wall-clock
+# sampling provenance-only bytes unless the operator explicitly asks for it.
+DEFAULT_EXCLUDED_SECTIONS_BY_GRAMMAR: dict[str, frozenset[str]] = {
+    "ibps1": frozenset({"encoder_blob"}),
+}
+
 # Score formula per upstream/evaluate.py:
 #   score = 100 * seg_dist + sqrt(10 * pose_dist) + 25 * rate
 # We measure Δscore against the baseline so the `25 * rate` term cancels
@@ -218,6 +226,7 @@ class TierBResult:
     """Sampled byte-level ablation aggregated result."""
 
     section: str
+    length_bytes: int
     n_samples: int
     n_inflate_failures: int
     n_significant: int  # |Δscore_components| > significance_threshold
@@ -261,6 +270,8 @@ class ArchiveAblationResult:
     baseline_seg: float
     baseline_pose: float
     baseline_score_components: float  # 100*seg + sqrt(10*pose), excludes rate
+    included_sections: list[str] = field(default_factory=list)
+    excluded_sections: list[str] = field(default_factory=list)
 
     tier_a: list[TierAResult] = field(default_factory=list)
     tier_b: list[TierBResult] = field(default_factory=list)
@@ -383,53 +394,18 @@ def parse_ibps1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]
     - ``meta_blob`` — sorted-keys JSON with beta_ib, decoder_channels,
       _lat_scale, _lat_zero_point (control_or_metadata)
     """
-    if len(archive_bytes) < IBPS1_HEADER_SIZE:
-        raise ValueError(
-            f"ibps1 archive too short: got {len(archive_bytes)} bytes, "
-            f"need >= {IBPS1_HEADER_SIZE} for header"
-        )
-    (
-        magic,
-        version,
-        latent_dim,
-        num_pairs,
-        encoder_len,
-        decoder_len,
-        latent_len,
-        meta_len,
-    ) = struct.unpack(IBPS1_HEADER_FMT, archive_bytes[:IBPS1_HEADER_SIZE])
-    if magic != IBPS1_MAGIC:
-        raise ValueError(
-            f"ibps1 archive: bad magic {magic!r} (expected {IBPS1_MAGIC!r})"
-        )
-    if version != 1:
-        raise ValueError(
-            f"ibps1 archive: unsupported schema version {version} (expected 1)"
-        )
-    # int8 = 1 byte each
-    expected_latent_bytes = int(num_pairs) * int(latent_dim)
-    if latent_len != expected_latent_bytes:
-        raise ValueError(
-            f"ibps1 archive: latent_len {latent_len} != num_pairs*latent_dim "
-            f"= {expected_latent_bytes}"
-        )
-    end_header = IBPS1_HEADER_SIZE
-    end_encoder = end_header + int(encoder_len)
-    end_decoder = end_encoder + int(decoder_len)
-    end_latents = end_decoder + int(latent_len)
-    end_meta = end_latents + int(meta_len)
-    if end_meta > len(archive_bytes):
-        raise ValueError(
-            f"ibps1 archive: declared end_meta {end_meta} > archive bytes "
-            f"{len(archive_bytes)} — truncated archive"
-        )
-    return {
-        "ibps1_header": (0, IBPS1_HEADER_SIZE),
-        "encoder_blob": (end_header, int(encoder_len)),
-        "decoder_blob": (end_encoder, int(decoder_len)),
-        "latent_blob": (end_decoder, int(latent_len)),
-        "meta_blob": (end_latents, int(meta_len)),
-    }
+    # Thin delegating shim. The canonical surface lives at
+    # :func:`tac.substrates.c6_e4_mdl_ibps.archive.parse_ibps1_archive_bytes`
+    # (promoted 2026-05-14 in
+    # ``lane_ibps1_canonical_surface_promotion_20260514``). This shim
+    # preserves the historical CLI/tools import path for backward
+    # compatibility. New callers should import directly from the
+    # canonical surface to avoid drift if the IBPS1 schema ever versions.
+    from tac.substrates.c6_e4_mdl_ibps.archive import (  # local import (heavy module)
+        parse_ibps1_archive_bytes as _canonical_parse,
+    )
+
+    return _canonical_parse(archive_bytes)
 
 
 def load_archive(archive_path: Path, grammar: str) -> tuple[bytes, dict[str, tuple[int, int]]]:
@@ -928,6 +904,25 @@ def _perturb_section(
     return bytes(buf)
 
 
+def _section_selected(
+    section_name: str,
+    *,
+    include_sections: set[str] | None,
+    exclude_sections: set[str] | None,
+) -> bool:
+    """Return whether a section should be sampled by Tier A/B.
+
+    Include filters select a shard. Exclude filters still apply afterward so
+    provenance-only sections stay skipped by default unless the caller removes
+    that exclusion explicitly.
+    """
+    if include_sections is not None and section_name not in include_sections:
+        return False
+    if exclude_sections is not None and section_name in exclude_sections:
+        return False
+    return True
+
+
 def run_tier_a(
     archive: ArchiveSpec,
     inner_bytes: bytes,
@@ -939,6 +934,8 @@ def run_tier_a(
     distortion_net: torch.nn.Module,
     device: torch.device,
     rng: random.Random,
+    include_sections: set[str] | None = None,
+    exclude_sections: set[str] | None = None,
 ) -> list[TierAResult]:
     """Run structural section ablation."""
     results: list[TierAResult] = []
@@ -954,7 +951,7 @@ def run_tier_a(
         "pr106_body_plus_sidecar": ["zero", "random"],
         # IBPS1 (C6 MDL-IBPS) sections
         "ibps1_header": ["zero"],  # zero magic / version -> inflate failure
-        "encoder_blob": ["zero", "random"],  # forensic-only but still required by parser
+        "encoder_blob": ["zero", "random"],  # provenance-only in IBPS1; skipped by default
         # decoder_blob handled above (same name as A1 / PR101)
         # latent_blob handled above
         "meta_blob": ["zero", "random"],  # JSON metadata; zero -> parse failure
@@ -963,6 +960,12 @@ def run_tier_a(
     baseline_score_comp = _score_components(baseline_pose, baseline_seg)
 
     for section_name, (start, length) in archive.sections.items():
+        if not _section_selected(
+            section_name,
+            include_sections=include_sections,
+            exclude_sections=exclude_sections,
+        ):
+            continue
         modes_to_run = section_modes.get(section_name, ["zero"])
         for mode in modes_to_run:
             t0 = time.time()
@@ -1020,6 +1023,8 @@ def run_tier_b(
     n_samples_per_section: int,
     significance_threshold: float = 1e-4,
     flip_mode: str = "xor_0xff",  # "xor_0xff" | "xor_bit_msb" | "random_byte"
+    include_sections: set[str] | None = None,
+    exclude_sections: set[str] | None = None,
 ) -> list[TierBResult]:
     """For each section, flip N random byte positions, measure Δscore."""
     baseline_score_comp = _score_components(baseline_pose, baseline_seg)
@@ -1029,6 +1034,12 @@ def run_tier_b(
     section_min_length_for_sampling = 16
 
     for section_name, (start, length) in archive.sections.items():
+        if not _section_selected(
+            section_name,
+            include_sections=include_sections,
+            exclude_sections=exclude_sections,
+        ):
+            continue
         if length < section_min_length_for_sampling:
             continue
         n_samples = min(n_samples_per_section, length)
@@ -1112,6 +1123,7 @@ def run_tier_b(
 
         results.append(TierBResult(
             section=section_name,
+            length_bytes=length,
             n_samples=n_samples,
             n_inflate_failures=n_inflate_failures,
             n_significant=n_significant,
@@ -1149,14 +1161,52 @@ def run_tier_c(
 
     Provides a clean MDL-sensitivity vs noise-magnitude curve.
 
-    Note: this REQUIRES re-implementing the inflate path with monkey-patched
-    decode. We instead intercept at the assembled-tensor boundary by
-    re-running the decode-and-inflate loop locally (inflate.py replica).
-    Only A1 grammar is implemented for Tier C in this initial version.
-    """
-    if grammar != "a1":
-        return []  # PR106 Tier C is non-trivial; defer
+    Tier C is the dispositive substrate-class discriminator (per
+    HARVEST-AND-Z1 landing memo): brotli-saturation makes Tier A blind
+    at the byte layer; Tier C bypasses the byte layer entirely by
+    perturbing the DECODED tensors (decoder state_dict / latents).
+    Across-class substrates (cooperative-receiver / predictive-coding /
+    IB-bottleneck) should show qualitatively different Δscore curves vs
+    within-class HNeRV substrates.
 
+    Grammar dispatch:
+        - ``a1`` / ``pr101``: perturb A1's HNeRVDecoder state_dict + latents
+        - ``ibps1``: perturb C6 IB decoder state_dict + latents
+        - ``pr106`` / others: not implemented (returns [])
+
+    The DECODER state_dict + LATENTS are the perturbation targets because
+    they are the inflate-time consumers (encoder is forensic-only for
+    IBPS1; A1 doesn't carry an encoder). Each sigma controls per-tensor
+    relative noise magnitude (Gaussian scaled by tensor's std).
+    """
+    if grammar in ("a1", "pr101"):
+        return _run_tier_c_a1(
+            inner_bytes, pair_indices, gt_pairs, baseline_seg,
+            baseline_pose, distortion_net, device, rng, noise_sigmas,
+        )
+    if grammar == "ibps1":
+        return _run_tier_c_ibps1(
+            inner_bytes, pair_indices, gt_pairs, baseline_seg,
+            baseline_pose, distortion_net, device, rng, noise_sigmas,
+        )
+    return []  # PR106 Tier C is non-trivial; defer
+
+
+def _run_tier_c_a1(
+    inner_bytes: bytes,
+    pair_indices: list[int],
+    gt_pairs: torch.Tensor,
+    baseline_seg: float,
+    baseline_pose: float,
+    distortion_net: torch.nn.Module,
+    device: torch.device,
+    rng: random.Random,
+    noise_sigmas: list[float] | None = None,
+) -> list[TierCResult]:
+    """A1 / PR101 Tier C: perturb HNeRVDecoder state_dict + latents.
+
+    Original A1-only implementation; preserved verbatim for back-compat.
+    """
     if noise_sigmas is None:
         noise_sigmas = [0.001, 0.01, 0.1, 1.0]
 
@@ -1253,6 +1303,198 @@ def run_tier_c(
     return results
 
 
+def _run_tier_c_ibps1(
+    inner_bytes: bytes,
+    pair_indices: list[int],
+    gt_pairs: torch.Tensor,
+    baseline_seg: float,
+    baseline_pose: float,
+    distortion_net: torch.nn.Module,
+    device: torch.device,
+    rng: random.Random,
+    noise_sigmas: list[float] | None = None,
+) -> list[TierCResult]:
+    """IBPS1 (C6 MDL-IBPS) Tier C: perturb decoder state_dict + latents.
+
+    Per CLAUDE.md "Forbidden in-place edits to public PR intake clones"
+    we re-construct the substrate from the parsed archive (mirrors
+    :func:`inflate_one_video`'s contract) then directly mutate the
+    decoder state_dict + latents tensors with Gaussian noise scaled by
+    per-tensor relative std. Encoder is NOT perturbed (it is forensic-
+    only at inflate — eval path does not run the encoder per
+    :class:`MDLIBPSSubstrate.forward(frames_for_encoder=None)`).
+
+    Math (per Z1 council deep-math §3.5 substrate-class discriminator):
+
+        Δscore(σ) = score(perturb_with(σ * tensor.std())) - baseline_score
+
+    For a within-HNeRV-class substrate, ``Δscore`` grows sharply with σ
+    because every decoded byte is structurally close to the input image
+    manifold and small weight perturbations move pixels off-manifold.
+    For an across-class IB-bottlenecked substrate, the BOTTLENECK absorbs
+    small perturbations (the latent is a low-dimensional summary of
+    structurally-relevant scorer features), so Δscore vs σ has a
+    different shape — typically gentler at small σ + saturating earlier
+    as σ grows.
+
+    Returns the same ``TierCResult`` schema as A1 Tier C so the
+    aggregation + JSON serialization downstream is grammar-agnostic.
+
+    Raises:
+        ValueError: if the archive parses successfully but the substrate
+            construction fails (encoder/decoder state_dict mismatch).
+    """
+    if noise_sigmas is None:
+        noise_sigmas = [0.001, 0.01, 0.1, 1.0]
+
+    # Late imports — C6 substrate may not be importable in test fixtures.
+    from tac.substrates.c6_e4_mdl_ibps.architecture import (  # type: ignore[import-not-found]
+        EVAL_HW,
+        MDLIBPSConfig,
+        MDLIBPSSubstrate,
+    )
+    from tac.substrates.c6_e4_mdl_ibps.archive import (  # type: ignore[import-not-found]
+        parse_archive,
+    )
+
+    arc = parse_archive(inner_bytes)
+    meta = arc.meta
+    cfg = MDLIBPSConfig(
+        latent_dim=int(arc.latents.shape[1]),
+        encoder_input_channels=int(meta.get("encoder_input_channels", 3)),
+        encoder_sin_freq=float(meta.get("encoder_sin_freq", 30.0)),
+        decoder_embed_dim=int(meta["decoder_embed_dim"]),
+        decoder_initial_grid_h=int(meta["decoder_initial_grid_h"]),
+        decoder_initial_grid_w=int(meta["decoder_initial_grid_w"]),
+        decoder_channels=tuple(int(c) for c in meta["decoder_channels"]),
+        decoder_num_upsample_blocks=int(meta["decoder_num_upsample_blocks"]),
+        decoder_sin_freq=float(meta.get("decoder_sin_freq", 30.0)),
+        num_pairs=int(arc.latents.shape[0]),
+        output_height=int(meta.get("output_height", EVAL_HW[0])),
+        output_width=int(meta.get("output_width", EVAL_HW[1])),
+        beta_ib=float(meta.get("beta_ib", 0.01)),
+        latent_init_std=float(meta.get("latent_init_std", 0.02)),
+    )
+
+    # Pre-cache the clean decoder state_dict + latents (CPU copies) so we
+    # rebuild the perturbed model from scratch each sigma without
+    # accumulating noise. The encoder state_dict is needed only because
+    # the substrate ``load_state_dict`` contract refuses unexpected_keys.
+    base_encoder_sd = {
+        k: v.detach().cpu().clone() for k, v in arc.encoder_state_dict.items()
+    }
+    base_decoder_sd = {
+        k: v.detach().cpu().clone() for k, v in arc.decoder_state_dict.items()
+    }
+    base_latents = arc.latents.detach().cpu().clone()
+
+    baseline_score_comp = _score_components(baseline_pose, baseline_seg)
+    results: list[TierCResult] = []
+
+    def _render(
+        decoder_sd: dict[str, torch.Tensor],
+        latents: torch.Tensor,
+    ) -> torch.Tensor:
+        """Render the requested pairs through a fresh substrate.
+
+        Mirrors :func:`_decode_ibps1_to_frames` but takes the pre-loaded
+        decoder state_dict + latents directly (no archive re-parsing).
+        """
+        model = MDLIBPSSubstrate(cfg).to(device).eval()
+        enc_load = model.encoder.load_state_dict(
+            base_encoder_sd, strict=False
+        )
+        if set(enc_load.missing_keys) or set(enc_load.unexpected_keys):
+            raise ValueError(
+                f"ibps1 tier_c: encoder state_dict mismatch "
+                f"missing={sorted(enc_load.missing_keys)} "
+                f"unexpected={sorted(enc_load.unexpected_keys)}"
+            )
+        dec_load = model.decoder.load_state_dict(decoder_sd, strict=False)
+        if set(dec_load.missing_keys) or set(dec_load.unexpected_keys):
+            raise ValueError(
+                f"ibps1 tier_c: decoder state_dict mismatch "
+                f"missing={sorted(dec_load.missing_keys)} "
+                f"unexpected={sorted(dec_load.unexpected_keys)}"
+            )
+        with torch.no_grad():
+            model.latents.copy_(
+                latents.to(device=device, dtype=model.latents.dtype)
+            )
+
+        pair_indices_t = sorted(set(pair_indices))
+        n_target = len(pair_indices_t)
+        out = torch.empty(
+            (n_target, 2, CAMERA_H, CAMERA_W, 3), dtype=torch.uint8
+        )
+        written = 0
+        with torch.inference_mode():
+            for pair_idx in pair_indices_t:
+                idx_t = torch.tensor(
+                    [pair_idx], device=device, dtype=torch.long
+                )
+                rgb_0, rgb_1, _mu, _logvar = model(
+                    idx_t, frames_for_encoder=None
+                )
+                stacked = torch.cat([rgb_0, rgb_1], dim=0)  # (2, 3, H, W) in [0,1]
+                up = F.interpolate(
+                    stacked,
+                    size=(CAMERA_H, CAMERA_W),
+                    mode="bicubic",
+                    align_corners=False,
+                )
+                frames = (
+                    (up * 255.0)
+                    .clamp(0, 255)
+                    .permute(0, 2, 3, 1)
+                    .round()
+                    .to(torch.uint8)
+                    .cpu()
+                )  # (2, H, W, 3)
+                out[written, 0] = frames[0]
+                out[written, 1] = frames[1]
+                written += 1
+        return out
+
+    for sigma in noise_sigmas:
+        for target in ("state_dict", "latents"):
+            t0 = time.time()
+            if target == "state_dict":
+                perturbed_sd: dict[str, torch.Tensor] = {}
+                for k, v in base_decoder_sd.items():
+                    v_dev = v.to(device).float()
+                    # Tensors with <2 elements have std()=0 (degenerate);
+                    # clamp keeps the noise scale finite + non-zero so
+                    # sigma=0 reliably produces zero noise.
+                    rel_std = v_dev.std().clamp(min=1e-8)
+                    noise = torch.randn_like(v_dev) * (rel_std * sigma)
+                    perturbed_sd[k] = (v_dev + noise).to(dtype=v.dtype).cpu()
+                cand_frames = _render(perturbed_sd, base_latents)
+            else:  # latents
+                base_latents_dev = base_latents.to(device).float()
+                rel_std = base_latents_dev.std().clamp(min=1e-8)
+                noise = torch.randn_like(base_latents_dev) * (rel_std * sigma)
+                perturbed_latents = (base_latents_dev + noise).cpu()
+                cand_frames = _render(base_decoder_sd, perturbed_latents)
+            pose_p, seg_p = _compute_seg_pose_delta(
+                distortion_net, gt_pairs, cand_frames, device
+            )
+            dseg = seg_p - baseline_seg
+            dpose = pose_p - baseline_pose
+            dsc = _score_components(pose_p, seg_p) - baseline_score_comp
+            t1 = time.time()
+            results.append(TierCResult(
+                target=target,
+                noise_sigma_relative=sigma,
+                delta_seg=dseg,
+                delta_pose=dpose,
+                delta_score_components=dsc,
+                elapsed_seconds=t1 - t0,
+            ))
+
+    return results
+
+
 # ----------------------------------------------------------------------
 # Aggregate MDL estimate
 # ----------------------------------------------------------------------
@@ -1297,20 +1539,21 @@ def aggregate_mdl_estimate(
         for tb in archive_result.tier_b:
             relevant_sections.add(tb.section)
 
-    # Build section name -> length lookup. Prefer Tier A entries (with
-    # full section metadata); fall back to inferred length from Tier B
-    # sample count (over-estimates but bounded).
+    # Build section name -> length lookup. Prefer Tier A entries; Tier B rows
+    # also carry full length so sharded --skip-tier-a scouts remain meaningful.
     section_lengths: dict[str, int] = {}
     for ta in archive_result.tier_a:
         # If we have multiple rows for the same section (e.g. zero+random
         # modes), they have the same length; overwrite is harmless.
         section_lengths[ta.section] = ta.length_bytes
+    for tb in archive_result.tier_b:
+        section_lengths.setdefault(tb.section, tb.length_bytes)
 
     # For each relevant section, use Tier B byte-density
     for tb in archive_result.tier_b:
         if tb.section not in relevant_sections:
             continue
-        length = section_lengths.get(tb.section, tb.n_samples)
+        length = section_lengths.get(tb.section, tb.length_bytes)
         # bytes_lo: fraction_significant * length (count of bytes that move score)
         bytes_lo = tb.fraction_significant * length
         section_to_lo[tb.section] = bytes_lo
@@ -1364,6 +1607,8 @@ def ablate_archive(
     run_tier_a_flag: bool = True,
     run_tier_b_flag: bool = True,
     run_tier_c_flag: bool = True,
+    include_sections: set[str] | None = None,
+    exclude_sections: set[str] | None = None,
 ) -> ArchiveAblationResult:
     """Full 3-tier ablation on one archive."""
     from datetime import datetime, timezone
@@ -1397,6 +1642,22 @@ def ablate_archive(
         size_bytes=archive_bytes_total,
         sections=sections,
     )
+    selected_sections = [
+        name
+        for name in sections
+        if _section_selected(
+            name,
+            include_sections=include_sections,
+            exclude_sections=exclude_sections,
+        )
+    ]
+    if (run_tier_a_flag or run_tier_b_flag) and not selected_sections:
+        raise ValueError(
+            "section filters selected no Tier A/B sections; "
+            f"include={sorted(include_sections or [])} "
+            f"exclude={sorted(exclude_sections or [])}"
+        )
+    print(f"[{archive_name}] Selected Tier A/B sections: {', '.join(selected_sections) or '(none)'}")
 
     # Sample pair indices (uniformly over 0..599)
     pair_indices = sorted(rng.sample(range(N_PAIRS), pair_samples))
@@ -1439,12 +1700,15 @@ def ablate_archive(
         baseline_seg=baseline_seg,
         baseline_pose=baseline_pose,
         baseline_score_components=baseline_sc,
+        included_sections=sorted(include_sections or []),
+        excluded_sections=sorted(exclude_sections or []),
         timestamp_utc=timestamp_utc,
         notes=[
             "[MDL-ablation-MPS]" if str(device) == "mps" else f"[MDL-ablation-{device}]",
             "[mathematical-derivation]",
             "Δscore measurements only; absolute scores are NOT contest-CUDA / contest-CPU.",
             "Rate term excluded from score_components; archive size constant across ablations.",
+            f"Selected Tier A/B sections: {', '.join(selected_sections)}.",
         ],
     )
 
@@ -1457,6 +1721,8 @@ def ablate_archive(
         result.tier_a = run_tier_a(
             archive_spec, inner_bytes, grammar, pair_indices, gt_pairs,
             baseline_seg, baseline_pose, distortion_net, device, rng,
+            include_sections=include_sections,
+            exclude_sections=exclude_sections,
         )
         t_a1 = time.time()
         print(f"[{archive_name}] Tier A complete ({t_a1-t_a0:.2f}s, {len(result.tier_a)} measurements)")
@@ -1474,6 +1740,8 @@ def ablate_archive(
             archive_spec, inner_bytes, grammar, pair_indices, gt_pairs,
             baseline_seg, baseline_pose, distortion_net, device, rng,
             n_samples_per_section=byte_samples_per_section,
+            include_sections=include_sections,
+            exclude_sections=exclude_sections,
         )
         t_b_end = time.time()
         print(f"[{archive_name}] Tier B complete ({t_b_end-t_b_start:.2f}s)")
@@ -1551,6 +1819,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--skip-tier-a", action="store_true")
     p.add_argument("--skip-tier-b", action="store_true")
     p.add_argument("--skip-tier-c", action="store_true")
+    p.add_argument("--include-section", action="append", default=[], metavar="NAME",
+                   help="Only sample this archive section in Tier A/B; repeatable.")
+    p.add_argument("--exclude-section", action="append", default=[], metavar="NAME",
+                   help="Skip this archive section in Tier A/B; repeatable.")
+    p.add_argument("--include-provenance-sections", action="store_true",
+                   help="Do not apply grammar defaults that skip provenance-only sections.")
     args = p.parse_args(argv)
 
     # Validate alignment
@@ -1579,6 +1853,15 @@ def main(argv: list[str] | None = None) -> int:
         if not archive_path.exists():
             print(f"ERROR: archive not found: {archive_path}", file=sys.stderr)
             return 1
+        include_sections = set(args.include_section) or None
+        exclude_sections = set(args.exclude_section)
+        if not args.include_provenance_sections:
+            exclude_sections.update(DEFAULT_EXCLUDED_SECTIONS_BY_GRAMMAR.get(grammar, ()))
+        print(
+            f"[{archive_name}] Section filter: "
+            f"include={sorted(include_sections or []) or 'ALL'} "
+            f"exclude={sorted(exclude_sections) or 'NONE'}"
+        )
         result = ablate_archive(
             archive_path=archive_path,
             archive_name=archive_name,
@@ -1592,6 +1875,8 @@ def main(argv: list[str] | None = None) -> int:
             run_tier_a_flag=not args.skip_tier_a,
             run_tier_b_flag=not args.skip_tier_b,
             run_tier_c_flag=not args.skip_tier_c,
+            include_sections=include_sections,
+            exclude_sections=exclude_sections or None,
         )
         all_results.append(result)
 
@@ -1608,6 +1893,8 @@ def main(argv: list[str] | None = None) -> int:
                 "path": r.archive_path,
                 "sha256": r.archive_sha256,
                 "size_bytes": r.archive_size_bytes,
+                "included_sections": r.included_sections,
+                "excluded_sections": r.excluded_sections,
                 "baseline_seg": r.baseline_seg,
                 "baseline_pose": r.baseline_pose,
                 "baseline_score_components": r.baseline_score_components,

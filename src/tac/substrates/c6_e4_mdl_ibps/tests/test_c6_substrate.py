@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """C6 MDL-IBPS substrate tests — 30+ tests covering all 8 modules.
 
 Test groups:
@@ -409,6 +410,72 @@ def test_inflate_ambiguous_archive_member_raises(tmp_path: Path) -> None:
     (archive_dir / "x").write_bytes(b"B")
     with pytest.raises(ValueError, match="ambiguous"):
         _read_single_member_archive_bytes(archive_dir)
+
+
+def test_encoder_only_archive_mutation_changes_bytes_not_inflated_frames(
+    tmp_path: Path,
+) -> None:
+    """Encoder blob is training/provenance-only on the inflate path.
+
+    The runtime calls ``model(..., frames_for_encoder=None)``, so a valid
+    encoder-only state_dict mutation must not be treated as a score-affecting
+    no-op proof. The archive bytes change, while the inflated raw-frame digest
+    stays identical.
+    """
+    from tac.substrates.c6_e4_mdl_ibps.inflate import inflate_one_video
+
+    cfg = MDLIBPSConfig(
+        latent_dim=4,
+        decoder_embed_dim=4,
+        decoder_initial_grid_h=1,
+        decoder_initial_grid_w=1,
+        decoder_channels=(4,),
+        decoder_num_upsample_blocks=1,
+        num_pairs=1,
+        output_height=8,
+        output_width=8,
+    )
+    torch.manual_seed(123)
+    base = MDLIBPSSubstrate(cfg)
+    torch.manual_seed(456)
+    alternate_encoder = MDLIBPSSubstrate(cfg).encoder
+    meta = {
+        "beta_ib": cfg.beta_ib,
+        "encoder_input_channels": cfg.encoder_input_channels,
+        "encoder_sin_freq": cfg.encoder_sin_freq,
+        "decoder_embed_dim": cfg.decoder_embed_dim,
+        "decoder_initial_grid_h": cfg.decoder_initial_grid_h,
+        "decoder_initial_grid_w": cfg.decoder_initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "decoder_num_upsample_blocks": cfg.decoder_num_upsample_blocks,
+        "decoder_sin_freq": cfg.decoder_sin_freq,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+        "latent_init_std": cfg.latent_init_std,
+    }
+    base_blob = pack_archive(
+        base.encoder.state_dict(),
+        base.decoder.state_dict(),
+        base.latents.detach().clone(),
+        meta,
+    )
+    encoder_mutated_blob = pack_archive(
+        alternate_encoder.state_dict(),
+        base.decoder.state_dict(),
+        base.latents.detach().clone(),
+        meta,
+    )
+    assert hashlib.sha256(base_blob).hexdigest() != hashlib.sha256(
+        encoder_mutated_blob
+    ).hexdigest()
+
+    base_raw = tmp_path / "base.raw"
+    mutated_raw = tmp_path / "encoder_mutated.raw"
+    assert inflate_one_video(base_blob, base_raw, device="cpu") == 2
+    assert inflate_one_video(encoder_mutated_blob, mutated_raw, device="cpu") == 2
+    assert hashlib.sha256(base_raw.read_bytes()).hexdigest() == hashlib.sha256(
+        mutated_raw.read_bytes()
+    ).hexdigest()
 
 
 # ============================================================
