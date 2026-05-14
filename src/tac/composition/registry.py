@@ -141,6 +141,18 @@ class PrimitiveCategory(StrEnum):
     # Per EEEE landing 2026-05-12 + FIX-J wire-in 2026-05-12.
     COMPRESSAI_CODEC = "compressai_codec"
 
+    # Cooperative-receiver score-aware-training primitives — Atick-Redlich
+    # 1990/1992 (cooperative_receiver_atick_redlich) and Rao-Ballard 1999
+    # (predictive_coding_rao_ballard). They are TRAINING-LOOP loss-shaping
+    # primitives that operate on the predicted RGB pair and the per-pair
+    # residual respectively; they do NOT touch archive bytes directly.
+    # Their score-axis impact is therefore "MIXED" (they reshape the
+    # encoder's gradient flow toward scorer-relevant directions, which
+    # changes BOTH seg and pose distortion at constant byte budget).
+    # Stackable with each other and with all rate-axis primitives. Per
+    # cooperative-receiver primitive extraction 2026-05-13.
+    COOPERATIVE_RECEIVER = "cooperative_receiver"
+
 
 class PrimitiveOrderSensitivity(StrEnum):
     """How the primitive composes with siblings in its category.
@@ -775,6 +787,83 @@ def canonical_primitive_inventory() -> list[PrimitiveRow]:
                 "magic CACG; strongest CompressAI primitive at higher decode cost"
             ),
         ),
+        # ── Cooperative-receiver primitives x2 (extraction landing 2026-05-13) ──
+        # Atick-Redlich (efficient coding 1990/1992) + Rao-Ballard (predictive
+        # coding 1999). Training-loop loss-shaping primitives extracted from
+        # the time-traveler L5 substrate. Per the floor-v3 commit 27a7950fd
+        # alien-tech composition strategy, cooperative-receiver is move #1 in
+        # the orthogonal Amdahl composition unlocking the 0.10-0.13 floor.
+        # Per CLAUDE.md HNeRV parity discipline lesson L6 (score-domain
+        # Lagrangian) + lesson L8 (eval-roundtrip + differentiable scorer-
+        # preprocess training).
+        PrimitiveRow(
+            primitive_id="cooperative_receiver_atick_redlich",
+            name="Atick-Redlich cooperative-receiver loss (efficient coding 1990/1992)",
+            category=PrimitiveCategory.COOPERATIVE_RECEIVER,
+            order_sensitivity=PrimitiveOrderSensitivity.STACKABLE,
+            order_index=10,  # Training-loop primitive, not a packet-pipeline stage.
+            target_axis=ScoreAxis.MIXED,  # Reshapes seg AND pose at constant rate.
+            predicted_bytes_delta_band=(0, 0),  # Loss-shaping; no direct byte change.
+            predicted_score_delta_band=(-0.030, -0.005),
+            canonical_module="tac.codec.cooperative_receiver.atick_redlich",
+            canonical_symbol="cooperative_receiver_loss",
+            applicable_substrate_classes=(
+                SubstrateClass.RENDERER_REPLACEMENT,
+                SubstrateClass.RESIDUAL,
+            ),
+            semantic_constraint=SemanticConstraint(
+                # Substrates whose own design already runs the contest
+                # eval-roundtrip + scorer-conditional loss inherently get
+                # the Atick-Redlich benefit; the primitive is then a no-op
+                # (it would re-derive the same loss).
+                redundant_with_substrate_ids=(
+                    "time_traveler_l5_autonomy",
+                    "pr101_lc_v2_clone",
+                ),
+                expects_substrate_property=(
+                    "rgb_renderer",
+                    "differentiable_through_scorer_preprocess",
+                ),
+            ),
+            notes=(
+                "Atick-Redlich efficient-coding theorem (1990/1992): the "
+                "encoder maximizes MI(B; S(B)) against a FIXED known scorer; "
+                "operationally a scorer-distortion loss with eval-roundtrip + "
+                "differentiable preprocess_input. Stackable with predictive_"
+                "coding_rao_ballard (sister) and any rate-axis primitive."
+            ),
+        ),
+        PrimitiveRow(
+            primitive_id="predictive_coding_rao_ballard",
+            name="Rao-Ballard predictive-coding-hierarchy residual term (1999)",
+            category=PrimitiveCategory.COOPERATIVE_RECEIVER,
+            order_sensitivity=PrimitiveOrderSensitivity.STACKABLE,
+            order_index=11,  # Sits beside Atick-Redlich in the training loop.
+            target_axis=ScoreAxis.MIXED,  # World-model side info touches all axes.
+            predicted_bytes_delta_band=(-2_000, -200),
+            predicted_score_delta_band=(-0.010, -0.001),
+            canonical_module="tac.codec.cooperative_receiver.predictive_coding",
+            canonical_symbol="predictive_coding_residual_term",
+            applicable_substrate_classes=(
+                SubstrateClass.RENDERER_REPLACEMENT,
+                SubstrateClass.RESIDUAL,
+            ),
+            semantic_constraint=SemanticConstraint(
+                # Substrates that do NOT carry a per-pair predictive residual
+                # (no learned world model + side info structure) cannot
+                # benefit from the Rao-Ballard term — it requires the
+                # residual tensor as an explicit input.
+                expects_substrate_property=(
+                    "world_model_with_per_pair_residual",
+                ),
+            ),
+            notes=(
+                "Rao-Ballard predictive-coding hierarchy (1999): top-down "
+                "prediction transmits only residuals; penalize ||residual||^2 "
+                "to reward the world model for predicting more. Distinct from "
+                "Atick-Redlich (efficient coding); both compose orthogonally."
+            ),
+        ),
     ]
 
 
@@ -847,6 +936,21 @@ _COMPATIBILITY_MATRIX_V1: dict[
     (SubstrateClass.SELF_COMPRESSION, PrimitiveCategory.COMPRESSAI_CODEC): False,
     (SubstrateClass.BOLT_ON, PrimitiveCategory.COMPRESSAI_CODEC): False,
     (SubstrateClass.META_CODEC, PrimitiveCategory.COMPRESSAI_CODEC): False,
+    # Cooperative-receiver primitives (Atick-Redlich + Rao-Ballard): apply
+    # to substrates that ship a learned RGB renderer (RENDERER_REPLACEMENT)
+    # or a residual sidecar that participates in the scorer-conditional
+    # gradient flow (RESIDUAL). Pose-axis sidechannels target pose directly
+    # via a non-RGB pathway so the cooperative-receiver loss does NOT apply
+    # there. Self-compression / bolt-on / meta-codec primitives operate on
+    # weights or wrap byte streams; they don't carry the predicted RGB pair
+    # the cooperative-receiver primitive needs as input.
+    # Per cooperative-receiver primitive extraction landing 2026-05-13.
+    (SubstrateClass.RENDERER_REPLACEMENT, PrimitiveCategory.COOPERATIVE_RECEIVER): True,
+    (SubstrateClass.RESIDUAL, PrimitiveCategory.COOPERATIVE_RECEIVER): True,
+    (SubstrateClass.POSE_AXIS_SIDECHANNEL, PrimitiveCategory.COOPERATIVE_RECEIVER): False,
+    (SubstrateClass.SELF_COMPRESSION, PrimitiveCategory.COOPERATIVE_RECEIVER): False,
+    (SubstrateClass.BOLT_ON, PrimitiveCategory.COOPERATIVE_RECEIVER): False,
+    (SubstrateClass.META_CODEC, PrimitiveCategory.COOPERATIVE_RECEIVER): False,
 }
 
 

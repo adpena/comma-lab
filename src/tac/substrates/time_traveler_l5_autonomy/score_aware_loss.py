@@ -7,18 +7,17 @@ where:
 * ``B`` is the archive byte count (rate term)
 * ``N`` is the contest normalizer (37,545,489 frames-equivalent)
 * ``d_seg``, ``d_pose`` are the canonical scorer distortions through the
-  ``score_pair_components`` pipeline (Catalog #164)
-* ``H_pred`` is the predictive-coding-hierarchy auxiliary term: the
-  entropy/L2 norm of the per-pair predictive-coding residual that the
-  world model failed to predict.  Per Rao-Ballard 1999 / Friston
-  free-energy: minimizing this term equalizes information flow between
-  the world model and the per-pair side info.
+  Atick-Redlich cooperative-receiver primitive (which itself delegates to
+  the canonical ``score_pair_components`` pipeline per Catalog #164)
+* ``H_pred`` is the Rao-Ballard predictive-coding-hierarchy auxiliary term:
+  the L2 norm of the per-pair predictive-coding residual that the world
+  model failed to predict.
 
-The Atick-Redlich cooperative-receiver hook: ``score_pair_components``
-already runs the eval-roundtrip-corrected RGB through the FIXED contest
-scorer (SegNet + PoseNet).  This is mathematically equivalent to
-maximizing ``MI(B; S(B))`` subject to the rate constraint (Atick-Redlich
-1990 efficient-coding theorem applied to the contest scorer).
+The Atick-Redlich cooperative-receiver and Rao-Ballard predictive-coding
+primitives now live in :mod:`tac.codec.cooperative_receiver` so any other
+substrate (SIREN-pose, NeRV-residual, cross-paradigm composition cells, etc.)
+can compose them orthogonally. This module is the IN-TREE consumer that
+proved them out and continues to drive their default tuning.
 
 Per CLAUDE.md "HNeRV parity discipline" lesson L6: score-domain
 Lagrangian (NOT weight-domain proxies like rel_err²).
@@ -34,10 +33,13 @@ from dataclasses import dataclass
 
 import torch
 
-from tac.substrates.score_aware_common import (
-    CONTEST_POSE_SQRT_WEIGHT,
-    score_pair_components,
+from tac.codec.cooperative_receiver import (
+    AtickRedlichWeights,
+    PredictiveCodingWeights,
+    cooperative_receiver_loss,
+    predictive_coding_residual_term,
 )
+from tac.substrates.score_aware_common import CONTEST_POSE_SQRT_WEIGHT
 
 
 @dataclass(frozen=True)
@@ -123,25 +125,25 @@ class TimeTravelerScoreAwareLoss(torch.nn.Module):
         if noise_std < 0.0:
             raise ValueError(f"noise_std must be >= 0; got {noise_std}")
 
-        # Lazy import per the canonical pattern.
-        from tac.differentiable_eval_roundtrip import (
-            apply_eval_roundtrip_during_training,
-        )
-
         if self.training and noise_std > 0.0:
             rgb_0 = rgb_0 + (torch.rand_like(rgb_0) - 0.5) * (2.0 * noise_std)
             rgb_1 = rgb_1 + (torch.rand_like(rgb_1) - 0.5) * (2.0 * noise_std)
 
-        rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
-        rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
-
-        seg_term, pose_term = score_pair_components(
+        # Atick-Redlich cooperative-receiver primitive: scorer-conditional
+        # loss against the FIXED known SegNet + PoseNet pair, with the
+        # mandatory eval-roundtrip applied internally per CLAUDE.md.
+        cooperative = cooperative_receiver_loss(
+            rgb_0,
+            rgb_1,
+            gt_rgb_0,
+            gt_rgb_1,
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
-            rgb_0_rt=rgb_0_rt,
-            rgb_1_rt=rgb_1_rt,
-            gt_rgb_0=gt_rgb_0,
-            gt_rgb_1=gt_rgb_1,
+            weights=AtickRedlichWeights(
+                beta_seg=self.weights.beta_seg,
+                gamma_pose=self.weights.gamma_pose,
+                pose_weight_scale=self.weights.pose_weight_scale,
+            ),
         )
 
         rate_term = (
@@ -149,27 +151,26 @@ class TimeTravelerScoreAwareLoss(torch.nn.Module):
             * archive_bytes_proxy
             / self.weights.contest_normalizer
         )
-        pose_sqrt = torch.sqrt(pose_term.clamp(min=1e-12))
+        loss = rate_term + cooperative.cooperative_loss
 
-        loss = (
-            rate_term
-            + self.weights.beta_seg * seg_term
-            + self.weights.gamma_pose * self.weights.pose_weight_scale * pose_sqrt
-        )
-
+        # Rao-Ballard predictive-coding-hierarchy primitive: penalize the
+        # magnitude of the per-pair residual the world model failed to
+        # predict.  A good world model makes the residual small.
         predict_term_value: torch.Tensor | float = 0.0
         if predictive_residual is not None and self.weights.delta_predict > 0.0:
-            # Predictive-coding hierarchy: penalize the magnitude of the
-            # per-pair residual the world model failed to predict.  Per
-            # Rao-Ballard 1999: a good world model makes the residual small.
-            predict_term = predictive_residual.pow(2).mean()
-            loss = loss + self.weights.delta_predict * predict_term
-            predict_term_value = predict_term.detach()
+            predictive = predictive_coding_residual_term(
+                predictive_residual,
+                weights=PredictiveCodingWeights(
+                    delta_predict=self.weights.delta_predict,
+                ),
+            )
+            loss = loss + predictive.scaled_term
+            predict_term_value = predictive.unscaled_residual_l2.detach()
         parts: dict[str, torch.Tensor] = {
             "rate_term": rate_term.detach(),
-            "seg_term": seg_term.detach(),
-            "pose_term": pose_term.detach(),
-            "pose_sqrt": pose_sqrt.detach(),
+            "seg_term": cooperative.seg_term.detach(),
+            "pose_term": cooperative.pose_term.detach(),
+            "pose_sqrt": cooperative.pose_sqrt.detach(),
             "predict_term": (
                 predict_term_value
                 if isinstance(predict_term_value, torch.Tensor)

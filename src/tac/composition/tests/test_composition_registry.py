@@ -3,7 +3,7 @@
 Per operator directive 2026-05-12 ("stacking and composition on
 everything"), this test file pins:
 
-1. The 17-primitive canonical inventory shape + integrity.
+1. The 19-primitive canonical inventory shape + integrity.
 2. The substrate x primitive compatibility matrix (every entry checked).
 3. The pipeline-ordering / mutually-exclusive validator.
 4. The enumerator's compatibility-matrix gate.
@@ -58,10 +58,12 @@ from tac.composition.registry import (
 # ── 1. Primitive inventory shape ──────────────────────────────────────────
 
 
-def test_primitive_inventory_has_17_rows():
+def test_primitive_inventory_has_19_rows():
     prims = canonical_primitive_inventory()
-    # 17 = 14 legacy + 3 CompressAI codecs (FIX-J wire-in 2026-05-12).
-    assert len(prims) == 17, f"expected 17 primitives, got {len(prims)}"
+    # 19 = 14 legacy + 3 CompressAI codecs (FIX-J wire-in 2026-05-12) + 2
+    # cooperative-receiver primitives (extraction landing 2026-05-13:
+    # Atick-Redlich + Rao-Ballard).
+    assert len(prims) == 19, f"expected 19 primitives, got {len(prims)}"
 
 
 def test_primitive_inventory_ids_unique():
@@ -88,6 +90,9 @@ def test_primitive_inventory_categories():
     assert len(by_cat[PrimitiveCategory.LZMA]) == 1
     # CompressAI codec adapters x3:
     assert len(by_cat[PrimitiveCategory.COMPRESSAI_CODEC]) == 3
+    # Cooperative-receiver x2 (Atick-Redlich + Rao-Ballard) — extraction
+    # landing 2026-05-13:
+    assert len(by_cat[PrimitiveCategory.COOPERATIVE_RECEIVER]) == 2
 
 
 def test_primitive_score_claim_invariants_planning_only():
