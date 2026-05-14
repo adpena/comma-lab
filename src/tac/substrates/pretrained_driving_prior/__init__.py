@@ -66,6 +66,17 @@ from tac.substrates.pretrained_driving_prior.archive import (
     pack_archive,
     parse_archive,
 )
+from tac.substrates.pretrained_driving_prior.composition import (
+    DPCOMP_HEADER_SIZE,
+    DPCOMP_MAGIC,
+    DPCOMP_SCHEMA_VERSION,
+    ComposedArchive,
+    compose_from_files,
+    compose_with,
+    decompose,
+    known_base_substrates,
+    verify_composition,
+)
 from tac.substrates.pretrained_driving_prior.codebook import (
     CODEBOOK_TOTAL_TARGET_BYTES_MAX,
     CODEBOOK_TOTAL_TARGET_BYTES_MIN,
@@ -101,6 +112,9 @@ from tac.substrates.pretrained_driving_prior.score_aware_loss import (
 __all__ = [
     "CODEBOOK_TOTAL_TARGET_BYTES_MAX",
     "CODEBOOK_TOTAL_TARGET_BYTES_MIN",
+    "DPCOMP_HEADER_SIZE",
+    "DPCOMP_MAGIC",
+    "DPCOMP_SCHEMA_VERSION",
     "DP1_HEADER_FMT",
     "DP1_HEADER_SIZE",
     "DP1_MAGIC",
@@ -111,6 +125,7 @@ __all__ = [
     "SKY_HORIZON_PROFILE_SHAPE",
     "VEHICLE_APPEARANCE_BASIS_SHAPE",
     "Comma2k19FrameIterator",
+    "ComposedArchive",
     "ContestVideoLeakageError",
     "DashcamCodebook",
     "DashcamPriorLoss",
@@ -125,12 +140,17 @@ __all__ = [
     "build_readiness_manifest",
     "check_no_contest_video_leakage",
     "codebook_to_torch_tensors",
+    "compose_from_files",
+    "compose_with",
+    "decompose",
     "deterministic_zero_codebook",
     "distill_codebook",
+    "known_base_substrates",
     "pack_archive",
     "parse_archive",
     "parse_codebook",
     "serialize_codebook",
     "validate_codebook",
+    "verify_composition",
     "write_codebook_to_disk",
 ]

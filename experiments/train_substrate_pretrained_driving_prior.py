@@ -468,10 +468,23 @@ def _smoke_main(args: argparse.Namespace) -> int:
     num_pairs = 4
     per_pair_bytes = 8
     residual = bytes([0] * (num_pairs * per_pair_bytes))
+    # Catalog #210 provenance propagation — every DP1 archive carries
+    # forensic metadata so downstream replay can audit dataset origin,
+    # license attribution, codebook reproducibility, and tampering
+    # detection.
     meta = {
         "residual_int8_scale": 64.0,
         "hidden_dim": renderer_cfg.hidden_dim,
         "num_hidden_layers": renderer_cfg.num_hidden_layers,
+        # Per Catalog #210: the codebook's own metadata is the
+        # authoritative source for these keys; we surface them at the
+        # archive level so a tool reading just the meta blob can audit.
+        "license_tags": book.metadata.get("license_tags", []),
+        "dataset_provenance": book.metadata.get("dataset_provenance", ""),
+        "distillation_version": book.metadata.get("distillation_version", ""),
+        "random_seed": book.metadata.get("random_seed", cfg.random_seed),
+        "basis_sha256": book.metadata.get("basis_sha256", ""),
+        "num_frames_used": book.metadata.get("num_frames_used", 0),
     }
     packed = pack_archive(
         book,
@@ -911,6 +924,10 @@ def _full_main(args: argparse.Namespace) -> int:
                     ]
                     residual_payload.extend(pair_bytes)
 
+            # Catalog #210 provenance propagation — codebook metadata
+            # surfaces to archive metadata so downstream replay tools can
+            # audit dataset origin, license attribution, codebook
+            # reproducibility, and tampering detection.
             meta = {
                 "residual_int8_scale": 64.0,
                 "hidden_dim": renderer_cfg.hidden_dim,
@@ -918,6 +935,17 @@ def _full_main(args: argparse.Namespace) -> int:
                 "best_val_lagrangian": best_val_lag if math.isfinite(best_val_lag) else None,
                 "best_epoch": best_epoch,
                 "lane_id": LANE_ID_PHASE_2,
+                # Catalog #210 surfaces:
+                "license_tags": book.metadata.get("license_tags", []),
+                "dataset_provenance": book.metadata.get(
+                    "dataset_provenance", ""
+                ),
+                "distillation_version": book.metadata.get(
+                    "distillation_version", ""
+                ),
+                "random_seed": book.metadata.get("random_seed", 0),
+                "basis_sha256": book.metadata.get("basis_sha256", ""),
+                "num_frames_used": book.metadata.get("num_frames_used", 0),
             }
             ema_state_torch = {k: v for k, v in ema_state_loaded.items()}
             bin_bytes = pack_archive(

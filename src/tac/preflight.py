@@ -1875,6 +1875,27 @@ def preflight_all(
         check_no_contest_video_leakage_in_distillation_callers(
             strict=True, verbose=verbose,
         )
+        # 2026-05-14 Catalog #210 - DP1 codebook provenance metadata gate.
+        # STRICT @ 0 at landing because the only DP1 archive builder is
+        # ``distill_codebook`` (self-exempt); downstream callers consume
+        # the codebook via ``compose_with`` which propagates metadata via
+        # the composition forensic surface (Catalog #211 sister). Future
+        # hand-rolled federated aggregators or "minimal repack" scripts
+        # that strip provenance will block at preflight. Memory:
+        # feedback_dp1_phase_2_hardening_v2_landed_20260514.md.
+        check_dp1_codebook_provenance_metadata_present(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #211 - DP1 composition routes through the
+        # canonical helper (``tac.substrates.pretrained_driving_prior.
+        # composition``). STRICT @ 0 at landing because no production
+        # caller hand-rolls composition yet; the gate refuses any FUTURE
+        # callsite that bypasses ``compose_with`` / ``decompose`` /
+        # ``verify_composition`` / ``compose_from_files``. Memory:
+        # feedback_dp1_phase_2_hardening_v2_landed_20260514.md.
+        check_dp1_composition_routes_through_canonical_helper(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -48804,6 +48825,390 @@ def check_no_contest_video_leakage_in_distillation_callers(
             "leakage refusal opt-in instead of structural. Per CLAUDE.md "
             "HNeRV parity discipline L1 the codebook MUST be distilled from "
             "OUT-OF-DISTRIBUTION dashcam data, never the contest video.\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
+
+# =============================================================================
+# Catalog #210 - DP1 codebook provenance metadata gate (2026-05-14)
+# =============================================================================
+
+_CHECK_210_REQUIRED_PROVENANCE_KEYS: tuple[str, ...] = (
+    "license_tags",
+    "dataset_provenance",
+    "distillation_version",
+    "random_seed",
+    "basis_sha256",
+    "num_frames_used",
+)
+# Files that legitimately construct a DashcamCodebook without going through
+# distill_codebook (e.g. the deterministic_zero_codebook scaffold helper used
+# by L0 tests / readiness manifest). The canonical implementation file
+# defines BOTH the validator and the zero scaffold; the test file constructs
+# fixtures across both modes.
+_CHECK_210_SELF_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "src/tac/substrates/pretrained_driving_prior/codebook.py",
+    "src/tac/substrates/pretrained_driving_prior/distillation.py",
+    "src/tac/substrates/pretrained_driving_prior/composition.py",
+    "src/tac/preflight.py",
+)
+_CHECK_210_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+)
+_CHECK_210_DP1_ARCHIVE_TOKEN = "pack_archive"
+_CHECK_210_WAIVER_TOKEN = "DP1_PROVENANCE_OK"
+
+
+def _check_210_iter_target_files(repo_root: Path) -> Iterator[Path]:
+    """Yield .py files that could pack a DP1 archive without provenance."""
+    scope_dirs = (
+        repo_root / "src" / "tac",
+        repo_root / "tools",
+        repo_root / "experiments",
+        repo_root / "scripts",
+    )
+    for scope_dir in scope_dirs:
+        if not scope_dir.exists():
+            continue
+        for path in scope_dir.rglob("*.py"):
+            rel = path.relative_to(repo_root).as_posix()
+            if any(frag in rel for frag in _CHECK_210_EXEMPT_PATH_FRAGMENTS):
+                continue
+            if any(rel == frag or rel.endswith(frag) for frag in _CHECK_210_SELF_EXEMPT_PATH_FRAGMENTS):
+                continue
+            if "/tests/" in rel or path.name.startswith("test_") or path.name.endswith("_test.py"):
+                continue
+            yield path
+
+
+def check_dp1_codebook_provenance_metadata_present(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #210 - DP1 archive builders must populate provenance metadata.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + the operator's
+    2026-05-14 hardening directive ("need to ensure it's useful") DP1
+    archives that will be **reused over and over** as a compositional
+    pretraining substrate MUST carry forensic provenance:
+
+    * ``license_tags`` (proves which dataset the codebook was distilled from)
+    * ``dataset_provenance`` (e.g. ``"comma2k19"`` / ``"synthetic_test"``)
+    * ``distillation_version`` (so future agents can reproduce the
+      distillation step)
+    * ``random_seed`` (deterministic codebook reproducibility)
+    * ``basis_sha256`` (codebook-tampering detection sister of Catalog #211
+      ``verify_composition`` forensic surface)
+    * ``num_frames_used`` (cost-quality matrix reproducibility)
+
+    The L1 scaffold + Phase 2 ``distill_codebook`` already populates all 6
+    keys; this gate refuses any FUTURE DP1 archive builder that strips
+    them (e.g. a hand-rolled federated aggregator that forgets to merge
+    provenance, or a downstream "minimal repack" script that re-emits a
+    bare codebook).
+
+    Detection: scans every file in ``src/tac/`` / ``tools/`` /
+    ``experiments/`` / ``scripts/`` that contains the DP1 ``pack_archive(``
+    token. For each such file, requires that the 60-line preceding window
+    of every ``pack_archive(`` call references all 6 provenance keys OR
+    routes through a metadata dict literal that names them. Same-line
+    ``# DP1_PROVENANCE_OK:<rationale>`` waiver accepted; placeholder
+    ``<reason>`` literal rejected.
+
+    Self-exempt: the canonical implementation files
+    (``distillation.py``, ``codebook.py``, ``composition.py``,
+    ``preflight.py``). Test files exempt by scope rule.
+
+    Per CLAUDE.md "Strict-flip atomicity rule" — STRICT @ 0 at landing
+    (the only current builder is ``distill_codebook`` itself which is on
+    the self-exempt list; downstream callers consume the codebook via
+    ``compose_with`` which propagates metadata via the composition
+    forensic surface).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    violations: list[str] = []
+    for path in _check_210_iter_target_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Only scan files that REALLY import DP1's pack_archive (not just
+        # mention the substrate name in a registry list or stage label).
+        # Acceptance signal: the file imports from
+        # ``tac.substrates.pretrained_driving_prior`` AND its body uses
+        # ``pack_archive(``, OR explicitly references DP1's own
+        # ``DP1_MAGIC`` / ``DP1_HEADER_FMT`` / ``DrivingPriorArchive``.
+        has_dp1_import = (
+            "from tac.substrates.pretrained_driving_prior" in text
+            and "pack_archive" in text
+        )
+        has_dp1_archive_tokens = (
+            "DP1_MAGIC" in text
+            or "DP1_HEADER_FMT" in text
+            or "DrivingPriorArchive" in text
+        )
+        if not (has_dp1_import or has_dp1_archive_tokens):
+            continue
+        if _CHECK_210_DP1_ARCHIVE_TOKEN + "(" not in text:
+            continue
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            if _CHECK_210_DP1_ARCHIVE_TOKEN + "(" not in line:
+                continue
+            stripped = line.strip()
+            if stripped.startswith(("def ", "from ", "import ", "#", '"', "'")):
+                continue
+            # Same-line waiver?
+            if _CHECK_210_WAIVER_TOKEN + ":" in line:
+                trailing = line.split(_CHECK_210_WAIVER_TOKEN + ":", 1)[1]
+                rationale = trailing.split()[0] if trailing.strip() else ""
+                if rationale and rationale != "<reason>":
+                    continue
+            # 60-line preceding window must reference all 6 provenance keys
+            # (loose check — any literal match suffices; the deep check is
+            # the runtime ``validate_codebook`` that runs INSIDE pack_archive).
+            window_start = max(0, i - 60)
+            window = "\n".join(lines[window_start : i + 1])
+            missing = [
+                k for k in _CHECK_210_REQUIRED_PROVENANCE_KEYS if k not in window
+            ]
+            if missing:
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}:{i + 1}: DP1 pack_archive(...) call missing "
+                    f"provenance keys {missing} in 60-line preceding window "
+                    f"(Catalog #210). DP1 is a CANONICAL pretraining "
+                    f"substrate reused across downstream lanes; provenance "
+                    f"is the operator's forensic audit trail. Add the "
+                    f"missing keys to the metadata dict or route through "
+                    f"``distill_codebook(...)`` which populates all 6."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [dp1-codebook-provenance] WARN: {len(violations)} "
+                f"DP1 archive builder(s) missing provenance keys "
+                f"(strict={strict})"
+            )
+        else:
+            print("  [dp1-codebook-provenance] OK")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_dp1_codebook_provenance_metadata_present: "
+            f"{len(violations)} DP1 archive builder(s) missing required "
+            "provenance metadata keys (Catalog #210). DP1 is the canonical "
+            "pretraining lane reused across downstream substrates; provenance "
+            "is the forensic audit trail enabling codebook-tampering detection "
+            "+ license-tag propagation + cost-quality reproducibility.\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
+
+# =============================================================================
+# Catalog #211 - DP1 composition routes through canonical helper (2026-05-14)
+# =============================================================================
+
+_CHECK_211_COMPOSED_MAGIC_LITERAL = b"DPC\x00"
+_CHECK_211_DP1_MAGIC_LITERAL = b"DP1\x00"
+_CHECK_211_CANONICAL_HELPER_TOKENS: tuple[str, ...] = (
+    "compose_with",
+    "compose_from_files",
+    "decompose",
+    "verify_composition",
+)
+_CHECK_211_SELF_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "src/tac/substrates/pretrained_driving_prior/composition.py",
+    "src/tac/substrates/pretrained_driving_prior/__init__.py",
+    "src/tac/preflight.py",
+)
+_CHECK_211_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+)
+_CHECK_211_WAIVER_TOKEN = "DP1_COMPOSITION_OK"
+
+
+def _check_211_iter_target_files(repo_root: Path) -> Iterator[Path]:
+    """Yield .py files that could hand-roll DP1 composition.
+
+    Scope: ``src/tac/``, ``tools/``, ``experiments/``, ``scripts/``.
+    Skips tests, vendored intake clones, OSS export mirrors, and
+    ``experiments/results/`` build artifacts.
+    """
+    scope_dirs = (
+        repo_root / "src" / "tac",
+        repo_root / "tools",
+        repo_root / "experiments",
+        repo_root / "scripts",
+    )
+    for scope_dir in scope_dirs:
+        if not scope_dir.exists():
+            continue
+        for path in scope_dir.rglob("*.py"):
+            rel = path.relative_to(repo_root).as_posix()
+            if any(frag in rel for frag in _CHECK_211_EXEMPT_PATH_FRAGMENTS):
+                continue
+            if any(rel == frag or rel.endswith(frag) for frag in _CHECK_211_SELF_EXEMPT_PATH_FRAGMENTS):
+                continue
+            if "/tests/" in rel or path.name.startswith("test_") or path.name.endswith("_test.py"):
+                continue
+            yield path
+
+
+def check_dp1_composition_routes_through_canonical_helper(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #211 - DP1 composition must route through canonical helper.
+
+    Per CLAUDE.md "Beauty, simplicity, and developer experience" + the
+    operator's 2026-05-14 hardening directive: DP1 is the **canonical
+    pretraining lane** reused across A1 / PR101 / HDM8 / YUCR / TT5L /
+    sane_hnerv. Composition between DP1 and any downstream substrate
+    MUST route through the canonical helper module
+    ``tac.substrates.pretrained_driving_prior.composition``:
+
+    * :func:`compose_with(dp1_bytes, base_bytes, base_substrate=...)` —
+      emits the byte-stable DPCOMP wrapper.
+    * :func:`decompose(composed_bytes)` — peels the wrapper.
+    * :func:`verify_composition(composed_bytes, ...)` — forensic surface
+      that detects codebook tampering + propagates license tags.
+    * :func:`compose_from_files(dp1_path, base_path, out_path, ...)` —
+      file-level convenience wrapper.
+
+    Bug class: ad-hoc composition (e.g. ``open(dp1_path, 'rb').read() +
+    open(base_path, 'rb').read()`` concatenation) silently bypasses the
+    DPCOMP header + length-prefix + base_tag contract. Downstream replay
+    cannot detect whether the DP1 prior was tampered with, license
+    attribution is lost, and the inflate path mis-parses the bytes.
+
+    Detection: scans every file in scope that REFERENCES DP1 archive
+    bytes (token ``DP1_MAGIC`` literal ``b"DP1\\x00"`` OR token
+    ``DPCOMP_MAGIC`` literal ``b"DPC\\x00"``) AND performs a byte
+    concatenation (``+`` operator joining two byte literals / two
+    ``read_bytes()`` calls within a 20-line window). Refuses if the
+    file does NOT import / reference one of the canonical helpers.
+
+    Same-line ``# DP1_COMPOSITION_OK:<rationale>`` waiver accepted for
+    the rare legitimate manual concatenation (e.g. a Modal worker
+    streaming bytes through a non-canonical wrapper). Placeholder
+    ``<reason>`` literal rejected.
+
+    Self-exempt: the canonical implementation file
+    (``composition.py``), the substrate ``__init__.py`` (re-exports),
+    and ``preflight.py`` (the gate carries the literal tokens in its
+    regex / docstring).
+
+    Per CLAUDE.md "Strict-flip atomicity rule" — STRICT @ 0 at landing.
+    Current callers of DP1 composition are limited to the canonical
+    helper itself + tests; no production caller exists yet (operator
+    hasn't dispatched Phase 2 DP1 archive). Future downstream substrate
+    composition wiring (e.g. ``tools/compose_dp1_x_a1.py``) MUST import
+    from the canonical helper.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    # Build the byte-literal patterns we look for. Python source can write
+    # them as either ``b"DPC\x00"`` or ``b"DP1\x00"`` (or hex/octal). Match
+    # the canonical escape form most likely produced by ``repr()``.
+    dp1_magic_patterns = (r'b"DP1\x00"', r"b'DP1\x00'")
+    dpcomp_magic_patterns = (r'b"DPC\x00"', r"b'DPC\x00'")
+
+    violations: list[str] = []
+    for path in _check_211_iter_target_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Quick filter: file must reference at least one of the DP1 / DPCOMP
+        # magic patterns AND the bytes concatenation surface.
+        if not any(p in text for p in dp1_magic_patterns + dpcomp_magic_patterns):
+            # Also accept files that import from the canonical helper as
+            # in-scope (they're fine — they delegate to the canonical API).
+            continue
+        # If the file imports/uses one of the canonical helpers, ACCEPT.
+        if any(
+            f"{tok}(" in text or f"import {tok}" in text or f"from .composition import" in text
+            for tok in _CHECK_211_CANONICAL_HELPER_TOKENS
+        ):
+            continue
+        # If the file is the canonical archive module itself
+        # (uses DP1_MAGIC in pack_archive), it's fine — Catalog #210
+        # already covers archive-builder discipline.
+        if "DP1_MAGIC" in text and "DP1_HEADER_FMT" in text:
+            # Heuristic: file is the archive module or imports it for
+            # legitimate DP1 archive packing — that path is Catalog #210
+            # territory, not composition territory.
+            continue
+        # The file references DP1 magic AND does NOT route through any
+        # canonical helper. Walk each line that mentions DP1/DPCOMP magic
+        # and emit a violation unless waived.
+        lines = text.splitlines()
+        emitted_for_file = False
+        for i, line in enumerate(lines):
+            if not any(p in line for p in dp1_magic_patterns + dpcomp_magic_patterns):
+                continue
+            # Same-line waiver?
+            if _CHECK_211_WAIVER_TOKEN + ":" in line:
+                trailing = line.split(_CHECK_211_WAIVER_TOKEN + ":", 1)[1]
+                rationale = trailing.split()[0] if trailing.strip() else ""
+                if rationale and rationale != "<reason>":
+                    continue
+            rel = path.relative_to(root).as_posix()
+            violations.append(
+                f"{rel}:{i + 1}: references DP1/DPCOMP magic bytes "
+                f"without routing through the canonical composition "
+                f"helper (Catalog #211). Use "
+                f"``tac.substrates.pretrained_driving_prior.compose_with`` "
+                f"(or ``decompose`` / ``verify_composition`` / "
+                f"``compose_from_files``) instead of hand-rolling. "
+                f"Same-line ``# DP1_COMPOSITION_OK:<rationale>`` waiver "
+                f"available for legitimate manual byte paths."
+            )
+            emitted_for_file = True
+            # One violation per file is enough for the operator to see the
+            # issue; emit at most 3 lines per file so the report doesn't
+            # explode on docstring-heavy files.
+            if emitted_for_file and i > 0 and len([v for v in violations if rel in v]) >= 3:
+                break
+
+    if verbose:
+        if violations:
+            print(
+                f"  [dp1-composition-canonical] WARN: {len(violations)} "
+                f"hand-rolled DP1 composition site(s) "
+                f"(strict={strict})"
+            )
+        else:
+            print("  [dp1-composition-canonical] OK")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_dp1_composition_routes_through_canonical_helper: "
+            f"{len(violations)} site(s) hand-roll DP1 composition outside "
+            "the canonical helper (Catalog #211). DP1 is the canonical "
+            "pretraining lane reused across A1/PR101/HDM8/YUCR/TT5L/"
+            "sane_hnerv; composition that bypasses ``compose_with`` "
+            "loses byte-stable DPCOMP framing, license-tag propagation, "
+            "and codebook-tampering detection.\n  "
             + "\n  ".join(v[:300] for v in violations[:8])
         )
     return violations
