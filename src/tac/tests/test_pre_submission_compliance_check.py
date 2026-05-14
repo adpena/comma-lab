@@ -904,6 +904,55 @@ def test_pre_submission_check_dispatch_claim_linkage_accepts_claim_helper_termin
     assert report["passed"], [c for c in report["checks"] if not c["passed"]]
 
 
+def test_pre_submission_check_contest_final_rejects_unsuccessful_terminal_claim(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-08T01:00:00Z | codex | lane-a | modal | job-a | "
+        f"2026-05-08T01:00Z | cancelled_operator_request | archive_sha256={expected['archive_sha256']} |\n"
+        "| 2026-05-08T00:00:00Z | codex | lane-a | modal | job-a | "
+        "2026-05-08T00:30Z | active_exact_eval | prior active claim |\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    failed = _failed_check_names(report)
+    assert "dispatch_claim_terminal_row" not in failed
+    assert "dispatch_claim_terminal_archive_sha_bound" not in failed
+    assert "dispatch_claim_successful_exact_eval_terminal_row" in failed
+
+
 def test_pre_submission_check_public_hygiene_flags_provider_ids(tmp_path: Path) -> None:
     mod = _load_module()
     _write_submission(tmp_path / "submission")
