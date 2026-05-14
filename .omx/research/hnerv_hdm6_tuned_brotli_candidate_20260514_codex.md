@@ -139,3 +139,25 @@ tools/claim_lane_dispatch.py claim \
 Then run Modal exact CUDA auth eval through the reviewed PR106-R2 PR101-grammar
 runtime. Until that JSON exists, this remains a byte-closed candidate, not a
 score claim.
+
+## Exact CUDA Harvest
+
+Recovered exact CUDA eval at `2026-05-14T08:21:35Z`:
+
+- Modal call id: `fc-01KRJS2DAQ0N0EFH21CR04WKMR`
+- Job id: `hnerv_hdm6_hlm2_modal_t4_20260514T081819Z`
+- Auth eval JSON: `experiments/results/modal_auth_eval/hnerv_hdm6_hlm2_modal_t4_20260514T081819Z/contest_auth_eval.json`
+- Result review packet: `.omx/research/hdm6_tuned_brotli_exact_cuda_result_review_20260514_codex.json`
+- Evidence row: `.omx/research/hdm6_tuned_brotli_exact_cuda_evidence_row_20260514_codex.json`
+- Score axis: `[contest-CUDA]`
+- Score: `0.2063703211910128`
+- SegNet distance: `0.0006426`
+- PoseNet distance: `0.00003236`
+- Archive bytes: `186408`
+
+Interpretation: the expected rate-only improvement over HLM2 landed under exact
+CUDA, but this is a tiny byte-frontier move inside the HNeRV basin, not a
+frontier jump. The result was adversarially reviewed, appended to
+`reports/cathedral_autopilot_evidence.jsonl`, accepted into the dispatch-claim
+terminal ledger, and kept non-promotable until an explicit operator promotion
+decision.
