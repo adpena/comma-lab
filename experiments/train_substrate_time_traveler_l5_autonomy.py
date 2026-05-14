@@ -122,6 +122,9 @@ from tac.substrates._shared.trainer_skeleton import (
     pin_seeds as _canon_pin_seeds,
 )
 from tac.substrates._shared.trainer_skeleton import (
+    require_contest_cuda_auth_eval_claim as _canon_require_contest_cuda_auth_eval_claim,
+)
+from tac.substrates._shared.trainer_skeleton import (
     sha256_bytes as _canon_sha256_bytes,
 )
 from tac.substrates._shared.trainer_skeleton import (
@@ -1123,6 +1126,8 @@ def _full_main(args: argparse.Namespace) -> int:
         (submission_dir / "0.bin").write_bytes(bin_bytes)
         archive_zip_path = args.output_dir / "archive.zip"
         _build_archive_zip(archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir)
+        archive_zip_sha = _sha256_bytes(archive_zip_path.read_bytes())
+        archive_zip_size = archive_zip_path.stat().st_size
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_emitted")
 
@@ -1154,8 +1159,19 @@ def _full_main(args: argparse.Namespace) -> int:
                 "cuda",
             ]
             print(f"[{SUBSTRATE_TAG}-full] launching auth eval: {' '.join(cmd)}")
-            subprocess.run(cmd, check=False)
-            _stage("auth_eval_cuda_done")
+            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"[{SUBSTRATE_TAG}-full] contest_auth_eval.py failed "
+                    f"rc={proc.returncode}; stdout_tail={proc.stdout[-2000:]}; "
+                    f"stderr_tail={proc.stderr[-2000:]}"
+                )
+            _canon_require_contest_cuda_auth_eval_claim(
+                auth_eval_json_path,
+                archive_sha256=archive_zip_sha,
+                substrate_tag=SUBSTRATE_TAG,
+            )
+            _stage("auth_eval_cuda_done_valid_claim")
     finally:
         unpatch_upstream_yuv6(yuv6_token)
         _stage("upstream_yuv6_unpatched")
@@ -1185,6 +1201,8 @@ def _full_main(args: argparse.Namespace) -> int:
         "git_head": _git_head_sha(),
         "bin_sha256": bin_sha,
         "bin_bytes": bin_size,
+        "archive_zip_sha256": archive_zip_sha,
+        "archive_zip_bytes": archive_zip_size,
         "n_params": n_params,
         "world_model_bytes_estimate": wm_bytes,
         "best_val_lag": best_val_lag,

@@ -226,6 +226,16 @@ def test_full_cpu_help_mentions_wall_clock_range(trainer_module):
     assert "2-12h" in help_text or ("2-6" in help_text and "12" in help_text)
 
 
+def test_full_cuda_auth_eval_is_fail_closed_by_canonical_claim_gate() -> None:
+    """Full CUDA mode must not return rc=0 after a broken auth-eval subprocess."""
+
+    text = TRAINER_PATH.read_text(encoding="utf-8")
+    assert "capture_output=True" in text
+    assert "contest_auth_eval.py failed" in text
+    assert "_canon_require_contest_cuda_auth_eval_claim(" in text
+    assert "auth_eval_cuda_done_valid_claim" in text
+
+
 # ---------------------------------------------------------------------------
 # Defense in depth — smoke + canonical CUDA path are unaffected
 # ---------------------------------------------------------------------------
