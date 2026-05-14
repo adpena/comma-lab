@@ -191,10 +191,18 @@ AUTH_EVAL_JSON="$OUTPUT_DIR/auth_eval.json"
 ARCHIVE_PATH="$OUTPUT_DIR/archive.zip"
 PAYLOAD_PATH="$OUTPUT_DIR/0.bin"
 if [ -f "$AUTH_EVAL_JSON" ]; then
-    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_SARC_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH payload=$PAYLOAD_PATH rc=$TRAIN_RC"
+    if [ "$TRAIN_RC" -eq 0 ]; then
+        log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
+        log "LANE_SARC_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH payload=$PAYLOAD_PATH rc=$TRAIN_RC"
+    else
+        log "auth_eval_artifact_present_but_trainer_failed path=$AUTH_EVAL_JSON rc=$TRAIN_RC; refusing [contest-CUDA] completion tag"
+    fi
 else
     log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH payload=$PAYLOAD_PATH (trainer may have failed before stage 12)"
+    if [ "$TRAIN_RC" -eq 0 ]; then
+        log "FATAL: trainer returned rc=0 but auth eval artifact is missing; refusing silent green dispatch"
+        TRAIN_RC=31
+    fi
 fi
 
 exit "$TRAIN_RC"

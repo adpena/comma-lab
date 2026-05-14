@@ -157,6 +157,25 @@ def _coerce_eval_roundtrip(
     return apply_eval_roundtrip_during_training
 
 
+def _validate_rgb_255_tensor(name: str, tensor: torch.Tensor) -> None:
+    if not torch.is_floating_point(tensor):
+        raise ValueError(f"{name} must be a floating-point RGB tensor in [0, 255]")
+    detached = tensor.detach()
+    if not torch.isfinite(detached).all():
+        raise ValueError(f"{name} contains non-finite values")
+    min_value = float(detached.min().item())
+    max_value = float(detached.max().item())
+    if min_value < -1e-3 or max_value > 255.0 + 1e-3:
+        raise ValueError(
+            f"{name} must be in [0, 255]; got min={min_value:.6g} max={max_value:.6g}"
+        )
+    if max_value <= 1.5 and float(detached.std(unbiased=False).item()) > 1e-6:
+        raise ValueError(
+            f"{name} looks like [0, 1] unit RGB but this primitive expects [0, 255]; "
+            "scale by 255 before calling cooperative_receiver_loss"
+        )
+
+
 def cooperative_receiver_loss(
     rgb_0: torch.Tensor,
     rgb_1: torch.Tensor,
@@ -211,6 +230,13 @@ def cooperative_receiver_loss(
     if weights is None:
         weights = AtickRedlichWeights()
     eval_roundtrip = _coerce_eval_roundtrip(apply_eval_roundtrip, eval_roundtrip_fn)
+    for name, tensor in (
+        ("rgb_0", rgb_0),
+        ("rgb_1", rgb_1),
+        ("gt_rgb_0", gt_rgb_0),
+        ("gt_rgb_1", gt_rgb_1),
+    ):
+        _validate_rgb_255_tensor(name, tensor)
 
     rgb_0_rt = eval_roundtrip(rgb_0)
     rgb_1_rt = eval_roundtrip(rgb_1)

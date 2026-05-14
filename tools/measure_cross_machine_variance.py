@@ -258,23 +258,23 @@ def _dispatch_command_stub(
     if runner.startswith("gha-"):
         return (
             f"# GHA workflow_dispatch ({runner}) for archive sha={sha_short}:\n"
-            f"gh workflow run eval.yml \\\n"
-            f"    -f archive_relpath={archive_path} \\\n"
-            f"    -f inflate_sh_relpath={inflate_sh_path} \\\n"
-            f"    -f output_artifact={output_relpath} \\\n"
-            f"    -f expected_archive_sha256={archive_sha256} \\\n"
+            f"gh workflow run contest_cpu_eval.yml \\\n"
+            f"    -f archive_path={archive_path} \\\n"
+            f"    -f inflate_sh_path={inflate_sh_path} \\\n"
+            f"    -f lane_id=cross_machine_variance_{sha_short}_{runner} \\\n"
             f"    --ref main"
         )
     if runner.startswith("modal-"):
         kind = "shared" if runner.endswith("shared") else "isolated"
         return (
-            f"# Modal CPU ({kind}) for archive sha={sha_short}:\n"
-            f".venv/bin/modal run --detach experiments/modal_cpu_auth_eval.py \\\n"
-            f"    --archive-path {archive_path} \\\n"
+            f"# Modal CPU ({kind}) for archive sha={sha_short}; verify wrapper flags before spend:\n"
+            f".venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py -- \\\n"
+            f"    --archive {archive_path} \\\n"
             f"    --inflate-sh {inflate_sh_path} \\\n"
-            f"    --output {output_relpath} \\\n"
-            f"    --expected-archive-sha256 {archive_sha256} \\\n"
-            f"    --container-kind {kind}"
+            f"    --output-dir {Path(output_relpath).parent.as_posix()} \\\n"
+            f"    --lane-id cross_machine_variance_{sha_short}_{runner} \\\n"
+            f"    --instance-job-id cross_machine_variance_{sha_short}_{runner} \\\n"
+            f"    --detach --provider-detach-ack"
         )
     if runner.startswith("vast-"):
         return (
@@ -450,17 +450,20 @@ def _t_critical_95_two_sided(n: int) -> float:
 
 
 def compute_statistics(scores_by_runner: dict[str, list[float]]) -> dict[str, Any]:
-    """Compute mean, std, 95% CI per runner + the cross-runner pooled variance.
+    """Compute mean/std/CI plus within-runner and total cross-runner variance.
 
     Returns a dict with keys:
 
     - ``per_runner``: dict[runner -> {n, mean, std, ci_95_low, ci_95_high}]
-    - ``cross_runner_pooled_std``
+    - ``cross_runner_pooled_within_std``: repeat noise inside each runner
+    - ``cross_runner_total_std``: all harvested scores pooled together,
+      including stable between-runner offsets
+    - ``cross_runner_pooled_std``: backward-compatible alias for total std
     - ``cross_runner_grand_mean``
     - ``cross_runner_n_total``
     - ``empirical_noise_floor`` — the recommended lower-bound that any
       "frontier" margin must exceed to be a real delta vs measurement
-      noise. Set to ``2 * cross_runner_pooled_std`` as a conservative
+      noise. Set to ``2 * cross_runner_total_std`` as a conservative
       ~95% confidence floor.
     """
     per_runner: dict[str, dict[str, Any]] = {}
@@ -511,23 +514,32 @@ def compute_statistics(scores_by_runner: dict[str, list[float]]) -> dict[str, An
 
     grand_mean = statistics.fmean(all_scores) if all_scores else None
     n_total = len(all_scores)
+    total_std = statistics.stdev(all_scores) if n_total > 1 else 0.0
 
     return {
         "per_runner": per_runner,
-        "cross_runner_pooled_std": pooled_std,
+        "cross_runner_pooled_within_std": pooled_std,
+        "cross_runner_total_std": total_std,
+        "cross_runner_pooled_std": total_std,
         "cross_runner_grand_mean": grand_mean,
         "cross_runner_n_total": n_total,
-        "empirical_noise_floor": 2.0 * pooled_std,
+        "empirical_noise_floor": 2.0 * total_std,
         "empirical_noise_floor_definition": (
-            "2 * cross_runner_pooled_std (~95% confidence band on a single "
-            "future measurement vs the pooled mean). Frontier-margin discipline "
-            "gate: any claimed delta MUST exceed this floor to be a real "
-            "delta vs cross-machine noise."
+            "2 * cross_runner_total_std (~95% confidence band on a single "
+            "future measurement vs the pooled mean, including stable "
+            "between-runner offsets). Frontier-margin discipline gate: any "
+            "claimed delta MUST exceed this floor to be a real delta vs "
+            "cross-machine noise."
         ),
     }
 
 
-def harvest_eval_json(eval_json_path: Path, expected_sha256: str) -> dict[str, Any]:
+def harvest_eval_json(
+    eval_json_path: Path,
+    expected_sha256: str,
+    *,
+    planned_runners: set[str] | None = None,
+) -> dict[str, Any]:
     """Read an eval JSON and return ``(runner_label, score_value)`` payload row.
 
     Raises :class:`VariancePlanRefused` if the eval JSON references a
@@ -545,6 +557,49 @@ def harvest_eval_json(eval_json_path: Path, expected_sha256: str) -> dict[str, A
             "archive_sha_mismatch",
             f"eval JSON sha={sha[:12]} does not match plan sha={expected_sha256[:12]}",
         )
+    n_samples = payload.get("n_samples")
+    if n_samples != 600:
+        raise VariancePlanRefused(
+            "sample_count_not_600",
+            f"eval JSON n_samples={n_samples!r}; variance probes require n_samples=600",
+        )
+    provenance = payload.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    device = str(payload.get("device") or provenance.get("device") or "").lower()
+    if device != "cpu":
+        raise VariancePlanRefused(
+            "non_cpu_eval_json",
+            f"variance probe harvest requires CPU eval JSON, got device={device!r}",
+        )
+    lane_tag = str(payload.get("lane_tag") or payload.get("evidence_tag") or "")
+    score_axis = str(payload.get("score_axis") or "").lower()
+    evidence_semantics = str(payload.get("evidence_semantics") or "").lower()
+    if not lane_tag.startswith("[contest-CPU]") and not lane_tag.startswith("[contest-CPU "):
+        raise VariancePlanRefused(
+            "non_contest_cpu_eval_json",
+            f"eval JSON lane_tag={lane_tag!r}; expected [contest-CPU...]",
+        )
+    if score_axis != "contest_cpu":
+        raise VariancePlanRefused(
+            "non_contest_cpu_eval_json",
+            f"eval JSON score_axis={score_axis!r}; expected contest_cpu",
+        )
+    if evidence_semantics and evidence_semantics != "public_leaderboard_cpu_reproduction":
+        raise VariancePlanRefused(
+            "non_contest_cpu_eval_json",
+            f"eval JSON evidence_semantics={evidence_semantics!r}",
+        )
+    eligible = payload.get("cpu_leaderboard_reproduction_eligible")
+    if eligible is not None and eligible is not True:
+        raise VariancePlanRefused(
+            "non_contest_cpu_eval_json",
+            f"cpu_leaderboard_reproduction_eligible={eligible!r}",
+        )
+    if payload.get("score_claim") is True:
+        raise VariancePlanRefused(
+            "score_claim_must_be_false",
+            "CPU variance probes must not carry score_claim=True",
+        )
     score = _extract_score_value(payload)
     if score is None:
         raise VariancePlanRefused(
@@ -552,10 +607,18 @@ def harvest_eval_json(eval_json_path: Path, expected_sha256: str) -> dict[str, A
             f"eval JSON {eval_json_path} has no canonical_score* / score_value field",
         )
     runner = _extract_runner_label(payload)
+    if runner == "unknown" or (planned_runners is not None and runner not in planned_runners):
+        raise VariancePlanRefused(
+            "runner_not_in_plan",
+            f"eval JSON runner={runner!r} not in planned runners={sorted(planned_runners or [])}",
+        )
     return {
         "eval_json_path": str(eval_json_path),
         "runner": runner,
         "score_value": float(score),
+        "n_samples": n_samples,
+        "score_axis": score_axis,
+        "evidence_semantics": evidence_semantics,
     }
 
 
@@ -572,7 +635,15 @@ def harvest(
             "plan_missing_archive_sha",
             "plan missing archive_sha256",
         )
-    rows = [harvest_eval_json(p, expected_sha) for p in eval_json_paths]
+    planned_runners = {
+        str(r).strip()
+        for r in plan.get("runners", [])
+        if isinstance(r, str) and str(r).strip()
+    }
+    rows = [
+        harvest_eval_json(p, expected_sha, planned_runners=planned_runners or None)
+        for p in eval_json_paths
+    ]
     scores_by_runner: dict[str, list[float]] = {}
     for r in rows:
         scores_by_runner.setdefault(r["runner"], []).append(r["score_value"])

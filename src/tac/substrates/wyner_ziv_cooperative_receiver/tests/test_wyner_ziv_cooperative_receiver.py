@@ -329,6 +329,31 @@ def test_wyner_ziv_reconstruct_pair_unit_range() -> None:
     assert float(rgb_1.max()) <= 1.0
 
 
+def test_wyner_ziv_reconstruct_pair_preserves_transmitted_coset() -> None:
+    class _ConstantSubstrate:
+        def render_pair(self, pair_idx: int):
+            frame = torch.full((3, 4, 4), 0.5)
+            return frame, frame.clone()
+
+        def predict_side_info(self, pair_idx: int):
+            frame = torch.full((3, 4, 4), 0.5)
+            return frame, frame.clone()
+
+    coset_index = 5
+    rgb_0, rgb_1 = _wyner_ziv_reconstruct_pair(
+        _ConstantSubstrate(),  # type: ignore[arg-type]
+        pair_idx=0,
+        coset_index=coset_index,
+        num_cosets=16,
+        search_grid=64,
+    )
+    reconstructed_idx = int(
+        slepian_wolf_coset_index(rgb_0.mean().unsqueeze(0), num_cosets=16).item()
+    )
+    assert reconstructed_idx == coset_index
+    assert torch.allclose(rgb_0, rgb_1)
+
+
 def test_inflate_one_video_writes_expected_raw_bytes(tmp_path) -> None:
     """The .raw output contains ``num_pairs * 2 * 874 * 1164 * 3`` uint8 bytes."""
     blob = _build_toy_archive_bytes(num_pairs=2)

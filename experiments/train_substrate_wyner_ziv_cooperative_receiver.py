@@ -797,6 +797,7 @@ def _full_main(args: argparse.Namespace) -> int:
             if epoch % max(1, args.val_every_epochs) == 0 or epoch == args.epochs - 1:
                 live_state = {k: v.detach().clone() for k, v in substrate.state_dict().items()}
                 ema.apply(substrate)
+                ema_state_for_ckpt: dict[str, torch.Tensor] | None = None
                 try:
                     val_lag = _run_val_loop(
                         substrate, loss_fn, gt_pair_tensor, val_indices_pool,
@@ -806,6 +807,10 @@ def _full_main(args: argparse.Namespace) -> int:
                         ),
                         device,
                     )
+                    ema_state_for_ckpt = {
+                        k: v.detach().cpu().clone()
+                        for k, v in substrate.state_dict().items()
+                    }
                 finally:
                     substrate.load_state_dict(live_state)
                     substrate.train()
@@ -818,10 +823,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 if val_lag < best_val_lag:
                     best_val_lag = val_lag
                     best_epoch = epoch
-                    ema_state = {k: v.detach().cpu() for k, v in substrate.state_dict().items()}
                     torch.save(
                         {
-                            "state_dict": ema_state,
+                            "state_dict": ema_state_for_ckpt,
                             "config": asdict(cfg),
                             "epoch": epoch,
                             "val_lag": val_lag,

@@ -148,13 +148,28 @@ def test_rank_cells_smoke_no_overrides():
     """Ranks the canonical substrate × primitive matrix end-to-end."""
     rows = rank_cells(only_with_primitives=False)
     assert len(rows) > 0
-    # Sorted descending by ev_per_dollar.
+    # Sorted by dispatchability first, then descending EV/$ within each group.
+    seen_blocked = False
     for i in range(len(rows) - 1):
-        assert rows[i].ev_per_dollar >= rows[i + 1].ev_per_dollar
+        if rows[i].blockers:
+            seen_blocked = True
+        assert not (seen_blocked and not rows[i + 1].blockers)
+        if bool(rows[i].blockers) == bool(rows[i + 1].blockers):
+            assert rows[i].ev_per_dollar >= rows[i + 1].ev_per_dollar
     # Every row has score_claim discipline.
     for r in rows:
         # No row promotes a score directly.
         assert r.predicted_score_delta_band_low <= r.predicted_score_delta_band_high
+
+
+def test_new_cooperative_receiver_substrates_are_ranked_inventory_members():
+    substrate_ids = {row.substrate_id for row in canonical_substrate_inventory()}
+    assert "sar_coherent_pose_pairs_substrate" in substrate_ids
+    assert "wyner_ziv_cooperative_receiver_substrate" in substrate_ids
+    rows = rank_cells(only_with_primitives=False)
+    ranked_ids = {row.substrate_id for row in rows}
+    assert "sar_coherent_pose_pairs_substrate" in ranked_ids
+    assert "wyner_ziv_cooperative_receiver_substrate" in ranked_ids
 
 
 def test_rank_cells_filters_to_only_with_primitives():
@@ -190,6 +205,25 @@ def test_rank_cells_blocker_flagged_below_noise_floor():
     assert len(rows) > 0
     flagged = [r for r in rows if any("noise_floor" in b for b in r.blockers)]
     assert len(flagged) > 0
+
+
+def test_rank_cells_moves_blocked_rows_behind_dispatchable_rows():
+    rows = rank_cells(
+        alien_tech_band_overrides={
+            "wyner_ziv_cooperative_receiver_substrate": {
+                "low": -1e-6,
+                "high": -1e-7,
+                "source": "[test override]",
+            }
+        },
+        only_with_primitives=False,
+    )
+    first_blocked_idx = next(
+        (idx for idx, row in enumerate(rows) if row.blockers),
+        None,
+    )
+    if first_blocked_idx is not None:
+        assert all(row.blockers for row in rows[first_blocked_idx:])
 
 
 def test_rank_cells_posterior_correction_changes_ranking():

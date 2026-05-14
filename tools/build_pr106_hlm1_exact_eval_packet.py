@@ -443,13 +443,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         dispatch_claims_path=_repo_path(args.claims_path),
         lane_id=args.lane_id,
         archive_sha256=str(archive.get("sha256") or ""),
-        # HLM1 packet refreshes may rewrite custody-only files such as
-        # report.txt, which changes the path-sensitive runtime tree while the
-        # measured archive and score-affecting decoder stay fixed. Suppress
-        # repeat dispatch by lane/archive; a true decoder successor needs a
-        # byte-different packet or a new lane id.
-        runtime_tree_sha256=None,
-        score_affecting_runtime_changed=False,
+        runtime_tree_sha256=str(runtime_manifest.get("runtime_tree_sha256") or ""),
+        score_affecting_runtime_changed=True,
         active_floor_score=args.active_score_frontier,
     )
     source_repo_commit = _git_commit()

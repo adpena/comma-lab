@@ -127,7 +127,7 @@ def _wyner_ziv_reconstruct_pair(
         num_cosets=num_cosets,
         search_grid=search_grid,
     )
-    shift = (disamb.item() - float(side_info_scalar.item())) * (1.0 / float(num_cosets))
+    shift = disamb.item() - float(side_info_scalar.item())
     rgb_0_out = (rgb_0_pred + shift).clamp(0.0, 1.0)
     rgb_1_out = (rgb_1_pred + shift).clamp(0.0, 1.0)
     return rgb_0_out, rgb_1_out

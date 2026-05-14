@@ -69,6 +69,7 @@ from tac.continual_learning import (  # noqa: E402  (after sys.path mutation)
     TAG_HARDWARE_REQUIREMENT,
     ContestResult,
 )
+from tac.optimizer.exact_readiness import runtime_dependency_manifest  # noqa: E402
 
 
 PROMOTION_SCHEMA_VERSION = "tac_frontier_promotion_manifest_v1"
@@ -99,6 +100,9 @@ REFUSAL_CLASSES = (
     "score_claim_invalid",
     "axis_stamp_missing",
     "axis_device_mismatch",
+    "runtime_binding_missing",
+    "runtime_tree_mismatch",
+    "runtime_copy_incomplete",
 )
 
 
@@ -127,6 +131,9 @@ class AxisEvidence:
     score_claim_valid: bool | None = None
     exact_cuda_eval_complete: bool | None = None
     evidence_semantics: str = ""
+    runtime_tree_sha256: str = ""
+    runtime_content_tree_sha256: str = ""
+    inflate_script_sha256: str = ""
     raw_payload: dict[str, Any] = field(default_factory=dict)
 
     def as_contest_result(
@@ -275,6 +282,26 @@ def _extract_archive_size_bytes(payload: Mapping[str, Any]) -> int | None:
     return None
 
 
+def _runtime_binding_from_payload(payload: Mapping[str, Any], key: str) -> str:
+    """Extract runtime binding fields from top-level/provenance manifest shapes."""
+    candidates: list[Any] = [payload.get(key)]
+    for container_key in ("inflate_runtime_manifest", "runtime_manifest"):
+        container = payload.get(container_key)
+        if isinstance(container, Mapping):
+            candidates.append(container.get(key))
+    prov = payload.get("provenance")
+    if isinstance(prov, Mapping):
+        candidates.append(prov.get(key))
+        for container_key in ("inflate_runtime_manifest", "runtime_manifest"):
+            container = prov.get(container_key)
+            if isinstance(container, Mapping):
+                candidates.append(container.get(key))
+    for value in candidates:
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+    return ""
+
+
 def parse_axis_evidence(eval_json_path: Path, axis: str) -> AxisEvidence:
     """Parse a contest_auth_eval JSON and return the typed AxisEvidence row.
 
@@ -344,6 +371,12 @@ def parse_axis_evidence(eval_json_path: Path, axis: str) -> AxisEvidence:
         evidence_semantics=str(
             payload.get("evidence_semantics") or prov.get("evidence_semantics") or ""
         ).strip().lower(),
+        runtime_tree_sha256=_runtime_binding_from_payload(payload, "runtime_tree_sha256"),
+        runtime_content_tree_sha256=_runtime_binding_from_payload(
+            payload,
+            "runtime_content_tree_sha256",
+        ),
+        inflate_script_sha256=_runtime_binding_from_payload(payload, "inflate_script_sha256"),
         raw_payload=dict(payload),
     )
 
@@ -502,6 +535,74 @@ def _sha256_file(path: Path) -> tuple[str, int]:
     return h.hexdigest(), n
 
 
+def _verify_runtime_binding(
+    evidence: AxisEvidence,
+    *,
+    runtime_manifest: Mapping[str, Any],
+    inflate_script_sha256: str,
+) -> list[str]:
+    """Return blockers if eval evidence is not bound to the copied runtime."""
+    blockers: list[str] = []
+    expected_content_tree = str(
+        runtime_manifest.get("runtime_content_tree_sha256") or ""
+    ).lower()
+
+    if not evidence.runtime_content_tree_sha256:
+        blockers.append(
+            f"runtime_binding_missing:axis={evidence.axis} "
+            "eval JSON lacks runtime_content_tree_sha256"
+        )
+        return blockers
+
+    content_tree_matches = (
+        bool(evidence.runtime_content_tree_sha256)
+        and bool(expected_content_tree)
+        and evidence.runtime_content_tree_sha256 == expected_content_tree
+    )
+    if not content_tree_matches:
+        blockers.append(
+            f"runtime_tree_mismatch:axis={evidence.axis} "
+            f"eval_runtime_content_tree={evidence.runtime_content_tree_sha256 or '<missing>'} "
+            f"copied_runtime_content_tree={expected_content_tree or '<missing>'}"
+        )
+    if (
+        evidence.inflate_script_sha256
+        and evidence.inflate_script_sha256 != inflate_script_sha256.lower()
+    ):
+        blockers.append(
+            f"runtime_tree_mismatch:axis={evidence.axis} "
+            f"inflate_script_sha256={evidence.inflate_script_sha256} "
+            f"copied_inflate_script_sha256={inflate_script_sha256.lower()}"
+        )
+    return blockers
+
+
+def _runtime_file_names(runtime_manifest: Mapping[str, Any]) -> set[str]:
+    files = runtime_manifest.get("files")
+    if not isinstance(files, list):
+        return set()
+    names: set[str] = set()
+    for file_record in files:
+        if not isinstance(file_record, Mapping):
+            continue
+        rel = file_record.get("relative_path")
+        if isinstance(rel, str):
+            names.add(rel)
+    return names
+
+
+def _raise_for_blockers(all_blockers: list[str]) -> None:
+    if not all_blockers:
+        return
+    first = all_blockers[0]
+    # Pull a refusal class prefix from the blocker string.
+    cls = next((c for c in REFUSAL_CLASSES if first.startswith(c)), "advisory_grade")
+    raise FrontierPromotionRefused(
+        cls,
+        f"promotion refused; blockers: {all_blockers}",
+    )
+
+
 # ── Top-level promotion ───────────────────────────────────────────────────
 
 
@@ -516,6 +617,8 @@ def build_integrity_manifest(
     architecture_class: str,
     inflate_sh_path: Path,
     inflate_py_path: Path | None,
+    runtime_manifest: Mapping[str, Any],
+    inflate_script_sha256: str,
     target_dir: Path,
     operator: str | None,
     notes: str | None,
@@ -561,6 +664,9 @@ def build_integrity_manifest(
                 "device": cpu.device,
                 "score_axis": cpu.score_axis,
                 "score_claim_valid": cpu.score_claim_valid,
+                "runtime_tree_sha256": cpu.runtime_tree_sha256,
+                "runtime_content_tree_sha256": cpu.runtime_content_tree_sha256,
+                "inflate_script_sha256": cpu.inflate_script_sha256,
             },
             "cuda": {
                 "eval_json_path": str(cuda.eval_json_path),
@@ -575,7 +681,23 @@ def build_integrity_manifest(
                 "score_claim_valid": cuda.score_claim_valid,
                 "exact_cuda_eval_complete": cuda.exact_cuda_eval_complete,
                 "evidence_semantics": cuda.evidence_semantics,
+                "runtime_tree_sha256": cuda.runtime_tree_sha256,
+                "runtime_content_tree_sha256": cuda.runtime_content_tree_sha256,
+                "inflate_script_sha256": cuda.inflate_script_sha256,
             },
+        },
+        "runtime_binding": {
+            "copied_runtime_tree_sha256": runtime_manifest.get("runtime_tree_sha256"),
+            "copied_runtime_content_tree_sha256": runtime_manifest.get(
+                "runtime_content_tree_sha256"
+            ),
+            "copied_runtime_file_count": runtime_manifest.get("runtime_file_count"),
+            "copied_runtime_files": [
+                file_record.get("relative_path")
+                for file_record in runtime_manifest.get("files", [])
+                if isinstance(file_record, Mapping)
+            ],
+            "copied_inflate_script_sha256": inflate_script_sha256,
         },
         "cpu_cuda_score_diff": abs(cpu.score_value - cuda.score_value),
         "cpu_cuda_noise_floor_used": cpu_cuda_noise_floor,
@@ -620,6 +742,7 @@ def promote_archive(
     """
     # 0. Resolve target dir; refuse outside-repo.
     target_resolved = _resolve_under_repo(target_dir, repo_root)
+    previous_provenance: dict[str, Any] | None = None
     if target_resolved.exists() and not overwrite:
         # only refuse if the target dir has files we'd overwrite.
         existing = list(target_resolved.iterdir()) if target_resolved.is_dir() else [target_resolved]
@@ -628,6 +751,17 @@ def promote_archive(
                 "target_path_collision",
                 f"target dir {target_resolved} is non-empty; pass --overwrite to replace",
             )
+    elif target_resolved.exists() and overwrite:
+        provenance_path = target_resolved / "promotion_provenance.json"
+        if provenance_path.is_file():
+            try:
+                previous_provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                previous_provenance = {"attempts": []}
+        if target_resolved.is_dir():
+            shutil.rmtree(target_resolved)
+        else:
+            target_resolved.unlink()
 
     # 1. Source-file existence checks.
     if not archive_path.is_file():
@@ -653,16 +787,7 @@ def promote_archive(
     )
 
     all_blockers = cpu_blockers + cuda_blockers + pair_blockers
-
-    # Map the FIRST refusal back to its typed class for the exception.
-    if all_blockers:
-        first = all_blockers[0]
-        # Pull a refusal class prefix from the blocker string.
-        cls = next((c for c in REFUSAL_CLASSES if first.startswith(c)), "advisory_grade")
-        raise FrontierPromotionRefused(
-            cls,
-            f"promotion refused; blockers: {all_blockers}",
-        )
+    _raise_for_blockers(all_blockers)
 
     # 4. Compute archive sha256 and verify it matches BOTH eval JSONs.
     archive_sha256, archive_bytes = _sha256_file(archive_path)
@@ -681,7 +806,9 @@ def promote_archive(
                 f"does not match archive bytes={archive_bytes}",
             )
 
-    # 5. Materialize target dir and copy bytes.
+    # 5. Materialize target dir and copy bytes. Runtime binding is checked
+    # before writing promotion JSON so custody files cannot perturb the
+    # runtime content hash that scored the archive.
     target_resolved.mkdir(parents=True, exist_ok=True)
     target_archive = target_resolved / "archive.zip"
     target_inflate_sh = target_resolved / "inflate.sh"
@@ -689,6 +816,37 @@ def promote_archive(
     shutil.copyfile(inflate_sh_path, target_inflate_sh)
     if inflate_py_path is not None and inflate_py_path.is_file():
         shutil.copyfile(inflate_py_path, target_resolved / "inflate.py")
+
+    runtime_manifest = runtime_dependency_manifest(target_resolved, repo_root)
+    inflate_script_sha256, _ = _sha256_file(target_inflate_sh)
+    copied_runtime_files = _runtime_file_names(runtime_manifest)
+    if "inflate.sh" not in copied_runtime_files:
+        all_blockers.append(
+            "runtime_copy_incomplete:copied runtime manifest lacks inflate.sh"
+        )
+    if inflate_py_path is not None and inflate_py_path.is_file() and "inflate.py" not in copied_runtime_files:
+        all_blockers.append(
+            "runtime_copy_incomplete:inflate.py requested but absent from copied runtime manifest"
+        )
+    all_blockers.extend(
+        _verify_runtime_binding(
+            cpu,
+            runtime_manifest=runtime_manifest,
+            inflate_script_sha256=inflate_script_sha256,
+        )
+    )
+    all_blockers.extend(
+        _verify_runtime_binding(
+            cuda,
+            runtime_manifest=runtime_manifest,
+            inflate_script_sha256=inflate_script_sha256,
+        )
+    )
+
+    # Map the FIRST refusal back to its typed class for the exception.
+    if all_blockers:
+        shutil.rmtree(target_resolved, ignore_errors=True)
+        _raise_for_blockers(all_blockers)
 
     arch_class = architecture_class or label
 
@@ -703,6 +861,8 @@ def promote_archive(
         architecture_class=arch_class,
         inflate_sh_path=inflate_sh_path,
         inflate_py_path=inflate_py_path,
+        runtime_manifest=runtime_manifest,
+        inflate_script_sha256=inflate_script_sha256,
         target_dir=target_resolved,
         operator=operator,
         notes=notes,
@@ -719,7 +879,9 @@ def promote_archive(
     # 7. Provenance log (separate from manifest so future re-promotions
     # append rather than overwrite custody history).
     provenance_path = target_resolved / "promotion_provenance.json"
-    if provenance_path.exists():
+    if previous_provenance is not None:
+        provenance = previous_provenance
+    elif provenance_path.exists():
         try:
             provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:

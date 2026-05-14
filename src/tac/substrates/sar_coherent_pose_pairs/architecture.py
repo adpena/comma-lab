@@ -135,6 +135,12 @@ class SARCoherentConfig:
             raise ValueError("sar_int16_scale must be positive")
         if self.pose_code_dim <= 0:
             raise ValueError("pose_code_dim must be positive")
+        if self.pose_code_dim != self.pose_dim:
+            raise ValueError(
+                f"pose_code_dim must equal pose_dim for SARC archive/inflate "
+                f"shape custody; got pose_code_dim={self.pose_code_dim} "
+                f"pose_dim={self.pose_dim}"
+            )
 
     def sar_topk(self) -> int:
         """Closed-form: number of rFFT coefficients retained per dim."""

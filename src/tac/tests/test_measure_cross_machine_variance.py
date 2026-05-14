@@ -72,6 +72,11 @@ def _eval_json(score: float, sha: str, hardware: str) -> dict[str, Any]:
         "n_samples": 600,
         "device": "cpu",
         "hardware": hardware,
+        "lane_tag": "[contest-CPU]",
+        "score_axis": "contest_cpu",
+        "evidence_semantics": "public_leaderboard_cpu_reproduction",
+        "score_claim": False,
+        "cpu_leaderboard_reproduction_eligible": True,
     }
 
 
@@ -107,9 +112,10 @@ def test_build_plan_dispatch_command_stubs_present(archive, inflate_sh):
         runners=["gha-ubuntu-latest", "modal-cpu-isolated"],
     )
     gha_row = next(r for r in plan.plan_rows if r.runner == "gha-ubuntu-latest")
-    assert "gh workflow run eval.yml" in gha_row.dispatch_command_stub
+    assert "gh workflow run contest_cpu_eval.yml" in gha_row.dispatch_command_stub
+    assert "-f archive_path=" in gha_row.dispatch_command_stub
     modal_row = next(r for r in plan.plan_rows if r.runner == "modal-cpu-isolated")
-    assert "modal run --detach" in modal_row.dispatch_command_stub
+    assert "modal run --detach experiments/modal_auth_eval_cpu.py" in modal_row.dispatch_command_stub
     # Every row carries the archive sha for apples-to-apples discipline.
     assert archive["sha"][:12] in gha_row.dispatch_command_stub
     assert archive["sha"][:12] in modal_row.dispatch_command_stub
@@ -241,10 +247,19 @@ def test_compute_statistics_pooled_std_is_finite_with_two_runners():
     scores = {"runner_a": [0.10, 0.11], "runner_b": [0.20, 0.21]}
     stats = compute_statistics(scores)
     assert stats["cross_runner_pooled_std"] > 0
-    # noise floor = 2 × pooled
+    assert stats["cross_runner_total_std"] > stats["cross_runner_pooled_within_std"]
+    # noise floor = 2 × total cross-runner std, including stable runner offsets.
     assert stats["empirical_noise_floor"] == pytest.approx(
-        2 * stats["cross_runner_pooled_std"]
+        2 * stats["cross_runner_total_std"]
     )
+
+
+def test_compute_statistics_counts_stable_between_runner_offset_as_noise():
+    scores = {"runner_a": [0.10, 0.10, 0.10], "runner_b": [0.20, 0.20, 0.20]}
+    stats = compute_statistics(scores)
+    assert stats["cross_runner_pooled_within_std"] == pytest.approx(0.0)
+    assert stats["cross_runner_total_std"] > 0.0
+    assert stats["empirical_noise_floor"] > 0.0
 
 
 def test_compute_statistics_empty_input():
@@ -289,10 +304,37 @@ def test_harvest_eval_json_refuses_on_sha_mismatch(tmp_path, archive):
 
 def test_harvest_eval_json_refuses_on_missing_score(tmp_path, archive):
     p = tmp_path / "run.json"
-    p.write_text(json.dumps({"archive_sha256": archive["sha"]}), encoding="utf-8")
+    payload = _eval_json(0.193, archive["sha"], "github-actions-ubuntu-latest")
+    payload.pop("canonical_score_recomputed")
+    p.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(VariancePlanRefused) as excinfo:
         harvest_eval_json(p, archive["sha"])
     assert excinfo.value.reason_class == "score_value_missing"
+
+
+def test_harvest_eval_json_refuses_non_contest_cpu_metadata(tmp_path, archive):
+    p = tmp_path / "run.json"
+    payload = _eval_json(0.193, archive["sha"], "github-actions-ubuntu-latest")
+    payload["lane_tag"] = "[diagnostic-auth-eval]"
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(VariancePlanRefused) as excinfo:
+        harvest_eval_json(p, archive["sha"])
+    assert excinfo.value.reason_class == "non_contest_cpu_eval_json"
+
+
+def test_harvest_eval_json_refuses_runner_not_in_plan(tmp_path, archive):
+    p = tmp_path / "run.json"
+    p.write_text(
+        json.dumps(_eval_json(0.193, archive["sha"], "modal-cpu-shared")),
+        encoding="utf-8",
+    )
+    with pytest.raises(VariancePlanRefused) as excinfo:
+        harvest_eval_json(
+            p,
+            archive["sha"],
+            planned_runners={"gha-ubuntu-latest"},
+        )
+    assert excinfo.value.reason_class == "runner_not_in_plan"
 
 
 def test_harvest_eval_json_refuses_on_missing_file(tmp_path, archive):

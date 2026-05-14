@@ -91,6 +91,14 @@ def _cuda_eval_payload(*, sha256: str, score: float = 0.226) -> dict[str, Any]:
     }
 
 
+def _attach_runtime_binding(payload: dict[str, Any], runtime_manifest: dict[str, Any], inflate_sh: Path) -> None:
+    payload["inflate_runtime_manifest"] = {
+        "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
+        "runtime_content_tree_sha256": runtime_manifest["runtime_content_tree_sha256"],
+    }
+    payload["inflate_script_sha256"] = hashlib.sha256(inflate_sh.read_bytes()).hexdigest()
+
+
 @pytest.fixture
 def stage(tmp_path: Path):
     """Stage a real archive + inflate.sh + paired CPU/CUDA evals under ``tmp_path``."""
@@ -100,19 +108,24 @@ def stage(tmp_path: Path):
     sha = _make_archive(archive)
     inflate_sh = src / "inflate.sh"
     _write_inflate_sh(inflate_sh)
+    runtime_manifest = promote_mod.runtime_dependency_manifest(src, tmp_path)
     cpu_path = src / "contest_auth_eval.cpu.json"
     cpu_payload = _cpu_eval_payload(sha256=sha)
     cpu_payload["archive_size_bytes"] = archive.stat().st_size
+    _attach_runtime_binding(cpu_payload, runtime_manifest, inflate_sh)
     cpu_path.write_text(json.dumps(cpu_payload), encoding="utf-8")
     cuda_path = src / "contest_auth_eval.cuda.json"
     cuda_payload = _cuda_eval_payload(sha256=sha)
     cuda_payload["archive_size_bytes"] = archive.stat().st_size
+    _attach_runtime_binding(cuda_payload, runtime_manifest, inflate_sh)
     cuda_path.write_text(json.dumps(cuda_payload), encoding="utf-8")
 
     target = tmp_path / "submissions_frontier" / "test_label"
     return {
         "archive_path": archive,
         "archive_sha256": sha,
+        "runtime_content_tree_sha256": runtime_manifest["runtime_content_tree_sha256"],
+        "inflate_script_sha256": hashlib.sha256(inflate_sh.read_bytes()).hexdigest(),
         "inflate_sh": inflate_sh,
         "cpu_eval_path": cpu_path,
         "cuda_eval_path": cuda_path,
@@ -136,6 +149,8 @@ def test_parse_axis_evidence_cpu_payload(stage):
     assert ev.device == "cpu"
     assert ev.score_axis == "contest_cpu"
     assert ev.score_claim_valid is True
+    assert ev.runtime_content_tree_sha256 == stage["runtime_content_tree_sha256"]
+    assert ev.inflate_script_sha256 == stage["inflate_script_sha256"]
 
 
 def test_parse_axis_evidence_cuda_payload(stage):
@@ -147,6 +162,7 @@ def test_parse_axis_evidence_cuda_payload(stage):
     assert ev.score_axis == "contest_cuda"
     assert ev.score_claim_valid is True
     assert ev.exact_cuda_eval_complete is True
+    assert ev.runtime_content_tree_sha256 == stage["runtime_content_tree_sha256"]
 
 
 def test_parse_axis_evidence_4090_hardware(stage, tmp_path):
@@ -262,6 +278,14 @@ def test_promote_archive_happy_path(stage):
     assert manifest["archive"]["sha256"] == stage["archive_sha256"]
     assert manifest["axes"]["cpu"]["score_value"] == pytest.approx(0.193)
     assert manifest["axes"]["cuda"]["score_value"] == pytest.approx(0.226)
+    assert (
+        manifest["runtime_binding"]["copied_runtime_content_tree_sha256"]
+        == stage["runtime_content_tree_sha256"]
+    )
+    assert (
+        manifest["runtime_binding"]["copied_inflate_script_sha256"]
+        == stage["inflate_script_sha256"]
+    )
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is True
     target = stage["target_dir"]
@@ -278,6 +302,15 @@ def test_promote_archive_happy_path(stage):
 def test_promote_archive_writes_inflate_py_when_present(stage):
     py = stage["archive_path"].parent / "inflate.py"
     py.write_text("import sys\nsys.exit(0)\n", encoding="utf-8")
+    runtime_root = stage["tmp_path"] / "runtime_with_py"
+    runtime_root.mkdir()
+    shutil.copyfile(stage["inflate_sh"], runtime_root / "inflate.sh")
+    shutil.copyfile(py, runtime_root / "inflate.py")
+    runtime_manifest = promote_mod.runtime_dependency_manifest(runtime_root, stage["tmp_path"])
+    for eval_path in (stage["cpu_eval_path"], stage["cuda_eval_path"]):
+        payload = json.loads(eval_path.read_text(encoding="utf-8"))
+        _attach_runtime_binding(payload, runtime_manifest, stage["inflate_sh"])
+        eval_path.write_text(json.dumps(payload), encoding="utf-8")
     promote_archive(
         archive_path=stage["archive_path"],
         inflate_sh_path=stage["inflate_sh"],
@@ -462,6 +495,43 @@ def test_refuses_on_archive_size_mismatch(stage):
             repo_root=stage["tmp_path"],
         )
     assert excinfo.value.refusal_class == "archive_size_mismatch"
+
+
+def test_refuses_when_eval_lacks_runtime_binding(stage):
+    payload = _cpu_eval_payload(sha256=stage["archive_sha256"])
+    payload["archive_size_bytes"] = stage["archive_path"].stat().st_size
+    stage["cpu_eval_path"].write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(FrontierPromotionRefused) as excinfo:
+        promote_archive(
+            archive_path=stage["archive_path"],
+            inflate_sh_path=stage["inflate_sh"],
+            contest_cpu_eval_path=stage["cpu_eval_path"],
+            contest_cuda_eval_path=stage["cuda_eval_path"],
+            label="x",
+            target_dir=stage["target_dir"],
+            repo_root=stage["tmp_path"],
+        )
+    assert excinfo.value.refusal_class == "runtime_binding_missing"
+    assert not stage["target_dir"].exists()
+
+
+def test_refuses_when_eval_runtime_content_tree_differs_from_copied_runtime(stage):
+    payload = _cuda_eval_payload(sha256=stage["archive_sha256"])
+    payload["archive_size_bytes"] = stage["archive_path"].stat().st_size
+    payload["inflate_runtime_manifest"] = {"runtime_content_tree_sha256": "0" * 64}
+    payload["inflate_script_sha256"] = stage["inflate_script_sha256"]
+    stage["cuda_eval_path"].write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(FrontierPromotionRefused) as excinfo:
+        promote_archive(
+            archive_path=stage["archive_path"],
+            inflate_sh_path=stage["inflate_sh"],
+            contest_cpu_eval_path=stage["cpu_eval_path"],
+            contest_cuda_eval_path=stage["cuda_eval_path"],
+            label="x",
+            target_dir=stage["target_dir"],
+            repo_root=stage["tmp_path"],
+        )
+    assert excinfo.value.refusal_class == "runtime_tree_mismatch"
 
 
 def test_refuses_on_target_dir_outside_repo(stage, tmp_path):

@@ -132,6 +132,34 @@ def test_loss_rejects_eval_roundtrip_false() -> None:
         )
 
 
+def test_loss_rejects_unit_range_rgb_inputs() -> None:
+    rgb_0, rgb_1, gt_0, gt_1 = _toy_pair()
+    with pytest.raises(ValueError, match=r"\[0, 1\] unit RGB"):
+        cooperative_receiver_loss(
+            rgb_0 / 255.0,
+            rgb_1 / 255.0,
+            gt_0 / 255.0,
+            gt_1 / 255.0,
+            seg_scorer=_StandinSegScorer(),
+            pose_scorer=_StandinPoseScorer(),
+        )
+
+
+def test_loss_rejects_out_of_range_rgb_inputs() -> None:
+    rgb_0, rgb_1, gt_0, gt_1 = _toy_pair()
+    rgb_0 = rgb_0.detach().clone()
+    rgb_0[0, 0, 0, 0] = 300.0
+    with pytest.raises(ValueError, match=r"must be in \[0, 255\]"):
+        cooperative_receiver_loss(
+            rgb_0,
+            rgb_1,
+            gt_0,
+            gt_1,
+            seg_scorer=_StandinSegScorer(),
+            pose_scorer=_StandinPoseScorer(),
+        )
+
+
 def test_loss_accepts_custom_eval_roundtrip_fn_for_isolation() -> None:
     """Callers can inject a no-op eval-roundtrip for unit-test isolation."""
     rgb_0, rgb_1, gt_0, gt_1 = _toy_pair()

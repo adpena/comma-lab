@@ -1096,6 +1096,7 @@ def inspect_dispatch_claims(
     *,
     require_successful_exact_eval_terminal: bool = False,
     expected_archive_sha256: str | None = None,
+    expected_runtime_tree_sha256: str | None = None,
 ) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     if not lane_id and not job_id:
@@ -1194,6 +1195,22 @@ def inspect_dispatch_claims(
             (
                 "contest-final terminal claim must bind the exact scored "
                 f"archive sha256={expected_sha}; latest_matching_notes={latest_matching_notes!r}"
+            ),
+        )
+        expected_runtime_sha = (expected_runtime_tree_sha256 or "").lower()
+        terminal_runtime_bound = bool(
+            expected_runtime_sha
+            and latest_matching_row
+            and expected_runtime_sha in latest_matching_row.lower()
+        )
+        _add(
+            checks,
+            "dispatch_claim_terminal_runtime_tree_sha_bound",
+            terminal_runtime_bound,
+            (
+                "contest-final terminal claim must bind the exact scored "
+                f"runtime_tree_sha256={expected_runtime_sha}; "
+                f"latest_matching_notes={latest_matching_notes!r}"
             ),
         )
     _add(
@@ -1356,6 +1373,9 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         args.expected_job_id,
         require_successful_exact_eval_terminal=args.contest_final,
         expected_archive_sha256=archive.get("sha256") if args.contest_final else None,
+        expected_runtime_tree_sha256=(
+            runtime_record.get("runtime_tree_sha256") if args.contest_final else None
+        ),
     )
     sections["dispatch_claims"] = claims_record
     checks.extend(claims_checks)

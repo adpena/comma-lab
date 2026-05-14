@@ -183,6 +183,14 @@ DEFAULT_ALIEN_TECH_BANDS: dict[str, dict[str, Any]] = {
         "low": -0.005, "high": -0.001,
         "source": "[predicted; magic codec auto-selector]",
     },
+    "sar_coherent_pose_pairs_substrate": {
+        "low": -0.006, "high": -0.002,
+        "source": "[predicted; Lincoln Lab SAR coherent pose integration]",
+    },
+    "wyner_ziv_cooperative_receiver_substrate": {
+        "low": -0.050, "high": -0.015,
+        "source": "[predicted; Slepian-Wolf/Wyner-Ziv cooperative receiver]",
+    },
 }
 
 
@@ -216,6 +224,8 @@ DEFAULT_SUBSTRATE_COST_USD: dict[str, float] = {
     "foveation_field_sidecar": 0.30,
     "scpp_substrate": 1.00,
     "magic_codec_pr106_r2": 0.20,
+    "sar_coherent_pose_pairs_substrate": 1.00,
+    "wyner_ziv_cooperative_receiver_substrate": 1.50,
 }
 
 
@@ -597,7 +607,7 @@ def rank_cells(
             )
         )
 
-    out.sort(key=lambda r: r.ev_per_dollar, reverse=True)
+    out.sort(key=lambda r: (bool(r.blockers), -r.ev_per_dollar))
     return out
 
 

@@ -73,6 +73,11 @@ def test_config_validation_refuses_invalid_pose_dim() -> None:
         SARCoherentConfig(pose_dim=4)
 
 
+def test_config_validation_refuses_pose_code_dim_mismatch() -> None:
+    with pytest.raises(ValueError, match="pose_code_dim must equal pose_dim"):
+        SARCoherentConfig(pose_code_dim=4)
+
+
 def test_config_validation_refuses_zero_residual_bytes() -> None:
     with pytest.raises(ValueError, match="per_pair_residual_bytes"):
         SARCoherentConfig(per_pair_residual_bytes=0)

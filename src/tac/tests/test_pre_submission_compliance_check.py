@@ -154,7 +154,13 @@ def _write_terminal_claim(
     lane_id: str = "lane-a",
     job_id: str = "job-a",
     archive_sha256: str = "0" * 64,
+    runtime_tree_sha256: str | None = None,
 ) -> None:
+    runtime_note = (
+        f" runtime_tree_sha256={runtime_tree_sha256}"
+        if runtime_tree_sha256
+        else ""
+    )
     active_row = (
         f"| 2026-05-07T23:59:00Z | codex | {lane_id} | lightning | {job_id} | "
         "2026-05-08T00:30Z | active_exact_eval | claimed before dispatch |\n"
@@ -162,7 +168,7 @@ def _write_terminal_claim(
     terminal_row = (
         f"| 2026-05-08T00:00:00Z | codex | {lane_id} | lightning | {job_id} | "
         "2026-05-08T00:00Z | completed_contest_cuda_score=0.209 | "
-        f"A++ archive_sha256={archive_sha256} |\n"
+        f"A++ archive_sha256={archive_sha256}{runtime_note} |\n"
     )
     path.write_text(
         "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
@@ -177,7 +183,11 @@ def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
     claims = tmp_path / "claims.md"
-    _write_terminal_claim(claims, archive_sha256=expected["archive_sha256"])
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
     report = mod.build_report(
         mod.build_arg_parser().parse_args(
             [
@@ -246,7 +256,11 @@ def test_pre_submission_check_matches_auth_runtime_after_custody_pruning_and_rem
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
     claims = tmp_path / "claims.md"
-    _write_terminal_claim(claims, archive_sha256=expected["archive_sha256"])
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
     auth_path = tmp_path / "submission" / "contest_auth_eval.json"
     auth = json.loads(auth_path.read_text(encoding="utf-8"))
     full_auth_manifest = _auth_runtime_manifest_with_custody_files(
@@ -309,7 +323,11 @@ def test_pre_submission_check_rejects_non_custody_runtime_manifest_mismatch(
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
     claims = tmp_path / "claims.md"
-    _write_terminal_claim(claims, archive_sha256=expected["archive_sha256"])
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
     auth_path = tmp_path / "submission" / "contest_auth_eval.json"
     auth = json.loads(auth_path.read_text(encoding="utf-8"))
     full_auth_manifest = _auth_runtime_manifest_with_custody_files(
@@ -388,7 +406,11 @@ def test_pre_submission_check_records_strict_formula_when_report_score_uses_roun
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
     claims = tmp_path / "claims.md"
-    _write_terminal_claim(claims, archive_sha256=expected["archive_sha256"])
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
     auth_path = tmp_path / "submission" / "contest_auth_eval.json"
     auth = json.loads(auth_path.read_text(encoding="utf-8"))
     strict_score = auth["score_recomputed_from_components"]
@@ -951,6 +973,47 @@ def test_pre_submission_check_contest_final_rejects_unsuccessful_terminal_claim(
     assert "dispatch_claim_terminal_row" not in failed
     assert "dispatch_claim_terminal_archive_sha_bound" not in failed
     assert "dispatch_claim_successful_exact_eval_terminal_row" in failed
+
+
+def test_pre_submission_check_contest_final_requires_terminal_runtime_tree_binding(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(claims, archive_sha256=expected["archive_sha256"])
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    failed = _failed_check_names(report)
+    assert "dispatch_claim_terminal_archive_sha_bound" not in failed
+    assert "dispatch_claim_successful_exact_eval_terminal_row" not in failed
+    assert "dispatch_claim_terminal_runtime_tree_sha_bound" in failed
 
 
 def test_pre_submission_check_public_hygiene_flags_provider_ids(tmp_path: Path) -> None:
