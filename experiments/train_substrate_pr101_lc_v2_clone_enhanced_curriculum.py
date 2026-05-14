@@ -227,8 +227,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--skip-auth-eval",
         action="store_true",
         help=(
-            "Skip final contest_auth_eval.py. CUDA smoke defaults to auth eval "
-            "so Catalog #167 validates a real contest-CUDA artifact."
+            "Skip final contest_auth_eval.py. The smoke path (``--smoke``) "
+            "ALWAYS skips contest_auth_eval regardless of this flag because "
+            "the recipe contract is ``training_artifact_v1`` (manifest.json + "
+            "non-empty archive.zip; no score-axis claim). The full path runs "
+            "auth eval unless this flag is set; full lands behind a Phase 2 "
+            "design memo per HNeRV parity discipline lesson L13."
         ),
     )
 
@@ -727,9 +731,12 @@ def _train_smoke_loop(
 
     _vendor_runtime(output_dir)
     sha = _canon_sha256_bytes(archive_bytes)
+    archive_zip_bytes = archive_zip.read_bytes()
     return {
         "archive_sha256": sha,
         "archive_bytes": len(archive_bytes),
+        "archive_zip_sha256": _canon_sha256_bytes(archive_zip_bytes),
+        "archive_zip_bytes": len(archive_zip_bytes),
         "archive_zip_path": str(archive_zip),
         "runtime_inflate_sh": str(output_dir / "runtime" / "inflate.sh"),
         **archive_meta,
@@ -913,7 +920,35 @@ def main(argv: list[str] | None = None) -> int:
         stages=stages,
         output_dir=args.output_dir,
     )
-    if not args.skip_auth_eval and device.type == "cuda":
+    # Path B (council-grade decision; see
+    # `feedback_pr95plus_smoke_archive_completion_landed_20260513.md`):
+    # smoke ALWAYS skips contest_auth_eval, regardless of `--skip-auth-eval`.
+    # Defense-in-depth gate. The smoke recipe contract is
+    # ``smoke_validation_contract: training_artifact_v1`` (manifest.json +
+    # non-empty archive.zip; no score-axis claim). The substrate's inflate.py
+    # writes per-frame .png into a subdir, but contest_auth_eval expects a
+    # single uint8 RGB ``.raw`` blob per video at top level — those contracts
+    # diverge by design today because the substrate is L0 SCAFFOLD per HNeRV
+    # parity discipline lesson L13. Forcing auth-eval at smoke would burn
+    # Modal $ on a known-degenerate inflate path (the empirical anchor
+    # fc-01KRJ15E7NYVDF77VF1ED1XBKS at HEAD bda49280 demonstrated this:
+    # contest_auth_eval ran 516.5s and refused with PARTIAL inflate). The
+    # full path lands behind a Phase 2 design memo + score-grade inflate
+    # implementation; until then the smoke is structurally infrastructure-only.
+    if args.smoke:
+        result["auth_eval_skipped_reason"] = (
+            "smoke_validation_contract=training_artifact_v1; "
+            "auth-eval refused at smoke per Path B council decision "
+            "(score_claim=false, evidence_grade=training-only)"
+        )
+        print(
+            "[pr95plus] [WARNING] smoke mode does NOT run contest_auth_eval. "
+            "The training_artifact_v1 contract validates manifest.json + "
+            "archive.zip only; no contest-CUDA score is claimed. "
+            "Full-mode auth eval lands when _full_main + score-grade inflate.py "
+            "are implemented behind the Phase 2 design memo."
+        )
+    elif not args.skip_auth_eval and device.type == "cuda":
         auth_eval_json_path = args.output_dir / "contest_auth_eval_cuda.json"
         auth_result = _run_contest_auth_eval_cuda(
             archive_zip=Path(result["archive_zip_path"]),
@@ -942,6 +977,7 @@ def main(argv: list[str] | None = None) -> int:
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "evidence_grade": result.get("evidence_grade", "training-only"),
     }
