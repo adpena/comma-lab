@@ -7,6 +7,7 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
   format_id=0x01 — legacy brotli-compressed (dim u8, delta_q i8) sidecar
   format_id=0x02 — PR101 ranked-Huffman/no-op grammar sidecar (this variant's
                     primary encoding; saves 42 bytes net vs format_id=0x01)
+  format_id=0x05 — PR101 grammar with fixed metadata and one rank byte elided
 
 Both format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
 parser/decoder-consumption evidence only. Score components require exact
@@ -49,10 +50,20 @@ CAMERA_H, CAMERA_W = 874, 1164
 SIDECAR_MAGIC = 0xFE
 SIDECAR_FORMAT_BROTLI = 0x01
 SIDECAR_FORMAT_PR101_GRAMMAR = 0x02
-SUPPORTED_FORMATS = (SIDECAR_FORMAT_BROTLI, SIDECAR_FORMAT_PR101_GRAMMAR)
+SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED = 0x05
+SUPPORTED_FORMATS = (
+    SIDECAR_FORMAT_BROTLI,
+    SIDECAR_FORMAT_PR101_GRAMMAR,
+    SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+)
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
 DEFAULT_BATCH_PAIRS = 16
+FIXED_META_NOOP_COUNT = 0
+FIXED_META_DIM_BYTES = 375
+FIXED_META_RANK_BYTES = 1
+FIXED_META_NOOP_RANK_BYTES = 1
+FIXED_META_RANK_BYTE = b"\x00"
 
 # PR101-grammar schema for this variant: n_pairs=600, n_dims=28,
 # deltas=(-2,-1,1,2), huff_min/max=(2,8), no-op sentinel=255.
@@ -110,6 +121,9 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
             )
         return format_id, pr106_bytes, sidecar_blob, None
 
+    if format_id == SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+        return format_id, pr106_bytes, bin_bytes[pos:], None
+
     # format_id == SIDECAR_FORMAT_PR101_GRAMMAR
     if pos + 2 > len(bin_bytes):
         raise ValueError("pr101_grammar archive truncated before pr101_payload_len")
@@ -160,6 +174,34 @@ def decode_pr101_grammar_sidecar(
     valid_mask = dim_arr != PR101_SCHEMA.no_op_sentinel
     delta_q_arr[valid_mask] = delta_lookup[delta_indices[valid_mask]]
     return dim_arr_u8, delta_q_arr
+
+
+def fixed_meta_framing_bytes() -> bytes:
+    return struct.pack(
+        "<HHBB",
+        FIXED_META_NOOP_COUNT,
+        FIXED_META_DIM_BYTES,
+        FIXED_META_RANK_BYTES,
+        FIXED_META_NOOP_RANK_BYTES,
+    )
+
+
+def decode_pr101_fixed_meta_rank_elided_sidecar(
+    payload: bytes,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode format_id=0x05 by restoring fixed metadata and the elided rank byte."""
+    expected_payload_bytes = 526
+    if len(payload) != expected_payload_bytes:
+        raise ValueError(
+            "fixed-meta PR101 sidecar payload length mismatch: "
+            f"got {len(payload)} bytes; expected {expected_payload_bytes}"
+        )
+    expanded_payload = (
+        payload[:FIXED_META_DIM_BYTES]
+        + FIXED_META_RANK_BYTE
+        + payload[FIXED_META_DIM_BYTES:]
+    )
+    return decode_pr101_grammar_sidecar(expanded_payload, fixed_meta_framing_bytes())
 
 
 def apply_sidecar_corrections(
@@ -232,10 +274,12 @@ def inflate(src_bin: str, dst_raw: str) -> int:
         else:
             dim_arr = np.full(PR101_SCHEMA.n_pairs, NO_OP_DIM, dtype=np.uint8)
             delta_q_arr = np.zeros(PR101_SCHEMA.n_pairs, dtype=np.int8)
-    else:  # SIDECAR_FORMAT_PR101_GRAMMAR
+    elif format_id == SIDECAR_FORMAT_PR101_GRAMMAR:
         if framing_meta is None:
             raise ValueError("framing_meta missing for format_id=0x02 payload")
         dim_arr, delta_q_arr = decode_pr101_grammar_sidecar(sidecar_blob, framing_meta)
+    else:  # SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED
+        dim_arr, delta_q_arr = decode_pr101_fixed_meta_rank_elided_sidecar(sidecar_blob)
 
     n_corrections = int((dim_arr != NO_OP_DIM).sum())
     print(

@@ -10,12 +10,16 @@ import pytest
 
 from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_BROTLI,
+    PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
+    build_pr106_sidecar_recode_candidate_packet,
+    decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta,
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
     decode_pr106_sidecar_packet_dim_delta,
     encode_pr101_ranked_sidecar_payload,
+    lossless_pr106_sidecar_recode_candidates,
     mutate_pr106_sidecar_semantic_correction,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
@@ -487,3 +491,88 @@ def test_pr106_sidecar_rank_elided_rejects_surplus_payload_bytes() -> None:
 
     with pytest.raises(ValueError, match="payload length mismatch"):
         parse_pr106_sidecar_packet(emitted[:-5] + b"x" + emitted[-5:])
+
+
+def test_pr106_sidecar_fixed_meta_rank_elided_candidate_roundtrips() -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    candidates = lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    fixed = {
+        candidate.name: candidate
+        for candidate in candidates
+    }["pr101_fixed_meta_rank_elided_sidecar_format_0x05"]
+
+    fixed_packet = build_pr106_sidecar_recode_candidate_packet(packet, fixed)
+    emitted = emit_pr106_sidecar_packet(fixed_packet)
+    reparsed = parse_pr106_sidecar_packet(emitted)
+    fixed_dims, fixed_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    direct_dims, direct_deltas = (
+        decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta(
+            fixed.encoded_bytes
+        )
+    )
+    proof = pr106_sidecar_consumed_byte_proof(reparsed)
+    manifest = pr106_sidecar_manifest(reparsed)
+
+    assert fixed.sidecar_format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED
+    assert fixed.runtime_decoder_implemented is True
+    assert fixed_packet.format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED
+    assert fixed_packet.framing_meta is None
+    assert len(emitted) == len(member.payload) - 9
+    assert [row["name"] for row in proof["sections"]] == [
+        "magic",
+        "format_id",
+        "pr106_len_le_u32",
+        "pr106_payload",
+        "sidecar_payload",
+    ]
+    assert proof["score_affecting_section_names"] == ["pr106_payload", "sidecar_payload"]
+    assert proof["all_payload_bytes_accounted"] is True
+    assert manifest["derived_fixed_meta"] is not None
+    assert (fixed_dims == dims).all()
+    assert (fixed_deltas == deltas).all()
+    assert (direct_dims == dims).all()
+    assert (direct_deltas == deltas).all()
+
+
+def test_pr106_sidecar_fixed_meta_rank_elided_mutation_is_valid() -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    fixed = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }["pr101_fixed_meta_rank_elided_sidecar_format_0x05"]
+    fixed_packet = build_pr106_sidecar_recode_candidate_packet(packet, fixed)
+
+    mutated_packet, mutation = mutate_pr106_sidecar_semantic_correction(
+        fixed_packet,
+        pair_index=0,
+    )
+    reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(mutated_packet))
+
+    assert mutated_packet.format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED
+    assert mutated_packet.framing_meta is None
+    assert mutation.section_name == "sidecar_payload"
+    assert mutation.old_delta_q != mutation.new_delta_q
+    assert reparsed.pr106_bytes == fixed_packet.pr106_bytes
+    assert reparsed.sidecar_payload != fixed_packet.sidecar_payload
+
+
+def test_pr106_sidecar_fixed_meta_rank_elided_rejects_bad_payload_length() -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    fixed = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }["pr101_fixed_meta_rank_elided_sidecar_format_0x05"]
+    fixed_packet = build_pr106_sidecar_recode_candidate_packet(packet, fixed)
+    emitted = emit_pr106_sidecar_packet(fixed_packet)
+
+    with pytest.raises(ValueError, match="payload length mismatch"):
+        parse_pr106_sidecar_packet(emitted + b"x")

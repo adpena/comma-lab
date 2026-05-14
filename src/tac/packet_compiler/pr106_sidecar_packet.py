@@ -35,16 +35,23 @@ PR106_SIDECAR_MAGIC = 0xFE
 PR106_SIDECAR_FORMAT_BROTLI = 0x01
 PR106_SIDECAR_FORMAT_PR101_GRAMMAR = 0x02
 PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED = 0x04
+PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED = 0x05
 PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
 )
 PR106_LATENT_N_PAIRS = 600
 PR106_LATENT_N_DIMS = 28
 PR106_DEFAULT_MEMBER_NAME = "0.bin"
 PR106_ALLOWED_SINGLE_MEMBER_NAMES = (PR106_DEFAULT_MEMBER_NAME, "x")
 PR106_NO_OP_DIM = 255
+PR106_PR101_FIXED_META_NOOP_COUNT = 0
+PR106_PR101_FIXED_META_DIM_BYTES = 375
+PR106_PR101_FIXED_META_RANK_BYTES = 1
+PR106_PR101_FIXED_META_NOOP_RANK_BYTES = 1
+PR106_PR101_FIXED_META_RANK_BYTE = b"\x00"
 PR106_PR101_RANKED_SCHEMA = RankedSidecarSchema(
     n_pairs=600,
     n_dims=28,
@@ -53,6 +60,21 @@ PR106_PR101_RANKED_SCHEMA = RankedSidecarSchema(
     huff_max_len=8,
     no_op_sentinel=PR106_NO_OP_DIM,
 )
+PR106_PR101_FIXED_META_FIELDS = {
+    "noop_count": PR106_PR101_FIXED_META_NOOP_COUNT,
+    "dim_bytes": PR106_PR101_FIXED_META_DIM_BYTES,
+    "rank_bytes": PR106_PR101_FIXED_META_RANK_BYTES,
+    "noop_rank_bytes": PR106_PR101_FIXED_META_NOOP_RANK_BYTES,
+    "rank_byte_hex": PR106_PR101_FIXED_META_RANK_BYTE.hex(),
+    "schema": {
+        "n_pairs": PR106_LATENT_N_PAIRS,
+        "n_dims": PR106_LATENT_N_DIMS,
+        "deltas": tuple(int(value) for value in PR106_PR101_RANKED_SCHEMA.deltas),
+        "huff_min_len": PR106_PR101_RANKED_SCHEMA.huff_min_len,
+        "huff_max_len": PR106_PR101_RANKED_SCHEMA.huff_max_len,
+        "no_op_sentinel": PR106_PR101_RANKED_SCHEMA.no_op_sentinel,
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -92,6 +114,8 @@ class PR106SidecarPacket:
             return "pr101_ranked_no_op"
         if self.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
             return "pr101_ranked_no_op_rank_elided"
+        if self.format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+            return "pr101_ranked_no_op_fixed_meta_rank_elided"
         return f"unknown_0x{self.format_id:02x}"
 
 
@@ -415,6 +439,60 @@ def reexpand_pr101_rank_elided_sidecar_payload(
     return source_payload, source_meta
 
 
+def _fixed_meta_framing_bytes() -> bytes:
+    return struct.pack(
+        "<HHBB",
+        PR106_PR101_FIXED_META_NOOP_COUNT,
+        PR106_PR101_FIXED_META_DIM_BYTES,
+        PR106_PR101_FIXED_META_RANK_BYTES,
+        PR106_PR101_FIXED_META_NOOP_RANK_BYTES,
+    )
+
+
+def _validate_fixed_meta_schema(schema: RankedSidecarSchema) -> None:
+    expected = PR106_PR101_RANKED_SCHEMA
+    if (
+        int(schema.n_pairs) != int(expected.n_pairs)
+        or int(schema.n_dims) != int(expected.n_dims)
+        or tuple(int(value) for value in schema.deltas)
+        != tuple(int(value) for value in expected.deltas)
+        or int(schema.huff_min_len) != int(expected.huff_min_len)
+        or int(schema.huff_max_len) != int(expected.huff_max_len)
+        or int(schema.no_op_sentinel) != int(expected.no_op_sentinel)
+    ):
+        raise ValueError("format_id=0x05 fixed meta requires the canonical PR106 PR101 schema")
+
+
+def reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(
+    payload: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[bytes, bytes]:
+    """Reconstruct format-0x02 PR101 payload/meta from fixed-meta format 0x05.
+
+    Format ``0x05`` is a byte-closed specialization for the current PR106/R2
+    no-op-free ranked sidecar. The archive pays only the dim-radix payload,
+    Huffman bits, and noop-rank byte; the fixed grammar metadata lives in the
+    runtime schema.
+    """
+
+    _validate_fixed_meta_schema(schema)
+    expected_payload_bytes = _rank_elided_expected_payload_bytes(
+        noop_count=PR106_PR101_FIXED_META_NOOP_COUNT,
+        dim_bytes=PR106_PR101_FIXED_META_DIM_BYTES,
+        noop_rank_bytes=PR106_PR101_FIXED_META_NOOP_RANK_BYTES,
+        schema=schema,
+    )
+    if len(payload) != expected_payload_bytes:
+        raise ValueError(
+            "format_id=0x05 fixed-meta rank-elided payload length mismatch: "
+            f"got {len(payload)} bytes; expected {expected_payload_bytes}"
+        )
+    dim_bytes = PR106_PR101_FIXED_META_DIM_BYTES
+    source_payload = payload[:dim_bytes] + PR106_PR101_FIXED_META_RANK_BYTE + payload[dim_bytes:]
+    return source_payload, _fixed_meta_framing_bytes()
+
+
 def decode_pr101_rank_elided_sidecar_payload_to_dim_delta(
     payload: bytes,
     framing_meta: bytes,
@@ -426,6 +504,24 @@ def decode_pr101_rank_elided_sidecar_payload_to_dim_delta(
     expanded_payload, expanded_meta = reexpand_pr101_rank_elided_sidecar_payload(
         payload,
         framing_meta,
+        schema=schema,
+    )
+    return decode_pr101_ranked_sidecar_payload_to_dim_delta(
+        expanded_payload,
+        expanded_meta,
+        schema=schema,
+    )
+
+
+def decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta(
+    payload: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode PR106 format-0x05 fixed-meta/rank-elided sidecar payload."""
+
+    expanded_payload, expanded_meta = reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(
+        payload,
         schema=schema,
     )
     return decode_pr101_ranked_sidecar_payload_to_dim_delta(
@@ -458,6 +554,11 @@ def decode_pr106_sidecar_packet_dim_delta(
         return decode_pr101_rank_elided_sidecar_payload_to_dim_delta(
             packet.sidecar_payload,
             packet.framing_meta,
+            schema=schema,
+        )
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+        return decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta(
+            packet.sidecar_payload,
             schema=schema,
         )
     raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
@@ -830,6 +931,29 @@ def lossless_pr106_sidecar_recode_candidates(
                 notes=("existing_pr106_r2_pr101_grammar_runtime_consumed_format",),
             )
         )
+        if ranked_meta == _fixed_meta_framing_bytes():
+            fixed_payload = (
+                ranked_payload[:PR106_PR101_FIXED_META_DIM_BYTES]
+                + ranked_payload[
+                    PR106_PR101_FIXED_META_DIM_BYTES
+                    + PR106_PR101_FIXED_META_RANK_BYTES :
+                ]
+            )
+            candidates.append(
+                _candidate(
+                    name="pr101_fixed_meta_rank_elided_sidecar_format_0x05",
+                    encoded_bytes=fixed_payload,
+                    decoded=decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta(
+                        fixed_payload,
+                    ),
+                    sidecar_format_id=PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+                    runtime_decoder_implemented=True,
+                    notes=(
+                        "runtime_derived_fixed_meta_consumed_format",
+                        "fixed_meta:noops=0,dim_bytes=375,rank_bytes=1,noop_rank_bytes=1",
+                    ),
+                )
+            )
 
     for candidate in candidates:
         if candidate.encoded_bytes and not (
@@ -1001,6 +1125,16 @@ def parse_pr106_sidecar_packet(
             framing_meta=framing_meta,
         )
 
+    if format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+        sidecar = payload[pos:]
+        reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(sidecar)
+        return PR106SidecarPacket(
+            format_id=format_id,
+            pr106_bytes=pr106_bytes,
+            sidecar_payload=sidecar,
+            framing_meta=None,
+        )
+
     raise ValueError(f"unsupported PR106 sidecar format_id=0x{format_id:02X}")
 
 
@@ -1102,12 +1236,23 @@ def mutate_pr106_sidecar_semantic_correction(
             new_delta_q=new_delta,
         )
 
-    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+    if packet.format_id in (
+        PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+        PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+    ):
         if packet.framing_meta is None:
-            raise ValueError("format_id=0x02 requires framing_meta")
+            if packet.format_id != PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+                raise ValueError("format_id=0x02 requires framing_meta")
+            ranked_payload, ranked_meta = reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(
+                packet.sidecar_payload,
+                schema=schema,
+            )
+        else:
+            ranked_payload = packet.sidecar_payload
+            ranked_meta = packet.framing_meta
         dims, delta_indices = _decode_pr101_ranked_sidecar_payload(
-            packet.sidecar_payload,
-            packet.framing_meta,
+            ranked_payload,
+            ranked_meta,
             schema=schema,
         )
         idx = (
@@ -1128,11 +1273,25 @@ def mutate_pr106_sidecar_semantic_correction(
             delta_indices=mutated_delta_indices,
             schema=schema,
         )
+        mutated_sidecar_payload = mutated_payload
+        mutated_framing_meta = packet.framing_meta
+        if packet.format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+            mutated_meta = _fixed_meta_framing_bytes()
+            if ranked_meta != mutated_meta:
+                raise ValueError("format_id=0x05 expanded metadata did not match fixed meta")
+            mutated_sidecar_payload = (
+                mutated_payload[:PR106_PR101_FIXED_META_DIM_BYTES]
+                + mutated_payload[
+                    PR106_PR101_FIXED_META_DIM_BYTES
+                    + PR106_PR101_FIXED_META_RANK_BYTES :
+                ]
+            )
+            mutated_framing_meta = None
         mutated_packet = PR106SidecarPacket(
             format_id=packet.format_id,
             pr106_bytes=packet.pr106_bytes,
-            sidecar_payload=mutated_payload,
-            framing_meta=packet.framing_meta,
+            sidecar_payload=mutated_sidecar_payload,
+            framing_meta=mutated_framing_meta,
         )
         return mutated_packet, PR106SidecarMutation(
             section_name="sidecar_payload",
@@ -1156,10 +1315,10 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
     if len(packet.pr106_bytes) > 0xFFFF_FFFF:
         raise ValueError("PR106 inner payload too large for u32 length field")
-    if (
-        packet.format_id != PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED
-        and len(packet.sidecar_payload) > 0xFFFF
-    ):
+    if packet.format_id not in (
+        PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+    ) and len(packet.sidecar_payload) > 0xFFFF:
         raise ValueError("sidecar payload too large for u16 length field")
     if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI and packet.framing_meta is not None:
         raise ValueError("format_id=0x01 must not carry framing_meta")
@@ -1177,6 +1336,10 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
             packet.sidecar_payload,
             packet.framing_meta,
         )
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+        if packet.framing_meta is not None:
+            raise ValueError("format_id=0x05 derives framing_meta and must not carry it")
+        reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(packet.sidecar_payload)
 
     prefix = (
         bytes([PR106_SIDECAR_MAGIC, packet.format_id])
@@ -1196,6 +1359,8 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
     if packet.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
         assert packet.framing_meta is not None
         return prefix + packet.sidecar_payload + packet.framing_meta
+    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+        return prefix + packet.sidecar_payload
     raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
 
 
@@ -1258,7 +1423,10 @@ def pr106_sidecar_consumed_byte_proof(
         score_affecting=False,
     )
     add("pr106_payload", packet.pr106_bytes, score_affecting=True)
-    if packet.format_id != PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+    if packet.format_id not in (
+        PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+    ):
         add(
             "sidecar_len_le_u16",
             struct.pack("<H", len(packet.sidecar_payload)),
@@ -1320,6 +1488,17 @@ def pr106_sidecar_manifest(
         "framing_meta_sha256": None
         if packet.framing_meta is None
         else sha256_hex(packet.framing_meta),
+        "derived_fixed_meta": None
+        if packet.format_id != PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED
+        else {
+            "fields": PR106_PR101_FIXED_META_FIELDS,
+            "framing_meta_bytes": len(_fixed_meta_framing_bytes()),
+            "framing_meta_sha256": sha256_hex(_fixed_meta_framing_bytes()),
+            "contest_compliance_rationale": (
+                "metadata is fixed by the committed runtime grammar and runtime tree SHA; "
+                "this manifest makes the implicit fields explicit for review"
+            ),
+        },
         "emitted_payload_bytes": len(emitted),
         "emitted_payload_sha256": sha256_hex(emitted),
         "packet_ir_consumed_byte_proof": pr106_sidecar_consumed_byte_proof(packet),
@@ -1501,6 +1680,11 @@ def build_pr106_sidecar_recode_candidate_packet(
                 f"candidate {candidate.name!r} requires six framing_meta bytes"
             )
         framing_meta = candidate.framing_meta_bytes
+    elif candidate.sidecar_format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+        if candidate.framing_meta_bytes:
+            raise ValueError(
+                f"candidate {candidate.name!r} must not carry explicit framing_meta"
+            )
     elif candidate.framing_meta_bytes:
         raise ValueError(
             f"candidate {candidate.name!r} carries framing_meta for non-PR101 format"
