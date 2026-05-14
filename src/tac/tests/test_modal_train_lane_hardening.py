@@ -97,3 +97,11 @@ def test_modal_train_lane_returns_experiments_results_artifacts() -> None:
     text = SOURCE.read_text()
 
     assert 'workspace / "experiments" / "results"' in text
+
+
+def test_modal_train_lane_image_carries_hard_entropy_runtime_deps() -> None:
+    text = SOURCE.read_text()
+
+    assert '"brotli"' in text
+    assert '"constriction>=0.4,<0.5"' in text
+    assert '"pyppmd>=1.3,<2.0"' in text

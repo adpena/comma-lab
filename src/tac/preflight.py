@@ -46,6 +46,7 @@ import sys
 import threading
 import time
 import tokenize
+import tomllib
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 from collections.abc import Iterator
@@ -2227,6 +2228,16 @@ def preflight_all(
         # fixed AND self-protected against" non-negotiable. Live count at
         # landing: 0.
         check_modal_dispatch_verifies_worker_source_matches_head(
+            strict=True, verbose=verbose,
+        )
+        # Catalog #203 - check_modal_training_image_includes_hard_runtime_deps
+        # PR95++ enhanced-curriculum smoke 2026-05-14 failed before training
+        # with ModuleNotFoundError: constriction on the Modal worker. The
+        # training image must carry pyproject hard entropy/runtime deps
+        # (brotli/constriction/pyppmd) before paid provider dispatch.
+        # Live count at landing: 0. STRICT @ 0 per CLAUDE.md
+        # "Bugs must be permanently fixed AND self-protected against".
+        check_modal_training_image_includes_hard_runtime_deps(
             strict=True, verbose=verbose,
         )
         # 2026-05-12 Catalog #167 (PHASE-B1-PIVOT): operator-authorize
@@ -42396,6 +42407,153 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
             f"{len(violations)} contract violation(s). The Modal HEAD-parity "
             "ledger (Catalog #166, PHASE-B1-PIVOT) cannot be dropped from "
             "the canonical dispatcher without re-exposing the bug class:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #203 - check_modal_training_image_includes_hard_runtime_deps
+#
+# PR95++ enhanced-curriculum smoke (2026-05-14T01:04Z) failed before training
+# with ``ModuleNotFoundError: No module named 'constriction'`` on the Modal
+# worker. The local project already declared ``constriction`` as a hard runtime
+# dependency in ``pyproject.toml``, and Modal auth-eval images already carried
+# the entropy-runtime closure, but the general training image lagged behind.
+#
+# This strict check refuses any state where the canonical Modal training
+# dispatcher's image omits hard entropy/runtime dependencies that pyproject
+# declares for archive/inflate/replay paths. The check uses Python AST string
+# literals for ``experiments/modal_train_lane.py`` so comments mentioning a dep
+# cannot satisfy the gate.
+# ----------------------------------------------------------------------------
+
+_CHECK_203_MODAL_TRAINING_IMAGE_PATH = "experiments/modal_train_lane.py"
+_CHECK_203_PYPROJECT_PATH = "pyproject.toml"
+_CHECK_203_HARD_RUNTIME_DEPS: dict[str, dict[str, tuple[str, ...]]] = {
+    "brotli": {
+        "pyproject": ("brotli",),
+        "modal": ("brotli", "brotli>=1.0"),
+    },
+    "constriction": {
+        "pyproject": ("constriction",),
+        "modal": ("constriction>=0.4,<0.5",),
+    },
+    "pyppmd": {
+        "pyproject": ("pyppmd",),
+        "modal": ("pyppmd>=1.3,<2.0",),
+    },
+}
+
+
+def _check_203_project_dependency_names(pyproject_path: Path) -> set[str]:
+    try:
+        payload = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return set()
+    project = payload.get("project", {})
+    if not isinstance(project, dict):
+        return set()
+    deps = project.get("dependencies", [])
+    if not isinstance(deps, list):
+        return set()
+    names: set[str] = set()
+    for dep in deps:
+        if not isinstance(dep, str):
+            continue
+        name = re.split(r"[<>=!~;\[\]\s]", dep, maxsplit=1)[0].strip().lower()
+        if name:
+            names.add(name)
+    return names
+
+
+def _check_203_python_string_literals(path: Path) -> tuple[set[str], str | None]:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return set(), f"read error {exc!s}"
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as exc:
+        return set(), f"syntax error {exc!s}"
+    literals: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            literals.add(node.value)
+    return literals, None
+
+
+def check_modal_training_image_includes_hard_runtime_deps(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #203. Refuse Modal training images that omit hard runtime
+    dependencies declared by ``pyproject.toml`` for entropy-coded archive
+    paths.
+
+    The check is deliberately narrow: it only guards dependencies that are both
+    hard project runtime deps and known to be needed by PR86/PR91/PR101/PR103
+    archive or packet-compiler surfaces. It does not require every project
+    dependency in the Modal training image.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    pyproject_path = root / _CHECK_203_PYPROJECT_PATH
+    modal_path = root / _CHECK_203_MODAL_TRAINING_IMAGE_PATH
+    violations: list[str] = []
+
+    if not pyproject_path.is_file():
+        violations.append(f"{_CHECK_203_PYPROJECT_PATH}: missing")
+        project_deps: set[str] = set()
+    else:
+        project_deps = _check_203_project_dependency_names(pyproject_path)
+
+    if not modal_path.is_file():
+        violations.append(
+            f"{_CHECK_203_MODAL_TRAINING_IMAGE_PATH}: missing canonical Modal "
+            "training dispatcher"
+        )
+        modal_literals: set[str] = set()
+    else:
+        modal_literals, parse_error = _check_203_python_string_literals(modal_path)
+        if parse_error:
+            violations.append(
+                f"{_CHECK_203_MODAL_TRAINING_IMAGE_PATH}: {parse_error}"
+            )
+
+    for dep_name, specs in _CHECK_203_HARD_RUNTIME_DEPS.items():
+        pyproject_names = {name.lower() for name in specs["pyproject"]}
+        if project_deps and dep_name not in project_deps and not (
+            pyproject_names & project_deps
+        ):
+            continue
+        if not any(spec in modal_literals for spec in specs["modal"]):
+            violations.append(
+                f"{_CHECK_203_MODAL_TRAINING_IMAGE_PATH}: Modal training image "
+                f"omits hard runtime dependency `{dep_name}` required by "
+                f"{_CHECK_203_PYPROJECT_PATH}; add one of "
+                f"{', '.join(repr(s) for s in specs['modal'])} to pip_install."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [modal-training-runtime-deps] {len(violations)} violation(s):")
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [modal-training-runtime-deps] OK "
+                "(Modal training image carries hard entropy runtime deps)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_training_image_includes_hard_runtime_deps found "
+            f"{len(violations)} contract violation(s). Modal training images "
+            "must include pyproject hard entropy/runtime dependencies before "
+            "paid provider dispatch:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
