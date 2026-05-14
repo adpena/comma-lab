@@ -103,6 +103,38 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         # Required only when --dataset-name=comma2k19 (validated at parse time).
         "satisfied_by_profile": ["smoke", "comma2k19_full"],
     },
+    # Catalog #213 auto-download canonical-helper wire-up. When
+    # --comma2k19-chunks-dir is empty AND --dataset-name=comma2k19, the
+    # trainer constructs a Comma2k19LocalCache rooted at --cache-dir and
+    # the log-incremental schedule streams chunks on-demand. This unblocks
+    # Phase 2 dispatch without the operator manually provisioning a chunks
+    # dir on every Modal/Vast.ai worker.
+    "--cache-dir": {
+        "env": "DPP_CACHE_DIR",
+        "default": "",  # empty = use default_cache_dir() = ~/.cache/tac/comma2k19_chunks
+        "required_input_file": False,
+        "satisfied_by_profile": ["smoke", "comma2k19_full"],
+    },
+    "--max-disk-gb": {
+        "env": "DPP_MAX_DISK_GB",
+        "default": "100.0",
+        "required_input_file": False,
+    },
+    "--log-incremental-base": {
+        "env": "DPP_LOG_INCREMENTAL_BASE",
+        "default": "2",
+        "required_input_file": False,
+    },
+    "--log-incremental-max-chunks": {
+        "env": "DPP_LOG_INCREMENTAL_MAX_CHUNKS",
+        "default": "80",
+        "required_input_file": False,
+    },
+    "--log-incremental-quality-threshold": {
+        "env": "DPP_LOG_INCREMENTAL_QUALITY_THRESHOLD",
+        "default": "0.005",
+        "required_input_file": False,
+    },
 }
 
 
@@ -186,8 +218,112 @@ def build_argparser() -> argparse.ArgumentParser:
         help=(
             "Path to a Comma2k19 chunk directory (MIT-licensed; "
             "github.com/commaai/comma2k19). Required when "
-            "--dataset-name=comma2k19. The Comma2k19FrameIterator runs the "
-            "Catalog #209 contest-video-leakage guard before any decode."
+            "--dataset-name=comma2k19 UNLESS --cache-dir is supplied to "
+            "auto-download via Comma2k19LocalCache. The Comma2k19FrameIterator "
+            "runs the Catalog #209 contest-video-leakage guard before any "
+            "decode."
+        ),
+    )
+    # Catalog #213 — Comma2k19 auto-download canonical cache.
+    parser.add_argument(
+        "--cache-dir",
+        default="",
+        help=(
+            "Local cache dir for auto-downloaded Comma2k19 chunks "
+            "(MIT-licensed; SHA-256-verified). Empty = use "
+            "~/.cache/tac/comma2k19_chunks (default_cache_dir()). When set "
+            "with --dataset-name=comma2k19 and an empty --comma2k19-chunks-dir, "
+            "the trainer auto-downloads via Comma2k19LocalCache + uses the "
+            "log-incremental schedule to feed distillation."
+        ),
+    )
+    parser.add_argument(
+        "--max-disk-gb",
+        type=float,
+        default=100.0,
+        help=(
+            "Maximum disk usage for the Comma2k19 cache before LRU "
+            "eviction kicks in. The cache refuses new fetches that "
+            "would exceed this even after evicting all stored entries."
+        ),
+    )
+    parser.add_argument(
+        "--log-incremental-base",
+        type=int,
+        default=2,
+        help=(
+            "Exponential base for the log-incremental chunk schedule. "
+            "Default 2 yields the canonical doubling schedule "
+            "[1, 2, 4, 8, 16, 32, 64, 80]."
+        ),
+    )
+    parser.add_argument(
+        "--log-incremental-max-chunks",
+        type=int,
+        default=80,
+        help=(
+            "Cap on the number of cumulative chunks the log-incremental "
+            "schedule visits. Default 80 = full Comma2k19 corpus size."
+        ),
+    )
+    parser.add_argument(
+        "--log-incremental-quality-threshold",
+        type=float,
+        default=0.005,
+        help=(
+            "Marginal-improvement plateau threshold for early-stop. "
+            "When (quality[n-1] - quality[n]) < this threshold and at "
+            "least 3 schedule steps have run, distillation stops. "
+            "Set to 0.0 to disable early-stop."
+        ),
+    )
+    parser.add_argument(
+        "--disable-log-incremental",
+        action="store_true",
+        help=(
+            "Disable the log-incremental schedule and fall back to a single "
+            "distill_codebook() call on the operator-supplied "
+            "--comma2k19-chunks-dir. Used when the operator wants exact "
+            "control over the chunk count (e.g. for byte-stable replays)."
+        ),
+    )
+    # Operator pivot 2026-05-14: streaming + log mode (NO permanent disk cache).
+    parser.add_argument(
+        "--use-streamer",
+        action="store_true",
+        help=(
+            "OPERATOR PIVOT 2026-05-14: route Comma2k19 chunk access through "
+            "Comma2k19LocalStreamer (streaming + JSONL log; NO permanent disk "
+            "cache) instead of Comma2k19LocalCache. Mutually exclusive with "
+            "--cache-dir. Operator pivot from auto-download to streaming + log."
+        ),
+    )
+    parser.add_argument(
+        "--stream-log-dir",
+        default="",
+        help=(
+            "Directory for the date-rotated JSONL stream-access log (defaults "
+            "to ~/.cache/tac/comma2k19_stream_logs). Required when "
+            "--use-streamer is set."
+        ),
+    )
+    parser.add_argument(
+        "--ram-buffer-gb",
+        type=float,
+        default=2.0,
+        help=(
+            "In-memory streaming buffer cap in gigabytes. LRU eviction once "
+            "the cap is reached. There is NO permanent disk cache in streamer "
+            "mode."
+        ),
+    )
+    parser.add_argument(
+        "--streamer-frames-per-chunk",
+        type=int,
+        default=256,
+        help=(
+            "Max frames decoded per streamed chunk in --use-streamer mode "
+            "(cost+memory). Streamed bytes are discarded after decode."
         ),
     )
     parser.add_argument(
@@ -368,6 +504,28 @@ def _torch_version_string() -> str:
         return "unknown"
 
 
+def _build_local_cache(args: argparse.Namespace):
+    """Construct the canonical Comma2k19LocalCache per Catalog #213.
+
+    Honors ``--cache-dir`` (env ``DPP_CACHE_DIR``) override; falls back to
+    :func:`default_cache_dir`. Always disk-budget-aware via
+    ``--max-disk-gb``. Returns the cache instance ready to fetch chunks.
+    """
+    from tac.substrates.pretrained_driving_prior import (
+        Comma2k19LocalCache,
+        default_cache_dir,
+    )
+
+    if args.cache_dir:
+        cache_dir = Path(args.cache_dir)
+    else:
+        cache_dir = default_cache_dir()
+    return Comma2k19LocalCache(
+        cache_dir=cache_dir,
+        max_disk_gb=float(args.max_disk_gb),
+    )
+
+
 def _build_frame_iterator(args: argparse.Namespace):
     """Construct the canonical Comma2k19FrameIterator per Catalog #209.
 
@@ -375,15 +533,30 @@ def _build_frame_iterator(args: argparse.Namespace):
     contest-video-leakage guard fires once, in a path STRICT preflight
     can audit. NEVER call ``distill_codebook(frames=<raw iterator>)``
     directly from this trainer.
+
+    Mode resolution (priority order):
+
+    1. If ``--dataset-name=comma2k19`` AND ``--comma2k19-chunks-dir`` is set:
+       use the operator-supplied chunks dir verbatim (existing behavior).
+    2. If ``--dataset-name=comma2k19`` AND no explicit chunks dir but the
+       trainer is wired to use the cache: the auto-download path goes
+       through :func:`_log_incremental_distillation_path` instead and this
+       helper is not called. Callers should branch on
+       ``_use_auto_download_cache(args)`` before invoking this helper.
+    3. If ``--dataset-name=bdd100k``: error out (Phase 3 scope).
+    4. Default: deterministic synthetic stub.
     """
     from tac.substrates.pretrained_driving_prior import Comma2k19FrameIterator
 
     if args.dataset_name == "comma2k19":
         if not args.comma2k19_chunks_dir:
             raise SystemExit(
-                "ERROR: --dataset-name=comma2k19 requires "
-                "--comma2k19-chunks-dir <path> (download an MIT-licensed "
-                "chunk from github.com/commaai/comma2k19)"
+                "ERROR: --dataset-name=comma2k19 with no --comma2k19-chunks-dir "
+                "AND no --cache-dir auto-download path; this code path should "
+                "have been routed via _log_incremental_distillation_path() "
+                "instead. Either pass --comma2k19-chunks-dir <path> (download "
+                "an MIT-licensed chunk from github.com/commaai/comma2k19) OR "
+                "set --cache-dir + leave --disable-log-incremental off."
             )
         # COMMA2K19_LEAKAGE_VERIFIED_OK:routed-via-Comma2k19FrameIterator-which-runs-check_no_contest_video_leakage-internally
         return Comma2k19FrameIterator(
@@ -406,6 +579,135 @@ def _build_frame_iterator(args: argparse.Namespace):
         synthetic=True,
         n_frames=min(args.max_distillation_frames, 1024),
         seed=args.seed,
+    )
+
+
+def _use_auto_download_cache(args: argparse.Namespace) -> bool:
+    """Return True iff the trainer should use the Comma2k19LocalCache.
+
+    Acceptance criteria:
+
+    1. ``--dataset-name=comma2k19`` (the cache only knows MIT-licensed chunks)
+    2. No explicit ``--comma2k19-chunks-dir`` passed (otherwise the operator
+       wants their own chunks tree)
+    3. ``--disable-log-incremental`` is False (operator can opt out)
+    4. ``--use-streamer`` is False (operator routes through cache, not stream)
+    """
+    return (
+        args.dataset_name == "comma2k19"
+        and not args.comma2k19_chunks_dir
+        and not getattr(args, "disable_log_incremental", False)
+        and not getattr(args, "use_streamer", False)
+    )
+
+
+def _use_streamer(args: argparse.Namespace) -> bool:
+    """Return True iff the trainer should route through Comma2k19LocalStreamer.
+
+    Operator pivot 2026-05-14: streaming + log mode is the NEW canonical path.
+
+    Acceptance criteria:
+    1. ``--use-streamer`` is explicitly set
+    2. ``--dataset-name=comma2k19`` (the streamer only knows MIT-licensed chunks)
+    3. No explicit ``--comma2k19-chunks-dir`` (operator chose streaming over disk)
+    4. ``--disable-log-incremental`` is False (streaming mode IS the log-incremental
+       schedule; the two are coupled)
+    """
+    return (
+        bool(getattr(args, "use_streamer", False))
+        and args.dataset_name == "comma2k19"
+        and not args.comma2k19_chunks_dir
+        and not getattr(args, "disable_log_incremental", False)
+    )
+
+
+def _build_local_streamer(args: argparse.Namespace):
+    """Construct the canonical Comma2k19LocalStreamer per Catalog #214.
+
+    All streamer construction goes through this single helper so the
+    JSONL log dir, RAM buffer cap, and contest-video-leakage guard are
+    centralized. NEVER instantiate Comma2k19LocalStreamer directly in
+    trainer code outside this helper.
+    """
+    from tac.substrates.pretrained_driving_prior import Comma2k19LocalStreamer
+
+    log_dir = args.stream_log_dir or None  # None → DEFAULT_LOG_DIR
+    # COMMA2K19_LEAKAGE_VERIFIED_OK:routed-via-Comma2k19LocalStreamer-which-runs-_verify_chunk_id_safe-internally
+    return Comma2k19LocalStreamer(
+        log_dir=Path(log_dir).expanduser() if log_dir else None,
+        ram_buffer_gb=float(args.ram_buffer_gb),
+        dispatch_label=Path(args.output_dir).name if args.output_dir else None,
+    )
+
+
+def _log_incremental_streaming_path(
+    args: argparse.Namespace,
+):
+    """Distill a codebook via the streaming-mode log-incremental schedule.
+
+    Operator pivot 2026-05-14: this is the streaming-mode companion to
+    :func:`_log_incremental_distillation_path`. Same schedule + plateau
+    logic; different chunk source (stream + JSONL log instead of cache).
+    """
+    from tac.substrates.pretrained_driving_prior import (
+        DistillationConfig,
+        LogIncrementalSchedule,
+        log_incremental_distillation_streaming,
+    )
+
+    streamer = _build_local_streamer(args)
+    schedule = LogIncrementalSchedule(
+        base=int(args.log_incremental_base),
+        initial_chunks=1,
+        max_chunks=int(args.log_incremental_max_chunks),
+        quality_plateau_threshold=float(args.log_incremental_quality_threshold),
+    )
+    distill_cfg_template = DistillationConfig(
+        dataset_name="comma2k19",
+        random_seed=int(args.seed),
+        max_frames=int(args.max_distillation_frames),
+    )
+    return log_incremental_distillation_streaming(
+        streamer=streamer,
+        schedule=schedule,
+        distill_cfg_template=distill_cfg_template,
+        frames_per_chunk=int(args.streamer_frames_per_chunk),
+    )
+
+
+def _log_incremental_distillation_path(
+    args: argparse.Namespace,
+):
+    """Distill a codebook via the canonical log-incremental schedule.
+
+    Per Catalog #213 the auto-download cache is the SOLE entry point for
+    chunk fetches; per Catalog #209 the leakage guard fires inside
+    Comma2k19FrameIterator before any decode. Returns
+    ``(DashcamCodebook, schedule_log)`` where ``schedule_log`` is the
+    per-step ScheduleStepResult list (continual-learning anchor candidates).
+    """
+    from tac.substrates.pretrained_driving_prior import (
+        DistillationConfig,
+        LogIncrementalSchedule,
+        log_incremental_distillation,
+    )
+
+    cache = _build_local_cache(args)
+    schedule = LogIncrementalSchedule(
+        base=int(args.log_incremental_base),
+        initial_chunks=1,
+        max_chunks=int(args.log_incremental_max_chunks),
+        quality_plateau_threshold=float(args.log_incremental_quality_threshold),
+    )
+    distill_cfg_template = DistillationConfig(
+        dataset_name="comma2k19",
+        random_seed=int(args.seed),
+        max_frames=int(args.max_distillation_frames),
+    )
+    return log_incremental_distillation(
+        cache=cache,
+        schedule=schedule,
+        distill_cfg_template=distill_cfg_template,
     )
 
 
@@ -657,11 +959,53 @@ def _full_main(args: argparse.Namespace) -> int:
 
         # 4. Codebook (load OR distill — both routed through Catalog #209)
         codebook_path = Path(args.codebook_path) if args.codebook_path else None
+        log_incremental_schedule_log: list[Any] = []
         if codebook_path is not None and codebook_path.is_file():
             from tac.substrates.pretrained_driving_prior import parse_codebook
 
             book = parse_codebook(codebook_path.read_bytes())
             print(f"[full] loaded codebook from {codebook_path}")
+        elif _use_streamer(args):
+            # OPERATOR PIVOT 2026-05-14: Catalog #214 streaming + JSONL log path.
+            # Streams chunks dynamically (no permanent disk cache); decodes
+            # frames; logs every access to a JSONL ledger; discards bytes.
+            print(
+                f"[full] log-incremental STREAMING distillation; base="
+                f"{args.log_incremental_base}, max_chunks="
+                f"{args.log_incremental_max_chunks}, threshold="
+                f"{args.log_incremental_quality_threshold}, "
+                f"stream_log_dir={args.stream_log_dir or '~/.cache/tac/comma2k19_stream_logs'}"
+            )
+            book, log_incremental_schedule_log = _log_incremental_streaming_path(args)
+            print(
+                f"[full] log-incremental streaming distillation complete "
+                f"({len(log_incremental_schedule_log)} steps; "
+                f"final chunk_count="
+                f"{log_incremental_schedule_log[-1].chunk_count if log_incremental_schedule_log else 0}; "
+                f"early_stopped="
+                f"{any(s.early_stopped for s in log_incremental_schedule_log)})"
+            )
+        elif _use_auto_download_cache(args):
+            # Catalog #213 auto-download path with log-incremental schedule.
+            # Streams chunks on-demand from cache; runs codebook distillation
+            # in exponentially-growing chunk batches with plateau early-stop.
+            print(
+                f"[full] log-incremental distillation; base="
+                f"{args.log_incremental_base}, max_chunks="
+                f"{args.log_incremental_max_chunks}, threshold="
+                f"{args.log_incremental_quality_threshold}"
+            )
+            book, log_incremental_schedule_log = _log_incremental_distillation_path(
+                args
+            )
+            print(
+                f"[full] log-incremental distillation complete "
+                f"({len(log_incremental_schedule_log)} steps; "
+                f"final chunk_count="
+                f"{log_incremental_schedule_log[-1].chunk_count if log_incremental_schedule_log else 0}; "
+                f"early_stopped="
+                f"{any(s.early_stopped for s in log_incremental_schedule_log)})"
+            )
         else:
             print(f"[full] distilling codebook from dataset={args.dataset_name!r}")
             distill_cfg = DistillationConfig(
@@ -1198,6 +1542,13 @@ def _full_main(args: argparse.Namespace) -> int:
             "ready_for_exact_eval_dispatch": False,
             "custody_status": "ci-rebuildable",
             "codebook_provenance": book.metadata,
+            # Catalog #213 log-incremental schedule log (empty unless the
+            # auto-download cache path fired). Each step is a continual-learning
+            # anchor candidate per Catalog #128 (frame_count vs codebook_quality
+            # posterior).
+            "log_incremental_schedule_log": [
+                step.to_dict() for step in log_incremental_schedule_log
+            ],
         }
         (output_dir / "provenance.json").write_text(
             json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
