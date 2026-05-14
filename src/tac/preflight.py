@@ -2660,6 +2660,18 @@ def preflight_all(
         check_modal_sentinel_files_are_in_mount_set(
             strict=True, verbose=verbose,
         )
+        # Catalog #202 - check_catalog_202_bypass_requires_paired_env_attestation
+        # Operator approved 2026-05-13 (5-smoke wave session: dirty-tree
+        # dispatch blocker recurred 3 times). Sister of Catalog #199
+        # (paired-env-var pattern), Catalog #166 (worker-side hash check
+        # that runs independently), Catalog #201 (sentinel-vs-mount parity).
+        # Refuses regressions in `_whole_tree_clean_check_bypass_active`
+        # helper and `_dispatch_modal` gating in tools/operator_authorize.py.
+        # Live count at landing: 0. STRICT @ 0 per CLAUDE.md "Strict-flip
+        # atomicity rule".
+        check_catalog_202_bypass_requires_paired_env_attestation(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -46776,6 +46788,459 @@ def check_modal_sentinel_files_are_in_mount_set(
             "fc-01KRHNMT4SEB794HFPH5GNTHFP @ 2026-05-13 21:59 UTC):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
+    return violations
+
+
+# ============================================================================
+# Catalog #202 — check_catalog_202_bypass_requires_paired_env_attestation
+#
+# Operator approved 2026-05-13 (5-smoke wave session: dirty-tree dispatch
+# blocker recurred 3 times). Sister self-protection for the
+# `_whole_tree_clean_check_bypass_active` helper added to
+# `tools/operator_authorize.py` at the same commit batch.
+#
+# Bug class (empirical anchor): the canonical Modal dispatch path in
+# `tools/operator_authorize.py::_dispatch_modal` hardcoded
+# `--require-clean-head` so `experiments/modal_train_lane.py` refused
+# dispatch on ANY whole-tree dirt. In the 2026-05-13 5-smoke wave the
+# blocker fired 3 times, despite the explicit sentinel set being clean
+# (sister-subagent infrastructure work touched unrelated files like
+# `tools/harvest_modal_calls.py`, `tools/parallel_dispatch_top_k.py`,
+# `experiments/modal_phase_a1/a4_*.py`, etc.). Catalog #166's worker-side
+# sentinel hash check would have passed cleanly but the dispatch never
+# fired because the upstream dirty-tree check refused.
+#
+# Fix: paired-env-var bypass per Catalog #199 pattern.
+#   * `OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1` (intent flag)
+#   * `OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=1` (attestation)
+# Bare intent without attestation -> SystemExit(12). Both set ->
+# `--require-clean-head` is OMITTED from the Modal dispatch command, but
+# Catalog #166's worker-side sentinel hash check still runs.
+#
+# This STRICT gate refuses any state of `tools/operator_authorize.py` that:
+#   1. Drops the helper `_whole_tree_clean_check_bypass_active`
+#   2. Drops the intent env var check inside the helper
+#   3. Drops the attestation env var check inside the helper
+#   4. Drops the `SystemExit` on bare intent without attestation
+#   5. Drops the helper invocation in `_dispatch_modal`, OR drops the
+#      `--require-clean-head` literal entirely (so reviewers can audit
+#      the gating in either direction)
+#
+# Sister of Catalog #199 (paired-env-var pattern, parent template),
+# Catalog #166 (worker-side sentinel hash check that runs independently),
+# Catalog #201 (sentinel-vs-mount parity sister gate).
+#
+# Live count at landing: 0. STRICT @ 0 in same commit batch per CLAUDE.md
+# "Strict-flip atomicity rule".
+# ============================================================================
+
+_CHECK_202_TARGET_REL = "tools/operator_authorize.py"
+_CHECK_202_HELPER_NAME = "_whole_tree_clean_check_bypass_active"
+_CHECK_202_DISPATCH_FN_NAME = "_dispatch_modal"
+_CHECK_202_INTENT_ENV_VAR = "OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK"
+_CHECK_202_ATTESTATION_ENV_VAR = (
+    "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED"
+)
+_CHECK_202_REQUIRE_CLEAN_FLAG = "--require-clean-head"
+_CHECK_202_SAMELINE_WAIVER_TOKEN = "CATALOG_202_BYPASS_LOGIC_OK:"
+_CHECK_202_CALLSITE_WAIVER_TOKEN = "OPERATOR_AUTHORIZE_CLEAN_BYPASS_OK:"
+_CHECK_202_CALLSITE_WINDOW_LINES = 30
+_CHECK_202_WAIVER_RE = re.compile(
+    r"#\s*CATALOG_202_BYPASS_LOGIC_OK:\s*(?!<reason>\s*$)\S+"
+)
+
+
+def _check_202_module_constant_value(
+    tree: ast.Module, name: str,
+) -> str | None:
+    """Resolve a top-level ``NAME = "literal"`` (or ``NAME: type = "literal"``)
+    to its string value. Returns None if `name` is not bound at module level
+    to a constant string literal. Used to follow indirect references
+    (``os.environ.get(_WHOLE_TREE_CLEAN_BYPASS_INTENT_ENV_VAR, "")``) back to
+    the underlying env-var literal so the gate accepts the canonical pattern.
+    """
+    for node in tree.body:
+        targets: list[ast.expr] = []
+        value: ast.expr | None = None
+        if isinstance(node, ast.Assign):
+            targets = list(node.targets)
+            value = node.value
+        elif isinstance(node, ast.AnnAssign):
+            if node.target is not None:
+                targets = [node.target]
+            value = node.value
+        else:
+            continue
+        if value is None:
+            continue
+        if not isinstance(value, ast.Constant):
+            continue
+        if not isinstance(value.value, str):
+            continue
+        for tgt in targets:
+            if isinstance(tgt, ast.Name) and tgt.id == name:
+                return value.value
+    return None
+
+
+def _check_202_resolve_env_arg(
+    arg: ast.expr, tree: ast.Module,
+) -> str | None:
+    """Return the env-var string `arg` refers to, or None.
+
+    Handles the two canonical shapes:
+      * ``os.environ.get("LITERAL", ...)``  (Constant)
+      * ``os.environ.get(MODULE_NAME, ...)`` (Name -> module-level constant)
+    """
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+        return arg.value
+    if isinstance(arg, ast.Name):
+        return _check_202_module_constant_value(tree, arg.id)
+    return None
+
+
+def _check_202_helper_references_env_var(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    env_var_name: str,
+    tree: ast.Module,
+) -> bool:
+    """True iff `func` body references `env_var_name` inside a string literal
+    accessed through ``os.environ`` (subscript/get/getenv) — i.e. the helper
+    actually CHECKS the env var, not just mentions it in a docstring/comment.
+
+    Module-level constants binding the env-var literal are followed via
+    ``_check_202_module_constant_value`` so the canonical pattern
+    ``os.environ.get(_INTENT_ENV_VAR, "")`` (with ``_INTENT_ENV_VAR =
+    "OPERATOR_AUTHORIZE_..."`` at module level) is accepted.
+    """
+    for node in ast.walk(func):
+        # os.environ.get("VAR", ...)  /  os.environ.get(NAME, ...)
+        # os.getenv("VAR")  /  os.getenv(NAME)
+        if isinstance(node, ast.Call):
+            fn = node.func
+            if (
+                isinstance(fn, ast.Attribute)
+                and fn.attr in {"get", "getenv"}
+                and node.args
+            ):
+                resolved = _check_202_resolve_env_arg(node.args[0], tree)
+                if resolved == env_var_name:
+                    return True
+        # os.environ["VAR"]  /  os.environ[NAME]  via subscript
+        if isinstance(node, ast.Subscript):
+            slice_value = node.slice
+            resolved = _check_202_resolve_env_arg(slice_value, tree)
+            if resolved == env_var_name:
+                return True
+    return False
+
+
+def _check_202_helper_raises_systemexit(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> bool:
+    """True iff `func` body has at least one ``raise SystemExit(...)`` call."""
+    for node in ast.walk(func):
+        if isinstance(node, ast.Raise):
+            exc = node.exc
+            if isinstance(exc, ast.Call):
+                fn = exc.func
+                if isinstance(fn, ast.Name) and fn.id == "SystemExit":
+                    return True
+                if (
+                    isinstance(fn, ast.Attribute)
+                    and fn.attr == "exit"
+                    and isinstance(fn.value, ast.Name)
+                    and fn.value.id == "sys"
+                ):
+                    return True
+            if isinstance(exc, ast.Name) and exc.id == "SystemExit":
+                return True
+    return False
+
+
+def _check_202_dispatch_fn_gates_flag_through_helper(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> tuple[bool, bool]:
+    """Return ``(helper_called, flag_appears)`` for ``_dispatch_modal``.
+
+    A correct gating pattern requires BOTH:
+      * the helper is called somewhere in the function body
+      * the ``--require-clean-head`` flag string literal still appears
+
+    We require the conjunction so reviewers can spot regressions in either
+    direction (helper dropped -> unconditional flag; flag dropped -> bypass
+    active by accident).
+    """
+    helper_called = False
+    flag_appears = False
+    for node in ast.walk(func):
+        if isinstance(node, ast.Call):
+            fn = node.func
+            if isinstance(fn, ast.Name) and fn.id == _CHECK_202_HELPER_NAME:
+                helper_called = True
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if node.value == _CHECK_202_REQUIRE_CLEAN_FLAG:
+                flag_appears = True
+    return helper_called, flag_appears
+
+
+def _check_202_line_has_waiver(text_line: str) -> bool:
+    return bool(_CHECK_202_WAIVER_RE.search(text_line))
+
+
+def _check_202_line_sets_intent_env(line: str) -> bool:
+    stripped = line.strip()
+    if _CHECK_202_CALLSITE_WAIVER_TOKEN in stripped:
+        return False
+    if _CHECK_202_INTENT_ENV_VAR not in stripped:
+        return False
+    if "=" not in stripped:
+        return False
+    if stripped.startswith("#"):
+        return False
+    if stripped.startswith('"""') or stripped.startswith("'''"):
+        return False
+    return True
+
+
+def _check_202_window_sets_attestation(lines: list[str], idx: int) -> bool:
+    lo = max(0, idx - _CHECK_202_CALLSITE_WINDOW_LINES)
+    hi = min(len(lines), idx + _CHECK_202_CALLSITE_WINDOW_LINES + 1)
+    for j in range(lo, hi):
+        if j == idx:
+            continue
+        candidate = lines[j]
+        if _CHECK_202_ATTESTATION_ENV_VAR not in candidate:
+            continue
+        if "=" not in candidate:
+            continue
+        if candidate.strip().startswith("#"):
+            continue
+        return True
+    return False
+
+
+def _check_202_callsite_violations(root: Path) -> tuple[list[str], int]:
+    violations: list[str] = []
+    scanned = 0
+    for path in _check_199_iter_candidate_files(root):
+        scanned += 1
+        try:
+            rel = str(path.relative_to(root))
+        except ValueError:
+            rel = str(path)
+        if rel in {_CHECK_202_TARGET_REL, "src/tac/preflight.py"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _CHECK_202_INTENT_ENV_VAR not in text:
+            continue
+        lines = text.splitlines()
+        for idx, line in enumerate(lines):
+            if not _check_202_line_sets_intent_env(line):
+                continue
+            if _check_202_window_sets_attestation(lines, idx):
+                continue
+            violations.append(
+                f"{path}:{idx + 1}: sets {_CHECK_202_INTENT_ENV_VAR} without "
+                f"setting {_CHECK_202_ATTESTATION_ENV_VAR} within "
+                f"{_CHECK_202_CALLSITE_WINDOW_LINES} lines. Per Catalog #202 "
+                "the clean-head bypass requires the paired sentinel-clean "
+                "attestation env var so dirty-tree dispatch cannot silently "
+                "skip --require-clean-head. Add "
+                f"`# {_CHECK_202_CALLSITE_WAIVER_TOKEN}<reason>` on the line, "
+                f"OR set {_CHECK_202_ATTESTATION_ENV_VAR}=1 nearby."
+            )
+    return violations, scanned
+
+
+def _check_202_raise_if_strict(violations: list[str], strict: bool) -> None:
+    if violations and strict:
+        raise PreflightError(
+            "check_catalog_202_bypass_requires_paired_env_attestation found "
+            f"{len(violations)} violation(s). Per CLAUDE.md 'Bugs must be "
+            "permanently fixed AND self-protected against' + Catalog #202:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+
+
+def check_catalog_202_bypass_requires_paired_env_attestation(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #202 — refuse bypass-helper regressions in operator_authorize.py.
+
+    Scans callsites for asymmetric clean-head bypass env-var use, then parses
+    ``tools/operator_authorize.py`` via AST and refuses any state that does
+    NOT honor the paired-env-var bypass contract for ``--require-clean-head``:
+
+      1. Helper ``_whole_tree_clean_check_bypass_active`` must be defined
+      2. Helper must read ``OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK``
+      3. Helper must read ``OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED``
+      4. Helper must ``raise SystemExit(...)`` on bare intent without
+         attestation (so partial-config cannot silently bypass)
+      5. ``_dispatch_modal`` must invoke the helper AND retain the
+         ``--require-clean-head`` literal (so reviewers can audit the gating)
+
+    Same-line ``# CATALOG_202_BYPASS_LOGIC_OK:<reason>`` waiver on the
+    function-def line is honored (placeholder ``<reason>`` literal rejected
+    so the gate's own docstring cannot self-waive).
+
+    Empirical anchor: 2026-05-13 5-smoke wave session — dirty-tree dispatch
+    blocker recurred 3 times because sister-subagent unrelated infrastructure
+    work touched files outside the explicit sentinel set. Sister of
+    Catalog #199 (paired-env-var pattern), Catalog #166 (worker-side hash
+    check that still runs), Catalog #201 (sentinel-vs-mount parity).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target_path = root / _CHECK_202_TARGET_REL
+    violations, callsite_scanned = _check_202_callsite_violations(root)
+    if not target_path.is_file():
+        if verbose:
+            print(
+                f"  [check-202] target file missing: {target_path} "
+                "(skipping)"
+            )
+        _check_202_raise_if_strict(violations, strict)
+        return violations
+    try:
+        text = target_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        if verbose:
+            print(f"  [check-202] cannot read {target_path}: {exc}")
+        _check_202_raise_if_strict(violations, strict)
+        return violations
+    try:
+        tree = ast.parse(text, filename=str(target_path))
+    except SyntaxError as exc:
+        if verbose:
+            print(f"  [check-202] syntax error in {target_path}: {exc}")
+        _check_202_raise_if_strict(violations, strict)
+        return violations
+    source_lines = text.splitlines()
+
+    helper_funcs: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+    dispatch_funcs: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name == _CHECK_202_HELPER_NAME:
+                helper_funcs.append(node)
+            elif node.name == _CHECK_202_DISPATCH_FN_NAME:
+                dispatch_funcs.append(node)
+
+    def _line_has_waiver_for(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        line_idx = node.lineno - 1
+        if 0 <= line_idx < len(source_lines):
+            return _check_202_line_has_waiver(source_lines[line_idx])
+        return False
+
+    if not helper_funcs:
+        violations.append(
+            f"{_CHECK_202_TARGET_REL}: helper "
+            f"`{_CHECK_202_HELPER_NAME}` is missing. Catalog #202 requires "
+            "the paired-env-var bypass helper. Add the canonical helper "
+            "(see Catalog #202 docstring)."
+        )
+    else:
+        for func in helper_funcs:
+            if _line_has_waiver_for(func):
+                continue
+            if not _check_202_helper_references_env_var(
+                func, _CHECK_202_INTENT_ENV_VAR, tree,
+            ):
+                violations.append(
+                    f"{_CHECK_202_TARGET_REL}:{func.lineno}: helper "
+                    f"`{_CHECK_202_HELPER_NAME}` does NOT read the intent "
+                    f"env var `{_CHECK_202_INTENT_ENV_VAR}`. Catalog #202 "
+                    "requires the helper to consult the intent flag via "
+                    "`os.environ.get` (or subscript). Add the env-var "
+                    f"check OR add `# {_CHECK_202_SAMELINE_WAIVER_TOKEN}"
+                    "<reason>` on the def line."
+                )
+            if not _check_202_helper_references_env_var(
+                func, _CHECK_202_ATTESTATION_ENV_VAR, tree,
+            ):
+                violations.append(
+                    f"{_CHECK_202_TARGET_REL}:{func.lineno}: helper "
+                    f"`{_CHECK_202_HELPER_NAME}` does NOT read the "
+                    "attestation env var "
+                    f"`{_CHECK_202_ATTESTATION_ENV_VAR}`. Catalog #202 "
+                    "requires the helper to consult the attestation flag. "
+                    "Add the env-var check OR add "
+                    f"`# {_CHECK_202_SAMELINE_WAIVER_TOKEN}<reason>` on the "
+                    "def line."
+                )
+            if not _check_202_helper_raises_systemexit(func):
+                violations.append(
+                    f"{_CHECK_202_TARGET_REL}:{func.lineno}: helper "
+                    f"`{_CHECK_202_HELPER_NAME}` does NOT raise SystemExit "
+                    "on bare intent without attestation. Catalog #202 "
+                    "requires SystemExit(12) on partial-config so the "
+                    "asymmetric env set cannot silently bypass. Add a "
+                    "`raise SystemExit(12)` branch OR add "
+                    f"`# {_CHECK_202_SAMELINE_WAIVER_TOKEN}<reason>` on the "
+                    "def line."
+                )
+
+    if not dispatch_funcs:
+        violations.append(
+            f"{_CHECK_202_TARGET_REL}: dispatch function "
+            f"`{_CHECK_202_DISPATCH_FN_NAME}` is missing. Catalog #202 "
+            "requires the Modal dispatch path to gate --require-clean-head "
+            "through the paired-env helper."
+        )
+    else:
+        for func in dispatch_funcs:
+            if _line_has_waiver_for(func):
+                continue
+            helper_called, flag_appears = (
+                _check_202_dispatch_fn_gates_flag_through_helper(func)
+            )
+            if not helper_called:
+                violations.append(
+                    f"{_CHECK_202_TARGET_REL}:{func.lineno}: "
+                    f"`{_CHECK_202_DISPATCH_FN_NAME}` does NOT invoke "
+                    f"`{_CHECK_202_HELPER_NAME}`. Catalog #202 requires "
+                    "the dispatch path to gate `--require-clean-head` "
+                    "through the helper so the paired-env bypass takes "
+                    "effect. Wire the helper call OR add "
+                    f"`# {_CHECK_202_SAMELINE_WAIVER_TOKEN}<reason>` on "
+                    "the def line."
+                )
+            if not flag_appears:
+                violations.append(
+                    f"{_CHECK_202_TARGET_REL}:{func.lineno}: "
+                    f"`{_CHECK_202_DISPATCH_FN_NAME}` no longer references "
+                    f"the literal `{_CHECK_202_REQUIRE_CLEAN_FLAG}`. "
+                    "Catalog #202 requires the flag literal to remain so "
+                    "reviewers can audit the gating. Restore the literal "
+                    "OR add "
+                    f"`# {_CHECK_202_SAMELINE_WAIVER_TOKEN}<reason>` on "
+                    "the def line."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-202-bypass-paired-env] {len(violations)} "
+                f"violation(s) in {_CHECK_202_TARGET_REL} / "
+                f"{callsite_scanned} callsite file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [catalog-202-bypass-paired-env] OK "
+                f"({_CHECK_202_TARGET_REL} + {callsite_scanned} callsite "
+                "file(s) scanned, 0 violation(s))"
+            )
+    _check_202_raise_if_strict(violations, strict)
     return violations
 
 

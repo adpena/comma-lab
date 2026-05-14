@@ -464,6 +464,78 @@ def _terminal_claim(
 _SESSION_DIRECTIVE_ENV_VAR = "OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE"
 _SESSION_BUDGET_ENV_VAR = "OPERATOR_AUTHORIZE_SESSION_BUDGET_USD"
 
+# Catalog #202 — paired-env-var bypass of `--require-clean-head` for trusted
+# sentinel-clean Modal dispatches. See `_whole_tree_clean_check_bypass_active`
+# below for the contract; STRICT preflight gate
+# `check_catalog_202_bypass_requires_paired_env_attestation` enforces the
+# paired-env contract structurally.
+_WHOLE_TREE_CLEAN_BYPASS_INTENT_ENV_VAR = (
+    "OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK"
+)
+_WHOLE_TREE_CLEAN_BYPASS_ATTESTATION_ENV_VAR = (
+    "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED"
+)
+
+
+def _whole_tree_clean_check_bypass_active() -> bool:
+    """Catalog #202 — return True iff the paired-env bypass attestation is set.
+
+    The bypass fires only when BOTH env vars are set to truthy values:
+      * ``OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1`` (intent flag)
+      * ``OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=1`` (operator
+        attestation that the explicit sentinel set is clean)
+
+    When ONLY the intent flag is set without the attestation flag, the helper
+    raises ``SystemExit(12)`` (sister to Catalog #199's ``SystemExit(11)``)
+    so a partial-config bypass cannot silently take effect. When BOTH are
+    set, prints a LOUD ``[OPERATOR-AUTHORIZE BYPASS]`` banner to stderr and
+    returns True.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+    + Catalog #199 paired-env-var pattern: the bypass is the immediate fix
+    for the recurring "sister-subagent unrelated dirty files block trusted
+    sentinel-clean dispatch" failure mode (3 occurrences in the 2026-05-13
+    5-smoke-wave session). Catalog #166's worker-side sentinel hash check
+    runs INDEPENDENTLY of ``--require-clean-head`` (see
+    ``experiments/modal_train_lane.py::main`` lines 944-991) so the worker
+    still refuses dispatch if any sentinel byte differs between the local
+    snapshot and what Modal mounts. The whole-tree clean check is a SISTER
+    safety surface that is overly conservative when the operator has
+    independently verified the sentinel set is clean.
+
+    The STRICT preflight gate
+    ``check_catalog_202_bypass_requires_paired_env_attestation`` refuses any
+    state of this file that drops the paired-env-var contract.
+    """
+    raw_intent = os.environ.get(_WHOLE_TREE_CLEAN_BYPASS_INTENT_ENV_VAR, "")
+    if not raw_intent or raw_intent.strip().lower() in {"", "0", "false", "no"}:
+        return False
+    raw_attestation = os.environ.get(
+        _WHOLE_TREE_CLEAN_BYPASS_ATTESTATION_ENV_VAR, ""
+    )
+    if (
+        not raw_attestation
+        or raw_attestation.strip().lower() in {"", "0", "false", "no"}
+    ):
+        print(
+            f"[operator-authorize] FATAL: "
+            f"{_WHOLE_TREE_CLEAN_BYPASS_INTENT_ENV_VAR}=1 is set but "
+            f"{_WHOLE_TREE_CLEAN_BYPASS_ATTESTATION_ENV_VAR} is missing or "
+            "falsy. Catalog #202 requires the paired attestation env var "
+            "(set =1) so the operator must explicitly attest that the "
+            "explicit sentinel set is clean. Catalog #166 worker-side "
+            "hash check still runs regardless.",
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+    print(
+        "[OPERATOR-AUTHORIZE BYPASS] Catalog #202 ACTIVE: "
+        "--require-clean-head DISABLED — operator attests sentinel set is "
+        "clean. Catalog #166 worker-side hash check still runs.",
+        file=sys.stderr,
+    )
+    return True
+
 
 def _session_directive_bypass_active() -> tuple[bool, str | None]:
     """Catalog #199 — return (bypass_active, error_message).
@@ -933,8 +1005,24 @@ def _dispatch_modal(
         f"{timeout_hours}",
         "--env-overrides",
         env_overrides,
-        "--require-clean-head",
     ]
+    # Catalog #202: paired-env-var bypass of `--require-clean-head` for
+    # trusted sentinel-clean dispatches. The bypass helper raises
+    # SystemExit(12) if the intent flag is set without the attestation flag,
+    # so a partial-config bypass cannot silently take effect. When the
+    # bypass is inactive (default), `--require-clean-head` is appended so the
+    # Modal worker fails-closed on any uncommitted edit. Catalog #166's
+    # worker-side sentinel hash check (experiments/modal_train_lane.py)
+    # runs INDEPENDENTLY of `--require-clean-head` regardless.
+    if not _whole_tree_clean_check_bypass_active():
+        cmd.append("--require-clean-head")
+    else:
+        print(
+            "[operator-authorize] Catalog #202: skipping --require-clean-head "
+            "per paired env attestation. Catalog #166 worker-side hash check "
+            "still runs.",
+            file=sys.stderr,
+        )
     sentinel_files = _modal_sentinel_files(recipe)
     if sentinel_files:
         cmd.extend(["--sentinel-files", sentinel_files])
