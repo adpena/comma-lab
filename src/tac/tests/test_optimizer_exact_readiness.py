@@ -26,12 +26,12 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def test_active_floor_score_tracks_score_frontier_not_rate_only_anchor() -> None:
     assert ACTIVE_FLOOR_ARCHIVE_BYTES == 185_578
     assert ACTIVE_RATE_ONLY_FLOOR_SCORE == 0.2089810755823297
-    assert ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20636832361415344
+    assert ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20636166502462222
     assert (
         ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_LABEL
-        == "hnerv_hdm7_hdm6_hlm2_modal_t4_retry1_20260514T090222Z"
+        == "hnerv_hdm8_fixed_lengths_modal_t4_retry2_20260514T095000Z"
     )
-    assert ACTIVE_SCORE_FRONTIER_SCORE == 0.20642625334307507
+    assert ACTIVE_SCORE_FRONTIER_SCORE == 0.20636166502462222
     assert ACTIVE_FLOOR_SCORE == ACTIVE_SCORE_FRONTIER_SCORE
 
 

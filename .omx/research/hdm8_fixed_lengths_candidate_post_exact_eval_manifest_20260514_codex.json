@@ -1,0 +1,64 @@
+{
+  "candidate_archive_bytes": 186395,
+  "candidate_archive_path": "experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/pr106_r2_hdm7_hlm2_xmember_hdm8_archive_candidate.zip",
+  "candidate_archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+  "candidate_diff_audit": {
+    "blockers": [],
+    "rate_score_delta_if_components_equal": -6.65859e-06,
+    "sections": [
+      {
+        "byte_delta": -10,
+        "candidate_bytes": 169974,
+        "candidate_section_sha256": "d274272b2ae48c0bffb0efcc080fb4e160a23417492b6e41020bbbf18c8d5e43",
+        "section_name": "inner_decoder_packed_brotli",
+        "source_bytes": 169984,
+        "source_section_sha256": "388d571fff65d5c2c4e3412445001a2f7b3528c0adb69c1c24a03c86af326feb"
+      }
+    ],
+    "total_byte_delta": -10
+  },
+  "candidate_id": "pr106_r2_hdm8_decoder_fixed_lengths_elided_10byte",
+  "candidate_payload_bytes": 186295,
+  "candidate_payload_sha256": "bc72f274f768f4f53a882fc2b6cee33536e565b27045bdbe6d28ae088dfc29b4",
+  "candidate_rate_score_delta_if_runtime_supported_and_components_equal": -6.65859e-06,
+  "decoder_raw_equivalence": {
+    "contract": "hnerv_hdm_decoder_raw_equivalence_v1",
+    "decoder_recode_key": "hdm8",
+    "q_roundtrip_equal": true,
+    "raw_equal": true,
+    "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "scale_roundtrip_equal": true,
+    "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+  },
+  "dispatch_attempted": true,
+  "exact_cuda_auth_eval_json": "experiments/results/modal_auth_eval/hnerv_hdm8_fixed_lengths_modal_t4_retry2_20260514T095000Z/contest_auth_eval.json",
+  "exact_cuda_evidence_row": ".omx/research/hdm8_fixed_lengths_exact_cuda_evidence_row_20260514_codex.json",
+  "exact_cuda_result_review_packet": ".omx/research/hdm8_fixed_lengths_exact_cuda_result_review_20260514_codex.json",
+  "exact_cuda_score": 0.20636166502462222,
+  "lane_id": "hnerv_hdm8_fixed_lengths_exact_eval",
+  "modal_uploaded_submission_dir_runtime_manifest_present": true,
+  "post_exact_eval_status": "exact_cuda_result_reviewed",
+  "pre_dispatch_candidate_manifest": "experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/hdm3_archive_candidate_manifest.json",
+  "pre_dispatch_exact_eval_missing_superseded": true,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_adapter_proof": {
+    "inflate_output_parity_proven_by_lossless_decoder_equivalence": true,
+    "latents_and_sidecar_match_source": true,
+    "lossless_decoder_equivalence_proven": true,
+    "ready_for_public_runtime_inflate": true,
+    "restored_payload_matches_source": false,
+    "runtime_adapter_proof_path": "experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/runtime_adapter_proof.with_tool_run.json",
+    "submission_runtime_candidate_parse_claim": true,
+    "submission_runtime_equivalence_claim": true
+  },
+  "runtime_content_tree_sha256": "08353bf112fc60ee4ec7fc683d8fddb7e5330e8ade04e5910233a5f45e62b9e3",
+  "runtime_tree_sha256": "77a8859782093d96c2fa7b88aea4bd646bada39837ea4e8e776b89065c38d11b",
+  "runtime_tree_sha256_local_contest_auth_eval": "e8c149b7ea6cd84682ac2d0c792cfdcfc79b709616cd54bcfe1cdad9328d5d26",
+  "runtime_tree_sha256_modal_uploaded_submission_dir": "77a8859782093d96c2fa7b88aea4bd646bada39837ea4e8e776b89065c38d11b",
+  "schema": "hnerv_hdm_post_exact_eval_candidate_manifest_v1",
+  "score_axis": "contest_cuda",
+  "score_claim": false,
+  "source_archive_bytes": 186405,
+  "source_archive_sha256": "df2e07084233fd38b01c46a4ffebe244391b01a8bf2e04392a4e0348463f1bbb",
+  "source_label": "PR106-R2-HDM7-HLM2-XMEMBER"
+}

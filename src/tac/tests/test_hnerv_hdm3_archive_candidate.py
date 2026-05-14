@@ -431,6 +431,15 @@ def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(
     assert runtime_contract["exact_frame_output_parity_run"] is False
     assert runtime_contract["ready_for_exact_eval_dispatch"] is False
     assert len(runtime_contract["runtime_tree_sha256"]) == 64
+    assert len(runtime_contract["modal_uploaded_submission_dir_runtime_tree_sha256"]) == 64
+    assert (
+        runtime_contract["modal_expected_runtime_tree_sha256"]
+        == runtime_contract["modal_uploaded_submission_dir_runtime_tree_sha256"]
+    )
+    assert (
+        runtime_contract["modal_uploaded_submission_dir_runtime_content_tree_sha256"]
+        == runtime_contract["inflate_runtime_manifest"]["runtime_content_tree_sha256"]
+    )
     assert runtime_contract["runtime_tree_manifest_source"].endswith(
         "contest_auth_eval.py::_runtime_dependency_manifest"
     )
@@ -439,6 +448,16 @@ def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(
     assert readiness["fixed_runtime_preflight"]["runtime_tree_sha256"] == runtime_contract[
         "runtime_tree_sha256"
     ]
+    assert readiness["fixed_runtime_preflight"]["modal_expected_runtime_tree_sha256"] == (
+        runtime_contract["modal_expected_runtime_tree_sha256"]
+    )
+    assert readiness["exact_cuda_auth_eval"][
+        "modal_uploaded_submission_dir_expected_runtime_tree_sha256"
+    ] == runtime_contract["modal_expected_runtime_tree_sha256"]
+    assert (
+        "--expected-runtime-tree-sha256"
+        in readiness["exact_cuda_auth_eval"]["modal_auth_eval_command_template"]
+    )
     assert readiness["strict_static_compliance"]["passed"] is True
     assert readiness["static_blockers"] == []
     assert readiness["dispatch_blockers"] == [

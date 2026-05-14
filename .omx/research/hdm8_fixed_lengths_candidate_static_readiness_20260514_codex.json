@@ -7,7 +7,7 @@
   "candidate_decoder_section_byte_delta_vs_hdm7": -10,
   "candidate_decoder_section_bytes": 169974,
   "candidate_id": "pr106_r2_hdm8_decoder_fixed_lengths_elided_10byte",
-  "candidate_rate_score_delta_if_components_equal": -0.000006658589531221714,
+  "candidate_rate_score_delta_if_components_equal": -6.658589531221714e-06,
   "candidate_variant": "hdm8_q_brotli_split_fixed_recipe_tuned_lgwin_recipe_chunk_lengths_elided_plus_raw_scales",
   "contract": "hnerv_hdm8_static_candidate_readiness_v1",
   "decoder_raw_equivalence": {
@@ -16,12 +16,15 @@
     "scale_roundtrip_equal": true,
     "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
   },
-  "dispatch_attempted": false,
-  "dispatch_blockers": [
-    "lane_dispatch_claim_missing",
-    "exact_cuda_auth_eval_missing"
-  ],
+  "dispatch_attempted": true,
+  "dispatch_blockers": [],
+  "exact_cuda_auth_eval_json": "experiments/results/modal_auth_eval/hnerv_hdm8_fixed_lengths_modal_t4_retry2_20260514T095000Z/contest_auth_eval.json",
+  "exact_cuda_evidence_row": ".omx/research/hdm8_fixed_lengths_exact_cuda_evidence_row_20260514_codex.json",
+  "exact_cuda_result_review_packet": ".omx/research/hdm8_fixed_lengths_exact_cuda_result_review_20260514_codex.json",
+  "exact_cuda_score": 0.20636166502462222,
+  "exact_cuda_score_axis": "contest_cuda",
   "exact_cuda_score_claim": false,
+  "exact_cuda_score_claim_valid": true,
   "fixed_length_contract": {
     "chunk_lengths_elided": true,
     "elided_len24_bytes": 9,
@@ -41,12 +44,20 @@
     "result_json": "experiments/results/modal_auth_eval/hnerv_hdm7_hdm6_hlm2_modal_t4_retry1_20260514T090222Z/contest_auth_eval.json"
   },
   "lane_id": "hnerv_hdm8_fixed_lengths_exact_eval",
+  "post_exact_eval_status": "exact_cuda_result_reviewed",
+  "pre_dispatch_static_packet_ready": true,
   "predicted_contest_cuda_score_if_components_equal": 0.20636166502462222,
+  "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,
+  "reviewed_score_claim": false,
   "runtime_adapter_proof": {
     "path": "experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/runtime_adapter_proof.with_tool_run.json",
     "ready_for_public_runtime_inflate": true
   },
+  "runtime_content_tree_sha256": "08353bf112fc60ee4ec7fc683d8fddb7e5330e8ade04e5910233a5f45e62b9e3",
+  "runtime_hash_note": "Local contest_auth_eval runtime_tree_sha256 differs from Modal uploaded --submission-dir runtime_tree_sha256 because the tree hash includes runtime root path/name; content_tree hash is equal.",
+  "runtime_tree_sha256_local_contest_auth_eval": "e8c149b7ea6cd84682ac2d0c792cfdcfc79b709616cd54bcfe1cdad9328d5d26",
+  "runtime_tree_sha256_modal_uploaded_submission_dir": "77a8859782093d96c2fa7b88aea4bd646bada39837ea4e8e776b89065c38d11b",
   "static_packet_ready": true,
   "static_pre_submission_compliance": {
     "path": "experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/pre_submission_compliance.static.json",

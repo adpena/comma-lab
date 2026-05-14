@@ -354,6 +354,13 @@ HNERV_SCORECARD_REQUIRED_EVALS = (
         / "hnerv_hdm7_hdm6_hlm2_modal_t4_retry1_20260514T090222Z/"
         / "contest_auth_eval.json",
     ),
+    (
+        "PR106-R2-HDM8-HLM2-XMEMBER",
+        REPO
+        / "experiments/results/modal_auth_eval/"
+        / "hnerv_hdm8_fixed_lengths_modal_t4_retry2_20260514T095000Z/"
+        / "contest_auth_eval.json",
+    ),
 )
 PR106X_ARCHIVE = (
     REPO

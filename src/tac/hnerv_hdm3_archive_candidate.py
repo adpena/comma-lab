@@ -36,6 +36,7 @@ from tac.hnerv_lowlevel_packer import (
     read_packed_archive_view,
     sha256_bytes,
 )
+from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
 from tac.repo_io import read_json, repo_relative, sha256_file, write_json
 
 SCHEMA_VERSION = 1
@@ -69,6 +70,7 @@ HDM3_UPSTREAM_DIR = "upstream"
 CONTEST_AUTH_EVAL_RUNTIME_MANIFEST_SOURCE = (
     "experiments/contest_auth_eval.py::_runtime_dependency_manifest"
 )
+MODAL_AUTH_EVAL_UPLOADED_RUNTIME_ROOT = "/tmp/modal_auth_eval/submission_dir"
 
 
 class HnervHdm3ArchiveCandidateError(ValueError):
@@ -597,6 +599,12 @@ def build_hdm3_exact_eval_packet_readiness(
             "required_before_score_claim": True,
             "present": False,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+            "modal_uploaded_submission_dir_expected_runtime_tree_sha256": (
+                runtime_tree_contract.get("modal_expected_runtime_tree_sha256")
+            ),
+            "modal_uploaded_submission_dir_runtime_root": (
+                runtime_tree_contract.get("modal_auth_eval_uploaded_runtime_root")
+            ),
             "command_template": [
                 ".venv/bin/python",
                 "experiments/contest_auth_eval.py",
@@ -608,6 +616,24 @@ def build_hdm3_exact_eval_packet_readiness(
                 "upstream",
                 "--device",
                 "cuda",
+            ],
+            "modal_auth_eval_command_template": [
+                ".venv/bin/modal",
+                "run",
+                "--detach",
+                "experiments/modal_auth_eval.py",
+                "--archive",
+                str(manifest.get("candidate_archive_path") or "<candidate-archive.zip>"),
+                "--submission-dir",
+                str(Path(HDM3_RUNTIME_INFLATE).parent),
+                "--inflate-sh",
+                Path(HDM3_RUNTIME_INFLATE).name,
+                "--gpu",
+                "T4",
+                "--expected-runtime-tree-sha256",
+                str(runtime_tree_contract.get("modal_expected_runtime_tree_sha256") or ""),
+                "--detach",
+                "--provider-detach-ack",
             ],
         },
         "operator_next_steps": [
@@ -650,10 +676,24 @@ def build_hdm3_runtime_tree_inflate_output_parity_contract(
         blockers.append(f"hdm3_runtime_tree_manifest_failed:{exc}")
 
     runtime_tree_sha256 = str(runtime_manifest.get("runtime_tree_sha256") or "")
+    modal_uploaded_runtime_manifest: Mapping[str, Any] = {}
+    if runtime_manifest:
+        modal_uploaded_runtime_manifest = modal_uploaded_submission_dir_runtime_manifest(
+            dict(runtime_manifest),
+            remote_submission_dir=MODAL_AUTH_EVAL_UPLOADED_RUNTIME_ROOT,
+        )
+    modal_uploaded_runtime_tree_sha256 = str(
+        modal_uploaded_runtime_manifest.get("runtime_tree_sha256") or ""
+    )
+    modal_uploaded_runtime_content_tree_sha256 = str(
+        modal_uploaded_runtime_manifest.get("runtime_content_tree_sha256") or ""
+    )
     decoder_recode_key = str(manifest.get("candidate_decoder_recode_key") or "hdm3")
     decoder_label = decoder_recode_key.upper()
     if not _is_sha256(runtime_tree_sha256):
         blockers.append("hdm3_runtime_tree_sha256_missing_or_invalid")
+    if runtime_manifest and not _is_sha256(modal_uploaded_runtime_tree_sha256):
+        blockers.append("hdm3_modal_uploaded_runtime_tree_sha256_missing_or_invalid")
     payload_identity_proven = (
         runtime_adapter_payload_identity.get("payload_identity_proven") is True
     )
@@ -687,6 +727,14 @@ def build_hdm3_runtime_tree_inflate_output_parity_contract(
         "path": repo_relative(output_root / RUNTIME_TREE_CLOSURE_FILENAME, repo),
         "runtime_manifest_schema": runtime_manifest.get("schema") if runtime_manifest else "",
         "runtime_tree_sha256": runtime_tree_sha256,
+        "modal_auth_eval_uploaded_runtime_root": MODAL_AUTH_EVAL_UPLOADED_RUNTIME_ROOT,
+        "modal_uploaded_submission_dir_runtime_tree_sha256": (
+            modal_uploaded_runtime_tree_sha256
+        ),
+        "modal_uploaded_submission_dir_runtime_content_tree_sha256": (
+            modal_uploaded_runtime_content_tree_sha256
+        ),
+        "modal_expected_runtime_tree_sha256": modal_uploaded_runtime_tree_sha256,
         "runtime_file_count": runtime_manifest.get("runtime_file_count", 0)
         if runtime_manifest
         else 0,
@@ -731,6 +779,9 @@ def build_hdm3_runtime_tree_inflate_output_parity_contract(
     }
     if runtime_manifest:
         contract["inflate_runtime_manifest"] = dict(runtime_manifest)
+        contract["modal_uploaded_submission_dir_runtime_manifest"] = dict(
+            modal_uploaded_runtime_manifest
+        )
     if write:
         write_json(output_root / RUNTIME_TREE_CLOSURE_FILENAME, contract)
     return contract
@@ -746,6 +797,15 @@ def _fixed_runtime_preflight(contract: Mapping[str, Any]) -> dict[str, Any]:
         "dispatch_attempted": False,
         "remote_gpu_run": False,
         "runtime_tree_sha256": str(contract.get("runtime_tree_sha256") or ""),
+        "modal_auth_eval_uploaded_runtime_root": contract.get(
+            "modal_auth_eval_uploaded_runtime_root"
+        ),
+        "modal_uploaded_submission_dir_runtime_tree_sha256": str(
+            contract.get("modal_uploaded_submission_dir_runtime_tree_sha256") or ""
+        ),
+        "modal_expected_runtime_tree_sha256": str(
+            contract.get("modal_expected_runtime_tree_sha256") or ""
+        ),
         "runtime_tree_source": str(contract.get("path") or RUNTIME_TREE_CLOSURE_FILENAME),
         "runtime_tree_manifest_source": contract.get("runtime_tree_manifest_source"),
         "ready_for_fixed_runtime_exact_eval_readiness": closed,
