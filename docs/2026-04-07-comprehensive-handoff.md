@@ -355,7 +355,7 @@ Old monitoring jobs and shell wrappers can silently accumulate and increase fail
 
 ### Do these instead
 
-- run authoritative work in `/tmp/pact-authoritative` or another isolated workspace
+- run authoritative work in `<scratch>/pact-authoritative` or another isolated workspace (use repo-relative `experiments/results/<lane_id>_<timestamp>/` or `.omx/tmp/` per CLAUDE.md "Forbidden /tmp paths in any persisted artifact")
 - only copy into shared canonical paths at promotion time
 - use BAT00 for smoke / ranking / non-authoritative scoring
 - keep one owner per long-running job

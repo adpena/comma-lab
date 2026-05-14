@@ -35,8 +35,8 @@ The new work must not trample the existing lossy workflow or leak state between 
 
 `commavq` already has a clean evaluation contract:
 
-- [compression/evaluate.py](/tmp/commavq-read/compression/evaluate.py)
-- [compression/evaluate.sh](/tmp/commavq-read/compression/evaluate.sh)
+- `compression/evaluate.py` (in the [commavq](https://github.com/commaai/commavq) upstream tree)
+- `compression/evaluate.sh` (in the [commavq](https://github.com/commaai/commavq) upstream tree)
 
 The correct move is not to scatter lossless utilities across `experiments/`. It is to build a sibling subsystem under `src/tac/` so:
 

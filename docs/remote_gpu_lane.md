@@ -126,12 +126,13 @@ Why:
 
 Inside WSL:
 - use one repo root, for example `<remote-home>/pact-side`
-- use one cache root, for example `/tmp/uv-cache` or a larger persistent path if `/tmp` is too small
+- use one cache root, for example `<remote-home>/.cache/uv` (default) or a larger persistent path if the home filesystem is too small
 
 Recommended environment:
 
+<!-- DEMO_LOCAL_PATH_OK -->
 ```bash
-export UV_CACHE_DIR=/tmp/uv-cache
+export UV_CACHE_DIR=/tmp/uv-cache  # adjust to a persistent path if needed
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 ```
 

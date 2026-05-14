@@ -80,8 +80,10 @@ points at §4.0 frontier table + §7.4 future work.
 - [ ] Confirm every Omega/Omega-OPT or intN predicted score is labeled
       non-ranking unless an exact CUDA `contest_auth_eval*.json` path, archive
       SHA-256, runtime tree SHA-256, and component recomputation are cited.
-- [ ] Verify no `/tmp/...` paths appear in any persisted artifact
-      (per the repository forbidden-pattern catalog)
+- [ ] Verify no transient scratch paths (the forbidden-pattern class described
+      in `CLAUDE.md`) appear in any persisted artifact. Use repo-relative
+      `experiments/results/<lane>_<timestamp>/`, `.omx/state/`, or `.omx/tmp/`
+      instead.
 - [ ] Confirm all archive SHA-256 values in §4 are reproducible from disk
 - [ ] Confirm the public PR / leaderboard position figures (PR #107 0.2293,
       ~11th place; PR #106 0.20945 frontier) reflect the leaderboard at

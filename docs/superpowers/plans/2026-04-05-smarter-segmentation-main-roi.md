@@ -62,7 +62,7 @@
   - Outputs: temporally smoothed main ROI plus optional aux ROI.
 
 - [ ] **Step 2: Run the helper on one sample video**
-  - Run: `uv run python submissions/robust_current/analyze_roi.py --video workspace/upstream/comma_video_compression_challenge/videos/0.mkv --scale-w 432 --scale-h 324 --out /tmp/roi-meta.json`
+  - Run (placeholder paths; substitute repo-relative paths): `uv run python submissions/robust_current/analyze_roi.py --video upstream/videos/0.mkv --scale-w 432 --scale-h 324 --out experiments/results/roi_analysis_smoke/roi-meta.json`
   - Expected: JSON file written with bounded ROI coordinates.
 
 - [ ] **Step 3: Inspect output sanity**

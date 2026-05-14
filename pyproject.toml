@@ -4,13 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tac"
-version = "1.0.5"
+version = "0.2.0rc1"
 description = "Task-Aware Codec: Neural video compression optimized for downstream perception models"
 readme = "src/tac/README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
-    { name = "Alejandro Pena", email = "adpena@users.noreply.github.com" },
+    { name = "Alejandro (Alex) Peña", email = "adpena@users.noreply.github.com" },
+]
+maintainers = [
+    { name = "Alejandro (Alex) Peña", email = "adpena@users.noreply.github.com" },
+]
+keywords = [
+    "video-compression",
+    "task-aware-codec",
+    "neural-compression",
+    "comma-ai",
+    "openpilot",
+    "self-driving",
+    "perception",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

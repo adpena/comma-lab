@@ -3,6 +3,48 @@
 All notable changes to the `tac` library are documented here.
 Dates are approximate milestones from the research sprint.
 
+## [0.2.0-rc1] - 2026-05-14
+
+OSS posture-alignment release candidate. Aligns the project's open-source
+publication surface with the comma.ai / openpilot style (MIT license, SPDX
+headers, third-party notices, contribution guide) under a single author
+copyright.
+
+### Added
+- `LICENSE` rewritten under MIT, `Copyright (c) 2026 Alejandro (Alex) Peña`
+- `THIRD_PARTY_NOTICES.md` rewritten as a comma.ai-style dependency manifest
+  with explicit hard-runtime / opt-in extras / upstream-referenced separation.
+  Documents the LGPL-2.1-or-later opt-in (`[pr86_replay]`) and the
+  permissive-only default install.
+- `CONTRIBUTING.md` (new) following openpilot conventions.
+- SPDX-License-Identifier headers added to every `.py` file in `src/tac/`,
+  `experiments/`, `tools/`, and `scripts/` (excludes `upstream/`, vendored
+  intake clones, OSS export mirrors, and generated build artifacts).
+- `pyproject.toml` `[project]` author / maintainer / keywords entries
+  aligned with the comma.ai openpilot pattern.
+
+### Changed
+- `pyproject.toml` version bumped from `1.0.5` to `0.2.0rc1`. The `1.0.x`
+  lineage in this changelog is preserved as the historical research-sprint
+  trajectory; the new `0.x` lineage starts here as the OSS publication line.
+- Catalog #208 docs sanitization: 14 hard-coded local absolute path
+  references across `docs/2026-04-07-comprehensive-handoff.md`,
+  `docs/paper/SUBMISSION_CHECKLIST.md`,
+  `docs/recovery_audit_session_20260505.md`, `docs/remote_gpu_lane.md`, and
+  `docs/superpowers/plans/2026-04-05-smarter-segmentation-main-roi.md`
+  rewritten to placeholder syntax (`<repo-root>`, `<scratch>/...`) or
+  explicit `<!-- DOCS_LOCAL_PATH_OK -->` demo-block waivers per the
+  preflight gate's documented opt-out mechanism.
+
+### Public posture
+This release candidate is prepared LOCALLY only. Pushing the tag to a public
+remote requires explicit operator approval per the `CLAUDE.md`
+"Public Disclosure Hygiene" non-negotiable. The release is `[provenance-only;
+no score claim]` — no contest score is being claimed by the version bump.
+
+Lane: `lane_oss_release_v0_2_0_rc1_comma_openpilot_style_alex_pena_20260514`.
+Memory: `feedback_oss_release_v0_2_0_rc1_landed_20260514.md`.
+
 ## [1.0.5] - 2026-04-15
 
 ### Added

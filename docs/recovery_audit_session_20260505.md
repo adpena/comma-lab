@@ -16,7 +16,7 @@ Searched these signal sources for lost/orphaned work:
 | git fsck unreachable commits | **10 unreachable commits** investigated |
 | `refs/original/refs/heads/main` | **24 commits** — all filter-branch duplicates of main, NOT lost |
 | `safety/snapshot-*` branches | 1 (pre-rigor-pass at 72e5a1a9, the session safety net) |
-| `/tmp/` session artifacts | dozens of files, not in repo (transient tooling outputs, see below) |
+| Transient scratch session artifacts <!-- DOCS_LOCAL_PATH_OK --> | dozens of files, not in repo (transient tooling outputs, see below) |
 
 ## Genuinely LOST and recovered (commit c2d7fda6)
 
@@ -70,15 +70,19 @@ The "preserve only" stashes are intentionally NOT applied because:
 
 All 10 unreachable commits accounted for; the `d2027075` recovery is the only signal-bearing extraction.
 
-## /tmp/ session artifacts
+## Transient scratch session artifacts
 
-Dozens of `/tmp/*.{json,md,py,sh,txt}` files exist from past tool invocations (codex CLI captures, harvest summaries, build-script drafts). Examples surfaced:
-- `/tmp/apogee_pr107_body_current.md` (PR draft)
-- `/tmp/build_audit_artifact.py` (build script draft)
-- `/tmp/beam_pose2_harvest.json` (harvest output)
-- `/tmp/all_pr_replays.txt` (PR replay log)
+<!-- DEMO_LOCAL_PATH_OK -->
+```
+Dozens of /tmp/*.{json,md,py,sh,txt} files exist from past tool invocations
+(codex CLI captures, harvest summaries, build-script drafts). Examples surfaced:
+- /tmp/apogee_pr107_body_current.md          (PR draft)
+- /tmp/build_audit_artifact.py               (build script draft)
+- /tmp/beam_pose2_harvest.json               (harvest output)
+- /tmp/all_pr_replays.txt                    (PR replay log)
+```
 
-These are TRANSIENT tooling outputs from prior sessions, not authored repo content. Per CLAUDE.md "files and git as memory" + "if it should be repo content it would have been committed", these are NOT recovered — but their existence is documented here in case any specific file proves to be load-bearing later.
+These are TRANSIENT tooling outputs from prior sessions, not authored repo content. Per CLAUDE.md "files and git as memory" + "if it should be repo content it would have been committed", these are NOT recovered — but their existence is documented here in case any specific file proves to be load-bearing later. Per the same `CLAUDE.md` "Forbidden /tmp paths in any persisted artifact" non-negotiable, future agents writing new artifacts must use repo-relative paths (`experiments/results/<lane>_<timestamp>/`, `.omx/state/`, `.omx/tmp/`) — the literal paths above are quoted here only as forensic context.
 
 ## Net session recovery statistics
 
