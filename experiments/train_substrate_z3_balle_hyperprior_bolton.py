@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the Z3 Ballé hyperprior bolt-on substrate (across-class staircase Step 1).
 
 Per zen-floor band v2 council + long-term campaign roadmap, Z3 is the cheapest
@@ -334,8 +335,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
         losses.append(float(out["total_loss"].item()))
         rate_bits.append(float(out["rate_bits_total"].item()))
 
-    # Build the Z3 composition archive (synthetic base bytes for smoke).
-    base_bytes = b"Z3_SMOKE_BASE_v0" * 100  # arbitrary smoke base
+    # Build the Z3 composition archive over the real A1 base when available so
+    # emitted smoke runtimes still consume the contest-style extracted `x`.
+    try:
+        base_bytes, _, _ = _load_a1_archive_bytes(args.a1_archive_path)
+    except Exception:
+        base_bytes = b"Z3_SMOKE_BASE_v0" * 100  # fallback for isolated tests
     base_sha = hashlib.sha256(base_bytes).hexdigest()
 
     # Quantize the hyperprior weights for the sidecar.
@@ -443,27 +448,632 @@ def _smoke_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _load_a1_archive_bytes(archive_zip_path: Path) -> tuple[bytes, str, int]:
+    """Read the inner ``x`` blob from an A1-style archive.zip.
+
+    Mirrors the canonical helper in a1_plus_wavelet_residual / a1_plus_lapose.
+    """
+    with zipfile.ZipFile(archive_zip_path) as zf:
+        names = zf.namelist()
+        if "x" not in names:
+            raise ValueError(
+                f"A1 archive {archive_zip_path} missing inner 'x' blob; got {names}"
+            )
+        data = zf.read("x")
+    sha = _canon_sha256_bytes(data)
+    return data, sha, len(data)
+
+
+def _load_a1_runtime_modules(a1_archive_path: Path):
+    """Load A1's vendored codec.py / model.py from the source runtime.
+
+    Mirrors the canonical helper in a1_plus_wavelet_residual.
+    """
+    import importlib
+
+    a1_src = a1_archive_path.parent / "src"
+    if not (a1_src / "codec.py").is_file() or not (a1_src / "model.py").is_file():
+        raise FileNotFoundError(
+            f"A1 source runtime missing at {a1_src}; expected codec.py + model.py"
+        )
+    old_path = list(sys.path)
+    old_codec = sys.modules.pop("codec", None)
+    old_model = sys.modules.pop("model", None)
+    sys.path.insert(0, str(a1_src))
+    try:
+        model = importlib.import_module("model")
+        codec = importlib.import_module("codec")
+        return codec, model
+    finally:
+        sys.path = old_path
+        sys.modules.pop("codec", None)
+        sys.modules.pop("model", None)
+        if old_codec is not None:
+            sys.modules["codec"] = old_codec
+        if old_model is not None:
+            sys.modules["model"] = old_model
+
+
+def _decode_a1_latents_and_decoder(
+    a1_archive_path: Path, a1_bytes: bytes, *, device,
+):
+    """Decode the FROZEN A1 archive into (decoder_module, latents_tensor).
+
+    Z3's hyperprior re-encodes the latent_blob; this returns the decoded
+    A1 latents (shape ``(600, 28)``) and the A1 HNeRVDecoder (frozen).
+    """
+    import struct
+
+    codec, model = _load_a1_runtime_modules(a1_archive_path)
+    if len(a1_bytes) < 4:
+        raise ValueError("A1 archive bytes too short")
+    section_total = struct.unpack_from("<I", a1_bytes, 0)[0]
+    decoder_blob = a1_bytes[4:section_total]
+    latent_blob = a1_bytes[section_total : section_total + int(codec.LATENT_BLOB_LEN)]
+    sidecar_blob = a1_bytes[section_total + int(codec.LATENT_BLOB_LEN) :]
+    decoder_sd = codec.decode_decoder_compact(decoder_blob)
+    latents = codec.apply_latent_sidecar(
+        codec.decode_latents_compact(latent_blob), sidecar_blob
+    ).to(device)
+    decoder = model.HNeRVDecoder(
+        latent_dim=A1_LATENT_DIM,
+        base_channels=36,  # A1_BASE_CHANNELS
+        eval_size=(384, 512),
+    ).to(device)
+    decoder.load_state_dict(decoder_sd)
+    decoder.eval()
+    for p in decoder.parameters():
+        p.requires_grad_(False)
+    return decoder, latents
+
+
+def _decode_real_pairs(
+    video_path: Path,
+    n_pairs: int = A1_N_PAIRS,
+    output_hw: tuple[int, int] = (874, 1164),
+    max_pairs: int | None = None,
+):
+    """Decode N pairs from contest video; returns (n_pairs, 2, 3, H, W) [0..255]."""
+    import av
+    import torch.nn.functional as F
+
+    n_target = min(n_pairs, max_pairs) if max_pairs else n_pairs
+    container = av.open(str(video_path))
+    pairs: list[tuple] = []
+    cur: list = []
+    for frame in container.decode(container.streams.video[0]):
+        rgb_array = frame.to_ndarray(format="rgb24")
+        t = torch.from_numpy(rgb_array.copy()).permute(2, 0, 1).unsqueeze(0).float()
+        if tuple(t.shape[-2:]) != tuple(output_hw):
+            t = F.interpolate(t, size=output_hw, mode="bilinear", align_corners=False)
+        t = t.squeeze(0).contiguous()
+        cur.append(t)
+        if len(cur) == 2:
+            pairs.append((cur[0], cur[1]))
+            cur = []
+            if len(pairs) >= n_target:
+                break
+    container.close()
+    if not pairs:
+        raise RuntimeError(f"no frames decoded from {video_path}")
+    return torch.stack(
+        [torch.stack([a, b], dim=0) for (a, b) in pairs], dim=0
+    )
+
+
+def _run_val_loop_full(
+    hyperprior: Z3HyperpriorMLP,
+    a1_latents: torch.Tensor,
+    val_indices: list[int],
+    args: argparse.Namespace,
+) -> dict[str, float]:
+    """Validation forward pass — eval-time torch.inference_mode (Catalog #180).
+
+    Z3's rate Lagrangian is the canonical val metric (distortion is FROZEN
+    by-construction since A1 decoder + latents don't change bytes-wise).
+    """
+    hyperprior.eval()
+    losses: list[float] = []
+    rate_bits_list: list[float] = []
+    with torch.inference_mode():
+        if not val_indices:
+            return {"val_loss": float("inf"), "val_rate_bits": float("inf")}
+        idx = torch.tensor(val_indices, device=a1_latents.device, dtype=torch.long)
+        val_latents = a1_latents[idx]
+        out = z3_lagrangian(
+            hyperprior=hyperprior,
+            a1_latents=val_latents,
+            seg_scorer=torch.nn.Identity(),
+            pose_scorer=torch.nn.Identity(),
+            a1_pair_pred_rt=None,
+            gt_pair=None,
+            alpha_rate=args.alpha_rate,
+            quantization_step=args.quantization_step,
+            factorized_half_range=args.factorized_half_range,
+        )
+        losses.append(float(out["total_loss"].item()))
+        rate_bits_list.append(float(out["rate_bits_total"].item()))
+    return {
+        "val_loss": sum(losses) / len(losses),
+        "val_rate_bits": sum(rate_bits_list) / len(rate_bits_list),
+    }
+
+
 def _full_main(args: argparse.Namespace) -> int:
     """Full training path: real A1 latents + score-aware R+λD Lagrangian.
 
-    PHASE 2 PRE-LAUNCH: raises NotImplementedError until the inner-quintet
-    + grand council approves the dispatch. The Z3 smoke is the canonical
-    cheap validation; full training composes the A1 decoder + scorer
-    forward and runs the full Ballé Lagrangian.
+    Per Phase 2 council ledger
+    (.omx/research/z3_phase_2_council_20260514.md): APPROVED 6/6 unanimous
+    (Shannon LEAD + Dykstra CO-LEAD + Yousfi + Fridrich + Contrarian + MacKay).
 
-    Per CLAUDE.md "Design decisions — non-negotiable", a dispatch that
-    burns $2-5 of Modal/Vast.ai compute REQUIRES quintet pact + grand
-    council sign-off; the operator may explicitly authorize via the
-    operator-authorize recipe's smoke→full ladder once the smoke anchor
-    lands.
+    Pipeline:
+      1. Load FROZEN A1 archive bytes (sha pinned via --a1-archive-path).
+      2. Decode A1 latents (600 × 28) via A1's codec.
+      3. Init Z3 hyperprior MLP (~1.8k params; canonical EMA decay=0.997).
+      4. Train AdamW(lr=1e-3) with score-aware Ballé R+λD Lagrangian.
+         (Rate-only on the latents while A1 decoder + latents are FROZEN.)
+      5. Apply EMA shadow at eval; snapshot+restore live weights (Catalog #88).
+      6. Estimate Z3HP1 sidecar bytes; ship IFF bytes_saved > overhead
+         (Ballé 2018 amortization principle). In v1, inflate.py is
+         parse-only, so the canonical safe path is sidecar-omitted +
+         archive byte-identical-to-A1 (the diagnostic sidecar is saved
+         separately for council review).
+      7. Build composition archive + contest-compliant runtime tree
+         (vendor A1's codec.py + model.py so inflate.py can fall back to
+         A1 behavior).
+      8. Run CUDA auth eval via canonical gate_auth_eval_call (Catalog #223).
+      9. Post stats with fail-closed result_review_blockers (Catalog #127).
     """
-    raise NotImplementedError(
-        "Z3 full training path is gated behind Phase 2 council approval per "
-        "CLAUDE.md 'Design decisions — non-negotiable'. The smoke "
-        "validation (`--smoke`) is the canonical cheap test. Full dispatch "
-        "requires operator-authorize recipe smoke→full ladder OR explicit "
-        "quintet pact sign-off."
+    import torch
+
+    from tac.differentiable_eval_roundtrip import (
+        patch_upstream_yuv6_globally,
+        unpatch_upstream_yuv6,
     )
+    from tac.scorer import load_differentiable_scorers
+    from tac.training import EMA
+
+    _canon_pin_seeds(args.seed)
+    out_dir = args.output_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # Catalog #197: --full-cpu is the paired-waiver path; smoke=True allows
+    # the canonical helper to accept CPU per the deviceordie contract.
+    device = _canon_device_or_die(
+        args.device,
+        smoke=bool(args.full_cpu) or bool(getattr(args, "smoke", False)),
+        substrate_tag=SUBSTRATE_TAG,
+    )
+
+    stage_log: list[dict[str, str]] = []
+
+    def _stage(name: str) -> None:
+        msg = {"stage": name, "at": _canon_utc_now_iso()}
+        stage_log.append(msg)
+        print(f"[z3-full] {name} @ {msg['at']}")
+
+    _stage("seed_pinned")
+
+    # ---- Step 1: load A1 (FROZEN base) ----
+    a1_bytes, a1_sha, a1_size = _load_a1_archive_bytes(args.a1_archive_path)
+    _stage(f"a1_loaded_{a1_size}_B_sha{a1_sha[:8]}")
+
+    # ---- Step 1b: patch upstream YUV6 BEFORE scorer load (Catalog #187) ----
+    yuv6_token = patch_upstream_yuv6_globally()
+    _stage("upstream_yuv6_patched")
+
+    auth_eval_result_path: str | None = None
+    auth_eval_score: float | None = None
+    auth_eval_evidence_grade: str | None = None
+    auth_eval_score_axis: str | None = None
+    auth_eval_lane_tag: str | None = None
+    auth_eval_score_claim_valid: bool = False
+    auth_eval_exact_cuda_complete: bool = False
+    composition_sha: str = ""
+    composition_size: int = 0
+    sidecar_shipped: bool = False
+    sidecar_bytes_estimate: int = 0
+    bytes_saved_estimate: int = 0
+    archive_zip_path = out_dir / "archive.zip"
+    submission_dir = out_dir / "submission_dir"
+    best_val_loss: float = math.inf
+    best_epoch: int = -1
+    train_started_at: float = time.time()
+
+    try:
+        # ---- Step 2: decode A1 latents + decoder (FROZEN) ----
+        decoder, a1_latents = _decode_a1_latents_and_decoder(
+            args.a1_archive_path, a1_bytes, device=device
+        )
+        _stage(f"a1_decoded_latents{tuple(a1_latents.shape)}")
+        # Decoder reference kept so future v2 composes the conditional
+        # Gaussian decode → A1 decoder pipeline; v1 uses identity rendering.
+        del decoder  # explicit: not used in v1 rate-only path
+
+        # ---- Step 3: load scorers (POSE first per Catalog #222) ----
+        pose_scorer, seg_scorer = load_differentiable_scorers(
+            args.upstream_dir, device=device
+        )
+        for p in list(pose_scorer.parameters()) + list(seg_scorer.parameters()):
+            p.requires_grad_(False)
+        pose_scorer.eval()
+        seg_scorer.eval()
+        _stage("scorers_loaded")
+
+        # ---- Step 4: init hyperprior + EMA + optimizer ----
+        cfg = Z3HyperpriorConfig(
+            hyper_latent_dim=args.hyper_latent_dim,
+            hyper_hidden_dim=args.hyper_hidden_dim,
+            quantization_step=args.quantization_step,
+        )
+        hyperprior = Z3HyperpriorMLP(cfg).to(device)
+        n_hp_params = sum(p.numel() for p in hyperprior.parameters())
+        ema = EMA(hyperprior, decay=args.ema_decay)
+        optimizer = torch.optim.AdamW(
+            hyperprior.parameters(), lr=args.lr, weight_decay=args.weight_decay
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(1, args.epochs)
+        )
+        _stage(f"hyperprior_built_{n_hp_params}_params")
+
+        # ---- Step 5: train/val split on the 600 A1 pairs (latent rows) ----
+        n_pairs = int(a1_latents.shape[0])
+        val_count = max(1, n_pairs // 8)
+        val_idx_start = n_pairs - val_count
+        train_indices_pool = list(range(val_idx_start))
+        val_indices_pool = list(range(val_idx_start, n_pairs))
+
+        ckpt_best_path = out_dir / "best.pt"
+        train_started_at = time.time()
+        nan_strike = 0
+        max_nan_strikes = 3
+
+        for epoch in range(args.epochs):
+            hyperprior.train()
+            random.shuffle(train_indices_pool)
+            epoch_losses: list[float] = []
+            epoch_rate_bits: list[float] = []
+            for batch_start in range(0, len(train_indices_pool), args.batch_size):
+                batch_indices = train_indices_pool[
+                    batch_start : batch_start + args.batch_size
+                ]
+                if not batch_indices:
+                    continue
+                pair_idxs = torch.tensor(batch_indices, device=device, dtype=torch.long)
+                batch_latents = a1_latents[pair_idxs]
+                out = z3_lagrangian(
+                    hyperprior=hyperprior,
+                    a1_latents=batch_latents,
+                    # v1 rate-only: A1 decoder + latents FROZEN → distortion
+                    # change is zero by construction (within quantization
+                    # tolerance). The rate term is the ONLY optimization
+                    # target. Per council ledger §2: ΔS predicted purely
+                    # via rate amortization.
+                    seg_scorer=seg_scorer,
+                    pose_scorer=pose_scorer,
+                    a1_pair_pred_rt=None,
+                    gt_pair=None,
+                    alpha_rate=args.alpha_rate,
+                    beta_seg=args.beta_seg,
+                    gamma_pose=args.gamma_pose,
+                    quantization_step=args.quantization_step,
+                    factorized_half_range=args.factorized_half_range,
+                )
+                loss = out["total_loss"]
+                if not torch.isfinite(loss):
+                    nan_strike += 1
+                    print(
+                        f"[z3-full] NaN strike {nan_strike}/{max_nan_strikes} "
+                        f"at epoch {epoch}"
+                    )
+                    if nan_strike >= max_nan_strikes:
+                        raise RuntimeError(
+                            "NaN watchdog tripped — refusing to continue"
+                        )
+                    continue
+                nan_strike = 0
+                optimizer.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    hyperprior.parameters(), args.grad_clip
+                )
+                optimizer.step()
+                ema.update(hyperprior)
+                epoch_losses.append(float(loss.detach().cpu()))
+                epoch_rate_bits.append(float(out["rate_bits_total"].detach().cpu()))
+            scheduler.step()
+
+            # Eval every ~epochs/30 OR at last epoch.
+            if epoch % max(1, args.epochs // 30) == 0 or epoch == args.epochs - 1:
+                live_state = {
+                    k: v.detach().clone() for k, v in hyperprior.state_dict().items()
+                }
+                ema.apply(hyperprior)
+                try:
+                    val_metrics = _run_val_loop_full(
+                        hyperprior, a1_latents, val_indices_pool, args
+                    )
+                finally:
+                    hyperprior.load_state_dict(live_state)
+                    hyperprior.train()
+                avg_train = (
+                    sum(epoch_losses) / len(epoch_losses)
+                    if epoch_losses else math.nan
+                )
+                avg_rate = (
+                    sum(epoch_rate_bits) / len(epoch_rate_bits)
+                    if epoch_rate_bits else math.nan
+                )
+                print(
+                    f"[z3-full] epoch {epoch:4d}: train_loss={avg_train:.5f} "
+                    f"rate_bits={avg_rate:.1f} "
+                    f"val_loss={val_metrics['val_loss']:.5f} "
+                    f"(best={best_val_loss:.5f})"
+                )
+                if val_metrics["val_loss"] < best_val_loss:
+                    best_val_loss = val_metrics["val_loss"]
+                    best_epoch = epoch
+                    # Save EMA shadow (NEVER live weights — Catalog #88).
+                    live_state2 = {
+                        k: v.detach().clone()
+                        for k, v in hyperprior.state_dict().items()
+                    }
+                    ema.apply(hyperprior)
+                    ema_state = {
+                        k: v.detach().cpu()
+                        for k, v in hyperprior.state_dict().items()
+                    }
+                    hyperprior.load_state_dict(live_state2)
+                    torch.save(
+                        {
+                            "state_dict": ema_state,
+                            "config": asdict(cfg),
+                            "epoch": epoch,
+                            "val_loss": val_metrics["val_loss"],
+                        },
+                        ckpt_best_path,
+                    )
+
+        train_elapsed = time.time() - train_started_at
+        _stage(
+            f"trained_best_epoch_{best_epoch}_val_loss_{best_val_loss:.5f}_"
+            f"elapsed_{train_elapsed:.1f}s"
+        )
+
+        # ---- Step 6: load EMA-best checkpoint + build composition archive ----
+        if ckpt_best_path.is_file():
+            best_ckpt = torch.load(
+                ckpt_best_path, weights_only=False, map_location=device
+            )
+            hyperprior.load_state_dict(best_ckpt["state_dict"])
+        hyperprior.eval()
+
+        with torch.inference_mode():
+            sigma_all, w_hat_all = hyperprior(a1_latents, quantize=True)
+            residual_q = (
+                (a1_latents / args.quantization_step)
+                .round().clamp(-128, 127).to(torch.int8)
+            )
+            w_hat_q = w_hat_all.clamp(-128, 127).to(torch.int8)
+            del sigma_all  # diagnostic only; rate is encoder-driven
+
+        weight_tensors = torch.cat(
+            [p.detach().flatten() for p in hyperprior.parameters()]
+        )
+        weights_int8, w_scale = quantize_int8_with_scale(weight_tensors)
+        w_hat_int8 = w_hat_q.cpu().numpy().tobytes()
+        residual_int8 = residual_q.cpu().numpy().tobytes()
+
+        sidecar = encode_z3hp1_sidecar(
+            hyperprior_weights_int8=weights_int8,
+            w_hat_int8=w_hat_int8,
+            residual_int8=residual_int8,
+            hyper_dim=cfg.hyper_latent_dim,
+            int8_w_scale=w_scale,
+            quant_step=cfg.quantization_step,
+            min_sigma=cfg.min_sigma,
+            max_sigma=cfg.max_sigma,
+        )
+        sidecar_bytes_estimate = len(sidecar)
+        # Ballé 2018 amortization principle: ship the sidecar ONLY when
+        # it would reduce archive bytes vs A1. v1 inflate.py is parse-only
+        # (does NOT yet replace A1's latent_blob with the conditional
+        # Gaussian decode of residual), so in v1 the sidecar ADDS bytes
+        # with zero rate offset. Canonical safe path: ship A1-byte-identical
+        # bytes AND save the diagnostic sidecar separately for council
+        # review (research_only=true).
+        bytes_saved_estimate = 0  # v1: no rate offset (parse-only inflate)
+        if bytes_saved_estimate > sidecar_bytes_estimate:
+            composition_bytes = pack_composition_archive(a1_bytes, sidecar)
+            sidecar_shipped = True
+        else:
+            composition_bytes = a1_bytes  # byte-identical to A1
+            sidecar_shipped = False
+            (out_dir / "z3hp1_sidecar_diagnostic.bin").write_bytes(sidecar)
+
+        composition_sha = hashlib.sha256(composition_bytes).hexdigest()
+        composition_size = len(composition_bytes)
+        _stage(
+            f"composition_built_{composition_size}_B_sha{composition_sha[:8]}_"
+            f"sidecar_shipped={sidecar_shipped}"
+        )
+
+        # ---- Step 7: build archive.zip + runtime tree ----
+        _build_archive_zip(archive_zip_path, bin_bytes=composition_bytes)
+        submission_dir.mkdir(parents=True, exist_ok=True)
+        _write_runtime(submission_dir)
+        (submission_dir / "0.bin").write_bytes(composition_bytes)
+        # Vendor A1's codec.py + model.py so inflate runtime can fall back
+        # to A1 behavior (Z3 inflate.py delegates when no Z3HP1 sidecar).
+        a1_src = args.a1_archive_path.parent / "src"
+        target_src = submission_dir / "src"
+        target_src.mkdir(parents=True, exist_ok=True)
+        for name in ("codec.py", "model.py"):
+            if (a1_src / name).is_file():
+                shutil.copy2(a1_src / name, target_src / name)
+        shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
+        _stage("archive_zip_and_runtime_emitted")
+
+        # ---- Step 8: CUDA auth eval via canonical gate (Catalog #223) ----
+        if not args.skip_auth_eval:
+            _stage("contest_auth_eval")
+            result_json_path = out_dir / "contest_auth_eval_cuda.json"
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=submission_dir / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=result_json_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag=SUBSTRATE_TAG,
+                device=device,
+                full_cpu_active=bool(args.full_cpu),
+            )
+            if auth_result is not None:
+                auth_eval_result_path = str(result_json_path)
+                auth_eval_score = auth_result["auth_eval_cuda_score"]
+                auth_eval_evidence_grade = "contest-CUDA"
+                auth_eval_score_axis = auth_result["auth_eval_score_axis"]
+                auth_eval_lane_tag = auth_result["auth_eval_lane_tag"]
+                auth_eval_score_claim_valid = bool(
+                    auth_result["auth_eval_score_claim_valid"]
+                )
+                auth_eval_exact_cuda_complete = True
+    finally:
+        unpatch_upstream_yuv6(yuv6_token)
+        _stage("upstream_yuv6_unpatched")
+
+    # ---- Step 9: posterior update via canonical locked helper (Catalog #128) ----
+    if not args.skip_auth_eval and (out_dir / "contest_auth_eval_cuda.json").exists():
+        try:
+            from tac.continual_learning import (
+                posterior_update_locked_from_auth_eval_json,
+            )
+
+            update = posterior_update_locked_from_auth_eval_json(
+                out_dir / "contest_auth_eval_cuda.json"
+            )
+            print(
+                f"[z3-full] posterior_update accepted="
+                f"{getattr(update, 'accepted', '?')}"
+            )
+            _stage("posterior_updated")
+        except Exception as exc:
+            print(f"[z3-full] WARN posterior_update failed: {exc!r}")
+
+    # Cost-band anchor (Catalog #175 canonical helper).
+    try:
+        from tac.cost_band_calibration import CostBandAnchor, append_anchor
+
+        cb_outcome = (
+            "successful_dispatch"
+            if auth_eval_score_claim_valid
+            else "failed_dispatch"
+        )
+        # Modal T4 ~ $0.60/hr per CLAUDE.md platform hierarchy.
+        wall_sec = float(time.time() - train_started_at)
+        cost_usd = wall_sec / 3600.0 * 0.60
+        anchor = CostBandAnchor(
+            logged_at_utc=_canon_utc_now_iso(),
+            dispatch_label=f"{SUBSTRATE_LANE_ID}_{_canon_utc_now_iso()}",
+            trainer="train_substrate_z3_balle_hyperprior_bolton",
+            platform="modal",
+            gpu="T4" if device.type == "cuda" else "cpu",
+            epochs=int(args.epochs),
+            batch_size=int(args.batch_size),
+            all_flags_on=False,
+            actual_wall_clock_sec=wall_sec,
+            actual_cost_usd=cost_usd,
+            outcome=cb_outcome,
+            notes=(
+                f"substrate_tag={SUBSTRATE_TAG};"
+                f"archive_sha256={composition_sha};"
+                f"sidecar_shipped={sidecar_shipped};"
+                f"literature_anchor=balle_2018_scale_hyperprior;"
+                f"lane_class=substrate_engineering"
+            ),
+        )
+        append_anchor(anchor)
+        _stage("cost_band_anchor_appended")
+    except Exception as exc:
+        print(f"[z3-full] WARN cost_band_anchor_append failed: {exc!r}")
+
+    result_review_blockers: list[str] = [
+        "z3_full_archive_byte_identical_to_a1_until_v2_inflate_composes_latent_blob",
+        "trainer_stats_not_authoritative_score_claim_surface",
+        "promotion_requires_separate_result_review",
+    ]
+    if not auth_eval_score_claim_valid:
+        skipped_reason = str(getattr(args, "auth_eval_skipped_reason", "") or "")
+        if skipped_reason:
+            result_review_blockers.append(skipped_reason)
+        else:
+            result_review_blockers.append("contest_cuda_auth_eval_not_validated")
+
+    hardware_substrate = _canon_detect_hardware_substrate(
+        substrate_tag=SUBSTRATE_TAG,
+        axis="cuda" if device.type == "cuda" else "cpu",
+        env_var_candidates=("Z3_BALLE_GPU", "MODAL_GPU"),
+    )
+    stats = {
+        "lane_id": SUBSTRATE_LANE_ID,
+        "substrate_tag": SUBSTRATE_TAG,
+        "smoke": False,
+        "epochs": args.epochs,
+        "best_epoch": best_epoch,
+        "best_val_loss": best_val_loss,
+        "archive_bytes": composition_size,
+        "archive_sha256": composition_sha,
+        "archive_zip_bytes": (
+            archive_zip_path.stat().st_size if archive_zip_path.exists() else 0
+        ),
+        "archive_zip_sha256": (
+            _canon_sha256_bytes(archive_zip_path.read_bytes())
+            if archive_zip_path.exists() else ""
+        ),
+        "base_archive_sha256": a1_sha,
+        "base_archive_bytes": a1_size,
+        "sidecar_shipped": sidecar_shipped,
+        "sidecar_bytes_estimate": sidecar_bytes_estimate,
+        "bytes_saved_estimate": bytes_saved_estimate,
+        "hyper_dim": args.hyper_latent_dim,
+        "predicted_delta_s_band": [-0.0009, -0.0003],
+        "predicted_delta_s_strict_honest": -0.0006,
+        "predicted_delta_s_uncertainty": 0.50,
+        "council_verdict": (
+            "PROCEED 6/6 unanimous (Shannon LEAD + Dykstra CO-LEAD + "
+            "Yousfi + Fridrich + Contrarian + MacKay)"
+        ),
+        "council_ledger_path": ".omx/research/z3_phase_2_council_20260514.md",
+        "auth_eval_score": auth_eval_score,
+        "auth_eval_evidence_grade": auth_eval_evidence_grade,
+        "auth_eval_result_path": auth_eval_result_path,
+        "auth_eval_score_axis": auth_eval_score_axis,
+        "auth_eval_lane_tag": auth_eval_lane_tag,
+        "auth_eval_score_claim_valid": auth_eval_score_claim_valid,
+        "auth_eval_exact_cuda_complete": auth_eval_exact_cuda_complete,
+        "score_axis": auth_eval_score_axis,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "result_review_blockers": result_review_blockers,
+        "stage_log": stage_log,
+        "hardware_substrate": hardware_substrate,
+        "git_head": _canon_git_head_sha(REPO_ROOT),
+        "trained_at_utc": _canon_utc_now_iso(),
+    }
+    (out_dir / "stats.json").write_text(
+        json.dumps(stats, sort_keys=True, indent=2),
+        encoding="utf-8",
+    )
+    print(
+        f"[z3-full] DONE archive={composition_size}B sha={composition_sha[:12]}... "
+        f"auth_score={auth_eval_score} grade={auth_eval_evidence_grade} "
+        f"sidecar_shipped={sidecar_shipped}"
+    )
+    return 0
 
 
 # ---------------------------------------------------------------------------
