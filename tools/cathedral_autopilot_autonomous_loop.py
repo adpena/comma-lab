@@ -169,6 +169,23 @@ class CandidateRow:
 
     Per CLAUDE.md "Forbidden score claims": ``predicted_score_delta`` is
     explicitly tagged as a prediction, never a measurement.
+
+    Z1 empirical revision fields (2026-05-14, decision #4 per
+    ``feedback_z1_mdl_ablation_landed_20260514.md``):
+
+      - ``mdl_density`` — measured scorer-conditional MDL density (0-1) per
+        the Z1 ablation tool. None when the candidate has no ablation
+        evidence yet (don't penalize lack-of-evidence). Density >0.95
+        indicates within-class trap; 0.90-0.95 trending; <0.90 across-class
+        promising.
+      - ``lane_class`` — declared substrate class ("substrate_class_shift",
+        "substrate_engineering", "research_substrate", etc.) used to apply
+        the class-shift reward. None = unknown / not-declared.
+      - ``literature_anchor`` — citation / family name surfacing the
+        substrate-class lineage (e.g. "cooperative-receiver",
+        "Tishby-Zaslavsky", "Wyner-Ziv"). Used by
+        :func:`adjust_score_for_class_shift` to reward known class-shift
+        primitives.
     """
 
     candidate_id: str
@@ -178,6 +195,10 @@ class CandidateRow:
     estimated_dispatch_cost_usd: float
     blockers: list[str] = field(default_factory=list)
     notes: str = ""
+    # Z1 empirical revision wire-in (2026-05-14):
+    mdl_density: float | None = None
+    lane_class: str | None = None
+    literature_anchor: str = ""
 
     def eig_per_dollar(self) -> float:
         if self.estimated_dispatch_cost_usd <= 0.0:
@@ -338,11 +359,190 @@ def _posterior_correction_factor(
     return 1.0, 0, family
 
 
+# ── Z1 empirical revision: MDL-density penalty + class-shift reward ────────
+#
+# Per `feedback_z1_mdl_ablation_landed_20260514.md` operator decision #4
+# (2026-05-14): update the cathedral autopilot ranker to penalize within-
+# HNeRV-class candidates (high MDL density = class-saturated) and reward
+# predictive-receiver / cooperative-receiver / foveation / class-shift
+# candidates. The Z1 ablation empirically established 0.90+ MDL density as
+# the within-class trap threshold.
+#
+# Per CLAUDE.md "Forbidden score claims": these adjustments operate on
+# PREDICTED scores only. They never claim or alter measured scores. The
+# adjustment is a ranking re-weight, not a score promotion.
+#
+# Per CLAUDE.md "Subagent coherence-by-default" hook #4 (cathedral autopilot
+# dispatch hook): these functions are the canonical hook for the autopilot
+# ranker to honor the Z1 empirical revision automatically.
+
+# MDL-density thresholds (per Z1 empirical revision 2026-05-14):
+#   density > 0.95  -> within-class; cap predicted_score_delta at -0.005
+#                       (floor effective predicted improvement near zero)
+#   density > 0.90  -> within-class trending; 50% penalty
+#   density < 0.90  -> across-class promising; no penalty
+#   density unknown -> no penalty (don't punish lack-of-evidence)
+MDL_DENSITY_WITHIN_CLASS_SATURATED_THRESHOLD = 0.95
+MDL_DENSITY_WITHIN_CLASS_TRENDING_THRESHOLD = 0.90
+MDL_DENSITY_WITHIN_CLASS_SATURATED_DELTA_FLOOR = -0.005  # negligible
+MDL_DENSITY_WITHIN_CLASS_TRENDING_PENALTY_FACTOR = 0.5  # halve predicted ΔS
+
+# Class-shift reward tokens. Candidates whose lane_class or literature_anchor
+# match any of these get a predicted_score_delta bonus per the Z1 council's
+# decision #4 (reward cooperative-receiver / predictive-receiver / foveation
+# / class-shift candidates). The reward is small (additive ~0.01-0.02) and
+# subtractive (lower = better in score-delta space).
+_CLASS_SHIFT_LANE_CLASS_TOKENS = (
+    "substrate_class_shift",
+    "predictive_receiver",
+    "cooperative_receiver",
+    "foveation",
+)
+
+_CLASS_SHIFT_LITERATURE_TOKENS = (
+    "cooperative-receiver",
+    "cooperative_receiver",
+    "predictive-coding",
+    "predictive_coding",
+    "predictive-receiver",
+    "predictive_receiver",
+    "foveation",
+    "Tishby-Zaslavsky",
+    "Tishby Zaslavsky",
+    "Atick-Redlich",
+    "Atick Redlich",
+    "Rao-Ballard",
+    "Rao Ballard",
+    "Wyner-Ziv",
+    "Wyner Ziv",
+    "Information Bottleneck",
+    "information_bottleneck",
+    "MDL-IBPS",
+    "Slepian-Wolf",
+    "Slepian Wolf",
+    "world_model",
+    "world-model",
+    "time_traveler",
+    "time-traveler",
+)
+
+CLASS_SHIFT_LANE_CLASS_REWARD = 0.02
+CLASS_SHIFT_LITERATURE_ANCHOR_REWARD = 0.01
+
+
+def adjust_predicted_delta_for_mdl_density(
+    base_delta: float,
+    mdl_density: float | None,
+) -> float:
+    """Penalize within-HNeRV-class candidates (high MDL density = class-
+    saturated) per the Z1 empirical revision 2026-05-14.
+
+    Per Z1 council decision #4:
+      - density > 0.95: within-class; floor predicted_score_delta at
+        ``MDL_DENSITY_WITHIN_CLASS_SATURATED_DELTA_FLOOR`` (effectively
+        zero improvement)
+      - density 0.90-0.95: within-class trending; apply 50% penalty to
+        predicted savings (less-negative becomes more-positive)
+      - density < 0.90: across-class promising; no penalty
+      - density unknown: no penalty
+
+    Per CLAUDE.md "Forbidden score claims": this adjusts PREDICTED ΔS only;
+    measured anchors are untouched.
+
+    Returns the (possibly penalized) predicted_score_delta. Lower is better
+    in the score-delta convention (negative = improvement).
+    """
+    if mdl_density is None:
+        return base_delta
+    try:
+        d = float(mdl_density)
+    except (TypeError, ValueError):
+        return base_delta
+    if d > MDL_DENSITY_WITHIN_CLASS_SATURATED_THRESHOLD:
+        # Floor at near-zero. If the candidate predicted a strong negative
+        # delta, the within-class density says that prediction is empirically
+        # unrealistic; cap at the conservative floor.
+        return max(base_delta, MDL_DENSITY_WITHIN_CLASS_SATURATED_DELTA_FLOOR)
+    if d > MDL_DENSITY_WITHIN_CLASS_TRENDING_THRESHOLD:
+        # Halve the predicted savings (only affects negative deltas; positive
+        # deltas stay the same magnitude since we multiply).
+        return base_delta * MDL_DENSITY_WITHIN_CLASS_TRENDING_PENALTY_FACTOR
+    return base_delta
+
+
+def adjust_predicted_delta_for_class_shift(
+    base_delta: float,
+    *,
+    lane_class: str | None = None,
+    literature_anchor: str = "",
+    notes: str = "",
+) -> float:
+    """Reward substrate-class-shift candidates per Z1 council decision #4.
+
+    Acceptance:
+      - ``lane_class`` matches any of ``_CLASS_SHIFT_LANE_CLASS_TOKENS``
+        adds ``CLASS_SHIFT_LANE_CLASS_REWARD`` (subtracted from base delta;
+        lower = better in score-delta convention)
+      - ``literature_anchor`` or ``notes`` contains any of
+        ``_CLASS_SHIFT_LITERATURE_TOKENS`` adds
+        ``CLASS_SHIFT_LITERATURE_ANCHOR_REWARD``
+
+    Both bonuses stack independently. Per CLAUDE.md "Forbidden score claims":
+    this is a PREDICTED ΔS reweight, not a score promotion.
+    """
+    bonus = 0.0
+    if isinstance(lane_class, str) and lane_class:
+        for tok in _CLASS_SHIFT_LANE_CLASS_TOKENS:
+            if tok in lane_class:
+                bonus += CLASS_SHIFT_LANE_CLASS_REWARD
+                break
+    haystacks: list[str] = []
+    if isinstance(literature_anchor, str):
+        haystacks.append(literature_anchor)
+    if isinstance(notes, str):
+        haystacks.append(notes)
+    for hay in haystacks:
+        if not hay:
+            continue
+        if any(tok in hay for tok in _CLASS_SHIFT_LITERATURE_TOKENS):
+            bonus += CLASS_SHIFT_LITERATURE_ANCHOR_REWARD
+            break
+    # Lower-is-better in score-delta convention; subtract the bonus to make
+    # this candidate look better in the ranking.
+    return base_delta - bonus
+
+
+def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
+    """Return the rank-key predicted_score_delta after Z1 empirical revision
+    adjustments. This is the canonical composition: first apply MDL-density
+    penalty, then apply class-shift reward.
+
+    Per CLAUDE.md "Subagent coherence-by-default" (Z1 wire-in hook #4): this
+    helper is the single source of truth for "what does the autopilot
+    *actually* believe about this candidate's predicted_score_delta after
+    integrating the Z1 ablation evidence?"
+
+    The ORIGINAL ``c.predicted_score_delta`` is preserved on the row; this
+    function returns a transient sort-key value, never mutates the row.
+    """
+    d = adjust_predicted_delta_for_mdl_density(
+        c.predicted_score_delta, c.mdl_density
+    )
+    d = adjust_predicted_delta_for_class_shift(
+        d,
+        lane_class=c.lane_class,
+        literature_anchor=c.literature_anchor,
+        notes=c.notes,
+    )
+    return d
+
+
 def rank_candidates(
     candidates: list[CandidateRow],
     *,
     rank_axis: str = "eig_per_dollar",
     continual_posterior: Any | None = None,
+    apply_z1_empirical_revision: bool = True,
 ) -> list[CandidateRow]:
     """Rank candidates by the chosen axis (descending best-first).
 
@@ -358,25 +558,62 @@ def rank_candidates(
     report the raw prediction. Per CLAUDE.md "Subagent coherence-by-default"
     this exercises wire-in hook 5 (continual-learning posterior).
 
+    When ``apply_z1_empirical_revision=True`` (default), the Z1 empirical
+    revision adjustments are applied BEFORE the continual-posterior
+    correction: MDL-density penalty (within-class trap) + class-shift
+    reward (cooperative-receiver / predictive-receiver / foveation). Per
+    `feedback_z1_mdl_ablation_landed_20260514.md` operator decision #4. The
+    ORIGINAL ``predicted_score_delta`` on the row is preserved; the
+    adjustment is applied transiently for sort-key purposes only.
+
     Per CLAUDE.md "Forbidden /tmp paths": no temp paths used; pure in-memory.
     """
+    def _effective_delta(c: CandidateRow) -> float:
+        if apply_z1_empirical_revision:
+            return apply_z1_empirical_revision_to_candidate_delta(c)
+        return c.predicted_score_delta
+
+    def _effective_eig_per_dollar(c: CandidateRow) -> float:
+        # EIG/$ does not directly consume predicted_score_delta, so the Z1
+        # adjustment does not change the EIG/$ axis. We still apply a small
+        # MDL-density-aware modifier for the within-class-saturated cap so a
+        # candidate with EIG/$ = 100 but density 0.99 doesn't beat a class-
+        # shift candidate with EIG/$ = 5 and density 0.50.
+        base = c.eig_per_dollar()
+        if not apply_z1_empirical_revision:
+            return base
+        # Apply the SAME 0.5 penalty factor used for the within-class-trending
+        # range, scaled to the EIG axis. Saturated candidates lose 90% of
+        # their EIG ranking; trending candidates lose 50%.
+        if c.mdl_density is None:
+            return base
+        try:
+            d = float(c.mdl_density)
+        except (TypeError, ValueError):
+            return base
+        if d > MDL_DENSITY_WITHIN_CLASS_SATURATED_THRESHOLD:
+            return base * 0.10  # 90% penalty
+        if d > MDL_DENSITY_WITHIN_CLASS_TRENDING_THRESHOLD:
+            return base * MDL_DENSITY_WITHIN_CLASS_TRENDING_PENALTY_FACTOR
+        return base
+
     if rank_axis == "eig_per_dollar":
         if continual_posterior is None:
-            return sorted(candidates, key=lambda c: c.eig_per_dollar(), reverse=True)
+            return sorted(candidates, key=_effective_eig_per_dollar, reverse=True)
         # Reweight EIG/$ by posterior correction. EIG itself is unchanged; the
         # cost-effective dispatch ordering still reflects empirical bias.
         def _eig_key(c: CandidateRow) -> float:
             factor, _, _ = _posterior_correction_factor(c, continual_posterior)
-            return c.eig_per_dollar() * factor
+            return _effective_eig_per_dollar(c) * factor
         return sorted(candidates, key=_eig_key, reverse=True)
     if rank_axis == "predicted_score_delta":
         if continual_posterior is None:
-            return sorted(candidates, key=lambda c: c.predicted_score_delta)
+            return sorted(candidates, key=_effective_delta)
         # Reweight predicted_score_delta by posterior correction. Most-negative
         # first ordering preserved.
         def _delta_key(c: CandidateRow) -> float:
             factor, _, _ = _posterior_correction_factor(c, continual_posterior)
-            return c.predicted_score_delta * factor
+            return _effective_delta(c) * factor
         return sorted(candidates, key=_delta_key)
     raise ValueError(
         f"unknown rank_axis {rank_axis!r}; must be 'eig_per_dollar' or "
@@ -981,7 +1218,13 @@ def _parse_approval_flags(items: list[str]) -> frozenset[EventClass]:
 
 
 def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
-    """Load CandidateRow objects from a JSONL file (one row per line)."""
+    """Load CandidateRow objects from a JSONL file (one row per line).
+
+    Z1 empirical revision fields (2026-05-14) are read from the row when
+    present: ``mdl_density`` (float), ``lane_class`` (str), and
+    ``literature_anchor`` (str). Backward-compat: rows without these fields
+    use the defaults (None / None / "") so legacy queues load unchanged.
+    """
     rows: list[CandidateRow] = []
     with path.open("r", encoding="utf-8") as f:
         for line in f:
@@ -989,6 +1232,19 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
             if not s:
                 continue
             raw = json.loads(s)
+            mdl_density_raw = raw.get("mdl_density")
+            mdl_density: float | None
+            if mdl_density_raw is None:
+                mdl_density = None
+            else:
+                try:
+                    mdl_density = float(mdl_density_raw)
+                except (TypeError, ValueError):
+                    mdl_density = None
+            lane_class_raw = raw.get("lane_class")
+            lane_class: str | None = (
+                str(lane_class_raw) if lane_class_raw is not None else None
+            )
             rows.append(CandidateRow(
                 candidate_id=raw["candidate_id"],
                 family=raw["family"],
@@ -997,6 +1253,9 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 estimated_dispatch_cost_usd=float(raw["estimated_dispatch_cost_usd"]),
                 blockers=list(raw.get("blockers", [])),
                 notes=str(raw.get("notes", "")),
+                mdl_density=mdl_density,
+                lane_class=lane_class,
+                literature_anchor=str(raw.get("literature_anchor", "")),
             ))
     return rows
 

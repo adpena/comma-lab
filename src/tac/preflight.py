@@ -1918,6 +1918,20 @@ def preflight_all(
         check_substrate_reconstruct_methods_support_mini_batch(
             strict=True, verbose=verbose,
         )
+        # 2026-05-14 Catalog #219 - Z1 empirical revision self-protection:
+        # refuse L2+ archive promotion when measured scorer-conditional MDL
+        # density exceeds the class-saturation threshold (0.90). Per Z1
+        # operator decision #5 in `feedback_z1_mdl_ablation_landed_20260514.md`
+        # the gate fires only when a lane's L2+ promotion evidence references
+        # a sha256 with measured MDL density >0.90. Initial wire-in is
+        # warn-only per CLAUDE.md "Strict-flip atomicity rule" - A1 + PR106
+        # are the only lanes with measured MDL evidence and both carry the
+        # canonical waiver as operator-acknowledged baselines. Strict-flip
+        # planned once 0 violations are confirmed. Memory:
+        # feedback_mdl_density_gate_and_autopilot_ranker_landed_20260514.md.
+        check_archive_promotion_blocked_by_mdl_density_above_threshold(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -49887,6 +49901,469 @@ def check_substrate_reconstruct_methods_support_mini_batch(
             + "\n  ".join(violations[:3])
         )
         raise PreflightError(msg)
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #219 — check_archive_promotion_blocked_by_mdl_density_above_threshold
+#
+# Z1 empirical revision self-protection (2026-05-14). Bug class: a lane in the
+# registry can be promoted to Level 2+ (real_archive_empirical / contest_cuda /
+# contest_cpu gate satisfied) with archive bytes whose scorer-conditional MDL
+# density is empirically class-saturated (> 0.90 — see Z1 ablation memo
+# `feedback_z1_mdl_ablation_landed_20260514.md` + sister band memo
+# `.omx/research/zen_floor_band_v2_post_z1_ablation_20260514.md`). High MDL
+# density empirically means the archive's score budget within the current
+# substrate class is exhausted — A1 measured 99.29% density and PR106 r2 at
+# 97.21%. The next dispatch round should be a class-shift (predictive-receiver
+# / cooperative-receiver / foveation / Wyner-Ziv) not another within-class
+# bolt-on. This STRICT gate refuses any L2+ lane whose real_archive_empirical
+# evidence string references an archive sha256 with measured MDL density above
+# the 0.90 threshold.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" +
+# "Strict-flip atomicity rule" + Z1 operator decision #5: live count at landing
+# is bounded (only A1 + PR106 have MDL ablation evidence; both are explicit
+# operator-acknowledged baselines / frontier anchors). Initial wire-in is
+# warn-only per "Strict-flip atomicity rule" — strict-flip atomically once 0
+# violations are confirmed across MDL-evidence-bearing lanes AND the baseline
+# A1 lane carries the canonical `# MDL_DENSITY_OVER_THRESHOLD_OK:` waiver in
+# its registry-notes (the operator-explicit waiver pattern documented below).
+#
+# Sister of Catalog #90 (`check_lane_registry_consistent`, the umbrella that
+# enforces registry schema invariants) + Catalog #127
+# (`check_authoritative_tag_requires_custody_metadata`, the per-anchor custody
+# rule). Together they extinct the "class-saturated archive silently promoted
+# to L2+" bug class.
+#
+# Lane: lane_mdl_density_gate_and_autopilot_ranker_20260514.
+# Memory: feedback_mdl_density_gate_and_autopilot_ranker_landed_20260514.md.
+# ----------------------------------------------------------------------------
+
+# Threshold above which a measured MDL density indicates class-saturation per
+# the Z1 ablation. The threshold 0.90 was chosen by the Z1 council per
+# `feedback_z1_mdl_ablation_landed_20260514.md` operator decision #5; >0.90
+# means substrate-class headroom is exhausted and the next dispatch should
+# attempt a class-shift architecture, not another within-class bolt-on.
+_CHECK_219_MDL_DENSITY_THRESHOLD = 0.90
+
+# Lane-level evidence-bearing gate names. If any of these gates carry a sha256
+# evidence string AND that sha is measured with MDL density >threshold, the
+# lane is class-saturated and L2+ promotion is refused.
+_CHECK_219_L2_PROMOTION_GATE_NAMES = (
+    "real_archive_empirical",
+    "contest_cuda",
+    "contest_cpu",
+)
+
+# Lane-class / target-mode tokens that exempt a lane from the gate. Lanes
+# whose explicit purpose is research-only or class-shift substrate engineering
+# don't need the within-class trap protection. Exemption is by-design and
+# requires the lane to declare its scope. Sister of HNeRV parity discipline
+# lesson 7 (substrate engineering tag).
+_CHECK_219_EXEMPT_LANE_CLASS_TOKENS = (
+    "substrate_class_shift",
+    "substrate_engineering",
+    "research_substrate",
+)
+
+# Target-modes tokens (sub-strings) that exempt a lane. Lanes producing only
+# `research_substrate` or `production_*` artifacts are not in scope for the
+# contest-promotion gate.
+_CHECK_219_EXEMPT_TARGET_MODE_TOKENS = (
+    "research_substrate",
+    "research_only",
+)
+
+# Same-line/notes waiver. Placeholder literal "<reason>" is rejected so the
+# docstring above cannot self-waive.
+_CHECK_219_WAIVER_RE = re.compile(
+    r"#\s*MDL_DENSITY_OVER_THRESHOLD_OK:\s*([^\s<].*)"
+)
+_CHECK_219_WAIVER_INLINE_RE = re.compile(
+    r"MDL_DENSITY_OVER_THRESHOLD_OK:\s*([^\s<,;]+)"
+)
+
+# Regex matching an 8-64 hex sha-prefix token in an evidence string. The
+# canonical lane-registry style is the 8-char prefix (e.g. ``87ec7ca5...492b5``)
+# so the matcher accepts short prefixes and uses set-membership against the
+# full sha index to avoid false positives on accidental hex words.
+_CHECK_219_SHA256_TOKEN_RE = re.compile(r"\b([a-fA-F0-9]{8,64})\b")
+
+# Minimum prefix length required for a registry-shortened sha to match a full
+# sha. The 8-char prefix is canonical in the registry; we accept >=8 hex chars
+# for matching but require the abbreviated form to be sha-like (preceded /
+# followed by sha-indicative context like ``sha256=`` / ``sha `` / ``...``).
+_CHECK_219_MIN_SHA_PREFIX_LEN = 8
+
+# Context tokens that confirm a hex string is actually a sha (vs accidental
+# hex like timestamps or counters). At least one must appear in the evidence
+# string for a sha-prefix to count.
+_CHECK_219_SHA_CONTEXT_TOKENS = (
+    "sha256",
+    "sha=",
+    "sha ",
+    "sha:",
+    "archive sha",
+    "archive_sha256",
+    "...",  # the canonical lane-registry abbreviation `87ec7ca5...492b5`
+)
+
+
+def _check_219_discover_mdl_results(
+    repo_root: Path,
+) -> dict[str, dict]:
+    """Return {sha256_full: {density_lo: float, source_path: str, ...}}.
+
+    Scans ``experiments/results/mdl_ablation*/`` for ``*_mdl_ablation.json``
+    files matching the canonical Z1 schema (archive_sha256 +
+    mdl_density_estimate_lo). Returns a dict keyed by FULL sha256 so the
+    lane-evidence shortened-sha matcher can do prefix membership.
+    """
+    out: dict[str, dict] = {}
+    results_dir = repo_root / "experiments" / "results"
+    if not results_dir.is_dir():
+        return out
+    for entry in results_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        if "mdl_ablation" not in entry.name.lower():
+            continue
+        for json_file in entry.glob("*_mdl_ablation.json"):
+            if json_file.name == "summary_mdl_ablation.json":
+                # Aggregate summary file - readable but redundant; we prefer
+                # per-archive results that carry archive_sha256 directly.
+                continue
+            try:
+                payload = json.loads(json_file.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                continue
+            sha = payload.get("archive_sha256")
+            density_lo = payload.get("mdl_density_estimate_lo")
+            density_hi = payload.get("mdl_density_estimate_hi")
+            if not sha or not isinstance(sha, str):
+                continue
+            if density_lo is None:
+                continue
+            try:
+                density_lo = float(density_lo)
+            except (TypeError, ValueError):
+                continue
+            sha_low = sha.lower()
+            # Keep the highest density observed for the same sha. Subsequent
+            # higher-precision runs may revise; we always gate on the most
+            # recent / highest reading so we never silently drop the alert.
+            if sha_low in out:
+                prev = out[sha_low].get("density_lo", 0.0)
+                if density_lo <= prev:
+                    continue
+            out[sha_low] = {
+                "density_lo": density_lo,
+                "density_hi": float(density_hi) if density_hi is not None else density_lo,
+                "source_path": str(json_file.relative_to(repo_root)),
+                "archive_size_bytes": payload.get("archive_size_bytes"),
+                "zen_floor_band_recommendation": payload.get("zen_floor_band_recommendation", ""),
+            }
+    return out
+
+
+def _check_219_lane_is_exempt(lane: dict) -> bool:
+    """Return True if the lane is explicitly research/substrate-engineering
+    scope and therefore exempt from the contest-promotion gate.
+
+    Acceptance:
+      - ``lane_class`` field has any of _CHECK_219_EXEMPT_LANE_CLASS_TOKENS;
+      - ``target_modes`` list contains any of
+        _CHECK_219_EXEMPT_TARGET_MODE_TOKENS;
+      - the ``notes`` body contains ``research_only=true`` OR
+        ``lane_class=<exempt token>``;
+      - the ``notes`` body contains a substrate-engineering exception phrase.
+    """
+    lane_class = lane.get("lane_class", "")
+    if isinstance(lane_class, str):
+        for tok in _CHECK_219_EXEMPT_LANE_CLASS_TOKENS:
+            if tok in lane_class:
+                return True
+    target_modes = lane.get("target_modes") or []
+    if isinstance(target_modes, list):
+        for mode in target_modes:
+            if isinstance(mode, str):
+                for tok in _CHECK_219_EXEMPT_TARGET_MODE_TOKENS:
+                    if tok in mode:
+                        return True
+    notes = lane.get("notes") or ""
+    if isinstance(notes, str):
+        lower = notes.lower()
+        if "research_only=true" in lower:
+            return True
+        if "research_only:true" in lower:
+            return True
+        if "substrate_engineering_exception" in lower:
+            return True
+        for tok in _CHECK_219_EXEMPT_LANE_CLASS_TOKENS:
+            if f"lane_class={tok}" in lower or f"lane_class:{tok}" in lower:
+                return True
+    return False
+
+
+def _check_219_lane_has_waiver(lane: dict) -> tuple[bool, str]:
+    """Return (waived, reason) if the lane carries a # MDL_DENSITY_OVER_THRESHOLD_OK:
+    waiver in its registry notes / evidence body.
+
+    Sister of Catalog #218's same-line waiver pattern. Placeholder literal
+    ``<reason>`` is rejected so the gate cannot self-waive on docstring text.
+    """
+    notes = lane.get("notes") or ""
+    if not isinstance(notes, str):
+        notes = ""
+    text_buckets = [notes]
+    gates = lane.get("gates") or {}
+    if isinstance(gates, dict):
+        for gate_name in _CHECK_219_L2_PROMOTION_GATE_NAMES:
+            gate = gates.get(gate_name) or {}
+            ev = gate.get("evidence") if isinstance(gate, dict) else None
+            if isinstance(ev, str):
+                text_buckets.append(ev)
+    for text in text_buckets:
+        m = _CHECK_219_WAIVER_RE.search(text)
+        if m is None:
+            m = _CHECK_219_WAIVER_INLINE_RE.search(text)
+        if m is None:
+            continue
+        reason = m.group(1).strip().rstrip(",;").strip()
+        if not reason or reason in {"<reason>", "<rationale>"}:
+            continue
+        return True, reason
+    return False, ""
+
+
+def _check_219_text_has_sha_context(text: str) -> bool:
+    """Return True if the text contains at least one sha-indicative context
+    token (sha256, sha=, ..., etc.). Used to reject accidental hex strings
+    (timestamps, counters) from being treated as sha prefixes.
+    """
+    if not isinstance(text, str):
+        return False
+    lower = text.lower()
+    return any(tok in lower for tok in _CHECK_219_SHA_CONTEXT_TOKENS)
+
+
+def _check_219_extract_sha_tokens(lane: dict) -> set[str]:
+    """Collect every 8-64-hex-char sha-prefix token referenced by the lane's
+    L2+ promotion gates' evidence strings and notes body.
+
+    Only fields where the surrounding text contains a sha-indicative context
+    token (`sha256`, `sha=`, `...`, etc.) are scanned to avoid false positives
+    on accidental hex words (timestamps, line counters, run-id fragments).
+
+    Returns a set of LOWERCASE hex strings.
+    """
+    tokens: set[str] = set()
+
+    def _scan(text: str) -> None:
+        if not isinstance(text, str):
+            return
+        if not _check_219_text_has_sha_context(text):
+            return
+        for m in _CHECK_219_SHA256_TOKEN_RE.finditer(text):
+            t = m.group(1).lower()
+            if len(t) >= _CHECK_219_MIN_SHA_PREFIX_LEN:
+                tokens.add(t)
+
+    gates = lane.get("gates") or {}
+    if isinstance(gates, dict):
+        for gate_name in _CHECK_219_L2_PROMOTION_GATE_NAMES:
+            gate = gates.get(gate_name) or {}
+            if not isinstance(gate, dict):
+                continue
+            if not gate.get("status"):
+                continue
+            _scan(gate.get("evidence", ""))
+    _scan(lane.get("notes", "") or "")
+    return tokens
+
+
+def _check_219_match_sha_against_mdl_index(
+    lane_tokens: set[str], mdl_index: dict[str, dict]
+) -> list[tuple[str, dict]]:
+    """Return [(sha_full, mdl_record)] for any lane-token that prefixes a full
+    sha in the MDL ablation index. Lane evidence often abbreviates 64-char
+    sha to first 8 chars (e.g. ``87ec7ca5...492b5``); we match by prefix.
+    """
+    matches: list[tuple[str, dict]] = []
+    seen: set[str] = set()
+    for tok in lane_tokens:
+        if len(tok) < _CHECK_219_MIN_SHA_PREFIX_LEN:
+            continue
+        for sha_full, rec in mdl_index.items():
+            if sha_full in seen:
+                continue
+            if len(tok) <= len(sha_full):
+                if sha_full.startswith(tok):
+                    matches.append((sha_full, rec))
+                    seen.add(sha_full)
+            else:
+                # Token longer than full sha would be unusual; require exact
+                # prefix match of the full sha to avoid false positives.
+                if tok.startswith(sha_full):
+                    matches.append((sha_full, rec))
+                    seen.add(sha_full)
+    return matches
+
+
+def check_archive_promotion_blocked_by_mdl_density_above_threshold(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #219 — refuse L2+ archive promotion when measured scorer-
+    conditional MDL density exceeds the class-saturation threshold (0.90).
+
+    Per Z1 empirical revision 2026-05-14 (`feedback_z1_mdl_ablation_landed_
+    20260514.md` operator decision #5): a measured MDL density above 0.90
+    means the substrate class is empirically saturated and any further
+    within-class encoder/codec refinement yields diminishing returns. The
+    operator should route the next dispatch to a class-shift architecture.
+
+    The gate scans `.omx/state/lane_registry.json` for lanes with L2+
+    promotion gates satisfied (`real_archive_empirical` /
+    `contest_cuda` / `contest_cpu` status=True), extracts any sha256 tokens
+    from those evidence strings, and cross-references each token against the
+    discovered MDL ablation results under
+    `experiments/results/mdl_ablation*/`. A lane is refused if it
+    references a sha256 whose `mdl_density_estimate_lo` > 0.90 AND the lane
+    is not exempt (lane_class / target_modes / notes opt-out) AND the lane
+    does not carry a `# MDL_DENSITY_OVER_THRESHOLD_OK:<reason>` waiver.
+
+    Initial landing is warn-only per CLAUDE.md "Strict-flip atomicity rule":
+    A1 (sha 87ec7ca5...) and PR106 r2 (sha 7f926bc3...) are the only lanes
+    with measured MDL density at the time of landing, and both are explicit
+    operator-acknowledged baselines whose lane-registry notes should carry
+    the canonical waiver in the same commit batch.
+
+    Sister of Catalog #90 (`check_lane_registry_consistent`) +
+    Catalog #127 (`check_authoritative_tag_requires_custody_metadata`).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    if not registry_path.is_file():
+        if verbose:
+            print("  [mdl-density-promotion-gate] OK (no lane_registry.json)")
+        return violations
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if verbose:
+            print(f"  [mdl-density-promotion-gate] WARN registry read error: {exc}")
+        return violations
+
+    mdl_index = _check_219_discover_mdl_results(root)
+    if not mdl_index:
+        if verbose:
+            print(
+                "  [mdl-density-promotion-gate] OK (no MDL ablation evidence "
+                "found under experiments/results/mdl_ablation*/)"
+            )
+        return violations
+
+    threshold = _CHECK_219_MDL_DENSITY_THRESHOLD
+    lanes_scanned = 0
+    lanes_with_mdl_evidence = 0
+
+    for lane in registry.get("lanes", []):
+        if not isinstance(lane, dict):
+            continue
+        lanes_scanned += 1
+        level = int(lane.get("level", 0) or 0)
+        if level < 2:
+            continue
+        # Quick L2-promotion check: at least one L2+ gate must be satisfied.
+        gates = lane.get("gates") or {}
+        any_l2_gate_satisfied = False
+        if isinstance(gates, dict):
+            for gate_name in _CHECK_219_L2_PROMOTION_GATE_NAMES:
+                gate = gates.get(gate_name) or {}
+                if isinstance(gate, dict) and gate.get("status"):
+                    any_l2_gate_satisfied = True
+                    break
+        if not any_l2_gate_satisfied:
+            continue
+
+        # Match against the MDL ablation index.
+        sha_tokens = _check_219_extract_sha_tokens(lane)
+        if not sha_tokens:
+            continue
+        matches = _check_219_match_sha_against_mdl_index(sha_tokens, mdl_index)
+        if not matches:
+            continue
+        lanes_with_mdl_evidence += 1
+
+        # Find the maximum measured density across all matched archives.
+        max_density = 0.0
+        max_match: tuple[str, dict] | None = None
+        for sha_full, rec in matches:
+            d = rec.get("density_lo", 0.0)
+            if d > max_density:
+                max_density = d
+                max_match = (sha_full, rec)
+        if max_density <= threshold:
+            continue
+
+        # Density exceeds threshold. Apply opt-out cascades.
+        if _check_219_lane_is_exempt(lane):
+            continue
+        waived, reason = _check_219_lane_has_waiver(lane)
+        if waived:
+            continue
+
+        sha_full, rec = max_match  # type: ignore[misc]
+        violations.append(
+            f"lane {lane.get('id', '?')!r} (L{level}) references sha "
+            f"{sha_full[:16]}... with measured MDL density "
+            f"{max_density:.4f} > {threshold:.2f} threshold "
+            f"(source: {rec.get('source_path', '?')}; "
+            f"zen_floor_band={rec.get('zen_floor_band_recommendation', 'unknown')[:80]!r}). "
+            f"Per Z1 empirical revision (CLAUDE.md Catalog #219): the "
+            f"substrate class is empirically saturated; further within-class "
+            f"promotion is diminishing-returns. Route the next dispatch to a "
+            f"class-shift architecture (predictive-receiver / cooperative-"
+            f"receiver / foveation / Wyner-Ziv) OR add a `# MDL_DENSITY_OVER"
+            f"_THRESHOLD_OK:<reason>` waiver to the lane's registry notes "
+            f"(operator-explicit acknowledgement, e.g. baseline-anchor / "
+            f"frontier-reference). Memory: feedback_mdl_density_gate_and_"
+            f"autopilot_ranker_landed_20260514.md."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [mdl-density-promotion-gate] {len(violations)} violation(s) "
+                f"across {lanes_scanned} lane(s) ({lanes_with_mdl_evidence} "
+                f"L2+ lane(s) had MDL evidence; strict={strict})"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [mdl-density-promotion-gate] OK "
+                f"({lanes_scanned} lane(s) scanned, "
+                f"{lanes_with_mdl_evidence} L2+ MDL-evidenced lane(s) clean)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_archive_promotion_blocked_by_mdl_density_above_threshold "
+            f"found {len(violations)} L2+ archive(s) with measured MDL density "
+            f"> {threshold:.2f} (Catalog #219 — Z1 empirical revision "
+            f"self-protect):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
     return violations
 
 
