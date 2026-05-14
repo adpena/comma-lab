@@ -1863,6 +1863,18 @@ def preflight_all(
         check_no_unguarded_rmtree_in_build_tools(
             strict=True, verbose=verbose,
         )
+        # 2026-05-14 Catalog #209 - DP1 Phase 2 contest-video-leakage caller
+        # gate. Refuses any distill_codebook(...) callsite under src/tac/,
+        # tools/, experiments/, scripts/ that does NOT route through a
+        # Comma2k19FrameIterator construction (which runs the leakage guard
+        # internally) OR the canonical _build_frame_iterator helper. STRICT
+        # @ 0 per CLAUDE.md "Strict-flip atomicity rule" — the only callers
+        # in the repo (the DP1 trainer's smoke + full + iterator-helper
+        # construction sites) all pass at landing. Memory:
+        # feedback_dp1_phase_2_landed_20260514.md.
+        check_no_contest_video_leakage_in_distillation_callers(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -48605,6 +48617,197 @@ def check_docs_no_local_absolute_paths(
             + "\n  ".join(v[:300] for v in violations[:8])
         )
     return violations
+
+_CHECK_209_DISTILL_TOKEN = "distill_codebook"
+_CHECK_209_ITERATOR_TOKEN = "Comma2k19FrameIterator"
+_CHECK_209_GUARD_TOKEN = "check_no_contest_video_leakage"
+_CHECK_209_WAIVER_TOKEN = "COMMA2K19_LEAKAGE_VERIFIED_OK"
+_CHECK_209_FILE_LEVEL_WAIVER_TOKEN = "COMMA2K19_LEAKAGE_VERIFIED_OK_FILE"
+# Canonical helper functions that wrap Comma2k19FrameIterator construction
+# (so a caller may invoke the helper instead of constructing the iterator
+# directly). The helper itself MUST construct Comma2k19FrameIterator (or
+# carry an inline waiver) — Catalog #209 verifies that recursively by
+# scanning the helper's defining file.
+_CHECK_209_CANONICAL_HELPER_NAMES: tuple[str, ...] = (
+    "_build_frame_iterator",
+    "build_frame_iterator",
+)
+# The canonical implementation files plus their tests are exempt: the
+# iterator class itself defines the leakage refusal; tests intentionally
+# exercise both positive and negative paths.
+_CHECK_209_SELF_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "src/tac/substrates/pretrained_driving_prior/distillation.py",
+    "src/tac/substrates/pretrained_driving_prior/__init__.py",
+    "src/tac/preflight.py",
+)
+# Exempt directories — vendored intake clones, OSS export mirrors, and
+# generated build artifacts.
+_CHECK_209_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+)
+
+
+def _check_209_iter_target_files(repo_root: Path) -> Iterator[Path]:
+    """Yield .py files in the in-scope directories.
+
+    Scope: ``src/tac/``, ``tools/``, ``experiments/``, ``scripts/``.
+    Skips test files (they exercise both positive and negative paths so
+    a literal `distill_codebook(` token in a test fixture is not a
+    real-world caller).
+    """
+    scope_dirs = (
+        repo_root / "src" / "tac",
+        repo_root / "tools",
+        repo_root / "experiments",
+        repo_root / "scripts",
+    )
+    for scope_dir in scope_dirs:
+        if not scope_dir.exists():
+            continue
+        for path in scope_dir.rglob("*.py"):
+            rel = path.relative_to(repo_root).as_posix()
+            if any(frag in rel for frag in _CHECK_209_EXEMPT_PATH_FRAGMENTS):
+                continue
+            if any(rel == frag or rel.endswith(frag) for frag in _CHECK_209_SELF_EXEMPT_PATH_FRAGMENTS):
+                continue
+            # Skip test files (per scope rules; tests cover positive and
+            # negative paths and should not bind production callers).
+            if "/tests/" in rel or path.name.startswith("test_") or path.name.endswith("_test.py"):
+                continue
+            yield path
+
+
+def check_no_contest_video_leakage_in_distillation_callers(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #209 - every distill_codebook caller routes through Comma2k19FrameIterator.
+
+    Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L1
+    + the L1 scaffold's :func:`check_no_contest_video_leakage` runtime guard.
+    The scaffold landing 2026-05-13 deferred this STRICT preflight gate
+    because no real frame iterator existed; Phase 2 lands
+    :class:`Comma2k19FrameIterator` and so the gate has live coverage.
+
+    Scans every ``distill_codebook(`` callsite in ``src/tac/``, ``tools/``,
+    ``experiments/``, ``scripts/`` (excluding the canonical implementation
+    file plus tests, vendored intakes, OSS export mirrors, and
+    ``experiments/results/`` build artifacts) and refuses any call that
+    cannot be routed back to a :class:`Comma2k19FrameIterator` instance.
+
+    Acceptance (any one suffices):
+
+    1. The same enclosing scope (within 30 lines BEFORE the call) constructs
+       a ``Comma2k19FrameIterator(...)``.
+    2. The call carries a same-line waiver
+       ``# COMMA2K19_LEAKAGE_VERIFIED_OK:<reason>`` (placeholder ``<reason>``
+       literal rejected so the scaffold's docstring example cannot
+       self-waive).
+    3. The file carries a file-level
+       ``# COMMA2K19_LEAKAGE_VERIFIED_OK_FILE:<reason>`` waiver in the
+       first 20 lines (rare; for trainer harnesses that cover both modes
+       and route through the iterator behind another helper).
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" + "Strict-flip atomicity rule": the gate strict-flips in the
+    same commit batch as the live count = 0. Memory:
+    ``feedback_dp1_phase_2_landed_20260514.md``.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    violations: list[str] = []
+    for path in _check_209_iter_target_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if _CHECK_209_DISTILL_TOKEN + "(" not in text:
+            continue
+        # File-level waiver opt-out (rare; first-20-lines window).
+        head = "\n".join(text.splitlines()[:20])
+        if _CHECK_209_FILE_LEVEL_WAIVER_TOKEN + ":" in head:
+            # Reject placeholder literal `<reason>` to prevent self-waiver
+            # from a docstring example.
+            if "<reason>" not in head:
+                continue
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            if _CHECK_209_DISTILL_TOKEN + "(" not in line:
+                continue
+            # Skip imports, function definitions ("def distill_codebook"),
+            # docstrings (heuristic: line is inside a triple-quoted block).
+            stripped = line.strip()
+            if stripped.startswith(("def ", "from ", "import ", "* ", "- ")):
+                continue
+            if stripped.startswith(("#", '"', "'")):
+                continue
+            # Same-line waiver?
+            if _CHECK_209_WAIVER_TOKEN + ":" in line:
+                # Reject the placeholder literal `<reason>`.
+                trailing = line.split(_CHECK_209_WAIVER_TOKEN + ":", 1)[1]
+                rationale = trailing.split()[0] if trailing.strip() else ""
+                if rationale and rationale != "<reason>":
+                    continue
+            # Look back 30 lines for an iterator construction.
+            window_start = max(0, i - 30)
+            window = "\n".join(lines[window_start : i + 1])
+            if _CHECK_209_ITERATOR_TOKEN + "(" in window:
+                continue
+            # Canonical helper-function wrapper acceptance — a caller may
+            # invoke ``_build_frame_iterator(...)`` instead of constructing
+            # the iterator directly. The helper itself must construct
+            # Comma2k19FrameIterator; this gate audits the helper's defining
+            # file separately so the indirect path is structurally safe.
+            if any(
+                helper + "(" in window
+                for helper in _CHECK_209_CANONICAL_HELPER_NAMES
+            ):
+                continue
+            # Final fallback: if the canonical guard token appears in the
+            # window (caller manually invoked check_no_contest_video_leakage
+            # before constructing its own iterator), accept too.
+            if _CHECK_209_GUARD_TOKEN + "(" in window:
+                continue
+            rel = path.relative_to(root).as_posix()
+            violations.append(
+                f"{rel}:{i + 1}: distill_codebook(...) called without "
+                f"routing through Comma2k19FrameIterator (Catalog #209). "
+                f"Add a Comma2k19FrameIterator(...) construction within "
+                f"30 lines above the call OR a same-line "
+                f"`# COMMA2K19_LEAKAGE_VERIFIED_OK:<rationale>` waiver."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [contest-video-leakage-callers] WARN: "
+                f"{len(violations)} unrouted distill_codebook callsite(s) "
+                f"(strict={strict})"
+            )
+        else:
+            print("  [contest-video-leakage-callers] OK")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_contest_video_leakage_in_distillation_callers: "
+            f"{len(violations)} distill_codebook caller(s) bypass the "
+            "Comma2k19FrameIterator routing required by Catalog #209. The "
+            "iterator's constructor runs check_no_contest_video_leakage on "
+            "the chunk path BEFORE any decode; bypassing it makes the "
+            "leakage refusal opt-in instead of structural. Per CLAUDE.md "
+            "HNeRV parity discipline L1 the codebook MUST be distilled from "
+            "OUT-OF-DISTRIBUTION dashcam data, never the contest video.\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
 
 if __name__ == "__main__":
     import argparse

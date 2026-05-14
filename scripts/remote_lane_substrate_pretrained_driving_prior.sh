@@ -41,6 +41,11 @@ DPP_UPSTREAM_DIR="${DPP_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 DPP_DEVICE="${DPP_DEVICE:-cuda}"
 DPP_DATASET_NAME="${DPP_DATASET_NAME:-comma2k19}"
 DPP_ENABLE_AUTOCAST_FP16="${DPP_ENABLE_AUTOCAST_FP16:-1}"
+# Phase 2 Comma2k19 chunk path (Catalog #209-routed via Comma2k19FrameIterator).
+# Smoke path uses synthetic stub regardless; full path with --dataset-name=comma2k19
+# requires this to be set by the operator-authorize wrapper. Default empty so
+# the smoke path doesn't accidentally point at a real chunk dir on the worker.
+DPP_COMMA2K19_CHUNKS_DIR="${DPP_COMMA2K19_CHUNKS_DIR:-}"
 
 DISPATCH_INSTANCE_JOB_ID="${DPP_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${DPP_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -151,7 +156,7 @@ cat > "$PROVENANCE" <<EOF
 EOF
 log "wrote provenance: $PROVENANCE"
 
-# Stage 3: smoke path FIRST (scaffold L0 — only smoke is enabled).
+# Stage 3: smoke path FIRST (always runs — exercises codebook distill + pack + parse).
 log "Stage 3: smoke distill + pack + parse"
 "$PYBIN" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py" \
     --smoke \
@@ -163,7 +168,36 @@ log "Stage 3: smoke distill + pack + parse"
     --batch-size "$DPP_BATCH_SIZE" \
     --dataset-name synthetic_test
 
-log "DPP scaffold smoke complete; full training path raises NotImplementedError"
-log "Full training requires Phase 2 council approval + real Comma2k19 distillation"
-log "Exiting cleanly (rc=0) to signal scaffold-only success."
+# Stage 4: Phase 2 full training (lane_pretrained_driving_prior_phase_2_20260514).
+# Only fires when DPP_RUN_FULL=1 is explicitly set by the operator-authorize
+# wrapper; otherwise we exit at scaffold-smoke completion to preserve $0
+# default behavior. Per CLAUDE.md "Race-mode rigor inversion": the full
+# dispatch is operator-gated; the smoke MUST PASS (above) before the full
+# path is attempted.
+DPP_RUN_FULL="${DPP_RUN_FULL:-0}"
+if [ "$DPP_RUN_FULL" = "1" ]; then
+    log "Stage 4: Phase 2 full training (DPP_RUN_FULL=1)"
+    DPP_FULL_ARGS=(
+        --video-path "$DPP_VIDEO_PATH"
+        --output-dir "$DPP_OUTPUT_DIR"
+        --upstream-dir "$DPP_UPSTREAM_DIR"
+        --device "$DPP_DEVICE"
+        --epochs "$DPP_EPOCHS"
+        --batch-size "$DPP_BATCH_SIZE"
+        --dataset-name "$DPP_DATASET_NAME"
+    )
+    if [ -n "$DPP_COMMA2K19_CHUNKS_DIR" ]; then
+        DPP_FULL_ARGS+=(--comma2k19-chunks-dir "$DPP_COMMA2K19_CHUNKS_DIR")
+    fi
+    if [ "$DPP_ENABLE_AUTOCAST_FP16" = "1" ]; then
+        DPP_FULL_ARGS+=(--enable-autocast-fp16)
+    fi
+    "$PYBIN" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py" \
+        "${DPP_FULL_ARGS[@]}"
+    log "DPP Phase 2 full training complete"
+else
+    log "DPP scaffold smoke complete; DPP_RUN_FULL=0 — skipping Phase 2 full training"
+    log "To run Phase 2 full training, the operator-authorize wrapper sets DPP_RUN_FULL=1 + DPP_COMMA2K19_CHUNKS_DIR"
+fi
+log "Exiting cleanly (rc=0)."
 exit 0

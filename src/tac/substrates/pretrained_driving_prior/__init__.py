@@ -81,6 +81,7 @@ from tac.substrates.pretrained_driving_prior.codebook import (
     validate_codebook,
 )
 from tac.substrates.pretrained_driving_prior.distillation import (
+    Comma2k19FrameIterator,
     ContestVideoLeakageError,
     DistillationConfig,
     aggregate_local_codebooks,
@@ -109,6 +110,7 @@ __all__ = [
     "ROAD_PLANE_BASIS_SHAPE",
     "SKY_HORIZON_PROFILE_SHAPE",
     "VEHICLE_APPEARANCE_BASIS_SHAPE",
+    "Comma2k19FrameIterator",
     "ContestVideoLeakageError",
     "DashcamCodebook",
     "DashcamPriorLoss",

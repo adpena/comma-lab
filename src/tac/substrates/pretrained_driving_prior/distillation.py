@@ -468,6 +468,187 @@ def aggregate_local_codebooks(
     return book
 
 
+class Comma2k19FrameIterator:
+    """Stream dashcam RGB frames from a Comma2k19 chunk directory tree.
+
+    Comma2k19 (`github.com/commaai/comma2k19`, MIT) ships chunks in a
+    nested directory layout:
+
+        <chunk_root>/<dongle_id>/<route_id>/<segment_idx>/video.hevc
+
+    Real Phase 2 dispatch points :func:`distill_codebook` at this iterator
+    by way of an operator-supplied ``--comma2k19-chunks-dir``. The
+    iterator delegates frame decoding to :mod:`av` (PyAV) when present,
+    which the canonical Modal training image already mounts.
+
+    **Contest-video-leakage refusal:** every chunk path is run through
+    :func:`check_no_contest_video_leakage` BEFORE the iterator yields its
+    first frame. Catalog #209 STRICT preflight enforces that EVERY caller
+    of :func:`distill_codebook` constructs the iterator through this class
+    (or carries a same-line waiver) so the leakage refusal cannot be
+    bypassed by handing a raw ``pyav`` iterator straight to the distiller.
+
+    **Deterministic synthetic stub.** Tests / scaffold smoke use
+    ``Comma2k19FrameIterator(synthetic=True, n_frames=N, seed=S)`` which
+    yields the canonical synthetic dashcam frames from
+    :func:`_synthetic_dashcam_frames`. The contract is otherwise
+    identical: ``__iter__`` yields ``np.uint8`` ``(H, W, 3)`` arrays.
+
+    Args:
+        chunks_dir: Root of the Comma2k19 download. Required when
+            ``synthetic=False``.
+        max_chunks: Cap on the number of (dongle, route, segment) triples
+            visited (each chunk decodes ~60 sec @ 20 Hz ≈ 1200 frames).
+        max_frames_per_chunk: Cap on frames decoded per chunk.
+        synthetic: If True, yield deterministic synthetic frames instead.
+        n_frames: Frame budget for ``synthetic=True``.
+        seed: Random seed for the synthetic generator.
+        frame_stride: Stride applied during decode (1 = every frame).
+    """
+
+    def __init__(
+        self,
+        chunks_dir: Path | None = None,
+        *,
+        max_chunks: int = 8,
+        max_frames_per_chunk: int = 256,
+        synthetic: bool = False,
+        n_frames: int = 1024,
+        seed: int = 0xDA5C,
+        frame_stride: int = 1,
+    ) -> None:
+        if synthetic:
+            if chunks_dir is not None:
+                raise ValueError(
+                    "synthetic=True is incompatible with chunks_dir; "
+                    "the synthetic stub generates its own deterministic frames"
+                )
+            self._chunks_dir = None
+        else:
+            if chunks_dir is None:
+                raise ValueError(
+                    "Comma2k19FrameIterator(chunks_dir=None, synthetic=False) "
+                    "is invalid; supply chunks_dir or set synthetic=True"
+                )
+            chunks_dir = Path(chunks_dir).resolve()
+            # CONTEST-VIDEO-LEAKAGE GUARD — refuse before any decode work.
+            check_no_contest_video_leakage([chunks_dir])
+            if not chunks_dir.exists():
+                raise FileNotFoundError(
+                    f"Comma2k19 chunks_dir {chunks_dir!r} does not exist; "
+                    f"download a chunk from "
+                    f"github.com/commaai/comma2k19#download (MIT-licensed) "
+                    f"and pass --comma2k19-chunks-dir <path>"
+                )
+            self._chunks_dir = chunks_dir
+        self._max_chunks = int(max_chunks)
+        self._max_frames_per_chunk = int(max_frames_per_chunk)
+        self._synthetic = bool(synthetic)
+        self._n_frames = int(n_frames)
+        self._seed = int(seed)
+        self._frame_stride = max(1, int(frame_stride))
+        # Provenance — populated lazily as chunks/frames are consumed.
+        self.provenance: dict[str, object] = {
+            "iterator_class": "Comma2k19FrameIterator",
+            "synthetic": self._synthetic,
+            "chunks_dir": str(self._chunks_dir) if self._chunks_dir else None,
+            "max_chunks": self._max_chunks,
+            "max_frames_per_chunk": self._max_frames_per_chunk,
+            "frame_stride": self._frame_stride,
+            "license": "MIT" if not self._synthetic else "synthetic-test-only",
+            "source_url": (
+                "https://github.com/commaai/comma2k19" if not self._synthetic else None
+            ),
+            "chunks_visited": [],  # populated by __iter__
+            "frame_count_used": 0,
+            "dataset_sha256_chunks": [],
+        }
+
+    def _iter_chunks(self) -> Iterator[Path]:
+        """Yield ``video.hevc`` paths under the Comma2k19 chunk root.
+
+        The Comma2k19 layout is documented at
+        ``github.com/commaai/comma2k19#chunk-layout``; we walk the tree
+        deterministically (sorted) so distillation is reproducible.
+        """
+        assert self._chunks_dir is not None
+        seen = 0
+        for video in sorted(self._chunks_dir.rglob("video.hevc")):
+            if seen >= self._max_chunks:
+                return
+            # Re-validate each candidate path against the leakage guard so
+            # symlinks / nested mount points cannot smuggle the contest
+            # video in via a deeper chunk subdir.
+            check_no_contest_video_leakage([video])
+            seen += 1
+            yield video
+
+    def _decode_chunk(self, path: Path) -> Iterator[np.ndarray]:
+        """Decode frames from a single ``video.hevc`` path via PyAV.
+
+        Raises ImportError if PyAV is not installed; the canonical Modal
+        training image carries it.
+        """
+        try:
+            import av  # type: ignore[import-not-found]
+        except ImportError as exc:  # pragma: no cover — runtime-only import
+            raise ImportError(
+                "Comma2k19FrameIterator non-synthetic mode requires PyAV "
+                "(`uv pip install av`)."
+            ) from exc
+
+        container = av.open(str(path))
+        try:
+            stream = container.streams.video[0]
+            stream.codec_context.skip_frame = "DEFAULT"
+            i = 0
+            yielded = 0
+            for frame in container.decode(stream):
+                if yielded >= self._max_frames_per_chunk:
+                    break
+                if i % self._frame_stride != 0:
+                    i += 1
+                    continue
+                arr = frame.to_ndarray(format="rgb24")  # (H, W, 3) uint8
+                yielded += 1
+                i += 1
+                yield arr
+        finally:
+            container.close()
+
+    def __iter__(self) -> Iterator[np.ndarray]:
+        """Yield np.uint8 (H, W, 3) frames in deterministic order."""
+        if self._synthetic:
+            yielded = 0
+            for frame in _synthetic_dashcam_frames(
+                n_frames=self._n_frames, seed=self._seed
+            ):
+                yielded += 1
+                self.provenance["frame_count_used"] = yielded
+                yield frame
+            return
+
+        chunks_visited: list[str] = []
+        chunks_sha256: list[str] = []
+        total_yielded = 0
+        for chunk_path in self._iter_chunks():
+            chunks_visited.append(str(chunk_path))
+            try:
+                chunks_sha256.append(
+                    hashlib.sha256(chunk_path.read_bytes()).hexdigest()
+                )
+            except OSError:
+                # Skip the SHA on huge chunks where read_bytes is impractical.
+                # The provenance still records the chunk path.
+                chunks_sha256.append("sha_skipped_large_file")
+            for frame in self._decode_chunk(chunk_path):
+                total_yielded += 1
+                self.provenance["frame_count_used"] = total_yielded
+                yield frame
+        self.provenance["chunks_visited"] = chunks_visited
+        self.provenance["dataset_sha256_chunks"] = chunks_sha256
+
+
 def write_codebook_to_disk(book: DashcamCodebook, out_path: Path) -> None:
     """Write codebook bytes + metadata sidecar JSON to disk for offline reuse.
 
@@ -491,6 +672,7 @@ def write_codebook_to_disk(book: DashcamCodebook, out_path: Path) -> None:
 
 
 __all__ = [
+    "Comma2k19FrameIterator",
     "ContestVideoLeakageError",
     "DistillationConfig",
     "aggregate_local_codebooks",

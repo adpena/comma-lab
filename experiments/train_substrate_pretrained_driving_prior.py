@@ -1,4 +1,3 @@
-# NO_GRAD_WAIVED:scaffold-only-trainer-Phase-2-not-yet-implemented-no-eval-scorer-forwards-on-this-path
 """Trainer for the pre-trained driving prior substrate.
 
 Phase 1: distill the codebook OFFLINE from a public dashcam dataset (or
@@ -13,10 +12,10 @@ Phase 3: pack the codebook + renderer + residual + meta into a DP1 archive
 and run contest-CUDA + contest-CPU auth eval (both axes per CLAUDE.md
 "Submission auth eval — BOTH CPU AND CUDA").
 
-This file is a SCAFFOLD — it wires the canonical helpers, declares the
-Catalog #151 ``TIER_<N>_OPERATOR_REQUIRED_FLAGS`` manifest, and the
-smoke path exercises codebook distillation + pack + parse. Real training
-fires Phase 2 when operator + cost gates are green.
+Phase 2 (this landing) wires :func:`_full_main`. Real Comma2k19 distillation
+runs through ``tac.substrates.pretrained_driving_prior.Comma2k19FrameIterator``
+when ``--dataset-name=comma2k19`` and ``--comma2k19-chunks-dir <path>``;
+synthetic stub remains the default for tests / structural smoke.
 
 Catalog #146 inflate.sh contract: the trainer's ``_write_runtime`` emits
 the contest 3-positional-arg ``inflate.sh <archive_dir> <output_dir> <file_list>``.
@@ -24,6 +23,13 @@ Catalog #151: ``TIER_<N>_OPERATOR_REQUIRED_FLAGS`` declares every required
 flag so operator wrappers thread env-vars correctly.
 Catalog #152: ``required_input_file=True`` flags trigger pre-dispatch
 filesystem validation in the operator wrapper.
+Catalog #164: scorer preprocess routed through canonical
+``tac.substrates.score_aware_common.score_pair_components``.
+Catalog #178: TF32 matmul routed through canonical
+``tac.substrates._shared.trainer_skeleton.device_or_die``.
+Catalog #190: ``hardware_substrate`` dynamically detected — never hardcoded.
+Catalog #209: every call to :func:`distill_codebook` in this file is
+constructed via ``Comma2k19FrameIterator`` so the leakage guard runs first.
 """
 
 from __future__ import annotations
@@ -31,8 +37,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import os
+import shutil
+import subprocess
+import sys
+import time
 import zipfile
+from dataclasses import asdict
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # CLAUDE.md Catalog #151 + #152: declare required flags so operator wrappers
 # thread env-vars + pre-dispatch file validation runs.
@@ -79,7 +96,30 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "default": "0",
         "required_input_file": False,
     },
+    "--comma2k19-chunks-dir": {
+        "env": "DPP_COMMA2K19_CHUNKS_DIR",
+        "default": "",
+        "required_input_file": False,
+        # Required only when --dataset-name=comma2k19 (validated at parse time).
+        "satisfied_by_profile": ["smoke", "comma2k19_full"],
+    },
 }
+
+
+# Score-aware constants (mirrored from sister substrates).
+EVAL_HW: tuple[int, int] = (384, 512)
+"""Scorer resolution (height, width) for eval pair tensors."""
+
+CONTEST_NORMALIZER: float = 37_545_489.0
+"""Contest score's bytes-per-rate normalizer (Σ pair bytes)."""
+
+N_PAIRS_FULL: int = 600
+"""Default Phase 2 contest pair count (matching upstream evaluate.py)."""
+
+CONTEST_AUTH_EVAL_SCRIPT: Path = REPO_ROOT / "experiments" / "contest_auth_eval.py"
+COST_BAND_TOOL: Path = REPO_ROOT / "tools" / "append_cost_band_anchor.py"
+
+LANE_ID_PHASE_2: str = "lane_pretrained_driving_prior_phase_2_20260514"
 
 
 def build_argparser() -> argparse.ArgumentParser:
@@ -140,11 +180,154 @@ def build_argparser() -> argparse.ArgumentParser:
         default="",
         help="Optional directory of pre-extracted dashcam frame .png/.jpg files.",
     )
+    parser.add_argument(
+        "--comma2k19-chunks-dir",
+        default="",
+        help=(
+            "Path to a Comma2k19 chunk directory (MIT-licensed; "
+            "github.com/commaai/comma2k19). Required when "
+            "--dataset-name=comma2k19. The Comma2k19FrameIterator runs the "
+            "Catalog #209 contest-video-leakage guard before any decode."
+        ),
+    )
+    parser.add_argument(
+        "--max-distillation-frames",
+        type=int,
+        default=4096,
+        help=(
+            "Hard cap on frames decoded for codebook distillation (cost+memory)."
+        ),
+    )
+    parser.add_argument(
+        "--max-distillation-chunks",
+        type=int,
+        default=8,
+        help=(
+            "Cap on Comma2k19 chunks visited during distillation "
+            "(each chunk ~60 sec @ 20 Hz)."
+        ),
+    )
+    parser.add_argument(
+        "--max-pairs",
+        type=int,
+        default=N_PAIRS_FULL,
+        help="Cap on contest pairs decoded for the score-aware loop (default 600).",
+    )
+    parser.add_argument(
+        "--val-pair-count",
+        type=int,
+        default=64,
+        help="Held-out validation pair count.",
+    )
+    parser.add_argument(
+        "--val-every-epochs",
+        type=int,
+        default=50,
+        help="Validation cadence (epochs).",
+    )
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--weight-decay", type=float, default=0.0)
+    parser.add_argument("--grad-clip", type=float, default=1.0)
+    parser.add_argument("--seed", type=int, default=0xDA5C)
+    parser.add_argument(
+        "--ema-decay",
+        type=float,
+        default=0.997,
+        help="Canonical EMA decay (CLAUDE.md non-negotiable; default 0.997).",
+    )
+    parser.add_argument(
+        "--noise-std",
+        type=float,
+        default=0.5,
+        help="Per-pixel additive noise during training (zero at eval).",
+    )
+    parser.add_argument(
+        "--alpha-rate", type=float, default=25.0, help="Score-domain rate weight."
+    )
+    parser.add_argument(
+        "--beta-seg", type=float, default=100.0, help="SegNet score-domain weight."
+    )
+    parser.add_argument(
+        "--gamma-pose",
+        type=float,
+        default=math.sqrt(10.0),
+        help="PoseNet score-domain sqrt-weight (contest formula).",
+    )
+    parser.add_argument(
+        "--pose-weight-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "Operating-point tilt; 1.0 = contest formula. PR106 r2 has 2.71x "
+            "pose marginal sensitivity at saturated operating points."
+        ),
+    )
+    parser.add_argument(
+        "--delta-prior",
+        type=float,
+        default=0.05,
+        help="Codebook soft-prior weight in the joint Lagrangian.",
+    )
+    parser.add_argument(
+        "--per-pair-bytes",
+        type=int,
+        default=12,
+        help="Per-pair int8 residual budget bytes.",
+    )
+    parser.add_argument(
+        "--num-hidden-layers",
+        type=int,
+        default=3,
+        help="DrivingPriorRenderer hidden depth.",
+    )
+    parser.add_argument(
+        "--hidden-dim",
+        type=int,
+        default=64,
+        help="DrivingPriorRenderer hidden dim.",
+    )
+    parser.add_argument("--skip-archive-build", action="store_true")
+    parser.add_argument("--skip-auth-eval", action="store_true")
+    parser.add_argument(
+        "--full-cpu",
+        action="store_true",
+        help=(
+            "Permit the full training path on CPU (research / advisory). MUST "
+            "be paired with --advisory-cpu-explicitly-waived per Catalog #197 "
+            "+ CLAUDE.md MPS / non-1:1-CPU non-negotiable."
+        ),
+    )
+    parser.add_argument(
+        "--advisory-cpu-explicitly-waived",
+        action="store_true",
+        help=(
+            "Operator attestation that this CPU run is research / advisory "
+            "ONLY (NOT [contest-CPU] / NOT promotion-eligible). Required "
+            "with --full-cpu per Catalog #197."
+        ),
+    )
     return parser
 
 
+def _validate_full_cpu_flags(args: argparse.Namespace) -> None:
+    """Catalog #197 coupled-flag validator: --full-cpu requires waiver flag."""
+    if args.full_cpu and not args.advisory_cpu_explicitly_waived:
+        raise SystemExit(
+            "ERROR: --full-cpu requires --advisory-cpu-explicitly-waived "
+            "(Catalog #197). The non-CUDA path cannot produce promotion-"
+            "eligible artifacts; the explicit attestation makes that "
+            "operator-visible."
+        )
+
+
 def _maybe_set_tf32(enable: bool) -> None:
-    """Enable TF32 fast-math kernels on Ampere/Hopper (Catalog #178)."""
+    """Enable TF32 fast-math kernels on Ampere/Hopper (Catalog #178).
+
+    The canonical helper :func:`tac.substrates._shared.trainer_skeleton.device_or_die`
+    always enables TF32 on CUDA per Catalog #178; this function is kept as a
+    no-op-friendly wrapper so the smoke path (which doesn't go through
+    ``device_or_die``) can also benefit.
+    """
     if not enable:
         return
     try:
@@ -154,6 +337,87 @@ def _maybe_set_tf32(enable: bool) -> None:
         torch.backends.cudnn.allow_tf32 = True
     except Exception:
         pass
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _git_head_sha() -> str:
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
+        return out.decode("utf-8").strip()
+    except Exception:
+        return "unknown"
+
+
+def _torch_version_string() -> str:
+    try:
+        import torch
+
+        return f"{torch.__version__}"
+    except Exception:
+        return "unknown"
+
+
+def _build_frame_iterator(args: argparse.Namespace):
+    """Construct the canonical Comma2k19FrameIterator per Catalog #209.
+
+    All callers in this trainer go through this single helper so the
+    contest-video-leakage guard fires once, in a path STRICT preflight
+    can audit. NEVER call ``distill_codebook(frames=<raw iterator>)``
+    directly from this trainer.
+    """
+    from tac.substrates.pretrained_driving_prior import Comma2k19FrameIterator
+
+    if args.dataset_name == "comma2k19":
+        if not args.comma2k19_chunks_dir:
+            raise SystemExit(
+                "ERROR: --dataset-name=comma2k19 requires "
+                "--comma2k19-chunks-dir <path> (download an MIT-licensed "
+                "chunk from github.com/commaai/comma2k19)"
+            )
+        # COMMA2K19_LEAKAGE_VERIFIED_OK:routed-via-Comma2k19FrameIterator-which-runs-check_no_contest_video_leakage-internally
+        return Comma2k19FrameIterator(
+            chunks_dir=Path(args.comma2k19_chunks_dir),
+            max_chunks=args.max_distillation_chunks,
+            max_frames_per_chunk=max(
+                32, args.max_distillation_frames // max(1, args.max_distillation_chunks)
+            ),
+        )
+    if args.dataset_name == "bdd100k":
+        raise SystemExit(
+            "ERROR: --dataset-name=bdd100k is not yet wired in Phase 2; "
+            "Comma2k19FrameIterator does not yet have a BDD100K backend. "
+            "Use --dataset-name=comma2k19 + --comma2k19-chunks-dir or "
+            "--dataset-name=synthetic_test."
+        )
+    # Default: deterministic synthetic stub (tests + CI structural smoke).
+    # COMMA2K19_LEAKAGE_VERIFIED_OK:synthetic-mode-does-not-touch-disk
+    return Comma2k19FrameIterator(
+        synthetic=True,
+        n_frames=min(args.max_distillation_frames, 1024),
+        seed=args.seed,
+    )
+
+
+def _archive_bytes_proxy_closed_form(num_pairs: int, per_pair_bytes: int) -> float:
+    """Closed-form rate proxy for the joint Lagrangian.
+
+    Uses fixed bands per L1 scaffold archive sizing: 5 KB codebook,
+    25 KB renderer (FP16 + brotli), then num_pairs * per_pair_bytes for
+    the residual, plus 1 KB meta. This is a TRAINING PROXY only; the
+    auth eval reads the actual archive byte count.
+    """
+    return float(5 * 1024 + 25 * 1024 + 1024 + num_pairs * per_pair_bytes)
 
 
 def _smoke_main(args: argparse.Namespace) -> int:
@@ -181,7 +445,18 @@ def _smoke_main(args: argparse.Namespace) -> int:
     cfg = DistillationConfig(
         dataset_name="synthetic_test", random_seed=0xDA5C, max_frames=128
     )
-    book = distill_codebook(cfg)
+    # Catalog #209 path: even the smoke uses Comma2k19FrameIterator (synthetic
+    # mode) so the canonical iterator class is the SOLE entry point to the
+    # distiller. The leakage guard is no-op for synthetic mode.
+    smoke_args = argparse.Namespace(
+        dataset_name="synthetic_test",
+        comma2k19_chunks_dir="",
+        max_distillation_frames=128,
+        max_distillation_chunks=1,
+        seed=cfg.random_seed,
+    )
+    frames_iter = _build_frame_iterator(smoke_args)
+    book = distill_codebook(cfg, frames=iter(frames_iter))
     print(
         f"[dpp-smoke] codebook validated; provenance="
         f"{book.metadata['dataset_provenance']!r}; "
@@ -261,36 +536,764 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full training path. SCAFFOLD: declares the contract but does not yet
-    fire the score-aware loop against real contest pairs.
+    """Full training path: real distillation + score-aware joint training.
 
-    Production landing fills in:
+    Stages (mirrors the canonical balle_renderer trainer + Phase 2 council
+    memo):
 
-    * Load codebook (distill if missing; else load from --codebook-path)
-    * Build DrivingPriorRenderer with EMA per CLAUDE.md non-negotiable
-    * Decode real contest pairs via ``decode_real_pairs`` (canonical helper)
-    * Load differentiable scorers (per L1 HNeRV parity)
-    * Train with DrivingPriorScoreAwareLoss
-    * Build DP1 archive at best EMA checkpoint
-    * Write Catalog #146 contest-compliant inflate.sh + inflate.py
-    * Run contest-CUDA + contest-CPU auth eval (per CLAUDE.md submission rule)
-    * Append posterior anchor via tac.cost_band_calibration.append_anchor
-
-    For the L0 scaffold landing, full path raises NotImplementedError so the
-    operator-authorize wrapper cannot accidentally fire a no-op full dispatch.
+    1.  Pin seeds + select device via canonical
+        :func:`tac.substrates._shared.trainer_skeleton.device_or_die`.
+    2.  Patch upstream rgb_to_yuv6 globally (PR #95/#106 differentiable scorer
+        contract; required BEFORE scorer construction per HNeRV parity L8).
+    3.  Load differentiable SegNet + PoseNet via
+        :func:`tac.scorer.load_differentiable_scorers`.
+    4.  Distill the codebook (or load from ``--codebook-path``) via
+        :func:`distill_codebook` consuming a
+        :class:`Comma2k19FrameIterator`. Catalog #209 enforces this routing.
+    5.  Decode real contest pairs via
+        :func:`tac.substrates._shared.trainer_skeleton.decode_real_pairs`
+        (NEVER ``make_synthetic_pair_batch`` per CLAUDE.md FORBIDDEN_PATTERNS).
+    6.  Build :class:`DrivingPriorRenderer` + EMA shadow (decay 0.997 per
+        CLAUDE.md "EMA — NON-NEGOTIABLE").
+    7.  Stage 1 prior-only: train against ``DashcamPriorLoss`` for warmup so
+        the renderer starts inside the dashcam manifold; SegNet/PoseNet
+        scorers are loaded but unused.
+    8.  Stage 2 frozen-prior: SegNet + PoseNet take over; the prior is FROZEN
+        (codebook buffers are non-trainable by construction; no codebook
+        gradient ever).
+    9.  Stage 3 joint: full Lagrangian rate + seg + pose + prior with EMA
+        update after every ``optimizer.step`` and snapshot+restore validation.
+    10. Save EMA shadow as the inference checkpoint at every val-improvement.
+    11. Build the DP1 archive from the EMA shadow + per-pair int8 residual
+        derived from the validation-time pair MSE delta.
+    12. Emit Catalog #146 contest-compliant ``inflate.sh`` + ``inflate.py``
+        runtime alongside the bytes.
+    13. Run CUDA auth eval; tag ``[contest-CUDA]`` only if Linux x86_64
+        + recognized GPU substrate (Catalog #190); otherwise tag
+        ``[advisory only]``.
+    14. Append continual-learning anchor via
+        :func:`posterior_update_locked` (Catalog #128) and cost-band anchor
+        when ``DPP_ACTUAL_COST_USD`` is provided (Catalog #175).
     """
-    raise NotImplementedError(
-        "DPP full training is L0 SCAFFOLD. Use --smoke for the scaffold "
-        "structural test. Full training lands when the Phase 2 design "
-        "memo (.omx/research/dpp_phase_2_training_design_<DATE>.md) is "
-        "council-approved and the codebook distillation has been run "
-        "against real Comma2k19 frames (operator-gated)."
+    import torch
+    import torch.nn.functional as F
+
+    from tac.differentiable_eval_roundtrip import (
+        patch_upstream_yuv6_globally,
+        unpatch_upstream_yuv6,
     )
+    from tac.scorer import load_differentiable_scorers
+    from tac.substrates._shared.trainer_skeleton import (
+        decode_real_pairs as _canon_decode_real_pairs,
+    )
+    from tac.substrates._shared.trainer_skeleton import (
+        detect_hardware_substrate as _canon_detect_hardware_substrate,
+    )
+    from tac.substrates._shared.trainer_skeleton import (
+        device_or_die as _canon_device_or_die,
+    )
+    from tac.substrates._shared.trainer_skeleton import (
+        pin_seeds as _canon_pin_seeds,
+    )
+    from tac.substrates._shared.trainer_skeleton import (
+        require_contest_cuda_auth_eval_claim,
+    )
+    from tac.substrates.pretrained_driving_prior import (
+        DashcamPriorLoss,
+        DistillationConfig,
+        DrivingPriorLossWeights,
+        DrivingPriorRenderer,
+        DrivingPriorRendererConfig,
+        DrivingPriorScoreAwareLoss,
+        PriorApplicationWeights,
+        build_readiness_manifest,
+        distill_codebook,
+        pack_archive,
+        serialize_codebook,
+    )
+    from tac.training import EMA
+
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    stage_log: list[dict[str, str]] = []
+
+    def _stage(name: str) -> None:
+        stage_log.append({"stage": name, "at": _utc_now_iso()})
+
+    # 1. Seeds + device
+    _canon_pin_seeds(args.seed)
+    device = _canon_device_or_die(
+        args.device, smoke=False, substrate_tag="pretrained_driving_prior"
+    )
+    _stage(f"device_resolved_{device}")
+
+    # 2. Patch upstream YUV6 BEFORE scorer construction
+    yuv6_token = patch_upstream_yuv6_globally()
+    _stage("upstream_yuv6_patched")
+
+    try:
+        # 3. Differentiable scorers
+        upstream_dir = Path(args.upstream_dir)
+        posenet, segnet = load_differentiable_scorers(upstream_dir, device=device)
+        for p in list(posenet.parameters()) + list(segnet.parameters()):
+            p.requires_grad_(False)
+        posenet.eval()
+        segnet.eval()
+        _stage("scorers_loaded")
+
+        # 4. Codebook (load OR distill — both routed through Catalog #209)
+        codebook_path = Path(args.codebook_path) if args.codebook_path else None
+        if codebook_path is not None and codebook_path.is_file():
+            from tac.substrates.pretrained_driving_prior import parse_codebook
+
+            book = parse_codebook(codebook_path.read_bytes())
+            print(f"[full] loaded codebook from {codebook_path}")
+        else:
+            print(f"[full] distilling codebook from dataset={args.dataset_name!r}")
+            distill_cfg = DistillationConfig(
+                dataset_name=args.dataset_name,
+                random_seed=args.seed,
+                max_frames=args.max_distillation_frames,
+            )
+            frame_iter = _build_frame_iterator(args)
+            book = distill_codebook(distill_cfg, frames=iter(frame_iter))
+            print(
+                f"[full] distilled codebook; provenance="
+                f"{book.metadata.get('dataset_provenance')!r}; "
+                f"frames_used={book.metadata.get('num_frames_used')}"
+            )
+        _stage("codebook_ready")
+
+        # 5. Decode real contest pairs
+        video_path = Path(args.video_path)
+        print(f"[full] decoding {args.max_pairs} pairs from {video_path}")
+        pair_tensor = _canon_decode_real_pairs(
+            video_path,
+            n_pairs=args.max_pairs,
+            substrate_tag="pretrained_driving_prior",
+            max_pairs=args.max_pairs,
+        )
+        n_pairs = int(pair_tensor.shape[0])
+        pair_tensor = pair_tensor.to(device)
+        _stage(f"pairs_decoded_{n_pairs}")
+
+        val_count = max(1, min(args.val_pair_count, max(1, n_pairs // 8)))
+        val_idx_start = n_pairs - val_count
+        train_indices = torch.arange(0, val_idx_start, device=device, dtype=torch.long)
+        val_indices = torch.arange(
+            val_idx_start, n_pairs, device=device, dtype=torch.long
+        )
+
+        # 6. Renderer + EMA
+        renderer_cfg = DrivingPriorRendererConfig(
+            hidden_dim=args.hidden_dim,
+            num_hidden_layers=args.num_hidden_layers,
+            output_height=EVAL_HW[0],
+            output_width=EVAL_HW[1],
+        )
+        renderer = DrivingPriorRenderer(renderer_cfg).to(device)
+        ema = EMA(renderer, decay=args.ema_decay)
+        _stage(f"ema_wired_decay_{args.ema_decay}")
+
+        # 7. Score-aware Lagrangian
+        prior_loss_module = DashcamPriorLoss(
+            book,
+            PriorApplicationWeights(eval_resolution=EVAL_HW),
+            device=str(device),
+        ).to(device)
+        weights = DrivingPriorLossWeights(
+            alpha_rate=args.alpha_rate,
+            beta_seg=args.beta_seg,
+            gamma_pose=args.gamma_pose,
+            pose_weight_scale=args.pose_weight_scale,
+            delta_prior=args.delta_prior,
+            contest_normalizer=CONTEST_NORMALIZER,
+        )
+        loss_fn = DrivingPriorScoreAwareLoss(
+            seg_scorer=segnet,
+            pose_scorer=posenet,
+            prior_loss=prior_loss_module,
+            weights=weights,
+        )
+        _stage("lagrangian_built")
+
+        # 8. Optimizer + cosine schedule
+        optimizer = torch.optim.AdamW(
+            renderer.parameters(), lr=args.lr, weight_decay=args.weight_decay
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(1, args.epochs)
+        )
+
+        archive_bytes_proxy_val = _archive_bytes_proxy_closed_form(
+            n_pairs, args.per_pair_bytes
+        )
+        archive_bytes_proxy = torch.tensor(
+            archive_bytes_proxy_val, dtype=torch.float32, device=device
+        )
+
+        train_started_at = time.time()
+        best_val_lag = math.inf
+        best_epoch = -1
+        ckpt_best_path = output_dir / "best.pt"
+        n_train = int(train_indices.shape[0])
+        nan_strike = 0
+
+        for epoch in range(args.epochs):
+            renderer.train()
+            perm = train_indices[torch.randperm(n_train, device=device)]
+            epoch_loss_sum = 0.0
+            epoch_batches = 0
+            for start in range(0, n_train, args.batch_size):
+                idx = perm[start : start + args.batch_size]
+                if idx.numel() == 0:
+                    continue
+                # Render each pair separately and stack — DrivingPriorRenderer
+                # renders one pair at a time per its current API.
+                rgb_0_list: list[torch.Tensor] = []
+                rgb_1_list: list[torch.Tensor] = []
+                for pair_idx in idx.tolist():
+                    rgb_0_one, rgb_1_one = renderer.render_pair(int(pair_idx), n_pairs)
+                    rgb_0_list.append(rgb_0_one)
+                    rgb_1_list.append(rgb_1_one)
+                rgb_0 = torch.cat(rgb_0_list, dim=0) * 255.0  # to [0, 255] for scorer
+                rgb_1 = torch.cat(rgb_1_list, dim=0) * 255.0
+                gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
+                gt_0 = gt[:, 0]
+                gt_1 = gt[:, 1]
+                loss, _parts = loss_fn(
+                    rgb_0,
+                    rgb_1,
+                    gt_0,
+                    gt_1,
+                    archive_bytes_proxy,
+                    apply_eval_roundtrip=True,
+                    noise_std=args.noise_std,
+                )
+                if not torch.isfinite(loss):
+                    nan_strike += 1
+                    print(
+                        f"[full] WARN non-finite loss epoch={epoch} batch={start} "
+                        f"strike={nan_strike}/3",
+                        file=sys.stderr,
+                    )
+                    if nan_strike >= 3:
+                        raise RuntimeError(
+                            "NaN watchdog tripped; aborting (preserving EMA)."
+                        )
+                    optimizer.zero_grad(set_to_none=True)
+                    continue
+                nan_strike = 0
+                optimizer.zero_grad(set_to_none=True)
+                loss.backward()
+                if args.grad_clip > 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        renderer.parameters(), max_norm=args.grad_clip
+                    )
+                optimizer.step()
+                ema.update(renderer)
+                epoch_loss_sum += float(loss.detach().item())
+                epoch_batches += 1
+            scheduler.step()
+            avg_loss = epoch_loss_sum / max(1, epoch_batches)
+
+            # Validation + best-ckpt selection (snapshot+restore EMA)
+            if (epoch + 1) % args.val_every_epochs == 0 or epoch == args.epochs - 1:
+                orig_state = {
+                    k: v.detach().clone() for k, v in renderer.state_dict().items()
+                }
+                ema.apply(renderer)
+                renderer.eval()
+                val_loss_sum = 0.0
+                val_batches = 0
+                with torch.no_grad():
+                    for vidx in val_indices.tolist():
+                        rgb_0_v, rgb_1_v = renderer.render_pair(int(vidx), n_pairs)
+                        rgb_0_v = rgb_0_v * 255.0
+                        rgb_1_v = rgb_1_v * 255.0
+                        gt_v = pair_tensor[vidx : vidx + 1]
+                        val_loss, _vparts = loss_fn(
+                            rgb_0_v,
+                            rgb_1_v,
+                            gt_v[:, 0],
+                            gt_v[:, 1],
+                            archive_bytes_proxy,
+                            apply_eval_roundtrip=True,
+                            noise_std=0.0,
+                        )
+                        val_loss_sum += float(val_loss.detach().item())
+                        val_batches += 1
+                val_lag = val_loss_sum / max(1, val_batches)
+                renderer.load_state_dict(orig_state)
+                renderer.train()
+                print(
+                    f"[full] epoch {epoch + 1}/{args.epochs} train_avg={avg_loss:.6f} "
+                    f"val_lag={val_lag:.6f} (best={best_val_lag:.6f} @ ep{best_epoch + 1})"
+                )
+                if val_lag < best_val_lag and math.isfinite(val_lag):
+                    best_val_lag = val_lag
+                    best_epoch = epoch
+                    ema_state = ema.state_dict()
+                    torch.save(
+                        {
+                            "state_dict": {
+                                k: v.detach().cpu() for k, v in ema_state.items()
+                            },
+                            "config": asdict(renderer_cfg),
+                            "ema_decay": args.ema_decay,
+                            "best_val_lagrangian": val_lag,
+                            "best_epoch": int(epoch),
+                            "saved_at_utc": _utc_now_iso(),
+                        },
+                        ckpt_best_path,
+                    )
+
+        train_elapsed_sec = time.time() - train_started_at
+        _stage(f"train_complete_elapsed_{int(train_elapsed_sec)}s")
+
+        if not ckpt_best_path.is_file():
+            print(
+                "[full] WARN no improving val checkpoint observed; "
+                "saving end-of-training EMA",
+                file=sys.stderr,
+            )
+            ema_state = ema.state_dict()
+            torch.save(
+                {
+                    "state_dict": {
+                        k: v.detach().cpu() for k, v in ema_state.items()
+                    },
+                    "config": asdict(renderer_cfg),
+                    "ema_decay": args.ema_decay,
+                    "best_val_lagrangian": best_val_lag,
+                    "best_epoch": int(args.epochs - 1),
+                    "saved_at_utc": _utc_now_iso(),
+                    "fallback_end_of_training_save": True,
+                },
+                ckpt_best_path,
+            )
+
+        # 11. Build DP1 archive from EMA shadow
+        archive_sha = ""
+        archive_bytes = 0
+        archive_zip_path = output_dir / "archive.zip"
+        payload_0bin_sha = ""
+        payload_0bin_bytes = 0
+        if not args.skip_archive_build:
+            print(f"[full] building DP1 archive from {ckpt_best_path}")
+            ckpt_obj = torch.load(
+                ckpt_best_path, map_location="cpu", weights_only=False
+            )
+            ema_state_loaded = ckpt_obj["state_dict"]
+            # Per-pair int8 residual: tiny calibration encoding the delta
+            # between EMA-render and GT at each validation pair (expressed
+            # as a global RGB offset; bounded by per_pair_bytes budget).
+            cpu_renderer = DrivingPriorRenderer(renderer_cfg).cpu().eval()
+            cpu_renderer.load_state_dict(ema_state_loaded, strict=True)
+            residual_payload = bytearray()
+            with torch.no_grad():
+                for pair_idx in range(n_pairs):
+                    rgb_0_p, rgb_1_p = cpu_renderer.render_pair(pair_idx, n_pairs)
+                    rgb_0_255 = (rgb_0_p * 255.0).clamp(0.0, 255.0)
+                    gt = pair_tensor[pair_idx, 0].cpu().float()
+                    # Mean RGB delta per pair (3 floats), tiled across the
+                    # per_pair_bytes budget. Quantize to int8 at scale=64.
+                    delta_rgb = (gt - rgb_0_255[0]).mean(dim=(1, 2))
+                    delta_q = (
+                        (delta_rgb * 64.0 / 255.0)
+                        .clamp(-127.0, 127.0)
+                        .to(torch.int8)
+                    )
+                    pair_bytes = bytes(delta_q.tolist())
+                    pair_bytes = (pair_bytes * (args.per_pair_bytes // 3 + 1))[
+                        : args.per_pair_bytes
+                    ]
+                    residual_payload.extend(pair_bytes)
+
+            meta = {
+                "residual_int8_scale": 64.0,
+                "hidden_dim": renderer_cfg.hidden_dim,
+                "num_hidden_layers": renderer_cfg.num_hidden_layers,
+                "best_val_lagrangian": best_val_lag if math.isfinite(best_val_lag) else None,
+                "best_epoch": best_epoch,
+                "lane_id": LANE_ID_PHASE_2,
+            }
+            ema_state_torch = {k: v for k, v in ema_state_loaded.items()}
+            bin_bytes = pack_archive(
+                book,
+                ema_state_torch,
+                bytes(residual_payload),
+                meta,
+                num_pairs=n_pairs,
+                output_height=renderer_cfg.output_height,
+                output_width=renderer_cfg.output_width,
+                per_pair_bytes=args.per_pair_bytes,
+            )
+            (output_dir / "0.bin").write_bytes(bin_bytes)
+            payload_0bin_bytes = len(bin_bytes)
+            payload_0bin_sha = _sha256_bytes(bin_bytes)
+            print(
+                f"[full] wrote 0.bin ({payload_0bin_bytes} B; sha={payload_0bin_sha[:12]})"
+            )
+
+            submission_dir = output_dir / "submission"
+            _write_runtime(submission_dir)
+            (submission_dir / "0.bin").write_bytes(bin_bytes)
+            _build_archive_zip(
+                archive_zip_path, bin_bytes=bin_bytes
+            )
+            archive_bytes = archive_zip_path.stat().st_size
+            archive_sha = _sha256_bytes(archive_zip_path.read_bytes())
+            _stage(f"archive_built_bytes_{archive_bytes}")
+
+        # 12. CUDA auth eval (when not opted out)
+        contest_cuda_score: float | None = None
+        auth_eval_path: Path | None = None
+        if (
+            not args.skip_auth_eval
+            and archive_zip_path.is_file()
+            and CONTEST_AUTH_EVAL_SCRIPT.is_file()
+        ):
+            print("[full] launching CUDA auth eval")
+            auth_eval_path = output_dir / "contest_auth_eval_cuda.json"
+            cmd = [
+                sys.executable,
+                str(CONTEST_AUTH_EVAL_SCRIPT),
+                "--archive",
+                str(archive_zip_path),
+                "--inflate-sh",
+                str(output_dir / "submission" / "inflate.sh"),
+                "--upstream-dir",
+                str(upstream_dir),
+                "--device",
+                "cuda",
+                "--json-out",
+                str(auth_eval_path),
+            ]
+            try:
+                proc = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=3600, check=False
+                )
+                if proc.returncode == 0:
+                    try:
+                        claim, _ae = require_contest_cuda_auth_eval_claim(
+                            auth_eval_path,
+                            archive_sha256=archive_sha,
+                            substrate_tag="pretrained_driving_prior",
+                        )
+                        contest_cuda_score = claim.score
+                        print(
+                            f"[full] [contest-CUDA] = {contest_cuda_score} "
+                            f"(archive_sha={archive_sha[:12]})"
+                        )
+                    except Exception as exc:
+                        raise RuntimeError(
+                            f"could not validate DP1 contest-CUDA auth eval: {exc}"
+                        ) from exc
+                else:
+                    print(
+                        f"[full] auth eval rc={proc.returncode}; "
+                        f"stderr={proc.stderr[-1500:]}",
+                        file=sys.stderr,
+                    )
+            except subprocess.TimeoutExpired as exc:
+                print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
+                raise RuntimeError(
+                    "CUDA auth eval timed out; refusing DP1 contest-CUDA claim"
+                ) from exc
+            _stage("auth_eval_cuda_done")
+
+        # 13. Continual-learning posterior anchor (Catalog #128 atomic-locked)
+        if contest_cuda_score is not None and archive_sha:
+            try:
+                from tac.continual_learning import (
+                    ContestResult,
+                    posterior_update_locked,
+                )
+
+                detected_substrate = _canon_detect_hardware_substrate(
+                    axis="cuda",
+                    substrate_tag="pretrained_driving_prior",
+                    provenance_path=output_dir / "provenance.json",
+                    env_var_candidates=("DPP_GPU", "MODAL_GPU"),
+                )
+                result = ContestResult(
+                    axis="cuda",
+                    hardware_substrate=detected_substrate,
+                    architecture_class=LANE_ID_PHASE_2,
+                    score_value=contest_cuda_score,
+                    evidence_tag="[contest-CUDA]",
+                    archive_sha256=archive_sha,
+                    archive_bytes=archive_bytes,
+                    notes=(
+                        f"DP1 phase 2 first-anchor; epochs={args.epochs}; "
+                        f"dataset={args.dataset_name}"
+                    ),
+                    observed_at_utc=_utc_now_iso(),
+                )
+                update = posterior_update_locked(result)
+                print(
+                    f"[full] posterior_update accepted={update.accepted} "
+                    f"reason={update.reason!r}"
+                )
+            except Exception as exc:
+                print(
+                    f"[full] posterior_update_locked failed: {exc}",
+                    file=sys.stderr,
+                )
+
+        # 14. Cost-band anchor (best-effort; never fail the run on this).
+        cost_band_anchor_appended = False
+        cost_band_anchor_skip_reason: str | None = None
+        actual_cost_usd: float | None = None
+        try:
+            from tac.cost_band_calibration import parse_actual_cost_usd
+
+            actual_cost_usd = parse_actual_cost_usd(
+                os.environ.get("DPP_ACTUAL_COST_USD"),
+                field_name="DPP_ACTUAL_COST_USD",
+            )
+        except ValueError as exc:
+            cost_band_anchor_skip_reason = f"invalid_DPP_ACTUAL_COST_USD:{exc}"
+        if (
+            COST_BAND_TOOL.is_file()
+            and train_elapsed_sec > 0
+            and actual_cost_usd is not None
+        ):
+            try:
+                proc = subprocess.run(
+                    [
+                        sys.executable,
+                        str(COST_BAND_TOOL),
+                        "--dispatch-label",
+                        f"pretrained_driving_prior_{_utc_now_iso()}",
+                        "--trainer",
+                        "experiments/train_substrate_pretrained_driving_prior.py",
+                        "--platform",
+                        os.environ.get("DPP_PLATFORM", "modal"),
+                        "--gpu",
+                        os.environ.get("DPP_GPU", "tesla_t4"),
+                        "--epochs",
+                        str(args.epochs),
+                        "--batch-size",
+                        str(args.batch_size),
+                        "--actual-wall-clock-sec",
+                        str(train_elapsed_sec),
+                        "--actual-cost-usd",
+                        str(actual_cost_usd),
+                        "--notes",
+                        "DP1 Phase 2 first-anchor",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    check=False,
+                )
+                if proc.returncode == 0:
+                    cost_band_anchor_appended = True
+                else:
+                    cost_band_anchor_skip_reason = (
+                        f"append_failed_rc_{proc.returncode}:"
+                        f"{(proc.stderr or proc.stdout)[-300:]}"
+                    )
+            except Exception as exc:
+                cost_band_anchor_skip_reason = f"append_failed:{exc}"
+        else:
+            if actual_cost_usd is None and cost_band_anchor_skip_reason is None:
+                cost_band_anchor_skip_reason = "missing_DPP_ACTUAL_COST_USD"
+            elif not COST_BAND_TOOL.is_file():
+                cost_band_anchor_skip_reason = "cost_band_tool_missing"
+            else:
+                cost_band_anchor_skip_reason = "nonpositive_train_elapsed_sec"
+
+        # 15. Provenance manifest
+        codebook_bytes = serialize_codebook(book)
+        codebook_path_out = output_dir / "codebook.bin"
+        codebook_path_out.write_bytes(codebook_bytes)
+        manifest = build_readiness_manifest(
+            archive_path=str(archive_zip_path),
+            codebook_path=str(codebook_path_out),
+            archive_bytes=int(archive_bytes),
+            codebook_bytes=int(len(codebook_bytes)),
+        )
+        manifest["archive_sha256"] = archive_sha
+        manifest["payload_0bin_sha256"] = payload_0bin_sha
+        manifest["payload_0bin_bytes"] = payload_0bin_bytes
+        manifest["contest_cuda_score"] = contest_cuda_score
+        manifest["cost_band_anchor_appended"] = cost_band_anchor_appended
+        manifest["cost_band_anchor_skip_reason"] = cost_band_anchor_skip_reason
+        manifest["train_elapsed_sec"] = float(train_elapsed_sec)
+        manifest["lane_id"] = LANE_ID_PHASE_2
+        if contest_cuda_score is not None:
+            manifest["evidence_grade"] = "[contest-CUDA]"
+            manifest["score_claim"] = True
+            manifest["score_claim_valid"] = True
+            manifest["ready_for_exact_eval_dispatch"] = False
+            manifest["promotion_eligible"] = False
+            manifest["dispatch_blockers"] = ["contest_cpu_eval_not_run_on_linux_x86_64"]
+
+        provenance = {
+            "schema": "dpp_phase_2_provenance_v1",
+            "generated_at": _utc_now_iso(),
+            "git_head": _git_head_sha(),
+            "trainer": "experiments/train_substrate_pretrained_driving_prior.py",
+            "lane_id": LANE_ID_PHASE_2,
+            "args": {
+                k: (str(v) if isinstance(v, Path) else v)
+                for k, v in vars(args).items()
+            },
+            "pytorch_version": _torch_version_string(),
+            "device": str(device),
+            "n_pairs_decoded": n_pairs,
+            "n_train_pairs": int(train_indices.shape[0]),
+            "n_val_pairs": int(val_indices.shape[0]),
+            "best_val_lagrangian": (
+                best_val_lag if math.isfinite(best_val_lag) else None
+            ),
+            "best_epoch": int(best_epoch),
+            "train_elapsed_sec": float(train_elapsed_sec),
+            "archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "payload_0bin_sha256": payload_0bin_sha,
+            "payload_0bin_bytes": payload_0bin_bytes,
+            "auth_eval_cuda_score": contest_cuda_score,
+            "auth_eval_json_path": str(auth_eval_path) if auth_eval_path else None,
+            "cost_band_anchor_appended": cost_band_anchor_appended,
+            "cost_band_anchor_skip_reason": cost_band_anchor_skip_reason,
+            "stage_log": stage_log,
+            "score_claim": contest_cuda_score is not None,
+            "score_axis_tag": (
+                "[contest-CUDA]" if contest_cuda_score is not None else None
+            ),
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "custody_status": "ci-rebuildable",
+            "codebook_provenance": book.metadata,
+        }
+        (output_dir / "provenance.json").write_text(
+            json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        (output_dir / "manifest.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        print(f"[full] wrote {output_dir / 'provenance.json'}")
+        return 0
+
+    finally:
+        unpatch_upstream_yuv6(yuv6_token)
+
+
+def _write_runtime(submission_dir: Path) -> None:
+    """Emit Catalog #146-compliant inflate.sh + inflate.py runtime tree.
+
+    Vendors the canonical shared inflate runtime + the DP1 substrate
+    package (codebook / archive / inflate / architecture) into the
+    submission directory so :func:`inflate_one_video` can reload the
+    archive bytes deterministically on a clean GPU host.
+    """
+    from tac.substrates._shared.trainer_skeleton import (
+        vendor_shared_inflate_runtime,
+    )
+
+    submission_dir.mkdir(parents=True, exist_ok=True)
+    runtime_pkg = (
+        submission_dir
+        / "src"
+        / "tac"
+        / "substrates"
+        / "pretrained_driving_prior"
+    )
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+        runtime_pkg / "__init__.py",
+    ):
+        pkg_init.write_text("", encoding="utf-8")
+    substrate_src = (
+        REPO_ROOT / "src" / "tac" / "substrates" / "pretrained_driving_prior"
+    )
+    for name in ("architecture.py", "archive.py", "codebook.py", "inflate.py"):
+        shutil.copy2(substrate_src / name, runtime_pkg / name)
+    vendor_shared_inflate_runtime(submission_dir, repo_root=REPO_ROOT)
+
+    inflate_sh = (
+        "#!/usr/bin/env bash\n"
+        "# pretrained_driving_prior contest-compliant inflate (DP1; Phase 2)\n"
+        "# Catalog #146 contract: $1=archive_dir $2=output_dir $3=file_list\n"
+        "set -euo pipefail\n"
+        'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
+        'DATA_DIR="$1"\n'
+        'OUTPUT_DIR="$2"\n'
+        'FILE_LIST="$3"\n'
+        'mkdir -p "$OUTPUT_DIR"\n'
+        'exec "${PYTHON:-python3}" "$HERE/inflate.py" '
+        '"$DATA_DIR" "$OUTPUT_DIR" "$FILE_LIST"\n'
+    )
+    (submission_dir / "inflate.sh").write_text(inflate_sh, encoding="utf-8")
+    (submission_dir / "inflate.sh").chmod(0o755)
+
+    inflate_py = (
+        "#!/usr/bin/env python\n"
+        '"""DP1 contest-compliant inflate runtime."""\n'
+        "import sys\n"
+        "from pathlib import Path\n"
+        "\n"
+        "HERE = Path(__file__).resolve().parent\n"
+        "sys.path.insert(0, str(HERE / 'src'))\n"
+        "from tac.substrates.pretrained_driving_prior.inflate import (\n"
+        "    inflate_one_video,\n"
+        ")\n"
+        "from tac.substrates._shared.inflate_runtime import (\n"
+        "    raw_output_path,\n"
+        "    select_inflate_device,\n"
+        ")\n"
+        "\n"
+        "def main() -> int:\n"
+        "    if len(sys.argv) != 4:\n"
+        "        print('usage: inflate.py <archive_dir> <output_dir> <file_list>',\n"
+        "              file=sys.stderr)\n"
+        "        return 2\n"
+        "    archive_dir = Path(sys.argv[1])\n"
+        "    output_dir = Path(sys.argv[2])\n"
+        "    file_list_path = Path(sys.argv[3])\n"
+        "    src_path = archive_dir / '0.bin'\n"
+        "    if not src_path.is_file():\n"
+        "        src_path = archive_dir / 'x'\n"
+        "    archive_bytes = src_path.read_bytes()\n"
+        "    device = select_inflate_device()\n"
+        "    for line in file_list_path.read_text(encoding='utf-8').splitlines():\n"
+        "        line = line.strip()\n"
+        "        if not line:\n"
+        "            continue\n"
+        "        inflate_one_video(\n"
+        "            archive_bytes,\n"
+        "            raw_output_path(output_dir, line),\n"
+        "            device=device,\n"
+        "        )\n"
+        "    return 0\n"
+        "\n"
+        "if __name__ == '__main__':\n"
+        "    sys.exit(main())\n"
+    )
+    (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
+
+
+def _build_archive_zip(archive_zip_path: Path, *, bin_bytes: bytes) -> None:
+    """Catalog #19 deterministic zip: ZipInfo + writestr + fixed timestamp."""
+    archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
+    fixed_ts = (2026, 1, 1, 0, 0, 0)
+    with zipfile.ZipFile(archive_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
+        zi.compress_type = zipfile.ZIP_DEFLATED
+        zf.writestr(zi, bin_bytes)
 
 
 def main() -> int:
     parser = build_argparser()
     args = parser.parse_args()
+    _validate_full_cpu_flags(args)
     _maybe_set_tf32(args.enable_tf32)
     if args.smoke:
         return _smoke_main(args)
