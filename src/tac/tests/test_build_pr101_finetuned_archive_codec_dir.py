@@ -195,8 +195,10 @@ def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:
     assert "result.get(\"stdout_tail\", \"\") or \"\"" in text
     assert "append_modal_training_cost_anchor" in text
     assert "append_modal_training_terminal_claim" in text
+    assert "_append_terminal_claim_evidence" in text
     assert '"cost_band_anchor": cost_anchor' in text
     assert '"terminal_claim": terminal_claim' in text
+    assert '"terminal_evidence": terminal_evidence' in text
     assert "failed_modal_training_function_timeout" in text
     assert "_safe_harvest_artifact_path" in text
 
@@ -243,6 +245,41 @@ def test_harvest_modal_calls_rejects_unsafe_artifact_paths(tmp_path: Path) -> No
     for unsafe in ("../escape.json", "/tmp/escape.json", "nested/../../escape.json"):
         with pytest.raises(mod.UnsafeModalArtifactPath):
             mod._safe_harvest_artifact_path(root, unsafe)
+
+
+def test_harvest_modal_calls_appends_terminal_claim_evidence_once(tmp_path: Path) -> None:
+    mod = _load_harvest_module()
+    repo = tmp_path
+    out_dir = repo / "experiments" / "results" / "lane_demo_modal"
+    out_dir.mkdir(parents=True)
+    claim = {
+        "lane_id": "lane_demo",
+        "instance_job_id": "job_demo",
+        "status": "failed_modal_training_rc_1",
+    }
+
+    first = mod._append_terminal_claim_evidence(
+        repo_root=repo,
+        out_dir=out_dir,
+        terminal_claim=claim,
+    )
+    second = mod._append_terminal_claim_evidence(
+        repo_root=repo,
+        out_dir=out_dir,
+        terminal_claim=claim,
+    )
+
+    evidence = repo / "reports" / "cathedral_autopilot_evidence.jsonl"
+    lines = evidence.read_text(encoding="utf-8").splitlines()
+    assert first["appended"] is True
+    assert second["already_covered"] is True
+    assert len(lines) == 1
+    row = json.loads(lines[0])
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["covered_terminal_claims"] == [claim]
 
 
 def test_harvest_modal_calls_repolls_generated_nonterminal_summary_only(

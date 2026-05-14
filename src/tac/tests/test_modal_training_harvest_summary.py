@@ -24,6 +24,7 @@ def test_already_harvested_summary_preserves_result_signal() -> None:
         },
         cost_anchor={"appended": True, "score_claim": False},
         terminal_claim={"appended": True, "status": "failed_modal_training_rc_1"},
+        terminal_evidence={"appended": True, "already_covered": False},
     )
 
     assert row == {
@@ -40,6 +41,7 @@ def test_already_harvested_summary_preserves_result_signal() -> None:
             "appended": True,
             "status": "failed_modal_training_rc_1",
         },
+        "terminal_evidence": {"appended": True, "already_covered": False},
     }
 
 

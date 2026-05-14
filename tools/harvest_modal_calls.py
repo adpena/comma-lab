@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 
 DEFAULT_REPO = repo_root_from_tool(__file__)
 GENERATED_HARVEST_FILENAMES = frozenset({"_harvest_summary.json", "_stdout_tail.txt"})
+CATHEDRAL_EVIDENCE_REL = Path("reports") / "cathedral_autopilot_evidence.jsonl"
 
 
 class UnsafeModalArtifactPath(ValueError):
@@ -136,6 +138,105 @@ def _already_harvested(out_dir: Path, artifacts_dir: Path) -> bool:
         return True
     summary = _read_json(artifacts_dir / "_harvest_summary.json")
     return _terminal_harvest_summary(summary)
+
+
+def _covered_terminal_claims(evidence_path: Path) -> set[tuple[str, str, str]]:
+    covered: set[tuple[str, str, str]] = set()
+    if not evidence_path.is_file():
+        return covered
+    for line in evidence_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        claims = payload.get("covered_terminal_claims")
+        if not isinstance(claims, list):
+            continue
+        for claim in claims:
+            if not isinstance(claim, dict):
+                continue
+            lane_id = str(claim.get("lane_id") or "")
+            job_id = str(claim.get("instance_job_id") or "")
+            status = str(claim.get("status") or "")
+            if lane_id and job_id and status:
+                covered.add((lane_id, job_id, status))
+    return covered
+
+
+def _append_terminal_claim_evidence(
+    *,
+    repo_root: Path,
+    out_dir: Path,
+    terminal_claim: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Append no-score cathedral evidence for a recovered terminal claim."""
+
+    if not isinstance(terminal_claim, dict):
+        return {"appended": False, "reason": "missing_terminal_claim"}
+    lane_id = str(terminal_claim.get("lane_id") or "")
+    job_id = str(terminal_claim.get("instance_job_id") or "")
+    status = str(terminal_claim.get("status") or "")
+    if not lane_id or not job_id or not status:
+        return {"appended": False, "reason": "incomplete_terminal_claim"}
+
+    evidence_path = repo_root / CATHEDRAL_EVIDENCE_REL
+    claim_key = (lane_id, job_id, status)
+    if claim_key in _covered_terminal_claims(evidence_path):
+        return {
+            "appended": False,
+            "already_covered": True,
+            "lane_id": lane_id,
+            "instance_job_id": job_id,
+            "status": status,
+        }
+
+    row = {
+        "schema": "cathedral_autopilot_terminal_claim_evidence_v1",
+        "recorded_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "evidence_grade": "[infrastructure terminal dispatch coverage]",
+        "evidence_marker": "[infrastructure terminal dispatch coverage]",
+        "evidence_semantics": "terminal_modal_training_harvest_no_signal_loss",
+        "covered_terminal_claim_count": 1,
+        "covered_terminal_claims": [
+            {
+                "lane_id": lane_id,
+                "instance_job_id": job_id,
+                "status": status,
+            }
+        ],
+        "dispatch_attempted": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "proxy_row": True,
+        "family_falsified": False,
+        "method_family_retired": False,
+        "contest_dispatch_verdict": "no_signal_loss_terminal_claim_coverage",
+        "measured_config_status": "terminal_dispatch_claim_preserved_no_score",
+        "dispatch_blockers": [
+            "terminal_training_harvest_has_no_score_authority",
+            "exact_result_review_required_before_promotion_or_rank_kill",
+        ],
+        "reactivation_criteria": [
+            "classify any archive/auth-eval artifacts through an exact result-review packet",
+            "do not infer model success or failure from terminal training infrastructure rows",
+        ],
+        "source": str(out_dir / "modal_training_terminal_claim.json"),
+    }
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    with evidence_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True) + "\n")
+    return {
+        "appended": True,
+        "evidence_path": str(evidence_path),
+        "lane_id": lane_id,
+        "instance_job_id": job_id,
+        "status": status,
+    }
 
 
 def list_modal_lanes(*, repo_root: Path) -> list[dict[str, Any]]:
@@ -285,6 +386,11 @@ def harvest_modal_calls(
                             f"{type(exc).__name__}:{exc}"
                         ),
                     }
+            terminal_evidence = _append_terminal_claim_evidence(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                terminal_claim=terminal_claim,
+            )
             summary.append(
                 modal_training_summary_entry(
                     label=label,
@@ -293,6 +399,7 @@ def harvest_modal_calls(
                     harvested=harvested,
                     cost_anchor=cost_anchor,
                     terminal_claim=terminal_claim,
+                    terminal_evidence=terminal_evidence,
                 )
             )
             continue
@@ -349,6 +456,11 @@ def harvest_modal_calls(
                 result=result,
                 agent="codex:harvest_modal_calls",
             )
+            terminal_evidence = _append_terminal_claim_evidence(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                terminal_claim=terminal_claim,
+            )
             harvest_summary = {
                 "rc": rc,
                 "elapsed_seconds": elapsed,
@@ -357,6 +469,7 @@ def harvest_modal_calls(
                 "crash_kind": crash_kind,
                 "cost_band_anchor": cost_anchor,
                 "terminal_claim": terminal_claim,
+                "terminal_evidence": terminal_evidence,
             }
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(harvest_summary, indent=2, default=str),
@@ -374,6 +487,7 @@ def harvest_modal_calls(
                     "crash_kind": crash_kind,
                     "cost_band_anchor": cost_anchor,
                     "terminal_claim": terminal_claim,
+                    "terminal_evidence": terminal_evidence,
                 }
             )
 
@@ -387,12 +501,18 @@ def harvest_modal_calls(
                 status="failed_modal_training_result_cache_expired",
                 agent="codex:harvest_modal_calls",
             )
+            terminal_evidence = _append_terminal_claim_evidence(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                terminal_claim=terminal_claim,
+            )
             artifacts_dir.mkdir(exist_ok=True)
             expired_summary = {
                 "status": "expired",
                 "crash_kind": "RESULT_CACHE_EXPIRED",
                 "n_artifacts": 0,
                 "terminal_claim": terminal_claim,
+                "terminal_evidence": terminal_evidence,
             }
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(expired_summary, indent=2, default=str),
@@ -405,6 +525,7 @@ def harvest_modal_calls(
                     call_id=call_id,
                     harvested=expired_summary,
                     terminal_claim=terminal_claim,
+                    terminal_evidence=terminal_evidence,
                 )
             )
         except modal.exception.FunctionTimeoutError as exc:
@@ -417,6 +538,11 @@ def harvest_modal_calls(
                 status="failed_modal_training_function_timeout",
                 agent="codex:harvest_modal_calls",
             )
+            terminal_evidence = _append_terminal_claim_evidence(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                terminal_claim=terminal_claim,
+            )
             artifacts_dir.mkdir(exist_ok=True)
             timeout_summary = {
                 "status": "function_timeout",
@@ -425,6 +551,7 @@ def harvest_modal_calls(
                 "crash_kind": "FUNCTION_TIMEOUT",
                 "n_artifacts": 0,
                 "terminal_claim": terminal_claim,
+                "terminal_evidence": terminal_evidence,
             }
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(timeout_summary, indent=2, default=str),
@@ -437,6 +564,7 @@ def harvest_modal_calls(
                     call_id=call_id,
                     harvested=timeout_summary,
                     terminal_claim=terminal_claim,
+                    terminal_evidence=terminal_evidence,
                 )
             )
         except UnsafeModalArtifactPath as exc:
@@ -449,6 +577,11 @@ def harvest_modal_calls(
                 status="failed_modal_training_unsafe_artifact_path",
                 agent="codex:harvest_modal_calls",
             )
+            terminal_evidence = _append_terminal_claim_evidence(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                terminal_claim=terminal_claim,
+            )
             artifacts_dir.mkdir(exist_ok=True)
             unsafe_summary = {
                 "status": "unsafe_artifact_path",
@@ -457,6 +590,7 @@ def harvest_modal_calls(
                 "crash_kind": "UNSAFE_ARTIFACT_PATH",
                 "n_artifacts": 0,
                 "terminal_claim": terminal_claim,
+                "terminal_evidence": terminal_evidence,
             }
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(unsafe_summary, indent=2, default=str),
@@ -469,6 +603,7 @@ def harvest_modal_calls(
                     call_id=call_id,
                     harvested=unsafe_summary,
                     terminal_claim=terminal_claim,
+                    terminal_evidence=terminal_evidence,
                 )
             )
         except TimeoutError:
@@ -485,6 +620,11 @@ def harvest_modal_calls(
                 status=status,
                 agent="codex:harvest_modal_calls",
             )
+            terminal_evidence = _append_terminal_claim_evidence(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                terminal_claim=terminal_claim,
+            )
             artifacts_dir.mkdir(exist_ok=True)
             error_summary = {
                 "status": f"error_{type(exc).__name__}",
@@ -493,6 +633,7 @@ def harvest_modal_calls(
                 "crash_kind": f"ERROR_{type(exc).__name__}",
                 "n_artifacts": 0,
                 "terminal_claim": terminal_claim,
+                "terminal_evidence": terminal_evidence,
             }
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(error_summary, indent=2, default=str),
@@ -505,6 +646,7 @@ def harvest_modal_calls(
                     call_id=call_id,
                     harvested=error_summary,
                     terminal_claim=terminal_claim,
+                    terminal_evidence=terminal_evidence,
                 )
             )
 

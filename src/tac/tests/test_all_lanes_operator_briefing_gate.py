@@ -219,6 +219,53 @@ def test_operator_briefing_dispatch_gate_rejects_terminal_packet_commands() -> N
     assert "exact_eval_packets:terminal_packet:terminal_evidence_commands_not_suppressed" in failures
 
 
+def test_operator_briefing_xray_gate_requires_visible_false_authority_tools() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "xray_tools": [
+            {
+                "tool": tool,
+                "tool_exists": True,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_blockers": ["diagnostic_tool_no_score_or_dispatch_authority"],
+            }
+            for tool in sorted(module._EXPECTED_XRAY_TOOLS)
+        ]
+    }
+
+    assert module._operator_briefing_xray_failures(payload) == []
+
+
+def test_operator_briefing_xray_gate_rejects_missing_and_authoritative_rows() -> None:
+    module = _load_all_lanes_module()
+    first_tool = sorted(module._EXPECTED_XRAY_TOOLS)[0]
+    payload = {
+        "xray_tools": [
+            {
+                "tool": first_tool,
+                "tool_exists": False,
+                "score_claim": True,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_blockers": [],
+            }
+        ]
+    }
+
+    failures = module._operator_briefing_xray_failures(payload)
+
+    assert f"xray_tools:{first_tool}:tool_exists_not_true" in failures
+    assert f"xray_tools:{first_tool}:score_claim_not_false" in failures
+    assert f"xray_tools:{first_tool}:missing_dispatch_blocker" in failures
+    assert any(failure.startswith("xray_tools_missing_expected:") for failure in failures)
+
+
 def test_terminal_substrate_claims_missing_evidence_detects_pr95plus_gap() -> None:
     module = _load_all_lanes_module()
     rows = [
@@ -291,6 +338,24 @@ def test_terminal_substrate_claims_missing_evidence_detects_refused_dispatch() -
 
     assert missing
     assert "refused_dispatch_operator_authorize_yN_gate_not_bypassable_from_subprocess" in missing[0]
+
+
+def test_terminal_substrate_claims_missing_evidence_detects_non_modal_substrate_gap() -> None:
+    module = _load_all_lanes_module()
+    rows = [
+        {
+            "timestamp_utc": "2026-05-13T20:59:07Z",
+            "platform": "lightning",
+            "lane_id": "lane_substrate_boundary_atoms_20260513",
+            "instance_job_id": "substrate_boundary_atoms_lightning_job",
+            "status": "failed_lightning_runtime_deps",
+        }
+    ]
+
+    missing = module._terminal_substrate_claims_missing_evidence(rows, set())
+
+    assert missing
+    assert "platform" not in missing[0]
 
 
 def test_terminal_substrate_claims_ignores_nonterminal_smoke_dispatched() -> None:

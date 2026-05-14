@@ -38,6 +38,7 @@ def modal_training_summary_entry(
     harvested: Mapping[str, Any] | None = None,
     cost_anchor: Mapping[str, Any] | None = None,
     terminal_claim: Mapping[str, Any] | None = None,
+    terminal_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one aggregate Modal training harvest row without signal loss."""
 
@@ -52,6 +53,8 @@ def modal_training_summary_entry(
         row["cost_band_anchor"] = dict(cost_anchor)
     if terminal_claim is not None:
         row["terminal_claim"] = dict(terminal_claim)
+    if terminal_evidence is not None:
+        row["terminal_evidence"] = dict(terminal_evidence)
     return row
 
 

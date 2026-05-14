@@ -192,7 +192,7 @@ from tac.geometry_feedback_readiness import (  # noqa: E402
     GEOMETRY_FEEDBACK_ROADMAP_KEYS,
     geometry_feedback_contract_failures,
 )
-from tac.deploy.claims import TERMINAL_PREFIXES as DISPATCH_CLAIM_TERMINAL_PREFIXES  # noqa: E402
+from tac.deploy.claims import is_terminal_status as is_dispatch_claim_terminal_status  # noqa: E402
 from tac.repo_io import json_text, sha256_bytes  # noqa: E402
 from tac.source_index import SourceIndex  # noqa: E402
 
@@ -590,6 +590,17 @@ def _run_active_dispatch_claims_gate() -> tuple[bool, str]:
 
 
 _OPERATOR_PLACEHOLDER_RE = re.compile(r"<[^>\n]+>")
+_EXPECTED_XRAY_TOOLS = frozenset(
+    {
+        "tools/xray_archive_section_entropy_heatmap.py",
+        "tools/xray_per_pr_archive_layout_compare.py",
+        "tools/xray_per_tensor_saliency_heatmap.py",
+        "tools/xray_inflate_op_cost_profiler.py",
+        "tools/xray_cpu_cuda_drift_per_arch_class.py",
+        "tools/xray_substrate_classifier.py",
+        "tools/xray_per_frame_difficulty_profile.py",
+    }
+)
 
 
 def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str]:
@@ -776,6 +787,46 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
     return failures
 
 
+def _operator_briefing_xray_failures(payload: dict[str, object]) -> list[str]:
+    failures: list[str] = []
+    rows = payload.get("xray_tools")
+    if not isinstance(rows, list):
+        return ["xray_tools_missing_or_not_list"]
+
+    observed: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            failures.append("xray_tools_contains_non_object_row")
+            continue
+        tool = str(row.get("tool") or "")
+        observed.add(tool)
+        if row.get("tool_exists") is not True:
+            failures.append(f"xray_tools:{tool or '<missing>'}:tool_exists_not_true")
+        for flag in (
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "rank_or_kill_eligible",
+            "ready_for_exact_eval_dispatch",
+        ):
+            if row.get(flag) is not False:
+                failures.append(f"xray_tools:{tool or '<missing>'}:{flag}_not_false")
+        blockers = row.get("dispatch_blockers")
+        if (
+            not isinstance(blockers, list)
+            or "diagnostic_tool_no_score_or_dispatch_authority" not in blockers
+        ):
+            failures.append(f"xray_tools:{tool or '<missing>'}:missing_dispatch_blocker")
+
+    missing = sorted(_EXPECTED_XRAY_TOOLS - observed)
+    extra = sorted(observed - _EXPECTED_XRAY_TOOLS)
+    if missing:
+        failures.append(f"xray_tools_missing_expected:{missing}")
+    if extra:
+        failures.append(f"xray_tools_unexpected:{extra}")
+    return failures
+
+
 _CLAIM_TABLE_KEYS = (
     "timestamp_utc",
     "agent",
@@ -830,11 +881,8 @@ def _terminal_claim_coverage_from_jsonl(evidence_path: Path) -> set[tuple[str, s
     return coverage
 
 
-_TERMINAL_DISPATCH_STATUS_PREFIXES = tuple(DISPATCH_CLAIM_TERMINAL_PREFIXES)
-
-
 def _is_terminal_dispatch_status(status: str) -> bool:
-    return any(status.startswith(prefix) for prefix in _TERMINAL_DISPATCH_STATUS_PREFIXES)
+    return is_dispatch_claim_terminal_status(status)
 
 
 def _terminal_substrate_claims_missing_evidence(
@@ -846,13 +894,10 @@ def _terminal_substrate_claims_missing_evidence(
     missing: list[str] = []
     for row in claim_rows:
         timestamp = row.get("timestamp_utc", "")
-        platform = row.get("platform", "")
         status = row.get("status", "")
         lane_id = row.get("lane_id", "")
         job_id = row.get("instance_job_id", "")
         if timestamp < earliest_timestamp_utc:
-            continue
-        if platform != "modal":
             continue
         if not _is_terminal_dispatch_status(status):
             continue
@@ -970,6 +1015,7 @@ def _run_operator_briefing_dispatch_gate() -> tuple[bool, str]:
     except json.JSONDecodeError as exc:
         return False, f"operator briefing emitted invalid JSON: {exc}: {output[:500]}"
     failures = _operator_briefing_dispatch_failures(payload)
+    failures.extend(_operator_briefing_xray_failures(payload))
     if failures:
         return False, "operator briefing dispatch routing failed: " + "; ".join(failures)
     counts = {
