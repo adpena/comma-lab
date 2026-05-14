@@ -508,7 +508,7 @@ def main(argv: list[str] | None = None) -> int:
         except subprocess.TimeoutExpired as exc:
             parity_dir = _repo_path(args.parity_dir)
             if not args.keep_local_inflate_outputs and parity_dir.exists():
-                shutil.rmtree(parity_dir)
+                shutil.rmtree(parity_dir)  # RMTREE_UNGUARDED_OK:cleanup of parity dir created by run_local_inflate_parity earlier in this try block; not a user-controlled --force destructive operation
             removed_packet_runtime_artifacts = _remove_excluded_paths(_repo_path(args.packet_dir))
             parity = {
                 "attempted": True,
