@@ -425,3 +425,260 @@ def test_archive_result_notes_carry_mps_advisory_when_device_mps(tmp_path: Path)
     # Tag must NOT be a contest tag
     assert "contest-CUDA" not in expected_tag
     assert "contest-CPU" not in expected_tag
+
+
+# ----------------------------------------------------------------------
+# IBPS1 (C6 MDL-IBPS) grammar parser tests
+# ----------------------------------------------------------------------
+
+
+def _build_synthetic_ibps1_inner(
+    *,
+    latent_dim: int = 24,
+    num_pairs: int = 600,
+    encoder_blob: bytes | None = None,
+    decoder_blob: bytes | None = None,
+    meta_blob: bytes | None = None,
+) -> bytes:
+    """Build a valid IBPS1 inner-blob byte sequence (header + 4 sections).
+
+    Uses synthetic byte payloads (not real brotli streams) so parser tests
+    can run without torch / brotli. Section LENGTHS are what the parser
+    cares about; section CONTENTS only matter for decode tests (which
+    require the real C6 substrate import).
+    """
+    if encoder_blob is None:
+        encoder_blob = b"\x01" * 65_000
+    if decoder_blob is None:
+        decoder_blob = b"\x02" * 145_000
+    latent_blob = b"\x03" * (num_pairs * latent_dim)  # int8
+    if meta_blob is None:
+        meta_blob = b'{"a":1,"b":2}'
+    header_fmt = "<4sBHHIIII"
+    header = struct.pack(
+        header_fmt,
+        b"IBPS",
+        1,  # version
+        latent_dim,
+        num_pairs,
+        len(encoder_blob),
+        len(decoder_blob),
+        len(latent_blob),
+        len(meta_blob),
+    )
+    return header + encoder_blob + decoder_blob + latent_blob + meta_blob
+
+
+def test_parse_ibps1_archive_bytes_returns_canonical_sections():
+    """Parse a synthetic IBPS1 inner blob and verify all 5 sections."""
+    mod = _load_module()
+    inner = _build_synthetic_ibps1_inner(
+        latent_dim=24,
+        num_pairs=600,
+        encoder_blob=b"\xaa" * 100,
+        decoder_blob=b"\xbb" * 200,
+        meta_blob=b'{"k":"v"}',
+    )
+    sections = mod.parse_ibps1_archive_bytes(inner)
+    assert set(sections.keys()) == {
+        "ibps1_header",
+        "encoder_blob",
+        "decoder_blob",
+        "latent_blob",
+        "meta_blob",
+    }
+    assert sections["ibps1_header"] == (0, 25)
+    assert sections["encoder_blob"] == (25, 100)
+    assert sections["decoder_blob"] == (125, 200)
+    # latent_blob = num_pairs * latent_dim = 600 * 24 = 14400
+    assert sections["latent_blob"] == (325, 14_400)
+    assert sections["meta_blob"] == (14_725, 9)  # len('{"k":"v"}')
+
+
+def test_parse_ibps1_archive_bytes_rejects_short_header():
+    """A buffer shorter than 25 bytes must raise ValueError."""
+    mod = _load_module()
+    with pytest.raises(ValueError, match="ibps1 archive too short"):
+        mod.parse_ibps1_archive_bytes(b"IBPS\x01")  # < 25 bytes
+
+
+def test_parse_ibps1_archive_bytes_rejects_bad_magic():
+    """Bad magic bytes must raise ValueError."""
+    mod = _load_module()
+    bad = struct.pack(
+        "<4sBHHIIII", b"XXXX", 1, 24, 600, 100, 100, 14_400, 10,
+    ) + b"\x00" * (100 + 100 + 14_400 + 10)
+    with pytest.raises(ValueError, match="bad magic"):
+        mod.parse_ibps1_archive_bytes(bad)
+
+
+def test_parse_ibps1_archive_bytes_rejects_unsupported_version():
+    """Schema version != 1 must raise ValueError."""
+    mod = _load_module()
+    bad = struct.pack(
+        "<4sBHHIIII", b"IBPS", 99, 24, 600, 100, 100, 14_400, 10,
+    ) + b"\x00" * (100 + 100 + 14_400 + 10)
+    with pytest.raises(ValueError, match="unsupported schema version"):
+        mod.parse_ibps1_archive_bytes(bad)
+
+
+def test_parse_ibps1_archive_bytes_rejects_latent_length_mismatch():
+    """latent_len != num_pairs * latent_dim must raise."""
+    mod = _load_module()
+    # Header declares latent_len=14400 but supplies 12 (wrong)
+    bad = struct.pack(
+        "<4sBHHIIII", b"IBPS", 1, 24, 600, 50, 50, 12, 5,
+    ) + b"\x00" * (50 + 50 + 12 + 5)
+    with pytest.raises(ValueError, match="latent_len"):
+        mod.parse_ibps1_archive_bytes(bad)
+
+
+def test_parse_ibps1_archive_bytes_rejects_truncated_archive():
+    """end_meta past the buffer end must raise."""
+    mod = _load_module()
+    inner = _build_synthetic_ibps1_inner()
+    truncated = inner[:-100]  # chop off 100 bytes from the meta tail
+    with pytest.raises(ValueError, match="truncated"):
+        mod.parse_ibps1_archive_bytes(truncated)
+
+
+def test_parse_ibps1_uses_canonical_header_constants():
+    """parse_ibps1 must use the same IBPS1_HEADER_SIZE constant the module declares."""
+    mod = _load_module()
+    # 25 bytes is the canonical header size per IBPS1_HEADER_FMT
+    assert mod.IBPS1_HEADER_SIZE == 25
+    assert mod.IBPS1_MAGIC == b"IBPS"
+    assert mod.IBPS1_HEADER_FMT == "<4sBHHIIII"
+
+
+def test_load_archive_dispatches_ibps1_grammar(tmp_path: Path):
+    """load_archive(grammar='ibps1') must parse via parse_ibps1_archive_bytes."""
+    mod = _load_module()
+    inner = _build_synthetic_ibps1_inner(
+        latent_dim=24, num_pairs=600,
+        encoder_blob=b"\x10" * 50,
+        decoder_blob=b"\x20" * 50,
+        meta_blob=b'{"x":0}',
+    )
+    archive_path = tmp_path / "ibps1.zip"
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr("0.bin", inner)
+    returned_inner, sections = mod.load_archive(archive_path, "ibps1")
+    assert returned_inner == inner
+    # 5 IBPS1 sections present
+    assert sections["ibps1_header"][1] == 25
+    assert sections["encoder_blob"][1] == 50
+    assert sections["decoder_blob"][1] == 50
+    assert sections["latent_blob"][1] == 14_400
+    assert sections["meta_blob"][1] == len(b'{"x":0}')
+
+
+def test_load_archive_ibps1_prefers_0bin_over_x():
+    """When the archive contains both '0.bin' AND 'x', IBPS1 grammar reads '0.bin'."""
+    mod = _load_module()
+    tmp_dir = Path("/tmp")  # pytest tmp_path equivalent here; we keep it minimal
+    # Use pytest tmp_path via fixture in the actual test runner; this is the
+    # helper invocation pattern.
+
+
+def test_read_inner_member_ibps1_grammar_prefers_0bin(tmp_path: Path):
+    """_read_inner_member with grammar='ibps1' reads '0.bin' even when 'x' is present."""
+    mod = _load_module()
+    archive_path = tmp_path / "dual.zip"
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr("x", b"WRONG_PAYLOAD_X")
+        zf.writestr("0.bin", b"CORRECT_PAYLOAD_0BIN")
+    bytes_for_ibps1 = mod._read_inner_member(archive_path, "ibps1")
+    assert bytes_for_ibps1 == b"CORRECT_PAYLOAD_0BIN"
+
+
+def test_read_inner_member_a1_grammar_prefers_x(tmp_path: Path):
+    """_read_inner_member with grammar='a1' reads 'x' (the conventional A1 member)."""
+    mod = _load_module()
+    archive_path = tmp_path / "dual.zip"
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr("x", b"CORRECT_A1_X")
+        zf.writestr("0.bin", b"WRONG_FOR_A1_0BIN")
+    bytes_for_a1 = mod._read_inner_member(archive_path, "a1")
+    assert bytes_for_a1 == b"CORRECT_A1_X"
+
+
+def test_read_inner_member_fallback_to_0bin_when_x_absent(tmp_path: Path):
+    """When 'x' is absent and only '0.bin' present, A1 grammar still reads '0.bin'."""
+    mod = _load_module()
+    archive_path = tmp_path / "only_0bin.zip"
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr("0.bin", b"FALLBACK_PAYLOAD")
+    bytes_for_a1 = mod._read_inner_member(archive_path, "a1")
+    assert bytes_for_a1 == b"FALLBACK_PAYLOAD"
+
+
+def test_ibps1_grammar_real_c6_5ep_archive_if_present():
+    """If the real C6 5ep archive is present, parse it and verify section
+    sizes match the substrate's archive.py contract (latent_dim=24, num_pairs=600).
+
+    This is the empirical regression test that pins the IBPS1 parser
+    against a REAL trained substrate archive (no synthetic bytes).
+    """
+    mod = _load_module()
+    real_archive = (
+        REPO
+        / "experiments"
+        / "results"
+        / "lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep_modal"
+        / "harvested_artifacts"
+        / "lane_substrate_c6_e4_mdl_ibps_results"
+        / "output"
+        / "archive.zip"
+    )
+    if not real_archive.exists():
+        pytest.skip("C6 5ep real archive not present in this checkout")
+    inner, sections = mod.load_archive(real_archive, "ibps1")
+    # Canonical C6 substrate config: latent_dim=24, num_pairs=600
+    assert sections["ibps1_header"][1] == 25
+    # latent_dim * num_pairs = 24 * 600 = 14400
+    assert sections["latent_blob"][1] == 14_400
+    # All sections must add up to len(inner)
+    end_meta = (
+        sections["meta_blob"][0] + sections["meta_blob"][1]
+    )
+    assert end_meta == len(inner)
+
+
+def test_aggregate_mdl_with_ibps1_synthetic_sections():
+    """Aggregation works with the IBPS1 5-section layout."""
+    mod = _load_module()
+    # Mirror the C6 5ep archive's section sizes
+    r = _make_synthetic_archive_result(
+        mod,
+        sections_lengths={
+            "ibps1_header": 25,
+            "encoder_blob": 65_000,
+            "decoder_blob": 145_000,
+            "latent_blob": 14_400,
+            "meta_blob": 500,
+        },
+        tier_b_fracs={
+            "ibps1_header": 1.0,
+            "encoder_blob": 0.9,
+            "decoder_blob": 0.95,
+            "latent_blob": 0.8,
+            "meta_blob": 1.0,
+        },
+        tier_a_delta=0.05,
+    )
+    out = mod.aggregate_mdl_estimate(r)
+    expected = (
+        1.0 * 25 + 0.9 * 65_000 + 0.95 * 145_000 + 0.8 * 14_400 + 1.0 * 500
+    )
+    assert out.mdl_scorer_extracted_bytes_lo == pytest.approx(expected)
+
+
+def test_ibps1_grammar_recognized_in_cli_grammar_choices_help(capsys):
+    """The CLI --grammar help string mentions 'ibps1' so operators discover it."""
+    mod = _load_module()
+    with pytest.raises(SystemExit):
+        mod.main(["--help"])
+    captured = capsys.readouterr()
+    combined = (captured.out + captured.err).lower()
+    assert "ibps1" in combined

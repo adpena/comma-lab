@@ -90,6 +90,22 @@ Usage:
         --seed 1234
 
 Multiple archives can be ablated in one run via repeated --archive flags.
+
+Supported grammars (parser dispatch + Tier A perturbation):
+
+- ``a1`` — PR101-microcodec A1 (decoder_section_header + decoder_blob +
+  latent_blob[15387] + sidecar_blob)
+- ``pr106`` / ``pr106_latent_sidecar`` — PR106 latent-sidecar wrapper
+  (0xFE 0x01 + uint32 pr106_len + pr106_base_archive + uint16 sidecar_len +
+  sidecar_blob)
+- ``ibps1`` — C6 MDL-IBPS variant 1 (per
+  :mod:`tac.substrates.c6_e4_mdl_ibps.archive`):
+  IBPS1_HEADER(25) + ENCODER_BLOB + DECODER_BLOB + LATENT_BLOB + META_BLOB
+- ``pr101`` (alias of ``a1`` for back-compat) — same layout
+
+For grammars not listed above, the parser falls back to a single
+``whole_blob`` section. Tier A perturbation still runs, but section-level
+attribution is coarse.
 """
 from __future__ import annotations
 
@@ -132,6 +148,15 @@ A1_LATENT_BLOB_LEN = 15_387  # PR101 latent blob length
 EVAL_H, EVAL_W = 384, 512
 CAMERA_H, CAMERA_W = 874, 1164
 N_PAIRS = 600
+
+# IBPS1 (C6 MDL-IBPS variant 1) header constants, mirrored from
+# src/tac/substrates/c6_e4_mdl_ibps/archive.py so this tool stays
+# importable even when the substrate package can't be imported (no torch
+# at --help time). Per CLAUDE.md "Beauty, simplicity, and developer
+# experience" — narrow contract preserved.
+IBPS1_MAGIC = b"IBPS"
+IBPS1_HEADER_FMT = "<4sBHHIIII"  # magic(4) + ver(1) + ld(2) + np(2) + 4*u32
+IBPS1_HEADER_SIZE = struct.calcsize(IBPS1_HEADER_FMT)  # = 25
 
 # Score formula per upstream/evaluate.py:
 #   score = 100 * seg_dist + sqrt(10 * pose_dist) + 25 * rate
@@ -324,6 +349,89 @@ def parse_pr106_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]
     }
 
 
+def parse_ibps1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for IBPS1 (C6 MDL-IBPS) grammar.
+
+    IBPS1 wire format (inner blob, single ZIP member '0.bin'); see
+    :mod:`tac.substrates.c6_e4_mdl_ibps.archive` for the canonical
+    definition. Layout:
+
+        MAGIC(4)            b"IBPS"
+        VERSION(1)          u8   schema version (currently 1)
+        LATENT_DIM(2)       u16  cfg.latent_dim (e.g. 24)
+        NUM_PAIRS(2)        u16  cfg.num_pairs (e.g. 600)
+        ENCODER_BLOB_LEN(4) u32  brotli-compressed encoder state_dict len
+        DECODER_BLOB_LEN(4) u32  brotli-compressed decoder state_dict len
+        LATENT_BLOB_LEN(4)  u32  int8 latents bytes len (num_pairs*latent_dim)
+        META_BLOB_LEN(4)    u32  sorted-keys JSON utf-8 bytes len
+        ENCODER_BLOB        ...
+        DECODER_BLOB        ...
+        LATENT_BLOB         ...
+        META_BLOB           ...
+
+    Total header bytes = 25 (IBPS1_HEADER_SIZE).
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``ibps1_header`` — 25-byte header (control_or_metadata; fixed layout)
+    - ``encoder_blob`` — brotli q=9 compressed encoder weights
+      (decoder_weight_stream — encoder is forensic-only at inflate but
+      occupies the same role family in the planner's bit-allocator)
+    - ``decoder_blob`` — brotli q=9 compressed decoder weights
+      (decoder_weight_stream — the actual inflate-time consumer)
+    - ``latent_blob`` — int8 quantized per-pair latents (latent_stream)
+    - ``meta_blob`` — sorted-keys JSON with beta_ib, decoder_channels,
+      _lat_scale, _lat_zero_point (control_or_metadata)
+    """
+    if len(archive_bytes) < IBPS1_HEADER_SIZE:
+        raise ValueError(
+            f"ibps1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {IBPS1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        encoder_len,
+        decoder_len,
+        latent_len,
+        meta_len,
+    ) = struct.unpack(IBPS1_HEADER_FMT, archive_bytes[:IBPS1_HEADER_SIZE])
+    if magic != IBPS1_MAGIC:
+        raise ValueError(
+            f"ibps1 archive: bad magic {magic!r} (expected {IBPS1_MAGIC!r})"
+        )
+    if version != 1:
+        raise ValueError(
+            f"ibps1 archive: unsupported schema version {version} (expected 1)"
+        )
+    # int8 = 1 byte each
+    expected_latent_bytes = int(num_pairs) * int(latent_dim)
+    if latent_len != expected_latent_bytes:
+        raise ValueError(
+            f"ibps1 archive: latent_len {latent_len} != num_pairs*latent_dim "
+            f"= {expected_latent_bytes}"
+        )
+    end_header = IBPS1_HEADER_SIZE
+    end_encoder = end_header + int(encoder_len)
+    end_decoder = end_encoder + int(decoder_len)
+    end_latents = end_decoder + int(latent_len)
+    end_meta = end_latents + int(meta_len)
+    if end_meta > len(archive_bytes):
+        raise ValueError(
+            f"ibps1 archive: declared end_meta {end_meta} > archive bytes "
+            f"{len(archive_bytes)} — truncated archive"
+        )
+    return {
+        "ibps1_header": (0, IBPS1_HEADER_SIZE),
+        "encoder_blob": (end_header, int(encoder_len)),
+        "decoder_blob": (end_encoder, int(decoder_len)),
+        "latent_blob": (end_decoder, int(latent_len)),
+        "meta_blob": (end_latents, int(meta_len)),
+    }
+
+
 def load_archive(archive_path: Path, grammar: str) -> tuple[bytes, dict[str, tuple[int, int]]]:
     """Read inner blob from archive.zip and parse sections.
 
@@ -331,23 +439,40 @@ def load_archive(archive_path: Path, grammar: str) -> tuple[bytes, dict[str, tup
     points its child inflate.py at — for A1 it is `x`, for PR106 it is
     the first file by name (`x` is conventional).
     """
-    with zipfile.ZipFile(archive_path) as zf:
-        names = zf.namelist()
-        if "x" in names:
-            inner_name = "x"
-        else:
-            inner_name = names[0]
-        inner_bytes = zf.read(inner_name)
+    inner_bytes = _read_inner_member(archive_path, grammar)
 
-    if grammar == "a1":
+    if grammar in ("a1", "pr101"):
         sections = parse_a1_archive_bytes(inner_bytes)
     elif grammar in ("pr106", "pr106_latent_sidecar"):
         sections = parse_pr106_archive_bytes(inner_bytes)
+    elif grammar == "ibps1":
+        sections = parse_ibps1_archive_bytes(inner_bytes)
     else:
         # Generic: treat whole blob as one section
         sections = {"whole_blob": (0, len(inner_bytes))}
 
     return inner_bytes, sections
+
+
+def _read_inner_member(archive_path: Path, grammar: str) -> bytes:
+    """Read the inner ZIP member that corresponds to ``inflate.sh``'s payload.
+
+    The conventional inner member is ``x`` for the A1 / PR101 / PR106 family.
+    For IBPS1 (C6 MDL-IBPS) the trainer writes the inner member as
+    ``0.bin``. If neither is present, the first member by listing order is
+    used (preserving previous behavior).
+    """
+    with zipfile.ZipFile(archive_path) as zf:
+        names = zf.namelist()
+        if grammar == "ibps1" and "0.bin" in names:
+            inner_name = "0.bin"
+        elif "x" in names:
+            inner_name = "x"
+        elif "0.bin" in names:
+            inner_name = "0.bin"
+        else:
+            inner_name = names[0]
+        return zf.read(inner_name)
 
 
 # ----------------------------------------------------------------------
@@ -561,6 +686,109 @@ def _decode_pr106_to_frames(
     return out
 
 
+def _decode_ibps1_to_frames(
+    inner_bytes: bytes,
+    pair_indices: list[int],
+    device: torch.device,
+) -> torch.Tensor:
+    """Inflate IBPS1 (C6 MDL-IBPS) inner blob -> uint8 frames for given pairs.
+
+    Per CLAUDE.md "MPS auth eval is NOISE" the absolute scores from this
+    path are NOT contest-grade; that's correct for MDL ablation which
+    measures DELTAS not absolute values.
+
+    Per CLAUDE.md "Forbidden in-place edits to public PR intake clones"
+    we do NOT mutate substrate inflate.py — we re-construct the substrate
+    from the parsed archive (mirrors :func:`inflate_one_video`'s
+    contract) but render at the scorer-resolution (EVAL_H, EVAL_W) then
+    bicubic-upsample to CAMERA (874, 1164) so the output shape matches
+    the A1 / PR106 contract and can be compared against PyAV-decoded GT.
+
+    Returns shape (len(pair_indices), 2, CAMERA_H, CAMERA_W, 3) uint8 CPU
+    tensor.
+
+    Raises on parse / inflate failure (caller catches in the byte-flip
+    Tier B loop — an inflate failure counts as a relevant byte position).
+    """
+    # Late imports — C6 substrate may not be importable in test fixtures
+    from tac.substrates.c6_e4_mdl_ibps.architecture import (  # type: ignore[import-not-found]
+        EVAL_HW,
+        MDLIBPSConfig,
+        MDLIBPSSubstrate,
+    )
+    from tac.substrates.c6_e4_mdl_ibps.archive import (  # type: ignore[import-not-found]
+        parse_archive,
+    )
+
+    arc = parse_archive(inner_bytes)
+    meta = arc.meta
+    cfg = MDLIBPSConfig(
+        latent_dim=int(arc.latents.shape[1]),
+        encoder_input_channels=int(meta.get("encoder_input_channels", 3)),
+        encoder_sin_freq=float(meta.get("encoder_sin_freq", 30.0)),
+        decoder_embed_dim=int(meta["decoder_embed_dim"]),
+        decoder_initial_grid_h=int(meta["decoder_initial_grid_h"]),
+        decoder_initial_grid_w=int(meta["decoder_initial_grid_w"]),
+        decoder_channels=tuple(int(c) for c in meta["decoder_channels"]),
+        decoder_num_upsample_blocks=int(meta["decoder_num_upsample_blocks"]),
+        decoder_sin_freq=float(meta.get("decoder_sin_freq", 30.0)),
+        num_pairs=int(arc.latents.shape[0]),
+        output_height=int(meta.get("output_height", EVAL_HW[0])),
+        output_width=int(meta.get("output_width", EVAL_HW[1])),
+        beta_ib=float(meta.get("beta_ib", 0.01)),
+        latent_init_std=float(meta.get("latent_init_std", 0.02)),
+    )
+
+    model = MDLIBPSSubstrate(cfg).to(device).eval()
+    enc_load = model.encoder.load_state_dict(arc.encoder_state_dict, strict=False)
+    if set(enc_load.missing_keys) or set(enc_load.unexpected_keys):
+        raise ValueError(
+            f"ibps1: encoder state_dict mismatch missing={sorted(enc_load.missing_keys)} "
+            f"unexpected={sorted(enc_load.unexpected_keys)}"
+        )
+    dec_load = model.decoder.load_state_dict(arc.decoder_state_dict, strict=False)
+    if set(dec_load.missing_keys) or set(dec_load.unexpected_keys):
+        raise ValueError(
+            f"ibps1: decoder state_dict mismatch missing={sorted(dec_load.missing_keys)} "
+            f"unexpected={sorted(dec_load.unexpected_keys)}"
+        )
+    with torch.no_grad():
+        model.latents.copy_(arc.latents.to(device=device, dtype=model.latents.dtype))
+
+    pair_indices_t = sorted(set(pair_indices))
+    n_target = len(pair_indices_t)
+    out = torch.empty((n_target, 2, CAMERA_H, CAMERA_W, 3), dtype=torch.uint8)
+
+    written = 0
+    with torch.inference_mode():
+        for pair_idx in pair_indices_t:
+            idx_t = torch.tensor([pair_idx], device=device, dtype=torch.long)
+            # rgb_0, rgb_1 are at EVAL_HW (384, 512), shape (1, 3, H, W),
+            # range [0, 1] per the substrate's "input_range=unit" contract
+            # (see substrates._shared.inflate_runtime.write_rgb_pair_to_raw).
+            rgb_0, rgb_1, _mu, _logvar = model(idx_t, frames_for_encoder=None)
+            # Stack as (2, 3, EVAL_H, EVAL_W)
+            stacked = torch.cat([rgb_0, rgb_1], dim=0)  # (2, 3, H, W)
+            # Upsample to CAMERA resolution via bicubic; A1/PR106 also do this.
+            up = F.interpolate(
+                stacked, size=(CAMERA_H, CAMERA_W),
+                mode="bicubic", align_corners=False,
+            )
+            # Convert [0, 1] -> [0, 255] uint8
+            frames = (
+                (up * 255.0)
+                .clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+            )  # (2, H, W, 3)
+            out[written, 0] = frames[0]
+            out[written, 1] = frames[1]
+            written += 1
+    return out
+
+
 def decode_to_frames(
     inner_bytes: bytes,
     grammar: str,
@@ -568,10 +796,12 @@ def decode_to_frames(
     device: torch.device,
 ) -> torch.Tensor:
     """Dispatch on grammar."""
-    if grammar == "a1":
+    if grammar in ("a1", "pr101"):
         return _decode_a1_to_frames(inner_bytes, pair_indices, device)
     elif grammar in ("pr106", "pr106_latent_sidecar"):
         return _decode_pr106_to_frames(inner_bytes, pair_indices, device)
+    elif grammar == "ibps1":
+        return _decode_ibps1_to_frames(inner_bytes, pair_indices, device)
     else:
         raise NotImplementedError(f"grammar {grammar} not supported")
 
@@ -714,12 +944,20 @@ def run_tier_a(
     results: list[TierAResult] = []
 
     section_modes = {
+        # A1 / PR101 sections
         "decoder_section_header": ["zero"],
         "decoder_blob": ["zero", "random"],
         "latent_blob": ["zero", "random"],
         "sidecar_blob": ["zero", "random"],
+        # PR106 sections
         "magic_header": ["zero"],
         "pr106_body_plus_sidecar": ["zero", "random"],
+        # IBPS1 (C6 MDL-IBPS) sections
+        "ibps1_header": ["zero"],  # zero magic / version -> inflate failure
+        "encoder_blob": ["zero", "random"],  # forensic-only but still required by parser
+        # decoder_blob handled above (same name as A1 / PR101)
+        # latent_blob handled above
+        "meta_blob": ["zero", "random"],  # JSON metadata; zero -> parse failure
     }
 
     baseline_score_comp = _score_components(baseline_pose, baseline_seg)
@@ -1136,19 +1374,18 @@ def ablate_archive(
     if np is not None:
         np.random.seed(seed)
 
-    # Read archive bytes
-    with zipfile.ZipFile(archive_path) as zf:
-        names = zf.namelist()
-        inner_name = "x" if "x" in names else names[0]
-        inner_bytes = zf.read(inner_name)
+    # Read archive bytes (grammar-aware inner-member selection)
+    inner_bytes = _read_inner_member(archive_path, grammar)
     archive_bytes_total = archive_path.stat().st_size
     archive_sha256 = _sha256_bytes(archive_path.read_bytes())
 
     # Parse sections
-    if grammar == "a1":
+    if grammar in ("a1", "pr101"):
         sections = parse_a1_archive_bytes(inner_bytes)
     elif grammar in ("pr106", "pr106_latent_sidecar"):
         sections = parse_pr106_archive_bytes(inner_bytes)
+    elif grammar == "ibps1":
+        sections = parse_ibps1_archive_bytes(inner_bytes)
     else:
         sections = {"whole_blob": (0, len(inner_bytes))}
 
@@ -1299,7 +1536,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--archive-name", action="append", required=True,
                    help="Short name for the archive (repeat in same order as --archive)")
     p.add_argument("--grammar", action="append", required=True,
-                   help="Grammar (a1|pr106_latent_sidecar|pr101); repeat in same order as --archive")
+                   help="Grammar (a1|pr106_latent_sidecar|pr101|ibps1); repeat in same order as --archive")
     p.add_argument("--upstream-dir", type=Path, default=REPO_ROOT / "upstream",
                    help="Path to upstream/ (for models + videos/0.mkv)")
     p.add_argument("--output-dir", type=Path, required=True,
