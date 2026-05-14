@@ -17,12 +17,15 @@ from tac.hnerv_lowlevel_packer import read_packed_archive_view
 from tac.hnerv_hlm1_archive_candidate import build_hlm1_latent_archive_candidate
 from tac.packet_compiler.pr106_fixed_latent_recode import (
     HLM1_MAGIC,
+    HLM2_MAGIC,
     PR106FixedLatentRecodeError,
     decode_pr106_fixed_latent_raw,
     encode_hlm1_fixed_latents_from_brotli,
+    encode_hlm2_fixed_latents_from_brotli,
     split_pr106_fixed_latent_raw,
 )
 from tac.packet_compiler.pr106_hlm1_runtime_consumption import (
+    prove_pr106_hlm_runtime_consumption,
     prove_pr106_hlm1_runtime_consumption,
 )
 from tac.packet_compiler.pr106_runtime_consumption import load_pr106_runtime_codec
@@ -85,6 +88,58 @@ def test_hlm1_recode_makes_byte_smaller_archive_without_touching_decoder(
         decode_pr106_fixed_latent_raw(candidate_view.packed.latents_and_sidecar_brotli)
         == brotli.decompress(source_view.packed.latents_and_sidecar_brotli)
     )
+
+
+def test_hlm2_recode_derives_hi_metadata_and_saves_four_bytes_over_hlm1() -> None:
+    view = read_packed_archive_view(PR106_R2_PR101_ARCHIVE)
+    source = view.packed.latents_and_sidecar_brotli
+    source_raw = brotli.decompress(source)
+
+    hlm1 = encode_hlm1_fixed_latents_from_brotli(source)
+    hlm2 = encode_hlm2_fixed_latents_from_brotli(source)
+
+    assert hlm2.payload.startswith(HLM2_MAGIC)
+    assert hlm2.codec == "pr106_fixed_latent_hlm2"
+    assert hlm2.packet_overhead_bytes == 6
+    assert hlm2.candidate_bytes == hlm1.candidate_bytes - 4
+    assert hlm2.byte_delta == hlm1.byte_delta - 4
+    assert hlm2.hi_nonzero_symbol_count == hlm1.hi_nonzero_symbol_count == 73
+    assert decode_pr106_fixed_latent_raw(hlm2.payload) == source_raw
+    assert hlm2.to_manifest()["raw_roundtrip_equal"] is True
+
+
+def test_hlm2_archive_candidate_builder_recodes_existing_hlm1_source(
+    tmp_path: Path,
+) -> None:
+    source_view = read_packed_archive_view(PR106_R2_HDM4_HLM1_ARCHIVE)
+
+    manifest = build_hlm1_latent_archive_candidate(
+        source_archive=PR106_R2_HDM4_HLM1_ARCHIVE,
+        output_dir=tmp_path / "out",
+        source_label="PR106 R2 HDM4 HLM1",
+        latent_codec="hlm2",
+        repo_root=REPO,
+    )
+
+    candidate_archive = Path(manifest["candidate_archive_path"])
+    candidate_view = read_packed_archive_view(candidate_archive)
+
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_archive_preflight"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["source_latents_section_codec"] == "hlm1"
+    assert manifest["target_latents_section_codec"] == "hlm2"
+    assert manifest["candidate_transform_kind"] == "hlm2_fixed_latent_recode"
+    assert manifest["candidate_latents_section_byte_delta"] == -4
+    assert manifest["candidate_archive_byte_delta"] == -4
+    assert candidate_archive.stat().st_size == PR106_R2_HDM4_HLM1_ARCHIVE.stat().st_size - 4
+    assert candidate_view.packed.decoder_packed_brotli == source_view.packed.decoder_packed_brotli
+    assert candidate_view.packed.latents_and_sidecar_brotli.startswith(HLM2_MAGIC)
+    assert (
+        decode_pr106_fixed_latent_raw(candidate_view.packed.latents_and_sidecar_brotli)
+        == decode_pr106_fixed_latent_raw(source_view.packed.latents_and_sidecar_brotli)
+    )
+    assert (tmp_path / "out" / "hlm2_latent_archive_candidate_manifest.json").exists()
 
 
 def test_hlm1_archive_candidate_builder_writes_nonpromotable_manifest(
@@ -168,6 +223,35 @@ def test_hlm1_archive_candidate_cli_accepts_x_member_name(tmp_path: Path) -> Non
     assert payload["ready_for_archive_preflight"] is True
     assert payload["candidate_member_name"] == "x"
     assert payload["candidate_archive_byte_delta"] == -8
+
+
+def test_hlm_archive_candidate_cli_accepts_hlm2_codec(tmp_path: Path) -> None:
+    json_out = tmp_path / "result.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_pr106_hlm1_latent_candidate.py"),
+            "--source-archive",
+            str(PR106_R2_HDM4_HLM1_ARCHIVE),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--source-label",
+            "PR106 R2 HDM4 HLM1",
+            "--latent-codec",
+            "hlm2",
+            "--json-out",
+            str(json_out),
+            "--fail-if-blocked",
+        ],
+        check=True,
+        text=True,
+    )
+
+    payload = json.loads(json_out.read_text(encoding="utf-8"))
+    assert payload["ready_for_archive_preflight"] is True
+    assert payload["target_latents_section_codec"] == "hlm2"
+    assert payload["candidate_archive_byte_delta"] == -4
 
 
 def test_pr106_inflate_sh_uses_x_payload_and_refuses_ambiguous_payloads(
@@ -272,6 +356,40 @@ def test_submission_runtime_decodes_hlm1_fixed_latents() -> None:
     assert runtime.decode_fixed_latents_raw(recode.payload) == brotli.decompress(
         view.packed.latents_and_sidecar_brotli
     )
+
+
+def test_submission_runtime_decodes_hlm2_fixed_latents() -> None:
+    view = read_packed_archive_view(PR106_R2_PR101_ARCHIVE)
+    recode = encode_hlm2_fixed_latents_from_brotli(view.packed.latents_and_sidecar_brotli)
+    runtime = _load_runtime_codec()
+
+    assert runtime.decode_fixed_latents_raw(recode.payload) == brotli.decompress(
+        view.packed.latents_and_sidecar_brotli
+    )
+
+
+def test_hlm2_runtime_consumption_proof_is_codec_specific(tmp_path: Path) -> None:
+    manifest = build_hlm1_latent_archive_candidate(
+        source_archive=PR106_R2_HDM4_HLM1_ARCHIVE,
+        output_dir=tmp_path / "out",
+        source_label="PR106 R2 HDM4 HLM1",
+        latent_codec="hlm2",
+        repo_root=REPO,
+    )
+
+    proof = prove_pr106_hlm_runtime_consumption(
+        archive_path=Path(manifest["candidate_archive_path"]),
+        runtime_dir=REPO / "submissions" / "pr106_latent_sidecar_r2_pr101_grammar",
+        repo_root=REPO,
+    )
+
+    assert proof["latent_section_codec"] == "hlm2"
+    assert proof["runtime_hlm_decode_consumption_claim"] is True
+    assert proof["runtime_hlm_decode_matches_canonical"] is True
+    assert proof["runtime_hlm_valid_mutation_changes_raw"] is True
+    assert proof["score_claim"] is False
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
 
 
 def test_runtime_consumption_loader_does_not_write_pycache(tmp_path: Path) -> None:

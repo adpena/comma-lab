@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a PR106 HLM1 fixed-latent archive candidate."""
+"""Build a PR106 HLM fixed-latent archive candidate."""
 
 from __future__ import annotations
 
@@ -35,6 +35,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--latent-codec",
+        choices=("hlm1", "hlm2"),
+        default="hlm1",
+        help=(
+            "Lossless fixed-latent HLM grammar to emit. HLM2 derives the "
+            "high-byte stream length and symbol count from packet boundaries."
+        ),
+    )
+    parser.add_argument(
         "--allow-rate-regression",
         action="store_true",
         help="Materialize even when HLM1 does not reduce section bytes.",
@@ -54,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=args.output_dir,
         source_label=args.source_label,
         candidate_member_name=args.candidate_member_name,
+        latent_codec=args.latent_codec,
         allow_rate_regression=args.allow_rate_regression,
         repo_root=REPO,
     )

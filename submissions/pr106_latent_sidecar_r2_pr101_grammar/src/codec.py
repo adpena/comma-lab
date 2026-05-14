@@ -358,9 +358,11 @@ def decode_fixed_latents(data):
 
 
 def decode_fixed_latents_raw(data):
-    """Decode legacy Brotli or HLM1 fixed-latent bytes to raw layout."""
+    """Decode legacy Brotli, HLM1, or HLM2 fixed-latent bytes to raw layout."""
     if data[:4] == b"HLM1":
         return decode_hlm1_fixed_latents_raw(data)
+    if data[:4] == b"HLM2":
+        return decode_hlm2_fixed_latents_raw(data)
     raw = brotli.decompress(data)
     if len(raw) != 600 * 28 * 2 + 28 * 4:
         raise ValueError("bad fixed latent raw payload")
@@ -399,6 +401,35 @@ def decode_hlm1_fixed_latents_raw(data):
     return lo + meta + hi
 
 
+def decode_hlm2_fixed_latents_raw(data):
+    """Decode HLM2 sparse high-byte fixed-latent bytes.
+
+    HLM2 is HLM1 with the high-byte delta length and count derived from packet
+    boundaries, saving four bytes while preserving the same raw latent layout.
+    """
+    if data[:4] != b"HLM2":
+        raise ValueError("invalid HLM2 fixed-latent magic")
+    n, d = 600, 28
+    total = n * d
+    meta_len = d * 4
+    cursor = 4
+    lo_len = int.from_bytes(read_exact(data, cursor, 2, "HLM2 lo_brotli_len"), "little")
+    cursor += 2
+    lo_brotli = read_exact(data, cursor, lo_len, "HLM2 lo_brotli")
+    cursor += lo_len
+    meta = read_exact(data, cursor, meta_len, "HLM2 meta")
+    cursor += meta_len
+    hi_delta = data[cursor:]
+    try:
+        lo = brotli.decompress(lo_brotli)
+    except brotli.error as exc:
+        raise ValueError(f"HLM2 lo Brotli decode failed: {exc}") from exc
+    if len(lo) != total:
+        raise ValueError("HLM2 lo stream length mismatch")
+    hi = decode_hlm_hi_delta_positions_until_end(hi_delta, total)
+    return lo + meta + hi
+
+
 def decode_hlm1_hi_delta_positions(payload, count, total):
     hi = bytearray(total)
     cursor = 0
@@ -423,6 +454,29 @@ def decode_hlm1_hi_delta_positions(payload, count, total):
         hi[pos] = 1
     if cursor != len(payload):
         raise ValueError("HLM1 hi delta stream has trailing bytes")
+    return bytes(hi)
+
+
+def decode_hlm_hi_delta_positions_until_end(payload, total):
+    hi = bytearray(total)
+    cursor = 0
+    pos = -1
+    while cursor < len(payload):
+        marker = payload[cursor]
+        cursor += 1
+        if marker == 255:
+            delta = int.from_bytes(read_exact(payload, cursor, 2, "HLM hi extended delta"), "little")
+            cursor += 2
+            if delta <= 254:
+                raise ValueError("non-canonical HLM extended delta")
+        else:
+            delta = int(marker)
+        if delta <= 0:
+            raise ValueError("HLM hi delta must be positive")
+        pos += delta
+        if pos >= total:
+            raise ValueError("HLM hi position out of range")
+        hi[pos] = 1
     return bytes(hi)
 
 

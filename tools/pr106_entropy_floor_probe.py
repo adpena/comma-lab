@@ -51,6 +51,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
 )
 from tac.packet_compiler.pr106_fixed_latent_recode import (  # noqa: E402
     HLM1_MAGIC,
+    HLM2_MAGIC,
     decode_pr106_fixed_latent_raw,
 )
 
@@ -441,7 +442,11 @@ def build_report_from_payload(
     latents_section_codec = (
         "hlm1_sparse_hi_delta_positions"
         if packed.latents_and_sidecar_brotli.startswith(HLM1_MAGIC)
-        else "brotli_fixed_latents_raw"
+        else (
+            "hlm2_sparse_hi_delta_positions"
+            if packed.latents_and_sidecar_brotli.startswith(HLM2_MAGIC)
+            else "brotli_fixed_latents_raw"
+        )
     )
 
     decoder_streams = [

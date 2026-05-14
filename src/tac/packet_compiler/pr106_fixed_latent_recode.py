@@ -23,6 +23,8 @@ import numpy as np
 from tac.repo_io import sha256_bytes
 
 HLM1_MAGIC = b"HLM1"
+HLM2_MAGIC = b"HLM2"
+HLM_FIXED_LATENT_MAGICS = (HLM1_MAGIC, HLM2_MAGIC)
 PR106_FIXED_LATENT_N = 600
 PR106_FIXED_LATENT_D = 28
 PR106_FIXED_LATENT_TOTAL = PR106_FIXED_LATENT_N * PR106_FIXED_LATENT_D
@@ -55,7 +57,7 @@ class BrotliChoice:
 
 @dataclass(frozen=True)
 class PR106FixedLatentRecode:
-    """Encoded HLM1 payload plus proof metadata."""
+    """Encoded HLM payload plus proof metadata."""
 
     payload: bytes
     source_brotli_bytes: int
@@ -70,6 +72,7 @@ class PR106FixedLatentRecode:
     lo_brotli_lgwin: int
     hi_nonzero_symbols: int
     hi_nonzero_symbol_count: int
+    codec: str = "pr106_fixed_latent_hlm1"
 
     @property
     def candidate_bytes(self) -> int:
@@ -86,7 +89,7 @@ class PR106FixedLatentRecode:
     def to_manifest(self) -> dict[str, object]:
         return {
             "schema_version": 1,
-            "codec": "pr106_fixed_latent_hlm1",
+            "codec": self.codec,
             "score_claim": False,
             "ready_for_exact_eval_dispatch": False,
             "source_brotli_bytes": self.source_brotli_bytes,
@@ -121,12 +124,35 @@ def split_pr106_fixed_latent_raw(raw: bytes) -> tuple[bytes, bytes, bytes]:
 
 
 def decode_pr106_fixed_latent_raw(payload: bytes) -> bytes:
-    """Decode either legacy Brotli fixed latents or HLM1 fixed latents to raw."""
+    """Decode legacy Brotli, HLM1, or HLM2 fixed latents to raw."""
     if payload.startswith(HLM1_MAGIC):
         return decode_hlm1_fixed_latent_raw(payload)
+    if payload.startswith(HLM2_MAGIC):
+        return decode_hlm2_fixed_latent_raw(payload)
     raw = brotli.decompress(payload)
     split_pr106_fixed_latent_raw(raw)
     return raw
+
+
+def encode_hlm_fixed_latents_from_brotli(
+    source_brotli: bytes,
+    *,
+    codec: str = "hlm1",
+    brotli_candidates: Iterable[tuple[int, int]] = DEFAULT_HLM1_BROTLI_CANDIDATES,
+) -> PR106FixedLatentRecode:
+    """Encode a legacy PR106 fixed-latent section as an HLM payload."""
+    normalized = codec.lower()
+    if normalized == "hlm1":
+        return encode_hlm1_fixed_latents_from_brotli(
+            source_brotli,
+            brotli_candidates=brotli_candidates,
+        )
+    if normalized == "hlm2":
+        return encode_hlm2_fixed_latents_from_brotli(
+            source_brotli,
+            brotli_candidates=brotli_candidates,
+        )
+    raise PR106FixedLatentRecodeError(f"unsupported HLM fixed-latent codec: {codec!r}")
 
 
 def encode_hlm1_fixed_latents_from_brotli(
@@ -166,6 +192,53 @@ def encode_hlm1_fixed_latents_from_brotli(
         lo_brotli_lgwin=lo_choice.lgwin,
         hi_nonzero_symbols=hi_nonzero_symbols,
         hi_nonzero_symbol_count=hi_nonzero_symbol_count,
+        codec="pr106_fixed_latent_hlm1",
+    )
+
+
+def encode_hlm2_fixed_latents_from_brotli(
+    source_brotli: bytes,
+    *,
+    brotli_candidates: Iterable[tuple[int, int]] = DEFAULT_HLM1_BROTLI_CANDIDATES,
+) -> PR106FixedLatentRecode:
+    """Encode a legacy PR106 fixed-latent Brotli/HLM section as HLM2.
+
+    HLM2 is a lossless HLM1 successor. It keeps the same low-byte Brotli stream,
+    raw fp16 min/scale metadata, and sparse high-byte delta-position stream, but
+    derives the high-byte stream length and symbol count from payload boundaries
+    instead of storing two redundant u16 fields.
+    """
+    raw = decode_pr106_fixed_latent_raw(source_brotli)
+    lo, meta, hi = split_pr106_fixed_latent_raw(raw)
+    lo_choice = _best_brotli(lo, brotli_candidates)
+    hi_delta_varint, hi_nonzero_symbols, hi_nonzero_symbol_count = (
+        _encode_sparse_hi_delta_positions(hi)
+    )
+    payload = _pack_hlm2(
+        lo_brotli=lo_choice.payload,
+        meta=meta,
+        hi_delta_varint=hi_delta_varint,
+    )
+    decoded = decode_hlm2_fixed_latent_raw(payload)
+    source_sha = sha256_bytes(raw)
+    decoded_sha = sha256_bytes(decoded)
+    if decoded_sha != source_sha:
+        raise PR106FixedLatentRecodeError("HLM2 fixed-latent roundtrip mismatch")
+    return PR106FixedLatentRecode(
+        payload=payload,
+        source_brotli_bytes=len(source_brotli),
+        source_raw_bytes=len(raw),
+        source_raw_sha256=source_sha,
+        decoded_raw_sha256=decoded_sha,
+        lo_brotli_bytes=len(lo_choice.payload),
+        hi_delta_varint_bytes=len(hi_delta_varint),
+        meta_raw_bytes=len(meta),
+        packet_overhead_bytes=4 + 2,
+        lo_brotli_quality=lo_choice.quality,
+        lo_brotli_lgwin=lo_choice.lgwin,
+        hi_nonzero_symbols=hi_nonzero_symbols,
+        hi_nonzero_symbol_count=hi_nonzero_symbol_count,
+        codec="pr106_fixed_latent_hlm2",
     )
 
 
@@ -196,6 +269,31 @@ def decode_hlm1_fixed_latent_raw(payload: bytes) -> bytes:
     if len(lo) != PR106_FIXED_LATENT_TOTAL:
         raise PR106FixedLatentRecodeError("HLM1 lo stream length mismatch")
     hi = _decode_sparse_hi_delta_positions(hi_delta_varint, hi_count)
+    raw = lo + meta + hi
+    split_pr106_fixed_latent_raw(raw)
+    return raw
+
+
+def decode_hlm2_fixed_latent_raw(payload: bytes) -> bytes:
+    """Decode an HLM2 fixed-latent payload to the legacy raw byte layout."""
+    if not payload.startswith(HLM2_MAGIC):
+        raise PR106FixedLatentRecodeError("invalid HLM2 fixed-latent magic")
+    cursor = len(HLM2_MAGIC)
+    lo_len = _read_u16(payload, cursor, "lo_brotli_len")
+    cursor += 2
+    lo_brotli = _read_exact(payload, cursor, lo_len, "lo_brotli")
+    cursor += lo_len
+    meta = _read_exact(payload, cursor, PR106_FIXED_LATENT_META_BYTES, "meta")
+    cursor += PR106_FIXED_LATENT_META_BYTES
+    hi_delta_varint = payload[cursor:]
+
+    try:
+        lo = brotli.decompress(lo_brotli)
+    except brotli.error as exc:
+        raise PR106FixedLatentRecodeError(f"HLM2 Brotli decode failed: {exc}") from exc
+    if len(lo) != PR106_FIXED_LATENT_TOTAL:
+        raise PR106FixedLatentRecodeError("HLM2 lo stream length mismatch")
+    hi = _decode_sparse_hi_delta_positions(hi_delta_varint, count=None)
     raw = lo + meta + hi
     split_pr106_fixed_latent_raw(raw)
     return raw
@@ -236,6 +334,26 @@ def _pack_hlm1(
         + meta
         + hi_delta_varint
     )
+
+
+def _pack_hlm2(
+    *,
+    lo_brotli: bytes,
+    meta: bytes,
+    hi_delta_varint: bytes,
+) -> bytes:
+    if not lo_brotli:
+        raise PR106FixedLatentRecodeError("HLM2 lo_brotli must be non-empty")
+    if len(lo_brotli) > 0xFFFF:
+        raise PR106FixedLatentRecodeError(
+            f"HLM2 lo_brotli too large for u16 length: {len(lo_brotli)}"
+        )
+    if len(meta) != PR106_FIXED_LATENT_META_BYTES:
+        raise PR106FixedLatentRecodeError(
+            f"HLM2 meta bytes mismatch: got {len(meta)}, "
+            f"expected {PR106_FIXED_LATENT_META_BYTES}"
+        )
+    return HLM2_MAGIC + len(lo_brotli).to_bytes(2, "little") + lo_brotli + meta + hi_delta_varint
 
 
 def _best_brotli(
@@ -287,13 +405,14 @@ def _encode_sparse_hi_delta_positions(hi: bytes) -> tuple[bytes, int, int]:
     return bytes(out), 2, int(positions.size)
 
 
-def _decode_sparse_hi_delta_positions(payload: bytes, count: int) -> bytes:
-    if count < 0:
+def _decode_sparse_hi_delta_positions(payload: bytes, count: int | None) -> bytes:
+    if count is not None and count < 0:
         raise PR106FixedLatentRecodeError(f"HLM1 negative hi count: {count}")
     hi = np.zeros(PR106_FIXED_LATENT_TOTAL, dtype=np.uint8)
     cursor = 0
     pos = -1
-    for _ in range(count):
+    decoded = 0
+    while cursor < len(payload) if count is None else decoded < count:
         if cursor >= len(payload):
             raise PR106FixedLatentRecodeError("truncated HLM1 hi delta stream")
         marker = payload[cursor]
@@ -315,6 +434,7 @@ def _decode_sparse_hi_delta_positions(payload: bytes, count: int) -> bytes:
         if pos >= PR106_FIXED_LATENT_TOTAL:
             raise PR106FixedLatentRecodeError("HLM1 hi position out of range")
         hi[pos] = 1
+        decoded += 1
     if cursor != len(payload):
         raise PR106FixedLatentRecodeError("HLM1 hi delta stream has trailing bytes")
     return hi.tobytes()
