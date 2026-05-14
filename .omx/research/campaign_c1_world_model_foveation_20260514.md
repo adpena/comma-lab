@@ -13,7 +13,7 @@
 - **Phase 2** (council-tracked)
 - **Dispatch-claim plan**:
   - L1 SCAFFOLD landing (this commit batch): mark `impl_complete` + `three_clean_review` + `memory_entry` + `deploy_runbook` gates after this landing
-  - L2 SCAFFOLD → SMOKE-VALIDATED: smoke dispatch (~$1 Modal T4 100ep) via `tools/operator_authorize.py --recipe substrate_c1_world_model_foveation_modal_t4_smoke_dispatch`; mark `real_archive_empirical` if smoke produces a valid C1WMFV1 archive
+  - L2 SCAFFOLD → SMOKE-VALIDATED: smoke dispatch (~$1 Modal T4 100ep) via the executable smoke-before-full wrapper `tools/run_modal_smoke_before_full.py --recipe substrate_c1_world_model_foveation_modal_t4_smoke_dispatch --dry-run` first, then explicit non-dry-run operator approval; mark `real_archive_empirical` if smoke produces a valid C1WMFV1 archive
   - L3 PRODUCTION (NOT yet): requires Phase 3 council + multi-stage full dispatch ($30-50 over 3-4 weeks); mark `contest_cuda` only after a verified `[contest-CUDA]` auth-eval anchor
 
 ### 2. Source evidence + score-lowering hypothesis
@@ -30,10 +30,10 @@
 
 A1 baseline 0.1928 (verified [contest-CUDA] anchor `87ec7ca5...492b5`). C1 substitutes:
 
-1. **World-model recurrent latent (z_t = GRU(z_{t-1}))** for HNeRV's per-frame independent decoder. Predicted byte savings: per-frame residual surprise ~50 B/frame * 1200 = 60 KB vs HNeRV's ~120 B/frame * 1200 = 144 KB. **Rate Δ ≈ -0.056 from residual alone** if asymptote holds.
+1. **Identity/no-world-model foveation route** after the 2026-05-14 fair probe verdict. Executable surfaces no longer launch the falsified GRU/LSTM recurrence by default; recurrent modes are explicit opt-ins only for future probe targets.
 2. **Foveation matched to ego-motion vanishing point** for uniform bit allocation. Predicted scorer-side Δ: PoseNet sees both frames YUV6 → forward FOV matters more; SegNet sees frame_1 only at 384x512 → 2D resize rank ~24K of 192K. **Distortion Δ ≈ -0.005 to -0.010** from foveation alone.
 
-Total predicted ΔS = -0.04 to -0.06 vs A1 0.1928 → predicted band **[0.13, 0.16]** `[mathematical-derivation; first-principles-bound]`.
+Revised predicted ΔS = -0.02 to -0.04 vs A1 0.1928 → predicted band **[0.153, 0.173]** `[contest-CUDA hypothetical; score_claim=false]`.
 
 ### 3. Timing-smoke command (seconds/epoch measurement)
 
@@ -44,15 +44,18 @@ Total predicted ΔS = -0.04 to -0.06 vs A1 0.1928 → predicted band **[0.13, 0.
     --device cpu --smoke --epochs 3
 
 # Modal T4 timing-smoke (~$0.30, 100 epochs)
-OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
-OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=1.00 \
-C1_WORLD_MODEL_FOVEATION_SMOKE_ONLY=1 \
-.venv/bin/bash scripts/operator_authorize_substrate_c1_world_model_foveation_modal_t4_smoke_dispatch.sh
+.venv/bin/python tools/run_modal_smoke_before_full.py \
+    --recipe substrate_c1_world_model_foveation_modal_t4_smoke_dispatch \
+    --smoke-epochs 100 \
+    --smoke-gpu T4 \
+    --smoke-timeout-hours 1.0 \
+    --operator-handle "operator:c1_identity_surface_validation" \
+    --dry-run
 ```
 
 **Expected smoke output**:
 - macOS CPU: ~3-5 sec total wall-clock; archive ~12 KB; sha256 byte-identical across runs.
-- Modal T4: ~5-15 min total wall-clock; archive ~120-160 KB; per-epoch ~3-9 sec.
+- Modal T4: dry-run first; non-dry-run is smoke-only `training_artifact_v1` with `recurrence_mode=identity_no_world_model`; no score claim.
 
 ### 4. Full-run command (resumable checkpoints + harvest)
 
@@ -64,7 +67,13 @@ C1_WORLD_MODEL_FOVEATION_SMOKE_ONLY=1 \
 OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
 OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=50.00 \
 C1_WORLD_MODEL_FOVEATION_EPOCHS=2000 \
-.venv/bin/bash scripts/operator_authorize_substrate_c1_world_model_foveation_modal_t4_smoke_dispatch.sh
+.venv/bin/python tools/run_modal_smoke_before_full.py \
+    --recipe substrate_c1_world_model_foveation_modal_t4_smoke_dispatch \
+    --smoke-epochs 100 \
+    --smoke-gpu T4 \
+    --smoke-timeout-hours 1.0 \
+    --operator-handle "operator:c1_phase3_identity_route" \
+    --dry-run
 
 # Harvest within 24h (per CLAUDE.md "Modal .spawn() HARVEST OR LOSE")
 .venv/bin/python tools/harvest_modal_calls.py
@@ -125,7 +134,7 @@ C1_WORLD_MODEL_FOVEATION_EPOCHS=2000 \
 | Stage 3 (combined) | proxy_loss < 0.04 (training-loss-only proxy) | continue to Stage 4 |
 | Stage 4 (residual codec) | residual_blob bytes ≤ 80 KB | continue to Stage 5 |
 | Stage 5 (archive byte sweep) | total bytes in [100, 180] KB | continue to Stage 6 |
-| Stage 6 (full Lagrangian) | auth_eval [contest-CUDA] score in predicted band [0.13, 0.16] | promote to L2/L3 |
+| Stage 6 (full Lagrangian) | auth_eval [contest-CUDA] score in revised predicted band [0.153, 0.173] | promote to L2/L3 |
 | Stage 6 fallback | score [0.17, 0.20] | DEFERRED-pending-research (no kill) |
 | Stage 6 worst-case | score > 0.22 | DEFERRED-pending-research-with-foveation-rescope (no kill) |
 

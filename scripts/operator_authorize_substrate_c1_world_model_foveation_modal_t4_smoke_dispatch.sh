@@ -6,9 +6,10 @@
 #
 # This wrapper routes through `tools/run_modal_smoke_before_full.py` per
 # Catalog #167 (`check_substrate_dispatch_uses_smoke_before_full_pattern`).
-# A 100-epoch ~$1 Modal T4 smoke fires FIRST, validates rc=0 + substrate
-# plumbing end-to-end. The trainer's `_full_main` raises NotImplementedError
-# pending Phase 3 council approval, so this wrapper is SMOKE-ONLY at L1.
+# A 100-epoch ~$1 Modal T4 smoke fires FIRST, validates the identity/no-world-
+# model foveation path as a research-only training artifact. The trainer's
+# `_full_main` raises NotImplementedError pending Phase 3 council approval, so
+# this wrapper is SMOKE-ONLY at L1.
 #
 # Per Catalog #162 (`check_operator_authorize_canonical_use`) the dispatch
 # ultimately delegates to `tools/operator_authorize.py --recipe`.
@@ -19,6 +20,8 @@
 #   MODAL_TIMEOUT_HOURS=1.0                        (Modal hard-kill wall-clock)
 #   C1_WORLD_MODEL_FOVEATION_SMOKE_EPOCHS=100      (smoke epoch override)
 #   C1_WORLD_MODEL_FOVEATION_SMOKE_GPU=T4          (smoke GPU class)
+#   C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE=identity_no_world_model
+#                                                   (default; GRU/LSTM explicit opt-in)
 #   C1_WORLD_MODEL_FOVEATION_SMOKE_ONLY=1          (skip full; default at L1)
 #   C1_WORLD_MODEL_FOVEATION_FULL_ONLY=1           (skip smoke; FORBIDDEN at L1
 #                                                   pending Phase 3 council)

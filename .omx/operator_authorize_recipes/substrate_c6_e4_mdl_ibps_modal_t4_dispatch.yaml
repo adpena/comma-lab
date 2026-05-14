@@ -32,6 +32,7 @@ summary: |
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
 min_vram_gb: 16
+min_smoke_gpu: "A10G"
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
@@ -54,9 +55,9 @@ dispatch_contracts:
 cost_band:
   epochs: 200
   all_flags_on: true
-  hand_calibrated_fallback_p50_usd: 0.50
+  hand_calibrated_fallback_p50_usd: 1.20
   platform_key: modal
-  gpu_key: T4
+  gpu_key: A10G
 
 predicted_score_target: null
 predicted_band: [0.113, 0.163]
@@ -94,11 +95,13 @@ risk: |
     saturation); if < 0.90 it's ACROSS-CLASS (the substrate-class shift
     happened).
 
-  Modal T4 training cost band: $0.50 smoke (200 epochs); $5-15 full
-  (2000-3000 epochs). Per CLAUDE.md "Auth eval EVERYWHERE" the dispatch
+  Modal A10G is the minimum smoke GPU after the 2026-05-14 100ep T4 timeout
+  finding. The helper `tools/run_modal_smoke_before_full.py` honors
+  `min_smoke_gpu: "A10G"` and upgrades stale T4 CLI defaults during dry-run
+  and dispatch. Per CLAUDE.md "Auth eval EVERYWHERE" any non-smoke dispatch
   MUST end with CUDA auth eval on the EMA shadow.
 
-envelope_status: "FITS $5 envelope at p50 fallback for smoke ($0.50); full dispatch $5-15"
+envelope_status: "FITS $5 envelope at p50 fallback for A10G smoke ($1-2); full dispatch $5-15"
 
 remote_driver: scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
 timeout_hours: 4.0
@@ -162,9 +165,20 @@ notes: |
   substrate (EV/$ #1) with predicted ΔS -0.030 to -0.080. The substrate
   is the across-class shift Z1 ablation says is required for sub-0.10.
 
-  Stage 0B smoke ($0.50 Modal T4) is the gating empirical test:
+  Stage 0B smoke (Modal A10G minimum after the 100ep T4 timeout) is the
+  gating empirical test:
   - Score in band [0.10, 0.30] → smoke green; advance to Stage 1 full ($5)
   - Score outside band → DEFERRED-pending-research per CLAUDE.md (NOT KILL)
+
+  Executable non-dispatch validation command:
+    .venv/bin/python tools/run_modal_smoke_before_full.py \
+      --recipe substrate_c6_e4_mdl_ibps_modal_t4_dispatch \
+      --smoke-epochs 50 \
+      --smoke-gpu T4 \
+      --smoke-timeout-hours 1.0 \
+      --operator-handle "operator:c6_surface_validation" \
+      --smoke-only \
+      --dry-run
 
   Post-smoke probe-disambiguator: run Z1 MDL ablation on the C6 archive
   via `tools/mdl_scorer_conditional_ablation.py`. If MDL density < 0.90,

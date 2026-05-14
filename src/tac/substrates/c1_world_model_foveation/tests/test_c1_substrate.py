@@ -144,6 +144,16 @@ class TestWorldModelRecurrence:
         out = wm.unroll(z_init, n_steps=8)
         assert out.shape == (8, 8)
 
+    def test_identity_no_world_model_unroll_repeats_z_init(self):
+        cfg = _make_tiny_cfg(
+            recurrence=WorldModelRecurrenceMode.IDENTITY_NO_WORLD_MODEL
+        )
+        wm = WorldModelModule(cfg.world_model_cfg)
+        z_init = torch.randn(cfg.world_model_cfg.latent_dim)
+        out = wm.unroll(z_init, n_steps=8)
+        assert out.shape == (8, 8)
+        assert torch.allclose(out, z_init.unsqueeze(0).expand(8, -1))
+
     def test_unroll_rejects_wrong_latent_dim(self):
         cfg = _make_tiny_cfg()
         wm = WorldModelModule(cfg.world_model_cfg)
@@ -267,6 +277,28 @@ class TestArchiveRoundtrip:
                 residual_blob=b"",
                 meta={},
             )
+
+    def test_pack_accepts_identity_no_world_model_recurrence_mode(self):
+        cfg = _make_tiny_cfg(
+            recurrence=WorldModelRecurrenceMode.IDENTITY_NO_WORLD_MODEL
+        )
+        substrate = WorldModelFoveationSubstrate(cfg)
+        archive_bytes = pack_archive(
+            num_pairs=cfg.num_pairs,
+            recurrence_mode=3,
+            foveation_strategy=1,
+            latent_dim=cfg.world_model_cfg.latent_dim,
+            output_h=cfg.output_height,
+            output_w=cfg.output_width,
+            world_model_state_dict=substrate.world_model.state_dict(),
+            decoder_state_dict=substrate.decoder.state_dict(),
+            z_init=substrate.z_init.detach(),
+            foveation_meta={"sigma": 6.0},
+            residual_blob=b"",
+            meta={"smoke": True},
+        )
+        arc = parse_archive(archive_bytes)
+        assert arc.recurrence_mode == 3
 
     def test_pack_rejects_invalid_foveation_strategy(self):
         cfg, substrate, wm_sd, dec_sd = self._build_minimal_archive_inputs()

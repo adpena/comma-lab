@@ -55,18 +55,17 @@ Build MDL-IBPS substrate (Minimum Description Length × Information Bottleneck �
 ## 3. Timing-smoke command (≤$0.50, ≤30 min)
 
 ```bash
-# Stage 0A — macOS-CPU advisory smoke
-.venv/bin/python experiments/train_substrate_c6_mdl_ibps.py \
-    --epochs 5 --batch-size 1 --quick-smoke \
-    --enable-procedural-decoder-stub \
-    --output-dir experiments/results/c6_smoke_macos_$(date -u +%Y%m%dT%H%M%SZ) \
-    --advisory-cpu-explicitly-waived
-
-# Stage 0B — Modal T4 timing smoke (cheapest)
+# Stage 0A — executable dry-run validation only; no dispatch.
+# Uses the real C6 trainer recipe surface. Recipe min_smoke_gpu=A10G after
+# the 2026-05-14 100ep T4 timeout, so a stale --smoke-gpu T4 is upgraded.
 .venv/bin/python tools/run_modal_smoke_before_full.py \
-    --recipe .omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml \
-    --smoke-epochs 100 --smoke-batch-size 4 \
-    --max-cost-usd 0.50
+    --recipe substrate_c6_e4_mdl_ibps_modal_t4_dispatch \
+    --smoke-epochs 50 \
+    --smoke-gpu T4 \
+    --smoke-timeout-hours 1.0 \
+    --operator-handle "operator:c6_surface_validation" \
+    --smoke-only \
+    --dry-run
 ```
 
 **Timing-smoke kill criterion:** if Stage 0B does not produce ≤150 KB archive within 30 min OR proxy score > 0.30, abort.
@@ -74,25 +73,15 @@ Build MDL-IBPS substrate (Minimum Description Length × Information Bottleneck �
 ## 4. Full-run command (resumable + harvest)
 
 ```bash
-# Stage 1 — Procedural decoder alone (1-2 weeks, $2-4 Modal T4)
-.venv/bin/python tools/operator_authorize.py \
-    --recipe substrate_c6_procedural_decoder_modal_t4_dispatch \
-    --operator-authorize-confirmed-via-session-directive \
-    --operator-authorize-session-budget-usd 15.0
-
-# Stage 2 — IB-regularized training (1-2 weeks, $3-7 Modal A100)
-.venv/bin/python tools/operator_authorize.py \
-    --recipe substrate_c6_ib_regularized_modal_a100_dispatch \
-    --operator-authorize-confirmed-via-session-directive \
-    --operator-authorize-session-budget-usd 15.0 \
-    --resume-from-checkpoint experiments/results/c6_procedural_decoder/best_ckpt.pt
-
-# Stage 3 — Composed MDL-IBPS substrate (3-5 days, $2-4)
-.venv/bin/python tools/operator_authorize.py \
-    --recipe substrate_c6_composed_full_modal_a100_dispatch \
-    --operator-authorize-confirmed-via-session-directive \
-    --operator-authorize-session-budget-usd 15.0 \
-    --resume-from-checkpoint experiments/results/c6_ib_regularized/best_ckpt.pt
+# Full-run surface check — still dry-run here; non-dry-run requires a fresh
+# lane claim and explicit operator spend approval.
+.venv/bin/python tools/run_modal_smoke_before_full.py \
+    --recipe substrate_c6_e4_mdl_ibps_modal_t4_dispatch \
+    --smoke-epochs 50 \
+    --smoke-gpu T4 \
+    --smoke-timeout-hours 1.0 \
+    --operator-handle "operator:c6_full_surface_check" \
+    --dry-run
 ```
 
 **Harvest path:** `experiments/results/c6_*/harvested_artifacts/` per Catalog #204.
@@ -166,7 +155,7 @@ C6 has WEAK dependencies on C5; can be dispatched independently if operator prio
 3. **Bit-allocator hook (`tac.composition.registry`)** — ENGAGED. IB β parameter IS the bit-allocator knob; register `bit_allocator.ib_beta_aware_v1`.
 4. **Cathedral autopilot dispatch hook** — ENGAGED. Add to autopilot queue with cost-band $5-15, predicted_dS [-0.030, -0.080], EIG very-high (LARGEST single bet).
 5. **Continual-learning posterior update (`tac.continual_learning.append_anchor`)** — ENGAGED. Stage 3 empirical anchor updates posterior; the IB β-sweep produces 5-10 anchors at different β-points — a high-information batch.
-6. **Probe-disambiguator** — ENGAGED. Two defensible interpretations: (a) "the procedural decoder dominates ΔS" vs (b) "the IB regularizer dominates ΔS". Probe `tools/probe_c6_procedural_vs_ib_dominance.py` (consumes Stage 1 + Stage 2 anchors).
+6. **Probe-disambiguator** — ENGAGED. Two defensible interpretations: (a) "the decoder class dominates ΔS" vs (b) "the IB bottleneck dominates ΔS". The executable probe surface is the existing C6 β-sweep/training recipe plus post-smoke MDL ablation on the emitted archive; validate dispatch syntax first with `tools/run_modal_smoke_before_full.py --recipe substrate_c6_e4_mdl_ibps_modal_t4_dispatch --dry-run`. There is no standalone procedural-vs-IB probe script surface in this checkout.
 
 ## 10. Cross-references
 

@@ -206,10 +206,10 @@ When the JSON lands, this section will record:
    - **RECOMMENDATION**: Land this BEFORE Decision 1 re-dispatch. The same Tier 1 backport unblocks ALL substrate trainers' Modal timeout pressure. Per the same memo, the trainer-side backport is **operator-routable next wave**; C6 is the natural first beneficiary because it was the empirical anchor for "timeout on T4 100ep".
 
 5. **DECISION 5 — Adjust C6 recipe `min_smoke_gpu` field to reflect timeout finding**
-   - The current C6 recipe declares `gpu: "${MODAL_GPU:-T4}"` (full-run) with `smoke_score_band: [0.10, 0.30]` and no `min_smoke_gpu` field. Per Catalog #215 + Catalog #167 the recipe SHOULD declare a `min_smoke_gpu` so the smoke wrapper auto-upgrades to a compute class that fits in 3600s.
-   - LOC estimate: 1 line YAML add: `min_smoke_gpu: "A10G"` (or A100).
-   - Cost: $0 (engineering).
-   - **RECOMMENDATION**: Land this as a follow-up to the C6 lane registry update. The `min_smoke_gpu` field then auto-propagates to future C6 dispatches via the smoke wrapper without further operator intervention.
+   - Status after executable-surface repair: `substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml` declares `min_smoke_gpu: "A10G"`.
+   - Validate without dispatch:
+     `.venv/bin/python tools/run_modal_smoke_before_full.py --recipe substrate_c6_e4_mdl_ibps_modal_t4_dispatch --smoke-epochs 50 --smoke-gpu T4 --smoke-timeout-hours 1.0 --operator-handle "operator:c6_surface_validation" --smoke-only --dry-run`
+   - Expected dry-run behavior: helper prints `Catalog #215: smoke GPU T4 -> A10G`, proving stale T4 CLI defaults no longer launch the timed-out smoke configuration.
 
 ## Resume protocol
 

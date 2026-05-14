@@ -4,16 +4,16 @@ lane_id: lane_c1_world_model_foveation_campaign_l1_scaffold_20260514
 summary: |
   C1 world-model + foveation substrate (long-term campaign L1 scaffold).
   ACROSS-CLASS substrate-shift from A1/PR101/HNeRV-family class-saturated
-  baselines (Z1 MDL density 97-99%). Predicted ΔS -0.04 to -0.06 vs A1
-  0.1928 ``[mathematical-derivation; first-principles-bound]`` -- predicted
-  band ``[0.13, 0.16]`` (staircase Step 4-5 territory).
+  baselines (Z1 MDL density 97-99%). After the 2026-05-14 fair probe v2
+  and adversarial review, executable dispatch defaults to the
+  identity/no-world-model foveation route. GRU/LSTM/Transformer recurrence
+  remains available only as explicit opt-in probe follow-up.
 
-  Two orthogonal innovations vs HNeRV-class:
+  Active executable hypothesis vs HNeRV-class:
 
-  A. World-model (recurrent latent dynamics) per Ha-Schmidhuber 2018
-     (arXiv:1803.10122) + Hafner DreamerV3 2023 (arXiv:2301.04104). Per-frame
-     residual surprise asymptotes to <100 bytes/frame for predictable
-     ego-motion (stationary-ergodic driving).
+  A. Identity/no-world-model baseline: repeat z_init rather than launching
+     the falsified GRU/LSTM recurrence by default. This matches the probe
+     verdict while preserving a byte-closed foveation smoke surface.
 
   B. Foveation (camera-geometry-aware bit allocation) per Atick & Redlich
      1990 (Neural Computation 2). Center 96x128 NEAR-FOV carries full-detail
@@ -25,15 +25,14 @@ summary: |
   (inner-quintet: Shannon LEAD + Dykstra CO-LEAD + Yousfi + Fridrich +
   Contrarian).
 
-  Probe-disambiguator (Catalog #125 hook #6): two design tensions ship as
-  callable alternatives -- world-model recurrence (gru/lstm/transformer) +
-  foveation strategy (uniform/ego_motion_radial/learned_per_pixel). Probes
-  at tools/probe_c1_world_model_vs_independent_frames_disambiguator.py +
-  tools/probe_c1_foveation_vs_uniform_quantization_disambiguator.py.
+  Probe-disambiguator (Catalog #125 hook #6): recurrent modes are still
+  callable alternatives via explicit recurrence-mode flags, but this recipe
+  is pinned to `identity_no_world_model` so stale dispatch surfaces cannot
+  relaunch GRU/LSTM by default.
 
-  Predicted band [0.13, 0.16] ``[mathematical-derivation; first-principles-bound]``
-  is NOT a score claim -- score authority requires CUDA + CPU paired auth eval
-  on 1:1 contest-CI hardware per CLAUDE.md "Submission auth eval".
+  Revised predicted band [0.153, 0.173] is axis-labelled
+  ``[contest-CUDA hypothetical; score_claim=false]``. It is NOT a score
+  claim and cannot promote without valid contest-CUDA auth eval.
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
@@ -52,6 +51,8 @@ canary_dependency: substrate_a1
 # registry as a baseline for the autopilot's ΔS calculation.
 
 active_dispatch_contract: c1_world_model_foveation_smoke
+smoke_only: true
+smoke_validation_contract: training_artifact_v1
 dispatch_contracts:
   - id: c1_world_model_foveation_smoke
     archive_role: monolithic_c1wmfv1
@@ -67,9 +68,10 @@ cost_band:
   gpu_key: T4
 
 predicted_score_target: null
-predicted_band: [0.130, 0.160]
-smoke_score_band: [0.180, 0.220]
-predicted_delta: "-0.04 to -0.06 vs A1 0.1928 [mathematical-derivation; first-principles-bound]"
+predicted_band: [0.153, 0.173]
+predicted_band_axis: "contest-CUDA hypothetical; score_claim=false; identity/no-world-model foveation route"
+smoke_score_band: [0.180, 0.260]
+predicted_delta: "-0.02 to -0.04 vs A1 0.1928 [contest-CUDA hypothetical; score_claim=false]"
 predicted_delta_basis: ".omx/research/campaign_c1_world_model_foveation_20260514.md §3 + §4"
 literature_anchor: |
   Ha & Schmidhuber (2018) "World Models" arXiv:1803.10122 DOI 10.48550/arXiv.1803.10122;
@@ -84,15 +86,15 @@ council_phase_5_prediction: 0.145
 
 risk: |
   C1 substrate first-anchor dispatch. The substrate is NOVEL across-class --
-  world-model + foveation has NOT been empirically anchored against the
-  contest video. Predicted band [0.13, 0.16] is a literature-prediction
-  synthesis (Ha-Schmidhuber 2018 + Atick-Redlich 1990 + Z1 across-class
-  predictions), NOT measurement.
+  identity/no-world-model + foveation has NOT been empirically anchored against
+  the contest video. Predicted band [0.153, 0.173] is a hypothetical
+  contest-CUDA band with score_claim=false, NOT measurement.
 
   Architectural risk:
-  - World-model recurrence has 3 design tensions (gru/lstm/transformer) and
-    the choice affects the world_model_blob byte budget. GRU is cheapest
-    forward but may underfit non-periodic ego-motion (lane changes).
+  - GRU/LSTM recurrence was falsified as a default campaign action by the
+    2026-05-14 probe verdict. This recipe therefore uses
+    identity_no_world_model unless an operator explicitly opts back into a
+    recurrent mode for a fresh probe target.
   - Foveation strategy has 3 design tensions; EGO_MOTION_RADIAL is the
     default but is geometric (not learned). LEARNED_PER_PIXEL pays a small
     foveation_meta_blob byte cost but may outperform.
@@ -105,9 +107,9 @@ risk: |
     of Z3 Ballé hyperprior).
 
   Modal T4 smoke is DIAGNOSTIC ONLY (validates substrate plumbing).
-  The score_claim_valid=false + result_review_blockers cascade per
-  Catalog #221 prevents promotion to autopilot ranking from smoke alone.
-  Full-anchor dispatch requires Phase 3 council approval (operator-routable).
+  The training_artifact_v1 + score_claim=false contract prevents promotion to
+  autopilot ranking from smoke alone. Full-anchor dispatch requires Phase 3
+  council approval (operator-routable).
 
 envelope_status: "FITS $5 envelope at p50 smoke fallback (Modal T4 100ep ~$1)"
 
@@ -146,7 +148,7 @@ env_overrides:
   C1_WORLD_MODEL_FOVEATION_EPOCHS: "100"
   C1_WORLD_MODEL_FOVEATION_UPSTREAM_DIR: /workspace/pact/upstream
   C1_WORLD_MODEL_FOVEATION_DEVICE: cuda
-  C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE: gru
+  C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE: identity_no_world_model
   C1_WORLD_MODEL_FOVEATION_FOVEATION_STRATEGY: ego_motion_radial
   C1_WORLD_MODEL_FOVEATION_LATENT_DIM: "64"
   LOCAL_CUDA_WORKER: "1"
@@ -160,8 +162,9 @@ dependencies:
 notes: |
   C1 world-model + foveation substrate -- long-term campaign L1 SCAFFOLD.
 
-  V1 SCOPE: --smoke-only dispatch (~$1 Modal T4) validates substrate
-  plumbing end-to-end. The trainer's `_full_main` raises
+  V1 SCOPE: --smoke-only dispatch (~$1 Modal T4) validates identity/no-world-
+  model foveation plumbing end-to-end as a training_artifact_v1 surface. The
+  trainer's `_full_main` raises
   NotImplementedError pending Phase 3 council approval; smoke-only runs
   are operator-authorized.
 
@@ -170,7 +173,8 @@ notes: |
 
   1. Inner-quintet council approves multi-stage schedule
   2. Z1 MDL ablation confirms C1 is across-class (density < 0.90)
-  3. Smoke dispatch validates substrate plumbing end-to-end
+  3. Smoke dispatch validates identity/no-world-model substrate plumbing
+     end-to-end
   4. Sister long-term campaign C5/C6 anchors land for stacking analysis
   5. Operator-routed budget approval via tools/operator_authorize.py
 

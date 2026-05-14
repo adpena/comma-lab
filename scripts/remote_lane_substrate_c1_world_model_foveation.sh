@@ -16,14 +16,16 @@
 #
 # Design refs:
 #   - .omx/research/campaign_c1_world_model_foveation_20260514.md
-#   - Ha-Schmidhuber 2018; Hafner DreamerV3 2023; Atick-Redlich 1990
+#   - C1 fair probe v2/adversarial review: identity/no-world-model is the
+#     executable default; GRU/LSTM/Transformer require explicit opt-in.
+#   - Atick-Redlich 1990 foveation remains the default C1 signal.
 #
 # V1 SCOPE: smoke dispatch validates substrate plumbing (~$1 Modal T4 100ep).
 # Full multi-stage training requires Phase 3 council approval; trainer's
 # _full_main raises NotImplementedError before council.
 #
-# Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_C1_WMF_DONE marker).
+# Score-tagging: this L1 driver emits [smoke-no-scorer] training artifacts
+# only. It makes no score claim and never launches full training.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity - non-negotiable".
 set -euo pipefail
@@ -42,7 +44,7 @@ C1_WORLD_MODEL_FOVEATION_OUTPUT_DIR="${C1_WORLD_MODEL_FOVEATION_OUTPUT_DIR:-$OUT
 C1_WORLD_MODEL_FOVEATION_EPOCHS="${C1_WORLD_MODEL_FOVEATION_EPOCHS:-100}"
 C1_WORLD_MODEL_FOVEATION_UPSTREAM_DIR="${C1_WORLD_MODEL_FOVEATION_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 C1_WORLD_MODEL_FOVEATION_DEVICE="${C1_WORLD_MODEL_FOVEATION_DEVICE:-cuda}"
-C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE="${C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE:-gru}"
+C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE="${C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE:-identity_no_world_model}"
 C1_WORLD_MODEL_FOVEATION_FOVEATION_STRATEGY="${C1_WORLD_MODEL_FOVEATION_FOVEATION_STRATEGY:-ego_motion_radial}"
 C1_WORLD_MODEL_FOVEATION_LATENT_DIM="${C1_WORLD_MODEL_FOVEATION_LATENT_DIM:-64}"
 # Modal durable output path per Catalog #204

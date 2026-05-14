@@ -5,8 +5,10 @@ Per the C1 long-term campaign ledger
 ``.omx/research/campaign_c1_world_model_foveation_20260514.md`` and the
 operator directive 2026-05-14 "we are aggressively pursuing across class too":
 ACROSS-CLASS substrate-shift from A1/PR101/HNeRV-family class-saturated
-baselines (Z1 MDL density 97-99%) toward the predicted [0.13, 0.16] zen-floor
-band (staircase Step 4-5 territory).
+baselines (Z1 MDL density 97-99%). After the 2026-05-14 fair probe v2 and
+adversarial review, executable dispatch defaults to the identity/no-world-model
+baseline plus foveation. GRU/LSTM/Transformer recurrence remains available only
+through explicit ``--recurrence-mode`` opt-in flags.
 
 Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 
@@ -112,6 +114,13 @@ CONTEST_NORMALIZER = 37_545_489.0
 
 SUBSTRATE_TAG = "c1_world_model_foveation"
 SUBSTRATE_LANE_ID = "lane_c1_world_model_foveation_campaign_l1_scaffold_20260514"
+DEFAULT_RECURRENCE_MODE = WorldModelRecurrenceMode.IDENTITY_NO_WORLD_MODEL.value
+RECURRENCE_MODE_TO_ID = {
+    WorldModelRecurrenceMode.GRU.value: 0,
+    WorldModelRecurrenceMode.LSTM.value: 1,
+    WorldModelRecurrenceMode.TRANSFORMER.value: 2,
+    WorldModelRecurrenceMode.IDENTITY_NO_WORLD_MODEL.value: 3,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -169,10 +178,12 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--recurrence-mode": {
         "env": "C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE",
         "rationale": (
-            "world-model recurrence (Catalog #125 hook #6 probe-disambiguator): "
-            "gru/lstm/transformer; default gru for cheapest forward"
+            "C1 latent dynamics mode (Catalog #125 hook #6 probe-disambiguator): "
+            "identity_no_world_model/gru/lstm/transformer. Default "
+            "identity_no_world_model matches the 2026-05-14 fair probe v2 "
+            "verdict; GRU/LSTM/Transformer are explicit opt-ins only."
         ),
-        "default": "gru",
+        "default": DEFAULT_RECURRENCE_MODE,
     },
     "--foveation-strategy": {
         "env": "C1_WORLD_MODEL_FOVEATION_FOVEATION_STRATEGY",
@@ -203,9 +214,10 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="train_substrate_c1_world_model_foveation",
         description=(
             "Train C1 world-model + foveation substrate (long-term campaign "
-            "L1 scaffold). World-model recurrent latent dynamics + foveated "
-            "decoder + camera-geometry-aware bit allocation. Predicted band "
-            "[0.13, 0.16] [mathematical-derivation; first-principles-bound]."
+            "L1 scaffold). Default is identity/no-world-model foveation after "
+            "the 2026-05-14 probe verdict; recurrent GRU/LSTM/Transformer "
+            "modes require explicit opt-in. Predicted band is hypothetical "
+            "[contest-CUDA; score_claim=false]."
         ),
     )
     p.add_argument("--video-path", type=Path, default=DEFAULT_VIDEO_PATH)
@@ -221,8 +233,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--recurrence-mode",
         type=str,
-        default="gru",
-        choices=["gru", "lstm", "transformer"],
+        default=DEFAULT_RECURRENCE_MODE,
+        choices=list(RECURRENCE_MODE_TO_ID.keys()),
     )
     p.add_argument(
         "--foveation-strategy",
@@ -296,11 +308,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Small smoke config: 4 pairs, 24x32 frames, latent_dim=8.
-    recurrence_mode = {
-        "gru": WorldModelRecurrenceMode.GRU,
-        "lstm": WorldModelRecurrenceMode.LSTM,
-        "transformer": WorldModelRecurrenceMode.TRANSFORMER,
-    }[args.recurrence_mode]
+    recurrence_mode = WorldModelRecurrenceMode(args.recurrence_mode)
     foveation_strategy = {
         "uniform": FoveationStrategy.UNIFORM,
         "ego_motion_radial": FoveationStrategy.EGO_MOTION_RADIAL,
@@ -338,11 +346,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         losses.append(float(loss.item()))
 
     # Build the smoke archive.
-    recurrence_int = (
-        0 if recurrence_mode == WorldModelRecurrenceMode.GRU
-        else 1 if recurrence_mode == WorldModelRecurrenceMode.LSTM
-        else 2
-    )
+    recurrence_int = RECURRENCE_MODE_TO_ID[recurrence_mode.value]
     foveation_int = (
         0 if foveation_strategy == FoveationStrategy.UNIFORM
         else 1 if foveation_strategy == FoveationStrategy.EGO_MOTION_RADIAL
@@ -557,7 +561,8 @@ def _full_main(args: argparse.Namespace) -> int:
     - $30-50 GPU budget over 3-4 weeks
     - 6-8 stages: world-model alone -> foveation alone -> combined fine-tune
       -> residual codec -> archive byte sweep -> full Lagrangian convergence
-    - Predicted band [0.13, 0.16] [mathematical-derivation; first-principles-bound]
+    - Predicted band is hypothetical [contest-CUDA; score_claim=false];
+      identity/no-world-model is the default after the 2026-05-14 probe verdict
     - Across-class from A1/HNeRV-family (substrate-shift, NOT bolt-on)
 
     Phase 3 unlock conditions (operator-routable):
@@ -573,8 +578,9 @@ def _full_main(args: argparse.Namespace) -> int:
     raise NotImplementedError(
         "C1 full training is gated by Phase 3 council approval per CLAUDE.md "
         "'Design decisions -- non-negotiable'. The multi-stage training "
-        "schedule ($30-50 over 3-4 weeks, 6-8 stages, predicted band "
-        "[0.13, 0.16] across-class substrate-shift) requires inner-quintet "
+        "schedule ($15-25 revised envelope after the probe verdict, 6-8 "
+        "stages, hypothetical predicted band [contest-CUDA; score_claim=false]) "
+        "requires inner-quintet "
         "council sign-off (Shannon + Dykstra + Yousfi + Fridrich + Contrarian) "
         "before any dispatch. Run --smoke to validate plumbing without GPU spend. "
         "See campaign ledger at "

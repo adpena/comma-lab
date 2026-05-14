@@ -8,9 +8,11 @@
 #
 # This wrapper routes through `tools/run_modal_smoke_before_full.py` per
 # Catalog #167 (`check_substrate_dispatch_uses_smoke_before_full_pattern`).
-# A 100-epoch ~$0.50 Modal T4 smoke fires FIRST, validates rc=0 + auth-eval
+# A smoke fires FIRST via the canonical helper. The recipe declares
+# min_smoke_gpu=A10G after the 2026-05-14 100ep T4 timeout, so stale T4 CLI
+# defaults are upgraded before any dispatch. Smoke validates rc=0 + auth-eval
 # JSON present + score in plausible band [0.10, 0.30], and only proceeds to
-# the full 200-epoch T4 dispatch on smoke-green.
+# the full dispatch on smoke-green.
 #
 # Per Catalog #162 (`check_operator_authorize_canonical_use`) the full
 # dispatch ultimately delegates to `tools/operator_authorize.py --recipe`.
@@ -20,7 +22,7 @@
 #   C6_E4_MDL_IBPS_EPOCHS=200                (council default; full training)
 #   MODAL_TIMEOUT_HOURS=4.0                  (Modal hard-kill wall-clock)
 #   C6_E4_MDL_IBPS_SMOKE_EPOCHS=100          (smoke epoch override)
-#   C6_E4_MDL_IBPS_SMOKE_GPU=T4              (smoke GPU class)
+#   C6_E4_MDL_IBPS_SMOKE_GPU=T4              (helper upgrades to A10G per recipe min)
 #   C6_E4_MDL_IBPS_SMOKE_ONLY=1              (skip full even on smoke-green)
 #   C6_E4_MDL_IBPS_FULL_ONLY=1               (skip smoke; operator override
 #                                             after >=3 successful anchors)

@@ -66,13 +66,18 @@ def _build_substrate_from_archive(
     device: str,
 ) -> tuple[WorldModelModule, FoveatedDecoderModule, FoveationMapModule, torch.Tensor]:
     """Build the world-model + decoder + foveation modules from archive sections."""
-    recurrence_mode = (
-        WorldModelRecurrenceMode.GRU
-        if arc.recurrence_mode == 0
-        else WorldModelRecurrenceMode.LSTM
-        if arc.recurrence_mode == 1
-        else WorldModelRecurrenceMode.TRANSFORMER
-    )
+    recurrence_mode_by_id = {
+        0: WorldModelRecurrenceMode.GRU,
+        1: WorldModelRecurrenceMode.LSTM,
+        2: WorldModelRecurrenceMode.TRANSFORMER,
+        3: WorldModelRecurrenceMode.IDENTITY_NO_WORLD_MODEL,
+    }
+    try:
+        recurrence_mode = recurrence_mode_by_id[arc.recurrence_mode]
+    except KeyError as exc:
+        raise ValueError(
+            f"unsupported C1 recurrence_mode id {arc.recurrence_mode}"
+        ) from exc
     foveation_strategy = (
         FoveationStrategy.UNIFORM
         if arc.foveation_strategy == 0

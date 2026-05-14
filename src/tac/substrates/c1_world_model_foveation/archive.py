@@ -15,7 +15,7 @@ The 6-section grammar (single monolithic 0.bin):
     MAGIC(4)              b"WMF\\x01"
     VERSION(1)            u8 (== 1)
     NUM_PAIRS(2)          u16
-    RECURRENCE_MODE(1)    u8 (0=GRU, 1=LSTM, 2=TRANSFORMER)
+    RECURRENCE_MODE(1)    u8 (0=GRU, 1=LSTM, 2=TRANSFORMER, 3=IDENTITY_NO_WORLD_MODEL)
     FOVEATION_STRATEGY(1) u8 (0=UNIFORM, 1=EGO_MOTION_RADIAL, 2=LEARNED_PER_PIXEL)
     LATENT_DIM(2)         u16
     OUTPUT_H(2)           u16
@@ -100,7 +100,7 @@ class WorldModelFoveationArchive:
 
     version: int
     num_pairs: int
-    recurrence_mode: int  # 0=GRU 1=LSTM 2=TRANSFORMER
+    recurrence_mode: int  # 0=GRU 1=LSTM 2=TRANSFORMER 3=IDENTITY_NO_WORLD_MODEL
     foveation_strategy: int  # 0=UNIFORM 1=EGO_MOTION_RADIAL 2=LEARNED_PER_PIXEL
     latent_dim: int
     output_h: int
@@ -200,7 +200,7 @@ def pack_archive(
 
     Args:
         num_pairs: contest pair count.
-        recurrence_mode: 0=GRU 1=LSTM 2=TRANSFORMER.
+        recurrence_mode: 0=GRU 1=LSTM 2=TRANSFORMER 3=IDENTITY_NO_WORLD_MODEL.
         foveation_strategy: 0=UNIFORM 1=EGO_MOTION_RADIAL 2=LEARNED_PER_PIXEL.
         latent_dim: world-model latent dim.
         output_h, output_w: scorer resolution height + width.
@@ -218,8 +218,10 @@ def pack_archive(
     Returns:
         Packed archive bytes ready for the contest 0.bin slot.
     """
-    if not (0 <= recurrence_mode <= 2):
-        raise ValueError(f"recurrence_mode must be 0/1/2; got {recurrence_mode}")
+    if not (0 <= recurrence_mode <= 3):
+        raise ValueError(
+            f"recurrence_mode must be 0/1/2/3; got {recurrence_mode}"
+        )
     if not (0 <= foveation_strategy <= 2):
         raise ValueError(
             f"foveation_strategy must be 0/1/2; got {foveation_strategy}"

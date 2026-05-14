@@ -5,11 +5,10 @@ Per the C1 long-term campaign ledger
 ``.omx/research/campaign_c1_world_model_foveation_20260514.md`` the
 substrate composes three orthogonal building blocks:
 
-1. ``WorldModelModule`` -- recurrent latent dynamics (GRU/LSTM/Transformer
-   per probe-disambiguator) that propagates a compact latent state ``z_t``
-   across the temporal axis. Per Ha-Schmidhuber 2018 / Hafner DreamerV3
-   2023, the recurrent posterior compresses adjacent-frame redundancy that
-   per-frame independent decoders (HNeRV-class) cannot exploit.
+1. ``WorldModelModule`` -- latent dynamics mode (identity/no-world-model by
+   default on executable dispatch surfaces after the 2026-05-14 probe verdict;
+   GRU/LSTM/Transformer remain explicit opt-ins) that propagates a compact
+   latent state ``z_t`` across the temporal axis.
 
 2. ``FoveatedDecoderModule`` -- per-frame decoder ``D(z_t)`` that emits
    full ``(3, 384, 512)`` RGB but with per-pixel bit allocation modulated
@@ -114,6 +113,16 @@ class WorldModelRecurrenceMode(Enum):
     dependencies the GRU/LSTM may miss. Council expectation: defer until
     GRU/LSTM anchors land, then probe whether attention helps."""
 
+    IDENTITY_NO_WORLD_MODEL = "identity_no_world_model"
+    """Zero-parameter identity/no-world-model mode.
+
+    Added after the 2026-05-14 adversarial review and fair C1 probe v2
+    falsified GRU/LSTM recurrence as the default campaign action for the C1
+    archive class. This mode repeats ``z_init`` for every frame, preserving an
+    executable no-world-model/foveation baseline while keeping GRU/LSTM/
+    Transformer available only as explicit opt-ins.
+    """
+
 
 class FoveationStrategy(Enum):
     """The foveation-strategy design tension (probe-disambiguator hook).
@@ -145,7 +154,8 @@ class WorldModelConfig:
     """Static design-time parameters for the world-model recurrence.
 
     Args:
-        recurrence_mode: GRU / LSTM / TRANSFORMER (probe-disambiguator hook).
+        recurrence_mode: identity-no-world-model / GRU / LSTM / TRANSFORMER
+            (probe-disambiguator hook).
         latent_dim: per-step latent z dimensionality.
         hidden_dim: GRU/LSTM cell hidden state size.
         transformer_heads: only used when recurrence_mode=TRANSFORMER.
@@ -244,7 +254,9 @@ class WorldModelModule(nn.Module):
     def __init__(self, cfg: WorldModelConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        if cfg.recurrence_mode == WorldModelRecurrenceMode.GRU:
+        if cfg.recurrence_mode == WorldModelRecurrenceMode.IDENTITY_NO_WORLD_MODEL:
+            self.cell = nn.Identity()
+        elif cfg.recurrence_mode == WorldModelRecurrenceMode.GRU:
             self.cell: nn.Module = nn.GRUCell(
                 input_size=cfg.latent_dim,
                 hidden_size=cfg.hidden_dim,
@@ -285,6 +297,9 @@ class WorldModelModule(nn.Module):
                 f"z_init last dim {z_init.shape[-1]} != latent_dim "
                 f"{self.cfg.latent_dim}"
             )
+
+        if self.cfg.recurrence_mode == WorldModelRecurrenceMode.IDENTITY_NO_WORLD_MODEL:
+            return z_init.expand(n_steps, -1).contiguous()
 
         if self.cfg.recurrence_mode == WorldModelRecurrenceMode.TRANSFORMER:
             # Tile z_init across the sequence and let the encoder process it.
