@@ -1,9 +1,28 @@
 {
+  "artifact_names": [
+    "contest_auth_eval.json",
+    "contest_auth_eval.stderr.log",
+    "contest_auth_eval.stdout.log",
+    "inflated_outputs_manifest.json",
+    "modal_cuda_auth_eval_validation.json",
+    "modal_cuda_preflight.json",
+    "provenance.json",
+    "report.txt"
+  ],
+  "avg_posenet_dist": 0.43463999,
+  "avg_segnet_dist": 0.50482631,
   "call_id": "fc-01KRKVR2VK30AVTW35J5SCAW4Z",
+  "evidence_grade": "contest-CUDA",
+  "inflate_device_policy": "auto",
   "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/c6_ibps1_decoder34858_patch_t4_20260514T182251Z",
+  "passed": true,
   "promotion_eligible": false,
-  "recovered_at_utc": "2026-05-14T18:28:08Z",
+  "recovered_at_utc": "2026-05-14T18:31:55Z",
+  "result_json": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/c6_ibps1_decoder34858_patch_t4_20260514T182251Z/modal_cuda_auth_eval_result.json",
+  "returncode": 0,
   "schema_version": "modal_auth_eval_recover_summary_v1",
-  "score_claim": false,
-  "status": "pending"
+  "score_axis": "contest_cuda",
+  "score_claim": true,
+  "score_recomputed_from_components": 52.7169058085588,
+  "status": "recovered"
 }

@@ -1,0 +1,391 @@
+{
+  "schema_version": 1,
+  "final_score": 52.72,
+  "avg_posenet_dist": 0.43463999,
+  "avg_segnet_dist": 0.50482631,
+  "rate_unscaled": 0.005978907346232726,
+  "rate_unscaled_reported_rounded": 0.00597891,
+  "original_uncompressed_size_bytes": 37545489,
+  "score_pose_contribution": 2.0848021249029847,
+  "score_seg_contribution": 50.482631,
+  "score_rate_contribution": 0.14947268365581814,
+  "score_recomputed_from_components": 52.7169058085588,
+  "canonical_score": 52.7169058085588,
+  "canonical_score_source": "score_recomputed_from_components",
+  "reported_final_score_display_rounded": 52.72,
+  "score_rounding_abs_delta": 0.003094191441199712,
+  "score_reported_rounded_differs_from_canonical": true,
+  "archive_size_bytes": 224481,
+  "n_samples": 600,
+  "report_path": "/root/modal_auth_eval_work/eval_work/report.txt",
+  "evaluate_elapsed_seconds": 57.29956877700005,
+  "inflate_elapsed_seconds": 251.339430947,
+  "contest_auth_eval_elapsed_seconds": 320.96709409700003,
+  "provenance": {
+    "schema_version": 1,
+    "started_at_utc": "2026-05-14T18:25:13Z",
+    "tool": "experiments/contest_auth_eval.py",
+    "archive_path": "/tmp/modal_auth_eval/archive.zip",
+    "archive_sha256": "2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+    "archive_size_bytes": 224481,
+    "inflate_script": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+    "inflate_script_sha256": "b625f1c32f47a3676d81e540a5d849d7d9f16d76a4fcbe80d86e8fe63d3f0fab",
+    "inflate_runtime_manifest": {
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "runtime_root": "/tmp/modal_auth_eval/submission_dir",
+      "runtime_file_count": 14,
+      "runtime_tree_sha256": "03c0788a1fb2cc4842803135820b350cf5db62f598403954996faef972c56f98",
+      "runtime_content_tree_sha256": "439b8b0998cd0f0c23988086270c3ad7fddca4f1e6dcb0198cd2d84a93af207c",
+      "files": [
+        {
+          "relative_path": "archive_manifest.json",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/archive_manifest.json",
+          "bytes": 585,
+          "sha256": "f9ea1f67890fd18c29ccc93dfc1a28ee6b5c0f77709740bb0416330f4f1c21ad"
+        },
+        {
+          "relative_path": "inflate.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+          "bytes": 193,
+          "sha256": "50417c2199267010e5685a9b36001b7fe5a9fa8af65547c58d2f08a85c2a7822"
+        },
+        {
+          "relative_path": "inflate.sh",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+          "bytes": 586,
+          "sha256": "b625f1c32f47a3676d81e540a5d849d7d9f16d76a4fcbe80d86e8fe63d3f0fab"
+        },
+        {
+          "relative_path": "report.txt",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
+          "bytes": 1027,
+          "sha256": "9cd97efb8c06949c6bd74287874fa740bea18868ec908571388e3486f840904b"
+        },
+        {
+          "relative_path": "src/tac/__init__.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/__init__.py",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "relative_path": "src/tac/substrates/__init__.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/__init__.py",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "relative_path": "src/tac/substrates/_shared/__init__.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/_shared/__init__.py",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "relative_path": "src/tac/substrates/_shared/inflate_runtime.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
+          "bytes": 4148,
+          "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
+        },
+        {
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/__init__.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/__init__.py",
+          "bytes": 668,
+          "sha256": "a63b0a5ec10d2356fb0057fedc762287dd1c94d7d5e7ec5a8f5fcacfc1848e87"
+        },
+        {
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/architecture.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/architecture.py",
+          "bytes": 7972,
+          "sha256": "2639cc74416ccb53824524f05475cd6885e9e471c9a7db436805bc5d8788fe77"
+        },
+        {
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/archive.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/archive.py",
+          "bytes": 16318,
+          "sha256": "4247a308a933295c79b4b4ec3da90dc2f731a161b9cc442abac0a15018c16c45"
+        },
+        {
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py",
+          "bytes": 7094,
+          "sha256": "bed2e015e0a4d0e377f70988dd8fbd0eee9ba16b3291f86b1e761bded649fa39"
+        },
+        {
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py",
+          "bytes": 5909,
+          "sha256": "c3c1cf342f8007193fdedf1df203aa361b5e3b92e5cf7968f5d33af88be55762"
+        },
+        {
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/inflate.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/inflate.py",
+          "bytes": 5804,
+          "sha256": "38dfeff6560e80c9143df78473a210d9c4979b4609d9643be5f8b5d58e8d194e"
+        }
+      ],
+      "external_dependency_roots": [],
+      "repo_local_tac_import_manifest": {
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "discovery": "static_ast_recursive_import_closure",
+        "runtime_root_name": "submission_dir",
+        "tac_root_relative_path": "src/tac",
+        "root_import_modules": [
+          "tac.substrates._shared.inflate_runtime",
+          "tac.substrates.c6_e4_mdl_ibps.architecture",
+          "tac.substrates.c6_e4_mdl_ibps.archive",
+          "tac.substrates.c6_e4_mdl_ibps.ib_decoder",
+          "tac.substrates.c6_e4_mdl_ibps.ib_encoder",
+          "tac.substrates.c6_e4_mdl_ibps.inflate"
+        ],
+        "unresolved_modules": [],
+        "parse_errors": [],
+        "module_count": 20,
+        "file_count": 21,
+        "files": [
+          {
+            "module": "tac",
+            "relative_path": "src/tac/__init__.py",
+            "bytes": 3121,
+            "sha256": "6f6a95655e32362c9cc12c2a9ad98a2f938b6110910f78d466cd50f61a8a3cd4"
+          },
+          {
+            "module": "tac.architectures",
+            "relative_path": "src/tac/architectures.py",
+            "bytes": 35544,
+            "sha256": "31acafc658b8291044c3c0d401e4d315ff634b72d598ec373d6e72bc7fec9f5c"
+          },
+          {
+            "module": "tac.differentiable_eval_roundtrip",
+            "relative_path": "src/tac/differentiable_eval_roundtrip.py",
+            "bytes": 27475,
+            "sha256": "9f75e30439a335c4ebd33fe094964c12bd512e4795b522bfa936f181d5d66bca"
+          },
+          {
+            "module": "tac.fridrich",
+            "relative_path": "src/tac/fridrich.py",
+            "bytes": 56197,
+            "sha256": "012095e4b14e4f73d66d166e1cdd2c49695ec70ceecc6be4db1561bd8236db2e"
+          },
+          {
+            "module": "tac.losses",
+            "relative_path": "src/tac/losses/__init__.py",
+            "bytes": 4400,
+            "sha256": "6897823740078bec2bd56f86eecd6dbece697b63caff5ffef6099c63cd978fce"
+          },
+          {
+            "module": "tac.losses.core",
+            "relative_path": "src/tac/losses/core.py",
+            "bytes": 98685,
+            "sha256": "fc93324ea0fffabf2a36241075a83800320430da775db959036c87e50de71b9c"
+          },
+          {
+            "module": "tac.psd_lumaskip_renderer",
+            "relative_path": "src/tac/psd_lumaskip_renderer.py",
+            "bytes": 13962,
+            "sha256": "de3818f2c0e17ec223f21df62829424aac812f09edf85d9cd39a69aa718dc1a9"
+          },
+          {
+            "module": "tac.quantization",
+            "relative_path": "src/tac/quantization.py",
+            "bytes": 41666,
+            "sha256": "d5acf14bf0c05c436e941d3565da67638b2d9ccd11777856bd3aeb74c1902da5"
+          },
+          {
+            "module": "tac.substrates",
+            "relative_path": "src/tac/substrates/__init__.py",
+            "bytes": 8574,
+            "sha256": "fee0c49fb16d9b3f2609cbb0179ed9cf36aaff1217645d9ed07a0cce2288921b"
+          },
+          {
+            "module": "tac.substrates._shared",
+            "relative_path": "src/tac/substrates/_shared/__init__.py",
+            "bytes": 374,
+            "sha256": "4f893eb90984041a4b67040a1c7a67e24ec61ccece840f8c64f6b7a1607462a1"
+          },
+          {
+            "module": "tac.substrates._shared.inflate_runtime",
+            "relative_path": "src/tac/substrates/_shared/inflate_runtime.py",
+            "bytes": 4148,
+            "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/__init__.py",
+            "bytes": 7401,
+            "sha256": "3b87c84249080f41100edbe239644aeba424ad8ed21c811d4bb86bce8d015658"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps.architecture",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/architecture.py",
+            "bytes": 7972,
+            "sha256": "2639cc74416ccb53824524f05475cd6885e9e471c9a7db436805bc5d8788fe77"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps.archive",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/archive.py",
+            "bytes": 16318,
+            "sha256": "4247a308a933295c79b4b4ec3da90dc2f731a161b9cc442abac0a15018c16c45"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps.ib_decoder",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py",
+            "bytes": 7094,
+            "sha256": "bed2e015e0a4d0e377f70988dd8fbd0eee9ba16b3291f86b1e761bded649fa39"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps.ib_encoder",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py",
+            "bytes": 5909,
+            "sha256": "c3c1cf342f8007193fdedf1df203aa361b5e3b92e5cf7968f5d33af88be55762"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps.inflate",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/inflate.py",
+            "bytes": 5804,
+            "sha256": "38dfeff6560e80c9143df78473a210d9c4979b4609d9643be5f8b5d58e8d194e"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps.mdl_loss",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/mdl_loss.py",
+            "bytes": 3941,
+            "sha256": "c1dee7cbc45e2faac9d966c11ddfc6a2eae0ca18a5b90ffe4c58fedcb260a919"
+          },
+          {
+            "module": "tac.substrates.c6_e4_mdl_ibps.score_aware_loss",
+            "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/score_aware_loss.py",
+            "bytes": 7312,
+            "sha256": "1a92d5c9babf8bd1da29a365f57cdf963989bf5f446f4c8da97241161743ea07"
+          },
+          {
+            "module": "tac.substrates.score_aware_common",
+            "relative_path": "src/tac/substrates/score_aware_common.py",
+            "bytes": 13596,
+            "sha256": "74aa9d18874564caa0a6bb2b0d66525759f038078ef4a6bfffba24fc40bbe06d"
+          },
+          {
+            "module": "tac.wavelet_variance",
+            "relative_path": "src/tac/wavelet_variance.py",
+            "bytes": 7609,
+            "sha256": "87dcbdb90399db9a73e2788b8683939b8877bca8714512f24d80e66f24b01e43"
+          }
+        ]
+      },
+      "upstream_evaluate_py": {
+        "relative_path": "evaluate.py",
+        "bytes": 6005,
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "upstream_dir": "/workspace/pact/upstream",
+    "device": "cuda",
+    "platform_system": "Linux",
+    "platform_machine": "x86_64",
+    "platform_processor": "",
+    "inflate_timeout_seconds": 1800,
+    "evaluate_timeout_seconds": 1800,
+    "video_names_file": "/workspace/pact/upstream/public_test_video_names.txt",
+    "sys_argv": [
+      "/workspace/pact/experiments/contest_auth_eval.py",
+      "--archive",
+      "/tmp/modal_auth_eval/archive.zip",
+      "--inflate-sh",
+      "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+      "--upstream-dir",
+      "/workspace/pact/upstream",
+      "--video-names-file",
+      "/workspace/pact/upstream/public_test_video_names.txt",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/root/modal_auth_eval_work/eval_work",
+      "--inflate-timeout",
+      "1800",
+      "--evaluate-timeout",
+      "1800",
+      "--inflate-device",
+      "auto",
+      "--expected-runtime-tree-sha256",
+      "03c0788a1fb2cc4842803135820b350cf5db62f598403954996faef972c56f98"
+    ],
+    "effective_inflate_python": "/usr/local/bin/python",
+    "env_vars": {
+      "PYTHONPATH": "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact",
+      "CUDA_VISIBLE_DEVICES": null,
+      "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+      "PYTHONHASHSEED": "0",
+      "PYTORCH_CUDA_ALLOC_CONF": null,
+      "LD_LIBRARY_PATH": null,
+      "CONFIG_ENV_PATH": null,
+      "PYTHON_INFLATE": null,
+      "LANE_MM_SIGMA": null,
+      "INFLATE_BROTLI_SPEC": null,
+      "INFLATE_AV_SPEC": null,
+      "INFLATE_TORCH_SPEC": null,
+      "INFLATE_TORCHVISION_SPEC": null,
+      "INFLATE_NUMPY_SPEC": null,
+      "UV_BIN": "/usr/local/bin/uv",
+      "UV_PROJECT_ENVIRONMENT": "/tmp/modal_auth_eval/uv_project_env",
+      "PYTHON": null
+    },
+    "gpu_model": "Tesla T4",
+    "gpu_driver": "580.95.05",
+    "gpu_t4_match": true,
+    "torch_version": "2.5.1+cu124",
+    "cuda_version": "12.4",
+    "cuda_available": true,
+    "mps_available": false,
+    "cuda_device_count": 1,
+    "ffmpeg_version": "ffmpeg version 5.1.8-0+deb12u1 Copyright (c) 2000-2025 the FFmpeg developers",
+    "libsvtav1_version": "configuration: --prefix=/usr --extra-version=0+deb12u1 --toolchain=hardened --libdir=/usr/lib/x86_64-linux-gnu --incdir=/usr/include/x86_64-linux-gnu --arch=amd64 --enable-gpl --disable-stripping --enable-gnutls --enable-ladspa --enable-libaom --enable-libass --enable-libbluray --enable-libbs2b --enable-libcaca --enable-libcdio --enable-libcodec2 --enable-libdav1d --enable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libglslang --enable-libgme --enable-libgsm --enable-libjack --enable-libmp3lame --enable-libmysofa --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-libpulse --enable-librabbitmq --enable-librist --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzimg --enable-libzmq --enable-libzvbi --enable-lv2 --enable-omx --enable-openal --enable-opencl --enable-opengl --enable-sdl2 --disable-sndio --enable-libjxl --enable-pocketsphinx --enable-librsvg --enable-libmfx --enable-libdc1394 --enable-libdrm --enable-libiec61883 --enable-chromaprint --enable-frei0r --enable-libx264 --enable-libplacebo --enable-librav1e --enable-shared",
+    "pact_commit": "e1015379cb36c2bf94724a89bf9551145aff1756",
+    "pact_commit_source": "PACT_SOURCE_COMMIT",
+    "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+    "inflate_device_policy": "auto",
+    "inflated_output_manifest": {
+      "path": "/root/modal_auth_eval_work/eval_work/inflated_outputs_manifest.json",
+      "sha256": "cff2359c599b4505cbbfa8bdc98147e6d50ba5648cd94e44e482453957aa0375",
+      "payload": {
+        "schema": "contest_auth_eval_inflated_output_manifest_v1",
+        "inflated_dir": "/root/modal_auth_eval_work/eval_work/inflated",
+        "video_names_file": "/workspace/pact/upstream/public_test_video_names.txt",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600,
+        "files": [
+          {
+            "video_name": "0.mkv",
+            "relative_path": "0.raw",
+            "exists": true,
+            "bytes": 3662409600,
+            "sha256": "bf29157414b36aac6239853e603dd7032080c67fad0f2e1e86f090d359efd7c7"
+          }
+        ],
+        "aggregate_sha256": "988cfec3662b928c68d83ca96fb73e0dc41395c553ca20204a3e45ca9c1357d2"
+      }
+    }
+  },
+  "evidence_grade": "contest-CUDA",
+  "lane_tag": "[contest-CUDA]",
+  "score_axis": "contest_cuda",
+  "evidence_semantics": "contest_cuda_exact_auth_eval",
+  "exact_cuda_eval_complete": true,
+  "score_claim": true,
+  "promotion_eligible": false,
+  "score_claim_valid": true,
+  "rank_or_kill_eligible": false,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "promotion_blockers": [
+    "raw_auth_eval_does_not_verify_submission_policy_gates",
+    "cpu_leaderboard_reproduction_not_adjudicated",
+    "pre_submission_compliance_check_not_recorded"
+  ],
+  "rank_or_kill_blockers": [
+    "raw_auth_eval_not_rank_or_kill_authority",
+    "requires_adjudicated_cuda_cpu_policy_review"
+  ],
+  "allowed_uses": [
+    "internal_cuda_frontier_ranking",
+    "promotion_review_input",
+    "paper_empirical_score_when_custody_complete"
+  ],
+  "work_dir": "/root/modal_auth_eval_work/eval_work"
+}

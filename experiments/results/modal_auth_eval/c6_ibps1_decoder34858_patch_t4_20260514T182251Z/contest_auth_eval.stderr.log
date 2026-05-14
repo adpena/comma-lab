@@ -1,0 +1,82 @@
+Downloading cpython-3.13.13-linux-x86_64-gnu (download) (33.2MiB)
+ Downloaded cpython-3.13.13-linux-x86_64-gnu (download)
+Using CPython 3.13.13
+Creating virtual environment at: /tmp/modal_auth_eval/uv_project_env
+   Building tac @ file:///workspace/pact
+Downloading sympy (6.0MiB)
+Downloading torch (506.1MiB)
+Downloading nvidia-cudnn-cu13 (349.1MiB)
+Downloading nvidia-cusparselt-cu13 (162.0MiB)
+Downloading cuda-bindings (5.9MiB)
+Downloading nvidia-cublas (403.5MiB)
+Downloading triton (179.6MiB)
+Downloading nvidia-cuda-runtime (2.1MiB)
+Downloading numpy (15.9MiB)
+Downloading cryptography (4.2MiB)
+Downloading nvidia-nvjitlink (38.8MiB)
+Downloading setuptools (1.0MiB)
+Downloading nvidia-curand (56.8MiB)
+Downloading nvidia-cufile (1.2MiB)
+Downloading networkx (2.0MiB)
+Downloading nvidia-cufft (204.2MiB)
+Downloading nvidia-nccl-cu13 (187.4MiB)
+Downloading nvidia-cusparse (139.2MiB)
+Downloading nvidia-cuda-cupti (10.2MiB)
+Downloading pydantic-core (2.0MiB)
+Downloading sqlalchemy (3.1MiB)
+Downloading nvidia-nvshmem-cu13 (57.6MiB)
+Downloading nvidia-cuda-nvrtc (86.0MiB)
+Downloading nvidia-cusolver (191.6MiB)
+Downloading brotli (1.4MiB)
+ Downloaded nvidia-cufile
+ Downloaded brotli
+ Downloaded pydantic-core
+ Downloaded nvidia-cuda-runtime
+ Downloaded sqlalchemy
+ Downloaded setuptools
+ Downloaded cryptography
+ Downloaded networkx
+ Downloaded cuda-bindings
+ Downloaded nvidia-cuda-cupti
+      Built tac @ file:///workspace/pact
+ Downloaded numpy
+ Downloaded sympy
+ Downloaded nvidia-nvjitlink
+ Downloaded nvidia-curand
+ Downloaded nvidia-nvshmem-cu13
+ Downloaded nvidia-cuda-nvrtc
+ Downloaded nvidia-cusparse
+ Downloaded nvidia-cusparselt-cu13
+ Downloaded nvidia-nccl-cu13
+ Downloaded nvidia-cusolver
+ Downloaded triton
+ Downloaded nvidia-cufft
+ Downloaded nvidia-cudnn-cu13
+ Downloaded nvidia-cublas
+ Downloaded torch
+Installed 51 packages in 39.07s
+Downloading nvidia-curand-cu12 (53.7MiB)
+Downloading nvidia-cusolver-cu12 (122.0MiB)
+Downloading nvidia-nccl-cu12 (179.9MiB)
+Downloading sympy (5.9MiB)
+Downloading nvidia-cuda-cupti-cu12 (13.2MiB)
+Downloading torch (864.4MiB)
+Downloading nvidia-cusparse-cu12 (197.8MiB)
+Downloading nvidia-nvjitlink-cu12 (20.1MiB)
+Downloading nvidia-cudnn-cu12 (634.0MiB)
+Downloading nvidia-cuda-nvrtc-cu12 (23.5MiB)
+Downloading nvidia-cufft-cu12 (201.7MiB)
+Downloading nvidia-cublas-cu12 (346.6MiB)
+ Downloaded nvidia-cuda-cupti-cu12
+ Downloaded nvidia-nvjitlink-cu12
+ Downloaded nvidia-cuda-nvrtc-cu12
+ Downloaded nvidia-curand-cu12
+ Downloaded nvidia-cusolver-cu12
+ Downloaded sympy
+ Downloaded nvidia-nccl-cu12
+ Downloaded nvidia-cusparse-cu12
+ Downloaded nvidia-cufft-cu12
+ Downloaded nvidia-cublas-cu12
+ Downloaded nvidia-cudnn-cu12
+ Downloaded torch
+Installed 24 packages in 25.18s
