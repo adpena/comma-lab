@@ -1,0 +1,9 @@
+{
+  "call_id": "fc-01KRK453W4GT5A99XFTMQ3KXMF",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_hdm8_postfilter_sweep/hdm8_modal_t4_policy_palette_v1_20260514T113221Z",
+  "promotion_eligible": false,
+  "recovered_at_utc": "2026-05-14T18:29:58Z",
+  "schema_version": "modal_hdm8_postfilter_sweep_recover_summary_v1",
+  "score_claim": false,
+  "status": "pending"
+}

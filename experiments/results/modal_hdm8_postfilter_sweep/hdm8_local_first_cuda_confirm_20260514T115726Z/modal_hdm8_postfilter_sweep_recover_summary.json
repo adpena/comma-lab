@@ -1,0 +1,9 @@
+{
+  "call_id": "fc-01KRK5KKSQYCCMAG95CN4FCE0K",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_hdm8_postfilter_sweep/hdm8_local_first_cuda_confirm_20260514T115726Z",
+  "promotion_eligible": false,
+  "recovered_at_utc": "2026-05-14T18:28:34Z",
+  "schema_version": "modal_hdm8_postfilter_sweep_recover_summary_v1",
+  "score_claim": false,
+  "status": "pending"
+}
