@@ -526,6 +526,59 @@ def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
     )
 
 
+def test_audit_indexes_packetir_closure_with_duplicate_keys_only(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_packetir_key_only",  # FAKE_LANE_OK: synthetic closure fixture.
+        archive_sha="f" * 64,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    payload["dispatch_ready"][0]["runtime_content_tree_sha256"] = "a" * 64
+    payload["dispatch_ready"][0]["score_axis"] = "contest_cuda"
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json(
+        tmp_path / "experiments/results/packetir_closed_key_only/closure.json",
+        {
+            "schema": "packetir_exact_eval_closure_v1",
+            "lane_id": "lane_packetir_key_only",
+            "classification": "exact_measured_not_current_frontier",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "archive": {"candidate_archive_sha256": archive_sha},
+            "duplicate_dispatch_blockers": [],
+            "exact_eval_duplicate_keys": [
+                {
+                    "archive_sha256": archive_sha,
+                    "runtime_content_tree_sha256": "a" * 64,
+                    "score_axis": "contest_cuda",
+                    "key": f"{archive_sha}:{'a' * 64}:contest_cuda",
+                }
+            ],
+        },
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    result = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["passed"] is False
+    row = result["queues"][0]["stale_ready_rows"][0]
+    assert any(
+        blocker.startswith("packetir_exact_closure_exact_eval_duplicate_key_match")
+        for blocker in row["blockers"]
+    )
+
+
 def test_audit_allows_ready_queue_after_infra_failure_same_archive(
     tmp_path: Path,
 ) -> None:

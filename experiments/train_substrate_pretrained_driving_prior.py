@@ -234,12 +234,18 @@ def _smoke_main(args: argparse.Namespace) -> int:
         codebook_bytes=len(codebook_bytes),
     )
     archive_sha256 = hashlib.sha256(packed).hexdigest()
+    archive_zip_bytes = archive_zip.read_bytes()
+    archive_zip_sha256 = hashlib.sha256(archive_zip_bytes).hexdigest()
     manifest["archive_sha256"] = archive_sha256
+    manifest["archive_zip_bytes"] = len(archive_zip_bytes)
+    manifest["archive_zip_sha256"] = archive_zip_sha256
     manifest["training_mode"] = "smoke"
     manifest["result"] = {
         "training_mode": "smoke",
         "archive_bytes": len(packed),
         "archive_sha256": archive_sha256,
+        "archive_zip_bytes": len(archive_zip_bytes),
+        "archive_zip_sha256": archive_zip_sha256,
         "archive_zip_path": str(archive_zip),
         "archive_bin_path": str(archive_bin),
         "codebook_path": str(codebook_path),

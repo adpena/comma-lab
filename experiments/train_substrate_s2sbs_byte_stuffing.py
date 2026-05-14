@@ -356,9 +356,12 @@ def _smoke_train_loop(
     _vendor_runtime(output_dir)
 
     sha = _canon_sha256_bytes(archive_bytes)
+    archive_zip_bytes = archive_zip.read_bytes()
     return {
         "archive_sha256": sha,
         "archive_bytes": len(archive_bytes),
+        "archive_zip_sha256": _canon_sha256_bytes(archive_zip_bytes),
+        "archive_zip_bytes": len(archive_zip_bytes),
         "last_loss_parts": last_parts,
         "training_mode": "smoke" if args.smoke else "full-scaffold",
         "evidence_grade": "macOS-CPU advisory" if device == "cpu" else "training-only",
@@ -383,6 +386,14 @@ class _RendererWithBias(torch.nn.Module):
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if not args.smoke:
+        print(
+            "[s2sbs] FATAL: full training is not implemented for this L0/L1 "
+            "substrate scaffold; pass --smoke until a downstream consumer and "
+            "score-aware full trainer land.",
+            file=sys.stderr,
+        )
+        return 2
     args.output_dir = Path(args.output_dir)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     _canon_pin_seeds(int(args.seed))
@@ -417,6 +428,10 @@ def main(argv: list[str] | None = None) -> int:
         "started_at_utc": _canon_utc_now_iso(),
         "args": {k: str(v) for k, v in vars(args).items()},
         "result": result,
+        "archive_sha256": result["archive_sha256"],
+        "archive_bytes": result["archive_bytes"],
+        "archive_zip_sha256": result["archive_zip_sha256"],
+        "archive_zip_bytes": result["archive_zip_bytes"],
         "hardware_substrate": _canon_detect_hardware_substrate(
             axis="cuda" if device == "cuda" else "cpu",
             substrate_tag=SUBSTRATE_TAG,
@@ -425,6 +440,7 @@ def main(argv: list[str] | None = None) -> int:
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
     (args.output_dir / "manifest.json").write_text(

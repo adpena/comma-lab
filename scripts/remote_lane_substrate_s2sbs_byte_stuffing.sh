@@ -30,6 +30,7 @@ S2SBS_UPSTREAM_DIR="${S2SBS_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 S2SBS_DEVICE="${S2SBS_DEVICE:-cuda}"
 S2SBS_PAYLOAD_BYTES_PER_PAIR="${S2SBS_PAYLOAD_BYTES_PER_PAIR:-32}"
 S2SBS_DELTA_AMP_UINT8="${S2SBS_DELTA_AMP_UINT8:-0.75}"
+S2SBS_SMOKE="${S2SBS_SMOKE:-1}"
 
 DISPATCH_INSTANCE_JOB_ID="${S2SBS_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${S2SBS_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -151,12 +152,17 @@ prov = {
     'epochs': $S2SBS_EPOCHS,
     'device': '$S2SBS_DEVICE',
     'payload_bytes_per_pair': $S2SBS_PAYLOAD_BYTES_PER_PAIR,
-    'delta_amp_uint8': $S2SBS_DELTA_AMP_UINT8,
-    'predicted_band': [0.168, 0.188],
-    'predicted_basis': 's2sbs_blindspot_audit_20260513',
-    'research_only': True,
-    'score_claim': False,
-}
+	    'delta_amp_uint8': $S2SBS_DELTA_AMP_UINT8,
+	    'smoke_only': '$S2SBS_SMOKE' in ('1', 'true', 'TRUE', 'yes', 'YES'),
+	    'predicted_band': [0.168, 0.188],
+	    'predicted_basis': 's2sbs_blindspot_audit_20260513',
+	    'research_only': True,
+	    'score_claim': False,
+	    'score_claim_valid': False,
+	    'promotion_eligible': False,
+	    'rank_or_kill_eligible': False,
+	    'ready_for_exact_eval_dispatch': False,
+	}
 pathlib.Path('$PROVENANCE').write_text(json.dumps(prov, indent=2, sort_keys=True))
 print('[provenance]', json.dumps(prov, indent=2, sort_keys=True))
 "
@@ -175,6 +181,16 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # Stage 4: invoke trainer.
 log "stage_4_trainer_invoke_begin epochs=$S2SBS_EPOCHS device=$S2SBS_DEVICE payload=$S2SBS_PAYLOAD_BYTES_PER_PAIR delta=$S2SBS_DELTA_AMP_UINT8"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
+TRAINER_SMOKE_ARGS=()
+case "$S2SBS_SMOKE" in
+    1|true|TRUE|yes|YES)
+        TRAINER_SMOKE_ARGS+=(--smoke)
+        ;;
+    *)
+        log "FATAL: S2SBS full training is not implemented; set S2SBS_SMOKE=1 until the full trainer lands"
+        exit 26
+        ;;
+esac
 set +e
 "$PYBIN" experiments/train_substrate_s2sbs_byte_stuffing.py \
     --video-path "$S2SBS_VIDEO_PATH" \
@@ -184,6 +200,7 @@ set +e
     --device "$S2SBS_DEVICE" \
     --payload-bytes-per-pair "$S2SBS_PAYLOAD_BYTES_PER_PAIR" \
     --delta-amp-uint8 "$S2SBS_DELTA_AMP_UINT8" \
+    "${TRAINER_SMOKE_ARGS[@]}" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import io
 import json
+import zipfile
 from pathlib import Path
 
 from tac.auth_eval_result import recompute_contest_score_from_payload
@@ -14,6 +17,14 @@ from tools.run_modal_smoke_before_full import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _archive_zip_artifact(payload: bytes) -> tuple[bytes, str, int]:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", payload)
+    archive = buf.getvalue()
+    return archive, hashlib.sha256(archive).hexdigest(), len(archive)
 
 
 def _auth_payload(*, score_axis: str = "contest_cuda") -> dict:
@@ -127,15 +138,26 @@ def test_smoke_validation_accepts_current_output_marker() -> None:
 
 
 def test_training_artifact_contract_accepts_current_false_authority_manifest() -> None:
+    payload = b"payload-0bin"
+    archive_zip, archive_zip_sha, archive_zip_bytes = _archive_zip_artifact(payload)
     manifest = {
         "lane_id": "lane_research_smoke",
-        "archive_bytes": 12,
-        "archive_sha256": "a" * 64,
-        "result": {"training_mode": "smoke", "archive_bytes": 12},
+        "archive_bytes": len(payload),
+        "archive_sha256": hashlib.sha256(payload).hexdigest(),
+        "archive_zip_bytes": archive_zip_bytes,
+        "archive_zip_sha256": archive_zip_sha,
+        "result": {
+            "training_mode": "smoke",
+            "archive_bytes": len(payload),
+            "archive_sha256": hashlib.sha256(payload).hexdigest(),
+            "archive_zip_bytes": archive_zip_bytes,
+            "archive_zip_sha256": archive_zip_sha,
+        },
         "research_only": True,
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
     green, diagnostic = _validate_smoke_result(
@@ -144,7 +166,7 @@ def test_training_artifact_contract_accepts_current_false_authority_manifest() -
             "timed_out": False,
             "artifacts": {
                 "lane_research_results/output/manifest.json": json.dumps(manifest),
-                "lane_research_results/output/archive.zip": b"PK\x03\x04payload",
+                "lane_research_results/output/archive.zip": archive_zip,
             },
         },
         required_artifact_markers=("lane_research_results/output/",),
@@ -154,7 +176,8 @@ def test_training_artifact_contract_accepts_current_false_authority_manifest() -
 
     assert green is True
     assert "research-only training_artifact_v1" in diagnostic
-    assert "score/promotion/readiness claims are false" in diagnostic
+    assert "archive.zip contains exactly 0.bin" in diagnostic
+    assert "score/promotion/rank/readiness claims are false" in diagnostic
 
 
 def test_training_artifact_contract_rejects_stale_manifest_marker() -> None:
@@ -167,6 +190,7 @@ def test_training_artifact_contract_rejects_stale_manifest_marker() -> None:
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
     green, diagnostic = _validate_smoke_result(
@@ -188,15 +212,20 @@ def test_training_artifact_contract_rejects_stale_manifest_marker() -> None:
 
 
 def test_training_artifact_contract_rejects_score_authority_manifest() -> None:
+    payload = b"payload-0bin"
+    archive_zip, archive_zip_sha, archive_zip_bytes = _archive_zip_artifact(payload)
     manifest = {
         "lane_id": "lane_research_smoke",
-        "archive_bytes": 12,
-        "archive_sha256": "a" * 64,
+        "archive_bytes": len(payload),
+        "archive_sha256": hashlib.sha256(payload).hexdigest(),
+        "archive_zip_bytes": archive_zip_bytes,
+        "archive_zip_sha256": archive_zip_sha,
         "result": {"training_mode": "smoke"},
         "research_only": True,
         "score_claim": True,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
     green, diagnostic = _validate_smoke_result(
@@ -205,7 +234,7 @@ def test_training_artifact_contract_rejects_score_authority_manifest() -> None:
             "timed_out": False,
             "artifacts": {
                 "lane_research_results/output/manifest.json": json.dumps(manifest),
-                "lane_research_results/output/archive.zip": b"PK\x03\x04payload",
+                "lane_research_results/output/archive.zip": archive_zip,
             },
         },
         validation_contract="training_artifact_v1",
@@ -217,14 +246,19 @@ def test_training_artifact_contract_rejects_score_authority_manifest() -> None:
 
 
 def test_training_artifact_contract_rejects_missing_archive_sha() -> None:
+    payload = b"payload-0bin"
+    archive_zip, archive_zip_sha, archive_zip_bytes = _archive_zip_artifact(payload)
     manifest = {
         "lane_id": "lane_research_smoke",
-        "archive_bytes": 12,
+        "archive_bytes": len(payload),
+        "archive_zip_bytes": archive_zip_bytes,
+        "archive_zip_sha256": archive_zip_sha,
         "result": {"training_mode": "smoke"},
         "research_only": True,
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
     green, diagnostic = _validate_smoke_result(
@@ -233,7 +267,7 @@ def test_training_artifact_contract_rejects_missing_archive_sha() -> None:
             "timed_out": False,
             "artifacts": {
                 "lane_research_results/output/manifest.json": json.dumps(manifest),
-                "lane_research_results/output/archive.zip": b"PK\x03\x04payload",
+                "lane_research_results/output/archive.zip": archive_zip,
             },
         },
         validation_contract="training_artifact_v1",
@@ -242,6 +276,40 @@ def test_training_artifact_contract_rejects_missing_archive_sha() -> None:
 
     assert green is False
     assert "archive_sha256_invalid" in diagnostic
+
+
+def test_training_artifact_contract_rejects_archive_member_mismatch() -> None:
+    payload = b"payload-0bin"
+    archive_zip, archive_zip_sha, archive_zip_bytes = _archive_zip_artifact(b"wrong")
+    manifest = {
+        "lane_id": "lane_research_smoke",
+        "archive_bytes": len(payload),
+        "archive_sha256": hashlib.sha256(payload).hexdigest(),
+        "archive_zip_bytes": archive_zip_bytes,
+        "archive_zip_sha256": archive_zip_sha,
+        "result": {"training_mode": "smoke"},
+        "research_only": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "lane_research_results/output/manifest.json": json.dumps(manifest),
+                "lane_research_results/output/archive.zip": archive_zip,
+            },
+        },
+        validation_contract="training_artifact_v1",
+        required_lane_id="lane_research_smoke",
+    )
+
+    assert green is False
+    assert "member_0bin" in diagnostic
 
 
 def test_expected_auth_artifact_markers_parse_workspace_output_dir() -> None:
@@ -334,6 +402,7 @@ def test_s2sbs_recipe_is_smoke_only_scaffold_guard() -> None:
     ).read_text(encoding="utf-8")
 
     assert _recipe_requests_smoke_only(text) is True
+    assert 'S2SBS_SMOKE: "1"' in text
     assert _smoke_validation_contract_from_recipe(text) == "training_artifact_v1"
 
 
@@ -345,6 +414,7 @@ def test_pretrained_driving_prior_recipe_is_smoke_only_scaffold_guard() -> None:
 
     assert _recipe_requests_smoke_only(text) is True
     assert "status: scaffold_only_no_full_dispatch" in text
+    assert "contest_exact_eval" not in text
     assert _smoke_validation_contract_from_recipe(text) == "training_artifact_v1"
 
 
@@ -354,7 +424,18 @@ def test_s2sbs_remote_script_does_not_emit_contest_cuda_claim() -> None:
     ).read_text(encoding="utf-8")
 
     assert "LANE_S2SBS_DONE [smoke-only-no-score-claim]" in text
+    assert "TRAINER_SMOKE_ARGS+=(--smoke)" in text
     assert "LANE_S2SBS_DONE [contest-CUDA]" not in text
+
+
+def test_dpp_remote_script_verifies_active_claim_and_false_authority() -> None:
+    text = (
+        REPO_ROOT / "scripts/remote_lane_substrate_pretrained_driving_prior.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "stage_0b_dispatch_claim_verified" in text
+    assert "claim_lane_dispatch.py\" summary" in text
+    assert '"rank_or_kill_eligible": false' in text
 
 
 def test_pr95plus_recipe_is_smoke_only_until_full_trainer_lands() -> None:

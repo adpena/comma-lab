@@ -121,14 +121,15 @@ def _discover_packetir_exact_closure_records(repo_root: Path) -> dict[str, list[
         archive_sha = archive.get("candidate_archive_sha256")
         if not is_sha256(archive_sha):
             continue
-        blockers = payload.get("duplicate_dispatch_blockers")
-        if not isinstance(blockers, list) or not blockers:
-            continue
         exact_eval_duplicate_keys = [
             str(item.get("key"))
             for item in payload.get("exact_eval_duplicate_keys") or []
             if isinstance(item, Mapping) and item.get("key")
         ]
+        blockers = payload.get("duplicate_dispatch_blockers")
+        blockers = blockers if isinstance(blockers, list) else []
+        if not blockers and not exact_eval_duplicate_keys:
+            continue
         records.setdefault(str(archive_sha).lower(), []).append(
             {
                 "closure_path": repo_rel(path, repo_root),

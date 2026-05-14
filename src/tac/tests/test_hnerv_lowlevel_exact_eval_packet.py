@@ -307,39 +307,7 @@ def test_lowlevel_exact_eval_packet_copies_valid_auth_eval_and_clears_eval_block
     tmp_path: Path,
 ) -> None:
     fixture = _write_lowlevel_fixture(tmp_path)
-    auth_eval = tmp_path / "contest_auth_eval.json"
-    archive_bytes = fixture["candidate_archive"].stat().st_size
-    seg = 0.0001
-    pose = 0.0002
-    rate = archive_bytes / 37_545_489
-    score = 100.0 * seg + (10.0 * pose) ** 0.5 + 25.0 * rate
-    auth_eval.write_text(
-        json_text(
-            {
-                "provenance": {
-                    "archive_sha256": fixture["candidate_archive_sha256"],
-                    "archive_size_bytes": archive_bytes,
-                    "device": "cuda",
-                    "gpu_model": "Tesla T4",
-                    "gpu_t4_match": True,
-                },
-                "archive_size_bytes": archive_bytes,
-                "score_claim_valid": True,
-                "exact_cuda_eval_complete": True,
-                "lane_tag": "[contest-CUDA]",
-                "score_axis": "contest_cuda",
-                "score_recomputed_from_components": score,
-                "canonical_score": score,
-                "canonical_score_source": "score_recomputed_from_components",
-                "final_score": round(score, 2),
-                "avg_segnet_dist": seg,
-                "avg_posenet_dist": pose,
-                "rate_unscaled": rate,
-                "n_samples": 600,
-            }
-        ),
-        encoding="utf-8",
-    )
+    auth_eval, score = _write_valid_cuda_auth_eval(tmp_path, fixture)
     result_dir = tmp_path / "auth_eval_packet"
 
     args = module.build_arg_parser().parse_args(
@@ -369,7 +337,13 @@ def test_lowlevel_exact_eval_packet_copies_valid_auth_eval_and_clears_eval_block
 
     assert packet["static_packet_ready"] is True
     assert packet["auth_eval"]["valid_exact_cuda_candidate_eval"] is True
-    assert packet["score_blockers"] == ["operator_score_claim_review_not_done"]
+    assert packet["ready_for_submit"] is False
+    assert "candidate_exact_cuda_auth_eval_already_present" in packet["submit_blockers"]
+    assert packet["score_blockers"] == [
+        "operator_score_claim_review_not_done",
+        "contest_final_compliance_not_run",
+        "successful_terminal_exact_cuda_claim_not_verified",
+    ]
     release_auth_eval = result_dir / "release_surface" / "contest_auth_eval.json"
     assert release_auth_eval.is_file()
     assert _sha256(release_auth_eval) == _sha256(auth_eval)
@@ -378,9 +352,117 @@ def test_lowlevel_exact_eval_packet_copies_valid_auth_eval_and_clears_eval_block
     )
     assert release_manifest["auth_eval"]["valid_exact_cuda_candidate_eval"] is True
     assert release_manifest["contest_auth_eval"]["exists"] is True
+    assert release_manifest["remaining_required_for_score_or_dispatch"] == [
+        "operator_score_claim_review"
+    ]
     report = (result_dir / "release_surface" / "report.txt").read_text(encoding="utf-8")
     assert "exact_cuda_eval_complete: true" in report
     assert f"exact_cuda_score: {score}" in report
+    assert "remaining_for_score_or_dispatch: operator score-claim review" in report
+    assert "Lightning submit environment" not in report
+
+
+def test_lowlevel_exact_eval_packet_does_not_resubmit_after_valid_auth_eval(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path)
+    auth_eval, _score = _write_valid_cuda_auth_eval(tmp_path, fixture)
+    claims_path = tmp_path / "claims.md"
+    claims_path.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
+        "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+        "| 2026-05-07T15:42:13Z | codex:gpt-5.5 | fixture_q10 | lightning | "
+        "exact_eval_fixture_q10 | 2026-05-07T16:00:00Z | claimed | active exact eval claim |\n",
+        encoding="utf-8",
+    )
+    for name in module.REQUIRED_ENV:
+        monkeypatch.setenv(name, f"fixture-{name.lower()}")
+    result_dir = tmp_path / "auth_eval_no_resubmit_packet"
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--auth-eval-json",
+            str(auth_eval),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(result_dir / "release_surface"),
+            "--lane-id",
+            "fixture_q10",
+            "--job-name",
+            "exact_eval_fixture_q10",
+            "--claims-path",
+            str(claims_path),
+            "--now-utc",
+            "2026-05-07T15:45:00Z",
+            "--operator-approved-exact-cuda",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["auth_eval"]["valid_exact_cuda_candidate_eval"] is True
+    assert packet["lane_claim_preflight"]["active_claim_present"] is True
+    assert packet["missing_env"] == []
+    assert packet["operator_approved_exact_cuda"] is True
+    assert packet["ready_for_submit"] is False
+    assert packet["submit_blockers"] == ["candidate_exact_cuda_auth_eval_already_present"]
+    assert packet["score_blockers"] == [
+        "operator_score_claim_review_not_done",
+        "contest_final_compliance_not_run",
+        "successful_terminal_exact_cuda_claim_not_verified",
+    ]
+
+
+def test_lowlevel_exact_eval_packet_rejects_auth_eval_formula_mismatch(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path)
+    auth_eval, _score = _write_valid_cuda_auth_eval(tmp_path, fixture)
+    payload = json.loads(auth_eval.read_text(encoding="utf-8"))
+    payload["score_recomputed_from_components"] = 123.0
+    payload["canonical_score"] = 123.0
+    auth_eval.write_text(json_text(payload), encoding="utf-8")
+    result_dir = tmp_path / "auth_eval_formula_blocked_packet"
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--auth-eval-json",
+            str(auth_eval),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(result_dir / "release_surface"),
+            "--now-utc",
+            "2026-05-07T12:00:00Z",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["auth_eval"]["valid_exact_cuda_candidate_eval"] is False
+    assert "auth_eval_blocked:auth_eval_component_formula_mismatch" in packet["score_blockers"]
 
 
 def test_lowlevel_exact_eval_packet_surfaces_terminal_env_refusal_as_audit(
@@ -653,6 +735,47 @@ def _write_runtime(root: Path) -> Path:
     inflate_sh.chmod(0o755)
     (root / "inflate.py").write_text("print('fixture inflate')\n", encoding="utf-8")
     return inflate_sh
+
+
+def _write_valid_cuda_auth_eval(root: Path, fixture: dict[str, object]) -> tuple[Path, float]:
+    auth_eval = root / "contest_auth_eval.json"
+    archive_path = fixture["candidate_archive"]
+    assert isinstance(archive_path, Path)
+    archive_sha256 = fixture["candidate_archive_sha256"]
+    assert isinstance(archive_sha256, str)
+    archive_bytes = archive_path.stat().st_size
+    seg = 0.0001
+    pose = 0.0002
+    rate = archive_bytes / 37_545_489
+    score = 100.0 * seg + (10.0 * pose) ** 0.5 + 25.0 * rate
+    auth_eval.write_text(
+        json_text(
+            {
+                "provenance": {
+                    "archive_sha256": archive_sha256,
+                    "archive_size_bytes": archive_bytes,
+                    "device": "cuda",
+                    "gpu_model": "Tesla T4",
+                    "gpu_t4_match": True,
+                },
+                "archive_size_bytes": archive_bytes,
+                "score_claim_valid": True,
+                "exact_cuda_eval_complete": True,
+                "lane_tag": "[contest-CUDA]",
+                "score_axis": "contest_cuda",
+                "score_recomputed_from_components": score,
+                "canonical_score": score,
+                "canonical_score_source": "score_recomputed_from_components",
+                "final_score": round(score, 2),
+                "avg_segnet_dist": seg,
+                "avg_posenet_dist": pose,
+                "rate_unscaled": rate,
+                "n_samples": 600,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return auth_eval, score
 
 
 def _packed_payload(decoder: bytes, latents: bytes) -> bytes:

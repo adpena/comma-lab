@@ -192,6 +192,7 @@ from tac.geometry_feedback_readiness import (  # noqa: E402
     GEOMETRY_FEEDBACK_ROADMAP_KEYS,
     geometry_feedback_contract_failures,
 )
+from tac.deploy.claims import TERMINAL_PREFIXES as DISPATCH_CLAIM_TERMINAL_PREFIXES  # noqa: E402
 from tac.repo_io import json_text, sha256_bytes  # noqa: E402
 from tac.source_index import SourceIndex  # noqa: E402
 
@@ -829,15 +830,7 @@ def _terminal_claim_coverage_from_jsonl(evidence_path: Path) -> set[tuple[str, s
     return coverage
 
 
-_TERMINAL_DISPATCH_STATUS_PREFIXES = (
-    "completed",
-    "failed_",
-    "refused_dispatch",
-    "stopped_",
-    "stale_superseded",
-    "cancelled",
-    "preempted",
-)
+_TERMINAL_DISPATCH_STATUS_PREFIXES = tuple(DISPATCH_CLAIM_TERMINAL_PREFIXES)
 
 
 def _is_terminal_dispatch_status(status: str) -> bool:

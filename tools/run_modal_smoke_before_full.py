@@ -92,12 +92,15 @@ Cross-references
 from __future__ import annotations
 
 import argparse
+import hashlib
+import io
 import json
 import math
 import os
 import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 try:
@@ -323,6 +326,54 @@ def _artifact_size(raw: object) -> int:
     return 0
 
 
+def _artifact_bytes(raw: object) -> bytes:
+    if isinstance(raw, bytes):
+        return raw
+    if isinstance(raw, str):
+        return raw.encode()
+    return b""
+
+
+def _sha256_bytes(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _validate_training_artifact_archive_zip(
+    *,
+    archive_key: str,
+    archive_raw: object,
+    payload_bytes_int: int,
+    payload_sha: str,
+    archive_zip_bytes_int: int,
+    archive_zip_sha: str,
+) -> list[str]:
+    archive_bytes = _artifact_bytes(archive_raw)
+    diagnostics: list[str] = []
+    if len(archive_bytes) != archive_zip_bytes_int:
+        diagnostics.append(
+            f"{archive_key}:archive_zip_bytes={len(archive_bytes)} expected={archive_zip_bytes_int}"
+        )
+    if _sha256_bytes(archive_bytes) != archive_zip_sha:
+        diagnostics.append(f"{archive_key}:archive_zip_sha256_mismatch")
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as zf:
+            names = zf.namelist()
+            if names != ["0.bin"]:
+                diagnostics.append(f"{archive_key}:zip_members={names!r} expected=['0.bin']")
+                return diagnostics
+            member = zf.read("0.bin")
+    except (zipfile.BadZipFile, KeyError, RuntimeError) as exc:
+        diagnostics.append(f"{archive_key}:bad_archive_zip:{exc}")
+        return diagnostics
+    if len(member) != payload_bytes_int:
+        diagnostics.append(
+            f"{archive_key}:member_0bin_bytes={len(member)} expected={payload_bytes_int}"
+        )
+    if _sha256_bytes(member) != payload_sha:
+        diagnostics.append(f"{archive_key}:member_0bin_sha256_mismatch")
+    return diagnostics
+
+
 def _validate_training_artifact_smoke_result(
     result: dict,
     *,
@@ -400,6 +451,7 @@ def _validate_training_artifact_smoke_result(
                 "score_claim",
                 "score_claim_valid",
                 "promotion_eligible",
+                "rank_or_kill_eligible",
                 "ready_for_exact_eval_dispatch",
             )
             if payload.get(flag) is not False
@@ -410,30 +462,63 @@ def _validate_training_artifact_smoke_result(
             )
             continue
         archive_bytes = payload.get("archive_bytes", result_payload.get("archive_bytes"))
+        archive_zip_bytes = payload.get(
+            "archive_zip_bytes",
+            result_payload.get("archive_zip_bytes"),
+        )
         try:
             archive_bytes_int = int(archive_bytes)
         except (TypeError, ValueError):
             archive_bytes_int = 0
+        try:
+            archive_zip_bytes_int = int(archive_zip_bytes)
+        except (TypeError, ValueError):
+            archive_zip_bytes_int = 0
         archive_sha = str(
             payload.get("archive_sha256")
             or result_payload.get("archive_sha256")
             or ""
         )
+        archive_zip_sha = str(
+            payload.get("archive_zip_sha256")
+            or result_payload.get("archive_zip_sha256")
+            or ""
+        )
         if archive_bytes_int <= 0:
             diagnostics.append(f"{manifest_key}:archive_bytes={archive_bytes!r}")
+            continue
+        if archive_zip_bytes_int <= 0:
+            diagnostics.append(f"{manifest_key}:archive_zip_bytes={archive_zip_bytes!r}")
             continue
         if len(archive_sha) != 64 or any(
             char not in "0123456789abcdef" for char in archive_sha.lower()
         ):
             diagnostics.append(f"{manifest_key}:archive_sha256_invalid")
             continue
-        archive_key = sorted(archive_keys)[0]
-        return True, (
-            "SMOKE GREEN [research-only training_artifact_v1; score_claim=false]: "
-            "rc=0, current manifest "
-            f"{manifest_key} + archive {archive_key}; research_only=true and "
-            "score/promotion/readiness claims are false"
-        )
+        if len(archive_zip_sha) != 64 or any(
+            char not in "0123456789abcdef" for char in archive_zip_sha.lower()
+        ):
+            diagnostics.append(f"{manifest_key}:archive_zip_sha256_invalid")
+            continue
+        for archive_key in sorted(archive_keys):
+            archive_diagnostics = _validate_training_artifact_archive_zip(
+                archive_key=archive_key,
+                archive_raw=artifacts[archive_key],
+                payload_bytes_int=archive_bytes_int,
+                payload_sha=archive_sha.lower(),
+                archive_zip_bytes_int=archive_zip_bytes_int,
+                archive_zip_sha=archive_zip_sha.lower(),
+            )
+            if archive_diagnostics:
+                diagnostics.extend(archive_diagnostics)
+                continue
+            return True, (
+                "SMOKE GREEN [research-only training_artifact_v1; score_claim=false]: "
+                "rc=0, current manifest "
+                f"{manifest_key} + archive {archive_key}; research_only=true, "
+                "archive.zip contains exactly 0.bin matching manifest bytes/sha, and "
+                "score/promotion/rank/readiness claims are false"
+            )
     return False, (
         "SMOKE training_artifact_v1 manifest did not prove smoke-only "
         "false-authority contract; diagnostics="

@@ -57,6 +57,11 @@ SCHEMA = "pre_submission_compliance_check_v1"
 PACKED_PAYLOAD_MEMBER_NAMES = ("p", "renderer_payload.bin", "renderer_payload.bin.br")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 TERMINAL_DISPATCH_STATUS_PREFIXES = tuple(CLAIM_TERMINAL_PREFIXES)
+SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES = (
+    "completed_contest_cuda",
+    "completed_exact_cuda",
+    "completed_cuda_auth_eval",
+)
 PRIVATE_SURFACE_RE = re.compile(
     r"(/Users/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
 )
@@ -992,6 +997,7 @@ def inspect_archive_manifest(
     archive: dict[str, Any],
     *,
     required: bool,
+    require_members: bool = False,
 ) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     exists = path.is_file()
@@ -1029,7 +1035,7 @@ def inspect_archive_manifest(
     )
     claimed_members = _candidate_members(payload)
     actual_members = archive.get("members") if isinstance(archive.get("members"), list) else []
-    member_required = required and payload.get("score_claim") is not False
+    member_required = require_members
     _add(
         checks,
         "archive_manifest_members_present",
@@ -1083,7 +1089,14 @@ def inspect_report(path: Path, archive: dict[str, Any], *, required_link: bool) 
     return {"path": _rel(path), "exists": exists}, checks
 
 
-def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None) -> tuple[dict[str, Any], list[Check]]:
+def inspect_dispatch_claims(
+    path: Path,
+    lane_id: str | None,
+    job_id: str | None,
+    *,
+    require_successful_exact_eval_terminal: bool = False,
+    expected_archive_sha256: str | None = None,
+) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     if not lane_id and not job_id:
         return {"required": False}, checks
@@ -1091,6 +1104,7 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
     _add(checks, "dispatch_claims_exists", exists, _rel(path))
     latest_matching_status: str | None = None
     latest_matching_row: str | None = None
+    latest_matching_notes: str | None = None
     has_prior_nonterminal_matching_row = False
     matching_rows = 0
     rows: list[str] = []
@@ -1115,12 +1129,18 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
             if header:
                 lookup = {name: cells[idx] for idx, name in enumerate(header) if idx < len(cells)}
                 row_lane = lookup.get("lane_id", "")
-                row_job = lookup.get("instance/job_id", "") or lookup.get("job_id", "")
+                row_job = (
+                    lookup.get("instance/job_id", "")
+                    or lookup.get("instance_job_id", "")
+                    or lookup.get("job_id", "")
+                )
                 status = lookup.get("status", "")
+                notes = lookup.get("notes", "")
             elif len(cells) >= 6:
                 row_lane = cells[1]
                 row_job = cells[3]
                 status = cells[4]
+                notes = cells[-1]
             else:
                 continue
             if (
@@ -1131,6 +1151,7 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
                 if latest_matching_status is None:
                     latest_matching_status = status
                     latest_matching_row = row
+                    latest_matching_notes = notes
                 elif not status.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES):
                     has_prior_nonterminal_matching_row = True
     terminal = bool(
@@ -1146,6 +1167,35 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
             f"latest_matching_status={latest_matching_status!r}"
         ),
     )
+    if require_successful_exact_eval_terminal:
+        successful_terminal = bool(
+            latest_matching_status
+            and latest_matching_status.startswith(SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES)
+        )
+        _add(
+            checks,
+            "dispatch_claim_successful_exact_eval_terminal_row",
+            successful_terminal,
+            (
+                f"lane_id={lane_id} job_id={job_id} matching_rows={matching_rows} "
+                f"latest_matching_status={latest_matching_status!r}"
+            ),
+        )
+        expected_sha = (expected_archive_sha256 or "").lower()
+        terminal_archive_bound = bool(
+            expected_sha
+            and latest_matching_row
+            and expected_sha in latest_matching_row.lower()
+        )
+        _add(
+            checks,
+            "dispatch_claim_terminal_archive_sha_bound",
+            terminal_archive_bound,
+            (
+                "contest-final terminal claim must bind the exact scored "
+                f"archive sha256={expected_sha}; latest_matching_notes={latest_matching_notes!r}"
+            ),
+        )
     _add(
         checks,
         "dispatch_claim_prior_active_row",
@@ -1162,6 +1212,7 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
         "matching_rows": matching_rows,
         "latest_matching_status": latest_matching_status,
         "latest_matching_row": latest_matching_row,
+        "latest_matching_notes": latest_matching_notes,
         "has_prior_nonterminal_matching_row": has_prior_nonterminal_matching_row,
     }, checks
 
@@ -1275,6 +1326,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         manifest_path,
         archive,
         required=args.contest_final or args.archive_manifest_json is not None,
+        require_members=args.contest_final,
     )
     sections["archive_manifest"] = manifest_record
     checks.extend(manifest_checks)
@@ -1302,6 +1354,8 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         args.dispatch_claims_md,
         args.expected_lane_id,
         args.expected_job_id,
+        require_successful_exact_eval_terminal=args.contest_final,
+        expected_archive_sha256=archive.get("sha256") if args.contest_final else None,
     )
     sections["dispatch_claims"] = claims_record
     checks.extend(claims_checks)

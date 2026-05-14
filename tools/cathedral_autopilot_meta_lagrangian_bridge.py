@@ -38,6 +38,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT))  # so 'experiments.distortion_proxy_local' resolves
 
+from tac.authority_contract import apply_false_authority_contract  # noqa: E402
+
 TOOL_NAME = "tools/cathedral_autopilot_meta_lagrangian_bridge.py"
 SCHEMA_VERSION = "cathedral_meta_lagrangian_bridge.v1"
 
@@ -172,7 +174,7 @@ def run_bridge(plan_json_path: Path, anchors_path: Path) -> dict:
             lane_class=cand["lane_class"],
             archive_path=cand["archive_path"],
         )
-        evaluations.append({
+        evaluations.append(apply_false_authority_contract({
             "candidate_id": ev.candidate_id,
             "technique_name": cand["_source_row"]["name"],
             "archive_bytes": ev.archive_bytes,
@@ -211,24 +213,21 @@ def run_bridge(plan_json_path: Path, anchors_path: Path) -> dict:
             ),
             "current_score_axis_from_recommender": current_score_axis,
             "current_score_axis_missing_from_recommender": current_score_axis_missing,
-        })
+        }, preserve_dispatch_ready=False))
 
     # Sort by Lagrangian (lower = better; refused/failed sort to bottom via inf)
     evaluations.sort(key=lambda e: (e["rank_key"], e["lagrangian"]))
 
-    return {
+    return apply_false_authority_contract({
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "evidence_grade": "[distortion-proxy:local]",
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
         "input_plan_json": str(plan_json_path),
         "anchors_path": str(anchors_path),
         "n_candidates": len(candidates),
         "n_eligible_for_dispatch": sum(1 for e in evaluations if e["eligible_for_dispatch"]),
         "evaluations": evaluations,
-    }
+    }, preserve_dispatch_ready=False)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -64,6 +64,7 @@ from tac.optimization.candidate_evidence_contract import (  # noqa: E402
     has_positive_exact_cuda_evidence_marker,
     promotable_exact_cuda_evidence_blockers,
 )
+from tac.authority_contract import normalize_score_authority_fields  # noqa: E402
 from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration  # noqa: E402
 from tac.score_geometry import (  # noqa: E402
     contest_score,
@@ -2099,14 +2100,9 @@ def _validation_status_for_unknown(bucket: dict[str, Any]) -> str:
 def _attach_fail_closed_dispatch_fields(row: dict[str, Any]) -> dict[str, Any]:
     """Make score/dispatch authority explicit on ranked and recommended rows."""
 
-    score_claim = bool(row.get("score_claim", False))
-    promotion_eligible = bool(row.get("promotion_eligible", False))
-    ready = bool(row.get("ready_for_exact_eval_dispatch", False))
-    row["score_claim"] = score_claim
-    row["promotion_eligible"] = promotion_eligible
-    row["ready_for_exact_eval_dispatch"] = ready
-    row.setdefault("score_claim_valid", score_claim)
-    row.setdefault("rank_or_kill_eligible", promotion_eligible)
+    normalize_score_authority_fields(row)
+    score_claim = row["score_claim"]
+    ready = row["ready_for_exact_eval_dispatch"]
     blockers = row.get("dispatch_blockers")
     if not isinstance(blockers, list):
         blockers = [] if blockers in (None, "") else [str(blockers)]

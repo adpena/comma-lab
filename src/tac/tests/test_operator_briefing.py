@@ -91,6 +91,34 @@ def test_briefing_json_composite_has_all_three_keys():
         "BLOCKED",
         "PENDING",
     }
+    assert len(out["xray_tools"]) >= 5
+    assert all(row["score_claim"] is False for row in out["xray_tools"])
+    assert all(row["score_claim_valid"] is False for row in out["xray_tools"])
+    assert all(row["promotion_eligible"] is False for row in out["xray_tools"])
+    assert all(row["rank_or_kill_eligible"] is False for row in out["xray_tools"])
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in out["xray_tools"])
+    assert all(row["tool_exists"] is True for row in out["xray_tools"])
+    assert {
+        "tools/xray_archive_section_entropy_heatmap.py",
+        "tools/xray_substrate_classifier.py",
+    }.issubset({row["tool"] for row in out["xray_tools"]})
+    integration = out["cooperative_receiver_solver_integration"]
+    assert integration["score_claim"] is False
+    assert integration["score_claim_valid"] is False
+    assert integration["promotion_eligible"] is False
+    assert integration["rank_or_kill_eligible"] is False
+    assert integration["ready_for_exact_eval_dispatch"] is False
+    assert integration["campaign_count"] >= 1
+    assert integration["autopilot_rows"] >= 1
+    assert integration["meta_lagrangian_rows"] >= 1
+    assert integration["pareto_rows"] >= 1
+    assert integration["continual_learning_posterior_update_allowed"] is False
+    assert integration["xray_grammars"] >= 1
+    assert integration["magic_codec_entries"] >= 1
+    assert integration["packet_compiler_grammars"] >= 1
+    assert integration["canonical_packet_compiler"] == (
+        "tac.packet_compiler.deterministic_compiler"
+    )
     assert "provider_readiness" in out
     assert out["provider_readiness"].get("score_claim") is False
     assert "pareto" in out
@@ -110,6 +138,10 @@ def test_briefing_json_composite_has_all_three_keys():
     )
     assert "non_dispatchable_readiness_artifacts" in out
     supplementary_rows = {row["lane_id"]: row for row in out["supplementary_lanes"]}
+    assert all(row["score_claim"] is False for row in supplementary_rows.values())
+    assert all(row["score_claim_valid"] is False for row in supplementary_rows.values())
+    assert all(row["promotion_eligible"] is False for row in supplementary_rows.values())
+    assert all(row["rank_or_kill_eligible"] is False for row in supplementary_rows.values())
     assert supplementary_rows["lane_pr106_latent_sidecar"]["score_target_routing"]["active"] is False
     assert supplementary_rows["lane_pr106_latent_sidecar"]["score_target_routing"]["status"] == "above_target"
     assert supplementary_rows["lane_pr106_latent_sidecar"]["dispatch_routing"]["active"] is False
@@ -119,6 +151,10 @@ def test_briefing_json_composite_has_all_three_keys():
     assert out["active_gated_lanes"] == []
     assert out["active_composition_lanes"] == []
     composition_rows = {row["lane_id"]: row for row in out["composition_lanes"]}
+    assert all(row["score_claim"] is False for row in composition_rows.values())
+    assert all(row["score_claim_valid"] is False for row in composition_rows.values())
+    assert all(row["promotion_eligible"] is False for row in composition_rows.values())
+    assert all(row["rank_or_kill_eligible"] is False for row in composition_rows.values())
     stacked = composition_rows["lane_pr106_stacked"]
     assert stacked["score_target_routing"]["active"] is True
     assert stacked["dispatch_routing"]["active"] is False

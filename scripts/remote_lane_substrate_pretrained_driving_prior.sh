@@ -77,6 +77,31 @@ if [ -z "$CLAIM_PYTHON" ]; then
     CLAIM_PYTHON="python3"
 fi
 
+# Stage 0b: verify the Level-2 active dispatch claim before any bootstrap/training.
+CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
+"$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
+    --claims-path "$DISPATCH_CLAIMS_PATH" \
+    --format json > "$CLAIM_SUMMARY_JSON" || {
+    log "FATAL: claim summary failed for $DISPATCH_CLAIMS_PATH"
+    exit 21
+}
+"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY'
+import json, sys
+summary_path, lane_id, job_id = sys.argv[1:4]
+payload = json.loads(open(summary_path, encoding="utf-8").read())
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
+        raise SystemExit(0)
+print(f"missing active claim lane={lane_id} job={job_id}", file=sys.stderr)
+raise SystemExit(1)
+PY
+CLAIM_RC=$?
+if [ "$CLAIM_RC" -ne 0 ]; then
+    log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
+    exit 21
+fi
+log "stage_0b_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
+
 # Stage 1: bootstrap runtime deps via canonical helper (Catalog #163).
 log "Stage 1: bootstrap runtime deps"
 REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source "$WORKSPACE/scripts/remote_archive_only_eval.sh"
@@ -98,7 +123,11 @@ cat > "$PROVENANCE" <<EOF
   "platform": "$DISPATCH_PLATFORM",
   "instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "evidence_grade": "[scaffold-only-no-score-claim]",
-  "score_claim": false
+  "score_claim": false,
+  "score_claim_valid": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false
 }
 EOF
 log "wrote provenance: $PROVENANCE"

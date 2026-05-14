@@ -32537,45 +32537,88 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
 
 #: Pre-existing packet-compilation surfaces grandfathered in at landing time.
 #: Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
-#: the gate lands STRICT at 0 live violations by allowlisting every
-#: pre-existing surface and refusing new surfaces that bypass the canonical
-#: deterministic compiler. The allowlist is intentionally narrow: only legacy
-#: packet/archive materializers observed at 2026-05-12 are exempt; any
-#: subsequent surface must route through the canonical compiler.
-_DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST: frozenset[str] = frozenset({
-    "tools/build_a1_frame_conditional_codec_variant.py",
-    "tools/build_a1_per_pair_latent_correction_sidecar.py",
-    "tools/build_a2_sensitivity_weighted_pr101_packet.py",
-    "tools/build_categorical_candidate_fixture.py",
-    "tools/build_cross_archive_substrate_composition.py",
-    "tools/build_deterministic_packet.py",  # The canonical CLI itself.
-    "tools/build_factorized_hnerv_archive.py",
-    "tools/build_hnerv_entropy_candidate_packet.py",
-    "tools/build_hnerv_generated_schema_candidate.py",
-    "tools/build_hnerv_lowlevel_exact_eval_packet.py",
-    "tools/build_hnerv_packet_section_manifest.py",
-    "tools/build_hnerv_packet_section_transform_candidate.py",
-    "tools/build_packet_compiler_golden_vectors.py",
-    "tools/build_phase1_packet_compiler.py",
-    "tools/build_pr101_finetuned_archive.py",
-    "tools/build_pr101_frame_conditional_packet_readiness.py",
-    "tools/build_pr101_frame_conditional_runtime_packet.py",
-    "tools/build_pr101_kaggle_proxy_runtime_packet.py",
-    "tools/build_pr101_runtime_packet.py",
-    "tools/build_pr103_lc_ac_candidate_packet.py",
-    "tools/build_pr106_uniward_runtime_packet.py",
-    "tools/build_result_review_packet.py",
-    "tools/build_tac_oss_release_packet.py",
-    "tools/build_track2_identity_packet.py",
-    "tools/build_uniward_stc_hessian_a1_v1.py",
-    "tools/build_wr01_exact_eval_packet.py",
-    "tools/materialize_film_pose_x_magic_codec_archive.py",
-    "tools/materialize_magic_codec_archive.py",
-})
+#: the gate lands STRICT at 0 live violations by SHA-pinning every legacy
+#: packet/archive materializer.  A path name alone is not authority: once a
+#: pinned file changes it must either route through the canonical compiler or
+#: carry an explicit waiver.
+_DETERMINISTIC_COMPILER_LEGACY_SHA256: dict[str, str] = {
+    "tools/build_a1_frame_conditional_codec_variant.py": "5dfe4ab8fdf000da04cfeeb308cb7baf53f5277fd10f1611eb98abdf8ef91b06",
+    "tools/build_a1_per_pair_latent_correction_sidecar.py": "97c8cc477032431905b8283cd2c21e41a49e65d8478bab88f7cf97b999f28649",
+    "tools/build_a2_sensitivity_weighted_pr101_packet.py": "817309fe3639f36338ae03c2ce6e86c9733d20b5bbe2355723f4ee44bab108fe",
+    "tools/build_categorical_candidate_fixture.py": "70f44b2990c495e65a16052d70bdb97f4aa87e52d1d7e383a49dbf26c0293c91",
+    "tools/build_cross_archive_substrate_composition.py": "3aaa8565d7df7e799d89250007dda5815c5357b7840593bc4aebac9fdc1dce1d",
+    "tools/build_deterministic_packet.py": "4b1480cb35304f657681f17da714ace0ef7d72d3cf05ba5d96a916215930c4cd",
+    "tools/build_factorized_hnerv_archive.py": "18d4abba6f2d9988ea58ad2f8b8828fa6aee37dd410e0a47f15900435fb578ed",
+    "tools/build_hnerv_entropy_candidate_packet.py": "e196dc4e29f340e7ddc70bb8ae43fba702fdb2c95592fa03cdab13cc874eda30",
+    "tools/build_hnerv_generated_schema_candidate.py": "90cd9cd021a1fc60b31821eeff8ea3889f2d680858765a78ce326a30324618d0",
+    "tools/build_hnerv_lowlevel_exact_eval_packet.py": "a47b867b4f11a91db20833ca12050eedc06af97d5a20d407701f2612514def83",
+    "tools/build_hnerv_packet_section_manifest.py": "c8c84f05ed152082f072124248311e030da682d0c4e8aee5e8085a9d8e2bc335",
+    "tools/build_hnerv_packet_section_transform_candidate.py": "cbca88434c78a52c8a46d7fab43fb7362469720cb2653801ea1c0b853e9d6efc",
+    "tools/build_packet_compiler_golden_vectors.py": "f1b5d704b0f0e8508c9caf246fa2f9a77906409bac72f050a1436e6af925a36d",
+    "tools/build_phase1_packet_compiler.py": "d59376e6fb11cd971d17e29d9c6f7e61797ee7e8386bf00d9de6ceb95f14bafe",
+    "tools/build_pr101_finetuned_archive.py": "24cc4c4dc2ef87fee98b4e13180a28603478f5e34be9c7453bbb5833e789fefe",
+    "tools/build_pr101_frame_conditional_packet_readiness.py": "7bc40ae3cc2590f44f517fd0350f6f13b2f4d38c24bc348e6d7adae60c6c2296",
+    "tools/build_pr101_frame_conditional_runtime_packet.py": "fef366dc438d77eb5759001ddd47bf951fef9f94c0d9ff9e12f2c998d7bd11b1",
+    "tools/build_pr101_kaggle_proxy_runtime_packet.py": "2a2c044ac2062369957b2a87071563a2d367986ad632e89ff406cf803d628364",
+    "tools/build_pr101_runtime_packet.py": "9bbe10b50c46ef03ce86c3deb789ba86d9f9451ac992627ba114657687a49de6",
+    "tools/build_pr103_lc_ac_candidate_packet.py": "e61e17f819736c2fab9aa7f032003353d7114b63609a30c9d2d1e3ceecf1f471",
+    "tools/build_pr106_uniward_runtime_packet.py": "c6eb3d1a44d932201806a85a94a86fd193952019816304a39622dc3e6471630f",
+    "tools/build_result_review_packet.py": "a82c02feb0cb7b76a67d4ac5dfaee035e572a8c214431a3e297bc7ff4807d9be",
+    "tools/build_tac_oss_release_packet.py": "bf3d39a3528015a4fc101391a3b914561e82a3f2e527a06fb475f30b56aacadc",
+    "tools/build_track2_identity_packet.py": "1de6d789d6c852dfeef6dafc41685bc1715ed590513a20c195bd2fc016d27edc",
+    "tools/build_uniward_stc_hessian_a1_v1.py": "d1c38c51f3f7f2919dbac4ddb479cbe3f848c0429ce9a1cc263933fa4fefacee",
+    "tools/build_wr01_exact_eval_packet.py": "a16413013b80bd2cc695d75b7bb763ff24d7c0286c7be42186d396b585243976",
+    "tools/materialize_film_pose_x_magic_codec_archive.py": "b59406081e5965944b4b75bda4d5dd33d8615a611531649002cdab23deb8628c",
+    "tools/materialize_magic_codec_archive.py": "99ce1390226a8b351b00b219686e57e66b16e77e35e3354ecd6effabcfc3e995",
+}
 
 #: Token that, when present in a packet-builder source file, waives the gate
 #: with an explicit rationale.
 _DETERMINISTIC_COMPILER_WAIVER_TOKEN = "DETERMINISTIC_COMPILER_OK"
+
+
+def _source_sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _deterministic_compiler_ast_proof(text: str) -> bool:
+    """Return true only for an importable canonical compiler call path."""
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    compile_packet_names: set[str] = set()
+    deterministic_aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module == "tac.packet_compiler.deterministic_compiler":
+                for alias in node.names:
+                    if alias.name == "compile_packet":
+                        compile_packet_names.add(alias.asname or alias.name)
+            if module == "tac.packet_compiler":
+                for alias in node.names:
+                    if alias.name == "deterministic_compiler":
+                        deterministic_aliases.add(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "tac.packet_compiler.deterministic_compiler":
+                    deterministic_aliases.add(alias.asname or alias.name)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id in compile_packet_names:
+            return True
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "compile_packet"
+            and isinstance(func.value, ast.Name)
+            and func.value.id in deterministic_aliases
+        ):
+            return True
+    return False
 
 
 def _deterministic_compiler_candidate_paths(tools_dir: Path) -> tuple[Path, ...]:
@@ -32639,8 +32682,6 @@ def check_deterministic_compiler_canonical_use(
     violations: list[str] = []
     for path in _deterministic_compiler_candidate_paths(tools_dir):
         rel = path.relative_to(root).as_posix()
-        if rel in _DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST:
-            continue
         name = path.name
         # The gate applies only to surfaces whose name marks them as
         # packet-builders / packet-compilers / submission-packet tooling.
@@ -32659,6 +32700,9 @@ def check_deterministic_compiler_canonical_use(
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
+        legacy_sha = _DETERMINISTIC_COMPILER_LEGACY_SHA256.get(rel)
+        if legacy_sha is not None and _source_sha256(text) == legacy_sha:
+            continue
         # Waiver anywhere in the file exempts it (operator-acknowledged).
         if _DETERMINISTIC_COMPILER_WAIVER_TOKEN in text:
             continue
@@ -32675,17 +32719,17 @@ def check_deterministic_compiler_canonical_use(
         )
         if not (writes_zip and emits_inflate):
             continue
-        canonical_import = (
-            "tac.packet_compiler.deterministic_compiler" in text
-        )
-        if not canonical_import:
+        if not _deterministic_compiler_ast_proof(text):
+            legacy_note = (
+                " Legacy SHA pin changed; " if legacy_sha is not None else " "
+            )
             violations.append(
-                f"{rel}: new packet-builder writes archive.zip + emits "
-                "inflate runtime without importing "
-                "'tac.packet_compiler.deterministic_compiler'. Either route "
-                "through `compile_packet(...)` or add the path to "
-                "_DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST with a rationale, "
-                "or add a `# DETERMINISTIC_COMPILER_OK:<reason>` waiver."
+                f"{rel}:{legacy_note}packet-builder writes archive.zip + emits "
+                "inflate runtime without AST-proof of a canonical "
+                "`tac.packet_compiler.deterministic_compiler.compile_packet(...)` "
+                "call. Route through `compile_packet(...)`, update the "
+                "SHA-pinned legacy waiver with review, or add a "
+                "`# DETERMINISTIC_COMPILER_OK:<reason>` waiver."
             )
 
     if violations and strict:
@@ -32702,8 +32746,8 @@ def check_deterministic_compiler_canonical_use(
         else:
             print(
                 "  [check_deterministic_compiler_canonical_use] OK "
-                f"({len(_DETERMINISTIC_COMPILER_CANONICAL_ALLOWLIST)} legacy "
-                "surfaces grandfathered)"
+                f"({len(_DETERMINISTIC_COMPILER_LEGACY_SHA256)} SHA-pinned "
+                "legacy surfaces)"
             )
     return violations
 

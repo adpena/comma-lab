@@ -275,6 +275,7 @@ def build_readiness_manifest(
         "score_claim_valid": False,
         "ready_for_exact_eval_dispatch": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "dispatch_blockers": [
             "contest_cuda_eval_not_run",
             "contest_cpu_eval_not_run",

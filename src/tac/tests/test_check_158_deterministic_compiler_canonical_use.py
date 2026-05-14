@@ -1,9 +1,9 @@
 """Tests for Catalog #158 — `check_deterministic_compiler_canonical_use`.
 
-The gate refuses NEW packet-compilation surfaces that bypass the canonical
+The gate refuses packet-compilation surfaces that bypass the canonical
 `tac.packet_compiler.deterministic_compiler`. Pre-existing surfaces are
-grandfathered in via an explicit allowlist; the gate is STRICT @ 0 violations
-on the post-landing repo state.
+grandfathered in only through SHA-pinned legacy waivers; changed legacy files
+must route through the canonical compiler or carry an explicit waiver.
 """
 
 from __future__ import annotations
@@ -89,6 +89,37 @@ def inspect():
         return zf.namelist()
 '''
 
+_COMMENT_ONLY_BUILDER = '''\
+#!/usr/bin/env python3
+"""Mentions tac.packet_compiler.deterministic_compiler without using it."""
+import zipfile
+
+def build():
+    # tac.packet_compiler.deterministic_compiler is not a compiler call.
+    with zipfile.ZipFile("archive.zip", "w") as zf:
+        zf.writestr("renderer.bin", b"data")
+    with open("inflate.sh", "w") as fh:
+        fh.write("#!/bin/bash\\n")
+
+if __name__ == "__main__":
+    build()
+'''
+
+_ALIAS_CANONICAL_BUILDER = '''\
+#!/usr/bin/env python3
+"""Canonical packet builder with module alias."""
+import zipfile
+import tac.packet_compiler.deterministic_compiler as dc
+
+def main():
+    with zipfile.ZipFile("archive.zip", "w") as zf:
+        zf.writestr("inflate.py", b"data")
+    dc.compile_packet("archive.zip", output_dir="out", mode="identity")
+
+if __name__ == "__main__":
+    main()
+'''
+
 
 # ---------------------------------------------------------------------------
 # Canonical / waived / non-packet surfaces all pass
@@ -98,6 +129,15 @@ def inspect():
 def test_canonical_builder_passes(tmp_path: Path) -> None:
     repo = _make_tools_repo(tmp_path)
     (repo / "tools" / "build_my_packet.py").write_text(_CANONICAL_BUILDER)
+    violations = check_deterministic_compiler_canonical_use(
+        repo_root=repo, strict=False,
+    )
+    assert violations == []
+
+
+def test_canonical_alias_builder_passes(tmp_path: Path) -> None:
+    repo = _make_tools_repo(tmp_path)
+    (repo / "tools" / "build_my_packet.py").write_text(_ALIAS_CANONICAL_BUILDER)
     violations = check_deterministic_compiler_canonical_use(
         repo_root=repo, strict=False,
     )
@@ -147,6 +187,16 @@ def test_offending_builder_caught_warn(tmp_path: Path) -> None:
     assert len(violations) == 1
     assert "build_my_packet.py" in violations[0]
     assert "tac.packet_compiler.deterministic_compiler" in violations[0]
+
+
+def test_comment_only_compiler_reference_is_not_compliance(tmp_path: Path) -> None:
+    repo = _make_tools_repo(tmp_path)
+    (repo / "tools" / "build_my_packet.py").write_text(_COMMENT_ONLY_BUILDER)
+    violations = check_deterministic_compiler_canonical_use(
+        repo_root=repo, strict=False,
+    )
+    assert len(violations) == 1
+    assert "AST-proof" in violations[0]
 
 
 def test_offending_builder_strict_raises(tmp_path: Path) -> None:
@@ -222,8 +272,8 @@ def test_allowlisted_legacy_surfaces_passes_real_repo() -> None:
     assert violations == [], "\n".join(violations)
 
 
-def test_allowlisted_surface_passes_even_if_offending(tmp_path: Path) -> None:
-    """A pre-existing surface in the allowlist is exempt regardless of content."""
+def test_legacy_sha_pin_does_not_exempt_changed_offender(tmp_path: Path) -> None:
+    """A legacy filename alone is not enough once the content hash changes."""
 
     repo = _make_tools_repo(tmp_path)
     # Use a known-allowlisted name.
@@ -233,7 +283,8 @@ def test_allowlisted_surface_passes_even_if_offending(tmp_path: Path) -> None:
     violations = check_deterministic_compiler_canonical_use(
         repo_root=repo, strict=False,
     )
-    assert violations == []
+    assert len(violations) == 1
+    assert "Legacy SHA pin changed" in violations[0]
 
 
 def test_missing_tools_dir_returns_empty(tmp_path: Path) -> None:

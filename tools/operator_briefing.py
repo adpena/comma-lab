@@ -62,6 +62,7 @@ from tac.optimizer.exact_readiness import (  # noqa: E402
     is_sha256,
     terminal_claim_result_conflicts,
 )
+from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimizer.exact_ready_audit import (  # noqa: E402
     apply_suppression_manifest,
     audit_exact_ready_queues,
@@ -237,7 +238,11 @@ def _annotate_score_target_lanes(
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for lane in lanes:
-        row = dict(lane)
+        row = apply_false_authority_contract(
+            dict(lane),
+            preserve_dispatch_ready=True,
+            reason="operator_briefing_planning_row_no_score_authority",
+        )
         decision = decide_score_target_routing(
             row.get("predicted_band"),
             target_score=target_score,
@@ -1106,19 +1111,162 @@ XRAY_TOOLKIT = [
             "  --label pr107_apogee"
         ),
     },
+    {
+        "tool": "tools/xray_substrate_classifier.py",
+        "purpose": (
+            "Classify archive payload grammar from magic bytes and layout "
+            "signals, including cooperative-receiver, S2SBS/SABOR, and "
+            "magic-codec packet classes. Use before routing an archive into "
+            "a compiler or repack lane."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_substrate_classifier.py \\\n"
+            "  --archive experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip \\\n"
+            "  --label pr106"
+        ),
+    },
+    {
+        "tool": "tools/xray_per_frame_difficulty_profile.py",
+        "purpose": (
+            "Per-frame difficulty and byte-allocation profile for finding "
+            "hard frames, stable interiors, and candidate frame-local "
+            "sidecar targets before a paid training or exact-eval pass."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_per_frame_difficulty_profile.py \\\n"
+            "  --auth-eval-json experiments/results/.../contest_auth_eval.json \\\n"
+            "  --label candidate"
+        ),
+    },
 ]
+
+
+def _xray_toolkit_rows() -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for entry in XRAY_TOOLKIT:
+        tool_path = REPO_ROOT / str(entry["tool"])
+        rows.append(
+            apply_false_authority_contract(
+                {
+                **entry,
+                "tool_exists": tool_path.is_file(),
+                "dispatch_blockers": ["diagnostic_tool_no_score_or_dispatch_authority"],
+                },
+                preserve_dispatch_ready=False,
+                reason="xray_diagnostic_tool_no_score_or_dispatch_authority",
+            )
+        )
+    return rows
 
 
 def _format_xray_toolkit() -> str:
     lines = []
-    for entry in XRAY_TOOLKIT:
+    for entry in _xray_toolkit_rows():
+        exists = "present" if entry["tool_exists"] else "MISSING"
         lines.append(f"• `{entry['tool']}`")
+        lines.append(
+            "    "
+            f"status: {exists}; score_claim=false; "
+            "ready_for_exact_eval_dispatch=false"
+        )
         lines.append(f"    {entry['purpose']}")
         lines.append("    Example:")
         for ln in entry["example"].splitlines():
             lines.append(f"      {ln}")
         lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def _cooperative_receiver_solver_integration() -> dict[str, object]:
+    """Return operator-visible hook counts for the unified solver stack.
+
+    This is a briefing surface, not a dispatcher. It intentionally keeps every
+    hook fail-closed so JSON consumers cannot turn research/planning manifests
+    into score authority by omission.
+    """
+
+    try:
+        from tac.optimization.cooperative_receiver_integration import (
+            build_integration_manifest,
+        )
+
+        manifest = build_integration_manifest()
+    except Exception as exc:
+        return apply_false_authority_contract({
+            "status": "BLOCKED",
+            "reason": f"cooperative receiver integration manifest failed: {exc}",
+            "dispatch_blockers": ["integration_manifest_build_failed"],
+        }, preserve_dispatch_ready=False)
+
+    autopilot_rows = manifest.get("autopilot_dispatch_hook", {}).get("rows") or []
+    meta_rows = manifest.get("meta_lagrangian_hook", {}).get("rows") or []
+    pareto_rows = manifest.get("pareto_constraint_hook", {}).get("rows") or []
+    xray_rows = manifest.get("xray_hook", {}).get("cooperative_receiver_packet_grammars") or []
+    magic_rows = manifest.get("magic_codec_hook", {}).get("entries") or []
+    packet_grammars = (
+        manifest.get("packet_compiler_hook", {}).get("cooperative_receiver_packet_grammars")
+        or []
+    )
+    continual = manifest.get("continual_learning_hook", {})
+    hooks_present = {
+        "autopilot_dispatch_hook": bool(autopilot_rows),
+        "meta_lagrangian_hook": bool(meta_rows),
+        "pareto_constraint_hook": bool(pareto_rows),
+        "continual_learning_hook": isinstance(continual, dict) and bool(continual),
+        "xray_hook": bool(xray_rows),
+        "magic_codec_hook": bool(magic_rows),
+        "packet_compiler_hook": bool(packet_grammars),
+    }
+    missing_hooks = [name for name, present in hooks_present.items() if not present]
+    return apply_false_authority_contract({
+        "status": "READY" if not missing_hooks else "BLOCKED",
+        "schema": manifest.get("schema"),
+        "planning_only": manifest.get("planning_only") is True,
+        "dispatch_blockers": ["planning_only_requires_byte_closed_exact_eval"],
+        "missing_hooks": missing_hooks,
+        "campaign_count": manifest.get("campaign_count"),
+        "autopilot_rows": len(autopilot_rows),
+        "meta_lagrangian_rows": len(meta_rows),
+        "pareto_rows": len(pareto_rows),
+        "continual_learning_posterior_update_allowed": bool(
+            isinstance(continual, dict)
+            and continual.get("posterior_update_allowed") is True
+        ),
+        "xray_grammars": len(xray_rows),
+        "magic_codec_entries": len(magic_rows),
+        "packet_compiler_grammars": len(packet_grammars),
+        "canonical_packet_compiler": manifest.get("packet_compiler_hook", {}).get(
+            "canonical_module"
+        ),
+    }, preserve_dispatch_ready=False)
+
+
+def _format_cooperative_receiver_solver_integration() -> str:
+    payload = _cooperative_receiver_solver_integration()
+    lines = [
+        f"status: {payload['status']}",
+        f"score_claim: {payload['score_claim']}",
+        f"ready_for_exact_eval_dispatch: {payload['ready_for_exact_eval_dispatch']}",
+    ]
+    if payload.get("reason"):
+        lines.append(f"reason: {payload['reason']}")
+    if payload.get("missing_hooks"):
+        lines.append("missing_hooks: " + ", ".join(str(v) for v in payload["missing_hooks"]))
+    lines.extend(
+        [
+            f"campaigns: {payload.get('campaign_count', 0)}",
+            f"autopilot_rows: {payload.get('autopilot_rows', 0)}",
+            f"meta_lagrangian_rows: {payload.get('meta_lagrangian_rows', 0)}",
+            f"pareto_rows: {payload.get('pareto_rows', 0)}",
+            "continual_learning_posterior_update_allowed: "
+            f"{payload.get('continual_learning_posterior_update_allowed')}",
+            f"xray_grammars: {payload.get('xray_grammars', 0)}",
+            f"magic_codec_entries: {payload.get('magic_codec_entries', 0)}",
+            f"packet_compiler_grammars: {payload.get('packet_compiler_grammars', 0)}",
+            f"canonical_packet_compiler: {payload.get('canonical_packet_compiler', '')}",
+        ]
+    )
+    return "\n".join(lines)
 
 
 # Phase-7: constrained-coord-search status (added 2026-05-09).
@@ -1414,6 +1562,10 @@ def main(argv: list[str] | None = None) -> int:
             "dispatch_claim_summary": _dispatch_claim_summary(),
             "dispatch_claim_historical_summary": _dispatch_claim_historical_summary(),
             "dispatch_readiness": _dispatch_readiness(),
+            "xray_tools": _xray_toolkit_rows(),
+            "cooperative_receiver_solver_integration": (
+                _cooperative_receiver_solver_integration()
+            ),
         }
         if not args.skip_provider_readiness:
             out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)
@@ -1525,6 +1677,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6 — XRAY toolkit (diagnostic tools landed 2026-05-09)",
         _format_xray_toolkit(),
+    ))
+    parts.append(_section(
+        "Phase 6b — Cooperative-receiver solver integration hooks",
+        _format_cooperative_receiver_solver_integration(),
     ))
     parts.append(_section(
         "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",

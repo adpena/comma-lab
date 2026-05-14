@@ -11,12 +11,14 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import os
 import re
 import shlex
 import shutil
 import subprocess
 import sys
+import zipfile
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -150,6 +152,24 @@ def _archive_identity(path: Path) -> dict[str, Any]:
     }
 
 
+def _zip_member_manifest(path: Path) -> list[dict[str, Any]]:
+    full = _repo_path(path)
+    members: list[dict[str, Any]] = []
+    with zipfile.ZipFile(full) as archive:
+        for info in archive.infolist():
+            payload = archive.read(info)
+            members.append(
+                {
+                    "name": info.filename,
+                    "file_size": int(info.file_size),
+                    "compress_size": int(info.compress_size),
+                    "crc": int(info.CRC),
+                    "sha256": sha256_bytes(payload),
+                }
+            )
+    return members
+
+
 def _q(value: object) -> str:
     text = str(value)
     if text.startswith("$") or text.startswith("${"):
@@ -256,8 +276,12 @@ def _packet_source_paths(
 
 
 def _remaining_required_for_score_or_dispatch(
-    *, operator_approved_exact_cuda: bool
+    *,
+    operator_approved_exact_cuda: bool,
+    exact_cuda_auth_eval_complete: bool = False,
 ) -> list[str]:
+    if exact_cuda_auth_eval_complete:
+        return ["operator_score_claim_review"]
     remaining = [
         "lightning_submit_environment",
         "active_level2_lane_dispatch_claim",
@@ -270,7 +294,11 @@ def _remaining_required_for_score_or_dispatch(
     return remaining
 
 
-def _remaining_required_report_text(*, operator_approved_exact_cuda: bool) -> str:
+def _remaining_required_report_text(
+    *,
+    operator_approved_exact_cuda: bool,
+    exact_cuda_auth_eval_complete: bool = False,
+) -> str:
     labels = {
         "operator_exact_cuda_approval": "operator exact-CUDA approval",
         "lightning_submit_environment": "Lightning submit environment",
@@ -282,7 +310,8 @@ def _remaining_required_report_text(*, operator_approved_exact_cuda: bool) -> st
     return ", ".join(
         labels[item]
         for item in _remaining_required_for_score_or_dispatch(
-            operator_approved_exact_cuda=operator_approved_exact_cuda
+            operator_approved_exact_cuda=operator_approved_exact_cuda,
+            exact_cuda_auth_eval_complete=exact_cuda_auth_eval_complete,
         )
     )
 
@@ -881,6 +910,37 @@ def _auth_eval_summary(
         blockers.append("auth_eval_lane_tag_not_contest_cuda")
     if payload.get("score_axis") != "contest_cuda":
         blockers.append("auth_eval_score_axis_not_contest_cuda")
+    if payload.get("n_samples") != 600:
+        blockers.append("auth_eval_n_samples_not_600")
+    if provenance.get("device") != "cuda":
+        blockers.append("auth_eval_device_not_cuda")
+    if provenance.get("gpu_t4_match") is not True and "t4" not in str(
+        provenance.get("gpu_model") or ""
+    ).lower():
+        blockers.append("auth_eval_gpu_not_t4")
+    seg = payload.get("avg_segnet_dist")
+    pose = payload.get("avg_posenet_dist")
+    score_value = (
+        payload.get("score_recomputed_from_components")
+        or payload.get("canonical_score")
+        or payload.get("final_score")
+    )
+    try:
+        seg_f = float(seg)
+        pose_f = float(pose)
+        archive_bytes_i = int(archive_bytes)
+        score_f = float(score_value)
+        expected_score = (
+            100.0 * seg_f
+            + math.sqrt(10.0 * pose_f)
+            + 25.0 * archive_bytes_i / CONTEST_ORIGINAL_BYTES
+        )
+    except (TypeError, ValueError):
+        expected_score = None
+        blockers.append("auth_eval_component_formula_fields_missing")
+    else:
+        if not math.isfinite(expected_score) or abs(score_f - expected_score) > 1e-9:
+            blockers.append("auth_eval_component_formula_mismatch")
     valid = not blockers
     return {
         "provided": True,
@@ -892,12 +952,16 @@ def _auth_eval_summary(
         "lane_tag": payload.get("lane_tag"),
         "score_claim_valid": payload.get("score_claim_valid"),
         "exact_cuda_eval_complete": payload.get("exact_cuda_eval_complete"),
-        "score": payload.get("score_recomputed_from_components")
-        or payload.get("canonical_score")
-        or payload.get("final_score"),
+        "score": score_value,
+        "component_formula_score": expected_score,
         "final_score": payload.get("final_score"),
         "avg_segnet_dist": payload.get("avg_segnet_dist"),
         "avg_posenet_dist": payload.get("avg_posenet_dist"),
+        "n_samples": payload.get("n_samples"),
+        "device": provenance.get("device"),
+        "gpu_model": provenance.get("gpu_model"),
+        "gpu_t4_match": provenance.get("gpu_t4_match"),
+        "contest_final_compliance_passed": payload.get("contest_final_compliance_passed") is True,
         "archive_sha256": archive_sha,
         "archive_size_bytes": archive_bytes,
     }
@@ -911,6 +975,10 @@ def _release_surface_report(
     auth_eval: dict[str, Any],
 ) -> str:
     byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
+    remaining_required = _remaining_required_report_text(
+        operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda),
+        exact_cuda_auth_eval_complete=auth_eval.get("valid_exact_cuda_candidate_eval") is True,
+    )
     lines = [
         "HNeRV low-level Brotli static release surface",
         f"recorded_at_utc: {_format_utc(now_utc)}",
@@ -931,8 +999,7 @@ def _release_surface_report(
         f"candidate_manifest: {_repo_rel(args.result_dir / 'manifest.json')}",
         f"payload_section_diff: {_repo_rel(args.result_dir / 'payload_section_diff_vs_source.json')}",
         f"public_replay_preflight: {_repo_rel(args.result_dir / 'public_replay_preflight.json')}",
-        "remaining_for_score_or_dispatch: "
-        f"{_remaining_required_report_text(operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda))}",
+        f"remaining_for_score_or_dispatch: {remaining_required}",
         "notes: This file intentionally records no score and no promotion claim.",
     ]
     if auth_eval.get("valid_exact_cuda_candidate_eval") is True:
@@ -1025,6 +1092,7 @@ def build_release_surface(
             "source_path": _repo_rel(args.archive),
             "sha256": candidate_result.get("candidate_archive_sha256"),
             "bytes": candidate_result.get("candidate_archive_bytes"),
+            "members": _zip_member_manifest(archive_dst),
         },
         "inflate_sh": {
             "path": "inflate.sh",
@@ -1062,7 +1130,8 @@ def build_release_surface(
         "remaining_required_for_score_or_dispatch": [
             item
             for item in _remaining_required_for_score_or_dispatch(
-                operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda)
+                operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda),
+                exact_cuda_auth_eval_complete=auth_eval.get("valid_exact_cuda_candidate_eval") is True,
             )
             if not (
                 auth_eval.get("valid_exact_cuda_candidate_eval") is True
@@ -1080,7 +1149,31 @@ def build_release_surface(
     }
 
 
-def _run_json_cmd(cmd: list[str], output_path: Path) -> dict[str, Any]:
+def _refresh_release_surface_packet_link(args: argparse.Namespace, packet_path: Path) -> None:
+    manifest_path = _repo_path(args.release_surface_dir / "archive_manifest.json")
+    if not manifest_path.is_file():
+        return
+    payload = read_json(manifest_path)
+    if not isinstance(payload, dict):
+        return
+    links = payload.get("manifest_links")
+    if not isinstance(links, dict):
+        links = {}
+        payload["manifest_links"] = links
+    links["exact_eval_packet"] = {
+        "repo_path": _repo_rel(packet_path),
+        "exists": _repo_path(packet_path).is_file(),
+    }
+    manifest_path.write_text(json_text(payload), encoding="utf-8")
+    manifest_path.chmod(0o644)
+
+
+def _run_json_cmd(
+    cmd: list[str],
+    output_path: Path,
+    *,
+    allow_failure: bool = False,
+) -> dict[str, Any]:
     result = subprocess.run(cmd, cwd=REPO_ROOT, check=False, capture_output=True, text=True)
     payload = {
         "command": _one_liner([".venv/bin/python", *cmd[1:]]),
@@ -1089,10 +1182,25 @@ def _run_json_cmd(cmd: list[str], output_path: Path) -> dict[str, Any]:
         "stdout_tail": result.stdout[-1000:],
         "stderr_tail": result.stderr[-2000:],
     }
-    if result.returncode != 0:
+    if result.returncode != 0 and not allow_failure:
         raise RuntimeError(
             f"command failed with exit={result.returncode}: {_one_liner(cmd)}\n{result.stderr[-4000:]}"
         )
+    if result.returncode != 0 and not _repo_path(output_path).is_file():
+        failure_payload = {
+            "schema": "subprocess_json_command_failure_v1",
+            "passed": False,
+            "checks": [
+                {
+                    "name": "subprocess_json_output_materialized",
+                    "passed": False,
+                    "severity": "error",
+                    "details": payload["stderr_tail"] or payload["stdout_tail"],
+                }
+            ],
+        }
+        _repo_path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        _repo_path(output_path).write_text(json_text(failure_payload), encoding="utf-8")
     return payload
 
 
@@ -1149,7 +1257,7 @@ def refresh_static_compliance(args: argparse.Namespace) -> dict[str, Any]:
         output.as_posix(),
         "--strict",
     ]
-    payload = _run_json_cmd(cmd, output)
+    payload = _run_json_cmd(cmd, output, allow_failure=True)
     payload["schema"] = "hnerv_lowlevel_static_compliance_refresh_v1"
     return payload
 
@@ -1172,6 +1280,13 @@ def refresh_dispatch_readiness(args: argparse.Namespace) -> dict[str, Any]:
         output.as_posix(),
     ]
     payload = _run_json_cmd(cmd, output)
+    underlying = read_json(_repo_path(output)) if _repo_path(output).is_file() else None
+    if isinstance(underlying, dict):
+        payload = {
+            **underlying,
+            **payload,
+            "underlying_static_readiness_json": underlying,
+        }
     stdout_tail = payload.get("stdout_tail")
     if isinstance(stdout_tail, str) and stdout_tail.strip().startswith("{"):
         try:
@@ -1183,6 +1298,30 @@ def refresh_dispatch_readiness(args: argparse.Namespace) -> dict[str, Any]:
         except json.JSONDecodeError:
             payload["stdout_tail_disposition"] = "unparsed_subprocess_stdout_tail"
     claim_report = lane_claim_preflight(args, now_utc=_now_utc(args))
+    claim_overlay_blocker_codes = {
+        "missing_active_lane_dispatch_claim",
+        "active_lane_dispatch_claim_conflict",
+        "active_lane_claim_conflict",
+    }
+    if claim_report["active_claim_present"] and not claim_report["conflict_present"]:
+        blockers = payload.get("blockers")
+        if isinstance(blockers, list):
+            original_codes = {
+                str(item.get("code"))
+                for item in blockers
+                if isinstance(item, dict) and item.get("code")
+            }
+            filtered = [
+                item
+                for item in blockers
+                if not (
+                    isinstance(item, dict)
+                    and str(item.get("code")) in claim_overlay_blocker_codes
+                )
+            ]
+            payload["blockers"] = filtered
+            if original_codes.issubset(claim_overlay_blocker_codes) and not filtered:
+                payload["ready_for_exact_eval_dispatch"] = True
     if not claim_report["active_claim_present"]:
         blockers = payload.setdefault("blockers", [])
         if isinstance(blockers, list):
@@ -1489,6 +1628,17 @@ def _submit_blocker_disposition(
     }
 
 
+def _successful_exact_cuda_terminal_claim_present(claim_report: Mapping[str, Any]) -> bool:
+    status = str(claim_report.get("latest_matching_terminal_status") or "")
+    return status.startswith(
+        (
+            "completed_contest_cuda",
+            "completed_exact_cuda",
+            "completed_cuda_auth_eval",
+        )
+    )
+
+
 def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     now_utc = _now_utc(args)
     candidate_result = read_json(_repo_path(args.candidate_result))
@@ -1584,6 +1734,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             claim_only_blockers = {
                 "missing_active_lane_dispatch_claim",
                 "active_lane_dispatch_claim_conflict",
+                "active_lane_claim_conflict",
             }
             if not blocker_codes or not blocker_codes.issubset(claim_only_blockers):
                 static_blockers.append(
@@ -1613,9 +1764,13 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
 
     claim_report = lane_claim_preflight(args, now_utc=now_utc)
     missing_env = [name for name in REQUIRED_ENV if not os.environ.get(name)]
+    auth_eval = _auth_eval_summary(args, candidate_result)
+    auth_eval_complete = auth_eval.get("valid_exact_cuda_candidate_eval") is True
     submit_blockers: list[str] = []
     if not static_ready:
         submit_blockers.append("static_packet_not_ready")
+    if auth_eval_complete:
+        submit_blockers.append("candidate_exact_cuda_auth_eval_already_present")
     if missing_env:
         submit_blockers.append("missing_lightning_environment")
     if claim_report["conflict_present"]:
@@ -1625,11 +1780,14 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     if not args.operator_approved_exact_cuda:
         submit_blockers.append("missing_operator_exact_cuda_approval")
 
-    auth_eval = _auth_eval_summary(args, candidate_result)
-    score_blockers = (
-        ["operator_score_claim_review_not_done"]
-        if auth_eval.get("valid_exact_cuda_candidate_eval") is True
-        else [
+    if auth_eval_complete:
+        score_blockers = ["operator_score_claim_review_not_done"]
+        if auth_eval.get("contest_final_compliance_passed") is not True:
+            score_blockers.append("contest_final_compliance_not_run")
+        if not _successful_exact_cuda_terminal_claim_present(claim_report):
+            score_blockers.append("successful_terminal_exact_cuda_claim_not_verified")
+    else:
+        score_blockers = [
             "exact_cuda_auth_eval_not_run_for_candidate",
             "contest_auth_eval_adjudication_not_run_for_candidate",
             "operator_score_claim_review_not_done",
@@ -1639,7 +1797,6 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 if blocker != "auth_eval_json_not_provided"
             ],
         ]
-    )
     byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
     expected_delta = byte_delta * RATE_SCORE_PER_BYTE
     kkt_proof = _rate_only_raw_equivalent_kkt_proof(
@@ -1788,6 +1945,9 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         },
     }
     _repo_path(packet_path).parent.mkdir(parents=True, exist_ok=True)
+    _repo_path(packet_path).write_text(json_text(packet), encoding="utf-8")
+    _refresh_release_surface_packet_link(args, packet_path)
+    packet["release_surface"] = _release_surface_status(args.release_surface_dir)
     _repo_path(packet_path).write_text(json_text(packet), encoding="utf-8")
     return packet
 

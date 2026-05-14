@@ -93,3 +93,22 @@ def test_macos_cpu_advisory_negative_enters_validation_queue_not_ranking() -> No
     assert row["rank_or_kill_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "reactivation_required_before_new_dispatch" in row["dispatch_blockers"]
+
+
+def test_autopilot_rank_or_kill_requires_explicit_true() -> None:
+    autopilot = _load_autopilot()
+
+    row = autopilot._attach_fail_closed_dispatch_fields(
+        {
+            "name": "stale_promotable_without_rank_evidence",
+            "score_claim": True,
+            "score_claim_valid": True,
+            "promotion_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+        }
+    )
+
+    assert row["score_claim"] is True
+    assert row["score_claim_valid"] is True
+    assert row["promotion_eligible"] is True
+    assert row["rank_or_kill_eligible"] is False

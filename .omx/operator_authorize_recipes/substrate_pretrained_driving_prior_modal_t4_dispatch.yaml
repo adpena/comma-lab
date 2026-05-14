@@ -11,19 +11,18 @@ min_vram_gb: 16
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
-  - contest_exact_eval
   - contest_one_video_replay
   - production_generalized
   - production_edge_adaptive
   - research_substrate
 canary_status: independent_substrate
-active_dispatch_contract: dpp_naked_replacement
+active_dispatch_contract: dpp_scaffold_smoke_only
 dispatch_contracts:
-  - id: dpp_naked_replacement
+  - id: dpp_scaffold_smoke_only
     archive_role: replaces_hnerv_a1_substrate_with_dashcam_prior
     builder_surface: experiments/train_substrate_pretrained_driving_prior.py
     status: scaffold_only_no_full_dispatch
-    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+    exact_eval_path: blocked_until_full_training_and_byte_closed_runtime_land
   - id: dpp_residual_on_a1_base
     archive_role: residual_sidecar_on_hnerv_a1_base
     builder_surface: future composition with tac.substrates.time_traveler_l5_autonomy
