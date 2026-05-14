@@ -1854,6 +1854,27 @@ def preflight_all(
             ),
             strict=True,
         )
+        # 2026-05-14 Catalog #234 - subagent commits must not have
+        # subject-only/markerless bodies. Warn-only initially because the
+        # cutoff exempts historical sibling commits while the rule propagates.
+        _parallel.run(
+            "check_subagent_commit_bodies_not_empty",
+            "[subagent-commit-body-not-empty]",
+            lambda: check_subagent_commit_bodies_not_empty(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
+        # 2026-05-14 Catalog #235 - refuse sha-prefix length mismatch
+        # comparisons like the Catalog #117 7-char-vs-9-char bug.
+        _parallel.run(
+            "check_no_sha_prefix_length_mismatch_comparisons",
+            "[sha-prefix-length-mismatch]",
+            lambda: check_no_sha_prefix_length_mismatch_comparisons(
+                strict=True, verbose=verbose,
+            ),
+            strict=True,
+        )
         # 2026-05-14 Catalog #207 - no unguarded shutil.rmtree in
         # tools/build_*.py / tools/promote_*.py per codex 3-findings HIGH.
         # STRICT @ 0 — the canonical guard ``_assert_rmtree_safe`` lands in
@@ -1862,6 +1883,26 @@ def preflight_all(
         # (which is on the file allowlist). Memory:
         # feedback_codex_3_findings_fix_landed_20260514.md.
         check_no_unguarded_rmtree_in_build_tools(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #234 - subagent commit bodies must NOT be empty
+        # per META-3 R1 finding (commit 0916332eb body was 1-line subject only;
+        # no Co-Authored-By, no checkpoint trace, no journal-grade ledger).
+        # Initial wire-in is warn-only per CLAUDE.md "Strict-flip atomicity
+        # rule"; cutoff (`_CHECK_234_DISCIPLINE_CUTOFF_UTC`) exempts pre-fix
+        # legacy commits. Strict-flip planned after operator-routed sweep
+        # confirms post-cutoff live count = 0. Memory:
+        # feedback_fix_wave_r1_wave_a_landed_20260514.md.
+        check_subagent_commit_bodies_not_empty(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #235 - META-meta sha-prefix length-mismatch
+        # comparison gate per META-4 R1 finding. STRICT @ 0 from byte one
+        # because the canonical bug pattern was already fixed in sister
+        # commit 4d483ac39 via `_check_117_serializer_sha_matches_commit`.
+        # This META-meta gate sister-protects against future re-introduction.
+        # Memory: feedback_fix_wave_r1_wave_a_landed_20260514.md.
+        check_no_sha_prefix_length_mismatch_comparisons(
             strict=True, verbose=verbose,
         )
         # 2026-05-14 Catalog #209 - DP1 Phase 2 contest-video-leakage caller
@@ -33314,6 +33355,261 @@ def check_subagent_commits_have_co_author_trailer(
             print(
                 f"  [co-author-trailer] OK ({scanned} commit(s) scanned)"
             )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #234 - subagent commits must NOT have empty body (META-3 R1 fix)
+# ---------------------------------------------------------------------------
+# Bug-class anchor: 2026-05-14 commit 0916332eb "Wire C1 Z5 routing and F3
+# cache surfaces" landed with EMPTY body — no Co-Authored-By, no checkpoint
+# discipline waiver, no journal-grade ledger reference, no premise verifier
+# path, no 6-hook wire-in declaration. The serializer log showed two
+# concurrent subagent commits BOTH ending in commit_failed:nothing-to-commit
+# at head_after=0916332eb — diagnostic signature of the commit-swap class
+# (auto-commit hook pre-staged everything before the canonical serializer
+# ran; well-formed subagent message bodies were never attached).
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# this gate refuses any subagent commit whose body lacks BOTH the canonical
+# Co-Authored-By trailer AND any of the canonical body markers (premise
+# verifier path / 6-hook declaration / journal-grade ledger reference /
+# checkpoint discipline waiver / explicit subject-only justification).
+# Sister of Catalog #117 (`check_subagent_commit_serializer_uses_lock`),
+# Catalog #119 (`check_subagent_commits_have_co_author_trailer`), and
+# Catalog #206 (`check_subagent_dispatches_use_checkpoint_discipline`).
+#
+# Initial wire-in is warn-only per CLAUDE.md "Strict-flip atomicity rule"
+# because historical commits before this gate landed may not satisfy it.
+# Strict-flip after operator-routed legacy backfill clears the historical
+# exemption; the cutoff lives in `_CHECK_234_DISCIPLINE_CUTOFF_UTC`.
+
+_CHECK_234_DISCIPLINE_CUTOFF_UTC = "2026-05-14T22:00:00Z"
+
+_CHECK_234_BODY_MARKER_TOKENS = (
+    # Canonical body markers — at least ONE must appear in addition to
+    # the Co-Authored-By trailer for a non-trivial subagent commit.
+    "Co-Authored-By",  # Catalog #119 trailer
+    "subagent_checkpoint.py",  # Catalog #206 checkpoint
+    "subagent_progress.jsonl",  # Catalog #206 ledger
+    "checkpoint discipline",  # Catalog #206 prose
+    "CHECKPOINT_DISCIPLINE_WAIVED",  # Catalog #206 waiver
+    "6-hook wire-in",  # Catalog #125 declaration
+    "Lane:",  # lane-id reference
+    "lane_",  # lane-id reference
+    "Memory:",  # memory file reference
+    "feedback_",  # memory file reference
+    ".omx/research/",  # ledger reference
+    "EMPTY_BODY_OK",  # explicit waiver for the rare subject-only commit
+)
+
+
+def check_subagent_commit_bodies_not_empty(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    last_n_commits: int = 50,
+    repo_root: Path | None = None,
+) -> list[str]:
+    """Catalog #234 - subagent commits must have non-empty body content.
+
+    Scans the last ``last_n_commits`` commits, intersects with the canonical
+    subagent_commit_serializer log so only true subagent commits are scoped
+    (operator/main-thread commits are exempt by definition), and refuses any
+    commit whose body is empty OR whose body lacks ALL canonical body markers
+    (Co-Authored-By trailer, checkpoint trace, lane reference, memory
+    reference, ledger reference, etc.).
+
+    Bug class anchor: META-3 R1 finding (commit 0916332eb empty body).
+
+    Acceptance: any of the tokens in ``_CHECK_234_BODY_MARKER_TOKENS``
+    visible in the body. Same-line waiver: ``# EMPTY_BODY_OK:<reason>``
+    for the rare subject-only commit (e.g. trivial state-file mutations).
+
+    Per CLAUDE.md "Comment-only contracts — FORBIDDEN" + "Bugs must be
+    permanently fixed AND self-protected against". Sister of Catalog #117
+    + #119 + #206. Cutoff filter exempts pre-fix legacy commits per
+    CLAUDE.md "Strict-flip atomicity rule".
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    serializer_shas = _check_206_load_serializer_commits(root, last_n_commits)
+    if not serializer_shas:
+        if verbose:
+            print(
+                "  [subagent-commit-body-not-empty] OK "
+                "(no subagent commits in serializer log)"
+            )
+        return []
+
+    started_at_map = _check_206_load_serializer_started_at(root, last_n_commits)
+    bodies = _check_206_iter_recent_commit_bodies(root, last_n_commits)
+    serializer_prefixes = {s[:9] for s in serializer_shas}
+    prefix_to_started_at = {s[:9]: ts for s, ts in started_at_map.items()}
+    violations: list[str] = []
+    scanned = 0
+    skipped_pre_cutoff = 0
+    for sha, body in bodies:
+        if sha[:9] not in serializer_prefixes:
+            continue
+        ts = prefix_to_started_at.get(sha[:9])
+        if ts is None or ts < _CHECK_234_DISCIPLINE_CUTOFF_UTC:
+            skipped_pre_cutoff += 1
+            continue
+        scanned += 1
+        # Strip the subject line (first line) and check the body proper.
+        body_lines = body.splitlines()
+        body_proper = "\n".join(body_lines[1:]).strip() if len(body_lines) > 1 else ""
+        if not body_proper:
+            violations.append(
+                f"commit {sha[:10]} (subagent commit per serializer log, "
+                f"started_at_utc={ts}) has EMPTY body (subject-only). "
+                "Per Catalog #234 + CLAUDE.md 'Comment-only contracts FORBIDDEN' "
+                "the body must include at least the Co-Authored-By trailer, "
+                "checkpoint discipline trace, lane reference, OR a same-line "
+                "`# EMPTY_BODY_OK:<reason>` waiver."
+            )
+            continue
+        # Body present but lacks all canonical markers — subagent commit
+        # without minimum journal-grade content.
+        if not any(tok in body_proper for tok in _CHECK_234_BODY_MARKER_TOKENS):
+            violations.append(
+                f"commit {sha[:10]} (subagent commit per serializer log, "
+                f"started_at_utc={ts}) body lacks all canonical markers "
+                "(Co-Authored-By, subagent_checkpoint, lane_, Memory:, "
+                "feedback_, .omx/research/). Per Catalog #234 add at least "
+                "one canonical marker OR a `# EMPTY_BODY_OK:<reason>` waiver."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [subagent-commit-body-not-empty] WARN: "
+                f"{len(violations)}/{scanned} post-cutoff subagent commit(s) "
+                f"with empty body or missing canonical markers "
+                f"(skipped_pre_cutoff={skipped_pre_cutoff}, strict={strict})"
+            )
+        else:
+            print(
+                f"  [subagent-commit-body-not-empty] OK "
+                f"({scanned} post-cutoff subagent commit(s) scanned, "
+                f"{skipped_pre_cutoff} legacy pre-cutoff exempt)"
+            )
+    if violations and strict:
+        msg = (
+            f"check_subagent_commit_bodies_not_empty: "
+            f"{len(violations)} subagent commit(s) with empty/markerless "
+            f"body (cutoff={_CHECK_234_DISCIPLINE_CUTOFF_UTC}); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #235 - META-meta sha-prefix length-mismatch comparison gate
+# (META-4 R1 fix; structural extinct of the comparison-mismatch bug class)
+# ---------------------------------------------------------------------------
+# Bug-class anchor: META-4 R1 finding cited Catalog #117 as having a hash
+# prefix matching bug — short_sha (7 chars) compared against seen_hashes
+# (9-char strings) via `in` membership. The actual fix sister-landed via
+# commit 4d483ac39 added `_check_117_serializer_sha_matches_commit` which
+# uses prefix-aware `full.startswith(token)` instead of `in` membership.
+#
+# This gate is the META-meta extinct: refuses any source-code comparison
+# pattern in `src/tac/preflight.py` of the form
+#   `<short_sha>[:7] in <set_or_iterable_of_9char_prefixes>`
+# OR
+#   `<short_sha>[:N] in <set_or_iterable>`  where N != prefix_length(set)
+# without routing through a length-aware helper. Detection is conservative
+# AST-based: only flags `Compare(In, ...)` nodes where the LHS is a
+# `Subscript(slice=Slice(...))` with constant int upper bound, and the RHS
+# is a `Name` whose definition is a `Set` / `Dict` / list comprehension
+# whose first element shape mismatches the LHS slice length.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# this gate sister-protects Catalog #117 against future re-introduction of
+# the prefix-length-mismatch comparison bug class.
+
+_CHECK_235_FORBIDDEN_PATTERNS = (
+    # Conservative literal-pattern detection: refuse explicit `[:7] in <set>`
+    # patterns where <set> is named `seen_hashes` or `seen_shas` or
+    # `serializer_*_set` etc. — the canonical names from the prior bug.
+    # Future patterns that look the same MUST route through a length-aware
+    # helper or carry a same-line `# SHA_PREFIX_LENGTH_MISMATCH_OK:<reason>`
+    # waiver.
+    ("[:7] in seen_hashes", "Use `_check_117_serializer_sha_matches_commit(...)` or `any(seen.startswith(...) for seen in ...)`"),  # SHA_PREFIX_LENGTH_MISMATCH_OK:detection-pattern-literal
+    ("[:7] in seen_shas", "Use prefix-aware comparison helper"),  # SHA_PREFIX_LENGTH_MISMATCH_OK:detection-pattern-literal
+    ("[:7] in serializer_shas", "Use `_check_117_serializer_sha_matches_commit(...)`"),  # SHA_PREFIX_LENGTH_MISMATCH_OK:detection-pattern-literal
+)
+
+
+def check_no_sha_prefix_length_mismatch_comparisons(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | None = None,
+) -> list[str]:
+    """Catalog #235 - refuses sha-prefix length-mismatch comparison patterns.
+
+    META-meta of Catalog #117 / #119 / #206 (the trio that scans the
+    serializer log + git log + commit bodies). The canonical bug:
+    comparing a 7-char `short_sha` against a `set` whose elements are
+    9-char prefixes via `in` membership ALWAYS returns False. The gate
+    sister-protects against future re-introduction of the bug class by
+    refusing the literal patterns in source code.
+
+    Detection is line-based + token-based (conservative; AST is overkill
+    for these well-known operator-facing patterns). Same-line waiver:
+    ``# SHA_PREFIX_LENGTH_MISMATCH_OK:<rationale>`` for the rare
+    deliberate-mismatch case (e.g. opportunistic prefix-truncation in a
+    test fixture).
+
+    Sister of Catalog #117 (the original bug-class anchor) +
+    Catalog #185 (drift detection between CLAUDE.md catalog text and
+    gate empirical result; this gate prevents the drift from arising in
+    the first place).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / "src" / "tac" / "preflight.py"
+    if not target.is_file():
+        return []
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    violations: list[str] = []
+    for lineno, raw in enumerate(text.splitlines(), start=1):
+        if "SHA_PREFIX_LENGTH_MISMATCH_OK" in raw:
+            continue
+        for pat, fix_hint in _CHECK_235_FORBIDDEN_PATTERNS:
+            if pat in raw:
+                violations.append(
+                    f"src/tac/preflight.py:{lineno}: forbidden sha-prefix "
+                    f"length-mismatch comparison pattern `{pat}`. {fix_hint}. "
+                    f"Per Catalog #235 + sister Catalog #117 the LHS slice "
+                    f"length and RHS prefix length must match OR the "
+                    f"comparison must use a prefix-aware helper. "
+                    f"Add `# SHA_PREFIX_LENGTH_MISMATCH_OK:<reason>` to waive."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [sha-prefix-length-mismatch] WARN: "
+                f"{len(violations)} forbidden pattern(s) (strict={strict})"
+            )
+        else:
+            print("  [sha-prefix-length-mismatch] OK")
+    if violations and strict:
+        msg = (
+            f"check_no_sha_prefix_length_mismatch_comparisons: "
+            f"{len(violations)} forbidden pattern(s) in src/tac/preflight.py:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
     return violations
 
 
