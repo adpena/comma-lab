@@ -2522,30 +2522,37 @@ def preflight_all(
         # 2026-05-13 Catalog #181 (WAVE-7-LOW-FIX, REVIEW-OMNI NV8):
         # Substrate operator-authorize recipes MUST declare
         # `pyav_decode_strategy` (cpu_thread_async_upload / cuda_nvdec /
-        # cpu_blocking_upload / not_applicable). Initial landing:
-        # warn-only; legacy recipes will be backfilled.
+        # cpu_blocking_upload / not_applicable).
+        # 2026-05-14 RECIPE-CANON-BACKFILL-SUBAGENT strict-flip
+        # (lane_recipe_canon_backfill_sweep_20260514): legacy recipes
+        # backfilled (verified live count = 0 across 27 substrate recipes);
+        # strict per CLAUDE.md "Strict-flip atomicity rule".
         check_substrate_recipes_declare_pyav_decode_strategy(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-13 Catalog #182 (WAVE-7-LOW-FIX, REVIEW-OMNI NV10):
         # Substrate operator-authorize recipes MUST declare
         # `target_modes` (YAML list with at least one of
         # contest_one_video_replay / contest_generalized /
         # production_generalized / production_edge_adaptive /
-        # research_substrate). Initial landing: warn-only; legacy
-        # recipes will be backfilled.
+        # research_substrate).
+        # 2026-05-14 RECIPE-CANON-BACKFILL-SUBAGENT strict-flip
+        # (lane_recipe_canon_backfill_sweep_20260514): legacy recipes
+        # backfilled (verified live count = 0); strict per atomicity rule.
         check_substrate_recipes_declare_target_modes(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-14 Catalog #215 (FIX-HARDEN-OPT P0): substrate recipes
         # whose full-run GPU is A100/H100/L40S must also declare
         # `min_smoke_gpu` so the smoke phase compute-class matches the
         # recipe-design intent (SIREN smoke timeout anchor 2026-05-13).
-        # Initial landing: warn-only; 26 legacy recipes are violations and
-        # will be backfilled in a separate wave per CLAUDE.md
-        # "Strict-flip atomicity rule".
+        # 2026-05-14 RECIPE-CANON-BACKFILL-SUBAGENT strict-flip
+        # (lane_recipe_canon_backfill_sweep_20260514): all 26 A100 legacy
+        # recipes backfilled with `min_smoke_gpu: "A100"` (verified live
+        # count = 0); strict per atomicity rule. CLAUDE.md numbered row
+        # added in same commit-batch per Catalog #176.
         check_modal_smoke_recipe_min_gpu_class_consistent(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-13 Catalog #193: substrate trainers must not update CUDA
         # posteriors from merely finite auth-eval JSON. The canonical boundary
