@@ -119,6 +119,9 @@ from tac.substrates._shared.smoke_auth_eval_gate import (
 )
 
 # Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14).
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _canon_build_optimized_training_context,
+)
 from tac.training_optimization import (
     autocast_aware_forward as _autocast_aware_forward,
     compile_with_fallback as _compile_with_fallback,
@@ -911,6 +914,21 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         _stage("lagrangian_built")
 
+        # F3 GTScorerCache wire-in (F3-BACKPORT-WAVE-V2 2026-05-14).
+        opt_ctx = _canon_build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=pair_tensor,
+            substrate_model=model,
+            device=device,
+        )
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
+
         # 8. Optimizer + cosine annealing
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=args.lr, weight_decay=args.weight_decay
@@ -957,11 +975,22 @@ def _full_main(args: argparse.Namespace) -> int:
                     gt = pair_tensor[idx]  # (B, 2, 3, H, W) already in [0, 255]
                     gt_0 = gt[:, 0]
                     gt_1 = gt[:, 1]
+                    # F3 GTScorerCache lookup (per-pair-index batched).
+                    gt_pose_batch = gt_seg_batch = None
+                    gt_seg_already_probs = None
+                    if gt_cache is not None:
+                        gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                            idx, device=device
+                        )
+                        gt_seg_already_probs = gt_cache.seg_already_probs
                     loss, parts = loss_fn(
                         rgb_0_255, rgb_1_255, gt_0, gt_1,
                         archive_bytes_proxy, rate_components,
                         apply_eval_roundtrip=True,
                         noise_std=args.noise_std,
+                        gt_pose_batch=gt_pose_batch,
+                        gt_seg_batch=gt_seg_batch,
+                        gt_seg_already_probs=gt_seg_already_probs,
                     )
                 # NaN watchdog
                 if not torch.isfinite(loss):
@@ -1002,6 +1031,14 @@ def _full_main(args: argparse.Namespace) -> int:
                 model.eval()
                 with torch.no_grad():
                     rgb_0_v, rgb_1_v, rate_v = model(val_indices)
+                    # F3 cache lookup for val pairs.
+                    val_pose_batch = val_seg_batch = None
+                    val_seg_already_probs = None
+                    if gt_cache is not None:
+                        val_pose_batch, val_seg_batch = gt_cache.lookup(
+                            val_indices, device=device
+                        )
+                        val_seg_already_probs = gt_cache.seg_already_probs
                     val_loss, _val_parts = loss_fn(
                         rgb_0_v * 255.0,
                         rgb_1_v * 255.0,
@@ -1011,6 +1048,9 @@ def _full_main(args: argparse.Namespace) -> int:
                         rate_v,
                         apply_eval_roundtrip=True,
                         noise_std=args.noise_std,
+                        gt_pose_batch=val_pose_batch,
+                        gt_seg_batch=val_seg_batch,
+                        gt_seg_already_probs=val_seg_already_probs,
                     )
                 val_lag = float(val_loss.detach().item())
                 # Restore live weights
