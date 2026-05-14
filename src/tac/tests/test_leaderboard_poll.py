@@ -7,9 +7,10 @@ the upstream challenge README captured 2026-05-05. The test exercises:
   - leaderboard block extraction
   - row parsing -> structured entries
   - score-column hashing (cosmetic-edit-stable)
+  - frontier-identity hashing (fixed rounded score, changed PR identity)
   - state save / load round-trip
   - change detection: same-fixture replay = no change
-  - change detection: mutated score column = change
+  - change detection: mutated score column or identity = change
 
 Per CLAUDE.md: every test added must actually pass.
 """
@@ -85,6 +86,8 @@ def test_extract_official_video_table_parses_comma_ai_page_shape(lp):
     assert state.source == "official"
     assert state.source_url == lp.OFFICIAL_LEADERBOARD_URL
     assert state.top_3[0]["name"] == "hnerv_ft_microcodec 👑"
+    assert state.top_3[0]["pr_number"] == 101
+    assert len(state.frontier_identity_hash) == 64
 
 
 def test_extract_official_video_table_raises_when_container_missing(lp):
@@ -126,10 +129,11 @@ def test_score_column_hash_is_stable_across_calls(lp, fixture_readme):
 
 
 def test_score_column_hash_ignores_cosmetic_edits(lp, fixture_readme):
-    """Cosmetic edits (whitespace/emoji in name column) must NOT change the hash."""
+    """Score hash is legacy-stable for name edits; identity hash catches them."""
     block = lp.extract_leaderboard_block(fixture_readme)
     entries = lp.parse_leaderboard_entries(block)
     h_orig = lp.hash_score_column(entries)
+    identity_orig = lp.hash_frontier_identity(entries)
 
     # Mutate names only — score column unchanged
     mutated = [
@@ -140,7 +144,29 @@ def test_score_column_hash_ignores_cosmetic_edits(lp, fixture_readme):
         for e in entries
     ]
     h_mut = lp.hash_score_column(mutated)
+    identity_mut = lp.hash_frontier_identity(mutated)
     assert h_mut == h_orig
+    assert identity_mut != identity_orig
+
+
+def test_frontier_identity_hash_changes_when_fixed_score_pr_changes(lp, fixture_readme):
+    block = lp.extract_leaderboard_block(fixture_readme)
+    entries = lp.parse_leaderboard_entries(block)
+    score_hash = lp.hash_score_column(entries)
+    identity_hash = lp.hash_frontier_identity(entries)
+
+    mutated = list(entries)
+    first = mutated[0]
+    mutated[0] = lp.LeaderboardEntry(
+        rank=first.rank,
+        score=first.score,
+        name="same_score_new_frontier",
+        pr_url="https://github.com/commaai/comma_video_compression_challenge/pull/108",
+        pr_number=108,
+    )
+
+    assert lp.hash_score_column(mutated) == score_hash
+    assert lp.hash_frontier_identity(mutated) != identity_hash
 
 
 def test_score_column_hash_changes_when_score_changes(lp, fixture_readme):
@@ -163,6 +189,7 @@ def test_build_state_from_readme_roundtrip(lp, fixture_readme, tmp_path):
     state = lp.build_state_from_readme(fixture_readme)
     assert state.n_entries >= 5
     assert len(state.score_column_hash) == 64
+    assert len(state.frontier_identity_hash) == 64
     assert len(state.top_3) == 3
 
     out = tmp_path / "leaderboard_state.json"
@@ -172,6 +199,7 @@ def test_build_state_from_readme_roundtrip(lp, fixture_readme, tmp_path):
     loaded = lp.load_state(out)
     assert loaded is not None
     assert loaded.score_column_hash == state.score_column_hash
+    assert loaded.frontier_identity_hash == state.frontier_identity_hash
     assert loaded.n_entries == state.n_entries
     assert loaded.top_3 == state.top_3
 
@@ -186,7 +214,32 @@ def test_replay_same_readme_is_unchanged(lp, fixture_readme, tmp_path):
     s2 = lp.build_state_from_readme(fixture_readme)
     # captured_utc differs, but score_column_hash MUST match
     assert s1.score_column_hash == s2.score_column_hash
+    assert s1.frontier_identity_hash == s2.frontier_identity_hash
     assert s1.top_3 == s2.top_3
+    assert lp.leaderboard_change_reasons(s1, s2) == []
+
+
+def test_change_detection_fires_on_identity_hash_at_fixed_score(lp, fixture_readme):
+    s_prev = lp.build_state_from_readme(fixture_readme)
+    block = lp.extract_leaderboard_block(fixture_readme)
+    entries = lp.parse_leaderboard_entries(block)
+    entries[0] = lp.LeaderboardEntry(
+        rank=entries[0].rank,
+        score=entries[0].score,
+        name="fixed_score_identity_change",
+        pr_url="https://github.com/commaai/comma_video_compression_challenge/pull/108",
+        pr_number=108,
+    )
+    s_next = lp.LeaderboardState(
+        score_column_hash=lp.hash_score_column(entries),
+        frontier_identity_hash=lp.hash_frontier_identity(entries),
+        captured_utc="2026-05-06T12:00:00Z",
+        n_entries=len(entries),
+        top_3=lp._top_entries(entries),
+    )
+
+    assert s_next.score_column_hash == s_prev.score_column_hash
+    assert lp.leaderboard_change_reasons(s_prev, s_next) == ["frontier_identity_hash"]
 
 
 def test_append_change_writes_jsonl(lp, fixture_readme, tmp_path):
@@ -200,12 +253,10 @@ def test_append_change_writes_jsonl(lp, fixture_readme, tmp_path):
     )
     s_next = lp.LeaderboardState(
         score_column_hash=lp.hash_score_column(entries),
+        frontier_identity_hash=lp.hash_frontier_identity(entries),
         captured_utc="2026-05-06T12:00:00Z",
         n_entries=len(entries),
-        top_3=[
-            {"rank": e.rank, "score": e.score, "name": e.name, "pr_url": e.pr_url}
-            for e in entries[:3]
-        ],
+        top_3=lp._top_entries(entries),
     )
     jsonl = tmp_path / "changes.jsonl"
     lp.append_change(s_prev, s_next, jsonl)
@@ -213,6 +264,9 @@ def test_append_change_writes_jsonl(lp, fixture_readme, tmp_path):
     rec = json.loads(jsonl.read_text().strip())
     assert rec["prev_hash"] == s_prev.score_column_hash
     assert rec["curr_hash"] == s_next.score_column_hash
+    assert rec["prev_frontier_identity_hash"] == s_prev.frontier_identity_hash
+    assert rec["curr_frontier_identity_hash"] == s_next.frontier_identity_hash
+    assert rec["change_reasons"] == ["score_column_hash", "frontier_identity_hash"]
     assert rec["curr_top_3"][0]["name"] == "new_leader"
 
 

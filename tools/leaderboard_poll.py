@@ -4,10 +4,11 @@
 
 Polls the official comma.ai leaderboard by default, extracts the video
 compression challenge table, computes a stable hash of the score column, and
-emits a RACE_MODE_DETECTED signal when the score column changes.
+emits a RACE_MODE_DETECTED signal when the score column or frontier identity
+changes.
 
 Outputs:
-    - .omx/state/leaderboard_state.json — last hash + timestamp + top-3 PRs
+    - .omx/state/leaderboard_state.json — last hashes + timestamp + top-3 PRs
     - .omx/state/RACE_MODE_ACTIVE.flag  — touched on every detected change
     - .omx/state/leaderboard_changes.jsonl — appended on every detected change
 
@@ -28,9 +29,10 @@ The README block is delimited by HTML comments::
     <table class="ranked"> ... </table>
     <!-- TABLE-END -->
 
-Stability: the hash covers ONLY the score column (not names, not PR links),
-because cosmetic README edits (typo fixes, emoji additions) must NOT trigger a
-race-mode alert. Score-column changes are the only signal that matters.
+Stability: the score hash is preserved for compatibility, but movement is now
+detected on either score hash or frontier identity hash. The identity hash
+covers rank, rounded score, PR identity/link, name, and entry count so a fixed
+rounded score can still alert when the row owner changes.
 """
 from __future__ import annotations
 
@@ -87,6 +89,7 @@ class LeaderboardState:
     captured_utc: str
     n_entries: int
     top_3: list[dict]
+    frontier_identity_hash: str = ""
     upstream_repo: str = UPSTREAM_REPO
     source: str = "github-readme"
     source_url: str | None = None
@@ -209,6 +212,79 @@ def hash_score_column(entries: list[LeaderboardEntry]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def hash_frontier_identity(entries: list[LeaderboardEntry]) -> str:
+    """Hash row identity, not just score.
+
+    The public table reports rounded scores; a new PR can occupy the same
+    rounded score slot as the previous row. Include enough stable identity
+    fields to catch that movement while avoiding raw HTML sensitivity.
+    """
+
+    payload = {
+        "entry_count": len(entries),
+        "entries": [
+            {
+                "rank": e.rank,
+                "score": f"{e.score:.6f}",
+                "pr_number": e.pr_number,
+                "pr_url": e.pr_url,
+                "name": e.name or None,
+            }
+            for e in entries
+        ],
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _top_entries(entries: list[LeaderboardEntry]) -> list[dict]:
+    return [
+        {
+            "rank": e.rank,
+            "score": e.score,
+            "name": e.name,
+            "pr_url": e.pr_url,
+            "pr_number": e.pr_number,
+        }
+        for e in entries[:3]
+    ]
+
+
+def _legacy_top_identity(rows: list[dict]) -> list[dict]:
+    """Normalize pre-identity-hash state rows for one-time migration checks."""
+
+    return [
+        {
+            "rank": row.get("rank"),
+            "score": row.get("score"),
+            "name": row.get("name"),
+            "pr_url": row.get("pr_url"),
+        }
+        for row in rows
+    ]
+
+
+def leaderboard_change_reasons(
+    prev: LeaderboardState | None, curr: LeaderboardState
+) -> list[str]:
+    """Return hash surfaces that changed between two polls."""
+
+    if prev is None:
+        return ["no_previous_state"]
+    reasons: list[str] = []
+    if prev.score_column_hash != curr.score_column_hash:
+        reasons.append("score_column_hash")
+    if prev.frontier_identity_hash:
+        if prev.frontier_identity_hash != curr.frontier_identity_hash:
+            reasons.append("frontier_identity_hash")
+    else:
+        if prev.n_entries != curr.n_entries:
+            reasons.append("entry_count_legacy_identity")
+        elif _legacy_top_identity(prev.top_3) != _legacy_top_identity(curr.top_3):
+            reasons.append("top_3_legacy_identity")
+    return reasons
+
+
 def load_state(path: Path = STATE_PATH) -> LeaderboardState | None:
     if not path.is_file():
         return None
@@ -227,6 +303,11 @@ def append_change(prev: LeaderboardState | None, curr: LeaderboardState,
         "detected_utc": curr.captured_utc,
         "prev_hash": prev.score_column_hash if prev else None,
         "curr_hash": curr.score_column_hash,
+        "prev_score_hash": prev.score_column_hash if prev else None,
+        "curr_score_hash": curr.score_column_hash,
+        "prev_frontier_identity_hash": prev.frontier_identity_hash if prev else None,
+        "curr_frontier_identity_hash": curr.frontier_identity_hash,
+        "change_reasons": leaderboard_change_reasons(prev, curr),
         "prev_top_3": prev.top_3 if prev else [],
         "curr_top_3": curr.top_3,
         "prev_n_entries": prev.n_entries if prev else 0,
@@ -253,10 +334,8 @@ def build_state_from_readme(readme: str) -> LeaderboardState:
         score_column_hash=hash_score_column(entries),
         captured_utc=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         n_entries=len(entries),
-        top_3=[
-            {"rank": e.rank, "score": e.score, "name": e.name, "pr_url": e.pr_url}
-            for e in entries[:3]
-        ],
+        top_3=_top_entries(entries),
+        frontier_identity_hash=hash_frontier_identity(entries),
         source="github-readme",
         source_url=f"https://github.com/{UPSTREAM_REPO}",
     )
@@ -271,10 +350,8 @@ def build_state_from_official_html(html: str) -> LeaderboardState:
         score_column_hash=hash_score_column(entries),
         captured_utc=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         n_entries=len(entries),
-        top_3=[
-            {"rank": e.rank, "score": e.score, "name": e.name, "pr_url": e.pr_url}
-            for e in entries[:3]
-        ],
+        top_3=_top_entries(entries),
+        frontier_identity_hash=hash_frontier_identity(entries),
         source="official",
         source_url=OFFICIAL_LEADERBOARD_URL,
     )
@@ -318,31 +395,41 @@ def main(argv: list[str] | None = None) -> int:
         save_state(curr, args.state_path)
         if not args.cron:
             print(f"[leaderboard-poll] BASELINE captured @ {curr.captured_utc}")
-            print(f"[leaderboard-poll]   hash    : {curr.score_column_hash[:16]}…")
+            print(f"[leaderboard-poll]   score_hash    : {curr.score_column_hash[:16]}…")
+            print(f"[leaderboard-poll]   identity_hash : {curr.frontier_identity_hash[:16]}…")
             print(f"[leaderboard-poll]   entries : {curr.n_entries}")
             for e in curr.top_3:
                 print(f"     #{e['rank']}  {e['score']:.4f}  {e['name']}")
         return 0
 
-    unchanged = prev is not None and prev.score_column_hash == curr.score_column_hash
+    change_reasons = leaderboard_change_reasons(prev, curr)
 
-    if unchanged:
-        # update timestamp but not the canonical state file? we keep the previous
-        # captured_utc to reflect "unchanged since"; do not overwrite.
+    if not change_reasons:
+        if prev is not None and not prev.frontier_identity_hash:
+            save_state(curr, args.state_path)
         if not args.cron:
-            print(f"[leaderboard-poll] unchanged since {prev.captured_utc} (hash {prev.score_column_hash[:16]}…)")
+            migrated = " identity hash migrated;" if prev and not prev.frontier_identity_hash else ""
+            print(
+                f"[leaderboard-poll]{migrated} unchanged since "
+                f"{prev.captured_utc} (score_hash {prev.score_column_hash[:16]}…, "
+                f"identity_hash {(prev.frontier_identity_hash or curr.frontier_identity_hash)[:16]}…)"
+            )
         return 0
 
-    # Hash differs — race mode triggered
+    # Score or identity hash differs — race mode triggered
     save_state(curr, args.state_path)
     append_change(prev, curr, args.changes_jsonl_path)
     touch_race_flag(args.race_flag_path)
     print("RACE_MODE_DETECTED=1")
     if not args.cron:
         print(f"[leaderboard-poll] CHANGE DETECTED @ {curr.captured_utc}")
+        print(f"[leaderboard-poll]   reasons   : {', '.join(change_reasons)}")
         print(f"[leaderboard-poll]   prev_hash : "
               f"{(prev.score_column_hash[:16] + '…') if prev else '<none>'}")
         print(f"[leaderboard-poll]   curr_hash : {curr.score_column_hash[:16]}…")
+        print(f"[leaderboard-poll]   prev_identity : "
+              f"{(prev.frontier_identity_hash[:16] + '…') if prev and prev.frontier_identity_hash else '<none>'}")
+        print(f"[leaderboard-poll]   curr_identity : {curr.frontier_identity_hash[:16]}…")
         print("[leaderboard-poll]   top-3 now :")
         for e in curr.top_3:
             print(f"     #{e['rank']}  {e['score']:.4f}  {e['name']}")

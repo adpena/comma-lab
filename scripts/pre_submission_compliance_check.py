@@ -69,6 +69,8 @@ PRIVATE_SURFACE_RE = re.compile(
 SUBMISSION_RUNTIME_CUSTODY_FILENAMES = {
     "archive_manifest.json",
     "contest_auth_eval.json",
+    "contest_auth_eval_cpu.json",
+    "contest_cpu_auth_eval.json",
     "report.txt",
 }
 SUBMISSION_RUNTIME_CUSTODY_PREFIXES = ("pre_submission_compliance.",)
@@ -79,9 +81,34 @@ POST_DEADLINE_POLICY_CONTEXT_RE = re.compile(
     re.IGNORECASE,
 )
 SOURCE_REPO_RE = re.compile(r"https://github\.com/adpena/[A-Za-z0-9_.-]+")
+PINNED_SOURCE_RE = re.compile(
+    r"https://github\.com/adpena/[A-Za-z0-9_.-]+/"
+    r"(?:commit/[0-9a-fA-F]{40}|releases/tag/[A-Za-z0-9_.-]+|"
+    r"tree/(?!main\b|master\b|HEAD\b)[A-Za-z0-9_.-]+)"
+    r"|(?<![0-9a-fA-F])[0-9a-fA-F]{40}(?![0-9a-fA-F])"
+)
 OSS_REPRO_RE = re.compile(
     r"\b(oss|open\s*source|mit|apache|source\s+code|deterministic|reproducib|"
     r"runtime\s+tree|commit)\b",
+    re.IGNORECASE,
+)
+REPRO_COMMAND_RE = re.compile(
+    r"(?im)^\s*(?:reproduce(?:\s+command)?|repro(?:duction)?|command|run)\s*:\s*"
+    r"(?:\.venv/bin/python|python(?:3)?\b|uv\s+run\b|bash\b|sh\b|./|scripts/|tools/|experiments/)"
+)
+ARCHIVE_RUNTIME_SHA_BINDING_RE = re.compile(
+    r"\b(?:archive_sha256|archive\s+sha(?:-?256)?|runtime_tree_sha256|"
+    r"runtime\s+tree\s+sha(?:-?256)?|runtime_content_tree_sha256)\b\s*[:=]\s*"
+    r"[0-9a-fA-F]{64}\b",
+    re.IGNORECASE,
+)
+POST_DEADLINE_POLICY_NEGATED_RE = re.compile(
+    r"\b(?:not|is\s+not|isn't|isn[\u2019']t)\s+(?:a\s+)?(?:competitive|innovative)\b"
+    r"|\bnot\s+(?:competitive|innovative)\s+or\s+(?:competitive|innovative)\b"
+    r"|\bneither\s+competitive\s+nor\s+innovative\b"
+    r"|\bneither\s+innovative\s+nor\s+competitive\b"
+    r"|\bno\s+(?:competitive|innovative)\s+(?:claim|rationale|basis|value)\b"
+    r"|\b(?:competitive|innovative)\s*:\s*(?:no|false|n/?a|none)\b",
     re.IGNORECASE,
 )
 
@@ -655,6 +682,27 @@ def _auth_runtime_candidates(auth_eval: dict[str, Any]) -> dict[str, str]:
     return merged
 
 
+def _payload_provenance(payload: dict[str, Any]) -> dict[str, Any]:
+    provenance = payload.get("provenance")
+    return provenance if isinstance(provenance, dict) else {}
+
+
+def _payload_is_linux_x86_64(payload: dict[str, Any]) -> bool:
+    provenance = _payload_provenance(payload)
+    system = str(provenance.get("platform_system") or payload.get("platform_system") or "")
+    machine = str(provenance.get("platform_machine") or payload.get("platform_machine") or "").lower()
+    hardware = str(provenance.get("hardware") or payload.get("hardware") or "").lower()
+    return (
+        system == "Linux" and machine in {"x86_64", "amd64"}
+    ) or "linux x86_64" in hardware or "github-actions-ubuntu-latest-x86_64" in hardware
+
+
+def _payload_runtime_candidate_values(payload: dict[str, Any]) -> dict[str, str]:
+    candidates = _runtime_tree_candidates(payload)
+    candidates.update(_pruned_runtime_tree_candidates(payload))
+    return candidates
+
+
 def inspect_submission_runtime(
     submission_dir: Path,
     auth_eval: dict[str, Any],
@@ -1029,6 +1077,175 @@ def inspect_auth_eval(
     }, checks
 
 
+def inspect_contest_cpu_auth_eval(
+    path: Path,
+    archive: dict[str, Any],
+    cuda_auth_eval: dict[str, Any],
+    *,
+    required: bool,
+) -> tuple[dict[str, Any], list[Check]]:
+    checks: list[Check] = []
+    exists = path.is_file()
+    _add(
+        checks,
+        "contest_cpu_auth_eval_exists" if required else "contest_cpu_auth_eval_present_or_optional",
+        exists or not required,
+        _rel(path),
+    )
+    if not exists:
+        if not required:
+            _add(
+                checks,
+                "contest_cpu_auth_eval_optional_missing",
+                False,
+                (
+                    f"{_rel(path)} missing; nonfinal compliance may pass, but "
+                    "public CPU-axis reproduction is not paired"
+                ),
+                severity="warning",
+            )
+        return {"path": _rel(path), "exists": False, "required": required}, checks
+
+    payload = _load_json(path)
+    _add(checks, "contest_cpu_auth_eval_json_object", payload is not None, _rel(path))
+    if payload is None:
+        return {"path": _rel(path), "exists": True, "required": required}, checks
+
+    record = parse_auth_eval_payload(payload)
+    _add(
+        checks,
+        "contest_cpu_auth_eval_score_parseable",
+        record is not None,
+        "canonical auth eval parser",
+    )
+    archive_sha = archive.get("sha256")
+    archive_bytes = archive.get("bytes")
+    claimed_sha = _candidate_sha(payload)
+    claimed_size = _candidate_size(payload)
+    _add(
+        checks,
+        "contest_cpu_auth_eval_archive_sha_matches",
+        claimed_sha == archive_sha,
+        f"claimed={claimed_sha} actual={archive_sha}",
+    )
+    _add(
+        checks,
+        "contest_cpu_auth_eval_archive_size_matches",
+        claimed_size == archive_bytes,
+        f"claimed={claimed_size} actual={archive_bytes}",
+    )
+
+    metrics = eval_metric_summary(payload)
+    metric_blockers = required_exact_eval_metric_blockers(
+        metrics,
+        expected_archive_bytes=int(archive_bytes) if archive_bytes is not None else None,
+        expected_n_samples=600,
+    )
+    _add(
+        checks,
+        "contest_cpu_auth_eval_schema_metric_consistency",
+        not metric_blockers,
+        ", ".join(metric_blockers) or "canonical score/components/formula consistent",
+    )
+
+    if record is not None:
+        linux_x86_64 = _payload_is_linux_x86_64(payload)
+        _add(
+            checks,
+            "contest_cpu_auth_eval_full_600_samples",
+            record.samples == 600,
+            f"samples={record.samples}",
+        )
+        _add(
+            checks,
+            "contest_cpu_auth_eval_linux_x86_64_provenance",
+            linux_x86_64,
+            (
+                f"platform_system={_payload_provenance(payload).get('platform_system') or payload.get('platform_system')} "
+                f"platform_machine={_payload_provenance(payload).get('platform_machine') or payload.get('platform_machine')}"
+            ),
+        )
+        _add(
+            checks,
+            "contest_cpu_auth_eval_contest_cpu_axis",
+            (
+                record.device == "cpu"
+                and record.samples == 600
+                and record.score_axis == "contest_cpu"
+                and record.cpu_leaderboard_reproduction_eligible
+                and record.hardware_compliance_blocker is None
+            ),
+            (
+                f"device={record.device} samples={record.samples} axis={record.score_axis} "
+                f"cpu_repro={record.cpu_leaderboard_reproduction_eligible} "
+                f"blocker={record.hardware_compliance_blocker}"
+            ),
+        )
+        _add(
+            checks,
+            "contest_cpu_auth_eval_explicit_non_promotional",
+            (
+                payload.get("score_claim") is False
+                and payload.get("promotion_eligible") is False
+                and payload.get("score_claim_valid") is False
+                and payload.get("rank_or_kill_eligible") is False
+                and not record.promotion_eligible
+                and not record.score_claim_valid
+                and not record.rank_or_kill_eligible
+            ),
+            (
+                f"score_claim={payload.get('score_claim')} "
+                f"promotion_eligible={payload.get('promotion_eligible')} "
+                f"score_claim_valid={payload.get('score_claim_valid')} "
+                f"rank_or_kill_eligible={payload.get('rank_or_kill_eligible')}"
+            ),
+        )
+        _add(
+            checks,
+            "contest_cpu_auth_eval_explicit_contest_cpu_stamp",
+            (
+                payload.get("score_axis") == "contest_cpu"
+                and payload.get("lane_tag") == "[contest-CPU]"
+                and payload.get("evidence_grade") == "contest-CPU"
+                and payload.get("cpu_leaderboard_reproduction_eligible") is True
+            ),
+            (
+                f"score_axis={payload.get('score_axis')} lane_tag={payload.get('lane_tag')} "
+                f"evidence_grade={payload.get('evidence_grade')} "
+                "cpu_leaderboard_reproduction_eligible="
+                f"{payload.get('cpu_leaderboard_reproduction_eligible')}"
+            ),
+        )
+
+    cpu_runtime_candidates = _payload_runtime_candidate_values(payload)
+    cuda_runtime_candidates = _auth_runtime_candidates(cuda_auth_eval)
+    cpu_runtime_values = set(cpu_runtime_candidates.values())
+    cuda_runtime_values = set(cuda_runtime_candidates.values())
+    _add(
+        checks,
+        "contest_cpu_auth_eval_runtime_tree_recorded",
+        (not required) or (not cuda_runtime_values) or bool(cpu_runtime_values),
+        f"cpu_candidates={cpu_runtime_candidates} cuda_candidates={cuda_runtime_candidates}",
+    )
+    _add(
+        checks,
+        "contest_cpu_auth_eval_runtime_tree_matches_cuda",
+        (not required)
+        or (not cuda_runtime_values)
+        or (not cpu_runtime_values)
+        or bool(cpu_runtime_values & cuda_runtime_values),
+        f"cpu_candidates={cpu_runtime_candidates} cuda_candidates={cuda_runtime_candidates}",
+    )
+    return {
+        "path": _rel(path),
+        "exists": True,
+        "required": required,
+        "record": asdict(record) if record else None,
+        "runtime_tree_candidates": _runtime_tree_candidates(payload),
+        "runtime_tree_pruned_candidates": _pruned_runtime_tree_candidates(payload),
+    }, checks
+
+
 def inspect_archive_manifest(
     path: Path,
     archive: dict[str, Any],
@@ -1311,6 +1528,38 @@ def _load_policy_statement(args: argparse.Namespace, submission_dir: Path) -> tu
     return "", None
 
 
+def _policy_template_reason(text: str) -> str | None:
+    lower = " ".join(text.lower().split())
+    if not lower:
+        return None
+    if lower in {
+        "competitive or innovative",
+        "competitive or innovative?",
+        "is this competitive or innovative?",
+    }:
+        return "template_prompt_only"
+    guidance_tokens = (
+        "please",
+        "template",
+        "todo",
+        "fill in",
+        "replace this",
+        "answer the",
+        "answer whether",
+        "is this",
+        "whether this",
+        "if yes",
+    )
+    if "competitive or innovative" in lower and any(token in lower for token in guidance_tokens):
+        return "template_guidance_text"
+    return None
+
+
+def _policy_negation_reason(text: str) -> str | None:
+    match = POST_DEADLINE_POLICY_NEGATED_RE.search(text)
+    return match.group(0) if match else None
+
+
 def inspect_post_deadline_submission_policy(
     args: argparse.Namespace,
     submission_dir: Path,
@@ -1329,7 +1578,10 @@ def inspect_post_deadline_submission_policy(
     text, source = _load_policy_statement(args, submission_dir)
     stripped = text.strip()
     lower = stripped.lower()
-    has_mode = "competitive" in lower or "innovative" in lower
+    template_reason = _policy_template_reason(stripped)
+    negation_reason = _policy_negation_reason(stripped)
+    has_mode_word = "competitive" in lower or "innovative" in lower
+    has_affirmative_mode = has_mode_word and template_reason is None and negation_reason is None
     has_context = bool(POST_DEADLINE_POLICY_CONTEXT_RE.search(stripped))
     long_enough = len(stripped) >= POST_DEADLINE_POLICY_MIN_CHARS
     if required:
@@ -1345,8 +1597,20 @@ def inspect_post_deadline_submission_policy(
         _add(
             checks,
             "post_deadline_policy_statement_names_mode",
-            has_mode,
-            "statement must explicitly say competitive and/or innovative",
+            has_affirmative_mode,
+            "statement must affirm competitive and/or innovative status",
+        )
+        _add(
+            checks,
+            "post_deadline_policy_statement_not_template",
+            template_reason is None,
+            template_reason or "non-template rationale",
+        )
+        _add(
+            checks,
+            "post_deadline_policy_statement_not_negated",
+            negation_reason is None,
+            negation_reason or "affirmative rationale",
         )
         _add(
             checks,
@@ -1375,7 +1639,9 @@ def inspect_post_deadline_submission_policy(
         "required": required,
         "source": source,
         "chars": len(stripped),
-        "names_mode": has_mode,
+        "names_mode": has_affirmative_mode,
+        "template_reason": template_reason,
+        "negation_reason": negation_reason,
         "has_frontier_context": has_context,
         "statement_preview": stripped[:240],
     }, checks
@@ -1412,7 +1678,15 @@ def inspect_public_source_reproducibility(
     checks: list[Check] = []
     text, sources = _submission_public_text(submission_dir)
     repo_links = sorted(set(SOURCE_REPO_RE.findall(text)))
+    pinned_source_refs = sorted({match.group(0) for match in PINNED_SOURCE_RE.finditer(text)})
     has_repro_context = bool(OSS_REPRO_RE.search(text))
+    has_reproduce_command = bool(REPRO_COMMAND_RE.search(text))
+    archive_runtime_sha_bindings = sorted(
+        {match.group(0) for match in ARCHIVE_RUNTIME_SHA_BINDING_RE.finditer(text)}
+    )
+    has_reproduce_command_or_sha_binding = has_reproduce_command or bool(
+        archive_runtime_sha_bindings
+    )
     if required:
         _add(
             checks,
@@ -1422,11 +1696,26 @@ def inspect_public_source_reproducibility(
         )
         _add(
             checks,
+            "public_source_pinned_revision_present",
+            bool(pinned_source_refs),
+            "contest-final packet must include a pinned commit/tag URL or 40-char git SHA",
+        )
+        _add(
+            checks,
             "public_source_reproducibility_context_present",
             has_repro_context,
             (
                 "contest-final packet must mention OSS/open-source, deterministic "
                 "reproducibility, source code, commit, archive SHA, or runtime tree"
+            ),
+        )
+        _add(
+            checks,
+            "public_source_reproduce_command_or_sha_binding_present",
+            has_reproduce_command_or_sha_binding,
+            (
+                "contest-final packet must include a reproduce command or an "
+                "archive/runtime SHA binding"
             ),
         )
     else:
@@ -1441,7 +1730,11 @@ def inspect_public_source_reproducibility(
         "required": required,
         "sources": sources,
         "repo_links": repo_links,
+        "pinned_source_refs": pinned_source_refs,
         "has_reproducibility_context": has_repro_context,
+        "has_reproduce_command": has_reproduce_command,
+        "archive_runtime_sha_bindings": archive_runtime_sha_bindings,
+        "has_reproduce_command_or_sha_binding": has_reproduce_command_or_sha_binding,
     }, checks
 
 
@@ -1450,6 +1743,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--submission-dir", type=Path, required=True)
     parser.add_argument("--archive", type=Path)
     parser.add_argument("--auth-eval-json", type=Path)
+    parser.add_argument("--contest-cpu-auth-eval-json", type=Path)
     parser.add_argument("--archive-manifest-json", type=Path)
     parser.add_argument("--require-auth-eval", action="store_true")
     parser.add_argument("--require-t4-equivalent", action="store_true")
@@ -1484,6 +1778,10 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     submission_dir = args.submission_dir
     archive_path = args.archive or submission_dir / "archive.zip"
     auth_path = args.auth_eval_json or submission_dir / "contest_auth_eval.json"
+    cpu_auth_path = (
+        args.contest_cpu_auth_eval_json
+        or submission_dir / "contest_cpu_auth_eval.json"
+    )
     manifest_path = args.archive_manifest_json or submission_dir / "archive_manifest.json"
 
     sections: dict[str, Any] = {}
@@ -1524,6 +1822,14 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     auth_record, auth_checks = inspect_auth_eval(auth_path, archive, args)
     sections["auth_eval"] = auth_record
     checks.extend(auth_checks)
+    cpu_auth_record, cpu_auth_checks = inspect_contest_cpu_auth_eval(
+        cpu_auth_path,
+        archive,
+        auth_record,
+        required=args.contest_final or args.contest_cpu_auth_eval_json is not None,
+    )
+    sections["contest_cpu_auth_eval"] = cpu_auth_record
+    checks.extend(cpu_auth_checks)
     runtime_record, runtime_checks = inspect_submission_runtime(
         submission_dir,
         auth_record,

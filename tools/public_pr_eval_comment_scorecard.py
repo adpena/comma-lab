@@ -5,6 +5,9 @@
 The contest bot can leave multiple eval comments on the same public PR, often
 with different devices. This tool records those comment rows explicitly so a
 CUDA replay is not accidentally compared with a CPU leaderboard row.
+
+Maintainer post-deadline policy guidance comments are also preserved separately
+from eval comments so monitoring does not drop non-score public-frontier signal.
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ from typing import Any
 
 DEFAULT_REPO = "commaai/comma_video_compression_challenge"
 CONTEST_N_BYTES = 37_545_489
+POLICY_EXCERPT_CHARS = 260
 
 
 def recompute_score(*, pose: float, seg: float, archive_bytes: int) -> float:
@@ -79,17 +83,59 @@ def parse_eval_comment(body: str) -> dict[str, Any] | None:
     }
 
 
+def is_post_deadline_policy_guidance_comment(body: str) -> bool:
+    """Return True for PR108-style competitive/innovative policy guidance."""
+
+    normalized = re.sub(r"\s+", " ", body).strip().lower()
+    if not normalized:
+        return False
+    guidance_markers = (
+        "new submission guidelines" in normalized,
+        "is this submission competitive or innovative" in normalized,
+        "competitive: better than top" in normalized,
+        "innovative:" in normalized and "leaderboard" in normalized,
+    )
+    return (
+        sum(1 for present in guidance_markers if present) >= 2
+        and "eval results" not in normalized
+    )
+
+
+def _excerpt(body: str, *, limit: int = POLICY_EXCERPT_CHARS) -> str:
+    text = re.sub(r"\s+", " ", body).strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def parse_policy_guidance_comment(comment: dict[str, Any]) -> dict[str, Any] | None:
+    body = comment.get("body") or ""
+    if not is_post_deadline_policy_guidance_comment(body):
+        return None
+    return {
+        "author": (comment.get("author") or {}).get("login"),
+        "url": comment.get("url"),
+        "createdAt": comment.get("createdAt"),
+        "excerpt": _excerpt(body),
+        "body": body,
+    }
+
+
 def parse_pr_json(pr_json: dict[str, Any]) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
+    policy_guidance_comments: list[dict[str, Any]] = []
     for comment in pr_json.get("comments", []):
         body = comment.get("body") or ""
         parsed = parse_eval_comment(body)
-        if parsed is None:
+        if parsed is not None:
+            parsed["author"] = (comment.get("author") or {}).get("login")
+            parsed["created_at"] = comment.get("createdAt")
+            parsed["updated_at"] = comment.get("updatedAt")
+            rows.append(parsed)
             continue
-        parsed["author"] = (comment.get("author") or {}).get("login")
-        parsed["created_at"] = comment.get("createdAt")
-        parsed["updated_at"] = comment.get("updatedAt")
-        rows.append(parsed)
+        policy_guidance = parse_policy_guidance_comment(comment)
+        if policy_guidance is not None:
+            policy_guidance_comments.append(policy_guidance)
     return {
         "pr": pr_json.get("number"),
         "title": pr_json.get("title"),
@@ -97,6 +143,8 @@ def parse_pr_json(pr_json: dict[str, Any]) -> dict[str, Any]:
         "author": (pr_json.get("author") or {}).get("login"),
         "head_sha": pr_json.get("headRefOid"),
         "eval_comments": rows,
+        "post_deadline_policy_guidance_present": bool(policy_guidance_comments),
+        "post_deadline_policy_guidance_comments": policy_guidance_comments,
     }
 
 
@@ -121,13 +169,17 @@ def fetch_pr_json(repo: str, pr: int) -> dict[str, Any]:
 
 
 def build_scorecard(repo: str, prs: list[int]) -> dict[str, Any]:
+    rows = [parse_pr_json(fetch_pr_json(repo, pr)) for pr in prs]
     return {
         "schema": "public_pr_eval_comment_scorecard.v1",
         "repo": repo,
         "evidence_grade": "external_github_pr_comment",
         "score_claim": False,
         "promotion_eligible": False,
-        "rows": [parse_pr_json(fetch_pr_json(repo, pr)) for pr in prs],
+        "post_deadline_policy_guidance_present": any(
+            bool(row.get("post_deadline_policy_guidance_present")) for row in rows
+        ),
+        "rows": rows,
     }
 
 
