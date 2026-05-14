@@ -206,6 +206,7 @@ def harvest_modal_calls(
         artifacts_dir = out_dir / "harvested_artifacts"
         if _already_harvested(out_dir, artifacts_dir):
             print(f"[SKIP-already-harvested] {label:30s} call_id={call_id[:30]}")
+            artifacts_dir.mkdir(exist_ok=True)
             harvest_summary = artifacts_dir / "_harvest_summary.json"
             harvested: dict[str, Any] | None = None
             if harvest_summary.is_file():

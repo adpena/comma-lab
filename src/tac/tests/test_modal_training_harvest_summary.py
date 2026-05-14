@@ -80,3 +80,15 @@ def test_partial_harvest_summary_is_non_score_claim(tmp_path: Path) -> None:
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False
+
+
+def test_partial_harvest_summary_handles_missing_artifacts_dir(tmp_path: Path) -> None:
+    row = partial_modal_training_result_summary(
+        artifacts_dir=tmp_path / "missing_harvested_artifacts",
+    )
+
+    assert row["crash_kind"] == "HARVESTED_PARTIAL"
+    assert row["n_artifacts"] == 0
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False

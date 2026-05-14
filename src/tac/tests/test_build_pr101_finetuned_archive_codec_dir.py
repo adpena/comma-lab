@@ -189,6 +189,7 @@ def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:
     text = _HARVEST_SCRIPT_PATH.read_text()
 
     assert "PLAN ONLY: pass --execute" in text
+    assert "artifacts_dir.mkdir(exist_ok=True)" in text
     assert "elapsed_raw = result.get(\"elapsed_seconds\")" in text
     assert "isinstance(elapsed_raw, (int, float))" in text
     assert "result.get(\"stdout_tail\", \"\") or \"\"" in text

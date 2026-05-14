@@ -21,6 +21,15 @@ PRESERVED_RESULT_KEYS = (
 )
 
 
+def _artifact_file_count(artifacts_dir: Path) -> int:
+    """Return local harvested artifact count, treating missing dirs as empty."""
+
+    root = Path(artifacts_dir)
+    if not root.is_dir():
+        return 0
+    return len([p for p in root.iterdir() if p.is_file()])
+
+
 def modal_training_summary_entry(
     *,
     label: str,
@@ -66,7 +75,7 @@ def normalise_modal_training_result_summary(
         **dict(loaded),
         "rc": rc,
         "timed_out": timed_out,
-        "n_artifacts": len([p for p in Path(artifacts_dir).iterdir() if p.is_file()]),
+        "n_artifacts": _artifact_file_count(artifacts_dir),
         "crash_kind": crash_kind,
         "source_summary": str(source_summary),
     }
@@ -77,7 +86,7 @@ def partial_modal_training_result_summary(*, artifacts_dir: Path) -> dict[str, A
 
     return {
         "timed_out": False,
-        "n_artifacts": len([p for p in Path(artifacts_dir).iterdir() if p.is_file()]),
+        "n_artifacts": _artifact_file_count(artifacts_dir),
         "crash_kind": "HARVESTED_PARTIAL",
         "score_claim": False,
         "promotion_eligible": False,
