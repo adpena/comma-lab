@@ -33063,11 +33063,29 @@ def check_deterministic_compiler_canonical_use(
 # ---------------------------------------------------------------------------
 
 
+def _check_117_serializer_sha_matches_commit(full_sha: str, serializer_sha: str) -> bool:
+    """Return true when a serializer-log SHA/prefix identifies ``full_sha``.
+
+    The serializer log records ``head_after`` as a 9-character prefix in normal
+    operation, while ``git log`` returns 40-character SHAs and this gate reports
+    7-character short SHAs. Match by validated prefix relation instead of exact
+    string equality so 9-char serializer rows satisfy the 40-char commit.
+    """
+    full = str(full_sha).strip().lower()
+    token = str(serializer_sha).strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{40}", full):
+        return False
+    if not re.fullmatch(r"[0-9a-f]{7,40}", token):
+        return False
+    return full.startswith(token)
+
+
 def check_subagent_commit_serializer_uses_lock(
     *,
     strict: bool = False,
     verbose: bool = False,
     last_n_commits: int = 50,
+    repo_root: Path | None = None,
 ) -> list[str]:
     """Catalog #117 - every subagent commit must go through subagent_commit_serializer.
 
@@ -33087,7 +33105,7 @@ def check_subagent_commit_serializer_uses_lock(
     THIS gate enforces that every subagent commit USES the serializer (so
     the FIX-1 protection applies).
     """
-    repo_root = REPO_ROOT
+    repo_root = repo_root or REPO_ROOT
     log_path = repo_root / ".omx/state/commit-serializer.log"
     seen_hashes: set[str] = set()
     if log_path.exists():
@@ -33097,9 +33115,12 @@ def check_subagent_commit_serializer_uses_lock(
                     continue
                 try:
                     rec = json.loads(line)
-                    h = rec.get("head_after")
-                    if h:
-                        seen_hashes.add(str(h))
+                    if rec.get("commit_rc") not in (0, "0"):
+                        continue
+                    for key in ("head_after", "commit_sha", "sha"):
+                        h = rec.get(key)
+                        if h:
+                            seen_hashes.add(str(h))
                 except (json.JSONDecodeError, AttributeError):
                     continue
         except OSError:
@@ -33130,7 +33151,7 @@ def check_subagent_commit_serializer_uses_lock(
         msg = (parts[1] if len(parts) > 1 else "") + "\n" + (parts[2] if len(parts) > 2 else "")
         if "NO_SERIALIZER_OK" in msg:
             continue
-        if short_sha in seen_hashes or full_sha in seen_hashes:
+        if any(_check_117_serializer_sha_matches_commit(full_sha, seen) for seen in seen_hashes):
             continue
         violations.append(
             f"commit {short_sha} did not go through subagent_commit_serializer "
