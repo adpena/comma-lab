@@ -97,6 +97,14 @@ from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
 
+# Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14; CLAUDE.md
+# Catalog #172/#179). The O1 GT-scorer cache flag is declared but reserved
+# pending per-substrate score_aware_loss API extension.
+from tac.training_optimization import (
+    autocast_aware_forward as _autocast_aware_forward,
+    compile_with_fallback as _compile_with_fallback,
+)
+
 # ---------------------------------------------------------------------------
 # Module paths + constants
 # ---------------------------------------------------------------------------
@@ -256,9 +264,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-auth-eval", action="store_true")
     p.add_argument("--skip-archive-build", action="store_true")
     p.add_argument("--enable-autocast-fp16", action="store_true",
-                   help="Catalog #172; deferred until canonical autocast wraps land.")
+                   help="Wrap forward in torch.autocast(fp16) (Catalog #172; 1.5-2x speedup).")
+    p.add_argument("--enable-torch-compile", action="store_true",
+                   help="Wrap substrate with torch.compile / Inductor (Catalog #179).")
+    p.add_argument("--enable-gt-scorer-cache", action="store_true",
+                   help="RESERVED (O1): GT-scorer-output cache; wire-in pending per-substrate score_aware_loss API extension.")
     p.add_argument("--enable-tf32", action="store_true",
-                   help="Catalog #178; deferred until paired CPU/CUDA anchor lands.")
+                   help="Catalog #178; opt-in.")
     return p
 
 
