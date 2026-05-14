@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Preflight pipeline validator - catches integration mismatches before GPU burns.
 
 Every bug in this project was at a boundary between components:
@@ -1948,14 +1949,15 @@ def preflight_all(
         # returned auth_eval rc=2 because the trainer hand-wrote
         # --archive-zip / --output-json flags that don't exist on
         # experiments/contest_auth_eval.py (canonical --archive / --json-out).
-        # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
-        # rule" - 18 substrate trainers currently hand-roll the pattern;
-        # strict-flip planned after operator-routed refactoring wave drives
-        # the live count to 0. Sister of Catalog #164 / #205 / #218 (canonical
-        # path enforcement gates). Memory:
-        # feedback_catalog_221_auth_eval_gate_and_d4_timeout_investigation_landed_20260514.md.
+        # STRICT-FLIPPED 2026-05-14 (CATALOG-226-REFACTOR-SUBAGENT) after all
+        # 18 substrate trainers were refactored through the canonical
+        # gate_auth_eval_call helper in commits 7b2fece4a + 27db6f6bd + 9839a3a73.
+        # Live count: 0 at strict-flip. Sister of Catalog #164 / #205 / #218
+        # (canonical path enforcement gates). Memory:
+        # feedback_catalog_221_auth_eval_gate_and_d4_timeout_investigation_landed_20260514.md
+        # + feedback_catalog_226_eighteen_trainer_refactor_strict_flip_landed_20260514.md.
         check_trainer_auth_eval_uses_canonical_helper(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
