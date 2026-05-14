@@ -121,14 +121,11 @@ SUBSTRATE_LANE_ID = "lane_d1_segnet_margin_polytope_encoder_20260514"
 
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
-DEFAULT_A1_ARCHIVE = (
-    REPO_ROOT
-    / "experiments"
-    / "results"
-    / "track4_sg_a1_t178000_20260509"
-    / "submission_dir"
-    / "archive.zip"
-)
+# Catalog #153/Modal mount: use submissions/a1/archive.zip (sha 87ec7ca5...;
+# identical bytes to the experiments/results/track4_sg_a1_t178000_20260509
+# archive) so the file is mounted via STRUCTURAL_MINIMUM_DIRS('submissions',
+# None) per src/tac/deploy/modal/mount_manifest.py.
+DEFAULT_A1_ARCHIVE = REPO_ROOT / "submissions" / "a1" / "archive.zip"
 CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 
 EVAL_HW = (384, 512)
@@ -153,16 +150,19 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
             "A1 base substrate archive bytes (the sole sub-0.20 anchor per "
             "the 49-anchor posterior).  D1 is a sidecar — A1 is loaded "
             "verbatim and the D1POLY1 0.bin is composed alongside as a "
-            "magic-byte-distinct member."
+            "magic-byte-distinct member.  Path resolves to submissions/a1/ "
+            "(committed; mounted via STRUCTURAL_MINIMUM_DIRS); the byte-"
+            "identical sister at experiments/results/track4_sg_a1_t178000_"
+            "20260509/submission_dir/archive.zip is NOT mounted by Modal "
+            "per DEFAULT_RESULTS_IGNORE."
         ),
-        "default": (
-            "experiments/results/track4_sg_a1_t178000_20260509/"
-            "submission_dir/archive.zip"
-        ),
+        "default": "submissions/a1/archive.zip",
         "required_input_file": True,
         "generator_command": (
             "experiments/results/track4_sg_a1_t178000_20260509/ (landed "
-            "2026-05-09 via PR101 score-gradient fine-tune)"
+            "2026-05-09 via PR101 score-gradient fine-tune); the same "
+            "archive bytes also live at submissions/a1/archive.zip "
+            "(committed) — both have sha256 87ec7ca5..."
         ),
         "rationale_audit": (
             ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md"
@@ -716,13 +716,9 @@ def _write_runtime(submission_dir: Path) -> None:
     submission_dir.mkdir(parents=True, exist_ok=True)
 
     # Vendor A1's canonical runtime tree (codec.py + model.py + inflate.py).
-    a1_canonical_dir = (
-        REPO_ROOT
-        / "experiments"
-        / "results"
-        / "track4_sg_a1_t178000_20260509"
-        / "submission_dir"
-    )
+    # submissions/a1/ is the canonical committed source (Catalog #205-compliant
+    # inflate.py with select_inflate_device honoring PACT_INFLATE_DEVICE).
+    a1_canonical_dir = REPO_ROOT / "submissions" / "a1"
     if not a1_canonical_dir.is_dir():
         raise FileNotFoundError(
             f"A1 canonical submission dir not found: {a1_canonical_dir}; "

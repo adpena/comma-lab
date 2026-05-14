@@ -71,8 +71,13 @@ remote_driver: scripts/remote_lane_substrate_d1_segnet_margin_polytope.sh
 timeout_hours: 1.5
 
 required_input_files:
+  # Use submissions/a1/archive.zip (sha 87ec7ca5...; identical bytes to the
+  # canonical track4_sg_a1_t178000_20260509 archive) so the file is mounted
+  # via STRUCTURAL_MINIMUM_DIRS('submissions', None). The experiments/results/
+  # tree is EXCLUDED from Modal mounts via DEFAULT_RESULTS_IGNORE per
+  # src/tac/deploy/modal/mount_manifest.py.
   - flag: --a1-archive
-    default_path: experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+    default_path: submissions/a1/archive.zip
   - flag: --video-path
     default_path: upstream/videos/0.mkv
 
@@ -87,7 +92,7 @@ required_input_files_trainer: experiments/train_substrate_d1_segnet_margin_polyt
 
 env_overrides:
   D1_POLYTOPE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
-  D1_POLYTOPE_A1_ARCHIVE: /workspace/pact/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  D1_POLYTOPE_A1_ARCHIVE: /workspace/pact/submissions/a1/archive.zip
   D1_POLYTOPE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
   D1_POLYTOPE_OUTPUT_DIR: /workspace/pact/lane_d1_polytope_results/output
   D1_POLYTOPE_EPOCHS: "1000"
