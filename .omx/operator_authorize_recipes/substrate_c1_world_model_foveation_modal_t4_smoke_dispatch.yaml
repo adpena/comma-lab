@@ -1,0 +1,188 @@
+schema_version: 1
+name: substrate_c1_world_model_foveation_modal_t4_smoke_dispatch
+lane_id: lane_c1_world_model_foveation_campaign_l1_scaffold_20260514
+summary: |
+  C1 world-model + foveation substrate (long-term campaign L1 scaffold).
+  ACROSS-CLASS substrate-shift from A1/PR101/HNeRV-family class-saturated
+  baselines (Z1 MDL density 97-99%). Predicted ΔS -0.04 to -0.06 vs A1
+  0.1928 ``[mathematical-derivation; first-principles-bound]`` -- predicted
+  band ``[0.13, 0.16]`` (staircase Step 4-5 territory).
+
+  Two orthogonal innovations vs HNeRV-class:
+
+  A. World-model (recurrent latent dynamics) per Ha-Schmidhuber 2018
+     (arXiv:1803.10122) + Hafner DreamerV3 2023 (arXiv:2301.04104). Per-frame
+     residual surprise asymptotes to <100 bytes/frame for predictable
+     ego-motion (stationary-ergodic driving).
+
+  B. Foveation (camera-geometry-aware bit allocation) per Atick & Redlich
+     1990 (Neural Computation 2). Center 96x128 NEAR-FOV carries full-detail
+     bits; periphery heavily quantized. Matched to ego-motion trajectory.
+
+  V1 SCOPE: SMOKE-only dispatch validates substrate plumbing (~$1 on Modal T4
+  smoke before any full-budget commit). Full multi-stage training schedule
+  ($30-50 over 3-4 weeks, 6-8 stages) requires Phase 3 council approval
+  (inner-quintet: Shannon LEAD + Dykstra CO-LEAD + Yousfi + Fridrich +
+  Contrarian).
+
+  Probe-disambiguator (Catalog #125 hook #6): two design tensions ship as
+  callable alternatives -- world-model recurrence (gru/lstm/transformer) +
+  foveation strategy (uniform/ego_motion_radial/learned_per_pixel). Probes
+  at tools/probe_c1_world_model_vs_independent_frames_disambiguator.py +
+  tools/probe_c1_foveation_vs_uniform_quantization_disambiguator.py.
+
+  Predicted band [0.13, 0.16] ``[mathematical-derivation; first-principles-bound]``
+  is NOT a score claim -- score authority requires CUDA + CPU paired auth eval
+  on 1:1 contest-CI hardware per CLAUDE.md "Submission auth eval".
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+min_full_gpu: "A100"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: substrate_a1
+# C1 is across-class FROM A1 but needs A1's contest-CUDA anchor in the
+# registry as a baseline for the autopilot's ΔS calculation.
+
+active_dispatch_contract: c1_world_model_foveation_smoke
+dispatch_contracts:
+  - id: c1_world_model_foveation_smoke
+    archive_role: monolithic_c1wmfv1
+    builder_surface: experiments/train_substrate_c1_world_model_foveation.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 100
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.130, 0.160]
+smoke_score_band: [0.180, 0.220]
+predicted_delta: "-0.04 to -0.06 vs A1 0.1928 [mathematical-derivation; first-principles-bound]"
+predicted_delta_basis: ".omx/research/campaign_c1_world_model_foveation_20260514.md §3 + §4"
+literature_anchor: |
+  Ha & Schmidhuber (2018) "World Models" arXiv:1803.10122 DOI 10.48550/arXiv.1803.10122;
+  Hafner et al. (2023) "DreamerV3" arXiv:2301.04104 (mastering diverse domains);
+  Atick & Redlich (1990) "Towards a theory of early visual processing"
+    Neural Computation 2:308-320 DOI 10.1162/neco.1990.2.3.308;
+  Shannon (1948) "A Mathematical Theory of Communication" -- predictive coding bound;
+  Rao & Ballard (1999) "Predictive coding in the visual cortex" Nature Neuroscience 2;
+  Tishby & Zaslavsky (2015) "Deep learning and the information bottleneck principle"
+    arXiv:1503.02406 (rate-distortion bottleneck framing).
+council_phase_5_prediction: 0.145
+
+risk: |
+  C1 substrate first-anchor dispatch. The substrate is NOVEL across-class --
+  world-model + foveation has NOT been empirically anchored against the
+  contest video. Predicted band [0.13, 0.16] is a literature-prediction
+  synthesis (Ha-Schmidhuber 2018 + Atick-Redlich 1990 + Z1 across-class
+  predictions), NOT measurement.
+
+  Architectural risk:
+  - World-model recurrence has 3 design tensions (gru/lstm/transformer) and
+    the choice affects the world_model_blob byte budget. GRU is cheapest
+    forward but may underfit non-periodic ego-motion (lane changes).
+  - Foveation strategy has 3 design tensions; EGO_MOTION_RADIAL is the
+    default but is geometric (not learned). LEARNED_PER_PIXEL pays a small
+    foveation_meta_blob byte cost but may outperform.
+  - The world-model is small (~12K params for GRU at latent_dim=64) but
+    its training stability depends on the seed -- vanishing/exploding
+    gradient through 1200 unroll steps is a known LSTM/GRU pitfall;
+    council deferred Transformer mode as a fallback.
+  - Residual surprise codec is V1 (int8 + brotli at coarse resolution);
+    a future revision could swap to learned arithmetic coding (sister
+    of Z3 Ballé hyperprior).
+
+  Modal T4 smoke is DIAGNOSTIC ONLY (validates substrate plumbing).
+  The score_claim_valid=false + result_review_blockers cascade per
+  Catalog #221 prevents promotion to autopilot ranking from smoke alone.
+  Full-anchor dispatch requires Phase 3 council approval (operator-routable).
+
+envelope_status: "FITS $5 envelope at p50 smoke fallback (Modal T4 100ep ~$1)"
+
+remote_driver: scripts/remote_lane_substrate_c1_world_model_foveation.sh
+timeout_hours: 1.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_c1_world_model_foveation.sh
+  cost_band_trainer: experiments/train_substrate_c1_world_model_foveation.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_c1_world_model_foveation.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) -- substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/c1_world_model_foveation/__init__.py
+  - src/tac/substrates/c1_world_model_foveation/architecture.py
+  - src/tac/substrates/c1_world_model_foveation/archive.py
+  - src/tac/substrates/c1_world_model_foveation/inflate.py
+  - src/tac/substrates/c1_world_model_foveation/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+
+env_overrides:
+  C1_WORLD_MODEL_FOVEATION_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  C1_WORLD_MODEL_FOVEATION_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  C1_WORLD_MODEL_FOVEATION_OUTPUT_DIR: /workspace/pact/lane_substrate_c1_world_model_foveation_results/output
+  C1_WORLD_MODEL_FOVEATION_EPOCHS: "100"
+  C1_WORLD_MODEL_FOVEATION_UPSTREAM_DIR: /workspace/pact/upstream
+  C1_WORLD_MODEL_FOVEATION_DEVICE: cuda
+  C1_WORLD_MODEL_FOVEATION_RECURRENCE_MODE: gru
+  C1_WORLD_MODEL_FOVEATION_FOVEATION_STRATEGY: ego_motion_radial
+  C1_WORLD_MODEL_FOVEATION_LATENT_DIM: "64"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_c1_world_model_foveation.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_c1_world_model_foveation.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  C1 world-model + foveation substrate -- long-term campaign L1 SCAFFOLD.
+
+  V1 SCOPE: --smoke-only dispatch (~$1 Modal T4) validates substrate
+  plumbing end-to-end. The trainer's `_full_main` raises
+  NotImplementedError pending Phase 3 council approval; smoke-only runs
+  are operator-authorized.
+
+  Phase 3 unlock conditions (operator-routable; per memory file
+  feedback_c1_world_model_foveation_campaign_l1_scaffold_landed_20260514.md):
+
+  1. Inner-quintet council approves multi-stage schedule
+  2. Z1 MDL ablation confirms C1 is across-class (density < 0.90)
+  3. Smoke dispatch validates substrate plumbing end-to-end
+  4. Sister long-term campaign C5/C6 anchors land for stacking analysis
+  5. Operator-routed budget approval via tools/operator_authorize.py
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    .omx/research/campaign_c1_world_model_foveation_20260514.md (campaign ledger)
+    feedback_long_term_multi_year_campaigns_landed_20260514.md (C1 in 7-campaign roadmap)
+    feedback_grand_council_maximize_value_landed_20260514.md (Carmack + Time-Traveler)
+    feedback_zen_floor_field_medal_grade_council_landed_20260514.md (across-class predictions)
+    src/tac/substrates/c1_world_model_foveation/__init__.py (substrate docstring)
+    tools/probe_c1_world_model_vs_independent_frames_disambiguator.py (probe 1)
+    tools/probe_c1_foveation_vs_uniform_quantization_disambiguator.py (probe 2)
