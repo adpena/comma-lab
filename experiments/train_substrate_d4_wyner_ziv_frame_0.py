@@ -36,8 +36,15 @@ V1 SCOPE (this landing):
 - ``_smoke_main`` builds a tiny config, trains for ≤3 epochs on synthetic
   data, runs the archive pack + parse + inflate roundtrip, and emits a
   contest-compliant runtime tree. NO scorer load required.
-- ``_full_main`` raises ``NotImplementedError`` pending Phase 2 council
-  approval before $15 Modal T4/A100 dispatch (per the build prompt).
+- ``_full_main`` trains the D4 substrate against real ``upstream/videos/0.mkv``
+  pairs decoded via pyav, runs the score-aware Lagrangian end-to-end with
+  patched YUV6 + differentiable scorers + EMA(0.997), packs the WZF01
+  archive against the smoke base provider (V1 self-contained custody), emits
+  the contest-compliant runtime tree, runs CUDA auth eval on the best EMA
+  checkpoint, and posts the result to the continual-learning posterior.
+  UNLOCKED 2026-05-14 per operator approval ("approved, proceed with all")
+  after the 5-round adversarial council unanimous SEAL documented in
+  ``feedback_d4_wyner_ziv_frame_0_landed_20260514.md``.
 
 Usage (smoke; macOS CPU, tiny config, ~3 epochs)::
 
@@ -62,7 +69,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import random
+import shutil
 import sys
+import time
+import zipfile
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -73,10 +85,34 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 import torch
 
 from tac.substrates._shared.trainer_skeleton import (
-    pin_seeds as _canon_pin_seeds,
-    utc_now_iso as _canon_utc_now_iso,
+    decode_real_pairs as _canon_decode_real_pairs,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    device_or_die as _canon_device_or_die,
+)
+from tac.substrates._shared.trainer_skeleton import (
     git_head_sha as _canon_git_head_sha,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    pin_seeds as _canon_pin_seeds,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    require_contest_cuda_auth_eval_claim as _canon_require_contest_cuda_auth_eval_claim,
+)
+from tac.substrates._shared.trainer_skeleton import (
     sha256_bytes as _canon_sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    utc_now_iso as _canon_utc_now_iso,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
+)
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 from tac.substrates.d4_wyner_ziv_frame_0 import (
     MotionModelMode,
@@ -92,8 +128,10 @@ from tac.substrates.d4_wyner_ziv_frame_0 import (
 
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
+CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 
 EVAL_HW = (384, 512)
+CAMERA_HW = (874, 1164)
 N_PAIRS_FULL = 600
 CONTEST_NORMALIZER = 37_545_489.0
 
@@ -244,6 +282,30 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Required sister flag for --full-cpu (Catalog #197 coupled flag)",
     )
+    # Full training hyperparameters (UNLOCKED 2026-05-14 per operator approval)
+    p.add_argument("--weight-decay", type=float, default=1e-5)
+    p.add_argument("--grad-clip", type=float, default=1.0)
+    p.add_argument("--ema-decay", type=float, default=0.997,
+                   help="EMA decay (CLAUDE.md non-negotiable default 0.997).")
+    p.add_argument("--noise-std", type=float, default=0.5,
+                   help="Per-pixel noise during training (proxy-auth gap closer).")
+    p.add_argument("--val-every-epochs", type=int, default=20)
+    p.add_argument("--val-pair-count", type=int, default=32)
+    p.add_argument("--max-pairs", type=int, default=None,
+                   help="Cap pair decode for fast smoke iteration.")
+    # Score-aware Lagrangian weights (council defaults)
+    p.add_argument("--alpha-rate", type=float, default=25.0)
+    p.add_argument("--beta-seg", type=float, default=100.0)
+    p.add_argument("--gamma-pose", type=float, default=math.sqrt(10.0))
+    p.add_argument("--pose-weight-scale", type=float, default=1.0)
+    p.add_argument("--lambda-residual", type=float, default=0.1)
+    # Post-train artifacts
+    p.add_argument("--skip-auth-eval", action="store_true")
+    p.add_argument("--skip-archive-build", action="store_true")
+    p.add_argument("--enable-autocast-fp16", action="store_true",
+                   help="Catalog #172; deferred until canonical autocast wraps land.")
+    p.add_argument("--enable-tf32", action="store_true",
+                   help="Catalog #178; deferred until paired CPU/CUDA anchor lands.")
     return p
 
 
@@ -344,8 +406,17 @@ def _smoke_main(args: argparse.Namespace) -> int:
     archive_path = out_dir / "0.bin"
     archive_path.write_bytes(archive_bytes)
 
+    # Emit runtime tree + archive.zip per the canonical pattern.
+    submission_dir = out_dir / "submission_dir"
+    _write_runtime(submission_dir)
+    (submission_dir / "0.bin").write_bytes(archive_bytes)
+    archive_zip_path = out_dir / "archive.zip"
+    _build_archive_zip(archive_zip_path, bin_bytes=archive_bytes)
+
     # Stats provenance
     archive_sha = _canon_sha256_bytes(archive_bytes)
+    archive_zip_sha = _canon_sha256_bytes(archive_zip_path.read_bytes())
+    archive_zip_size = archive_zip_path.stat().st_size
     final_loss = losses[-1] if losses else float("inf")
     stats = {
         "lane_id": SUBSTRATE_LANE_ID,
@@ -355,6 +426,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "final_loss_proxy": final_loss,
         "archive_bytes": len(archive_bytes),
         "archive_sha256": archive_sha,
+        "archive_zip_bytes": archive_zip_size,
+        "archive_zip_sha256": archive_zip_sha,
         "base_substrate_archive_sha256": base_sha,
         "motion_mode": args.motion_mode,
         "cfg": asdict(cfg),
@@ -362,7 +435,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "evidence_grade": "smoke-no-scorer",
         "ready_for_exact_eval_dispatch": False,
         "promotion_eligible": False,
-        "council_phase_2_required_before_full_dispatch": True,
+        "council_phase_2_required_before_full_dispatch": False,
         "git_head": _canon_git_head_sha(REPO_ROOT),
         "trained_at_utc": _canon_utc_now_iso(),
     }
@@ -374,84 +447,584 @@ def _smoke_main(args: argparse.Namespace) -> int:
         f"[d4-smoke] OK final_loss={final_loss:.6f} archive={len(archive_bytes)}B "
         f"sha={archive_sha[:12]}... motion={args.motion_mode}"
     )
-    _write_runtime(out_dir)
     return 0
 
 
-def _write_runtime(out_dir: Path) -> None:
-    """Emit the contest-compliant inflate.sh + inflate.py runtime tree.
+def _write_runtime(submission_dir: Path) -> None:
+    """Emit contest-compliant inflate.sh + inflate.py + vendored substrate.
 
     Per Catalog #146 the inflate.sh signature is 3-positional-arg
     ``inflate.sh <archive_dir> <output_dir> <file_list>``. Per Catalog #163
-    the script uses ``set -euo pipefail`` for fail-closed semantics.
+    the script uses ``set -euo pipefail`` for fail-closed semantics. The
+    vendored substrate package + shared inflate runtime live under
+    ``submission_dir/src/`` per the canonical pattern.
     """
-    runtime_dir = out_dir / "runtime"
-    runtime_dir.mkdir(parents=True, exist_ok=True)
-
-    inflate_sh = runtime_dir / "inflate.sh"
-    inflate_sh.write_text(
-        """#!/usr/bin/env bash
-set -euo pipefail
-
-# D4 Wyner-Ziv frame-0 substrate contest-compliant inflate runtime.
-# Per Catalog #146: 3-positional-arg signature.
-# Per Catalog #163: set -euo pipefail.
-# Per CLAUDE.md "Strict scorer rule": no scorer at inflate time.
-
-if [ "$#" -lt 3 ]; then
-    echo "usage: inflate.sh <archive_dir> <output_dir> <file_list>" >&2
-    exit 2
-fi
-
-DATA_DIR="$1"
-OUTPUT_DIR="$2"
-FILE_LIST="$3"
-
-HERE="$(cd "$(dirname "$0")" && pwd)"
-exec uv run --with torch --with brotli --with numpy \\
-    "$HERE/inflate.py" "$DATA_DIR" "$OUTPUT_DIR" "$FILE_LIST"
-""",
+    submission_dir.mkdir(parents=True, exist_ok=True)
+    runtime_pkg = submission_dir / "src" / "tac" / "substrates" / "d4_wyner_ziv_frame_0"
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+        runtime_pkg / "__init__.py",
+    ):
+        pkg_init.write_text("", encoding="utf-8")
+    substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "d4_wyner_ziv_frame_0"
+    for name in (
+        "architecture.py",
+        "archive.py",
+        "frame0_synthesis.py",
+        "inflate.py",
+        "motion_model.py",
+        "residual_codec.py",
+    ):
+        shutil.copy2(substrate_src / name, runtime_pkg / name)
+    # Runtime __init__.py is MINIMAL — only the inflate-time modules. The full
+    # package __init__.py eagerly imports score_aware_loss which would pull in
+    # scorer code (forbidden at inflate time per CLAUDE.md "Strict scorer rule").
+    (runtime_pkg / "__init__.py").write_text(
+        "\"\"\"D4 runtime package (inflate-time only — no scorer imports).\"\"\"\n"
+        "from tac.substrates.d4_wyner_ziv_frame_0.architecture import (\n"
+        "    BASE_SHA_HEX_LEN,\n"
+        "    EVAL_HW,\n"
+        "    NUM_PAIRS,\n"
+        "    MotionModelMode,\n"
+        "    WynerZivFrame0Config,\n"
+        "    WynerZivFrame0Substrate,\n"
+        ")\n"
+        "from tac.substrates.d4_wyner_ziv_frame_0.archive import (\n"
+        "    WZF01_MAGIC,\n"
+        "    WZF01_SCHEMA_VERSION,\n"
+        "    WynerZivFrame0Archive,\n"
+        "    pack_archive,\n"
+        "    parse_archive,\n"
+        ")\n"
+        "from tac.substrates.d4_wyner_ziv_frame_0.frame0_synthesis import synthesize_frame_0\n"
+        "from tac.substrates.d4_wyner_ziv_frame_0.motion_model import (\n"
+        "    OpticalFlowField,\n"
+        "    SE3MotionParams,\n"
+        "    apply_optical_flow,\n"
+        "    apply_se3_motion,\n"
+        ")\n"
+        "from tac.substrates.d4_wyner_ziv_frame_0.residual_codec import (\n"
+        "    decode_residual_blob,\n"
+        "    encode_residual_blob,\n"
+        ")\n"
+        "__all__ = [\n"
+        "    'BASE_SHA_HEX_LEN', 'EVAL_HW', 'MotionModelMode', 'NUM_PAIRS',\n"
+        "    'OpticalFlowField', 'SE3MotionParams', 'WZF01_MAGIC',\n"
+        "    'WZF01_SCHEMA_VERSION', 'WynerZivFrame0Archive',\n"
+        "    'WynerZivFrame0Config', 'WynerZivFrame0Substrate',\n"
+        "    'apply_optical_flow', 'apply_se3_motion', 'decode_residual_blob',\n"
+        "    'encode_residual_blob', 'pack_archive', 'parse_archive',\n"
+        "    'synthesize_frame_0',\n"
+        "]\n",
         encoding="utf-8",
     )
-    inflate_sh.chmod(0o755)
+    _canon_vendor_shared_inflate_runtime(submission_dir, repo_root=REPO_ROOT)
 
-    # Minimal contest inflate.py: imports our D4 inflate module + loops.
-    inflate_py = runtime_dir / "inflate.py"
-    inflate_py.write_text(
-        """#!/usr/bin/env python3
-\"\"\"D4 contest inflate runtime entry point.\"\"\"
-import sys
-from pathlib import Path
-
-# Resolve project path (vendored alongside this runtime tree)
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE / "src"))
-
-from tac.substrates.d4_wyner_ziv_frame_0.inflate import main_cli
-
-if __name__ == "__main__":
-    sys.exit(main_cli())
-""",
-        encoding="utf-8",
+    inflate_sh = (
+        "#!/usr/bin/env bash\n"
+        "# D4 Wyner-Ziv frame-0 contest-compliant inflate runtime.\n"
+        "# Per Catalog #146: 3-positional-arg signature.\n"
+        "# Per Catalog #163: set -euo pipefail.\n"
+        "# Per CLAUDE.md \"Strict scorer rule\": no scorer at inflate time.\n"
+        "set -euo pipefail\n"
+        "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
+        "DATA_DIR=\"$1\"\n"
+        "OUTPUT_DIR=\"$2\"\n"
+        "FILE_LIST=\"$3\"\n"
+        "mkdir -p \"$OUTPUT_DIR\"\n"
+        "exec \"${PYTHON:-python3}\" \"$HERE/inflate.py\" "
+        "\"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\"\n"
     )
-    inflate_py.chmod(0o755)
+    (submission_dir / "inflate.sh").write_text(inflate_sh, encoding="utf-8")
+    (submission_dir / "inflate.sh").chmod(0o755)
+
+    inflate_py = (
+        "#!/usr/bin/env python\n"
+        '"""D4 Wyner-Ziv frame-0 contest-compliant inflate runtime.\n'
+        "\n"
+        "Delegates to the vendored substrate CLI, which decodes each WZF01\n"
+        "archive into one contest .raw tensor stream per file_list entry.\n"
+        "No scorer-network imports (strict-scorer-rule contract).\n"
+        '"""\n'
+        "import sys\n"
+        "from pathlib import Path\n"
+        "\n"
+        "HERE = Path(__file__).resolve().parent\n"
+        "sys.path.insert(0, str(HERE / 'src'))\n"
+        "from tac.substrates.d4_wyner_ziv_frame_0.inflate import main_cli\n"
+        "\n"
+        "def main() -> int:\n"
+        "    return main_cli()\n"
+        "\n"
+        "if __name__ == '__main__':\n"
+        "    sys.exit(main())\n"
+    )
+    (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
+
+
+def _build_archive_zip(
+    archive_zip_path: Path, *, bin_bytes: bytes
+) -> None:
+    """Deterministic archive.zip containing ONLY the data payload (0.bin)."""
+    archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
+    fixed_ts = (2026, 1, 1, 0, 0, 0)
+    with zipfile.ZipFile(archive_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
+        zi.compress_type = zipfile.ZIP_DEFLATED
+        zf.writestr(zi, bin_bytes)
 
 
 # ---------------------------------------------------------------------------
-# Full entry path — gated behind Phase 2 council approval
+# Full entry path — UNLOCKED 2026-05-14 per operator approval
 # ---------------------------------------------------------------------------
+# The 5-round adversarial council (25/25 PROCEED unanimous) is documented in
+# ``feedback_d4_wyner_ziv_frame_0_landed_20260514.md``. Operator approved
+# Phase 2 dispatch 2026-05-14 with directive "approved, proceed with all".
+# Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end.
+
+def _run_val_loop(
+    substrate: WynerZivFrame0Substrate,
+    loss_fn,
+    gt_pair_tensor: "torch.Tensor",
+    val_pair_indices: list[int],
+    archive_bytes_proxy: "torch.Tensor",
+    device,
+) -> float:
+    """Validation pass with EMA shadow + torch.inference_mode (Catalog #180)."""
+    substrate.eval()
+    losses: list[float] = []
+    with torch.inference_mode():
+        # Batched val: rebuild full-pair reconstruction at the configured num_pairs.
+        # gt_pair_tensor shape: (N, 2, 3, H, W). substrate trained on first N.
+        f1_full = gt_pair_tensor[:, 1, :, :, :].contiguous()
+        f0_recon, f1_passthrough = substrate.reconstruct_pair(f1_full)
+        for pair_idx in val_pair_indices:
+            pair_idx = int(pair_idx)
+            rgb_0 = (f0_recon[pair_idx : pair_idx + 1] * 255.0).clamp(0.0, 255.0)
+            rgb_1 = (f1_passthrough[pair_idx : pair_idx + 1] * 255.0).clamp(0.0, 255.0)
+            gt_a = gt_pair_tensor[pair_idx : pair_idx + 1, 0]
+            gt_b = gt_pair_tensor[pair_idx : pair_idx + 1, 1]
+            try:
+                loss, _ = loss_fn(
+                    reconstructed_rgb_0=rgb_0,
+                    reconstructed_rgb_1=rgb_1,
+                    gt_rgb_0=gt_a,
+                    gt_rgb_1=gt_b,
+                    archive_bytes_proxy=archive_bytes_proxy,
+                    residual_coarse=substrate.residual_coarse,
+                    apply_eval_roundtrip=True,
+                    noise_std=0.0,
+                )
+            except Exception as exc:
+                print(f"[{SUBSTRATE_TAG}-val] WARN pair {pair_idx} val skipped: {exc!r}")
+                continue
+            if torch.isfinite(loss):
+                losses.append(float(loss.detach().cpu()))
+    return float(sum(losses) / len(losses)) if losses else math.inf
+
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full CUDA training path — PENDING Phase 2 council approval.
+    """Full CUDA training path — score-aware Lagrangian end-to-end.
 
-    Per the build prompt the full training path is gated behind a 5-round
-    adversarial council review before any $5-15 Modal T4/A100 dispatch.
+    UNLOCKED 2026-05-14 per operator approval. The 5-round adversarial
+    council (25/25 PROCEED) is documented in
+    ``feedback_d4_wyner_ziv_frame_0_landed_20260514.md``.
     """
-    raise NotImplementedError(
-        "D4 full training is PENDING Phase 2 council approval. "
-        "Run with --smoke for the v1 substrate-engineering smoke. "
-        "Lane: " + SUBSTRATE_LANE_ID
+    from tac.differentiable_eval_roundtrip import (
+        patch_upstream_yuv6_globally,
+        unpatch_upstream_yuv6,
     )
+    from tac.scorer import load_differentiable_scorers
+    from tac.substrates.d4_wyner_ziv_frame_0.score_aware_loss import (
+        WynerZivFrame0LossWeights,
+        WynerZivFrame0ScoreAwareLoss,
+    )
+    from tac.training import EMA
+
+    _canon_pin_seeds(args.seed)
+    device = _canon_device_or_die(args.device, smoke=False, substrate_tag=SUBSTRATE_TAG)
+
+    if args.enable_tf32 and device.type == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    stage_log: list[dict[str, str]] = []
+
+    def _stage(name: str) -> None:
+        msg = {"stage": name, "at": _canon_utc_now_iso()}
+        stage_log.append(msg)
+        print(f"[{SUBSTRATE_TAG}-full] {name} @ {msg['at']}")
+
+    _stage("seed_pinned")
+
+    # 1. Patch upstream rgb_to_yuv6 BEFORE scorer construction (Catalog #187).
+    yuv6_token = patch_upstream_yuv6_globally()
+    _stage("upstream_yuv6_patched")
+
+    auth_eval_json_path = args.output_dir / "auth_eval.json"
+    archive_zip_path = args.output_dir / "archive.zip"
+    archive_zip_sha = ""
+    archive_zip_size = 0
+    bin_sha = ""
+    bin_size = 0
+    n_params = 0
+    best_val_lag = math.inf
+    best_epoch = -1
+
+    try:
+        # 2. Load differentiable scorers (frozen).
+        posenet, segnet = load_differentiable_scorers(args.upstream_dir, device=device)
+        for p in list(posenet.parameters()) + list(segnet.parameters()):
+            p.requires_grad_(False)
+        posenet.eval()
+        segnet.eval()
+        _stage("scorers_loaded")
+
+        # 3. Decode real target pairs.
+        print(f"[{SUBSTRATE_TAG}-full] decoding pairs from {args.video_path}")
+        gt_pair_tensor = _canon_decode_real_pairs(
+            args.video_path,
+            n_pairs=N_PAIRS_FULL,
+            substrate_tag=SUBSTRATE_TAG,
+            max_pairs=args.max_pairs,
+            repo_root=REPO_ROOT,
+        ).to(device)
+        n_pairs = int(gt_pair_tensor.shape[0])
+        _stage(f"pairs_decoded_{n_pairs}")
+        # gt_pair_tensor: (n_pairs, 2, 3, 384, 512) in [0, 255].
+
+        val_count = max(1, min(args.val_pair_count, max(1, n_pairs // 8)))
+        val_idx_start = n_pairs - val_count
+        train_indices_pool = list(range(val_idx_start))
+        val_indices_pool = list(range(val_idx_start, n_pairs))
+
+        # 4. Build substrate at full resolution + n_pairs.
+        motion_mode = (
+            MotionModelMode.SE3_PARAMETRIC
+            if args.motion_mode == "se3_parametric"
+            else MotionModelMode.OPTICAL_FLOW
+        )
+        cfg = WynerZivFrame0Config(
+            motion_mode=motion_mode,
+            num_pairs=n_pairs,
+            output_height=EVAL_HW[0],
+            output_width=EVAL_HW[1],
+            flow_grid_h=args.flow_grid_h,
+            flow_grid_w=args.flow_grid_w,
+            residual_coarse_h=args.residual_coarse_h,
+            residual_coarse_w=args.residual_coarse_w,
+            residual_loss_weight=args.lambda_residual,
+        )
+        substrate = WynerZivFrame0Substrate(cfg).to(device)
+        n_params = sum(p.numel() for p in substrate.parameters())
+        print(f"[{SUBSTRATE_TAG}-full] substrate params: {n_params:,}")
+        _stage(f"substrate_built_{n_params}_params")
+
+        # 5. EMA shadow (Catalog #88).
+        ema = EMA(substrate, decay=args.ema_decay)
+        _stage(f"ema_wired_decay_{args.ema_decay}")
+
+        # 6. Score-aware Lagrangian.
+        weights = WynerZivFrame0LossWeights(
+            alpha_rate=args.alpha_rate,
+            beta_seg=args.beta_seg,
+            gamma_pose=args.gamma_pose,
+            pose_weight_scale=args.pose_weight_scale,
+            lambda_residual=args.lambda_residual,
+            contest_normalizer=CONTEST_NORMALIZER,
+        )
+        loss_fn = WynerZivFrame0ScoreAwareLoss(
+            seg_scorer=segnet, pose_scorer=posenet, weights=weights
+        )
+        _stage("lagrangian_built")
+
+        # 7. Optimizer (AdamW + cosine annealing).
+        optimizer = torch.optim.AdamW(
+            substrate.parameters(),
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(1, args.epochs)
+        )
+
+        # 8. Train loop.
+        train_started_at = time.time()
+        ckpt_best_path = args.output_dir / "best.pt"
+        nan_strike = 0
+        max_nan_strikes = 3
+
+        # Closed-form rate proxy: motion + residual + base bytes estimate.
+        # SE3: ~5KB after brotli; optical_flow: ~30-50KB.
+        # Residual: 50-150KB after brotli.
+        # Base: 178KB (A1/PR101 placeholder for proxy).
+        if motion_mode == MotionModelMode.SE3_PARAMETRIC:
+            motion_bytes_proxy = 5_000
+        else:
+            motion_bytes_proxy = 40_000
+        residual_bytes_proxy = (
+            cfg.residual_coarse_h * cfg.residual_coarse_w * 3 * n_pairs // 4
+        )  # rough int8+brotli estimate
+        base_bytes_proxy = 178_000
+        total_proxy_bytes = motion_bytes_proxy + residual_bytes_proxy + base_bytes_proxy
+        archive_bytes_proxy = torch.tensor(float(total_proxy_bytes), device=device)
+        print(
+            f"[{SUBSTRATE_TAG}-full] archive_bytes_proxy: motion={motion_bytes_proxy}B "
+            f"residual={residual_bytes_proxy}B base={base_bytes_proxy}B "
+            f"total={total_proxy_bytes}B"
+        )
+
+        # Pre-cache GT frame_1 batch tensor for forward pass.
+        gt_f1_all = gt_pair_tensor[:, 1].contiguous() / 255.0  # unit-domain for reconstruct_pair
+
+        for epoch in range(args.epochs):
+            substrate.train()
+            random.shuffle(train_indices_pool)
+            epoch_losses: list[float] = []
+
+            # Full-pair forward (substrate is per-pair). We use the full n_pairs
+            # reconstruct_pair call because the substrate's residual_coarse has
+            # shape (n_pairs, ...) and motion params are per-pair. Compute loss
+            # over the training subset and skip the val pairs in the gradient path.
+            f0_recon, f1_unchanged = substrate.reconstruct_pair(gt_f1_all)
+
+            # Shuffle and batch through training indices.
+            for batch_start in range(0, len(train_indices_pool), args.batch_size):
+                batch_indices = train_indices_pool[batch_start : batch_start + args.batch_size]
+                if not batch_indices:
+                    continue
+                batch_idx_tensor = torch.tensor(batch_indices, device=device)
+                rgb_0 = (f0_recon[batch_idx_tensor] * 255.0).clamp(0.0, 255.0)
+                rgb_1 = (f1_unchanged[batch_idx_tensor] * 255.0).clamp(0.0, 255.0)
+                gt_0 = gt_pair_tensor[batch_idx_tensor, 0]
+                gt_1 = gt_pair_tensor[batch_idx_tensor, 1]
+
+                loss, parts = loss_fn(
+                    reconstructed_rgb_0=rgb_0,
+                    reconstructed_rgb_1=rgb_1,
+                    gt_rgb_0=gt_0,
+                    gt_rgb_1=gt_1,
+                    archive_bytes_proxy=archive_bytes_proxy,
+                    residual_coarse=substrate.residual_coarse,
+                    apply_eval_roundtrip=True,
+                    noise_std=args.noise_std,
+                )
+
+                if not torch.isfinite(loss):
+                    nan_strike += 1
+                    print(
+                        f"[{SUBSTRATE_TAG}-full] NaN strike {nan_strike}/{max_nan_strikes}"
+                    )
+                    if nan_strike >= max_nan_strikes:
+                        raise RuntimeError("NaN watchdog tripped")
+                    continue
+                nan_strike = 0
+
+                optimizer.zero_grad()
+                loss.backward(retain_graph=(batch_start + args.batch_size < len(train_indices_pool)))
+                torch.nn.utils.clip_grad_norm_(substrate.parameters(), args.grad_clip)
+                optimizer.step()
+                ema.update(substrate)
+                epoch_losses.append(float(loss.detach().cpu()))
+
+            scheduler.step()
+
+            if epoch % max(1, args.val_every_epochs) == 0 or epoch == args.epochs - 1:
+                # EMA snapshot+restore per CLAUDE.md "EMA non-negotiable".
+                live_state = {
+                    k: v.detach().clone() for k, v in substrate.state_dict().items()
+                }
+                ema.apply(substrate)
+                ema_state_for_ckpt: dict[str, "torch.Tensor"] | None = None
+                try:
+                    val_lag = _run_val_loop(
+                        substrate, loss_fn, gt_pair_tensor, val_indices_pool,
+                        archive_bytes_proxy, device,
+                    )
+                    ema_state_for_ckpt = {
+                        k: v.detach().cpu().clone()
+                        for k, v in substrate.state_dict().items()
+                    }
+                finally:
+                    substrate.load_state_dict(live_state)
+                    substrate.train()
+
+                avg_train = (
+                    sum(epoch_losses) / len(epoch_losses)
+                ) if epoch_losses else math.nan
+                print(
+                    f"[{SUBSTRATE_TAG}-full] epoch {epoch:4d}: train={avg_train:.5f} "
+                    f"val={val_lag:.5f} (best={best_val_lag:.5f})"
+                )
+                if val_lag < best_val_lag and ema_state_for_ckpt is not None:
+                    best_val_lag = val_lag
+                    best_epoch = epoch
+                    torch.save(
+                        {
+                            "state_dict": ema_state_for_ckpt,
+                            "config": asdict(cfg),
+                            "epoch": epoch,
+                            "val_lag": val_lag,
+                        },
+                        ckpt_best_path,
+                    )
+
+        train_elapsed = time.time() - train_started_at
+        _stage(
+            f"trained_best_epoch_{best_epoch}_val_lag_{best_val_lag:.5f}_"
+            f"elapsed_{train_elapsed:.1f}s"
+        )
+
+        # 9. Load best EMA checkpoint and build the archive.
+        if not args.skip_archive_build:
+            if ckpt_best_path.exists():
+                best_ckpt = torch.load(
+                    ckpt_best_path, weights_only=False, map_location=device
+                )  # WEIGHTS_ONLY_FALSE_OK:trusted-local-checkpoint-from-this-process
+                substrate.load_state_dict(best_ckpt["state_dict"])
+            substrate.eval()
+
+            # Pack archive: extract motion params + residual blob + smoke base bytes.
+            motion_mode_int = 0 if motion_mode == MotionModelMode.SE3_PARAMETRIC else 1
+            if motion_mode_int == 0:
+                se3_flat = substrate.motion.se3_flat.detach().cpu()
+                flow_uv = None
+            else:
+                se3_flat = None
+                flow_uv = substrate.motion.flow_uv.detach().cpu()
+            residual_blob = encode_residual_blob(
+                substrate.residual_coarse.detach().cpu(),
+                coarse_hw=(cfg.residual_coarse_h, cfg.residual_coarse_w),
+            )
+            # V1: smoke base provider for inflate-time custody (self-contained).
+            # Phase 3 composes with A1/PR101/HDM8 via --base-archive-path.
+            base_bytes = b"D4_FULL_BASE_v0_smoke_provider_self_contained"
+            base_sha = hashlib.sha256(base_bytes).hexdigest()
+            bin_bytes = pack_archive(
+                motion_mode=motion_mode_int,
+                se3_flat=se3_flat,
+                flow_uv=flow_uv,
+                residual_blob=residual_blob,
+                meta={
+                    "base_substrate_id": "smoke_base_substrate_v0",
+                    "motion_mode_label": args.motion_mode,
+                    "smoke": False,
+                    "v1_self_contained_custody": True,
+                    "best_val_lag": float(best_val_lag),
+                    "best_epoch": int(best_epoch),
+                    "git_head": _canon_git_head_sha(REPO_ROOT),
+                    "trained_at_utc": _canon_utc_now_iso(),
+                },
+                base_substrate_archive_sha256_hex=base_sha,
+                base_substrate_bytes=base_bytes,
+                num_pairs=cfg.num_pairs,
+                flow_grid_h=cfg.flow_grid_h if motion_mode_int == 1 else 0,
+                flow_grid_w=cfg.flow_grid_w if motion_mode_int == 1 else 0,
+                residual_coarse_h=cfg.residual_coarse_h,
+                residual_coarse_w=cfg.residual_coarse_w,
+            )
+            bin_sha = _canon_sha256_bytes(bin_bytes)
+            bin_size = len(bin_bytes)
+            print(
+                f"[{SUBSTRATE_TAG}-full] WZF01 archive: {bin_size} B "
+                f"sha256={bin_sha[:16]}..."
+            )
+            _stage(f"archive_built_{bin_size}_B_sha{bin_sha[:8]}")
+
+            # 10. Build runtime tree + archive.zip.
+            submission_dir = args.output_dir / "submission_dir"
+            _write_runtime(submission_dir)
+            (submission_dir / "0.bin").write_bytes(bin_bytes)
+            _build_archive_zip(archive_zip_path, bin_bytes=bin_bytes)
+            archive_zip_sha = _canon_sha256_bytes(archive_zip_path.read_bytes())
+            archive_zip_size = archive_zip_path.stat().st_size
+            shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
+            _stage("archive_emitted")
+
+            # 11. Auth eval ([contest-CUDA] inline) through the canonical gate.
+            if not args.skip_auth_eval:
+                auth_result = _canon_gate_auth_eval_call(
+                    args=args,
+                    archive_zip=archive_zip_path,
+                    inflate_sh=submission_dir / "inflate.sh",
+                    upstream_dir=args.upstream_dir,
+                    output_json=auth_eval_json_path,
+                    contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                    substrate_tag=SUBSTRATE_TAG,
+                    device=device,
+                )
+                if auth_result is not None:
+                    _canon_require_contest_cuda_auth_eval_claim(
+                        auth_eval_json_path,
+                        archive_sha256=archive_zip_sha,
+                        substrate_tag=SUBSTRATE_TAG,
+                    )
+                    _stage("auth_eval_cuda_done_valid_claim")
+                else:
+                    _stage("auth_eval_skipped_gate_refused")
+    finally:
+        unpatch_upstream_yuv6(yuv6_token)
+        _stage("upstream_yuv6_unpatched")
+
+    # 12. Posterior update (Catalog #128 atomic fcntl).
+    if (not args.skip_auth_eval) and auth_eval_json_path.exists():
+        try:
+            from tac.continual_learning import (
+                posterior_update_locked_from_auth_eval_json,
+            )
+
+            update = posterior_update_locked_from_auth_eval_json(auth_eval_json_path)
+            print(
+                f"[{SUBSTRATE_TAG}-full] posterior_update accepted="
+                f"{getattr(update, 'accepted', '?')}"
+            )
+            _stage("posterior_updated")
+        except Exception as exc:
+            print(
+                f"[{SUBSTRATE_TAG}-full] WARN posterior_update failed: {exc!r}"
+            )
+
+    # 13. Provenance.
+    provenance = {
+        "lane_id": SUBSTRATE_LANE_ID,
+        "substrate_tag": SUBSTRATE_TAG,
+        "started_at_utc": stage_log[0]["at"] if stage_log else _canon_utc_now_iso(),
+        "completed_at_utc": _canon_utc_now_iso(),
+        "git_head": _canon_git_head_sha(REPO_ROOT),
+        "bin_sha256": bin_sha,
+        "bin_bytes": bin_size,
+        "archive_zip_sha256": archive_zip_sha,
+        "archive_zip_bytes": archive_zip_size,
+        "n_params": n_params,
+        "best_val_lag": float(best_val_lag) if math.isfinite(best_val_lag) else None,
+        "best_epoch": best_epoch,
+        "epochs": args.epochs,
+        "device": str(device),
+        "motion_mode": args.motion_mode,
+        "council_phase_2_unanimous_seal": True,
+        "council_review_anchor": (
+            "feedback_d4_wyner_ziv_frame_0_landed_20260514.md"
+        ),
+        "design_memo": (
+            ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md"
+        ),
+        "stage_log": stage_log,
+        "hardware_substrate_cuda": _canon_detect_hardware_substrate(
+            axis="cuda",
+            substrate_tag=SUBSTRATE_TAG,
+            env_var_candidates=("D4_WYNER_ZIV_FRAME_0_GPU", "MODAL_GPU"),
+        ),
+    }
+    (args.output_dir / "provenance.json").write_text(
+        json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    print(
+        f"[{SUBSTRATE_TAG}-full] wrote {args.output_dir / 'provenance.json'}"
+    )
+    return 0
 
 
 # ---------------------------------------------------------------------------
