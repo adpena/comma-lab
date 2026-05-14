@@ -1827,6 +1827,24 @@ def preflight_all(
             ),
             strict=False,
         )
+        # 2026-05-14 Catalog #206 - subagent crash-resume checkpoint discipline.
+        # Empirical anchor: Wyner-Ziv subagent crashed mid-session
+        # (Anthropic API "Internal server error") after 17min/58 tool uses
+        # with all in-flight progress lost. Long-running subagents MUST
+        # checkpoint via `tools/subagent_checkpoint.py` so a successor can
+        # resume from disk. Initial landing is warn-only per the Strict-flip
+        # atomicity rule (catalog rows + subagent prompt updates need time
+        # to propagate to in-flight subagents). STRICT-FLIP after backfill
+        # sweep clears live count to 0. Memory:
+        # feedback_subagent_crash_resume_discipline_landed_20260514.md.
+        _parallel.run(
+            "check_subagent_dispatches_use_checkpoint_discipline",
+            "[subagent-checkpoint-discipline]",
+            lambda: check_subagent_dispatches_use_checkpoint_discipline(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -47877,6 +47895,229 @@ def check_inflate_py_uses_canonical_select_inflate_device(
             "bytes. Refactor to a canonical `select_inflate_device` helper:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #206 - subagent crash-resume checkpoint discipline
+# ---------------------------------------------------------------------------
+# Empirical anchor 2026-05-14: Wyner-Ziv research subagent
+# (id "a1362a24d986029c3") crashed mid-session with Anthropic API
+# "Internal server error" after 17 minutes / 58 tool uses / 1704 tokens.
+# All in-flight progress was lost; the parent had to re-spawn from scratch.
+# Sister-pattern WAVE-3-HNERV-C-RETRY survived the same failure class only
+# because intermediate commits had already landed.
+#
+# This gate scans the last N commits for subagent-style commit bodies that
+# were written to the canonical commit-serializer, and refuses any that
+# lack a checkpoint trace (either an inline call to
+# tools/subagent_checkpoint.py in the message body OR a paired memory-file
+# declaration of "checkpoint discipline honored").
+#
+# Same-line waiver: ``# CHECKPOINT_DISCIPLINE_WAIVED:<reason>`` may appear
+# in the commit body for short subagents (≤5 tool uses estimate) where
+# the checkpoint overhead is unjustified.
+#
+# Per CLAUDE.md "Strict-flip atomicity rule" non-negotiable: the gate
+# initially lands warn-only because catalog rows + subagent-prompt updates
+# take time to propagate; it will be flipped to STRICT once a backfill
+# sweep clears the live count to 0.
+# ---------------------------------------------------------------------------
+
+# Tokens that indicate the commit body or message references the canonical
+# checkpoint discipline. ANY of these tokens, when present in the commit body,
+# satisfies the gate for that commit.
+_CHECKPOINT_DISCIPLINE_TOKENS = (
+    "tools/subagent_checkpoint.py",
+    "subagent_checkpoint.py",
+    "subagent_progress.jsonl",
+    "checkpoint discipline honored",
+    "checkpoint discipline: honored",
+    "CHECKPOINT_DISCIPLINE_WAIVED",
+)
+
+# Heuristic: a "subagent commit" is one routed through the canonical
+# subagent_commit_serializer (per Catalog #117) — i.e. its sha appears in
+# .omx/state/commit-serializer.log. We use that log as the authoritative
+# signal so the gate doesn't accidentally flag operator-side commits.
+_SERIALIZER_LOG_RELPATH = ".omx/state/commit-serializer.log"
+
+# Conservative same-line waiver: must declare a non-empty reason. The
+# placeholder literal "<reason>" is rejected so the docstring above cannot
+# self-waive.
+_CHECKPOINT_WAIVER_RE = re.compile(
+    r"#\s*CHECKPOINT_DISCIPLINE_WAIVED:\s*([^\s<].*)"
+)
+
+
+def _check_206_load_serializer_commits(repo_root: Path, last_n: int) -> set[str]:
+    """Return the set of full SHAs that appear in the last ``last_n`` rows of
+    .omx/state/commit-serializer.log. Empty if the log is missing or empty.
+
+    The log is JSONL; each row records ``head_after`` (the post-commit HEAD
+    SHA) when the serializer's commit succeeded. Rows for refused/failed
+    attempts have no ``head_after`` and are skipped. We also require
+    ``outcome == "committed"`` so refusal rows (e.g. concurrent-edit refuse,
+    pre-pre-lock hash mismatch) don't enter the set.
+    """
+    log_path = repo_root / _SERIALIZER_LOG_RELPATH
+    if not log_path.exists():
+        return set()
+    shas: list[str] = []
+    try:
+        for raw in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                row = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            outcome = row.get("outcome")
+            if outcome != "committed":
+                continue
+            sha = row.get("head_after")
+            if isinstance(sha, str) and len(sha) >= 7:
+                shas.append(sha)
+    except OSError:
+        return set()
+    # Last N rows. We collect the most-recent N committed SHAs across the
+    # full log so the gate matches the same time window git log queries.
+    return set(shas[-last_n:])
+
+
+def _check_206_iter_recent_commit_bodies(
+    repo_root: Path, last_n: int
+) -> list[tuple[str, str]]:
+    """Return a list of (sha, body) for the last ``last_n`` commits."""
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "log",
+                f"-{last_n}",
+                "--format=%H%x09%B%x1f",
+            ],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    if result.returncode != 0:
+        return []
+    out: list[tuple[str, str]] = []
+    for raw in result.stdout.split("\x1f"):
+        raw = raw.strip()
+        if not raw:
+            continue
+        parts = raw.split("\t", 1)
+        if len(parts) < 2:
+            continue
+        sha, body = parts
+        out.append((sha, body))
+    return out
+
+
+def _check_206_body_has_checkpoint_signal(body: str) -> bool:
+    """Return True if the commit body satisfies the discipline."""
+    for tok in _CHECKPOINT_DISCIPLINE_TOKENS:
+        if tok in body:
+            # The waiver token MUST carry a non-empty reason.
+            if tok == "CHECKPOINT_DISCIPLINE_WAIVED":
+                if _CHECKPOINT_WAIVER_RE.search(body):
+                    return True
+                # Bare "CHECKPOINT_DISCIPLINE_WAIVED" without a reason is
+                # rejected so the catalog row's own example phrasing cannot
+                # self-waive.
+                continue
+            return True
+    return False
+
+
+def check_subagent_dispatches_use_checkpoint_discipline(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+    last_n_commits: int = 50,
+) -> list[str]:
+    """Catalog #206 - subagent commits must declare crash-resume checkpoints.
+
+    Scans the last ``last_n_commits`` commits, intersects with the canonical
+    subagent_commit_serializer log (``.omx/state/commit-serializer.log``)
+    so only true subagent commits are scoped, and refuses any commit body
+    that does NOT mention the canonical checkpoint surface
+    (``tools/subagent_checkpoint.py``, ``subagent_progress.jsonl``,
+    ``checkpoint discipline honored``) or carry a same-line waiver
+    ``# CHECKPOINT_DISCIPLINE_WAIVED:<reason>``.
+
+    Per CLAUDE.md "Strict-flip atomicity rule": initial landing is
+    warn-only — catalog rows + subagent-prompt updates take time to
+    propagate to in-flight subagents. The strict flip lands after a
+    backfill sweep clears the live count to 0.
+
+    Memory: feedback_subagent_crash_resume_discipline_landed_20260514.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    serializer_shas = _check_206_load_serializer_commits(root, last_n_commits)
+    if not serializer_shas:
+        # No subagent commits visible (e.g. fresh checkout, missing log).
+        # Nothing to refuse; return clean.
+        if verbose:
+            print(
+                "  [subagent-checkpoint-discipline] OK "
+                "(no subagent commits in serializer log)"
+            )
+        return []
+
+    bodies = _check_206_iter_recent_commit_bodies(root, last_n_commits)
+    # The serializer log records short SHAs (9 chars); git log returns full
+    # 40-char SHAs. Build a prefix-set for matching.
+    serializer_prefixes = {s[:9] for s in serializer_shas}
+    violations: list[str] = []
+    scanned = 0
+    for sha, body in bodies:
+        if sha[:9] not in serializer_prefixes:
+            continue
+        scanned += 1
+        if _check_206_body_has_checkpoint_signal(body):
+            continue
+        violations.append(
+            f"commit {sha[:10]} (subagent commit per serializer log) "
+            f"lacks checkpoint discipline trace; expected one of: "
+            f"{', '.join(_CHECKPOINT_DISCIPLINE_TOKENS[:3])} "
+            "in commit body, OR a same-line "
+            "`# CHECKPOINT_DISCIPLINE_WAIVED:<reason>` waiver. "
+            "See CLAUDE.md Catalog #206 + "
+            "feedback_subagent_crash_resume_discipline_landed_20260514.md."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [subagent-checkpoint-discipline] WARN: "
+                f"{len(violations)}/{scanned} subagent commit(s) without "
+                f"checkpoint trace (strict={strict})"
+            )
+        else:
+            print(
+                f"  [subagent-checkpoint-discipline] OK "
+                f"({scanned} subagent commit(s) scanned)"
+            )
+
+    if violations and strict:
+        msg = (
+            f"check_subagent_dispatches_use_checkpoint_discipline: "
+            f"{len(violations)} subagent commit(s) missing checkpoint "
+            f"trace in last {last_n_commits} commits; first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
     return violations
 
 
