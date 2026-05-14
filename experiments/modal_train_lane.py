@@ -65,6 +65,13 @@ image = (
         "segmentation-models-pytorch",
         "av",
         "brotli",
+        # constriction: Rust-backed range coder used by tac.codec.jscc (SE-4
+        # JSCC), tac.pr101_*, tac.pr103_*, tac.pr86_hpac_codec,
+        # tac.packet_compiler.*. Must match pyproject.toml's
+        # `constriction>=0.4,<0.5` runtime dep. Added 2026-05-13 after
+        # PR95++ smoke fc-01KRJ07NVC73YPXTNGQX8T747P crashed at
+        # `import constriction` ModuleNotFoundError on Modal worker.
+        "constriction>=0.4,<0.5",
         "click",
         "nvidia-dali-cuda120==1.52.0",
         "tqdm",
