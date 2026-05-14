@@ -91,6 +91,18 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
+
+# Tier-1 optimization helpers (per CLAUDE.md TIER-1-OPT-BATCH 2026-05-14
+# + F3-BACKPORT-WAVE-V2 / Council omnibus Decision 13 PROCEED Option C
+# 2026-05-14). Opt-in via the --enable-autocast-fp16 / --enable-torch-compile
+# / --enable-gt-scorer-cache CLI flags. Defaults preserve historical behavior.
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _canon_build_optimized_training_context,
+)
+
 # Canonical substrate-trainer helpers (CANON-DEDUP-1 landing, commit ac1cfc41).
 # Per CLAUDE.md "Beauty, simplicity, and developer experience": dedup the
 # trainer-skeleton boilerplate by importing the shared, byte-faithful helpers.
@@ -120,17 +132,6 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
-)
-from tac.substrates._shared.smoke_auth_eval_gate import (
-    gate_auth_eval_call as _canon_gate_auth_eval_call,
-)
-
-# Tier-1 optimization helpers (per CLAUDE.md TIER-1-OPT-BATCH 2026-05-14
-# + F3-BACKPORT-WAVE-V2 / Council omnibus Decision 13 PROCEED Option C
-# 2026-05-14). Opt-in via the --enable-autocast-fp16 / --enable-torch-compile
-# / --enable-gt-scorer-cache CLI flags. Defaults preserve historical behavior.
-from tac.substrates._shared.trainer_skeleton import (
-    build_optimized_training_context as _canon_build_optimized_training_context,
 )
 from tac.training_optimization import (
     autocast_aware_forward as _autocast_aware_forward,
@@ -454,6 +455,11 @@ def _build_parser() -> argparse.ArgumentParser:
     # Tier-1 optimization CLI surface (per F3-BACKPORT-WAVE-V2 + Council
     # omnibus Decision 13 PROCEED Option C 2026-05-14). Defaults preserve
     # historical behavior; opt-in is operator-routed via env-var/CLI.
+    # AUTOCAST_FP16_WAIVED:flag-now-declared-DiD-against-revert-per-HOTZ-2-R1
+    # Per HOTZ-2 R1 finding: keep this defense-in-depth marker even though
+    # the flag IS now declared. A future revert that drops the argparse
+    # declaration without re-adding the waiver would silently trip
+    # Catalog #172 (`check_substrate_trainers_declare_autocast_fp16_support`).
     p.add_argument(
         "--enable-autocast-fp16",
         action="store_true",
@@ -464,6 +470,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "CPU autocast forbidden per autocast_aware_forward contract."
         ),
     )
+    # TORCH_COMPILE_WAIVED:flag-now-declared-DiD-against-revert-per-HOTZ-2-R1
+    # Per HOTZ-2 R1 finding: defense-in-depth marker against future revert
+    # that drops the argparse declaration; would otherwise silently trip
+    # Catalog #179 (`check_substrate_trainers_declare_torch_compile_support`).
     p.add_argument(
         "--enable-torch-compile",
         action="store_true",

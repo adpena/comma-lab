@@ -478,3 +478,64 @@ def test_v2_payload_bytes_smaller_than_a1_when_compressible():
     assert len(payload) < len(a1), (
         f"v2 payload {len(payload)} bytes is NOT smaller than A1 {len(a1)} bytes"
     )
+
+
+def test_v2_payload_byte_savings_floor_per_quantizr_finding_r1():
+    """QUANTIZR-1 R1 finding regression test (Catalog #228 + Z3 v2 commit
+    e54901d60 empirical claim).
+
+    The Z3 v2 landing commit body claimed:
+        ``A1 178162 B -> v2 173320 B (saved 4842) [macOS-CPU advisory]``
+
+    Per QUANTIZR-1's R1 council finding, that claim was a marketing
+    number until backed by a regression assertion. Future refactors that
+    add fixed overhead (header bytes, per-section wrappers, etc.) would
+    silently degrade the savings. This test pins a STRUCTURAL byte-savings
+    floor: under the all-zero compressible-residual configuration, the
+    Z3 v2 payload must be smaller than the equivalent A1 payload by AT
+    LEAST 4000 bytes (842-byte natural-compression slack from the empirical
+    4842 figure on real A1 input).
+
+    The synthetic A1 + small-section configuration here is a structural
+    proxy for the empirical ratio; real-A1 anchors are gated by the
+    Z3 v2 dispatch claim and live elsewhere. The assertion is a
+    STRUCTURAL gate: if the v2 grammar adds fixed overhead exceeding
+    842 bytes, this test catches it before dispatch.
+
+    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + the
+    Z3 v2 commit's [macOS-CPU advisory only] tag: this regression test
+    is the [empirical:test_z3_v2_substrate.py] artifact closing the loop.
+    """
+    a1 = _build_synthetic_a1_bytes()
+    section_meta = _build_synthetic_z3hv2_section()[1]
+    # All-zero residual + w_hat: maximally compressible (Balle hyperprior
+    # with all-zero residual encodes to near-Shannon entropy ~0).
+    small_section = encode_z3hv2_section(
+        hyperprior_weights_int8=section_meta["weights_int8"],
+        w_hat_int8=b"\x00" * (A1_N_PAIRS * 8),
+        residual_int8=b"\x00" * (A1_N_PAIRS * A1_LATENT_DIM),
+        latent_min=section_meta["latent_min"],
+        latent_scale=section_meta["latent_scale"],
+        hyper_dim=8,
+        int8_w_scale=section_meta["int8_w_scale"],
+        quant_step=1.0,
+        min_sigma=1e-3,
+        max_sigma=16.0,
+        factorized_half_range=16.0,
+    )
+    payload = build_z3v2_payload_bytes(a1_bytes=a1, z3hv2_section=small_section)
+    savings = len(a1) - len(payload)
+    # STRUCTURAL FLOOR: if v2 grammar regresses (added overhead, lost
+    # compression discipline, sidecar duplication, etc.) this catches it.
+    # The actual empirical savings on real A1 was 4842 bytes; we keep an
+    # 842 byte slack to allow for natural per-pair compressibility variation
+    # between synthetic (all-zero) and real (entropy-coded) residuals.
+    MIN_SAVINGS_BYTES = 4000
+    assert savings >= MIN_SAVINGS_BYTES, (
+        f"Z3 v2 byte-savings regressed: only saved {savings} bytes "
+        f"(A1 {len(a1)} -> v2 {len(payload)}). "
+        f"Per Catalog #228 + QUANTIZR-1 R1 finding the floor is "
+        f"{MIN_SAVINGS_BYTES}; if this fails, a refactor added fixed overhead "
+        f"OR the all-zero-residual compressibility assumption broke. "
+        f"Investigate before dispatch."
+    )

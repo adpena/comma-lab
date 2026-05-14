@@ -207,8 +207,12 @@ def build_argparser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help=(
-            "RESERVED (O1): GT-scorer-output cache; wire-in pending "
-            "per-substrate score_aware_loss API extension."
+            "F3 GTScorerCache: pre-compute the GT scorer outputs once and "
+            "reuse across the hot loop (~50%% scorer compute savings; "
+            "mathematically identical to GT-forward path). Catalog #228. "
+            "Default OFF preserves byte-faithful historical behavior; opt-in "
+            "is operator-routed via this flag for the substrates that have "
+            "been F3-wired (PDP wire-in landed 2026-05-14 commit 0916332eb)."
         ),
     )
     parser.add_argument("--smoke", action="store_true", help="Smoke path (CPU OK).")
@@ -526,10 +530,7 @@ def _build_local_cache(args: argparse.Namespace):
         default_cache_dir,
     )
 
-    if args.cache_dir:
-        cache_dir = Path(args.cache_dir)
-    else:
-        cache_dir = default_cache_dir()
+    cache_dir = Path(args.cache_dir) if args.cache_dir else default_cache_dir()
     return Comma2k19LocalCache(
         cache_dir=cache_dir,
         max_disk_gb=float(args.max_disk_gb),
@@ -901,13 +902,24 @@ def _full_main(args: argparse.Namespace) -> int:
         when ``DPP_ACTUAL_COST_USD`` is provided (Catalog #175).
     """
     import torch
-    import torch.nn.functional as F
 
     from tac.differentiable_eval_roundtrip import (
         patch_upstream_yuv6_globally,
         unpatch_upstream_yuv6,
     )
     from tac.scorer import load_differentiable_scorers
+    from tac.substrates._shared.smoke_auth_eval_gate import (
+        gate_auth_eval_call as _canon_gate_auth_eval_call,
+    )
+
+    # F3 GTScorerCache canonical helper per Council omnibus Decision 13
+    # PROCEED Option C 2026-05-14 + Time-Traveler default-OFF amendment.
+    # Substrate-side score_aware_loss accepts F3 kwargs as of the same
+    # commit batch; trainer-side wire-in defaults OFF (substrate authors
+    # opt in via --enable-gt-scorer-cache flag).
+    from tac.substrates._shared.trainer_skeleton import (
+        build_optimized_training_context as _canon_build_optimized_training_context,
+    )
     from tac.substrates._shared.trainer_skeleton import (
         decode_real_pairs as _canon_decode_real_pairs,
     )
@@ -919,20 +931,6 @@ def _full_main(args: argparse.Namespace) -> int:
     )
     from tac.substrates._shared.trainer_skeleton import (
         pin_seeds as _canon_pin_seeds,
-    )
-    from tac.substrates._shared.trainer_skeleton import (
-        require_contest_cuda_auth_eval_claim,
-    )
-    # F3 GTScorerCache canonical helper per Council omnibus Decision 13
-    # PROCEED Option C 2026-05-14 + Time-Traveler default-OFF amendment.
-    # Substrate-side score_aware_loss accepts F3 kwargs as of the same
-    # commit batch; trainer-side wire-in defaults OFF (substrate authors
-    # opt in via --enable-gt-scorer-cache flag).
-    from tac.substrates._shared.trainer_skeleton import (
-        build_optimized_training_context as _canon_build_optimized_training_context,
-    )
-    from tac.substrates._shared.smoke_auth_eval_gate import (
-        gate_auth_eval_call as _canon_gate_auth_eval_call,
     )
     from tac.substrates.pretrained_driving_prior import (
         DashcamPriorLoss,
@@ -1377,7 +1375,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 "basis_sha256": book.metadata.get("basis_sha256", ""),
                 "num_frames_used": book.metadata.get("num_frames_used", 0),
             }
-            ema_state_torch = {k: v for k, v in ema_state_loaded.items()}
+            ema_state_torch = dict(ema_state_loaded)
             bin_bytes = pack_archive(
                 book,
                 ema_state_torch,
@@ -1547,7 +1545,7 @@ def _full_main(args: argparse.Namespace) -> int:
             archive_path=str(archive_zip_path),
             codebook_path=str(codebook_path_out),
             archive_bytes=int(archive_bytes),
-            codebook_bytes=int(len(codebook_bytes)),
+            codebook_bytes=len(codebook_bytes),
         )
         manifest["archive_sha256"] = archive_sha
         manifest["payload_0bin_sha256"] = payload_0bin_sha

@@ -39,8 +39,8 @@ platform: modal
 gpu: "${MODAL_GPU:-T4}"
 min_smoke_gpu: "T4"
 min_vram_gb: 14
-video_input_strategy: cpu_thread_async_upload
-pyav_decode_strategy: cpu_thread_async_upload
+video_input_strategy: per_dispatch_local_copy  # Catalog #171 vocabulary
+pyav_decode_strategy: cpu_thread_async_upload  # Catalog #181 (decode)
 target_modes:
   - contest_one_video_replay
   - contest_generalized
