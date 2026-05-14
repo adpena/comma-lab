@@ -182,7 +182,7 @@ CPLX1_SECTION_ROLES = {
 IBPS1_MAGIC_PREFIX = b"IBPS"
 D1POLY1_MAGIC_PREFIX = b"D1PY"
 WZF01_MAGIC_PREFIX = b"WZF\x01"
-DP1_MAGIC_PREFIX = b"DP1\x00"
+DP1_MAGIC_PREFIX = b"DP1\x00"  # DP1_COMPOSITION_OK:parser-dispatch-magic-constant-not-runtime-composition-call-FIX-WAVE-R1-out-of-scope-cleanup
 C1WMFV1_MAGIC_PREFIX = b"WMF\x01"
 WZ1_MAGIC_PREFIX = b"WZ1\x00"
 Z4CR1_MAGIC_PREFIX = b"Z4CR"
@@ -469,7 +469,7 @@ def _infer_parser(
         return PARSER_C1WMFV1
     if (
         "wyner_ziv_cooperative_receiver" in text
-        or "cooperative_receiver" in text and "z4" not in text
+        or ("cooperative_receiver" in text and "z4" not in text)
         or "wz1_" in text
     ):
         return PARSER_WZ1
