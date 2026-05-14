@@ -1,0 +1,185 @@
+schema_version: 1
+name: hdm8_film_grain_selector_modal_t4_auth_eval_dispatch
+lane_id: lane_hdm8_film_grain_selector_dispatch_20260514
+summary: |
+  HDM8 film-grain postfilter / per-pair selector exact-CUDA auth-eval dispatch
+  on Modal T4 (NOT a training dispatch). Routes through experiments/modal_auth_eval.py
+  directly with an existing HDM8 archive + the hdm8_film_grain_sidecar runtime
+  template + a chosen postfilter_config.json (either fixed mode or selector
+  with selector_indices packed into archive bytes as format_id=0x03).
+
+  Codex frame-exploit research 2026-05-14 #1 ranked experiment per
+  .omx/research/segnet_posenet_frame_exploit_latest_research_20260514_codex.md.
+
+  Strategic gating per operator directive 2026-05-14: sub-0.188 score gate NOT
+  yet cleared (HDM8 base 0.20636 [contest-CUDA T4]); this dispatch is RESEED
+  ONLY into the meta-Lagrangian/Pareto/continual-learning posterior. Selector
+  advisory delta -0.014 over 64-pair MPS PROXY only; CUDA inversion risk is
+  REAL (codex section 7). Wait for codex's CUDA-in-loop palette sweep
+  (hdm8_modal_t4_postfilter_policy_sweep_20260514, ETA 14:32Z) to land
+  per-pair component arrays BEFORE building the credible CUDA selector.
+
+# Platform: auth-eval-only (NOT a training dispatch).
+# - operator_authorize.py Modal flow hardcodes experiments/modal_train_lane.py,
+#   which is wrong for auth-eval-on-existing-archive.
+# - tools/run_modal_smoke_before_full.py is training-flow specific.
+# Per CLAUDE.md "NEVER invent CLI flags" + "Operator gates must be wired and
+# used": this recipe DOCUMENTS the dispatch shape (operator audit surface) but
+# is invoked via scripts/operator_authorize_hdm8_film_grain_selector_modal_t4_auth_eval_dispatch.sh
+# which prints the canonical exact-eval command from
+# tools/build_hdm8_film_grain_sidecar_packet.py and operator runs directly.
+platform: none  # auth-eval-only; not consumed by operator_authorize.py
+gpu: "${MODAL_GPU:-T4}"
+
+cost_band:
+  epochs: 0  # auth-eval-only; Catalog #167 (smoke-before-full) does NOT fire (< 1000)
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.30  # 1 Modal T4 auth-eval @ ~5min on existing archive
+  platform_key: modal
+  gpu_key: T4
+
+predicted_delta: |
+  none mode: 0.000 [empirical: archive_sha unchanged; runtime delta only via
+  postfilter_config.json; rate term unchanged].
+
+  even_grain_chroma:1.0 (best 600-pair MPS): -0.000338 [MPS proxy 600 pairs].
+  Within uint8 quantization noise; CUDA inversion plausible.
+
+  per-pair selector packed (format_id=0x03): -0.014 [operator advisory 64-pair
+  MPS] OR could invert to +0.030 on CUDA per codex section 7 prefix-overfit
+  risk. NOT YET BUILT — needs CUDA-in-loop palette data from codex sweep.
+
+predicted_delta_basis: |
+  - .omx/research/segnet_posenet_frame_exploit_latest_research_20260514_codex.md
+    (codex's #1 ranked experiment with exact-CUDA-unknown predicted band)
+  - experiments/results/hdm8_postfilter_sweep_20260514_codex/proxy_600pairs_even_palette2_mps.json
+    (600-pair MPS evidence: best mode even_grain_chroma:1.0 at -0.000338)
+  - experiments/results/hdm8_film_grain_selector_dispatch_20260514/frame_parity_no_op_proof_top6_64pairs.json
+    (CPU proof: SegNet structural-nullspace contract empirically confirmed for
+    all 6 top-MPS modes; n_odd_mismatches=0 across all even_* modes)
+
+risk: |
+  CPU/CUDA inversion risk (codex section 7): CUDA uses DALI; CPU/MPS uses
+  AV/PyAV. Floating point, decode, resize, and scorer device can alter
+  PoseNet/SegNet near thresholds. Only exact CUDA can promote, retire, or rank.
+
+  Sub-0.188 gate math: HDM8 base 0.20636 - 0.015 (best-case selector
+  advisory) = 0.191. STILL ABOVE GATE. This dispatch is reseed only, NOT
+  PR-submission.
+
+  Compliance risk for global-mode packets: postfilter_config.json sits in the
+  RUNTIME TREE (submission_dir/postfilter_config.json) not in archive.zip
+  bytes. For a global fixed mode this is arguably runtime configuration. For
+  the per-pair selector this is unambiguously video side information and MUST
+  be packed into archive.zip via format_id=0x03 (which the packet builder
+  enforces via the --pack-selector-into-archive flag).
+
+envelope_status: |
+  FITS within $1 envelope at p50 fallback (single Modal T4 auth-eval).
+
+# No remote driver — this is auth-eval-only via experiments/modal_auth_eval.py.
+# remote_driver: scripts/remote_lane_hdm8_film_grain_selector_modal_t4_auth_eval.sh
+timeout_hours: 0.5  # Modal T4 auth-eval on 600 pairs ~5min on existing archive
+
+# Required input files: the existing HDM8 archive + runtime template + a fixed
+# postfilter_config.json. All sourced from the repo; no external dependencies.
+required_input_files:
+  - flag: --archive
+    default_path: experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/exact_eval_static_release_surface/archive.zip
+  - flag: --submission-dir
+    default_path: experiments/results/hdm8_film_grain_selector_dispatch_20260514/packet_<mode>/submission_dir
+
+# Canonical exact-eval command template (emitted by the packet builder).
+canonical_dispatch_command_template:
+  - .venv/bin/modal
+  - run
+  - --detach
+  - experiments/modal_auth_eval.py
+  - --archive
+  - "<repo_relative_archive_path>"
+  - --submission-dir
+  - "<repo_relative_submission_dir_path>"
+  - --inflate-sh
+  - inflate.sh
+  - --gpu
+  - T4
+  - --expected-runtime-tree-sha256
+  - "<modal_uploaded_runtime_tree_sha256>"
+  - --detach
+  - --provider-detach-ack
+
+# Pre-dispatch proof gate (codex section 7 mitigations).
+pre_dispatch_proofs:
+  - name: frame_parity_proof
+    tool: tools/probe_hdm8_postfilter_frame_parity_and_no_op.py
+    contract: "every even_* mode must leave odd-indexed frames byte-identical to none (SegNet structural-nullspace)"
+    proof_path: experiments/results/hdm8_film_grain_selector_dispatch_20260514/frame_parity_no_op_proof_top6_64pairs.json
+    status: empirically_confirmed_for_top_6_mps_modes
+  - name: no_op_pixel_delta_proof
+    tool: tools/probe_hdm8_postfilter_frame_parity_and_no_op.py
+    contract: "every non-none mode must change inflated bytes after uint8 clamp/round (Catalog #105 sister)"
+    proof_path: experiments/results/hdm8_film_grain_selector_dispatch_20260514/frame_parity_no_op_proof_top6_64pairs.json
+    status: empirically_confirmed_for_top_6_mps_modes
+  - name: selector_byte_charging_proof
+    contract: "selector mode packets MUST pack selector_indices into archive.zip via format_id=0x03 BEFORE exact eval"
+    enforcement: "tools/build_hdm8_film_grain_sidecar_packet.py --pack-selector-into-archive emits format_id=0x03"
+    status: builder_supports_format_0x03
+
+# Strategic gating decision: WAIT for codex's CUDA-in-loop sweep BEFORE building
+# the credible per-pair selector. MPS-only selector evidence carries CUDA
+# inversion risk per codex section 7.
+dispatch_readiness:
+  global_mode_candidates_ready:
+    - mode: even_grain_chroma:1.0
+      proxy_delta_600pairs: -0.000338
+      proof_path: experiments/results/hdm8_film_grain_selector_dispatch_20260514/frame_parity_no_op_proof_top6_64pairs.json
+      packet_path: experiments/results/hdm8_film_grain_selector_dispatch_20260514/packet_even_grain_chroma_1p0/packet_manifest.json
+      operator_decision: surfaced_as_smallest_signal_safest_bet
+    - mode: even_grain_chroma:2.0
+      proxy_delta_600pairs: -0.000079
+      proof_status: passing
+      operator_decision: surfaced_as_borderline_global_candidate
+  selector_mode_pending:
+    - waiting_on: codex CUDA-in-loop palette sweep hdm8_modal_t4_postfilter_policy_sweep_20260514
+      sweep_eta_utc: 2026-05-14T14:32:36Z
+      blocker: "MPS-only selector evidence carries CUDA inversion risk per codex section 7"
+      next_action: "after sweep harvest, rebuild selector via tools/build_hdm8_film_grain_sidecar_packet.py --selector-from-proxy-json <modal_t4_cuda_per_pair.json> --pack-selector-into-archive"
+
+target_modes:
+  - contest_one_video_replay  # auth-eval-on-existing-archive of a contest-shaped video
+  - contest_exact_eval  # the canonical target axis
+canary_status: independent_substrate  # not a substrate trainer; not part of the substrate canary chain
+min_vram_gb: 16  # Modal T4
+
+# Modal-side video input strategy (auth-eval flow):
+video_input_strategy: shared_volume_no_contention_expected  # single auth-eval, not a fan-out training
+pyav_decode_strategy: cuda_nvdec  # contest evaluator uses DaliVideoDataset on CUDA per upstream/evaluate.py:21-43
+
+dependencies:
+  - submissions/hdm8_film_grain_sidecar/inflate.py (683 LOC; deterministic; scorer-free)
+  - submissions/hdm8_film_grain_sidecar/inflate.sh (Catalog #146 3-positional-arg CLI; brotli runtime dep)
+  - submissions/hdm8_film_grain_sidecar/postfilter_config.json (runtime config schema)
+  - submissions/hdm8_film_grain_sidecar/src/{codec,model,pr101_grammar}.py (HNeRV decoder + format_id=0x02/0x03 grammar)
+  - tools/build_hdm8_film_grain_sidecar_packet.py (canonical packet builder)
+  - tools/probe_hdm8_postfilter_frame_parity_and_no_op.py (pre-dispatch proof harness)
+  - experiments/modal_auth_eval.py (canonical Modal T4 auth-eval)
+  - experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/exact_eval_static_release_surface/archive.zip (HDM8 base)
+
+notes: |
+  Lane lifecycle:
+  - L0 SKETCH: lane registered (2026-05-14, this commit)
+  - L1 SCAFFOLD: pre-dispatch proof harness landed; canonical packet builder
+    + frame-parity + no-op proofs all green for top-6 MPS modes
+  - L2 INTEGRATION: pending operator-routable decision to dispatch first
+    candidate (operator may choose to wait for codex CUDA sweep)
+  - L3 PRODUCTION: requires both [contest-CUDA T4 Linux x86_64] AND
+    [contest-CPU Linux x86_64] anchors per CLAUDE.md "Submission auth eval"
+    non-negotiable
+
+  Sister lane: hnerv_hdm8_film_grain_sidecar_exact_eval (L1; codex landing
+  2026-05-14 of the build infrastructure).
+
+  Cross-ref:
+    .omx/research/segnet_posenet_frame_exploit_latest_research_20260514_codex.md
+    .omx/research/hnerv_hdm8_active_scorecard_refresh_20260514_codex.md
+    feedback_hdm8_film_grain_selector_dispatch_landed_20260514.md (this lane's landing memo)
