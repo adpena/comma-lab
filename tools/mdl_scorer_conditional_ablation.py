@@ -879,6 +879,98 @@ def _decode_ibps1_to_frames(
     return out
 
 
+def _decode_dp1_to_frames(
+    inner_bytes: bytes,
+    pair_indices: list[int],
+    device: torch.device,
+) -> torch.Tensor:
+    """Inflate DP1 inner blob -> uint8 frames for requested pairs.
+
+    This mirrors ``pretrained_driving_prior.inflate`` without importing the
+    inflate-side device router. Tier C uses advisory CPU/MPS/CUDA deltas and
+    must be able to decode DP1 baselines before perturbing the same renderer.
+    """
+    from tac.substrates.pretrained_driving_prior.archive import (  # type: ignore[import-not-found]
+        DrivingPriorArchive,
+        parse_archive,
+    )
+    from tac.substrates.pretrained_driving_prior.architecture import (  # type: ignore[import-not-found]
+        DrivingPriorRenderer,
+        DrivingPriorRendererConfig,
+    )
+
+    arc: DrivingPriorArchive = parse_archive(inner_bytes)
+    renderer_sd = {k: v.detach().cpu().clone() for k, v in arc.renderer_state_dict.items()}
+    sine_layer_indices = sorted(
+        {
+            int(k.split(".")[1])
+            for k in renderer_sd
+            if k.startswith("net.") and ".linear.weight" in k
+        }
+    )
+    num_sine_layers = len(sine_layer_indices) if sine_layer_indices else 3
+    first_key = (
+        f"net.{sine_layer_indices[0]}.linear.weight"
+        if sine_layer_indices
+        else None
+    )
+    hidden_dim = (
+        int(renderer_sd[first_key].shape[0])
+        if first_key is not None and first_key in renderer_sd
+        else 64
+    )
+    cfg = DrivingPriorRendererConfig(
+        hidden_dim=hidden_dim,
+        num_hidden_layers=num_sine_layers,
+        output_height=int(arc.output_height),
+        output_width=int(arc.output_width),
+    )
+    renderer = DrivingPriorRenderer(cfg).to(device).eval()
+    incompat = renderer.load_state_dict(renderer_sd, strict=False)
+    if set(incompat.missing_keys) or set(incompat.unexpected_keys):
+        raise ValueError(
+            f"dp1: renderer state_dict mismatch "
+            f"missing={sorted(incompat.missing_keys)} "
+            f"unexpected={sorted(incompat.unexpected_keys)}"
+        )
+
+    int8_scale = float(arc.meta.get("residual_int8_scale", 64.0))
+    pair_indices_t = sorted(set(pair_indices))
+    out = torch.empty((len(pair_indices_t), 2, CAMERA_H, CAMERA_W, 3), dtype=torch.uint8)
+    with torch.no_grad():
+        for i, pair_idx in enumerate(pair_indices_t):
+            rgb_0, rgb_1 = renderer.render_pair(pair_idx, arc.num_pairs)
+            start = pair_idx * arc.per_pair_bytes
+            pair_bytes = arc.per_pair_residual[start : start + arc.per_pair_bytes]
+            pair_int8 = np.frombuffer(pair_bytes, dtype=np.int8).astype(np.float32)
+            residual_floats = torch.from_numpy(pair_int8).to(device) / int8_scale
+            n_chunks = arc.per_pair_bytes // 3
+            if n_chunks >= 1:
+                chunk = residual_floats[: n_chunks * 3].view(n_chunks, 3).mean(dim=0)
+                correction = chunk.view(1, 3, 1, 1)
+                correction_full = correction.expand_as(rgb_0)
+                rgb_0 = (rgb_0 + 0.02 * correction_full).clamp(0.0, 1.0)
+                rgb_1 = (rgb_1 + 0.02 * correction_full).clamp(0.0, 1.0)
+            stacked = torch.cat([rgb_0, rgb_1], dim=0)
+            up = F.interpolate(
+                stacked,
+                size=(CAMERA_H, CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            frames = (
+                (up * 255.0)
+                .clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+            )
+            out[i, 0] = frames[0]
+            out[i, 1] = frames[1]
+    return out
+
+
 def decode_to_frames(
     inner_bytes: bytes,
     grammar: str,
@@ -892,6 +984,8 @@ def decode_to_frames(
         return _decode_pr106_to_frames(inner_bytes, pair_indices, device)
     elif grammar == "ibps1":
         return _decode_ibps1_to_frames(inner_bytes, pair_indices, device)
+    elif grammar == "dp1":
+        return _decode_dp1_to_frames(inner_bytes, pair_indices, device)
     else:
         raise NotImplementedError(f"grammar {grammar} not supported")
 

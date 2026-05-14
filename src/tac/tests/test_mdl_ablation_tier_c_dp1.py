@@ -747,6 +747,19 @@ def test_load_archive_dp1_parses_synthetic_archive(tmp_path):
     assert set(sections.keys()) == expected
 
 
+def test_decode_to_frames_dp1_supports_synthetic_archive():
+    """DP1 baselines must decode before real-scorer Tier C perturbation."""
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("brotli")
+    mod = _load_module()
+    inner_bytes, _cfg = _build_tiny_dp1_archive_bytes(num_pairs=2)
+
+    frames = mod.decode_to_frames(inner_bytes, "dp1", [0, 1], torch.device("cpu"))
+
+    assert frames.shape == (2, 2, mod.CAMERA_H, mod.CAMERA_W, 3)
+    assert frames.dtype == torch.uint8
+
+
 def test_dp1_canonical_supported_grammar_field():
     """DP1 in SUPPORTED_GRAMMARS but parses no fall-through."""
     mod = _load_module()
