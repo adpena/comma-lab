@@ -10,7 +10,6 @@ import pytest
 from tac.repo_io import write_json
 from tools.probe_pr103_arithmetic_retarget import _estimate_global_combo_state_count
 
-
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tools/plan_pr103_arithmetic_transform.py"
 RETARGET_SCRIPT = REPO / "tools/probe_pr103_arithmetic_retarget.py"
@@ -368,6 +367,8 @@ def test_materialize_pr103_arithmetic_histogram_candidate_cli_real_manifest_if_a
             str(manifest),
             "--beam-probe-report",
             str(beam),
+            "--retune-brotli-section",
+            "latent_hi_histogram_brotli",
             "--output-archive",
             str(archive_out),
             "--json-out",
@@ -389,6 +390,10 @@ def test_materialize_pr103_arithmetic_histogram_candidate_cli_real_manifest_if_a
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["candidate_archive"]["sha256"]
     assert report["candidate_archive"]["sha256"] != report["source_archive"]["sha256"]
+    assert any(
+        row["name"] == "latent_hi_histogram_brotli" and row["retune_enabled"] is True
+        for row in report["section_recompression"]
+    )
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
     assert "Histogram Candidate" in md_out.read_text(encoding="utf-8")
 

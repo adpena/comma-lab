@@ -258,6 +258,56 @@ def test_pr103_arithmetic_histogram_candidate_materializes_byte_different_archiv
     assert "ac_histograms_brotli" in changed_sections
 
 
+def test_pr103_arithmetic_histogram_candidate_retunes_safe_brotli_sections(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    beam0 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight0",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=2,
+    )
+    output_archive = tmp_path / "retuned.zip"
+
+    report = materialize_pr103_arithmetic_histogram_candidate(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0,),
+        output_archive=output_archive,
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        retune_brotli_sections=("latent_low_bytes_brotli",),
+    )
+
+    retune = {
+        row["name"]: row
+        for row in report["section_recompression"]
+        if row["retune_enabled"] is True
+    }
+    assert retune["latent_low_bytes_brotli"]["retune_delta_bytes"] < 0
+    assert report["byte_accounting"]["brotli_retune_delta_bytes"] == retune[
+        "latent_low_bytes_brotli"
+    ]["retune_delta_bytes"]
+    assert report["runtime_adapter_contract"]["public_runtime_constants"]["LO_LEN"] == retune[
+        "latent_low_bytes_brotli"
+    ]["candidate_bytes"]
+    changed_sections = {
+        row["name"] for row in report["section_diffs"] if row["changed"] is True
+    }
+    assert "latent_low_bytes_brotli" in changed_sections
+    assert report["candidate_roundtrip"]["reencoded_byte_identical"] is True
+    assert report["semantic_stream_parity"]["all_stream_symbol_sha_match"] is True
+    assert report["score_claim"] is False
+
+
 def test_pr103_arithmetic_histogram_global_combo_probe_rescores_full_sideband(
     tmp_path: Path,
 ) -> None:
@@ -781,7 +831,7 @@ def _probe_fixture(tmp_path: Path) -> dict:
     non_ac = brotli.compress(b"non-ac-weights")
     hists = brotli.compress(histograms.tobytes())
     latent_meta = b"meta"
-    low = brotli.compress(bytes([1, 2, 3, 4, 5]))
+    low = brotli.compress(b"\x00" * 512)
     hi_hist = brotli.compress(hi_histogram.tobytes())
     layout = Pr103LcAcLayout(
         scales_fp16=len(scales),

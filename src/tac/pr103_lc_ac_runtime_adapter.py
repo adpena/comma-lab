@@ -26,6 +26,7 @@ ADAPTER_SCHEMA = "pr103_lc_ac_runtime_adapter_v1"
 PACKET_SCHEMA = "pr103_lc_ac_histogram_candidate_packet_v1"
 ARCHIVE_MANIFEST_SCHEMA = "pr103_lc_ac_histogram_candidate_archive_manifest_v1"
 FRAME_PARITY_SCHEMA = "pr103_lc_ac_frame_parity_probe_v1"
+SHELL_PARITY_SCHEMA = "pact.inflate_shell_output_parity_v1"
 REQUIRED_RUNTIME_CONSTANTS = (
     "BR_LEN",
     "HIST_LEN",
@@ -131,6 +132,7 @@ def build_pr103_lc_ac_candidate_packet(
     runtime_adapter_manifest: str | Path,
     packet_dir: str | Path,
     frame_parity_report: str | Path | None = None,
+    shell_parity_report: str | Path | None = None,
     repo_root: str | Path | None = None,
     force: bool = False,
 ) -> dict[str, Any]:
@@ -145,6 +147,7 @@ def build_pr103_lc_ac_candidate_packet(
     manifest_path = _repo_path(Path(runtime_adapter_manifest), repo)
     manifest = _read_adapter_manifest(manifest_path)
     frame_parity = _read_frame_parity_report(frame_parity_report, repo=repo)
+    shell_parity = _read_shell_parity_report(shell_parity_report, repo=repo)
     output_dir = _repo_path(Path(packet_dir), repo)
     candidate_record = _mapping(manifest.get("candidate_archive"))
     source_runtime_dir = _repo_path(Path(str(manifest.get("output_runtime_dir") or "")), repo)
@@ -152,6 +155,7 @@ def build_pr103_lc_ac_candidate_packet(
     _validate_inputs(source_runtime_dir, candidate_archive)
     _validate_candidate_archive_custody(candidate_record, candidate_archive)
     _validate_frame_parity_report(frame_parity, candidate_record)
+    _validate_shell_parity_report(shell_parity, candidate_record)
     _validate_output_location(source_runtime_dir, output_dir)
     _prepare_output_dir(output_dir, force=force)
 
@@ -171,7 +175,7 @@ def build_pr103_lc_ac_candidate_packet(
                 "sha256": sha256_file(manifest_path),
             },
             "decoder_state_parity_proof": _mapping(manifest.get("decoder_state_parity_proof")),
-            "frame_output_parity_proof": _frame_parity_summary(frame_parity),
+            "frame_output_parity_proof": _frame_parity_summary(frame_parity, shell_parity),
         }
     )
     write_json(output_dir / "archive_manifest.json", archive_manifest)
@@ -190,7 +194,7 @@ def build_pr103_lc_ac_candidate_packet(
         [
             *(
                 ["full_frame_render_output_parity_missing"]
-                if not _full_frame_parity_passed(frame_parity)
+                if not _full_frame_parity_passed(frame_parity, shell_parity)
                 else []
             ),
             *(
@@ -199,7 +203,7 @@ def build_pr103_lc_ac_candidate_packet(
                     "shell_inflate_output_parity_missing" in adapter_blockers
                     or "full_frame_inflate_output_parity_missing" in adapter_blockers
                 )
-                and not _shell_inflate_parity_passed(frame_parity)
+                and not _shell_inflate_parity_passed(frame_parity, shell_parity)
                 else []
             ),
             "lane_dispatch_claim_missing",
@@ -225,7 +229,7 @@ def build_pr103_lc_ac_candidate_packet(
         "runtime_tree_sha256": _runtime_tree_sha256(packet_runtime_files),
         "adapter_runtime_tree_sha256": manifest.get("runtime_tree_sha256"),
         "decoder_state_parity_proof": _mapping(manifest.get("decoder_state_parity_proof")),
-        "frame_output_parity_proof": _frame_parity_summary(frame_parity),
+        "frame_output_parity_proof": _frame_parity_summary(frame_parity, shell_parity),
         "readiness_blockers": packet_blockers,
         "dispatch_blockers": [
             "pr103_candidate_packet_is_not_dispatch_authorization",
@@ -373,6 +377,25 @@ def _read_frame_parity_report(path: str | Path | None, *, repo: Path) -> dict[st
     return payload
 
 
+def _read_shell_parity_report(path: str | Path | None, *, repo: Path) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    report_path = _repo_path(Path(path), repo)
+    payload = read_json(report_path)
+    if not isinstance(payload, dict):
+        raise Pr103RuntimeAdapterError("shell parity report must be a JSON object")
+    if payload.get("schema") != SHELL_PARITY_SCHEMA:
+        raise Pr103RuntimeAdapterError(
+            f"expected shell parity schema {SHELL_PARITY_SCHEMA}, got {payload.get('schema')!r}"
+        )
+    if payload.get("score_claim") is True or payload.get("dispatch_attempted") is True:
+        raise Pr103RuntimeAdapterError("shell parity report must be a no-score local artifact")
+    payload = dict(payload)
+    payload["_report_path"] = repo_relative(report_path, repo)
+    payload["_report_sha256"] = sha256_file(report_path)
+    return payload
+
+
 def _validate_frame_parity_report(
     report: dict[str, Any] | None,
     candidate_archive_record: dict[str, Any],
@@ -391,21 +414,80 @@ def _validate_frame_parity_report(
         raise Pr103RuntimeAdapterError("frame parity candidate archive bytes do not match packet archive")
 
 
-def _full_frame_parity_passed(report: dict[str, Any] | None) -> bool:
-    return bool(report is not None and report.get("full_frame_output_parity_proven") is True)
-
-
-def _shell_inflate_parity_passed(report: dict[str, Any] | None) -> bool:
-    return bool(report is not None and report.get("shell_inflate_output_parity_proven") is True)
-
-
-def _frame_parity_summary(report: dict[str, Any] | None) -> dict[str, Any]:
+def _validate_shell_parity_report(
+    report: dict[str, Any] | None,
+    candidate_archive_record: dict[str, Any],
+) -> None:
     if report is None:
+        return
+    if report.get("passed") is not True:
+        raise Pr103RuntimeAdapterError("shell parity report did not pass")
+    if report.get("output_mismatches"):
+        raise Pr103RuntimeAdapterError("shell parity report contains output mismatches")
+    candidate = _mapping(report.get("candidate"))
+    archive = _mapping(candidate.get("archive"))
+    if archive.get("sha256") != candidate_archive_record.get("sha256"):
+        raise Pr103RuntimeAdapterError(
+            "shell parity candidate archive sha256 does not match packet archive"
+        )
+    if archive.get("bytes") != candidate_archive_record.get("bytes"):
+        raise Pr103RuntimeAdapterError("shell parity candidate archive bytes do not match packet archive")
+    source_outputs = _shell_output_map(_mapping(report.get("source")).get("outputs"))
+    candidate_outputs = _shell_output_map(candidate.get("outputs"))
+    if not source_outputs or source_outputs != candidate_outputs:
+        raise Pr103RuntimeAdapterError("shell parity report output records are not identical")
+
+
+def _full_frame_parity_passed(
+    frame_report: dict[str, Any] | None,
+    shell_report: dict[str, Any] | None = None,
+) -> bool:
+    return bool(
+        (frame_report is not None and frame_report.get("full_frame_output_parity_proven") is True)
+        or _shell_inflate_parity_passed(frame_report, shell_report)
+    )
+
+
+def _shell_inflate_parity_passed(
+    frame_report: dict[str, Any] | None,
+    shell_report: dict[str, Any] | None = None,
+) -> bool:
+    return bool(
+        (frame_report is not None and frame_report.get("shell_inflate_output_parity_proven") is True)
+        or (shell_report is not None and shell_report.get("passed") is True)
+    )
+
+
+def _frame_parity_summary(
+    frame_report: dict[str, Any] | None,
+    shell_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if frame_report is None and shell_report is None:
         return {
             "provided": False,
             "full_frame_output_parity_proven": False,
             "shell_inflate_output_parity_proven": False,
         }
+    if frame_report is None:
+        source_outputs = _shell_output_map(_mapping(_mapping(shell_report).get("source")).get("outputs"))
+        candidate_outputs = _shell_output_map(
+            _mapping(_mapping(shell_report).get("candidate")).get("outputs")
+        )
+        return {
+            "provided": True,
+            "path": shell_report.get("_report_path") if shell_report else None,
+            "sha256": shell_report.get("_report_sha256") if shell_report else None,
+            "parity_method": shell_report.get("parity_method") if shell_report else None,
+            "frame_output_parity_scope": "inflate_shell_full_outputs",
+            "sampled_frame_output_parity_proven": False,
+            "full_frame_output_parity_proven": _shell_inflate_parity_passed(None, shell_report),
+            "shell_inflate_output_parity_proven": _shell_inflate_parity_passed(None, shell_report),
+            "source_output_sha256": _single_output_sha(source_outputs),
+            "candidate_output_sha256": _single_output_sha(candidate_outputs),
+            "output_bytes": _single_output_bytes(source_outputs),
+            "shell_output_count": len(source_outputs),
+        }
+    report = frame_report
     return {
         "provided": True,
         "path": report.get("_report_path"),
@@ -415,7 +497,7 @@ def _frame_parity_summary(report: dict[str, Any] | None) -> dict[str, Any]:
         "sampled_frame_output_parity_proven": report.get("sampled_frame_output_parity_proven"),
         "full_frame_output_parity_proven": report.get("full_frame_output_parity_proven"),
         "shell_inflate_output_parity_proven": report.get("shell_inflate_output_parity_proven")
-        is True,
+        is True or _shell_inflate_parity_passed(None, shell_report),
         "source_output_sha256": _mapping(_mapping(report.get("source")).get("render")).get(
             "output_sha256"
         ),
@@ -424,6 +506,34 @@ def _frame_parity_summary(report: dict[str, Any] | None) -> dict[str, Any]:
         ),
         "output_bytes": _mapping(_mapping(report.get("source")).get("render")).get("output_bytes"),
     }
+
+
+def _shell_output_map(value: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, list):
+        return {}
+    rows: dict[str, dict[str, Any]] = {}
+    for item in value:
+        row = _mapping(item)
+        relpath = str(row.get("relative_path") or "")
+        if relpath:
+            rows[relpath] = {
+                "bytes": row.get("bytes"),
+                "sha256": row.get("sha256"),
+            }
+    return rows
+
+
+def _single_output_sha(outputs: dict[str, dict[str, Any]]) -> str | None:
+    if len(outputs) != 1:
+        return None
+    return next(iter(outputs.values())).get("sha256")
+
+
+def _single_output_bytes(outputs: dict[str, dict[str, Any]]) -> int | None:
+    if len(outputs) != 1:
+        return None
+    value = next(iter(outputs.values())).get("bytes")
+    return int(value) if value is not None else None
 
 
 def _candidate_runtime_constants(manifest: dict[str, Any]) -> dict[str, int]:
@@ -997,6 +1107,7 @@ __all__ = [
     "ADAPTER_SCHEMA",
     "ARCHIVE_MANIFEST_SCHEMA",
     "PACKET_SCHEMA",
+    "SHELL_PARITY_SCHEMA",
     "Pr103RuntimeAdapterError",
     "build_pr103_lc_ac_candidate_packet",
     "build_pr103_lc_ac_runtime_adapter",

@@ -13,13 +13,13 @@ from tac.pr103_lc_ac_runtime_adapter import (
     ADAPTER_SCHEMA,
     FRAME_PARITY_SCHEMA,
     PACKET_SCHEMA,
+    SHELL_PARITY_SCHEMA,
     Pr103RuntimeAdapterError,
     build_pr103_lc_ac_candidate_packet,
     build_pr103_lc_ac_runtime_adapter,
     probe_pr103_lc_ac_frame_parity,
 )
 from tac.repo_io import sha256_file, write_json
-
 
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "tools/build_pr103_lc_ac_runtime_adapter.py"
@@ -171,6 +171,28 @@ def test_pr103_candidate_packet_copies_archive_runtime_and_custody(
     assert packet_with_frame_parity["frame_output_parity_proof"][
         "shell_inflate_output_parity_proven"
     ] is False
+
+    shell_report = tmp_path / "shell_parity.json"
+    write_json(shell_report, _shell_parity_report_for(fixture["archive"]))
+    packet_with_shell_parity = build_pr103_lc_ac_candidate_packet(
+        runtime_adapter_manifest=adapter_manifest,
+        shell_parity_report=shell_report,
+        packet_dir=tmp_path / "packet_with_shell_parity",
+        repo_root=tmp_path,
+    )
+    assert "full_frame_render_output_parity_missing" not in packet_with_shell_parity[
+        "readiness_blockers"
+    ]
+    assert "shell_inflate_output_parity_missing" not in packet_with_shell_parity[
+        "readiness_blockers"
+    ]
+    assert packet_with_shell_parity["frame_output_parity_proof"][
+        "shell_inflate_output_parity_proven"
+    ] is True
+    assert packet_with_shell_parity["frame_output_parity_proof"][
+        "full_frame_output_parity_proven"
+    ] is True
+    assert packet_with_shell_parity["frame_output_parity_proof"]["source_output_sha256"] == "b" * 64
 
 
 def test_pr103_frame_parity_probe_hashes_same_runtime_rendered_pairs(tmp_path: Path) -> None:
@@ -440,4 +462,22 @@ def _full_frame_parity_report_for(candidate_archive: Path) -> dict[str, object]:
         "shell_inflate_output_parity_proven": False,
         "source": {"render": {"output_sha256": "a" * 64, "output_bytes": 10}},
         "candidate": {"archive": archive_record, "render": {"output_sha256": "a" * 64}},
+    }
+
+
+def _shell_parity_report_for(candidate_archive: Path) -> dict[str, object]:
+    archive_record = {
+        "bytes": candidate_archive.stat().st_size,
+        "sha256": sha256_file(candidate_archive),
+    }
+    output = {"relative_path": "0.raw", "bytes": 123, "sha256": "b" * 64}
+    return {
+        "schema": SHELL_PARITY_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "parity_method": "exact_inflate_sh_archive_dir_output_dir_file_list",
+        "passed": True,
+        "source": {"outputs": [output]},
+        "candidate": {"archive": archive_record, "outputs": [output]},
+        "output_mismatches": [],
     }

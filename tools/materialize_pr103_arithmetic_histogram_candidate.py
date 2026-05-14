@@ -17,6 +17,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.pr103_arithmetic_transform_plan import (  # noqa: E402
+    RETUNABLE_BROTLI_SECTIONS,
     Pr103ArithmeticTransformPlanError,
     materialize_pr103_arithmetic_histogram_candidate,
     render_candidate_markdown,
@@ -49,6 +50,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Override source archive path. Defaults to source_archive.path in the manifest.",
     )
     parser.add_argument("--member-name", help="Override output ZIP member name.")
+    parser.add_argument(
+        "--retune-brotli-section",
+        action="append",
+        choices=sorted(RETUNABLE_BROTLI_SECTIONS),
+        default=[],
+        help=(
+            "Recompress a Brotli section with an exact quality/lgwin sweep. "
+            "Repeat for multiple sections. Default preserves historical q=11 bytes."
+        ),
+    )
     parser.add_argument("--output-archive", required=True, type=Path)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--md-out", type=Path)
@@ -79,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
             global_combo_report=args.global_combo_report,
             member_name=args.member_name,
             repo_root=REPO_ROOT,
+            retune_brotli_sections=args.retune_brotli_section,
         )
     except (OSError, Pr103ArithmeticTransformPlanError) as exc:
         print(f"FATAL: PR103 histogram candidate materialization failed: {exc}", file=sys.stderr)

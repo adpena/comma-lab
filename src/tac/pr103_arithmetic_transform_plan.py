@@ -53,6 +53,15 @@ CANDIDATE_SCHEMA = "pr103_arithmetic_histogram_candidate_v1"
 GLOBAL_COMBO_SCHEMA = "pr103_arithmetic_histogram_global_combo_probe_v1"
 DEFAULT_STRATEGY = "retarget_categorical_model_to_decoded_symbols"
 _PR103_PROCESS_COMBO_CONTEXT: dict[str, Any] = {}
+RETUNABLE_BROTLI_SECTIONS = frozenset(
+    {
+        "non_ac_weights_brotli",
+        "ac_histograms_brotli",
+        "latent_low_bytes_brotli",
+        "latent_hi_histogram_brotli",
+        "sidecar_corrections_brotli",
+    }
+)
 
 
 class Pr103ArithmeticTransformPlanError(ValueError):
@@ -203,15 +212,12 @@ def build_pr103_arithmetic_retarget_probe(
     archive_path = context["archive_path"]
     source = context["source"]
     histograms = context["histograms"]
-    hi_histogram = context["hi_histogram"]
     source_merged = context["source_merged"]
     source_histogram_blob = context["source_histogram_blob"]
-    source_hi_histogram_blob = context["source_hi_histogram_blob"]
     source_symbol_streams = context["source_symbol_streams"]
     source_model_weights = context["source_model_weights"]
     source_roundtrip = context["source_roundtrip"]
     target_index = context["target_index"]
-    target_record = dict(context["target_record"])
     expected_symbol_sha = str(context["expected_symbol_sha"])
     observed_symbol_sha = str(context["observed_symbol_sha"])
     source_roundtrip_identical = bool(context["source_roundtrip_identical"])
@@ -375,7 +381,6 @@ def build_pr103_arithmetic_histogram_coordinate_probe(
     source_model_weights = context["source_model_weights"]
     source_roundtrip = context["source_roundtrip"]
     target_index = context["target_index"]
-    target_record = dict(context["target_record"])
     expected_symbol_sha = str(context["expected_symbol_sha"])
     observed_symbol_sha = str(context["observed_symbol_sha"])
     source_roundtrip_identical = bool(context["source_roundtrip_identical"])
@@ -565,7 +570,6 @@ def build_pr103_arithmetic_histogram_beam_probe(
     source_model_weights = context["source_model_weights"]
     source_roundtrip = context["source_roundtrip"]
     target_index = context["target_index"]
-    target_record = dict(context["target_record"])
     expected_symbol_sha = str(context["expected_symbol_sha"])
     observed_symbol_sha = str(context["observed_symbol_sha"])
     source_roundtrip_identical = bool(context["source_roundtrip_identical"])
@@ -747,6 +751,7 @@ def materialize_pr103_arithmetic_histogram_candidate(
     layout: Pr103LcAcLayout = PUBLIC_PR103_LAYOUT,
     stream_specs: Sequence[tuple[str, int, int | None]] = AC_STREAM_SPECS,
     hi_symbol_count: int = HI_SYMBOL_COUNT,
+    retune_brotli_sections: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Build a byte-different PR103 histogram candidate and runtime plan.
 
@@ -756,6 +761,7 @@ def materialize_pr103_arithmetic_histogram_candidate(
     """
 
     reports = _load_beam_probe_reports(beam_probe_reports)
+    retune_sections = _validate_retune_brotli_sections(retune_brotli_sections)
     global_report = _load_global_combo_report(global_combo_report) if global_combo_report else None
     if not reports:
         raise Pr103ArithmeticTransformPlanError("at least one beam probe report is required")
@@ -862,26 +868,62 @@ def materialize_pr103_arithmetic_histogram_candidate(
                 }
             )
 
+    section_recompression: list[dict[str, Any]] = []
     candidate_histogram_raw = histograms.astype(np.uint8).tobytes()
-    candidate_histogram_blob = brotli.compress(candidate_histogram_raw, quality=11)
-    candidate_hi_histogram_blob = brotli.compress(_hi_histogram_raw(hi_histogram), quality=11)
+    candidate_histogram_blob, record = _maybe_retune_brotli_blob(
+        "ac_histograms_brotli",
+        raw=candidate_histogram_raw,
+        base_candidate_blob=brotli.compress(candidate_histogram_raw, quality=11),
+        source_blob=context["source_histogram_blob"],
+        retune_sections=retune_sections,
+    )
+    section_recompression.append(record)
+    candidate_hi_histogram_raw = _hi_histogram_raw(hi_histogram)
+    candidate_hi_histogram_blob, record = _maybe_retune_brotli_blob(
+        "latent_hi_histogram_brotli",
+        raw=candidate_hi_histogram_raw,
+        base_candidate_blob=brotli.compress(candidate_hi_histogram_raw, quality=11),
+        source_blob=context["source_hi_histogram_blob"],
+        retune_sections=retune_sections,
+    )
+    section_recompression.append(record)
+    candidate_non_ac_blob, record = _retune_existing_brotli_section(
+        parsed,
+        "non_ac_weights_brotli",
+        retune_sections=retune_sections,
+    )
+    section_recompression.append(record)
+    candidate_low_blob, record = _retune_existing_brotli_section(
+        parsed,
+        "latent_low_bytes_brotli",
+        retune_sections=retune_sections,
+    )
+    section_recompression.append(record)
+    candidate_sidecar_blob, record = _retune_existing_brotli_section(
+        parsed,
+        "sidecar_corrections_brotli",
+        retune_sections=retune_sections,
+    )
+    section_recompression.append(record)
     candidate_merged = encode_pr103_merged_ac_stream(source_symbol_streams, source_model_weights)
     candidate_layout = dataclasses.replace(
         layout,
+        non_ac_weights_brotli=len(candidate_non_ac_blob),
         ac_histograms_brotli=len(candidate_histogram_blob),
         merged_range_coded_weights_and_hi_latents=len(candidate_merged),
+        latent_low_bytes_brotli=len(candidate_low_blob),
         latent_hi_histogram_brotli=len(candidate_hi_histogram_blob),
     )
     candidate_payload = b"".join(
         [
             parsed.section_bytes("scales_fp16"),
-            parsed.section_bytes("non_ac_weights_brotli"),
+            candidate_non_ac_blob,
             candidate_histogram_blob,
             candidate_merged,
             parsed.section_bytes("latent_min_scale_fp16"),
-            parsed.section_bytes("latent_low_bytes_brotli"),
+            candidate_low_blob,
             candidate_hi_histogram_blob,
-            parsed.section_bytes("sidecar_corrections_brotli"),
+            candidate_sidecar_blob,
         ]
     )
     candidate_parsed = parse_pr103_lc_ac_payload(candidate_payload, layout=candidate_layout)
@@ -939,6 +981,9 @@ def materialize_pr103_arithmetic_histogram_candidate(
         else None
     )
     payload_delta = len(candidate_payload) - len(source.payload)
+    brotli_retune_delta = sum(
+        int(row.get("retune_delta_bytes") or 0) for row in section_recompression
+    )
     blockers = _unique_ordered(
         [
             *([] if output_path is not None else ["candidate_archive_missing"]),
@@ -990,6 +1035,7 @@ def materialize_pr103_arithmetic_histogram_candidate(
             "source_archive_bytes": source_archive_bytes,
             "candidate_archive_bytes": candidate_archive_bytes,
             "archive_byte_delta": archive_delta,
+            "brotli_retune_delta_bytes": brotli_retune_delta,
             "estimated_rate_score_delta_if_components_unchanged": (
                 float(payload_delta) * RATE_SCORE_PER_BYTE
             ),
@@ -1004,14 +1050,17 @@ def materialize_pr103_arithmetic_histogram_candidate(
             "public_runtime_constants": _runtime_constants_from_layout(candidate_layout),
             "source_runtime_constants": _runtime_constants_from_layout(layout),
             "required_code_changes": [
-                "update HIST_LEN to candidate hists_b length",
-                "update MERGED_AC_LEN to candidate merged_ac length",
+                "update every changed Brotli/AC section length constant",
+                "update HIST_LEN to candidate hists_b length when changed",
+                "update MERGED_AC_LEN to candidate merged_ac length when changed",
+                "update BR_LEN/LO_LEN/HI_HIST_LEN when Brotli retune changes them",
                 "preserve section order in parse_archive",
                 "prove inflate consumes candidate archive bytes",
             ],
             "runtime_tree_missing": True,
         },
         "applied_beam_reports": applied_reports,
+        "section_recompression": section_recompression,
         "section_diffs": section_diffs,
         "candidate_roundtrip": {
             "merged_ac_bytes": candidate_decoded.get("source_bytes"),
@@ -1393,6 +1442,7 @@ def render_candidate_markdown(report: Mapping[str, Any]) -> str:
         f"- selection_mode: `{byte_accounting.get('selection_mode')}`",
         f"- payload_byte_delta: `{byte_accounting.get('payload_byte_delta')}`",
         f"- archive_byte_delta: `{byte_accounting.get('archive_byte_delta')}`",
+        f"- brotli_retune_delta_bytes: `{byte_accounting.get('brotli_retune_delta_bytes')}`",
         f"- source_probe_delta_sum: `{byte_accounting.get('source_probe_delta_sum')}`",
         f"- non_additivity_delta: `{byte_accounting.get('non_additivity_delta')}`",
         f"- semantic_stream_parity: `{_bool(semantic.get('all_stream_symbol_sha_match') is True)}`"
@@ -1418,6 +1468,27 @@ def render_candidate_markdown(report: Mapping[str, Any]) -> str:
                 )
             )
     if not changed:
+        lines.append("- none")
+    retuned = [
+        _mapping(row)
+        for row in report.get("section_recompression") or []
+        if _mapping(row).get("retune_enabled") is True
+    ]
+    lines.extend(["", "## Brotli Retune", ""])
+    if retuned:
+        for row in retuned:
+            lines.append(
+                "- `{name}`: base `{base}` -> candidate `{candidate}` "
+                "(`{delta}`) q=`{quality}` lgwin=`{lgwin}`".format(
+                    name=row.get("name"),
+                    base=row.get("base_candidate_bytes"),
+                    candidate=row.get("candidate_bytes"),
+                    delta=row.get("retune_delta_bytes"),
+                    quality=row.get("selected_brotli_quality"),
+                    lgwin=row.get("selected_brotli_lgwin"),
+                )
+            )
+    else:
         lines.append("- none")
     lines.extend(["", "## Blockers", ""])
     for blocker in report.get("readiness_blockers") or []:
@@ -2448,6 +2519,140 @@ def _score_combined_histograms(
     }
 
 
+def _validate_retune_brotli_sections(sections: Sequence[str]) -> tuple[str, ...]:
+    """Return a deterministic retune-section tuple or fail closed."""
+
+    out: list[str] = []
+    for raw in sections:
+        name = str(raw)
+        if name not in RETUNABLE_BROTLI_SECTIONS:
+            allowed = ", ".join(sorted(RETUNABLE_BROTLI_SECTIONS))
+            raise Pr103ArithmeticTransformPlanError(
+                f"unsupported Brotli retune section {name!r}; allowed: {allowed}"
+            )
+        if name not in out:
+            out.append(name)
+    return tuple(out)
+
+
+def _retune_existing_brotli_section(
+    parsed: Any,
+    section_name: str,
+    *,
+    retune_sections: Sequence[str],
+) -> tuple[bytes, dict[str, Any]]:
+    source_blob = parsed.section_bytes(section_name)
+    if section_name not in set(retune_sections):
+        return _preserved_brotli_record(section_name, source_blob)
+    try:
+        raw = brotli.decompress(source_blob)
+    except brotli.error as exc:
+        raise Pr103ArithmeticTransformPlanError(
+            f"section {section_name} is not Brotli-decompressible"
+        ) from exc
+    return _maybe_retune_brotli_blob(
+        section_name,
+        raw=raw,
+        base_candidate_blob=source_blob,
+        source_blob=source_blob,
+        retune_sections=retune_sections,
+    )
+
+
+def _preserved_brotli_record(section_name: str, source_blob: bytes) -> tuple[bytes, dict[str, Any]]:
+    return source_blob, {
+        "name": section_name,
+        "retune_enabled": False,
+        "source_bytes": len(source_blob),
+        "base_candidate_bytes": len(source_blob),
+        "candidate_bytes": len(source_blob),
+        "source_delta_bytes": 0,
+        "retune_delta_bytes": 0,
+        "raw_bytes": None,
+        "raw_sha256": "",
+        "source_sha256": sha256_bytes(source_blob),
+        "base_candidate_sha256": sha256_bytes(source_blob),
+        "candidate_sha256": sha256_bytes(source_blob),
+        "selected_brotli_quality": 11,
+        "selected_brotli_lgwin": None,
+        "explored_parameter_count": 0,
+        "changed_vs_source": False,
+        "score_claim": False,
+        "dispatch_attempted": False,
+    }
+
+
+def _maybe_retune_brotli_blob(
+    section_name: str,
+    *,
+    raw: bytes,
+    base_candidate_blob: bytes,
+    source_blob: bytes,
+    retune_sections: Sequence[str],
+) -> tuple[bytes, dict[str, Any]]:
+    if section_name not in RETUNABLE_BROTLI_SECTIONS:
+        raise Pr103ArithmeticTransformPlanError(
+            f"section is not configured for Brotli retune: {section_name}"
+        )
+    retune_enabled = section_name in set(retune_sections)
+    if retune_enabled:
+        candidate_blob, params, explored_count = _best_brotli_blob(raw)
+    else:
+        candidate_blob = base_candidate_blob
+        params = {"quality": 11, "lgwin": None}
+        explored_count = 0
+    record = {
+        "name": section_name,
+        "retune_enabled": retune_enabled,
+        "source_bytes": len(source_blob),
+        "base_candidate_bytes": len(base_candidate_blob),
+        "candidate_bytes": len(candidate_blob),
+        "source_delta_bytes": len(candidate_blob) - len(source_blob),
+        "retune_delta_bytes": len(candidate_blob) - len(base_candidate_blob),
+        "raw_bytes": len(raw),
+        "raw_sha256": sha256_bytes(raw),
+        "source_sha256": sha256_bytes(source_blob),
+        "base_candidate_sha256": sha256_bytes(base_candidate_blob),
+        "candidate_sha256": sha256_bytes(candidate_blob),
+        "selected_brotli_quality": params["quality"],
+        "selected_brotli_lgwin": params["lgwin"],
+        "explored_parameter_count": explored_count,
+        "changed_vs_source": candidate_blob != source_blob,
+        "score_claim": False,
+        "dispatch_attempted": False,
+    }
+    return candidate_blob, record
+
+
+def _best_brotli_blob(raw: bytes) -> tuple[bytes, dict[str, int], int]:
+    if not raw:
+        raise Pr103ArithmeticTransformPlanError("cannot Brotli-retune an empty section")
+    best_blob: bytes | None = None
+    best_params: dict[str, int] = {}
+    explored = 0
+    for quality in range(12):
+        for lgwin in range(10, 25):
+            candidate = brotli.compress(raw, quality=quality, lgwin=lgwin)
+            explored += 1
+            key = (
+                len(candidate),
+                quality,
+                lgwin,
+                sha256_bytes(candidate),
+            )
+            if best_blob is None:
+                best_blob = candidate
+                best_params = {"quality": quality, "lgwin": lgwin}
+                best_key = key
+                continue
+            if key < best_key:
+                best_blob = candidate
+                best_params = {"quality": quality, "lgwin": lgwin}
+                best_key = key
+    assert best_blob is not None
+    return best_blob, best_params, explored
+
+
 def _hi_histogram_raw(hi_histogram: np.ndarray) -> bytes:
     return np.asarray(hi_histogram, dtype="<u2").reshape(-1).tobytes()
 
@@ -2570,13 +2775,14 @@ def _bool(value: bool) -> str:
 
 
 __all__ = [
-    "DEFAULT_STRATEGY",
-    "COORDINATE_SCHEMA",
     "BEAM_SCHEMA",
     "CANDIDATE_SCHEMA",
+    "COORDINATE_SCHEMA",
+    "DEFAULT_STRATEGY",
     "GLOBAL_COMBO_SCHEMA",
     "PLAN_SCHEMA",
     "RETARGET_SCHEMA",
+    "RETUNABLE_BROTLI_SECTIONS",
     "Pr103ArithmeticTransformPlanError",
     "TransformTargetSelection",
     "build_pr103_arithmetic_histogram_beam_probe",
@@ -2586,11 +2792,11 @@ __all__ = [
     "build_pr103_arithmetic_transform_plan",
     "materialize_pr103_arithmetic_histogram_candidate",
     "optimize_pr103_histogram_frontier_combinations",
-    "resolve_pr103_combo_worker_count",
     "render_beam_markdown",
     "render_candidate_markdown",
     "render_coordinate_markdown",
     "render_global_combo_markdown",
     "render_markdown",
     "render_retarget_markdown",
+    "resolve_pr103_combo_worker_count",
 ]
