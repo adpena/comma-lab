@@ -222,6 +222,16 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
         "default": "",
     },
+    "--max-pairs": {
+        "env": "D4_WYNER_ZIV_FRAME_0_MAX_PAIRS",
+        "rationale": (
+            "Cap the n_pairs decoded from the contest video; default empty "
+            "means use N_PAIRS_FULL=600. T4 (16GB) OOMs on 600-pair "
+            "retain_graph=True full forward at 384x512; smoke-on-T4 sets "
+            "150. A10G/A100 with 24-40GB can run the full 600."
+        ),
+        "default": "",
+    },
 }
 
 
