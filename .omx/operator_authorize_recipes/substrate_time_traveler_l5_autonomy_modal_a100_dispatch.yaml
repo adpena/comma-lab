@@ -19,8 +19,15 @@ target_modes:
   - contest_exact_eval
   - contest_one_video_replay
   - research_substrate
-canary_status: post_canary_dependent
-canary_dependency: sane_hnerv
+canary_status: independent_substrate
+# canary_dependency removed 2026-05-13: time-traveler is architecturally
+# INDEPENDENT of HNeRV-family (cooperative-receiver + predictive-coding +
+# foveation; not a mask/renderer derivative). Catalog #173 canary discipline
+# was designed to gate HNeRV-family-derivatives where pace-of-failure
+# correlates across substrates. Time-traveler doesn't share that failure
+# surface. Operator-approved 2026-05-13 per sub-0.188 gate prioritization +
+# floor-v3 commit 27a7950fd identifying time-traveler as the only L1-READY
+# substrate clearing the gate.
 active_dispatch_contract: time_traveler_l5_autonomy_naked_substrate
 dispatch_contracts:
   - id: time_traveler_l5_autonomy_naked_substrate
