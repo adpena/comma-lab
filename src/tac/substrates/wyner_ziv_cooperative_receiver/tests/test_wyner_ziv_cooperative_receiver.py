@@ -161,6 +161,16 @@ def test_disambiguate_coset_returns_matching_member() -> None:
     assert out_idx == expected_idx
 
 
+def test_disambiguate_coset_requires_grid_covering_all_cosets() -> None:
+    with pytest.raises(ValueError, match="search_grid must be >= num_cosets"):
+        disambiguate_coset(
+            torch.tensor([0.5]),
+            coset_index=5,
+            num_cosets=16,
+            search_grid=8,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Archive tests
 # ---------------------------------------------------------------------------
@@ -321,7 +331,7 @@ def test_wyner_ziv_reconstruct_pair_unit_range() -> None:
         pair_idx=0,
         coset_index=5,
         num_cosets=cfg.num_cosets,
-        search_grid=32,
+        search_grid=cfg.num_cosets,
     )
     assert float(rgb_0.min()) >= 0.0
     assert float(rgb_0.max()) <= 1.0
@@ -352,6 +362,30 @@ def test_wyner_ziv_reconstruct_pair_preserves_transmitted_coset() -> None:
     )
     assert reconstructed_idx == coset_index
     assert torch.allclose(rgb_0, rgb_1)
+
+
+def test_wyner_ziv_reconstruct_pair_preserves_coset_when_side_info_differs() -> None:
+    class _OffsetSubstrate:
+        def render_pair(self, pair_idx: int):
+            frame = torch.full((3, 4, 4), 0.25)
+            return frame, frame.clone()
+
+        def predict_side_info(self, pair_idx: int):
+            frame = torch.full((3, 4, 4), 0.75)
+            return frame, frame.clone()
+
+    coset_index = 12
+    rgb_0, _ = _wyner_ziv_reconstruct_pair(
+        _OffsetSubstrate(),  # type: ignore[arg-type]
+        pair_idx=0,
+        coset_index=coset_index,
+        num_cosets=16,
+        search_grid=64,
+    )
+    reconstructed_idx = int(
+        slepian_wolf_coset_index(rgb_0.mean().unsqueeze(0), num_cosets=16).item()
+    )
+    assert reconstructed_idx == coset_index
 
 
 def test_inflate_one_video_writes_expected_raw_bytes(tmp_path) -> None:
@@ -542,6 +576,22 @@ def test_loss_emits_expected_parts_keys() -> None:
     assert "pose_sqrt" in parts
     assert "wyner_ziv_term" in parts
     assert "loss_total" in parts
+
+
+def test_loss_rejects_unit_domain_rgb() -> None:
+    seg = _MockScorer("seg")
+    pose = _MockScorer("pose")
+    loss_fn = WynerZivCooperativeReceiverLoss(seg, pose, WynerZivLossWeights())
+    with pytest.raises(ValueError, match="unit-domain RGB"):
+        loss_fn(
+            torch.full((1, 3, 32, 32), 0.5),
+            torch.full((1, 3, 32, 32), 255.0),
+            torch.full((1, 3, 32, 32), 128.0),
+            torch.full((1, 3, 32, 32), 128.0),
+            torch.tensor(50_000.0),
+            apply_eval_roundtrip=True,
+            noise_std=0.0,
+        )
 
 
 # ---------------------------------------------------------------------------

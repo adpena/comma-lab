@@ -122,27 +122,25 @@ def _apply_per_pair_rgb_residual(
     """Apply per-pair int8-quantized RGB residual as additive correction.
 
     The residual bytes (default 50 B/pair) are interpreted as a small spatial
-    RGB delta. Layout: bytes are reshaped to a small (3, H_low, W_low) tile
-    then bilinear upsampled to (3, H, W) and added to BOTH frames of the pair.
+    RGB delta. All transmitted bytes are consumed: the stream is linearly
+    resampled to exactly ``3 * H * W`` correction coefficients, then added to
+    BOTH frames of the pair.
     """
     import torch.nn.functional as F
 
     residual_floats = residual_pair / int8_scale
-    n_bytes = residual_floats.shape[0]
-    # Reshape to (3, H_low, W_low) where H_low * W_low ≈ n_bytes / 3.
-    n_per_channel = n_bytes // 3
-    side = max(1, int(round(n_per_channel**0.5)))
-    flat = residual_floats[: 3 * side * side]
-    if flat.shape[0] < 3:
+    n_bytes = int(residual_floats.shape[0])
+    if n_bytes < 3:
         # Edge case: trivially small residual; skip correction.
         return rgb_0.clamp(0.0, 1.0), rgb_1.clamp(0.0, 1.0)
-    correction = flat.view(3, side, side).unsqueeze(0)
+    h = int(rgb_0.shape[-2])
+    w = int(rgb_0.shape[-1])
     correction_full = F.interpolate(
-        correction,
-        size=(rgb_0.shape[-2], rgb_0.shape[-1]),
-        mode="bilinear",
+        residual_floats.view(1, 1, n_bytes),
+        size=3 * h * w,
+        mode="linear",
         align_corners=False,
-    )
+    ).view(1, 3, h, w)
     # Apply gently; correction magnitude bounded by ~1/scale ~ 0.015 so the
     # delta is at most ~4 gray levels (out of 255).
     rgb_0_c = (rgb_0 + 0.02 * correction_full).clamp(0.0, 1.0)

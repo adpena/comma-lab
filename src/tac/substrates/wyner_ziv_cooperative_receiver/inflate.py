@@ -115,19 +115,20 @@ def _wyner_ziv_reconstruct_pair(
     """
     rgb_0_pred, rgb_1_pred = substrate.render_pair(pair_idx)
     y_0, y_1 = substrate.predict_side_info(pair_idx)
-    # Coset center coarse-grain: average renderer + side-info as the
-    # mid-coset estimate. The transmitted coset index resolves the small
-    # ambiguity between candidates. We apply the disambiguation as a
-    # per-pair gain shift in [-1/num_cosets, +1/num_cosets].
+    # Coset-center coarse-grain: average renderer + side-info for candidate
+    # selection, but shift the renderer relative to its own mean. Otherwise
+    # disagreement between renderer and side-info can decode the right coset
+    # representative and still emit a reconstruction in the wrong coset.
     mid = 0.5 * (rgb_0_pred + y_0)
     side_info_scalar = mid.mean().clamp(0.0, 1.0).unsqueeze(0)
+    renderer_scalar = rgb_0_pred.mean().clamp(0.0, 1.0).unsqueeze(0)
     disamb = disambiguate_coset(
         side_info_scalar,
         coset_index=coset_index,
         num_cosets=num_cosets,
         search_grid=search_grid,
     )
-    shift = disamb.item() - float(side_info_scalar.item())
+    shift = disamb.item() - float(renderer_scalar.item())
     rgb_0_out = (rgb_0_pred + shift).clamp(0.0, 1.0)
     rgb_1_out = (rgb_1_pred + shift).clamp(0.0, 1.0)
     return rgb_0_out, rgb_1_out
@@ -145,7 +146,7 @@ def inflate_one_video(
     substrate = _build_substrate_from_archive(arc, device=render_device)
     coset_indices = arc.coset_indices.tolist()
     num_cosets = arc.num_cosets
-    search_grid = int(arc.meta.get("search_grid_size", 32))
+    search_grid = max(int(arc.meta.get("search_grid_size", 32)), int(num_cosets))
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
     frames_written = 0

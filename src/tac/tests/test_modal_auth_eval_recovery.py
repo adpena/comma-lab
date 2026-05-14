@@ -33,6 +33,41 @@ def _fake_modal(result: object):
     return types.SimpleNamespace(functions=types.SimpleNamespace(FunctionCall=FunctionCall))
 
 
+def _contest_cuda_auth_eval_payload() -> bytes:
+    return json.dumps(
+        {
+            "score_recomputed_from_components": 25.0,
+            "archive_size_bytes": 37_545_489,
+            "avg_segnet_dist": 0.0,
+            "avg_posenet_dist": 0.0,
+            "score_axis": "contest_cuda",
+            "evidence_grade": "contest-CUDA",
+            "lane_tag": "[contest-CUDA Modal A100]",
+            "exact_cuda_eval_complete": True,
+            "score_claim": True,
+            "score_claim_valid": True,
+            "promotion_eligible": True,
+        }
+    ).encode("utf-8")
+
+
+def _contest_cpu_auth_eval_payload() -> bytes:
+    return json.dumps(
+        {
+            "score_recomputed_from_components": 25.0,
+            "archive_size_bytes": 37_545_489,
+            "avg_segnet_dist": 0.0,
+            "avg_posenet_dist": 0.0,
+            "score_axis": "contest_cpu",
+            "evidence_grade": "contest-CPU",
+            "lane_tag": "[contest-CPU Modal Linux x86_64]",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": True,
+        }
+    ).encode("utf-8")
+
+
 def test_function_call_id_accepts_modal_sdk_object_id() -> None:
     assert function_call_id(types.SimpleNamespace(object_id="fc-test")) == "fc-test"
     assert function_call_id(types.SimpleNamespace(function_call_id="fc-alt")) == "fc-alt"
@@ -121,8 +156,82 @@ def test_recover_prefers_canonical_auth_eval_claim_flags(tmp_path: Path) -> None
     assert summary["score_claim"] is False
     assert summary["promotion_eligible"] is False
     assert summary["score_axis"] == "diagnostic_cuda"
-    assert summary["diagnostic_blockers"] == ["inflate_device_policy_cpu"]
+    assert summary["diagnostic_blockers"] == [
+        "unsupported_modal_auth_eval_recovery_axis:diagnostic_cuda",
+        "inflate_device_policy_cpu",
+    ]
     assert summary["inflate_device_policy"] == "cpu"
+
+
+def test_recover_refuses_diagnostic_axis_even_if_artifact_claims_score(
+    tmp_path: Path,
+) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval.py",
+        app="comma-auth-eval",
+        axis="diagnostic_cuda",
+        call_id="fc-test",
+        local_request={},
+        result_json_name="modal_cuda_auth_eval_result.json",
+    )
+
+    payload = json.loads(_contest_cuda_auth_eval_payload().decode("utf-8"))
+    payload["score_axis"] = "diagnostic_cuda"
+    payload["evidence_grade"] = "B"
+    payload["promotion_eligible"] = True
+    result = {
+        "passed": True,
+        "returncode": 0,
+        "score_claim": True,
+        "promotion_eligible": True,
+        "artifacts": {"contest_auth_eval.json": json.dumps(payload).encode("utf-8")},
+    }
+
+    summary = recover_modal_auth_eval(
+        out_dir=tmp_path,
+        timeout_s=0,
+        modal_module=_fake_modal(result),
+    )
+
+    assert summary["status"] == "recovered"
+    assert summary["score_claim"] is False
+    assert summary["promotion_eligible"] is False
+    assert summary["diagnostic_blockers"] == [
+        "unsupported_modal_auth_eval_recovery_axis:diagnostic_cuda"
+    ]
+
+
+def test_recover_accepts_contest_cpu_leaderboard_artifact_without_score_claim(
+    tmp_path: Path,
+) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval_cpu.py",
+        app="comma-auth-eval-cpu",
+        axis="contest_cpu",
+        call_id="fc-test",
+        local_request={},
+        result_json_name="modal_cpu_auth_eval_result.json",
+    )
+
+    result = {
+        "passed": True,
+        "returncode": 0,
+        "score_claim": True,
+        "promotion_eligible": True,
+        "artifacts": {"contest_auth_eval.json": _contest_cpu_auth_eval_payload()},
+    }
+    summary = recover_modal_auth_eval(
+        out_dir=tmp_path,
+        timeout_s=0,
+        modal_module=_fake_modal(result),
+    )
+
+    assert summary["status"] == "recovered"
+    assert summary["score_claim"] is False
+    assert summary["promotion_eligible"] is False
+    assert summary["score_axis"] == "contest_cpu"
 
 
 def test_recover_pending_writes_pending_summary(tmp_path: Path) -> None:
@@ -175,3 +284,104 @@ def test_recover_remote_error_writes_fail_closed_summary(tmp_path: Path) -> None
     assert summary["score_claim"] is False
     assert summary["promotion_eligible"] is False
     assert "remote failed" in summary["error"]
+
+
+def test_recover_contest_cuda_requires_canonical_auth_eval_artifact(
+    tmp_path: Path,
+) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval.py",
+        app="comma-auth-eval",
+        axis="contest_cuda",
+        call_id="fc-test",
+        local_request={},
+        result_json_name="modal_cuda_auth_eval_result.json",
+    )
+
+    result = {
+        "passed": True,
+        "returncode": 0,
+        "score_claim": True,
+        "score_claim_valid": True,
+        "promotion_eligible": True,
+        "score_recomputed_from_components": 25.0,
+    }
+    summary = recover_modal_auth_eval(
+        out_dir=tmp_path,
+        timeout_s=0,
+        modal_module=_fake_modal(result),
+    )
+
+    assert summary["status"] == "recovered"
+    assert summary["score_claim"] is False
+    assert summary["promotion_eligible"] is False
+    assert summary["diagnostic_blockers"] == [
+        "missing_canonical_contest_auth_eval_json"
+    ]
+
+
+def test_recover_contest_cuda_accepts_valid_canonical_auth_eval_artifact(
+    tmp_path: Path,
+) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval.py",
+        app="comma-auth-eval",
+        axis="contest_cuda",
+        call_id="fc-test",
+        local_request={},
+        result_json_name="modal_cuda_auth_eval_result.json",
+    )
+
+    result = {
+        "passed": True,
+        "returncode": 0,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "artifacts": {
+            "contest_auth_eval.json": _contest_cuda_auth_eval_payload(),
+        },
+    }
+    summary = recover_modal_auth_eval(
+        out_dir=tmp_path,
+        timeout_s=0,
+        modal_module=_fake_modal(result),
+    )
+
+    assert summary["status"] == "recovered"
+    assert summary["score_claim"] is True
+    assert summary["promotion_eligible"] is True
+    assert summary["score_axis"] == "contest_cuda"
+
+
+def test_recover_rejects_unsafe_modal_artifact_paths(tmp_path: Path) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval.py",
+        app="comma-auth-eval",
+        axis="contest_cuda",
+        call_id="fc-test",
+        local_request={},
+        result_json_name="modal_cuda_auth_eval_result.json",
+    )
+
+    result = {
+        "passed": True,
+        "returncode": 0,
+        "score_claim": True,
+        "artifacts": {
+            ".": b"{}",
+            "contest_auth_eval.json": _contest_cuda_auth_eval_payload(),
+        },
+    }
+    summary = recover_modal_auth_eval(
+        out_dir=tmp_path,
+        timeout_s=0,
+        modal_module=_fake_modal(result),
+    )
+
+    assert summary["status"] == "invalid_artifacts"
+    assert summary["score_claim"] is False
+    assert not (tmp_path / "contest_auth_eval.json").exists()
+    assert not (tmp_path / "contest_auth_eval.json").exists()

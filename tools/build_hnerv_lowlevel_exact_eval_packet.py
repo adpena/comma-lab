@@ -465,6 +465,83 @@ def _copy_runtime_surface(
     return copied
 
 
+def _prepare_release_surface_dir(
+    *,
+    release_dir: Path,
+    result_dir: Path,
+    source_inflate: Path,
+) -> Path:
+    """Create a clean owned release surface without preserving stale custody files."""
+
+    release_full = _repo_path(release_dir)
+    release_resolved = release_full.resolve(strict=False)
+    result_resolved = _repo_path(result_dir).resolve(strict=False)
+    source_runtime_resolved = _repo_path(source_inflate).parent.resolve(strict=False)
+    protected = {
+        REPO_ROOT.resolve(),
+        result_resolved,
+        source_runtime_resolved,
+        Path("/").resolve(),
+    }
+    protected.update(
+        (REPO_ROOT / rel).resolve(strict=False)
+        for rel in (
+            "docs",
+            "experiments",
+            "experiments/results",
+            "reports",
+            "reverse_engineering",
+            "scripts",
+            "src",
+            "submissions",
+            "tools",
+            "upstream",
+            ".omx",
+        )
+    )
+    if release_resolved in protected:
+        raise ValueError(
+            "refusing to clean unsafe release-surface directory: "
+            f"{release_full}"
+        )
+    try:
+        release_resolved.relative_to(result_resolved)
+    except ValueError as exc:
+        raise ValueError(
+            "refusing to clean release-surface directory outside result-dir: "
+            f"release_surface={release_full} result_dir={_repo_path(result_dir)}"
+        ) from exc
+    default_release_resolved = (
+        result_resolved / DEFAULT_RELEASE_SURFACE_SUBDIR
+    ).resolve(strict=False)
+    if release_full.exists() and not release_full.is_dir():
+        raise NotADirectoryError(
+            f"release-surface path exists but is not a directory: {release_full}"
+        )
+    if release_full.is_dir() and release_resolved != default_release_resolved:
+        manifest_path = release_full / "archive_manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            raise ValueError(
+                "refusing to clean non-default release-surface directory without "
+                f"owned archive_manifest.json: {release_full}"
+            ) from exc
+        if manifest.get("schema") != "hnerv_lowlevel_release_surface_manifest_v1":
+            raise ValueError(
+                "refusing to clean non-default release-surface directory with "
+                f"unrecognized ownership manifest: {release_full}"
+            )
+    if release_full.is_dir():
+        for child in release_full.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+    release_full.mkdir(parents=True, exist_ok=True)
+    return release_full
+
+
 def _changed_sections(candidate_result: dict[str, Any]) -> list[dict[str, Any]]:
     audit = candidate_result.get("candidate_diff_audit")
     if not isinstance(audit, dict):
@@ -1023,8 +1100,11 @@ def build_release_surface(
     candidate_result: dict[str, Any],
 ) -> dict[str, Any]:
     release_dir = args.release_surface_dir
-    release_full = _repo_path(release_dir)
-    release_full.mkdir(parents=True, exist_ok=True)
+    release_full = _prepare_release_surface_dir(
+        release_dir=release_dir,
+        result_dir=args.result_dir,
+        source_inflate=args.inflate_sh,
+    )
 
     archive_identity = _archive_identity(args.archive)
     if archive_identity["sha256"] != candidate_result.get("candidate_archive_sha256"):
@@ -1174,6 +1254,9 @@ def _run_json_cmd(
     *,
     allow_failure: bool = False,
 ) -> dict[str, Any]:
+    output_full = _repo_path(output_path)
+    if output_full.exists():
+        output_full.unlink()
     result = subprocess.run(cmd, cwd=REPO_ROOT, check=False, capture_output=True, text=True)
     payload = {
         "command": _one_liner([".venv/bin/python", *cmd[1:]]),
@@ -1182,14 +1265,14 @@ def _run_json_cmd(
         "stdout_tail": result.stdout[-1000:],
         "stderr_tail": result.stderr[-2000:],
     }
-    if result.returncode != 0 and not allow_failure:
-        raise RuntimeError(
-            f"command failed with exit={result.returncode}: {_one_liner(cmd)}\n{result.stderr[-4000:]}"
-        )
-    if result.returncode != 0 and not _repo_path(output_path).is_file():
+    if result.returncode != 0:
         failure_payload = {
             "schema": "subprocess_json_command_failure_v1",
             "passed": False,
+            "returncode": result.returncode,
+            "command": _one_liner(cmd),
+            "stdout_tail": payload["stdout_tail"],
+            "stderr_tail": payload["stderr_tail"],
             "checks": [
                 {
                     "name": "subprocess_json_output_materialized",
@@ -1199,8 +1282,12 @@ def _run_json_cmd(
                 }
             ],
         }
-        _repo_path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        _repo_path(output_path).write_text(json_text(failure_payload), encoding="utf-8")
+        output_full.parent.mkdir(parents=True, exist_ok=True)
+        output_full.write_text(json_text(failure_payload), encoding="utf-8")
+        if not allow_failure:
+            raise RuntimeError(
+                f"command failed with exit={result.returncode}: {_one_liner(cmd)}\n{result.stderr[-4000:]}"
+            )
     return payload
 
 

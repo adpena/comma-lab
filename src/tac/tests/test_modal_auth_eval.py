@@ -68,6 +68,20 @@ def test_modal_app_has_correct_name(mod):
     assert mod.app.name == "comma-auth-eval"
 
 
+def test_blocking_auth_eval_closes_claim_on_invalid_artifacts() -> None:
+    cuda_text = TOOL_PATH.read_text(encoding="utf-8")
+    cpu_text = CPU_TOOL_PATH.read_text(encoding="utf-8")
+
+    assert "except ModalArtifactWriteError as exc" in cuda_text
+    assert "failed_modal_auth_eval_invalid_artifacts" in cuda_text
+    assert "terminal_modal_auth_eval_claim" in cuda_text
+    assert "raise SystemExit(5) from exc" in cuda_text
+    assert "except ModalArtifactWriteError as exc" in cpu_text
+    assert "failed_modal_cpu_auth_eval_invalid_artifacts" in cpu_text
+    assert "terminal_modal_auth_eval_claim" in cpu_text
+    assert "raise SystemExit(5) from exc" in cpu_text
+
+
 def test_run_auth_eval_function_signature(mod):
     """The function MUST accept archive_bytes (the upload format) and return
     a dict (so local entrypoint can index .get('score'), etc.)."""
@@ -456,6 +470,9 @@ def test_validate_contest_result_accepts_cuda_custody(mod):
         "archive_size_bytes": 456,
         "n_samples": 600,
         "score_recomputed_from_components": 0.99,
+        "evidence_grade": "contest-CUDA",
+        "score_axis": "contest_cuda",
+        "exact_cuda_eval_complete": True,
         "provenance": {
             "device": "cuda",
             "cuda_available": True,

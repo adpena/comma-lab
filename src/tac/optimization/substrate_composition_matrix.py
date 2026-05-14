@@ -973,7 +973,7 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
             target_axis=ScoreAxis.MIXED,
             format_id=0xB1,
-            magic_bytes="WZCR",
+            magic_bytes="WZ1\x00",
             runtime_dep_closure=("torch", "brotli", "numpy"),
             byte_budget_band=(45_000, 75_000),
             predicted_delta_alone_band=(-0.0500, -0.0150),
@@ -1441,6 +1441,9 @@ DISPATCH_COST_USD_MIDPOINT: dict[str, float] = {
     "mlx_mask_renderer": 0.0,  # `[macOS-CPU advisory only]`; no paid remote.
     "dp_sims_renderer": 55.0,
     "diffusion_renderer": 70.0,
+    # ── Cooperative-receiver substrates (2026-05-13) ──
+    "sar_coherent_pose_pairs_substrate": 1.00,
+    "wyner_ziv_cooperative_receiver_substrate": 1.50,
 }
 
 

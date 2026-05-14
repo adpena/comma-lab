@@ -11,6 +11,7 @@ import datetime as dt
 from pathlib import Path
 
 import brotli
+import pytest
 
 from tac.hnerv_lowlevel_packer import sha256_bytes, write_stored_single_member_zip
 from tac.packet_compiler.pr106_sidecar_packet import (
@@ -190,6 +191,120 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
         for row in readiness["blockers"]
     )
     assert (packet_path).is_file()
+
+
+def test_lowlevel_release_surface_rebuild_clears_stale_custody_files(tmp_path: Path) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path)
+    result_dir = tmp_path / "stale_packet"
+    release_surface = result_dir / "release_surface"
+    (release_surface / "stale_dir").mkdir(parents=True)
+    (release_surface / "contest_auth_eval.json").write_text(
+        '{"stale": true}\n',
+        encoding="utf-8",
+    )
+    (release_surface / "stale_dir" / "old_runtime.py").write_text(
+        "print('stale')\n",
+        encoding="utf-8",
+    )
+    (release_surface / "old_runtime.py").write_text(
+        "print('stale')\n",
+        encoding="utf-8",
+    )
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(release_surface),
+            "--now-utc",
+            "2026-05-07T12:00:00Z",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["static_packet_ready"] is True
+    assert not (release_surface / "contest_auth_eval.json").exists()
+    assert not (release_surface / "stale_dir").exists()
+    assert not (release_surface / "old_runtime.py").exists()
+    release_manifest = json.loads(
+        (release_surface / "archive_manifest.json").read_text(encoding="utf-8")
+    )
+    assert release_manifest["contest_auth_eval"]["exists"] is False
+
+
+def test_lowlevel_release_surface_refuses_repo_results_container(tmp_path: Path) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path)
+    result_dir = tmp_path / "packet"
+    result_dir.mkdir()
+
+    with pytest.raises(ValueError, match="unsafe release-surface directory"):
+        module._prepare_release_surface_dir(
+            release_dir=REPO / "experiments" / "results",
+            result_dir=result_dir,
+            source_inflate=fixture["inflate_sh"],
+        )
+
+
+def test_lowlevel_release_surface_refuses_non_default_unowned_dir(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path)
+    result_dir = tmp_path / "packet"
+    release_dir = result_dir / "manual_surface"
+    release_dir.mkdir(parents=True)
+    (release_dir / "unrelated.txt").write_text("do not delete\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-default release-surface"):
+        module._prepare_release_surface_dir(
+            release_dir=release_dir,
+            result_dir=result_dir,
+            source_inflate=fixture["inflate_sh"],
+        )
+    assert (release_dir / "unrelated.txt").is_file()
+
+
+def test_run_json_cmd_overwrites_stale_output_on_allowed_failure(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    output = tmp_path / "pre_submission_compliance.json"
+    output.write_text('{"passed": true, "stale": true}\n', encoding="utf-8")
+
+    def fake_run(*_args, **_kwargs):
+        return subprocess.CompletedProcess(
+            args=["fixture"],
+            returncode=7,
+            stdout="old stdout",
+            stderr="fresh failure",
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    payload = module._run_json_cmd(
+        [sys.executable, "scripts/pre_submission_compliance_check.py"],
+        output,
+        allow_failure=True,
+    )
+
+    assert payload["returncode"] == 7
+    persisted = json.loads(output.read_text(encoding="utf-8"))
+    assert persisted["schema"] == "subprocess_json_command_failure_v1"
+    assert persisted["passed"] is False
+    assert persisted["returncode"] == 7
+    assert "fresh failure" in persisted["stderr_tail"]
+    assert "stale" not in persisted
 
 
 def test_lowlevel_exact_eval_packet_blocks_missing_raw_equivalence(tmp_path: Path) -> None:

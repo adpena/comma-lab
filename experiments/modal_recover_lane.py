@@ -30,6 +30,10 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.deploy.modal.training_claims import append_modal_training_terminal_claim
 from tac.deploy.modal.training_cost import append_modal_training_cost_anchor
+from tac.deploy.modal.auth_eval import (
+    ModalArtifactWriteError,
+    materialize_modal_artifacts,
+)
 
 
 def label_from_modal_result_dir(dirname: str) -> str:
@@ -294,12 +298,41 @@ def recover_one(label: str | None, call_id: str | None) -> int:
     out_dir = REPO_ROOT / "experiments" / "results" / f"lane_{label}_modal"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    n_saved = 0
-    for path, data in result.get("artifacts", {}).items():
-        full = out_dir / path
-        full.parent.mkdir(parents=True, exist_ok=True)
-        full.write_bytes(data)
-        n_saved += 1
+    artifacts = result.get("artifacts", {})
+    try:
+        saved_artifacts = (
+            materialize_modal_artifacts(out_dir=out_dir, artifacts=artifacts)
+            if isinstance(artifacts, dict)
+            else []
+        )
+    except ModalArtifactWriteError as exc:
+        failure = {
+            "schema_version": "modal_lane_recover_summary_v1",
+            "status": "invalid_artifacts",
+            "call_id": call_id,
+            "label": label,
+            "artifact_write_errors": exc.errors,
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+        (out_dir / "modal_recover_summary.json").write_text(
+            json.dumps(failure, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        _print_terminal_claim_summary(
+            _append_terminal_claim_if_requested(
+                out_dir=out_dir,
+                result=failure,
+                status="failed_modal_training_invalid_artifacts",
+            )
+        )
+        print(
+            "  FATAL: Modal returned unsafe or malformed artifacts; "
+            f"wrote fail-closed summary to {out_dir / 'modal_recover_summary.json'}",
+            file=sys.stderr,
+        )
+        return 5
+    n_saved = len(saved_artifacts)
     print(f"  saved {n_saved} artifacts → {out_dir}")
 
     rc = result.get("returncode")

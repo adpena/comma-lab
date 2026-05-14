@@ -48,6 +48,7 @@ from tac.substrates.sar_coherent_pose_pairs.archive import (
     encode_pose_codec_bytes,
 )
 from tac.substrates.sar_coherent_pose_pairs.inflate import (
+    _apply_per_pair_rgb_residual,
     inflate_one_video,
     main_cli,
 )
@@ -154,7 +155,7 @@ def test_pose_codec_int16_byte_estimate_is_closed_form() -> None:
     cfg = SARCoherentConfig(num_pairs=NUM_PAIRS, sar_topk_keep_fraction=0.10)
     codec = SARCoherentPoseCodec(cfg)
     K = cfg.sar_topk()
-    expected = K * cfg.pose_dim * 6 + 8
+    expected = K * cfg.pose_dim * 6
     assert codec.estimate_int16_bytes() == expected
 
 
@@ -195,7 +196,11 @@ def test_pose_codec_bytes_decode_refuses_corrupt_length() -> None:
 
 
 def test_per_pair_residual_quant_dequant_is_int8_bounded() -> None:
-    res = torch.randn(8, PER_PAIR_RESIDUAL_TARGET_BYTES) * 0.5
+    res = torch.linspace(
+        -1.0,
+        1.0,
+        steps=8 * PER_PAIR_RESIDUAL_TARGET_BYTES,
+    ).view(8, PER_PAIR_RESIDUAL_TARGET_BYTES)
     q = quantize_per_pair_residual_int8(res, scale=64.0)
     assert q.dtype == np.int8
     assert q.shape == (8, PER_PAIR_RESIDUAL_TARGET_BYTES)
@@ -508,7 +513,7 @@ def test_score_aware_loss_routes_through_canonical_score_pair_components(monkeyp
         weights=soa_mod.SARCoherentLossWeights(),
     )
     rgb_0 = torch.zeros(1, 3, 4, 4)
-    rgb_1 = torch.ones(1, 3, 4, 4)
+    rgb_1 = torch.full((1, 3, 4, 4), 255.0)
     gt_0 = torch.full((1, 3, 4, 4), 2.0)
     gt_1 = torch.full((1, 3, 4, 4), 3.0)
     bytes_proxy = torch.tensor(37_545_489.0)
@@ -533,6 +538,52 @@ def test_score_aware_loss_routes_through_canonical_score_pair_components(monkeyp
     expected_total = expected_rate + expected_seg + expected_pose
     assert torch.allclose(loss, expected_total, atol=1e-5)
     assert "rate_term" in parts and "seg_term" in parts and "pose_term" in parts
+
+
+def test_per_pair_residual_consumes_tail_bytes() -> None:
+    rgb = torch.full((1, 3, 8, 8), 0.5)
+    residual_a = torch.zeros(50)
+    residual_b = residual_a.clone()
+    residual_b[-1] = 64.0
+
+    out_a, _ = _apply_per_pair_rgb_residual(
+        rgb, rgb, residual_a, int8_scale=64.0
+    )
+    out_b, _ = _apply_per_pair_rgb_residual(
+        rgb, rgb, residual_b, int8_scale=64.0
+    )
+
+    assert not torch.allclose(out_a, out_b)
+
+
+def test_score_aware_loss_rejects_unit_domain_rgb(monkeypatch):
+    import tac.differentiable_eval_roundtrip as eval_roundtrip
+    import tac.substrates.sar_coherent_pose_pairs.score_aware_loss as soa_mod
+
+    monkeypatch.setattr(
+        eval_roundtrip, "apply_eval_roundtrip_during_training", lambda x: x
+    )
+    monkeypatch.setattr(
+        soa_mod,
+        "score_pair_components",
+        lambda **_kwargs: (torch.tensor(0.0), torch.tensor(0.0)),
+    )
+
+    loss_fn = SARCoherentScoreAwareLoss(
+        seg_scorer=object(),
+        pose_scorer=object(),
+        weights=SARCoherentLossWeights(),
+    )
+    with pytest.raises(ValueError, match="unit-domain RGB"):
+        loss_fn(
+            torch.full((1, 3, 4, 4), 0.5),
+            torch.full((1, 3, 4, 4), 255.0),
+            torch.full((1, 3, 4, 4), 128.0),
+            torch.full((1, 3, 4, 4), 128.0),
+            torch.tensor(1000.0),
+            apply_eval_roundtrip=True,
+            noise_std=0.0,
+        )
 
 
 def test_score_aware_loss_refuses_eval_roundtrip_false():

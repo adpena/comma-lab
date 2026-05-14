@@ -714,7 +714,7 @@ def append_platform_training_anchor(
     if marker.is_file():
         try:
             payload = json.loads(marker.read_text(encoding="utf-8"))
-            if isinstance(payload, dict):
+            if isinstance(payload, dict) and payload.get("appended") is True:
                 return {**payload, "already_appended": True}
         except json.JSONDecodeError:
             pass
@@ -809,7 +809,6 @@ def append_platform_training_anchor(
         returncode=returncode_value,
         notes=notes,
     )
-    append_anchor(anchor, posterior_path=posterior_path, lock_path=lock_path)
     manifest = {
         "schema": "platform_training_cost_anchor_append_v1",
         "appended": True,
@@ -858,6 +857,7 @@ def append_platform_training_anchor(
             f"{epochs * _MIN_SEC_PER_EPOCH:.3f}. "
             f"Stub-loop suspected; refusing to write platform training anchor manifest."
         )
+    append_anchor(anchor, posterior_path=posterior_path, lock_path=lock_path)
     # The marker file's JSON payload must match what an idempotent re-run
     # returns. Serialize stably to keep byte-identical output across runs.
     return _write_marker(manifest)

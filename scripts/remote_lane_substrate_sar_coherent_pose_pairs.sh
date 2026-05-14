@@ -45,6 +45,7 @@ DISPATCH_INSTANCE_JOB_ID="${SARC_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_J
 DISPATCH_CLAIMS_PATH="${SARC_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
 HEARTBEAT_PID=""
+CLAIM_VERIFIED=0
 
 log() { echo "[lane-sarc] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
@@ -56,6 +57,53 @@ if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
     log "FATAL: SARC_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"
     exit 21
 fi
+
+CLAIM_PYTHON="${PYBIN:-}"
+if [ -z "$CLAIM_PYTHON" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then
+    CLAIM_PYTHON="$WORKSPACE/.venv/bin/python"
+fi
+if [ -z "$CLAIM_PYTHON" ]; then
+    CLAIM_PYTHON="python3"
+fi
+
+append_terminal_claim() {
+    local rc="$1"
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        log "WARN: claim helper missing; cannot append terminal dispatch claim"
+        return 0
+    fi
+    local status
+    if [ "$rc" -eq 0 ]; then
+        status="completed_sarc_remote_driver"
+    elif [ "${CLAIM_VERIFIED:-0}" != "1" ]; then
+        status="failed_sarc_claim_verification_rc_${rc}"
+    else
+        status="failed_sarc_remote_driver_rc_${rc}"
+    fi
+    "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --force \
+        --lane-id "$LANE_ID" \
+        --platform "$DISPATCH_PLATFORM" \
+        --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
+        --agent "remote_lane_substrate_sar_coherent_pose_pairs" \
+        --status "$status" \
+        --notes "remote_driver_terminal rc=$rc output_dir=$SARC_OUTPUT_DIR" \
+        >> "$LOG_DIR/run.log" 2>&1 || {
+        log "WARN: failed to append terminal dispatch claim status=$status"
+    }
+}
+
+cleanup() {
+    local rc="$?"
+    if [ -n "$HEARTBEAT_PID" ]; then
+        kill "$HEARTBEAT_PID" 2>/dev/null || true
+    fi
+    append_terminal_claim "$rc"
+    exit "$rc"
+}
+trap cleanup EXIT
+
 if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
     log "FATAL: claim helper missing at $WORKSPACE/tools/claim_lane_dispatch.py"
     exit 21
@@ -65,13 +113,33 @@ if [ ! -f "$DISPATCH_CLAIMS_PATH" ]; then
     exit 21
 fi
 
-CLAIM_PYTHON="${PYBIN:-}"
-if [ -z "$CLAIM_PYTHON" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then
-    CLAIM_PYTHON="$WORKSPACE/.venv/bin/python"
+CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
+"$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
+    --claims-path "$DISPATCH_CLAIMS_PATH" \
+    --format json > "$CLAIM_SUMMARY_JSON" || {
+    log "FATAL: claim summary failed for $DISPATCH_CLAIMS_PATH"
+    exit 21
+}
+set +e
+"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY'
+import json
+import sys
+summary_path, lane_id, job_id = sys.argv[1:4]
+payload = json.loads(open(summary_path, encoding="utf-8").read())
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
+        raise SystemExit(0)
+print(f"missing active claim lane={lane_id} job={job_id}", file=sys.stderr)
+raise SystemExit(1)
+PY
+CLAIM_RC=$?
+set -e
+if [ "$CLAIM_RC" -ne 0 ]; then
+    log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
+    exit 21
 fi
-if [ -z "$CLAIM_PYTHON" ]; then
-    CLAIM_PYTHON="python3"
-fi
+CLAIM_VERIFIED=1
+log "stage_0_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
 
 # Stage 0b: NVDEC probe (per CLAUDE.md `feedback_vastai_nvdec_host_variation`).
 if [ -x "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
@@ -156,7 +224,6 @@ log "stage_2_provenance_done"
     done
 ) &
 HEARTBEAT_PID=$!
-trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
 
 # Stage 4: invoke trainer.
 #

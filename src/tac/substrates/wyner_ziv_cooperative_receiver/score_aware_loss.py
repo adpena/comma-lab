@@ -48,6 +48,24 @@ from tac.substrates.score_aware_common import (
 )
 
 
+def _validate_rgb_255_domain(name: str, tensor: torch.Tensor) -> None:
+    """Fail closed when callers pass nonzero unit-domain RGB by mistake."""
+
+    detached = tensor.detach()
+    if not torch.isfinite(detached).all():
+        raise ValueError(f"{name} must contain finite RGB values")
+    min_value = float(detached.min().item())
+    max_value = float(detached.max().item())
+    if min_value < 0.0 or max_value > 255.0:
+        raise ValueError(
+            f"{name} must be in [0, 255]; got min={min_value} max={max_value}"
+        )
+    if max_value > 0.0 and max_value <= 1.0:
+        raise ValueError(
+            f"{name} appears to be unit-domain RGB; expected [0, 255] scorer input"
+        )
+
+
 @dataclass(frozen=True)
 class WynerZivLossWeights:
     """The score-domain Lagrangian weights.
@@ -129,6 +147,13 @@ class WynerZivCooperativeReceiverLoss(torch.nn.Module):
             )
         if noise_std < 0.0:
             raise ValueError(f"noise_std must be >= 0; got {noise_std}")
+        for name, tensor in (
+            ("rgb_0", rgb_0),
+            ("rgb_1", rgb_1),
+            ("gt_rgb_0", gt_rgb_0),
+            ("gt_rgb_1", gt_rgb_1),
+        ):
+            _validate_rgb_255_domain(name, tensor)
 
         # Lazy import per the canonical pattern.
         from tac.differentiable_eval_roundtrip import (

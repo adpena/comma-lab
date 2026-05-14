@@ -1351,6 +1351,60 @@ def test_modal_recover_direct_call_id_falls_back_to_provenance_label() -> None:
     assert mod.label_from_modal_result(result) == label
 
 
+def test_modal_recover_closes_terminal_claim_on_artifact_materialization_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
+    spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+
+    terminal_calls: list[dict[str, object]] = []
+
+    def fake_terminal_claim(**kwargs):
+        terminal_calls.append(kwargs)
+        return {"appended": True, "status": kwargs.get("status")}
+
+    monkeypatch.setattr(mod, "_append_terminal_claim_if_requested", fake_terminal_claim)
+
+    class OutputExpiredError(Exception):
+        pass
+
+    class FunctionCall:
+        @classmethod
+        def from_id(cls, call_id: str):
+            assert call_id == "fc-test"
+            return cls()
+
+        def get(self, timeout: float = 0):
+            return {
+                "returncode": 0,
+                "artifacts": {
+                    ".": b"not a file",
+                    "run.log": b"would otherwise be valid",
+                },
+            }
+
+    fake_modal = types.SimpleNamespace(
+        FunctionCall=FunctionCall,
+        exception=types.SimpleNamespace(OutputExpiredError=OutputExpiredError),
+    )
+    monkeypatch.setitem(sys.modules, "modal", fake_modal)
+
+    rc = mod.recover_one("demo", "fc-test")
+
+    out_dir = tmp_path / "experiments" / "results" / "lane_demo_modal"
+    summary = json.loads((out_dir / "modal_recover_summary.json").read_text())
+    assert rc == 5
+    assert summary["status"] == "invalid_artifacts"
+    assert summary["score_claim"] is False
+    assert terminal_calls
+    assert terminal_calls[0]["status"] == "failed_modal_training_invalid_artifacts"
+
+
 def test_modal_recover_labels_non_cuda_scores_advisory() -> None:
     path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
     spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)

@@ -462,6 +462,8 @@ def _run_lane_inner(
                     "label": label,
                     "lane_script": lane_script,
                     "synced_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "auth_eval_device": "cpu",
+                    "auth_eval_advisory_only": True,
                     "score_claim": False,
                     "promotion_eligible": False,
                     "volume": RESULTS_VOL,
@@ -583,6 +585,10 @@ def _run_lane_inner(
         "stdout_tail": stdout_tail,
         "elapsed_seconds": elapsed,
         "skipped_large_artifacts": skipped_large,
+        "auth_eval_device": "cpu",
+        "auth_eval_advisory_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
     }
 
 
@@ -1047,6 +1053,8 @@ def main(
         "call_id": call_id,
         "wrapper_score_claim": False,
         "inline_auth_eval_contract_required": True,
+        "auth_eval_device": "cpu",
+        "auth_eval_advisory_only": True,
         "score_claim": False,
         "promotion_eligible": False,
         "live_volume": RESULTS_VOL,

@@ -37,7 +37,7 @@ from tac.optimization.substrate_composition_matrix import (
 
 
 def test_inventory_has_expected_count():
-    """48-row inventory: 24 legacy + 15 FIX-J + 9 WAVE-A-2 single-file rows.
+    """50-row inventory: 24 legacy + 15 FIX-J + 9 WAVE-A-2 + 2 cooperative rows.
 
     Legacy 24 = residual basis 5 + pose-axis 3 + self-compression 3 +
     NeRV-family 5 + NeRV/MNeRV/VQVAE 3 + ANR/categorical 2 + magic codec 1 +
@@ -60,10 +60,13 @@ def test_inventory_has_expected_count():
     mlx_mask_renderer, dp_sims_renderer, diffusion_renderer. See
     ``.omx/research/substrate_tradition_taxonomy_20260512.md`` and
     ``feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512.md``.
+
+    Cooperative-receiver wire-in 2026-05-13 added 2 rows: SARC and WZ1.
     """
     rows = canonical_substrate_inventory()
-    assert len(rows) == 48, (
-        f"expected 48 substrate rows (24 legacy + 15 FIX-J + 9 WAVE-A-2), got {len(rows)}"
+    assert len(rows) == 50, (
+        "expected 50 substrate rows (24 legacy + 15 FIX-J + 9 WAVE-A-2 + "
+        f"2 cooperative), got {len(rows)}"
     )
 
 
@@ -266,6 +269,16 @@ def test_magic_codec_is_zero_ev_until_byte_closed_runtime_lands():
     }["magic_codec"]
     assert pareto.predicted_delta_alone_midpoint == 0.0
     assert pareto.estimated_dispatch_cost_usd == 0.0
+
+
+def test_wyner_ziv_magic_matches_archive_grammar():
+    from tac.substrates.wyner_ziv_cooperative_receiver.archive import WZ1_MAGIC
+
+    row = {
+        r.substrate_id: r
+        for r in canonical_substrate_inventory()
+    }["wyner_ziv_cooperative_receiver_substrate"]
+    assert row.magic_bytes.encode("latin1") == WZ1_MAGIC
 
 
 def test_self_with_self_redundant_alpha_zero():

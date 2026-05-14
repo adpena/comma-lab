@@ -35,9 +35,11 @@ import modal
 
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
+    ModalArtifactWriteError,
     claim_modal_auth_eval_dispatch,
     fail_closed_remote_exception_result,
     function_call_id,
+    materialize_modal_artifacts,
     prepare_modal_auth_eval_request,
     terminal_modal_auth_eval_claim,
     write_spawn_metadata,
@@ -240,6 +242,19 @@ def _validate_contest_result(
         )
     if payload.get("n_samples") != REQUIRED_SAMPLES:
         errors.append(f"n_samples={payload.get('n_samples')!r}, expected {REQUIRED_SAMPLES}")
+
+    if expected_device == "cuda":
+        grade = payload.get("evidence_grade")
+        if grade != "contest-CUDA":
+            errors.append(
+                f"evidence_grade={grade!r}; expected 'contest-CUDA'"
+            )
+        if payload.get("score_axis") != "contest_cuda":
+            errors.append(
+                f"score_axis={payload.get('score_axis')!r}; expected 'contest_cuda'"
+            )
+        if payload.get("exact_cuda_eval_complete") is not True:
+            errors.append("exact_cuda_eval_complete is not true")
 
     score = payload.get("score_recomputed_from_components")
     if not isinstance(score, (int, float)) or isinstance(score, bool) or not math.isfinite(float(score)):
@@ -1036,8 +1051,30 @@ def main(
         raise
 
     artifacts = result.pop("artifacts", {})
-    for name, data in sorted(artifacts.items()):
-        (out_dir / name).write_bytes(data)
+    if isinstance(artifacts, dict):
+        try:
+            materialize_modal_artifacts(out_dir=out_dir, artifacts=artifacts)
+        except ModalArtifactWriteError as exc:
+            failure = {
+                "schema_version": "modal_cuda_auth_eval_result_v1",
+                "status": "invalid_artifacts",
+                "artifact_write_errors": exc.errors,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "archive_sha256": archive_sha256,
+                "archive_size_bytes": archive_size_bytes,
+            }
+            write_json(out_dir / "modal_cuda_auth_eval_result.json", failure)
+            terminal_modal_auth_eval_claim(
+                repo_root=Path.cwd(),
+                spec=claim_spec,
+                status="failed_modal_auth_eval_invalid_artifacts",
+                notes=(
+                    "Modal CUDA auth eval returned unsafe/malformed artifacts; "
+                    f"archive_sha256={archive_sha256}; output_dir={out_dir}"
+                ),
+            )
+            raise SystemExit(5) from exc
 
     result["local_output_dir"] = str(out_dir)
     result["archive_path"] = str(archive_path)

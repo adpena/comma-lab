@@ -310,12 +310,12 @@ class _Renderer(nn.Module):
 def slepian_wolf_coset_index(
     source: torch.Tensor, *, num_cosets: int
 ) -> torch.Tensor:
-    """DISCUS coset binning: hash source value into one of ``num_cosets`` cosets.
+    """DISCUS coset binning: quantize source values into reachable cosets.
 
-    A canonical scalar hash: ``int(round(source * num_cosets * 13.37)) % num_cosets``
-    where 13.37 is an irrational-ish multiplier chosen to spread sources across
-    cosets. The receiver applies the SAME hash to candidate disambiguators and
-    selects the one matching the transmitted index.
+    The receiver enumerates scalar representatives and applies the SAME
+    quantizer. This must be reachable and monotone; a hash can make valid
+    transmitted indices unrecoverable when the decoder search grid is smaller
+    than the coset count.
 
     Args:
         source: float tensor in ``[0, 1]`` (e.g., the mean of a small RGB
@@ -327,8 +327,10 @@ def slepian_wolf_coset_index(
     """
     if num_cosets <= 0 or (num_cosets & (num_cosets - 1)) != 0:
         raise ValueError(f"num_cosets must be a positive power of 2; got {num_cosets}")
-    scaled = (source.detach().float().clamp(0.0, 1.0) * float(num_cosets) * 13.37)
-    return scaled.round().to(torch.long) % num_cosets
+    if num_cosets == 1:
+        return torch.zeros_like(source, dtype=torch.long)
+    scaled = source.detach().float().clamp(0.0, 1.0) * float(num_cosets - 1)
+    return scaled.round().to(torch.long).clamp(0, num_cosets - 1)
 
 
 def disambiguate_coset(
@@ -341,9 +343,9 @@ def disambiguate_coset(
     """Pick the coset member nearest to ``side_info`` matching ``coset_index``.
 
     Implementation: enumerate ``search_grid`` candidate values uniformly in
-    ``[0, 1]``, hash each through ``slepian_wolf_coset_index``, and pick
-    the first matching the index. Falls back to the side-info value if no
-    candidate matches (numerical safety net).
+    ``[0, 1]``, quantize each through ``slepian_wolf_coset_index``, and pick
+    the nearest matching candidate. The grid must be at least as large as the
+    coset count so every transmitted index is decodable.
 
     Args:
         side_info: ``(...,)`` predicted Y in ``[0, 1]``.
@@ -355,11 +357,23 @@ def disambiguate_coset(
         Tensor with same shape as ``side_info`` containing the disambiguated
         reconstruction.
     """
+    if coset_index < 0 or coset_index >= num_cosets:
+        raise ValueError(
+            f"coset_index must be in [0, {num_cosets}); got {coset_index}"
+        )
+    if search_grid < num_cosets:
+        raise ValueError(
+            f"search_grid must be >= num_cosets so every transmitted coset is "
+            f"reachable; got search_grid={search_grid} num_cosets={num_cosets}"
+        )
     candidates = torch.linspace(0.0, 1.0, search_grid, device=side_info.device)
     cand_indices = slepian_wolf_coset_index(candidates, num_cosets=num_cosets)
     matching = candidates[cand_indices == coset_index]
     if matching.numel() == 0:
-        return side_info
+        raise ValueError(
+            f"no candidate representative for coset_index={coset_index}; "
+            f"search_grid={search_grid} num_cosets={num_cosets}"
+        )
     diffs = (matching.unsqueeze(0) - side_info.unsqueeze(-1)).abs()
     pick = diffs.argmin(dim=-1)
     return matching[pick]

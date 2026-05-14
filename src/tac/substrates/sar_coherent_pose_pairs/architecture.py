@@ -242,10 +242,11 @@ class SARCoherentPoseCodec(nn.Module):
         """Closed-form bytes for the sparse rFFT bytes (after deduplication).
 
         Layout: K positions × pose_dim × (2 B index + 4 B complex int16 = real
-        int16 + imag int16) = K * pose_dim * 6 + 8 B header.
+        int16 + imag int16) = K * pose_dim * 6. Container headers are counted
+        by the archive grammar, not by this payload estimator.
         """
         K = self.cfg.sar_topk()
-        return K * self.cfg.pose_dim * 6 + 8
+        return K * self.cfg.pose_dim * 6
 
 
 class SARCoherentRenderer(nn.Module):

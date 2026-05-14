@@ -27,6 +27,14 @@ class UnsafeModalArtifactPath(ValueError):
     """Raised when a Modal artifact key would escape the harvest directory."""
 
 
+class ModalArtifactWriteError(RuntimeError):
+    """Raised when one or more Modal artifacts could not be written locally."""
+
+    def __init__(self, errors: list[dict[str, Any]]) -> None:
+        self.errors = errors
+        super().__init__(f"failed to write {len(errors)} Modal artifact(s)")
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -89,7 +97,12 @@ def _safe_harvest_artifact_path(artifacts_dir: Path, relpath: str) -> Path:
 
     raw = str(relpath).replace("\\", "/").strip()
     path = Path(raw)
-    if not raw or path.is_absolute() or any(part in {"", ".."} for part in path.parts):
+    if (
+        not raw
+        or raw in {".", ".."}
+        or path.is_absolute()
+        or any(part in {"", ".."} for part in path.parts)
+    ):
         raise UnsafeModalArtifactPath(f"unsafe Modal artifact path: {relpath!r}")
     root = artifacts_dir.resolve(strict=False)
     target = (artifacts_dir / path).resolve(strict=False)
@@ -100,6 +113,74 @@ def _safe_harvest_artifact_path(artifacts_dir: Path, relpath: str) -> Path:
             f"Modal artifact path escapes harvest root: {relpath!r}"
         ) from exc
     return target
+
+
+def _write_modal_artifacts(
+    *,
+    artifacts_dir: Path,
+    artifacts: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Write Modal artifact payloads and refuse partial-success harvests."""
+
+    planned: list[tuple[str, Path, bytes]] = []
+    errors: list[dict[str, Any]] = []
+    for relpath, data in artifacts.items():
+        try:
+            if not isinstance(relpath, str):
+                raise TypeError(
+                    f"Modal artifact keys must be str, got {type(relpath).__name__}"
+                )
+            target = _safe_harvest_artifact_path(artifacts_dir, relpath)
+            if not isinstance(data, (bytes, bytearray, memoryview)):
+                raise TypeError(
+                    "Modal artifact values must be bytes-like, "
+                    f"got {type(data).__name__}"
+                )
+            planned.append((relpath, target, bytes(data)))
+        except Exception as exc:
+            errors.append(
+                {
+                    "relative_path": str(relpath),
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc)[:1000],
+                }
+            )
+            print(f"    FAILED {relpath}: {exc}")
+    if errors:
+        raise ModalArtifactWriteError(errors)
+
+    written_paths: list[Path] = []
+    written: list[dict[str, Any]] = []
+    for relpath, target, payload in planned:
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(payload)
+        except Exception as exc:  # pragma: no cover - filesystem edge
+            for path in written_paths:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+            print(f"    FAILED {relpath}: {exc}")
+            raise ModalArtifactWriteError(
+                [
+                    {
+                        "relative_path": relpath,
+                        "target": str(target),
+                        "error_type": type(exc).__name__,
+                        "error_message": str(exc)[:1000],
+                    }
+                ]
+            ) from exc
+        written_paths.append(target)
+        written.append(
+            {
+                "relative_path": relpath,
+                "path": str(target),
+                "bytes": len(payload),
+            }
+        )
+    return written
 
 
 def _terminal_harvest_summary(summary: dict[str, Any] | None) -> bool:
@@ -114,7 +195,10 @@ def _terminal_harvest_summary(summary: dict[str, Any] | None) -> bool:
     return (
         status in {"expired", "function_timeout"}
         or status.startswith("error_")
-        or crash_kind in {"RESULT_CACHE_EXPIRED", "FUNCTION_TIMEOUT"}
+        or crash_kind in {
+            "RESULT_CACHE_EXPIRED",
+            "FUNCTION_TIMEOUT",
+        }
         or crash_kind.startswith("ERROR_")
     )
 
@@ -130,8 +214,10 @@ def _has_harvest_payload_files(artifacts_dir: Path) -> bool:
 def _already_harvested(out_dir: Path, artifacts_dir: Path) -> bool:
     """Return whether local state is terminal enough to avoid re-polling Modal."""
 
-    if (out_dir / "modal_training_terminal_claim.json").is_file():
-        return True
+    terminal_marker = out_dir / "modal_training_terminal_claim.json"
+    if terminal_marker.is_file():
+        marker = _read_json(terminal_marker)
+        return bool(isinstance(marker, dict) and marker.get("appended") is True)
     if (out_dir / "harvest_summary.json").is_file():
         return True
     if _has_harvest_payload_files(artifacts_dir):
@@ -443,13 +529,10 @@ def harvest_modal_calls(
             )
 
             artifacts_dir.mkdir(exist_ok=True)
-            for relpath, data in result.get("artifacts", {}).items():
-                target = _safe_harvest_artifact_path(artifacts_dir, str(relpath))
-                target.parent.mkdir(parents=True, exist_ok=True)
-                try:
-                    target.write_bytes(data)
-                except Exception as exc:  # pragma: no cover - filesystem edge
-                    print(f"    SKIP {relpath}: {exc}")
+            artifact_files = _write_modal_artifacts(
+                artifacts_dir=artifacts_dir,
+                artifacts=dict(result.get("artifacts", {})),
+            )
 
             (artifacts_dir / "_stdout_tail.txt").write_text(
                 result.get("stdout_tail", "") or "",
@@ -477,6 +560,7 @@ def harvest_modal_calls(
                 "elapsed_seconds": elapsed,
                 "timed_out": timed_out,
                 "n_artifacts": n_artifacts,
+                "artifact_files": artifact_files,
                 "crash_kind": crash_kind,
                 "cost_band_anchor": cost_anchor,
                 "terminal_claim": terminal_claim,
@@ -495,6 +579,7 @@ def harvest_modal_calls(
                     "elapsed_seconds": elapsed,
                     "timed_out": timed_out,
                     "n_artifacts": n_artifacts,
+                    "artifact_files": artifact_files,
                     "crash_kind": crash_kind,
                     "cost_band_anchor": cost_anchor,
                     "terminal_claim": terminal_claim,
@@ -613,6 +698,46 @@ def harvest_modal_calls(
                     status="unsafe_artifact_path",
                     call_id=call_id,
                     harvested=unsafe_summary,
+                    terminal_claim=terminal_claim,
+                    terminal_evidence=terminal_evidence,
+                )
+            )
+        except ModalArtifactWriteError as exc:
+            print(f"  ARTIFACT WRITE FAILURE: {exc}")
+            terminal_claim = append_modal_training_terminal_claim(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                metadata=meta,
+                result=None,
+                status="failed_modal_training_invalid_artifacts",
+                agent="codex:harvest_modal_calls",
+            )
+            terminal_evidence = _append_terminal_claim_evidence(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                terminal_claim=terminal_claim,
+            )
+            artifacts_dir.mkdir(exist_ok=True)
+            write_error_summary = {
+                "status": "invalid_artifacts",
+                "error_type": type(exc).__name__,
+                "error_message": str(exc)[:1000],
+                "artifact_write_errors": exc.errors,
+                "crash_kind": "INVALID_MODAL_ARTIFACTS",
+                "n_artifacts": n_artifacts,
+                "terminal_claim": terminal_claim,
+                "terminal_evidence": terminal_evidence,
+            }
+            (artifacts_dir / "_harvest_summary.json").write_text(
+                json.dumps(write_error_summary, indent=2, default=str),
+                encoding="utf-8",
+            )
+            summary.append(
+                modal_training_summary_entry(
+                    label=label,
+                    status="invalid_artifacts",
+                    call_id=call_id,
+                    harvested=write_error_summary,
                     terminal_claim=terminal_claim,
                     terminal_evidence=terminal_evidence,
                 )

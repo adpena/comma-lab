@@ -65,7 +65,7 @@ def append_modal_training_terminal_claim(
         try:
             existing = marker.read_text(encoding="utf-8")
             payload = json.loads(existing)
-            if isinstance(payload, dict):
+            if isinstance(payload, dict) and payload.get("appended") is True:
                 return {**payload, "already_appended": True}
         except Exception:
             pass

@@ -196,6 +196,7 @@ def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:
     assert "append_modal_training_cost_anchor" in text
     assert "append_modal_training_terminal_claim" in text
     assert "_append_terminal_claim_evidence" in text
+    assert "failed_modal_training_invalid_artifacts" in text
     assert '"cost_band_anchor": cost_anchor' in text
     assert '"terminal_claim": terminal_claim' in text
     assert '"terminal_evidence": terminal_evidence' in text
@@ -242,9 +243,49 @@ def test_harvest_modal_calls_rejects_unsafe_artifact_paths(tmp_path: Path) -> No
     assert mod._safe_harvest_artifact_path(root, "nested/result.json") == (
         root / "nested" / "result.json"
     )
-    for unsafe in ("../escape.json", "/tmp/escape.json", "nested/../../escape.json"):
+    for unsafe in (
+        ".",
+        "../escape.json",
+        "/tmp/escape.json",
+        "nested/../../escape.json",
+    ):
         with pytest.raises(mod.UnsafeModalArtifactPath):
             mod._safe_harvest_artifact_path(root, unsafe)
+
+
+def test_harvest_modal_calls_refuses_partial_artifact_write_success(tmp_path: Path) -> None:
+    mod = _load_harvest_module()
+    root = tmp_path / "harvested_artifacts"
+
+    with pytest.raises(mod.ModalArtifactWriteError) as exc_info:
+        mod._write_modal_artifacts(
+            artifacts_dir=root,
+            artifacts={
+                "ok/result.json": b"{}",
+                "bad/not-bytes.json": {"not": "bytes"},
+            },
+        )
+
+    assert not (root / "ok" / "result.json").exists()
+    assert exc_info.value.errors[0]["relative_path"] == "bad/not-bytes.json"
+    assert exc_info.value.errors[0]["error_type"] == "TypeError"
+
+
+def test_harvest_modal_calls_refuses_non_string_artifact_keys(tmp_path: Path) -> None:
+    mod = _load_harvest_module()
+    root = tmp_path / "harvested_artifacts"
+
+    with pytest.raises(mod.ModalArtifactWriteError) as exc_info:
+        mod._write_modal_artifacts(
+            artifacts_dir=root,
+            artifacts={
+                7: b"{}",
+            },
+        )
+
+    assert exc_info.value.errors[0]["relative_path"] == "7"
+    assert exc_info.value.errors[0]["error_type"] == "TypeError"
+    assert not (root / "7").exists()
 
 
 def test_harvest_modal_calls_appends_terminal_claim_evidence_once(tmp_path: Path) -> None:
@@ -336,3 +377,9 @@ def test_harvest_modal_calls_repolls_generated_nonterminal_summary_only(
         encoding="utf-8",
     )
     assert mod._already_harvested(out_dir, artifacts) is True
+
+    (artifacts / "_harvest_summary.json").write_text(
+        json.dumps({"status": "artifact_write_failed_retryable"}),
+        encoding="utf-8",
+    )
+    assert mod._already_harvested(out_dir, artifacts) is False

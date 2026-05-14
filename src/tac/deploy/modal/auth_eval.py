@@ -23,6 +23,7 @@ from tac.deploy.claims import (
     terminal_dispatch_claim,
     utc_now,
 )
+from tac.auth_eval_result import parse_auth_eval_score_claim
 from tac.repo_io import read_json, write_json
 
 SPAWN_SCHEMA = "modal_auth_eval_spawn_v1"
@@ -47,6 +48,18 @@ SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS = (
     "secret",
     "token",
 )
+
+
+class UnsafeModalArtifactPath(ValueError):
+    """Raised when a Modal artifact key would escape its recovery directory."""
+
+
+class ModalArtifactWriteError(RuntimeError):
+    """Raised when Modal artifact materialization cannot be completed safely."""
+
+    def __init__(self, errors: list[dict[str, Any]]) -> None:
+        self.errors = errors
+        super().__init__(f"failed to materialize {len(errors)} Modal artifact(s)")
 
 
 @dataclass(frozen=True)
@@ -151,6 +164,89 @@ def safe_artifact_label(value: str) -> str:
 
     label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
     return label or "archive"
+
+
+def safe_modal_artifact_path(artifacts_dir: Path, relpath: str) -> Path:
+    """Return a safe local target for an untrusted Modal artifact key."""
+
+    raw = str(relpath).replace("\\", "/").strip()
+    path = Path(raw)
+    if (
+        not raw
+        or raw in {".", ".."}
+        or path.is_absolute()
+        or any(part in {"", ".."} for part in path.parts)
+    ):
+        raise UnsafeModalArtifactPath(f"unsafe Modal artifact path: {relpath!r}")
+    root = artifacts_dir.resolve(strict=False)
+    target = (artifacts_dir / path).resolve(strict=False)
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise UnsafeModalArtifactPath(
+            f"Modal artifact path escapes recovery root: {relpath!r}"
+        ) from exc
+    return target
+
+
+def materialize_modal_artifacts(
+    *,
+    out_dir: Path,
+    artifacts: dict[str, Any],
+) -> list[str]:
+    """Safely write every Modal artifact and return its relative names.
+
+    The function validates all paths and byte payload types before writing any
+    file, so unsafe or malformed provider results cannot leave a partial local
+    recovery tree that later looks harvested.
+    """
+
+    planned: list[tuple[str, Path, bytes]] = []
+    errors: list[dict[str, Any]] = []
+    for name, data in sorted(artifacts.items(), key=lambda item: str(item[0])):
+        try:
+            if not isinstance(name, str):
+                raise TypeError(f"artifact key must be str, got {type(name).__name__}")
+            if not isinstance(data, (bytes, bytearray, memoryview)):
+                raise TypeError(
+                    "artifact payload must be bytes-like, "
+                    f"got {type(data).__name__}"
+                )
+            planned.append((name, safe_modal_artifact_path(out_dir, name), bytes(data)))
+        except Exception as exc:
+            errors.append(
+                {
+                    "relative_path": str(name),
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc)[:1000],
+                }
+            )
+    if errors:
+        raise ModalArtifactWriteError(errors)
+
+    written: list[Path] = []
+    for _name, target, data in planned:
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            written.append(target)
+        except Exception as exc:  # pragma: no cover - filesystem edge
+            for path in written:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+            raise ModalArtifactWriteError(
+                [
+                    {
+                        "relative_path": _name,
+                        "target": str(target),
+                        "error_type": type(exc).__name__,
+                        "error_message": str(exc)[:1000],
+                    }
+                ]
+            ) from exc
+    return [name for name, _target, _data in planned]
 
 
 def function_call_id(call: Any) -> str:
@@ -446,29 +542,49 @@ def _recovered_claim_flags(
     *,
     out_dir: Path,
     result_without_artifacts: dict[str, Any],
+    score_axis: str,
 ) -> dict[str, Any]:
     """Return claim flags, preferring canonical auth-eval artifact custody."""
 
     flags: dict[str, Any] = {
-        "score_claim": bool(result_without_artifacts.get("score_claim")),
-        "promotion_eligible": bool(result_without_artifacts.get("promotion_eligible")),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "artifact_required": True,
     }
     artifact = out_dir / "contest_auth_eval.json"
     if not artifact.is_file():
+        flags["diagnostic_blockers"] = ["missing_canonical_contest_auth_eval_json"]
         return flags
     try:
         payload = read_json(artifact)
     except Exception:
+        flags["diagnostic_blockers"] = ["invalid_canonical_contest_auth_eval_json"]
         return flags
     if not isinstance(payload, dict):
+        flags["diagnostic_blockers"] = ["invalid_canonical_contest_auth_eval_json"]
         return flags
 
-    if "score_claim" in payload or "score_claim_valid" in payload:
-        flags["score_claim"] = _truthy(payload.get("score_claim")) or _truthy(
-            payload.get("score_claim_valid")
-        )
-    if "promotion_eligible" in payload:
-        flags["promotion_eligible"] = _truthy(payload.get("promotion_eligible"))
+    if score_axis == "contest_cuda":
+        claim = parse_auth_eval_score_claim(payload, required_score_axis=score_axis)
+        if claim is not None:
+            flags["score_claim"] = True
+            flags["promotion_eligible"] = _truthy(payload.get("promotion_eligible"))
+        else:
+            flags["diagnostic_blockers"] = [
+                f"canonical_auth_eval_not_valid_{score_axis}_score_claim"
+            ]
+    elif score_axis == "contest_cpu":
+        if (
+            payload.get("score_axis") != "contest_cpu"
+            or payload.get("evidence_grade") != "contest-CPU"
+        ):
+            flags["diagnostic_blockers"] = [
+                "canonical_auth_eval_not_valid_contest_cpu_leaderboard_artifact"
+            ]
+    else:
+        flags["diagnostic_blockers"] = [
+            f"unsupported_modal_auth_eval_recovery_axis:{score_axis or '<missing>'}"
+        ]
     for key in (
         "score_axis",
         "evidence_grade",
@@ -476,7 +592,14 @@ def _recovered_claim_flags(
         "inflate_device_policy",
     ):
         if key in payload:
-            flags[key] = payload.get(key)
+            if key == "diagnostic_blockers":
+                existing = flags.get("diagnostic_blockers")
+                existing_list = existing if isinstance(existing, list) else []
+                payload_blockers = payload.get(key)
+                payload_list = payload_blockers if isinstance(payload_blockers, list) else []
+                flags[key] = [*existing_list, *payload_list]
+            else:
+                flags[key] = payload.get(key)
     provenance = payload.get("provenance")
     if isinstance(provenance, dict):
         for key in ("inflate_device_policy", "inflate_env_override_mode"):
@@ -555,13 +678,24 @@ def recover_modal_auth_eval(
     artifacts = result.get("artifacts")
     artifact_names: list[str] = []
     if isinstance(artifacts, dict):
-        for name, data in sorted(artifacts.items()):
-            if not isinstance(name, str) or not isinstance(data, (bytes, bytearray)):
-                continue
-            target = out_dir / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(bytes(data))
-            artifact_names.append(name)
+        try:
+            artifact_names = materialize_modal_artifacts(
+                out_dir=out_dir,
+                artifacts=artifacts,
+            )
+        except ModalArtifactWriteError as exc:
+            summary = {
+                "schema_version": "modal_auth_eval_recover_summary_v1",
+                "status": "invalid_artifacts",
+                "call_id": resolved_call_id,
+                "output_dir": str(out_dir),
+                "recovered_at_utc": utc_now(),
+                "artifact_write_errors": exc.errors,
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
+            return summary
 
     result_without_artifacts = {k: v for k, v in result.items() if k != "artifacts"}
     result_name = result_json_name or str(
@@ -571,6 +705,7 @@ def recover_modal_auth_eval(
     claim_flags = _recovered_claim_flags(
         out_dir=out_dir,
         result_without_artifacts=result_without_artifacts,
+        score_axis=str(metadata.get("axis") or ""),
     )
 
     summary = {

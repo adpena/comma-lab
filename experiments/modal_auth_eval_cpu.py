@@ -56,9 +56,11 @@ import modal
 
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
+    ModalArtifactWriteError,
     claim_modal_auth_eval_dispatch,
     fail_closed_remote_exception_result,
     function_call_id,
+    materialize_modal_artifacts,
     prepare_modal_auth_eval_request,
     terminal_modal_auth_eval_claim,
     write_spawn_metadata,
@@ -909,8 +911,30 @@ def main(
         raise
 
     artifacts = result.pop("artifacts", {})
-    for name, data in sorted(artifacts.items()):
-        (out_dir / name).write_bytes(data)
+    if isinstance(artifacts, dict):
+        try:
+            materialize_modal_artifacts(out_dir=out_dir, artifacts=artifacts)
+        except ModalArtifactWriteError as exc:
+            failure = {
+                "schema_version": "modal_cpu_auth_eval_result_v1",
+                "status": "invalid_artifacts",
+                "artifact_write_errors": exc.errors,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "archive_sha256": archive_sha256,
+                "archive_size_bytes": archive_size_bytes,
+            }
+            write_json(out_dir / "modal_cpu_auth_eval_result.json", failure)
+            terminal_modal_auth_eval_claim(
+                repo_root=Path.cwd(),
+                spec=claim_spec,
+                status="failed_modal_cpu_auth_eval_invalid_artifacts",
+                notes=(
+                    "Modal CPU auth eval returned unsafe/malformed artifacts; "
+                    f"archive_sha256={archive_sha256}; output_dir={out_dir}"
+                ),
+            )
+            raise SystemExit(5) from exc
 
     result["local_output_dir"] = str(out_dir)
     result["archive_path"] = str(archive_path)

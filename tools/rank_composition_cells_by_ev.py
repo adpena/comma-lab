@@ -246,6 +246,81 @@ class PosteriorSummary:
     most_recent_authoritative_tag: str | None
 
 
+def _anchor_score_value(row: dict[str, Any]) -> float | None:
+    score = row.get("score_value")
+    try:
+        score_f = float(score) if score is not None else None
+    except (TypeError, ValueError):
+        return None
+    if score_f is None or not math.isfinite(score_f):
+        return None
+    return score_f
+
+
+def _anchor_axis(row: dict[str, Any]) -> str | None:
+    for key in ("score_axis", "axis", "device"):
+        value = row.get(key)
+        if not isinstance(value, str):
+            continue
+        token = value.strip().lower().replace("-", "_")
+        if token in {"cuda", "contest_cuda"}:
+            return "cuda"
+        if token in {"cpu", "contest_cpu"}:
+            return "cpu"
+    return None
+
+
+def _first_string(row: dict[str, Any], keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    provenance = row.get("provenance")
+    if isinstance(provenance, dict):
+        for key in keys:
+            value = provenance.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return ""
+
+
+def _anchor_is_linux_x86_64(row: dict[str, Any]) -> bool:
+    system = _first_string(
+        row,
+        ("platform_system", "provenance_platform_system", "os", "runner_os"),
+    ).lower()
+    machine = _first_string(
+        row,
+        (
+            "platform_machine",
+            "provenance_platform_machine",
+            "machine",
+            "arch",
+            "architecture",
+            "runner_arch",
+        ),
+    ).lower()
+    if system == "linux" and machine in {"x86_64", "amd64"}:
+        return True
+    hardware = _first_string(row, ("hardware", "runner", "host", "platform")).lower()
+    return "linux" in hardware and ("x86_64" in hardware or "amd64" in hardware)
+
+
+def _is_authoritative_anchor_row(row: dict[str, Any]) -> bool:
+    """Return True only for score-axis-explicit contest authority rows."""
+    if _anchor_score_value(row) is None:
+        return False
+    tag = str(row.get("evidence_tag") or "")
+    axis = _anchor_axis(row)
+    if tag == "[contest-CUDA]":
+        return axis == "cuda"
+    if tag in ("[contest-CPU GHA Linux x86_64]", "[contest-CPU GHA]"):
+        return axis == "cpu"
+    if tag == "[contest-CPU]":
+        return axis == "cpu" and _anchor_is_linux_x86_64(row)
+    return False
+
+
 def load_posterior_summary(
     path: Path | None,
 ) -> dict[str, PosteriorSummary]:
@@ -286,43 +361,22 @@ def load_posterior_summary(
             key=lambda r: str(r.get("observed_at_utc") or ""),
             reverse=True,
         )
-        # Find first authoritative (CUDA / CPU GHA Linux) row.
+        # Find authoritative rows. Authority requires both the evidence tag
+        # and a matching score-axis field; a bare tag can be stale prose.
         authoritative_score: float | None = None
         authoritative_tag: str | None = None
         n_auth = 0
         n_adv = 0
         for r in rows:
-            tag = str(r.get("evidence_tag") or "")
-            score = r.get("score_value")
-            try:
-                score_f = float(score) if score is not None else None
-            except (TypeError, ValueError):
-                score_f = None
-            is_auth = tag in (
-                "[contest-CUDA]",
-                "[contest-CPU GHA Linux x86_64]",
-                "[contest-CPU GHA]",
-                "[contest-CPU]",
-            )
-            if is_auth:
+            if _is_authoritative_anchor_row(r):
                 n_auth += 1
             else:
                 n_adv += 1
         # Look for most-recent authoritative.
         for r in rows_sorted:
-            tag = str(r.get("evidence_tag") or "")
-            if tag in (
-                "[contest-CUDA]",
-                "[contest-CPU GHA Linux x86_64]",
-                "[contest-CPU GHA]",
-                "[contest-CPU]",
-            ):
-                v = r.get("score_value")
-                try:
-                    authoritative_score = float(v) if v is not None else None
-                except (TypeError, ValueError):
-                    authoritative_score = None
-                authoritative_tag = tag
+            if _is_authoritative_anchor_row(r):
+                authoritative_score = _anchor_score_value(r)
+                authoritative_tag = str(r.get("evidence_tag") or "")
                 break
 
         out[cls] = PosteriorSummary(
@@ -582,6 +636,15 @@ def rank_cells(
         if cell.semantic_compatibility_warning is not None:
             blockers.append(
                 f"semantic_compatibility_warning: {cell.semantic_compatibility_warning}"
+            )
+        if lane_level < 2:
+            blockers.append(
+                f"lane_level_below_L2_exact_eval_not_dispatchable: readiness=L{lane_level}"
+            )
+        if ps.n_authoritative_anchors <= 0:
+            blockers.append(
+                "missing_authoritative_anchor_for_rank_dispatch: "
+                "rank row is planning signal until a contest-CPU/CUDA anchor exists"
             )
 
         out.append(

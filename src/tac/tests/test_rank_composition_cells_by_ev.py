@@ -112,6 +112,76 @@ def test_posterior_summary_extracts_per_class_anchors(tmp_path: Path):
     assert summary["test_class_b"].n_advisory_anchors == 1
 
 
+def test_posterior_summary_rejects_bare_cpu_tag_without_hardware_as_authoritative(
+    tmp_path: Path,
+):
+    payload = {
+        "schema": "tac_continual_learning_posterior_v1",
+        "accepted_anchor_history": [
+            {
+                "axis": "cpu",
+                "architecture_class": "test_class",
+                "evidence_tag": "[contest-CPU]",
+                "score_value": 0.190,
+                "observed_at_utc": "2026-05-13T10:00:00+00:00",
+            },
+        ],
+    }
+    p = tmp_path / "posterior.json"
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    summary = load_posterior_summary(p)
+    assert summary["test_class"].n_authoritative_anchors == 0
+    assert summary["test_class"].n_advisory_anchors == 1
+    assert summary["test_class"].most_recent_authoritative_score is None
+
+
+def test_posterior_summary_accepts_plain_cpu_tag_with_linux_x86_64_hardware(
+    tmp_path: Path,
+):
+    payload = {
+        "schema": "tac_continual_learning_posterior_v1",
+        "accepted_anchor_history": [
+            {
+                "axis": "cpu",
+                "architecture_class": "test_class",
+                "evidence_tag": "[contest-CPU]",
+                "score_value": 0.190,
+                "platform_system": "Linux",
+                "platform_machine": "x86_64",
+                "observed_at_utc": "2026-05-13T10:00:00+00:00",
+            },
+        ],
+    }
+    p = tmp_path / "posterior.json"
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    summary = load_posterior_summary(p)
+    assert summary["test_class"].n_authoritative_anchors == 1
+    assert summary["test_class"].n_advisory_anchors == 0
+    assert summary["test_class"].most_recent_authoritative_score == pytest.approx(
+        0.190
+    )
+
+
+def test_posterior_summary_rejects_axis_tag_mismatch(tmp_path: Path):
+    payload = {
+        "schema": "tac_continual_learning_posterior_v1",
+        "accepted_anchor_history": [
+            {
+                "axis": "cpu",
+                "architecture_class": "test_class",
+                "evidence_tag": "[contest-CUDA]",
+                "score_value": 0.190,
+                "observed_at_utc": "2026-05-13T10:00:00+00:00",
+            },
+        ],
+    }
+    p = tmp_path / "posterior.json"
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    summary = load_posterior_summary(p)
+    assert summary["test_class"].n_authoritative_anchors == 0
+    assert summary["test_class"].n_advisory_anchors == 1
+
+
 def test_posterior_summary_handles_unparseable_json(tmp_path: Path):
     p = tmp_path / "bad.json"
     p.write_text("{not-json", encoding="utf-8")
@@ -170,6 +240,21 @@ def test_new_cooperative_receiver_substrates_are_ranked_inventory_members():
     ranked_ids = {row.substrate_id for row in rows}
     assert "sar_coherent_pose_pairs_substrate" in ranked_ids
     assert "wyner_ziv_cooperative_receiver_substrate" in ranked_ids
+
+
+def test_l1_no_anchor_rows_are_explicitly_blocked_from_dispatch():
+    rows = rank_cells(
+        only_with_primitives=False,
+        lane_levels={"wyner_ziv_cooperative_receiver_substrate": 1},
+        posterior_summary={},
+    )
+    wz = next(
+        row
+        for row in rows
+        if row.substrate_id == "wyner_ziv_cooperative_receiver_substrate"
+    )
+    assert any("lane_level_below_L2" in blocker for blocker in wz.blockers)
+    assert any("missing_authoritative_anchor" in blocker for blocker in wz.blockers)
 
 
 def test_rank_cells_filters_to_only_with_primitives():
