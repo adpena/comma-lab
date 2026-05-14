@@ -158,7 +158,7 @@ def test_recover_cancelled_provider_call_persists_terminal_summary(
     class CancelledCall:
         def get(self, *, timeout):
             assert timeout == 0.0
-            raise RuntimeError("Function call was cancelled by user.")
+            raise RuntimeError("Function call was cancelled by user. | bad\ncell")
 
     terminal_calls: list[dict[str, object]] = []
     monkeypatch.setattr(mod, "_function_call_from_id", lambda call_id: CancelledCall())
@@ -177,6 +177,13 @@ def test_recover_cancelled_provider_call_persists_terminal_summary(
     assert summary["promotion_eligible"] is False
     assert summary["provider_exception_type"] == "RuntimeError"
     assert "cancelled by user" in summary["provider_exception_message"]
+    assert summary["lane_id"] == "hdm8_cancelled_probe"
+    assert summary["instance_job_id"] == "hdm8_cancelled_probe_job"
+    assert summary["terminal_claim_closed"] is True
+    assert (
+        summary["terminal_claim_status"]
+        == "cancelled_modal_hdm8_postfilter_sweep_no_score_claim"
+    )
     persisted = json.loads(
         (out_dir / "modal_hdm8_postfilter_sweep_recover_summary.json").read_text()
     )
@@ -187,6 +194,8 @@ def test_recover_cancelled_provider_call_persists_terminal_summary(
         == "cancelled_modal_hdm8_postfilter_sweep_no_score_claim"
     )
     assert "score_claim=false" in terminal_calls[0]["notes"]
+    assert "|" not in terminal_calls[0]["notes"]
+    assert "\n" not in terminal_calls[0]["notes"]
 
 
 def test_recover_cancelled_provider_call_can_skip_claim_close(
@@ -215,6 +224,61 @@ def test_recover_cancelled_provider_call_can_skip_claim_close(
 
     assert summary["status"] == "cancelled_provider_function_call"
     assert summary["passed"] is False
+    assert summary["terminal_claim_status"] == "skipped_no_close_claim"
+
+
+def test_recover_invalid_non_dict_result_fails_and_closes_claim(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_module()
+    out_dir = tmp_path / "invalid_result"
+    out_dir.mkdir()
+    (out_dir / "modal_hdm8_postfilter_sweep_spawn.json").write_text(
+        json.dumps(
+            {
+                "call_id": "fc-invalid",
+                "lane_id": "hdm8_invalid_probe",
+                "instance_job_id": "hdm8_invalid_probe_job",
+                "claim_agent": "codex:test",
+                "local_request": {
+                    "archive_sha256": "a" * 64,
+                    "archive_size_bytes": 123,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class InvalidCall:
+        def get(self, *, timeout):
+            return ["not", "a", "dict"]
+
+    terminal_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(mod, "_function_call_from_id", lambda call_id: InvalidCall())
+    monkeypatch.setattr(
+        mod,
+        "terminal_dispatch_claim",
+        lambda **kwargs: terminal_calls.append(kwargs),
+    )
+
+    summary = mod.recover_detached(output_dir=out_dir)
+
+    assert summary["status"] == "invalid_result"
+    assert summary["passed"] is False
+    assert summary["returncode"] == 5
+    assert summary["axis"] == mod.AXIS
+    assert summary["archive_sha256"] == "a" * 64
+    assert summary["archive_size_bytes"] == 123
+    assert summary["terminal_claim_closed"] is True
+    assert (
+        summary["terminal_claim_status"]
+        == "failed_modal_hdm8_postfilter_sweep_invalid_result_no_score_claim"
+    )
+    assert terminal_calls
+    assert (
+        terminal_calls[0]["status"]
+        == "failed_modal_hdm8_postfilter_sweep_invalid_result_no_score_claim"
+    )
 
 
 def test_non_dry_run_requires_claim_fields_before_remote(tmp_path: Path, monkeypatch) -> None:

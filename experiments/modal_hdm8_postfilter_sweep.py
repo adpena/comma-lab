@@ -939,6 +939,82 @@ def _function_call_from_id(call_id: str) -> Any:
     return function_call.from_id(call_id)
 
 
+def _claim_note_fragment(value: Any, *, max_len: int = 240) -> str:
+    """Return text safe for the markdown dispatch-claim table cell."""
+
+    text = str(value)
+    safe = "".join(" " if char == "|" or ord(char) < 0x20 else char for char in text)
+    return " ".join(safe.split())[:max_len]
+
+
+def _recovery_identity_fields(metadata: dict[str, Any]) -> dict[str, Any]:
+    request = metadata.get("local_request") if isinstance(metadata, dict) else None
+    if not isinstance(request, dict):
+        request = {}
+    fields: dict[str, Any] = {
+        "lane_id": metadata.get("lane_id"),
+        "instance_job_id": metadata.get("instance_job_id"),
+        "claim_agent": metadata.get("claim_agent"),
+    }
+    if request.get("archive_sha256") is not None:
+        fields["archive_sha256"] = request.get("archive_sha256")
+    if request.get("archive_size_bytes") is not None:
+        fields["archive_size_bytes"] = request.get("archive_size_bytes")
+    return fields
+
+
+def _close_recovery_claim(
+    *,
+    metadata: dict[str, Any],
+    status: str,
+    notes: str,
+    no_close_claim: bool,
+) -> dict[str, Any]:
+    """Best-effort terminal claim close with summary fields for custody."""
+
+    lane_id = str(metadata.get("lane_id") or "")
+    instance_job_id = str(metadata.get("instance_job_id") or "")
+    claim_agent = str(
+        metadata.get("claim_agent") or "codex:modal_hdm8_postfilter_sweep_recover"
+    )
+    if no_close_claim:
+        return {
+            "terminal_claim_closed": False,
+            "terminal_claim_status": "skipped_no_close_claim",
+            "terminal_claim_error": None,
+        }
+    if not lane_id or not instance_job_id:
+        return {
+            "terminal_claim_closed": False,
+            "terminal_claim_status": "missing_claim_identity",
+            "terminal_claim_error": "lane_id or instance_job_id missing from spawn metadata",
+        }
+    try:
+        terminal_dispatch_claim(
+            repo_root=Path.cwd(),
+            spec=DispatchClaimSpec(
+                lane_id=lane_id,
+                instance_job_id=instance_job_id,
+                agent=claim_agent,
+                platform="modal",
+                force=True,
+            ),
+            status=status,
+            notes=_claim_note_fragment(notes, max_len=500),
+        )
+    except (Exception, SystemExit) as exc:
+        return {
+            "terminal_claim_closed": False,
+            "terminal_claim_status": "terminal_claim_close_failed",
+            "terminal_claim_error": _claim_note_fragment(repr(exc), max_len=500),
+        }
+    return {
+        "terminal_claim_closed": True,
+        "terminal_claim_status": status,
+        "terminal_claim_error": None,
+    }
+
+
 def recover_detached(
     *,
     output_dir: Path,
@@ -1009,35 +1085,30 @@ def recover_detached(
             "promotion_eligible": False,
             "recovered_at_utc": utc_now(),
         }
-        write_json(out_dir / RECOVER_JSON_NAME, summary)
-        if not no_close_claim:
-            lane_id = str(metadata.get("lane_id") or "")
-            instance_job_id = str(metadata.get("instance_job_id") or "")
-            claim_agent = str(
-                metadata.get("claim_agent")
-                or "codex:modal_hdm8_postfilter_sweep_recover"
+        summary.update(_recovery_identity_fields(metadata))
+        terminal_status = (
+            "cancelled_modal_hdm8_postfilter_sweep_no_score_claim"
+            if is_cancelled
+            else "failed_modal_hdm8_postfilter_sweep_provider_exception_no_score_claim"
+        )
+        summary.update(
+            _close_recovery_claim(
+                metadata=metadata,
+                status=terminal_status,
+                notes=(
+                    "Modal HDM8 postfilter sweep recovery observed provider "
+                    f"exception type={type(exc).__name__}; "
+                    f"message={message}; axis={AXIS}; score_claim=false"
+                ),
+                no_close_claim=no_close_claim,
             )
-            if lane_id and instance_job_id:
-                terminal_dispatch_claim(
-                    repo_root=Path.cwd(),
-                    spec=DispatchClaimSpec(
-                        lane_id=lane_id,
-                        instance_job_id=instance_job_id,
-                        agent=claim_agent,
-                        platform="modal",
-                        force=True,
-                    ),
-                    status=(
-                        "cancelled_modal_hdm8_postfilter_sweep_no_score_claim"
-                        if is_cancelled
-                        else "failed_modal_hdm8_postfilter_sweep_provider_exception_no_score_claim"
-                    ),
-                    notes=(
-                        "Modal HDM8 postfilter sweep recovery observed provider "
-                        f"exception type={type(exc).__name__}; "
-                        f"message={message[:240]!r}; axis={AXIS}; score_claim=false"
-                    ),
-                )
+        )
+        if (
+            not no_close_claim
+            and summary.get("terminal_claim_closed") is not True
+        ):
+            summary["returncode"] = 6
+        write_json(out_dir / RECOVER_JSON_NAME, summary)
         return summary
     if not isinstance(result, dict):
         summary = {
@@ -1046,10 +1117,30 @@ def recover_detached(
             "call_id": resolved_call_id,
             "output_dir": str(out_dir),
             "error": f"Modal result must be a dict, got {type(result).__name__}",
+            "passed": False,
+            "returncode": 5,
+            "axis": AXIS,
             "score_claim": False,
             "promotion_eligible": False,
             "recovered_at_utc": utc_now(),
         }
+        summary.update(_recovery_identity_fields(metadata))
+        summary.update(
+            _close_recovery_claim(
+                metadata=metadata,
+                status="failed_modal_hdm8_postfilter_sweep_invalid_result_no_score_claim",
+                notes=(
+                    "Modal HDM8 postfilter sweep recovery returned invalid result "
+                    f"type={type(result).__name__}; axis={AXIS}; score_claim=false"
+                ),
+                no_close_claim=no_close_claim,
+            )
+        )
+        if (
+            not no_close_claim
+            and summary.get("terminal_claim_closed") is not True
+        ):
+            summary["returncode"] = 6
         write_json(out_dir / RECOVER_JSON_NAME, summary)
         return summary
     _materialize_result(out_dir=out_dir, result=result)
@@ -1068,33 +1159,28 @@ def recover_detached(
         "best": result.get("best"),
         "recovered_at_utc": utc_now(),
     }
-    write_json(out_dir / RECOVER_JSON_NAME, summary)
-    if not no_close_claim:
-        lane_id = str(metadata.get("lane_id") or "")
-        instance_job_id = str(metadata.get("instance_job_id") or "")
-        claim_agent = str(
-            metadata.get("claim_agent") or "codex:modal_hdm8_postfilter_sweep_recover"
+    summary.update(_recovery_identity_fields(metadata))
+    terminal_status = (
+        "completed_modal_hdm8_postfilter_sweep_no_score_claim"
+        if result.get("passed")
+        else "failed_modal_hdm8_postfilter_sweep_no_score_claim"
+    )
+    summary.update(
+        _close_recovery_claim(
+            metadata=metadata,
+            status=terminal_status,
+            notes=(
+                f"Modal HDM8 postfilter sweep recovered; passed={result.get('passed')}; "
+                f"axis={AXIS}; result_json={out_dir / RESULT_JSON_NAME}; "
+                "score_claim=false"
+            ),
+            no_close_claim=no_close_claim,
         )
-        if lane_id and instance_job_id:
-            terminal_dispatch_claim(
-                repo_root=Path.cwd(),
-                spec=DispatchClaimSpec(
-                    lane_id=lane_id,
-                    instance_job_id=instance_job_id,
-                    agent=claim_agent,
-                    platform="modal",
-                    force=True,
-                ),
-                status=(
-                    "completed_modal_hdm8_postfilter_sweep_no_score_claim"
-                    if result.get("passed")
-                    else "failed_modal_hdm8_postfilter_sweep_no_score_claim"
-                ),
-                notes=(
-                    f"Modal HDM8 postfilter sweep recovered; passed={result.get('passed')}; "
-                    f"axis={AXIS}; result_json={out_dir / RESULT_JSON_NAME}; score_claim=false"
-                ),
-            )
+    )
+    if not no_close_claim and summary.get("terminal_claim_closed") is not True:
+        summary["passed"] = False
+        summary["returncode"] = 6
+    write_json(out_dir / RECOVER_JSON_NAME, summary)
     return summary
 
 

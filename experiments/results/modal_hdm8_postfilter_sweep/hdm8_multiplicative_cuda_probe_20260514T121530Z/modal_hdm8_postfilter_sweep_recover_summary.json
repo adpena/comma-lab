@@ -1,14 +1,22 @@
 {
+  "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+  "archive_size_bytes": 186395,
   "axis": "modal-t4-cuda-proxy-prefix",
   "call_id": "fc-01KRK6M42CB2VGZCZASGHBSV72",
+  "claim_agent": "codex:gpt-5.5",
+  "instance_job_id": "hdm8_multiplicative_cuda_probe_20260514T121530Z",
+  "lane_id": "hdm8_multiplicative_cuda_probe_20260514",
   "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_hdm8_postfilter_sweep/hdm8_multiplicative_cuda_probe_20260514T121530Z",
   "passed": false,
   "promotion_eligible": false,
   "provider_exception_message": "Function call was cancelled by user.",
   "provider_exception_type": "RemoteError",
-  "recovered_at_utc": "2026-05-14T20:56:38Z",
+  "recovered_at_utc": "2026-05-14T21:04:57Z",
   "returncode": 1,
   "schema_version": "modal_hdm8_postfilter_sweep_recover_summary_v1",
   "score_claim": false,
-  "status": "cancelled_provider_function_call"
+  "status": "cancelled_provider_function_call",
+  "terminal_claim_closed": true,
+  "terminal_claim_error": null,
+  "terminal_claim_status": "cancelled_modal_hdm8_postfilter_sweep_no_score_claim"
 }

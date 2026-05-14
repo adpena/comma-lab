@@ -471,3 +471,37 @@ PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest \
   src/tac/tests/test_modal_hdm8_postfilter_sweep.py -q
 # 10 passed
 ```
+
+## 2026-05-14T21:05Z Adversarial Recovery-Failclose Patch
+
+Fresh-eye adversarial review of the recovery hardening found two custody bugs:
+
+- `invalid_result` recovery returned no `passed=false` / `returncode`, so the
+  CLI could exit `0`.
+- Raw provider exception text could contain markdown table separators or
+  control characters, causing terminal claim writes to fail after a terminal
+  summary had already been persisted.
+
+Fix landed in `experiments/modal_hdm8_postfilter_sweep.py`:
+
+- invalid non-dict Modal results now produce `passed=false`, `returncode=5`,
+  `axis=modal-t4-cuda-proxy-prefix`, and a terminal
+  `failed_modal_hdm8_postfilter_sweep_invalid_result_no_score_claim` claim
+  when claim identity is available.
+- provider failure notes are sanitized before dispatch-claim writes.
+- recovery summaries now include `lane_id`, `instance_job_id`, `claim_agent`,
+  `archive_sha256`, `archive_size_bytes`, `terminal_claim_closed`,
+  `terminal_claim_status`, and `terminal_claim_error`.
+- claim-close failures fail closed with `returncode=6`.
+
+The four cancelled HDM8 Modal proxy-prefix calls were re-recovered through the
+patched path; each summary is now self-contained and still has
+`score_claim=false` / `promotion_eligible=false`.
+
+Focused regression:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest \
+  src/tac/tests/test_modal_hdm8_postfilter_sweep.py -q
+# 11 passed
+```
