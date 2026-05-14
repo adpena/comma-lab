@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the siren substrate end-to-end on contest video.
 
 Operator-callable training script per the Fields-medal grand council substrate
@@ -116,6 +117,9 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
+)
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 from tac.substrates.siren.activation_family import (
     ACTIVATION_FAMILY_IDS,
@@ -1070,7 +1074,7 @@ def _full_main(args: argparse.Namespace) -> int:
             )
             _stage(f"archive_built_bytes_{archive_bytes}")
 
-        # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
+        # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
         auth_eval_result_path: Path | None = None
         auth_eval_score: float | None = None
         auth_eval_score_axis: str | None = None
@@ -1081,45 +1085,30 @@ def _full_main(args: argparse.Namespace) -> int:
         if not args.skip_auth_eval and archive_zip_path.is_file():
             print("[full] launching CUDA auth eval ...")
             auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--archive", str(archive_zip_path),
-                "--inflate-sh", str(args.output_dir / "submission" / "inflate.sh"),
-                "--upstream-dir", str(args.upstream_dir),
-                "--device", "cuda",
-                "--json-out", str(auth_eval_result_path),
-            ]
-            try:
-                proc = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=3600
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_result_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="siren",
+                device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
+                auth_eval_score = contest_cuda_score
+                auth_eval_score_axis = auth_result["auth_eval_score_axis"]
+                auth_eval_lane_tag = auth_result["auth_eval_lane_tag"]
+                auth_eval_score_claim_valid = bool(
+                    auth_result["auth_eval_score_claim_valid"]
                 )
-                if proc.returncode != 0:
-                    raise RuntimeError(
-                        f"[full] auth eval rc={proc.returncode}; stderr=\n{proc.stderr[-2000:]}",
-                    )
-                from tac.substrates._shared.trainer_skeleton import (
-                    require_contest_cuda_auth_eval_claim,
-                )
-
-                claim, _ae = require_contest_cuda_auth_eval_claim(
-                    auth_eval_result_path,
-                    archive_sha256=archive_sha,
-                    substrate_tag="siren",
-                )
-                contest_cuda_score = claim.score
-                auth_eval_score = claim.score
-                auth_eval_score_axis = claim.score_axis
-                auth_eval_lane_tag = claim.lane_tag
-                auth_eval_score_claim_valid = claim.score_claim_valid
-                auth_eval_exact_cuda_complete = claim.exact_cuda_eval_complete
+                auth_eval_exact_cuda_complete = True
                 print(
-                    f"[full] {claim.lane_tag or '[contest-CUDA]'} score = "
-                    f"{contest_cuda_score} (source={claim.source_key}, "
+                    f"[full] {auth_eval_lane_tag or '[contest-CUDA]'} score = "
+                    f"{contest_cuda_score} (axis={auth_eval_score_axis}, "
                     f"archive_sha256={archive_sha})"
                 )
-            except subprocess.TimeoutExpired as exc:
-                raise RuntimeError("[full] auth eval TIMEOUT (>3600s)") from exc
             _stage("auth_eval_cuda_done")
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)

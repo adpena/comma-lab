@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Train the SABOR boundary-only renderer substrate (PAIR T+OPT3 2026-05-13).
 
 Operator-callable training script per the Grand Council O1 first-principles
@@ -90,6 +91,9 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     utc_now_iso as _utc_now_iso,
+)
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 
 # ---------------------------------------------------------------------------
@@ -777,41 +781,27 @@ def _full_main(args: argparse.Namespace) -> int:
             )
             _stage(f"archive_built_bytes_{archive_bytes_total}")
 
-        # CUDA auth eval.
+        # CUDA auth eval — canonical helper (Catalog #226 self-protect).
         if not args.skip_auth_eval and archive_zip_path.is_file():
             auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
-            cmd = [
-                sys.executable, str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--archive", str(archive_zip_path),
-                "--inflate-sh", str(args.output_dir / "submission" / "inflate.sh"),
-                "--upstream-dir", str(args.upstream_dir),
-                "--device", "cuda",
-                "--json-out", str(auth_eval_result_path),
-            ]
-            try:
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
-                if proc.returncode != 0:
-                    print(
-                        f"[full] auth eval rc={proc.returncode}; stderr=\n"
-                        f"{proc.stderr[-2000:]}",
-                        file=sys.stderr,
-                    )
-                    raise RuntimeError(
-                        f"CUDA auth eval failed rc={proc.returncode}"
-                    )
-                from tac.substrates._shared.trainer_skeleton import (
-                    require_contest_cuda_auth_eval_claim,
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_result_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="sabor",
+                device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
+                print(
+                    f"[full] [contest-CUDA] score = {contest_cuda_score} "
+                    f"(axis={auth_result['auth_eval_score_axis']}, "
+                    f"lane_tag={auth_result['auth_eval_lane_tag']}, "
+                    f"archive_sha256={archive_sha})"
                 )
-
-                claim, _ae = require_contest_cuda_auth_eval_claim(
-                    auth_eval_result_path,
-                    archive_sha256=archive_sha,
-                    substrate_tag="sabor",
-                )
-                contest_cuda_score = claim.score
-                print(f"[full] [contest-CUDA] score = {contest_cuda_score}")
-            except subprocess.TimeoutExpired:
-                raise RuntimeError("CUDA auth eval timed out") from None
             _stage("auth_eval_cuda_done")
 
         # Posterior update (Catalog #128).
