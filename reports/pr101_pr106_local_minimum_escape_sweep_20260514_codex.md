@@ -106,6 +106,12 @@ Exact-K16 boundary after vectorizing the search:
 - Selector payload bytes: `340`
 - Classification: not dispatchable. The K16 component gain is real but the extra 4-bit selector rate overwhelms it.
 
+Lower-rate procedural selector boundary:
+
+- Best fixed single-mode optimistic estimate: about `0.19291` charged.
+- Piecewise segment selector over the exact-K8 palette: best tested estimate about `0.19254` charged at 192 segments.
+- Classification: not viable. The selector decisions are not pair-index smooth enough to replace per-pair codes with segment endpoints.
+
 ## PR106 / HDM8 Postfilter Check
 
 Existing exact CUDA artifacts reviewed:

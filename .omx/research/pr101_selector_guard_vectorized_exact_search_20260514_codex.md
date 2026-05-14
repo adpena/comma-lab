@@ -91,3 +91,14 @@ Direct charged exact-K16 probe after vectorizing search:
 - Charged bytes: `178608`
 - Selector payload bytes: `340`
 - Classification: not dispatchable; the extra uncharged component gain is eaten by the 4-bit selector rate.
+
+## Lower-Rate Procedural Selector Boundary
+
+Measured whether selector bytes could be reduced by replacing the per-pair selector with lower-rate rules:
+
+- Best fixed single-mode optimistic estimate: about `0.19291` charged, not viable.
+- Piecewise constant segment selector over the exact-K8 palette:
+  - 8 segments: about `0.19284` charged
+  - 64 segments: about `0.19263` charged
+  - 192 segments: about `0.19254` charged
+- Classification: not viable for this artifact. The selector choices are not smooth enough in pair index to trade per-pair codes for segment endpoints without losing too much component score.
