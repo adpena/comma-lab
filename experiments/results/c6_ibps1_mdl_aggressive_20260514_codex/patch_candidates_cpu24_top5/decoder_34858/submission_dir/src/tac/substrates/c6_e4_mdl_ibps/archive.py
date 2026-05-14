@@ -1,0 +1,425 @@
+# SPDX-License-Identifier: MIT
+"""C6 MDL-IBPS archive grammar — IBPS1 monolithic single-file ``0.bin``.
+
+Per CLAUDE.md HNeRV parity discipline L2 (export-first) + L3 (monolithic 0.bin)
++ L4 (≤200 LOC inflate substrate-engineering waiver) + L8 (deterministic).
+
+Grammar:
+
+::
+
+    MAGIC(4)            b"IBPS"
+    VERSION(1)          u8       schema version (currently 1)
+    LATENT_DIM(2)       u16      cfg.latent_dim (e.g. 24)
+    NUM_PAIRS(2)        u16      cfg.num_pairs (e.g. 600)
+    ENCODER_BLOB_LEN(4) u32      brotli-compressed encoder state_dict bytes len
+    DECODER_BLOB_LEN(4) u32      brotli-compressed decoder state_dict bytes len
+    LATENT_BLOB_LEN(4)  u32      int8 latents bytes len (= num_pairs * latent_dim)
+    META_BLOB_LEN(4)    u32      sorted-keys JSON utf-8 bytes len
+    ENCODER_BLOB        ...      brotli(quality=9) of pickled encoder state_dict (fp16)
+    DECODER_BLOB        ...      brotli(quality=9) of pickled decoder state_dict (fp16)
+    LATENT_BLOB         ...      int8 latents row-major (num_pairs, latent_dim)
+    META_BLOB           ...      sorted-keys JSON: {"beta_ib", "decoder_channels",
+                                  "encoder_sin_freq", "_lat_scale", "_lat_zero_point", ...}
+
+The encoder state_dict is preserved for forensic provenance (Z1-style ablation
+can verify the encoder + per-pair z relationship). The decoder state_dict is
+the inflate-time consumer.
+
+Round-trip contract:
+
+    bytes → parse_archive → (encoder_sd, decoder_sd, latents, meta)
+    (encoder_sd, decoder_sd, latents, meta) → pack_archive → bytes
+
+CLAUDE.md compliance:
+- No silent defaults (caller passes config)
+- No /tmp paths
+- No scorer load
+- Deterministic: same input → same bytes (sorted-keys JSON; fixed brotli quality;
+  fp16 state_dict cast on CPU)
+"""
+
+from __future__ import annotations
+
+import json
+import struct
+from dataclasses import dataclass
+
+import brotli  # type: ignore[import-not-found]
+import torch
+
+IBPS1_MAGIC: bytes = b"IBPS"
+"""C6 MDL-IBPS variant 1 archive magic."""
+
+IBPS1_SCHEMA_VERSION: int = 1
+"""Schema version byte. Bump when grammar changes."""
+
+# Header layout: MAGIC(4) + VERSION(1) + LATENT_DIM(2) + NUM_PAIRS(2)
+#                + ENCODER_LEN(4) + DECODER_LEN(4) + LATENT_LEN(4) + META_LEN(4)
+# = 4+1+2+2+4+4+4+4 = 25 bytes
+IBPS1_HEADER_FMT: str = "<4sBHHIIII"
+IBPS1_HEADER_SIZE: int = struct.calcsize(IBPS1_HEADER_FMT)
+assert IBPS1_HEADER_SIZE == 25, f"header size invariant: expected 25, got {IBPS1_HEADER_SIZE}"
+
+# Deterministic brotli quality (matches WZF01 / SHV1 / TT5L siblings).
+_BROTLI_QUALITY: int = 9
+
+
+@dataclass(frozen=True)
+class MDLIBPSArchive:
+    """Parsed IBPS1 archive — the inflate-time data contract."""
+
+    encoder_state_dict: dict[str, torch.Tensor]
+    """Encoder state_dict (provenance; not strictly required at inflate)."""
+
+    decoder_state_dict: dict[str, torch.Tensor]
+    """Decoder state_dict (the inflate-time consumer)."""
+
+    latents: torch.Tensor
+    """``(num_pairs, latent_dim)`` float32 dequantized per-pair z."""
+
+    meta: dict[str, object]
+    """Sidecar JSON meta: beta_ib, decoder_channels, etc."""
+
+    schema_version: int
+
+
+def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
+    """Serialize state_dict deterministically as length-prefixed records.
+
+    Format per entry (sorted by key for determinism):
+
+        u16 key_len + key_bytes (utf-8)
+        u8 ndim
+        u32 shape[0..ndim-1] (little-endian)
+        fp16 tensor bytes (row-major contiguous)
+
+    Returns brotli-compressed concatenation. Pickle is avoided because
+    pickle's tensor memo IDs vary across instantiations.
+    """
+    parts: list[bytes] = []
+    for key in sorted(sd.keys()):
+        tensor = sd[key].detach().to("cpu", dtype=torch.float16).contiguous()
+        key_bytes = key.encode("utf-8")
+        if len(key_bytes) > 0xFFFF:
+            raise ValueError(f"key {key!r} is too long for u16 length")
+        shape = tuple(int(s) for s in tensor.shape)
+        if len(shape) > 0xFF:
+            raise ValueError(f"tensor {key!r} has too many dims for u8 ndim")
+        for dim in shape:
+            if dim < 0 or dim > 0xFFFFFFFF:
+                raise ValueError(f"tensor {key!r} dim {dim} out of u32 range")
+        header_fmt = f"<H{len(key_bytes)}sB" + "I" * len(shape)
+        header = struct.pack(header_fmt, len(key_bytes), key_bytes, len(shape), *shape)
+        parts.append(header)
+        parts.append(tensor.numpy().tobytes(order="C"))
+    raw = b"".join(parts)
+    return bytes(brotli.compress(raw, quality=_BROTLI_QUALITY))
+
+
+def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+    raw = brotli.decompress(blob)
+    sd: dict[str, torch.Tensor] = {}
+    pos = 0
+    import numpy as np  # local import to keep hot path light
+
+    while pos < len(raw):
+        if pos + 2 > len(raw):
+            raise ValueError("state_dict blob truncated reading key length")
+        (key_len,) = struct.unpack("<H", raw[pos : pos + 2])
+        pos += 2
+        if pos + key_len + 1 > len(raw):
+            raise ValueError("state_dict blob truncated reading key bytes")
+        key = raw[pos : pos + key_len].decode("utf-8")
+        pos += key_len
+        (ndim,) = struct.unpack("<B", raw[pos : pos + 1])
+        pos += 1
+        if pos + ndim * 4 > len(raw):
+            raise ValueError("state_dict blob truncated reading shape")
+        shape = struct.unpack("<" + "I" * ndim, raw[pos : pos + ndim * 4])
+        pos += ndim * 4
+        numel = 1
+        for dim in shape:
+            numel *= int(dim)
+        tensor_bytes = numel * 2  # fp16
+        if pos + tensor_bytes > len(raw):
+            raise ValueError(f"state_dict blob truncated reading tensor {key!r}")
+        arr = np.frombuffer(
+            raw[pos : pos + tensor_bytes], dtype=np.float16
+        ).reshape(shape).astype(np.float16, copy=True)
+        sd[key] = torch.from_numpy(arr)
+        pos += tensor_bytes
+    if pos != len(raw):
+        raise ValueError(f"state_dict blob has trailing bytes (pos={pos} len={len(raw)})")
+    return sd
+
+
+def _quantize_latents_to_int8(
+    latents: torch.Tensor,
+) -> tuple[torch.Tensor, float, float]:
+    """Quantize latents to int8 (saves 50% vs int16; total ~24 B/pair × 600 = 14.4 KB max).
+
+    Returns (q_int8, scale, zero_point) so dequant is: ``f = (q + 127) * scale + zero_point``.
+
+    Quantization: ``q_int8 = round((f - zero_point) / scale) - 127``
+    such that ``f = (q_int8 + 127) * scale + zero_point``. This gives the
+    full 254 levels of int8 storage.
+
+    Degenerate (all-equal) case: ``hi <= lo``. Per Catalog #161 (the canonical
+    degenerate-range fix landed via sane_hnerv + block_nerv), q is filled
+    with ``-(MAX_LEVELS // 2) = -127`` so ``dequant(-127) = 0 * scale + lo = lo``.
+    """
+    if latents.dtype not in (torch.float32, torch.float16):
+        raise ValueError(f"latents must be float; got {latents.dtype}")
+    f = latents.detach().to(dtype=torch.float32, device="cpu")
+    lo, hi = float(f.min()), float(f.max())
+    if hi <= lo:
+        return (
+            torch.full_like(f, -127, dtype=torch.int8),
+            1.0,
+            lo,
+        )
+    # Map [lo, hi] → [0, 254] → [-127, 127]
+    scale = (hi - lo) / 254.0
+    q_unsigned = ((f - lo) / scale).round().clamp(0.0, 254.0)
+    q = (q_unsigned - 127.0).to(torch.int8)
+    return (q, scale, lo)
+
+
+def _dequantize_latents(q: torch.Tensor, scale: float, zero_point: float) -> torch.Tensor:
+    q_unsigned = q.to(torch.float32) + 127.0
+    return q_unsigned * float(scale) + float(zero_point)
+
+
+def pack_archive(
+    encoder_state_dict: dict[str, torch.Tensor],
+    decoder_state_dict: dict[str, torch.Tensor],
+    latents: torch.Tensor,
+    meta: dict[str, object],
+    *,
+    schema_version: int = IBPS1_SCHEMA_VERSION,
+) -> bytes:
+    """Serialize trained substrate weights + latents + meta into IBPS1 0.bin bytes."""
+    if schema_version != IBPS1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {schema_version}")
+    if latents.dim() != 2:
+        raise ValueError(
+            f"latents must be 2-D (num_pairs, latent_dim); got {tuple(latents.shape)}"
+        )
+
+    num_pairs, latent_dim = int(latents.shape[0]), int(latents.shape[1])
+    if num_pairs <= 0 or num_pairs > 0xFFFF:
+        raise ValueError(f"num_pairs {num_pairs} out of u16 range")
+    if latent_dim <= 0 or latent_dim > 0xFFFF:
+        raise ValueError(f"latent_dim {latent_dim} out of u16 range")
+
+    q_latents, scale, zero_point = _quantize_latents_to_int8(latents)
+    latent_bytes = q_latents.contiguous().numpy().tobytes()
+
+    encoder_blob = _serialize_state_dict(encoder_state_dict)
+    decoder_blob = _serialize_state_dict(decoder_state_dict)
+
+    meta_with_quant = dict(meta)
+    meta_with_quant["_lat_scale"] = float(scale)
+    meta_with_quant["_lat_zero_point"] = float(zero_point)
+    meta_bytes = json.dumps(
+        meta_with_quant, separators=(",", ":"), sort_keys=True
+    ).encode("utf-8")
+
+    header = struct.pack(
+        IBPS1_HEADER_FMT,
+        IBPS1_MAGIC,
+        schema_version,
+        latent_dim,
+        num_pairs,
+        len(encoder_blob),
+        len(decoder_blob),
+        len(latent_bytes),
+        len(meta_bytes),
+    )
+    return header + encoder_blob + decoder_blob + latent_bytes + meta_bytes
+
+
+def parse_ibps1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for IBPS1 (C6 MDL-IBPS) grammar.
+
+    Canonical section-offset parser for IBPS1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tools.mdl_scorer_conditional_ablation` (CLI three-tier ablation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — IBPS1 auto-detection by ``b"IBPS"`` magic prefix)
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``ibps1_header`` — 25-byte header (control_or_metadata; fixed layout)
+    - ``encoder_blob`` — brotli q=9 compressed encoder weights
+      (training_provenance_only — parsed/loaded for provenance, but not
+      score-affecting at inflate because ``frames_for_encoder=None``)
+    - ``decoder_blob`` — brotli q=9 compressed decoder weights
+      (decoder_weight_stream — the actual inflate-time consumer)
+    - ``latent_blob`` — int8 quantized per-pair latents (latent_stream)
+    - ``meta_blob`` — sorted-keys JSON with beta_ib, decoder_channels,
+      _lat_scale, _lat_zero_point (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for IBPS1 byte layout
+    is :data:`IBPS1_HEADER_FMT` + :data:`IBPS1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no torch state_dict deserialization). It is
+    cheaper and is safe to call with brotli-tampered blobs (it never invokes
+    ``brotli.decompress``).
+
+    Raises ``ValueError`` on:
+
+    - short header (< 25 bytes)
+    - bad magic (!= ``b"IBPS"``)
+    - unsupported schema version (!= 1)
+    - latent_len != num_pairs * latent_dim
+    - archive size mismatch (declared end_meta != len(archive_bytes)),
+      covering BOTH truncated archives (end_meta > len) and trailing-byte
+      schema drift (end_meta < len). The exact-equality contract matches
+      :func:`parse_archive` so the section-offset parser and the full
+      round-trip parser agree on what a valid IBPS1 archive looks like.
+    """
+    if len(archive_bytes) < IBPS1_HEADER_SIZE:
+        raise ValueError(
+            f"ibps1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {IBPS1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        encoder_len,
+        decoder_len,
+        latent_len,
+        meta_len,
+    ) = struct.unpack(IBPS1_HEADER_FMT, archive_bytes[:IBPS1_HEADER_SIZE])
+    if magic != IBPS1_MAGIC:
+        raise ValueError(
+            f"ibps1 archive: bad magic {magic!r} (expected {IBPS1_MAGIC!r})"
+        )
+    if version != IBPS1_SCHEMA_VERSION:
+        raise ValueError(
+            f"ibps1 archive: unsupported schema version {version} "
+            f"(expected {IBPS1_SCHEMA_VERSION})"
+        )
+    # int8 = 1 byte each
+    expected_latent_bytes = int(num_pairs) * int(latent_dim)
+    if latent_len != expected_latent_bytes:
+        raise ValueError(
+            f"ibps1 archive: latent_len {latent_len} != num_pairs*latent_dim "
+            f"= {expected_latent_bytes}"
+        )
+    end_header = IBPS1_HEADER_SIZE
+    end_encoder = end_header + int(encoder_len)
+    end_decoder = end_encoder + int(decoder_len)
+    end_latents = end_decoder + int(latent_len)
+    end_meta = end_latents + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"ibps1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "ibps1_header": (0, IBPS1_HEADER_SIZE),
+        "encoder_blob": (end_header, int(encoder_len)),
+        "decoder_blob": (end_encoder, int(decoder_len)),
+        "latent_blob": (end_decoder, int(latent_len)),
+        "meta_blob": (end_latents, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for IBPS1 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS`` / ``PR101_SECTION_ROLES``.
+IBPS1_SECTION_ROLES: dict[str, str] = {
+    "ibps1_header": "control_or_metadata",
+    "encoder_blob": "training_provenance_only",
+    "decoder_blob": "decoder_weight_stream",
+    "latent_blob": "latent_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
+def parse_archive(blob: bytes) -> MDLIBPSArchive:
+    """Parse IBPS1 0.bin bytes back into encoder + decoder + latents + meta."""
+    if len(blob) < IBPS1_HEADER_SIZE:
+        raise ValueError(
+            f"archive too short ({len(blob)} bytes; need >= {IBPS1_HEADER_SIZE})"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        encoder_len,
+        decoder_len,
+        latent_len,
+        meta_len,
+    ) = struct.unpack(IBPS1_HEADER_FMT, blob[:IBPS1_HEADER_SIZE])
+    if magic != IBPS1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {IBPS1_MAGIC!r})")
+    if version != IBPS1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+
+    expected_latent_bytes = num_pairs * latent_dim  # int8 = 1 byte
+    if latent_len != expected_latent_bytes:
+        raise ValueError(
+            f"latent_len {latent_len} != num_pairs*latent_dim = {expected_latent_bytes}"
+        )
+
+    end_header = IBPS1_HEADER_SIZE
+    end_encoder = end_header + encoder_len
+    end_decoder = end_encoder + decoder_len
+    end_latents = end_decoder + latent_len
+    end_meta = end_latents + meta_len
+    if end_meta != len(blob):
+        raise ValueError(
+            f"archive size {len(blob)} != expected {end_meta} from header"
+        )
+
+    encoder_blob = blob[end_header:end_encoder]
+    decoder_blob = blob[end_encoder:end_decoder]
+    latent_blob = blob[end_decoder:end_latents]
+    meta_blob = blob[end_latents:end_meta]
+
+    encoder_sd = _deserialize_state_dict(encoder_blob)
+    decoder_sd = _deserialize_state_dict(decoder_blob)
+    meta = json.loads(meta_blob.decode("utf-8"))
+
+    import numpy as np  # local import — keep import-time hot path light
+
+    q_latents = torch.from_numpy(
+        np.frombuffer(latent_blob, dtype=np.int8).copy()
+    ).view(num_pairs, latent_dim)
+    scale = float(meta.pop("_lat_scale"))
+    zp = float(meta.pop("_lat_zero_point"))
+    latents = _dequantize_latents(q_latents, scale, zp)
+
+    return MDLIBPSArchive(
+        encoder_state_dict=encoder_sd,
+        decoder_state_dict=decoder_sd,
+        latents=latents,
+        meta=meta,
+        schema_version=int(version),
+    )
+
+
+__all__ = [
+    "IBPS1_HEADER_FMT",
+    "IBPS1_HEADER_SIZE",
+    "IBPS1_MAGIC",
+    "IBPS1_SCHEMA_VERSION",
+    "IBPS1_SECTION_ROLES",
+    "MDLIBPSArchive",
+    "pack_archive",
+    "parse_archive",
+    "parse_ibps1_archive_bytes",
+]

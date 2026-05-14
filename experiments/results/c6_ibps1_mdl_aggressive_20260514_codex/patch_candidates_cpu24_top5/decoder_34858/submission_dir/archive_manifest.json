@@ -1,0 +1,12 @@
+{
+  "archive_path": "archive.zip",
+  "archive_sha256": "2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+  "archive_size_bytes": 224481,
+  "candidate_id": "c6_ibps1_decoder_blob_34858_byte_patch",
+  "inner_member": "0.bin",
+  "inner_sha256": "32780ae8437327f1a7e3b959001306f9e1bbae4db2d57fe7b8b7335ccef40645",
+  "lane_id": "lane_c6_ibps1_decoder34858_byte_patch_exact_cuda_20260514",
+  "score_claim": false,
+  "source_archive_sha256": "a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607",
+  "source_commit": "e1015379cb36c2bf94724a89bf9551145aff1756"
+}

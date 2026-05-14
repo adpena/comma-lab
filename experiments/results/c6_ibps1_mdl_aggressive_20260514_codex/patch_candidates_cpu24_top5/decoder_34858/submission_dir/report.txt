@@ -1,0 +1,32 @@
+C6 IBPS1 decoder byte-patch candidate: decoder_blob:34858
+
+Repository: https://github.com/adpena/comma-lab/tree/e1015379cb36c2bf94724a89bf9551145aff1756
+Commit: e1015379cb36c2bf94724a89bf9551145aff1756
+
+This packet is an exact-eval candidate, not a score claim. It applies one
+bytewise XOR patch to the C6 5-epoch smoke archive:
+
+- section: decoder_blob
+- relative_offset: 34858
+- absolute_offset: 100365
+- before: 77
+- after: 178
+- xor_value: 255
+
+Candidate archive:
+
+- archive_sha256: 2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a
+- archive_size_bytes: 224481
+- member: 0.bin
+- member_sha256: 32780ae8437327f1a7e3b959001306f9e1bbae4db2d57fe7b8b7335ccef40645
+
+Source archive:
+
+- archive_sha256: a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607
+- archive_size_bytes: 224481
+
+Evidence status:
+
+- local CPU600 MDL-ablation signal exists and is advisory only
+- score_claim=false until exact archive/runtime auth eval lands
+- promotion_eligible=false until adjudication and compliance gates pass

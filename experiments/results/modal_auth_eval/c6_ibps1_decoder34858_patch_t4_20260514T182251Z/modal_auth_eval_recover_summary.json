@@ -1,0 +1,9 @@
+{
+  "call_id": "fc-01KRKVR2VK30AVTW35J5SCAW4Z",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/c6_ibps1_decoder34858_patch_t4_20260514T182251Z",
+  "promotion_eligible": false,
+  "recovered_at_utc": "2026-05-14T18:25:13Z",
+  "schema_version": "modal_auth_eval_recover_summary_v1",
+  "score_claim": false,
+  "status": "pending"
+}

@@ -1,0 +1,23 @@
+{
+  "adjudication_required": true,
+  "app": "comma-auth-eval",
+  "archive_path": "/Users/adpena/Projects/pact/experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive.zip",
+  "archive_sha256": "2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+  "archive_size_bytes": 224481,
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "diagnostic_only": false,
+  "expected_runtime_tree_sha256": "03c0788a1fb2cc4842803135820b350cf5db62f598403954996faef972c56f98",
+  "inflate_device_policy": "auto",
+  "inflate_env_overrides": [],
+  "inflate_sh": "inflate.sh",
+  "modal_dispatch_mode": "detached_spawn",
+  "non_t4_gpu_diagnostic": false,
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "scorer_device": "cuda",
+  "source_repo_commit": "e1015379cb36c2bf94724a89bf9551145aff1756",
+  "submission_dir": "/Users/adpena/Projects/pact/experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir",
+  "submission_dir_zip_sha256": "a97a686e34cce186f2baec5b24a0b3f3c7e2a5e76d03061d2d7937218a93fb87",
+  "tool": "experiments/modal_auth_eval.py"
+}

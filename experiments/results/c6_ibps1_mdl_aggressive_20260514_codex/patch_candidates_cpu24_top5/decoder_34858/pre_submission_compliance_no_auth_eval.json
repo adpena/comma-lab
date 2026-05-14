@@ -1,0 +1,514 @@
+{
+  "archive": {
+    "bytes": 224481,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 224373,
+        "crc": 849888871,
+        "file_size": 225622,
+        "local_header": {
+          "compress_size": 224373,
+          "compress_type": 8,
+          "crc32": 849888871,
+          "extra_len": 0,
+          "file_size": 225622,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "0.bin",
+          "version_needed": 20
+        },
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "32780ae8437327f1a7e3b959001306f9e1bbae4db2d57fe7b8b7335ccef40645",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive.zip",
+    "sha256": "2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='0.bin' local='0.bin' local_reason=None",
+      "name": "zip_local_header_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_local_header_metadata_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_payload_readable:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a actual=2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=224481 actual=224481",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/contest_auth_eval.json",
+      "name": "auth_eval_present_or_optional",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/contest_auth_eval.json missing; nonfinal compliance may pass, but this packet has no auth-eval custody and is not score/rank/promote evidence",
+      "name": "auth_eval_optional_missing",
+      "passed": false,
+      "severity": "warning"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=82d270c997dbbb91ad3c06a7737cd3c3980a126e03991ee8a86a2bed8df3635e",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['3d55c533eff20d6bed7b243493005b68ea48d3678a2f19e4b43a4aeeb316d8df', '82d270c997dbbb91ad3c06a7737cd3c3980a126e03991ee8a86a2bed8df3635e'] auth_eval_candidates={}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a actual=2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=224481 actual=224481",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=0 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=0 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "not required for this non-final packet",
+      "name": "post_deadline_policy_statement_optional",
+      "passed": true,
+      "severity": "info"
+    },
+    {
+      "details": "not required for this non-final packet",
+      "name": "public_source_reproducibility_optional",
+      "passed": true,
+      "severity": "info"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "post_deadline_submission_policy": {
+    "chars": 0,
+    "has_frontier_context": false,
+    "names_mode": false,
+    "required": false,
+    "source": null,
+    "statement_preview": ""
+  },
+  "public_source_reproducibility": {
+    "has_reproducibility_context": true,
+    "repo_links": [
+      "https://github.com/adpena/comma-lab"
+    ],
+    "required": false,
+    "sources": [
+      "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/report.txt",
+      "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive_manifest.json"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 193,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/inflate.py",
+        "sha256": "50417c2199267010e5685a9b36001b7fe5a9fa8af65547c58d2f08a85c2a7822"
+      },
+      {
+        "bytes": 586,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/inflate.sh",
+        "sha256": "b625f1c32f47a3676d81e540a5d849d7d9f16d76a4fcbe80d86e8fe63d3f0fab"
+      },
+      {
+        "bytes": 0,
+        "relative_path": "src/tac/__init__.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 0,
+        "relative_path": "src/tac/substrates/__init__.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 0,
+        "relative_path": "src/tac/substrates/_shared/__init__.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/_shared/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 4148,
+        "relative_path": "src/tac/substrates/_shared/inflate_runtime.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
+        "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
+      },
+      {
+        "bytes": 668,
+        "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/__init__.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/__init__.py",
+        "sha256": "a63b0a5ec10d2356fb0057fedc762287dd1c94d7d5e7ec5a8f5fcacfc1848e87"
+      },
+      {
+        "bytes": 7972,
+        "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/architecture.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/architecture.py",
+        "sha256": "2639cc74416ccb53824524f05475cd6885e9e471c9a7db436805bc5d8788fe77"
+      },
+      {
+        "bytes": 16318,
+        "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/archive.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/archive.py",
+        "sha256": "4247a308a933295c79b4b4ec3da90dc2f731a161b9cc442abac0a15018c16c45"
+      },
+      {
+        "bytes": 7094,
+        "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py",
+        "sha256": "bed2e015e0a4d0e377f70988dd8fbd0eee9ba16b3291f86b1e761bded649fa39"
+      },
+      {
+        "bytes": 5909,
+        "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py",
+        "sha256": "c3c1cf342f8007193fdedf1df203aa361b5e3b92e5cf7968f5d33af88be55762"
+      },
+      {
+        "bytes": 5804,
+        "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/inflate.py",
+        "repo_relative_path": "experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir/src/tac/substrates/c6_e4_mdl_ibps/inflate.py",
+        "sha256": "38dfeff6560e80c9143df78473a210d9c4979b4609d9643be5f8b5d58e8d194e"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "3d55c533eff20d6bed7b243493005b68ea48d3678a2f19e4b43a4aeeb316d8df",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 21,
+      "files": [
+        {
+          "bytes": 3121,
+          "module": "tac",
+          "relative_path": "src/tac/__init__.py",
+          "sha256": "6f6a95655e32362c9cc12c2a9ad98a2f938b6110910f78d466cd50f61a8a3cd4"
+        },
+        {
+          "bytes": 35544,
+          "module": "tac.architectures",
+          "relative_path": "src/tac/architectures.py",
+          "sha256": "31acafc658b8291044c3c0d401e4d315ff634b72d598ec373d6e72bc7fec9f5c"
+        },
+        {
+          "bytes": 27475,
+          "module": "tac.differentiable_eval_roundtrip",
+          "relative_path": "src/tac/differentiable_eval_roundtrip.py",
+          "sha256": "9f75e30439a335c4ebd33fe094964c12bd512e4795b522bfa936f181d5d66bca"
+        },
+        {
+          "bytes": 56197,
+          "module": "tac.fridrich",
+          "relative_path": "src/tac/fridrich.py",
+          "sha256": "012095e4b14e4f73d66d166e1cdd2c49695ec70ceecc6be4db1561bd8236db2e"
+        },
+        {
+          "bytes": 4400,
+          "module": "tac.losses",
+          "relative_path": "src/tac/losses/__init__.py",
+          "sha256": "6897823740078bec2bd56f86eecd6dbece697b63caff5ffef6099c63cd978fce"
+        },
+        {
+          "bytes": 98685,
+          "module": "tac.losses.core",
+          "relative_path": "src/tac/losses/core.py",
+          "sha256": "fc93324ea0fffabf2a36241075a83800320430da775db959036c87e50de71b9c"
+        },
+        {
+          "bytes": 13962,
+          "module": "tac.psd_lumaskip_renderer",
+          "relative_path": "src/tac/psd_lumaskip_renderer.py",
+          "sha256": "de3818f2c0e17ec223f21df62829424aac812f09edf85d9cd39a69aa718dc1a9"
+        },
+        {
+          "bytes": 41666,
+          "module": "tac.quantization",
+          "relative_path": "src/tac/quantization.py",
+          "sha256": "d5acf14bf0c05c436e941d3565da67638b2d9ccd11777856bd3aeb74c1902da5"
+        },
+        {
+          "bytes": 8574,
+          "module": "tac.substrates",
+          "relative_path": "src/tac/substrates/__init__.py",
+          "sha256": "fee0c49fb16d9b3f2609cbb0179ed9cf36aaff1217645d9ed07a0cce2288921b"
+        },
+        {
+          "bytes": 374,
+          "module": "tac.substrates._shared",
+          "relative_path": "src/tac/substrates/_shared/__init__.py",
+          "sha256": "4f893eb90984041a4b67040a1c7a67e24ec61ccece840f8c64f6b7a1607462a1"
+        },
+        {
+          "bytes": 4148,
+          "module": "tac.substrates._shared.inflate_runtime",
+          "relative_path": "src/tac/substrates/_shared/inflate_runtime.py",
+          "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
+        },
+        {
+          "bytes": 7401,
+          "module": "tac.substrates.c6_e4_mdl_ibps",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/__init__.py",
+          "sha256": "3b87c84249080f41100edbe239644aeba424ad8ed21c811d4bb86bce8d015658"
+        },
+        {
+          "bytes": 7972,
+          "module": "tac.substrates.c6_e4_mdl_ibps.architecture",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/architecture.py",
+          "sha256": "2639cc74416ccb53824524f05475cd6885e9e471c9a7db436805bc5d8788fe77"
+        },
+        {
+          "bytes": 16318,
+          "module": "tac.substrates.c6_e4_mdl_ibps.archive",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/archive.py",
+          "sha256": "4247a308a933295c79b4b4ec3da90dc2f731a161b9cc442abac0a15018c16c45"
+        },
+        {
+          "bytes": 7094,
+          "module": "tac.substrates.c6_e4_mdl_ibps.ib_decoder",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py",
+          "sha256": "bed2e015e0a4d0e377f70988dd8fbd0eee9ba16b3291f86b1e761bded649fa39"
+        },
+        {
+          "bytes": 5909,
+          "module": "tac.substrates.c6_e4_mdl_ibps.ib_encoder",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py",
+          "sha256": "c3c1cf342f8007193fdedf1df203aa361b5e3b92e5cf7968f5d33af88be55762"
+        },
+        {
+          "bytes": 5804,
+          "module": "tac.substrates.c6_e4_mdl_ibps.inflate",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/inflate.py",
+          "sha256": "38dfeff6560e80c9143df78473a210d9c4979b4609d9643be5f8b5d58e8d194e"
+        },
+        {
+          "bytes": 3941,
+          "module": "tac.substrates.c6_e4_mdl_ibps.mdl_loss",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/mdl_loss.py",
+          "sha256": "c1dee7cbc45e2faac9d966c11ddfc6a2eae0ca18a5b90ffe4c58fedcb260a919"
+        },
+        {
+          "bytes": 7312,
+          "module": "tac.substrates.c6_e4_mdl_ibps.score_aware_loss",
+          "relative_path": "src/tac/substrates/c6_e4_mdl_ibps/score_aware_loss.py",
+          "sha256": "1a92d5c9babf8bd1da29a365f57cdf963989bf5f446f4c8da97241161743ea07"
+        },
+        {
+          "bytes": 13596,
+          "module": "tac.substrates.score_aware_common",
+          "relative_path": "src/tac/substrates/score_aware_common.py",
+          "sha256": "74aa9d18874564caa0a6bb2b0d66525759f038078ef4a6bfffba24fc40bbe06d"
+        },
+        {
+          "bytes": 7609,
+          "module": "tac.wavelet_variance",
+          "relative_path": "src/tac/wavelet_variance.py",
+          "sha256": "87dcbdb90399db9a73e2788b8683939b8877bca8714512f24d80e66f24b01e43"
+        }
+      ],
+      "module_count": 20,
+      "parse_errors": [],
+      "root_import_modules": [
+        "tac.substrates._shared.inflate_runtime",
+        "tac.substrates.c6_e4_mdl_ibps.architecture",
+        "tac.substrates.c6_e4_mdl_ibps.archive",
+        "tac.substrates.c6_e4_mdl_ibps.ib_decoder",
+        "tac.substrates.c6_e4_mdl_ibps.ib_encoder",
+        "tac.substrates.c6_e4_mdl_ibps.inflate"
+      ],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 12,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/c6_ibps1_mdl_aggressive_20260514_codex/patch_candidates_cpu24_top5/decoder_34858/submission_dir",
+    "runtime_tree_sha256": "82d270c997dbbb91ad3c06a7737cd3c3980a126e03991ee8a86a2bed8df3635e",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}
