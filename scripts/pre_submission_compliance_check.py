@@ -741,12 +741,31 @@ def _safe_provenance_snapshot(
     runtime_file_rows = [
         item for item in (_runtime_file(row) for row in runtime_files) if item is not None
     ]
+    runtime_root = str(runtime_manifest.get("runtime_root") or "")
+    runtime_root_name = (
+        (runtime_manifest.get("repo_local_tac_import_manifest") or {}).get("runtime_root_name")
+        if isinstance(runtime_manifest.get("repo_local_tac_import_manifest"), dict)
+        else None
+    )
+
+    def _provider_runtime_rel(text: str) -> str | None:
+        if not runtime_root or not text.startswith(runtime_root.rstrip("/") + "/"):
+            return None
+        suffix = text[len(runtime_root.rstrip("/") + "/") :]
+        safe_root = str(runtime_root_name or PurePosixPath(runtime_root).name or "provider_runtime")
+        return str(PurePosixPath(safe_root) / suffix)
+
     def _repoish(raw: Any, fallback: str) -> str:
         text = str(raw or "")
         if "/pact/" in text:
             return text.split("/pact/", 1)[1]
+        provider_rel = _provider_runtime_rel(text)
+        if provider_rel:
+            return provider_rel
         if not text or text.startswith("/"):
-            return fallback
+            if not text:
+                return fallback
+            return str(PurePosixPath("non_repo_absolute_runtime") / PurePosixPath(text).name)
         return text
 
     eval_args = [
@@ -1374,7 +1393,9 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         require_successful_exact_eval_terminal=args.contest_final,
         expected_archive_sha256=archive.get("sha256") if args.contest_final else None,
         expected_runtime_tree_sha256=(
-            runtime_record.get("runtime_tree_sha256") if args.contest_final else None
+            (args.expected_runtime_tree_sha256 or runtime_record.get("runtime_tree_sha256"))
+            if args.contest_final
+            else None
         ),
     )
     sections["dispatch_claims"] = claims_record

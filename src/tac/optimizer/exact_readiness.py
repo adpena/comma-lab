@@ -512,6 +512,7 @@ def terminal_claim_result_conflicts(
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
     runtime_tree_sha256: str | None = None,
     score_affecting_runtime_changed: bool | None = None,
+    block_runtime_mismatch_for_same_archive: bool = False,
 ) -> list[str]:
     """Block stale exact-ready rows after terminal evidence on same archive.
 
@@ -541,14 +542,20 @@ def terminal_claim_result_conflicts(
         notes = _claim_job_notes(claim_rows_by_job.get(key, [row]))
         if archive_sha256 not in notes:
             continue
+        claim_id = f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
         claim_runtime_shas = _terminal_claim_runtime_tree_shas(notes)
         if candidate_runtime_sha is not None and claim_runtime_shas:
             if candidate_runtime_sha not in claim_runtime_shas:
+                if block_runtime_mismatch_for_same_archive:
+                    blockers.append(
+                        "same_lane_terminal_runtime_mismatch_for_same_archive:"
+                        f"{candidate_runtime_sha}:terminal_runtime="
+                        f"{','.join(sorted(claim_runtime_shas))}:{claim_id}"
+                    )
                 continue
         elif score_affecting_runtime_changed is True and candidate_runtime_sha is not None:
             continue
         status = row["status"].lower()
-        claim_id = f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
         if status.startswith("refused_dispatch"):
             blockers.append(f"same_lane_terminal_refused_dispatch_for_same_archive:{claim_id}")
             continue

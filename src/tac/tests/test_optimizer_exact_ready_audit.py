@@ -7,7 +7,10 @@ import sys
 import zipfile
 from pathlib import Path
 
-from tac.optimizer.exact_readiness import runtime_dependency_manifest
+from tac.optimizer.exact_readiness import (
+    runtime_dependency_manifest,
+    terminal_claim_result_conflicts,
+)
 from tac.optimizer.exact_ready_audit import (
     apply_suppression_manifest,
     audit_exact_ready_queues,
@@ -55,6 +58,42 @@ def _ready_queue(path: Path, *, lane_id: str, archive_sha: str, ready: bool = Tr
                 }
             ],
         },
+    )
+
+
+def test_terminal_claim_conflict_can_fail_closed_on_runtime_mismatch_same_archive(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "a" * 64
+    terminal_runtime_sha = "b" * 64
+    candidate_runtime_sha = "c" * 64
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [
+            f"| 2026-05-10T00:00:00Z | test | lane_x | modal | job1 |  | completed_contest_cuda | archive_sha={archive_sha}; score_recomputed=0.206; runtime_tree_sha256={terminal_runtime_sha} |"
+        ],
+    )
+
+    default_blockers = terminal_claim_result_conflicts(
+        "lane_x",
+        archive_sha,
+        dispatch_claims_path=claims,
+        runtime_tree_sha256=candidate_runtime_sha,
+        score_affecting_runtime_changed=True,
+    )
+    fail_closed_blockers = terminal_claim_result_conflicts(
+        "lane_x",
+        archive_sha,
+        dispatch_claims_path=claims,
+        runtime_tree_sha256=candidate_runtime_sha,
+        score_affecting_runtime_changed=True,
+        block_runtime_mismatch_for_same_archive=True,
+    )
+
+    assert default_blockers == []
+    assert any(
+        blocker.startswith("same_lane_terminal_runtime_mismatch_for_same_archive")
+        for blocker in fail_closed_blockers
     )
 
 

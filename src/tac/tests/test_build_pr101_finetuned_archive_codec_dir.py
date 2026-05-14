@@ -383,3 +383,35 @@ def test_harvest_modal_calls_repolls_generated_nonterminal_summary_only(
         encoding="utf-8",
     )
     assert mod._already_harvested(out_dir, artifacts) is False
+
+
+def test_harvest_modal_calls_incomplete_claim_marker_keeps_local_result_signal(
+    tmp_path: Path,
+) -> None:
+    mod = _load_harvest_module()
+    out_dir = tmp_path / "lane_demo_modal"
+    artifacts = out_dir / "harvested_artifacts"
+    artifacts.mkdir(parents=True)
+    (out_dir / "modal_training_terminal_claim.json").write_text(
+        json.dumps(
+            {
+                "appended": False,
+                "reason": "metadata_missing_lane_id_or_instance_job_id",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifacts / "_harvest_summary.json").write_text(
+        json.dumps(
+            {
+                "rc": 137,
+                "elapsed_seconds": 33.0,
+                "timed_out": False,
+                "n_artifacts": 55,
+                "crash_kind": "RC_137",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert mod._already_harvested(out_dir, artifacts) is True

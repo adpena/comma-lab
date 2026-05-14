@@ -161,6 +161,94 @@ def test_trigger_write_dispatch_metadata_round_trips_schema(tmp_path, trigger_to
     assert data["runner"] == "ubuntu-latest"
 
 
+def test_trigger_skip_trigger_closes_claim_without_run(tmp_path, trigger_tool, monkeypatch):
+    claims: list[dict] = []
+    closes: list[dict] = []
+    monkeypatch.setattr(trigger_tool, "workflow_registered", lambda *_: True)
+    monkeypatch.setattr(
+        trigger_tool,
+        "claim_lane",
+        lambda **kwargs: claims.append(kwargs) or 0,
+    )
+    monkeypatch.setattr(
+        trigger_tool,
+        "close_lane_claim",
+        lambda **kwargs: closes.append(kwargs) or 0,
+    )
+
+    rc = trigger_tool.main(
+        [
+            "--archive-url",
+            "https://github.com/foo/bar/releases/download/tag/archive.zip",
+            "--archive-sha256",
+            "a" * 64,
+            "--archive-size-bytes",
+            "178262",
+            "--label",
+            "skip_trigger_test",
+            "--output-dir",
+            str(tmp_path / "gha_dispatch"),
+            "--skip-trigger",
+        ]
+    )
+
+    metadata = json.loads((tmp_path / "gha_dispatch" / "dispatch_metadata.json").read_text())
+    assert rc == 0
+    assert metadata["workflow_run_id"] is None
+    assert metadata["trigger_status"] == "skipped_trigger_diagnostic"
+    assert len(claims) == 1
+    assert len(closes) == 1
+    assert closes[0]["lane_id"] == claims[0]["lane_id"]
+    assert closes[0]["instance_job_id"] == claims[0]["instance_job_id"]
+    assert closes[0]["status"] == "refused_dispatch_skip_trigger_diagnostic"
+
+
+def test_trigger_failure_closes_claim_without_run(tmp_path, trigger_tool, monkeypatch):
+    claims: list[dict] = []
+    closes: list[dict] = []
+    monkeypatch.setattr(trigger_tool, "workflow_registered", lambda *_: True)
+    monkeypatch.setattr(
+        trigger_tool,
+        "claim_lane",
+        lambda **kwargs: claims.append(kwargs) or 0,
+    )
+    monkeypatch.setattr(
+        trigger_tool,
+        "close_lane_claim",
+        lambda **kwargs: closes.append(kwargs) or 0,
+    )
+    monkeypatch.setattr(
+        trigger_tool,
+        "trigger_workflow_dispatch",
+        lambda **_: (None, "could not identify new run id within 60s"),
+    )
+
+    rc = trigger_tool.main(
+        [
+            "--archive-url",
+            "https://github.com/foo/bar/releases/download/tag/archive.zip",
+            "--archive-sha256",
+            "b" * 64,
+            "--archive-size-bytes",
+            "178262",
+            "--label",
+            "trigger_failure_test",
+            "--output-dir",
+            str(tmp_path / "gha_dispatch"),
+        ]
+    )
+
+    metadata = json.loads((tmp_path / "gha_dispatch" / "dispatch_metadata.json").read_text())
+    assert rc == 4
+    assert metadata["workflow_run_id"] is None
+    assert metadata["trigger_status"] == "could not identify new run id within 60s"
+    assert len(claims) == 1
+    assert len(closes) == 1
+    assert closes[0]["lane_id"] == claims[0]["lane_id"]
+    assert closes[0]["instance_job_id"] == claims[0]["instance_job_id"]
+    assert closes[0]["status"] == "failed_gha_cpu_eval_trigger_no_run_id"
+
+
 def test_trigger_workflow_dispatch_returns_unique_new_run(trigger_tool, monkeypatch):
     """trigger_workflow_dispatch identifies the new run via run-list delta."""
     call_state = {"step": 0}

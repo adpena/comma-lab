@@ -217,7 +217,11 @@ def _already_harvested(out_dir: Path, artifacts_dir: Path) -> bool:
     terminal_marker = out_dir / "modal_training_terminal_claim.json"
     if terminal_marker.is_file():
         marker = _read_json(terminal_marker)
-        return bool(isinstance(marker, dict) and marker.get("appended") is True)
+        if isinstance(marker, dict) and marker.get("appended") is True:
+            return True
+        # A failed/incomplete claim marker is weaker than harvested local result
+        # evidence. Keep checking so a provider-GC refresh cannot erase rc/artifact
+        # custody that was already materialized before the claim helper existed.
     if (out_dir / "harvest_summary.json").is_file():
         return True
     if _has_harvest_payload_files(artifacts_dir):

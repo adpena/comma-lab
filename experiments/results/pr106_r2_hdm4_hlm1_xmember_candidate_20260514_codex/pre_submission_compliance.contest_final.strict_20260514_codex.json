@@ -71,7 +71,7 @@
           "--archive",
           "archive.zip",
           "--inflate-sh",
-          "submissions/pr103_pr106_final_runtime/inflate.sh",
+          "submission_dir/inflate.sh",
           "--upstream-dir",
           "upstream",
           "--device",
@@ -500,25 +500,31 @@
       "severity": "error"
     },
     {
-      "details": "lane_id=hnerv_hlm1_xmember_exact_eval_20260514 job_id=exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 matching_rows=3 latest_matching_status='completed_contest_cuda_modal_auth_eval_recovered'",
+      "details": "lane_id=hnerv_hlm1_xmember_exact_eval_20260514 job_id=exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 matching_rows=4 latest_matching_status='completed_contest_cuda_modal_auth_eval_recovered'",
       "name": "dispatch_claim_terminal_row",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "lane_id=hnerv_hlm1_xmember_exact_eval_20260514 job_id=exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 matching_rows=3 latest_matching_status='completed_contest_cuda_modal_auth_eval_recovered'",
+      "details": "lane_id=hnerv_hlm1_xmember_exact_eval_20260514 job_id=exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 matching_rows=4 latest_matching_status='completed_contest_cuda_modal_auth_eval_recovered'",
       "name": "dispatch_claim_successful_exact_eval_terminal_row",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "contest-final terminal claim must bind the exact scored archive sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; latest_matching_notes='Modal auth eval recovered; passed=True; result_json=/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/modal_cuda_auth_eval_result.json; archive_sha=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; archive_bytes=186415; score_recomputed=0.20637498220368466; axis=cuda; hardware_substrate=linux_x86_64_t4; posterior_update=accepted; posterior_n=43; posterior_reason=accepted'",
+      "details": "contest-final terminal claim must bind the exact scored archive sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; latest_matching_notes='Terminal custody correction; Modal auth eval recovered; passed=True; result_json=experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/modal_cuda_auth_eval_result.json; archive_sha=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; archive_bytes=186415; score_recomputed=0.20637498220368466; axis=cuda; hardware_substrate=linux_x86_64_t4; runtime_tree_sha256=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf; runtime_content_tree_sha256=17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b; posterior_update=accepted; posterior_n=43; posterior_reason=accepted'",
       "name": "dispatch_claim_terminal_archive_sha_bound",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "lane_id=hnerv_hlm1_xmember_exact_eval_20260514 job_id=exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 matching_rows=3 has_prior_nonterminal_matching_row=True",
+      "details": "contest-final terminal claim must bind the exact scored runtime_tree_sha256=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf; latest_matching_notes='Terminal custody correction; Modal auth eval recovered; passed=True; result_json=experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/modal_cuda_auth_eval_result.json; archive_sha=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; archive_bytes=186415; score_recomputed=0.20637498220368466; axis=cuda; hardware_substrate=linux_x86_64_t4; runtime_tree_sha256=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf; runtime_content_tree_sha256=17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b; posterior_update=accepted; posterior_n=43; posterior_reason=accepted'",
+      "name": "dispatch_claim_terminal_runtime_tree_sha_bound",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=hnerv_hlm1_xmember_exact_eval_20260514 job_id=exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 matching_rows=4 has_prior_nonterminal_matching_row=True",
       "name": "dispatch_claim_prior_active_row",
       "passed": true,
       "severity": "error"
@@ -527,12 +533,12 @@
   "dispatch_claims": {
     "exists": true,
     "has_prior_nonterminal_matching_row": true,
-    "latest_matching_notes": "Modal auth eval recovered; passed=True; result_json=/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/modal_cuda_auth_eval_result.json; archive_sha=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; archive_bytes=186415; score_recomputed=0.20637498220368466; axis=cuda; hardware_substrate=linux_x86_64_t4; posterior_update=accepted; posterior_n=43; posterior_reason=accepted",
-    "latest_matching_row": "| 2026-05-14T04:08:27Z | codex:gpt-5.5 | hnerv_hlm1_xmember_exact_eval_20260514 | modal | exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 | 2026-05-14T04:08:27Z | completed_contest_cuda_modal_auth_eval_recovered | Modal auth eval recovered; passed=True; result_json=/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/modal_cuda_auth_eval_result.json; archive_sha=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; archive_bytes=186415; score_recomputed=0.20637498220368466; axis=cuda; hardware_substrate=linux_x86_64_t4; posterior_update=accepted; posterior_n=43; posterior_reason=accepted |",
+    "latest_matching_notes": "Terminal custody correction; Modal auth eval recovered; passed=True; result_json=experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/modal_cuda_auth_eval_result.json; archive_sha=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; archive_bytes=186415; score_recomputed=0.20637498220368466; axis=cuda; hardware_substrate=linux_x86_64_t4; runtime_tree_sha256=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf; runtime_content_tree_sha256=17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b; posterior_update=accepted; posterior_n=43; posterior_reason=accepted",
+    "latest_matching_row": "| 2026-05-14T06:16:19Z | codex:gpt-5.5 | hnerv_hlm1_xmember_exact_eval_20260514 | modal | exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 | 2026-05-14T04:08:27Z | completed_contest_cuda_modal_auth_eval_recovered | Terminal custody correction; Modal auth eval recovered; passed=True; result_json=experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/modal_cuda_auth_eval_result.json; archive_sha=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; archive_bytes=186415; score_recomputed=0.20637498220368466; axis=cuda; hardware_substrate=linux_x86_64_t4; runtime_tree_sha256=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf; runtime_content_tree_sha256=17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b; posterior_update=accepted; posterior_n=43; posterior_reason=accepted |",
     "latest_matching_status": "completed_contest_cuda_modal_auth_eval_recovered",
-    "matching_rows": 3,
+    "matching_rows": 4,
     "path": ".omx/state/active_lane_dispatch_claims.md",
-    "rows": 705
+    "rows": 706
   },
   "passed": true,
   "report": {

@@ -137,6 +137,14 @@ PHASE_1_EXACT_EVAL_PACKETS = [
             "hlm1_exact_eval_packet.json"
         ),
     },
+    {
+        "lane_id": "hnerv_hlm1_xmember_exact_eval_20260514",
+        "name": "PR106 HDM4+HLM1 xmember rate-only repack",
+        "packet_path": (
+            "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/"
+            "hlm1_xmember_exact_eval_packet.json"
+        ),
+    },
 ]
 
 
@@ -432,6 +440,7 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
             active_floor_score=ACTIVE_FLOOR_SCORE,
             runtime_tree_sha256=runtime_tree_sha256,
             score_affecting_runtime_changed=runtime_changed,
+            block_runtime_mismatch_for_same_archive=True,
         )
         terminal_blockers.extend(
             blocker for blocker in live_terminal_blockers if blocker not in terminal_blockers

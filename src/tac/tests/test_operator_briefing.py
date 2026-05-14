@@ -50,6 +50,7 @@ def test_briefing_runs_all_three_phases():
     assert "pr106_q10_151byte_brotli" in proc.stdout
     assert "pr106x_lgblock16_1byte_brotli" in proc.stdout
     assert "hnerv_hlm1_fixed_latent_recode_exact_eval" in proc.stdout
+    assert "hnerv_hlm1_xmember_exact_eval_20260514" in proc.stdout
     assert "Copy-safe next steps" in proc.stdout
     assert "assert_packet_ready_for_submit" in proc.stdout
     assert "refresh_with_operator_exact_cuda_approval" in proc.stdout
@@ -189,6 +190,7 @@ def test_briefing_json_composite_has_all_three_keys():
         "pr106_q10_151byte_brotli",
         "pr106x_lgblock16_1byte_brotli",
         "hnerv_hlm1_fixed_latent_recode_exact_eval",
+        "hnerv_hlm1_xmember_exact_eval_20260514",
     }
     q10 = packet_rows["pr106_q10_151byte_brotli"]
     assert q10["ready_for_submit"] is False
@@ -309,6 +311,23 @@ def test_briefing_json_composite_has_all_three_keys():
     else:
         assert hlm1["operator_next_steps"]["schema"] == "hnerv_hlm1_operator_next_steps_v1"
 
+    xmember = packet_rows["hnerv_hlm1_xmember_exact_eval_20260514"]
+    assert xmember["archive_sha256"] == (
+        "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f"
+    )
+    assert xmember["archive_bytes"] == 186415
+    assert xmember["ready_for_submit"] is False
+    assert xmember["repeat_dispatch_allowed"] is False
+    assert xmember["dispatch_action"] == "terminal_exact_eval_evidence_stop"
+    assert xmember["commands"] == {}
+    assert "submit" in xmember["suppressed_commands"]
+    assert xmember["terminal_exact_eval_evidence_blockers"]
+    assert any(
+        blocker.startswith("same_lane_terminal_score_not_below_active_floor_for_same_archive")
+        or blocker.startswith("same_lane_terminal_runtime_mismatch_for_same_archive")
+        for blocker in xmember["terminal_exact_eval_evidence_blockers"]
+    )
+
 
 def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
     proc = _run("--skip-dashboard", "--skip-reconciler", "--top", "3")
@@ -401,9 +420,14 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
         for step in packet_rows["pr106x_lgblock16_1byte_brotli"]["operator_next_steps"]["steps"]
     ]
     hlm1 = packet_rows["hnerv_hlm1_fixed_latent_recode_exact_eval"]
+    xmember = packet_rows["hnerv_hlm1_xmember_exact_eval_20260514"]
     hlm1_step_ids = [
         step["id"]
         for step in hlm1["operator_next_steps"]["steps"]
+    ]
+    xmember_step_ids = [
+        step["id"]
+        for step in xmember["operator_next_steps"]["steps"]
     ]
     assert "assert_packet_ready_for_submit" in wr01_step_ids
     assert q10_step_ids == [
@@ -424,6 +448,10 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
         ]
     else:
         assert "submit_modal_exact_cuda" in hlm1_step_ids
+    assert xmember_step_ids == [
+        "review_terminal_cuda_result",
+        "choose_byte_different_successor_candidate",
+    ]
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
 

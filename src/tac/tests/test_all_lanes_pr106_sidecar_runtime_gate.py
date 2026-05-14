@@ -207,6 +207,7 @@ def test_pr106_sidecar_runtime_consumption_gate_threads_expected_archive_sha256(
     assert seen == [
         module.PR106_R2_ARCHIVE_SHA256,
         module.PR106_R2_PR101_ARCHIVE_SHA256,
+        module.PR106_R2_HLM1_XMEMBER_ARCHIVE_SHA256,
     ]
 
 

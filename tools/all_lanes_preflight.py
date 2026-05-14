@@ -235,6 +235,12 @@ PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_gramm
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
 PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f"
+PR106_R2_HLM1_XMEMBER_ARCHIVE = (
+    REPO
+    / "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex"
+    / "pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip"
+)
+PR106_R2_HLM1_XMEMBER_ARCHIVE_SHA256 = "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f"
 CLAIM_LANE_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 OPERATOR_BRIEFING = TOOLS / "operator_briefing.py"
 CATHEDRAL_AUTOPILOT_EVIDENCE = REPO / "reports" / "cathedral_autopilot_evidence.jsonl"
@@ -320,6 +326,13 @@ HNERV_SCORECARD_REQUIRED_EVALS = (
         / "experiments/results/modal_auth_eval/"
         / "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513/"
         / "contest_auth_eval.adjudicated.json",
+    ),
+    (
+        "PR106-R2-HDM4-HLM1-XMEMBER",
+        REPO
+        / "experiments/results/modal_auth_eval/"
+        / "hnerv_hlm1_xmember_modal_t4_20260514/"
+        / "contest_auth_eval.json",
     ),
 )
 PR106X_ARCHIVE = (
@@ -2591,6 +2604,14 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
             PR106_R2_PR101_RUNTIME,
             "0x02",
             PR106_R2_PR101_ARCHIVE_SHA256,
+            PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256,
+        ),
+        (
+            "r2_hlm1_xmember_pr101_grammar",
+            PR106_R2_HLM1_XMEMBER_ARCHIVE,
+            PR106_R2_PR101_RUNTIME,
+            "0x02",
+            PR106_R2_HLM1_XMEMBER_ARCHIVE_SHA256,
             PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256,
         ),
     ):

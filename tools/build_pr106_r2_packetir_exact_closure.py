@@ -72,6 +72,10 @@ DEFAULT_FULL_FRAME_PARITY_PROOF = (
 def build_from_args(args: argparse.Namespace) -> dict[str, Any]:
     """Load inputs and build the closure manifest."""
 
+    candidate_result = _candidate_result_with_packetir_identity(
+        candidate_result=read_json(args.candidate_result),
+        packetir_identity=_read_optional(args.packetir_identity),
+    )
     input_paths = {
         "candidate_result": _rel(args.candidate_result),
         "candidate_archive": _rel(args.candidate_archive),
@@ -86,10 +90,13 @@ def build_from_args(args: argparse.Namespace) -> dict[str, Any]:
         "runtime_consumption_proof": _rel(args.runtime_consumption_proof),
         "full_frame_parity_proof": _rel(args.full_frame_parity_proof),
         "recode_profile": _rel(args.recode_profile) if args.recode_profile is not None else None,
+        "packetir_identity": _rel(args.packetir_identity)
+        if args.packetir_identity is not None
+        else None,
     }
     return build_packetir_exact_closure(
         lane_id=args.lane_id,
-        candidate_result=read_json(args.candidate_result),
+        candidate_result=candidate_result,
         candidate_archive_path=args.candidate_archive,
         cuda_eval=read_json(args.cuda_eval),
         cpu_eval=_read_optional(args.cpu_eval),
@@ -127,9 +134,25 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=DEFAULT_FULL_FRAME_PARITY_PROOF,
     )
+    parser.add_argument(
+        "--packetir-identity",
+        type=Path,
+        default=None,
+        help=(
+            "Optional PacketIR identity proof to merge when the candidate result "
+            "manifest does not carry packet_ir_consumed_byte_proof directly."
+        ),
+    )
+    parser.add_argument(
+        "--no-cpu-eval",
+        action="store_true",
+        help="Omit the optional contest-CPU axis closure artifact.",
+    )
     parser.add_argument("--output-json", type=Path, default=DEFAULT_RESULT_DIR / "closure.json")
     parser.add_argument("--output-md", type=Path, default=DEFAULT_RESULT_DIR / "closure.md")
     args = parser.parse_args(argv)
+    if args.no_cpu_eval:
+        args.cpu_eval = None
 
     closure = build_from_args(args)
     closure["recorded_at_utc"] = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
@@ -149,6 +172,31 @@ def _read_optional(path: Path | None) -> Any | None:
     if not path.is_file():
         return None
     return read_json(path)
+
+
+def _candidate_result_with_packetir_identity(
+    *,
+    candidate_result: dict[str, Any],
+    packetir_identity: Any | None,
+) -> dict[str, Any]:
+    """Normalize supported static PacketIR manifests into closure input shape."""
+
+    result = dict(candidate_result)
+    if "candidate_diff_audit" not in result:
+        byte_delta = result.get("candidate_archive_byte_delta")
+        blockers = result.get("archive_build_blockers", [])
+        if isinstance(byte_delta, int):
+            result["candidate_diff_audit"] = {
+                "blockers": blockers if isinstance(blockers, list) else [],
+                "total_byte_delta": byte_delta,
+            }
+    if "packet_ir_consumed_byte_proof" not in result and isinstance(packetir_identity, dict):
+        packet = packetir_identity.get("packet")
+        if isinstance(packet, dict):
+            proof = packet.get("packet_ir_consumed_byte_proof")
+            if isinstance(proof, dict):
+                result["packet_ir_consumed_byte_proof"] = proof
+    return result
 
 
 def _rel(path: Path) -> str:

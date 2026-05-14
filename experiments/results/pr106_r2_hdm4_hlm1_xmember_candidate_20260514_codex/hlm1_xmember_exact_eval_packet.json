@@ -1,6 +1,6 @@
 {
   "approval_scope": "operator approval for exact CUDA work only; Modal wrapper must claim lane, dispatch, harvest, and adjudication before any score claim",
-  "approved_exact_eval_target": true,
+  "approved_exact_eval_target": false,
   "archive_bytes": 186415,
   "archive_identity": {
     "bytes": 186415,
@@ -59,20 +59,15 @@
     "sidecar_runtime_consumption": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/runtime_decode_consumption.json",
     "static_release_surface": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface"
   },
-  "blockers": [],
+  "blockers": [
+    "same_lane_terminal_runtime_mismatch_for_same_archive:76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9:terminal_runtime=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf:hnerv_hlm1_xmember_exact_eval_20260514:exact_eval_hnerv_hlm1_xmember_modal_t4_20260514:completed_contest_cuda_modal_auth_eval_recovered"
+  ],
   "byte_delta": -8,
   "candidate_id": "pr106_hlm1_xmember_rate_repack",
-  "commands": {
-    "claim": "Modal wrapper records the Level-2 active lane claim before provider spawn; do not pre-claim separately unless using a different provider actuator.",
-    "harvest": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514",
-    "harvest_contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_xmember_modal_cpu_20260514",
-    "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 781aad1c5530bab2b2cb7b7f5d102e97aad234fe819ec7e7a42c8496c7ec478f --json-out experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/contest_auth_eval.cuda.json",
-    "submit": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_xmember_exact_eval_20260514 --instance-job-id exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; bytes=186415; runtime_tree_sha256=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf; submission_dir_zip_sha256=b32fce2c2ae329d050db344b652f38281a73034179457ef29722fa1033b8c848'",
-    "submit_contest_cpu": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_xmember_modal_cpu_20260514 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface --detach --provider-detach-ack --lane-id hnerv_hlm1_xmember_exact_cpu_closure_20260514 --instance-job-id exact_eval_hnerv_hlm1_xmember_modal_cpu_20260514 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 3a4628224f5cf1d56d2eaed6c5a7a2984c7d867c2a60eff36a6103dbceb6fac8 --claim-notes 'PR106 HDM4+HLM1 exact CPU closure; archive_sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; bytes=186415; runtime_tree_sha256=3a4628224f5cf1d56d2eaed6c5a7a2984c7d867c2a60eff36a6103dbceb6fac8; submission_dir_zip_sha256=b32fce2c2ae329d050db344b652f38281a73034179457ef29722fa1033b8c848'"
-  },
+  "commands": {},
   "cpu_job_name": "exact_eval_hnerv_hlm1_xmember_modal_cpu_20260514",
   "cpu_lane_id": "hnerv_hlm1_xmember_exact_cpu_closure_20260514",
-  "dispatch_action": "submit_after_static_gates_and_operator_approval",
+  "dispatch_action": "terminal_exact_eval_evidence_stop",
   "dispatch_attempted": false,
   "dry_run_ready": true,
   "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
@@ -84,72 +79,41 @@
   "full_frame_inflate_output_parity_claim": true,
   "job_name": "exact_eval_hnerv_hlm1_xmember_modal_t4_20260514",
   "lane_id": "hnerv_hlm1_xmember_exact_eval_20260514",
-  "local_runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
-  "local_runtime_tree_sha256": "781aad1c5530bab2b2cb7b7f5d102e97aad234fe819ec7e7a42c8496c7ec478f",
+  "local_runtime_content_tree_sha256": "3143432c26d7e986ba9b2985d11f40721e8a060f4dd41a22b0befef91bfdc643",
+  "local_runtime_tree_sha256": "79503460e8fbec9be005c34dc36aea57ab9bdd2c4adae9e46c0ce10df60ba0eb",
   "missing_env": [],
   "modal_submission_dir_transport": {
     "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/modal_submission_dir_transport.json",
-    "transport_zip_bytes": 202367,
-    "transport_zip_sha256": "b32fce2c2ae329d050db344b652f38281a73034179457ef29722fa1033b8c848"
+    "transport_zip_bytes": 202489,
+    "transport_zip_sha256": "d283d14be03c8b07dd6cde4949bb30f1b7bd11296b34237fd5fb8a100210f3be"
   },
   "name": "PR106 HDM4+HLM1 fixed-latent recode",
   "operator_approved_exact_cuda": true,
   "operator_next_steps": {
     "copy_safe": true,
-    "current_submit_blockers": [],
-    "first_remote_gpu_step": "submit_modal_exact_cuda",
     "must_run_in_order": true,
     "packet_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/hlm1_xmember_exact_eval_packet.json",
-    "schema": "hnerv_hlm1_operator_next_steps_v1",
+    "schema": "terminal_exact_eval_evidence_stop_v1",
     "steps": [
       {
-        "copy_safe_command": ".venv/bin/python tools/build_pr106_hlm1_exact_eval_packet.py --json-out experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/hlm1_xmember_exact_eval_packet.json",
+        "copy_safe_command": ".venv/bin/python tools/operator_briefing.py --json",
         "dispatches_remote_gpu": false,
-        "id": "refresh_static_packet_no_dispatch",
+        "id": "review_terminal_cuda_result",
         "order": 1,
-        "purpose": "regenerate HLM1 runtime custody and fail-closed exact-eval packet",
-        "writes_repo_state": true
+        "purpose": "same archive/runtime already has terminal exact-CUDA evidence; do not redispatch this packet",
+        "writes_repo_state": false
       },
       {
-        "copy_safe_command": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 781aad1c5530bab2b2cb7b7f5d102e97aad234fe819ec7e7a42c8496c7ec478f --json-out experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/contest_auth_eval.cuda.json",
-        "dispatches_remote_gpu": true,
-        "id": "optional_local_cuda_exact_eval",
+        "copy_safe_command": ".venv/bin/python tools/operator_briefing.py --top 6",
+        "dispatches_remote_gpu": false,
+        "id": "choose_byte_different_successor_candidate",
         "order": 2,
-        "purpose": "run only on a real CUDA host; MPS and macOS CPU are not promotion axes",
-        "writes_repo_state": true
-      },
-      {
-        "copy_safe_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_xmember_exact_eval_20260514 --instance-job-id exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; bytes=186415; runtime_tree_sha256=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf; submission_dir_zip_sha256=b32fce2c2ae329d050db344b652f38281a73034179457ef29722fa1033b8c848'",
-        "dispatches_remote_gpu": true,
-        "id": "submit_modal_exact_cuda",
-        "order": 3,
-        "purpose": "canonical Modal T4 exact CUDA auth eval; wrapper records the Level-2 claim before spawn",
-        "writes_repo_state": true
-      },
-      {
-        "copy_safe_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514",
-        "dispatches_remote_gpu": false,
-        "id": "harvest_modal_exact_cuda",
-        "order": 4,
-        "purpose": "recover detached Modal artifacts before any score or promotion claim",
-        "writes_repo_state": true
-      },
-      {
-        "copy_safe_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_xmember_modal_cpu_20260514 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface --detach --provider-detach-ack --lane-id hnerv_hlm1_xmember_exact_cpu_closure_20260514 --instance-job-id exact_eval_hnerv_hlm1_xmember_modal_cpu_20260514 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 3a4628224f5cf1d56d2eaed6c5a7a2984c7d867c2a60eff36a6103dbceb6fac8 --claim-notes 'PR106 HDM4+HLM1 exact CPU closure; archive_sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; bytes=186415; runtime_tree_sha256=3a4628224f5cf1d56d2eaed6c5a7a2984c7d867c2a60eff36a6103dbceb6fac8; submission_dir_zip_sha256=b32fce2c2ae329d050db344b652f38281a73034179457ef29722fa1033b8c848'",
-        "dispatches_remote_gpu": false,
-        "id": "submit_modal_exact_cpu",
-        "order": 5,
-        "purpose": "canonical Modal Linux x86_64 exact CPU closure; never convert CUDA to CPU",
-        "writes_repo_state": true
-      },
-      {
-        "copy_safe_command": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_xmember_modal_cpu_20260514",
-        "dispatches_remote_gpu": false,
-        "id": "harvest_modal_exact_cpu",
-        "order": 6,
-        "purpose": "recover detached Modal CPU artifacts for axis-labelled CPU/CUDA comparison",
-        "writes_repo_state": true
+        "purpose": "move to a byte-different successor touching decoder or score-affecting sections instead of repeating HLM1",
+        "writes_repo_state": false
       }
+    ],
+    "terminal_exact_eval_evidence_blockers": [
+      "same_lane_terminal_runtime_mismatch_for_same_archive:76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9:terminal_runtime=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf:hnerv_hlm1_xmember_exact_eval_20260514:exact_eval_hnerv_hlm1_xmember_modal_t4_20260514:completed_contest_cuda_modal_auth_eval_recovered"
     ]
   },
   "packet_kind": "hnerv_hlm1_exact_eval_operator_packet",
@@ -159,188 +123,92 @@
   "preflight_ready": true,
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch_claim": true,
-  "ready_for_submit": true,
-  "recorded_at_utc": "2026-05-14T04:05:38Z",
+  "ready_for_submit": false,
+  "recorded_at_utc": "2026-05-14T06:14:23Z",
   "remaining_required_for_score_or_promotion": [
-    "modal_cuda_auth_eval_dispatch",
-    "modal_auth_eval_harvest",
-    "contest_auth_eval_adjudication",
-    "operator_score_claim_review"
+    "terminal_exact_cuda_evidence_review",
+    "byte_different_successor_candidate_required"
   ],
-  "repeat_dispatch_allowed": true,
-  "runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+  "repeat_dispatch_allowed": false,
+  "runtime_content_tree_sha256": "3143432c26d7e986ba9b2985d11f40721e8a060f4dd41a22b0befef91bfdc643",
   "runtime_hlm1_decode_consumption_claim": true,
   "runtime_hlm1_valid_mutation_changes_raw": true,
   "runtime_manifest": {
-    "local_runtime_tree_sha256": "781aad1c5530bab2b2cb7b7f5d102e97aad234fe819ec7e7a42c8496c7ec478f",
-    "modal_cpu_runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
-    "modal_cpu_runtime_tree_sha256": "3a4628224f5cf1d56d2eaed6c5a7a2984c7d867c2a60eff36a6103dbceb6fac8",
+    "local_runtime_tree_sha256": "79503460e8fbec9be005c34dc36aea57ab9bdd2c4adae9e46c0ce10df60ba0eb",
+    "modal_cpu_runtime_content_tree_sha256": "3143432c26d7e986ba9b2985d11f40721e8a060f4dd41a22b0befef91bfdc643",
+    "modal_cpu_runtime_tree_sha256": "6b9b6482993568576880fbe5157f32b420be3ad6a5e71a444af59263507226fc",
     "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/runtime_tree_manifest.json",
-    "runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+    "runtime_content_tree_sha256": "3143432c26d7e986ba9b2985d11f40721e8a060f4dd41a22b0befef91bfdc643",
     "runtime_file_count": 7,
-    "runtime_tree_sha256": "c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf"
+    "runtime_tree_sha256": "76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9"
   },
   "runtime_sidecar_apply_consumption_claim": true,
   "runtime_sidecar_decode_consumption_claim": true,
-  "runtime_tree_sha256": "c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf",
+  "runtime_tree_sha256": "76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9",
   "schema_version": 1,
   "score_affecting_runtime_changed": true,
   "score_claim": false,
   "source_archive_bytes": 186423,
   "source_archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
-  "source_repo_commit": "88fe68d4b5a89a2365d768fa6a82af31102b5faa",
+  "source_repo_commit": "2203235120554d4413daf2c76ad5052ece6b109a",
   "source_tree_custody": {
     "custody_scope": "build_time_local_tree_before_remote_dispatch",
-    "diff_against_head_bytes": 660128,
-    "diff_against_head_sha256": "dde2894fa83078f03bf2f9ce06ba7854cf31fb63a454fcf84966ddf114a39ebb",
+    "diff_against_head_bytes": 72738,
+    "diff_against_head_sha256": "d0e18c81bd5bfd2674995ede4135df0a36970c8afc75b811d88052839b28f51a",
     "dirty": true,
-    "head_commit": "88fe68d4b5a89a2365d768fa6a82af31102b5faa",
+    "head_commit": "2203235120554d4413daf2c76ad5052ece6b109a",
     "provider_wrapper_records_actual_source_repo_commit_at_dispatch": true,
     "schema": "provider_dispatch_source_tree_custody_v2",
     "score_claim": false,
-    "source_tree_custody_sha256": "5bbcc9416ed203a26ffea54cf79a840d6acfc71f143ca746d37994df2efa8b2a",
+    "source_tree_custody_sha256": "bb16143c33fe8533be1c8550d192f8ca6548dd65ca517e56acc9c60ec7f90441",
     "status_short": [
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/hlm1_latent_archive_candidate_manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/hlm1_runtime_consumption.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/hlm1_xmember_exact_eval_packet.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/modal_submission_dir_transport.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/packetir_identity.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pre_submission_compliance.static_clean.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pre_submission_compliance.static_clean.public.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/runtime_decode_consumption.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/runtime_tree_manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/same_runtime_full_frame_parity.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive.zip",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive_manifest.json",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.py",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/report.txt",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/codec.py",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/model.py",
-      "A  experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/pr101_grammar.py",
-      " M src/tac/preflight.py",
-      " M src/tac/substrates/time_traveler_l5_autonomy/score_aware_loss.py",
-      " M submissions/a1/inflate.py",
-      " M submissions/anr_substrate/inflate.py",
-      " M submissions/categorical_substrate/inflate.py",
-      " M submissions/hnerv_lc_ac/inflate.py",
-      " M submissions/scpp_substrate/inflate.py",
-      "?? src/tac/codec/cooperative_receiver/__init__.py",
-      "?? src/tac/codec/cooperative_receiver/atick_redlich.py",
-      "?? src/tac/codec/cooperative_receiver/predictive_coding.py",
-      "?? src/tac/codec/cooperative_receiver/tests/__init__.py",
-      "?? src/tac/codec/cooperative_receiver/tests/test_atick_redlich.py",
-      "?? src/tac/codec/cooperative_receiver/tests/test_predictive_coding.py",
-      "?? src/tac/substrates/sar_coherent_pose_pairs/__init__.py",
-      "?? src/tac/substrates/sar_coherent_pose_pairs/architecture.py",
-      "?? src/tac/substrates/sar_coherent_pose_pairs/archive.py",
-      "?? src/tac/substrates/sar_coherent_pose_pairs/inflate.py",
-      "?? src/tac/substrates/sar_coherent_pose_pairs/score_aware_loss.py",
-      "?? src/tac/substrates/sar_coherent_pose_pairs/tests/__init__.py",
-      "?? src/tac/substrates/wyner_ziv_cooperative_receiver/__init__.py",
-      "?? src/tac/substrates/wyner_ziv_cooperative_receiver/architecture.py",
-      "?? src/tac/substrates/wyner_ziv_cooperative_receiver/archive.py",
-      "?? src/tac/substrates/wyner_ziv_cooperative_receiver/inflate.py",
-      "?? tools/promote_frontier_archive.py"
+      " M experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/hlm1_xmember_exact_eval_packet.json",
+      " M experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/modal_submission_dir_transport.json",
+      " M experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/runtime_tree_manifest.json",
+      " M scripts/pre_submission_compliance_check.py",
+      " M src/tac/optimizer/exact_readiness.py",
+      " M src/tac/tests/test_all_lanes_pr106_sidecar_runtime_gate.py",
+      " M src/tac/tests/test_build_pr101_finetuned_archive_codec_dir.py",
+      " M src/tac/tests/test_gha_cpu_eval_harness.py",
+      " M src/tac/tests/test_operator_briefing.py",
+      " M src/tac/tests/test_optimizer_exact_ready_audit.py",
+      " M src/tac/tests/test_packetir_exact_closure.py",
+      " M src/tac/tests/test_pre_submission_compliance_check.py",
+      " M tools/all_lanes_preflight.py",
+      " M tools/build_pr106_hlm1_exact_eval_packet.py",
+      " M tools/build_pr106_r2_packetir_exact_closure.py",
+      " M tools/harvest_modal_calls.py",
+      " M tools/operator_briefing.py",
+      " M tools/trigger_gha_cpu_eval.py",
+      "?? .omx/research/codex_provider_packetir_no_signal_loss_closure_20260514.md"
     ],
-    "untracked_content_tree_sha256": "cfd0640032941c13c08835f4384e9f5c9c5736eb2346d502033a5e13f785f861",
+    "untracked_content_tree_sha256": "d83646e48feb46900810df56fb424fd8c60057ea55c3cb347045b4f453f127a9",
     "untracked_files": [
       {
-        "bytes": 2552,
-        "path": "src/tac/codec/cooperative_receiver/__init__.py",
-        "sha256": "58b266eef20c19b88b84a9ee7b752d31d681dbb8fb9a74dcc2b5aa5ced4927d7"
-      },
-      {
-        "bytes": 10044,
-        "path": "src/tac/codec/cooperative_receiver/atick_redlich.py",
-        "sha256": "e56b291721f3634562994d413769d481d3156d63f41f49db14bda0d3192be0c7"
-      },
-      {
-        "bytes": 6366,
-        "path": "src/tac/codec/cooperative_receiver/predictive_coding.py",
-        "sha256": "a296b27cc13b96603cfa2e2790f7fabd6606fce4ef9727b38d4d3bdf80b10e0b"
-      },
-      {
-        "bytes": 0,
-        "path": "src/tac/codec/cooperative_receiver/tests/__init__.py",
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
-      {
-        "bytes": 10436,
-        "path": "src/tac/codec/cooperative_receiver/tests/test_atick_redlich.py",
-        "sha256": "630ad53f9ffb842eb97dcd1d9f99631477a928060551034f7a8a3aa7efd34fe5"
-      },
-      {
-        "bytes": 6522,
-        "path": "src/tac/codec/cooperative_receiver/tests/test_predictive_coding.py",
-        "sha256": "f8a19836a6dd57f71f9ab352c450f72a24995638c9b4c4edf831b14d0a7b867a"
-      },
-      {
-        "bytes": 5045,
-        "path": "src/tac/substrates/sar_coherent_pose_pairs/__init__.py",
-        "sha256": "949849dffaab656b3720b8fd5919d26ea22856e153d0589a7a228ff799fe7bd8"
-      },
-      {
-        "bytes": 17022,
-        "path": "src/tac/substrates/sar_coherent_pose_pairs/architecture.py",
-        "sha256": "3f364fe20d8a37b5239e2ce50e0db960c8b4544c6aea0a663dbac33c40467688"
-      },
-      {
-        "bytes": 13709,
-        "path": "src/tac/substrates/sar_coherent_pose_pairs/archive.py",
-        "sha256": "915def1866abb0f50d5d212f6f23d82008993b27845ca22b7c0e36f2ffbc046c"
-      },
-      {
-        "bytes": 8084,
-        "path": "src/tac/substrates/sar_coherent_pose_pairs/inflate.py",
-        "sha256": "6c244530c255c523172703a26772fd6814bdc1d57cd145a28925ca17a0e1687b"
-      },
-      {
-        "bytes": 7506,
-        "path": "src/tac/substrates/sar_coherent_pose_pairs/score_aware_loss.py",
-        "sha256": "b36810ea91f56aef868688e471044192e54bc89ba18b2198188339c49816a5da"
-      },
-      {
-        "bytes": 54,
-        "path": "src/tac/substrates/sar_coherent_pose_pairs/tests/__init__.py",
-        "sha256": "f090ff4e548ec9c9480b2da7c612fa01a20977cc1b5183a6b5529697b5d41f02"
-      },
-      {
-        "bytes": 5974,
-        "path": "src/tac/substrates/wyner_ziv_cooperative_receiver/__init__.py",
-        "sha256": "84781b285ac59ce08ab82242d7b55f16fc8c07a9d583c13ea79fd92d24f9e4ac"
-      },
-      {
-        "bytes": 19090,
-        "path": "src/tac/substrates/wyner_ziv_cooperative_receiver/architecture.py",
-        "sha256": "ede7530805af1e403947f1360b0e9eacace21ed566acbc4f906d5467f476b2a8"
-      },
-      {
-        "bytes": 10778,
-        "path": "src/tac/substrates/wyner_ziv_cooperative_receiver/archive.py",
-        "sha256": "5bba32a8093756885b85c295de7ca198f3afcef511a4d1f2fd07bf60c0d60802"
-      },
-      {
-        "bytes": 6693,
-        "path": "src/tac/substrates/wyner_ziv_cooperative_receiver/inflate.py",
-        "sha256": "30e629550eb13ba8975db5d53addad5b622cf204aaa95119a3a6ae4913078368"
-      },
-      {
-        "bytes": 28645,
-        "path": "tools/promote_frontier_archive.py",
-        "sha256": "b2d556220255da666d98ac858e104bdb5a02a9e4a96d40216760da67a7aeb8d5"
+        "bytes": 2407,
+        "path": ".omx/research/codex_provider_packetir_no_signal_loss_closure_20260514.md",
+        "sha256": "403c79564af3ba23b67560610a9b98241e83cae049ff195c0643fb08db76e6f0"
       }
     ],
-    "untracked_path_count": 17
+    "untracked_path_count": 1
   },
   "source_tree_custody_note": "Build-time local source custody only; the Modal wrapper records the actual source_repo_commit at dispatch and contest_auth_eval must enforce the expected runtime-tree hash.",
   "static_compliance_auth_eval_custody_present": false,
   "static_compliance_ok": true,
   "static_compliance_scope": "static_pre_exact_eval_only",
   "static_packet_ready": true,
-  "submit_blockers": [],
-  "suppressed_commands": {},
-  "terminal_exact_eval_evidence_blockers": []
+  "submit_blockers": [
+    "same_lane_terminal_runtime_mismatch_for_same_archive:76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9:terminal_runtime=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf:hnerv_hlm1_xmember_exact_eval_20260514:exact_eval_hnerv_hlm1_xmember_modal_t4_20260514:completed_contest_cuda_modal_auth_eval_recovered"
+  ],
+  "suppressed_commands": {
+    "claim": "Modal wrapper records the Level-2 active lane claim before provider spawn; do not pre-claim separately unless using a different provider actuator.",
+    "harvest": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514",
+    "harvest_contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_xmember_modal_cpu_20260514",
+    "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --inflate-sh experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh --upstream-dir upstream --device cuda --expected-runtime-tree-sha256 79503460e8fbec9be005c34dc36aea57ab9bdd2c4adae9e46c0ce10df60ba0eb --json-out experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/contest_auth_eval.cuda.json",
+    "submit": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface --gpu T4 --scorer-device cuda --inflate-device auto --detach --provider-detach-ack --lane-id hnerv_hlm1_xmember_exact_eval_20260514 --instance-job-id exact_eval_hnerv_hlm1_xmember_modal_t4_20260514 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9 --claim-notes 'PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; bytes=186415; runtime_tree_sha256=76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9; submission_dir_zip_sha256=d283d14be03c8b07dd6cde4949bb30f1b7bd11296b34237fd5fb8a100210f3be'",
+    "submit_contest_cpu": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip --output-dir experiments/results/modal_auth_eval_cpu/hnerv_hlm1_xmember_modal_cpu_20260514 --inflate-sh inflate.sh --submission-dir experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface --detach --provider-detach-ack --lane-id hnerv_hlm1_xmember_exact_cpu_closure_20260514 --instance-job-id exact_eval_hnerv_hlm1_xmember_modal_cpu_20260514 --claim-agent codex:gpt-5.5 --expected-runtime-tree-sha256 6b9b6482993568576880fbe5157f32b420be3ad6a5e71a444af59263507226fc --claim-notes 'PR106 HDM4+HLM1 exact CPU closure; archive_sha256=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f; bytes=186415; runtime_tree_sha256=6b9b6482993568576880fbe5157f32b420be3ad6a5e71a444af59263507226fc; submission_dir_zip_sha256=d283d14be03c8b07dd6cde4949bb30f1b7bd11296b34237fd5fb8a100210f3be'"
+  },
+  "terminal_exact_eval_evidence_blockers": [
+    "same_lane_terminal_runtime_mismatch_for_same_archive:76680d45b0ac38ddeed9ecae9898182c3d9f37abacc79b7884c8626e30eb26d9:terminal_runtime=c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf:hnerv_hlm1_xmember_exact_eval_20260514:exact_eval_hnerv_hlm1_xmember_modal_t4_20260514:completed_contest_cuda_modal_auth_eval_recovered"
+  ]
 }

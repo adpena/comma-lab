@@ -274,6 +274,7 @@ def test_pre_submission_check_matches_auth_runtime_after_custody_pruning_and_rem
         row["repo_relative_path"] = f"/tmp/modal_auth_eval/submission_dir/{row['relative_path']}"
     auth["inflate_runtime_manifest"] = full_auth_manifest
     auth["provenance"]["inflate_runtime_manifest"] = full_auth_manifest
+    auth["provenance"]["inflate_script"] = "/tmp/modal_auth_eval/submission_dir/inflate.sh"
     auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
 
     report = mod.build_report(
@@ -314,7 +315,59 @@ def test_pre_submission_check_matches_auth_runtime_after_custody_pruning_and_rem
         ]
         == report["submission_runtime"]["portable_runtime_tree_sha256_without_custody_files"]
     )
+    eval_command = report["auth_eval"]["anchor_proof"]["auth_eval"]["eval_command_sanitized"]
+    assert eval_command[eval_command.index("--inflate-sh") + 1] == "submission_dir/inflate.sh"
     assert report["submission_runtime"]["runtime_tree_sha256"] == expected["runtime_tree"]
+
+
+def test_pre_submission_check_does_not_relabel_provider_temp_runtime_as_default_runtime(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    auth_path = tmp_path / "submission" / "contest_auth_eval.json"
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    auth["provenance"]["inflate_script"] = "/tmp/modal_auth_eval/submission_dir/inflate.sh"
+    auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    eval_command = report["auth_eval"]["anchor_proof"]["auth_eval"]["eval_command_sanitized"]
+    assert eval_command[eval_command.index("--inflate-sh") + 1] == (
+        "non_repo_absolute_runtime/inflate.sh"
+    )
+    assert "submissions/pr103_pr106_final_runtime/inflate.sh" not in eval_command
 
 
 def test_pre_submission_check_rejects_non_custody_runtime_manifest_mismatch(

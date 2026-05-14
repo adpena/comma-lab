@@ -392,6 +392,62 @@ def _terminal_operator_next_steps(
     }
 
 
+def _refresh_packet_command(args: argparse.Namespace) -> str:
+    parts: list[object] = [
+        ".venv/bin/python",
+        "tools/build_pr106_hlm1_exact_eval_packet.py",
+        "--result-dir",
+        args.result_dir,
+        "--static-release-surface",
+        args.static_release_surface,
+        "--manifest",
+        args.manifest,
+        "--packetir-identity",
+        args.packetir_identity,
+        "--runtime-consumption",
+        args.runtime_consumption,
+        "--hlm1-runtime-consumption",
+        args.hlm1_runtime_consumption,
+        "--prefix-parity",
+        args.prefix_parity,
+        "--static-compliance",
+        args.static_compliance,
+        "--static-compliance-public-out",
+        args.static_compliance_public_out,
+        "--runtime-manifest-out",
+        args.runtime_manifest_out,
+        "--modal-transport-out",
+        args.modal_transport_out,
+        "--json-out",
+        args.json_out,
+        "--upstream-dir",
+        args.upstream_dir,
+        "--lane-id",
+        args.lane_id,
+        "--cpu-lane-id",
+        args.cpu_lane_id,
+        "--job-name",
+        args.job_name,
+        "--cpu-job-name",
+        args.cpu_job_name,
+        "--modal-output-dir",
+        args.modal_output_dir,
+        "--modal-cpu-output-dir",
+        args.modal_cpu_output_dir,
+        "--modal-gpu",
+        args.modal_gpu,
+        "--claim-agent",
+        args.claim_agent,
+        "--claims-path",
+        args.claims_path,
+        "--active-score-frontier",
+        args.active_score_frontier,
+    ]
+    if args.operator_approved_exact_cuda:
+        parts.append("--operator-approved-exact-cuda")
+    return _one_liner(parts)
+
+
 def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     payloads = _load_inputs(args)
     manifest = payloads["manifest"]
@@ -446,6 +502,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         runtime_tree_sha256=str(runtime_manifest.get("runtime_tree_sha256") or ""),
         score_affecting_runtime_changed=True,
         active_floor_score=args.active_score_frontier,
+        block_runtime_mismatch_for_same_archive=True,
     )
     source_repo_commit = _git_commit()
     modal_submit = "PYTHONPATH=src:upstream:$PWD " + _one_liner(
@@ -582,14 +639,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "dispatches_remote_gpu": False,
                 "writes_repo_state": True,
                 "purpose": "regenerate HLM1 runtime custody and fail-closed exact-eval packet",
-                "copy_safe_command": _one_liner(
-                    [
-                        ".venv/bin/python",
-                        "tools/build_pr106_hlm1_exact_eval_packet.py",
-                        "--json-out",
-                        args.json_out,
-                    ]
-                ),
+                "copy_safe_command": _refresh_packet_command(args),
             },
             {
                 "id": "optional_local_cuda_exact_eval",

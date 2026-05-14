@@ -197,6 +197,41 @@ def claim_lane(
     return proc.returncode
 
 
+def close_lane_claim(
+    *,
+    lane_id: str,
+    instance_job_id: str,
+    agent: str,
+    status: str,
+    notes: str,
+    claims_path: Path | None = None,
+) -> int:
+    """Append a terminal claim row for a trigger attempt that created no run."""
+
+    cmd = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+        "claim",
+        "--force",
+        "--lane-id",
+        lane_id,
+        "--platform",
+        "github",
+        "--instance-job-id",
+        instance_job_id,
+        "--agent",
+        agent,
+        "--status",
+        status,
+        "--notes",
+        notes,
+    ]
+    if claims_path is not None:
+        cmd.extend(["--claims-path", str(claims_path)])
+    proc = subprocess.run(cmd, check=False)
+    return proc.returncode
+
+
 def trigger_workflow_dispatch(
     *,
     repo: str,
@@ -476,6 +511,23 @@ def main(argv: list[str] | None = None) -> int:
             "  (re-run without --skip-trigger to fire the workflow)",
             flush=True,
         )
+        if not args.skip_claim:
+            close_rc = close_lane_claim(
+                lane_id=lane_id,
+                instance_job_id=instance_job_id,
+                agent=args.agent,
+                status="refused_dispatch_skip_trigger_diagnostic",
+                notes=(
+                    "Diagnostic --skip-trigger path did not create a workflow run; "
+                    f"metadata={out_path}; archive_sha={args.archive_sha256}"
+                ),
+            )
+            if close_rc != 0:
+                sys.stderr.write(
+                    "[fatal] failed to append terminal claim row for --skip-trigger "
+                    f"diagnostic path; rc={close_rc}; metadata at {out_path}\n"
+                )
+                return 5
         return 0
 
     run_id, msg = trigger_workflow_dispatch(
@@ -509,6 +561,23 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if run_id is None:
+        if not args.skip_claim:
+            close_rc = close_lane_claim(
+                lane_id=lane_id,
+                instance_job_id=instance_job_id,
+                agent=args.agent,
+                status="failed_gha_cpu_eval_trigger_no_run_id",
+                notes=(
+                    f"workflow_dispatch did not produce a workflow run; reason={msg!r}; "
+                    f"metadata={out_path}; archive_sha={args.archive_sha256}"
+                ),
+            )
+            if close_rc != 0:
+                sys.stderr.write(
+                    "[fatal] workflow_dispatch failed and terminal claim append also "
+                    f"failed rc={close_rc}; reason={msg!r}; metadata at {out_path}\n"
+                )
+                return 5
         sys.stderr.write(
             f"[fatal] workflow_dispatch failed: {msg!r}; metadata at {out_path}\n"
         )

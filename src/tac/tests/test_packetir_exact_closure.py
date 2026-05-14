@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import math
 import zipfile
 from pathlib import Path
@@ -15,6 +16,8 @@ SEG = 0.001
 POSE = 0.00004
 RUNTIME_INFLATE_PY_SHA = "d" * 64
 RUNTIME_CONTENT_TREE_SHA = "e" * 64
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_CLOSURE_TOOL = _REPO_ROOT / "tools" / "build_pr106_r2_packetir_exact_closure.py"
 
 
 def test_packetir_exact_closure_closes_measured_not_current_frontier(tmp_path: Path) -> None:
@@ -231,6 +234,40 @@ def test_packetir_exact_closure_accepts_profile_row_for_packetir_source(tmp_path
     assert profile_check["evidence"]["matches_packetir_source_archive"] is True
 
 
+def test_packetir_closure_tool_merges_hlm1_manifest_shape() -> None:
+    mod = _load_closure_tool()
+    merged = mod._candidate_result_with_packetir_identity(
+        candidate_result={
+            "candidate_archive_byte_delta": -8,
+            "archive_build_blockers": [],
+            "candidate_archive_sha256": "a" * 64,
+            "candidate_archive_bytes": 10,
+            "source_archive_sha256": "b" * 64,
+            "source_archive_bytes": 18,
+            "score_claim": False,
+            "dispatch_attempted": False,
+        },
+        packetir_identity={
+            "packet": {
+                "packet_ir_consumed_byte_proof": {
+                    "all_payload_bytes_accounted": True,
+                    "runtime_consumption_claim": False,
+                    "score_affecting_section_names": ["pr106_payload"],
+                },
+            },
+        },
+    )
+
+    assert merged["candidate_diff_audit"] == {
+        "blockers": [],
+        "total_byte_delta": -8,
+    }
+    assert merged["packet_ir_consumed_byte_proof"]["all_payload_bytes_accounted"] is True
+    assert merged["packet_ir_consumed_byte_proof"]["score_affecting_section_names"] == [
+        "pr106_payload"
+    ]
+
+
 def _candidate_result(archive: Path) -> dict:
     archive_sha = _sha256_file(archive)
     archive_bytes = archive.stat().st_size
@@ -257,6 +294,14 @@ def _candidate_result(archive: Path) -> dict:
             ],
         },
     }
+
+
+def _load_closure_tool():
+    spec = importlib.util.spec_from_file_location("build_pr106_r2_packetir_exact_closure", _CLOSURE_TOOL)
+    assert spec is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
 
 
 def _profile(archive: Path) -> dict:
