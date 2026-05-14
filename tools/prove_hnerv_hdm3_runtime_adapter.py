@@ -28,6 +28,7 @@ from tac.hnerv_lowlevel_packer import (  # noqa: E402
     read_packed_archive_view,
     sha256_bytes,
 )
+from tac.hnerv_decoder_recode import parse_decoder_section_for_recode  # noqa: E402
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_SIDECAR_MAGIC,
     parse_pr106_sidecar_packet,
@@ -60,7 +61,12 @@ def build_proof(
     candidate = candidate_view.archive
     source_packed = source_view.packed
     candidate_packed = candidate_view.packed
-    source_raw = brotli.decompress(source_packed.decoder_packed_brotli)
+    _source_parsed, source_raw, source_decoder_codec = parse_decoder_section_for_recode(
+        source_packed.decoder_packed_brotli
+    )
+    _candidate_parsed, candidate_raw, candidate_decoder_codec = parse_decoder_section_for_recode(
+        candidate_packed.decoder_packed_brotli
+    )
     restored_payload, adapter_proof = restore_hdm3_payload_to_legacy_brotli(
         candidate.payload,
         require_hdm3=True,
@@ -71,6 +77,7 @@ def build_proof(
     restored_payload_path.write_bytes(restored_payload)
 
     source_raw_sha = sha256_bytes(source_raw)
+    candidate_raw_sha = sha256_bytes(candidate_raw)
     restored_raw_sha = sha256_bytes(restored_raw)
     source_payload_sha = sha256_bytes(source.payload)
     restored_payload_sha = sha256_bytes(restored_payload)
@@ -89,13 +96,27 @@ def build_proof(
         and candidate_latents_sha == source_latents_sha
         and restored_latents_sha == source_latents_sha
     )
+    inflate_output_parity_proven_by_lossless_decoder_equivalence = (
+        candidate_raw_sha == source_raw_sha
+        and restored_raw_sha == source_raw_sha
+        and candidate_latents_sha == source_latents_sha
+        and restored_latents_sha == source_latents_sha
+        and candidate_decoder_magic in (b"HDM3", b"HDM4", b"HDM6")
+    )
+    public_runtime_ready = bool(
+        inflate_output_parity_proven_by_payload_identity
+        or inflate_output_parity_proven_by_lossless_decoder_equivalence
+    )
     adapter_proof = {
         **adapter_proof,
         "exact_source_payload_identity_proven_by_archive_proof": (
             inflate_output_parity_proven_by_payload_identity
         ),
+        "lossless_decoder_equivalence_proven_by_archive_proof": (
+            inflate_output_parity_proven_by_lossless_decoder_equivalence
+        ),
         "remaining_dispatch_blockers": _dispatch_blockers(
-            inflate_output_parity_proven_by_payload_identity
+            public_runtime_ready
         ),
     }
     adapter_files = [
@@ -117,6 +138,7 @@ def build_proof(
         "source_payload_bytes": len(source.payload),
         "source_decoder_section_sha256": source_decoder_section_sha,
         "source_decoder_section_bytes": len(source_packed.decoder_packed_brotli),
+        "source_decoder_section_codec": source_decoder_codec,
         "candidate_archive_path": repo_relative(candidate_archive, REPO_ROOT),
         "candidate_archive_sha256": candidate.archive_sha256,
         "candidate_archive_bytes": candidate.archive_bytes,
@@ -125,10 +147,15 @@ def build_proof(
         "candidate_decoder_section_sha256": sha256_bytes(candidate_packed.decoder_packed_brotli),
         "candidate_decoder_section_bytes": len(candidate_packed.decoder_packed_brotli),
         "candidate_decoder_section_is_hdm3": candidate_packed.decoder_packed_brotli.startswith(b"HDM3"),
-        "candidate_decoder_section_is_hdm": candidate_decoder_magic in (b"HDM3", b"HDM4"),
+        "candidate_decoder_section_is_hdm4": candidate_packed.decoder_packed_brotli.startswith(b"HDM4"),
+        "candidate_decoder_section_is_hdm6": candidate_packed.decoder_packed_brotli.startswith(b"HDM6"),
+        "candidate_decoder_section_is_hdm": candidate_decoder_magic in (b"HDM3", b"HDM4", b"HDM6"),
         "candidate_decoder_section_magic": candidate_decoder_magic.decode("ascii", errors="replace"),
+        "candidate_decoder_section_codec": candidate_decoder_codec,
         "source_decoder_raw_sha256": source_raw_sha,
+        "candidate_decoder_raw_sha256": candidate_raw_sha,
         "restored_decoder_raw_sha256": restored_raw_sha,
+        "candidate_decoder_raw_matches_source": candidate_raw_sha == source_raw_sha,
         "decoder_raw_matches_source": restored_raw_sha == source_raw_sha,
         "restored_decoder_section_sha256": restored_decoder_section_sha,
         "restored_decoder_section_bytes": len(restored_packed.decoder_packed_brotli),
@@ -154,10 +181,13 @@ def build_proof(
         "runtime_adapter_integrated": True,
         "public_pr106_dependency_root_unchanged": True,
         "inflate_output_parity_proven_by_payload_identity": inflate_output_parity_proven_by_payload_identity,
-        "ready_for_public_runtime_inflate": inflate_output_parity_proven_by_payload_identity,
+        "inflate_output_parity_proven_by_lossless_decoder_equivalence": (
+            inflate_output_parity_proven_by_lossless_decoder_equivalence
+        ),
+        "ready_for_public_runtime_inflate": public_runtime_ready,
         "ready_for_exact_eval_dispatch": False,
         "remaining_dispatch_blockers": _dispatch_blockers(
-            inflate_output_parity_proven_by_payload_identity
+            public_runtime_ready
         ),
     }
     write_json(output_dir / "runtime_adapter_proof.json", proof)

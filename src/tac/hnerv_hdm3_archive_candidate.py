@@ -21,9 +21,11 @@ import brotli
 from tac.hnerv_decoder_recode import (
     decode_hdm3_q_brotli_split_fixture,
     decode_hdm4_q_brotli_split_fixture,
+    decode_hdm6_q_brotli_tuned_fixture,
     encode_hdm3_q_brotli_split_fixture,
     encode_hdm4_q_brotli_split_fixture,
-    parse_packed_decoder_brotli,
+    encode_hdm6_q_brotli_tuned_fixture,
+    parse_decoder_section_for_recode,
 )
 from tac.hnerv_lowlevel_packer import (
     PackedHnervPayload,
@@ -36,6 +38,7 @@ SCHEMA_VERSION = 1
 TOOL = "tac.hnerv_hdm3_archive_candidate.build_hdm3_archive_candidate"
 HDM3_VARIANT_NAME = "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
 HDM4_VARIANT_NAME = "hdm4_q_brotli_split_fixed_recipe_dp4_plus_raw_scales"
+HDM6_VARIANT_NAME = "hdm6_q_brotli_split_fixed_recipe_tuned_lgwin_plus_raw_scales"
 RATE_SCORE_PER_BYTE = 25.0 / 37_545_489
 EXACT_PACKET_READINESS_FILENAME = "hdm3_exact_eval_packet_readiness.json"
 STATIC_RELEASE_SURFACE_DIRNAME = "exact_eval_static_release_surface"
@@ -50,6 +53,7 @@ RUNTIME_ADAPTER_PROOF_FILENAMES = (
 RUNTIME_TREE_CLOSURE_FILENAME = "hdm3_runtime_tree_closure.json"
 HDM3_EXACT_EVAL_LANE_ID = "hnerv_hdm3_q_brotli_split_exact_eval"
 HDM4_EXACT_EVAL_LANE_ID = "hnerv_hdm4_q_brotli_split_exact_eval"
+HDM6_EXACT_EVAL_LANE_ID = "hnerv_hdm6_q_brotli_tuned_exact_eval"
 HDM3_RUNTIME_INFLATE = "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.sh"
 HDM3_UPSTREAM_DIR = "upstream"
 CONTEST_AUTH_EVAL_RUNTIME_MANIFEST_SOURCE = (
@@ -81,8 +85,17 @@ def _decoder_recode_variant(name: str) -> dict[str, Any]:
             "encode": encode_hdm4_q_brotli_split_fixture,
             "decode": decode_hdm4_q_brotli_split_fixture,
         }
+    if key == "hdm6":
+        return {
+            "key": "hdm6",
+            "variant_name": HDM6_VARIANT_NAME,
+            "candidate_id": "pr106_r2_hdm6_decoder_tuned_brotli_3byte",
+            "lane_id": HDM6_EXACT_EVAL_LANE_ID,
+            "encode": encode_hdm6_q_brotli_tuned_fixture,
+            "decode": decode_hdm6_q_brotli_tuned_fixture,
+        }
     raise HnervHdm3ArchiveCandidateError(
-        f"unsupported decoder recode variant {name!r}; expected hdm3 or hdm4"
+        f"unsupported decoder recode variant {name!r}; expected hdm3, hdm4, or hdm6"
     )
 
 
@@ -110,10 +123,16 @@ def build_hdm3_archive_candidate(
     view = read_packed_archive_view(source_path)
     source = view.archive
     packed = view.packed
-    parsed_decoder = parse_packed_decoder_brotli(packed.decoder_packed_brotli)
-    source_raw = brotli.decompress(packed.decoder_packed_brotli)
+    try:
+        parsed_decoder, source_raw, source_decoder_codec = parse_decoder_section_for_recode(
+            packed.decoder_packed_brotli
+        )
+    except (brotli.error, ValueError) as exc:
+        raise HnervHdm3ArchiveCandidateError(
+            f"source decoder parser does not support current section: {exc}"
+        ) from exc
     if parsed_decoder.to_raw() != source_raw:
-        raise HnervHdm3ArchiveCandidateError("source decoder parser does not match Brotli raw")
+        raise HnervHdm3ArchiveCandidateError("source decoder parser does not match raw decoder")
 
     variant = _decoder_recode_variant(decoder_recode_variant)
     recoded_stream, recode_stats = variant["encode"](parsed_decoder)
@@ -193,6 +212,7 @@ def build_hdm3_archive_candidate(
         "source_hnerv_payload_bytes": len(view.hnerv_payload),
         "source_decoder_section_sha256": sha256_bytes(packed.decoder_packed_brotli),
         "source_decoder_section_bytes": len(packed.decoder_packed_brotli),
+        "source_decoder_section_codec": source_decoder_codec,
         "source_decoder_raw_sha256": sha256_bytes(source_raw),
         "source_decoder_raw_bytes": len(source_raw),
         "latents_and_sidecar_section_sha256": sha256_bytes(packed.latents_and_sidecar_brotli),
@@ -224,6 +244,7 @@ def build_hdm3_archive_candidate(
         "decoder_recode_stats": recode_stats,
         "hdm3_stats": recode_stats if variant["key"] == "hdm3" else {},
         "hdm4_stats": recode_stats if variant["key"] == "hdm4" else {},
+        "hdm6_stats": recode_stats if variant["key"] == "hdm6" else {},
         "decoder_raw_equivalence": {
             "contract": "hnerv_hdm_decoder_raw_equivalence_v1",
             "decoder_recode_key": variant["key"],
@@ -713,6 +734,15 @@ def _runtime_adapter_payload_identity_evidence(
         else:
             proof = loaded
     if proof:
+        parity_by_payload_identity = (
+            proof.get("inflate_output_parity_proven_by_payload_identity") is True
+        )
+        parity_by_lossless_decoder_equivalence = (
+            proof.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
+        )
+        any_runtime_parity = bool(
+            parity_by_payload_identity or parity_by_lossless_decoder_equivalence
+        )
         if proof.get("candidate_archive_sha256") != manifest.get("candidate_archive_sha256"):
             blockers.append("hdm3_runtime_adapter_archive_sha256_mismatch")
         if proof.get("score_claim") is not False:
@@ -721,11 +751,17 @@ def _runtime_adapter_payload_identity_evidence(
             blockers.append("hdm3_runtime_adapter_proof_dispatch_attempted_not_false")
         if proof.get("ready_for_public_runtime_inflate") is not True:
             blockers.append("hdm3_runtime_adapter_public_runtime_inflate_not_ready")
-        if proof.get("inflate_output_parity_proven_by_payload_identity") is not True:
-            blockers.append("hdm3_inflate_output_parity_not_proven_by_payload_identity")
-        if proof.get("restored_payload_matches_source") is not True:
+        if not any_runtime_parity:
+            blockers.append("hdm3_inflate_output_parity_not_proven_by_runtime_equivalence")
+        if (
+            proof.get("restored_payload_matches_source") is not True
+            and not parity_by_lossless_decoder_equivalence
+        ):
             blockers.append("hdm3_restored_payload_not_source_identical")
-        if proof.get("restored_decoder_section_matches_source") is not True:
+        if (
+            proof.get("restored_decoder_section_matches_source") is not True
+            and not parity_by_lossless_decoder_equivalence
+        ):
             blockers.append("hdm3_restored_decoder_section_not_source_identical")
         if proof.get("latents_and_sidecar_match_source") is not True:
             blockers.append("hdm3_latents_sidecar_not_preserved")
@@ -742,7 +778,15 @@ def _runtime_adapter_payload_identity_evidence(
         "proof_contract": proof.get("contract") if proof else "",
         "candidate_archive_sha256_matches": not proof
         or proof.get("candidate_archive_sha256") == manifest.get("candidate_archive_sha256"),
-        "payload_identity_proven": proof.get("inflate_output_parity_proven_by_payload_identity") is True
+        "payload_identity_proven": (
+            proof.get("inflate_output_parity_proven_by_payload_identity") is True
+            or proof.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
+        )
+        if proof
+        else False,
+        "lossless_decoder_equivalence_proven": (
+            proof.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
+        )
         if proof
         else False,
         "restored_payload_matches_source": proof.get("restored_payload_matches_source") is True
@@ -844,7 +888,7 @@ def _failed_compliance_checks(payload: Mapping[str, Any]) -> list[str]:
 def _release_surface_inflate_wrapper_text() -> str:
     return (
         "#!/usr/bin/env bash\n"
-        "# Static HDM3 exact-eval packet wrapper. Delegates to the reviewed\n"
+        "# Static HDM exact-eval packet wrapper. Delegates to the reviewed\n"
         "# PR106-R2 PR101-grammar runtime; no score claim is made here.\n"
         "set -euo pipefail\n"
         'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
@@ -863,9 +907,10 @@ def _release_surface_inflate_wrapper_text() -> str:
 
 
 def _release_surface_report_text(manifest: Mapping[str, Any]) -> str:
+    decoder_label = str(manifest.get("candidate_decoder_recode_key") or "hdm").upper()
     return "\n".join(
         [
-            "HDM3 HNeRV static exact-eval packet surface",
+            f"{decoder_label} HNeRV static exact-eval packet surface",
             "",
             "This is a static packet artifact only. It makes no score claim and no GPU dispatch was attempted.",
             f"Candidate archive SHA-256: {manifest.get('candidate_archive_sha256')}",

@@ -1718,6 +1718,12 @@
       "disposition": "track",
       "note": "track: focused tests for the A5 per-channel q-bit DP schedule builder.",
       "path": "tests/test_build_a5_channel_qbits_schedule.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: HDM6 tuned-Brotli candidate static release surface is rebuildable from the tracked builder, runtime adapter, and candidate manifest; canonical signal is in .omx/research/hnerv_hdm6_tuned_brotli_candidate_20260514_codex.md.",
+      "path": "experiments/results/pr106_r2_hdm4_hlm2_hdm6_candidate_20260514_codex/exact_eval_static_release_surface/inflate.sh"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

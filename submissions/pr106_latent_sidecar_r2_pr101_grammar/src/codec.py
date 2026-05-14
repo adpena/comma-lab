@@ -110,7 +110,7 @@ def decode_packed_decoder(data):
     try:
         raw = brotli.decompress(data)
     except brotli.error as legacy_error:
-        if data[:4] in (b"HDM3", b"HDM4"):
+        if data[:4] in (b"HDM3", b"HDM4", b"HDM6"):
             raw = decode_hdm_decoder_raw(data)
         else:
             raw = decode_pr101_schema_decoder_raw(data, legacy_error=legacy_error)
@@ -190,15 +190,17 @@ def decode_pr101_schema_decoder_raw(data, *, legacy_error=None):
 
 
 def decode_hdm_decoder_raw(data):
-    """Decode HDM3/HDM4 fixed-schema q-Brotli/raw-scale decoder bytes.
+    """Decode HDM3/HDM4/HDM6 fixed-schema q-Brotli/raw-scale decoder bytes.
 
-    HDM3 and HDM4 are lossless section recodes for the same packed HNeRV
-    decoder contract. Unknown or malformed HDM bytes fail closed.
+    HDM3, HDM4, and HDM6 are lossless section recodes for the same packed
+    HNeRV decoder contract. Unknown or malformed HDM bytes fail closed.
     """
     if data[:4] == b"HDM3":
         return decode_hdm3_decoder_raw(data)
     if data[:4] == b"HDM4":
         return decode_hdm4_decoder_raw(data)
+    if data[:4] == b"HDM6":
+        return decode_hdm6_decoder_raw(data)
     raise ValueError("invalid HDM decoder magic")
 
 
@@ -293,6 +295,74 @@ def decode_hdm4_decoder_raw(data):
         q = records_by_name.get(name)
         if q is None or len(q) != int(np.prod(shape)):
             raise ValueError(f"HDM4 decoded schema mismatch for {name}")
+        raw_parts.append(q)
+    return b"".join(raw_parts) + scale_stream
+
+
+def decode_hdm6_decoder_raw(data):
+    """Decode HDM6 fixed-recipe tuned split q-Brotli/raw-scale decoder bytes."""
+    if data[:4] != b"HDM6":
+        raise ValueError("invalid HDM6 decoder magic")
+    cursor = 4
+    recipe_id = read_exact(data, cursor, 1, "HDM6 recipe_id")[0]
+    cursor += 1
+    if recipe_id != 1:
+        raise ValueError(f"unsupported HDM6 recipe id: {recipe_id}")
+    split_points = (6, 9, 26, 28)
+    lengths = []
+    for index in range(len(split_points)):
+        lengths.append(
+            int.from_bytes(
+                read_exact(data, cursor, 3, f"HDM6 q_brotli_len24_{index}"),
+                "little",
+            )
+        )
+        cursor += 3
+    chunks = []
+    for index, length in enumerate(lengths):
+        compressed = read_exact(data, cursor, length, f"HDM6 q_brotli_{index}")
+        cursor += length
+        try:
+            chunks.append(brotli.decompress(compressed))
+        except brotli.error as exc:
+            raise ValueError(f"HDM6 q stream chunk {index} brotli decode failed: {exc}") from exc
+    scale_len = 4 * len(PACKED_STATE_SCHEMA)
+    scale_stream = read_exact(data, cursor, scale_len, "HDM6 scale_stream")
+    cursor += scale_len
+    if cursor != len(data):
+        raise ValueError("HDM6 decoder has trailing bytes")
+
+    ordered_schema = sorted(
+        PACKED_STATE_SCHEMA,
+        key=lambda item: (
+            0 if len(item[1]) == 4 and item[1][2:] == (3, 3)
+            else 1 if len(item[1]) == 4
+            else 2 if item[0].endswith(".bias")
+            else 3,
+            -int(np.prod(item[1])),
+            item[0],
+        ),
+    )
+    records_by_name = {}
+    split_start = 0
+    for chunk, split_end in zip(chunks, split_points):
+        schema_slice = ordered_schema[split_start:split_end]
+        expected = sum(int(np.prod(shape)) for _, shape in schema_slice)
+        if len(chunk) != expected:
+            raise ValueError("HDM6 q chunk length mismatch")
+        q_cursor = 0
+        for name, shape in schema_slice:
+            value_count = int(np.prod(shape))
+            records_by_name[name] = chunk[q_cursor:q_cursor + value_count]
+            q_cursor += value_count
+        split_start = split_end
+    if len(records_by_name) != len(PACKED_STATE_SCHEMA):
+        raise ValueError("HDM6 decoded record count mismatch")
+    raw_parts = []
+    for name, shape in PACKED_STATE_SCHEMA:
+        q = records_by_name.get(name)
+        if q is None or len(q) != int(np.prod(shape)):
+            raise ValueError(f"HDM6 decoded schema mismatch for {name}")
         raw_parts.append(q)
     return b"".join(raw_parts) + scale_stream
 

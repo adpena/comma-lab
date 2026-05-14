@@ -37,6 +37,7 @@ from tac.hnerv_decoder_recode import (  # noqa: E402
     PACKED_STATE_SCHEMA,
     decode_hdm3_q_brotli_split_fixture,
     decode_hdm4_q_brotli_split_fixture,
+    decode_hdm6_q_brotli_tuned_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_lowlevel_packer import (  # noqa: E402
@@ -525,6 +526,9 @@ def _decode_decoder_section(decoder_section: bytes) -> tuple[Any, bytes, str]:
     if decoder_section.startswith(b"HDM4"):
         parsed = decode_hdm4_q_brotli_split_fixture(decoder_section)
         return parsed, parsed.to_raw(), "hdm4_q_brotli_split"
+    if decoder_section.startswith(b"HDM6"):
+        parsed = decode_hdm6_q_brotli_tuned_fixture(decoder_section)
+        return parsed, parsed.to_raw(), "hdm6_q_brotli_tuned_split"
     parsed = parse_packed_decoder_brotli(decoder_section)
     return parsed, parsed.to_raw(), "brotli_packed_decoder_raw"
 

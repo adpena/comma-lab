@@ -31,7 +31,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-label", required=True)
     parser.add_argument(
         "--decoder-recode-variant",
-        choices=("hdm3", "hdm4"),
+        choices=("hdm3", "hdm4", "hdm6"),
         default="hdm3",
         help="Lossless decoder-section recode to materialize.",
     )

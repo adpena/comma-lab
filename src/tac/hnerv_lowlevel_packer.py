@@ -1071,6 +1071,7 @@ def _detect_decoder_brotli_stream_count(data: bytes) -> int | None:
 
 def _codec_magic_hint(data: bytes) -> str | None:
     for magic, name in (
+        (b"HDM6", "HDM6 decoder codec"),
         (b"HDM4", "HDM4 decoder codec"),
         (b"HDM3", "HDM3 decoder codec"),
         (b"HLM2", "HLM2 fixed-latent codec"),

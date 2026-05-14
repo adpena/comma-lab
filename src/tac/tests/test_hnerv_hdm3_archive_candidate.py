@@ -13,6 +13,7 @@ from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     decode_hdm3_q_brotli_split_fixture,
     decode_hdm4_q_brotli_split_fixture,
+    decode_hdm6_q_brotli_tuned_fixture,
 )
 from tac.hnerv_hdm3_archive_candidate import (
     build_hdm3_archive_candidate,
@@ -178,6 +179,57 @@ def test_build_hdm4_archive_candidate_uses_distinct_lane_and_preserves_raw_decod
     assert "strict_pre_submission_compliance_json_missing" in blockers
     assert "lane_dispatch_claim_missing" in blockers
     assert "exact_cuda_auth_eval_missing" in blockers
+
+
+def test_build_hdm6_archive_candidate_accepts_hdm4_source_and_saves_bytes(
+    tmp_path: Path,
+) -> None:
+    source_archive = _source_sidecar_archive(tmp_path)
+    hdm4_manifest = build_hdm3_archive_candidate(
+        source_archive=source_archive,
+        output_dir=tmp_path / "hdm4",
+        source_label="PR106 R2 sidecar",
+        decoder_recode_variant="hdm4",
+        repo_root=REPO,
+    )
+    hdm4_archive = Path(hdm4_manifest["candidate_archive_path"])
+    hdm4_view = read_packed_archive_view(hdm4_archive)
+    hdm4_raw = decode_hdm4_q_brotli_split_fixture(
+        hdm4_view.packed.decoder_packed_brotli
+    ).to_raw()
+
+    manifest = build_hdm3_archive_candidate(
+        source_archive=hdm4_archive,
+        output_dir=tmp_path / "hdm6",
+        source_label="PR106 R2 HDM4 sidecar",
+        decoder_recode_variant="hdm6",
+        repo_root=REPO,
+    )
+
+    assert manifest["score_claim"] is False
+    assert manifest["candidate_decoder_recode_key"] == "hdm6"
+    assert manifest["candidate_variant"] == "hdm6_q_brotli_split_fixed_recipe_tuned_lgwin_plus_raw_scales"
+    assert manifest["lane_id"] == "hnerv_hdm6_q_brotli_tuned_exact_eval"
+    assert manifest["source_decoder_section_codec"] == "hdm4_q_brotli_split"
+    assert manifest["candidate_rate_positive"] is True
+    assert manifest["candidate_decoder_section_byte_delta"] < 0
+    assert manifest["hdm3_stats"] == {}
+    assert manifest["hdm4_stats"] == {}
+    assert manifest["hdm6_stats"]["recipe_id"] == 1
+    assert manifest["hdm6_stats"]["brotli_params_by_chunk"] == [
+        {"quality": 11, "lgwin": 18},
+        {"quality": 11, "lgwin": 16},
+        {"quality": 11, "lgwin": 16},
+        {"quality": 10, "lgwin": 16},
+    ]
+
+    candidate_archive = Path(manifest["candidate_archive_path"])
+    candidate_view = read_packed_archive_view(candidate_archive)
+    assert candidate_view.payload_kind == "pr106_sidecar_wrapper"
+    assert candidate_view.packed.decoder_packed_brotli.startswith(b"HDM6")
+    assert candidate_view.packed.latents_and_sidecar_brotli == hdm4_view.packed.latents_and_sidecar_brotli
+    restored = decode_hdm6_q_brotli_tuned_fixture(candidate_view.packed.decoder_packed_brotli)
+    assert restored.to_raw() == hdm4_raw
 
 
 def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(

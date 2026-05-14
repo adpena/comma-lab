@@ -24,6 +24,7 @@ from tac.hnerv_decoder_recode import (
     HnervDecoderRecodeError,
     decode_hdm3_q_brotli_split_fixture,
     decode_hdm4_q_brotli_split_fixture,
+    decode_hdm6_q_brotli_tuned_fixture,
 )
 from tac.hnerv_lowlevel_packer import (
     HnervLowlevelPackError,
@@ -104,7 +105,7 @@ def restore_hdm3_payload_to_legacy_brotli(
     input_decoder_sha = sha256_bytes(decoder)
     input_latents_sha = sha256_bytes(packed.latents_and_sidecar_brotli)
 
-    if decoder.startswith((b"HDM3", b"HDM4")):
+    if decoder.startswith((b"HDM3", b"HDM4", b"HDM6")):
         recode_magic = decoder[:4].decode("ascii", errors="replace")
         raw_decoder = _decode_hdm_raw(decoder)
         restored_decoder = brotli.compress(raw_decoder, quality=brotli_quality)
@@ -136,13 +137,13 @@ def restore_hdm3_payload_to_legacy_brotli(
         return restored_payload, proof
 
     if require_hdm3:
-        raise HnervHdm3RuntimeAdapterError("payload decoder section is not HDM3")
+        raise HnervHdm3RuntimeAdapterError("payload decoder section is not HDM3/HDM4/HDM6")
 
     try:
         raw_decoder = brotli.decompress(decoder)
     except brotli.error as exc:
         raise HnervHdm3RuntimeAdapterError(
-            "decoder section is neither HDM3 nor legacy Brotli"
+            "decoder section is neither HDM3/HDM4/HDM6 nor legacy Brotli"
         ) from exc
     proof = _proof(
         mode="legacy_brotli_passthrough",
@@ -197,6 +198,8 @@ def _decode_hdm_raw(decoder: bytes) -> bytes:
             return decode_hdm3_q_brotli_split_fixture(decoder).to_raw()
         if decoder.startswith(b"HDM4"):
             return decode_hdm4_q_brotli_split_fixture(decoder).to_raw()
+        if decoder.startswith(b"HDM6"):
+            return decode_hdm6_q_brotli_tuned_fixture(decoder).to_raw()
         raise HnervDecoderRecodeError("unsupported HDM decoder-section magic")
     except HnervDecoderRecodeError as exc:
         raise HnervHdm3RuntimeAdapterError(f"invalid HDM decoder section: {exc}") from exc

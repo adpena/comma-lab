@@ -13,12 +13,14 @@ from tac.hnerv_decoder_recode import (
     decode_global_prev_symbol_context_range_fixture,
     decode_global_prev_symbol_mixed_context_fixture,
     decode_hdm3_q_brotli_split_fixture,
+    decode_hdm6_q_brotli_tuned_fixture,
     decode_hdm5_q_brotli_split_planning_fixture,
     decode_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_mixed_context_fixture,
     encode_hdm3_q_brotli_split_fixture,
     encode_hdm4_q_brotli_split_fixture,
+    encode_hdm6_q_brotli_tuned_fixture,
     encode_hdm5_q_brotli_split_planning_fixture,
     encode_prev_symbol_context_range_fixture,
     parse_decoder_section_for_recode,
@@ -139,6 +141,23 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     assert hdm3["raw_scale_bytes"] == profile["scale_stream_bytes"]
     assert hdm3["header_bytes"] == 7
     assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in hdm3
+    hdm6 = next(
+        row
+        for row in profile["variants"]
+        if row["variant"]
+        == "hdm6_q_brotli_split_fixed_recipe_tuned_lgwin_plus_raw_scales"
+    )
+    assert hdm6["codec"] == "HDM6_fixed_recipe_tuned_q_brotli_raw_scales"
+    assert hdm6["parity_fixture"] is True
+    assert hdm6["archive_ready"] is False
+    assert hdm6["raw_equal"] is True
+    assert hdm6["q_roundtrip_equal"] is True
+    assert hdm6["scale_roundtrip_equal"] is True
+    assert hdm6["q_stream_bytes"] == profile["q_stream_bytes"]
+    assert hdm6["raw_scale_bytes"] == profile["scale_stream_bytes"]
+    assert hdm6["header_bytes"] == 17
+    assert len(hdm6["brotli_params_by_chunk"]) == 4
+    assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in hdm6
     plan = profile["context_overhead_plan"]
     assert plan["score_claim"] is False
     assert plan["planning_only"] is True
@@ -246,6 +265,28 @@ def test_hdm3_q_brotli_split_fixture_roundtrips_and_reduces_raw_q_bytes() -> Non
     assert len(payload) == 7 + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
 
 
+def test_hdm6_tuned_q_brotli_fixture_roundtrips_with_fixed_recipe_params() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    payload, stats = encode_hdm6_q_brotli_tuned_fixture(parsed)
+    restored = decode_hdm6_q_brotli_tuned_fixture(payload)
+
+    assert payload.startswith(b"HDM6")
+    assert restored.to_raw() == parsed.to_raw()
+    assert restored.q_stream == parsed.q_stream
+    assert restored.scale_stream == parsed.scale_stream
+    assert stats["header_bytes"] == 17
+    assert stats["recipe_id"] == 1
+    assert stats["split_points"] == [6, 9, 26, 28]
+    assert stats["brotli_params_by_chunk"] == [
+        {"quality": 11, "lgwin": 18},
+        {"quality": 11, "lgwin": 16},
+        {"quality": 11, "lgwin": 16},
+        {"quality": 10, "lgwin": 16},
+    ]
+    assert len(payload) == stats["header_bytes"] + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
+
+
 def test_parse_decoder_section_for_recode_accepts_hdm4_source_sections() -> None:
     parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
     hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
@@ -253,6 +294,17 @@ def test_parse_decoder_section_for_recode_accepts_hdm4_source_sections() -> None
     restored, raw, codec = parse_decoder_section_for_recode(hdm4_payload)
 
     assert codec == "hdm4_q_brotli_split"
+    assert raw == parsed.to_raw()
+    assert restored.to_raw() == parsed.to_raw()
+
+
+def test_parse_decoder_section_for_recode_accepts_hdm6_source_sections() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm6_payload, _stats = encode_hdm6_q_brotli_tuned_fixture(parsed)
+
+    restored, raw, codec = parse_decoder_section_for_recode(hdm6_payload)
+
+    assert codec == "hdm6_q_brotli_tuned_split"
     assert raw == parsed.to_raw()
     assert restored.to_raw() == parsed.to_raw()
 
