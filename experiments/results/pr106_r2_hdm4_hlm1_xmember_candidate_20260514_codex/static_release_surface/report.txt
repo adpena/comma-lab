@@ -23,5 +23,13 @@ directory. These are not contest score claims.
 
 Submission-readiness status
 ===========================
-Exact [contest-CUDA] auth eval is still required before any score movement is
-accepted. CPU/Mac/local parity is advisory only.
+Exact [contest-CUDA] auth eval completed on Modal T4:
+
+auth_eval_json     : experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/contest_auth_eval.json
+avg_posenet_dist   : 0.00003236
+avg_segnet_dist    : 0.0006426
+canonical_score    : 0.20637498220368466
+evidence_grade     : contest-CUDA
+
+The reviewed score is rate-only movement versus HDM4+HLM1. CPU/Mac/local
+parity remains advisory only.
