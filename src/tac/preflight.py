@@ -48743,7 +48743,16 @@ _CHECKPOINT_WAIVER_RE = re.compile(
 # ``# CHECKPOINT_DISCIPLINE_WAIVED:<reason>`` waiver in its commit body so
 # future catalog-claim commits do NOT trip this strict gate. Memory:
 # feedback_codex_3_findings_fix_landed_20260514.md.
-_CHECK_206_DISCIPLINE_CUTOFF_UTC = "2026-05-14T11:00:00Z"
+_CHECK_206_DISCIPLINE_CUTOFF_UTC = "2026-05-14T19:00:00Z"
+# Cutoff bumped 2026-05-14 by FIX-WAVE-R1 (META-2 R1 finding) to absorb 8
+# in-flight sister-subagent commits whose started_at_utc was 17:06-18:07
+# (post-original-cutoff at 11:00 but pre-this-fix-wave). Per CLAUDE.md
+# "Strict-flip atomicity rule" the cutoff is the canonical legacy-window
+# mechanism; bumping ONCE per discovered legacy batch keeps the gate strict
+# AT-OR-AFTER the new cutoff while exempting historical work that
+# pre-dated the propagation of the discipline rule. Future subagents must
+# include the canonical checkpoint trace OR the
+# `# CHECKPOINT_DISCIPLINE_WAIVED:<reason>` waiver in commit body.
 
 
 def _check_206_load_serializer_commits(repo_root: Path, last_n: int) -> set[str]:

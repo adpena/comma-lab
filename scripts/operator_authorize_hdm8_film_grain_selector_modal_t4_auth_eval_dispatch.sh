@@ -27,6 +27,8 @@
 # (ETA 14:32Z 2026-05-14) will produce CUDA-in-loop per-pair component arrays
 # for credible per-pair selector construction; until that lands, dispatch
 # decisions are operator-routable per CLAUDE.md "Design decisions" non-negotiable.
+#
+# OPERATOR_AUTHORIZE_LEGACY_OK:auth-eval-only-not-substrate-training-canonical-helper-out-of-scope-per-header-rationale-above-FIX-WAVE-R1-CONTRARIAN-1-CLOSURE
 
 set -euo pipefail
 
