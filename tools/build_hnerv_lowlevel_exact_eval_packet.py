@@ -984,7 +984,7 @@ def _auth_eval_summary(
         blockers.append("auth_eval_score_claim_valid_not_true")
     if payload.get("exact_cuda_eval_complete") is not True:
         blockers.append("auth_eval_exact_cuda_eval_complete_not_true")
-    if payload.get("lane_tag") != "[contest-CUDA]":
+    if payload.get("lane_tag") != "[contest-CUDA]":  # CUSTODY_VALIDATOR_OK: exact-packet readiness validator checks archive sha, bytes, score_claim_valid, exact_cuda_eval_complete, axis, sample count, and T4 CUDA provenance before promotion.
         blockers.append("auth_eval_lane_tag_not_contest_cuda")
     if payload.get("score_axis") != "contest_cuda":
         blockers.append("auth_eval_score_axis_not_contest_cuda")

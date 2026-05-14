@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK:non-promoting-research-or-probe-builder-emits-non-score-claiming-archive-FIX-WAVE-R1-META-1-closure
 """Materialize an exact-evaluable HDM8 deterministic postfilter packet."""
 
 from __future__ import annotations

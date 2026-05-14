@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK:non-promoting-research-or-probe-builder-emits-non-score-claiming-archive-FIX-WAVE-R1-META-1-closure
 """Build a local A5 PR101 runtime-consumption packet scaffold.
 
 This tool is local-only. It does not run inflate end-to-end, does not invoke

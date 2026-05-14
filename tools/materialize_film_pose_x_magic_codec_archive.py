@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK:non-promoting-research-or-probe-builder-emits-non-score-claiming-archive-FIX-WAVE-R1-META-1-closure
 """Materialize a film_pose_conditioning × magic_codec composition probe archive.
 
 Per grand council Cluster 1 verdict 2026-05-12 (BUILD-ONE-PROBE; subagent

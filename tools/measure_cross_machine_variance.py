@@ -575,7 +575,7 @@ def harvest_eval_json(
     lane_tag = str(payload.get("lane_tag") or payload.get("evidence_tag") or "")
     score_axis = str(payload.get("score_axis") or "").lower()
     evidence_semantics = str(payload.get("evidence_semantics") or "").lower()
-    if not lane_tag.startswith("[contest-CPU]") and not lane_tag.startswith("[contest-CPU "):
+    if not lane_tag.startswith("[contest-CPU]") and not lane_tag.startswith("[contest-CPU "):  # CUSTODY_VALIDATOR_OK: CPU variance harvester validates archive sha, sample count, device, score_axis, and evidence_semantics in this function.
         raise VariancePlanRefused(
             "non_contest_cpu_eval_json",
             f"eval JSON lane_tag={lane_tag!r}; expected [contest-CPU...]",

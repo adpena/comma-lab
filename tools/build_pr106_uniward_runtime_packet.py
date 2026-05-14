@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK:non-promoting-research-or-probe-builder-emits-non-score-claiming-archive-FIX-WAVE-R1-META-1-closure
 """Build the PR106 UNIWARD-Lagrangian byte-closed runtime packet.
 
 CUDA-PRESTAGE flagged Candidate 2 (PR106 UNIWARD-Lagrangian @ rms=0.05 → 150,460 B

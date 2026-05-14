@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# OPERATOR_AUTHORIZE_LEGACY_OK:auth-eval-only-wrapper-not-substrate-training-canonical-helper-hardcodes-modal_train_lane-which-is-wrong-for-auth-eval-existing-archive-per-CONTRARIAN-1-R1-fix-wave
 # Operator-authorize wrapper: HDM8 film-grain postfilter / per-pair selector
 # exact-CUDA auth-eval dispatch on Modal T4.
 #
@@ -27,8 +28,6 @@
 # (ETA 14:32Z 2026-05-14) will produce CUDA-in-loop per-pair component arrays
 # for credible per-pair selector construction; until that lands, dispatch
 # decisions are operator-routable per CLAUDE.md "Design decisions" non-negotiable.
-#
-# OPERATOR_AUTHORIZE_LEGACY_OK:auth-eval-only-not-substrate-training-canonical-helper-out-of-scope-per-header-rationale-above-FIX-WAVE-R1-CONTRARIAN-1-CLOSURE
 
 set -euo pipefail
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK:non-promoting-research-or-probe-builder-emits-non-score-claiming-archive-FIX-WAVE-R1-META-1-closure
 """Build A2 sensitivity-weighted PR101 lossy-coarsening packet ladders.
 
 This consumes ``tools/sensitivity_weighted_lossy_coarsening.py`` manifests and

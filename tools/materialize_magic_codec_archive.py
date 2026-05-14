@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK:non-promoting-research-or-probe-builder-emits-non-score-claiming-archive-FIX-WAVE-R1-META-1-closure
 """Materialize a magic-codec archive from a source archive.
 
 Per CLAUDE.md "Deterministic packet compiler" non-negotiable, this tool is

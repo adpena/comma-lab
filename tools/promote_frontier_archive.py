@@ -396,7 +396,7 @@ def _classify_evidence_grade(tag: str) -> str | None:
         return "mps_evidence"
     if tag in NON_PROMOTABLE_TAGS:
         return "advisory_grade"
-    if tag not in AUTHORITATIVE_TAGS:
+    if tag not in AUTHORITATIVE_TAGS:  # CUSTODY_VALIDATOR_OK: refusal classifier only rejects non-authoritative tags; promotion path verifies AxisEvidence custody separately.
         return "advisory_grade"
     return None
 
