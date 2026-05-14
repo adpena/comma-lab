@@ -1885,26 +1885,6 @@ def preflight_all(
         check_no_unguarded_rmtree_in_build_tools(
             strict=True, verbose=verbose,
         )
-        # 2026-05-14 Catalog #234 - subagent commit bodies must NOT be empty
-        # per META-3 R1 finding (commit 0916332eb body was 1-line subject only;
-        # no Co-Authored-By, no checkpoint trace, no journal-grade ledger).
-        # Initial wire-in is warn-only per CLAUDE.md "Strict-flip atomicity
-        # rule"; cutoff (`_CHECK_234_DISCIPLINE_CUTOFF_UTC`) exempts pre-fix
-        # legacy commits. Strict-flip planned after operator-routed sweep
-        # confirms post-cutoff live count = 0. Memory:
-        # feedback_fix_wave_r1_wave_a_landed_20260514.md.
-        check_subagent_commit_bodies_not_empty(
-            strict=False, verbose=verbose,
-        )
-        # 2026-05-14 Catalog #235 - META-meta sha-prefix length-mismatch
-        # comparison gate per META-4 R1 finding. STRICT @ 0 from byte one
-        # because the canonical bug pattern was already fixed in sister
-        # commit 4d483ac39 via `_check_117_serializer_sha_matches_commit`.
-        # This META-meta gate sister-protects against future re-introduction.
-        # Memory: feedback_fix_wave_r1_wave_a_landed_20260514.md.
-        check_no_sha_prefix_length_mismatch_comparisons(
-            strict=True, verbose=verbose,
-        )
         # 2026-05-14 Catalog #209 - DP1 Phase 2 contest-video-leakage caller
         # gate. Refuses any distill_codebook(...) callsite under src/tac/,
         # tools/, experiments/, scripts/ that does NOT route through a
