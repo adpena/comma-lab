@@ -281,3 +281,42 @@ OSS v0.2.0-rc1 audit, commit `c293ba425`, findings D-3 + D-4. This draft is the
 proposal for resolving both findings. Promotion to canonical
 `LICENSE` / `THIRD_PARTY_NOTICES.md` is **gated on explicit operator approval**
 per CLAUDE.md "Non-Negotiable Upstream Rule."
+
+---
+
+## comma.ai alignment addendum (operator directive 2026-05-14)
+
+Operator directive: *"whatever is cleanest for comma ai in production and in
+line with their OSS policies and commercial monetization"*.
+
+A companion addendum verified comma.ai's actual production OSS posture against
+the canonical comma.ai repos and produced concrete recommendations for the
+LICENSE.draft + THIRD_PARTY_NOTICES.md.draft promotion. Key resolutions:
+
+- **B1 (`pyppmd` LGPL) is RESOLVED**: comma.ai's own contest repo
+  `commaai/comma_video_compression_challenge` ships `pyppmd` directly in its
+  `pyproject.toml` runtime deps. Option 1 (accept dynamically-linked LGPL as
+  documented exception) is precedent-matched to upstream and is the only
+  comma-aligned choice. The notices draft has been updated to reference this.
+- **SPDX headers (operator-confirm point §3 above): resolve to NO** — comma.ai
+  uses no SPDX headers in their LICENSE files or per-source-file across
+  openpilot. Reverses the "consider adding" suggestion to "do NOT add for
+  comma alignment".
+- **Copyright holder name**: confirm `Alejandro Peña` (single author) — matches
+  comma.ai's contest repo `Copyright (c) 2026 comma.ai` minimalism. Joint
+  attribution NOT recommended absent explicit operator IP-transfer authorization.
+- **Copyright year**: confirm `2026` (single year, matches contest).
+- **THIRD_PARTY_NOTICES.md**: keep the comprehensive draft (Path B) over a
+  comma-strict-minimal alternative (Path A). The comprehensive draft is more
+  useful for a research-stage repo.
+- **New STRICT preflight gate proposed**: `check_no_copyleft_dependencies` would
+  refuse future LGPL/GPL/AGPL deps except an explicit allowlist (initially:
+  `pyppmd` only). Operator-decide whether to spawn a follow-up subagent to land
+  this.
+- **CLAUDE.md non-negotiable proposed**: a "License policy — non-negotiable"
+  section codifying the permissive-only-with-pyppmd-exception posture.
+
+See `reports/oss_d3_d4_drafts_20260514/comma_ai_alignment_addendum.md` for the
+full addendum, verified-empirical receipts, and the comma-aligned operator
+confirm-or-correct checklist that supersedes the original §"Operator
+confirm-or-correct checklist" above.
