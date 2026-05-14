@@ -98,6 +98,14 @@ Result:
 - Proxy uncharged score: `0.19193269006537006`
 - Classification: not dispatchable. The guard helps the proxy by about `1.02e-5` versus the top-64 no-guard packet, but it still does not clear the existing exact CPU near-miss or the `<0.192` target.
 
+Exact-K16 boundary after vectorizing the search:
+
+- Best charged proxy tested: about `0.19211844`
+- Best uncharged proxy tested: about `0.19188539`
+- Charged bytes: `178608`
+- Selector payload bytes: `340`
+- Classification: not dispatchable. The K16 component gain is real but the extra 4-bit selector rate overwhelms it.
+
 ## PR106 / HDM8 Postfilter Check
 
 Existing exact CUDA artifacts reviewed:

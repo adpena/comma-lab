@@ -20,6 +20,7 @@ Landed in `tools/build_pr101_frame_exploit_selector_packet.py`:
 - Recorded `selector_seg_guard_delta`, `selector.seg_guard_delta`, and `selector.selector_search_engine` in packet manifests.
 - Replaced the slow pure-Python exact compact selector search with a deterministic NumPy-backed exact exhaustive path when NumPy is available.
 - Kept the old pure-Python exhaustive path as a fallback.
+- Exposed `compact_exact_k4`, `compact_exact_k8`, and `compact_exact_k16` through the CLI so exact-K sweeps are reproducible without private helper calls.
 
 Test added in `src/tac/tests/test_frame_exploit_selector_packet.py`:
 
@@ -32,6 +33,14 @@ Verification:
 ```
 
 Result: `17 passed in 1.89s`.
+
+Follow-up exact-K CLI verification after exposing K variants:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_frame_exploit_selector_packet.py -q
+```
+
+Result: `18 passed in 1.93s`.
 
 ## Guard Probe Result
 
@@ -72,3 +81,13 @@ The remaining PR101 gap is not closed by guard relaxation. The likely next usefu
 - combine the selector packet with an independently verified PR101 source-payload byte saving.
 
 The builder hardening is still valuable because it turns future `K × guard × overlay` selector sweeps from minutes into seconds and preserves exact reproducibility in packet manifests.
+
+## Exact K16 Boundary
+
+Direct charged exact-K16 probe after vectorizing search:
+
+- Best base/top16/top64 guard charged proxy: about `0.19211844`
+- Best uncharged proxy: about `0.19188539`
+- Charged bytes: `178608`
+- Selector payload bytes: `340`
+- Classification: not dispatchable; the extra uncharged component gain is eaten by the 4-bit selector rate.
