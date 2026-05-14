@@ -256,6 +256,17 @@ def test_hnerv_scorecard_gate_fails_closed_on_missing_required_eval(monkeypatch,
     assert "MISSING-HLM2" in output
 
 
+def test_hnerv_scorecard_required_evals_include_hdm6_floor() -> None:
+    module = _load_all_lanes_module()
+    required = dict(module.HNERV_SCORECARD_REQUIRED_EVALS)
+
+    assert "PR106-R2-HDM6-HLM2-XMEMBER" in required
+    assert (
+        "hnerv_hdm6_hlm2_modal_t4_20260514T081819Z"
+        in required["PR106-R2-HDM6-HLM2-XMEMBER"].as_posix()
+    )
+
+
 def test_pr106_sidecar_runtime_consumption_gate_rejects_promotable_manifest(monkeypatch) -> None:
     module = _load_all_lanes_module()
 
