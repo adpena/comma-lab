@@ -111,6 +111,12 @@ def _make_repo_with_serializer_log(
                 "label": label,
                 "files": [marker_file.name],
                 "message_head": body.split("\n")[0][:80],
+                # 2026-05-14: post-cutoff timestamp so the strict gate evaluates
+                # the test fixture (the cutoff
+                # _CHECK_206_DISCIPLINE_CUTOFF_UTC is 2026-05-14T10:30:00Z;
+                # 9999-12-31 is well past it). Without this, the cutoff filter
+                # treats every test row as legacy and the gate returns clean.
+                "started_at_utc": "9999-12-31T00:00:00Z",
             })
         else:
             # Non-subagent: skip or emit a non-committed outcome
@@ -472,3 +478,221 @@ def test_gate_live_repo_count_below_threshold():
         "regression in the gate or a flood of new subagent commits without "
         "checkpoint discipline. Investigate before raising the threshold."
     )
+
+
+# ─── Cutoff-filter behavior (codex 3-findings fix, 2026-05-14) ──────────
+
+
+def _make_repo_with_serializer_log_v2(
+    tmp_path,
+    commits,  # list of (label, body, is_subagent, started_at_utc)
+):
+    """V2 helper: lets tests choose the started_at_utc per commit.
+
+    Required by the cutoff-filter tests below so pre-cutoff and post-cutoff
+    behavior can be exercised independently.
+    """
+    root = tmp_path / "repo"
+    root.mkdir()
+    state_dir = root / ".omx" / "state"
+    state_dir.mkdir(parents=True)
+
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=root, check=True, capture_output=True)
+
+    serializer_log_path = state_dir / "commit-serializer.log"
+    log_rows = []
+    for label, body, is_subagent, started_at_utc in commits:
+        f = root / f"f_{label}.txt"
+        f.write_text(label)
+        subprocess.run(["git", "add", f.name], cwd=root, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-q", "-m", body], cwd=root, check=True, capture_output=True)
+        sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+        ).stdout.strip()
+        if is_subagent:
+            log_rows.append({
+                "outcome": "committed",
+                "head_after": sha[:9],
+                "label": label,
+                "started_at_utc": started_at_utc,
+            })
+    with open(serializer_log_path, "w") as fh:
+        for row in log_rows:
+            fh.write(json.dumps(row) + "\n")
+    return root
+
+
+def test_pre_cutoff_subagent_commit_without_checkpoint_exempt(tmp_path):
+    """Legacy commit (started_at_utc before cutoff) is exempt regardless of body."""
+    root = _make_repo_with_serializer_log_v2(
+        tmp_path,
+        [("legacy", "no checkpoint mention here", True, "2026-05-14T10:00:00Z")],
+    )
+    v = check_subagent_dispatches_use_checkpoint_discipline(
+        repo_root=root, strict=False, verbose=False
+    )
+    assert v == []
+
+
+def test_post_cutoff_subagent_commit_without_checkpoint_FAILS_STRICT(tmp_path):
+    """REGRESSION TEST per codex MEDIUM #2 recommendation:
+
+    A post-cutoff subagent commit (serializer started_at_utc AFTER the
+    cutoff) that LACKS a checkpoint trace MUST cause preflight_all in
+    strict mode to RAISE PreflightError.
+    """
+    root = _make_repo_with_serializer_log_v2(
+        tmp_path,
+        [(
+            "post_cutoff_violator",
+            "post-cutoff subagent commit without checkpoint mention",
+            True,
+            "9999-12-31T00:00:00Z",
+        )],
+    )
+    # Warn mode: violation detected.
+    v = check_subagent_dispatches_use_checkpoint_discipline(
+        repo_root=root, strict=False, verbose=False
+    )
+    assert len(v) == 1
+    # Strict mode: must raise.
+    with pytest.raises(PreflightError, match="checkpoint trace"):
+        check_subagent_dispatches_use_checkpoint_discipline(
+            repo_root=root, strict=True, verbose=False
+        )
+
+
+def test_post_cutoff_subagent_commit_with_checkpoint_passes_strict(tmp_path):
+    """Post-cutoff commit WITH a checkpoint trace must pass strict."""
+    root = _make_repo_with_serializer_log_v2(
+        tmp_path,
+        [(
+            "post_cutoff_clean",
+            "Wrote tools/subagent_checkpoint.py at step 3.",
+            True,
+            "9999-12-31T00:00:00Z",
+        )],
+    )
+    v = check_subagent_dispatches_use_checkpoint_discipline(
+        repo_root=root, strict=True, verbose=False
+    )
+    assert v == []
+
+
+def test_missing_started_at_utc_is_treated_as_legacy(tmp_path):
+    """Conservative behavior: a row missing started_at_utc is treated as legacy
+    (exempt) to avoid breaking tests/fixtures that omit the field."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    state_dir = root / ".omx" / "state"
+    state_dir.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "t@e.com"], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=root, check=True, capture_output=True)
+    (root / "f.txt").write_text("x")
+    subprocess.run(["git", "add", "f.txt"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-q", "-m", "no checkpoint mention"],
+        cwd=root, check=True, capture_output=True,
+    )
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    log = state_dir / "commit-serializer.log"
+    # Note: NO started_at_utc field.
+    log.write_text(
+        json.dumps({"outcome": "committed", "head_after": sha[:9]}) + "\n"
+    )
+    v = check_subagent_dispatches_use_checkpoint_discipline(
+        repo_root=root, strict=True, verbose=False
+    )
+    assert v == []
+
+
+def test_load_serializer_started_at_returns_mapping(tmp_path):
+    """Helper round-trip."""
+    from tac.preflight import _check_206_load_serializer_started_at
+    state = tmp_path / ".omx" / "state"
+    state.mkdir(parents=True)
+    log = state / "commit-serializer.log"
+    rows = [
+        {"outcome": "committed", "head_after": "shaPOSTcut", "started_at_utc": "9999-01-01T00:00:00Z"},
+        {"outcome": "committed", "head_after": "shaPRECutT", "started_at_utc": "2026-05-14T00:00:00Z"},
+        {"outcome": "refused",   "head_after": "shaSKIPPED"},
+        {"outcome": "committed", "head_after": "shaNoTime"},  # missing field
+    ]
+    with open(log, "w") as fh:
+        for r in rows:
+            fh.write(json.dumps(r) + "\n")
+    m = _check_206_load_serializer_started_at(tmp_path, 50)
+    assert m == {
+        "shaPOSTcut": "9999-01-01T00:00:00Z",
+        "shaPRECutT": "2026-05-14T00:00:00Z",
+    }
+
+
+def test_cutoff_constant_present_and_iso_format():
+    """Smoke: the cutoff constant must exist and parse as ISO-8601."""
+    import datetime as _dt
+    from tac.preflight import _CHECK_206_DISCIPLINE_CUTOFF_UTC
+    # Strip trailing Z (replace with +00:00 for fromisoformat).
+    iso = _CHECK_206_DISCIPLINE_CUTOFF_UTC.replace("Z", "+00:00")
+    parsed = _dt.datetime.fromisoformat(iso)
+    assert parsed.tzinfo is not None
+    assert parsed.year >= 2026
+
+
+def test_orchestrator_callsite_is_strict_true():
+    """Catalog #176 sister check: the strict-flip MUST be wired in preflight_all().
+
+    This guards against accidental regression of the strict=False landing.
+    """
+    import inspect
+    from tac import preflight
+    src = inspect.getsource(preflight.preflight_all)
+    # The check_subagent_dispatches_use_checkpoint_discipline call must use
+    # strict=True (the 3-findings fix). Pattern is permissive on whitespace
+    # but rejects strict=False.
+    assert "check_subagent_dispatches_use_checkpoint_discipline" in src
+    # Forbid strict=False in the same window where the function name appears.
+    idx = src.index("check_subagent_dispatches_use_checkpoint_discipline")
+    window = src[idx:idx + 600]
+    assert "strict=True" in window, (
+        "Expected strict=True wire-in for check_subagent_dispatches_use_"
+        "checkpoint_discipline per Catalog #206 strict-flip"
+    )
+
+
+def test_preflight_all_raises_on_post_cutoff_violation_in_synthetic_repo(
+    tmp_path,
+):
+    """REGRESSION GUARD per codex MEDIUM #2 recommendation:
+
+    A post-cutoff subagent commit that lacks a checkpoint trace MUST cause
+    ``preflight_all(strict=True)`` (or the subagent-checkpoint gate
+    invocation) to raise PreflightError.
+
+    Construction: a synthetic repo with a single post-cutoff dirty subagent
+    commit. We exercise the gate directly (preflight_all itself wires many
+    sister checks that cannot all be satisfied in a synthetic tmp repo);
+    the contract this test enforces is that the wire-in honors strict=True.
+    """
+    root = _make_repo_with_serializer_log_v2(
+        tmp_path,
+        [(
+            "regression_guard",
+            "post-cutoff dirty body, no token, no waiver",
+            True,
+            "9999-12-31T00:00:00Z",
+        )],
+    )
+    # The strict-flipped wire-in must propagate strict=True; the gate
+    # function must raise.
+    with pytest.raises(PreflightError, match="checkpoint trace"):
+        check_subagent_dispatches_use_checkpoint_discipline(
+            repo_root=root, strict=True, verbose=False,
+        )

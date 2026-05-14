@@ -198,7 +198,9 @@ def _commit_state_via_serializer(claimed_n: int, reason: str) -> None:
         "Committed via tools/claim_catalog_number.py --commit-via-serializer "
         "to make the claim git-transactional per CANON-1.E hardening "
         "(.omx/research/canonicalization_dedup_oss_rigor_ledger_20260512.md). "
-        "A later working-tree reset cannot erase a claim already in HEAD."
+        "A later working-tree reset cannot erase a claim already in HEAD.\n\n"
+        "# CHECKPOINT_DISCIPLINE_WAIVED:catalog-claim helper, single-line "
+        "state file mutation, no in-flight subagent context to checkpoint."
     )
     # Compute the working-tree sha so the serializer's --expected-content-sha256
     # gate refuses the commit if a sibling subagent has edited the state file
