@@ -25,6 +25,13 @@ def test_modal_training_terminal_status_is_score_claim_safe() -> None:
     )
 
 
+def test_modal_training_terminal_status_accepts_legacy_rc_key() -> None:
+    assert (
+        modal_training_terminal_status({"rc": 1, "timed_out": False})
+        == "failed_modal_training_rc_1"
+    )
+
+
 def test_append_modal_training_terminal_claim_idempotent(tmp_path: Path) -> None:
     repo = tmp_path
     repo_tools = repo / "tools"

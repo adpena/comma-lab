@@ -26,7 +26,7 @@ def modal_training_terminal_status(result: dict[str, Any] | None) -> str:
         return "failed_modal_training_missing_result"
     if result.get("timed_out") is True:
         return "failed_modal_training_timeout"
-    rc = result.get("returncode")
+    rc = result.get("returncode", result.get("rc"))
     if isinstance(rc, bool):
         return "failed_modal_training_invalid_returncode"
     if isinstance(rc, int):
@@ -88,7 +88,7 @@ def append_modal_training_terminal_claim(
     terminal_status = status or modal_training_terminal_status(result)
     if result is None:
         result = {}
-    rc = result.get("returncode")
+    rc = result.get("returncode", result.get("rc"))
     timed_out = bool(result.get("timed_out", False))
     elapsed = result.get("elapsed_seconds")
     notes = (

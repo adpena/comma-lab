@@ -253,6 +253,7 @@ def test_harvest_modal_calls_appends_terminal_claim_evidence_once(tmp_path: Path
     out_dir = repo / "experiments" / "results" / "lane_demo_modal"
     out_dir.mkdir(parents=True)
     claim = {
+        "appended": True,
         "lane_id": "lane_demo",
         "instance_job_id": "job_demo",
         "status": "failed_modal_training_rc_1",
@@ -279,7 +280,41 @@ def test_harvest_modal_calls_appends_terminal_claim_evidence_once(tmp_path: Path
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
-    assert row["covered_terminal_claims"] == [claim]
+    assert row["covered_terminal_claims"] == [
+        {
+            "lane_id": "lane_demo",
+            "instance_job_id": "job_demo",
+            "status": "failed_modal_training_rc_1",
+        }
+    ]
+
+
+def test_harvest_modal_calls_refuses_evidence_when_terminal_claim_failed(tmp_path: Path) -> None:
+    mod = _load_harvest_module()
+    repo = tmp_path
+    out_dir = repo / "experiments" / "results" / "lane_demo_modal"
+    out_dir.mkdir(parents=True)
+
+    result = mod._append_terminal_claim_evidence(
+        repo_root=repo,
+        out_dir=out_dir,
+        terminal_claim={
+            "appended": False,
+            "reason": "terminal_claim_failed:RuntimeError:boom",
+            "lane_id": "lane_demo",
+            "instance_job_id": "job_demo",
+            "status": "failed_modal_training_rc_1",
+        },
+    )
+
+    assert result == {
+        "appended": False,
+        "reason": "terminal_claim_not_appended",
+        "lane_id": "lane_demo",
+        "instance_job_id": "job_demo",
+        "status": "failed_modal_training_rc_1",
+    }
+    assert not (repo / "reports" / "cathedral_autopilot_evidence.jsonl").exists()
 
 
 def test_harvest_modal_calls_repolls_generated_nonterminal_summary_only(

@@ -180,6 +180,17 @@ def _append_terminal_claim_evidence(
     status = str(terminal_claim.get("status") or "")
     if not lane_id or not job_id or not status:
         return {"appended": False, "reason": "incomplete_terminal_claim"}
+    if (
+        terminal_claim.get("appended") is not True
+        and terminal_claim.get("already_appended") is not True
+    ):
+        return {
+            "appended": False,
+            "reason": "terminal_claim_not_appended",
+            "lane_id": lane_id,
+            "instance_job_id": job_id,
+            "status": status,
+        }
 
     evidence_path = repo_root / CATHEDRAL_EVIDENCE_REL
     claim_key = (lane_id, job_id, status)
