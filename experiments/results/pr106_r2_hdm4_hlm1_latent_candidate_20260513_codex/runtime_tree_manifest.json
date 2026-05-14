@@ -1,7 +1,7 @@
 {
   "dispatch_runtime": "modal_cuda_uploaded_submission_dir",
-  "local_runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
-  "local_runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
+  "local_runtime_content_tree_sha256": "245fcc62243c547496bb9234159467e90c7f06829adc59dd4f4bd98a43a992ac",
+  "local_runtime_tree_sha256": "71fbc08f3d4f1550c9dc01408cea3993c608c55f9173f8ba04cf4411a59f0466",
   "local_static_release_surface_runtime": {
     "external_dependency_roots": [],
     "files": [
@@ -24,10 +24,10 @@
         "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
       },
       {
-        "bytes": 145,
+        "bytes": 1355,
         "relative_path": "report.txt",
         "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface/report.txt",
-        "sha256": "54fb3322c4e2cc380c50e988c513da7f6ec9abb94dde8c260b6032dfe4925c5d"
+        "sha256": "97d0d8956e111b1b1ca7b466fd1168ca4727515122f740ca5669efadb6ccdef2"
       },
       {
         "bytes": 23637,
@@ -60,10 +60,10 @@
       "tac_root_relative_path": "src/tac",
       "unresolved_modules": []
     },
-    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+    "runtime_content_tree_sha256": "245fcc62243c547496bb9234159467e90c7f06829adc59dd4f4bd98a43a992ac",
     "runtime_file_count": 7,
     "runtime_root": "<repo>/experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface",
-    "runtime_tree_sha256": "321e261238b1450f7545a3ddf27ddad9ab76fe3ac24c54e1c3a8826bb62fcf85",
+    "runtime_tree_sha256": "71fbc08f3d4f1550c9dc01408cea3993c608c55f9173f8ba04cf4411a59f0466",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,
@@ -71,8 +71,8 @@
       "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
     }
   },
-  "modal_cpu_runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
-  "modal_cpu_runtime_tree_sha256": "9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576",
+  "modal_cpu_runtime_content_tree_sha256": "245fcc62243c547496bb9234159467e90c7f06829adc59dd4f4bd98a43a992ac",
+  "modal_cpu_runtime_tree_sha256": "e60b3d5669cb5a08e04afb5c1413d5849411cf978676e7e0b8e3d5861a0b6d09",
   "modal_cpu_uploaded_submission_dir_runtime": {
     "external_dependency_roots": [],
     "files": [
@@ -95,10 +95,10 @@
         "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
       },
       {
-        "bytes": 145,
+        "bytes": 1355,
         "relative_path": "report.txt",
         "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/report.txt",
-        "sha256": "54fb3322c4e2cc380c50e988c513da7f6ec9abb94dde8c260b6032dfe4925c5d"
+        "sha256": "97d0d8956e111b1b1ca7b466fd1168ca4727515122f740ca5669efadb6ccdef2"
       },
       {
         "bytes": 23637,
@@ -131,10 +131,10 @@
       "tac_root_relative_path": "src/tac",
       "unresolved_modules": []
     },
-    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+    "runtime_content_tree_sha256": "245fcc62243c547496bb9234159467e90c7f06829adc59dd4f4bd98a43a992ac",
     "runtime_file_count": 7,
     "runtime_root": "/tmp/modal_auth_eval_cpu/submission_dir",
-    "runtime_tree_sha256": "9f96af4e62c60f5c2e4efc9c151dcc2c0e68adb5e8a3db94c49ca135d707b576",
+    "runtime_tree_sha256": "e60b3d5669cb5a08e04afb5c1413d5849411cf978676e7e0b8e3d5861a0b6d09",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,
@@ -164,10 +164,10 @@
         "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
       },
       {
-        "bytes": 145,
+        "bytes": 1355,
         "relative_path": "report.txt",
         "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
-        "sha256": "54fb3322c4e2cc380c50e988c513da7f6ec9abb94dde8c260b6032dfe4925c5d"
+        "sha256": "97d0d8956e111b1b1ca7b466fd1168ca4727515122f740ca5669efadb6ccdef2"
       },
       {
         "bytes": 23637,
@@ -200,10 +200,10 @@
       "tac_root_relative_path": "src/tac",
       "unresolved_modules": []
     },
-    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+    "runtime_content_tree_sha256": "245fcc62243c547496bb9234159467e90c7f06829adc59dd4f4bd98a43a992ac",
     "runtime_file_count": 7,
     "runtime_root": "/tmp/modal_auth_eval/submission_dir",
-    "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
+    "runtime_tree_sha256": "432c73045d0c93b85ceecb4f7b37bbbaec73c0a3fde27b34a750a8b8f46358f5",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,
@@ -233,10 +233,10 @@
         "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
       },
       {
-        "bytes": 145,
+        "bytes": 1355,
         "relative_path": "report.txt",
         "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
-        "sha256": "54fb3322c4e2cc380c50e988c513da7f6ec9abb94dde8c260b6032dfe4925c5d"
+        "sha256": "97d0d8956e111b1b1ca7b466fd1168ca4727515122f740ca5669efadb6ccdef2"
       },
       {
         "bytes": 23637,
@@ -269,10 +269,10 @@
       "tac_root_relative_path": "src/tac",
       "unresolved_modules": []
     },
-    "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
+    "runtime_content_tree_sha256": "245fcc62243c547496bb9234159467e90c7f06829adc59dd4f4bd98a43a992ac",
     "runtime_file_count": 7,
     "runtime_root": "/tmp/modal_auth_eval/submission_dir",
-    "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
+    "runtime_tree_sha256": "432c73045d0c93b85ceecb4f7b37bbbaec73c0a3fde27b34a750a8b8f46358f5",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,
@@ -281,8 +281,8 @@
     }
   },
   "promotion_eligible": false,
-  "runtime_content_tree_sha256": "e05e79416feed12996efce6e23cc6d21cbc276ff6221c7a2a4eea8dd2d4d2161",
-  "runtime_tree_sha256": "de844bdf4170b40e7ca2c94cc546c039b49704f6d99c730d4318803eed81aab9",
+  "runtime_content_tree_sha256": "245fcc62243c547496bb9234159467e90c7f06829adc59dd4f4bd98a43a992ac",
+  "runtime_tree_sha256": "432c73045d0c93b85ceecb4f7b37bbbaec73c0a3fde27b34a750a8b8f46358f5",
   "schema": "pr106_hlm1_runtime_custody_manifest_v1",
   "score_claim": false
 }

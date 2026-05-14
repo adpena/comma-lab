@@ -3,6 +3,6 @@
   "schema": "pr106_hlm1_modal_submission_dir_transport_v1",
   "score_claim": false,
   "submission_dir": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/static_release_surface",
-  "transport_zip_bytes": 201752,
-  "transport_zip_sha256": "9fae3b61ef2c5e37e95a4deceea289b86b73017e6152ac48f4ff599bc657b212"
+  "transport_zip_bytes": 202320,
+  "transport_zip_sha256": "130db7279273c7368531ced069819383fd18547ca6d162ad11910cef69b9c997"
 }

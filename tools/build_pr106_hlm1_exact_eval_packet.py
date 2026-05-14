@@ -34,6 +34,10 @@ from tac.deploy.modal.auth_eval import (  # noqa: E402
 from tac.packet_compiler.pr106_hlm1_runtime_consumption import (  # noqa: E402
     prove_pr106_hlm1_runtime_consumption,
 )
+from tac.optimizer.exact_readiness import (  # noqa: E402
+    ACTIVE_FLOOR_SCORE,
+    terminal_claim_result_conflicts,
+)
 from tac.repo_io import read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 DEFAULT_RESULT_DIR = Path(
@@ -64,6 +68,7 @@ DEFAULT_CPU_OUTPUT_DIR = (
     "experiments/results/modal_auth_eval_cpu/"
     "hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513"
 )
+DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
 REQUIRED_ARTIFACTS = (
     "manifest",
     "packetir_identity",
@@ -330,6 +335,57 @@ def _local_blockers(
     return blockers
 
 
+def _terminal_operator_next_steps(
+    *,
+    args: argparse.Namespace,
+    terminal_blockers: list[str],
+) -> dict[str, Any]:
+    return {
+        "schema": "terminal_exact_eval_evidence_stop_v1",
+        "copy_safe": True,
+        "must_run_in_order": True,
+        "packet_path": _repo_rel(args.json_out),
+        "terminal_exact_eval_evidence_blockers": terminal_blockers,
+        "steps": [
+            {
+                "id": "review_terminal_cuda_result",
+                "order": 1,
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": False,
+                "purpose": (
+                    "same archive/runtime already has terminal exact-CUDA evidence; "
+                    "do not redispatch this packet"
+                ),
+                "copy_safe_command": _one_liner(
+                    [
+                        ".venv/bin/python",
+                        "tools/operator_briefing.py",
+                        "--json",
+                    ]
+                ),
+            },
+            {
+                "id": "choose_byte_different_successor_candidate",
+                "order": 2,
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": False,
+                "purpose": (
+                    "move to a byte-different successor touching decoder or "
+                    "score-affecting sections instead of repeating HLM1"
+                ),
+                "copy_safe_command": _one_liner(
+                    [
+                        ".venv/bin/python",
+                        "tools/operator_briefing.py",
+                        "--top",
+                        "6",
+                    ]
+                ),
+            },
+        ],
+    }
+
+
 def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     payloads = _load_inputs(args)
     manifest = payloads["manifest"]
@@ -377,6 +433,19 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         runtime_manifest=runtime_manifest,
     )
     static_ready = not local_blockers
+    terminal_blockers = terminal_claim_result_conflicts(
+        dispatch_claims_path=_repo_path(args.claims_path),
+        lane_id=args.lane_id,
+        archive_sha256=str(archive.get("sha256") or ""),
+        # HLM1 packet refreshes may rewrite custody-only files such as
+        # report.txt, which changes the path-sensitive runtime tree while the
+        # measured archive and score-affecting decoder stay fixed. Suppress
+        # repeat dispatch by lane/archive; a true decoder successor needs a
+        # byte-different packet or a new lane id.
+        runtime_tree_sha256=None,
+        score_affecting_runtime_changed=False,
+        active_floor_score=args.active_score_frontier,
+    )
     source_repo_commit = _git_commit()
     modal_submit = "PYTHONPATH=src:upstream:$PWD " + _one_liner(
         [
@@ -563,6 +632,34 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             },
         ],
     }
+    candidate_commands = {
+        "claim": (
+            "Modal wrapper records the Level-2 active lane claim before provider spawn; "
+            "do not pre-claim separately unless using a different provider actuator."
+        ),
+        "submit": modal_submit,
+        "submit_contest_cpu": modal_cpu_submit,
+        "harvest": recover,
+        "harvest_contest_cpu": recover_cpu,
+        "local_cuda_exact_eval": local_cuda_smoke,
+    }
+    if terminal_blockers:
+        operator_next_steps = _terminal_operator_next_steps(
+            args=args,
+            terminal_blockers=terminal_blockers,
+        )
+        remaining_required = [
+            "terminal_exact_cuda_evidence_review",
+            "byte_different_successor_candidate_required",
+        ]
+        commands: dict[str, Any] = {}
+        suppressed_commands: dict[str, Any] = candidate_commands
+    else:
+        commands = candidate_commands
+        suppressed_commands = {}
+    submit_blockers = local_blockers + terminal_blockers + (
+        [] if args.operator_approved_exact_cuda else ["operator_exact_cuda_approval_required"]
+    )
 
     return {
         "packet_kind": "hnerv_hlm1_exact_eval_operator_packet",
@@ -588,15 +685,28 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "promotion_eligible": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch_claim": bool(static_ready),
-        "ready_for_submit": bool(static_ready and args.operator_approved_exact_cuda),
+        "ready_for_submit": bool(
+            static_ready and args.operator_approved_exact_cuda and not terminal_blockers
+        ),
         "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
-        "approved_exact_eval_target": bool(static_ready and args.operator_approved_exact_cuda),
+        "approved_exact_eval_target": bool(
+            static_ready and args.operator_approved_exact_cuda and not terminal_blockers
+        ),
         "approval_scope": (
             "operator approval for exact CUDA work only; Modal wrapper must claim lane, "
             "dispatch, harvest, and adjudication before any score claim"
         ),
         "blockers": local_blockers
+        + terminal_blockers
         + ([] if args.operator_approved_exact_cuda else ["operator_exact_cuda_approval_required"]),
+        "submit_blockers": submit_blockers,
+        "terminal_exact_eval_evidence_blockers": terminal_blockers,
+        "repeat_dispatch_allowed": not terminal_blockers,
+        "dispatch_action": (
+            "terminal_exact_eval_evidence_stop"
+            if terminal_blockers
+            else "submit_after_static_gates_and_operator_approval"
+        ),
         "remaining_required_for_score_or_promotion": remaining_required,
         "missing_env": [],
         "archive_sha256": archive["sha256"],
@@ -689,17 +799,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "pre_submission_compliance": args.static_compliance_public_out,
             }.items()
         },
-        "commands": {
-            "claim": (
-                "Modal wrapper records the Level-2 active lane claim before provider spawn; "
-                "do not pre-claim separately unless using a different provider actuator."
-            ),
-            "submit": modal_submit,
-            "submit_contest_cpu": modal_cpu_submit,
-            "harvest": recover,
-            "harvest_contest_cpu": recover_cpu,
-            "local_cuda_exact_eval": local_cuda_smoke,
-        },
+        "commands": commands,
+        "suppressed_commands": suppressed_commands,
         "operator_next_steps": operator_next_steps,
     }
 
@@ -735,6 +836,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--modal-cpu-output-dir", default=DEFAULT_CPU_OUTPUT_DIR)
     parser.add_argument("--modal-gpu", default="T4", choices=("T4", "A100", "A100-40GB", "A100-80GB", "H100", "H100-80GB"))
     parser.add_argument("--claim-agent", default="codex:gpt-5.5")
+    parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
+    parser.add_argument("--active-score-frontier", type=float, default=ACTIVE_FLOOR_SCORE)
     parser.add_argument(
         "--operator-approved-exact-cuda",
         action="store_true",

@@ -423,9 +423,9 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
     archive_sha256 = packet.get("archive_sha256")
     runtime_tree_sha256 = _packet_runtime_tree_sha256(packet)
     runtime_changed = as_bool(packet.get("score_affecting_runtime_changed"))
-    terminal_blockers = []
+    terminal_blockers = list(packet.get("terminal_exact_eval_evidence_blockers") or [])
     if isinstance(archive_sha256, str):
-        terminal_blockers = terminal_claim_result_conflicts(
+        live_terminal_blockers = terminal_claim_result_conflicts(
             str(lane["lane_id"]),
             archive_sha256,
             dispatch_claims_path=DISPATCH_CLAIMS,
@@ -433,6 +433,15 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
             runtime_tree_sha256=runtime_tree_sha256,
             score_affecting_runtime_changed=runtime_changed,
         )
+        terminal_blockers.extend(
+            blocker for blocker in live_terminal_blockers if blocker not in terminal_blockers
+        )
+    if (
+        packet.get("dispatch_action") == "terminal_exact_eval_evidence_stop"
+        and not terminal_blockers
+    ):
+        terminal_blockers.append("packet_dispatch_action_terminal_exact_eval_evidence_stop")
+    if terminal_blockers:
         blockers.extend(
             blocker for blocker in terminal_blockers if blocker not in blockers
         )
@@ -461,6 +470,7 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
         or packet.get("ready_for_exact_eval_dispatch_claim")
     )
     commands = dict(packet.get("commands") or {})
+    packet_suppressed_commands = dict(packet.get("suppressed_commands") or {})
     operator_next_steps = dict(packet.get("operator_next_steps") or {})
     repeat_dispatch_allowed = not terminal_blockers
     if not repeat_dispatch_allowed:
@@ -505,9 +515,11 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
         "payload_diff_ready": payload_diff_ready,
         "dry_run_ready": dry_run_ready,
         "commands": commands,
-        "suppressed_commands": dict(packet.get("commands") or {})
+        "suppressed_commands": (
+            packet_suppressed_commands or dict(packet.get("commands") or {})
+        )
         if not repeat_dispatch_allowed
-        else {},
+        else packet_suppressed_commands,
         "operator_next_steps": operator_next_steps,
         "suppressed_operator_next_steps": dict(packet.get("operator_next_steps") or {})
         if not repeat_dispatch_allowed

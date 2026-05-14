@@ -239,19 +239,39 @@ def test_briefing_json_composite_has_all_three_keys():
     hlm1_packet = json.loads(packet_text)
     assert "/Users/adpena" not in packet_text
     assert hlm1_packet["runtime_tree_sha256"] != hlm1_packet["local_runtime_tree_sha256"]
-    assert (
-        "--expected-runtime-tree-sha256 "
-        + hlm1_packet["runtime_tree_sha256"]
-        in hlm1_packet["commands"]["submit"]
-    )
     modal_cpu_runtime_sha = hlm1_packet["runtime_manifest"]["modal_cpu_runtime_tree_sha256"]
     assert modal_cpu_runtime_sha != hlm1_packet["runtime_tree_sha256"]
-    assert (
-        "--expected-runtime-tree-sha256 "
-        + modal_cpu_runtime_sha
-        in hlm1_packet["commands"]["submit_contest_cpu"]
-    )
-    assert "experiments/modal_auth_eval_cpu.py" in hlm1_packet["commands"]["submit_contest_cpu"]
+    if hlm1_packet.get("terminal_exact_eval_evidence_blockers"):
+        assert hlm1_packet["ready_for_submit"] is False
+        assert hlm1_packet["commands"] == {}
+        assert "submit" in hlm1_packet["suppressed_commands"]
+        assert "submit_contest_cpu" in hlm1_packet["suppressed_commands"]
+        assert (
+            "--expected-runtime-tree-sha256 "
+            + hlm1_packet["runtime_tree_sha256"]
+            in hlm1_packet["suppressed_commands"]["submit"]
+        )
+        assert (
+            "--expected-runtime-tree-sha256 "
+            + modal_cpu_runtime_sha
+            in hlm1_packet["suppressed_commands"]["submit_contest_cpu"]
+        )
+        assert (
+            "experiments/modal_auth_eval_cpu.py"
+            in hlm1_packet["suppressed_commands"]["submit_contest_cpu"]
+        )
+    else:
+        assert (
+            "--expected-runtime-tree-sha256 "
+            + hlm1_packet["runtime_tree_sha256"]
+            in hlm1_packet["commands"]["submit"]
+        )
+        assert (
+            "--expected-runtime-tree-sha256 "
+            + modal_cpu_runtime_sha
+            in hlm1_packet["commands"]["submit_contest_cpu"]
+        )
+        assert "experiments/modal_auth_eval_cpu.py" in hlm1_packet["commands"]["submit_contest_cpu"]
     refresh_cmd = hlm1_packet["operator_next_steps"]["steps"][0]["copy_safe_command"]
     assert "--operator-approved-exact-cuda" not in refresh_cmd
     assert hlm1_packet["runtime_hlm1_decode_consumption_claim"] is True
@@ -265,14 +285,20 @@ def test_briefing_json_composite_has_all_three_keys():
     assert hlm1["dry_run_ready"] is True
     assert hlm1["score_affecting_runtime_changed"] is True
     packet_step_ids = [step["id"] for step in hlm1_packet["operator_next_steps"]["steps"]]
-    assert packet_step_ids == [
-        "refresh_static_packet_no_dispatch",
-        "optional_local_cuda_exact_eval",
-        "submit_modal_exact_cuda",
-        "harvest_modal_exact_cuda",
-        "submit_modal_exact_cpu",
-        "harvest_modal_exact_cpu",
-    ]
+    if hlm1_packet.get("terminal_exact_eval_evidence_blockers"):
+        assert packet_step_ids == [
+            "review_terminal_cuda_result",
+            "choose_byte_different_successor_candidate",
+        ]
+    else:
+        assert packet_step_ids == [
+            "refresh_static_packet_no_dispatch",
+            "optional_local_cuda_exact_eval",
+            "submit_modal_exact_cuda",
+            "harvest_modal_exact_cuda",
+            "submit_modal_exact_cpu",
+            "harvest_modal_exact_cpu",
+        ]
     if hlm1["terminal_exact_eval_evidence_blockers"]:
         assert hlm1["operator_next_steps"]["schema"] == "terminal_exact_eval_evidence_stop_v1"
         hlm1_step_ids = [step["id"] for step in hlm1["operator_next_steps"]["steps"]]

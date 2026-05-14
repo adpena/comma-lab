@@ -47,17 +47,20 @@ _RUNTIME_SOURCE_CANDIDATES = (
 @contextmanager
 def _runtime_import_context(runtime_dir: Path) -> Iterator[None]:
     saved_path = list(sys.path)
+    saved_dont_write_bytecode = sys.dont_write_bytecode
     sentinel = object()
     saved_modules: dict[str, ModuleType | object] = {
         name: sys.modules.get(name, sentinel) for name in _RUNTIME_TRANSIENT_MODULES
     }
     for name in _RUNTIME_TRANSIENT_MODULES:
         sys.modules.pop(name, None)
+    sys.dont_write_bytecode = True
     sys.path.insert(0, str(runtime_dir / "src"))
     sys.path.insert(0, str(runtime_dir))
     try:
         yield
     finally:
+        sys.dont_write_bytecode = saved_dont_write_bytecode
         sys.path[:] = saved_path
         for name, module in saved_modules.items():
             if module is sentinel:

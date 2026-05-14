@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -23,6 +24,7 @@ from tac.packet_compiler.pr106_fixed_latent_recode import (
 from tac.packet_compiler.pr106_hlm1_runtime_consumption import (
     prove_pr106_hlm1_runtime_consumption,
 )
+from tac.packet_compiler.pr106_runtime_consumption import load_pr106_runtime_codec
 
 REPO = Path(__file__).resolve().parents[3]
 PR106_R2_PR101_ARCHIVE = (
@@ -157,6 +159,19 @@ def test_submission_runtime_decodes_hlm1_fixed_latents() -> None:
     assert runtime.decode_fixed_latents_raw(recode.payload) == brotli.decompress(
         view.packed.latents_and_sidecar_brotli
     )
+
+
+def test_runtime_consumption_loader_does_not_write_pycache(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    shutil.copytree(REPO / "submissions" / "pr106_latent_sidecar_r2_pr101_grammar", runtime)
+    for cache_dir in runtime.rglob("__pycache__"):
+        shutil.rmtree(cache_dir)
+
+    module = load_pr106_runtime_codec(runtime)
+
+    assert hasattr(module, "decode_fixed_latents_raw")
+    assert not list(runtime.rglob("__pycache__"))
+    assert not list(runtime.rglob("*.pyc"))
 
 
 def test_hlm1_recode_rejects_non_binary_hi_stream() -> None:
