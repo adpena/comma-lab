@@ -1,0 +1,30 @@
+{
+  "alpha": 1.0,
+  "delta_b_c6": 83643,
+  "delta_b_stack": 72973,
+  "delta_b_z3": -10670,
+  "inputs": {
+    "base_a1_archive_bytes": 178262,
+    "base_source": "submissions/a1/archive.zip",
+    "c6_only_archive_bytes": 94619,
+    "c6_source": "experiments/results/c6_smoke_cpu_re_141735/0.bin",
+    "stacked_archive_bytes": 105289,
+    "stacked_source": "additive_estimate_c6=94619+z3_sidecar=10670",
+    "z3_only_archive_bytes": 188932,
+    "z3_source": "synthetic_z3hp1_sidecar_seed=0_n_pairs=600"
+  },
+  "notes": "alpha=1.0000; verdict=additive; n_pairs=600",
+  "predicted_additive_savings": 72973,
+  "predicted_delta_s_additive": -0.04858972538618421,
+  "predicted_delta_s_realized": -0.04858972538618421,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "realized_savings": 72973,
+  "result_review_blockers": [
+    "alpha_is_structural_not_empirical_real_stacked_archive_required_for_empirical_alpha",
+    "probe_is_research_only_not_a_score_claim",
+    "probe_is_cpu_synthetic_not_contest_cuda_or_contest_cpu_authority"
+  ],
+  "score_claim": false,
+  "verdict": "additive"
+}
