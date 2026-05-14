@@ -1,0 +1,186 @@
+schema_version: 1
+name: substrate_c6_e4_mdl_ibps_modal_t4_dispatch
+lane_id: lane_c6_e4_mdl_ibps_substrate_20260514
+summary: |
+  C6 MDL-IBPS substrate (zen-Z1 LARGEST single bet for substrate-class shift)
+  per `.omx/research/campaign_lane_c6_e4_mdl_ibps_substrate_20260514.md` +
+  `.omx/research/adjusted_theoretical_floor_v3_post_pr106_falsification_20260513.md`.
+
+  Mechanism (Tishby-Zaslavsky 2015 IB + Rissanen 1978 MDL):
+
+  Jointly minimize:
+
+      L = ||scorer(decoded) - scorer(GT)||² + β · I(z; frames)
+
+  where z is a per-pair low-rate latent (24 dims target) and the encoder
+  produces a variational q(z|frames) bounded by KL(q || N(0,I)).
+
+  Z1 ablation (`.omx/research/zen_floor_band_v2_post_z1_ablation_20260514.md`)
+  empirically proved the HNeRV-family substrate class is saturated at ~99.3%
+  MDL density on A1; sub-0.10 requires a DIFFERENT substrate class. C6 is
+  the across-class shift.
+
+  Predicted ΔS -0.030 to -0.080 vs PR101 0.193 → predicted score band
+  [0.113, 0.163] [mathematical-derivation; first-principles-bound].
+
+  Probe-disambiguator (Catalog #125 hook #6): two defensible interpretations
+  of "what dominates ΔS" — (a) decoder-class hypothesis vs (b) encoder-
+  bottleneck hypothesis. The β-sweep over [0.001, 1.0] IS the probe; post-
+  smoke MDL ablation on the C6 archive (via `tools/mdl_scorer_conditional_ablation.py`)
+  CONFIRMS or REFUTES the substrate-class shift.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: independent_substrate
+# C6 is structurally INDEPENDENT of HNeRV-family. The mechanism is variational
+# IB (encoder + decoder + per-pair z) with the KL regularizer flowing through
+# the encoder. No mask/renderer-derivative failure surface shared with HNeRV.
+
+active_dispatch_contract: c6_mdl_ibps_substrate
+dispatch_contracts:
+  - id: c6_mdl_ibps_substrate
+    archive_role: monolithic_ibps1_self_contained
+    builder_surface: experiments/train_substrate_c6_e4_mdl_ibps.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 200
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.113, 0.163]
+smoke_score_band: [0.10, 0.30]
+predicted_delta: "-0.030 to -0.080 vs PR101 0.193 [mathematical-derivation; first-principles-bound]"
+predicted_delta_basis: ".omx/research/adjusted_theoretical_floor_v3_post_pr106_falsification_20260513.md (#3 in TOP-3 dispatch queue; zen-Z1 LARGEST single bet)"
+literature_anchor: |
+  Tishby & Zaslavsky (2015) "Deep Learning and the Information Bottleneck Principle"
+    IEEE Info. Theory Workshop DOI 10.1109/ITW.2015.7133169;
+  Rissanen (1978) "Modeling by shortest data description" Automatica 14:465-471;
+  Alemi et al. (2017) "Deep Variational Information Bottleneck" ICLR;
+  Kingma & Welling (2013) "Auto-Encoding Variational Bayes" ICLR;
+  MacKay (2003) Information Theory, Inference, and Learning Algorithms chs. 28-30;
+  Wallace & Boulton (1968) "An information measure for classification" MML/MDL precursor;
+  Atick & Redlich (1990) "Towards a theory of early visual processing" (cooperative-receiver).
+
+council_phase_5_prediction: 0.140
+
+risk: |
+  C6 MDL-IBPS substrate first-anchor dispatch. The substrate is NOVEL — no
+  empirical anchor exists yet on the contest video. Predicted band
+  [0.113, 0.163] is a mathematical derivation from the IB upper bound +
+  Z1 across-class-shift hypothesis, not measurement.
+
+  Architectural risk:
+  - The IB bottleneck (24-dim z) may be TOO TIGHT to reconstruct contest
+    pose features at the required PoseNet/SegNet fidelity. Sweep β over
+    [0.001, 1.0] in production; smoke uses β=0.01.
+  - The encoder + decoder + per-pair latent compose with brotli but random
+    init weights compress poorly. After training, structured weights are
+    expected to hit the 100-150 KB band; if they don't, the rate term in
+    the Lagrangian dominates the score.
+  - The probe-disambiguator (β-sweep + post-smoke MDL ablation) is the
+    pre-promotion test. If C6 MDL density > 0.95 it's WITHIN-CLASS (Z1
+    saturation); if < 0.90 it's ACROSS-CLASS (the substrate-class shift
+    happened).
+
+  Modal T4 training cost band: $0.50 smoke (200 epochs); $5-15 full
+  (2000-3000 epochs). Per CLAUDE.md "Auth eval EVERYWHERE" the dispatch
+  MUST end with CUDA auth eval on the EMA shadow.
+
+envelope_status: "FITS $5 envelope at p50 fallback for smoke ($0.50); full dispatch $5-15"
+
+remote_driver: scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+  cost_band_trainer: experiments/train_substrate_c6_e4_mdl_ibps.py
+  cost_band_epochs: 200
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_c6_e4_mdl_ibps.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/c6_e4_mdl_ibps/__init__.py
+  - src/tac/substrates/c6_e4_mdl_ibps/architecture.py
+  - src/tac/substrates/c6_e4_mdl_ibps/archive.py
+  - src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py
+  - src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py
+  - src/tac/substrates/c6_e4_mdl_ibps/inflate.py
+  - src/tac/substrates/c6_e4_mdl_ibps/mdl_loss.py
+  - src/tac/substrates/c6_e4_mdl_ibps/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+
+env_overrides:
+  C6_E4_MDL_IBPS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  C6_E4_MDL_IBPS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  C6_E4_MDL_IBPS_OUTPUT_DIR: /workspace/pact/lane_substrate_c6_e4_mdl_ibps_results/output
+  C6_E4_MDL_IBPS_EPOCHS: "200"
+  C6_E4_MDL_IBPS_BATCH_SIZE: "4"
+  C6_E4_MDL_IBPS_LR: "5e-4"
+  C6_E4_MDL_IBPS_LATENT_DIM: "24"
+  C6_E4_MDL_IBPS_BETA_IB: "0.01"
+  C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16: "false"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_c6_e4_mdl_ibps.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  C6 MDL-IBPS substrate first-anchor dispatch recipe.
+
+  The substrate is a single-archive IBPS1 packet at ~100-200 KB target.
+  Encoder (~35K params) + decoder (~80K params) + per-pair latent
+  (~14K bytes int8) + sorted-keys JSON meta. v1 smoke produces ~94KB
+  archive at smoke config (8-dim latent, 48x64 output); full config
+  produces ~219KB random-init archive (compresses better after training).
+
+  Per the floor v3 routing memo, C6 is the cheapest LARGEST-bet single
+  substrate (EV/$ #1) with predicted ΔS -0.030 to -0.080. The substrate
+  is the across-class shift Z1 ablation says is required for sub-0.10.
+
+  Stage 0B smoke ($0.50 Modal T4) is the gating empirical test:
+  - Score in band [0.10, 0.30] → smoke green; advance to Stage 1 full ($5)
+  - Score outside band → DEFERRED-pending-research per CLAUDE.md (NOT KILL)
+
+  Post-smoke probe-disambiguator: run Z1 MDL ablation on the C6 archive
+  via `tools/mdl_scorer_conditional_ablation.py`. If MDL density < 0.90,
+  the substrate-class shift is CONFIRMED.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE": dispatch ends with CUDA auth eval
+  on EMA shadow. CUDA-only at this stage; paired CPU axis on Linux x86_64
+  required before frontier-claim language per CLAUDE.md "Submission auth
+  eval — BOTH CPU AND CUDA".
+
+  Cross-ref:
+    .omx/research/campaign_lane_c6_e4_mdl_ibps_substrate_20260514.md (campaign ledger)
+    .omx/research/adjusted_theoretical_floor_v3_post_pr106_falsification_20260513.md (zen-Z1 LARGEST single bet)
+    .omx/research/zen_floor_band_v2_post_z1_ablation_20260514.md (across-class shift evidence)
+    src/tac/substrates/c6_e4_mdl_ibps/__init__.py (substrate docstring + Catalog #124 8 fields)
+    src/tac/substrates/d4_wyner_ziv_frame_0/__init__.py (sister independent-substrate reference)
