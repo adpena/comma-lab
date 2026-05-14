@@ -988,6 +988,57 @@ def recover_detached(
         }
         write_json(out_dir / RECOVER_JSON_NAME, summary)
         return summary
+    except Exception as exc:
+        message = str(exc)
+        is_cancelled = "cancel" in message.lower()
+        summary = {
+            "schema_version": "modal_hdm8_postfilter_sweep_recover_summary_v1",
+            "status": (
+                "cancelled_provider_function_call"
+                if is_cancelled
+                else "failed_provider_exception"
+            ),
+            "call_id": resolved_call_id,
+            "output_dir": str(out_dir),
+            "provider_exception_type": type(exc).__name__,
+            "provider_exception_message": message,
+            "passed": False,
+            "returncode": 1,
+            "axis": AXIS,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "recovered_at_utc": utc_now(),
+        }
+        write_json(out_dir / RECOVER_JSON_NAME, summary)
+        if not no_close_claim:
+            lane_id = str(metadata.get("lane_id") or "")
+            instance_job_id = str(metadata.get("instance_job_id") or "")
+            claim_agent = str(
+                metadata.get("claim_agent")
+                or "codex:modal_hdm8_postfilter_sweep_recover"
+            )
+            if lane_id and instance_job_id:
+                terminal_dispatch_claim(
+                    repo_root=Path.cwd(),
+                    spec=DispatchClaimSpec(
+                        lane_id=lane_id,
+                        instance_job_id=instance_job_id,
+                        agent=claim_agent,
+                        platform="modal",
+                        force=True,
+                    ),
+                    status=(
+                        "cancelled_modal_hdm8_postfilter_sweep_no_score_claim"
+                        if is_cancelled
+                        else "failed_modal_hdm8_postfilter_sweep_provider_exception_no_score_claim"
+                    ),
+                    notes=(
+                        "Modal HDM8 postfilter sweep recovery observed provider "
+                        f"exception type={type(exc).__name__}; "
+                        f"message={message[:240]!r}; axis={AXIS}; score_claim=false"
+                    ),
+                )
+        return summary
     if not isinstance(result, dict):
         summary = {
             "schema_version": "modal_hdm8_postfilter_sweep_recover_summary_v1",

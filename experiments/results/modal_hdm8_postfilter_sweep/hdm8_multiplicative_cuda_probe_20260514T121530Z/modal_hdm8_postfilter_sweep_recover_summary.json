@@ -1,9 +1,14 @@
 {
+  "axis": "modal-t4-cuda-proxy-prefix",
   "call_id": "fc-01KRK6M42CB2VGZCZASGHBSV72",
   "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_hdm8_postfilter_sweep/hdm8_multiplicative_cuda_probe_20260514T121530Z",
+  "passed": false,
   "promotion_eligible": false,
-  "recovered_at_utc": "2026-05-14T18:28:38Z",
+  "provider_exception_message": "Function call was cancelled by user.",
+  "provider_exception_type": "RemoteError",
+  "recovered_at_utc": "2026-05-14T20:56:38Z",
+  "returncode": 1,
   "schema_version": "modal_hdm8_postfilter_sweep_recover_summary_v1",
   "score_claim": false,
-  "status": "pending"
+  "status": "cancelled_provider_function_call"
 }

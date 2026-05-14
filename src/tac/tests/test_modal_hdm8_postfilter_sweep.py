@@ -134,6 +134,89 @@ def test_recover_dry_run_dir_without_spawn_manifest_is_clean_skip(tmp_path: Path
     assert persisted["status"] == "dry_run_no_remote_call"
 
 
+def test_recover_cancelled_provider_call_persists_terminal_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_module()
+    out_dir = tmp_path / "cancelled"
+    out_dir.mkdir()
+    (out_dir / "modal_hdm8_postfilter_sweep_spawn.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "modal_hdm8_postfilter_sweep_spawn_v1",
+                "call_id": "fc-cancelled",
+                "lane_id": "hdm8_cancelled_probe",
+                "instance_job_id": "hdm8_cancelled_probe_job",
+                "claim_agent": "codex:test",
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class CancelledCall:
+        def get(self, *, timeout):
+            assert timeout == 0.0
+            raise RuntimeError("Function call was cancelled by user.")
+
+    terminal_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(mod, "_function_call_from_id", lambda call_id: CancelledCall())
+    monkeypatch.setattr(
+        mod,
+        "terminal_dispatch_claim",
+        lambda **kwargs: terminal_calls.append(kwargs),
+    )
+
+    summary = mod.recover_detached(output_dir=out_dir)
+
+    assert summary["status"] == "cancelled_provider_function_call"
+    assert summary["passed"] is False
+    assert summary["returncode"] == 1
+    assert summary["score_claim"] is False
+    assert summary["promotion_eligible"] is False
+    assert summary["provider_exception_type"] == "RuntimeError"
+    assert "cancelled by user" in summary["provider_exception_message"]
+    persisted = json.loads(
+        (out_dir / "modal_hdm8_postfilter_sweep_recover_summary.json").read_text()
+    )
+    assert persisted == summary
+    assert terminal_calls
+    assert (
+        terminal_calls[0]["status"]
+        == "cancelled_modal_hdm8_postfilter_sweep_no_score_claim"
+    )
+    assert "score_claim=false" in terminal_calls[0]["notes"]
+
+
+def test_recover_cancelled_provider_call_can_skip_claim_close(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_module()
+    out_dir = tmp_path / "cancelled_no_close"
+    out_dir.mkdir()
+    (out_dir / "modal_hdm8_postfilter_sweep_spawn.json").write_text(
+        json.dumps({"call_id": "fc-cancelled"}),
+        encoding="utf-8",
+    )
+
+    class CancelledCall:
+        def get(self, *, timeout):
+            raise RuntimeError("Function call was cancelled by user.")
+
+    monkeypatch.setattr(mod, "_function_call_from_id", lambda call_id: CancelledCall())
+    monkeypatch.setattr(
+        mod,
+        "terminal_dispatch_claim",
+        lambda **_kwargs: pytest.fail("terminal claim should be skipped"),
+    )
+
+    summary = mod.recover_detached(output_dir=out_dir, no_close_claim=True)
+
+    assert summary["status"] == "cancelled_provider_function_call"
+    assert summary["passed"] is False
+
+
 def test_non_dry_run_requires_claim_fields_before_remote(tmp_path: Path, monkeypatch) -> None:
     mod = _load_module()
     archive = tmp_path / "archive.zip"

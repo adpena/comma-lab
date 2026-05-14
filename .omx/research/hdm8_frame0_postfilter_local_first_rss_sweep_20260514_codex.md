@@ -437,3 +437,37 @@ Local CPU advisory calibration:
 Interpretation: local CPU supports using small film-grain modes as hypothesis
 generators, but it does not rescue the MPS-selected HDM8 selector because exact
 CUDA already showed a large PoseNet regression. CUDA ranking remains mandatory.
+
+## 2026-05-14T20:56Z Modal-Cancel Recovery Closure
+
+The four pending Modal T4 proxy-prefix calls were recovered after hardening
+`experiments/modal_hdm8_postfilter_sweep.py` to persist provider exceptions
+instead of letting `FunctionCall.get()` failures escape before custody writes.
+All four calls now have terminal recovery summaries and terminal lane-claim rows:
+
+- `hdm8_local_first_cuda_confirm_20260514T115726Z`:
+  `cancelled_provider_function_call`, Modal `RemoteError`,
+  `Function call was cancelled by user.`
+- `hdm8_modal_t4_policy_palette_v1_20260514T113221Z`:
+  `cancelled_provider_function_call`, Modal `RemoteError`,
+  `Function call was cancelled by user.`
+- `hdm8_multiplicative_cuda_probe_20260514T121530Z`:
+  `cancelled_provider_function_call`, Modal `RemoteError`,
+  `Function call was cancelled by user.`
+- `hdm8_tile_chroma_cuda_probe_20260514T123320Z`:
+  `cancelled_provider_function_call`, Modal `RemoteError`,
+  `Function call was cancelled by user.`
+
+Classification: provider-cancelled infrastructure outcome, not a score result
+and not method evidence. These artifacts carry `score_claim=false` and
+`promotion_eligible=false`. The lane remains blocked on fresh CUDA-ranked proxy
+evidence before any new byte-closed selector packet or exact `[contest-CUDA]`
+auth eval can be justified.
+
+Focused regression:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest \
+  src/tac/tests/test_modal_hdm8_postfilter_sweep.py -q
+# 10 passed
+```
