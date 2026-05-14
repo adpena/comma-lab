@@ -113,6 +113,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 
 # Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14).
 from tac.training_optimization import (
@@ -1138,7 +1141,7 @@ def _full_main(args: argparse.Namespace) -> int:
             )
             _stage(f"archive_built_bytes_{archive_bytes}")
 
-        # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
+        # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
         auth_eval_result_path: Path | None = None
         auth_eval_alias_path: Path | None = None
         contest_cuda_score: float | None = None
@@ -1148,63 +1151,27 @@ def _full_main(args: argparse.Namespace) -> int:
                 args.output_dir / "contest_auth_eval_cuda.json"
             )
             auth_eval_alias_path = args.output_dir / "auth_eval.json"
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--archive", str(archive_zip_path),
-                "--inflate-sh",
-                str(args.output_dir / "submission" / "inflate.sh"),
-                "--upstream-dir", str(args.upstream_dir),
-                "--device", "cuda",
-                "--json-out", str(auth_eval_result_path),
-            ]
-            try:
-                proc = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=3600
-                )
-                if proc.returncode != 0:
-                    print(
-                        f"[full] auth eval rc={proc.returncode}; "
-                        f"stderr=\n{proc.stderr[-2000:]}",
-                        file=sys.stderr,
-                    )
-                    raise RuntimeError(
-                        f"CUDA auth eval failed rc={proc.returncode}; refusing "
-                        "balle_renderer contest-CUDA score claim."
-                    )
-                else:
-                    try:
-                        from tac.substrates._shared.trainer_skeleton import (
-                            require_contest_cuda_auth_eval_claim,
-                        )
-
-                        claim, _ae = require_contest_cuda_auth_eval_claim(
-                            auth_eval_result_path,
-                            archive_sha256=archive_sha,
-                            substrate_tag="balle_renderer",
-                        )
-                        contest_cuda_score = claim.score
-                        print(
-                            f"[full] [contest-CUDA] score = "
-                            f"{contest_cuda_score} "
-                            f"(source={claim.source_key}, "
-                            f"archive_sha256={archive_sha})"
-                        )
-                        if auth_eval_result_path.is_file():
-                            shutil.copy2(auth_eval_result_path, auth_eval_alias_path)
-                    except Exception as exc:
-                        raise RuntimeError(
-                            "could not validate balle_renderer contest-CUDA "
-                            f"auth eval JSON: {exc}"
-                        ) from exc
-            except subprocess.TimeoutExpired as exc:
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_result_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="balle_renderer",
+                device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
                 print(
-                    "[full] auth eval TIMEOUT (>3600s)", file=sys.stderr
+                    f"[full] [contest-CUDA] score = "
+                    f"{contest_cuda_score} "
+                    f"(axis={auth_result['auth_eval_score_axis']}, "
+                    f"lane_tag={auth_result['auth_eval_lane_tag']}, "
+                    f"archive_sha256={archive_sha})"
                 )
-                raise RuntimeError(
-                    "CUDA auth eval timed out; refusing balle_renderer "
-                    "contest-CUDA score claim."
-                ) from exc
+                if auth_eval_result_path.is_file():
+                    shutil.copy2(auth_eval_result_path, auth_eval_alias_path)
             _stage("auth_eval_cuda_done")
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)

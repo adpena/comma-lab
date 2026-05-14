@@ -97,6 +97,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 
 # Tier-1 optimization helpers (per CLAUDE.md TIER-1-OPT-BATCH landing 2026-05-14).
 # Opt-in via the --enable-autocast-fp16 / --enable-torch-compile CLI flags.
@@ -978,62 +981,30 @@ def _full_main(args: argparse.Namespace) -> int:
             print(f"[full] wrote {archive_zip_path}")
             _stage(f"archive_built_bytes_{archive_bytes}")
 
-        # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
+        # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
         auth_eval_result_path: Path | None = None
         contest_cuda_score: float | None = None
         if not args.skip_auth_eval and archive_zip_path.is_file():
             print("[full] launching CUDA auth eval ...")
             auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--archive", str(archive_zip_path),
-                "--inflate-sh", str(args.output_dir / "submission" / "inflate.sh"),
-                "--upstream-dir", str(args.upstream_dir),
-                "--device", "cuda",
-                "--json-out", str(auth_eval_result_path),
-            ]
-            try:
-                proc = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=3600
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_result_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="sane_hnerv",
+                device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
+                print(
+                    f"[full] [contest-CUDA] score = {contest_cuda_score} "
+                    f"(axis={auth_result['auth_eval_score_axis']}, "
+                    f"lane_tag={auth_result['auth_eval_lane_tag']}, "
+                    f"archive_sha256={archive_sha})"
                 )
-                if proc.returncode != 0:
-                    print(
-                        f"[full] auth eval rc={proc.returncode}; stderr=\n{proc.stderr[-2000:]}",
-                        file=sys.stderr,
-                    )
-                    raise RuntimeError(
-                        f"CUDA auth eval failed rc={proc.returncode}; refusing "
-                        "sane_hnerv contest-CUDA score claim."
-                    )
-                else:
-                    try:
-                        from tac.substrates._shared.trainer_skeleton import (
-                            require_contest_cuda_auth_eval_claim,
-                        )
-
-                        claim, _ae = require_contest_cuda_auth_eval_claim(
-                            auth_eval_result_path,
-                            archive_sha256=archive_sha,
-                            substrate_tag="sane_hnerv",
-                        )
-                        contest_cuda_score = claim.score
-                        print(
-                            f"[full] [contest-CUDA] score = {contest_cuda_score} "
-                            f"(source={claim.source_key}, "
-                            f"archive_sha256={archive_sha})"
-                        )
-                    except Exception as exc:  # noqa: BLE001
-                        raise RuntimeError(
-                            "could not validate sane_hnerv contest-CUDA auth "
-                            f"eval JSON: {exc}"
-                        ) from exc
-            except subprocess.TimeoutExpired as exc:
-                print("[full] auth eval TIMEOUT (>3600s)", file=sys.stderr)
-                raise RuntimeError(
-                    "CUDA auth eval timed out; refusing sane_hnerv "
-                    "contest-CUDA score claim."
-                ) from exc
             _stage("auth_eval_cuda_done")
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)
