@@ -104,8 +104,27 @@ log "stage_0b_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_I
 
 # Stage 1: bootstrap runtime deps via canonical helper (Catalog #163).
 log "Stage 1: bootstrap runtime deps"
+if [ ! -f "$WORKSPACE/scripts/remote_archive_only_eval.sh" ]; then
+    log "FATAL: canonical bootstrap script missing at scripts/remote_archive_only_eval.sh"
+    exit 22
+fi
+# shellcheck source=/dev/null
 REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source "$WORKSPACE/scripts/remote_archive_only_eval.sh"
 bootstrap_runtime_deps
+if [ -z "${PYBIN:-}" ] || [ ! -x "$PYBIN" ]; then
+    log "FATAL: PYBIN not set or not executable after bootstrap (PYBIN=${PYBIN:-unset})"
+    exit 24
+fi
+
+# Stage 1b: validate required input files PRE-dispatch (Catalog #152).
+log "Stage 1b: validate required input files"
+"$PYBIN" "$WORKSPACE/tools/validate_dispatch_required_inputs.py" \
+    --trainer "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py" \
+    || {
+    log "FATAL: Catalog #152 required input file validation failed"
+    exit 25
+}
+log "Stage 1b: required input files validated"
 
 # Stage 2: write provenance.json (per Catalog #L wire-in).
 log "Stage 2: write provenance.json"
@@ -134,7 +153,7 @@ log "wrote provenance: $PROVENANCE"
 
 # Stage 3: smoke path FIRST (scaffold L0 — only smoke is enabled).
 log "Stage 3: smoke distill + pack + parse"
-"$WORKSPACE/.venv/bin/python" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py" \
+"$PYBIN" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py" \
     --smoke \
     --video-path "$DPP_VIDEO_PATH" \
     --output-dir "$DPP_OUTPUT_DIR" \

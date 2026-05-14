@@ -77,6 +77,9 @@ def test_recommended_top_3_predicted_rows_fail_closed_for_dispatch() -> None:
         assert row["ready_for_exact_eval_dispatch"] is False
         assert row["rank_or_kill_eligible"] is False
         assert row["dispatch_blockers"]
+        assert row["recommended_action"] == "build_or_exact_eval_before_dispatch"
+        assert row["dispatch_recommendation_status"] == "blocked_until_exact_eval"
+        assert row["active_ranking_block_reason"]
 
 
 def test_already_at_target_emits_note() -> None:

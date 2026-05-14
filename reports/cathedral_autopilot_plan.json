@@ -1,6 +1,7 @@
 {
   "arch_technique_ranking": [
     {
+      "active_ranking_block_reason": "predicted_row_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 20.0,
       "cost_hours": 18.0,
@@ -10,6 +11,7 @@
       "dispatch_blockers": [
         "predicted_row_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "evidence_grade": "[predicted]",
       "gain_per_dollar": 0.0029345735782000336,
       "gain_per_hour": 0.0032606373091111484,
@@ -41,6 +43,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": true,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "architectural",
       "score_claim": false,
@@ -66,6 +69,7 @@
         "reactivation_required_before_new_dispatch",
         "requires_exact_cuda_auth_eval_before_any_score_use"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "empirical_anchor_promotable": false,
       "empirical_anchor_score_claim": false,
       "evidence_grade": "[exact-negative-N3; reactivation-required]",
@@ -126,6 +130,7 @@
         "classify whether the loss is SegNet, PoseNet, or runtime/harness driven before any broader method conclusion"
       ],
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": true,
       "risk": "lossy_high",
       "score_claim": false,
@@ -171,6 +176,7 @@
         "source_dispatch_blockers_present",
         "model_spec_mismatch_pending_faithful_implementation"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "empirical_anchor_bytes": 100799,
       "empirical_anchor_evidence_semantics": [
         "cpu_roundtrip_precision_proxy_no_score_measured_config_negative"
@@ -230,6 +236,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossy_high",
       "score_claim": false,
@@ -265,6 +272,7 @@
         "log_path_required",
         "dispatch_claim_status_required"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "empirical_anchor_bytes": 83571,
       "empirical_anchor_evidence_semantics": [],
       "empirical_anchor_n": 1,
@@ -304,6 +312,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "architectural",
       "score_claim": false,
@@ -339,6 +348,7 @@
         "log_path_required",
         "dispatch_claim_status_required"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "empirical_anchor_bytes": 94671,
       "empirical_anchor_evidence_semantics": [],
       "empirical_anchor_n": 1,
@@ -378,6 +388,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "training_side",
       "score_claim": false,
@@ -406,6 +417,7 @@
   ],
   "encoder_technique_ranking": [
     {
+      "active_ranking_block_reason": "score_claim_false_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 0.0,
       "cost_hours": 0.5,
@@ -415,6 +427,7 @@
       "dispatch_blockers": [
         "score_claim_false_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "evidence_grade": "[contest-CUDA]",
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
@@ -446,12 +459,14 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
       "score_claim_valid": false
     },
     {
+      "active_ranking_block_reason": "score_claim_false_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 0.0,
       "cost_hours": 1.0,
@@ -461,6 +476,7 @@
       "dispatch_blockers": [
         "score_claim_false_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "evidence_grade": "[CPU-prep]",
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
@@ -492,12 +508,14 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
       "score_claim_valid": false
     },
     {
+      "active_ranking_block_reason": "score_claim_false_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 0.0,
       "cost_hours": 2.0,
@@ -507,6 +525,7 @@
       "dispatch_blockers": [
         "score_claim_false_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "evidence_grade": "[CPU-prep empirical; planning-only]",
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
@@ -538,6 +557,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
@@ -579,6 +599,7 @@
         "source_dispatch_blockers_present",
         "model_spec_mismatch_pending_faithful_implementation"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "empirical_anchor_bytes": 179276,
       "empirical_anchor_evidence_semantics": [
         "cpu_faithful_200_param_mlp_byte_anchor_no_score"
@@ -633,6 +654,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
@@ -674,6 +696,7 @@
         "negative_or_retired_result_not_promotable",
         "source_dispatch_blockers_present"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "empirical_anchor_bytes": 205963,
       "empirical_anchor_evidence_semantics": [
         "cpu_kalle_fold_nn_literature_shapes_byte_anchor_no_decoder_no_score"
@@ -717,6 +740,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
@@ -753,6 +777,7 @@
         "dispatch_claim_status_required",
         "negative_or_retired_result_not_promotable"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "empirical_anchor_bytes": 207065,
       "empirical_anchor_evidence_semantics": [],
       "empirical_anchor_n": 2,
@@ -794,6 +819,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
@@ -1116,10 +1142,114 @@
       {
         "line_number": 77,
         "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 78,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 79,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 80,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 81,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 82,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 83,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 84,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 85,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 86,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 87,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 88,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 89,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 90,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 91,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 92,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 93,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 94,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 95,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 96,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 97,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 98,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 99,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 100,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 101,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 102,
+        "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 103,
+        "reason": "row_not_object_or_missing_technique"
       }
     ],
     "n_evidence_rows": 72,
-    "rejected_evidence_row_count": 5,
+    "rejected_evidence_row_count": 31,
     "unknown_evidence_row_count": 53,
     "unknown_evidence_technique_count": 49,
     "unknown_evidence_techniques": [
@@ -2690,6 +2820,7 @@
   },
   "loss_modifier_technique_ranking": [
     {
+      "active_ranking_block_reason": "predicted_row_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 0.0,
       "cost_hours": 0.0,
@@ -2699,6 +2830,7 @@
       "dispatch_blockers": [
         "predicted_row_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "entry_conditions": [
         "trainer wire-in (currently a standalone loss; no trainer consumes it)"
       ],
@@ -2706,7 +2838,7 @@
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
       "landed_commit_or_memo": "a2f4677c",
-      "last_updated_utc": "2026-05-14T02:08:12+00:00",
+      "last_updated_utc": "2026-05-14T03:37:00+00:00",
       "model_spec": {
         "architecture_class": "loss_modifier",
         "canonical_shape_family": "loss_term",
@@ -2736,6 +2868,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "training_side",
       "score_claim": false,
@@ -2746,6 +2879,7 @@
       "track_phase": "loss_term"
     },
     {
+      "active_ranking_block_reason": "predicted_row_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 0.0,
       "cost_hours": 0.0,
@@ -2755,6 +2889,7 @@
       "dispatch_blockers": [
         "predicted_row_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "entry_conditions": [
         "trainer wire-in"
       ],
@@ -2762,7 +2897,7 @@
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
       "landed_commit_or_memo": "a2f4677c",
-      "last_updated_utc": "2026-05-14T02:08:12+00:00",
+      "last_updated_utc": "2026-05-14T03:37:00+00:00",
       "model_spec": {
         "architecture_class": "loss_modifier",
         "canonical_shape_family": "regularizer",
@@ -2792,6 +2927,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "training_side",
       "score_claim": false,
@@ -2827,6 +2963,7 @@
   },
   "recommended_top_3": [
     {
+      "active_ranking_block_reason": "predicted_row_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 20.0,
       "cost_hours": 18.0,
@@ -2836,6 +2973,7 @@
       "dispatch_blockers": [
         "predicted_row_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "evidence_grade": "[predicted]",
       "gain_per_dollar": 0.0029345735782000336,
       "gain_per_hour": 0.0032606373091111484,
@@ -2867,12 +3005,14 @@
       "rank_or_kill_eligible": false,
       "reaches_target": true,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "architectural",
       "score_claim": false,
       "score_claim_valid": false
     },
     {
+      "active_ranking_block_reason": "score_claim_false_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 0.0,
       "cost_hours": 0.5,
@@ -2882,6 +3022,7 @@
       "dispatch_blockers": [
         "score_claim_false_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "evidence_grade": "[contest-CUDA]",
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
@@ -2913,12 +3054,14 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
       "score_claim_valid": false
     },
     {
+      "active_ranking_block_reason": "score_claim_false_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 0.0,
       "cost_hours": 1.0,
@@ -2928,6 +3071,7 @@
       "dispatch_blockers": [
         "score_claim_false_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "evidence_grade": "[CPU-prep]",
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
@@ -2959,6 +3103,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "lossless",
       "score_claim": false,
@@ -2967,6 +3112,7 @@
   ],
   "representation_lane_ranking": [
     {
+      "active_ranking_block_reason": "predicted_row_requires_exact_eval_before_dispatch",
       "active_ranking_blocked": false,
       "cost_dollars": 30.0,
       "cost_hours": 24.0,
@@ -2976,6 +3122,7 @@
       "dispatch_blockers": [
         "predicted_row_requires_exact_eval_before_dispatch"
       ],
+      "dispatch_recommendation_status": "blocked_until_exact_eval",
       "entry_conditions": [
         "Phase B preconditions per phase_b_preconditions_status()",
         "first [contest-CUDA] anchor"
@@ -2984,7 +3131,7 @@
       "gain_per_dollar": 0.0,
       "gain_per_hour": 0.0,
       "landed_commit_or_memo": "cda997d7 (Phase A: design + module + inflate + 39 tests)",
-      "last_updated_utc": "2026-05-14T02:08:12+00:00",
+      "last_updated_utc": "2026-05-14T03:37:00+00:00",
       "model_spec": {
         "architecture_class": "nerv_class_renderer",
         "canonical_shape_family": "implicit_neural_representation",
@@ -3014,6 +3161,7 @@
       "rank_or_kill_eligible": false,
       "reaches_target": false,
       "ready_for_exact_eval_dispatch": false,
+      "recommended_action": "build_or_exact_eval_before_dispatch",
       "retired_from_active_ranking": false,
       "risk": "architectural",
       "score_claim": false,

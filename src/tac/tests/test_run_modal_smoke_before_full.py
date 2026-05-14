@@ -435,6 +435,10 @@ def test_dpp_remote_script_verifies_active_claim_and_false_authority() -> None:
 
     assert "stage_0b_dispatch_claim_verified" in text
     assert "claim_lane_dispatch.py\" summary" in text
+    assert "validate_dispatch_required_inputs.py" in text
+    assert "PYBIN not set or not executable after bootstrap" in text
+    assert '"$PYBIN" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py"' in text
+    assert '"$WORKSPACE/.venv/bin/python" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py"' not in text
     assert '"rank_or_kill_eligible": false' in text
 
 

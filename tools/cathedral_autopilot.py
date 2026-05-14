@@ -2115,6 +2115,16 @@ def _attach_fail_closed_dispatch_fields(row: dict[str, Any]) -> dict[str, Any]:
             blockers.append("predicted_row_requires_exact_eval_before_dispatch")
         if not blockers and not score_claim:
             blockers.append("score_claim_false_requires_exact_eval_before_dispatch")
+        row.setdefault("recommended_action", "build_or_exact_eval_before_dispatch")
+        row.setdefault(
+            "active_ranking_block_reason",
+            ";".join(str(blocker) for blocker in blockers)
+            or "ready_for_exact_eval_dispatch_false",
+        )
+        row.setdefault("dispatch_recommendation_status", "blocked_until_exact_eval")
+    else:
+        row.setdefault("recommended_action", "dispatch_exact_eval_after_claim")
+        row.setdefault("dispatch_recommendation_status", "ready_for_exact_eval_dispatch")
     row["dispatch_blockers"] = blockers
     return row
 
