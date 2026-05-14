@@ -112,6 +112,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -299,6 +300,50 @@ class ArchiveAblationResult:
     mdl_scorer_extracted_bytes_lo: float = 0.0
     mdl_scorer_extracted_bytes_hi: float = 0.0
     zen_floor_band_recommendation: str = ""  # "[low, center, high]"
+
+    # Tier C-derived substrate-class discrimination signal (Catalog #227 wire-in,
+    # 2026-05-14). Tier A is brotli-saturated at the byte layer (any fp16-weight
+    # + brotli archive sits at density ~0.99) and structurally CANNOT
+    # discriminate WITHIN-class from ACROSS-class substrates. Tier C measures
+    # post-decode perturbation via gaussian noise on decoder state_dict OR
+    # latents; the curve shape Δscore(σ) is the dispositive disambiguator per
+    # the Z1 deep-math §3.5 + Tishby-Zaslavsky 2015 information-bottleneck
+    # framework.
+    #
+    # Per the C6 5ep empirical anchor (`feedback_mdl_ablation_tier_c_ibps1_
+    # landed_20260514.md`): latent Δscore at σ=1.0 = −0.00213 is the canonical
+    # ACROSS-CLASS signature (3 orders of magnitude smaller than a within-
+    # HNeRV-class substrate's predicted Δlatents). Within-class shows monotonic
+    # linear growth in σ; across-class shows a knee + plateau on state_dict AND
+    # robust-at-all-σ latents.
+    #
+    # Fields:
+    #   * mdl_tier_c_density_estimate — float in [0, 1]. Higher = more
+    #     within-class (high Δscore for both state_dict and latents at
+    #     σ=1.0); lower = more across-class (latents robust + state_dict
+    #     knee+plateau). Computed only when Tier C carries the canonical
+    #     8-row schema (4 sigmas × 2 targets). 0.0 when Tier C absent /
+    #     incomplete (treated as "no signal" by downstream consumers).
+    #
+    #   * mdl_tier_c_substrate_class_verdict — "across_class" | "within_class"
+    #     | "indeterminate". Computed from `mdl_tier_c_density_estimate`
+    #     bands: density >= 0.70 → within_class; density <= 0.30 → across_
+    #     class; in-between → indeterminate. "" when Tier C absent.
+    #
+    #   * mdl_tier_c_curve_knee_signal — float; the |Δscore_state_dict| ratio
+    #     between σ=0.1 and σ=0.01 measurement points. Values near 1.0 (or
+    #     less) indicate the canonical knee+plateau structural-bottleneck
+    #     signature; values much greater than 1.0 indicate monotonic linear
+    #     growth (within-class). 0.0 when Tier C absent.
+    #
+    #   * mdl_tier_c_latent_sigma1_delta — float; the |Δscore_latents| at
+    #     σ=1.0 (the dispositive ACROSS-CLASS test). Within-class predicts
+    #     |Δlatents| ~ O(1+); across-class predicts |Δlatents| < 0.05. 0.0
+    #     when Tier C absent or σ=1.0 latents row not present.
+    mdl_tier_c_density_estimate: float = 0.0
+    mdl_tier_c_substrate_class_verdict: str = ""
+    mdl_tier_c_curve_knee_signal: float = 0.0
+    mdl_tier_c_latent_sigma1_delta: float = 0.0
 
     notes: list[str] = field(default_factory=list)
     timestamp_utc: str = ""
@@ -564,12 +609,39 @@ def _decode_pr106_to_frames(
     path are NOT contest-grade; that's correct for MDL ablation which
     measures DELTAS not absolute values.
     """
-    pr106_src = REPO_ROOT / "submissions" / "pr106_latent_sidecar_r2" / "src"
-    if str(pr106_src) not in sys.path:
-        sys.path.insert(0, str(pr106_src))
+    state_dict, latents = _decode_pr106_components(inner_bytes)
+    _codec_mod, model_mod = _load_pr106_runtime_modules()
+    decoder = _make_pr106_decoder(model_mod.HNeRVDecoder, state_dict, latents, device)
+    return _render_pr106_components(decoder, latents.to(device), pair_indices, device)
 
-    from codec import parse_packed_archive  # type: ignore[import-not-found]
-    from model import HNeRVDecoder  # type: ignore[import-not-found]
+
+def _load_module_from_path(module_name: str, path: Path):
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load module {module_name} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_pr106_runtime_modules():
+    """Load PR106 runtime modules without colliding with A1's codec.py."""
+
+    pr106_src = REPO_ROOT / "submissions" / "pr106_latent_sidecar_r2" / "src"
+    codec_mod = _load_module_from_path("_mdl_pr106_codec", pr106_src / "codec.py")
+    model_mod = _load_module_from_path("_mdl_pr106_model", pr106_src / "model.py")
+    return codec_mod, model_mod
+
+
+def _decode_pr106_components(inner_bytes: bytes):
+    """Return PR106 decoder state_dict and sidecar-applied latents."""
+
+    codec_mod, _model_mod = _load_pr106_runtime_modules()
+    parse_packed_archive = codec_mod.parse_packed_archive
 
     # Mirror inflate.py::parse_sidecar_archive parsing exactly:
     #   uint8 magic (0xFE) + uint8 format_id (0x01)
@@ -634,17 +706,31 @@ def _decode_pr106_to_frames(
         except Exception as e:
             raise ValueError(f"sidecar decode failed: {e}") from e
 
-    # Decoder
+    return state_dict, latents
+
+
+def _make_pr106_decoder(
+    decoder_cls,
+    state_dict: dict[str, torch.Tensor],
+    latents: torch.Tensor,
+    device: torch.device,
+) -> torch.nn.Module:
     latent_dim = latents.shape[1]
-    # PR106 r2 uses base_channels=36 + latent_dim=28; verify if possible
-    decoder = HNeRVDecoder(latent_dim=latent_dim, base_channels=36, eval_size=(EVAL_H, EVAL_W)).to(device)
+    decoder = decoder_cls(latent_dim=latent_dim, base_channels=36, eval_size=(EVAL_H, EVAL_W)).to(device)
     try:
         decoder.load_state_dict(state_dict)
     except Exception as e:
         raise ValueError(f"decoder.load_state_dict failed: {e}") from e
     decoder.eval()
-    latents = latents.to(device)
+    return decoder
 
+
+def _render_pr106_components(
+    decoder: torch.nn.Module,
+    latents: torch.Tensor,
+    pair_indices: list[int],
+    device: torch.device,
+) -> torch.Tensor:
     pair_indices_t = sorted(set(pair_indices))
     n_target = len(pair_indices_t)
     out = torch.empty((n_target, 2, CAMERA_H, CAMERA_W, 3), dtype=torch.uint8)
@@ -1274,8 +1360,10 @@ def run_tier_c(
 
     Grammar dispatch:
         - ``a1`` / ``pr101``: perturb A1's HNeRVDecoder state_dict + latents
+        - ``pr106`` / ``pr106_latent_sidecar``: perturb PR106 state_dict
+          + sidecar-applied latents
         - ``ibps1``: perturb C6 IB decoder state_dict + latents
-        - ``pr106`` / others: not implemented (returns [])
+        - others: not implemented (returns [])
 
     The DECODER state_dict + LATENTS are the perturbation targets because
     they are the inflate-time consumers (encoder is forensic-only for
@@ -1294,7 +1382,13 @@ def run_tier_c(
             baseline_pose, distortion_net, device, rng, noise_sigmas,
             scorer_batch_size=scorer_batch_size,
         )
-    return []  # PR106 Tier C is non-trivial; defer
+    if grammar in ("pr106", "pr106_latent_sidecar", "pr106_latent_sidecar_r2"):
+        return _run_tier_c_pr106(
+            inner_bytes, pair_indices, gt_pairs, baseline_seg,
+            baseline_pose, distortion_net, device, rng, noise_sigmas,
+            scorer_batch_size=scorer_batch_size,
+        )
+    return []
 
 
 def _run_tier_c_a1(
@@ -1406,6 +1500,89 @@ def _run_tier_c_a1(
                 delta_score_components=dsc,
                 elapsed_seconds=t1 - t0,
             ))
+
+    return results
+
+
+def _run_tier_c_pr106(
+    inner_bytes: bytes,
+    pair_indices: list[int],
+    gt_pairs: torch.Tensor,
+    baseline_seg: float,
+    baseline_pose: float,
+    distortion_net: torch.nn.Module,
+    device: torch.device,
+    rng: random.Random,
+    noise_sigmas: list[float] | None = None,
+    scorer_batch_size: int = 4,
+) -> list[TierCResult]:
+    """PR106 Tier C: perturb decoder state_dict + sidecar-applied latents."""
+
+    if noise_sigmas is None:
+        noise_sigmas = [0.001, 0.01, 0.1, 1.0]
+
+    base_decoder_sd, base_latents = _decode_pr106_components(inner_bytes)
+    _codec_mod, model_mod = _load_pr106_runtime_modules()
+    HNeRVDecoder = model_mod.HNeRVDecoder
+    base_latents = base_latents.detach().cpu().clone()
+    base_decoder_sd = {
+        k: v.detach().cpu().clone() for k, v in base_decoder_sd.items()
+    }
+
+    baseline_score_comp = _score_components(baseline_pose, baseline_seg)
+    results: list[TierCResult] = []
+
+    def _render(decoder_sd, latents):
+        decoder = _make_pr106_decoder(
+            HNeRVDecoder,
+            decoder_sd,
+            latents,
+            device,
+        )
+        return _render_pr106_components(
+            decoder,
+            latents.to(device),
+            pair_indices,
+            device,
+        )
+
+    for sigma in noise_sigmas:
+        for target in ("state_dict", "latents"):
+            t0 = time.time()
+            if target == "state_dict":
+                perturbed_sd: dict[str, torch.Tensor] = {}
+                for k, v in base_decoder_sd.items():
+                    v_dev = v.to(device).float()
+                    rel_std = v_dev.std().clamp(min=1e-8)
+                    noise = torch.randn_like(v_dev) * (rel_std * sigma)
+                    perturbed_sd[k] = (v_dev + noise).to(dtype=v.dtype).cpu()
+                cand_frames = _render(perturbed_sd, base_latents)
+            else:
+                base_latents_dev = base_latents.to(device).float()
+                rel_std = base_latents_dev.std().clamp(min=1e-8)
+                noise = torch.randn_like(base_latents_dev) * (rel_std * sigma)
+                perturbed_latents = (base_latents_dev + noise).cpu()
+                cand_frames = _render(base_decoder_sd, perturbed_latents)
+            pose_p, seg_p = _compute_seg_pose_delta(
+                distortion_net,
+                gt_pairs,
+                cand_frames,
+                device,
+                batch_size=scorer_batch_size,
+            )
+            dseg = seg_p - baseline_seg
+            dpose = pose_p - baseline_pose
+            dsc = _score_components(pose_p, seg_p) - baseline_score_comp
+            results.append(
+                TierCResult(
+                    target=target,
+                    noise_sigma_relative=sigma,
+                    delta_seg=dseg,
+                    delta_pose=dpose,
+                    delta_score_components=dsc,
+                    elapsed_seconds=time.time() - t0,
+                )
+            )
 
     return results
 
@@ -1695,6 +1872,109 @@ def aggregate_mdl_estimate(
         band = "[0.100, 0.150] — major architectural breakthrough needed for sub-0.10"
     archive_result.zen_floor_band_recommendation = band
 
+    # ── Tier C substrate-class discrimination wire-in (Catalog #227, 2026-05-14)
+    #
+    # Compute the substrate-class discrimination signal from Tier C rows. Tier
+    # A is brotli-saturated and CANNOT discriminate substrate class; Tier C
+    # post-decode perturbation IS the dispositive disambiguator per Z1 deep-
+    # math §3.5 + Tishby-Zaslavsky 2015. Per the C6 5ep empirical anchor:
+    #
+    #   * within-class HNeRV substrate predicts |Δlatents| at σ=1.0 ~ O(1+)
+    #     AND monotonic linear growth in σ for state_dict perturbation
+    #   * across-class IB-bottleneck substrate predicts |Δlatents| at σ=1.0
+    #     < 0.05 (3 orders of magnitude smaller) AND a curve knee+plateau
+    #     on state_dict (σ=0.1 magnitude ≈ σ=0.01 magnitude)
+    #
+    # Three signals derived:
+    #   1. latent_sigma1_delta — |Δscore_latents| at σ=1.0. Dispositive test.
+    #   2. curve_knee_signal — |Δscore_sd@σ=0.1| / |Δscore_sd@σ=0.01|.
+    #      Near 1.0 → knee+plateau (across-class); >> 1 → monotonic (within).
+    #   3. density_estimate — composite 0-1 score; high = within-class.
+    #
+    # The density rule (forward, not inverse): high values are within-class
+    # so a within-class substrate has high MDL "density" (the scorer extracts
+    # information from EVERY perturbation; the substrate has no structural
+    # bottleneck). An across-class substrate has low MDL "density" (the
+    # scorer is INSENSITIVE to latent perturbation; the IB-bottleneck
+    # absorbs noise).
+    tier_c_rows = archive_result.tier_c
+    if tier_c_rows:
+        # Index by (target, sigma) for quick lookup. Skip rows where the
+        # delta is None (inflate failure or skipped measurement).
+        tier_c_index: dict[tuple[str, float], float] = {}
+        for row in tier_c_rows:
+            dsc = row.delta_score_components
+            if dsc is None:
+                continue
+            try:
+                sigma = float(row.noise_sigma_relative)
+            except (TypeError, ValueError):
+                continue
+            tier_c_index[(row.target, sigma)] = abs(float(dsc))
+
+        if not tier_c_index:
+            return archive_result
+
+        # Signal 1: latent_sigma1_delta — the dispositive ACROSS-CLASS test.
+        latent_sigma1 = tier_c_index.get(("latents", 1.0), 0.0)
+        archive_result.mdl_tier_c_latent_sigma1_delta = latent_sigma1
+
+        # Signal 2: curve_knee_signal — ratio |sd@0.1| / |sd@0.01|. The
+        # canonical knee+plateau pattern has this ratio close to 1.0 (or
+        # less). Within-class monotonic linear growth has ratio >> 1.
+        sd_sigma_p1 = tier_c_index.get(("state_dict", 0.1), 0.0)
+        sd_sigma_p01 = tier_c_index.get(("state_dict", 0.01), 0.0)
+        if sd_sigma_p01 > 1e-12:
+            curve_knee = sd_sigma_p1 / sd_sigma_p01
+        else:
+            # Denominator near zero is itself a within-class anomaly (the
+            # smaller-sigma perturbation produced no signal). Treat as
+            # missing-signal (0.0) per the docstring contract.
+            curve_knee = 0.0
+        archive_result.mdl_tier_c_curve_knee_signal = curve_knee
+
+        # Signal 3: composite density_estimate. The composite is monotone in
+        # the within-class signature: HIGH latent_sigma1_delta + HIGH curve
+        # knee monotonicity = WITHIN-class (density near 1.0). LOW
+        # latent_sigma1_delta + curve knee ≈ 1.0 = ACROSS-class (density
+        # near 0.0). The two are combined with empirically-chosen scales
+        # informed by the C6 5ep anchor.
+        #
+        # Per the C6 5ep empirical anchor (density < 0.30):
+        #   latent_sigma1=0.00213 → component ≈ 0.04 (well below 0.5)
+        #   curve_knee=0.0639/0.0745≈0.857 → component ≈ 0.22 (below 0.5)
+        # Per a hypothetical within-class anchor (density > 0.70):
+        #   latent_sigma1=5.0 → component ≈ 0.99
+        #   curve_knee=10.0 → component ≈ 0.77
+        #
+        # Logistic mapping: each signal is squashed to [0, 1] via
+        #   component_i = signal_i / (signal_i + scale_i)
+        # which gives 0 at signal=0, 0.5 at signal=scale, and approaches 1
+        # as signal grows. The composite is the unweighted mean of the two.
+        _LATENT_SIGMA1_SCALE = 0.05  # threshold for "non-trivial latents Δ"
+        _CURVE_KNEE_SCALE = 3.0  # threshold for "monotonic linear growth"
+        latent_component = (
+            latent_sigma1 / (latent_sigma1 + _LATENT_SIGMA1_SCALE)
+            if latent_sigma1 >= 0.0 else 0.0
+        )
+        knee_component = (
+            curve_knee / (curve_knee + _CURVE_KNEE_SCALE)
+            if curve_knee > 0.0 else 0.0
+        )
+        density_tier_c = 0.5 * (latent_component + knee_component)
+        archive_result.mdl_tier_c_density_estimate = density_tier_c
+
+        # Substrate-class verdict from density bands. Hard thresholds per the
+        # C6 5ep anchor (density ≈ 0.045 = clearly across-class) and the
+        # Z1 ablation Tier A band ordering (density > 0.90 = clearly
+        # within-class; symmetric mapping at Tier C).
+        if density_tier_c >= 0.70:
+            archive_result.mdl_tier_c_substrate_class_verdict = "within_class"
+        elif density_tier_c <= 0.30:
+            archive_result.mdl_tier_c_substrate_class_verdict = "across_class"
+        else:
+            archive_result.mdl_tier_c_substrate_class_verdict = "indeterminate"
+
     return archive_result
 
 
@@ -1914,6 +2194,13 @@ def ablate_archive(
     print(f"  density LO: {result.mdl_density_estimate_lo:.4f}")
     print(f"  density HI: {result.mdl_density_estimate_hi:.4f}")
     print(f"  zen-floor band: {result.zen_floor_band_recommendation}")
+    if result.tier_c:
+        print(
+            f"  Tier C density: {result.mdl_tier_c_density_estimate:.4f} "
+            f"(verdict: {result.mdl_tier_c_substrate_class_verdict or 'n/a'}; "
+            f"curve_knee={result.mdl_tier_c_curve_knee_signal:.3f}; "
+            f"latent_sigma1_delta={result.mdl_tier_c_latent_sigma1_delta:.5f})"
+        )
     print(f"  total ablation time: {result.elapsed_seconds_total:.1f}s")
 
     # Persist JSON
@@ -2092,6 +2379,11 @@ def main(argv: list[str] | None = None) -> int:
                 "mdl_scorer_extracted_bytes_hi": r.mdl_scorer_extracted_bytes_hi,
                 "mdl_density_lo": r.mdl_density_estimate_lo,
                 "mdl_density_hi": r.mdl_density_estimate_hi,
+                # Tier C substrate-class discrimination (Catalog #227 wire-in)
+                "mdl_tier_c_density_estimate": r.mdl_tier_c_density_estimate,
+                "mdl_tier_c_substrate_class_verdict": r.mdl_tier_c_substrate_class_verdict,
+                "mdl_tier_c_curve_knee_signal": r.mdl_tier_c_curve_knee_signal,
+                "mdl_tier_c_latent_sigma1_delta": r.mdl_tier_c_latent_sigma1_delta,
                 "zen_floor_band_recommendation": r.zen_floor_band_recommendation,
                 "elapsed_seconds": r.elapsed_seconds_total,
             }

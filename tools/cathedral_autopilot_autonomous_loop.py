@@ -200,6 +200,25 @@ class CandidateRow:
     mdl_density: float | None = None
     lane_class: str | None = None
     literature_anchor: str = ""
+    # Catalog #227 Tier C empirical revision wire-in (2026-05-14):
+    # Tier C-derived substrate-class density estimate (0..1). HIGH (>= 0.70) =
+    # within-class; LOW (<= 0.30) = across-class. The signal OVERRIDES Tier A
+    # for substrate-class discrimination because Tier A is brotli-saturated at
+    # the byte layer (any fp16-weight + brotli archive sits at Tier A density
+    # ~0.99) and structurally CANNOT discriminate. Per the C6 5ep empirical
+    # anchor `feedback_mdl_ablation_tier_c_ibps1_landed_20260514.md`. None =
+    # no Tier C evidence (don't penalize lack-of-evidence).
+    mdl_tier_c_density: float | None = None
+    # Catalog #227 composition matrix wire-in (2026-05-14):
+    # Substrate composition additivity factor α (0..1+). HIGH (> 0.7) =
+    # ADDITIVE stacking (compound predicted_score_delta savings); MEDIUM
+    # (0.3-0.7) = SUB-ADDITIVE (halve savings); LOW (≤ 0.3) = SATURATING
+    # (single-substrate dominates; floor predicted_score_delta near zero).
+    # Sourced from `.omx/state/substrate_composition_matrix.json` per T1-F
+    # `feedback_t1_f_z3_x_c6_composition_probe_build_landed_20260514.md`.
+    # None = no composition evidence (single-substrate candidate or untested
+    # pair); the candidate is ranked without composition adjustment.
+    composition_alpha: float | None = None
 
     def eig_per_dollar(self) -> float:
         if self.estimated_dispatch_cost_usd <= 0.0:
@@ -425,6 +444,20 @@ _CLASS_SHIFT_LITERATURE_TOKENS = (
     "world-model",
     "time_traveler",
     "time-traveler",
+    # 2026-05-14 C1 council "RETAIN" decision per
+    # `project_c1_world_model_revision_SUPERSEDED_by_council_unfair_probe_finding_20260514.md`:
+    # the C1 world-model architecture revision was DEFERRED-pending-fair-probe-v2,
+    # NOT KILLED. The literature anchor for the world-model class IS
+    # Ha-Schmidhuber 2018 + Hafner DreamerV3 2023; both must be retained as
+    # autopilot-ranker class-shift reward tokens so the probe-v2 evidence loop
+    # (when it lands) inherits the canonical priority. Per CLAUDE.md
+    # "Forbidden premature KILL without research exhaustion".
+    "Ha-Schmidhuber",
+    "Ha Schmidhuber",
+    "Hafner",
+    "DreamerV3",
+    "Dreamer V3",
+    "Dreamer-V3",
 )
 
 CLASS_SHIFT_LANE_CLASS_REWARD = 0.02
@@ -516,7 +549,8 @@ def adjust_predicted_delta_for_class_shift(
 def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     """Return the rank-key predicted_score_delta after Z1 empirical revision
     adjustments. This is the canonical composition: first apply MDL-density
-    penalty, then apply class-shift reward.
+    penalty (Tier A), then Tier C density penalty/reward (Catalog #227),
+    then class-shift reward, then composition matrix factor (Catalog #227).
 
     Per CLAUDE.md "Subagent coherence-by-default" (Z1 wire-in hook #4): this
     helper is the single source of truth for "what does the autopilot
@@ -529,13 +563,156 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     d = adjust_predicted_delta_for_mdl_density(
         c.predicted_score_delta, c.mdl_density
     )
+    # Catalog #227 Tier C wire-in: substrate-class signal overrides Tier A
+    # for class discrimination. Apply BEFORE the class-shift reward so the
+    # Tier C verdict can either reinforce (across-class density LOW + bonus)
+    # or contradict (across-class evidence already captured by Tier C
+    # alone, even without a literature_anchor).
+    d = adjust_predicted_delta_for_mdl_tier_c_density(d, c.mdl_tier_c_density)
     d = adjust_predicted_delta_for_class_shift(
         d,
         lane_class=c.lane_class,
         literature_anchor=c.literature_anchor,
         notes=c.notes,
     )
+    # Catalog #227 composition matrix wire-in: stacking of two substrates
+    # has an additivity factor α ∈ [0, 1+] per the Z3×C6 probe-disambiguator
+    # (`tools/probe_z3_x_c6_composition_disambiguator.py`). The factor maps
+    # to a predicted_score_delta scaling per the additivity verdict bands.
+    d = adjust_predicted_delta_for_composition_alpha(d, c.composition_alpha)
     return d
+
+
+# ── Tier C substrate-class density (Catalog #227 wire-in, 2026-05-14) ─────
+#
+# Per `feedback_mdl_ablation_tier_c_ibps1_landed_20260514.md` operator
+# decision #4 (RECOMMENDED-LAND-NEXT): wire Tier C decoder/latent curve-knee
+# into the autopilot ranker. Tier A is brotli-saturated at the byte layer and
+# CANNOT discriminate substrate class; Tier C is the dispositive disambiguator
+# per Z1 deep-math §3.5 + Tishby-Zaslavsky 2015.
+#
+# Thresholds (per Z1 council band math + C6 5ep anchor density ≈ 0.13):
+#   density >= 0.70 (within-class) → cap at floor (effective zero
+#                                    improvement; sister of Tier A 0.95 cap)
+#   density >= 0.50 (within-class trending) → 50% penalty
+#   density <= 0.30 (across-class) → 0.01 ΔS bonus (subtract → more-negative
+#                                    = better in score-delta convention).
+#                                    Sister of CLASS_SHIFT_LITERATURE_ANCHOR_
+#                                    REWARD but applied only when EMPIRICAL
+#                                    Tier C evidence backs the across-class
+#                                    claim, not just lineage.
+#   density unknown (None) → no adjustment (don't punish lack-of-evidence).
+#
+# The Tier C signal is STRONGER than the Tier A signal for substrate-class
+# discrimination, but Tier A still captures within-class encoder/codec
+# saturation which Tier C alone does not. The composition in
+# `apply_z1_empirical_revision_to_candidate_delta` applies BOTH so a
+# within-Tier-A candidate gets penalized AND a within-Tier-C candidate is
+# further capped at the floor.
+MDL_TIER_C_WITHIN_CLASS_SATURATED_THRESHOLD = 0.70
+MDL_TIER_C_WITHIN_CLASS_TRENDING_THRESHOLD = 0.50
+MDL_TIER_C_ACROSS_CLASS_THRESHOLD = 0.30
+MDL_TIER_C_WITHIN_CLASS_SATURATED_DELTA_FLOOR = -0.005  # sister of Tier A
+MDL_TIER_C_WITHIN_CLASS_TRENDING_PENALTY_FACTOR = 0.5
+MDL_TIER_C_ACROSS_CLASS_BONUS = 0.01  # subtract from delta (lower = better)
+
+
+def adjust_predicted_delta_for_mdl_tier_c_density(
+    base_delta: float,
+    mdl_tier_c_density: float | None,
+) -> float:
+    """Apply substrate-class-discrimination Tier C penalty/reward to the
+    predicted_score_delta.
+
+    Per Catalog #227 / Tier C wire-in (`feedback_mdl_ablation_tier_c_ibps1_
+    landed_20260514.md` operator decision #4):
+
+      - density >= 0.70: within-class (Tier C confirms); floor delta at
+        ``MDL_TIER_C_WITHIN_CLASS_SATURATED_DELTA_FLOOR``.
+      - density >= 0.50: within-class trending; 50% penalty.
+      - density <= 0.30: across-class (Tier C confirms); apply
+        ``MDL_TIER_C_ACROSS_CLASS_BONUS`` subtraction (more-negative = better).
+      - 0.30 < density < 0.50: indeterminate; no adjustment.
+      - density unknown (None) or non-numeric: no adjustment.
+
+    Per CLAUDE.md "Forbidden score claims": this adjusts PREDICTED ΔS only.
+    Returns the adjusted predicted_score_delta. Lower is better.
+    """
+    if mdl_tier_c_density is None:
+        return base_delta
+    try:
+        d = float(mdl_tier_c_density)
+    except (TypeError, ValueError):
+        return base_delta
+    if d >= MDL_TIER_C_WITHIN_CLASS_SATURATED_THRESHOLD:
+        return max(base_delta, MDL_TIER_C_WITHIN_CLASS_SATURATED_DELTA_FLOOR)
+    if d >= MDL_TIER_C_WITHIN_CLASS_TRENDING_THRESHOLD:
+        return base_delta * MDL_TIER_C_WITHIN_CLASS_TRENDING_PENALTY_FACTOR
+    if d <= MDL_TIER_C_ACROSS_CLASS_THRESHOLD:
+        # Subtract bonus → more-negative → better-ranked in score-delta
+        # convention. Sister of the class-shift literature bonus but
+        # backed by Tier C empirical evidence rather than lineage tokens.
+        return base_delta - MDL_TIER_C_ACROSS_CLASS_BONUS
+    # 0.30 < density < 0.50 → indeterminate; no adjustment.
+    return base_delta
+
+
+# ── Substrate composition matrix factor (Catalog #227 wire-in, 2026-05-14) ─
+#
+# Per `feedback_t1_f_z3_x_c6_composition_probe_build_landed_20260514.md`:
+# the Z3×C6 composition probe-disambiguator returns an additivity factor α
+# in the [0, 1+] band:
+#
+#   α > 0.7   (ADDITIVE) → stacking realizes additive savings; predicted_
+#                          score_delta scaled by 1.0 (no penalty)
+#   α 0.3-0.7 (SUB-ADDITIVE) → marginal stacking; halve predicted savings
+#   α <= 0.3  (SATURATING) → single-substrate dominates; cap at floor
+#
+# The matrix is the canonical posterior surface
+# `.omx/state/substrate_composition_matrix.json` populated by every probe
+# invocation. The ranker reads the candidate's `composition_alpha` field;
+# upstream loaders (`load_candidates_from_substrate_composition_ranking`)
+# populate it when QQ's substrate composition ranker emits the field.
+#
+# Per CLAUDE.md "Anti-arbitrariness primitive: the probe-disambiguator
+# pattern": the probe IS the arbitration; the ranker consumes the verdict.
+COMPOSITION_ALPHA_ADDITIVE_THRESHOLD = 0.7  # >0.7 = additive, no penalty
+COMPOSITION_ALPHA_SUB_ADDITIVE_THRESHOLD = 0.3  # 0.3-0.7 = sub-additive
+COMPOSITION_ALPHA_SUB_ADDITIVE_PENALTY_FACTOR = 0.5  # halve savings
+COMPOSITION_ALPHA_SATURATING_DELTA_FLOOR = -0.005  # sister of MDL-density
+
+
+def adjust_predicted_delta_for_composition_alpha(
+    base_delta: float,
+    composition_alpha: float | None,
+) -> float:
+    """Apply substrate composition additivity factor to predicted_score_delta.
+
+    Per Catalog #227 composition matrix wire-in
+    (`feedback_t1_f_z3_x_c6_composition_probe_build_landed_20260514.md`):
+
+      - α > 0.7  (ADDITIVE): no adjustment (full additive savings)
+      - α 0.3-0.7 (SUB-ADDITIVE): 50% penalty on predicted savings
+      - α <= 0.3 (SATURATING): floor at -0.005 (single-substrate dominates)
+      - α unknown (None): no adjustment (single-substrate candidate or
+        composition evidence not yet collected)
+
+    Returns the (possibly adjusted) predicted_score_delta. Lower is better.
+    """
+    if composition_alpha is None:
+        return base_delta
+    try:
+        a = float(composition_alpha)
+    except (TypeError, ValueError):
+        return base_delta
+    if a > COMPOSITION_ALPHA_ADDITIVE_THRESHOLD:
+        # ADDITIVE: full additive savings realized; no adjustment.
+        return base_delta
+    if a > COMPOSITION_ALPHA_SUB_ADDITIVE_THRESHOLD:
+        # SUB-ADDITIVE: halve the predicted savings.
+        return base_delta * COMPOSITION_ALPHA_SUB_ADDITIVE_PENALTY_FACTOR
+    # SATURATING (α <= 0.3): single-substrate dominates; cap at floor.
+    return max(base_delta, COMPOSITION_ALPHA_SATURATING_DELTA_FLOOR)
 
 
 def rank_candidates(
@@ -1225,7 +1402,20 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     present: ``mdl_density`` (float), ``lane_class`` (str), and
     ``literature_anchor`` (str). Backward-compat: rows without these fields
     use the defaults (None / None / "") so legacy queues load unchanged.
+
+    Catalog #227 Tier C empirical revision fields (2026-05-14) are also
+    read when present: ``mdl_tier_c_density`` (float) and
+    ``composition_alpha`` (float). Backward-compat: rows without these
+    fields use None defaults.
     """
+    def _opt_float(value: object) -> float | None:
+        if value is None:
+            return None
+        try:
+            return float(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return None
+
     rows: list[CandidateRow] = []
     with path.open("r", encoding="utf-8") as f:
         for line in f:
@@ -1233,15 +1423,9 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
             if not s:
                 continue
             raw = json.loads(s)
-            mdl_density_raw = raw.get("mdl_density")
-            mdl_density: float | None
-            if mdl_density_raw is None:
-                mdl_density = None
-            else:
-                try:
-                    mdl_density = float(mdl_density_raw)
-                except (TypeError, ValueError):
-                    mdl_density = None
+            mdl_density = _opt_float(raw.get("mdl_density"))
+            mdl_tier_c_density = _opt_float(raw.get("mdl_tier_c_density"))
+            composition_alpha = _opt_float(raw.get("composition_alpha"))
             lane_class_raw = raw.get("lane_class")
             lane_class: str | None = (
                 str(lane_class_raw) if lane_class_raw is not None else None
@@ -1257,6 +1441,8 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 mdl_density=mdl_density,
                 lane_class=lane_class,
                 literature_anchor=str(raw.get("literature_anchor", "")),
+                mdl_tier_c_density=mdl_tier_c_density,
+                composition_alpha=composition_alpha,
             ))
     return rows
 
@@ -1341,6 +1527,15 @@ def load_candidates_from_substrate_composition_ranking(
             f"composition_notes: {raw.get('composition_notes', '')}",
             f"substrate_ids: {raw.get('substrate_ids', [])!r}",
         ]
+        # Catalog #227 wire-in: read optional composition_alpha if present
+        # (the canonical Z3×C6 probe-disambiguator emits this).
+        composition_alpha_raw = raw.get("composition_alpha")
+        composition_alpha: float | None = None
+        if composition_alpha_raw is not None:
+            try:
+                composition_alpha = float(composition_alpha_raw)
+            except (TypeError, ValueError):
+                composition_alpha = None
         rows.append(CandidateRow(
             candidate_id=str(raw["candidate_id"]),
             family=str(raw["family"]),
@@ -1349,8 +1544,126 @@ def load_candidates_from_substrate_composition_ranking(
             estimated_dispatch_cost_usd=float(raw["estimated_dispatch_cost_usd"]),
             blockers=list(raw.get("blockers", [])),
             notes="\n".join(notes_lines),
+            composition_alpha=composition_alpha,
         ))
     return rows
+
+
+# ── Canonical substrate composition matrix consumer (Catalog #227) ────────
+#
+# Per `feedback_t1_f_z3_x_c6_composition_probe_build_landed_20260514.md` the
+# canonical posterior surface for substrate composition is
+# `.omx/state/substrate_composition_matrix.json`. The probe-disambiguator
+# appends one entry per probe invocation; multiple entries per pair are
+# possible (most-recent wins).
+#
+# This loader maps the matrix into a `(substrate_pair_key, alpha)` dict so
+# the autopilot can look up the composition factor for any candidate that
+# carries substrate_ids. Substrate pair key is the canonical
+# "<substrate_id_a>__x__<substrate_id_b>" form used by T1-F.
+#
+# Per CLAUDE.md "Forbidden score claims" the matrix entries are PREDICTED
+# composition signals, never measured scores; the loader refuses any entry
+# with score_claim=True.
+SUBSTRATE_COMPOSITION_MATRIX_PATH = (
+    REPO_ROOT / ".omx" / "state" / "substrate_composition_matrix.json"
+)
+
+
+def load_substrate_composition_alpha_index(
+    path: Path | None = None,
+) -> dict[str, float]:
+    """Return {"<substrate_a>__x__<substrate_b>": alpha} from the canonical
+    substrate composition matrix posterior surface.
+
+    For each pair key in the matrix, the loader returns the alpha of the
+    MOST RECENTLY WRITTEN entry (by ``written_at_utc``). Per CLAUDE.md
+    "Forbidden score claims" any entry with ``score_claim=True`` is REFUSED
+    (the loader raises ``ValueError``).
+
+    Returns an empty dict when the matrix file is absent.
+    """
+    p = path if path is not None else SUBSTRATE_COMPOSITION_MATRIX_PATH
+    if not p.is_file():
+        return {}
+    try:
+        payload = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    entries = payload.get("entries") or {}
+    if not isinstance(entries, dict):
+        return {}
+    out: dict[str, float] = {}
+    for pair_key, rows in entries.items():
+        if not isinstance(rows, list) or not rows:
+            continue
+        # Pick most-recent by written_at_utc (string lexicographic compare
+        # works because all timestamps use canonical UTC ISO format).
+        latest = max(
+            (r for r in rows if isinstance(r, dict)),
+            key=lambda r: r.get("written_at_utc", ""),
+            default=None,
+        )
+        if latest is None:
+            continue
+        if latest.get("score_claim", False):
+            raise ValueError(
+                f"substrate composition matrix entry for pair {pair_key!r} "
+                "has score_claim=True; refuse to consume score-claimed "
+                "composition rows (per CLAUDE.md 'Forbidden score claims')"
+            )
+        alpha_raw = latest.get("alpha")
+        if alpha_raw is None:
+            continue
+        try:
+            out[str(pair_key)] = float(alpha_raw)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def apply_substrate_composition_matrix_to_candidates(
+    candidates: list[CandidateRow],
+    *,
+    substrate_ids_by_candidate: dict[str, tuple[str, ...]] | None = None,
+    matrix_path: Path | None = None,
+) -> list[CandidateRow]:
+    """Populate ``candidate.composition_alpha`` from the canonical
+    substrate composition matrix.
+
+    For each candidate, if ``substrate_ids_by_candidate`` carries a tuple of
+    exactly TWO substrate ids, the canonical key
+    ``<a>__x__<b>`` (alphabetically sorted) OR ``<b>__x__<a>`` is looked up
+    in the matrix. Single-substrate candidates and substrate triples are not
+    matched (composition_alpha stays None).
+
+    Returns the SAME list (mutated in place) — convenient for chaining.
+    """
+    if not candidates:
+        return candidates
+    alpha_index = load_substrate_composition_alpha_index(matrix_path)
+    if not alpha_index:
+        return candidates
+    if substrate_ids_by_candidate is None:
+        substrate_ids_by_candidate = {}
+    for cand in candidates:
+        sids = substrate_ids_by_candidate.get(cand.candidate_id)
+        if not sids or len(sids) != 2:
+            continue
+        a, b = sorted(sids)
+        key_a = f"{a}__x__{b}"
+        key_b = f"{b}__x__{a}"
+        alpha = alpha_index.get(key_a) or alpha_index.get(key_b)
+        if alpha is None:
+            # Fallback: scan keys for any pair containing both substrate ids
+            # (the probe may emit keys in non-sorted form).
+            for k, v in alpha_index.items():
+                if a in k and b in k and "__x__" in k:
+                    alpha = v
+                    break
+        if alpha is not None:
+            cand.composition_alpha = alpha
+    return candidates
 
 
 def candidate_substrate_ids_from_ranking(path: Path) -> dict[str, tuple[str, ...]]:
