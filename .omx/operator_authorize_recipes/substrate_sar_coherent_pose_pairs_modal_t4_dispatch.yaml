@@ -1,0 +1,156 @@
+schema_version: 1
+name: substrate_sar_coherent_pose_pairs_modal_t4_dispatch
+lane_id: lane_sar_coherent_pose_pairs_substrate_20260513
+summary: |
+  L2 SAR coherent pose-pair integration substrate (SARC) — reverse-engineered
+  from the alien-tech master synthesis Lincoln Lab L2 entry (rank #1 EV/$ in
+  the floor-v3 commit 27a7950fd). Per Cook & Bernfeld 1967 *Radar Signals* +
+  Carrara, Goodman, Majewski 1995 *Spotlight Synthetic Aperture Radar*: phase
+  coherence across 600 contest pose-pairs synthesizes a √600 ≈ 24× coherent
+  SNR gain → ~4.6 fewer bits per pose-symbol → predicted ΔS -0.0056 vs PR101
+  0.193 anchor. Predicted band [0.187, 0.190] [first-principles-bound,
+  literature-prediction]. Target archive: 50-70 KB.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+# canary_dependency removed: SAR coherent pose-pair codec is architecturally
+# INDEPENDENT of HNeRV-family (sparse rFFT pose codec + SIREN renderer; no
+# mask/renderer derivative shared failure surface). Catalog #173 canary
+# discipline is designed to gate HNeRV-family-derivatives where pace-of-failure
+# correlates across substrates.
+
+active_dispatch_contract: sar_coherent_pose_pairs_naked_substrate
+dispatch_contracts:
+  - id: sar_coherent_pose_pairs_naked_substrate
+    archive_role: monolithic_sarc_replaces_hnerv_a1_substrate
+    builder_surface: experiments/train_substrate_sar_coherent_pose_pairs.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.187, 0.190]
+smoke_score_band: [0.05, 0.40]
+predicted_delta: "-0.0056 vs PR101 0.193 [first-principles-bound, literature-prediction]"
+predicted_delta_basis: ".omx/research/expert_team_signal_processing_lincoln_lab_20260513.md §2"
+literature_anchor: |
+  Cook & Bernfeld (1967) Radar Signals (Academic Press, ISBN 0-12-186750-4);
+  Carrara, Goodman, Majewski (1995) Spotlight Synthetic Aperture Radar
+  (Artech House, ISBN 0-89006-728-7);
+  Munson & Visentin (1989) IEEE ASSP Magazine 6:21-30;
+  Sitzmann et al. (2020) NeurIPS (SIREN init for renderer MLP);
+  Atick & Redlich (1990) Neural Computation 2:308-320 (cooperative-receiver).
+council_phase_5_prediction: 0.188
+
+risk: |
+  L2 SAR substrate first-anchor dispatch. The substrate is novel — the
+  sparse rFFT pose codec + SIREN renderer + per-pair RGB residual composition
+  has NOT been empirically anchored against the contest video. The predicted
+  band [0.187, 0.190] is a literature-prediction synthesis (Cook & Bernfeld
+  1967 + Carrara 1995 + L2 ledger §2.2 first-principles math), not measurement.
+
+  Architectural risk:
+  - L2 ledger §2.4 falsification: SAR coherence requires temporal smoothness
+    of the pose trajectory. Empirical contest dashcam data shows ~80% energy
+    in the lowest 10% of bins (sustained-velocity highway driving), but if
+    the actual spectrum is uniform, sparse retention provides no compression
+    gain. The score-aware loss includes a SAR temporal-smoothness aux term
+    (delta_temporal=0.05) to actively encourage the precondition.
+  - Renderer is sub-50K params with SIREN-style init; lr=5e-4 with grad-clip=1.0
+    is conservative against omega=30 gradient amplification.
+  - Per-pair residual budget is 50 B/pair (30 KB total); per codex's math
+    correction (`feedback_codex_math_correction_pr95_lora_dora_landed_20260513.md`)
+    30 KB rate penalty ≈ 0.020 score; must overcome via pose+seg reduction.
+
+  Modal T4 training is diagnostic unless the auth-eval contract itself records
+  score_axis=contest_cuda and score_claim_valid=true. CPU axis remains required
+  separately on Linux x86_64 before any frontier-claim language.
+
+envelope_status: "FITS $5 envelope at p50 fallback (cheap T4 dispatch)"
+
+remote_driver: scripts/remote_lane_substrate_sar_coherent_pose_pairs.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_sar_coherent_pose_pairs.sh
+  cost_band_trainer: experiments/train_substrate_sar_coherent_pose_pairs.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_sar_coherent_pose_pairs.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/sar_coherent_pose_pairs/__init__.py
+  - src/tac/substrates/sar_coherent_pose_pairs/architecture.py
+  - src/tac/substrates/sar_coherent_pose_pairs/archive.py
+  - src/tac/substrates/sar_coherent_pose_pairs/inflate.py
+  - src/tac/substrates/sar_coherent_pose_pairs/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+
+env_overrides:
+  SARC_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SARC_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  SARC_OUTPUT_DIR: /workspace/pact/lane_substrate_sar_coherent_pose_pairs_results/output
+  SARC_EPOCHS: "2000"
+  SARC_UPSTREAM_DIR: /workspace/pact/upstream
+  SARC_DEVICE: cuda
+  SARC_HIDDEN_DIM: "48"
+  SARC_PER_PAIR_RESIDUAL_BYTES: "50"
+  SARC_TOPK_KEEP_FRACTION: "0.10"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_sar_coherent_pose_pairs.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_sar_coherent_pose_pairs.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+
+notes: |
+  L2 SAR coherent pose-pair integration substrate dispatch recipe.
+
+  The substrate is a single-archive SARC packet at 50-70 KB target.
+  Renderer (Stage 1, ~15-25 KB FP16 SIREN MLP) + sparse rFFT pose codec
+  (Stage 2, ~3-5 KB) + per-pair int8 RGB residual (Stage 3, ~30-40 KB at
+  50 B/pair × 600 pairs) + header/meta JSON (Stage 4, ~1 KB).
+
+  Per the floor-v3 ranking commit 27a7950fd, L2 SAR is rank #1 EV/$ across
+  the alien-tech short-list — $1 dispatch cost, 30-60 min wall-clock,
+  predicted ΔS -0.0056. The cheap T4 dispatch makes this an ideal first-
+  anchor for the SAR-coherent paradigm; success unlocks larger pose-axis
+  composition surfaces.
+
+  Predicted contest-CUDA score: 0.187-0.190 [first-principles-bound,
+  literature-prediction] (NOT a score claim — score authority requires CUDA
+  + CPU paired auth eval on 1:1 contest-CI hardware per CLAUDE.md
+  "Submission auth eval — BOTH CPU AND CUDA").
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    .omx/research/expert_team_signal_processing_lincoln_lab_20260513.md §2
+    feedback_expert_team_signal_processing_alien_tech_landed_20260513.md
+    .omx/research/adjusted_theoretical_floor_v3_post_pr106_falsification_20260513.md
