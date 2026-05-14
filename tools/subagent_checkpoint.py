@@ -171,11 +171,17 @@ def append_checkpoint(
     next_action: str,
     notes: str = "",
     parent_id_or_session: str | None = None,
+    lane_id: str | None = None,
 ) -> dict:
     """Append a single checkpoint record under the fcntl lock.
 
     Returns the record as-written (including server-side fields like
     ``written_at_utc`` / ``pid`` / ``host``).
+
+    ``lane_id`` (Codex finding #3, 2026-05-14) is a structured field that
+    enables resume-lookup via ``read_checkpoints_by_lane``. Older checkpoint
+    records that pre-date this field still satisfy the lane query via
+    notes-substring fallback.
     """
     # Validate BEFORE the list() coercion below so callers passing a string
     # (or other non-list) for ``files_touched`` get a clear error rather than
@@ -187,6 +193,7 @@ def append_checkpoint(
     record = {
         "subagent_id": subagent_id,
         "parent_id_or_session": parent_id_or_session,
+        "lane_id": lane_id,
         "step": step,
         "status": status,
         "files_touched": list(files_touched),
@@ -245,6 +252,101 @@ def latest_checkpoint(subagent_id: str) -> dict | None:
     return rows[-1]
 
 
+# ─── Predecessor-resume query paths (Codex finding #3, 2026-05-14) ───────
+#
+# Anchor: when a long-running subagent crashes (Anthropic API "Internal
+# server error" mid-session) the parent typically respawns a SUCCESSOR with
+# a NEW subagent_id. The original ``read --subagent-id`` flow requires an
+# exact match, so the documented startup query returned no rows even when
+# the predecessor had checkpointed — defeating the core crash-resume
+# scenario.
+#
+# The fix adds three additional query modes:
+#   * ``read --parent-id-or-session <id>`` — resolves by predecessor's
+#     parent_id_or_session field, supporting "spawn under the same parent
+#     session" semantics.
+#   * ``read --latest-incomplete`` — returns the most-recent non-complete
+#     record so a successor can grep for whatever's in-progress globally.
+#   * ``read --lane-id <lane>`` — resolves by lane id (matches structured
+#     ``lane_id`` field on the record OR substring inside ``notes`` for
+#     backward compatibility with older checkpoints).
+#
+# Memory: feedback_codex_3_findings_fix_landed_20260514.md.
+
+
+def read_checkpoints_by_parent(parent_id_or_session: str) -> list[dict]:
+    """Return all checkpoints with matching ``parent_id_or_session`` field.
+
+    Used by a SUCCESSOR subagent that has a different ``subagent_id`` from
+    the crashed predecessor but inherited the parent session anchor. Records
+    are ordered by write time (the JSONL append order, which is also the
+    write order under the lock).
+    """
+    if not parent_id_or_session:
+        raise ValueError("parent_id_or_session must be a non-empty string")
+    rows: list[dict] = []
+    for rec in read_checkpoints():
+        if rec.get("parent_id_or_session") == parent_id_or_session:
+            rows.append(rec)
+    return rows
+
+
+def read_checkpoints_by_lane(lane_id: str) -> list[dict]:
+    """Return all checkpoints associated with ``lane_id``.
+
+    Resolution order:
+      1. records that carry a structured ``lane_id`` field equal to ``lane_id``;
+      2. records whose ``notes`` field contains ``lane_id`` as a substring
+         (backward-compat for checkpoints written before the structured
+         field landed).
+
+    Returns the union of (1) and (2) preserving JSONL append order.
+    """
+    if not lane_id:
+        raise ValueError("lane_id must be a non-empty string")
+    rows: list[dict] = []
+    for rec in read_checkpoints():
+        if rec.get("lane_id") == lane_id:
+            rows.append(rec)
+            continue
+        notes = rec.get("notes", "")
+        if isinstance(notes, str) and lane_id in notes:
+            rows.append(rec)
+    return rows
+
+
+def latest_incomplete_checkpoint() -> dict | None:
+    """Return the MOST-RECENT checkpoint whose status is not ``complete``.
+
+    Used by a successor that has no predecessor id to start from: the
+    most-recent in-progress (or blocked) record in the JSONL is the most
+    plausible predecessor-resume candidate.
+    """
+    rows = read_checkpoints()
+    for rec in reversed(rows):
+        if rec.get("status") and rec["status"] != "complete":
+            return rec
+    return None
+
+
+def latest_incomplete_for_parent(parent_id_or_session: str) -> dict | None:
+    """Return the latest non-complete record for a given parent session."""
+    rows = read_checkpoints_by_parent(parent_id_or_session)
+    for rec in reversed(rows):
+        if rec.get("status") and rec["status"] != "complete":
+            return rec
+    return None
+
+
+def latest_incomplete_for_lane(lane_id: str) -> dict | None:
+    """Return the latest non-complete record for a given lane id."""
+    rows = read_checkpoints_by_lane(lane_id)
+    for rec in reversed(rows):
+        if rec.get("status") and rec["status"] != "complete":
+            return rec
+    return None
+
+
 def _parse_files_touched(raw: str | None) -> list[str]:
     if raw is None:
         return []
@@ -279,12 +381,47 @@ def main(argv: list[str] | None = None) -> int:
     # 'read' subcommand
     read_p = subparsers.add_parser(
         "read",
-        help="Read latest checkpoint(s) for a subagent.",
+        help=(
+            "Read latest checkpoint(s) for a subagent. For crash-resume of "
+            "a SUCCESSOR with a different subagent_id, use "
+            "--parent-id-or-session, --latest-incomplete, or --lane-id "
+            "(Codex finding #3 fix, 2026-05-14)."
+        ),
     )
+    # ONE of {--subagent-id, --parent-id-or-session, --lane-id,
+    # --latest-incomplete} is required. We don't use ``required=True`` on any
+    # single argument because the four are mutually-substitutable query
+    # paths; the validator at the end of main() enforces "at least one".
     read_p.add_argument(
         "--subagent-id",
-        required=True,
-        help="Subagent id to look up.",
+        default=None,
+        help="Subagent id to look up (exact match).",
+    )
+    read_p.add_argument(
+        "--parent-id-or-session",
+        default=None,
+        help=(
+            "Predecessor's parent_id_or_session value. Returns checkpoints "
+            "for any subagent_id that shared this parent. Recommended for "
+            "successor subagents respawned after a crash."
+        ),
+    )
+    read_p.add_argument(
+        "--lane-id",
+        default=None,
+        help=(
+            "Lane id (matches structured lane_id field on a record OR "
+            "substring inside notes for backward compatibility)."
+        ),
+    )
+    read_p.add_argument(
+        "--latest-incomplete",
+        action="store_true",
+        help=(
+            "Return only the most-recent record whose status is not "
+            "'complete'. Use this when neither the predecessor subagent id "
+            "nor the parent session is known."
+        ),
     )
     read_p.add_argument(
         "--latest-only",
@@ -326,15 +463,64 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional parent subagent id or session anchor.",
     )
+    parser.add_argument(
+        "--lane-id",
+        default=None,
+        help=(
+            "Optional structured lane id (e.g. lane_codex_3_findings_fix_"
+            "20260514). Codex finding #3 fix 2026-05-14: enables successor "
+            "subagents to resume-lookup by lane without needing the "
+            "predecessor's subagent id."
+        ),
+    )
 
     args = parser.parse_args(argv)
 
     if args.subcommand == "read":
-        records = read_checkpoints(args.subagent_id)
+        # Validate: exactly one query path must be present.
+        query_modes = sum(
+            1
+            for v in (
+                args.subagent_id,
+                args.parent_id_or_session,
+                args.lane_id,
+                args.latest_incomplete,
+            )
+            if v
+        )
+        if query_modes == 0:
+            parser.error(
+                "'read' requires one of: --subagent-id, "
+                "--parent-id-or-session, --lane-id, --latest-incomplete"
+            )
+        if query_modes > 1:
+            parser.error(
+                "'read' accepts exactly ONE query mode at a time; "
+                "got multiple: --subagent-id / --parent-id-or-session / "
+                "--lane-id / --latest-incomplete"
+            )
+
+        records: list[dict]
+        query_label: str
+        if args.latest_incomplete:
+            rec = latest_incomplete_checkpoint()
+            records = [rec] if rec is not None else []
+            query_label = "--latest-incomplete"
+        elif args.parent_id_or_session:
+            records = read_checkpoints_by_parent(args.parent_id_or_session)
+            query_label = (
+                f"--parent-id-or-session={args.parent_id_or_session!r}"
+            )
+        elif args.lane_id:
+            records = read_checkpoints_by_lane(args.lane_id)
+            query_label = f"--lane-id={args.lane_id!r}"
+        else:
+            records = read_checkpoints(args.subagent_id)
+            query_label = f"--subagent-id={args.subagent_id!r}"
+
         if not records:
             print(
-                f"[subagent-checkpoint] no records for subagent_id="
-                f"{args.subagent_id!r}",
+                f"[subagent-checkpoint] no records for {query_label}",
                 file=sys.stderr,
             )
             return 2
@@ -362,6 +548,7 @@ def main(argv: list[str] | None = None) -> int:
         next_action=args.next_action,
         notes=args.notes,
         parent_id_or_session=args.parent_id_or_session,
+        lane_id=args.lane_id,
     )
     print(json.dumps(record, sort_keys=True))
     return 0
