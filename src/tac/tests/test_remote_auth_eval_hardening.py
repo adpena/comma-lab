@@ -1312,6 +1312,45 @@ def test_modal_result_dir_label_parser_preserves_lane_prefix() -> None:
     )
 
 
+def test_modal_recover_direct_call_id_derives_original_dispatch_label_from_log() -> None:
+    path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
+    spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    label = "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep"
+    result = {
+        "artifacts": {
+            f"modal_lane_{label}.log": b"log",
+            "lane_pr95plus_results/provenance.json": json.dumps(
+                {"dispatch_instance_job_id": label}
+            ).encode("utf-8"),
+        }
+    }
+
+    assert mod.label_from_modal_result(result) == label
+
+
+def test_modal_recover_direct_call_id_falls_back_to_provenance_label() -> None:
+    path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
+    spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    label = "lane_preserve_full_label_with_underscores"
+    result = {
+        "artifacts": {
+            "lane_pr95plus_results/provenance.json": json.dumps(
+                {"dispatch_instance_job_id": label}
+            ).encode("utf-8"),
+        }
+    }
+
+    assert mod.label_from_modal_result(result) == label
+
+
 def test_modal_recover_labels_non_cuda_scores_advisory() -> None:
     path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
     spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)

@@ -46,6 +46,45 @@ def label_from_modal_result_dir(dirname: str) -> str:
     return dirname[len(prefix):-len(suffix)]
 
 
+def label_from_modal_result(result: dict) -> str | None:
+    """Recover the original Modal dispatch label from returned artifacts.
+
+    Direct ``--call-id`` recovery does not have the local sentinel path, so the
+    label must come from the provider result itself. Prefer the modal log name
+    because it is written by ``modal_train_lane.py`` from the original dispatch
+    label; fall back to structured provenance and then broad artifact prefixes.
+    """
+
+    artifacts = result.get("artifacts")
+    if not isinstance(artifacts, dict):
+        return None
+    for key in artifacts:
+        name = Path(str(key)).name
+        match = re.fullmatch(r"modal_lane_(.+)\.log", name)
+        if match:
+            return match.group(1)
+    for key, data in artifacts.items():
+        if not str(key).endswith("provenance.json"):
+            continue
+        try:
+            payload = json.loads(bytes(data).decode("utf-8"))
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            label = str(payload.get("dispatch_instance_job_id") or "").strip()
+            if label:
+                return label
+    for key in artifacts:
+        match = re.match(r"results/([^/]+)/", str(key))
+        if match:
+            return match.group(1)
+    for key in artifacts:
+        match = re.match(r"([^/]+)_results/", str(key))
+        if match:
+            return match.group(1)
+    return None
+
+
 def _first_present(payload: dict, keys: tuple[str, ...]):
     for key in keys:
         value = payload.get(key)
@@ -250,13 +289,8 @@ def recover_one(label: str | None, call_id: str | None) -> int:
 
     # Save artifacts
     if not label:
-        # Derive label from a hint in the result, else use call_id
-        label = "unknown"
-        for k in result.get("artifacts", {}):
-            m = re.search(r"lane_([\w_-]+)_results/", k)
-            if m:
-                label = m.group(1).split("_")[0]
-                break
+        # Derive label from the result itself, else isolate by call_id.
+        label = label_from_modal_result(result) or call_id
     out_dir = REPO_ROOT / "experiments" / "results" / f"lane_{label}_modal"
     out_dir.mkdir(parents=True, exist_ok=True)
 

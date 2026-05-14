@@ -26,6 +26,10 @@ from tac.hnerv_pr103_lc_ac_schema import (
     HnervPr103LcAcSchemaError,
     parse_pr103_lc_ac_payload,
 )
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_MAGIC,
+    parse_pr106_sidecar_packet,
+)
 from tac.repo_io import json_text, repo_relative, sha256_bytes
 
 SCHEMA_VERSION = 1
@@ -288,8 +292,12 @@ def _emit_packet_section_manifest(
         member_name=single.member_name,
         payload=single.payload,
     )
-    sections = _parse_sections(parser_name, single.payload)
-    coverage = _coverage_record(sections, payload_bytes=single.member_bytes)
+    parser_input, wrapper_meta = _parser_input_payload(
+        parser_name=parser_name,
+        member_payload=single.payload,
+    )
+    sections = _parse_sections(parser_name, parser_input)
+    coverage = _coverage_record(sections, payload_bytes=len(parser_input))
     manifest = {
         "schema": MANIFEST_SCHEMA,
         "schema_version": SCHEMA_VERSION,
@@ -318,6 +326,12 @@ def _emit_packet_section_manifest(
             "requested": parser,
             "confidence": _parser_confidence(parser_name),
         },
+        "parser_input": {
+            "kind": "pr106_sidecar_inner_payload" if wrapper_meta else "member_payload",
+            "bytes": len(parser_input),
+            "sha256": sha256_bytes(parser_input),
+            "offset_base": "parser_input",
+        },
         "parser_section_manifest": _gate3_parser_section_manifest(sections),
         "sections": sections,
         "coverage": coverage,
@@ -327,6 +341,8 @@ def _emit_packet_section_manifest(
             "no component score, score movement, or dispatch authorization is claimed",
         ],
     }
+    if wrapper_meta is not None:
+        manifest["pr106_sidecar_wrapper"] = wrapper_meta
     return manifest
 
 
@@ -374,11 +390,48 @@ def _infer_parser(
         return PARSER_PR101
     if len(payload) >= 4 and payload[0] == 0xFF:
         return PARSER_PR106
+    if len(payload) >= 8 and payload[0] == PR106_SIDECAR_MAGIC:
+        return PARSER_PR106
     if len(payload) == PR101_TOTAL_KNOWN_LEN:
         return PARSER_PR101
     if len(payload) >= PUBLIC_PR103_LAYOUT.fixed_bytes:
         return PARSER_PR103
     raise HnervPacketSectionManifestError("could not infer HNeRV packet parser")
+
+
+def _parser_input_payload(
+    *,
+    parser_name: str,
+    member_payload: bytes,
+) -> tuple[bytes, dict[str, Any] | None]:
+    if parser_name != PARSER_PR106:
+        return member_payload, None
+    if not member_payload or member_payload[0] != PR106_SIDECAR_MAGIC:
+        return member_payload, None
+    try:
+        packet = parse_pr106_sidecar_packet(member_payload)
+    except ValueError as exc:
+        raise HnervPacketSectionManifestError(
+            f"PR106 sidecar wrapper parse failed: {exc}"
+        ) from exc
+    framing_meta = packet.framing_meta or b""
+    wrapper_meta = {
+        "kind": "pr106_sidecar_wrapper",
+        "magic": f"0x{PR106_SIDECAR_MAGIC:02X}",
+        "format_id": f"0x{packet.format_id:02X}",
+        "sidecar_kind": packet.sidecar_kind,
+        "outer_member_bytes": len(member_payload),
+        "outer_member_sha256": sha256_bytes(member_payload),
+        "inner_pr106_bytes": len(packet.pr106_bytes),
+        "inner_pr106_sha256": sha256_bytes(packet.pr106_bytes),
+        "sidecar_payload_bytes": len(packet.sidecar_payload),
+        "sidecar_payload_sha256": sha256_bytes(packet.sidecar_payload),
+        "framing_meta_bytes": len(framing_meta),
+        "framing_meta_sha256": sha256_bytes(framing_meta) if framing_meta else None,
+        "score_claim": False,
+        "dispatch_attempted": False,
+    }
+    return packet.pr106_bytes, wrapper_meta
 
 
 def _parse_sections(parser_name: str, payload: bytes) -> list[dict[str, Any]]:

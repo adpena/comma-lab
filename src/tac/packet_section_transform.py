@@ -26,10 +26,9 @@ from tac.analysis.hnerv_packet_sections import (
 from tac.hnerv_lowlevel_packer import (
     HnervLowlevelPackError,
     brotli_recode_search,
-    parse_ff_packed_brotli_hnerv,
+    read_packed_archive_view,
     read_strict_single_member_zip,
     sha256_bytes,
-    write_stored_single_member_zip,
 )
 from tac.hnerv_section_repack import RATE_SCORE_PER_BYTE
 from tac.repo_io import sha256_file
@@ -106,6 +105,8 @@ class PacketIR:
     member_bytes: int
     member_sha256: str
     parser_name: str
+    parser_input: Mapping[str, Any]
+    pr106_sidecar_wrapper: Mapping[str, Any] | None
     sections: tuple[SectionIR, ...]
     parser_section_gate: Mapping[str, Any]
 
@@ -126,6 +127,12 @@ class PacketIR:
             member_bytes=int(member["bytes"]),
             member_sha256=str(member["sha256"]),
             parser_name=str(parser["name"]),
+            parser_input=_mapping(manifest.get("parser_input"), "parser_input"),
+            pr106_sidecar_wrapper=(
+                _mapping(manifest.get("pr106_sidecar_wrapper"), "pr106_sidecar_wrapper")
+                if manifest.get("pr106_sidecar_wrapper") is not None
+                else None
+            ),
             sections=tuple(
                 SectionIR.from_manifest_section(section)
                 for section in sections
@@ -152,6 +159,12 @@ class PacketIR:
             "member_bytes": self.member_bytes,
             "member_sha256": self.member_sha256,
             "parser_name": self.parser_name,
+            "parser_input": dict(self.parser_input),
+            "pr106_sidecar_wrapper": (
+                dict(self.pr106_sidecar_wrapper)
+                if self.pr106_sidecar_wrapper is not None
+                else None
+            ),
             "sections": [section.to_dict() for section in self.sections],
             "parser_section_gate": dict(self.parser_section_gate),
         }
@@ -333,8 +346,8 @@ def compile_hnerv_pr106_section_transform_candidate(
             f"PR106 section-transform compiler requires parser {PARSER_PR106}, "
             f"got {source_ir.parser_name}"
         )
-    single = read_strict_single_member_zip(source_path)
-    packed = parse_ff_packed_brotli_hnerv(single.payload)
+    source_view = read_packed_archive_view(source_path)
+    packed = source_view.packed
     payload_by_section = {
         "packed_header_ff_len24": packed.header,
         "decoder_packed_brotli": packed.decoder_packed_brotli,
@@ -362,7 +375,7 @@ def compile_hnerv_pr106_section_transform_candidate(
     if not replacements:
         blockers.append("transform_produced_no_changed_sections")
 
-    candidate_payload = single.payload
+    candidate_payload = source_view.archive.payload
     candidate_ir: PacketIR | None = None
     candidate_archive_sha = None
     candidate_archive_bytes = None
@@ -378,12 +391,8 @@ def compile_hnerv_pr106_section_transform_candidate(
                 packed.latents_and_sidecar_brotli,
             ),
         )
-        candidate_payload = candidate_packed.to_bytes()
-        write_stored_single_member_zip(
-            output_path,
-            member_name=single.member_name,
-            payload=candidate_payload,
-        )
+        candidate_payload = source_view.emit_payload(candidate_packed)
+        source_view.write_archive(output_path, candidate_payload)
         candidate_archive_sha = sha256_file(output_path)
         candidate_archive_bytes = output_path.stat().st_size
         candidate_ir = build_hnerv_packet_ir(
@@ -461,14 +470,16 @@ def certify_hnerv_grammar_preserving_candidate_pair(
     )
     source_single = read_strict_single_member_zip(source_path)
     candidate_single = read_strict_single_member_zip(candidate_path)
+    source_parser_payload = _parser_payload_for_archive(source_path, source_ir.parser_name)
+    candidate_parser_payload = _parser_payload_for_archive(candidate_path, candidate_ir.parser_name)
 
     changed_sections = _changed_sections(source_ir, candidate_ir)
     section_equivalence = _candidate_pair_section_equivalence(
         parser_name=source_ir.parser_name,
         source_ir=source_ir,
         candidate_ir=candidate_ir,
-        source_payload=source_single.payload,
-        candidate_payload=candidate_single.payload,
+        source_payload=source_parser_payload,
+        candidate_payload=candidate_parser_payload,
     )
     blockers = _candidate_pair_blockers(
         source_ir=source_ir,
@@ -564,12 +575,12 @@ def scan_hnerv_brotli_recode_opportunities(
                 parser=parser,
                 repo_root=repo_root,
             )
-            single = read_strict_single_member_zip(path)
+            parser_payload = _parser_payload_for_archive(path, packet_ir.parser_name)
         except (PacketSectionTransformError, HnervLowlevelPackError) as exc:
             blockers.append(f"{label}:archive_unreadable:{exc}")
             continue
         for section in packet_ir.sections:
-            payload = single.payload[section.offset : section.offset + section.length]
+            payload = parser_payload[section.offset : section.offset + section.length]
             rows.append(
                 _scan_one_brotli_section(
                     label=label,
@@ -649,6 +660,12 @@ def scan_hnerv_brotli_recode_opportunities(
         "ranked_rate_positive": ranked,
         "sections": rows,
     }
+
+
+def _parser_payload_for_archive(path: Path, parser_name: str) -> bytes:
+    if parser_name == PARSER_PR106:
+        return read_packed_archive_view(path).hnerv_payload
+    return read_strict_single_member_zip(path).payload
 
 
 def _candidate_pair_section_equivalence(

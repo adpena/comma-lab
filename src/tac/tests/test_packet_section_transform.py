@@ -8,6 +8,12 @@ from pathlib import Path
 import brotli
 
 from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv, write_stored_single_member_zip
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106SidecarPacket,
+    PR106_SIDECAR_FORMAT_BROTLI,
+    emit_pr106_sidecar_packet,
+    parse_pr106_sidecar_packet,
+)
 from tac.packet_section_transform import (
     BrotliRecodeSectionTransform,
     build_hnerv_packet_ir,
@@ -39,6 +45,35 @@ def test_build_hnerv_packet_ir_records_parser_sections(tmp_path: Path) -> None:
     ]
     assert packet_ir.parser_section_gate["ready"] is True
 
+
+def test_build_hnerv_packet_ir_accepts_pr106_sidecar_wrapper(tmp_path: Path) -> None:
+    archive = tmp_path / "source_sidecar.zip"
+    inner = _packed_payload(
+        brotli.compress(b"decoder" * 200, quality=1),
+        brotli.compress(b"latents" * 100, quality=1),
+    )
+    wrapper = _sidecar_payload(inner)
+    write_stored_single_member_zip(archive, member_name="0.bin", payload=wrapper)
+
+    packet_ir = build_hnerv_packet_ir(archive, label="sidecar-fixture")
+
+    assert packet_ir.archive_bytes == archive.stat().st_size
+    assert packet_ir.member_bytes == len(wrapper)
+    assert packet_ir.parser_name == "pr106_ff_packed_hnerv"
+    assert packet_ir.parser_input["kind"] == "pr106_sidecar_inner_payload"
+    assert packet_ir.pr106_sidecar_wrapper is not None
+    assert packet_ir.pr106_sidecar_wrapper["format_id"] == "0x01"
+    assert [section.name for section in packet_ir.sections] == [
+        "packed_header_ff_len24",
+        "decoder_packed_brotli",
+        "latents_and_sidecar_brotli",
+    ]
+    parsed_inner = parse_ff_packed_brotli_hnerv(
+        parse_pr106_sidecar_packet(wrapper).pr106_bytes
+    )
+    assert packet_ir.sections[1].length == len(parsed_inner.decoder_packed_brotli)
+    assert packet_ir.sections[2].offset == 4 + len(parsed_inner.decoder_packed_brotli)
+    assert packet_ir.parser_section_gate["ready"] is True
 
 def test_compile_pr106_brotli_recode_candidate_updates_header_and_proves_raw_equivalence(
     tmp_path: Path,
@@ -96,6 +131,62 @@ def test_compile_pr106_brotli_recode_candidate_updates_header_and_proves_raw_equ
     assert candidate_ir["parser_section_gate"]["ready"] is True
     assert candidate_ir["member_name"] == "0.bin"
     assert candidate_ir["sections"][1]["length"] < len(source_payload.decoder_packed_brotli)
+
+
+def test_compile_pr106_brotli_recode_candidate_preserves_sidecar_wrapper(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source_sidecar.zip"
+    candidate = tmp_path / "candidate_sidecar.zip"
+    inner = _packed_payload(
+        brotli.compress(b"decoder-record-" * 3000, quality=1),
+        brotli.compress(b"latent-record-" * 1000, quality=1),
+    )
+    source_wrapper = _sidecar_payload(inner)
+    write_stored_single_member_zip(source, member_name="0.bin", payload=source_wrapper)
+
+    result = compile_hnerv_pr106_section_transform_candidate(
+        source_archive=source,
+        label="PR106-sidecar-fixture",
+        transform=BrotliRecodeSectionTransform(
+            target_section="decoder_packed_brotli",
+            qualities=(11,),
+            lgwins=(None,),
+            jobs=1,
+        ),
+        output_archive=candidate,
+    )
+
+    assert result["ready_for_archive_preflight"] is True
+    assert result["blockers"] == []
+    assert result["archive_byte_delta"] < 0
+    assert result["source_packet_ir"]["member_bytes"] == len(source_wrapper)
+    assert result["source_packet_ir"]["parser_input"]["kind"] == "pr106_sidecar_inner_payload"
+    assert result["source_packet_ir"]["pr106_sidecar_wrapper"]["sidecar_payload_bytes"] == len(b"opaque-sidecar")
+    assert result["candidate_packet_ir"]["member_name"] == "0.bin"
+    assert result["candidate_packet_ir"]["parser_input"]["kind"] == "pr106_sidecar_inner_payload"
+    candidate_wrapper = parse_pr106_sidecar_packet(
+        _single_payload(candidate)
+    )
+    source_packet = parse_pr106_sidecar_packet(source_wrapper)
+    assert candidate_wrapper.format_id == source_packet.format_id
+    assert candidate_wrapper.sidecar_payload == source_packet.sidecar_payload
+    assert candidate_wrapper.framing_meta == source_packet.framing_meta
+    assert candidate_wrapper.pr106_bytes != source_packet.pr106_bytes
+
+    cert = certify_hnerv_grammar_preserving_candidate_pair(
+        source_archive=source,
+        candidate_archive=candidate,
+        label="PR106-sidecar-fixture",
+    )
+    assert cert["ready_for_archive_preflight"] is True
+    assert cert["readiness_blockers"] == []
+    assert cert["source_packet_ir"]["member_bytes"] == len(source_wrapper)
+    assert cert["source_packet_ir"]["pr106_sidecar_wrapper"]["format_id"] == "0x01"
+    assert cert["candidate_packet_ir"]["member_bytes"] == len(_single_payload(candidate))
+    assert cert["candidate_packet_ir"]["pr106_sidecar_wrapper"]["sidecar_payload_bytes"] == len(b"opaque-sidecar")
+    equivalence = {row["section_name"]: row for row in cert["section_equivalence"]}
+    assert equivalence["decoder_packed_brotli"]["raw_equal"] is True
 
 
 def test_compile_pr106_transform_blocks_nonmatching_section(tmp_path: Path) -> None:
@@ -380,3 +471,23 @@ def test_certify_hnerv_packet_transform_cli_writes_json(tmp_path: Path) -> None:
 
 def _packed_payload(decoder_brotli: bytes, latents_brotli: bytes) -> bytes:
     return bytes([0xFF]) + len(decoder_brotli).to_bytes(3, "little") + decoder_brotli + latents_brotli
+
+
+def _sidecar_payload(inner_payload: bytes) -> bytes:
+    return emit_pr106_sidecar_packet(
+        PR106SidecarPacket(
+            format_id=PR106_SIDECAR_FORMAT_BROTLI,
+            pr106_bytes=inner_payload,
+            sidecar_payload=b"opaque-sidecar",
+            framing_meta=None,
+        )
+    )
+
+
+def _single_payload(archive: Path) -> bytes:
+    import zipfile
+
+    with zipfile.ZipFile(archive, "r") as zf:
+        infos = zf.infolist()
+        assert len(infos) == 1
+        return zf.read(infos[0])

@@ -13,6 +13,7 @@ from tac.analysis.hnerv_packet_sections import (
     CPLX1_MAGIC,
     MANIFEST_SCHEMA,
     PARSER_A2K1,
+    PARSER_AUTO,
     PARSER_CPLX1,
     PARSER_PR101,
     PARSER_PR103,
@@ -26,6 +27,12 @@ from tac.analysis.hnerv_packet_sections import (
     validate_packet_section_manifest_batch,
 )
 from tac.hnerv_pr103_lc_ac_schema import PUBLIC_PR103_LAYOUT
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106SidecarPacket,
+    PR106_SIDECAR_FORMAT_BROTLI,
+    emit_pr106_sidecar_packet,
+)
+from tac.repo_io import sha256_bytes
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -183,6 +190,57 @@ def test_pr106_manifest_records_len24_sections(tmp_path: Path) -> None:
     assert manifest["sections"][1]["offset"] == 4
     assert manifest["sections"][2]["offset"] == 4 + len(decoder)
     assert manifest["coverage"]["covers_payload"] is True
+
+
+def test_pr106_sidecar_wrapper_manifest_records_inner_sections_and_wrapper_custody(
+    tmp_path: Path,
+) -> None:
+    decoder = b"decoder-section"
+    tail = b"latent-sidecar"
+    inner_payload = bytes([0xFF]) + len(decoder).to_bytes(3, "little") + decoder + tail
+    wrapper_payload = emit_pr106_sidecar_packet(
+        PR106SidecarPacket(
+            format_id=PR106_SIDECAR_FORMAT_BROTLI,
+            pr106_bytes=inner_payload,
+            sidecar_payload=b"opaque-sidecar",
+            framing_meta=None,
+        )
+    )
+    archive = tmp_path / "pr106_sidecar.zip"
+    _stored_zip(archive, "0.bin", wrapper_payload)
+
+    manifest = build_packet_section_manifest(
+        archive,
+        label="PR106 sidecar",
+        parser=PARSER_AUTO,
+    )
+
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser"]["name"] == PARSER_PR106
+    assert manifest["member"]["bytes"] == len(wrapper_payload)
+    assert manifest["member"]["sha256"] == sha256_bytes(wrapper_payload)
+    assert manifest["parser_input"] == {
+        "kind": "pr106_sidecar_inner_payload",
+        "bytes": len(inner_payload),
+        "sha256": sha256_bytes(inner_payload),
+        "offset_base": "parser_input",
+    }
+    assert manifest["coverage"]["payload_bytes"] == len(inner_payload)
+    assert manifest["coverage"]["covers_payload"] is True
+    assert [section["name"] for section in manifest["sections"]] == [
+        "packed_header_ff_len24",
+        "decoder_packed_brotli",
+        "latents_and_sidecar_brotli",
+    ]
+    wrapper = manifest["pr106_sidecar_wrapper"]
+    assert wrapper["kind"] == "pr106_sidecar_wrapper"
+    assert wrapper["format_id"] == "0x01"
+    assert wrapper["sidecar_kind"] == "brotli_dim_delta"
+    assert wrapper["outer_member_bytes"] == len(wrapper_payload)
+    assert wrapper["inner_pr106_bytes"] == len(inner_payload)
+    assert wrapper["sidecar_payload_bytes"] == len(b"opaque-sidecar")
+    assert wrapper["score_claim"] is False
+    assert validate_packet_section_manifest(manifest) == []
 
 
 def test_pr103_manifest_uses_existing_lc_ac_parser(tmp_path: Path) -> None:

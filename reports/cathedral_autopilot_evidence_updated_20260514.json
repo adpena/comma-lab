@@ -826,10 +826,14 @@
       {
         "line_number": 73,
         "reason": "row_not_object_or_missing_technique"
+      },
+      {
+        "line_number": 77,
+        "reason": "row_not_object_or_missing_technique"
       }
     ],
     "n_evidence_rows": 72,
-    "rejected_evidence_row_count": 4,
+    "rejected_evidence_row_count": 5,
     "unknown_evidence_row_count": 53,
     "unknown_evidence_technique_count": 49,
     "unknown_evidence_techniques": [
