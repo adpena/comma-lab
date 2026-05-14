@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # no-argparse-OK: custom subcommand dispatcher — usage in module docstring + per-subcommand validation in handlers
 """AST-powered code review tracker for tac — DuckDB backend.
 
@@ -65,16 +66,51 @@ DB_LOCK_INITIAL_SLEEP_SECONDS = float(
 
 
 def _is_duckdb_lock_error(exc: BaseException) -> bool:
+    """Recognize duckdb lock-contention errors across in-process AND cross-process cases.
+
+    The empirical anchor (CATALOG-226 + F3 GTSCORERCACHE landing memos, 2026-05-14) covers
+    BOTH error-message families that duckdb emits under contention:
+
+    1. Cross-process file lock conflict (IOException):
+       ``IO Error: Could not set lock on file "..."``
+       — Raised when a different OS process holds the duckdb file lock.
+
+    2. In-process / mixed-mode connection conflict (Connection Error):
+       ``Can't open a connection to same database file with a different configuration``
+       — Raised when the same database is being opened with conflicting read_only flags
+         (e.g., one connection is RW, a new one tries RO) inside the same lifetime.
+
+    Both classes are RETRY-ABLE: the contention is transient (writers eventually
+    release; mixed-mode conflicts resolve when the RW connection closes). The
+    canonical retry helper ``_connect_duckdb`` consumes this predicate.
+
+    Cross-ref Catalog #226 review-gate hook hardening (lane
+    ``lane_duckdb_lock_fix_review_gate_hook_20260514``).
+    """
     message = str(exc)
-    return "Could not set lock" in message or "Conflicting lock" in message
+    return (
+        "Could not set lock" in message
+        or "Conflicting lock" in message
+        or "Can't open a connection to same database file" in message
+    )
 
 
-def _connect_duckdb(path: Path, *, read_only: bool = False):
-    """Connect to DuckDB, retrying briefly on process-level lock contention."""
+def _connect_duckdb(path: Path, *, read_only: bool = False, retry_seconds: float | None = None):
+    """Connect to DuckDB, retrying briefly on process-level lock contention.
+
+    Args:
+        path: DB file path.
+        read_only: open in read-only mode.
+        retry_seconds: override the global ``DB_LOCK_RETRY_SECONDS`` deadline.
+            Useful for hot-path callers (e.g. pre-commit hooks) that prefer to
+            fall through to a JSON snapshot rather than block the operator
+            for the full 8s default. ``None`` uses the global default.
+    """
 
     import duckdb
 
-    deadline = time.monotonic() + max(0.0, DB_LOCK_RETRY_SECONDS)
+    budget = DB_LOCK_RETRY_SECONDS if retry_seconds is None else float(retry_seconds)
+    deadline = time.monotonic() + max(0.0, budget)
     sleep_s = max(0.01, DB_LOCK_INITIAL_SLEEP_SECONDS)
     while True:
         try:
@@ -403,6 +439,35 @@ def _export_json(con) -> None:
         "review_count": len(reviews),
         "entities": entities,
     }, indent=2, default=str) + "\n")
+
+
+def load_entities_from_json_snapshot(json_path: Path | None = None) -> dict | None:
+    """Load entity-status map from the JSON snapshot. Hook-side fallback path.
+
+    Used by ``tools/review_gate_hook.py`` when the DuckDB file lock cannot be
+    acquired inside the hook's tight retry deadline. The JSON snapshot is
+    written by every meaningful ``review_tracker.py`` write (``scan``,
+    ``mark-file``, ``import-greenup``, etc.) via :func:`_export_json`, so it
+    is generally fresh-enough to serve the entity-status portion of the
+    pre-commit policy gate.
+
+    Caveat: the JSON snapshot does NOT contain the ``reviews`` table — the
+    full policy check (consecutive-clean-passes + distinct-approvers) cannot
+    be served from JSON alone. Hook fallback consumers MUST downgrade those
+    checks to warnings.
+
+    Returns:
+        ``None`` if the snapshot is missing/unreadable; otherwise the parsed
+        dict (with at least an ``entities`` key mapping qualified-name →
+        per-entity dict including ``review_status``).
+    """
+    target = TRACKER_JSON if json_path is None else json_path
+    try:
+        if not target.exists():
+            return None
+        return json.loads(target.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 # ---------------------------------------------------------------------------
