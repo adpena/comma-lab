@@ -1,0 +1,252 @@
+# Third-Party Notices
+
+This file enumerates third-party software that the `tac` (Task-Aware Codec) project
+depends on at runtime, build time, or via reference. The project itself is licensed
+under the MIT License — see `LICENSE` at the repository root.
+
+Per project policy, all runtime dependencies must be under permissive licenses
+compatible with MIT redistribution (MIT, Apache-2.0, BSD-2/3-Clause, HPND, MPL-2.0,
+ISC, PSF, Python-2.0, BSL-1.0). Copyleft licenses (GPL family, LGPL when
+statically linked, AGPL) are not accepted as runtime deps without explicit
+operator review and an isolation plan.
+
+The list below is non-vendored: we do not include third-party source code in this
+repository (other than the pinned upstream challenge snapshot under `upstream/`,
+which is governed by its own license — see "Pinned upstream snapshot" below).
+Dependencies are installed via `pip` / `uv` from PyPI at install time. Each
+listing below records the package name, version range pinned by
+`pyproject.toml` (or, where applicable, the Modal worker image at
+`experiments/modal_train_lane.py:60-83`), the upstream license, and the upstream
+project home.
+
+## Project license
+
+This project: **MIT License**, Copyright (c) 2026 Alejandro Peña. See `LICENSE`.
+
+## Runtime dependencies (`[project] dependencies` in `pyproject.toml`)
+
+These are installed by default with `pip install tac` / `uv pip install -e .`.
+
+### torch (PyTorch)
+- Version: `>=2.0,<3.0`
+- License: **BSD 3-Clause** (with some components Apache-2.0; see the package's own
+  `LICENSE` file inside the wheel).
+- Upstream: https://github.com/pytorch/pytorch
+- Copyright: Copyright (c) 2016-present, Facebook, Inc. and contributors.
+
+### pydantic
+- Version: `>=2.0,<3.0`
+- License: **MIT**
+- Upstream: https://github.com/pydantic/pydantic
+- Copyright: Copyright (c) 2017 to present Pydantic Services Inc. and individual
+  contributors.
+
+### numpy
+- Version: `>=1.24,<3.0`
+- License: **BSD 3-Clause** (with several bundled third-party components under
+  compatible permissive licenses — see the `licenses_bundled/` directory in the
+  installed package, including portions originating from pocketfft, libdivide,
+  highway, x86-simd-sort, LAPACK, Random123/PCG/Philox/SFC64/SplitMix64/MT19937).
+- Upstream: https://github.com/numpy/numpy
+- Copyright: Copyright (c) 2005-2024, NumPy Developers.
+
+### click
+- Version: `>=8.0,<9.0`
+- License: **BSD 3-Clause**
+- Upstream: https://github.com/pallets/click
+- Copyright: Copyright 2014 Pallets.
+
+### brotli
+- Version: `>=1.0`
+- License: **MIT**
+- Upstream: https://github.com/google/brotli
+- Copyright: Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors.
+
+### constriction
+- Version: `>=0.4,<0.5`
+- License: **MIT OR Apache-2.0 OR BSL-1.0** (tri-licensed; the project uses it
+  under the MIT terms).
+- Upstream: https://github.com/bamler-lab/constriction
+- Copyright: Copyright (c) 2020-2024 Robert Bamler.
+
+### pyppmd
+- Version: `>=1.3,<2.0`
+- License: **LGPL-2.1-or-later** *(see BLOCKERS section below — this is the only
+  copyleft dependency in the current dependency graph; operator decision
+  required before promoting these drafts to `LICENSE` / `THIRD_PARTY_NOTICES.md`)*.
+- Upstream: https://github.com/miurahr/pyppmd
+- Copyright: Copyright (C) 2020-2024 Hiroshi Miura.
+
+### cryptography
+- Version: `>=41.0`
+- License: **Apache-2.0 OR BSD-3-Clause** (dual-licensed; the project's PyCA
+  cryptography library may be used under either).
+- Upstream: https://github.com/pyca/cryptography
+- Copyright: Copyright (c) Individual contributors.
+
+### cmaes
+- Version: `>=0.13,<1.0`
+- License: **MIT**
+- Upstream: https://github.com/CyberAgentAILab/cmaes
+- Copyright: Copyright (c) 2020 CyberAgent, Inc.
+
+### optuna
+- Version: `>=4.0,<5.0`
+- License: **MIT**
+- Upstream: https://github.com/optuna/optuna
+- Copyright: Copyright (c) 2018 Preferred Networks, Inc.
+
+## Runtime extras (`[project.optional-dependencies].runtime`)
+
+These are installed via `pip install tac[runtime]` for GPU training/eval deploys.
+The remote bootstrap scripts in `scripts/remote_*_bootstrap.sh` install this extra.
+
+### av (PyAV)
+- Version: `>=10.0`
+- License: **BSD 3-Clause**
+- Upstream: https://github.com/PyAV-Org/PyAV
+- Copyright: Copyright (c) 2017, Mike Boers and others.
+- Note: PyAV is a Python binding to FFmpeg. FFmpeg itself is licensed under
+  LGPL-2.1+ (with optional GPL components); the Modal/Vast.ai/Kaggle worker
+  images install the FFmpeg binary separately. FFmpeg is dynamically linked,
+  not statically linked or redistributed by this project, so LGPL obligations
+  are satisfied by the upstream binary distributors (BtbN FFmpeg-Builds for
+  Modal; system `apt`/`brew` for local). Distributors of binary archives that
+  bundle FFmpeg must comply separately.
+
+### safetensors
+- Version: `>=0.4,<1.0`
+- License: **Apache-2.0**
+- Upstream: https://github.com/huggingface/safetensors
+- Copyright: Copyright (c) Hugging Face.
+
+### opencv-python
+- Version: `>=4.5`
+- License: **Apache-2.0** (the OpenCV core library; `opencv-python` wheel
+  itself is MIT-licensed wrapper; bundled FFmpeg/libjpeg/libpng/etc. each
+  retain their original permissive licenses).
+- Upstream: https://github.com/opencv/opencv-python
+- Copyright: Copyright (c) 2000-2024 OpenCV team.
+
+### timm
+- Version: `>=0.9`
+- License: **Apache-2.0**
+- Upstream: https://github.com/huggingface/pytorch-image-models
+- Copyright: Copyright 2019-2024 Ross Wightman.
+
+### einops
+- Version: `>=0.7`
+- License: **MIT**
+- Upstream: https://github.com/arogozhnikov/einops
+- Copyright: Copyright (c) 2018 Alex Rogozhnikov.
+
+### segmentation-models-pytorch
+- Version: `>=0.3`
+- License: **MIT**
+- Upstream: https://github.com/qubvel-org/segmentation_models.pytorch
+- Copyright: Copyright (c) 2019 Pavel Iakubovskii.
+
+## Build/dev dependencies (`[project.optional-dependencies].dev`)
+
+These are required for running the test suite and developer tooling but are NOT
+shipped at runtime in the contest archive or the inflate path. License notices are
+included for transparency:
+
+| Package | Version | License | Upstream |
+|---------|---------|---------|----------|
+| pytest | `>=8.0` | MIT | https://github.com/pytest-dev/pytest |
+| pytest-timeout | `>=2.0` | MIT | https://github.com/pytest-dev/pytest-timeout |
+| pytest-subtests | `>=0.12` | MIT | https://github.com/pytest-dev/pytest-subtests |
+| hypothesis | `>=6.0` | MPL-2.0 | https://github.com/HypothesisWorks/hypothesis |
+| ruff | `>=0.4` | MIT | https://github.com/astral-sh/ruff |
+| ty | `>=0.0.1a8` | MIT | https://github.com/astral-sh/ty |
+| mypy | `>=1.0` | MIT | https://github.com/python/mypy |
+| scipy | `>=1.10` | BSD 3-Clause | https://github.com/scipy/scipy |
+| PyWavelets | `>=1.6,<2.0` | MIT | https://github.com/PyWavelets/pywt |
+
+## Cloud orchestration dependencies (`[project.optional-dependencies].cloud`)
+
+Installed only when using cloud orchestration tooling (`pip install tac[cloud]`).
+These are SDK packages used to dispatch jobs to managed compute providers; their
+network/API services have their own separate terms-of-service.
+
+| Package | Version | License | Upstream |
+|---------|---------|---------|----------|
+| lightning-sdk | `>=2026.4.10,<2026.5` | Apache-2.0 | https://github.com/Lightning-AI/lightning-sdk |
+| modal | `>=1.4,<2` | Apache-2.0 | https://github.com/modal-labs/modal-client |
+| vastai | `>=1.0,<2` | MIT | https://github.com/vast-ai/vast-python |
+| kaggle | `>=1.6,<2` | Apache-2.0 | https://github.com/Kaggle/kaggle-api |
+
+## Optional viz / notebooks / analysis extras
+
+These are pulled in only when installing `tac[viz]`, `tac[notebooks]`,
+`tac[analysis]`, or `tac[mlx]`.
+
+| Package | License | Upstream |
+|---------|---------|----------|
+| plotly | MIT | https://github.com/plotly/plotly.py |
+| matplotlib | PSF-based (matplotlib license; BSD-compatible) | https://github.com/matplotlib/matplotlib |
+| pillow | HPND (MIT-compatible) | https://github.com/python-pillow/Pillow |
+| imageio | BSD 2-Clause | https://github.com/imageio/imageio |
+| dask | BSD 3-Clause | https://github.com/dask/dask |
+| polars | MIT | https://github.com/pola-rs/polars |
+| marimo | Apache-2.0 | https://github.com/marimo-team/marimo |
+| mlx | MIT | https://github.com/ml-explore/mlx |
+
+## Modal-only worker image deps (`experiments/modal_train_lane.py:60-83`)
+
+The Modal worker image pip-installs an additional set on top of the project deps,
+listed here for completeness. These are functionally a subset/superset of the
+`[runtime]` extra plus DALI for GPU video decode:
+
+| Package | License | Upstream |
+|---------|---------|----------|
+| torchvision | BSD 3-Clause | https://github.com/pytorch/vision |
+| tqdm | MIT + MPL-2.0 (dual) | https://github.com/tqdm/tqdm |
+| Pillow | HPND | https://github.com/python-pillow/Pillow |
+| scipy | BSD 3-Clause | https://github.com/scipy/scipy |
+| nvidia-dali-cuda120 | Apache-2.0 | https://github.com/NVIDIA/DALI |
+
+## Pinned upstream snapshot
+
+This repository bundles a pinned snapshot of the upstream Comma Video Compression
+Challenge harness under `upstream/`. The snapshot is governed by its own license
+as published by comma.ai; see `upstream/LICENSE` (or, if absent, the upstream
+repository at https://github.com/commaai/comma_video_compression_challenge).
+Per CLAUDE.md's "Non-Negotiable Upstream Rule" this snapshot is not modified.
+
+## Research inspirations / referenced projects
+
+This pack does not vendor third-party source code from the projects below, but it
+is designed to interoperate with them or references them in documentation:
+
+- `commaai/comma_video_compression_challenge` — upstream challenge repo.
+- `Yeachan-Heo/oh-my-codex` and related OMX tooling — referenced for the
+  Ralph-style Codex workflow.
+- `iannuttall/ralph` — referenced as a file-based loop model and optional CLI
+  lane.
+- `karpathy/autoresearch` — conceptual inspiration for constrained experiment
+  loops.
+- DSPy / GEPA — conceptual inspiration for evolving prompts and other
+  text-shaped artifacts.
+- `NousResearch/hermes-agent-self-evolution` — conceptual inspiration for
+  persistent optimization loops.
+- Modular Mojo documentation — referenced for the optional experimental Mojo
+  lane.
+
+Please review the licenses and terms of any third-party code you clone or install
+separately.
+
+## How to review or update this file
+
+When `pyproject.toml` dependencies change, this file MUST be updated in the same
+commit batch. The canonical procedure:
+
+1. Compare the `pyproject.toml` dependency lists against the entries below.
+2. For any new package, look up its license via `pip show <pkg>` or its
+   upstream repository.
+3. If the license is anything other than MIT / Apache-2.0 / BSD-2/3-Clause /
+   HPND / ISC / PSF / MPL-2.0 (dev only) / BSL-1.0, surface as a BLOCKER for
+   operator review before adding the dep.
+4. Re-run `python tools/check_third_party_notices.py` (if it exists) to verify
+   the lock matches.
