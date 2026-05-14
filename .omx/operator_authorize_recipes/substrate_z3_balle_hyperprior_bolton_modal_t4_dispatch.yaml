@@ -1,0 +1,204 @@
+schema_version: 1
+name: substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch
+lane_id: lane_z3_balle_hyperprior_bolton_recover_20260514
+summary: |
+  Z3 Ballé 2018 scale-hyperprior bolt-on on the FROZEN A1 base — across-class
+  staircase Step 1 per zen-floor band v2 council
+  (`feedback_zen_floor_band_v2_post_z1_ablation_20260514.md`) and the
+  long-term campaign roadmap
+  (`feedback_long_term_multi_year_campaigns_landed_20260514.md` Campaign C5
+  cooperative-receiver Step 1).
+
+  Mechanism (Ballé 2018 ICLR scale-hyperprior, tiny per-pair variant):
+
+  A1's existing latent_blob (15,387 bytes) is arithmetic-coded under a
+  FACTORIZED prior (mean=0, fixed scale). The hyperprior replaces this
+  with a CONDITIONAL Gaussian prior whose per-dim scale σ_p is predicted
+  per-pair via a tiny MLP h_s(w_hat_p) where w_hat_p is an 8-dim
+  side-info hyper-latent. Per Ballé 2018:
+
+      R_total = R_y (conditional Gaussian) + R_w (factorized side-info)
+              = -log p_y(y_hat | σ(w_hat)) + -log p_z(w_hat)
+
+  When |y stream rate saving| > |w side-info + MLP weights|, bytes drop.
+  At A1's 99.29% scorer-conditional MDL density (Z1 ablation; saturated
+  within-class) the predicted byte savings is ~5-15% of latent_blob with
+  zero distortion change.
+
+  Predicted ΔS = −0.005 to −0.010 vs A1 0.1928 [contest-CPU 1to1]
+  ``[prediction; first-principles-bound]``. Cost $2 (Modal T4 smoke).
+
+  This is the cheapest across-class validation that a recognized class-shift
+  literature anchor (Ballé hyperprior; Catalog #219 ranker reward -0.01 for
+  literature-anchor + -0.02 for class_shift lane_class) reduces A1 bytes
+  without distortion regression.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_smoke_gpu: "T4"
+min_vram_gb: 14
+video_input_strategy: cpu_thread_async_upload
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: substrate_a1
+# Z3 is a BOLT-ON over the FROZEN A1 base — it depends on A1's archive bytes
+# being available and unchanged. Per CLAUDE.md "HNeRV parity discipline" L7
+# the bolt-on budget is ≤ 350 LOC; substrate-engineering exemption NOT used.
+
+active_dispatch_contract: z3_hyperprior_bolt_on_a1_base
+dispatch_contracts:
+  - id: z3_hyperprior_bolt_on_a1_base
+    archive_role: monolithic_z3hp1_sidecar_trailing_a1
+    builder_surface: experiments/train_substrate_z3_balle_hyperprior_bolton.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 1000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 2.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.183, 0.190]
+smoke_score_band: [0.180, 0.200]
+predicted_delta: "-0.005 to -0.010 vs A1 0.1928 [contest-CPU 1to1] [prediction; first-principles-bound]"
+predicted_delta_basis: |
+  Ballé (2018) ICLR 2018 "Variational image compression with a scale
+  hyperprior" — empirical 10-20% rate savings vs factorized prior on
+  natural images. For A1 latent_blob (15387B) the conservative 5-15%
+  savings = ~770-2300 bytes shaved off the rate term. At contest rate
+  weight α=25 / N_normalizer=37,545,489: ΔS = 25 * 1000 / 37.5M = -0.000666
+  per 1000B saved. Predicted -0.005 to -0.010 implies 7500-15000 bytes
+  saved which is OPTIMISTIC — realistic is closer to -0.001 to -0.003.
+  The smoke is the canonical empirical test (Z1 council Decision Z3).
+literature_anchor: |
+  Ballé, Minnen, Singh, Hwang, Johnston (2018) "Variational image compression
+  with a scale hyperprior" ICLR 2018 arXiv:1802.01436
+  DOI 10.48550/arXiv.1802.01436;
+  Ballé, Laparra, Simoncelli (2017) "End-to-end optimized image compression"
+  ICLR 2017 arXiv:1611.01704;
+  MacKay (2003) "Information Theory, Inference, and Learning Algorithms"
+  § 6.7 (arithmetic coding ideal rate);
+  Bauer & Cover (1991) Elements of Information Theory § 5.5 (factorized
+  vs conditional priors).
+council_phase_5_prediction: 0.190
+
+risk: |
+  Z3 hyperprior bolt-on smoke. Predicted band [0.183, 0.190] is a literature-
+  prediction synthesis (Ballé 2018 + Z1 MDL ablation at 99.29% density), NOT
+  measurement.
+
+  Architectural risk:
+  - At A1's 99.29% scorer-conditional MDL density the realistic delta is at
+    the LOW end of the predicted band (-0.001 to -0.003 more likely than
+    -0.010). The Z1 ablation EUREKA finding (Tier C σ=0.01 perturbation =
+    A1↔PR106 medal-band gap fingerprint) suggests the within-class encoder
+    is structurally saturated.
+  - The Ballé hyperprior is a known across-class win; Catalog #219 cathedral
+    autopilot ranker v2 rewards it -0.01 for literature-anchor + -0.02 for
+    class_shift lane_class so the bet is asymmetric: tiny downside, modest
+    upside via posterior calibration.
+  - The sidecar overhead estimate is ~14,055 bytes (residual 10080 + w_hat
+    2880 + weights 1058 + header 37). A1's latent_blob is 15,387 bytes so
+    amortization requires the conditional-Gaussian rate-y to come in below
+    ~1300 bytes for the full 600 pairs. The trainer adopts the Ballé
+    amortization principle: ship the sidecar ONLY when bytes_saved >
+    overhead, else fall back to byte-identical-to-A1.
+
+  Modal T4 training is diagnostic unless the auth-eval contract itself records
+  score_axis=contest_cuda and score_claim_valid=true. CPU axis remains
+  required separately on Linux x86_64 before any frontier-claim language.
+
+envelope_status: "FITS $2 envelope at p50 fallback (Modal T4 smoke + dispatch)"
+
+remote_driver: scripts/remote_lane_substrate_z3_balle_hyperprior_bolton.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --a1-archive-path
+    default_path: submissions/a1/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_z3_balle_hyperprior_bolton.sh
+  cost_band_trainer: experiments/train_substrate_z3_balle_hyperprior_bolton.py
+  cost_band_epochs: 1000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_z3_balle_hyperprior_bolton.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/z3_balle_hyperprior_bolton/__init__.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/architecture.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/archive.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/inflate.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - submissions/a1/archive.zip
+
+env_overrides:
+  Z3_BALLE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z3_BALLE_A1_ARCHIVE_PATH: /workspace/pact/submissions/a1/archive.zip
+  Z3_BALLE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z3_BALLE_OUTPUT_DIR: /workspace/pact/lane_substrate_z3_balle_hyperprior_bolton_results/output
+  Z3_BALLE_EPOCHS: "1000"
+  Z3_BALLE_UPSTREAM_DIR: /workspace/pact/upstream
+  Z3_BALLE_DEVICE: cuda
+  Z3_BALLE_HYPER_LATENT_DIM: "8"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_z3_balle_hyperprior_bolton.sh
+  - submissions/a1/archive.zip
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_z3_balle_hyperprior_bolton.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  Z3 Ballé hyperprior bolt-on first-anchor SMOKE dispatch recipe.
+
+  Architecture: 1,764-param Ballé-2018 scale-hyperprior MLP (h_a: 28→16→8;
+  h_s: 8→16→28) with int8 weight quantization and brotli-compressed sidecar.
+  Sidecar overhead ~14,055B vs A1 latent_blob 15,387B → amortization budget
+  ~1,300B for the conditional-Gaussian rate-y term. Per the Ballé 2018
+  amortization principle, the sidecar is OMITTED when bytes_saved < overhead
+  (the archive is then byte-identical-to-A1 and the trainer reports
+  research_only=true).
+
+  Per the long-term campaign C5 ranking, Z3 is the cheapest across-class
+  validation that a literature-anchored class-shift mechanism reduces A1
+  bytes without distortion regression. The smoke is the canonical empirical
+  test; full training (gated behind _full_main NotImplementedError) requires
+  Phase 2 council approval.
+
+  PHASE 2 COUNCIL APPROVAL REQUIRED before --smoke=false dispatch. The
+  trainer's `_full_main` raises NotImplementedError pending council green-up;
+  smoke-only runs are operator-authorized.
+
+  Predicted contest-CUDA score: 0.183-0.190 [prediction; first-principles-bound]
+  (NOT a score claim — score authority requires CUDA + CPU paired auth eval
+  on 1:1 contest-CI hardware per CLAUDE.md "Submission auth eval — BOTH CPU
+  AND CUDA").
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    .omx/research/campaign_z3_balle_hyperprior_bolton_20260514.md
+    src/tac/substrates/z3_balle_hyperprior_bolton/__init__.py (substrate docstring)
+    feedback_zen_floor_band_v2_post_z1_ablation_20260514.md
+    feedback_long_term_multi_year_campaigns_landed_20260514.md C5
+    feedback_z1_mdl_ablation_landed_20260514.md (the 99.29% saturation anchor)
