@@ -1,0 +1,153 @@
+schema_version: 1
+name: substrate_d1_segnet_margin_polytope_modal_t4_dispatch
+lane_id: lane_d1_segnet_margin_polytope_encoder_20260514
+summary: D1 SegNet margin polytope encoder first-anchor dispatch on Modal T4 (sub-0.188 path #1 lowest cost; deep-math memo §3.6/§10 D1; frame-1 polytope geometric-nullspace sister to YUCR's frame-0 structural-nullspace).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 1000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: 0.184
+predicted_delta: "deep-math memo §10 D1 central band: Δ -0.005 to -0.012 on A1 0.192848 baseline → [contest-CPU prediction] [0.181, 0.188]"
+predicted_delta_basis: ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md#section-10-top-5-dispatch-queue-d1"
+literature_anchor: "Fridrich-Holub 2014 UNIWARD steganalysis + Filler 2011 STC + Boyd-Vandenberghe 2004 §6 polytope geometry"
+council_verdicts:
+  D1: "sidecar architecture (HNeRV parity L3; mirrors YUCR + a1_plus_wavelet pattern)"
+  D2: "≤500 B target overhead at full budget (smaller than YUCR; margin map is non-negative + brotli-friendly)"
+  D3: "freeze-A1 base (default; B-side composition order may flip after empirical anchor lands)"
+  D4: "magic-byte 'D1PY' distinct from YUCR/WAV1/LPA1/STC1"
+  D5: "frame-1 polytope-interior noise allocation (deep-math memo §3.6)"
+  D6: "BOTH AXES contest-CPU + contest-CUDA (mandatory; CUDA inline, CPU dispatched separately)"
+
+predicted_band: [0.165, 0.200]
+
+risk: |
+  D1 is the lowest-cost sub-0.188-CLEARING substrate per deep-math memo §10
+  Top-K ranking. Predicted Δ band -0.005 to -0.012 is BOUNDED-FROM-ABOVE
+  by the fraction of pixels with high margin × per-pixel safe-bit budget.
+  An A1 archive whose margin distribution skews boundary-dominant (>50%
+  pixels with m < margin_threshold) would compress the achievable Δ
+  toward the lower bound -0.005.
+
+  A1 substrate is FROZEN (loaded verbatim from archive.zip SHA
+  87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5
+  unzipped to 178,162 B "x" blob SHA 8e664385...). The D1POLY1 sidecar
+  carries only the int8 margin map + brotli-compressed polytope payload
+  + base sha truncation + metadata JSON. Predicted overhead ~1-2 KB
+  post-brotli.
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable,
+  this lane requires BOTH `[contest-CUDA]` (inline) AND `[contest-CPU]`
+  (Linux x86_64 separate dispatch) before promotion. First-anchor dispatch
+  is CUDA-only; CPU axis follow-up is a separate operator step.
+
+  Smoke-before-full pattern (Catalog #167): the operator-authorize wrapper
+  routes through `tools/run_modal_smoke_before_full.py` which fires a
+  100-epoch ~$0.15 Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON
+  present + score in plausible band [0.15, 0.25], then fires the full
+  1000-epoch T4 dispatch only on smoke-green.
+
+  Pre-smoke macOS-CPU SANITY gate (operator pre-approved 2026-05-13):
+  the wrapper runs `tools/score_macos_cpu_advisory_proxy.py` on the A1
+  baseline BEFORE Modal smoke to verify the proxy chain end-to-end.
+  Proxy score outside [0.187, 0.200] refuses the chain at $0.
+
+envelope_status: "FITS $5 envelope at p50 fallback (macOS-CPU $0 + smoke $0.15 + full $1.00)"
+
+remote_driver: scripts/remote_lane_substrate_d1_segnet_margin_polytope.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --a1-archive
+    default_path: experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_d1_segnet_margin_polytope.sh
+  cost_band_trainer: experiments/train_substrate_d1_segnet_margin_polytope.py
+  cost_band_epochs: 1000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_d1_segnet_margin_polytope.py
+
+env_overrides:
+  D1_POLYTOPE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  D1_POLYTOPE_A1_ARCHIVE: /workspace/pact/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  D1_POLYTOPE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  D1_POLYTOPE_OUTPUT_DIR: /workspace/pact/lane_d1_polytope_results/output
+  D1_POLYTOPE_EPOCHS: "1000"
+  D1_POLYTOPE_UPSTREAM_DIR: /workspace/pact/upstream
+  D1_POLYTOPE_DEVICE: cuda
+  D1_POLYTOPE_PAYLOAD_BITS: "8000"
+  D1_POLYTOPE_JACOBIAN_LIPSCHITZ: "20.0"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_d1_segnet_margin_polytope.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_d1_segnet_margin_polytope.py
+  - experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - tools/run_modal_smoke_before_full.py (Catalog #167)
+  - tools/score_macos_cpu_advisory_proxy.py (operator pre-smoke gate)
+
+sentinel_files:
+  - experiments/train_substrate_d1_segnet_margin_polytope.py
+  - src/tac/substrates/d1_segnet_margin_polytope/architecture.py
+  - src/tac/substrates/d1_segnet_margin_polytope/archive.py
+  - src/tac/substrates/d1_segnet_margin_polytope/margin_map.py
+  - src/tac/substrates/d1_segnet_margin_polytope/polytope_encoder.py
+  - src/tac/substrates/d1_segnet_margin_polytope/score_aware_loss.py
+  - src/tac/substrates/d1_segnet_margin_polytope/inflate.py
+
+notes: |
+  D1 first-anchor dispatch for the SegNet margin polytope encoder.
+  Per deep-math memo §10 D1 this is the LOWEST-COST sufficient path to
+  sub-0.188-CLEARING ($1 Modal smoke + 3 days build; $0 GPU during the
+  L1 SCAFFOLD landing).
+
+  Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
+  this is a substrate-engineering lane (substrate-engineering LOC budget
+  per HNeRV parity lesson L7). Substrate package + trainer total ~1500
+  LOC; freeze-A1 mode keeps the substantive surface small vs joint-mode
+  substrates.
+
+  Per CLAUDE.md "Design decisions — non-negotiable": the FULL trainer
+  path is currently NotImplementedError-gated until inner-quintet
+  council adjudicates the 5 design verdicts enumerated in the trainer
+  docstring (Jacobian Lipschitz calibration strategy; per-pair vs
+  per-frame margin map; pre- vs post-renderer noise application;
+  composition order with YUCR; EMA shadow scope). The SMOKE path
+  validates substrate end-to-end at $0 cost.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per the new macOS-CPU proxy (verified 2026-05-13 within 2e-5 of GHA
+  Linux x86_64 contest-CPU): the operator wrapper runs the local-host
+  proxy BEFORE Modal smoke, gated on [0.187, 0.200] for the A1 baseline.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'T4', 1000) —
+  hand_calibrated_fallback p50 = $1.00 (n=0 anchors; this dispatch
+  bootstraps the calibration system for the D1 family).
+
+  Cross-ref:
+    .omx/research/deep_math_geometry_manifolds_synthesis_20260514.md
+    feedback_yucr_substrate_landed_20260514.md (sister substrate)
+    feedback_macos_cpu_proxy_empirical_validation_landed_20260513.md
+    feedback_a1_plus_wavelet_residual_landed_20260513.md (template)
