@@ -22,13 +22,13 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
-      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, AV discriminator raw custody, T1 Modal guard harvest, T1 full-path smoke harvest, Kaggle proxy local materialization, HNeRV frontier section-profile refresh, PR103 hidden-gem release-surface portable-wrapper consolidation, Kaggle PR101 bias-refine proxy materialization, PR106 exhaustive Brotli release-surface custody, optimizer-guided PR101/A1 bias-refine 0127 runtime packet custody, factorized PR107 HNeRV packet-surface closure, Kaggle PR101 bias-refine harvest/runtime packet custody, Kaggle PR106 latent radius-2 score-table harvest/runtime packet custody, recursive no-signal-loss hardening 2026-05-13, PR106 sidecar GHA CPU-pairing dispatch materialization, and PR95++ dependency-failure Modal smoke custody 2026-05-14; durable signal is summarized in .omx/research ledgers.",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, AV discriminator raw custody, T1 Modal guard harvest, T1 full-path smoke harvest, Kaggle proxy local materialization, HNeRV frontier section-profile refresh, PR103 hidden-gem release-surface portable-wrapper consolidation, Kaggle PR101 bias-refine proxy materialization, PR106 exhaustive Brotli release-surface custody, optimizer-guided PR101/A1 bias-refine 0127 runtime packet custody, factorized PR107 HNeRV packet-surface closure, Kaggle PR101 bias-refine harvest/runtime packet custody, Kaggle PR106 latent radius-2 score-table harvest/runtime packet custody, recursive no-signal-loss hardening 2026-05-13, PR106 sidecar GHA CPU-pairing dispatch materialization, PR95++ dependency-failure Modal smoke custody 2026-05-14, and SAR/Wyner-Ziv cooperative-receiver local smoke runtime custody 2026-05-14; durable signal is summarized in .omx/research ledgers.",
       "path": "experiments/results/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 11150,
-        "sha256": "b2635c303b4216084c9c70b1042e2bac12a0a7edb1144156e0652dc4e67bd9a5"
+        "count": 11170,
+        "sha256": "9d63daa34cb3f671d81da130cc95318f6865f4113884c1bfd73996f4147a3a50"
       }
     },
     {
