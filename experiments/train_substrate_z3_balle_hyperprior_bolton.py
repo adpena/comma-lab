@@ -271,6 +271,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--enable-autocast-fp16", action="store_true")
     p.add_argument("--enable-torch-compile", action="store_true")
     p.add_argument("--enable-gt-scorer-cache", action="store_true")
+    # v2 latent-replacement archive grammar (council omnibus Decision 3, 2026-05-14).
+    # When set, the trainer emits the Z3HV2-section payload that REPLACES A1's
+    # latent_blob in-place rather than the v1 append-only Z3HP1 sidecar. v1
+    # was retired as redundant per the binding 11/11 verdict (commit 7872c9f4b).
+    p.add_argument(
+        "--enable-v2-latent-replacement",
+        action="store_true",
+        help=(
+            "Use the v2 latent-replacement archive grammar (Z3HV2 magic) "
+            "instead of the legacy v1 append-only sidecar. Council omnibus "
+            "Decision 3 binding verdict (commit 7872c9f4b) — v1 retired as "
+            "redundant; v2 is the operational latent-replacement path."
+        ),
+    )
     return p
 
 
@@ -854,10 +868,9 @@ def _full_main(args: argparse.Namespace) -> int:
 
         with torch.inference_mode():
             sigma_all, w_hat_all = hyperprior(a1_latents, quantize=True)
-            residual_q = (
-                (a1_latents / args.quantization_step)
-                .round().clamp(-128, 127).to(torch.int8)
-            )
+            # NOTE: v1 path quantizes raw latents directly; v2 path needs the
+            # per-dim affine reload so the residual is in A1's range. The
+            # decision branch below dispatches on --enable-v2-latent-replacement.
             w_hat_q = w_hat_all.clamp(-128, 127).to(torch.int8)
             del sigma_all  # diagnostic only; rate is encoder-driven
 
@@ -866,55 +879,121 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         weights_int8, w_scale = quantize_int8_with_scale(weight_tensors)
         w_hat_int8 = w_hat_q.cpu().numpy().tobytes()
-        residual_int8 = residual_q.cpu().numpy().tobytes()
 
-        sidecar = encode_z3hp1_sidecar(
-            hyperprior_weights_int8=weights_int8,
-            w_hat_int8=w_hat_int8,
-            residual_int8=residual_int8,
-            hyper_dim=cfg.hyper_latent_dim,
-            int8_w_scale=w_scale,
-            quant_step=cfg.quantization_step,
-            min_sigma=cfg.min_sigma,
-            max_sigma=cfg.max_sigma,
-        )
-        sidecar_bytes_estimate = len(sidecar)
-        # Ballé 2018 amortization principle: ship the sidecar ONLY when
-        # it would reduce archive bytes vs A1. v1 inflate.py is parse-only
-        # (does NOT yet replace A1's latent_blob with the conditional
-        # Gaussian decode of residual), so in v1 the sidecar ADDS bytes
-        # with zero rate offset. Canonical safe path: ship A1-byte-identical
-        # bytes AND save the diagnostic sidecar separately for council
-        # review (research_only=true).
-        bytes_saved_estimate = 0  # v1: no rate offset (parse-only inflate)
-        if bytes_saved_estimate > sidecar_bytes_estimate:
-            composition_contract = build_composition_archive_contract(
-                a1_bytes,
-                sidecar,
+        if bool(getattr(args, "enable_v2_latent_replacement", False)):
+            # v2 latent-replacement path (council omnibus Decision 3).
+            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+                A1_LATENT_BLOB_LEN as _V2_A1_LATENT_BLOB_LEN,
+                build_z3v2_composition_archive_contract as _v2_build_contract,
+                build_z3v2_payload_bytes as _v2_build_payload,
+                encode_z3hv2_section as _v2_encode_section,
             )
-            composition_bytes = pack_composition_archive(
-                a1_bytes,
-                sidecar,
-                allow_append_only_diagnostic=True,
+            from tac.substrates.z3_balle_hyperprior_bolton.score_aware_loss_v2 import (
+                estimate_z3v2_section_overhead_bytes as _v2_estimate_overhead,
             )
+
+            # Per-dim affine for the v2 grammar: derive from current A1 latents
+            # so the residual centers around 0 with low entropy. The min/scale
+            # match A1's own learned-quantized fp16 statistics shipped in the
+            # latent_blob LZMA header.
+            a1_min = a1_latents.min(dim=0).values.detach().to(torch.float32).cpu()
+            a1_max = a1_latents.max(dim=0).values.detach().to(torch.float32).cpu()
+            a1_scale = ((a1_max - a1_min) / 254.0).clamp(min=1e-6)
+            with torch.inference_mode():
+                residual_v2 = (
+                    (a1_latents.cpu() - a1_min.unsqueeze(0)) / a1_scale.unsqueeze(0)
+                ).round().clamp(min=-128.0, max=127.0).to(torch.int8)
+            residual_int8 = residual_v2.numpy().tobytes()
+
+            z3hv2_section = _v2_encode_section(
+                hyperprior_weights_int8=weights_int8,
+                w_hat_int8=w_hat_int8,
+                residual_int8=residual_int8,
+                latent_min=a1_min,
+                latent_scale=a1_scale,
+                hyper_dim=cfg.hyper_latent_dim,
+                int8_w_scale=w_scale,
+                quant_step=cfg.quantization_step,
+                min_sigma=cfg.min_sigma,
+                max_sigma=cfg.max_sigma,
+                factorized_half_range=args.factorized_half_range,
+            )
+            sidecar_bytes_estimate = len(z3hv2_section)
+            bytes_saved_estimate = _V2_A1_LATENT_BLOB_LEN - sidecar_bytes_estimate
+
+            # v2 ALWAYS uses the latent-replacement grammar (no append-only
+            # fallback) per council Decision 3. The byte-saving flag is
+            # descriptive only — score_claim remains gated on auth eval.
+            composition_bytes = _v2_build_payload(
+                a1_bytes=a1_bytes,
+                z3hv2_section=z3hv2_section,
+            )
+            composition_contract = _v2_build_contract(a1_bytes, composition_bytes)
             sidecar_shipped = True
-        else:
-            composition_contract = build_composition_archive_contract(
-                a1_bytes,
-                b"",
-            )
-            composition_bytes = composition_contract.payload_bytes
-            sidecar_shipped = False
-            (out_dir / "z3hp1_sidecar_diagnostic.bin").write_bytes(sidecar)
-        composition_contract_manifest = composition_contract.as_manifest()
-        composition_byte_saving = composition_contract.byte_saving
+            composition_contract_manifest = composition_contract.as_manifest()
+            composition_byte_saving = composition_contract.byte_saving
+            (out_dir / "z3v2_section_diagnostic.bin").write_bytes(z3hv2_section)
 
-        composition_sha = hashlib.sha256(composition_bytes).hexdigest()
-        composition_size = len(composition_bytes)
-        _stage(
-            f"composition_built_{composition_size}_B_sha{composition_sha[:8]}_"
-            f"sidecar_shipped={sidecar_shipped}"
-        )
+            composition_sha = hashlib.sha256(composition_bytes).hexdigest()
+            composition_size = len(composition_bytes)
+            _stage(
+                f"v2_composition_built_{composition_size}_B_sha{composition_sha[:8]}_"
+                f"section_bytes={sidecar_bytes_estimate}_saved={bytes_saved_estimate}"
+            )
+        else:
+            # v1 legacy append-only path (kept for forensic comparison).
+            residual_q = (
+                (a1_latents / args.quantization_step)
+                .round().clamp(-128, 127).to(torch.int8)
+            )
+            residual_int8 = residual_q.cpu().numpy().tobytes()
+            sidecar = encode_z3hp1_sidecar(
+                hyperprior_weights_int8=weights_int8,
+                w_hat_int8=w_hat_int8,
+                residual_int8=residual_int8,
+                hyper_dim=cfg.hyper_latent_dim,
+                int8_w_scale=w_scale,
+                quant_step=cfg.quantization_step,
+                min_sigma=cfg.min_sigma,
+                max_sigma=cfg.max_sigma,
+            )
+            sidecar_bytes_estimate = len(sidecar)
+            # Ballé 2018 amortization principle: ship the sidecar ONLY when
+            # it would reduce archive bytes vs A1. v1 inflate.py is parse-only
+            # (does NOT yet replace A1's latent_blob with the conditional
+            # Gaussian decode of residual), so in v1 the sidecar ADDS bytes
+            # with zero rate offset. Canonical safe path: ship A1-byte-identical
+            # bytes AND save the diagnostic sidecar separately for council
+            # review (research_only=true).
+            bytes_saved_estimate = 0  # v1: no rate offset (parse-only inflate)
+            if bytes_saved_estimate > sidecar_bytes_estimate:
+                composition_contract = build_composition_archive_contract(
+                    a1_bytes,
+                    sidecar,
+                )
+                composition_bytes = pack_composition_archive(
+                    a1_bytes,
+                    sidecar,
+                    allow_append_only_diagnostic=True,
+                )
+                sidecar_shipped = True
+            else:
+                composition_contract = build_composition_archive_contract(
+                    a1_bytes,
+                    b"",
+                )
+                composition_bytes = composition_contract.payload_bytes
+                sidecar_shipped = False
+                (out_dir / "z3hp1_sidecar_diagnostic.bin").write_bytes(sidecar)
+            composition_contract_manifest = composition_contract.as_manifest()
+            composition_byte_saving = composition_contract.byte_saving
+
+            composition_sha = hashlib.sha256(composition_bytes).hexdigest()
+            composition_size = len(composition_bytes)
+            _stage(
+                f"composition_built_{composition_size}_B_sha{composition_sha[:8]}_"
+                f"sidecar_shipped={sidecar_shipped}"
+            )
 
         # ---- Step 7: build archive.zip + runtime tree ----
         _build_archive_zip(archive_zip_path, bin_bytes=composition_bytes)
@@ -1139,7 +1218,9 @@ def _write_runtime(submission_dir: Path) -> None:
     for name in (
         "architecture.py",
         "archive.py",
+        "archive_v2.py",
         "inflate.py",
+        "inflate_v2.py",
     ):
         shutil.copy2(substrate_src / name, runtime_pkg / name)
     a1_runtime_pkg = submission_dir / "src" / "a1_runtime"
@@ -1164,14 +1245,34 @@ def _write_runtime(submission_dir: Path) -> None:
         "    split_composition_archive,\n"
         ")\n"
         "from tac.substrates.z3_balle_hyperprior_bolton.inflate import (\n"
+        "    reconstruct_a1_latents as reconstruct_a1_latents_v1,\n"
+        ")\n"
+        "from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (\n"
+        "    Z3HV2_MAGIC,\n"
+        "    Z3HV2_VERSION,\n"
+        "    decode_z3hv2_section,\n"
+        "    split_z3v2_payload_bytes,\n"
+        ")\n"
+        "from tac.substrates.z3_balle_hyperprior_bolton.inflate_v2 import (\n"
+        "    is_v2_payload,\n"
         "    reconstruct_a1_latents,\n"
+        "    reconstruct_a1_latents_from_v2_payload,\n"
         "    select_inflate_device,\n"
         ")\n"
         "__all__ = [\n"
-        "    'A1_LATENT_DIM', 'A1_N_PAIRS', 'Z3HP1_MAGIC', 'Z3HP1_VERSION',\n"
-        "    'Z3HyperpriorConfig', 'Z3HyperpriorMLP', 'decode_z3hp1_sidecar',\n"
-        "    'pack_composition_archive', 'reconstruct_a1_latents',\n"
-        "    'select_inflate_device', 'split_composition_archive',\n"
+        "    'A1_LATENT_DIM', 'A1_N_PAIRS',\n"
+        "    'Z3HP1_MAGIC', 'Z3HP1_VERSION',\n"
+        "    'Z3HV2_MAGIC', 'Z3HV2_VERSION',\n"
+        "    'Z3HyperpriorConfig', 'Z3HyperpriorMLP',\n"
+        "    'decode_z3hp1_sidecar', 'decode_z3hv2_section',\n"
+        "    'is_v2_payload',\n"
+        "    'pack_composition_archive',\n"
+        "    'reconstruct_a1_latents',\n"
+        "    'reconstruct_a1_latents_v1',\n"
+        "    'reconstruct_a1_latents_from_v2_payload',\n"
+        "    'select_inflate_device',\n"
+        "    'split_composition_archive',\n"
+        "    'split_z3v2_payload_bytes',\n"
         "]\n",
         encoding="utf-8",
     )
@@ -1205,9 +1306,11 @@ def _write_runtime(submission_dir: Path) -> None:
     inflate_py = (
         '"""Z3 contest-compliant inflate.py.\n'
         "\n"
-        "Consumes the evaluator-provided extracted archive member `x`. If the\n"
-        "Z3HP1 sidecar is absent, this is A1 byte-identical fallback. If the\n"
-        "sidecar is present, it reconstructs A1 latents before HNeRV decode.\n"
+        "Consumes the evaluator-provided extracted archive member `x`. Three\n"
+        "possible payload layouts are supported:\n"
+        "  (1) Z3HV2 magic at A1 decoder boundary -> v2 latent-replacement;\n"
+        "  (2) Z3HP1 magic appended at end of A1 -> v1 append-only sidecar;\n"
+        "  (3) A1 byte-identical -> legacy fallback (no Z3 payload).\n"
         '"""\n'
         "from __future__ import annotations\n"
         "import struct\n"
@@ -1223,7 +1326,11 @@ def _write_runtime(submission_dir: Path) -> None:
         "\n"
         "from codec import LATENT_BLOB_LEN, apply_latent_sidecar, decode_decoder_compact, decode_latents_compact\n"
         "from model import HNeRVDecoder\n"
-        "from tac.substrates.z3_balle_hyperprior_bolton.inflate import reconstruct_a1_latents, select_inflate_device\n"
+        "from tac.substrates.z3_balle_hyperprior_bolton.inflate_v2 import (\n"
+        "    is_v2_payload,\n"
+        "    reconstruct_a1_latents,\n"
+        "    select_inflate_device,\n"
+        ")\n"
         "\n"
         "CAMERA_H, CAMERA_W = 874, 1164\n"
         "EVAL_H, EVAL_W = 384, 512\n"
@@ -1231,7 +1338,7 @@ def _write_runtime(submission_dir: Path) -> None:
         "BASE_CHANNELS = 36\n"
         "N_PAIRS = 600\n"
         "\n"
-        "def parse_a1_archive(a1_bytes: bytes):\n"
+        "def parse_a1_archive(a1_bytes: bytes, *, decode_latents: bool = True):\n"
         "    if len(a1_bytes) < 4:\n"
         "        raise ValueError('A1 archive too short')\n"
         "    section_total = struct.unpack_from('<I', a1_bytes, 0)[0]\n"
@@ -1243,14 +1350,24 @@ def _write_runtime(submission_dir: Path) -> None:
         "    if not decoder_blob or len(latent_blob) != LATENT_BLOB_LEN:\n"
         "        raise ValueError('bad A1 archive layout')\n"
         "    decoder_sd = decode_decoder_compact(decoder_blob)\n"
-        "    latents = apply_latent_sidecar(decode_latents_compact(latent_blob), sidecar_blob)\n"
-        "    return decoder_sd, latents\n"
+        "    if decode_latents:\n"
+        "        latents = apply_latent_sidecar(decode_latents_compact(latent_blob), sidecar_blob)\n"
+        "    else:\n"
+        "        latents = None\n"
+        "    return decoder_sd, latents, sidecar_blob\n"
         "\n"
         "def inflate(src_bin: str, dst_raw: str) -> int:\n"
         "    composition_bytes = Path(src_bin).read_bytes()\n"
+        "    is_v2 = is_v2_payload(composition_bytes)\n"
         "    a1_bytes, z3_latents = reconstruct_a1_latents(composition_bytes)\n"
-        "    decoder_sd, a1_latents = parse_a1_archive(a1_bytes)\n"
-        "    latents = z3_latents if z3_latents is not None else a1_latents\n"
+        "    if is_v2 and z3_latents is not None:\n"
+        "        # v2 path: skip A1 latent decode (latent_blob slot is zero-padded);\n"
+        "        # use Z3-decoded latents directly + apply A1's sidecar refinement.\n"
+        "        decoder_sd, _, sidecar_blob = parse_a1_archive(a1_bytes, decode_latents=False)\n"
+        "        latents = apply_latent_sidecar(z3_latents, sidecar_blob)\n"
+        "    else:\n"
+        "        decoder_sd, a1_latents, _ = parse_a1_archive(a1_bytes, decode_latents=True)\n"
+        "        latents = z3_latents if z3_latents is not None else a1_latents\n"
         "    device = select_inflate_device()\n"
         "    decoder = HNeRVDecoder(latent_dim=LATENT_DIM, base_channels=BASE_CHANNELS, eval_size=(EVAL_H, EVAL_W)).to(device)\n"
         "    decoder.load_state_dict(decoder_sd)\n"
