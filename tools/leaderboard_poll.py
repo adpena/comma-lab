@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: MIT
 """Leaderboard-move detector for the comma video compression challenge.
 
-Polls the upstream challenge README, extracts the canonical TABLE-START/TABLE-END
-leaderboard block, computes a stable hash of the score column, and emits a
-RACE_MODE_DETECTED signal when the score column changes.
+Polls the official comma.ai leaderboard by default, extracts the video
+compression challenge table, computes a stable hash of the score column, and
+emits a RACE_MODE_DETECTED signal when the score column changes.
 
 Outputs:
     - .omx/state/leaderboard_state.json — last hash + timestamp + top-3 PRs
@@ -19,8 +19,10 @@ Modes:
 Default mode (no flag) prints a human-readable summary every invocation and
 emits RACE_MODE_DETECTED=1 on stdout iff the score column changed.
 
-The README is fetched via `gh api repos/commaai/comma_video_compression_challenge/readme`.
-The canonical block is delimited by HTML comments::
+The official source of truth is fetched from https://comma.ai/leaderboard.
+The GitHub README mirror can still be polled via ``--source github-readme``;
+that path fetches via ``gh api repos/commaai/comma_video_compression_challenge/readme``.
+The README block is delimited by HTML comments::
 
     <!-- TABLE-START -->
     <table class="ranked"> ... </table>
@@ -35,11 +37,14 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import html
 import json
 import re
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -63,6 +68,8 @@ TABLE_START = "<!-- TABLE-START -->"
 TABLE_END = "<!-- TABLE-END -->"
 
 UPSTREAM_REPO = "commaai/comma_video_compression_challenge"
+OFFICIAL_LEADERBOARD_URL = "https://comma.ai/leaderboard"
+VIDEO_TABLE_ID = "video_compression_challenge_table"
 
 
 @dataclass
@@ -81,6 +88,8 @@ class LeaderboardState:
     n_entries: int
     top_3: list[dict]
     upstream_repo: str = UPSTREAM_REPO
+    source: str = "github-readme"
+    source_url: str | None = None
 
 
 def _gh_fetch_readme(repo: str = UPSTREAM_REPO) -> str:
@@ -103,6 +112,19 @@ def _gh_fetch_readme(repo: str = UPSTREAM_REPO) -> str:
     return base64.b64decode(payload["content"]).decode("utf-8", errors="replace")
 
 
+def _http_fetch(url: str = OFFICIAL_LEADERBOARD_URL) -> str:
+    """Return official leaderboard HTML. Raises on any network or decode failure."""
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "comma-lab-leaderboard-poll/1.0"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return response.read().decode("utf-8", errors="replace")
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"`GET {url}` failed: {exc}") from exc
+
+
 def extract_leaderboard_block(readme: str) -> str:
     """Slice out the canonical TABLE-START..TABLE-END region. Raises if absent."""
     start_idx = readme.find(TABLE_START)
@@ -113,6 +135,21 @@ def extract_leaderboard_block(readme: str) -> str:
         )
     # include both markers so the block is itself self-delimiting
     return readme[start_idx : end_idx + len(TABLE_END)]
+
+
+def extract_official_video_table(html: str) -> str:
+    """Slice the official comma.ai video-compression leaderboard table."""
+    container_idx = html.find(f'id="{VIDEO_TABLE_ID}"')
+    if container_idx < 0:
+        raise ValueError(f"official video leaderboard container missing: id={VIDEO_TABLE_ID!r}")
+    table_start = html.find("<table", container_idx)
+    table_end = html.find("</table>", table_start)
+    if table_start < 0 or table_end < 0:
+        raise ValueError(
+            f"official video leaderboard table missing: table_start={table_start} "
+            f"table_end={table_end}"
+        )
+    return html[table_start : table_end + len("</table>")]
 
 
 _ROW_PATTERN = re.compile(r"<tr>(.*?)</tr>", re.DOTALL)
@@ -163,7 +200,7 @@ def parse_leaderboard_entries(block: str) -> list[LeaderboardEntry]:
 
 
 def _strip_html(s: str) -> str:
-    return re.sub(r"<[^>]+>", "", s)
+    return html.unescape(re.sub(r"<[^>]+>", "", s))
 
 
 def hash_score_column(entries: list[LeaderboardEntry]) -> str:
@@ -220,6 +257,26 @@ def build_state_from_readme(readme: str) -> LeaderboardState:
             {"rank": e.rank, "score": e.score, "name": e.name, "pr_url": e.pr_url}
             for e in entries[:3]
         ],
+        source="github-readme",
+        source_url=f"https://github.com/{UPSTREAM_REPO}",
+    )
+
+
+def build_state_from_official_html(html: str) -> LeaderboardState:
+    block = extract_official_video_table(html)
+    entries = parse_leaderboard_entries(block)
+    if not entries:
+        raise ValueError("parsed zero official leaderboard entries — extraction regex drifted")
+    return LeaderboardState(
+        score_column_hash=hash_score_column(entries),
+        captured_utc=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        n_entries=len(entries),
+        top_3=[
+            {"rank": e.rank, "score": e.score, "name": e.name, "pr_url": e.pr_url}
+            for e in entries[:3]
+        ],
+        source="official",
+        source_url=OFFICIAL_LEADERBOARD_URL,
     )
 
 
@@ -232,18 +289,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--state-path", type=Path, default=STATE_PATH)
     parser.add_argument("--race-flag-path", type=Path, default=RACE_FLAG_PATH)
     parser.add_argument("--changes-jsonl-path", type=Path, default=CHANGES_JSONL_PATH)
+    parser.add_argument(
+        "--source",
+        choices=("official", "github-readme"),
+        default="official",
+        help="leaderboard source to poll; official comma.ai page is the source of truth",
+    )
     parser.add_argument("--repo", default=UPSTREAM_REPO,
-                        help=f"upstream repo (default: {UPSTREAM_REPO})")
+                        help=f"upstream repo for --source github-readme (default: {UPSTREAM_REPO})")
     args = parser.parse_args(argv)
 
     try:
-        readme = _gh_fetch_readme(args.repo)
+        if args.source == "official":
+            curr = build_state_from_official_html(_http_fetch(OFFICIAL_LEADERBOARD_URL))
+        else:
+            readme = _gh_fetch_readme(args.repo)
+            curr = build_state_from_readme(readme)
     except (RuntimeError, json.JSONDecodeError) as exc:
-        print(f"FATAL: README fetch failed: {exc}", file=sys.stderr)
+        print(f"FATAL: leaderboard fetch failed: {exc}", file=sys.stderr)
         return 2
-
-    try:
-        curr = build_state_from_readme(readme)
     except ValueError as exc:
         print(f"FATAL: leaderboard extraction failed: {exc}", file=sys.stderr)
         return 3

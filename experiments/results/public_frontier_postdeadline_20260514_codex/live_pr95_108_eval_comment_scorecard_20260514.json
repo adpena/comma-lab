@@ -1,0 +1,385 @@
+{
+  "evidence_grade": "external_github_pr_comment",
+  "promotion_eligible": false,
+  "repo": "commaai/comma_video_compression_challenge",
+  "rows": [
+    {
+      "author": "AaronLeslie138",
+      "eval_comments": [
+        {
+          "archive_bytes": 178417,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:33:00Z",
+          "device": "cuda",
+          "pose": 0.00017185,
+          "printed_minus_recomputed": -0.0009833514955467082,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.23098335149554672,
+          "seg": 0.00070728,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 178417,
+          "author": "github-actions",
+          "created_at": "2026-05-05T16:36:28Z",
+          "device": "cpu",
+          "pose": 3.494e-05,
+          "printed_minus_recomputed": 0.0012951987797755193,
+          "printed_score": 0.2,
+          "recomputed_score_from_rounded_comment_components": 0.1987048012202245,
+          "seg": 0.00061212,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+      "pr": 95,
+      "title": "hnerv_muon submission (0.20)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/95"
+    },
+    {
+      "author": "rem2",
+      "eval_comments": [
+        {
+          "archive_bytes": 186631,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:34:01Z",
+          "device": "cuda",
+          "pose": 0.00017261,
+          "printed_minus_recomputed": 0.0023207180718676224,
+          "printed_score": 0.24,
+          "recomputed_score_from_rounded_comment_components": 0.23767928192813237,
+          "seg": 0.00071863,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 186631,
+          "author": "github-actions",
+          "created_at": "2026-05-05T16:36:56Z",
+          "device": "cpu",
+          "pose": 3.676e-05,
+          "printed_minus_recomputed": 0.004321180181925038,
+          "printed_score": 0.21,
+          "recomputed_score_from_rounded_comment_components": 0.20567881981807495,
+          "seg": 0.00062236,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "c692688419e8960d62201903c908f56b6c16c13d",
+      "pr": 96,
+      "title": "rem2_HNeRV submission (0.21)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/96"
+    },
+    {
+      "author": "BradyMeighan",
+      "eval_comments": [
+        {
+          "archive_bytes": 197160,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:35:17Z",
+          "device": "cuda",
+          "pose": 0.00063744,
+          "printed_minus_recomputed": -0.0016325908767650388,
+          "printed_score": 0.25,
+          "recomputed_score_from_rounded_comment_components": 0.25163259087676504,
+          "seg": 0.00040512,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 197160,
+          "author": "github-actions",
+          "created_at": "2026-05-05T16:34:09Z",
+          "device": "cpu",
+          "pose": 0.00049454,
+          "printed_minus_recomputed": 0.001217710779946951,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.22878228922005306,
+          "seg": 0.00027178,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "5dfad2f5db4bb8999800e322f8eb5c5591ef7017",
+      "pr": 97,
+      "title": "vibe_coder_final_boss (0.23)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/97"
+    },
+    {
+      "author": "EthanYangTW",
+      "eval_comments": [
+        {
+          "archive_bytes": 178392,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:35:08Z",
+          "device": "cuda",
+          "pose": 0.00017394,
+          "printed_minus_recomputed": 0.0006689749750260487,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.22933102502497396,
+          "seg": 0.00068841,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 178392,
+          "author": "github-actions",
+          "created_at": "2026-05-05T17:02:40Z",
+          "device": "cpu",
+          "pose": 3.58e-05,
+          "printed_minus_recomputed": 0.0033712017062051125,
+          "printed_score": 0.2,
+          "recomputed_score_from_rounded_comment_components": 0.1966287982937949,
+          "seg": 0.00058924,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "1be9eff48c696ca04ae0613346fd383d20637325",
+      "pr": 98,
+      "title": "hnerv_muon_finetuned_from_pr95 (0.1963)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/98"
+    },
+    {
+      "author": "BradyMeighan",
+      "eval_comments": [],
+      "head_sha": "6badd2506c1ce07751236fc299d0b14f2702ac29",
+      "pr": 99,
+      "title": "hnerv_muon_lc submission (0.19667)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/99"
+    },
+    {
+      "author": "BradyMeighan",
+      "eval_comments": [
+        {
+          "archive_bytes": 178981,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:35:49Z",
+          "device": "cuda",
+          "pose": 0.00017198,
+          "printed_minus_recomputed": 0.001730427288793579,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.22826957271120643,
+          "seg": 0.00067623,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 178981,
+          "author": "github-actions",
+          "created_at": "2026-05-05T17:47:33Z",
+          "device": "cpu",
+          "pose": 3.443e-05,
+          "printed_minus_recomputed": 0.004614576024744466,
+          "printed_score": 0.2,
+          "recomputed_score_from_rounded_comment_components": 0.19538542397525555,
+          "seg": 0.00057654,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "0a8d343a5dc7f9e93d9d0e6cb8bc15f6c626c050",
+      "pr": 100,
+      "title": "hnerv_lc_v2 submission (0.1954)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/100"
+    },
+    {
+      "author": "SajayR",
+      "eval_comments": [
+        {
+          "archive_bytes": 178258,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:36:14Z",
+          "device": "cuda",
+          "pose": 0.00017103,
+          "printed_minus_recomputed": 0.003645541255908491,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.22635445874409152,
+          "seg": 0.00066304,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 178258,
+          "author": "github-actions",
+          "created_at": "2026-05-05T16:58:50Z",
+          "device": "cpu",
+          "pose": 3.286e-05,
+          "printed_minus_recomputed": -0.0028450127024254868,
+          "printed_score": 0.19,
+          "recomputed_score_from_rounded_comment_components": 0.1928450127024255,
+          "seg": 0.00056023,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "ec7e366844fd8cffff33184e7ad92df22e93a908",
+      "pr": 101,
+      "title": "add hnerv ft microcodec submission",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/101"
+    },
+    {
+      "author": "EthanYangTW",
+      "eval_comments": [
+        {
+          "archive_bytes": 178981,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:58:03Z",
+          "device": "cuda",
+          "pose": 0.00017347,
+          "printed_minus_recomputed": 0.0016091688201597398,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.22839083117984027,
+          "seg": 0.00067565,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 178981,
+          "author": "github-actions",
+          "created_at": "2026-05-05T17:05:18Z",
+          "device": "cpu",
+          "pose": 3.46e-05,
+          "printed_minus_recomputed": 0.004623823473502375,
+          "printed_score": 0.2,
+          "recomputed_score_from_rounded_comment_components": 0.19537617652649764,
+          "seg": 0.00057599,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
+      "pr": 102,
+      "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/102"
+    },
+    {
+      "author": "rem2",
+      "eval_comments": [
+        {
+          "archive_bytes": 178223,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:36:21Z",
+          "device": "cuda",
+          "pose": 0.00017198,
+          "printed_minus_recomputed": 0.002235148375260204,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.2277648516247398,
+          "seg": 0.00067623,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 178223,
+          "author": "github-actions",
+          "created_at": "2026-05-05T16:37:33Z",
+          "device": "cpu",
+          "pose": 3.443e-05,
+          "printed_minus_recomputed": -0.004880702888788946,
+          "printed_score": 0.19,
+          "recomputed_score_from_rounded_comment_components": 0.19488070288878895,
+          "seg": 0.00057654,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "d20270750e603346056f4e867cddd4744272c9d8",
+      "pr": 103,
+      "title": "hnerv_lc_ac submission (0.19)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/103"
+    },
+    {
+      "author": "patattzel",
+      "eval_comments": [
+        {
+          "archive_bytes": 178637,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:37:10Z",
+          "device": "cuda",
+          "pose": 0.00017235,
+          "printed_minus_recomputed": -0.0011451033181794357,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.23114510331817945,
+          "seg": 0.00070683,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "f1c59d895325f2d2835e843ce72be3443983a4b4",
+      "pr": 104,
+      "title": "qhnerv_ft_best",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/104"
+    },
+    {
+      "author": "valtterivalo",
+      "eval_comments": [
+        {
+          "archive_bytes": 177857,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:37:57Z",
+          "device": "cuda",
+          "pose": 0.00017267,
+          "printed_minus_recomputed": -0.00043725569529998176,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.2304372556953,
+          "seg": 0.00070456,
+          "updated_at": null
+        },
+        {
+          "archive_bytes": 177857,
+          "author": "github-actions",
+          "created_at": "2026-05-05T17:01:12Z",
+          "device": "cpu",
+          "pose": 3.472e-05,
+          "printed_minus_recomputed": 0.0020260206563866012,
+          "printed_score": 0.2,
+          "recomputed_score_from_rounded_comment_components": 0.1979739793436134,
+          "seg": 0.00060913,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "9376a6f86c76cb576b5f25afd8c789a8a727077f",
+      "pr": 105,
+      "title": "kitchen_sink (0.19797)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/105"
+    },
+    {
+      "author": "valtterivalo",
+      "eval_comments": [
+        {
+          "archive_bytes": 186239,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:37:44Z",
+          "device": "cuda",
+          "pose": 3.351e-05,
+          "printed_minus_recomputed": 0.0005433576237678928,
+          "printed_score": 0.21,
+          "recomputed_score_from_rounded_comment_components": 0.2094566423762321,
+          "seg": 0.00067142,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "339910eb2da2048796c8555cb964c5d8cb5c194e",
+      "pr": 106,
+      "title": "belt_and_suspenders (0.20946)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/106"
+    },
+    {
+      "author": "adpena",
+      "eval_comments": [
+        {
+          "archive_bytes": 178392,
+          "author": "github-actions",
+          "created_at": "2026-05-04T16:38:25Z",
+          "device": "cuda",
+          "pose": 0.00017394,
+          "printed_minus_recomputed": 0.0006689749750260487,
+          "printed_score": 0.23,
+          "recomputed_score_from_rounded_comment_components": 0.22933102502497396,
+          "seg": 0.00068841,
+          "updated_at": null
+        }
+      ],
+      "head_sha": "20c411b58c9270dfb6ce19742e657fefd1f54829",
+      "pr": 107,
+      "title": "apogee submission (0.2293)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/107"
+    },
+    {
+      "author": "andrei-minca",
+      "eval_comments": [],
+      "head_sha": "59c1bbd544bb2aa166656d24d7de117ad3e3e62e",
+      "pr": 108,
+      "title": "andimin01",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/108"
+    }
+  ],
+  "schema": "public_pr_eval_comment_scorecard.v1",
+  "score_claim": false
+}

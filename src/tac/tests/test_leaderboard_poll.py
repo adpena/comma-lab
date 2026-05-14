@@ -60,6 +60,38 @@ def test_extract_block_raises_when_markers_missing(lp):
         lp.extract_leaderboard_block("# README without markers")
 
 
+def test_extract_official_video_table_parses_comma_ai_page_shape(lp):
+    html = """
+    <h2 id="video_compression_challenge">video compression challenge</h2>
+    <div class="table-container" id="video_compression_challenge_table">
+    <table class="ranked">
+      <thead><tr><th></th><th>score</th><th>name</th><th>link</th></tr></thead>
+      <tbody>
+        <tr> <td></td> <td>0.193</td> <td>hnerv_ft_microcodec&nbsp;👑</td>
+          <td><a href="https://github.com/commaai/comma_video_compression_challenge/pull/101">#101</a></td> </tr>
+        <tr> <td></td> <td>0.195</td> <td>hnerv_lc_ac&nbsp;👑</td>
+          <td><a href="https://github.com/commaai/comma_video_compression_challenge/pull/103">#103</a></td> </tr>
+        <tr> <td></td> <td>0.195</td> <td>hnerv_lc_v2_scale095_rplus1&nbsp;👑</td>
+          <td><a href="https://github.com/commaai/comma_video_compression_challenge/pull/102">#102</a></td> </tr>
+      </tbody>
+    </table>
+    </div>
+    """
+    block = lp.extract_official_video_table(html)
+    entries = lp.parse_leaderboard_entries(block)
+    assert [entry.pr_number for entry in entries] == [101, 103, 102]
+    assert entries[0].score == pytest.approx(0.193)
+    state = lp.build_state_from_official_html(html)
+    assert state.source == "official"
+    assert state.source_url == lp.OFFICIAL_LEADERBOARD_URL
+    assert state.top_3[0]["name"] == "hnerv_ft_microcodec 👑"
+
+
+def test_extract_official_video_table_raises_when_container_missing(lp):
+    with pytest.raises(ValueError, match="official video leaderboard container missing"):
+        lp.extract_official_video_table("<table></table>")
+
+
 def test_parse_returns_nonempty_entries(lp, fixture_readme):
     block = lp.extract_leaderboard_block(fixture_readme)
     entries = lp.parse_leaderboard_entries(block)

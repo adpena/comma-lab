@@ -1,0 +1,28 @@
+{
+  "captured_utc": "2026-05-14T18:39:07Z",
+  "n_entries": 56,
+  "score_column_hash": "cfd9fe0f97383c6165f5536ce065abd8c22e253c868d9a41d4e042e51a220c3c",
+  "source": "official",
+  "source_url": "https://comma.ai/leaderboard",
+  "top_3": [
+    {
+      "name": "hnerv_ft_microcodec \ud83d\udc51",
+      "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/101",
+      "rank": 1,
+      "score": 0.193
+    },
+    {
+      "name": "hnerv_lc_ac \ud83d\udc51",
+      "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/103",
+      "rank": 2,
+      "score": 0.195
+    },
+    {
+      "name": "hnerv_lc_v2_scale095_rplus1 \ud83d\udc51",
+      "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/102",
+      "rank": 3,
+      "score": 0.195
+    }
+  ],
+  "upstream_repo": "commaai/comma_video_compression_challenge"
+}
