@@ -135,6 +135,7 @@ class PackedArchiveView:
     stored_member: StoredZipMember | None = None
     repackable_sections: tuple[str, ...] = REPACKABLE_SECTIONS
     decoder_brotli_stream_count: int | None = None
+    hnerv_payload_start: int = 0
 
     def emit_payload(self, packed: PackedHnervPayload) -> bytes:
         inner = packed.to_bytes()
@@ -316,6 +317,10 @@ def read_packed_archive_view(path: str | Path) -> PackedArchiveView:
             hnerv_payload=packet.pr106_bytes,
             sidecar_packet=packet,
             stored_member=stored_member,
+            decoder_brotli_stream_count=_detect_decoder_brotli_stream_count(
+                packed.decoder_packed_brotli
+            ),
+            hnerv_payload_start=6,
         )
     if archive.payload and archive.payload[0] == 0xFF:
         packed = parse_ff_packed_brotli_hnerv(archive.payload)
@@ -370,6 +375,12 @@ def brotli_recode_search(
         else:
             raw = tuple(row[1] for row in _split_brotli_streams(compressed, stream_count))
     except brotli.error as exc:
+        codec_hint = _codec_magic_hint(compressed)
+        if codec_hint is not None:
+            raise HnervLowlevelPackError(
+                f"{section_name} is {codec_hint}, not a brotli stream; "
+                "route through the codec-specific recoder"
+            ) from exc
         raise HnervLowlevelPackError(f"{section_name} is not brotli-decompressible") from exc
 
     attempts: list[tuple[int, int | None, int | None]] = []
@@ -455,10 +466,8 @@ def build_lowlevel_brotli_repack_candidate(
     )
     plan = build_section_repack_plan(effective_scorecard, labels=[source_label])
     blockers = _audit_source_against_manifest(
-        archive,
-        packed,
+        view,
         manifest,
-        section_payload_bytes=len(view.hnerv_payload),
     )
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
@@ -537,11 +546,13 @@ def build_lowlevel_brotli_repack_candidate(
     candidate_archive_sha = sha256_file(candidate_archive_path)
     candidate_archive_bytes = candidate_archive_path.stat().st_size
     candidate_packed_checked = _parse_candidate_inner_payload(view, candidate_payload)
+    section_name_aliases = _packed_section_name_aliases(view, manifest)
     raw_equivalence = _brotli_raw_equivalence(
         packed,
         candidate_packed_checked,
         repackable_sections=view.repackable_sections,
         decoder_brotli_stream_count=view.decoder_brotli_stream_count,
+        section_name_aliases=section_name_aliases,
     )
     candidate_diff = _candidate_diff(
         source_label=source_label,
@@ -554,6 +565,7 @@ def build_lowlevel_brotli_repack_candidate(
         packed=packed,
         candidate_packed=candidate_packed_checked,
         brotli_raw_equivalence=raw_equivalence,
+        section_name_aliases=section_name_aliases,
     )
     raw_equivalence_blockers = [
         f"brotli_raw_mismatch:{row['section_name']}"
@@ -701,13 +713,12 @@ def _manifest_for_label(scorecard: Mapping[str, Any], label: str) -> Mapping[str
 
 
 def _audit_source_against_manifest(
-    archive: SingleMemberArchive,
-    packed: PackedHnervPayload,
+    view: PackedArchiveView,
     manifest: Mapping[str, Any],
-    *,
-    section_payload_bytes: int,
 ) -> list[str]:
     blockers: list[str] = []
+    archive = view.archive
+    packed = view.packed
     expected_archive_sha = manifest.get("archive_sha256")
     if not _is_sha256(expected_archive_sha):
         blockers.append("source_manifest_archive_sha256_missing_or_invalid")
@@ -733,23 +744,23 @@ def _audit_source_against_manifest(
     if not isinstance(sections, list):
         blockers.append("source_manifest_missing_sections")
         return blockers
-    expected_sections = [
-        (packed.header_section_name, 0, 0, 4),
-        ("decoder_packed_brotli", 1, 4, 4 + len(packed.decoder_packed_brotli)),
-        (
-            "latents_and_sidecar_brotli",
-            2,
-            4 + len(packed.decoder_packed_brotli),
-            section_payload_bytes,
-        ),
-    ]
-    if len(sections) != len(expected_sections):
-        blockers.append("source_manifest_section_count_mismatch")
-    for expected, section in zip(expected_sections, sections, strict=False):
+    expected_sections = _expected_manifest_sections(view, manifest)
+    section_by_name = {
+        str(section.get("name") or ""): section
+        for section in sections
+        if isinstance(section, Mapping)
+    }
+    if all(expected[0] in section_by_name for expected in expected_sections):
+        manifest_sections = [section_by_name[expected[0]] for expected in expected_sections]
+    else:
+        manifest_sections = list(sections)
+        if len(manifest_sections) != len(expected_sections):
+            blockers.append("source_manifest_section_count_mismatch")
+    for expected, section in zip(expected_sections, manifest_sections, strict=False):
         if not isinstance(section, Mapping):
             blockers.append("source_manifest_section_not_object")
             continue
-        expected_name, expected_index, expected_start, expected_end = expected
+        expected_name, expected_packed_name, expected_index, expected_start, expected_end = expected
         section_name = str(section.get("name") or "")
         if section_name != expected_name:
             blockers.append(f"source_section_name_mismatch:{expected_name}")
@@ -760,7 +771,7 @@ def _audit_source_against_manifest(
         if section.get("end") != expected_end:
             blockers.append(f"source_section_end_mismatch:{expected_name}")
         try:
-            actual = packed.section_bytes(expected_name)
+            actual = packed.section_bytes(expected_packed_name)
         except HnervLowlevelPackError:
             blockers.append(f"source_section_unknown:{section_name}")
             continue
@@ -769,6 +780,77 @@ def _audit_source_against_manifest(
         if section.get("sha256") != sha256_bytes(actual):
             blockers.append(f"source_section_sha256_mismatch:{expected_name}")
     return blockers
+
+
+def _expected_manifest_sections(
+    view: PackedArchiveView,
+    manifest: Mapping[str, Any],
+) -> list[tuple[str, str, int, int, int]]:
+    """Return manifest-name/packed-name/start/end tuples for the inner payload."""
+
+    packed = view.packed
+    aliases = _packed_section_name_aliases(view, manifest)
+    wrapper_named = set(aliases.values()) != {
+        packed.header_section_name,
+        "decoder_packed_brotli",
+        "latents_and_sidecar_brotli",
+    }
+    base = view.hnerv_payload_start if wrapper_named else 0
+    index_base = 1 if wrapper_named else 0
+    return [
+        (
+            aliases[packed.header_section_name],
+            packed.header_section_name,
+            index_base,
+            base,
+            base + 4,
+        ),
+        (
+            aliases["decoder_packed_brotli"],
+            "decoder_packed_brotli",
+            index_base + 1,
+            base + 4,
+            base + 4 + len(packed.decoder_packed_brotli),
+        ),
+        (
+            aliases["latents_and_sidecar_brotli"],
+            "latents_and_sidecar_brotli",
+            index_base + 2,
+            base + 4 + len(packed.decoder_packed_brotli),
+            base + len(view.hnerv_payload),
+        ),
+    ]
+
+
+def _packed_section_name_aliases(
+    view: PackedArchiveView,
+    manifest: Mapping[str, Any],
+) -> dict[str, str]:
+    """Map internal packed-section names to scorecard manifest names."""
+
+    packed = view.packed
+    sections = manifest.get("sections")
+    manifest_names = {
+        str(section.get("name") or "")
+        for section in sections
+        if isinstance(section, Mapping)
+    }
+    aliases = {
+        packed.header_section_name: packed.header_section_name,
+        "decoder_packed_brotli": "decoder_packed_brotli",
+        "latents_and_sidecar_brotli": "latents_and_sidecar_brotli",
+    }
+    if view.sidecar_packet is None:
+        return aliases
+    wrapper_aliases = {
+        packed.header_section_name: f"inner_{packed.header_section_name}",
+        "decoder_packed_brotli": "inner_decoder_packed_brotli",
+        "latents_and_sidecar_brotli": "inner_latents_and_sidecar_brotli",
+    }
+    for packed_name, wrapper_name in wrapper_aliases.items():
+        if wrapper_name in manifest_names:
+            aliases[packed_name] = wrapper_name
+    return aliases
 
 
 def _candidate_diff(
@@ -783,7 +865,9 @@ def _candidate_diff(
     packed: PackedHnervPayload,
     candidate_packed: PackedHnervPayload,
     brotli_raw_equivalence: Sequence[Mapping[str, Any]],
+    section_name_aliases: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
+    aliases = dict(section_name_aliases or {})
     rows = []
     for section_name in (
         packed.header_section_name,
@@ -797,7 +881,7 @@ def _candidate_diff(
         rows.append(
             {
                 "label": source_label,
-                "section_name": section_name,
+                "section_name": aliases.get(section_name, section_name),
                 "source_section_sha256": sha256_bytes(source_section),
                 "candidate_section_sha256": sha256_bytes(candidate_section),
                 "source_bytes": len(source_section),
@@ -830,7 +914,9 @@ def _brotli_raw_equivalence(
     *,
     repackable_sections: Sequence[str] = REPACKABLE_SECTIONS,
     decoder_brotli_stream_count: int | None = None,
+    section_name_aliases: Mapping[str, str] | None = None,
 ) -> list[dict[str, Any]]:
+    aliases = dict(section_name_aliases or {})
     rows = []
     for section_name in repackable_sections:
         source_section = source.section_bytes(section_name)
@@ -850,7 +936,7 @@ def _brotli_raw_equivalence(
             raw_bytes = None
         rows.append(
             {
-                "section_name": section_name,
+                "section_name": aliases.get(section_name, section_name),
                 "raw_equal": raw_equal,
                 "raw_bytes": raw_bytes,
                 "source_raw_sha256": source_raw_sha,
@@ -967,6 +1053,31 @@ def _parse_candidate_inner_payload(
 def _section_brotli_stream_count(view: PackedArchiveView, section_name: str) -> int | None:
     if section_name == "decoder_packed_brotli":
         return view.decoder_brotli_stream_count
+    return None
+
+
+def _detect_decoder_brotli_stream_count(data: bytes) -> int | None:
+    try:
+        brotli.decompress(data)
+        return None
+    except brotli.error:
+        pass
+    try:
+        _split_brotli_streams(data, A1_SPLIT_BROTLI_STREAM_COUNT)
+    except (brotli.error, HnervLowlevelPackError):
+        return None
+    return A1_SPLIT_BROTLI_STREAM_COUNT
+
+
+def _codec_magic_hint(data: bytes) -> str | None:
+    for magic, name in (
+        (b"HDM4", "HDM4 decoder codec"),
+        (b"HDM3", "HDM3 decoder codec"),
+        (b"HLM2", "HLM2 fixed-latent codec"),
+        (b"HLM1", "HLM1 fixed-latent codec"),
+    ):
+        if data.startswith(magic):
+            return name
     return None
 
 

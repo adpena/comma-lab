@@ -176,6 +176,60 @@ def test_build_lowlevel_brotli_repack_candidate_reemits_pr106_sidecar_wrapper(
     )
 
 
+def test_sidecar_wrapper_scorecard_manifest_uses_inner_sections_and_split_decoder(
+    tmp_path: Path,
+) -> None:
+    source_streams = [
+        brotli.compress((f"wrapped-split-decoder-{idx}-".encode() * 4000), quality=1)
+        for idx in range(7)
+    ]
+    decoder = b"".join(source_streams)
+    latents = brotli.compress((b"wrapped-split-latent-row-" * 2000), quality=1)
+    inner_payload = _packed_payload(decoder, latents)
+    source_packet_payload = emit_pr106_sidecar_packet(
+        _sidecar_packet(inner_payload, sidecar_payload=b"runtime-visible-sidecar")
+    )
+    source_archive = tmp_path / "source.zip"
+    write_stored_single_member_zip(
+        source_archive,
+        member_name="x",
+        payload=source_packet_payload,
+    )
+    source = read_strict_single_member_zip(source_archive)
+
+    result = build_lowlevel_brotli_repack_candidate(
+        source_archive=source_archive,
+        scorecard=_sidecar_scorecard(source, "PR106-R2-HLM2"),
+        source_label="PR106-R2-HLM2",
+        output_dir=tmp_path / "out",
+        target_sections=["decoder_packed_brotli"],
+        qualities=[11],
+        lgwins=[None],
+    )
+
+    assert result["ready_for_archive_preflight"] is True
+    assert result["source_payload_kind"] == "pr106_sidecar_wrapper"
+    assert result["scorecard_anchor"]["matched_scorecard_label"] is True
+    assert result["packet_ir_consumed_byte_proof"]["all_payload_bytes_accounted"] is True
+    assert result["candidate_diff_audit"]["ready_for_archive_preflight"] is True
+    assert {
+        row["section_name"] for row in result["candidate_diff"]["sections"]
+    } == {"inner_packed_header_ff_len24", "inner_decoder_packed_brotli"}
+    raw_by_section = {row["section_name"]: row for row in result["brotli_raw_equivalence"]}
+    assert raw_by_section["inner_decoder_packed_brotli"]["raw_equal"] is True
+    assert raw_by_section["inner_latents_and_sidecar_brotli"]["raw_equal"] is True
+
+    candidate = read_strict_single_member_zip(result["candidate_archive_path"])
+    candidate_packet = parse_pr106_sidecar_packet(candidate.payload)
+    candidate_inner = parse_ff_packed_brotli_hnerv(candidate_packet.pr106_bytes)
+    assert candidate_packet.sidecar_payload == parse_pr106_sidecar_packet(
+        source_packet_payload
+    ).sidecar_payload
+    source_raw = b"".join(brotli.decompress(stream) for stream in source_streams)
+    candidate_streams = _split_brotli_streams_for_test(candidate_inner.decoder_packed_brotli, 7)
+    assert b"".join(candidate_streams) == source_raw
+
+
 def test_build_lowlevel_brotli_repack_candidate_reemits_a1_split_brotli(
     tmp_path: Path,
 ) -> None:
@@ -262,6 +316,35 @@ def test_build_lowlevel_brotli_repack_candidate_blocks_noop(tmp_path: Path) -> N
     assert result["ready_for_archive_preflight"] is False
     assert "no_rate_positive_section_recode" in result["blockers"]
     assert "candidate_archive_path" not in result
+
+
+def test_build_lowlevel_brotli_repack_candidate_routes_codec_specific_sections(
+    tmp_path: Path,
+) -> None:
+    source_archive = tmp_path / "source.zip"
+    payload = _packed_payload(b"HDM4\x01not-brotli-decoder", b"HLM2not-brotli-latents")
+    write_stored_single_member_zip(source_archive, member_name="x", payload=payload)
+    source = read_strict_single_member_zip(source_archive)
+
+    result = build_lowlevel_brotli_repack_candidate(
+        source_archive=source_archive,
+        scorecard=_scorecard(source, "codec-specific"),
+        source_label="codec-specific",
+        output_dir=tmp_path / "out",
+        qualities=[11],
+        lgwins=[None],
+    )
+
+    assert result["ready_for_archive_preflight"] is False
+    assert any(
+        "HDM4 decoder codec, not a brotli stream" in blocker
+        for blocker in result["blockers"]
+    )
+    assert any(
+        "HLM2 fixed-latent codec, not a brotli stream" in blocker
+        for blocker in result["blockers"]
+    )
+    assert "no_rate_positive_section_recode" in result["blockers"]
 
 
 def test_build_lowlevel_brotli_repack_candidate_fails_closed_on_stale_scorecard(tmp_path: Path) -> None:
@@ -396,3 +479,66 @@ def _scorecard(source, label: str) -> dict:
             }
         ],
     }
+
+
+def _sidecar_scorecard(source, label: str) -> dict:
+    packet = parse_pr106_sidecar_packet(source.payload)
+    parsed = parse_ff_packed_brotli_hnerv(packet.pr106_bytes)
+    wrapper_sections = [
+        ("pr106_sidecar_header_fe_fmt_len_u32", source.payload[:6], "control_or_metadata"),
+        ("inner_packed_header_ff_len24", parsed.header, "control_or_metadata"),
+        ("inner_decoder_packed_brotli", parsed.decoder_packed_brotli, "decoder_weight_stream"),
+        ("inner_latents_and_sidecar_brotli", parsed.latents_and_sidecar_brotli, "latent_stream"),
+        ("sidecar_len_u16", source.payload[6 + len(packet.pr106_bytes) : 8 + len(packet.pr106_bytes)], "sidecar_or_correction_stream"),
+        ("sidecar_payload_pr101_ranked_no_op", packet.sidecar_payload, "sidecar_or_correction_stream"),
+    ]
+    sections = []
+    start = 0
+    for index, (name, data, role) in enumerate(wrapper_sections):
+        end = start + len(data)
+        sections.append(
+            {
+                "index": index,
+                "name": name,
+                "start": start,
+                "end": end,
+                "bytes": len(data),
+                "sha256": sha256_bytes(data),
+                "entropy_bits_per_byte": 7.0,
+                "optimization_role": role,
+            }
+        )
+        start = end
+    return {
+        "schema_version": 1,
+        "tool": "build_hnerv_frontier_scorecard",
+        "score_truth": "byte_fixture",
+        "payload_section_manifests": [
+            {
+                "label": label,
+                "archive_sha256": source.archive_sha256,
+                "archive_bytes": source.archive_bytes,
+                "zip_member": source.member_name,
+                "payload_sha256": sha256_bytes(source.payload),
+                "member_bytes": source.member_bytes,
+                "profile_match_key": "archive_sha256",
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "sections": sections,
+            }
+        ],
+    }
+
+
+def _split_brotli_streams_for_test(data: bytes, stream_count: int) -> list[bytes]:
+    rows = []
+    pos = 0
+    for _ in range(stream_count):
+        dec = brotli.Decompressor()
+        chunks = []
+        while pos < len(data) and not dec.is_finished():
+            chunks.append(dec.process(data[pos : pos + 1]))
+            pos += 1
+        rows.append(b"".join(chunks))
+    assert pos == len(data)
+    return rows
