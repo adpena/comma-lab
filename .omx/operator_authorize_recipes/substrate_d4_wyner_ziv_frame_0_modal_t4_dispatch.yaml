@@ -150,6 +150,15 @@ env_overrides:
   D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_H: "48"
   D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_W: "64"
   D4_WYNER_ZIV_FRAME_0_BASE_ARCHIVE_PATH: ""
+  # F4 (lane_d4_unblock_f1_f4_smoke_l2_promotion_20260514): cap pair-decode
+  # at 200 (down from N_PAIRS_FULL=600) so the smoke wall-clock fits inside
+  # the 60-min Modal T4 budget. Per the D4 timeout investigation memo
+  # `feedback_catalog_221_auth_eval_gate_and_d4_timeout_investigation_landed_20260514.md`
+  # §F4: 200 iter × ~90 ms/iter × 50 epochs ≈ 900 s (~15 min) on T4, well
+  # under the 60-min smoke budget. Smoke validates integration; first
+  # empirical anchor at full N_PAIRS_FULL=600 is a separate Phase 2
+  # dispatch decision after smoke green-up.
+  D4_WYNER_ZIV_FRAME_0_MAX_PAIRS: "200"
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:

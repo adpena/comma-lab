@@ -17,7 +17,10 @@
 #   MODAL_GPU=T4|A10G|A100|H100              (default T4 per recipe)
 #   D4_WYNER_ZIV_FRAME_0_EPOCHS=2000         (council default; full training)
 #   MODAL_TIMEOUT_HOURS=3.0                  (Modal hard-kill wall-clock)
-#   D4_WYNER_ZIV_FRAME_0_SMOKE_EPOCHS=100    (smoke epoch override)
+#   D4_WYNER_ZIV_FRAME_0_SMOKE_EPOCHS=50     (smoke epoch override; F1 default
+#                                             reduced from 100 to 50 per
+#                                             lane_d4_unblock_f1_f4_smoke_l2_promotion_20260514
+#                                             so wall-clock fits in 60-min budget)
 #   D4_WYNER_ZIV_FRAME_0_SMOKE_GPU=T4        (smoke GPU class)
 #   D4_WYNER_ZIV_FRAME_0_SMOKE_ONLY=1        (skip full even on smoke-green)
 #   D4_WYNER_ZIV_FRAME_0_FULL_ONLY=1         (skip smoke; operator override
@@ -44,7 +47,7 @@ fi
 
 exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --recipe substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch \
-    --smoke-epochs "${D4_WYNER_ZIV_FRAME_0_SMOKE_EPOCHS:-100}" \
+    --smoke-epochs "${D4_WYNER_ZIV_FRAME_0_SMOKE_EPOCHS:-50}" \
     --smoke-gpu "${D4_WYNER_ZIV_FRAME_0_SMOKE_GPU:-T4}" \
     --smoke-timeout-hours "${D4_WYNER_ZIV_FRAME_0_SMOKE_TIMEOUT_HOURS:-1.0}" \
     --operator-handle "claude:operator_authorize_substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch" \
