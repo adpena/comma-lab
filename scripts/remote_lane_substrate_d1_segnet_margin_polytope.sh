@@ -21,13 +21,29 @@ PYBIN="${PYBIN:-}"
 LANE_ID="lane_d1_segnet_margin_polytope_encoder_20260514"
 TAG="${TAG:-substrate_d1_segnet_margin_polytope}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_d1_polytope_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+
+# Catalog #204 (PR95++ Modal smoke score-custody harden 2026-05-14):
+# contest_auth_eval.py refuses score-grade evidence under /tmp. Modal workers
+# run from /tmp/pact, so when MODAL_RUNTIME=1 + /modal_results exists, write
+# archive/runtime/auth-eval work under the mounted result volume by default
+# and let modal_train_lane.py harvest it. Local non-Modal runs keep the
+# legacy $LOG_DIR/output path.
+DISPATCH_INSTANCE_JOB_ID_TEMP="${D1_POLYTOPE_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-d1_polytope_unknown_job}}"
+if [ -n "${D1_POLYTOPE_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$D1_POLYTOPE_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID_TEMP}/output"
+else
+    OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+fi
+unset DISPATCH_INSTANCE_JOB_ID_TEMP
+
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 D1_POLYTOPE_A1_ARCHIVE="${D1_POLYTOPE_A1_ARCHIVE:-$WORKSPACE/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip}"
 D1_POLYTOPE_VIDEO_PATH="${D1_POLYTOPE_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
-D1_POLYTOPE_OUTPUT_DIR="${D1_POLYTOPE_OUTPUT_DIR:-$OUTPUT_DIR}"
+D1_POLYTOPE_OUTPUT_DIR="$OUTPUT_DIR"
 D1_POLYTOPE_EPOCHS="${D1_POLYTOPE_EPOCHS:-1000}"
 D1_POLYTOPE_UPSTREAM_DIR="${D1_POLYTOPE_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 D1_POLYTOPE_DEVICE="${D1_POLYTOPE_DEVICE:-cuda}"

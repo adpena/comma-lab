@@ -94,7 +94,8 @@ env_overrides:
   D1_POLYTOPE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   D1_POLYTOPE_A1_ARCHIVE: /workspace/pact/submissions/a1/archive.zip
   D1_POLYTOPE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
-  D1_POLYTOPE_OUTPUT_DIR: /workspace/pact/lane_d1_polytope_results/output
+  # Catalog #204: leave D1_POLYTOPE_OUTPUT_DIR unset so the remote driver
+  # auto-routes to /modal_results/<job>/output when MODAL_RUNTIME=1.
   D1_POLYTOPE_EPOCHS: "1000"
   D1_POLYTOPE_UPSTREAM_DIR: /workspace/pact/upstream
   D1_POLYTOPE_DEVICE: cuda
