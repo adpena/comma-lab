@@ -133,6 +133,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -1131,41 +1134,33 @@ def _full_main(args: argparse.Namespace) -> int:
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_emitted")
 
-        # 12. Auth eval ([contest-CUDA] inline). SKIPPED in --full-cpu mode
-        # because local macOS-CPU is NOT 1:1 contest-compliant per CLAUDE.md
-        # "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT
-        # HARDWARE". Sister harness `tools/smoke_time_traveler_l5_autonomy_
-        # macos_cpu.py --archive-path ...` produces the canonical
-        # [macOS-CPU advisory only] proxy signal.
+        # 12. Auth eval ([contest-CUDA] inline) via the canonical
+        # ``tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call``
+        # helper. The gate refuses at smoke / full-CPU advisory / non-CUDA
+        # paths per CLAUDE.md "Auth eval EVERYWHERE" + HNeRV parity lesson
+        # L13. Time-traveler routes the full-CPU advisory-only branch
+        # through the canonical FULL_CPU_REFUSAL_REASON so downstream
+        # manifests carry a stable refusal token.
         auth_eval_json_path = args.output_dir / "auth_eval.json"
-        if full_cpu_active:
-            print(
-                f"[{SUBSTRATE_TAG}-full-cpu] auth eval SKIPPED (macOS-CPU is "
-                "not 1:1 contest-compliant; use sister smoke harness for "
-                "[macOS-CPU advisory only] proxy signal)."
-            )
-            _stage("auth_eval_skipped_full_cpu_advisory_only")
-        elif not args.skip_auth_eval and device.type == "cuda":
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--submission-dir",
-                str(submission_dir),
-                "--upstream-dir",
-                str(args.upstream_dir),
-                "--result-json",
-                str(auth_eval_json_path),
-                "--device",
-                "cuda",
-            ]
-            print(f"[{SUBSTRATE_TAG}-full] launching auth eval: {' '.join(cmd)}")
-            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            if proc.returncode != 0:
-                raise RuntimeError(
-                    f"[{SUBSTRATE_TAG}-full] contest_auth_eval.py failed "
-                    f"rc={proc.returncode}; stdout_tail={proc.stdout[-2000:]}; "
-                    f"stderr_tail={proc.stderr[-2000:]}"
-                )
+        auth_result = _canon_gate_auth_eval_call(
+            args=args,
+            archive_zip=archive_zip_path,
+            inflate_sh=submission_dir / "inflate.sh",
+            upstream_dir=args.upstream_dir,
+            output_json=auth_eval_json_path,
+            contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+            substrate_tag=SUBSTRATE_TAG,
+            device=device,
+            full_cpu_active=full_cpu_active,
+        )
+        if auth_result is None:
+            if full_cpu_active:
+                _stage("auth_eval_skipped_full_cpu_advisory_only")
+            else:
+                _stage("auth_eval_skipped_gate_refused")
+        else:
+            # Defense-in-depth: validate the claim a second time via the
+            # canonical requirer (older code path that also stamps custody).
             _canon_require_contest_cuda_auth_eval_claim(
                 auth_eval_json_path,
                 archive_sha256=archive_zip_sha,

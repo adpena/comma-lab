@@ -58,22 +58,29 @@ def select_inflate_device() -> torch.device:
     """Honor ``PACT_INFLATE_DEVICE`` (auto/cpu/cuda); MPS is forbidden.
 
     Per CLAUDE.md ``MPS auth eval is NOISE`` non-negotiable + A1 council
-    Round 1 finding F1/F11: silent device-fork at inflate produces a
-    +0.0335 CPU/CUDA score gap from the SAME archive bytes. The auto
-    fallback is preserved as the LAST branch (matching the canonical
+    Round 1 finding F1/F11 + Catalog #205 self-protection: silent
+    device-fork at inflate produces a +0.0335 CPU/CUDA score gap from
+    the SAME archive bytes. This helper mirrors the canonical
     ``tac.substrates._shared.inflate_runtime.select_inflate_device``
-    contract) so the operator can pin via env var without code changes.
+    body byte-for-byte (modulo the ``torch.device`` return-type wrap).
+
+    Per CLAUDE.md "Contest runtime closure" non-negotiable the inflate
+    tree must be self-contained; that prevents an actual import of the
+    canonical helper at inflate time. The parity is enforced by
+    ``src/tac/tests/test_inflate_select_device_parity.py`` which asserts
+    every ``submissions/*/inflate.py`` helper returns the same value as
+    the canonical for every env-var setting.
     """
-    policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
-    if policy in {"mps", "metal"}:
-        raise RuntimeError("PACT_INFLATE_DEVICE=mps is forbidden for auth-eval inflate")
-    if policy == "cpu":
-        return torch.device("cpu")
-    if policy == "cuda":
+    value = (os.environ.get("PACT_INFLATE_DEVICE") or "auto").strip().lower()
+    if value == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if value == "cuda":
         if not torch.cuda.is_available():
-            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but CUDA unavailable")
+            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but torch.cuda is not available")
         return torch.device("cuda")
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if value == "cpu":
+        return torch.device("cpu")
+    raise RuntimeError(f"unsupported PACT_INFLATE_DEVICE={value!r}; expected auto/cpu/cuda")
 
 
 def inflate(src_bin: str, dst_raw: str):

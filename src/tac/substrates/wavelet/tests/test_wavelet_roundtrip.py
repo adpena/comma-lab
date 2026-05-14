@@ -163,6 +163,44 @@ def test_pair_indices_out_of_range_raises():
         raise AssertionError("expected ValueError on out-of-range pair index")
 
 
+def test_inflate_runtime_writes_contest_raw_file(tmp_path):
+    from tac.substrates._shared.inflate_runtime import CAMERA_HW
+    from tac.substrates.wavelet.inflate import inflate_one_video
+
+    cfg = WaveletConfig(
+        coeff_channels=1,
+        synthesis_hidden=4,
+        synthesis_layers=2,
+        num_pairs=1,
+        output_height=16,
+        output_width=24,
+    )
+    torch.manual_seed(31)
+    model = WaveletSubstrate(cfg)
+    meta = {
+        "synthesis_hidden": cfg.synthesis_hidden,
+        "synthesis_layers": cfg.synthesis_layers,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+    }
+    blob = pack_archive(
+        model.synthesis.state_dict(),
+        {"film": model.film.clone()},
+        model.coeff_ll.clone(),
+        model.coeff_lh.clone(),
+        model.coeff_hl.clone(),
+        model.coeff_hh.clone(),
+        meta,
+    )
+    out = tmp_path / "0.raw"
+
+    frames = inflate_one_video(blob, out, device="cpu")
+
+    assert frames == 2
+    assert out.is_file()
+    assert out.stat().st_size == 2 * CAMERA_HW[0] * CAMERA_HW[1] * 3
+
+
 def test_db4_filter_coefficients_unit_norm():
     """Daubechies-4 low-pass filter coefficients should be orthonormal."""
     from tac.substrates.wavelet.architecture import _DB4_LO, _db4_hi

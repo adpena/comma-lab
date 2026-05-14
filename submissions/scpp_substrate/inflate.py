@@ -112,16 +112,27 @@ def _unpack_blockfp(packed_bytes: bytes, meta: dict) -> dict[str, torch.Tensor]:
 
 
 def select_inflate_device() -> torch.device:
-    policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
-    if policy in {"mps", "metal"}:
-        raise RuntimeError("PACT_INFLATE_DEVICE=mps forbidden; use cpu or cuda")
-    if policy == "cpu":
-        return torch.device("cpu")
-    if policy == "cuda":
+    """Honor ``PACT_INFLATE_DEVICE`` (auto/cpu/cuda); MPS is forbidden.
+
+    Per A1 council Round 1 finding F1/F11 + CLAUDE.md ``MPS auth eval is
+    NOISE`` non-negotiable + Catalog #205 self-protection. This helper
+    mirrors the canonical
+    ``tac.substrates._shared.inflate_runtime.select_inflate_device``
+    body byte-for-byte (modulo the ``torch.device`` return-type wrap).
+    Per CLAUDE.md "Contest runtime closure" the inflate tree must be
+    self-contained; parity is verified by
+    ``src/tac/tests/test_inflate_select_device_parity.py``.
+    """
+    value = (os.environ.get("PACT_INFLATE_DEVICE") or "auto").strip().lower()
+    if value == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if value == "cuda":
         if not torch.cuda.is_available():
-            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but CUDA unavailable")
+            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but torch.cuda is not available")
         return torch.device("cuda")
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if value == "cpu":
+        return torch.device("cpu")
+    raise RuntimeError(f"unsupported PACT_INFLATE_DEVICE={value!r}; expected auto/cpu/cuda")
 
 
 def inflate(src_bin: str, dst_raw: str) -> int:

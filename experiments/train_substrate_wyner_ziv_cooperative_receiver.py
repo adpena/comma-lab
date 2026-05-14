@@ -98,6 +98,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 
 # ---------------------------------------------------------------------------
 # Module paths + constants
@@ -897,28 +900,28 @@ def _full_main(args: argparse.Namespace) -> int:
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_emitted")
 
+        # Auth eval routed via canonical
+        # ``tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call``;
+        # gate refuses at smoke / full-CPU advisory / non-CUDA paths per
+        # CLAUDE.md "Auth eval EVERYWHERE" + HNeRV parity lesson L13.
         auth_eval_json_path = args.output_dir / "auth_eval.json"
-        if full_cpu_active:
-            print(
-                f"[{SUBSTRATE_TAG}-full-cpu] auth eval SKIPPED (macOS-CPU "
-                "non-1:1-contest-compliant per CLAUDE.md)."
-            )
-            _stage("auth_eval_skipped_full_cpu_advisory_only")
-        elif not args.skip_auth_eval and device.type == "cuda":
-            cmd = [
-                sys.executable, str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--submission-dir", str(submission_dir),
-                "--upstream-dir", str(args.upstream_dir),
-                "--result-json", str(auth_eval_json_path),
-                "--device", "cuda",
-            ]
-            print(f"[{SUBSTRATE_TAG}-full] launching auth eval: {' '.join(cmd)}")
-            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            if proc.returncode != 0:
-                raise RuntimeError(
-                    f"[{SUBSTRATE_TAG}-full] contest_auth_eval.py failed "
-                    f"rc={proc.returncode}; stderr_tail={proc.stderr[-2000:]}"
-                )
+        auth_result = _canon_gate_auth_eval_call(
+            args=args,
+            archive_zip=archive_zip_path,
+            inflate_sh=submission_dir / "inflate.sh",
+            upstream_dir=args.upstream_dir,
+            output_json=auth_eval_json_path,
+            contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+            substrate_tag=SUBSTRATE_TAG,
+            device=device,
+            full_cpu_active=full_cpu_active,
+        )
+        if auth_result is None:
+            if full_cpu_active:
+                _stage("auth_eval_skipped_full_cpu_advisory_only")
+            else:
+                _stage("auth_eval_skipped_gate_refused")
+        else:
             _canon_require_contest_cuda_auth_eval_claim(
                 auth_eval_json_path,
                 archive_sha256=archive_zip_sha,

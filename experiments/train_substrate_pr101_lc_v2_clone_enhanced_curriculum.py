@@ -84,6 +84,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     utc_now_iso as _canon_utc_now_iso,
 )
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates.pr101_lc_v2_clone import (
     EnhancedCurriculumConfig,
     Pr101LcV2CloneConfig,
@@ -758,53 +761,44 @@ def _run_contest_auth_eval_cuda(
 ) -> dict[str, object]:
     """Run the canonical contest auth eval and require a CUDA score claim.
 
+    Thin shim around
+    :func:`tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call`
+    that hardcodes the post-gate execution path (caller already validated
+    not-smoke + not-skip + CUDA device at the call site at line ~951 per
+    Path B). This keeps the public function name patchable by the existing
+    Path B regression tests at
+    ``src/tac/tests/test_train_substrate_pr101_lc_v2_clone_auth_eval_gate.py``.
+
     The caller must choose ``output_json`` under durable repo/provider storage.
     Modal smoke runs default to ``/modal_results/<job>/output`` via the remote
     driver; a temp evidence bypass would make the smoke score non-custodial.
     """
 
-    cmd = [
-        sys.executable,
-        str(CONTEST_AUTH_EVAL_SCRIPT),
-        "--archive",
-        str(archive_zip),
-        "--inflate-sh",
-        str(inflate_sh),
-        "--upstream-dir",
-        str(upstream_dir),
-        "--device",
-        "cuda",
-        "--json-out",
-        str(output_json),
-    ]
-    print(f"[pr95plus-auth-eval] {' '.join(cmd)}")
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"contest_auth_eval.py failed rc={proc.returncode}; "
-            f"stdout_tail={proc.stdout[-2000:]}; "
-            f"stderr_tail={proc.stderr[-2000:]}"
-        )
-    from tac.auth_eval_result import parse_auth_eval_score_claim
+    # Synthetic "full mode" args so the canonical gate runs the subprocess
+    # path. The Path B call-site smoke gate above this function is the
+    # primary defense-in-depth; this gate is hardcoded to bypass-refuse
+    # at the call to maintain the established public contract.
+    import argparse as _argparse
 
-    payload = json.loads(output_json.read_text(encoding="utf-8"))
-    claim = parse_auth_eval_score_claim(
-        payload,
-        required_score_axis="contest_cuda",
-        require_component_recompute=True,
+    _args = _argparse.Namespace(smoke=False, skip_auth_eval=False)
+    result = _canon_gate_auth_eval_call(
+        args=_args,
+        archive_zip=archive_zip,
+        inflate_sh=inflate_sh,
+        upstream_dir=upstream_dir,
+        output_json=output_json,
+        contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+        substrate_tag="pr95plus",
+        device="cuda",
     )
-    if claim is None:
+    if result is None:
+        # Should not happen given the synthetic args above; guard against
+        # any future canonical-helper opt-out.
         raise RuntimeError(
-            "contest_auth_eval.py completed but did not produce a valid "
-            "contest_cuda score claim; refusing silent smoke success"
+            "_run_contest_auth_eval_cuda: canonical gate refused with "
+            "synthetic full-mode args; investigate gate logic"
         )
-    return {
-        "auth_eval_json_path": str(output_json),
-        "auth_eval_cuda_score": float(claim.score),
-        "auth_eval_score_axis": "contest_cuda",
-        "auth_eval_lane_tag": claim.lane_tag,
-        "auth_eval_score_claim_valid": True,
-    }
+    return result
 
 
 def _full_main(args: argparse.Namespace) -> int:
