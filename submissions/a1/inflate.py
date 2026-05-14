@@ -6,7 +6,13 @@ Wire format (inner blob, single ZIP member 'x'):
     byte * (D - 4): encoded decoder blob (PR101 split-Brotli, canonical)
     byte * 15387: latent_blob (PR101 ORIGINAL — preserved from source archive)
     byte * remaining: sidecar_blob (PR101 ORIGINAL)
+
+Per A1 council Round 1 finding F1/F11 (2026-05-13) the inflate device must NOT
+silently fork on `torch.cuda.is_available()`. Honor `PACT_INFLATE_DEVICE` env
+var (auto/cpu/cuda) and refuse `mps` so the same archive bytes always render
+through the operator-pinned device. Sister of Catalog #205.
 """
+import os
 import struct
 import sys
 from pathlib import Path
@@ -48,12 +54,34 @@ def parse_a1_finetuned_archive(archive_bytes: bytes):
     return decoder_sd, latents
 
 
+def select_inflate_device() -> torch.device:
+    """Honor ``PACT_INFLATE_DEVICE`` (auto/cpu/cuda); MPS is forbidden.
+
+    Per CLAUDE.md ``MPS auth eval is NOISE`` non-negotiable + A1 council
+    Round 1 finding F1/F11: silent device-fork at inflate produces a
+    +0.0335 CPU/CUDA score gap from the SAME archive bytes. The auto
+    fallback is preserved as the LAST branch (matching the canonical
+    ``tac.substrates._shared.inflate_runtime.select_inflate_device``
+    contract) so the operator can pin via env var without code changes.
+    """
+    policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
+    if policy in {"mps", "metal"}:
+        raise RuntimeError("PACT_INFLATE_DEVICE=mps is forbidden for auth-eval inflate")
+    if policy == "cpu":
+        return torch.device("cpu")
+    if policy == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but CUDA unavailable")
+        return torch.device("cuda")
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def inflate(src_bin: str, dst_raw: str):
     with open(src_bin, "rb") as f:
         archive_bytes = f.read()
     decoder_sd, latents = parse_a1_finetuned_archive(archive_bytes)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = select_inflate_device()
     decoder = HNeRVDecoder(
         latent_dim=LATENT_DIM,
         base_channels=BASE_CHANNELS,

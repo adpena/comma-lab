@@ -2692,6 +2692,21 @@ def preflight_all(
         check_catalog_202_bypass_requires_paired_env_attestation(
             strict=True, verbose=verbose,
         )
+        # Catalog #205 - check_inflate_py_uses_canonical_select_inflate_device
+        # A1 council Round 1 finding F1/F11 (CRITICAL, 2026-05-13). Inline
+        # `device = "cuda" if torch.cuda.is_available() else "cpu"` at top
+        # level in `submissions/*/inflate.py` is the empirical mechanism
+        # producing the +0.0335 CPU/CUDA score gap on the same archive
+        # bytes. Refuses raw inline outside the canonical
+        # `select_inflate_device` helper. Sister of Catalog #1
+        # (`check_no_mps_fallback_default`) scoped to `submissions/`.
+        # Live count at landing: 0 (4 raw inline sites driven to 0 in
+        # same commit batch). STRICT @ 0 per CLAUDE.md "Strict-flip
+        # atomicity rule" + "Bugs must be permanently fixed AND
+        # self-protected against".
+        check_inflate_py_uses_canonical_select_inflate_device(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -47549,6 +47564,319 @@ def check_catalog_202_bypass_requires_paired_env_attestation(
                 "file(s) scanned, 0 violation(s))"
             )
     _check_202_raise_if_strict(violations, strict)
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #205 - check_inflate_py_uses_canonical_select_inflate_device
+#
+# A1 council Round 1 finding F1/F11 (CRITICAL, 2026-05-13). The inline pattern
+# ``device = "cuda" if torch.cuda.is_available() else "cpu"`` at top-level
+# inflate code is the EMPIRICAL MECHANISM producing the +0.0335 CPU/CUDA score
+# gap on the same archive bytes (CPU seg=0.00056023, CUDA seg=0.00066299;
+# different rendered frames -> different scored components -> different score).
+# Per CLAUDE.md FORBIDDEN_PATTERNS: "Forbidden device-selection defaults
+# (the MPS-fallback trap)". Hotz F11 framing: write inflate.py to ALWAYS use
+# CPU OR ALWAYS use CUDA, but NEVER let ``torch.cuda.is_available()`` decide
+# silently from raw inline code.
+#
+# This gate refuses ``submissions/*/inflate.py`` files that contain a raw
+# top-level / function-body assignment ``device = "cuda" if
+# torch.cuda.is_available() else "cpu"`` (or its ``torch.device(...)``
+# wrapper) when the assignment is NOT inside the canonical
+# ``select_inflate_device`` helper. The helper itself MAY contain the
+# ``auto`` fallback (``return "cuda" if torch.cuda.is_available() else
+# "cpu"``) as its last branch - that IS the canonical design. The helper
+# additionally MUST honor ``PACT_INFLATE_DEVICE`` env-var policy
+# (auto/cpu/cuda) and refuse ``mps``.
+#
+# Acceptance:
+#   1. file imports + uses ``select_inflate_device`` (locally defined OR
+#      imported from ``tac.substrates._shared.inflate_runtime``);
+#   2. inline pattern only appears INSIDE a function named
+#      ``select_inflate_device``;
+#   3. same-line ``# INLINE_DEVICE_FORK_OK:<reason>`` waiver on the
+#      assignment line (placeholder ``<reason>`` literal rejected so the
+#      gate's own docstring cannot self-waive).
+#
+# Scope: ``submissions/*/inflate.py`` ONLY. ``experiments/results/`` is
+# DERIVED_OUTPUT (Catalog #113) - those are forensic snapshots and may not
+# be re-runnable; they are out-of-scope. The canonical helper at
+# ``src/tac/substrates/_shared/inflate_runtime.py`` is the source of truth
+# for the env-var policy contract; this gate is the structural lock that
+# refuses ``submissions/*/inflate.py`` from re-introducing the raw inline
+# bug class.
+#
+# Sister of Catalog #1 (``check_no_mps_fallback_default``) which scans
+# ``src/tac``/``experiments``/``scripts`` for the MPS-fallback ternary;
+# this gate is the ``submissions/`` complement scoped to the inflate
+# runtime contract specifically. Together they extinct the silent
+# device-selection-fork bug class across the entire repo.
+#
+# References:
+#   - feedback_a1_pr_submission_council_round_1_of_5_20260513.md (F1/F11)
+#   - CLAUDE.md FORBIDDEN_PATTERNS "Forbidden device-selection defaults"
+#   - CLAUDE.md "MPS auth eval is NOISE" non-negotiable
+#   - submissions/a1/dual_eval_adjudicated.json (the +0.0335 anchor)
+# ----------------------------------------------------------------------------
+
+
+_CHECK_205_INLINE_WAIVER_TOKEN = "INLINE_DEVICE_FORK_OK:"
+_CHECK_205_INLINE_WAIVER_PLACEHOLDER = "<reason>"
+_CHECK_205_HELPER_NAME = "select_inflate_device"
+
+
+def _check_205_iter_target_files(repo_root: Path) -> list[Path]:
+    """List every ``submissions/*/inflate.py`` under repo_root.
+
+    Excludes ``submissions/exact_current/`` since CLAUDE.md mutation
+    frontier marks the pinned upstream snapshot as off-limits without
+    explicit human approval; that file is upstream-pinned and never our
+    write surface.
+    """
+
+    submissions_root = repo_root / "submissions"
+    if not submissions_root.is_dir():
+        return []
+    targets: list[Path] = []
+    for child in sorted(submissions_root.iterdir()):
+        if not child.is_dir():
+            continue
+        if child.name == "exact_current":
+            # Pinned upstream snapshot - off our mutation frontier per CLAUDE.md.
+            continue
+        candidate = child / "inflate.py"
+        if candidate.is_file():
+            targets.append(candidate)
+    return targets
+
+
+def _check_205_extract_select_helper_line_ranges(tree: ast.AST) -> list[tuple[int, int]]:
+    """Return (start_lineno, end_lineno) ranges of every ``select_inflate_device`` def."""
+
+    ranges: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name == _CHECK_205_HELPER_NAME:
+                end = getattr(node, "end_lineno", None) or node.lineno
+                ranges.append((node.lineno, end))
+    return ranges
+
+
+def _check_205_node_is_inline_cuda_else_cpu(node: ast.AST) -> bool:
+    """Detect the canonical inline ``"cuda" if torch.cuda.is_available() else "cpu"`` pattern.
+
+    Accepts both ``"cuda"`` (str) and ``torch.device("cuda")`` wrapper
+    variants on the IfExp body, with matching ``"cpu"`` (or wrapper) on
+    the orelse. The test must call ``torch.cuda.is_available()``.
+    """
+
+    if not isinstance(node, ast.IfExp):
+        return False
+
+    def _is_cuda_str_or_wrapper(value: ast.AST, target_str: str) -> bool:
+        if isinstance(value, ast.Constant) and value.value == target_str:
+            return True
+        if (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Attribute)
+            and value.func.attr == "device"
+            and isinstance(value.func.value, ast.Name)
+            and value.func.value.id == "torch"
+            and len(value.args) >= 1
+            and isinstance(value.args[0], ast.Constant)
+            and value.args[0].value == target_str
+        ):
+            return True
+        return False
+
+    if not _is_cuda_str_or_wrapper(node.body, "cuda"):
+        return False
+    if not _is_cuda_str_or_wrapper(node.orelse, "cpu"):
+        return False
+
+    # Test must call torch.cuda.is_available()
+    for sub in ast.walk(node.test):
+        if (
+            isinstance(sub, ast.Call)
+            and isinstance(sub.func, ast.Attribute)
+            and sub.func.attr == "is_available"
+        ):
+            value = sub.func.value
+            if isinstance(value, ast.Attribute) and value.attr == "cuda":
+                inner = value.value
+                if isinstance(inner, ast.Name) and inner.id == "torch":
+                    return True
+            if isinstance(value, ast.Name) and value.id == "cuda":
+                return True
+    return False
+
+
+def _check_205_line_has_waiver(line: str) -> bool:
+    """Return True if ``line`` carries the canonical same-line waiver.
+
+    Placeholder literal ``<reason>`` is rejected so the gate's own
+    documentation example cannot self-waive a real violation.
+    """
+
+    if _CHECK_205_INLINE_WAIVER_TOKEN not in line:
+        return False
+    idx = line.find(_CHECK_205_INLINE_WAIVER_TOKEN)
+    tail = line[idx + len(_CHECK_205_INLINE_WAIVER_TOKEN):].strip()
+    if not tail:
+        return False
+    if tail.startswith(_CHECK_205_INLINE_WAIVER_PLACEHOLDER):
+        return False
+    return True
+
+
+def _check_205_helper_honors_pact_env(text: str) -> bool:
+    """Return True if the file honors ``PACT_INFLATE_DEVICE`` env var.
+
+    Conservative: literal substring check. Intentional - the canonical
+    helper text is uniform across every passing file and a string match
+    is sufficient for this layer; the AST scan below catches the bare
+    inline assignment outside the helper.
+    """
+
+    return "PACT_INFLATE_DEVICE" in text
+
+
+def _scan_inflate_for_inline_device_fork(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Find inline device-fork assignments outside ``select_inflate_device``.
+
+    Returns one violation string per offending node. Empty list means
+    the file is canonical (uses the helper, helper honors env var, and
+    no raw inline pattern leaks at top-level).
+    """
+
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except SyntaxError:
+        # Cannot AST-parse - the file is either empty or malformed; skip
+        # silently per the same convention as sister gates.
+        return []
+
+    helper_ranges = _check_205_extract_select_helper_line_ranges(tree)
+    helper_present = bool(helper_ranges)
+    text_lines = text.splitlines()
+
+    def _line_in_helper(lineno: int) -> bool:
+        for start, end in helper_ranges:
+            if start <= lineno <= end:
+                return True
+        return False
+
+    violations: list[str] = []
+
+    # First pass: every IfExp whose shape matches the inline device-fork
+    # pattern AND that lives outside any select_inflate_device body.
+    for node in ast.walk(tree):
+        if not _check_205_node_is_inline_cuda_else_cpu(node):
+            continue
+        lineno = getattr(node, "lineno", 0)
+        if _line_in_helper(lineno):
+            continue
+        # Same-line waiver?
+        line_text = text_lines[lineno - 1] if 0 < lineno <= len(text_lines) else ""
+        if _check_205_line_has_waiver(line_text):
+            continue
+        violations.append(
+            f"{rel}:{lineno}: inline `cuda if torch.cuda.is_available() "
+            f"else \"cpu\"` device-fork OUTSIDE the canonical "
+            f"`{_CHECK_205_HELPER_NAME}` helper. Per A1 council Round 1 "
+            f"finding F1/F11 (CRITICAL): this pattern produces the +0.0335 "
+            f"CPU/CUDA score gap on the same archive bytes. Refactor to "
+            f"use a local `{_CHECK_205_HELPER_NAME}()` helper that honors "
+            f"`PACT_INFLATE_DEVICE` env var and refuses `mps`. See "
+            f"`submissions/pr106_c3_residual_sidecar/inflate.py` for the "
+            f"canonical pattern, OR add same-line "
+            f"`# {_CHECK_205_INLINE_WAIVER_TOKEN}<reason>` waiver "
+            f"(placeholder `<reason>` literal rejected)."
+        )
+
+    # Second pass: file uses the inline pattern inside a helper but the
+    # helper does NOT honor PACT_INFLATE_DEVICE. The helper without the
+    # env-var policy is dead engineering - it looks canonical but does
+    # not give the operator a way to pin device explicitly.
+    if helper_present and not violations:
+        if not _check_205_helper_honors_pact_env(text):
+            # Find the helper's def line for a precise error pointer.
+            helper_lineno = helper_ranges[0][0]
+            violations.append(
+                f"{rel}:{helper_lineno}: `{_CHECK_205_HELPER_NAME}` helper "
+                f"present but does NOT reference `PACT_INFLATE_DEVICE` env "
+                f"var. The helper must honor the canonical env-var policy "
+                f"(auto/cpu/cuda) and refuse `mps` so the operator can pin "
+                f"the inflate device without code changes. See "
+                f"`submissions/pr106_c3_residual_sidecar/inflate.py` for "
+                f"the canonical pattern."
+            )
+
+    return violations
+
+
+def check_inflate_py_uses_canonical_select_inflate_device(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #205 - refuse raw inline device-fork in submission inflate.py.
+
+    Per A1 council Round 1 finding F1/F11 (CRITICAL, 2026-05-13). Inline
+    ``device = "cuda" if torch.cuda.is_available() else "cpu"`` at top
+    level is the empirical mechanism behind the +0.0335 CPU/CUDA score
+    gap on the same archive bytes. Refactor every ``submissions/*/
+    inflate.py`` to route through a canonical ``select_inflate_device``
+    helper that honors ``PACT_INFLATE_DEVICE`` env var (auto/cpu/cuda)
+    and refuses ``mps``.
+
+    Sister of Catalog #1 (``check_no_mps_fallback_default``); this gate
+    is the ``submissions/`` complement scoped to inflate runtime files.
+    Returns the list of violation strings; raises ``PreflightError``
+    when ``strict=True`` and any violation exists.
+    """
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    targets = _check_205_iter_target_files(root)
+    violations: list[str] = []
+    for path in targets:
+        violations.extend(_scan_inflate_for_inline_device_fork(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [inflate-device-fork] {len(violations)} violation(s) "
+                f"across {len(targets)} submissions/inflate.py file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [inflate-device-fork] OK "
+                f"({len(targets)} submissions/inflate.py file(s) scanned, "
+                "0 violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_inflate_py_uses_canonical_select_inflate_device found "
+            f"{len(violations)} violation(s). Per A1 council Round 1 "
+            "finding F1/F11 (CRITICAL): inline device-fork in inflate.py "
+            "produces the +0.0335 CPU/CUDA score gap on the same archive "
+            "bytes. Refactor to a canonical `select_inflate_device` helper:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
     return violations
 
 

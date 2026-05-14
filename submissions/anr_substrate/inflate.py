@@ -9,6 +9,7 @@ No PoseNet/SegNet load at inflate (strict-scorer-rule).
 """
 from __future__ import annotations
 import io
+import os
 import struct
 import sys
 from pathlib import Path
@@ -115,12 +116,30 @@ def _load_state(buf, device):
             for k, v in sd.items()}
 
 
+def select_inflate_device() -> str:
+    """Honor ``PACT_INFLATE_DEVICE`` (auto/cpu/cuda); MPS is forbidden.
+
+    Per A1 council Round 1 finding F1/F11 + CLAUDE.md ``MPS auth eval is
+    NOISE`` non-negotiable. Sister of Catalog #205.
+    """
+    policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
+    if policy in {"mps", "metal"}:
+        raise RuntimeError("PACT_INFLATE_DEVICE=mps is forbidden for auth-eval inflate")
+    if policy == "cpu":
+        return "cpu"
+    if policy == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but CUDA unavailable")
+        return "cuda"
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
 def main():
     if len(sys.argv) != 3:
         print("usage: inflate.py <archive_path> <dst_raw>", file=sys.stderr)
         sys.exit(2)
     archive_path, dst_raw = Path(sys.argv[1]), Path(sys.argv[2])
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = select_inflate_device()
 
     sections = _parse(archive_path.read_bytes())
     meta = torch.load(io.BytesIO(sections["meta"]), map_location="cpu", weights_only=False)

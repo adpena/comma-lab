@@ -111,7 +111,7 @@ def _unpack_blockfp(packed_bytes: bytes, meta: dict) -> dict[str, torch.Tensor]:
     return out
 
 
-def _select_device() -> torch.device:
+def select_inflate_device() -> torch.device:
     policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
     if policy in {"mps", "metal"}:
         raise RuntimeError("PACT_INFLATE_DEVICE=mps forbidden; use cpu or cuda")
@@ -151,7 +151,7 @@ def inflate(src_bin: str, dst_raw: str) -> int:
     latents = (lat_int8 * lat_scale).reshape(lat_shape)
 
     config = cfg_payload["config"]
-    device = _select_device()
+    device = select_inflate_device()
     decoder = _SCPPDecoder(
         latent_dim=int(config["latent_dim"]),
         base_channels=int(config["base_channels"]),

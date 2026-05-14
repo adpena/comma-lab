@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import struct
 import sys
 from pathlib import Path
@@ -192,6 +193,24 @@ def apply_corrections(latents, wrp_brotli):
     return latents
 
 
+def select_inflate_device() -> torch.device:
+    """Honor ``PACT_INFLATE_DEVICE`` (auto/cpu/cuda); MPS is forbidden.
+
+    Per A1 council Round 1 finding F1/F11 + CLAUDE.md ``MPS auth eval is
+    NOISE`` non-negotiable. Sister of Catalog #205.
+    """
+    policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
+    if policy in {"mps", "metal"}:
+        raise RuntimeError("PACT_INFLATE_DEVICE=mps is forbidden for auth-eval inflate")
+    if policy == "cpu":
+        return torch.device("cpu")
+    if policy == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but CUDA unavailable")
+        return torch.device("cuda")
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def inflate(src_bin, dst_raw):
     blob = Path(src_bin).read_bytes()
     sca, br_b, hists_b, merged_ac, ms, lo_b, hi_hist_b, wrp_b = parse_archive(blob)
@@ -199,7 +218,7 @@ def inflate(src_bin, dst_raw):
     state_dict, hi_decoded = build_state_dict(br_b, hists_b, merged_ac, sca, hi_hist)
     latents = decode_latents(ms, lo_b, hi_decoded)
     apply_corrections(latents, wrp_b)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = select_inflate_device()
     decoder = HNeRVDecoder(LATENT_DIM, BASE_CHANNELS, EVAL_SIZE).to(device)
     decoder.load_state_dict(state_dict)
     decoder.eval()
