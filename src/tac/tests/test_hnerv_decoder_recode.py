@@ -17,6 +17,7 @@ from tac.hnerv_decoder_recode import (
     decode_hdm3_q_brotli_split_fixture,
     decode_hdm6_q_brotli_tuned_fixture,
     decode_hdm7_q_brotli_len_elided_fixture,
+    decode_hdm8_q_brotli_recipe_elided_fixture,
     decode_hdm5_q_brotli_split_planning_fixture,
     decode_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_context_range_fixture,
@@ -25,6 +26,7 @@ from tac.hnerv_decoder_recode import (
     encode_hdm4_q_brotli_split_fixture,
     encode_hdm6_q_brotli_tuned_fixture,
     encode_hdm7_q_brotli_len_elided_fixture,
+    encode_hdm8_q_brotli_recipe_elided_fixture,
     encode_hdm5_q_brotli_split_planning_fixture,
     encode_prev_symbol_context_range_fixture,
     parse_decoder_section_for_recode,
@@ -181,6 +183,27 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     assert hdm7["q_chunk_bytes"] == hdm6["q_chunk_bytes"]
     assert hdm7["bytes"] == hdm6["bytes"] - 3
     assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in hdm7
+    hdm8 = next(
+        row
+        for row in profile["variants"]
+        if row["variant"]
+        == "hdm8_q_brotli_split_fixed_recipe_tuned_lgwin_recipe_chunk_lengths_elided_plus_raw_scales"
+    )
+    assert hdm8["codec"] == "HDM8_fixed_recipe_tuned_q_brotli_recipe_chunk_lengths_elided_raw_scales"
+    assert hdm8["parity_fixture"] is True
+    assert hdm8["archive_ready"] is False
+    assert hdm8["raw_equal"] is True
+    assert hdm8["q_roundtrip_equal"] is True
+    assert hdm8["scale_roundtrip_equal"] is True
+    assert hdm8["q_stream_bytes"] == profile["q_stream_bytes"]
+    assert hdm8["raw_scale_bytes"] == profile["scale_stream_bytes"]
+    assert hdm8["header_bytes"] == 4
+    assert hdm8["elided_len24_bytes"] == 9
+    assert hdm8["elided_recipe_id_bytes"] == 1
+    assert hdm8["fixed_chunk_lengths_enforced"] is False
+    assert hdm8["q_chunk_bytes"] == hdm7["q_chunk_bytes"]
+    assert hdm8["bytes"] == hdm7["bytes"] - 10
+    assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in hdm8
     plan = profile["context_overhead_plan"]
     assert plan["score_claim"] is False
     assert plan["planning_only"] is True
@@ -348,6 +371,59 @@ def test_hdm7_len_elision_fails_closed_when_final_chunk_cannot_exist() -> None:
         decode_hdm7_q_brotli_len_elided_fixture(payload)
 
 
+def test_hdm8_tuned_q_brotli_fixture_roundtrips_with_recipe_id_elided() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    hdm7_payload, hdm7_stats = encode_hdm7_q_brotli_len_elided_fixture(parsed)
+    payload, stats = encode_hdm8_q_brotli_recipe_elided_fixture(
+        parsed,
+        expected_chunk_bytes=tuple(hdm7_stats["q_chunk_bytes"]),
+    )
+    restored = decode_hdm8_q_brotli_recipe_elided_fixture(
+        payload,
+        expected_chunk_bytes=tuple(hdm7_stats["q_chunk_bytes"]),
+    )
+
+    assert payload.startswith(b"HDM8")
+    assert restored.to_raw() == parsed.to_raw()
+    assert restored.q_stream == parsed.q_stream
+    assert restored.scale_stream == parsed.scale_stream
+    assert stats["header_bytes"] == 4
+    assert stats["split_points"] == [6, 9, 26, 28]
+    assert stats["q_chunk_bytes"] == hdm7_stats["q_chunk_bytes"]
+    assert stats["derived_final_chunk_bytes"] == hdm7_stats["derived_final_chunk_bytes"]
+    assert stats["final_chunk_len_elided"] is True
+    assert stats["elided_len24_bytes"] == 9
+    assert stats["chunk_lengths_elided"] is True
+    assert stats["recipe_id_elided"] is True
+    assert stats["elided_recipe_id_bytes"] == 1
+    assert stats["fixed_chunk_lengths_enforced"] is True
+    assert stats["brotli_params_by_chunk"] == hdm7_stats["brotli_params_by_chunk"]
+    assert len(payload) == len(hdm7_payload) - 10
+    assert len(payload) == stats["header_bytes"] + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
+
+
+def test_hdm8_recipe_elision_fails_closed_when_final_chunk_cannot_exist() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    hdm7_payload, hdm7_stats = encode_hdm7_q_brotli_len_elided_fixture(parsed)
+    payload, stats = encode_hdm8_q_brotli_recipe_elided_fixture(
+        parsed,
+        expected_chunk_bytes=tuple(hdm7_stats["q_chunk_bytes"]),
+    )
+    scale_len = stats["raw_scale_bytes"]
+    final_len = stats["derived_final_chunk_bytes"]
+    payload = payload[: len(payload) - scale_len - final_len] + payload[-scale_len:]
+
+    with pytest.raises(
+        HnervDecoderRecodeError,
+        match="HDM8 derived final q Brotli chunk length must be positive",
+    ):
+        decode_hdm8_q_brotli_recipe_elided_fixture(
+            payload,
+            expected_chunk_bytes=tuple(hdm7_stats["q_chunk_bytes"]),
+        )
+
+
 def test_parse_decoder_section_for_recode_accepts_hdm4_source_sections() -> None:
     parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
     hdm4_payload, _stats = encode_hdm4_q_brotli_split_fixture(parsed, quality=5)
@@ -379,6 +455,13 @@ def test_parse_decoder_section_for_recode_accepts_hdm7_source_sections() -> None
     assert codec == "hdm7_q_brotli_len_elided_split"
     assert raw == parsed.to_raw()
     assert restored.to_raw() == parsed.to_raw()
+
+
+def test_hdm8_default_fixed_chunk_lengths_fail_closed_for_noncanonical_chunks() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    with pytest.raises(HnervDecoderRecodeError, match="HDM8 fixed chunk lengths mismatch"):
+        encode_hdm8_q_brotli_recipe_elided_fixture(parsed)
 
 
 def test_hdm5_planning_fixture_roundtrips_with_self_describing_byte_accounting() -> None:

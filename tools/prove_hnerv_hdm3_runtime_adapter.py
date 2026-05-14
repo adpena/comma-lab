@@ -114,7 +114,7 @@ def build_proof(
         and restored_raw_sha == source_raw_sha
         and candidate_latents_sha == source_latents_sha
         and restored_latents_sha == source_latents_sha
-        and candidate_decoder_magic in (b"HDM3", b"HDM4", b"HDM6", b"HDM7")
+        and candidate_decoder_magic in (b"HDM3", b"HDM4", b"HDM6", b"HDM7", b"HDM8")
     )
     submission_runtime_proof = _submission_runtime_parse_proof(
         runtime_dir=runtime_dir,
@@ -189,8 +189,9 @@ def build_proof(
         "candidate_decoder_section_is_hdm4": candidate_packed.decoder_packed_brotli.startswith(b"HDM4"),
         "candidate_decoder_section_is_hdm6": candidate_packed.decoder_packed_brotli.startswith(b"HDM6"),
         "candidate_decoder_section_is_hdm7": candidate_packed.decoder_packed_brotli.startswith(b"HDM7"),
+        "candidate_decoder_section_is_hdm8": candidate_packed.decoder_packed_brotli.startswith(b"HDM8"),
         "candidate_decoder_section_is_hdm": candidate_decoder_magic
-        in (b"HDM3", b"HDM4", b"HDM6", b"HDM7"),
+        in (b"HDM3", b"HDM4", b"HDM6", b"HDM7", b"HDM8"),
         "candidate_decoder_section_magic": candidate_decoder_magic.decode("ascii", errors="replace"),
         "candidate_decoder_section_codec": candidate_decoder_codec,
         "source_decoder_raw_sha256": source_raw_sha,

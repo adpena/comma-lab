@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 import brotli
+import pytest
 
 from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
@@ -15,6 +16,7 @@ from tac.hnerv_decoder_recode import (
     decode_hdm4_q_brotli_split_fixture,
     decode_hdm6_q_brotli_tuned_fixture,
     decode_hdm7_q_brotli_len_elided_fixture,
+    decode_hdm8_q_brotli_recipe_elided_fixture,
 )
 from tac.hnerv_hdm3_archive_candidate import (
     build_hdm3_archive_candidate,
@@ -291,6 +293,65 @@ def test_build_hdm7_archive_candidate_accepts_hdm6_source_and_elides_final_lengt
     assert candidate_view.packed.latents_and_sidecar_brotli == hdm6_view.packed.latents_and_sidecar_brotli
     restored = decode_hdm7_q_brotli_len_elided_fixture(candidate_view.packed.decoder_packed_brotli)
     assert restored.to_raw() == hdm6_raw
+
+
+def test_build_hdm8_archive_candidate_accepts_hdm7_source_and_elides_recipe_id(
+    tmp_path: Path,
+) -> None:
+    hdm7_archive = (
+        REPO
+        / "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/"
+        "pr106_r2_hdm6_hlm2_xmember_hdm7_archive_candidate.zip"
+    )
+    if not hdm7_archive.exists():
+        pytest.skip("HDM7 exact-CUDA candidate artifact is not present in this checkout")
+    hdm7_view = read_packed_archive_view(hdm7_archive)
+    hdm7_raw = decode_hdm7_q_brotli_len_elided_fixture(
+        hdm7_view.packed.decoder_packed_brotli
+    ).to_raw()
+
+    manifest = build_hdm3_archive_candidate(
+        source_archive=hdm7_archive,
+        output_dir=tmp_path / "hdm8",
+        source_label="PR106 R2 HDM7 sidecar",
+        decoder_recode_variant="hdm8",
+        repo_root=REPO,
+    )
+
+    assert manifest["score_claim"] is False
+    assert manifest["candidate_decoder_recode_key"] == "hdm8"
+    assert (
+        manifest["candidate_variant"]
+        == "hdm8_q_brotli_split_fixed_recipe_tuned_lgwin_recipe_chunk_lengths_elided_plus_raw_scales"
+    )
+    assert manifest["lane_id"] == "hnerv_hdm8_fixed_lengths_exact_eval"
+    assert manifest["source_decoder_section_codec"] == "hdm7_q_brotli_len_elided_split"
+    assert manifest["candidate_rate_positive"] is True
+    assert manifest["candidate_decoder_section_byte_delta"] == -10
+    assert manifest["candidate_archive_byte_delta"] == -10
+    assert manifest["hdm3_stats"] == {}
+    assert manifest["hdm4_stats"] == {}
+    assert manifest["hdm6_stats"] == {}
+    assert manifest["hdm7_stats"] == {}
+    assert manifest["hdm8_stats"]["header_bytes"] == 4
+    assert manifest["hdm8_stats"]["elided_len24_bytes"] == 9
+    assert manifest["hdm8_stats"]["elided_recipe_id_bytes"] == 1
+    assert manifest["hdm8_stats"]["recipe_id_elided"] is True
+    assert manifest["hdm8_stats"]["fixed_chunk_lengths_enforced"] is True
+    assert manifest["hdm8_stats"]["runtime_fixed_chunk_lengths"] == [
+        130887,
+        2769,
+        4397,
+        31805,
+    ]
+
+    candidate_archive = Path(manifest["candidate_archive_path"])
+    candidate_view = read_packed_archive_view(candidate_archive)
+    assert candidate_view.payload_kind == "pr106_sidecar_wrapper"
+    assert candidate_view.packed.decoder_packed_brotli.startswith(b"HDM8")
+    assert candidate_view.packed.latents_and_sidecar_brotli == hdm7_view.packed.latents_and_sidecar_brotli
+    restored = decode_hdm8_q_brotli_recipe_elided_fixture(candidate_view.packed.decoder_packed_brotli)
+    assert restored.to_raw() == hdm7_raw
 
 
 def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(

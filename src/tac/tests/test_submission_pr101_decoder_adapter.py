@@ -10,13 +10,16 @@ import torch
 
 from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
+    decode_hdm7_q_brotli_len_elided_fixture,
     encode_hdm3_q_brotli_split_fixture,
     encode_hdm4_q_brotli_split_fixture,
     encode_hdm6_q_brotli_tuned_fixture,
     encode_hdm7_q_brotli_len_elided_fixture,
+    encode_hdm8_q_brotli_recipe_elided_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_pr101_schema_packer import encode_pr101_schema_split_fixture
+from tac.hnerv_lowlevel_packer import read_packed_archive_view
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -169,5 +172,44 @@ def test_pr106_r2_pr101_runtime_accepts_hdm7_decoder_section() -> None:
     with pytest.raises(
         ValueError,
         match="HDM7 derived final q stream chunk length must be positive",
+    ):
+        codec.decode_packed_decoder(no_final_chunk)
+
+
+def test_pr106_r2_pr101_runtime_accepts_hdm8_decoder_section() -> None:
+    codec = _load_codec(
+        REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/src/codec.py",
+        "pr106_r2_pr101_codec_hdm8_adapter",
+    )
+    hdm7_archive = (
+        REPO
+        / "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/"
+        "pr106_r2_hdm6_hlm2_xmember_hdm7_archive_candidate.zip"
+    )
+    if not hdm7_archive.exists():
+        pytest.skip("HDM7 exact-CUDA candidate artifact is not present in this checkout")
+    hdm7_view = read_packed_archive_view(hdm7_archive)
+    parsed = decode_hdm7_q_brotli_len_elided_fixture(hdm7_view.packed.decoder_packed_brotli)
+    raw = parsed.to_raw()
+    legacy_decoder = brotli.compress(raw, quality=5)
+    hdm8_decoder, stats = encode_hdm8_q_brotli_recipe_elided_fixture(parsed)
+
+    legacy_sd = codec.decode_packed_decoder(legacy_decoder)
+    hdm8_sd = codec.decode_packed_decoder(hdm8_decoder)
+
+    assert stats["header_bytes"] == 4
+    assert stats["elided_len24_bytes"] == 9
+    assert stats["elided_recipe_id_bytes"] == 1
+    assert stats["runtime_fixed_chunk_lengths"] == [130887, 2769, 4397, 31805]
+    assert set(hdm8_sd) == set(legacy_sd)
+    for name in legacy_sd:
+        assert torch.equal(hdm8_sd[name], legacy_sd[name]), name
+
+    no_final_chunk = hdm8_decoder[: -stats["raw_scale_bytes"] - stats["derived_final_chunk_bytes"]] + hdm8_decoder[
+        -stats["raw_scale_bytes"] :
+    ]
+    with pytest.raises(
+        ValueError,
+        match="HDM8 derived final q stream chunk length must be positive",
     ):
         codec.decode_packed_decoder(no_final_chunk)

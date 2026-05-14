@@ -10,10 +10,12 @@ import pytest
 
 from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
+    decode_hdm7_q_brotli_len_elided_fixture,
     encode_hdm3_q_brotli_split_fixture,
     encode_hdm4_q_brotli_split_fixture,
     encode_hdm6_q_brotli_tuned_fixture,
     encode_hdm7_q_brotli_len_elided_fixture,
+    encode_hdm8_q_brotli_recipe_elided_fixture,
 )
 from tac.hnerv_hdm3_runtime_adapter import (
     HnervHdm3RuntimeAdapterError,
@@ -23,6 +25,7 @@ from tac.hnerv_hdm3_runtime_adapter import (
 from tac.hnerv_lowlevel_packer import (
     PackedHnervPayload,
     parse_ff_packed_brotli_hnerv,
+    read_packed_archive_view,
     sha256_bytes,
     write_stored_single_member_zip,
 )
@@ -189,6 +192,36 @@ def test_restore_hdm7_payload_to_legacy_brotli_preserves_raw_decoder_and_latents
     assert proof["ready_for_public_runtime_inflate"] is True
 
 
+def test_restore_hdm8_payload_to_legacy_brotli_preserves_raw_decoder_and_latents() -> None:
+    hdm7_archive = (
+        REPO
+        / "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/"
+        "pr106_r2_hdm6_hlm2_xmember_hdm7_archive_candidate.zip"
+    )
+    if not hdm7_archive.exists():
+        pytest.skip("HDM7 exact-CUDA candidate artifact is not present in this checkout")
+    hdm7_view = read_packed_archive_view(hdm7_archive)
+    parsed = decode_hdm7_q_brotli_len_elided_fixture(hdm7_view.packed.decoder_packed_brotli)
+    raw = parsed.to_raw()
+    hdm8, _stats = encode_hdm8_q_brotli_recipe_elided_fixture(parsed)
+    payload = PackedHnervPayload(
+        header=b"\xff" + len(hdm8).to_bytes(3, "little"),
+        decoder_packed_brotli=hdm8,
+        latents_and_sidecar_brotli=hdm7_view.packed.latents_and_sidecar_brotli,
+    ).to_bytes()
+
+    restored, proof = restore_hdm3_payload_to_legacy_brotli(payload, require_hdm3=True)
+
+    restored_packed = parse_ff_packed_brotli_hnerv(restored)
+    assert restored != payload
+    assert brotli.decompress(restored_packed.decoder_packed_brotli) == raw
+    assert restored_packed.latents_and_sidecar_brotli == hdm7_view.packed.latents_and_sidecar_brotli
+    assert proof["mode"] == "hdm8_restored_to_legacy_brotli"
+    assert proof["decoder_raw_equal"] is True
+    assert proof["latents_and_sidecar_preserved"] is True
+    assert proof["ready_for_public_runtime_inflate"] is True
+
+
 def test_restore_unknown_decoder_fails_closed() -> None:
     payload = PackedHnervPayload(
         header=b"\xff\x00\x00\x00",
@@ -198,7 +231,7 @@ def test_restore_unknown_decoder_fails_closed() -> None:
 
     with pytest.raises(
         HnervHdm3RuntimeAdapterError,
-        match="neither HDM3/HDM4/HDM6/HDM7 nor legacy Brotli",
+        match="neither HDM3/HDM4/HDM6/HDM7/HDM8 nor legacy Brotli",
     ):
         restore_hdm3_payload_to_legacy_brotli(payload)
 

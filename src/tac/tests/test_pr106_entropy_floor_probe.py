@@ -8,6 +8,7 @@ from pathlib import Path
 
 import brotli
 import numpy as np
+import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 if str(REPO) not in sys.path:
@@ -19,11 +20,13 @@ import pr106_entropy_floor_probe as probe  # type: ignore  # noqa: E402
 
 from tac.hnerv_decoder_recode import (  # noqa: E402
     PACKED_STATE_SCHEMA,
+    decode_hdm7_q_brotli_len_elided_fixture,
     encode_hdm4_q_brotli_split_fixture,
     encode_hdm7_q_brotli_len_elided_fixture,
+    encode_hdm8_q_brotli_recipe_elided_fixture,
     parse_packed_decoder_brotli,
 )
-from tac.hnerv_lowlevel_packer import write_stored_single_member_zip  # noqa: E402
+from tac.hnerv_lowlevel_packer import read_packed_archive_view, write_stored_single_member_zip  # noqa: E402
 from tac.packet_compiler.pr106_fixed_latent_recode import (  # noqa: E402
     encode_hlm1_fixed_latents_from_brotli,
 )
@@ -185,6 +188,39 @@ def test_hdm7_decoder_section_is_decoded_for_entropy_probe(tmp_path: Path) -> No
 
     assert report["source"]["decoder_section_codec"] == "hdm7_q_brotli_len_elided_split"
     assert report["source"]["decoder_raw_bytes"] == len(raw)
+    assert report["groups"][0]["current_storage_label"] == "decoder_section_encoded"
+    assert report["score_claim"] is False
+
+
+def test_hdm8_decoder_section_is_decoded_for_entropy_probe(tmp_path: Path) -> None:
+    hdm7_archive = (
+        REPO
+        / "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/"
+        "pr106_r2_hdm6_hlm2_xmember_hdm7_archive_candidate.zip"
+    )
+    if not hdm7_archive.exists():
+        pytest.skip("HDM7 exact-CUDA candidate artifact is not present in this checkout")
+    hdm7_view = read_packed_archive_view(hdm7_archive)
+    parsed = decode_hdm7_q_brotli_len_elided_fixture(hdm7_view.packed.decoder_packed_brotli)
+    decoder_hdm8, _stats = encode_hdm8_q_brotli_recipe_elided_fixture(parsed)
+    payload = (
+        b"\xff"
+        + len(decoder_hdm8).to_bytes(3, "little")
+        + decoder_hdm8
+        + hdm7_view.packed.latents_and_sidecar_brotli
+    )
+    archive = tmp_path / "archive.zip"
+    write_stored_single_member_zip(archive, member_name="0.bin", payload=payload)
+
+    report = probe.build_report_from_archive(
+        archive,
+        pr101_reference_archive_bytes=None,
+        active_floor_archive_bytes=None,
+        active_floor_label=None,
+    )
+
+    assert report["source"]["decoder_section_codec"] == "hdm8_q_brotli_fixed_lengths_split"
+    assert report["source"]["decoder_raw_bytes"] == len(parsed.to_raw())
     assert report["groups"][0]["current_storage_label"] == "decoder_section_encoded"
     assert report["score_claim"] is False
 
