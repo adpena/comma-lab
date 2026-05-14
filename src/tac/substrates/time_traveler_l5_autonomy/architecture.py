@@ -298,6 +298,111 @@ class PredictiveRenderer(nn.Module):
         return torch.sigmoid(self.output_layer(x))
 
 
+class Z5RoutedLatentPredictor(nn.Module):
+    """Time-Traveler -> Z5 routing adapter for per-pair latent prediction.
+
+    Per the 2026-05-14 grand-council reconvening Decision 1 (UNANIMOUS β
+    11/11), Time-Traveler is a sister-substrate of Z5
+    (``z5_predictive_coding_world_model``); the sister-routing pattern
+    keeps the latent-prediction primitive consistent across the two L5
+    autonomy substrates so cathedral-autopilot composition logic
+    (Catalog #227 ``adjust_predicted_delta_for_composition_alpha``) sees
+    the same predictor kernel under stacking.
+
+    This adapter wraps Z5's :class:`HierarchicalPredictor` for use by
+    Time-Traveler's per-pair latent recurrence WHEN a future revision of
+    :class:`TimeTravelerSubstrate` opts into the routed path. The current
+    Time-Traveler v1 substrate does NOT use this adapter (the canonical
+    SIREN renderer + Markov-1 ego-pose dynamics + log-polar foveation
+    grid composition is preserved per CLAUDE.md "Forbidden premature
+    KILL"); the adapter is provided as a NEUTRAL routing primitive so a
+    future training run can compare the SIREN-rendered baseline against
+    a Z5-routed predicted-residual variant without duplicating Z5's
+    Hafner DreamerV3 + Rao-Ballard predictive-coding plumbing inside
+    this module.
+
+    Mode arbitration matches Z5 directly:
+        * ``identity_predictor=False``: Z5's full predictive-coding kernel
+          (z_t = predictor(z_{t-1}, ego_motion_t)).
+        * ``identity_predictor=True``: identity (z_t = z_{t-1}).
+
+    Cross-references:
+        * :mod:`tac.substrates.z5_predictive_coding_world_model.architecture`
+        * :class:`tac.substrates.c1_world_model_foveation.architecture.Z5RoutedWorldModel`
+          (sister adapter on the C1 side)
+        * Council ledger
+          ``.omx/research/grand_council_c1_post_probe_v2_reconvene_20260514.md``
+
+    Args:
+        latent_dim: per-pair latent dimensionality.
+        hidden_dim: predictor hidden dim (passed to Z5's HierarchicalPredictor).
+        num_layers: predictor depth (2 or 3 per Z5's design).
+        ego_motion_dim: ego-motion projection dim. Time-Traveler's pose_dim
+            is 6 (SE(3) Lie); ego-motion conditioning here is a learned
+            small projection, default 8.
+        identity_predictor: when True, predictor is identity (Z5
+            ablation control).
+    """
+
+    def __init__(
+        self,
+        *,
+        latent_dim: int,
+        hidden_dim: int = 64,
+        num_layers: int = 2,
+        ego_motion_dim: int = 8,
+        identity_predictor: bool = False,
+    ) -> None:
+        super().__init__()
+        # Lazy import per CLAUDE.md "Beauty, simplicity, and developer
+        # experience" — Z5's architecture is heavy, only import when used.
+        from tac.substrates.z5_predictive_coding_world_model.architecture import (
+            HierarchicalPredictor,
+        )
+
+        self.latent_dim = latent_dim
+        self.hidden_dim = hidden_dim
+        self.ego_motion_dim = ego_motion_dim
+        self._identity_predictor_mode = identity_predictor
+        self.predictor = HierarchicalPredictor(
+            latent_dim=latent_dim,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            ego_motion_dim=ego_motion_dim,
+            identity_predictor=identity_predictor,
+        )
+
+    def predict_next(
+        self,
+        z_prev: torch.Tensor,
+        ego_motion: torch.Tensor,
+    ) -> torch.Tensor:
+        """Predict the next latent given previous latent + ego-motion.
+
+        Args:
+            z_prev: ``(B, latent_dim)``.
+            ego_motion: ``(B, ego_motion_dim)``.
+
+        Returns:
+            ``(B, latent_dim)`` predicted next latent.
+        """
+        if z_prev.shape[-1] != self.latent_dim:
+            raise ValueError(
+                f"z_prev last dim {z_prev.shape[-1]} != latent_dim {self.latent_dim}"
+            )
+        if ego_motion.shape[-1] != self.ego_motion_dim:
+            raise ValueError(
+                f"ego_motion last dim {ego_motion.shape[-1]} != "
+                f"ego_motion_dim {self.ego_motion_dim}"
+            )
+        return self.predictor(z_prev, ego_motion)
+
+    @property
+    def identity_predictor_mode(self) -> bool:
+        """Read-only accessor for the routed predictor's identity-mode flag."""
+        return self._identity_predictor_mode
+
+
 class TimeTravelerSubstrate(nn.Module):
     """Composite world-model substrate.
 
@@ -387,4 +492,5 @@ __all__ = [
     "PredictiveRenderer",
     "TimeTravelerConfig",
     "TimeTravelerSubstrate",
+    "Z5RoutedLatentPredictor",
 ]

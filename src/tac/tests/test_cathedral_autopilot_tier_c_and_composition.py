@@ -419,24 +419,29 @@ def test_class_shift_literature_tokens_include_ha_schmidhuber() -> None:
 
 
 def test_class_shift_reward_applied_for_hafner_anchor() -> None:
-    """Per C1 council `RETAIN` decision, Hafner DreamerV3 lineage should
-    receive the class-shift literature-anchor reward."""
+    """Per C1 council `RETAIN` decision the Hafner DreamerV3 lineage stays in
+    `_CLASS_SHIFT_LITERATURE_TOKENS`; per the 2026-05-14 council reconvening
+    Decision 6 HALF-MEASURE the literature-anchor reward for C1-class tokens
+    (Hafner / Ha-Schmidhuber / DreamerV3) is HALVED 0.01 -> 0.005."""
     mod = _load_autopilot_module()
     adjusted = mod.adjust_predicted_delta_for_class_shift(
         base_delta=-0.03,
         literature_anchor="Hafner DreamerV3 2023",
     )
-    # Bonus 0.01 subtracted → more negative
-    assert adjusted == pytest.approx(-0.04)
+    # Halved bonus 0.005 subtracted → -0.03 - 0.005 = -0.035
+    assert adjusted == pytest.approx(-0.035)
 
 
 def test_class_shift_reward_applied_for_ha_schmidhuber_anchor() -> None:
+    """Per Decision 6 HALF-MEASURE the Ha-Schmidhuber 2018 anchor receives
+    the halved literature-anchor reward (0.005 instead of 0.01)."""
     mod = _load_autopilot_module()
     adjusted = mod.adjust_predicted_delta_for_class_shift(
         base_delta=-0.03,
         literature_anchor="Ha-Schmidhuber 2018 world model",
     )
-    assert adjusted == pytest.approx(-0.04)
+    # Halved bonus 0.005 subtracted → -0.03 - 0.005 = -0.035
+    assert adjusted == pytest.approx(-0.035)
 
 
 # ── apply_z1_empirical_revision_to_candidate_delta stack-up ──────────────

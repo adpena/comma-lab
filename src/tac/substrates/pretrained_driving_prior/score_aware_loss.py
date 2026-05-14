@@ -46,7 +46,7 @@ import torch
 
 from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
-    score_pair_components,
+    score_pair_components_dispatch,
 )
 
 if TYPE_CHECKING:
@@ -108,6 +108,9 @@ class DrivingPriorScoreAwareLoss(torch.nn.Module):
         *,
         apply_eval_roundtrip: bool = True,
         noise_std: float = 0.5,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute the score-domain Lagrangian.
 
@@ -118,6 +121,17 @@ class DrivingPriorScoreAwareLoss(torch.nn.Module):
             archive_bytes_proxy: scalar tensor with the archive byte count.
             apply_eval_roundtrip: must be True per CLAUDE.md non-negotiable.
             noise_std: per-pixel additive noise during training (zero at eval).
+            gt_pose_batch / gt_seg_batch / gt_seg_already_probs: optional F3
+                GTScorerCache batch (per-pair-index lookup from
+                :meth:`tac.training_optimization.GTScorerCache.lookup`). When
+                ALL THREE are provided, the dispatch helper routes through
+                ``score_pair_components_with_cache`` (~50%% scorer-compute
+                savings); when ALL THREE are None, falls back to the
+                GT-forward path. Partial cache args raise via the dispatcher.
+                Per Council omnibus Decision 13 PROCEED Option C 2026-05-14:
+                PDP substrate-side wire-in defaults OFF (substrate authors
+                opt in via composition). The kwargs are accepted but the
+                dispatcher's None-default preserves byte-faithful behavior.
 
         Returns:
             ``(loss, parts_dict)`` — loss is a scalar tensor with gradient;
@@ -142,13 +156,21 @@ class DrivingPriorScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        seg_term, pose_term = score_pair_components(
+        # F3 GTScorerCache routing per F3-BACKPORT-WAVE-V2 + Council omnibus
+        # Decision 13 PROCEED Option C 2026-05-14. The dispatch helper picks
+        # the cached path when ALL THREE cache kwargs are non-None, otherwise
+        # falls back to the canonical GT-forward path used by Catalog #164.
+        # The two paths are mathematically identical.
+        seg_term, pose_term = score_pair_components_dispatch(
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )
 
         rate_term = (

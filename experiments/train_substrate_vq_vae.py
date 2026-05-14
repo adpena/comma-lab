@@ -76,10 +76,6 @@ Usage (full; CUDA-required; threads from operator wrapper)::
         --epochs 2000 --batch-size 16 --lr 5e-4 --grad-clip 1.0 \\
         --device cuda
 """
-# AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
-
-
-# TORCH_COMPILE_WAIVED:defer-until-per-substrate-canary-validates-Inductor-graph-breaks-and-score-axis-custody
 from __future__ import annotations
 
 import argparse
@@ -127,6 +123,17 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
+
+# Tier-1 optimization helpers (per CLAUDE.md TIER-1-OPT-BATCH 2026-05-14
+# + F3-BACKPORT-WAVE-V2 / Council omnibus Decision 13 PROCEED Option C
+# 2026-05-14). Opt-in via the --enable-autocast-fp16 / --enable-torch-compile
+# / --enable-gt-scorer-cache CLI flags. Defaults preserve historical behavior.
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _canon_build_optimized_training_context,
+)
+from tac.training_optimization import (
+    autocast_aware_forward as _autocast_aware_forward,
 )
 
 _SUBSTRATE_TAG = "vq_vae"
@@ -442,6 +449,60 @@ def _build_parser() -> argparse.ArgumentParser:
         "--skip-archive-build",
         action="store_true",
         help="Skip building the archive.zip (e.g. for trainer-only smoke).",
+    )
+
+    # Tier-1 optimization CLI surface (per F3-BACKPORT-WAVE-V2 + Council
+    # omnibus Decision 13 PROCEED Option C 2026-05-14). Defaults preserve
+    # historical behavior; opt-in is operator-routed via env-var/CLI.
+    p.add_argument(
+        "--enable-autocast-fp16",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable FP16 autocast for the scorer/model forward "
+            "(1.5-2x speedup on Ampere/Hopper). Catalog #172. "
+            "CPU autocast forbidden per autocast_aware_forward contract."
+        ),
+    )
+    p.add_argument(
+        "--enable-torch-compile",
+        action="store_true",
+        default=False,
+        help=(
+            "Wrap the substrate model with torch.compile (Inductor; "
+            "1.5-2x per-step wall-clock on A100/Ampere+). Catalog #179. "
+            "Falls back to uncompiled on Inductor error."
+        ),
+    )
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        action="store_true",
+        default=False,
+        help=(
+            "F3 GTScorerCache: pre-compute the GT scorer outputs once and "
+            "reuse across the hot loop (~50%% scorer compute savings). "
+            "Mathematically identical to GT-forward path; the cache stores "
+            "exactly what direct GT forward produces (per CLAUDE.md "
+            "TIER-1-OPT-BATCH landing 2026-05-14). Default OFF."
+        ),
+    )
+    p.add_argument(
+        "--gt-scorer-cache-chunk-size",
+        type=int,
+        default=16,
+        help=(
+            "Per-step chunk size for the F3 GT scorer cache build "
+            "(controls peak GPU memory during cache pre-compute)."
+        ),
+    )
+    p.add_argument(
+        "--segmentation-temperature",
+        type=float,
+        default=1.0,
+        help=(
+            "Softmax temperature for SegNet GT cache (default 1.0 = "
+            "canonical contest formula; cache stores probs not logits when 1.0)."
+        ),
     )
 
     return p
@@ -783,6 +844,26 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         _stage("lagrangian_built")
 
+        # F3 GTScorerCache wire-in per F3-BACKPORT-WAVE-V2 + Council omnibus
+        # Decision 13 PROCEED Option C 2026-05-14. The cache pre-computes
+        # the GT PoseNet + SegNet forward (invariant across epochs) and
+        # threads them into the loss call as kwargs. Mathematically identical
+        # to the uncached path (the cache holds exactly what direct GT forward
+        # produces). Predicted 1.4-1.5x per-step in real training.
+        opt_ctx = _canon_build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=pair_tensor,
+            substrate_model=model,
+            device=device,
+        )
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
+
         # 8. Optimizer + cosine annealing
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=args.lr, weight_decay=args.weight_decay
@@ -813,24 +894,43 @@ def _full_main(args: argparse.Namespace) -> int:
                 idx = perm[start : start + batch_size]
                 if idx.numel() == 0:
                     continue
-                rgb_0, rgb_1 = model(idx)
-                commitment = model.compute_commitment_loss(idx)
-                # Frames in [0,1]; score-aware loss + eval-roundtrip expect [0, 255]
-                rgb_0_255 = rgb_0 * 255.0
-                rgb_1_255 = rgb_1 * 255.0
-                gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
-                gt_0 = gt[:, 0]
-                gt_1 = gt[:, 1]
-                loss, parts = loss_fn(
-                    rgb_0_255,
-                    rgb_1_255,
-                    gt_0,
-                    gt_1,
-                    archive_bytes_proxy,
-                    commitment,
-                    apply_eval_roundtrip=True,
-                    noise_std=args.noise_std,
-                )
+                # Tier-1 O2: wrap forward + scoring in autocast (no-op when
+                # flag=False). Losses are recast to fp32 outside via tensor
+                # dtype management in the score-aware Lagrangian.
+                with _autocast_aware_forward(
+                    enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                    dtype=torch.float16,
+                    device=device,
+                ):
+                    rgb_0, rgb_1 = model(idx)
+                    commitment = model.compute_commitment_loss(idx)
+                    # Frames in [0,1]; score-aware loss + eval-roundtrip expect [0, 255]
+                    rgb_0_255 = rgb_0 * 255.0
+                    rgb_1_255 = rgb_1 * 255.0
+                    gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
+                    gt_0 = gt[:, 0]
+                    gt_1 = gt[:, 1]
+                    # F3 GTScorerCache lookup (per-pair-index batched).
+                    gt_pose_batch = gt_seg_batch = None
+                    gt_seg_already_probs = None
+                    if gt_cache is not None:
+                        gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                            idx, device=device
+                        )
+                        gt_seg_already_probs = gt_cache.seg_already_probs
+                    loss, parts = loss_fn(
+                        rgb_0_255,
+                        rgb_1_255,
+                        gt_0,
+                        gt_1,
+                        archive_bytes_proxy,
+                        commitment,
+                        apply_eval_roundtrip=True,
+                        noise_std=args.noise_std,
+                        gt_pose_batch=gt_pose_batch,
+                        gt_seg_batch=gt_seg_batch,
+                        gt_seg_already_probs=gt_seg_already_probs,
+                    )
                 if not torch.isfinite(loss):
                     nan_strike += 1
                     print(
@@ -870,6 +970,14 @@ def _full_main(args: argparse.Namespace) -> int:
                 with torch.no_grad():
                     rgb_0_v, rgb_1_v = model(val_indices)
                     commitment_v = model.compute_commitment_loss(val_indices)
+                    # F3 cache lookup for val pairs (same primitive as train).
+                    val_pose_batch = val_seg_batch = None
+                    val_seg_already_probs = None
+                    if gt_cache is not None:
+                        val_pose_batch, val_seg_batch = gt_cache.lookup(
+                            val_indices, device=device
+                        )
+                        val_seg_already_probs = gt_cache.seg_already_probs
                     val_loss, _val_parts = loss_fn(
                         rgb_0_v * 255.0,
                         rgb_1_v * 255.0,
@@ -879,6 +987,9 @@ def _full_main(args: argparse.Namespace) -> int:
                         commitment_v,
                         apply_eval_roundtrip=True,
                         noise_std=args.noise_std,
+                        gt_pose_batch=val_pose_batch,
+                        gt_seg_batch=val_seg_batch,
+                        gt_seg_already_probs=val_seg_already_probs,
                     )
                 val_lag = float(val_loss.detach().item())
                 # Restore live weights

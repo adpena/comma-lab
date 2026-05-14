@@ -142,13 +142,55 @@ class FoveationStrategy(Enum):
 
 @dataclass(frozen=True)
 class WorldModelConfig:
-    """Static design-time parameters for the world-model recurrence."""
+    """Static design-time parameters for the world-model recurrence.
+
+    Args:
+        recurrence_mode: GRU / LSTM / TRANSFORMER (probe-disambiguator hook).
+        latent_dim: per-step latent z dimensionality.
+        hidden_dim: GRU/LSTM cell hidden state size.
+        transformer_heads: only used when recurrence_mode=TRANSFORMER.
+        transformer_seq_len: full sequence length (not chunked).
+        route_compute_to_z5: when True, the substrate routes recurrent
+            compute through Z5's ``HierarchicalPredictor`` (Z5's canonical
+            Hafner DreamerV3 + Rao-Ballard predictive-coding pattern with
+            per-step ``identity_predictor`` mode-arbitration). Per the
+            2026-05-14 grand-council reconvening Decision 1 (UNANIMOUS β
+            11/11) — Option β routes C1 compute INTO Z5 wholesale so the
+            dispositive Hafner DreamerV3 vs identity test happens as a
+            side-effect of the already-planned Z5 dispatch.
+
+            This flag is OPT-IN (default False): the original
+            ``WorldModelModule`` (Decision δ REJECTED 11/11 — DO NOT
+            REMOVE) remains the C1 v1 forward path. Setting this flag to
+            True at trainer/dispatch time selects the Z5-routed forward
+            path WITHOUT modifying the substrate scaffold; the council's
+            "PAUSE WorldModelModule removal" verdict is preserved.
+        z5_predictor_hidden_dim: hidden_dim passed to Z5's
+            ``HierarchicalPredictor`` when ``route_compute_to_z5=True``.
+            Defaults to ``hidden_dim`` so the routing is parameter-budget
+            comparable to the native GRU/LSTM cell.
+        z5_predictor_num_layers: predictor depth (2 or 3) per Z5's design.
+        z5_predictor_ego_motion_dim: ego-motion projection dim for Z5's
+            predictor. Default 8 matches Z5's
+            ``PredictiveCodingConfig.predictor_ego_motion_dim`` default.
+        z5_identity_predictor_mode: when True, Z5's predictor runs in
+            ``identity_predictor`` regime (predict z_t = z_{t-1}). This is
+            the dispositive ablation per the council's Decision 1 β:
+            ``predictive_world_model`` (False) vs ``identity_predictor``
+            (True). Default False (full Hafner DreamerV3 pattern).
+    """
 
     recurrence_mode: WorldModelRecurrenceMode = WorldModelRecurrenceMode.GRU
     latent_dim: int = DECODER_LATENT_DIM
     hidden_dim: int = DECODER_LATENT_DIM  # GRU/LSTM hidden state size
     transformer_heads: int = 2  # only used when recurrence_mode=TRANSFORMER
     transformer_seq_len: int = N_FRAMES  # full sequence; not chunked
+    # ── 2026-05-14 council Decision 1 (UNANIMOUS β 11/11): C1 -> Z5 routing ──
+    route_compute_to_z5: bool = False
+    z5_predictor_hidden_dim: int | None = None
+    z5_predictor_num_layers: int = 2
+    z5_predictor_ego_motion_dim: int = 8
+    z5_identity_predictor_mode: bool = False
 
 
 @dataclass(frozen=True)
@@ -266,6 +308,125 @@ class WorldModelModule(nn.Module):
                 z_t, cell_state = self.cell(zero_action, (z_t, cell_state))
             outputs.append(z_t)
         return torch.cat(outputs, dim=0)  # (n_steps, latent_dim)
+
+
+class Z5RoutedWorldModel(nn.Module):
+    """C1 -> Z5 routing adapter: delegate recurrent compute to Z5's
+    ``HierarchicalPredictor``.
+
+    Per the 2026-05-14 grand-council reconvening Decision 1 (UNANIMOUS β
+    11/11) — Option β routes C1 compute INTO Z5 wholesale rather than
+    duplicating world-model plumbing in two places (Hotz: "stop building
+    plumbing in two places"; Time-Traveler peer: "Z5 IS C1 modulo scale").
+
+    This adapter exposes the SAME ``unroll(z_init, n_steps) -> (n_steps,
+    latent_dim)`` interface as :class:`WorldModelModule`, so it is a
+    drop-in replacement at substrate-build time when
+    ``WorldModelConfig.route_compute_to_z5=True``. Internally it invokes
+    Z5's :class:`HierarchicalPredictor` autoregressively, with ego-motion
+    set to a zero placeholder (matching the C1 v1 "no explicit action
+    signal" semantic) so the routing is observation-equivalent to C1's
+    GRU/LSTM forward pass at the top-level interface contract.
+
+    The wrapper preserves :class:`WorldModelModule` (Decision δ REJECTED
+    11/11 — DO NOT REMOVE the existing class). Selecting the Z5-routed
+    path is opt-in via :attr:`WorldModelConfig.route_compute_to_z5`.
+
+    Mode arbitration:
+        * ``identity_predictor=False``: full Z5 Hafner DreamerV3 +
+          Rao-Ballard predictive-coding pattern (z_t = predictor(z_{t-1},
+          ego_motion_t)). This is the ``predictive_world_model`` regime
+          per the council ledger.
+        * ``identity_predictor=True``: Z5's identity branch (z_t =
+          z_{t-1}). This is the ``identity_predictor`` regime — the
+          dispositive ablation that self-arbitrates the world-model
+          class hypothesis at trainer scale.
+
+    Cross-references:
+        * :mod:`tac.substrates.z5_predictive_coding_world_model.architecture`
+        * Council ledger
+          ``.omx/research/grand_council_c1_post_probe_v2_reconvene_20260514.md``
+        * Memory file
+          ``feedback_c1_council_reconvene_post_probe_v2_landed_20260514.md``
+
+    Args:
+        cfg: parent :class:`WorldModelConfig`. Reads ``latent_dim``,
+            ``z5_predictor_hidden_dim`` (defaults to ``hidden_dim``),
+            ``z5_predictor_num_layers``, ``z5_predictor_ego_motion_dim``,
+            and ``z5_identity_predictor_mode``.
+    """
+
+    def __init__(self, cfg: WorldModelConfig) -> None:
+        super().__init__()
+        # Lazy import per CLAUDE.md "Beauty, simplicity, and developer
+        # experience": Z5's architecture module is heavy (encoder + decoder
+        # + predictor); only import when routing is enabled.
+        from tac.substrates.z5_predictive_coding_world_model.architecture import (
+            HierarchicalPredictor,
+        )
+
+        self.cfg = cfg
+        hidden_dim = (
+            cfg.z5_predictor_hidden_dim
+            if cfg.z5_predictor_hidden_dim is not None
+            else cfg.hidden_dim
+        )
+        self._z5_predictor_hidden_dim = hidden_dim
+        self._ego_motion_dim = cfg.z5_predictor_ego_motion_dim
+        self._identity_predictor_mode = cfg.z5_identity_predictor_mode
+        self.predictor = HierarchicalPredictor(
+            latent_dim=cfg.latent_dim,
+            hidden_dim=hidden_dim,
+            num_layers=cfg.z5_predictor_num_layers,
+            ego_motion_dim=cfg.z5_predictor_ego_motion_dim,
+            identity_predictor=cfg.z5_identity_predictor_mode,
+        )
+
+    def unroll(
+        self,
+        z_init: torch.Tensor,
+        n_steps: int,
+    ) -> torch.Tensor:
+        """Unroll Z5's predictor for ``n_steps`` from ``z_init``.
+
+        Matches :meth:`WorldModelModule.unroll` signature exactly so the
+        substrate forward pass is interface-equivalent at
+        ``WorldModelConfig.route_compute_to_z5=True``.
+
+        Args:
+            z_init: ``(latent_dim,)`` or ``(1, latent_dim)`` initial latent.
+            n_steps: number of recurrent steps to unroll.
+
+        Returns:
+            ``(n_steps, latent_dim)`` tensor of latent states z_0..z_{n_steps-1}.
+        """
+        if z_init.dim() == 1:
+            z_init = z_init.unsqueeze(0)
+        if z_init.shape[-1] != self.cfg.latent_dim:
+            raise ValueError(
+                f"z_init last dim {z_init.shape[-1]} != latent_dim "
+                f"{self.cfg.latent_dim}"
+            )
+
+        # Per the C1 v1 contract (line 196-200 docstring of
+        # WorldModelModule.unroll), the "action" is a zero placeholder. We
+        # mirror that here so the routing is observation-equivalent at the
+        # interface contract: identical I/O shape; the ONLY change is which
+        # recurrent kernel runs the per-step prediction.
+        zero_action = torch.zeros(
+            1, self._ego_motion_dim, device=z_init.device, dtype=z_init.dtype
+        )
+        z_t = z_init
+        outputs: list[torch.Tensor] = []
+        for _ in range(n_steps):
+            z_t = self.predictor(z_t, zero_action)
+            outputs.append(z_t)
+        return torch.cat(outputs, dim=0)
+
+    @property
+    def identity_predictor_mode(self) -> bool:
+        """Read-only accessor for the routed predictor's identity-mode flag."""
+        return self._identity_predictor_mode
 
 
 class FoveatedDecoderModule(nn.Module):
@@ -410,12 +571,31 @@ class WorldModelFoveationSubstrate(nn.Module):
     def __init__(self, cfg: WorldModelFoveationConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.world_model = WorldModelModule(cfg.world_model_cfg)
+        # Per the 2026-05-14 grand-council reconvening Decision 1
+        # (UNANIMOUS β 11/11): when ``route_compute_to_z5`` is set on the
+        # world_model_cfg, the recurrent kernel is Z5's
+        # ``HierarchicalPredictor`` (Hafner DreamerV3 + Rao-Ballard
+        # predictive-coding) with self-arbitration of the
+        # ``predictive_world_model`` vs ``identity_predictor`` regime.
+        # Otherwise, the canonical :class:`WorldModelModule` (Decision δ
+        # REJECTED 11/11 — DO NOT REMOVE) provides the C1 v1 GRU/LSTM/
+        # Transformer recurrence. Both kernels expose the SAME ``unroll``
+        # interface so downstream forward paths are unchanged.
+        self.world_model: nn.Module
+        if cfg.world_model_cfg.route_compute_to_z5:
+            self.world_model = Z5RoutedWorldModel(cfg.world_model_cfg)
+        else:
+            self.world_model = WorldModelModule(cfg.world_model_cfg)
         self.decoder = FoveatedDecoderModule(cfg)
         self.foveation = FoveationMapModule(cfg)
         # Initial latent z_init -- trainable parameter that the world-model
         # unrolls from. ~16 KB at FP32 / latent_dim=64.
         self.z_init = nn.Parameter(torch.zeros(cfg.world_model_cfg.latent_dim))
+
+    @property
+    def routes_compute_to_z5(self) -> bool:
+        """Whether this substrate's world-model kernel is the Z5 routing wrapper."""
+        return isinstance(self.world_model, Z5RoutedWorldModel)
 
     def render_all_frames(
         self,
@@ -480,4 +660,5 @@ __all__ = [
     "WorldModelFoveationSubstrate",
     "WorldModelModule",
     "WorldModelRecurrenceMode",
+    "Z5RoutedWorldModel",
 ]

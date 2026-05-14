@@ -134,8 +134,10 @@ from tac.substrates.c1_world_model_foveation.architecture import (
     WorldModelConfig,
     WorldModelFoveationConfig,
     WorldModelFoveationSubstrate,
+    WorldModelModule,
     WorldModelRecurrenceMode,
     FoveationStrategy,
+    Z5RoutedWorldModel,
 )
 from tac.substrates.c1_world_model_foveation.archive import (
     C1WMFV1_HEADER_FMT,
@@ -174,7 +176,9 @@ __all__ = [
     "WorldModelFoveationLossWeights",
     "WorldModelFoveationScoreAwareLoss",
     "WorldModelFoveationSubstrate",
+    "WorldModelModule",
     "WorldModelRecurrenceMode",
+    "Z5RoutedWorldModel",
     "pack_archive",
     "parse_archive",
     "parse_c1wmfv1_archive_bytes",

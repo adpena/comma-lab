@@ -923,6 +923,14 @@ def _full_main(args: argparse.Namespace) -> int:
     from tac.substrates._shared.trainer_skeleton import (
         require_contest_cuda_auth_eval_claim,
     )
+    # F3 GTScorerCache canonical helper per Council omnibus Decision 13
+    # PROCEED Option C 2026-05-14 + Time-Traveler default-OFF amendment.
+    # Substrate-side score_aware_loss accepts F3 kwargs as of the same
+    # commit batch; trainer-side wire-in defaults OFF (substrate authors
+    # opt in via --enable-gt-scorer-cache flag).
+    from tac.substrates._shared.trainer_skeleton import (
+        build_optimized_training_context as _canon_build_optimized_training_context,
+    )
     from tac.substrates._shared.smoke_auth_eval_gate import (
         gate_auth_eval_call as _canon_gate_auth_eval_call,
     )
@@ -1096,6 +1104,27 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         _stage("lagrangian_built")
 
+        # F3 GTScorerCache wire-in per F3-BACKPORT-VQVAE-PDP + Council omnibus
+        # Decision 13 PROCEED Option C 2026-05-14 + Time-Traveler default-OFF
+        # amendment. The canonical helper respects ``args.enable_gt_scorer_cache``
+        # (default False); when False, returns ``gt_cache=None`` and the loss
+        # falls back to the GT-forward path - byte-faithful to historical
+        # behavior. When True, pre-computes GT PoseNet + SegNet outputs once
+        # (~50%% scorer compute savings; mathematically identical).
+        opt_ctx = _canon_build_optimized_training_context(
+            args,
+            scorers=(posenet, segnet),
+            gt_pairs=pair_tensor,
+            substrate_model=renderer,
+            device=device,
+        )
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(gt_cache.summary_line())
+            _stage("gt_scorer_cache_built")
+        else:
+            _stage("gt_scorer_cache_disabled")
+
         # 8. Optimizer + cosine schedule
         optimizer = torch.optim.AdamW(
             renderer.parameters(), lr=args.lr, weight_decay=args.weight_decay
@@ -1147,6 +1176,17 @@ def _full_main(args: argparse.Namespace) -> int:
                     gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
                     gt_0 = gt[:, 0]
                     gt_1 = gt[:, 1]
+                    # F3 GTScorerCache lookup (per-pair-index batched).
+                    # When gt_cache is None (default-OFF amendment), the
+                    # three kwargs stay None and the dispatch helper falls
+                    # back to GT-forward (byte-faithful to historical).
+                    gt_pose_batch = gt_seg_batch = None
+                    gt_seg_already_probs = None
+                    if gt_cache is not None:
+                        gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                            idx, device=device
+                        )
+                        gt_seg_already_probs = gt_cache.seg_already_probs
                     loss, _parts = loss_fn(
                         rgb_0,
                         rgb_1,
@@ -1155,6 +1195,9 @@ def _full_main(args: argparse.Namespace) -> int:
                         archive_bytes_proxy,
                         apply_eval_roundtrip=True,
                         noise_std=args.noise_std,
+                        gt_pose_batch=gt_pose_batch,
+                        gt_seg_batch=gt_seg_batch,
+                        gt_seg_already_probs=gt_seg_already_probs,
                     )
                 if not torch.isfinite(loss):
                     nan_strike += 1
@@ -1198,6 +1241,18 @@ def _full_main(args: argparse.Namespace) -> int:
                         rgb_0_v = rgb_0_v * 255.0
                         rgb_1_v = rgb_1_v * 255.0
                         gt_v = pair_tensor[vidx : vidx + 1]
+                        # F3 cache lookup for the single val pair (same
+                        # primitive as train; default-OFF preserved).
+                        val_pose_batch = val_seg_batch = None
+                        val_seg_already_probs = None
+                        if gt_cache is not None:
+                            vidx_tensor = torch.tensor(
+                                [int(vidx)], dtype=torch.long, device=device
+                            )
+                            val_pose_batch, val_seg_batch = gt_cache.lookup(
+                                vidx_tensor, device=device
+                            )
+                            val_seg_already_probs = gt_cache.seg_already_probs
                         val_loss, _vparts = loss_fn(
                             rgb_0_v,
                             rgb_1_v,
@@ -1206,6 +1261,9 @@ def _full_main(args: argparse.Namespace) -> int:
                             archive_bytes_proxy,
                             apply_eval_roundtrip=True,
                             noise_std=0.0,
+                            gt_pose_batch=val_pose_batch,
+                            gt_seg_batch=val_seg_batch,
+                            gt_seg_already_probs=val_seg_already_probs,
                         )
                         val_loss_sum += float(val_loss.detach().item())
                         val_batches += 1

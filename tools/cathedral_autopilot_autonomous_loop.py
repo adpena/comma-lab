@@ -463,6 +463,42 @@ _CLASS_SHIFT_LITERATURE_TOKENS = (
 CLASS_SHIFT_LANE_CLASS_REWARD = 0.02
 CLASS_SHIFT_LITERATURE_ANCHOR_REWARD = 0.01
 
+# Per the 2026-05-14 grand-council reconvening
+# (`feedback_c1_council_reconvene_post_probe_v2_landed_20260514.md` Decision 6
+# HALF-MEASURE; council vote 4/11 explicit Contrarian + Quantizr + MacKay +
+# Time-Traveler peer): probe v2 (FAIR Hafner DreamerV3 RSSM at matched-DOF +
+# matched-bit-budget) reports world-model loses 99.98-100% margin in
+# feature-space proxy regime. The verdict is NOT a class falsification per
+# CLAUDE.md "Apples-to-apples evidence discipline" + "Forbidden premature KILL"
+# — the regime distinction (FP4 quantization, SegNet+PoseNet preprocess
+# invariances, 1200-frame temporal scaling) preserves a bidirectional posterior
+# Δ ∈ [-0.04, +0.05] — but the strong-prior signal warrants halving the
+# autopilot-ranker C1-class literature-anchor reward as a conditional revision
+# pending the dispositive Z5 dispatch (Decision 1 Option β).
+#
+# RETAIN: the literature anchor stays in `_CLASS_SHIFT_LITERATURE_TOKENS` so
+# the C1 lane is NOT closed (Decision δ DROP REJECTED 11/11 — Contrarian
+# SUPER-VETO eligible).
+# HALVE: when the matched literature token is one of the C1-class tokens
+# below, the literature-anchor reward contribution is HALVED (0.01 -> 0.005).
+# Combined with the lane_class reward (0.02), the effective C1-class candidate
+# reward drops from ~0.025 stacked to ~0.0125 stacked — the 50% reduction the
+# council ledger Decision 6 specifies.
+#
+# REVERT: this halve is a conditional revision. Update to full reward IF Z5
+# (`lane_z5_predictive_coding_world_model_step3_20260514`) dispatch returns
+# dispositive positive evidence; revert to zero IF Z5 + Decision 1 α
+# (contest-scale C1) dispatch are jointly dispositive negative.
+_C1_HALVED_LITERATURE_TOKENS = (
+    "Ha-Schmidhuber",
+    "Ha Schmidhuber",
+    "Hafner",
+    "DreamerV3",
+    "Dreamer V3",
+    "Dreamer-V3",
+)
+_C1_LITERATURE_ANCHOR_HALVE_FACTOR = 0.5
+
 
 def adjust_predicted_delta_for_mdl_density(
     base_delta: float,
@@ -538,9 +574,25 @@ def adjust_predicted_delta_for_class_shift(
     for hay in haystacks:
         if not hay:
             continue
-        if any(tok in hay for tok in _CLASS_SHIFT_LITERATURE_TOKENS):
+        matched_token = next(
+            (tok for tok in _CLASS_SHIFT_LITERATURE_TOKENS if tok in hay),
+            None,
+        )
+        if matched_token is None:
+            continue
+        # Per Decision 6 HALF-MEASURE 2026-05-14: halve the literature-anchor
+        # reward when the matched token is a C1-class token (Hafner /
+        # DreamerV3 / Ha-Schmidhuber). All other class-shift tokens
+        # (cooperative-receiver, predictive-coding, foveation, MDL-IBPS, ...)
+        # keep the full literature-anchor reward.
+        if matched_token in _C1_HALVED_LITERATURE_TOKENS:
+            bonus += (
+                CLASS_SHIFT_LITERATURE_ANCHOR_REWARD
+                * _C1_LITERATURE_ANCHOR_HALVE_FACTOR
+            )
+        else:
             bonus += CLASS_SHIFT_LITERATURE_ANCHOR_REWARD
-            break
+        break
     # Lower-is-better in score-delta convention; subtract the bonus to make
     # this candidate look better in the ranking.
     return base_delta - bonus

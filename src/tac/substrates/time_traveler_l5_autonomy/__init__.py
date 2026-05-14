@@ -63,6 +63,7 @@ from tac.substrates.time_traveler_l5_autonomy.architecture import (
     TOTAL_ARCHIVE_TARGET_BYTES_MIN,
     TimeTravelerConfig,
     TimeTravelerSubstrate,
+    Z5RoutedLatentPredictor,
 )
 from tac.substrates.time_traveler_l5_autonomy.archive import (
     TT5L_HEADER_FMT,
@@ -96,6 +97,7 @@ __all__ = [
     "TimeTravelerLossWeights",
     "TimeTravelerScoreAwareLoss",
     "TimeTravelerSubstrate",
+    "Z5RoutedLatentPredictor",
     "pack_archive",
     "parse_archive",
     "parse_tt5l_archive_bytes",
