@@ -144,17 +144,29 @@ class PackedArchiveView:
             dataclasses.replace(self.sidecar_packet, pr106_bytes=inner)
         )
 
-    def write_archive(self, path: str | Path, payload: bytes) -> None:
+    def write_archive(
+        self,
+        path: str | Path,
+        payload: bytes,
+        *,
+        member_name: str | None = None,
+    ) -> None:
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
+        emitted_member_name = member_name or self.archive.member_name
+        _validate_member_name(emitted_member_name)
         if self.stored_member is None:
             write_stored_single_member_zip(
                 target,
-                member_name=self.archive.member_name,
+                member_name=emitted_member_name,
                 payload=payload,
             )
             return
-        candidate_member = dataclasses.replace(self.stored_member, payload=payload)
+        candidate_member = dataclasses.replace(
+            self.stored_member,
+            name=emitted_member_name,
+            payload=payload,
+        )
         target.write_bytes(emit_single_stored_member_archive(candidate_member))
 
 

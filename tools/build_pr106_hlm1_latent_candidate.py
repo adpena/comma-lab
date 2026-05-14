@@ -26,6 +26,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-label", required=True)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument(
+        "--candidate-member-name",
+        choices=("0.bin", "x"),
+        help=(
+            "Optional single ZIP member name for the emitted archive. Use x for "
+            "the PR101-style one-byte member-name rate repack; default preserves "
+            "the source member name."
+        ),
+    )
+    parser.add_argument(
         "--allow-rate-regression",
         action="store_true",
         help="Materialize even when HLM1 does not reduce section bytes.",
@@ -44,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         source_archive=args.source_archive,
         output_dir=args.output_dir,
         source_label=args.source_label,
+        candidate_member_name=args.candidate_member_name,
         allow_rate_regression=args.allow_rate_regression,
         repo_root=REPO,
     )

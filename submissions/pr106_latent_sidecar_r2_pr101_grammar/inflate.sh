@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # pr106_latent_sidecar inflate: PR106 HNeRV decoder + per-pair latent sidecar.
-# Reads <data_dir>/<base>.bin, writes <output_dir>/<base>.raw (uint8 RGB, (N,H,W,3)).
+# Reads <data_dir>/<base>.bin or a single-member x archive payload, writes
+# <output_dir>/<base>.raw (uint8 RGB, (N,H,W,3)).
 # NO_NVDEC_NEEDED — purely tensor-side decode + bicubic upsample, no DALI/NVDEC.
 set -euo pipefail
 
@@ -26,10 +27,21 @@ fi
 while IFS= read -r line; do
   [ -z "$line" ] && continue
   BASE="${line%.*}"
-  SRC="${DATA_DIR}/${BASE}.bin"
+  PRIMARY_SRC="${DATA_DIR}/${BASE}.bin"
+  X_SRC="${DATA_DIR}/x"
   DST="${OUTPUT_DIR}/${BASE}.raw"
 
-  [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
+  if [ -f "$PRIMARY_SRC" ] && [ -f "$X_SRC" ] && [ "$PRIMARY_SRC" != "$X_SRC" ]; then
+    echo "ERROR: ambiguous archive payloads found: ${PRIMARY_SRC} and ${X_SRC}" >&2
+    exit 1
+  elif [ -f "$PRIMARY_SRC" ]; then
+    SRC="$PRIMARY_SRC"
+  elif [ -f "$X_SRC" ]; then
+    SRC="$X_SRC"
+  else
+    echo "ERROR: neither ${PRIMARY_SRC} nor ${X_SRC} found" >&2
+    exit 1
+  fi
 
   printf "Inflating %s ... " "$line"
   "${RUNNER[@]}" "$SRC" "$DST"

@@ -320,10 +320,16 @@ def _local_blockers(
         blockers.append("runtime_hlm1_valid_mutation_did_not_change_raw")
     if hlm1_runtime_consumption.get("score_claim") is not False:
         blockers.append("hlm1_runtime_consumption_score_claim_not_false")
-    if prefix_parity.get("prefix_parity_claim") is not True:
-        blockers.append("same_runtime_prefix_parity_missing")
-    if prefix_parity.get("full_frame_inflate_output_parity_claim") is not False:
-        blockers.append("prefix_parity_overclaims_full_frame")
+    prefix_parity_claim = prefix_parity.get("prefix_parity_claim") is True
+    full_frame_parity_claim = prefix_parity.get("full_frame_inflate_output_parity_claim") is True
+    if not (prefix_parity_claim or full_frame_parity_claim):
+        blockers.append("same_runtime_parity_missing")
+    if full_frame_parity_claim and prefix_parity.get("proof_scope") != (
+        "same_runtime_streaming_full_frame_hash"
+    ):
+        blockers.append("full_frame_parity_scope_mismatch")
+    if prefix_parity_claim and full_frame_parity_claim:
+        blockers.append("same_runtime_parity_scope_ambiguous")
     if prefix_parity.get("score_claim") is not False:
         blockers.append("prefix_parity_score_claim_not_false")
     if static_compliance.get("passed") is not True:
@@ -758,7 +764,10 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             and manifest.get("source_archive_sha256") != archive["sha256"]
         ),
         "dry_run_ready": bool(static_ready),
-        "full_frame_inflate_output_parity_claim": False,
+        "full_frame_inflate_output_parity_claim": payloads["prefix_parity"].get(
+            "full_frame_inflate_output_parity_claim"
+        )
+        is True,
         "prefix_parity_claim": payloads["prefix_parity"].get("prefix_parity_claim") is True,
         "runtime_sidecar_decode_consumption_claim": payloads["runtime_consumption"].get(
             "runtime_sidecar_decode_consumption_claim"
