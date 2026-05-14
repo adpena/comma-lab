@@ -10,8 +10,11 @@
 #   MODAL_GPU=T4|A10G|A100|H100  (default A100 per operator directive 2026-05-13)
 #   TT5L_EPOCHS=3000             (council default; full training)
 #   MODAL_TIMEOUT_HOURS=4.0      (full Modal hard-kill wall-clock)
-#   TT5L_SMOKE_EPOCHS=100        (smoke epoch override)
-#   TT5L_SMOKE_GPU=T4            (smoke GPU class)
+#   TT5L_SMOKE_EPOCHS=25         (smoke epoch override; remediated 2026-05-14
+#                                  Option 1 after first smoke timed out at 3600s
+#                                  on T4 + 100 epochs; A100 + 25 epochs targets
+#                                  ~5-10 min completion)
+#   TT5L_SMOKE_GPU=A100          (smoke GPU class; same remediation)
 #
 # Lane: lane_time_traveler_l5_autonomy_substrate_20260513
 # Cross-ref: .omx/research/time_traveler_architecture_reverse_engineered_20260513.md
@@ -35,8 +38,8 @@ fi
 
 exec .venv/bin/python tools/run_modal_smoke_before_full.py \
     --recipe substrate_time_traveler_l5_autonomy_modal_a100_dispatch \
-    --smoke-epochs "${TT5L_SMOKE_EPOCHS:-100}" \
-    --smoke-gpu "${TT5L_SMOKE_GPU:-T4}" \
+    --smoke-epochs "${TT5L_SMOKE_EPOCHS:-25}" \
+    --smoke-gpu "${TT5L_SMOKE_GPU:-A100}" \
     --smoke-timeout-hours "${TT5L_SMOKE_TIMEOUT_HOURS:-1.0}" \
     --operator-handle "claude:operator_authorize_substrate_time_traveler_l5_autonomy_modal_a100_dispatch" \
     ${SMOKE_ARGS[@]+"${SMOKE_ARGS[@]}"} \
