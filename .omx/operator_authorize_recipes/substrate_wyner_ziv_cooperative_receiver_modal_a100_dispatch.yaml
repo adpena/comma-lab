@@ -1,0 +1,174 @@
+schema_version: 1
+name: substrate_wyner_ziv_cooperative_receiver_modal_a100_dispatch
+lane_id: lane_wyner_ziv_cooperative_receiver_substrate_20260513
+summary: |
+  Wyner-Ziv cooperative-receiver substrate (alien-tech N3) — top-ranked
+  technique with predicted ΔS -0.05 vs PR101 0.193 anchor per the Bell
+  Labs / NSA / Lincoln Lab / JPL alien-tech expert team master synthesis
+  (`feedback_expert_team_signal_processing_alien_tech_landed_20260513.md`).
+  Per Slepian-Wolf-Wyner-Ziv 1973-1976 + DISCUS 2003 (Pradhan-Ramchandran):
+  the SegNet+PoseNet scorer IS the cooperative-receiver side-information
+  Y; the encoder transmits only the conditional bits
+  ``H(source | scorer_weights + architecture + preprocessing)`` via
+  Slepian-Wolf coset binning. The renderer + side-info predictor compose
+  through a `delta_wyner_ziv * ||X - Y||^2` term that is the
+  differentiable proxy for the conditional rate ``R_WZ(D)``.
+
+  Composition vs Atick-Redlich sister primitive (`tac.codec.cooperative_receiver`):
+  Atick-Redlich = MI-max at scorer (forward-pass objective on encoder);
+  Wyner-Ziv = lossy source coding with side-info at decoder (archive
+  grammar + cooperative reconstruction). Both share the canonical
+  `score_pair_components` scorer helper (Catalog #164) under the hood but
+  are mathematically distinct primitives composing in different ways.
+  Predicted band [0.140, 0.150] `[wyner-ziv-prediction, first-principles-bound]`.
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 24
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+# canary_dependency removed: Wyner-Ziv cooperative-receiver is architecturally
+# INDEPENDENT of HNeRV-family. The substrate ships its own renderer + side-info
+# predictor + DISCUS coset coder; no mask/renderer derivative shared failure
+# surface with HNeRV-family substrates.
+
+active_dispatch_contract: wyner_ziv_naked_substrate
+dispatch_contracts:
+  - id: wyner_ziv_naked_substrate
+    archive_role: monolithic_wz1_replaces_hnerv_substrate
+    builder_surface: experiments/train_substrate_wyner_ziv_cooperative_receiver.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 3000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 7.50
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: null
+predicted_band: [0.140, 0.150]
+smoke_score_band: [0.05, 0.50]
+predicted_delta: "-0.05 vs PR101 0.193 [wyner-ziv-prediction, first-principles-bound]"
+predicted_delta_basis: ".omx/research/expert_team_signal_processing_alien_tech_20260513.md §N3 (Wyner-Ziv)"
+literature_anchor: |
+  Slepian & Wolf (1973) IEEE Trans. Inf. Theory 19:471-480 DOI 10.1109/TIT.1973.1055037;
+  Wyner & Ziv (1976) IEEE Trans. Inf. Theory 22:1-10 DOI 10.1109/TIT.1976.1055508;
+  Pradhan & Ramchandran (2003) DISCUS IEEE Trans. Inf. Theory 49:626-643
+    DOI 10.1109/TIT.2002.808103;
+  Atick & Redlich (1990) Neural Computation 2:308-320 (cooperative-receiver MI-max);
+  Sitzmann et al. (2020) NeurIPS (SIREN init for renderer MLP);
+  Ballé et al. (2018) ICLR (hyperprior conditional rate coding).
+council_phase_5_prediction: 0.145
+
+risk: |
+  Wyner-Ziv substrate first-anchor dispatch. The substrate is novel — the
+  renderer + side-info predictor + DISCUS coset coder + cooperative
+  reconstruction has NOT been empirically anchored against the contest
+  video. The predicted band [0.140, 0.150] is a literature-prediction
+  synthesis (Slepian-Wolf-Wyner-Ziv 1973-1976 + DISCUS 2003 + alien-tech
+  N3 ranking), not measurement.
+
+  Architectural risk:
+  - DISCUS coset binning relies on the side-info predictor Y being a good
+    enough proxy for the contest-rounding-error-equivalence-class of the
+    source. If Y mispredicts cosets for >25% of pairs, the
+    `delta_wyner_ziv` term cannot reduce rate by its predicted -0.05
+    score because the coset disambiguation step at inflate time falls
+    back to the closest member regardless of side-info quality.
+  - Per the floor-v3 commit `27a7950fd` the alien-tech N3 ΔS -0.05
+    prediction assumes scorer-conditional entropy `H(X | Y)` is at least
+    50% smaller than unconditional entropy `H(X)`. The contest scorer is
+    fixed; this assumption holds for the SegNet/PoseNet pair per the
+    expert team derivation, but empirical residual variance dominates at
+    PR106 r2 frontier operating point so the realized ΔS may be smaller.
+  - The renderer is sub-30K params; lr=5e-4 + grad-clip=1.0 are
+    conservative against SIREN-style omega=30 gradient amplification.
+
+  Modal A100 training is diagnostic unless the auth-eval contract itself
+  records score_axis=contest_cuda and score_claim_valid=true. CPU axis
+  remains required separately on Linux x86_64 before any frontier-claim
+  language.
+
+envelope_status: "FITS $20 envelope at p50 fallback (A100 dispatch)"
+
+remote_driver: scripts/remote_lane_substrate_wyner_ziv_cooperative_receiver.sh
+timeout_hours: 3.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_wyner_ziv_cooperative_receiver.sh
+  cost_band_trainer: experiments/train_substrate_wyner_ziv_cooperative_receiver.py
+  cost_band_epochs: 3000
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_wyner_ziv_cooperative_receiver.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/wyner_ziv_cooperative_receiver/__init__.py
+  - src/tac/substrates/wyner_ziv_cooperative_receiver/architecture.py
+  - src/tac/substrates/wyner_ziv_cooperative_receiver/archive.py
+  - src/tac/substrates/wyner_ziv_cooperative_receiver/inflate.py
+  - src/tac/substrates/wyner_ziv_cooperative_receiver/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+
+env_overrides:
+  WYNER_ZIV_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  WYNER_ZIV_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  WYNER_ZIV_OUTPUT_DIR: /workspace/pact/lane_substrate_wyner_ziv_cooperative_receiver_results/output
+  WYNER_ZIV_EPOCHS: "3000"
+  WYNER_ZIV_UPSTREAM_DIR: /workspace/pact/upstream
+  WYNER_ZIV_DEVICE: cuda
+  WYNER_ZIV_HIDDEN_DIM: "48"
+  WYNER_ZIV_COSET_INDEX_BITS: "8"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_wyner_ziv_cooperative_receiver.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_wyner_ziv_cooperative_receiver.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+
+notes: |
+  Wyner-Ziv cooperative-receiver substrate (alien-tech N3) first-anchor
+  dispatch recipe.
+
+  The substrate is a single-archive WZ1 packet at 50-70 KB target.
+  Renderer (~30 KB FP16 SIREN-style MLP) + side-info predictor (~18 KB
+  FP16 small MLP) + per-pair DISCUS coset indices (~6 KB at
+  coset_index_bits=8 → 1 B/pair × 600 pairs) + header/meta JSON (~2 KB).
+
+  Per the alien-tech master synthesis ranking, Wyner-Ziv is the #1
+  technique by predicted ΔS (-0.05). The cheap A100 dispatch (~$7.50
+  p50) makes this a strategic first-anchor for the cooperative-receiver
+  paradigm; success unlocks larger composition surfaces with the
+  Atick-Redlich sister primitive (`tac.codec.cooperative_receiver`).
+
+  Predicted contest-CUDA score: 0.140-0.150 [wyner-ziv-prediction,
+  first-principles-bound] (NOT a score claim — score authority requires
+  CUDA + CPU paired auth eval on 1:1 contest-CI hardware per CLAUDE.md
+  "Submission auth eval — BOTH CPU AND CUDA").
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    feedback_expert_team_signal_processing_alien_tech_landed_20260513.md (N3 entry)
+    feedback_wyner_ziv_cooperative_receiver_substrate_l1_landed_20260513.md
+    src/tac/substrates/wyner_ziv_cooperative_receiver/__init__.py (substrate doctring)
+    src/tac/codec/cooperative_receiver/atick_redlich.py (sister primitive)
