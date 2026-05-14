@@ -40,11 +40,11 @@ council's competing predictions:
         zen-floor band [0.10, 0.15]; major arch breakthrough needed
 
 Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable, MPS forward
-passes do NOT produce authoritative absolute scores. However, MDL
-ablation measures DELTAS (score(perturbed) - score(baseline)) — the
-device-specific drift cancels for sign + relative magnitude. Therefore
-MPS is ACCEPTABLE for this ablation. Results are tagged
-`[MDL-ablation-MPS]` — NEVER `[contest-CUDA]` / `[contest-CPU]`.
+passes do NOT produce authoritative absolute scores. MPS is used as a
+screening accelerator only; dispatch/rank-changing conclusions require CPU or
+CUDA replay of the same pair indices and byte offsets. Results are tagged
+`[MDL-ablation-MPS]` and `decision_grade=false` — NEVER `[contest-CUDA]` /
+`[contest-CPU]`.
 
 Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact"
 non-negotiable, persisted artifacts go to
@@ -165,6 +165,20 @@ IBPS1_HEADER_SIZE = struct.calcsize(IBPS1_HEADER_FMT)  # = 25
 DEFAULT_EXCLUDED_SECTIONS_BY_GRAMMAR: dict[str, frozenset[str]] = {
     "ibps1": frozenset({"encoder_blob"}),
 }
+GRAMMAR_ALIASES: dict[str, str] = {
+    "pr101": "a1",
+    "pr106": "pr106_latent_sidecar",
+    "ibps1_mdl_ibps": "ibps1",
+    "c6_e4_mdl_ibps": "ibps1",
+    "mdl_ibps": "ibps1",
+}
+SUPPORTED_GRAMMARS = frozenset({"a1", "pr106_latent_sidecar", "ibps1"})
+
+
+def normalize_grammar(grammar: str) -> str:
+    """Normalize user-facing grammar aliases to canonical parser labels."""
+    key = grammar.strip().lower()
+    return GRAMMAR_ALIASES.get(key, key)
 
 # Score formula per upstream/evaluate.py:
 #   score = 100 * seg_dist + sqrt(10 * pose_dist) + 25 * rate
@@ -270,6 +284,8 @@ class ArchiveAblationResult:
     baseline_seg: float
     baseline_pose: float
     baseline_score_components: float  # 100*seg + sqrt(10*pose), excludes rate
+    pair_indices: list[int] = field(default_factory=list)
+    decision_grade: bool = False
     included_sections: list[str] = field(default_factory=list)
     excluded_sections: list[str] = field(default_factory=list)
 
@@ -415,11 +431,12 @@ def load_archive(archive_path: Path, grammar: str) -> tuple[bytes, dict[str, tup
     points its child inflate.py at — for A1 it is `x`, for PR106 it is
     the first file by name (`x` is conventional).
     """
+    grammar = normalize_grammar(grammar)
     inner_bytes = _read_inner_member(archive_path, grammar)
 
-    if grammar in ("a1", "pr101"):
+    if grammar == "a1":
         sections = parse_a1_archive_bytes(inner_bytes)
-    elif grammar in ("pr106", "pr106_latent_sidecar"):
+    elif grammar == "pr106_latent_sidecar":
         sections = parse_pr106_archive_bytes(inner_bytes)
     elif grammar == "ibps1":
         sections = parse_ibps1_archive_bytes(inner_bytes)
@@ -923,6 +940,73 @@ def _section_selected(
     return True
 
 
+def _parse_byte_offset_specs(
+    specs: list[str],
+    include_sections: set[str] | None = None,
+) -> dict[str, list[int]]:
+    """Parse CLI byte-offset specs.
+
+    Accepted forms:
+    - ``section:offset`` for explicit section targeting.
+    - ``offset`` only when exactly one ``--include-section`` is present.
+    """
+    parsed: dict[str, list[int]] = {}
+    implicit_section: str | None = None
+    if include_sections is not None and len(include_sections) == 1:
+        implicit_section = next(iter(include_sections))
+    for raw in specs:
+        raw = raw.strip()
+        if not raw:
+            raise ValueError("empty byte offset spec")
+        if ":" in raw:
+            section, offset_s = raw.split(":", 1)
+            section = section.strip()
+            if not section:
+                raise ValueError(f"missing section in byte offset spec {raw!r}")
+        else:
+            if implicit_section is None:
+                raise ValueError(
+                    "bare --byte-offset requires exactly one --include-section; "
+                    f"got include_sections={sorted(include_sections or [])}"
+                )
+            section = implicit_section
+            offset_s = raw
+        try:
+            offset = int(offset_s, 0)
+        except ValueError as exc:
+            raise ValueError(f"invalid byte offset spec {raw!r}") from exc
+        if offset < 0:
+            raise ValueError(f"byte offset must be >= 0 in spec {raw!r}")
+        parsed.setdefault(section, []).append(offset)
+    return parsed
+
+
+def _load_pair_indices_file(path: Path) -> list[int]:
+    """Load pair indices from JSON list or comma/whitespace separated text."""
+    raw = path.read_text().strip()
+    if not raw:
+        raise ValueError(f"pair indices file is empty: {path}")
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        tokens = raw.replace(",", " ").split()
+        parsed = [int(tok, 0) for tok in tokens]
+    if isinstance(parsed, int):
+        parsed = [parsed]
+    if not isinstance(parsed, list):
+        raise ValueError(f"pair indices file must contain a list or token stream: {path}")
+    try:
+        indices = [int(v) for v in parsed]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"pair indices must be integers: {path}") from exc
+    if not indices:
+        raise ValueError(f"pair indices file has no indices: {path}")
+    bad = [v for v in indices if v < 0 or v >= N_PAIRS]
+    if bad:
+        raise ValueError(f"pair indices out of range 0..{N_PAIRS - 1}: {bad}")
+    return sorted(dict.fromkeys(indices))
+
+
 def run_tier_a(
     archive: ArchiveSpec,
     inner_bytes: bytes,
@@ -936,6 +1020,7 @@ def run_tier_a(
     rng: random.Random,
     include_sections: set[str] | None = None,
     exclude_sections: set[str] | None = None,
+    scorer_batch_size: int = 4,
 ) -> list[TierAResult]:
     """Run structural section ablation."""
     results: list[TierAResult] = []
@@ -973,7 +1058,8 @@ def run_tier_a(
             try:
                 cand_frames = decode_to_frames(perturbed, grammar, pair_indices, device)
                 pose_p, seg_p = _compute_seg_pose_delta(
-                    distortion_net, gt_pairs, cand_frames, device
+                    distortion_net, gt_pairs, cand_frames, device,
+                    batch_size=scorer_batch_size,
                 )
                 dseg = seg_p - baseline_seg
                 dpose = pose_p - baseline_pose
@@ -1025,6 +1111,8 @@ def run_tier_b(
     flip_mode: str = "xor_0xff",  # "xor_0xff" | "xor_bit_msb" | "random_byte"
     include_sections: set[str] | None = None,
     exclude_sections: set[str] | None = None,
+    byte_offsets_by_section: dict[str, list[int]] | None = None,
+    scorer_batch_size: int = 4,
 ) -> list[TierBResult]:
     """For each section, flip N random byte positions, measure Δscore."""
     baseline_score_comp = _score_components(baseline_pose, baseline_seg)
@@ -1042,8 +1130,21 @@ def run_tier_b(
             continue
         if length < section_min_length_for_sampling:
             continue
-        n_samples = min(n_samples_per_section, length)
-        offsets = sorted(rng.sample(range(length), n_samples))
+        explicit_offsets = (byte_offsets_by_section or {}).get(section_name)
+        if explicit_offsets is not None:
+            bad_offsets = [off for off in explicit_offsets if off < 0 or off >= length]
+            if bad_offsets:
+                raise ValueError(
+                    f"byte offsets out of range for section {section_name}: {bad_offsets}; "
+                    f"section length={length}"
+                )
+            offsets = sorted(dict.fromkeys(explicit_offsets))
+            n_samples = len(offsets)
+        else:
+            n_samples = min(n_samples_per_section, length)
+            offsets = sorted(rng.sample(range(length), n_samples))
+        if n_samples == 0:
+            continue
         samples: list[TierBSample] = []
         n_inflate_failures = 0
         n_significant = 0
@@ -1066,7 +1167,8 @@ def run_tier_b(
             try:
                 cand_frames = decode_to_frames(bytes(buf), grammar, pair_indices, device)
                 pose_p, seg_p = _compute_seg_pose_delta(
-                    distortion_net, gt_pairs, cand_frames, device
+                    distortion_net, gt_pairs, cand_frames, device,
+                    batch_size=scorer_batch_size,
                 )
                 dseg = seg_p - baseline_seg
                 dpose = pose_p - baseline_pose
@@ -1156,6 +1258,7 @@ def run_tier_c(
     device: torch.device,
     rng: random.Random,
     noise_sigmas: list[float] | None = None,
+    scorer_batch_size: int = 4,
 ) -> list[TierCResult]:
     """Inject gaussian noise on state_dict OR latents at multiple sigmas.
 
@@ -1183,11 +1286,13 @@ def run_tier_c(
         return _run_tier_c_a1(
             inner_bytes, pair_indices, gt_pairs, baseline_seg,
             baseline_pose, distortion_net, device, rng, noise_sigmas,
+            scorer_batch_size=scorer_batch_size,
         )
     if grammar == "ibps1":
         return _run_tier_c_ibps1(
             inner_bytes, pair_indices, gt_pairs, baseline_seg,
             baseline_pose, distortion_net, device, rng, noise_sigmas,
+            scorer_batch_size=scorer_batch_size,
         )
     return []  # PR106 Tier C is non-trivial; defer
 
@@ -1202,6 +1307,7 @@ def _run_tier_c_a1(
     device: torch.device,
     rng: random.Random,
     noise_sigmas: list[float] | None = None,
+    scorer_batch_size: int = 4,
 ) -> list[TierCResult]:
     """A1 / PR101 Tier C: perturb HNeRVDecoder state_dict + latents.
 
@@ -1285,7 +1391,8 @@ def _run_tier_c_a1(
                 perturbed_latents = base_latents + noise
                 cand_frames = _render(base_decoder_sd, perturbed_latents)
             pose_p, seg_p = _compute_seg_pose_delta(
-                distortion_net, gt_pairs, cand_frames, device
+                distortion_net, gt_pairs, cand_frames, device,
+                batch_size=scorer_batch_size,
             )
             dseg = seg_p - baseline_seg
             dpose = pose_p - baseline_pose
@@ -1313,6 +1420,7 @@ def _run_tier_c_ibps1(
     device: torch.device,
     rng: random.Random,
     noise_sigmas: list[float] | None = None,
+    scorer_batch_size: int = 4,
 ) -> list[TierCResult]:
     """IBPS1 (C6 MDL-IBPS) Tier C: perturb decoder state_dict + latents.
 
@@ -1477,7 +1585,8 @@ def _run_tier_c_ibps1(
                 perturbed_latents = (base_latents_dev + noise).cpu()
                 cand_frames = _render(base_decoder_sd, perturbed_latents)
             pose_p, seg_p = _compute_seg_pose_delta(
-                distortion_net, gt_pairs, cand_frames, device
+                distortion_net, gt_pairs, cand_frames, device,
+                batch_size=scorer_batch_size,
             )
             dseg = seg_p - baseline_seg
             dpose = pose_p - baseline_pose
@@ -1609,10 +1718,21 @@ def ablate_archive(
     run_tier_c_flag: bool = True,
     include_sections: set[str] | None = None,
     exclude_sections: set[str] | None = None,
+    byte_offsets_by_section: dict[str, list[int]] | None = None,
+    significance_threshold: float = 1e-4,
+    pair_indices_override: list[int] | None = None,
+    allow_generic_whole_blob: bool = False,
+    scorer_batch_size: int = 4,
 ) -> ArchiveAblationResult:
     """Full 3-tier ablation on one archive."""
     from datetime import datetime, timezone
     timestamp_utc = datetime.now(timezone.utc).isoformat()
+    grammar = normalize_grammar(grammar)
+    if grammar not in SUPPORTED_GRAMMARS and not allow_generic_whole_blob:
+        raise ValueError(
+            f"unknown grammar {grammar!r}; pass --allow-generic-whole-blob "
+            "to use whole_blob"
+        )
 
     rng = random.Random(seed)
     torch.manual_seed(seed)
@@ -1625,9 +1745,9 @@ def ablate_archive(
     archive_sha256 = _sha256_bytes(archive_path.read_bytes())
 
     # Parse sections
-    if grammar in ("a1", "pr101"):
+    if grammar == "a1":
         sections = parse_a1_archive_bytes(inner_bytes)
-    elif grammar in ("pr106", "pr106_latent_sidecar"):
+    elif grammar == "pr106_latent_sidecar":
         sections = parse_pr106_archive_bytes(inner_bytes)
     elif grammar == "ibps1":
         sections = parse_ibps1_archive_bytes(inner_bytes)
@@ -1659,8 +1779,17 @@ def ablate_archive(
         )
     print(f"[{archive_name}] Selected Tier A/B sections: {', '.join(selected_sections) or '(none)'}")
 
-    # Sample pair indices (uniformly over 0..599)
-    pair_indices = sorted(rng.sample(range(N_PAIRS), pair_samples))
+    # Sample pair indices (uniformly over 0..599) unless caller supplies an
+    # explicit shared set for apples-to-apples sharded comparisons.
+    if pair_indices_override is None:
+        pair_indices = sorted(rng.sample(range(N_PAIRS), pair_samples))
+    else:
+        pair_indices = sorted(dict.fromkeys(pair_indices_override))
+        if not pair_indices:
+            raise ValueError("pair_indices_override must not be empty")
+        bad_pairs = [p for p in pair_indices if p < 0 or p >= N_PAIRS]
+        if bad_pairs:
+            raise ValueError(f"pair indices out of range 0..{N_PAIRS - 1}: {bad_pairs}")
 
     # Load ground-truth frames (the same ones for every ablation)
     video_path = upstream_dir / "videos" / "0.mkv"
@@ -1681,7 +1810,8 @@ def ablate_archive(
     t_b0 = time.time()
     baseline_frames = decode_to_frames(inner_bytes, grammar, pair_indices, device)
     baseline_pose, baseline_seg = _compute_seg_pose_delta(
-        distortion_net, gt_pairs, baseline_frames, device
+        distortion_net, gt_pairs, baseline_frames, device,
+        batch_size=scorer_batch_size,
     )
     t_b1 = time.time()
     baseline_sc = _score_components(baseline_pose, baseline_seg)
@@ -1700,6 +1830,8 @@ def ablate_archive(
         baseline_seg=baseline_seg,
         baseline_pose=baseline_pose,
         baseline_score_components=baseline_sc,
+        pair_indices=pair_indices,
+        decision_grade=str(device) in {"cpu", "cuda"},
         included_sections=sorted(include_sections or []),
         excluded_sections=sorted(exclude_sections or []),
         timestamp_utc=timestamp_utc,
@@ -1707,6 +1839,7 @@ def ablate_archive(
             "[MDL-ablation-MPS]" if str(device) == "mps" else f"[MDL-ablation-{device}]",
             "[mathematical-derivation]",
             "Δscore measurements only; absolute scores are NOT contest-CUDA / contest-CPU.",
+            f"decision_grade={str(device) in {'cpu', 'cuda'}}; MPS is screening-only.",
             "Rate term excluded from score_components; archive size constant across ablations.",
             f"Selected Tier A/B sections: {', '.join(selected_sections)}.",
         ],
@@ -1723,6 +1856,7 @@ def ablate_archive(
             baseline_seg, baseline_pose, distortion_net, device, rng,
             include_sections=include_sections,
             exclude_sections=exclude_sections,
+            scorer_batch_size=scorer_batch_size,
         )
         t_a1 = time.time()
         print(f"[{archive_name}] Tier A complete ({t_a1-t_a0:.2f}s, {len(result.tier_a)} measurements)")
@@ -1740,8 +1874,11 @@ def ablate_archive(
             archive_spec, inner_bytes, grammar, pair_indices, gt_pairs,
             baseline_seg, baseline_pose, distortion_net, device, rng,
             n_samples_per_section=byte_samples_per_section,
+            significance_threshold=significance_threshold,
             include_sections=include_sections,
             exclude_sections=exclude_sections,
+            byte_offsets_by_section=byte_offsets_by_section,
+            scorer_batch_size=scorer_batch_size,
         )
         t_b_end = time.time()
         print(f"[{archive_name}] Tier B complete ({t_b_end-t_b_start:.2f}s)")
@@ -1757,6 +1894,7 @@ def ablate_archive(
         result.tier_c = run_tier_c(
             inner_bytes, grammar, pair_indices, gt_pairs,
             baseline_seg, baseline_pose, distortion_net, device, rng,
+            scorer_batch_size=scorer_batch_size,
         )
         t_c1 = time.time()
         print(f"[{archive_name}] Tier C complete ({t_c1-t_c0:.2f}s)")
@@ -1815,6 +1953,10 @@ def main(argv: list[str] | None = None) -> int:
                    help="Number of pairs to sample per measurement (default: 60)")
     p.add_argument("--byte-samples", type=int, default=200,
                    help="Number of byte positions to flip per section in Tier B")
+    p.add_argument("--significance-threshold", type=float, default=1e-4,
+                   help="Tier B |delta score_components| threshold for scorer-sensitive bytes")
+    p.add_argument("--scorer-batch-size", type=int, default=4,
+                   help="Pairs per scorer forward batch; raise to spend memory for lower wall-clock.")
     p.add_argument("--seed", type=int, default=1234)
     p.add_argument("--skip-tier-a", action="store_true")
     p.add_argument("--skip-tier-b", action="store_true")
@@ -1825,6 +1967,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="Skip this archive section in Tier A/B; repeatable.")
     p.add_argument("--include-provenance-sections", action="store_true",
                    help="Do not apply grammar defaults that skip provenance-only sections.")
+    p.add_argument("--byte-offset", action="append", default=[], metavar="SECTION:OFFSET",
+                   help="Explicit Tier B byte offset to test; repeatable. Bare OFFSET is allowed with one --include-section.")
+    p.add_argument("--pair-indices-file", type=Path,
+                   help="JSON list or comma/whitespace file of exact pair indices for apples-to-apples shards.")
+    p.add_argument("--allow-generic-whole-blob", action="store_true",
+                   help="Allow unknown grammar by treating the archive as one whole_blob section.")
     args = p.parse_args(argv)
 
     # Validate alignment
@@ -1844,11 +1992,32 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Device: {device}")
     print(f"Output dir: {args.output_dir}")
+    if args.scorer_batch_size <= 0:
+        print("ERROR: --scorer-batch-size must be > 0", file=sys.stderr)
+        return 2
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    try:
+        pair_indices_override = (
+            _load_pair_indices_file(args.pair_indices_file)
+            if args.pair_indices_file is not None
+            else None
+        )
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
     all_results: list[ArchiveAblationResult] = []
     for archive_path_str, archive_name, grammar in zip(args.archive, args.archive_name, args.grammar):
+        grammar = normalize_grammar(grammar)
+        if grammar not in SUPPORTED_GRAMMARS and not args.allow_generic_whole_blob:
+            print(
+                f"ERROR: unknown grammar {grammar!r}; pass --allow-generic-whole-blob "
+                "to use whole_blob",
+                file=sys.stderr,
+            )
+            return 2
         archive_path = Path(archive_path_str)
         if not archive_path.exists():
             print(f"ERROR: archive not found: {archive_path}", file=sys.stderr)
@@ -1857,11 +2026,21 @@ def main(argv: list[str] | None = None) -> int:
         exclude_sections = set(args.exclude_section)
         if not args.include_provenance_sections:
             exclude_sections.update(DEFAULT_EXCLUDED_SECTIONS_BY_GRAMMAR.get(grammar, ()))
+        try:
+            byte_offsets_by_section = _parse_byte_offset_specs(
+                args.byte_offset,
+                include_sections=include_sections,
+            )
+        except ValueError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
         print(
             f"[{archive_name}] Section filter: "
             f"include={sorted(include_sections or []) or 'ALL'} "
             f"exclude={sorted(exclude_sections) or 'NONE'}"
         )
+        if byte_offsets_by_section:
+            print(f"[{archive_name}] Explicit byte offsets: {byte_offsets_by_section}")
         result = ablate_archive(
             archive_path=archive_path,
             archive_name=archive_name,
@@ -1877,6 +2056,11 @@ def main(argv: list[str] | None = None) -> int:
             run_tier_c_flag=not args.skip_tier_c,
             include_sections=include_sections,
             exclude_sections=exclude_sections or None,
+            byte_offsets_by_section=byte_offsets_by_section or None,
+            significance_threshold=args.significance_threshold,
+            pair_indices_override=pair_indices_override,
+            allow_generic_whole_blob=args.allow_generic_whole_blob,
+            scorer_batch_size=args.scorer_batch_size,
         )
         all_results.append(result)
 
@@ -1886,6 +2070,10 @@ def main(argv: list[str] | None = None) -> int:
         "device": str(device),
         "pair_samples": args.pair_samples,
         "byte_samples_per_section": args.byte_samples,
+        "significance_threshold": args.significance_threshold,
+        "scorer_batch_size": args.scorer_batch_size,
+        "byte_offsets": args.byte_offset,
+        "pair_indices_file": str(args.pair_indices_file) if args.pair_indices_file else None,
         "seed": args.seed,
         "archives": [
             {
@@ -1895,6 +2083,8 @@ def main(argv: list[str] | None = None) -> int:
                 "size_bytes": r.archive_size_bytes,
                 "included_sections": r.included_sections,
                 "excluded_sections": r.excluded_sections,
+                "pair_indices": r.pair_indices,
+                "decision_grade": r.decision_grade,
                 "baseline_seg": r.baseline_seg,
                 "baseline_pose": r.baseline_pose,
                 "baseline_score_components": r.baseline_score_components,
@@ -1911,7 +2101,7 @@ def main(argv: list[str] | None = None) -> int:
             "[MDL-ablation-MPS]" if str(device) == "mps" else f"[MDL-ablation-{device}]",
             "[mathematical-derivation]",
             "Per CLAUDE.md 'MPS auth eval is NOISE': MPS forward passes do NOT produce authoritative absolute scores.",
-            "MDL ablation measures DELTAS; device-specific drift cancels for sign + relative magnitude.",
+            f"decision_grade={str(device) in {'cpu', 'cuda'}}; MPS is screening-only and must be replayed for routing.",
             "Rate term excluded from score_components; archive size constant across ablations.",
             "Per CLAUDE.md 'KILL is LAST RESORT': zen-floor band update is INFORMATIONAL, not falsifying.",
         ],
