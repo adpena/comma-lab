@@ -28,9 +28,7 @@ from tac.substrates.z3_balle_hyperprior_bolton.archive import (
 from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
     A1_DECODER_SECTION_TOTAL,
     A1_LATENT_BLOB_LEN,
-    Z3HV2_HEADER_STRUCT,
     Z3HV2_MAGIC,
-    Z3HV2_PER_DIM_AFFINE_LEN,
     Z3V2CompositionArchiveContract,
     build_z3v2_composition_archive_contract,
     build_z3v2_payload_bytes,
@@ -44,7 +42,6 @@ from tac.substrates.z3_balle_hyperprior_bolton.inflate_v2 import (
     reconstruct_a1_latents_from_v2_payload,
     select_inflate_device,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

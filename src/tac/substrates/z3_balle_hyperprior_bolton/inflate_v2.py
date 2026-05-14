@@ -30,12 +30,8 @@ import os
 import numpy as np
 import torch
 
-from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
-    A1_DECODER_SECTION_TOTAL,
-    A1_LATENT_BLOB_LEN,
-    Z3HV2_MAGIC,
-    decode_z3hv2_section,
-    split_z3v2_payload_bytes,
+from tac.substrates._shared.inflate_runtime import (
+    select_inflate_device as _canonical_select_inflate_device,
 )
 from tac.substrates.z3_balle_hyperprior_bolton.architecture import (
     A1_LATENT_DIM,
@@ -46,26 +42,34 @@ from tac.substrates.z3_balle_hyperprior_bolton.architecture import (
 from tac.substrates.z3_balle_hyperprior_bolton.archive import (
     dequantize_int8_with_scale,
 )
+from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+    A1_DECODER_SECTION_TOTAL,
+    A1_LATENT_BLOB_LEN,
+    Z3HV2_MAGIC,
+    decode_z3hv2_section,
+    split_z3v2_payload_bytes,
+)
 
 
 def select_inflate_device() -> torch.device:
     """Canonical inflate device selector (Catalog #205).
 
-    Honors ``PACT_INFLATE_DEVICE`` env var (``auto``/``cpu``/``cuda``).
-    Refuses ``mps`` explicitly per CLAUDE.md MPS-NOISE non-negotiable.
+    Thin wrapper over ``tac.substrates._shared.inflate_runtime.select_inflate_device``
+    (per HOTZ-1 finding R1 + Catalog #205 canonical-helper discipline). The
+    canonical helper returns a ``str`` (``"cuda"``/``"cpu"``); this wrapper
+    converts to ``torch.device`` for backward compatibility with existing
+    Z3 v2 callers + tests that rely on ``.type`` attribute access. The
+    canonical helper raises on ``PACT_INFLATE_DEVICE=mps`` per CLAUDE.md
+    MPS-NOISE non-negotiable.
+
+    Per CLAUDE.md "Forbidden device-selection defaults" + Catalog #205
+    (`check_inflate_py_uses_canonical_select_inflate_device`).
     """
-    requested = os.environ.get("PACT_INFLATE_DEVICE", "auto").lower()
-    if requested == "mps":
+    if os.environ.get("PACT_INFLATE_DEVICE", "auto").lower() == "mps":
+        # Canonical helper raises a generic message ("unsupported"); preserve
+        # the explicit MPS-refusal banner the v2 contract documented.
         raise RuntimeError("PACT_INFLATE_DEVICE=mps refused (MPS is noise)")
-    if requested == "cpu":
-        return torch.device("cpu")
-    if requested == "cuda":
-        if not torch.cuda.is_available():
-            raise RuntimeError("PACT_INFLATE_DEVICE=cuda but no CUDA visible")
-        return torch.device("cuda")
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
+    return torch.device(_canonical_select_inflate_device())
 
 
 def is_v2_payload(payload_bytes: bytes) -> bool:
