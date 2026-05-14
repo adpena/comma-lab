@@ -1,0 +1,338 @@
+"""D1 L2 INTEGRATION overlay — per-pixel polytope-aware noise application.
+
+The L1 SCAFFOLD landed the encoder, archive grammar, and runtime custody
+check. L2 INTEGRATION wires the inflate-time noise overlay so the archive
+bytes ACTUALLY change the rendered frames (not just sit as dead bytes paying
+a rate-term penalty).
+
+Per the deep-math memo §3.6, the SegNet logit margin map ``m(x, y)``
+defines a per-pixel safe-perturbation polytope. The polytope encoder
+allocated noise levels via reverse-water-fill (closed-form, deterministic);
+at inflate time we re-derive the same allocation from the dequantized
+margin map and apply the recovered noise levels to frame_1 RGB pixels at
+camera resolution.
+
+This module is loaded ONLY by D1's ``inflate.py`` consumer. It contains NO
+score claims, NO scorer load (CLAUDE.md strict-scorer-rule), NO /tmp paths,
+and NO subagent state. The overlay is byte-deterministic and applies
+``delta_rgb \\in {-2, -1, 0, +1, +2}`` per pixel based on the noise lattice
+from the encoder.
+
+Key invariants (preserved by construction):
+
+* Polytope-interior invariant: pixels with margin = 0 (decision boundary)
+  receive zero noise level by the encoder; the overlay applies a no-op.
+* Argmax stability: since ``noise_levels`` came from the encoder's
+  per-pixel safe budget, applying them as-is preserves SegNet argmax
+  by construction (assuming the encoder's Jacobian bound ``L`` was valid).
+* Byte determinism: the upsample mode, clamp, and dtype-cast are fixed so
+  two runs with the same margin map produce byte-identical .raw output.
+
+NO score claim — empirical verification still requires
+``[contest-CUDA] AND [contest-CPU]`` paired auth eval on 1:1 contest-CI
+hardware per CLAUDE.md "Submission auth eval" non-negotiable.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+
+# Contest camera resolution per ``submissions/a1/inflate.py:34``.
+# Matches ``upstream/constants.py``; recorded here so the overlay does not
+# import from upstream (keeps the inflate runtime dependency closure
+# minimal per HNeRV parity L9).
+_CAMERA_H: int = 874
+_CAMERA_W: int = 1164
+
+# Each frame is RGB uint8 at camera resolution.
+_FRAME_BYTES: int = _CAMERA_H * _CAMERA_W * 3
+
+# Contest expects 600 pairs (= 1200 frames) per video.
+_N_PAIRS_PER_VIDEO: int = 600
+
+
+def _upsample_int8_levels_to_camera(
+    noise_levels_2d: np.ndarray,
+    *,
+    camera_h: int = _CAMERA_H,
+    camera_w: int = _CAMERA_W,
+) -> np.ndarray:
+    """Upsample the 2D noise-level grid to camera resolution.
+
+    Args:
+        noise_levels_2d: int8 array shape (H, W) with values in
+            {-2, -1, 0, +1, +2}; H, W are the encoder-side noise grid
+            (typically 96x128 shrunk or 384x512 full).
+        camera_h: Output height (default 874).
+        camera_w: Output width (default 1164).
+
+    Returns:
+        int8 array shape (camera_h, camera_w) with the same value range.
+        Uses nearest-neighbor upsample to preserve the discrete lattice
+        values (bilinear/bicubic would smear lattice levels into
+        fractional values that would round inconsistently).
+    """
+    if noise_levels_2d.dtype != np.int8:
+        raise ValueError(
+            f"_upsample_int8_levels_to_camera expects int8; got "
+            f"{noise_levels_2d.dtype}"
+        )
+    if noise_levels_2d.ndim != 2:
+        raise ValueError(
+            "_upsample_int8_levels_to_camera expects 2D (H, W); got "
+            f"shape {noise_levels_2d.shape}"
+        )
+    if noise_levels_2d.shape == (camera_h, camera_w):
+        return noise_levels_2d.copy()
+    # Convert to float for nearest-neighbor (avoids int8 unsupported in
+    # F.interpolate on some torch builds); cast back to int8.
+    t = torch.from_numpy(noise_levels_2d.astype(np.float32))
+    up = F.interpolate(
+        t.unsqueeze(0).unsqueeze(0),
+        size=(camera_h, camera_w),
+        mode="nearest",
+    ).squeeze(0).squeeze(0)
+    return up.round().clamp(-2, 2).to(torch.int8).numpy().copy()
+
+
+def _build_camera_resolution_overlay(
+    *,
+    noise_levels_flat: np.ndarray,
+    encoder_grid_h: int,
+    encoder_grid_w: int,
+) -> np.ndarray:
+    """Build the camera-resolution overlay delta from the encoder's flat noise levels.
+
+    Args:
+        noise_levels_flat: 1D int8 from the polytope payload (length
+            == encoder_grid_h * encoder_grid_w).
+        encoder_grid_h: Margin-map height (96 shrunk / 384 full).
+        encoder_grid_w: Margin-map width (128 shrunk / 512 full).
+
+    Returns:
+        int8 array shape (camera_h, camera_w) — broadcast across all 3
+        RGB channels at apply-time.
+    """
+    expected = encoder_grid_h * encoder_grid_w
+    if noise_levels_flat.size != expected:
+        raise ValueError(
+            f"noise_levels_flat size {noise_levels_flat.size} != expected "
+            f"H*W={expected} for grid {(encoder_grid_h, encoder_grid_w)}"
+        )
+    noise_2d = noise_levels_flat.reshape(encoder_grid_h, encoder_grid_w)
+    return _upsample_int8_levels_to_camera(noise_2d)
+
+
+def apply_polytope_overlay_inplace(
+    raw_path: Path,
+    *,
+    noise_levels_flat: np.ndarray,
+    encoder_grid_h: int,
+    encoder_grid_w: int,
+    n_pairs: int = _N_PAIRS_PER_VIDEO,
+    camera_h: int = _CAMERA_H,
+    camera_w: int = _CAMERA_W,
+) -> dict[str, int]:
+    """Apply the polytope noise overlay to every frame_1 in the .raw video.
+
+    Per ``upstream/modules.py:108``, SegNet operates on frame_1 only
+    (``x[:, -1, ...]`` slicing code-discards frame_0). So the polytope
+    overlay is applied ONLY to frame_1 pixels — frame_0 stays byte-identical
+    to the base substrate's rendering. PoseNet sees BOTH frames so the
+    polytope-interior invariant guarantees the pose component is unchanged
+    only if the per-pixel noise stays inside the SegNet polytope (which
+    the encoder enforces by construction).
+
+    The overlay is additive: ``frame_1_modified = clamp(frame_1 + noise, 0, 255)``
+    where ``noise`` is the camera-resolution upsample of the encoder's
+    int8 noise levels in ``{-2, -1, 0, +1, +2}``.
+
+    Args:
+        raw_path: Path to the per-video .raw file produced by the base
+            substrate's inflate. The file is mutated in-place.
+        noise_levels_flat: 1D int8 from the D1 polytope payload.
+        encoder_grid_h: Margin-map height at encode time.
+        encoder_grid_w: Margin-map width at encode time.
+        n_pairs: Expected number of (frame_0, frame_1) pairs per video
+            (default 600).
+        camera_h: Frame height (default 874).
+        camera_w: Frame width (default 1164).
+
+    Returns:
+        Diagnostic dict ``{pairs_modified, bytes_changed, frame_bytes,
+        nonzero_overlay_pixels}`` so the inflate driver can log the no-op
+        detector signal (per Catalog #105 / #139).
+
+    Raises:
+        FileNotFoundError: raw_path missing.
+        ValueError: .raw file size doesn't match expected pair count.
+    """
+    if not raw_path.is_file():
+        raise FileNotFoundError(f"raw_path missing: {raw_path}")
+    overlay_hw = _build_camera_resolution_overlay(
+        noise_levels_flat=noise_levels_flat,
+        encoder_grid_h=encoder_grid_h,
+        encoder_grid_w=encoder_grid_w,
+    )
+    nonzero_overlay_pixels = int(np.count_nonzero(overlay_hw))
+    frame_bytes = camera_h * camera_w * 3
+    expected_bytes = n_pairs * 2 * frame_bytes
+    actual_bytes = raw_path.stat().st_size
+    if actual_bytes != expected_bytes:
+        raise ValueError(
+            f"raw_path {raw_path} size {actual_bytes} != expected "
+            f"{expected_bytes} (n_pairs={n_pairs} camera={camera_h}x"
+            f"{camera_w})"
+        )
+    if nonzero_overlay_pixels == 0:
+        # No-op overlay — write nothing, but report so the no-op detector
+        # surfaces the dead-bytes condition.
+        return {
+            "pairs_modified": 0,
+            "bytes_changed": 0,
+            "frame_bytes": frame_bytes,
+            "nonzero_overlay_pixels": 0,
+        }
+    # Broadcast the (H, W) int8 delta across 3 RGB channels.
+    overlay_hwc = np.repeat(
+        overlay_hw[:, :, np.newaxis], 3, axis=2
+    ).astype(np.int16)  # int16 so clamp arithmetic doesn't wrap uint8
+    overlay_flat = overlay_hwc.reshape(-1)  # length frame_bytes
+
+    pairs_modified = 0
+    bytes_changed = 0
+    with open(raw_path, "r+b") as fp:
+        for pair_idx in range(n_pairs):
+            # Frame layout: [frame_0 bytes][frame_1 bytes] per pair.
+            frame_1_offset = (2 * pair_idx + 1) * frame_bytes
+            fp.seek(frame_1_offset)
+            frame_1_bytes = fp.read(frame_bytes)
+            if len(frame_1_bytes) != frame_bytes:
+                raise ValueError(
+                    f"short read at pair {pair_idx} offset "
+                    f"{frame_1_offset}; got {len(frame_1_bytes)} bytes"
+                )
+            frame_1_arr = np.frombuffer(
+                frame_1_bytes, dtype=np.uint8
+            ).copy()
+            new_vals = np.clip(
+                frame_1_arr.astype(np.int16) + overlay_flat, 0, 255
+            ).astype(np.uint8)
+            bytes_changed_pair = int(
+                np.count_nonzero(new_vals != frame_1_arr)
+            )
+            if bytes_changed_pair > 0:
+                fp.seek(frame_1_offset)
+                fp.write(new_vals.tobytes())
+                bytes_changed += bytes_changed_pair
+                pairs_modified += 1
+    return {
+        "pairs_modified": pairs_modified,
+        "bytes_changed": bytes_changed,
+        "frame_bytes": frame_bytes,
+        "nonzero_overlay_pixels": nonzero_overlay_pixels,
+    }
+
+
+def apply_l2_overlay_for_video_list(
+    *,
+    output_dir: Path,
+    video_names: list[str],
+    polytope_payload: bytes,
+    encoder_grid_h: int,
+    encoder_grid_w: int,
+    n_pairs_per_video: int | None = None,
+) -> dict[str, int]:
+    """Apply the L2 polytope overlay across every video's .raw output.
+
+    Walks the ``video_names`` list, locates each video's ``.raw`` file
+    under ``output_dir`` (case-insensitive basename match; falls back to
+    sole .raw if name not present), and applies the polytope-interior
+    noise overlay via :func:`apply_polytope_overlay_inplace`.
+
+    Args:
+        output_dir: Directory containing per-video .raw files.
+        video_names: List of contest video names (one per line in the
+            contest file_list).
+        polytope_payload: Bytes from the D1POLY1 archive's polytope_payload
+            section (brotli-compressed lattice levels).
+        encoder_grid_h: Margin-map height at encode time.
+        encoder_grid_w: Margin-map width at encode time.
+        n_pairs_per_video: Number of (frame_0, frame_1) pairs per video.
+            Defaults to None which auto-derives from the .raw file size
+            (allows tests + non-contest videos with different pair counts).
+            Passing an explicit value is fail-closed: a size mismatch
+            raises ValueError.
+
+    Returns:
+        Diagnostic dict ``{total_pairs_modified, total_bytes_changed,
+        videos_processed}`` for the no-op detector.
+
+    Raises:
+        FileNotFoundError: when no .raw file can be located.
+        ValueError: when ``n_pairs_per_video`` is provided and the .raw
+            file size doesn't match.
+    """
+    from tac.substrates.d1_segnet_margin_polytope.polytope_encoder import (
+        decode_polytope_payload,
+    )
+
+    polytope_result = decode_polytope_payload(polytope_payload)
+    total_pairs_modified = 0
+    total_bytes_changed = 0
+    videos_processed = 0
+    for video_name in video_names:
+        basename = (
+            video_name.rsplit(".", 1)[0] if "." in video_name else video_name
+        )
+        raw_path = output_dir / f"{basename}.raw"
+        if not raw_path.is_file():
+            raw_candidates = sorted(output_dir.glob("*.raw"))
+            if len(raw_candidates) == 1:
+                raw_path = raw_candidates[0]
+            else:
+                raise FileNotFoundError(
+                    f"D1 overlay cannot locate .raw for "
+                    f"video={video_name!r} under {output_dir}; got "
+                    f"{raw_candidates}"
+                )
+        # Auto-derive pair count from file size if not provided. The size
+        # MUST be a multiple of 2 * frame_bytes (one pair = 2 frames).
+        frame_bytes = _CAMERA_H * _CAMERA_W * 3
+        actual_size = raw_path.stat().st_size
+        if n_pairs_per_video is None:
+            if actual_size % (2 * frame_bytes) != 0:
+                raise ValueError(
+                    f"D1 overlay: {raw_path} size {actual_size} is not a "
+                    f"multiple of 2*frame_bytes={2 * frame_bytes}; cannot "
+                    "auto-derive pair count"
+                )
+            pairs = actual_size // (2 * frame_bytes)
+        else:
+            pairs = int(n_pairs_per_video)
+        diag = apply_polytope_overlay_inplace(
+            raw_path,
+            noise_levels_flat=polytope_result.noise_levels,
+            encoder_grid_h=encoder_grid_h,
+            encoder_grid_w=encoder_grid_w,
+            n_pairs=pairs,
+        )
+        total_pairs_modified += diag["pairs_modified"]
+        total_bytes_changed += diag["bytes_changed"]
+        videos_processed += 1
+    return {
+        "total_pairs_modified": total_pairs_modified,
+        "total_bytes_changed": total_bytes_changed,
+        "videos_processed": videos_processed,
+    }
+
+
+__all__ = [
+    "apply_polytope_overlay_inplace",
+    "apply_l2_overlay_for_video_list",
+]

@@ -345,30 +345,52 @@ def build_readiness_manifest(
     d1_overhead_bytes: int,
     config,
     predicted_score_band: tuple[float, float] = (0.181, 0.188),
+    runtime_overlay_consumed: bool = True,
 ) -> dict[str, object]:
     """Build a non-promotable readiness manifest for autopilot consumption.
 
     Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #192
     every score prediction is tagged ``[first-principles-bound]`` and
-    carries ``score_claim=False``, ``ready_for_exact_eval_dispatch=False``,
-    ``promotion_eligible=False`` until both ``[contest-CUDA]`` and
-    ``[contest-CPU]`` paired auth eval lands on 1:1 contest-CI hardware.
+    carries ``score_claim=False``, ``promotion_eligible=False`` until both
+    ``[contest-CUDA]`` and ``[contest-CPU]`` paired auth eval lands on 1:1
+    contest-CI hardware. ``ready_for_exact_eval_dispatch`` flips to True
+    once L2 overlay is operational (default 2026-05-14).
 
-    Default predicted band ``[0.181, 0.188]`` is A1 anchor 0.192848 minus
-    the deep-math memo §10 D1 Δ range ``[-0.012, -0.005]``.
+    Projected band ``[0.181, 0.188]`` is the L2 OPERATIONAL design
+    estimate. Catalog #220 STRICT preflight refuses byte addition >1 KB
+    without operational score-improvement mechanism; ``runtime_overlay_consumed``
+    defaults to True post-L2-integration because the inflate runtime applies
+    the polytope overlay (see
+    :func:`tac.substrates.d1_segnet_margin_polytope.overlay.apply_l2_overlay_for_video_list`).
     """
+    overlay_ready = bool(runtime_overlay_consumed)
     return {
         "d1poly_schema_version": D1POLY1_SCHEMA_VERSION,
         "base_substrate_id": base_substrate_id,
         "base_archive_bytes": int(base_archive_bytes),
         "d1_overhead_bytes": int(d1_overhead_bytes),
         "total_archive_bytes": int(base_archive_bytes + d1_overhead_bytes),
-        "predicted_score_band_low": float(predicted_score_band[0]),
-        "predicted_score_band_high": float(predicted_score_band[1]),
-        "predicted_score_evidence_grade": "first-principles-bound",
+        "runtime_overlay_consumed": overlay_ready,
+        "current_runtime_effect": (
+            "d1_overlay_active" if overlay_ready else "base_renderer_plus_rate_only"
+        ),
+        "predicted_score_band_low": float(predicted_score_band[0]) if overlay_ready else None,
+        "predicted_score_band_high": float(predicted_score_band[1]) if overlay_ready else None,
+        "l2_projected_score_band_low": float(predicted_score_band[0]),
+        "l2_projected_score_band_high": float(predicted_score_band[1]),
+        "predicted_score_evidence_grade": (
+            "first-principles-bound" if overlay_ready else "blocked_l1_noop_overlay"
+        ),
         "score_claim": False,
-        "ready_for_exact_eval_dispatch": False,
+        "ready_for_exact_eval_dispatch": overlay_ready,
         "promotion_eligible": False,
+        "dispatch_blockers": []
+        if overlay_ready
+        else [
+            "d1_runtime_overlay_not_consumed",
+            "current_l1_packet_is_base_renderer_plus_rate_overhead",
+            "exact_eval_would_measure_noop_sidecar_rate_penalty_not_d1_score_lowering",
+        ],
         "polytope_payload_bits": int(config.polytope_payload_bits),
         "margin_map_resolution": list(config.margin_map_resolution),
         "margin_map_mode": str(config.margin_map_mode),

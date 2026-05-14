@@ -34,6 +34,34 @@ from tac.substrates.score_aware_common import _require_preprocess
 MARGIN_MAP_DEFAULT_RESOLUTION: tuple[int, int] = (384, 512)
 """Scorer eval resolution per ``upstream/modules.py:109`` SegNet preprocess."""
 
+MARGIN_MAP_SHRUNK_RESOLUTION: tuple[int, int] = (96, 128)
+"""16x-shrunk margin map (96, 128) for archive cost reduction.
+
+D1 dispatch finding 2026-05-14 R3 showed full-resolution (384, 512) margin map
+brotli'd to ~39 KB (margin_map_int8 = 196,608 bytes pre-brotli; brotli closes
+~80% on high-margin-interior plateaus → 39 KB; plus 35 B polytope payload +
+meta + 31 B header → 43,296 B total D1POLY1 sidecar).
+
+The rate-axis cost is ``25 * 43,296 / 37,545,489 ≈ +0.029`` per CLAUDE.md
+contest scoring formula — too expensive on its own to land sub-A1 without an
+equally-strong overlay savings on the seg/pose components.
+
+Shrinking the margin map 16× to (96, 128) before int8-quantization gives
+``96 * 128 = 12,288`` pre-brotli bytes → ~2.4 KB brotli'd → ~2.7 KB total
+D1POLY1 sidecar. Rate-axis cost is ``25 * 2,700 / 37,545,489 ≈ +0.0018``.
+
+Trade-off: the SegNet margin map has spatial structure at scorer eval grid
+(384, 512); area-pool downsample to (96, 128) preserves coarse polytope
+geometry but blurs fine boundary detail. The inflate-side bicubic upsample
+back to (384, 512) recovers the smooth interior margin but may misallocate
+noise near polytope boundaries. The deep-math memo §3.6 polytope theorem
+remains valid: at any resolution the per-pixel safe budget is bounded above
+by ``m / L`` for the average margin in the pooled region.
+
+Use ``MARGIN_MAP_DEFAULT_RESOLUTION`` for L2-PROOF dispatch; use
+``MARGIN_MAP_SHRUNK_RESOLUTION`` for cost-efficient L2-EXPLORATORY dispatch.
+"""
+
 
 class MarginMapMode(Enum):
     """How to derive the per-pixel margin map."""
@@ -55,6 +83,7 @@ def compute_logit_margin_map(
     target_resolution: tuple[int, int] = MARGIN_MAP_DEFAULT_RESOLUTION,
     eps: float = 1e-6,
     detach_grad: bool = True,
+    downsample_mode: str = "bilinear",
 ) -> torch.Tensor:
     """Compute the canonical SegNet logit margin map.
 
@@ -76,11 +105,19 @@ def compute_logit_margin_map(
             sets to the scorer plane unless they explicitly want a
             different resolution).
         target_resolution: Output spatial resolution. Defaults to scorer
-            eval resolution ``(384, 512)``.
+            eval resolution ``(384, 512)``. Pass
+            :data:`MARGIN_MAP_SHRUNK_RESOLUTION` (``(96, 128)``) for the
+            16x-shrunk archive cost variant.
         eps: Eps-clamp to avoid div-by-zero in degenerate top1==top2.
         detach_grad: If True (default), the returned margin map is
             grad-detached. Set False only for a research probe of
             margin-aware loss training.
+        downsample_mode: torch.nn.functional.interpolate mode used when
+            ``target_resolution`` is smaller than the scorer's logit grid.
+            ``"area"`` preserves the average margin in each pooled region
+            (the canonical choice for shrunk margin maps). ``"bilinear"``
+            (default) is interpolation-faithful for the full-resolution
+            case where target == logit grid.
 
     Returns:
         Margin map ``(B, H, W)`` float32 at ``target_resolution``. Values
@@ -129,12 +166,27 @@ def compute_logit_margin_map(
     # pixels for downstream stratification.
     target_h, target_w = target_resolution
     if margin.shape[-2:] != (target_h, target_w):
-        margin = torch.nn.functional.interpolate(
-            margin.unsqueeze(1),  # (B, 1, H, W)
-            size=(target_h, target_w),
-            mode="bilinear",
-            align_corners=False,
-        ).squeeze(1)
+        if downsample_mode == "area":
+            # Area-pool downsample (best for shrunk margin maps; preserves
+            # average margin per pooled region, which is the canonical
+            # quantity that bounds the polytope safe budget).
+            margin = torch.nn.functional.interpolate(
+                margin.unsqueeze(1),  # (B, 1, H, W)
+                size=(target_h, target_w),
+                mode="area",
+            ).squeeze(1)
+        elif downsample_mode == "bilinear":
+            margin = torch.nn.functional.interpolate(
+                margin.unsqueeze(1),  # (B, 1, H, W)
+                size=(target_h, target_w),
+                mode="bilinear",
+                align_corners=False,
+            ).squeeze(1)
+        else:
+            raise ValueError(
+                f"compute_logit_margin_map: unsupported downsample_mode="
+                f"{downsample_mode!r}; expected 'area' or 'bilinear'"
+            )
 
     if detach_grad:
         margin = margin.detach()
@@ -214,6 +266,64 @@ def quantize_margin_map_int8(
     return int8, recovered_scale
 
 
+def upsample_margin_map_for_overlay(
+    margin_map_float: torch.Tensor,
+    *,
+    target_resolution: tuple[int, int] = MARGIN_MAP_DEFAULT_RESOLUTION,
+    upsample_mode: str = "bicubic",
+) -> torch.Tensor:
+    """Upsample a shrunk margin map back to scorer resolution for overlay.
+
+    The L2 overlay path packs the margin map at
+    :data:`MARGIN_MAP_SHRUNK_RESOLUTION` (96, 128) at encode time for archive
+    cost reduction; inflate-time must restore it to scorer eval resolution
+    (384, 512) so per-pixel polytope-interior noise can be allocated at the
+    scorer grid. The 16× upsample is bicubic so smooth interior margins
+    interpolate without staircase artifacts.
+
+    For full-resolution maps where ``margin_map_float.shape ==
+    target_resolution`` this is a no-op pass-through.
+
+    Args:
+        margin_map_float: ``(H, W)`` float32 tensor, typically dequantized
+            from :func:`dequantize_margin_map_int8`.
+        target_resolution: Output spatial resolution. Defaults to
+            :data:`MARGIN_MAP_DEFAULT_RESOLUTION`.
+        upsample_mode: ``"bicubic"`` (default) or ``"bilinear"``.
+
+    Returns:
+        Float32 tensor at ``target_resolution``. Values are
+        clamp_min(0.0) so the polytope-interior invariant
+        (``B_safe >= 0``) is preserved through the interpolation.
+
+    Raises:
+        ValueError: when ``margin_map_float`` is not 2D or
+            ``upsample_mode`` is unrecognized.
+    """
+    if margin_map_float.dim() != 2:
+        raise ValueError(
+            "upsample_margin_map_for_overlay expects 2D margin map; got "
+            f"shape {tuple(margin_map_float.shape)}"
+        )
+    if upsample_mode not in {"bicubic", "bilinear"}:
+        raise ValueError(
+            f"upsample_margin_map_for_overlay: unsupported upsample_mode="
+            f"{upsample_mode!r}; expected 'bicubic' or 'bilinear'"
+        )
+    target_h, target_w = target_resolution
+    if tuple(margin_map_float.shape) == (target_h, target_w):
+        return margin_map_float.clamp_min(0.0).contiguous()
+    upsampled = torch.nn.functional.interpolate(
+        margin_map_float.unsqueeze(0).unsqueeze(0).float(),
+        size=(target_h, target_w),
+        mode=upsample_mode,
+        align_corners=False,
+    ).squeeze(0).squeeze(0)
+    # Bicubic can introduce small negative ringing near zero-margin
+    # boundary pixels; clamp_min preserves the polytope-interior invariant.
+    return upsampled.clamp_min(0.0).contiguous()
+
+
 def dequantize_margin_map_int8(
     int8_map: torch.Tensor,
     *,
@@ -243,9 +353,11 @@ def dequantize_margin_map_int8(
 
 __all__ = [
     "MARGIN_MAP_DEFAULT_RESOLUTION",
+    "MARGIN_MAP_SHRUNK_RESOLUTION",
     "MarginMapMode",
     "compute_logit_margin_map",
     "compute_logit_margin_map_dummy",
     "dequantize_margin_map_int8",
     "quantize_margin_map_int8",
+    "upsample_margin_map_for_overlay",
 ]

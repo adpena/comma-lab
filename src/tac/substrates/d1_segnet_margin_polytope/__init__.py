@@ -33,14 +33,19 @@ exploit:
 * **Together** they exhaust the bidirectional bit-allocation: YUCR captures
   the structural nullspace; D1 captures the geometric nullspace.
 
-Predicted contest-CPU score band: ``[A1_anchor + Delta]`` where
-``Delta ∈ [-0.012, -0.005]`` ``[first-principles-bound]``. From the
-verified A1 anchor 0.192848 ``[contest-CPU-1to1]``, D1 alone projects into
-the band ``[0.181, 0.188]``. Composes additively with YUCR for combined
-predicted band ``[0.165, 0.180]``. **NOT a score claim** — score authority
-requires both ``[contest-CUDA]`` AND ``[contest-CPU]`` paired auth eval on
-1:1 contest-CI hardware per CLAUDE.md "Submission auth eval — BOTH CPU AND
-CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE" non-negotiable.
+L2 OPERATIONAL contest-CPU score band: ``[A1_anchor + Delta]`` where
+``Delta ∈ [-0.012, -0.005]`` ``[first-principles-bound]``. As of
+2026-05-14 L2 INTEGRATION lands the post-renderer polytope-interior
+overlay via
+:func:`tac.substrates.d1_segnet_margin_polytope.overlay.apply_l2_overlay_for_video_list`,
+so the D1 sidecar bytes operationally consume into per-pixel frame_1 RGB
+perturbations at camera resolution. The archive cost can be reduced 16×
+by dispatching with
+:data:`tac.substrates.d1_segnet_margin_polytope.margin_map.MARGIN_MAP_SHRUNK_RESOLUTION`
+``(96, 128)`` (~2.7 KB total vs ~43 KB at full resolution). **NOT a
+score claim** — score authority requires both ``[contest-CUDA]`` AND
+``[contest-CPU]`` paired auth eval on 1:1 contest-CI hardware per
+CLAUDE.md evidence discipline.
 
 Catalog #124 STRICT archive-grammar 8 fields (declared inline so the AST
 walker observes them):
@@ -62,9 +67,11 @@ walker observes them):
 - ``bolt_on_loc_budget``: ``lane_class=substrate_engineering`` (HNeRV
   parity L7); margin map + polytope encoder + composability wrapper
   exceed the 350 LOC bolt-on cap
-- ``no_op_detector_planned``: pack/parse roundtrip is byte-stable; archive
-  payload is structurally consumed by inverse-margin unpack in inflate.py
-  (Catalog #105 / #139 compliant)
+- ``no_op_detector_planned``: pack/parse roundtrip is byte-stable; L2
+  inflate runtime applies per-pixel polytope-interior noise overlay via
+  :func:`tac.substrates.d1_segnet_margin_polytope.overlay.apply_l2_overlay_for_video_list`;
+  bytes_changed and pairs_modified diagnostic ensures sidecar bytes
+  produce real frame changes (Catalog #220 OPERATIONAL)
 
 Distinction from sister substrates (this is NOT a duplicate):
 

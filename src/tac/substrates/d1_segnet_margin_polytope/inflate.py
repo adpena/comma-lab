@@ -1,24 +1,15 @@
-"""D1 inflate runtime — sidecar margin-map dequantization + polytope noise overlay.
+"""D1 inflate runtime — sidecar margin-map dequant + L2 polytope overlay.
 
-Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L4:
-inflate.py <= 200 LOC (substrate-engineering waiver). NO scorer load
-(strict-scorer-rule). torch + numpy + brotli only (<= 2 deps + numpy
-buffer-protocol stdlib-equivalent).
+Per HNeRV parity L4: inflate.py <= 200 LOC substrate-engineering waiver.
+NO scorer load (strict-scorer-rule). torch + numpy + brotli only.
+Catalog #146 CLI: ``inflate.py archive_dir output_dir file_list``.
 
-Contract per Catalog #146: ``inflate.sh archive_dir output_dir file_list``.
-This module exposes a ``main(...)`` function consumed by a thin
-``inflate.sh``; the trainer's archive-build step writes both files. The
-D1 sidecar inflate consumer:
-
-1. Locates the D1POLY1 0.bin inside ``archive_dir``.
-2. Locates the base substrate's archive inside ``archive_dir`` and
-   verifies ``base_archive_sha256_truncated`` matches.
-3. Dispatches to the base substrate's inflate function for renderer
-   state.
-4. Dequantizes the margin map + decodes the polytope payload.
-5. Applies the polytope-interior noise overlay during the per-frame
-   render (no-op at L1 SCAFFOLD landing; L2 wires per-base adapter).
-6. Writes per-video raw bytes to ``output_dir`` per the contest contract.
+Steps: (1) locate ``d1_polytope.bin``; (2) verify base sha-truncated match;
+(3) delegate to base substrate's inflate to write .raw files; (4) L2
+INTEGRATION — apply polytope-interior noise overlay to every frame_1 in
+each output .raw via overlay.apply_l2_overlay_for_video_list. Operational
+score-improvement mechanism per Catalog #220 NON-NEGOTIABLE: byte addition
+must produce real frame changes, not dead bytes paying rate-term penalty.
 
 NO score claim. NO /tmp paths.
 """
@@ -88,15 +79,11 @@ def _verify_base_archive_match(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Catalog #146-compliant CLI: ``inflate.py <archive_dir> <output_dir> <file_list>``.
+    """Catalog #146 CLI: ``inflate.py <archive_dir> <output_dir> <file_list>``.
 
-    The base substrate's inflate is invoked via its package-relative
-    ``inflate`` module (e.g. ``tac.substrates.a1.inflate.main``); the
-    D1 polytope overlay is applied AFTER the base renders each frame
-    pair, before the pair is written to the contest .raw output.
-
-    Returns:
-        0 on success; non-zero on failure (per shell convention).
+    Delegates to ``tac.substrates.<base>.inflate.main`` then applies the
+    L2 polytope overlay to every frame_1 in each .raw output. Returns 0
+    on success, non-zero on failure.
     """
     parser = argparse.ArgumentParser(
         prog="inflate", description="D1 sidecar inflate (Catalog #146)"
@@ -147,11 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         file=sys.stderr,
     )
 
-    # Dispatch to base substrate inflate — the D1 overlay is applied via
-    # the margin_map + polytope_payload, but the heavy renderer work
-    # (per-pair frame synthesis) lives in the base. Each base substrate
-    # exposes a canonical ``main(argv)`` consumer; we delegate without
-    # reimporting contest-faithful render logic here.
+    # Delegate to base substrate inflate; D1 applies polytope overlay after.
     video_names = _read_file_list(file_list_path)
     if not video_names:
         raise ValueError(f"file_list {file_list_path} is empty")
@@ -176,20 +159,32 @@ def main(argv: list[str] | None = None) -> int:
             "main(argv)"
         )
 
-    # The base inflate writes the underlying frames; the D1 margin-map +
-    # polytope noise overlay is applied via metadata in the base archive's
-    # meta JSON when the base substrate is D1-aware. For the L1 SCAFFOLD
-    # landing the overlay is no-op-by-default (margin map archived but
-    # not yet applied at inflate time); the L2 INTEGRATION landing wires
-    # the actual noise application via a per-base adapter shim. The
-    # margin map + polytope payload remain consumed during decode
-    # (parsed + sha-verified) so the no-op detector (Catalog #105) sees
-    # structural consumption.
-
     rc = base_inflate.main(
         [str(archive_dir), str(output_dir), str(file_list_path)]
     )
-    return int(rc) if rc is not None else 0
+    if rc:
+        return int(rc)
+
+    # L2 INTEGRATION per Catalog #220 NON-NEGOTIABLE.
+    from tac.substrates.d1_segnet_margin_polytope.overlay import (
+        apply_l2_overlay_for_video_list,
+    )
+
+    overlay_diag = apply_l2_overlay_for_video_list(
+        output_dir=output_dir,
+        video_names=video_names,
+        polytope_payload=d1_archive.polytope_payload,
+        encoder_grid_h=d1_archive.height,
+        encoder_grid_w=d1_archive.width,
+    )
+    print(
+        f"[d1-inflate] OVERLAY_TOTAL pairs_modified="
+        f"{overlay_diag['total_pairs_modified']} bytes_changed="
+        f"{overlay_diag['total_bytes_changed']} videos_processed="
+        f"{overlay_diag['videos_processed']}",
+        file=sys.stderr,
+    )
+    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover

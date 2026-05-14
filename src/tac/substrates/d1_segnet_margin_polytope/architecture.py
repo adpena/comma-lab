@@ -52,6 +52,15 @@ D1POLY_OVERHEAD_TARGET_BYTES_MAX: int = 3072
 EVAL_HW: tuple[int, int] = (384, 512)
 """Scorer-resolution eval grid for margin-map computation."""
 
+SHRUNK_HW: tuple[int, int] = (96, 128)
+"""16x-shrunk margin map grid for archive cost reduction.
+
+See :data:`tac.substrates.d1_segnet_margin_polytope.margin_map.MARGIN_MAP_SHRUNK_RESOLUTION`
+for the full rationale. Encoder-side area-pool downsample 384x512 → 96x128;
+inflate-side bicubic upsample 96x128 → 384x512 via
+:func:`tac.substrates.d1_segnet_margin_polytope.margin_map.upsample_margin_map_for_overlay`.
+"""
+
 # Conservative empirical Lipschitz bound for SegNet (logit-vs-input-RGB).
 # Calibrated offline on a held-out frame batch; recorded in archive
 # metadata so the receiver inverts deterministically. Operators should
@@ -302,6 +311,7 @@ __all__ = [
     "D1POLY_OVERHEAD_TARGET_BYTES_MAX",
     "D1POLY_OVERHEAD_TARGET_BYTES_MIN",
     "EVAL_HW",
+    "SHRUNK_HW",
     "D1PolytopeConfig",
     "D1PolytopeSidecar",
     "_BaseArchiveDescriptor",

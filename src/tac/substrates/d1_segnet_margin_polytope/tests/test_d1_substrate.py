@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import math
+import subprocess
+import sys
 
 import numpy as np
 import pytest
@@ -669,6 +671,8 @@ def test_loss_weights_reject_negative_margin_threshold():
 
 
 def test_readiness_manifest_has_no_score_claim():
+    """Manifest never sets score_claim or promotion_eligible regardless of
+    runtime_overlay_consumed."""
     cfg = D1PolytopeConfig()
     manifest = build_readiness_manifest(
         base_substrate_id="a1",
@@ -677,9 +681,27 @@ def test_readiness_manifest_has_no_score_claim():
         config=cfg,
     )
     assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+
+
+def test_readiness_manifest_l1_no_op_explicit_false():
+    """When the caller asserts L1 NO-OP overlay (runtime_overlay_consumed=False)
+    the manifest must surface the dispatch blocker per Catalog #220."""
+    cfg = D1PolytopeConfig()
+    manifest = build_readiness_manifest(
+        base_substrate_id="a1",
+        base_archive_bytes=200_000,
+        d1_overhead_bytes=1_500,
+        config=cfg,
+        runtime_overlay_consumed=False,
+    )
+    assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["promotion_eligible"] is False
-    assert manifest["predicted_score_evidence_grade"] == "first-principles-bound"
+    assert manifest["runtime_overlay_consumed"] is False
+    assert manifest["current_runtime_effect"] == "base_renderer_plus_rate_only"
+    assert manifest["predicted_score_evidence_grade"] == "blocked_l1_noop_overlay"
+    assert "d1_runtime_overlay_not_consumed" in manifest["dispatch_blockers"]
 
 
 def test_readiness_manifest_records_total_archive_bytes():
@@ -693,9 +715,26 @@ def test_readiness_manifest_records_total_archive_bytes():
     assert manifest["total_archive_bytes"] == 178_000 + 2_000
 
 
-def test_readiness_manifest_predicted_band_falls_in_sub_0188_clearing():
-    # Default predicted band [0.181, 0.188] = A1 anchor 0.192848 - Δ ∈
-    # [-0.012, -0.005] per deep-math memo §10 D1.
+def test_readiness_manifest_l1_no_op_blocks_score_band_records_l2_projection():
+    # When the caller explicitly asserts L1 NO-OP overlay (runtime_overlay_consumed=False)
+    # the manifest blocks current band but still records the L2 projection.
+    cfg = D1PolytopeConfig()
+    manifest = build_readiness_manifest(
+        base_substrate_id="a1",
+        base_archive_bytes=178_000,
+        d1_overhead_bytes=2_000,
+        config=cfg,
+        runtime_overlay_consumed=False,
+    )
+    assert manifest["predicted_score_band_low"] is None
+    assert manifest["predicted_score_band_high"] is None
+    assert 0.18 <= manifest["l2_projected_score_band_low"] <= 0.19
+    assert 0.18 <= manifest["l2_projected_score_band_high"] <= 0.19
+
+
+def test_readiness_manifest_l2_default_overlay_ready_exposes_dispatchable_projection():
+    """L2 INTEGRATION default: runtime_overlay_consumed defaults to True
+    (the inflate runtime applies the polytope overlay)."""
     cfg = D1PolytopeConfig()
     manifest = build_readiness_manifest(
         base_substrate_id="a1",
@@ -703,6 +742,10 @@ def test_readiness_manifest_predicted_band_falls_in_sub_0188_clearing():
         d1_overhead_bytes=2_000,
         config=cfg,
     )
+    assert manifest["runtime_overlay_consumed"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is True
+    assert manifest["promotion_eligible"] is False
+    assert manifest["predicted_score_evidence_grade"] == "first-principles-bound"
     assert 0.18 <= manifest["predicted_score_band_low"] <= 0.19
     assert 0.18 <= manifest["predicted_score_band_high"] <= 0.19
 
@@ -817,14 +860,12 @@ def test_no_tmp_paths_in_d1_module_source():
         )
 
 
-def test_no_op_detector_payload_structurally_consumed(tmp_path):
-    """Catalog #105 / #139 no-op detector: archive payload bytes are
-    structurally consumed by the inflate parser.
+def test_sidecar_payload_roundtrip_is_structurally_parseable(tmp_path):
+    """Catalog #105 / #139 guard: archive payload bytes are parseable.
 
     A roundtrip pack -> parse -> roundtrip must produce identical bytes,
-    AND the parsed archive must carry the polytope payload + margin map
-    (both non-zero size) so the no-op detector sees structural
-    consumption.
+    and the parsed archive must carry the polytope payload + margin map.
+    Runtime score movement is still blocked until L2 overlay wiring.
     """
     cfg, mm, payload, base_sha = _make_dummy_archive_inputs()
     blob = pack_archive(
@@ -852,6 +893,45 @@ def test_no_op_detector_payload_structurally_consumed(tmp_path):
         extra_meta={},
     )
     assert blob == blob2
+
+
+def test_trainer_runtime_emits_d1_sidecar_verifier(tmp_path):
+    import importlib
+
+    trainer = importlib.import_module(
+        "experiments.train_substrate_d1_segnet_margin_polytope"
+    )
+    submission_dir = tmp_path / "submission"
+    trainer._write_runtime(submission_dir)
+    assert (submission_dir / "d1_verify.py").is_file()
+    inflate_sh = (submission_dir / "inflate.sh").read_text(encoding="utf-8")
+    assert "d1_verify.py" in inflate_sh
+    assert "D1 sidecar not found" in inflate_sh
+
+    base_bytes = b"some-a1-base"
+    base_path = tmp_path / "a1.bin"
+    base_path.write_bytes(base_bytes)
+    cfg, mm, payload, _ = _make_dummy_archive_inputs()
+    blob = pack_archive(
+        margin_map=mm,
+        polytope_payload=payload,
+        jacobian_lipschitz=10.0,
+        base_substrate_id="a1",
+        base_archive_sha256=hashlib.sha256(base_bytes).hexdigest(),
+        base_archive_bytes=len(base_bytes),
+        config=cfg,
+        extra_meta={},
+    )
+    d1_path = tmp_path / "d1_polytope.bin"
+    d1_path.write_bytes(blob)
+    result = subprocess.run(
+        [sys.executable, str(submission_dir / "d1_verify.py"), str(d1_path), str(base_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "[d1-verify] parsed D1 sidecar" in result.stderr
 
 
 def test_d1_substrate_lane_class_marker_present():
