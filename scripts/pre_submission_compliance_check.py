@@ -834,7 +834,12 @@ def inspect_auth_eval(
 ) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     exists = path.is_file()
-    _add(checks, "auth_eval_exists", exists or not args.require_auth_eval, _rel(path))
+    _add(
+        checks,
+        "auth_eval_exists" if args.require_auth_eval else "auth_eval_present_or_optional",
+        exists or not args.require_auth_eval,
+        _rel(path),
+    )
     if not exists:
         if not args.require_auth_eval:
             _add(

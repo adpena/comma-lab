@@ -621,10 +621,19 @@ def build_hdm3_runtime_tree_inflate_output_parity_contract(
     decoder_label = decoder_recode_key.upper()
     if not _is_sha256(runtime_tree_sha256):
         blockers.append("hdm3_runtime_tree_sha256_missing_or_invalid")
+    payload_identity_proven = (
+        runtime_adapter_payload_identity.get("payload_identity_proven") is True
+    )
+    lossless_decoder_equivalence_proven = (
+        runtime_adapter_payload_identity.get("lossless_decoder_equivalence_proven") is True
+    )
+    runtime_equivalence_proven = (
+        runtime_adapter_payload_identity.get("runtime_equivalence_proven") is True
+    )
     if runtime_adapter_payload_identity.get("runtime_adapter_parity_proven") is not True:
-        blockers.append("hdm3_runtime_adapter_payload_identity_not_proven")
-    if runtime_adapter_payload_identity.get("payload_identity_proven") is not True:
-        blockers.append("hdm3_inflate_output_payload_identity_not_proven")
+        blockers.append("hdm3_runtime_adapter_equivalence_not_proven")
+    if not (payload_identity_proven or lossless_decoder_equivalence_proven):
+        blockers.append("hdm3_runtime_adapter_decoder_equivalence_not_proven")
     if runtime_adapter_payload_identity.get("ready_for_public_runtime_inflate") is not True:
         blockers.append("hdm3_public_runtime_inflate_not_ready")
 
@@ -662,17 +671,22 @@ def build_hdm3_runtime_tree_inflate_output_parity_contract(
         else 0,
         "runtime_tree_closure_proven": closed,
         "inflate_output_parity_proof_kind": (
-            "hnerv_hdm_decoder_section_lossless_runtime_support_plus_payload_identity"
+            "payload_identity"
+            if payload_identity_proven
+            else "decoder_raw_equivalence_with_submission_runtime_parse"
+            if lossless_decoder_equivalence_proven and runtime_equivalence_proven
+            else "missing"
         ),
         "inflate_output_parity_scope": (
-            f"{decoder_label} candidate payload normalizes to the exact source legacy "
-            f"payload, and the PR106-R2 PR101-grammar runtime decodes the {decoder_label} "
-            "decoder section directly. This is a byte identity/runtime decode "
-            "contract, not a CUDA frame or scorer parity result."
+            f"{decoder_label} candidate proof records exact payload identity when "
+            "available, otherwise only decoder-raw equivalence plus actual "
+            "submission-runtime parse support. This is not a CUDA frame or "
+            "scorer parity result."
         ),
-        "inflate_output_parity_proven_by_payload_identity": (
-            runtime_adapter_payload_identity.get("payload_identity_proven") is True
-        ),
+        "inflate_output_parity_proven_by_payload_identity": payload_identity_proven,
+        "lossless_decoder_equivalence_proven": lossless_decoder_equivalence_proven,
+        "runtime_equivalence_proven": runtime_equivalence_proven,
+        "full_frame_inflate_output_parity_claim": False,
         "exact_frame_output_parity_run": False,
         "exact_cuda_auth_eval_required_before_score": True,
         "lane_dispatch_claim_required_before_gpu": True,
@@ -740,8 +754,14 @@ def _runtime_adapter_payload_identity_evidence(
         parity_by_lossless_decoder_equivalence = (
             proof.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
         )
-        any_runtime_parity = bool(
+        any_runtime_equivalence = bool(
             parity_by_payload_identity or parity_by_lossless_decoder_equivalence
+        )
+        submission_runtime_candidate_parse_claim = (
+            proof.get("submission_runtime_candidate_parse_claim") is True
+        )
+        submission_runtime_equivalence_claim = (
+            proof.get("submission_runtime_equivalence_claim") is True
         )
         if proof.get("candidate_archive_sha256") != manifest.get("candidate_archive_sha256"):
             blockers.append("hdm3_runtime_adapter_archive_sha256_mismatch")
@@ -751,8 +771,20 @@ def _runtime_adapter_payload_identity_evidence(
             blockers.append("hdm3_runtime_adapter_proof_dispatch_attempted_not_false")
         if proof.get("ready_for_public_runtime_inflate") is not True:
             blockers.append("hdm3_runtime_adapter_public_runtime_inflate_not_ready")
-        if not any_runtime_parity:
-            blockers.append("hdm3_inflate_output_parity_not_proven_by_runtime_equivalence")
+        if not any_runtime_equivalence:
+            blockers.append("hdm3_decoder_equivalence_not_proven_by_runtime_adapter")
+        if (
+            parity_by_lossless_decoder_equivalence
+            and not parity_by_payload_identity
+            and not submission_runtime_candidate_parse_claim
+        ):
+            blockers.append("hdm3_submission_runtime_candidate_parse_not_proven")
+        if (
+            parity_by_lossless_decoder_equivalence
+            and not parity_by_payload_identity
+            and not submission_runtime_equivalence_claim
+        ):
+            blockers.append("hdm3_submission_runtime_equivalence_not_proven")
         if (
             proof.get("restored_payload_matches_source") is not True
             and not parity_by_lossless_decoder_equivalence
@@ -768,7 +800,7 @@ def _runtime_adapter_payload_identity_evidence(
 
     return {
         "schema_version": SCHEMA_VERSION,
-        "contract": "hnerv_hdm3_runtime_adapter_payload_identity_evidence_v1",
+        "contract": "hnerv_hdm3_runtime_adapter_equivalence_evidence_v1",
         "runtime_adapter_module": "tac.hnerv_hdm3_runtime_adapter",
         "runtime_decoder_support": f"direct_{decoder_recode_key}_decoder_section",
         "runtime_normalizer_path": "",
@@ -780,12 +812,31 @@ def _runtime_adapter_payload_identity_evidence(
         or proof.get("candidate_archive_sha256") == manifest.get("candidate_archive_sha256"),
         "payload_identity_proven": (
             proof.get("inflate_output_parity_proven_by_payload_identity") is True
-            or proof.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
         )
         if proof
         else False,
         "lossless_decoder_equivalence_proven": (
             proof.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
+        )
+        if proof
+        else False,
+        "runtime_equivalence_proven": (
+            proof.get("inflate_output_parity_proven_by_payload_identity") is True
+            or (
+                proof.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
+                and proof.get("submission_runtime_candidate_parse_claim") is True
+                and proof.get("submission_runtime_equivalence_claim") is True
+            )
+        )
+        if proof
+        else False,
+        "submission_runtime_candidate_parse_claim": (
+            proof.get("submission_runtime_candidate_parse_claim") is True
+        )
+        if proof
+        else False,
+        "submission_runtime_equivalence_claim": (
+            proof.get("submission_runtime_equivalence_claim") is True
         )
         if proof
         else False,

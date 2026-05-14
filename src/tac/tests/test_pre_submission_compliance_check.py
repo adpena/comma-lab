@@ -795,6 +795,9 @@ def test_pre_submission_check_marks_optional_missing_custody_as_warning(
         for check in report["checks"]
         if check["severity"] == "warning" and not check["passed"]
     }
+    passed = {check["name"]: check for check in report["checks"] if check["passed"]}
+    assert "auth_eval_exists" not in passed
+    assert "auth_eval_present_or_optional" in passed
     assert "auth_eval_optional_missing" in warnings
     assert "archive_manifest_optional_missing" in warnings
 

@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.util
+import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import brotli
 
@@ -45,6 +48,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--candidate-archive", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument(
+        "--runtime-dir",
+        type=Path,
+        help=(
+            "Optional submission runtime directory containing inflate.py and src/. "
+            "When supplied, the proof also imports the actual runtime parser and "
+            "decodes the source/candidate packet through that code path."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -53,6 +65,7 @@ def build_proof(
     source_archive: Path,
     candidate_archive: Path,
     output_dir: Path,
+    runtime_dir: Path | None = None,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     source_view = read_packed_archive_view(source_archive)
@@ -103,10 +116,36 @@ def build_proof(
         and restored_latents_sha == source_latents_sha
         and candidate_decoder_magic in (b"HDM3", b"HDM4", b"HDM6")
     )
+    submission_runtime_proof = _submission_runtime_parse_proof(
+        runtime_dir=runtime_dir,
+        source_payload=source.payload,
+        candidate_payload=candidate.payload,
+    )
+    submission_runtime_candidate_parse_claim = (
+        submission_runtime_proof.get("candidate_parse_claim") is True
+    )
+    submission_runtime_equivalence_claim = (
+        submission_runtime_proof.get("candidate_decoder_state_matches_source") is True
+        and submission_runtime_proof.get("candidate_latents_match_source") is True
+        and submission_runtime_proof.get("candidate_meta_matches_source") is True
+    )
     public_runtime_ready = bool(
         inflate_output_parity_proven_by_payload_identity
-        or inflate_output_parity_proven_by_lossless_decoder_equivalence
+        or (
+            inflate_output_parity_proven_by_lossless_decoder_equivalence
+            and submission_runtime_candidate_parse_claim
+            and submission_runtime_equivalence_claim
+        )
     )
+    remaining_dispatch_blockers = _dispatch_blockers(
+        inflate_output_parity_proven_by_payload_identity
+    )
+    if (
+        inflate_output_parity_proven_by_lossless_decoder_equivalence
+        and not inflate_output_parity_proven_by_payload_identity
+        and not submission_runtime_candidate_parse_claim
+    ):
+        remaining_dispatch_blockers.insert(0, "submission_runtime_candidate_parse_missing")
     adapter_proof = {
         **adapter_proof,
         "exact_source_payload_identity_proven_by_archive_proof": (
@@ -115,9 +154,9 @@ def build_proof(
         "lossless_decoder_equivalence_proven_by_archive_proof": (
             inflate_output_parity_proven_by_lossless_decoder_equivalence
         ),
-        "remaining_dispatch_blockers": _dispatch_blockers(
-            public_runtime_ready
-        ),
+        "submission_runtime_candidate_parse_claim": submission_runtime_candidate_parse_claim,
+        "submission_runtime_equivalence_claim": submission_runtime_equivalence_claim,
+        "remaining_dispatch_blockers": remaining_dispatch_blockers,
     }
     adapter_files = [
         REPO_ROOT / "src/tac/hnerv_hdm3_runtime_adapter.py",
@@ -178,17 +217,22 @@ def build_proof(
             }
             for path in adapter_files
         ],
+        "submission_runtime_parse_proof": submission_runtime_proof,
+        "submission_runtime_parse_exercised": (
+            submission_runtime_proof.get("runtime_parse_exercised") is True
+        ),
+        "submission_runtime_candidate_parse_claim": submission_runtime_candidate_parse_claim,
+        "submission_runtime_equivalence_claim": submission_runtime_equivalence_claim,
         "runtime_adapter_integrated": True,
         "public_pr106_dependency_root_unchanged": True,
         "inflate_output_parity_proven_by_payload_identity": inflate_output_parity_proven_by_payload_identity,
         "inflate_output_parity_proven_by_lossless_decoder_equivalence": (
             inflate_output_parity_proven_by_lossless_decoder_equivalence
         ),
+        "full_frame_inflate_output_parity_claim": False,
         "ready_for_public_runtime_inflate": public_runtime_ready,
         "ready_for_exact_eval_dispatch": False,
-        "remaining_dispatch_blockers": _dispatch_blockers(
-            public_runtime_ready
-        ),
+        "remaining_dispatch_blockers": remaining_dispatch_blockers,
     }
     write_json(output_dir / "runtime_adapter_proof.json", proof)
     return proof
@@ -201,13 +245,130 @@ def _packed_from_member_payload(payload: bytes):
     return parse_ff_packed_brotli_hnerv(payload)
 
 
-def _dispatch_blockers(inflate_output_parity_proven: bool) -> list[str]:
+def _submission_runtime_parse_proof(
+    *,
+    runtime_dir: Path | None,
+    source_payload: bytes,
+    candidate_payload: bytes,
+) -> dict[str, Any]:
+    if runtime_dir is None:
+        return {
+            "runtime_parse_exercised": False,
+            "candidate_parse_claim": False,
+            "blockers": ["submission_runtime_dir_not_supplied"],
+        }
+    try:
+        runtime = _load_submission_inflate_module(runtime_dir)
+        source_digest = _runtime_payload_digest(runtime, source_payload)
+        candidate_digest = _runtime_payload_digest(runtime, candidate_payload)
+    except Exception as exc:
+        return {
+            "runtime_parse_exercised": False,
+            "runtime_dir": repo_relative(runtime_dir, REPO_ROOT),
+            "candidate_parse_claim": False,
+            "blockers": [f"submission_runtime_parse_failed:{type(exc).__name__}:{exc}"],
+        }
+
+    decoder_matches = (
+        source_digest.get("decoder_state_sha256")
+        == candidate_digest.get("decoder_state_sha256")
+    )
+    latents_match = source_digest.get("latents_sha256") == candidate_digest.get("latents_sha256")
+    meta_matches = source_digest.get("meta") == candidate_digest.get("meta")
+    blockers: list[str] = []
+    if not decoder_matches:
+        blockers.append("submission_runtime_decoder_state_mismatch")
+    if not latents_match:
+        blockers.append("submission_runtime_latents_mismatch")
+    if not meta_matches:
+        blockers.append("submission_runtime_meta_mismatch")
+    return {
+        "runtime_parse_exercised": True,
+        "runtime_dir": repo_relative(runtime_dir, REPO_ROOT),
+        "source": source_digest,
+        "candidate": candidate_digest,
+        "candidate_decoder_state_matches_source": decoder_matches,
+        "candidate_latents_match_source": latents_match,
+        "candidate_meta_matches_source": meta_matches,
+        "candidate_parse_claim": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _load_submission_inflate_module(runtime_dir: Path):
+    runtime_dir = runtime_dir.resolve()
+    inflate_py = runtime_dir / "inflate.py"
+    if not inflate_py.is_file():
+        raise FileNotFoundError(f"{inflate_py} does not exist")
+    module_name = f"_pact_hdm_runtime_{hashlib.sha256(str(runtime_dir).encode()).hexdigest()[:12]}"
+    saved_path = list(sys.path)
+    runtime_module_names = ("codec", "model", "pr101_grammar")
+    saved_modules = {name: sys.modules.get(name) for name in runtime_module_names}
+    for name in runtime_module_names:
+        sys.modules.pop(name, None)
+    try:
+        sys.path.insert(0, str(runtime_dir / "src"))
+        sys.path.insert(0, str(runtime_dir))
+        spec = importlib.util.spec_from_file_location(module_name, inflate_py)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load runtime module from {inflate_py}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.path[:] = saved_path
+        for name, module in saved_modules.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+
+
+def _runtime_payload_digest(runtime: Any, payload: bytes) -> dict[str, Any]:
+    if payload and payload[0] == PR106_SIDECAR_MAGIC:
+        format_id, pr106_bytes, _sidecar_blob, _framing_meta = runtime.parse_sidecar_archive(payload)
+        format_label = f"0x{int(format_id):02X}"
+    else:
+        pr106_bytes = payload
+        format_label = None
+    decoder_sd, latents, meta = runtime.parse_packed_archive(pr106_bytes)
+    return {
+        "format_id": format_label,
+        "pr106_payload_sha256": sha256_bytes(pr106_bytes),
+        "decoder_state_sha256": _tensor_mapping_digest(decoder_sd),
+        "latents_sha256": _tensor_digest(latents),
+        "meta": json.loads(json.dumps(meta, sort_keys=True)),
+    }
+
+
+def _tensor_mapping_digest(mapping: Mapping[str, Any]) -> str:
+    digest = hashlib.sha256()
+    for name in sorted(mapping):
+        digest.update(name.encode())
+        digest.update(b"\0")
+        digest.update(_tensor_digest(mapping[name]).encode())
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _tensor_digest(tensor: Any) -> str:
+    array = tensor.detach().cpu().contiguous().numpy()
+    digest = hashlib.sha256()
+    digest.update(str(tuple(array.shape)).encode())
+    digest.update(b"\0")
+    digest.update(str(array.dtype).encode())
+    digest.update(b"\0")
+    digest.update(array.tobytes())
+    return digest.hexdigest()
+
+
+def _dispatch_blockers(exact_inflate_output_parity_proven: bool) -> list[str]:
     blockers = [
         "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
     ]
-    if not inflate_output_parity_proven:
+    if not exact_inflate_output_parity_proven:
         blockers.insert(0, "exact_inflate_output_parity_missing")
     return blockers
 
@@ -220,6 +381,7 @@ def main(argv: list[str] | None = None) -> int:
             source_archive=args.source_archive,
             candidate_archive=args.candidate_archive,
             output_dir=args.output_dir,
+            runtime_dir=args.runtime_dir,
         )
     except (brotli.error, HnervHdm3RuntimeAdapterError, HnervLowlevelPackError) as exc:
         print(f"FATAL: HDM3 runtime adapter proof failed: {exc}", file=sys.stderr)

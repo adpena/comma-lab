@@ -212,7 +212,7 @@ def test_prove_hnerv_hdm3_runtime_adapter_tool_writes_archive_parity_manifest(
     source_decoder = brotli.compress(raw, quality=10)
     parsed = _parsed_decoder_from_legacy_brotli(source_decoder)
     hdm3, _stats = encode_hdm3_q_brotli_split_fixture(parsed)
-    latents = brotli.compress(b"latents" * 100, quality=5)
+    latents = brotli.compress(bytes(600 * 28 * 2 + 28 * 4), quality=5)
     source_archive = tmp_path / "source.zip"
     candidate_archive = tmp_path / "candidate.zip"
     write_stored_single_member_zip(
@@ -272,7 +272,7 @@ def test_prove_hnerv_hdm3_runtime_adapter_tool_supports_pr106_sidecar_wrapper(
     source_decoder = brotli.compress(raw, quality=10)
     parsed = _parsed_decoder_from_legacy_brotli(source_decoder)
     hdm3, _stats = encode_hdm3_q_brotli_split_fixture(parsed)
-    latents = brotli.compress(b"latents" * 100, quality=5)
+    latents = brotli.compress(bytes(600 * 28 * 2 + 28 * 4), quality=5)
     sidecar_payload = brotli.compress(b"\x00\x00", quality=5)
     source_archive = tmp_path / "source.zip"
     candidate_archive = tmp_path / "candidate.zip"
@@ -337,7 +337,7 @@ def test_prove_runtime_adapter_accepts_hdm4_source_to_hdm6_candidate(
     parsed = _parsed_decoder_from_legacy_brotli(source_decoder)
     hdm4, _hdm4_stats = encode_hdm4_q_brotli_split_fixture(parsed)
     hdm6, _hdm6_stats = encode_hdm6_q_brotli_tuned_fixture(parsed)
-    latents = brotli.compress(b"latents" * 100, quality=5)
+    latents = brotli.compress(bytes(600 * 28 * 2 + 28 * 4), quality=5)
     source_archive = tmp_path / "source_hdm4.zip"
     candidate_archive = tmp_path / "candidate_hdm6.zip"
     write_stored_single_member_zip(
@@ -372,6 +372,8 @@ def test_prove_runtime_adapter_accepts_hdm4_source_to_hdm6_candidate(
             str(tmp_path / "out_hdm6"),
             "--json-out",
             str(json_out),
+            "--runtime-dir",
+            str(REPO / "submissions" / "pr106_latent_sidecar_r2_pr101_grammar"),
         ],
         check=True,
         text=True,
@@ -386,9 +388,13 @@ def test_prove_runtime_adapter_accepts_hdm4_source_to_hdm6_candidate(
     assert proof["restored_payload_matches_source"] is False
     assert proof["inflate_output_parity_proven_by_payload_identity"] is False
     assert proof["inflate_output_parity_proven_by_lossless_decoder_equivalence"] is True
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert proof["submission_runtime_parse_exercised"] is True
+    assert proof["submission_runtime_candidate_parse_claim"] is True
+    assert proof["submission_runtime_equivalence_claim"] is True
     assert proof["ready_for_public_runtime_inflate"] is True
     assert proof["ready_for_exact_eval_dispatch"] is False
-    assert "exact_inflate_output_parity_missing" not in proof["remaining_dispatch_blockers"]
+    assert "exact_inflate_output_parity_missing" in proof["remaining_dispatch_blockers"]
 
 
 def _parsed_decoder_from_legacy_brotli(decoder_brotli: bytes):

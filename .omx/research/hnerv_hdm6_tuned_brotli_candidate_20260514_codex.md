@@ -22,7 +22,8 @@ CUDA auth eval on the exact archive/runtime packet.
   `f3941568035d40bc7cb9e6fc0a108a5ec8bedf33f7ae14f6c060e92f7f247593`
 - Candidate archive bytes: `186408`
 - Decoder section bytes: `169990 -> 169987`
-- Rate-only score delta if components are equal:
+- Rate-only candidate delta, axis label `[pending-contest-CUDA; rate-term-only;
+  not a score claim]`, if exact CUDA components are equal:
   `-0.000001997577`
 
 ## Mechanism
@@ -74,8 +75,16 @@ Runtime parity proof:
   --source-archive experiments/results/pr106_r2_hdm4_hlm2_latent_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm2_latent_candidate.zip \
   --candidate-archive experiments/results/pr106_r2_hdm4_hlm2_hdm6_candidate_20260514_codex/pr106_r2_hdm4_hlm2_xmember_hdm6_archive_candidate.zip \
   --output-dir experiments/results/pr106_r2_hdm4_hlm2_hdm6_candidate_20260514_codex \
-  --json-out experiments/results/pr106_r2_hdm4_hlm2_hdm6_candidate_20260514_codex/runtime_adapter_proof.json
+  --json-out experiments/results/pr106_r2_hdm4_hlm2_hdm6_candidate_20260514_codex/runtime_adapter_proof.json \
+  --runtime-dir submissions/pr106_latent_sidecar_r2_pr101_grammar
 ```
+
+The proof now distinguishes exact payload identity from decoder-raw equivalence:
+
+- `inflate_output_parity_proven_by_payload_identity=false`
+- `inflate_output_parity_proven_by_lossless_decoder_equivalence=true`
+- `submission_runtime_candidate_parse_claim=true`
+- `full_frame_inflate_output_parity_claim=false`
 
 Static compliance:
 
@@ -111,7 +120,7 @@ Static packet readiness:
   src/tac/tests/test_hnerv_lowlevel_packer.py
 ```
 
-Result: `54 passed in 30.33s`.
+Result after adversarial hardening: `76 passed in 31.55s`.
 
 ## Dispatch Gate
 

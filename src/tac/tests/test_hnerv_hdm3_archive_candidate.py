@@ -65,7 +65,7 @@ def test_build_hdm3_archive_candidate_is_byte_closed_but_not_dispatch_ready(
     assert manifest["runtime_adapter_proof"]["runtime_adapter_parity_proven"] is False
     assert manifest["runtime_adapter_proof"]["runtime_adapter_module"] == "tac.hnerv_hdm3_runtime_adapter"
     assert manifest["fixed_runtime_preflight"]["ready_for_fixed_runtime_exact_eval_readiness"] is False
-    assert "hdm3_runtime_adapter_payload_identity_not_proven" in manifest["fixed_runtime_preflight"][
+    assert "hdm3_runtime_adapter_equivalence_not_proven" in manifest["fixed_runtime_preflight"][
         "blockers"
     ]
     assert "hdm3_runtime_adapter_archive_parity_proof_missing" in manifest["dispatch_blockers"]
@@ -325,6 +325,80 @@ def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(
     ]
     assert (out / "hdm3_exact_eval_packet_readiness.json").exists()
     assert (out / "hdm3_runtime_tree_closure.json").exists()
+
+
+def test_hdm3_readiness_keeps_lossless_decoder_equivalence_separate_from_payload_identity(
+    tmp_path: Path,
+) -> None:
+    source_archive = _source_archive(tmp_path)
+    out = tmp_path / "out"
+    manifest = build_hdm3_archive_candidate(
+        source_archive=source_archive,
+        output_dir=out,
+        source_label="PR106x frontier",
+        repo_root=REPO,
+    )
+    (out / "runtime_adapter_proof.json").write_text(
+        json.dumps(
+            {
+                "contract": "hnerv_hdm3_runtime_adapter_archive_parity_v1",
+                "candidate_archive_sha256": manifest["candidate_archive_sha256"],
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "ready_for_public_runtime_inflate": True,
+                "inflate_output_parity_proven_by_payload_identity": False,
+                "inflate_output_parity_proven_by_lossless_decoder_equivalence": True,
+                "submission_runtime_candidate_parse_claim": True,
+                "submission_runtime_equivalence_claim": True,
+                "restored_payload_matches_source": False,
+                "restored_decoder_section_matches_source": False,
+                "latents_and_sidecar_match_source": True,
+                "full_frame_inflate_output_parity_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out / "pre_submission_compliance.static.json").write_text(
+        json.dumps(
+            {
+                "schema": "pre_submission_compliance_check_v1",
+                "passed": True,
+                "archive": {
+                    "sha256": manifest["candidate_archive_sha256"],
+                    "bytes": manifest["candidate_archive_bytes"],
+                },
+                "checks": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = build_hdm3_exact_eval_packet_readiness(
+        manifest,
+        output_dir=out,
+        repo_root=REPO,
+        write=True,
+    )
+
+    runtime_evidence = readiness["runtime_adapter_payload_identity"]
+    assert runtime_evidence["payload_identity_proven"] is False
+    assert runtime_evidence["lossless_decoder_equivalence_proven"] is True
+    assert runtime_evidence["runtime_equivalence_proven"] is True
+    assert runtime_evidence["runtime_adapter_parity_proven"] is True
+    runtime_contract = readiness["runtime_tree_inflate_output_parity"]
+    assert runtime_contract["inflate_output_parity_proven_by_payload_identity"] is False
+    assert runtime_contract["lossless_decoder_equivalence_proven"] is True
+    assert runtime_contract["runtime_equivalence_proven"] is True
+    assert runtime_contract["full_frame_inflate_output_parity_claim"] is False
+    assert runtime_contract["runtime_tree_closure_proven"] is True
+    assert readiness["ready_for_exact_eval_packet"] is True
 
 
 def test_build_hdm3_archive_candidate_fails_closed_without_rate_win(tmp_path: Path) -> None:
