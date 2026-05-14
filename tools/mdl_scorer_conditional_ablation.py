@@ -169,11 +169,15 @@ DEFAULT_EXCLUDED_SECTIONS_BY_GRAMMAR: dict[str, frozenset[str]] = {
 GRAMMAR_ALIASES: dict[str, str] = {
     "pr101": "a1",
     "pr106": "pr106_latent_sidecar",
+    "pr106_latent_sidecar_r2": "pr106_latent_sidecar",
     "ibps1_mdl_ibps": "ibps1",
     "c6_e4_mdl_ibps": "ibps1",
     "mdl_ibps": "ibps1",
+    "pretrained_driving_prior": "dp1",
+    "driving_prior": "dp1",
+    "dp1_driving_prior": "dp1",
 }
-SUPPORTED_GRAMMARS = frozenset({"a1", "pr106_latent_sidecar", "ibps1"})
+SUPPORTED_GRAMMARS = frozenset({"a1", "pr106_latent_sidecar", "ibps1", "dp1"})
 
 
 def normalize_grammar(grammar: str) -> str:
@@ -485,6 +489,13 @@ def load_archive(archive_path: Path, grammar: str) -> tuple[bytes, dict[str, tup
         sections = parse_pr106_archive_bytes(inner_bytes)
     elif grammar == "ibps1":
         sections = parse_ibps1_archive_bytes(inner_bytes)
+    elif grammar == "dp1":
+        # Delegate to the canonical DP1 surface (sister of IBPS1 promotion
+        # 2026-05-14 IBPS1-PARSER-WAVE-P0 / DP1 sister wave).
+        from tac.substrates.pretrained_driving_prior.archive import (  # type: ignore[import-not-found]
+            parse_dp1_archive_bytes,
+        )
+        sections = parse_dp1_archive_bytes(inner_bytes)
     else:
         # Generic: treat whole blob as one section
         sections = {"whole_blob": (0, len(inner_bytes))}
@@ -502,7 +513,7 @@ def _read_inner_member(archive_path: Path, grammar: str) -> bytes:
     """
     with zipfile.ZipFile(archive_path) as zf:
         names = zf.namelist()
-        if grammar == "ibps1" and "0.bin" in names:
+        if grammar in ("ibps1", "dp1") and "0.bin" in names:
             inner_name = "0.bin"
         elif "x" in names:
             inner_name = "x"
@@ -1363,12 +1374,18 @@ def run_tier_c(
         - ``pr106`` / ``pr106_latent_sidecar``: perturb PR106 state_dict
           + sidecar-applied latents
         - ``ibps1``: perturb C6 IB decoder state_dict + latents
+        - ``dp1`` / ``pretrained_driving_prior``: perturb DP1
+          DrivingPriorRenderer state_dict + per-pair int8 residual
         - others: not implemented (returns [])
 
     The DECODER state_dict + LATENTS are the perturbation targets because
     they are the inflate-time consumers (encoder is forensic-only for
     IBPS1; A1 doesn't carry an encoder). Each sigma controls per-tensor
-    relative noise magnitude (Gaussian scaled by tensor's std).
+    relative noise magnitude (Gaussian scaled by tensor's std). For DP1
+    the targets are the renderer state_dict (state_dict perturbation) and
+    the per-pair int8 residual (latents-analogue perturbation: the
+    residual IS the per-pair latent-dimensional correction signal in
+    DP1's grammar).
     """
     if grammar in ("a1", "pr101"):
         return _run_tier_c_a1(
@@ -1384,6 +1401,13 @@ def run_tier_c(
         )
     if grammar in ("pr106", "pr106_latent_sidecar", "pr106_latent_sidecar_r2"):
         return _run_tier_c_pr106(
+            inner_bytes, pair_indices, gt_pairs, baseline_seg,
+            baseline_pose, distortion_net, device, rng, noise_sigmas,
+            scorer_batch_size=scorer_batch_size,
+        )
+    if grammar in ("dp1", "pretrained_driving_prior", "driving_prior",
+                   "dp1_driving_prior"):
+        return _run_tier_c_dp1(
             inner_bytes, pair_indices, gt_pairs, baseline_seg,
             baseline_pose, distortion_net, device, rng, noise_sigmas,
             scorer_batch_size=scorer_batch_size,
@@ -1761,6 +1785,260 @@ def _run_tier_c_ibps1(
                 noise = torch.randn_like(base_latents_dev) * (rel_std * sigma)
                 perturbed_latents = (base_latents_dev + noise).cpu()
                 cand_frames = _render(base_decoder_sd, perturbed_latents)
+            pose_p, seg_p = _compute_seg_pose_delta(
+                distortion_net, gt_pairs, cand_frames, device,
+                batch_size=scorer_batch_size,
+            )
+            dseg = seg_p - baseline_seg
+            dpose = pose_p - baseline_pose
+            dsc = _score_components(pose_p, seg_p) - baseline_score_comp
+            t1 = time.time()
+            results.append(TierCResult(
+                target=target,
+                noise_sigma_relative=sigma,
+                delta_seg=dseg,
+                delta_pose=dpose,
+                delta_score_components=dsc,
+                elapsed_seconds=t1 - t0,
+            ))
+
+    return results
+
+
+def _run_tier_c_dp1(
+    inner_bytes: bytes,
+    pair_indices: list[int],
+    gt_pairs: torch.Tensor,
+    baseline_seg: float,
+    baseline_pose: float,
+    distortion_net: torch.nn.Module,
+    device: torch.device,
+    rng: random.Random,
+    noise_sigmas: list[float] | None = None,
+    scorer_batch_size: int = 4,
+) -> list[TierCResult]:
+    """DP1 (pre-trained driving prior) Tier C: perturb renderer state_dict + per-pair residual.
+
+    Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" and
+    the operator's grand council Decision 7 (omnibus commit ``7872c9f4b``,
+    PROCEED A→C ordering), DP1's Tier C measures decoder-state and per-pair
+    residual sensitivity directly — bypassing the byte layer.
+
+    DP1 architecture differs from A1 / PR106 (HNeRV-family) and IBPS1
+    (encoder/decoder bottleneck): the inflate-time renderer is a tiny
+    SIREN-style coordinate-MLP (~12K params at hidden=64, layers=3) that
+    maps ``(x, y, t_pair, foveation)`` → RGB per pair. The codebook is
+    FROZEN at inflate (no contest-specific gradient touches it) so it is
+    NOT a perturbation target here — perturbing the codebook would be
+    measuring an offline-distilled prior's robustness, not the
+    contest-overfit signal. The two perturbation targets are:
+
+    * ``state_dict`` — the contest-overfit renderer's FP16 weights
+      (DrivingPriorRenderer state_dict). Mirrors A1/PR106/IBPS1 contract.
+    * ``latents`` — the per-pair int8 residual bytes (the rate-limited
+      per-pair correction signal). DP1's "latents-analogue": each pair
+      carries ``per_pair_bytes`` int8 values that the inflate path
+      dequantizes via ``int8_scale`` then applies as a low-frequency
+      RGB delta clamped within ~3 gray levels. Perturbing the residual
+      is the CLOSEST mechanical analogue to perturbing IBPS1's per-pair
+      latent vector.
+
+    Math (per Z1 council deep-math §3.5 substrate-class discriminator):
+
+        Δscore(σ) = score(perturb_with(σ * tensor.std())) - baseline_score
+
+    For DP1 the substrate-class hypothesis is NOT the IB-bottleneck
+    (DP1 has no posterior/prior KL gating). The hypothesis is closer to
+    the "frozen-prior-plus-small-overfit" class: a PCA-subspace + tiny
+    coordinate-MLP that should saturate quickly under renderer-weight
+    perturbation (the renderer is the score-affecting surface) and be
+    roughly insensitive to residual perturbation at small σ (the
+    residual is heavily quantized + clamped to ~3 gray levels).
+
+    Returns the same ``TierCResult`` schema as A1 / PR106 / IBPS1 Tier C
+    so the aggregation + JSON serialization downstream is grammar-agnostic.
+
+    Raises:
+        ValueError: if the archive parses successfully but the renderer
+            construction fails (state_dict shape mismatch).
+    """
+    if noise_sigmas is None:
+        noise_sigmas = [0.001, 0.01, 0.1, 1.0]
+
+    # Late imports — DP1 substrate dependencies (brotli, codebook PCA arrays)
+    # may not be importable in test fixtures without the substrate package.
+    from tac.substrates.pretrained_driving_prior.archive import (  # type: ignore[import-not-found]
+        DrivingPriorArchive,
+        parse_archive,
+    )
+    from tac.substrates.pretrained_driving_prior.architecture import (  # type: ignore[import-not-found]
+        DrivingPriorRenderer,
+        DrivingPriorRendererConfig,
+    )
+
+    arc: DrivingPriorArchive = parse_archive(inner_bytes)
+
+    # Pre-cache the clean renderer state_dict + per-pair residual (CPU
+    # copies) so we rebuild the perturbed renderer from scratch each
+    # sigma without accumulating noise. Mirrors the IBPS1 + A1 + PR106
+    # contract for cleanliness.
+    base_renderer_sd = {
+        k: v.detach().cpu().clone() for k, v in arc.renderer_state_dict.items()
+    }
+    base_residual_bytes = bytes(arc.per_pair_residual)
+    int8_scale = float(arc.meta.get("residual_int8_scale", 64.0))
+
+    baseline_score_comp = _score_components(baseline_pose, baseline_seg)
+    results: list[TierCResult] = []
+
+    # Infer renderer config from state_dict shapes — same logic as
+    # ``inflate.py::_build_renderer_from_state_dict``. We replicate it
+    # here (rather than importing the inflate helper) to keep the Tier C
+    # path self-contained + decoupled from inflate-side device routing
+    # (inflate select_inflate_device refuses MPS; the Tier C harness
+    # accepts MPS for fast advisory ablation per CLAUDE.md MPS-noise
+    # carve-out for DELTAS).
+    sine_layer_indices = sorted(
+        {
+            int(k.split(".")[1])
+            for k in base_renderer_sd
+            if k.startswith("net.") and ".linear.weight" in k
+        }
+    )
+    num_sine_layers = len(sine_layer_indices) if sine_layer_indices else 3
+    first_key = (
+        f"net.{sine_layer_indices[0]}.linear.weight"
+        if sine_layer_indices
+        else None
+    )
+    hidden_dim = (
+        int(base_renderer_sd[first_key].shape[0])
+        if first_key is not None and first_key in base_renderer_sd
+        else 64
+    )
+    cfg = DrivingPriorRendererConfig(
+        hidden_dim=int(hidden_dim),
+        num_hidden_layers=int(num_sine_layers),
+        output_height=int(arc.output_height),
+        output_width=int(arc.output_width),
+    )
+
+    def _render_pair_with_residual(
+        renderer_sd: dict[str, torch.Tensor],
+        residual_bytes: bytes,
+        pair_idx: int,
+    ) -> torch.Tensor:
+        """Render one pair through a fresh renderer + residual application.
+
+        Returns shape (2, CAMERA_H, CAMERA_W, 3) uint8 CPU tensor.
+        """
+        renderer = DrivingPriorRenderer(cfg).to(device).eval()
+        incompat = renderer.load_state_dict(renderer_sd, strict=False)
+        if set(incompat.missing_keys) or set(incompat.unexpected_keys):
+            raise ValueError(
+                f"dp1 tier_c: renderer state_dict mismatch "
+                f"missing={sorted(incompat.missing_keys)} "
+                f"unexpected={sorted(incompat.unexpected_keys)}"
+            )
+        with torch.no_grad():
+            rgb_0, rgb_1 = renderer.render_pair(pair_idx, arc.num_pairs)
+            # Apply per-pair int8 residual using the SAME logic as inflate.py
+            # (slice → dequantize → low-frequency RGB delta).
+            start = pair_idx * arc.per_pair_bytes
+            pair_bytes = residual_bytes[start : start + arc.per_pair_bytes]
+            pair_int8 = np.frombuffer(pair_bytes, dtype=np.int8).astype(
+                np.float32
+            )
+            residual_floats = (
+                torch.from_numpy(pair_int8).to(device) / int8_scale
+            )
+            n_chunks = arc.per_pair_bytes // 3
+            if n_chunks >= 1:
+                chunk = (
+                    residual_floats[: n_chunks * 3]
+                    .view(n_chunks, 3)
+                    .mean(dim=0)
+                )
+                correction = chunk.view(1, 3, 1, 1)
+                correction_full = correction.expand_as(rgb_0)
+                rgb_0 = (rgb_0 + 0.02 * correction_full).clamp(0.0, 1.0)
+                rgb_1 = (rgb_1 + 0.02 * correction_full).clamp(0.0, 1.0)
+            # Renderer returns shape (1, 3, OUT_H, OUT_W) in [0, 1]. Up to
+            # camera resolution (874, 1164) via bicubic — same contract as
+            # IBPS1 + PR106.
+            stacked = torch.cat([rgb_0, rgb_1], dim=0)  # (2, 3, H, W)
+            up = F.interpolate(
+                stacked,
+                size=(CAMERA_H, CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            frames = (
+                (up * 255.0)
+                .clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+            )
+        return frames
+
+    def _render(
+        renderer_sd: dict[str, torch.Tensor],
+        residual_bytes: bytes,
+    ) -> torch.Tensor:
+        """Render the requested pairs through the perturbed renderer + residual.
+
+        Returns shape (len(pair_indices), 2, CAMERA_H, CAMERA_W, 3) uint8.
+        """
+        pair_indices_t = sorted(set(pair_indices))
+        n_target = len(pair_indices_t)
+        out = torch.empty(
+            (n_target, 2, CAMERA_H, CAMERA_W, 3), dtype=torch.uint8
+        )
+        for i, pair_idx in enumerate(pair_indices_t):
+            frames = _render_pair_with_residual(
+                renderer_sd, residual_bytes, pair_idx
+            )
+            out[i, 0] = frames[0]
+            out[i, 1] = frames[1]
+        return out
+
+    for sigma in noise_sigmas:
+        for target in ("state_dict", "latents"):
+            t0 = time.time()
+            if target == "state_dict":
+                # Perturb the renderer state_dict in float space, cast back
+                # to the source dtype (FP16 in DP1).
+                perturbed_sd: dict[str, torch.Tensor] = {}
+                for k, v in base_renderer_sd.items():
+                    v_dev = v.to(device).float()
+                    rel_std = v_dev.std().clamp(min=1e-8)
+                    noise = torch.randn_like(v_dev) * (rel_std * sigma)
+                    perturbed_sd[k] = (v_dev + noise).to(dtype=v.dtype).cpu()
+                cand_frames = _render(perturbed_sd, base_residual_bytes)
+            else:  # latents (per-pair int8 residual)
+                # Perturb the per-pair residual in int8 space. The
+                # mechanically-honest analogue to "perturb latents":
+                # dequantize → add Gaussian noise scaled by std → re-
+                # quantize to int8 (clamped to [-128, 127] before .tobytes()).
+                # If the residual is empty (per_pair_bytes == 0) the
+                # perturbation is a no-op + we record the row with Δ=0.
+                if not base_residual_bytes:
+                    perturbed_residual_bytes = base_residual_bytes
+                else:
+                    res_int8 = np.frombuffer(
+                        base_residual_bytes, dtype=np.int8
+                    ).astype(np.float32)
+                    res_t = torch.from_numpy(res_int8.copy()).to(device)
+                    rel_std = res_t.std().clamp(min=1e-8)
+                    noise = torch.randn_like(res_t) * (rel_std * sigma)
+                    perturbed = (res_t + noise).clamp(-128.0, 127.0)
+                    perturbed_int8 = (
+                        perturbed.round().to(torch.int8).cpu().numpy()
+                    )
+                    perturbed_residual_bytes = perturbed_int8.tobytes()
+                cand_frames = _render(base_renderer_sd, perturbed_residual_bytes)
             pose_p, seg_p = _compute_seg_pose_delta(
                 distortion_net, gt_pairs, cand_frames, device,
                 batch_size=scorer_batch_size,
