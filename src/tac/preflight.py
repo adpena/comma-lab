@@ -1932,6 +1932,31 @@ def preflight_all(
         check_archive_promotion_blocked_by_mdl_density_above_threshold(
             strict=False, verbose=verbose,
         )
+        # 2026-05-14 Catalog #220 - substrate scaffold byte addition without
+        # operational score-improvement mechanism. Anchor: D1 R3 dispatch
+        # produced score ~0.222 vs predicted [0.181, 0.188] because the L1
+        # SCAFFOLD landed a 43 KB sidecar that the inflate runtime did NOT
+        # consume operationally. The gate is wired strict=True per CLAUDE.md
+        # "Strict-flip atomicity rule" - the D1 L2 INTEGRATION + readiness
+        # manifest default flip + lane registry note update land in the same
+        # commit batch driving live count to 0.
+        check_substrate_l1_scaffold_no_byte_addition_without_operational_score_improvement_mechanism(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
+        # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
+        # returned auth_eval rc=2 because the trainer hand-wrote
+        # --archive-zip / --output-json flags that don't exist on
+        # experiments/contest_auth_eval.py (canonical --archive / --json-out).
+        # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+        # rule" - 18 substrate trainers currently hand-roll the pattern;
+        # strict-flip planned after operator-routed refactoring wave drives
+        # the live count to 0. Sister of Catalog #164 / #205 / #218 (canonical
+        # path enforcement gates). Memory:
+        # feedback_catalog_221_auth_eval_gate_and_d4_timeout_investigation_landed_20260514.md.
+        check_trainer_auth_eval_uses_canonical_helper(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -2054,6 +2079,26 @@ def preflight_all(
         # Catalog #130 landed at 0 live violations; ratchet permanently
         # extincts the broader tag-only-custody META class.
         check_no_tag_only_custody_validation(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #221: result/planner artifacts must not leak
+        # score-claim or promotion authority through nested rows. This keeps
+        # auth-eval roundtrip matrices as command planners and keeps PacketIR
+        # CPU-axis rows visibly diagnostic before any operator/reviewer consumes
+        # generated JSON out of context.
+        check_auth_eval_result_artifacts_fail_closed_for_score_claims(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #222: scorer loader helpers return
+        # (posenet, segnet). A reversed assignment silently feeds SegNet into
+        # the PoseNet slot and fails only when a trainer reaches scorer loss.
+        check_scorer_loader_assignment_order(strict=True, verbose=verbose)
+        # 2026-05-14 Catalog #223: substrate trainers must use the current
+        # contest_auth_eval.py CLI and must not silently continue after an
+        # auth-eval invocation that cannot produce a valid archive/runtime
+        # score. This blocks stale --archive-zip/--output-json calls and direct
+        # invocations missing --inflate-sh before another Modal smoke burns.
+        check_substrate_auth_eval_invocations_use_current_cli(
             strict=True, verbose=verbose,
         )
         # 2026-05-09 proactive META-class custody+concurrency audit (#131):
@@ -35675,6 +35720,432 @@ def check_no_tag_only_custody_validation(
 
 
 # ─────────────────────────────────────────────────────────────────────────
+# Catalog #221 - generated auth-eval/PacketIR result artifacts must fail closed
+# ─────────────────────────────────────────────────────────────────────────
+
+_CHECK_221_ROUNDTRIP_REVIEW_BLOCKERS: frozenset[str] = frozenset(
+    {
+        "roundtrip_matrix_is_command_planner_not_claim_surface",
+        "requires_separate_auth_eval_result_review_before_score_claim",
+    }
+)
+_CHECK_221_CPU_AXIS_BLOCKERS: frozenset[str] = frozenset(
+    {
+        "not_contest_cuda_axis",
+        "cpu_axis_not_rank_or_kill_authority",
+        "requires_cuda_cpu_policy_review",
+    }
+)
+
+
+def _check_221_json_files(root: Path, filename: str) -> tuple[Path, ...]:
+    results_root = root / "experiments" / "results"
+    if not results_root.is_dir():
+        return ()
+    return tuple(sorted(results_root.rglob(filename)))
+
+
+def _check_221_read_json(path: Path, violations: list[str], root: Path) -> dict | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        rel = path.relative_to(root) if path.is_relative_to(root) else path
+        violations.append(f"{rel}: malformed JSON artifact: {exc}")
+        return None
+    if not isinstance(payload, dict):
+        rel = path.relative_to(root) if path.is_relative_to(root) else path
+        violations.append(f"{rel}: JSON artifact root is not an object")
+        return None
+    return payload
+
+
+def _check_221_str_list(value: object) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    return {str(item) for item in value}
+
+
+def check_auth_eval_result_artifacts_fail_closed_for_score_claims(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #221 - generated result/planner artifacts must not leak authority.
+
+    Two bug classes are covered:
+
+    * ``auth_eval_roundtrip_results.json`` is a recovery matrix/planner surface,
+      not a score-claim surface. Top-level and nested rows must carry
+      ``score_claim=false`` and fail-closed review blockers.
+    * PacketIR closure CPU-axis rows are diagnostic only. If a closure records
+      a ``contest_cpu`` axis row, it must carry explicit promotion and
+      rank/kill blockers so CPU evidence cannot be accidentally treated as
+      current-frontier CUDA evidence by downstream JSON consumers.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    roundtrip_files = 0
+    closure_files = 0
+
+    for path in _check_221_json_files(root, "auth_eval_roundtrip_results.json"):
+        payload = _check_221_read_json(path, violations, root)
+        if payload is None:
+            continue
+        if payload.get("schema") != "auth_eval_roundtrip_results_v1":
+            continue
+        roundtrip_files += 1
+        rel = path.relative_to(root) if path.is_relative_to(root) else path
+        if payload.get("score_claim") is not False:
+            violations.append(f"{rel}: top-level score_claim must be false")
+        rows = payload.get("rows")
+        if not isinstance(rows, list):
+            violations.append(f"{rel}: rows must be a list")
+            continue
+        for idx, row in enumerate(rows):
+            if not isinstance(row, dict):
+                violations.append(f"{rel}: rows[{idx}] is not an object")
+                continue
+            label = row.get("target_id") or f"rows[{idx}]"
+            if row.get("score_claim") is not False:
+                violations.append(
+                    f"{rel}:{label}: row score_claim must be false; "
+                    "roundtrip matrix results require separate result review"
+                )
+            if row.get("rank_or_kill_eligible") is not False:
+                violations.append(
+                    f"{rel}:{label}: row rank_or_kill_eligible must be false"
+                )
+            blockers = _check_221_str_list(row.get("result_review_blockers"))
+            missing = sorted(_CHECK_221_ROUNDTRIP_REVIEW_BLOCKERS - blockers)
+            if missing:
+                violations.append(
+                    f"{rel}:{label}: missing fail-closed result_review_blockers "
+                    f"{missing}"
+                )
+            if row.get("contest_axis_anchor") is True and row.get(
+                "score_claim_possible_after_result_review"
+            ) is not True:
+                violations.append(
+                    f"{rel}:{label}: contest_axis_anchor rows must use "
+                    "score_claim_possible_after_result_review=true, not "
+                    "score_claim=true"
+                )
+
+    for path in _check_221_json_files(root, "closure.json"):
+        payload = _check_221_read_json(path, violations, root)
+        if payload is None:
+            continue
+        if payload.get("schema") != "packetir_exact_eval_closure_v1":
+            continue
+        closure_files += 1
+        rel = path.relative_to(root) if path.is_relative_to(root) else path
+        axes = payload.get("axes")
+        if not isinstance(axes, dict):
+            continue
+        cpu = axes.get("contest_cpu")
+        if cpu is None:
+            continue
+        if not isinstance(cpu, dict):
+            violations.append(f"{rel}: axes.contest_cpu must be an object")
+            continue
+        if cpu.get("score_axis") != "contest_cpu":
+            violations.append(f"{rel}: axes.contest_cpu.score_axis must be contest_cpu")
+        for field in ("promotion_blockers", "rank_or_kill_blockers"):
+            blockers = _check_221_str_list(cpu.get(field))
+            missing = sorted(_CHECK_221_CPU_AXIS_BLOCKERS - blockers)
+            if missing:
+                violations.append(
+                    f"{rel}: axes.contest_cpu.{field} missing CPU diagnostic "
+                    f"blockers {missing}"
+                )
+        if cpu.get("score_claim") is True:
+            violations.append(f"{rel}: axes.contest_cpu.score_claim must not be true")
+
+    if verbose:
+        if violations:
+            print(
+                "  [auth-eval-result-fail-closed] "
+                f"{len(violations)} violation(s) across {roundtrip_files} "
+                f"roundtrip result file(s) and {closure_files} PacketIR closure(s)"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [auth-eval-result-fail-closed] OK "
+                f"({roundtrip_files} roundtrip result file(s), "
+                f"{closure_files} PacketIR closure(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_auth_eval_result_artifacts_fail_closed_for_score_claims "
+            f"found {len(violations)} generated evidence authority leak(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+            + "\n\nFix: regenerate auth-eval roundtrip result artifacts with "
+            "row-level score_claim=false + review blockers, and regenerate "
+            "PacketIR closures so non-CUDA axes carry CPU diagnostic blockers."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #222 - scorer loader assignment order must match API contract
+# ─────────────────────────────────────────────────────────────────────────
+
+_CHECK_222_SCORER_LOADER_NAMES: frozenset[str] = frozenset(
+    {
+        "load_scorers",
+        "load_default_scorers",
+        "load_differentiable_scorers",
+    }
+)
+_CHECK_222_WAIVER_TOKEN = "SCORER_LOADER_ORDER_OK:"
+
+
+def _check_222_call_name(node: ast.AST) -> str | None:
+    if not isinstance(node, ast.Call):
+        return None
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+def _check_222_target_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return ""
+
+
+def _check_222_assignment_targets(node: ast.AST) -> list[ast.AST]:
+    if isinstance(node, (ast.Tuple, ast.List)):
+        return list(node.elts)
+    return []
+
+
+def _check_222_is_reversed_scorer_assignment(targets: Sequence[ast.AST]) -> bool:
+    if len(targets) < 2:
+        return False
+    first = _check_222_target_name(targets[0]).lower()
+    second = _check_222_target_name(targets[1]).lower()
+    return "seg" in first and ("pose" in second or "posenet" in second)
+
+
+def check_scorer_loader_assignment_order(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #222 - scorer loader tuple assignment order must be correct.
+
+    The canonical scorer loaders return ``(posenet, segnet)``. Reversing the
+    assignment, e.g. ``seg_scorer, pose_scorer = load_differentiable_scorers``,
+    passes static imports and usually fails only inside the score-aware loss
+    when SegNet output is indexed as a PoseNet dictionary. This gate catches the
+    source-level bug before another Modal smoke reaches the scorer hot loop.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for py in _iter_python_files(root, ["src/tac", "experiments", "tools"]):
+        try:
+            rel = py.relative_to(root)
+        except ValueError:
+            rel = py
+        if "tests" in rel.parts or py.name.startswith("test_"):
+            continue
+        if py == root / "src" / "tac" / "preflight.py":
+            continue
+        text, tree, err = _read_python_text_and_tree(py)
+        if err is not None or text is None or tree is None:
+            continue
+        if not any(name in text for name in _CHECK_222_SCORER_LOADER_NAMES):
+            continue
+        scanned += 1
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            value: ast.AST | None = None
+            target_nodes: list[ast.AST] = []
+            if isinstance(node, ast.Assign):
+                value = node.value
+                for target in node.targets:
+                    target_nodes.extend(_check_222_assignment_targets(target))
+            elif isinstance(node, ast.AnnAssign):
+                value = node.value
+                target_nodes.extend(_check_222_assignment_targets(node.target))
+            if value is None:
+                continue
+            call_name = _check_222_call_name(value)
+            if call_name not in _CHECK_222_SCORER_LOADER_NAMES:
+                continue
+            if not _check_222_is_reversed_scorer_assignment(target_nodes):
+                continue
+            lineno = getattr(node, "lineno", 1)
+            line = lines[lineno - 1] if 0 <= lineno - 1 < len(lines) else ""
+            if _CHECK_222_WAIVER_TOKEN in line and "<reason>" not in line:
+                continue
+            first = _check_222_target_name(target_nodes[0])
+            second = _check_222_target_name(target_nodes[1])
+            violations.append(
+                f"{rel}:{lineno}: `{first}, {second} = {call_name}(...)` "
+                "reverses the canonical scorer loader return order "
+                "(posenet, segnet). Use `pose_scorer, seg_scorer = ...` "
+                "or add SCORER_LOADER_ORDER_OK:<reason> if this is a "
+                "nonstandard wrapper."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [scorer-loader-order] {len(violations)} violation(s) "
+                f"across {scanned} scorer-loader file(s)"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                f"  [scorer-loader-order] OK ({scanned} scorer-loader file(s) scanned)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_scorer_loader_assignment_order found reversed scorer loader "
+            "assignment(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+            + "\n\nFix: `load_differentiable_scorers` / `load_default_scorers` "
+            "return (posenet, segnet); assign PoseNet first, SegNet second."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #223 - substrate auth-eval invocations must use current CLI
+# ─────────────────────────────────────────────────────────────────────────
+
+_CHECK_223_STALE_FLAGS: tuple[str, ...] = (
+    "--archive-zip",
+    "--output-json",
+)
+_CHECK_223_REQUIRED_DIRECT_FLAGS: tuple[str, ...] = (
+    "--archive",
+    "--inflate-sh",
+    "--json-out",
+)
+_CHECK_223_WAIVER_TOKEN = "AUTH_EVAL_CLI_OK:"
+
+
+def check_substrate_auth_eval_invocations_use_current_cli(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #223 - substrate trainers must use current auth-eval CLI.
+
+    ``experiments/contest_auth_eval.py`` currently requires ``--archive`` and
+    writes durable JSON through ``--json-out``; shippable substrate trainers
+    must also pass their emitted runtime ``--inflate-sh``. The stale
+    ``--archive-zip`` / ``--output-json`` pair exits argparse with rc=2 and
+    can look like a green trainer if the caller catches-and-continues.
+
+    Acceptance:
+      * route through ``gate_auth_eval_call(...)``; OR
+      * direct invocation contains ``--archive``, ``--inflate-sh``, and
+        ``--json-out``; AND
+      * no stale flags appear.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    experiments_dir = root / "experiments"
+    if not experiments_dir.is_dir():
+        return violations
+    for py in sorted(experiments_dir.glob("train_substrate_*.py")):
+        try:
+            rel = py.relative_to(root)
+        except ValueError:
+            rel = py
+        text, tree, err = _read_python_text_and_tree(py)
+        if err is not None or text is None:
+            continue
+        if "contest_auth_eval" not in text and "CONTEST_AUTH_EVAL_SCRIPT" not in text:
+            continue
+        scanned += 1
+        lines = text.splitlines()
+        for flag in _CHECK_223_STALE_FLAGS:
+            for line_no, line in enumerate(lines, start=1):
+                if flag not in line:
+                    continue
+                if _CHECK_223_WAIVER_TOKEN in line and "<reason>" not in line:
+                    continue
+                violations.append(
+                    f"{rel}:{line_no}: stale contest_auth_eval.py flag `{flag}` "
+                    "in substrate trainer. Use current CLI flags "
+                    "`--archive`, `--inflate-sh`, and `--json-out`, or route "
+                    "through `tac.substrates._shared.smoke_auth_eval_gate."
+                    "gate_auth_eval_call`."
+                )
+        if "gate_auth_eval_call" in text:
+            continue
+        if "CONTEST_AUTH_EVAL_SCRIPT" not in text and "contest_auth_eval.py" not in text:
+            continue
+        missing = [flag for flag in _CHECK_223_REQUIRED_DIRECT_FLAGS if flag not in text]
+        if missing:
+            first_line = next(
+                (
+                    i
+                    for i, line in enumerate(lines, start=1)
+                    if "CONTEST_AUTH_EVAL_SCRIPT" in line or "contest_auth_eval.py" in line
+                ),
+                1,
+            )
+            line = lines[first_line - 1] if 0 <= first_line - 1 < len(lines) else ""
+            if _CHECK_223_WAIVER_TOKEN not in line:
+                violations.append(
+                    f"{rel}:{first_line}: direct contest_auth_eval.py invocation "
+                    f"missing required current CLI flag(s): {', '.join(missing)}. "
+                    "Pass archive bytes via `--archive`, runtime via "
+                    "`--inflate-sh`, durable JSON via `--json-out`, and fail "
+                    "closed on nonzero returncode."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [substrate-auth-eval-cli] {len(violations)} violation(s) "
+                f"across {scanned} substrate trainer(s)"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                f"  [substrate-auth-eval-cli] OK ({scanned} substrate trainer(s) scanned)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_auth_eval_invocations_use_current_cli found stale "
+            "or incomplete substrate auth-eval invocation(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+            + "\n\nFix: use `gate_auth_eval_call(...)` or pass "
+            "`--archive`, `--inflate-sh`, and `--json-out`, then fail closed "
+            "unless the emitted auth-eval JSON validates as a contest-CUDA "
+            "score claim."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
 # Catalog #131 - bare-write-on-shared-state must route through fcntl helpers
 # ─────────────────────────────────────────────────────────────────────────
 #
@@ -42635,6 +43106,13 @@ def check_modal_dispatch_verifies_worker_source_matches_head(
 # declares for archive/inflate/replay paths. The check uses Python AST string
 # literals for ``experiments/modal_train_lane.py`` so comments mentioning a dep
 # cannot satisfy the gate.
+#
+# 2026-05-14 extension: D1 and C6 both reached CUDA auth-eval after successful
+# inflate, then failed inside upstream/evaluate.py's DALI video pipeline with
+# ``nvml error (999)``. Modal auth-eval wrappers already set
+# ``DALI_DISABLE_NVML=1``; the general Modal training dispatcher lagged. This
+# guard now also requires the DALI/NVML and CUDA allocator environment keys in
+# the canonical training dispatcher.
 # ----------------------------------------------------------------------------
 
 _CHECK_203_MODAL_TRAINING_IMAGE_PATH = "experiments/modal_train_lane.py"
@@ -42653,6 +43131,10 @@ _CHECK_203_HARD_RUNTIME_DEPS: dict[str, dict[str, tuple[str, ...]]] = {
         "modal": ("pyppmd>=1.3,<2.0",),
     },
 }
+_CHECK_203_REQUIRED_MODAL_ENV_LITERALS: tuple[str, ...] = (
+    "DALI_DISABLE_NVML",
+    "PYTORCH_CUDA_ALLOC_CONF",
+)
 
 
 def _check_203_project_dependency_names(pyproject_path: Path) -> set[str]:
@@ -42746,6 +43228,16 @@ def check_modal_training_image_includes_hard_runtime_deps(
                 f"{', '.join(repr(s) for s in specs['modal'])} to pip_install."
             )
 
+    for literal in _CHECK_203_REQUIRED_MODAL_ENV_LITERALS:
+        if literal not in modal_literals:
+            violations.append(
+                f"{_CHECK_203_MODAL_TRAINING_IMAGE_PATH}: Modal training "
+                f"runtime env omits required literal {literal!r}. General "
+                "training lanes that run inline CUDA auth-eval must inherit "
+                "DALI_DISABLE_NVML=1 and CUDA allocator config before "
+                "upstream/evaluate.py starts."
+            )
+
     if verbose:
         if violations:
             print(f"  [modal-training-runtime-deps] {len(violations)} violation(s):")
@@ -42754,7 +43246,8 @@ def check_modal_training_image_includes_hard_runtime_deps(
         else:
             print(
                 "  [modal-training-runtime-deps] OK "
-                "(Modal training image carries hard entropy runtime deps)"
+                "(Modal training image carries hard entropy runtime deps "
+                "and CUDA/DALI env guards)"
             )
 
     if violations and strict:
@@ -46199,10 +46692,11 @@ def check_test_imports_use_tac_not_src_tac(
 #
 # This STRICT gate refuses any ``experiments/train_substrate_*.py`` that
 # contains a hardcoded ``hardware_substrate="linux_x86_64_<gpu>"`` literal
-# (any GPU token in the canonical accepted set). Acceptance:
+# (any GPU token in the canonical accepted set), and any canonical hardware
+# detector call missing its required ``substrate_tag=`` keyword. Acceptance:
 #   * The line is replaced with a variable reference or call expression
 #     (e.g. ``hardware_substrate=_detected_substrate,`` or
-#     ``hardware_substrate=detect_hardware_substrate(...),``).
+#     ``hardware_substrate=detect_hardware_substrate(..., substrate_tag=...),``).
 #   * Same-line ``# HARDWARE_SUBSTRATE_HARDCODE_OK:<reason>`` waiver for
 #     the rare legitimate hardcoded case (e.g. test fixtures pinning a
 #     known substrate).
@@ -46223,6 +46717,12 @@ _CHECK_190_HARDCODED_HW_RE = re.compile(
 _CHECK_190_WAIVER_RE = re.compile(
     r"#\s*HARDWARE_SUBSTRATE_HARDCODE_OK\s*:\s*\S",
 )
+_CHECK_190_DETECT_HELPER_NAMES = frozenset(
+    {
+        "detect_hardware_substrate",
+        "_canon_detect_hardware_substrate",
+    }
+)
 _CHECK_190_SELF_EXEMPT_FILES: tuple[str, ...] = (
     "src/tac/substrates/_shared/trainer_skeleton.py",
     "src/tac/continual_learning.py",
@@ -46237,13 +46737,14 @@ def check_substrate_trainer_does_not_hardcode_hardware_substrate(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #190 — refuse substrate trainers that hardcode hardware_substrate.
+    """Catalog #190 — refuse invalid substrate hardware-substrate writes.
 
     Scans ``experiments/train_substrate_*.py`` for any line of the form
     ``hardware_substrate="linux_x86_64_<gpu>"`` (literal string). The
     canonical pattern is ``hardware_substrate=_detected_substrate,`` where
     ``_detected_substrate`` is computed via
-    ``tac.substrates._shared.trainer_skeleton.detect_hardware_substrate``.
+    ``tac.substrates._shared.trainer_skeleton.detect_hardware_substrate`` with
+    an explicit ``substrate_tag=...`` keyword.
 
     Per CLAUDE.md SIREN audit 2026-05-13 CRITICAL #1 +
     "Forbidden empirical-claim-without-evidence-tag" non-negotiable.
@@ -46263,6 +46764,7 @@ def check_substrate_trainer_does_not_hardcode_hardware_substrate(
         except OSError:
             continue
         scanned += 1
+        lines = text.splitlines()
         for line_no, line in enumerate(text.splitlines(), start=1):
             if not _CHECK_190_HARDCODED_HW_RE.search(line):
                 continue
@@ -46275,6 +46777,41 @@ def check_substrate_trainer_does_not_hardcode_hardware_substrate(
                 f"`hardware_substrate=_detected_substrate,` OR add same-line "
                 f"`# HARDWARE_SUBSTRATE_HARDCODE_OK:<reason>` waiver. "
                 f"Line: {line.strip()[:160]}"
+            )
+        try:
+            tree = ast.parse(text, filename=rel)
+        except SyntaxError as exc:
+            violations.append(
+                f"{rel}:{exc.lineno or 1}: unable to parse substrate trainer "
+                "while checking hardware-substrate detection calls. Fix syntax "
+                "or add a narrow preflight exemption only for generated code."
+            )
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if isinstance(func, ast.Name):
+                helper_name = func.id
+            elif isinstance(func, ast.Attribute):
+                helper_name = func.attr
+            else:
+                continue
+            if helper_name not in _CHECK_190_DETECT_HELPER_NAMES:
+                continue
+            line_no = getattr(node, "lineno", 1)
+            line = lines[line_no - 1] if 0 <= line_no - 1 < len(lines) else ""
+            if _CHECK_190_WAIVER_RE.search(line):
+                continue
+            if any(keyword.arg == "substrate_tag" for keyword in node.keywords):
+                continue
+            violations.append(
+                f"{rel}:{line_no}: `{helper_name}(...)` missing required "
+                "`substrate_tag=` keyword. Missing tags crashed C6 after "
+                "training before stats/artifact emission. Pass "
+                "`substrate_tag=SUBSTRATE_TAG` or a literal lane tag; add "
+                "same-line `# HARDWARE_SUBSTRATE_HARDCODE_OK:<reason>` only "
+                f"for a reviewed non-runtime fixture. Line: {line.strip()[:160]}"
             )
     if verbose:
         if violations:
@@ -50364,6 +50901,660 @@ def check_archive_promotion_blocked_by_mdl_density_above_threshold(
             f"self-protect):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #220 — substrate scaffold byte addition without operational mechanism
+# ---------------------------------------------------------------------------
+
+# Threshold below which the byte addition is too small to matter (e.g. probe
+# packets, byte-anchor metadata). At >1 KB we expect the substrate to either
+# operationally consume the bytes or explicitly tag itself research_only /
+# pre-build substrate_engineering.
+_CHECK_220_BYTE_ADDITION_THRESHOLD_KB: float = 1.0
+
+# Regex patterns to extract byte-addition signals from a lane's notes /
+# evidence strings. A match suggests the lane adds non-trivial bytes to a
+# composition archive.
+_CHECK_220_BYTE_ADDITION_TOKEN_PATTERNS: tuple[str, ...] = (
+    r"[+~]\s*\d+(?:\.\d+)?\s*KB",         # "+43 KB" / "+1.5 KB" / "~2.7 KB"
+    r"overhead[^a-zA-Z0-9]*[~+]?\s*\d+(?:\.\d+)?\s*(?:KB|B|bytes)",  # "overhead ~43 KB"
+    r"sidecar[^a-zA-Z0-9]*[~+]?\s*\d+(?:\.\d+)?\s*(?:KB|B|bytes)",   # "sidecar 2 KB"
+    r"d1_overhead_bytes\s*=\s*~?\d+",     # explicit D1 overhead
+    r"archive_bytes_added\s*=\s*[+~]?\s*\d+(?:\.\d+)?",  # canonical declaration
+    r"rate\s*\+0?\.\d+",                  # "rate +0.029" → byte addition
+    r"\d+(?:,\d+)+\s*(?:bytes|B)\b",      # "43,296 B" / "43,296 bytes"
+    r"=~\d+(?:\.\d+)?\s*KB",              # "archive_bytes_added=~43 KB"
+)
+
+# Token forms accepted as the OPERATIONAL signal that the substrate actually
+# uses its added bytes for score improvement at inflate time.
+_CHECK_220_OPERATIONAL_TOKENS: tuple[str, ...] = (
+    "score_improvement_mechanism_status=OPERATIONAL",
+    "score_improvement_mechanism=OPERATIONAL",
+    "operational_score_improvement=true",
+    "operational_overlay=true",
+    "operational_consumption=true",
+    "l2_integration_landed",
+    "l2_overlay_active",
+    "runtime_overlay_consumed=true",
+)
+
+# Token forms accepted as the RESEARCH-ONLY tag (CLAUDE.md HNeRV parity L2).
+_CHECK_220_RESEARCH_ONLY_TOKENS: tuple[str, ...] = (
+    "research_only=true",
+    "research-only=true",
+)
+
+# Token forms accepted as the PRE-BUILD substrate_engineering opt-out.
+# The substrate has declared itself as scaffold work and the trainer's
+# _full_main is still NotImplementedError-gated; no $1+ dispatch can fire.
+_CHECK_220_SUBSTRATE_ENGINEERING_TOKENS: tuple[str, ...] = (
+    "lane_class=substrate_engineering",
+)
+_CHECK_220_PRE_BUILD_GATE_TOKENS: tuple[str, ...] = (
+    "_full_main raises NotImplementedError",
+    "full_main_raises_notimplemented",
+    "full_path_council_gated",
+    "pre_build_substrate_engineering",
+    "scaffold_only",
+)
+
+# Same-line waiver pattern for the rare deliberate deferred-integration case.
+_CHECK_220_WAIVER_PATTERN: str = (
+    r"#\s*SCAFFOLD_DEFERRED_INTEGRATION_OK\s*:\s*([^\s].{1,200}?)(?:\s*#|$)"
+)
+_CHECK_220_WAIVER_PLACEHOLDER_RE_REJECTS: tuple[str, ...] = (
+    "<reason>",
+)
+
+# Substrate-id token-substring forms in lane id. A lane whose id matches one
+# of these is treated as in-scope. Helps distinguish substrate lanes from
+# pure-infrastructure / wire-in / META lanes that may carry byte-related
+# notes for unrelated reasons.
+_CHECK_220_IN_SCOPE_ID_SUBSTRINGS: tuple[str, ...] = (
+    "substrate_",
+    "_substrate_",
+    "_polytope_",
+    "_sidecar_",
+    "_overlay_",
+    # Known substrate id roots that don't carry the "substrate" word.
+    "yucr_",
+    "d1_segnet",
+    "d2_",
+    "d4_",
+    "lane_a1_",
+    "_hnerv_",
+    "_nerv_",
+    "_lora_",
+    "wavelet_residual",
+    "siren_residual",
+    "coord_mlp_residual",
+)
+
+
+def _check_220_lane_is_in_scope(lane_id: str) -> bool:
+    """Return True if the lane id matches a substrate-class pattern."""
+    if not lane_id:
+        return False
+    needle = lane_id.lower()
+    return any(token in needle for token in _CHECK_220_IN_SCOPE_ID_SUBSTRINGS)
+
+
+def _check_220_extract_byte_addition_kb(text: str) -> float | None:
+    """Parse the largest byte-addition signal from a lane's text fields.
+
+    Returns the byte addition in KB if a numeric signal is found, else None
+    (no signal = no byte addition claimed). The largest signal wins so a
+    lane that mentions both "43 KB" and "1 KB" is gated at 43 KB.
+    """
+    import re
+
+    if not text:
+        return None
+    biggest_kb: float | None = None
+    for pattern in _CHECK_220_BYTE_ADDITION_TOKEN_PATTERNS:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            raw = match.group(0).lower()
+            # Extract the numeric value + unit. Anchor after the LAST '='
+            # or '~' or '+' so we don't pick up stray digit prefixes (e.g.
+            # the '1' in 'd1_overhead_bytes=43296').
+            anchor_pos = max(
+                raw.rfind("="), raw.rfind("~"), raw.rfind("+")
+            )
+            search_text = raw[anchor_pos + 1 :] if anchor_pos >= 0 else raw
+            num_match = re.search(r"(\d+(?:\.\d+|,\d+)*)", search_text)
+            if not num_match:
+                continue
+            num_str = num_match.group(1).replace(",", "")
+            try:
+                num = float(num_str)
+            except ValueError:
+                continue
+            # Determine KB scale from the matched text. Order matters:
+            # the most specific tokens are checked first so a raw containing
+            # both ``bytes`` and ``kb`` is treated as bytes.
+            if "overhead_bytes" in raw or "bytes_added" in raw:
+                kb = num / 1024.0
+            elif "kb" in raw:
+                kb = num
+            elif "bytes" in raw or " b" in raw or raw.endswith("b"):
+                kb = num / 1024.0
+            elif "rate" in raw and num < 1.0:
+                # "rate +0.029" → ~43 KB equivalent on 37.5MB contest video.
+                # 0.029 * 37545489 / 25 ≈ 43,553 B ≈ 42.5 KB.
+                kb = (num * 37_545_489.0 / 25.0) / 1024.0
+            else:
+                # Fallback: assume KB (the most common unit in our notes).
+                kb = num
+            if biggest_kb is None or kb > biggest_kb:
+                biggest_kb = kb
+    return biggest_kb
+
+
+def _check_220_lane_has_operational_signal(text: str) -> bool:
+    if not text:
+        return False
+    lower = text.lower()
+    return any(tok.lower() in lower for tok in _CHECK_220_OPERATIONAL_TOKENS)
+
+
+def _check_220_lane_is_research_only(text: str) -> bool:
+    if not text:
+        return False
+    lower = text.lower()
+    return any(tok in lower for tok in _CHECK_220_RESEARCH_ONLY_TOKENS)
+
+
+def _check_220_lane_is_pre_build_substrate_engineering(text: str) -> bool:
+    """Pre-build substrate-engineering opt-out requires BOTH the lane_class
+    tag AND a pre-build signal (full path gated / NotImplementedError /
+    scaffold-only)."""
+    if not text:
+        return False
+    lower = text.lower()
+    has_substrate_engineering = any(
+        tok.lower() in lower for tok in _CHECK_220_SUBSTRATE_ENGINEERING_TOKENS
+    )
+    if not has_substrate_engineering:
+        return False
+    return any(tok.lower() in lower for tok in _CHECK_220_PRE_BUILD_GATE_TOKENS)
+
+
+def _check_220_lane_has_waiver(text: str) -> tuple[bool, str]:
+    """Return (waived, reason). Placeholder ``<reason>`` literal rejected."""
+    import re
+
+    if not text:
+        return False, ""
+    match = re.search(_CHECK_220_WAIVER_PATTERN, text)
+    if not match:
+        return False, ""
+    reason = match.group(1).strip().rstrip("#").strip()
+    if not reason:
+        return False, ""
+    if reason in _CHECK_220_WAIVER_PLACEHOLDER_RE_REJECTS:
+        return False, ""
+    return True, reason
+
+
+def _check_220_collect_lane_text(lane: dict) -> str:
+    """Concatenate every text field of a lane for token extraction."""
+    parts: list[str] = []
+    notes = lane.get("notes")
+    if isinstance(notes, str):
+        parts.append(notes)
+    gates = lane.get("gates") or {}
+    if isinstance(gates, dict):
+        for gate_name, gate in gates.items():
+            if isinstance(gate, dict):
+                ev = gate.get("evidence")
+                if isinstance(ev, str):
+                    parts.append(ev)
+    return "\n".join(parts)
+
+
+def check_substrate_l1_scaffold_no_byte_addition_without_operational_score_improvement_mechanism(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #220 — refuse L1+ substrate scaffolds adding bytes without
+    operational score-improvement mechanism.
+
+    Anchor: D1 R3 dispatch 2026-05-14 produced score ~0.222 vs predicted band
+    [0.181, 0.188] because the L1 SCAFFOLD landed a 43 KB sidecar that the
+    inflate runtime did NOT consume (overlay was no-op-by-default). Per
+    CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" + the
+    NEW "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable
+    section: a substrate that adds bytes (>1 KB) MUST also wire the inflate
+    runtime to OPERATIONALLY consume them for score improvement, OR tag itself
+    ``research_only=true``, OR explicitly declare pre-build
+    ``lane_class=substrate_engineering`` with the trainer's ``_full_main``
+    raising NotImplementedError (so no $1+ dispatch can fire).
+
+    The gate scans ``.omx/state/lane_registry.json`` for in-scope substrate
+    lanes at L1+ (``level >= 1``); for each lane it extracts the byte-addition
+    signal from notes + gate evidence strings; if the signal exceeds 1 KB,
+    one of the following acceptance tokens MUST appear in the lane text:
+
+    1. ``score_improvement_mechanism_status=OPERATIONAL`` (or
+       ``l2_integration_landed`` / ``l2_overlay_active`` /
+       ``operational_overlay=true`` / ``runtime_overlay_consumed=true`` / etc.)
+    2. ``research_only=true``
+    3. ``lane_class=substrate_engineering`` AND a pre-build signal
+       (``_full_main raises NotImplementedError`` / ``full_path_council_gated``
+       / ``scaffold_only`` / etc.)
+    4. Same-line waiver ``# SCAFFOLD_DEFERRED_INTEGRATION_OK:<reason>`` with
+       a real rationale (placeholder ``<reason>`` literal is rejected).
+
+    Sister of Catalog #90 (`check_lane_registry_consistent`),
+    Catalog #105 / #139 (no-op detector + packet compiler structural
+    consumption proof), and Catalog #124 (representation-lane archive grammar
+    at design time).
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-lane diagnostic.
+
+    Returns:
+        List of violation messages (one per refused lane).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    if not registry_path.is_file():
+        if verbose:
+            print("  [catalog-220] OK (no lane_registry.json)")
+        return violations
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if verbose:
+            print(f"  [catalog-220] WARN registry read error: {exc}")
+        return violations
+
+    lanes = registry.get("lanes")
+    if not isinstance(lanes, list):
+        if verbose:
+            print("  [catalog-220] OK (registry has no lanes list)")
+        return violations
+
+    lanes_scanned = 0
+    lanes_with_byte_addition = 0
+
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            continue
+        lane_id = str(lane.get("id", ""))
+        if not _check_220_lane_is_in_scope(lane_id):
+            continue
+        level = int(lane.get("level", 0) or 0)
+        if level < 1:
+            continue
+        lanes_scanned += 1
+        text = _check_220_collect_lane_text(lane)
+        kb = _check_220_extract_byte_addition_kb(text)
+        if kb is None or kb < _CHECK_220_BYTE_ADDITION_THRESHOLD_KB:
+            continue
+        lanes_with_byte_addition += 1
+
+        # Cascade through accept paths in order.
+        if _check_220_lane_has_operational_signal(text):
+            if verbose:
+                print(
+                    f"  [catalog-220] OK lane={lane_id} kb={kb:.1f} "
+                    "(operational mechanism declared)"
+                )
+            continue
+        if _check_220_lane_is_research_only(text):
+            if verbose:
+                print(
+                    f"  [catalog-220] OK lane={lane_id} kb={kb:.1f} "
+                    "(research_only=true)"
+                )
+            continue
+        if _check_220_lane_is_pre_build_substrate_engineering(text):
+            if verbose:
+                print(
+                    f"  [catalog-220] OK lane={lane_id} kb={kb:.1f} "
+                    "(pre-build substrate_engineering scaffold)"
+                )
+            continue
+        waived, reason = _check_220_lane_has_waiver(text)
+        if waived:
+            if verbose:
+                print(
+                    f"  [catalog-220] WAIVED lane={lane_id} kb={kb:.1f} "
+                    f"reason={reason!r}"
+                )
+            continue
+
+        violations.append(
+            f"lane {lane_id!r} (L{level}) declares byte addition "
+            f"~{kb:.1f} KB without an operational score-improvement mechanism. "
+            "Required: declare ``score_improvement_mechanism_status=OPERATIONAL`` "
+            "(or sister token: l2_integration_landed / l2_overlay_active / "
+            "runtime_overlay_consumed=true / operational_overlay=true) in the "
+            "lane's notes or gate evidence, OR tag the lane research_only=true, "
+            "OR declare lane_class=substrate_engineering + pre-build "
+            "scaffold signal (_full_main raises NotImplementedError / "
+            "scaffold_only / full_path_council_gated), OR carry a same-line "
+            "`# SCAFFOLD_DEFERRED_INTEGRATION_OK:<rationale>` waiver. Per "
+            "CLAUDE.md \"Substrate scaffolds MUST be COMPLETE or RESEARCH-"
+            "ONLY\" non-negotiable + Catalog #220."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-220] scanned={lanes_scanned} "
+            f"with_byte_addition={lanes_with_byte_addition} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_l1_scaffold_no_byte_addition_without_operational"
+            f"_score_improvement_mechanism found {len(violations)} substrate "
+            f"lane(s) with >{_CHECK_220_BYTE_ADDITION_THRESHOLD_KB:.0f} KB byte "
+            f"addition but no operational score-improvement mechanism declared "
+            f"(Catalog #220 — D1 R3 self-protect):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #226 — check_trainer_auth_eval_uses_canonical_helper
+#
+# Trainer hand-rolled auth_eval subprocess self-protection (2026-05-14).
+# Bug class: substrate trainers under ``experiments/train_substrate_*.py`` that
+# call ``experiments/contest_auth_eval.py`` via a hand-built ``subprocess.run``
+# invocation (typically ``cmd = [sys.executable, str(CONTEST_AUTH_EVAL_SCRIPT),
+# ...]; subprocess.run(cmd, ...)``) WITHOUT routing through the canonical
+# helper ``tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call``.
+#
+# Anchor: C6 5ep Modal T4 smoke ``fc-01KRKG566Z2F48CVCGF8JFA0S1`` (2026-05-14)
+# returned ``auth_eval rc=2`` with a ``usage`` error in stderr because the C6
+# trainer hand-wrote ``--archive-zip`` / ``--output-json`` flags that do NOT
+# exist on ``experiments/contest_auth_eval.py`` (the canonical CLI surface
+# uses ``--archive`` / ``--json-out``). The RECOVERY-2 fix landed at commit
+# ``3e4571c3a`` and routed C6 through the canonical helper. This META gate
+# refuses ANY future trainer from re-introducing the hand-rolled pattern at
+# a different substrate file — even when the current flag set happens to be
+# CORRECT, the hand-rolled pattern is the bug class because future CLI
+# refactors of ``contest_auth_eval.py`` will silently break the hand-rolled
+# callers but cannot break the canonical helper (which is the single source
+# of truth for the contract).
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# + "META-meta finding from a8bc7e79 sweep" (bug classes have 6-7× spread
+# across the repo). Current audit: 18 substrate trainers hand-roll the
+# pattern. Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip
+# atomicity rule" — strict-flip planned once 0 violations are confirmed
+# after a separate refactoring wave routes each trainer through the
+# canonical helper. The wave is operator-routed because it touches 18
+# files owned by multiple sister substrate subagents and must NOT collide
+# with their in-flight work.
+#
+# Sister of Catalog #164 (`check_substrate_score_aware_loss_calls_preprocess_
+# input_before_scorer`, the canonical scorer-preprocess routing) + Catalog
+# #205 (`check_inflate_py_uses_canonical_select_inflate_device`, the
+# canonical inflate device-fork) + Catalog #218 (`check_substrate_reconstruct_
+# methods_support_mini_batch`, the canonical mini-batch reconstruct). Same
+# pattern of "force callers into the canonical path" applied to a different
+# bug class (auth_eval subprocess flag drift instead of scorer-preprocess
+# bypass / inflate device-fork / full-batch reconstruct OOM).
+#
+# Lane: lane_catalog_221_auth_eval_gate_plus_d4_timeout_investigation_20260514.
+# Memory: feedback_catalog_221_auth_eval_gate_and_d4_timeout_investigation_landed_20260514.md.
+# ----------------------------------------------------------------------------
+
+# Token identifying the canonical helper import path. Any trainer that
+# imports the helper AND calls it from the same function that does the
+# subprocess-style work is accepted.
+_CHECK_226_CANONICAL_HELPER_TOKENS = (
+    "smoke_auth_eval_gate",
+    "gate_auth_eval_call",
+)
+
+# Subprocess attribute names that trigger inspection when invoked on the
+# ``subprocess`` module.
+_CHECK_226_SUBPROCESS_ATTRS = frozenset(
+    {"run", "Popen", "call", "check_call", "check_output"}
+)
+
+# Tokens that mark a callsite as targeting contest_auth_eval.py.
+_CHECK_226_CONTEST_AUTH_EVAL_TOKENS = (
+    "CONTEST_AUTH_EVAL_SCRIPT",
+    "contest_auth_eval.py",
+    "contest_auth_eval",
+)
+
+# Same-line waiver. Placeholder ``<reason>`` literal is rejected so the
+# docstring above cannot self-waive.
+_CHECK_226_WAIVER_RE = re.compile(
+    r"#\s*AUTH_EVAL_DIRECT_SUBPROCESS_OK:\s*([^\s<].*)"
+)
+
+
+def _check_226_iter_trainer_files(repo_root: Path) -> list[Path]:
+    """Return ``experiments/train_substrate_*.py`` files."""
+    files: list[Path] = []
+    exp_dir = repo_root / "experiments"
+    if exp_dir.exists():
+        for f in exp_dir.glob("train_substrate_*.py"):
+            if f.is_file():
+                files.append(f)
+    return sorted(files)
+
+
+def _check_226_function_uses_canonical_helper(
+    func_node: ast.AST, src: str
+) -> bool:
+    """Return True if the function body or its enclosing module imports +
+    calls the canonical helper.
+
+    The check accepts either:
+    * a direct call to ``gate_auth_eval_call(...)`` (or its alias) inside
+      the function body, OR
+    * the function delegates to a sister wrapper that itself routes through
+      the canonical helper (detected by the helper token appearing as a
+      ``Call`` target inside the function body).
+    """
+    if not isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return False
+    for sub in ast.walk(func_node):
+        if isinstance(sub, ast.Call):
+            func = sub.func
+            # Direct name call
+            if isinstance(func, ast.Name) and any(
+                tok in func.id for tok in _CHECK_226_CANONICAL_HELPER_TOKENS
+            ):
+                return True
+            # Attribute call like module.gate_auth_eval_call(...)
+            if isinstance(func, ast.Attribute) and any(
+                tok in func.attr for tok in _CHECK_226_CANONICAL_HELPER_TOKENS
+            ):
+                return True
+    return False
+
+
+def _check_226_collect_subprocess_targets(
+    func_node: ast.AST,
+) -> list[tuple[int, str]]:
+    """Walk a function body, collect subprocess.X(...) call sites that
+    reference contest_auth_eval directly OR via a previously-assigned cmd
+    variable that itself references contest_auth_eval.
+
+    Returns a list of ``(lineno, cmd_var_name_or_inline)`` tuples.
+    """
+    if not isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return []
+    # First pass: collect Assign targets whose value mentions contest_auth_eval.
+    cmd_var_names: set[str] = set()
+    for sub in ast.walk(func_node):
+        if isinstance(sub, ast.Assign) and len(sub.targets) == 1:
+            tgt = sub.targets[0]
+            if isinstance(tgt, ast.Name):
+                try:
+                    val_src = ast.unparse(sub.value)
+                except Exception:  # pragma: no cover - defensive
+                    continue
+                if any(
+                    tok in val_src for tok in _CHECK_226_CONTEST_AUTH_EVAL_TOKENS
+                ):
+                    cmd_var_names.add(tgt.id)
+
+    # Second pass: find subprocess.X() Calls referencing those variables OR
+    # containing contest_auth_eval inline.
+    results: list[tuple[int, str]] = []
+    for sub in ast.walk(func_node):
+        if not isinstance(sub, ast.Call):
+            continue
+        func = sub.func
+        is_subprocess = (
+            isinstance(func, ast.Attribute)
+            and func.attr in _CHECK_226_SUBPROCESS_ATTRS
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "subprocess"
+        )
+        if not is_subprocess:
+            continue
+        try:
+            args_src = " ".join(ast.unparse(a) for a in sub.args)
+        except Exception:  # pragma: no cover - defensive
+            continue
+        inline_match = any(
+            tok in args_src for tok in _CHECK_226_CONTEST_AUTH_EVAL_TOKENS
+        )
+        var_match = ""
+        for a in sub.args:
+            if isinstance(a, ast.Name) and a.id in cmd_var_names:
+                var_match = a.id
+                break
+        if inline_match or var_match:
+            tag = var_match or "inline-contest_auth_eval"
+            results.append((sub.lineno, tag))
+    return results
+
+
+def _check_226_collect_violations_in_file(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """AST-walk one trainer file, emit one violation per offending
+    subprocess invocation."""
+    rel = path.relative_to(repo_root).as_posix()
+    try:
+        src = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    try:
+        tree = ast.parse(src, filename=str(path))
+    except SyntaxError:
+        return []
+    src_lines = src.splitlines()
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        targets = _check_226_collect_subprocess_targets(node)
+        if not targets:
+            continue
+        # Acceptance: the enclosing function uses the canonical helper.
+        if _check_226_function_uses_canonical_helper(node, src):
+            continue
+        for lineno, cmd_tag in targets:
+            line_text = (
+                src_lines[lineno - 1] if 0 < lineno <= len(src_lines) else ""
+            )
+            if _CHECK_226_WAIVER_RE.search(line_text):
+                continue
+            violations.append(
+                f"{rel}:{lineno} trainer function {node.name!r} invokes "
+                f"``subprocess.run(...)`` on {cmd_tag} targeting "
+                f"``experiments/contest_auth_eval.py`` WITHOUT routing "
+                f"through the canonical helper "
+                f"``tac.substrates._shared.smoke_auth_eval_gate."
+                f"gate_auth_eval_call``. Per Catalog #226 (C6 auth_eval "
+                f"rc=2 self-protect): hand-rolled subprocess invocations "
+                f"silently drift on CLI refactors (canonical flags are "
+                f"``--archive`` / ``--json-out``; C6 hand-wrote "
+                f"``--archive-zip`` / ``--output-json`` which silently "
+                f"skipped CUDA auth eval at 5ep Modal smoke). Route "
+                f"through the canonical helper (canonical pattern: "
+                f"``experiments/train_substrate_c6_e4_mdl_ibps.py`` "
+                f"@ commit 3e4571c3a). Same-line waiver: "
+                f"``# AUTH_EVAL_DIRECT_SUBPROCESS_OK:<reason>``. "
+                f"See CLAUDE.md Catalog #226."
+            )
+    return violations
+
+
+def check_trainer_auth_eval_uses_canonical_helper(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #226 — refuse substrate trainers that hand-roll auth_eval
+    subprocess invocations instead of routing through the canonical helper.
+
+    Per the 2026-05-14 C6 auth_eval rc=2 anchor (``fc-01KRKG566Z2F48CVCGF8JFA0S1``),
+    a trainer that hand-writes ``subprocess.run([..., 'contest_auth_eval.py',
+    '--archive-zip', ..., '--output-json', ...])`` silently skips CUDA auth
+    eval because the contest_auth_eval CLI surface uses ``--archive`` /
+    ``--json-out``. The canonical helper
+    ``tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call`` is the
+    single source of truth for the CLI contract; future CLI refactors of
+    ``contest_auth_eval.py`` propagate through the helper automatically.
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    because 18 substrate trainers currently hand-roll the pattern; strict-
+    flip planned once a separate operator-routed refactoring wave drives
+    the live count to 0.
+
+    Sister of Catalog #164 (canonical scorer-preprocess) + Catalog #205
+    (canonical inflate device-fork) + Catalog #218 (canonical mini-batch
+    reconstruct). Memory:
+    feedback_catalog_221_auth_eval_gate_and_d4_timeout_investigation_landed_20260514.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = _check_226_iter_trainer_files(root)
+    violations: list[str] = []
+    for path in files:
+        violations.extend(_check_226_collect_violations_in_file(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-226] WARN: {len(violations)} trainer "
+                f"function(s) hand-roll auth_eval subprocess "
+                f"across {len(files)} substrate trainer file(s) (strict={strict})"
+            )
+        else:
+            print(
+                f"  [catalog-226] OK ({len(files)} trainer file(s) scanned)"
+            )
+
+    if violations and strict:
+        msg = (
+            f"check_trainer_auth_eval_uses_canonical_helper: "
+            f"{len(violations)} trainer function(s) hand-roll auth_eval "
+            f"subprocess (Catalog #226 — C6 auth_eval rc=2 self-protect); "
+            f"first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
     return violations
 
 
