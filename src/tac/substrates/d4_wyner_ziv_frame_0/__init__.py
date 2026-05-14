@@ -127,9 +127,11 @@ from tac.substrates.d4_wyner_ziv_frame_0.architecture import (
 from tac.substrates.d4_wyner_ziv_frame_0.archive import (
     WZF01_MAGIC,
     WZF01_SCHEMA_VERSION,
+    WZF01_SECTION_ROLES,
     WynerZivFrame0Archive,
     pack_archive,
     parse_archive,
+    parse_wzf01_archive_bytes,
 )
 from tac.substrates.d4_wyner_ziv_frame_0.frame0_synthesis import synthesize_frame_0
 from tac.substrates.d4_wyner_ziv_frame_0.motion_model import (
@@ -159,6 +161,7 @@ __all__ = [
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
     "WZF01_MAGIC",
     "WZF01_SCHEMA_VERSION",
+    "WZF01_SECTION_ROLES",
     "WynerZivFrame0Archive",
     "WynerZivFrame0Config",
     "WynerZivFrame0LossWeights",
@@ -170,5 +173,6 @@ __all__ = [
     "encode_residual_blob",
     "pack_archive",
     "parse_archive",
+    "parse_wzf01_archive_bytes",
     "synthesize_frame_0",
 ]

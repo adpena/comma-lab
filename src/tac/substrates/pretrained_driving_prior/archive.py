@@ -181,6 +181,120 @@ def pack_archive(
     return header + codebook_blob + renderer_blob + residual_blob + meta_blob
 
 
+def parse_dp1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for DP1 (pre-trained driving prior) grammar.
+
+    Canonical section-offset parser for DP1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — DP1 auto-detection by ``b"DP1\\x00"`` magic prefix)
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``dp1_header`` — 28-byte header (control_or_metadata; fixed layout)
+    - ``codebook_blob`` — frozen dashcam-statistical prior distilled offline
+      from Comma2k19 (decoder_weight_stream — the codebook acts as a
+      fixed-decoder lookup that contributes to inflate-time frame reconstruction)
+    - ``renderer_blob`` — brotli-compressed FP16 state_dict of the small
+      contest-video-overfit renderer (decoder_weight_stream — the score-affecting
+      learned weights)
+    - ``residual_blob`` — brotli-compressed int8 per-pair residual
+      (latent_stream — the rate-limited per-pair correction signal)
+    - ``meta_blob`` — sorted-keys utf-8 JSON (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for DP1 byte layout
+    is :data:`DP1_HEADER_FMT` + :data:`DP1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no brotli decompression or pickle.load). It
+    is cheaper and is safe to call with brotli-tampered blobs — critically
+    NEVER invokes :func:`_deserialize_state_dict` which uses
+    ``pickle.loads`` on the renderer blob.
+
+    Raises ``ValueError`` on:
+
+    - short header (< 28 bytes)
+    - bad magic (!= ``b"DP1\\x00"``)
+    - unsupported schema version (!= 1)
+    - archive size mismatch (declared end != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift.
+    """
+    if len(archive_bytes) < DP1_HEADER_SIZE:
+        raise ValueError(
+            f"dp1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {DP1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        _num_pairs,
+        _out_h,
+        _out_w,
+        _per_pair_bytes,
+        codebook_len,
+        renderer_len,
+        residual_len,
+        meta_len,
+    ) = struct.unpack(DP1_HEADER_FMT, archive_bytes[:DP1_HEADER_SIZE])
+    if magic != DP1_MAGIC:
+        raise ValueError(
+            f"dp1 archive: bad magic {magic!r} (expected {DP1_MAGIC!r})"
+        )
+    if version != DP1_SCHEMA_VERSION:
+        raise ValueError(
+            f"dp1 archive: unsupported schema version {version} "
+            f"(expected {DP1_SCHEMA_VERSION})"
+        )
+    end_header = DP1_HEADER_SIZE
+    end_codebook = end_header + int(codebook_len)
+    end_renderer = end_codebook + int(renderer_len)
+    end_residual = end_renderer + int(residual_len)
+    end_meta = end_residual + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"dp1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "dp1_header": (0, DP1_HEADER_SIZE),
+        "codebook_blob": (end_header, int(codebook_len)),
+        "renderer_blob": (end_codebook, int(renderer_len)),
+        "residual_blob": (end_renderer, int(residual_len)),
+        "meta_blob": (end_residual, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for DP1 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS`` / ``IBPS1_SECTION_ROLES``.
+#
+# Section semantics rationale:
+# - codebook_blob: the frozen dashcam codebook IS a fixed-decoder lookup
+#   that contributes to inflate-time frame reconstruction (PCA bases for
+#   road plane / sky horizon / lane curvature / vehicle appearance). It is
+#   loaded once at inflate and applied as a soft prior. Therefore:
+#   decoder_weight_stream (a structurally distinct weight stream from the
+#   contest-overfit renderer; both contribute to inflate-time decode).
+# - renderer_blob: the contest-video-overfit renderer state_dict; the
+#   score-affecting learned weights. decoder_weight_stream.
+# - residual_blob: the per-pair int8 residual is the rate-limited per-pair
+#   correction signal that captures contest-specific delta from the prior.
+#   latent_stream.
+# - All header/meta sections are control_or_metadata.
+DP1_SECTION_ROLES: dict[str, str] = {
+    "dp1_header": "control_or_metadata",
+    "codebook_blob": "decoder_weight_stream",
+    "renderer_blob": "decoder_weight_stream",
+    "residual_blob": "latent_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 def parse_archive(data: bytes) -> DrivingPriorArchive:
     """Parse DP1 archive bytes into a :class:`DrivingPriorArchive`.
 
@@ -302,8 +416,10 @@ __all__ = [
     "DP1_HEADER_SIZE",
     "DP1_MAGIC",
     "DP1_SCHEMA_VERSION",
+    "DP1_SECTION_ROLES",
     "DrivingPriorArchive",
     "build_readiness_manifest",
     "pack_archive",
     "parse_archive",
+    "parse_dp1_archive_bytes",
 ]

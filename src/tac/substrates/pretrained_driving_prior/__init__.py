@@ -62,10 +62,12 @@ from tac.substrates.pretrained_driving_prior.archive import (
     DP1_HEADER_SIZE,
     DP1_MAGIC,
     DP1_SCHEMA_VERSION,
+    DP1_SECTION_ROLES,
     DrivingPriorArchive,
     build_readiness_manifest,
     pack_archive,
     parse_archive,
+    parse_dp1_archive_bytes,
 )
 from tac.substrates.pretrained_driving_prior.composition import (
     DPCOMP_HEADER_SIZE,
@@ -154,6 +156,7 @@ __all__ = [
     "DP1_HEADER_SIZE",
     "DP1_MAGIC",
     "DP1_SCHEMA_VERSION",
+    "DP1_SECTION_ROLES",
     "EVAL_HW",
     "LANE_CURVATURE_PCA_SHAPE",
     "LogIncrementalSchedule",
@@ -196,6 +199,7 @@ __all__ = [
     "pack_archive",
     "parse_archive",
     "parse_codebook",
+    "parse_dp1_archive_bytes",
     "replay_stream_log",
     "serialize_codebook",
     "summarize_stream_log",

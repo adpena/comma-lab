@@ -128,10 +128,12 @@ from tac.substrates.d1_segnet_margin_polytope.archive import (
     D1POLY1_HEADER_SIZE,
     D1POLY1_MAGIC,
     D1POLY1_SCHEMA_VERSION,
+    D1POLY1_SECTION_ROLES,
     D1PolytopeArchive,
     build_readiness_manifest,
     pack_archive,
     parse_archive,
+    parse_d1poly1_archive_bytes,
 )
 from tac.substrates.d1_segnet_margin_polytope.margin_map import (
     MARGIN_MAP_DEFAULT_RESOLUTION,
@@ -161,6 +163,7 @@ __all__ = [
     "D1POLY1_HEADER_SIZE",
     "D1POLY1_MAGIC",
     "D1POLY1_SCHEMA_VERSION",
+    "D1POLY1_SECTION_ROLES",
     "D1POLY_BASE_SUBSTRATE_IDS",
     "D1POLY_DEFAULT_BASE_SUBSTRATE",
     "D1POLY_DEFAULT_BUDGET_BITS",
@@ -190,5 +193,6 @@ __all__ = [
     "estimate_overhead_bytes",
     "pack_archive",
     "parse_archive",
+    "parse_d1poly1_archive_bytes",
     "quantize_margin_map_int8",
 ]

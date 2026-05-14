@@ -253,6 +253,124 @@ def pack_archive(
     )
 
 
+def parse_d1poly1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for D1POLY1 (D1 SegNet margin polytope) grammar.
+
+    Canonical section-offset parser for D1POLY1 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — D1POLY1 auto-detection by ``b"D1PY"`` magic prefix)
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``d1poly1_header`` — 31-byte header (control_or_metadata; fixed layout)
+    - ``base_substrate_id`` — utf-8 base substrate id (control_or_metadata)
+    - ``base_archive_sha256_truncated`` — 16-byte truncated sha256 hex
+      (control_or_metadata)
+    - ``margin_map_blob`` — brotli-compressed int8 margin map
+      (sidecar_or_correction_stream — the per-pixel safe-noise budget map)
+    - ``polytope_payload_blob`` — pre-encoded polytope payload
+      (sidecar_or_correction_stream — geometric-nullspace encoding)
+    - ``meta_blob`` — sorted-keys utf-8 JSON (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for D1POLY1 byte layout
+    is :data:`D1POLY1_HEADER_FMT` + :data:`D1POLY1_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no brotli decompression). It is cheaper and
+    is safe to call with brotli-tampered blobs.
+
+    Raises ``ValueError`` on:
+
+    - short header (< 31 bytes)
+    - bad magic (!= ``b"D1PY"``)
+    - unsupported schema version (!= 1)
+    - sha truncated length != 16
+    - archive size mismatch (declared end != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift.
+    """
+    if len(archive_bytes) < D1POLY1_HEADER_SIZE:
+        raise ValueError(
+            f"d1poly1 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {D1POLY1_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        height,
+        width,
+        scale,
+        jacobian_lipschitz,
+        base_id_len,
+        sha_len,
+        margin_map_len,
+        polytope_len,
+        meta_len,
+    ) = struct.unpack(D1POLY1_HEADER_FMT, archive_bytes[:D1POLY1_HEADER_SIZE])
+    if magic != D1POLY1_MAGIC:
+        raise ValueError(
+            f"d1poly1 archive: bad magic {magic!r} (expected {D1POLY1_MAGIC!r})"
+        )
+    if version != D1POLY1_SCHEMA_VERSION:
+        raise ValueError(
+            f"d1poly1 archive: unsupported schema version {version} "
+            f"(expected {D1POLY1_SCHEMA_VERSION})"
+        )
+    if sha_len != 16:
+        raise ValueError(
+            f"d1poly1 archive: sha truncated len={sha_len} (expected 16)"
+        )
+    if base_id_len == 0:
+        raise ValueError(
+            f"d1poly1 archive: base_substrate_id length must be > 0; got {base_id_len}"
+        )
+    end_header = D1POLY1_HEADER_SIZE
+    end_base_id = end_header + int(base_id_len)
+    end_base_sha = end_base_id + int(sha_len)
+    end_margin_map = end_base_sha + int(margin_map_len)
+    end_polytope = end_margin_map + int(polytope_len)
+    end_meta = end_polytope + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"d1poly1 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "d1poly1_header": (0, D1POLY1_HEADER_SIZE),
+        "base_substrate_id": (end_header, int(base_id_len)),
+        "base_archive_sha256_truncated": (end_base_id, int(sha_len)),
+        "margin_map_blob": (end_base_sha, int(margin_map_len)),
+        "polytope_payload_blob": (end_margin_map, int(polytope_len)),
+        "meta_blob": (end_polytope, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for D1POLY1 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS`` / ``IBPS1_SECTION_ROLES``.
+#
+# Section semantics rationale:
+# - margin_map_blob: the per-pixel safe-noise budget map IS the side-information
+#   that drives geometric-nullspace exploitation; it is a correction sidecar
+#   that scales with margin (NOT a decoder weight, NOT a latent code).
+# - polytope_payload_blob: the polytope-encoded sidecar bytes are
+#   geometric-nullspace correction signal; sidecar_or_correction_stream.
+# - All header/identity/meta sections are control_or_metadata.
+D1POLY1_SECTION_ROLES: dict[str, str] = {
+    "d1poly1_header": "control_or_metadata",
+    "base_substrate_id": "control_or_metadata",
+    "base_archive_sha256_truncated": "control_or_metadata",
+    "margin_map_blob": "sidecar_or_correction_stream",
+    "polytope_payload_blob": "sidecar_or_correction_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 def parse_archive(blob: bytes) -> D1PolytopeArchive:
     """Parse D1POLY1 0.bin bytes back to a typed :class:`D1PolytopeArchive`."""
     if len(blob) < D1POLY1_HEADER_SIZE:
@@ -404,8 +522,10 @@ __all__ = [
     "D1POLY1_HEADER_SIZE",
     "D1POLY1_MAGIC",
     "D1POLY1_SCHEMA_VERSION",
+    "D1POLY1_SECTION_ROLES",
     "D1PolytopeArchive",
     "build_readiness_manifest",
     "pack_archive",
     "parse_archive",
+    "parse_d1poly1_archive_bytes",
 ]

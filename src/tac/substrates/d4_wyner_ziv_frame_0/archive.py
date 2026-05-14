@@ -347,6 +347,138 @@ def pack_archive(
     )
 
 
+def parse_wzf01_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
+    """Return section name -> (start, length) for WZF01 (D4 Wyner-Ziv frame-0) grammar.
+
+    Canonical section-offset parser for WZF01 inner-blob bytes. The returned
+    mapping is the data contract consumed by:
+
+    - :mod:`tac.analysis.scorer_conditional_mdl` (ScorerConditionalMDLEstimator
+      section-aware Tier A density estimation)
+    - :mod:`tac.analysis.hnerv_packet_sections` (parser-section manifest
+      dispatch — WZF01 auto-detection by ``b"WZF\\x01"`` magic prefix)
+
+    Returned sections (Tier A / Tier B targets):
+
+    - ``wzf01_header`` — 33-byte header (control_or_metadata; fixed layout)
+    - ``base_substrate_archive_sha256`` — 64-byte hex-ASCII sha256 of the base
+      substrate archive (control_or_metadata; custody anchor)
+    - ``base_substrate_bytes`` — embedded base substrate ``0.bin`` bytes
+      (decoder_weight_stream — the base renderer reconstructs frame 1 which
+      is the side-information for Wyner-Ziv derivation of frame 0)
+    - ``motion_blob`` — brotli-compressed motion parameters (SE(3) or
+      optical-flow) — sidecar_or_correction_stream (per-pair motion side-info)
+    - ``residual_blob`` — brotli-compressed int8 photometric residual
+      (latent_stream — the rate-limited frame_0 - warp(frame_1) signal)
+    - ``meta_blob`` — sorted-keys utf-8 JSON (control_or_metadata)
+
+    The byte ranges returned here MUST agree with the writer in
+    :func:`pack_archive` and with the canonical full-decode parser
+    :func:`parse_archive`. The single-source-of-truth for WZF01 byte layout
+    is :data:`WZF01_HEADER_FMT` + :data:`WZF01_HEADER_SIZE`.
+
+    Differs from :func:`parse_archive` in that this function returns
+    section-offset tuples only (no brotli decompression). It is cheaper and
+    is safe to call with brotli-tampered blobs.
+
+    Raises ``ValueError`` on:
+
+    - short header (< 33 bytes)
+    - bad magic (!= ``b"WZF\\x01"``)
+    - unsupported schema version (!= 1)
+    - base_sha_len != 64
+    - unknown motion_mode (must be 0 or 1)
+    - archive size mismatch (declared end != len(archive_bytes)),
+      covering BOTH truncated archives and trailing-byte schema drift.
+    """
+    if len(archive_bytes) < WZF01_HEADER_SIZE:
+        raise ValueError(
+            f"wzf01 archive too short: got {len(archive_bytes)} bytes, "
+            f"need >= {WZF01_HEADER_SIZE} for header"
+        )
+    (
+        magic,
+        version,
+        _num_pairs,
+        motion_mode,
+        _flow_grid_h,
+        _flow_grid_w,
+        _residual_coarse_h,
+        _residual_coarse_w,
+        base_sha_len,
+        base_bytes_len,
+        motion_len,
+        residual_len,
+        meta_len,
+    ) = struct.unpack(WZF01_HEADER_FMT, archive_bytes[:WZF01_HEADER_SIZE])
+    if magic != WZF01_MAGIC:
+        raise ValueError(
+            f"wzf01 archive: bad magic {magic!r} (expected {WZF01_MAGIC!r})"
+        )
+    if version != WZF01_SCHEMA_VERSION:
+        raise ValueError(
+            f"wzf01 archive: unsupported schema version {version} "
+            f"(expected {WZF01_SCHEMA_VERSION})"
+        )
+    if base_sha_len != BASE_SHA_HEX_LEN:
+        raise ValueError(
+            f"wzf01 archive: base_sha_len {base_sha_len} != expected "
+            f"{BASE_SHA_HEX_LEN}"
+        )
+    if motion_mode not in (_MOTION_MODE_SE3, _MOTION_MODE_OPTICAL_FLOW):
+        raise ValueError(
+            f"wzf01 archive: unknown motion_mode {motion_mode} "
+            f"(expected 0=SE3 or 1=OPTICAL_FLOW)"
+        )
+    end_header = WZF01_HEADER_SIZE
+    end_base_sha = end_header + int(base_sha_len)
+    end_base_bytes = end_base_sha + int(base_bytes_len)
+    end_motion = end_base_bytes + int(motion_len)
+    end_residual = end_motion + int(residual_len)
+    end_meta = end_residual + int(meta_len)
+    if end_meta != len(archive_bytes):
+        raise ValueError(
+            f"wzf01 archive: archive size {len(archive_bytes)} != expected "
+            f"{end_meta} from header"
+        )
+    return {
+        "wzf01_header": (0, WZF01_HEADER_SIZE),
+        "base_substrate_archive_sha256": (end_header, int(base_sha_len)),
+        "base_substrate_bytes": (end_base_sha, int(base_bytes_len)),
+        "motion_blob": (end_base_bytes, int(motion_len)),
+        "residual_blob": (end_motion, int(residual_len)),
+        "meta_blob": (end_residual, int(meta_len)),
+    }
+
+
+# Canonical optimization-role mapping for WZF01 sections (consumed by
+# tac.analysis.scorer_conditional_mdl and tac.analysis.hnerv_packet_sections).
+# Mirrors the role taxonomy in ``ROLE_WEIGHTS`` / ``IBPS1_SECTION_ROLES``.
+#
+# Section semantics rationale:
+# - base_substrate_bytes: the embedded base substrate 0.bin reconstructs
+#   frame 1 which IS the cooperative-receiver side-information for Wyner-Ziv
+#   derivation of frame 0. The base renderer's decoder weights are the
+#   dominant score-affecting bytes (frame_1 reconstruction quality drives
+#   both PoseNet pose error AND the inverse warp accuracy used by D4).
+#   Therefore: decoder_weight_stream.
+# - motion_blob: per-pair SE(3) or optical-flow parameters. These are
+#   side-information for the warp that derives frame_0; they are correction
+#   signal that adjusts the warp prediction. sidecar_or_correction_stream.
+# - residual_blob: the brotli-compressed int8 photometric residual is the
+#   rate-limited frame_0 - warp(frame_1) signal — the latent stream that
+#   carries the unpredictable residual energy. latent_stream.
+# - All header/identity/meta sections are control_or_metadata.
+WZF01_SECTION_ROLES: dict[str, str] = {
+    "wzf01_header": "control_or_metadata",
+    "base_substrate_archive_sha256": "control_or_metadata",
+    "base_substrate_bytes": "decoder_weight_stream",
+    "motion_blob": "sidecar_or_correction_stream",
+    "residual_blob": "latent_stream",
+    "meta_blob": "control_or_metadata",
+}
+
+
 def parse_archive(blob: bytes) -> WynerZivFrame0Archive:
     """Parse WZF01 0.bin bytes back into a typed ``WynerZivFrame0Archive``."""
     if len(blob) < WZF01_HEADER_SIZE:
@@ -438,8 +570,10 @@ __all__ = [
     "WZF01_HEADER_SIZE",
     "WZF01_MAGIC",
     "WZF01_SCHEMA_VERSION",
+    "WZF01_SECTION_ROLES",
     "WynerZivFrame0Archive",
     "deserialize_motion_to_tensor",
     "pack_archive",
     "parse_archive",
+    "parse_wzf01_archive_bytes",
 ]
