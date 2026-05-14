@@ -2003,7 +2003,7 @@ def _rank_techniques(
         gap_to_target = (
             primary_score_after - target_score if target_score is not None else None
         )
-        rows.append({
+        row = {
             **t,
             "current_score_baseline": current_score,
             "predicted_score_after": score_after,
@@ -2027,7 +2027,8 @@ def _rank_techniques(
             ),
             "active_ranking_blocked": active_ranking_blocked,
             "retired_from_active_ranking": retired_from_active_ranking,
-        })
+        }
+        rows.append(_attach_fail_closed_dispatch_fields(row))
     # Primary-axis ranking; default dual mode uses the conservative smaller
     # predicted gain across CUDA and CPU.
     rows.sort(key=lambda r: (
@@ -2093,6 +2094,33 @@ def _validation_status_for_unknown(bucket: dict[str, Any]) -> str:
     if bucket.get("cuda_eval_worth_testing_any"):
         return "unknown_candidate_needs_catalog_or_alias_before_dispatch"
     return "unknown_planning_signal_needs_catalog_or_alias"
+
+
+def _attach_fail_closed_dispatch_fields(row: dict[str, Any]) -> dict[str, Any]:
+    """Make score/dispatch authority explicit on ranked and recommended rows."""
+
+    score_claim = bool(row.get("score_claim", False))
+    promotion_eligible = bool(row.get("promotion_eligible", False))
+    ready = bool(row.get("ready_for_exact_eval_dispatch", False))
+    row["score_claim"] = score_claim
+    row["promotion_eligible"] = promotion_eligible
+    row["ready_for_exact_eval_dispatch"] = ready
+    row.setdefault("score_claim_valid", score_claim)
+    row.setdefault("rank_or_kill_eligible", promotion_eligible)
+    blockers = row.get("dispatch_blockers")
+    if not isinstance(blockers, list):
+        blockers = [] if blockers in (None, "") else [str(blockers)]
+    if not ready:
+        evidence_grade = str(row.get("evidence_grade") or "").lower()
+        if "predicted" in evidence_grade and not any(
+            str(blocker).startswith("predicted_row_requires_exact_eval_before_dispatch")
+            for blocker in blockers
+        ):
+            blockers.append("predicted_row_requires_exact_eval_before_dispatch")
+        if not blockers and not score_claim:
+            blockers.append("score_claim_false_requires_exact_eval_before_dispatch")
+    row["dispatch_blockers"] = blockers
+    return row
 
 
 def build_validation_queue(

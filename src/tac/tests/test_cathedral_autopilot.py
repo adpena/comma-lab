@@ -59,6 +59,26 @@ def test_pr106_frontier_targets_arch_techniques() -> None:
     )
 
 
+def test_recommended_top_3_predicted_rows_fail_closed_for_dispatch() -> None:
+    autopilot = _load_autopilot()
+    plan = autopilot.build_plan(
+        d_seg=6.7e-4,
+        d_pose=3.4e-5,
+        archive_bytes=178144,
+        target_score=0.155,
+        label="pr106_frontier",
+    )
+
+    assert plan.recommended_top_3
+    for row in plan.recommended_top_3:
+        assert row["score_claim"] is False
+        assert row["score_claim_valid"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert row["rank_or_kill_eligible"] is False
+        assert row["dispatch_blockers"]
+
+
 def test_already_at_target_emits_note() -> None:
     """If current score <= target, autopilot says ALREADY AT TARGET."""
     autopilot = _load_autopilot()
