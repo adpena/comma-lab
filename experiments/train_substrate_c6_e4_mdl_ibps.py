@@ -83,8 +83,8 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     pin_seeds as _canon_pin_seeds,
 )
-from tac.substrates._shared.trainer_skeleton import (
-    require_contest_cuda_auth_eval_claim as _canon_require_contest_cuda_auth_eval_claim,
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 from tac.substrates._shared.trainer_skeleton import (
     sha256_bytes as _canon_sha256_bytes,
@@ -525,7 +525,10 @@ def _full_main(args: argparse.Namespace) -> int:
     patch_upstream_yuv6_globally()
 
     _stage("load_scorers")
-    seg_scorer, pose_scorer = load_differentiable_scorers(args.upstream_dir, device=device)
+    pose_scorer, seg_scorer = load_differentiable_scorers(
+        args.upstream_dir,
+        device=device,
+    )
 
     _stage("decode_video_pairs")
     max_pairs = args.max_pairs or N_PAIRS_FULL
@@ -668,33 +671,48 @@ def _full_main(args: argparse.Namespace) -> int:
 
     auth_eval_score = None
     auth_eval_evidence_grade = "skipped"
+    auth_eval_score_axis = None
+    auth_eval_lane_tag = None
+    auth_eval_score_claim_valid = False
+    auth_eval_exact_cuda_complete = False
+    auth_eval_result_path = None
+    result_review_blockers = [
+        "trainer_stats_not_authoritative_score_claim_surface",
+        "promotion_requires_separate_result_review",
+    ]
     if not args.skip_auth_eval:
         _stage("contest_auth_eval")
-        # Forward to contest_auth_eval.py; result captured for posterior
-        # update + score-claim manifest. Refused MPS per Catalog #1.
-        try:
-            import subprocess
-            cuda_axis = "cuda" if device.type == "cuda" else "cpu"
-            result_json_path = out_dir / "auth_eval.json"
-            cmd = [
-                sys.executable,
-                str(CONTEST_AUTH_EVAL_SCRIPT),
-                "--archive-zip", str(archive_zip_path),
-                "--upstream-dir", str(args.upstream_dir),
-                "--device", cuda_axis,
-                "--output-json", str(result_json_path),
-            ]
-            print(f"[c6-full] running: {' '.join(cmd)}")
-            proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
-            if proc.returncode == 0 and result_json_path.is_file():
-                with result_json_path.open() as f:
-                    auth = json.load(f)
-                auth_eval_score = auth.get("score")
-                auth_eval_evidence_grade = auth.get("evidence_grade", "unknown")
-            else:
-                print(f"[c6-full] auth eval rc={proc.returncode}; stderr={proc.stderr[:500]}")
-        except Exception as e:
-            print(f"[c6-full] auth eval EXC: {type(e).__name__}: {e}")
+        result_json_path = out_dir / "contest_auth_eval_cuda.json"
+        auth_result = _canon_gate_auth_eval_call(
+            args=args,
+            archive_zip=archive_zip_path,
+            inflate_sh=submission_dir / "inflate.sh",
+            upstream_dir=args.upstream_dir,
+            output_json=result_json_path,
+            contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+            substrate_tag=SUBSTRATE_TAG,
+            device=device,
+            full_cpu_active=bool(args.full_cpu),
+        )
+        if auth_result is not None:
+            auth_eval_result_path = str(result_json_path)
+            auth_eval_score = auth_result["auth_eval_cuda_score"]
+            auth_eval_evidence_grade = "contest-CUDA"
+            auth_eval_score_axis = auth_result["auth_eval_score_axis"]
+            auth_eval_lane_tag = auth_result["auth_eval_lane_tag"]
+            auth_eval_score_claim_valid = bool(
+                auth_result["auth_eval_score_claim_valid"]
+            )
+            auth_eval_exact_cuda_complete = True
+    else:
+        result_review_blockers.append("skip_auth_eval_explicitly_set")
+
+    if not auth_eval_score_claim_valid:
+        skipped_reason = str(getattr(args, "auth_eval_skipped_reason", "") or "")
+        if skipped_reason:
+            result_review_blockers.append(skipped_reason)
+        else:
+            result_review_blockers.append("contest_cuda_auth_eval_not_validated")
 
     stats = {
         "lane_id": SUBSTRATE_LANE_ID,
@@ -709,9 +727,25 @@ def _full_main(args: argparse.Namespace) -> int:
         "archive_zip_sha256": _canon_sha256_bytes(archive_zip_path.read_bytes()),
         "auth_eval_score": auth_eval_score,
         "auth_eval_evidence_grade": auth_eval_evidence_grade,
+        "auth_eval_result_path": auth_eval_result_path,
+        "auth_eval_score_axis": auth_eval_score_axis,
+        "auth_eval_lane_tag": auth_eval_lane_tag,
+        "auth_eval_score_claim_valid": auth_eval_score_claim_valid,
+        "auth_eval_exact_cuda_complete": auth_eval_exact_cuda_complete,
+        "score_axis": auth_eval_score_axis,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "result_review_blockers": result_review_blockers,
         "cfg": asdict(cfg),
         "param_breakdown": substrate.num_parameters_breakdown(),
-        "hardware_substrate": _canon_detect_hardware_substrate(),
+        "hardware_substrate": _canon_detect_hardware_substrate(
+            axis="cuda" if device.type == "cuda" else "cpu",
+            substrate_tag=SUBSTRATE_TAG,
+            env_var_candidates=("C6_E4_MDL_IBPS_GPU", "MODAL_GPU"),
+        ),
         "git_head": _canon_git_head_sha(REPO_ROOT),
         "trained_at_utc": _canon_utc_now_iso(),
     }

@@ -31,7 +31,6 @@ LANE_ID="lane_c6_e4_mdl_ibps_substrate_20260514"
 TAG="${TAG:-substrate_c6_e4_mdl_ibps}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_c6_e4_mdl_ibps_results}"
 OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
-PROVENANCE="$LOG_DIR/provenance.json"
 
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 C6_E4_MDL_IBPS_VIDEO_PATH="${C6_E4_MDL_IBPS_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
@@ -52,14 +51,26 @@ CLAIM_VERIFIED=0
 
 log() { echo "[lane-c6-mdl-ibps] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
-mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
-cd "$WORKSPACE"
-
 # Stage 0: dispatch claim verification.
 if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
+    mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
     log "FATAL: C6_E4_MDL_IBPS_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"
     exit 21
 fi
+
+if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    case "$C6_E4_MDL_IBPS_OUTPUT_DIR" in
+        "$WORKSPACE"/*|/tmp/*|/workspace/*)
+            LOG_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}"
+            OUTPUT_DIR="$LOG_DIR/output"
+            C6_E4_MDL_IBPS_OUTPUT_DIR="$OUTPUT_DIR"
+            ;;
+    esac
+fi
+PROVENANCE="$LOG_DIR/provenance.json"
+
+mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
+cd "$WORKSPACE"
 
 CLAIM_PYTHON="${PYBIN:-}"
 if [ -z "$CLAIM_PYTHON" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then
@@ -172,6 +183,37 @@ PYBIN_RESOLVED="$CLAIM_PYTHON"
     --upstream-dir "$C6_E4_MDL_IBPS_UPSTREAM_DIR" \
     --device "$C6_E4_MDL_IBPS_DEVICE" \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
+
+# The trainer is allowed to write non-authoritative stats, but this remote
+# driver may only emit the [contest-CUDA] completion marker after a validated
+# CUDA auth-eval claim. This prevents stale auth-eval flags plus trainer rc=0
+# from looking like a successful contest-CUDA lane.
+"$PYBIN_RESOLVED" - "$C6_E4_MDL_IBPS_OUTPUT_DIR/stats.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+stats_path = Path(sys.argv[1])
+if not stats_path.is_file():
+    raise SystemExit(f"missing C6 stats.json: {stats_path}")
+stats = json.loads(stats_path.read_text(encoding="utf-8"))
+if stats.get("auth_eval_score_claim_valid") is not True:
+    raise SystemExit(
+        "C6 stats missing valid auth_eval_score_claim_valid=true; "
+        f"blockers={stats.get('result_review_blockers')!r}"
+    )
+if stats.get("auth_eval_score_axis") != "contest_cuda":
+    raise SystemExit(
+        f"C6 stats not on contest_cuda axis: {stats.get('auth_eval_score_axis')!r}"
+    )
+if stats.get("auth_eval_exact_cuda_complete") is not True:
+    raise SystemExit("C6 stats missing auth_eval_exact_cuda_complete=true")
+print(
+    "C6_AUTH_EVAL_VALIDATED "
+    f"score={stats.get('auth_eval_score')} "
+    f"path={stats.get('auth_eval_result_path')}"
+)
+PY
 
 # Stage 5: emit completion marker (operator + autopilot consume).
 log "LANE_C6_MDL_IBPS_DONE [contest-CUDA] output_dir=$C6_E4_MDL_IBPS_OUTPUT_DIR"

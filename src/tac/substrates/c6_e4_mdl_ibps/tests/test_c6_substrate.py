@@ -523,7 +523,10 @@ def test_score_aware_loss_parts_dict_shape() -> None:
 
     patch_upstream_yuv6_globally()
     try:
-        seg_scorer, pose_scorer = load_differentiable_scorers(upstream_dir, device="cpu")
+        pose_scorer, seg_scorer = load_differentiable_scorers(
+            upstream_dir,
+            device="cpu",
+        )
     except (FileNotFoundError, RuntimeError) as exc:
         pytest.skip(f"upstream scorer weights not available: {exc}")
 
