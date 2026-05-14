@@ -1933,6 +1933,19 @@ def preflight_all(
         check_archive_promotion_blocked_by_mdl_density_above_threshold(
             strict=False, verbose=verbose,
         )
+        # 2026-05-14 Catalog #227 — Tier C empirical revision self-protect.
+        # Sister of #219 (Tier A density gate). Tier A is brotli-saturated at
+        # the byte layer and CANNOT discriminate substrate class; Tier C is
+        # the dispositive disambiguator per Z1 deep-math + C6 5ep ACROSS-
+        # CLASS verdict. Refuses L2+ promotion of class-shift-claiming lanes
+        # without Tier C empirical evidence. Initial wire-in is warn-only
+        # per CLAUDE.md "Strict-flip atomicity rule" until a converged
+        # 100ep+ Tier C anchor lands on at least one class-shift substrate.
+        # Memory: feedback_autopilot_tier_c_integration_catalog_227_landed_
+        # 20260514.md.
+        check_substrate_class_promotion_requires_tier_c_evidence(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #220 - substrate scaffold byte addition without
         # operational score-improvement mechanism. Anchor: D1 R3 dispatch
         # produced score ~0.222 vs predicted [0.181, 0.188] because the L1
@@ -1959,6 +1972,70 @@ def preflight_all(
         check_trainer_auth_eval_uses_canonical_helper(
             strict=True, verbose=verbose,
         )
+        # 2026-05-14 Catalog #228 - F3 GTScorerCache trainer-side consumption
+        # gate. Per F3-BACKPORT-WAVE-V2 op-routable #5. Refuses substrate
+        # trainers that declare the RESERVED `--enable-gt-scorer-cache`
+        # Tier-1 optimization flag but do NOT consume the cache primitive
+        # (`gt_cache.lookup(` + `gt_pose_batch=` threading) in their hot
+        # loop. Delegates verdict classification to the canonical helper
+        # at `tools/check_f3_trainer_actionable.py` so the gate and the
+        # operator-facing reproducer stay in lock-step. Initial wire-in
+        # is warn-only per CLAUDE.md "Strict-flip atomicity rule" —
+        # the 17 ALREADY_WIRED trainers + 8 non-actionable verdicts at
+        # landing all classify cleanly; strict-flip pending sister
+        # subagent backfill of the 2 NEEDS_F3_BACKPORT_PLUS_TIER1_FLAGS
+        # trainers (vq_vae, s2sbs_byte_stuffing). Memory:
+        # feedback_f3_backport_wave_v2_eleven_trainers_landed_20260514.md.
+        _parallel.run(
+            "check_substrate_trainer_consumes_f3_cache_when_flag_declared",
+            "[f3-cache-consumption]",
+            lambda: check_substrate_trainer_consumes_f3_cache_when_flag_declared(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
+        # 2026-05-14 Catalog #229 - subagent landing premise-verification
+        # evidence gate. Per `feedback_prompt_premise_verification_before_
+        # edit_pattern_20260514.md`. Refuses post-2026-05-14 landing memos
+        # claiming >=3 bulk edits without an empirical verdict table OR
+        # reproducer-script path. Initial wire-in is warn-only;
+        # strict-flip pending operator-routed backfill sweep of legacy
+        # memos that predate the canonical pattern. Memory:
+        # feedback_prompt_premise_verification_before_edit_pattern_20260514.md.
+        _parallel.run(
+            "check_subagent_landing_includes_premise_verification_evidence",
+            "[premise-verification]",
+            lambda: check_subagent_landing_includes_premise_verification_evidence(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
+        # 2026-05-14 Catalog #230 - bulk-rewrite ownership-map gate. Per
+        # `feedback_editor_vs_editor_collision_patterns_in_parallel_waves_
+        # 20260514.md`. Refuses subagent commits whose body mentions a
+        # bulk-op token (SPDX header sweep / mass refactor / etc.) WITHOUT
+        # referencing the recursive R2 ownership map / disjoint-scope
+        # declaration. Initial wire-in is warn-only; strict-flip pending
+        # operator-routed backfill. Memory:
+        # feedback_editor_vs_editor_collision_patterns_in_parallel_waves_20260514.md.
+        _parallel.run(
+            "check_bulk_rewrite_respects_sister_subagent_ownership_map",
+            "[bulk-rewrite-ownership]",
+            lambda: check_bulk_rewrite_respects_sister_subagent_ownership_map(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
+        # 2026-05-14 Catalog #231 - review-gate retry-helper gate. Per
+        # `feedback_duckdb_lock_fix_review_gate_hook_landed_20260514.md`
+        # operator decision #1 (RECOMMENDED YES). Refuses any future
+        # `tools/review_gate_hook.py` revision that re-introduces a bare
+        # `duckdb.connect()` call outside the canonical retry helper.
+        # STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently
+        # fixed AND self-protected against" + "Strict-flip atomicity
+        # rule" — live count at landing: 0 (the canonical fix is already
+        # present in the hook).
+        check_review_gate_hook_uses_retry_helper(strict=True, verbose=verbose)
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -50906,6 +50983,459 @@ def check_archive_promotion_blocked_by_mdl_density_above_threshold(
     return violations
 
 
+# ----------------------------------------------------------------------------
+# Catalog #227 — check_substrate_class_promotion_requires_tier_c_evidence
+#
+# Tier C empirical revision self-protection (2026-05-14). Sister of Catalog
+# #219 (Tier A within-class density gate). Where #219 refuses L2+ promotion
+# when Tier A density > 0.90, #227 refuses substrate-class-shift PROMOTION
+# (lanes claiming `lane_class` ∈ class-shift tokens OR `notes` referencing
+# class-shift literature anchors) at L2+ WITHOUT Tier C empirical evidence.
+#
+# Bug class: Tier A is brotli-saturated at the byte layer (any fp16-weight +
+# brotli archive sits at Tier A density ~0.99) and structurally CANNOT
+# discriminate substrate class. A lane can claim ACROSS-CLASS lineage via
+# its lane_class / notes / literature_anchor field WITHOUT empirically
+# demonstrating the class-shift signature via Tier C post-decode
+# perturbation. Per the C6 5ep empirical anchor `feedback_mdl_ablation_
+# tier_c_ibps1_landed_20260514.md`, the dispositive test is Tier C — the
+# latent Δscore at σ=1.0 must be sub-0.05 AND state_dict perturbation
+# must show a knee+plateau structural signature.
+#
+# This gate refuses any L2+ class-shift lane whose evidence does NOT
+# reference a Tier C ablation result on the lane's archive bytes. The
+# acceptance includes a waiver mechanism for genuinely-pre-empirical lanes
+# (still in design / 5ep / pre-Tier-C-feasibility).
+#
+# Lane: lane_autopilot_tier_c_integration_catalog_227_20260514.
+# Memory: feedback_autopilot_tier_c_integration_catalog_227_landed_20260514.md.
+# Cross-ref:
+#   - Catalog #219 (Tier A density-saturation gate; sister)
+#   - Catalog #125 (subagent landing 6-hook wire-in; this gate IS hook #4
+#     for the Tier C result loop)
+#   - CLAUDE.md "HNeRV / leaderboard-implementation parity discipline"
+#     lesson 6 (score-domain Lagrangian via Tier C, not byte-domain Tier A)
+# ----------------------------------------------------------------------------
+
+# Substrate-class-shift tokens that trigger Catalog #227. Sister of the
+# autopilot ranker's `_CLASS_SHIFT_LANE_CLASS_TOKENS` /
+# `_CLASS_SHIFT_LITERATURE_TOKENS` constants in
+# `tools/cathedral_autopilot_autonomous_loop.py`.
+_CHECK_227_CLASS_SHIFT_LANE_CLASS_TOKENS = (
+    "substrate_class_shift",
+    "predictive_receiver",
+    "cooperative_receiver",
+    "foveation",
+)
+
+_CHECK_227_CLASS_SHIFT_NOTES_TOKENS = (
+    "cooperative-receiver",
+    "cooperative_receiver",
+    "predictive-coding",
+    "predictive_coding",
+    "predictive-receiver",
+    "predictive_receiver",
+    "foveation",
+    "Tishby-Zaslavsky",
+    "Atick-Redlich",
+    "Rao-Ballard",
+    "Wyner-Ziv",
+    "Information Bottleneck",
+    "information_bottleneck",
+    "MDL-IBPS",
+    "Slepian-Wolf",
+    "world_model",
+    "world-model",
+    "time_traveler",
+    "time-traveler",
+    "Ha-Schmidhuber",
+    "Ha Schmidhuber",
+    "Hafner",
+    "DreamerV3",
+)
+
+# Same-line waiver. Placeholder literal "<reason>" / "<rationale>" rejected
+# so the docstring above cannot self-waive.
+_CHECK_227_WAIVER_RE = re.compile(
+    r"#\s*TIER_C_EVIDENCE_PENDING_OK:\s*([^\s<].*)"
+)
+_CHECK_227_WAIVER_INLINE_RE = re.compile(
+    r"TIER_C_EVIDENCE_PENDING_OK:\s*([^\s<,;]+)"
+)
+
+# Tier C evidence requires that the lane's evidence string OR notes mention
+# a Tier C ablation in one of the canonical ways:
+#   * literal "tier_c" / "tier c" / "Tier C" in evidence / notes
+#   * an archive_sha256 that appears in the MDL ablation index AND that
+#     index entry's source file has Tier C rows
+_CHECK_227_TIER_C_TOKENS = (
+    "tier_c",
+    "tier c",
+    "Tier C",
+    "TIER_C",
+    "mdl_tier_c",
+    "tier-c",
+)
+
+
+# Catalog #227-specific exemption tokens. Sister of Catalog #219's
+# _CHECK_219_EXEMPT_LANE_CLASS_TOKENS but DOES NOT include
+# "substrate_class_shift" (the whole point of #227 is to gate class-shift
+# lanes!). The Catalog #227 exemption is narrower: ONLY research-only and
+# substrate_engineering scopes that are OUT of contest-promotion scope.
+_CHECK_227_EXEMPT_LANE_CLASS_TOKENS = (
+    "substrate_engineering",
+    "research_substrate",
+)
+
+_CHECK_227_EXEMPT_TARGET_MODE_TOKENS = (
+    "research_substrate",
+    "research_only",
+)
+
+
+def _check_227_lane_is_exempt(lane: dict) -> bool:
+    """Return True if the lane is explicitly research-only OR substrate-
+    engineering scope (out of contest-promotion eligibility).
+
+    Narrower than `_check_219_lane_is_exempt` — Catalog #227 does NOT exempt
+    `substrate_class_shift` lanes (those ARE the lanes being gated).
+    """
+    lane_class = lane.get("lane_class", "")
+    if isinstance(lane_class, str):
+        for tok in _CHECK_227_EXEMPT_LANE_CLASS_TOKENS:
+            if tok in lane_class:
+                return True
+    target_modes = lane.get("target_modes") or []
+    if isinstance(target_modes, list):
+        for mode in target_modes:
+            if isinstance(mode, str):
+                for tok in _CHECK_227_EXEMPT_TARGET_MODE_TOKENS:
+                    if tok in mode:
+                        return True
+    notes = lane.get("notes") or ""
+    if isinstance(notes, str):
+        lower = notes.lower()
+        if "research_only=true" in lower:
+            return True
+        if "research_only:true" in lower:
+            return True
+        if "substrate_engineering_exception" in lower:
+            return True
+        for tok in _CHECK_227_EXEMPT_LANE_CLASS_TOKENS:
+            if f"lane_class={tok}" in lower or f"lane_class:{tok}" in lower:
+                return True
+    return False
+
+
+def _check_227_lane_is_class_shift_claim(lane: dict) -> bool:
+    """Return True if the lane CLAIMS substrate-class-shift lineage via any of:
+      - lane_class field contains class-shift token
+      - notes body contains class-shift literature token
+      - notes body contains lane_class=<class-shift token>
+    """
+    lane_class = lane.get("lane_class") or ""
+    if isinstance(lane_class, str):
+        for tok in _CHECK_227_CLASS_SHIFT_LANE_CLASS_TOKENS:
+            if tok in lane_class:
+                return True
+    notes = lane.get("notes") or ""
+    if isinstance(notes, str):
+        for tok in _CHECK_227_CLASS_SHIFT_LANE_CLASS_TOKENS:
+            if f"lane_class={tok}" in notes or f"lane_class:{tok}" in notes:
+                return True
+        for tok in _CHECK_227_CLASS_SHIFT_NOTES_TOKENS:
+            if tok in notes:
+                return True
+    return False
+
+
+def _check_227_lane_has_tier_c_evidence(
+    lane: dict, mdl_tier_c_index: dict[str, dict]
+) -> bool:
+    """Return True if the lane has Tier C ablation evidence.
+
+    Acceptance:
+      (a) any gate evidence string OR notes body contains a Tier C token
+          (literal "tier_c" / "Tier C" / etc.), OR
+      (b) the lane's archive sha256 is in the Tier C index (an MDL ablation
+          JSON with non-empty tier_c rows exists for the archive).
+    """
+    text_buckets: list[str] = []
+    gates = lane.get("gates") or {}
+    if isinstance(gates, dict):
+        for gate_name in _CHECK_219_L2_PROMOTION_GATE_NAMES:
+            gate = gates.get(gate_name) or {}
+            ev = gate.get("evidence") if isinstance(gate, dict) else None
+            if isinstance(ev, str):
+                text_buckets.append(ev)
+    notes = lane.get("notes") or ""
+    if isinstance(notes, str):
+        text_buckets.append(notes)
+
+    # Token-based acceptance (a)
+    for text in text_buckets:
+        for tok in _CHECK_227_TIER_C_TOKENS:
+            if tok in text:
+                return True
+
+    # SHA-based acceptance (b)
+    if mdl_tier_c_index:
+        sha_tokens = _check_219_extract_sha_tokens(lane)
+        if sha_tokens:
+            matches = _check_219_match_sha_against_mdl_index(
+                sha_tokens, mdl_tier_c_index
+            )
+            if matches:
+                return True
+    return False
+
+
+def _check_227_lane_has_waiver(lane: dict) -> tuple[bool, str]:
+    """Return (waived, reason) if the lane carries a # TIER_C_EVIDENCE_PENDING_OK:
+    waiver in its registry notes / evidence body.
+
+    Sister of Catalog #219's waiver pattern. Placeholder literal
+    ``<reason>`` is rejected so the gate cannot self-waive on docstring text.
+    """
+    notes = lane.get("notes") or ""
+    if not isinstance(notes, str):
+        notes = ""
+    text_buckets = [notes]
+    gates = lane.get("gates") or {}
+    if isinstance(gates, dict):
+        for gate_name in _CHECK_219_L2_PROMOTION_GATE_NAMES:
+            gate = gates.get(gate_name) or {}
+            ev = gate.get("evidence") if isinstance(gate, dict) else None
+            if isinstance(ev, str):
+                text_buckets.append(ev)
+    for text in text_buckets:
+        m = _CHECK_227_WAIVER_RE.search(text)
+        if m is None:
+            m = _CHECK_227_WAIVER_INLINE_RE.search(text)
+        if m is None:
+            continue
+        reason = m.group(1).strip().rstrip(",;").strip()
+        if not reason or reason in {"<reason>", "<rationale>"}:
+            continue
+        return True, reason
+    return False, ""
+
+
+def _check_227_discover_tier_c_results(
+    repo_root: Path,
+) -> dict[str, dict]:
+    """Return {sha256_full: {density_lo, has_tier_c, source_path, ...}}.
+
+    Same scan-shape as Catalog #219's helper, but additionally requires the
+    JSON to have a non-empty ``tier_c`` list so the index only carries
+    archives that actually have Tier C measurements.
+    """
+    out: dict[str, dict] = {}
+    results_dir = repo_root / "experiments" / "results"
+    if not results_dir.is_dir():
+        return out
+    for entry in results_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        if "mdl_ablation" not in entry.name.lower():
+            continue
+        for json_file in entry.glob("*_mdl_ablation.json"):
+            if json_file.name == "summary_mdl_ablation.json":
+                continue
+            try:
+                payload = json.loads(json_file.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                continue
+            sha = payload.get("archive_sha256")
+            tier_c_rows = payload.get("tier_c") or []
+            if not sha or not isinstance(sha, str):
+                continue
+            if not isinstance(tier_c_rows, list) or not tier_c_rows:
+                continue
+            density_lo = payload.get("mdl_density_estimate_lo", 0.0)
+            try:
+                density_lo = float(density_lo)
+            except (TypeError, ValueError):
+                density_lo = 0.0
+            tier_c_density = payload.get("mdl_tier_c_density_estimate", 0.0)
+            try:
+                tier_c_density = float(tier_c_density)
+            except (TypeError, ValueError):
+                tier_c_density = 0.0
+            sha_low = sha.lower()
+            out[sha_low] = {
+                "has_tier_c": True,
+                "density_lo": density_lo,
+                "tier_c_density": tier_c_density,
+                "tier_c_verdict": payload.get(
+                    "mdl_tier_c_substrate_class_verdict", ""
+                ),
+                "source_path": str(json_file.relative_to(repo_root)),
+                "n_tier_c_rows": len(tier_c_rows),
+            }
+    return out
+
+
+def check_substrate_class_promotion_requires_tier_c_evidence(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #227 — refuse L2+ promotion of substrate-class-shift lanes
+    without Tier C empirical evidence.
+
+    Per `feedback_mdl_ablation_tier_c_ibps1_landed_20260514.md` operator
+    decision #4 + the C6 5ep ACROSS-CLASS verdict
+    (`project_c6_substrate_class_shift_first_empirical_confirmation_tier_c_
+    20260514.md`): Tier A density alone CANNOT discriminate substrate class
+    because brotli saturation makes Tier A indistinguishable for any fp16-
+    weight + brotli archive (within OR across class, all saturate at ~0.99).
+    The dispositive test is Tier C (post-decode perturbation curve shape).
+
+    The gate scans `.omx/state/lane_registry.json` for L2+ lanes that CLAIM
+    substrate-class-shift lineage (via lane_class field OR class-shift
+    literature anchor tokens in notes) AND refuses any such lane lacking
+    Tier C evidence on its archive.
+
+    Acceptance cascades (lane must satisfy at least one):
+      (a) Lane evidence/notes contain a Tier C token ("tier_c" / "Tier C" /
+          etc.) — the operator has explicitly acknowledged Tier C either
+          ran OR is in flight.
+      (b) Lane's archive sha256 is in the Tier C ablation index (an MDL
+          ablation JSON with non-empty tier_c rows exists for the archive).
+      (c) Lane carries a same-line `# TIER_C_EVIDENCE_PENDING_OK:<rationale>`
+          waiver. Reserved for pre-empirical lanes (still in design / 5ep
+          / pre-Tier-C-feasibility); placeholder `<reason>` literal rejected.
+      (d) Lane is exempt via lane_class / target_modes opt-out OR has the
+          waiver per Catalog #219's sister exemption mechanism. Specifically
+          a research_only / research_substrate lane is exempt — those are
+          not contest-promotion eligible regardless of Tier C status.
+
+    Initial wire-in is warn-only per CLAUDE.md "Strict-flip atomicity rule".
+    Strict-flip planned once 0 violations are confirmed across class-shift
+    lanes AND the canonical Tier C anchor for at least one substrate
+    (C6 IBPS1) lands at converged 100ep+ level.
+
+    Sister of Catalog #219 (Tier A density gate; brotli-saturated layer) +
+    Catalog #125 (subagent landing 6-hook wire-in). Together they extinct
+    the "class-shift claim without empirical Tier C evidence" bug class.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+    the gate REFUSES promotion of an unproven class-shift CLAIM but does
+    NOT kill the lane; the operator can either run Tier C OR add the
+    waiver for pre-empirical scope.
+
+    Memory: feedback_autopilot_tier_c_integration_catalog_227_landed_20260514.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    if not registry_path.is_file():
+        if verbose:
+            print("  [tier-c-class-shift-promotion-gate] OK (no lane_registry.json)")
+        return violations
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if verbose:
+            print(
+                f"  [tier-c-class-shift-promotion-gate] WARN registry read error: {exc}"
+            )
+        return violations
+
+    tier_c_index = _check_227_discover_tier_c_results(root)
+
+    lanes_scanned = 0
+    class_shift_lanes_scanned = 0
+
+    for lane in registry.get("lanes", []):
+        if not isinstance(lane, dict):
+            continue
+        lanes_scanned += 1
+        level = int(lane.get("level", 0) or 0)
+        if level < 2:
+            continue
+        # L2-promotion gate satisfaction.
+        gates = lane.get("gates") or {}
+        any_l2_gate_satisfied = False
+        if isinstance(gates, dict):
+            for gate_name in _CHECK_219_L2_PROMOTION_GATE_NAMES:
+                gate = gates.get(gate_name) or {}
+                if isinstance(gate, dict) and gate.get("status"):
+                    any_l2_gate_satisfied = True
+                    break
+        if not any_l2_gate_satisfied:
+            continue
+
+        if not _check_227_lane_is_class_shift_claim(lane):
+            continue
+        class_shift_lanes_scanned += 1
+
+        # Catalog #227-specific exemption: research_only / research_substrate
+        # / substrate_engineering lanes are out of contest-promotion scope.
+        # Narrower than Catalog #219's exemption — we do NOT exempt
+        # `substrate_class_shift` here (those are the gated lanes).
+        if _check_227_lane_is_exempt(lane):
+            continue
+
+        # Tier C evidence cascade (a)+(b)
+        if _check_227_lane_has_tier_c_evidence(lane, tier_c_index):
+            continue
+
+        # Waiver cascade (c)
+        waived, reason = _check_227_lane_has_waiver(lane)
+        if waived:
+            continue
+
+        # Build the violation message.
+        violations.append(
+            f"lane {lane.get('id', '?')!r} (L{level}) CLAIMS substrate-class-shift "
+            f"lineage (lane_class={lane.get('lane_class', '')!r} OR class-shift "
+            f"literature token in notes) but lacks Tier C empirical evidence. "
+            f"Per Z1 deep-math + C6 5ep ACROSS-CLASS verdict, Tier A density "
+            f"is brotli-saturated and CANNOT discriminate substrate class; "
+            f"Tier C is the dispositive disambiguator. Either (a) run "
+            f"`tools/mdl_scorer_conditional_ablation.py --run-tier-c-only` on "
+            f"the lane's archive and add the result path to the lane's "
+            f"evidence, OR (b) add a `# TIER_C_EVIDENCE_PENDING_OK:<rationale>` "
+            f"waiver to the lane's registry notes for pre-empirical scope. "
+            f"Memory: feedback_autopilot_tier_c_integration_catalog_227_"
+            f"landed_20260514.md."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [tier-c-class-shift-promotion-gate] {len(violations)} "
+                f"violation(s) across {class_shift_lanes_scanned} class-shift "
+                f"lane(s) of {lanes_scanned} total (strict={strict})"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [tier-c-class-shift-promotion-gate] OK "
+                f"({lanes_scanned} lane(s) scanned, "
+                f"{class_shift_lanes_scanned} class-shift lane(s) clean)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_class_promotion_requires_tier_c_evidence "
+            f"found {len(violations)} L2+ class-shift lane(s) lacking Tier C "
+            f"evidence (Catalog #227 — Tier C empirical revision self-protect):"
+            f"\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
 # ---------------------------------------------------------------------------
 # Catalog #220 — substrate scaffold byte addition without operational mechanism
 # ---------------------------------------------------------------------------
@@ -51557,6 +52087,843 @@ def check_trainer_auth_eval_uses_canonical_helper(
             + "\n  ".join(violations[:3])
         )
         raise PreflightError(msg)
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #228 — check_substrate_trainer_consumes_f3_cache_when_flag_declared
+#
+# F3-BACKPORT-WAVE-V2 op-routable #5 (2026-05-14). Bug class: a substrate
+# trainer under ``experiments/train_substrate_*.py`` declares the RESERVED
+# ``--enable-gt-scorer-cache`` Tier-1 optimization flag (Catalog #151
+# manifest entry) but does NOT actually consume the cache primitive in its
+# hot loop (``gt_cache.lookup(`` + ``gt_pose_batch=`` kwarg threading).
+#
+# Empirical anchor: predecessor F3-BACKPORT-WAVE-V2 wired the contract into
+# 10 substrate trainers
+# (`feedback_f3_backport_wave_v2_eleven_trainers_landed_20260514.md`).
+# Without a STRICT preflight gate, a future trainer refactor could silently
+# remove the wire-in (replace canonical
+# `_build_optimized_training_context` with manual `loss_fn(...)`); the
+# regression would not surface until a future Modal/Lightning smoke
+# timeout on contest-resolution training.
+#
+# The gate delegates classification to the canonical helper
+# ``tools/check_f3_trainer_actionable.py`` (which already encodes the full
+# verdict taxonomy: ALREADY_WIRED / D1_SEGNET_SIDECAR / FULL_MAIN_STUB /
+# Z3_V1_RATE_ONLY / SMOKE_SYNTHETIC / NEEDS_SUBSTRATE_F3_WIRE_IN). Only the
+# explicit ``NEEDS_F3_BACKPORT`` and ``NEEDS_F3_BACKPORT_PLUS_TIER1_FLAGS``
+# verdicts are gate violations — every other verdict is a structurally
+# legitimate non-actionable state (substrate-side blocker / synthetic
+# scorer / SegNet-only sidecar / stub-state).
+#
+# Per CLAUDE.md "Strict-flip atomicity rule" + the predecessor F3-V2
+# landing memo: 17 trainers are ALREADY_WIRED at landing time; the gate
+# inherits a 0 live count for trainers that DECLARE-AND-CONSUME the F3
+# contract.
+#
+# Sister of Catalog #172 (`check_substrate_trainers_declare_autocast_fp16_
+# support`), #178 (TF32), #179 (torch.compile), #180 (no_grad) — same
+# pattern of "substrate-trainer engineering hygiene gate" applied to a
+# different Tier-1 primitive (F3 GTScorerCache instead of autocast / TF32
+# / torch.compile / no_grad).
+#
+# Memory: feedback_f3_backport_wave_v2_eleven_trainers_landed_20260514.md
+# + feedback_prompt_premise_verification_before_edit_pattern_20260514.md.
+# ----------------------------------------------------------------------------
+
+# Canonical helper's recognized "ACTIONABLE violation" verdict tokens —
+# any trainer that classifies into one of these has declared the F3 flag
+# AND has a real PoseNet hot loop AND has a substrate-side wire-in but
+# is missing the trainer-side wire-in. These are the only refusal
+# verdicts; the other verdicts (ALREADY_WIRED / D1_SEGNET_SIDECAR /
+# Z3_V1_RATE_ONLY / FULL_MAIN_STUB / SMOKE_SYNTHETIC_SCORERS_FULL_STUB /
+# NEEDS_SUBSTRATE_F3_WIRE_IN / RESERVED_FLAG_BUT_NO_SCORER_HOT_LOOP /
+# RESERVED_FLAG_NOT_CONSUMED / UNKNOWN_STATE_INVESTIGATE / NO_TRAINER_FILE)
+# are structurally legitimate non-actionable states (substrate-side
+# blocker / stub / synthetic / sidecar) and not refused.
+_CHECK_228_ACTIONABLE_VIOLATION_VERDICTS = frozenset(
+    {
+        "NEEDS_F3_BACKPORT",
+        "NEEDS_F3_BACKPORT_PLUS_TIER1_FLAGS",
+    }
+)
+
+# Same-line waiver on the trainer file's argparse flag-declaration line.
+# Placeholder ``<reason>`` literal is rejected so the docstring above
+# cannot self-waive.
+_CHECK_228_WAIVER_RE = re.compile(
+    r"#\s*F3_CACHE_CONSUMPTION_WAIVED:\s*(?!<reason>)\S+"
+)
+
+_CHECK_228_TRAINER_GLOB = "train_substrate_*.py"
+
+
+def _check_228_load_classifier() -> object | None:
+    """Lazy-import the canonical F3-actionable classifier so the gate
+    delegates to the single source of truth.
+    """
+    try:
+        import importlib.util as _ilu
+
+        path = REPO_ROOT / "tools" / "check_f3_trainer_actionable.py"
+        if not path.is_file():
+            return None
+        spec = _ilu.spec_from_file_location(
+            "_pact_check_228_f3_classifier", path
+        )
+        if spec is None or spec.loader is None:
+            return None
+        module = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    except Exception:
+        return None
+
+
+def _check_228_trainer_has_waiver(path: Path) -> bool:
+    """Return True if the trainer file carries the same-line F3 waiver
+    on any argparse flag-declaration line referencing
+    ``--enable-gt-scorer-cache``.
+    """
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    for line in text.splitlines():
+        if "enable-gt-scorer-cache" in line or "enable_gt_scorer_cache" in line:
+            if _CHECK_228_WAIVER_RE.search(line):
+                return True
+    return False
+
+
+def check_substrate_trainer_consumes_f3_cache_when_flag_declared(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #228 — refuse substrate trainers that declare the RESERVED
+    ``--enable-gt-scorer-cache`` Tier-1 optimization flag but do NOT
+    actually consume the GTScorerCache primitive in their hot loop.
+
+    Per F3-BACKPORT-WAVE-V2 op-routable #5
+    (`feedback_f3_backport_wave_v2_eleven_trainers_landed_20260514.md`).
+    Delegates verdict classification to the canonical helper at
+    ``tools/check_f3_trainer_actionable.py`` so the gate and the
+    operator-facing reproducer stay in lock-step.
+
+    Same-line waiver: ``# F3_CACHE_CONSUMPTION_WAIVED:<reason>`` on the
+    argparse flag-declaration line. Placeholder ``<reason>`` literal is
+    rejected.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    classifier = _check_228_load_classifier()
+    if classifier is None:
+        if verbose:
+            print(
+                "  [f3-cache-consumption] OK "
+                "(canonical classifier tools/check_f3_trainer_actionable.py "
+                "not found; gate is no-op)"
+            )
+        return []
+    experiments_dir = root / "experiments"
+    if not experiments_dir.is_dir():
+        if verbose:
+            print(
+                "  [f3-cache-consumption] OK "
+                "(no experiments dir; 0 trainer(s) scanned)"
+            )
+        return []
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(experiments_dir.glob(_CHECK_228_TRAINER_GLOB)):
+        rel = str(path.relative_to(root))
+        scanned += 1
+        trainer_id = path.stem.replace("train_substrate_", "")
+        try:
+            verdict_row = classifier._classify(trainer_id)
+        except Exception as exc:
+            violations.append(
+                f"{rel}: classifier raised {exc!s} for trainer_id={trainer_id}"
+            )
+            continue
+        verdict = str(verdict_row.get("verdict", ""))
+        if verdict not in _CHECK_228_ACTIONABLE_VIOLATION_VERDICTS:
+            continue
+        if _check_228_trainer_has_waiver(path):
+            continue
+        violations.append(
+            f"{rel}: trainer declares `--enable-gt-scorer-cache` but does "
+            f"NOT consume the GTScorerCache primitive (verdict={verdict}); "
+            "expected `gt_cache.lookup(` + `gt_pose_batch=` threading in "
+            "the hot loop per canonical helper "
+            "tools/check_f3_trainer_actionable.py. Either backport the "
+            "wire-in OR carry a same-line "
+            "`# F3_CACHE_CONSUMPTION_WAIVED:<reason>` waiver on the "
+            "argparse flag-declaration line. Catalog #228 + "
+            "feedback_f3_backport_wave_v2_eleven_trainers_landed_20260514.md."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [f3-cache-consumption] {len(violations)} "
+                f"violation(s) across {scanned} substrate trainer(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [f3-cache-consumption] OK "
+                f"({scanned} substrate trainer(s); all flag-declared "
+                f"trainers also consume the cache or are non-actionable)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainer_consumes_f3_cache_when_flag_declared "
+            f"found {len(violations)} violation(s). Catalog #228 closes "
+            "F3-BACKPORT-WAVE-V2 op-routable #5; the canonical helper at "
+            "tools/check_f3_trainer_actionable.py is the verdict authority:"
+            "\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #229 — check_subagent_landing_includes_premise_verification_evidence
+#
+# Premise-verification-before-edit pattern self-protection (2026-05-14).
+# Bug class: subagent landing memos that claim N file/trainer/substrate
+# edits without an accompanying empirical verdict table OR reproducer
+# script path. Per
+# `feedback_prompt_premise_verification_before_edit_pattern_20260514.md`,
+# the F3-BACKPORT-WAVE empirically falsified the parent prompt's
+# "7 trainers need backport" claim (0/7 actionable) via reproducer
+# BEFORE any edit. Without this gate, future bulk-edit subagents will
+# apply edits based on parent assertions without verification.
+#
+# Scope: ~/.claude/projects/.../memory/feedback_*_landed_<YYYYMMDD>.md
+# where YYYYMMDD >= 20260514. Detection: memo body claims ">= 3 bulk
+# edits" (e.g., "10 trainers wired", "5 substrates rewritten",
+# "13 recipes backfilled") AND lacks BOTH (a) a verdict table
+# (markdown table headers like "| trainer_id |" / "| verdict |" /
+# "verdict_table" / "actionable") AND (b) a reproducer script path
+# token (".omx/tmp/" / "_reproducer.py" / "tools/check_").
+#
+# Same-line waiver: ``# PREMISE_VERIFICATION_WAIVED:<reason>`` on a
+# single body line for memos that legitimately don't apply the pattern
+# (e.g., infrastructure landings with no file-list claims). Placeholder
+# ``<reason>`` rejected.
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule" — the legacy memo backfill is large and the operator will route
+# strict-flip after the backfill sweep clears live count to 0.
+#
+# Sister of Catalog #125 (`check_subagent_landing_has_solver_wire_in`)
+# + Catalog #126 (`check_lane_pre_registered_before_work_starts`) +
+# Catalog #206 (`check_subagent_dispatches_use_checkpoint_discipline`).
+# Together they form the four-corner discipline gate for subagent
+# landings: solver wire-in + lane registry + checkpoint discipline +
+# premise verification.
+#
+# Memory: feedback_prompt_premise_verification_before_edit_pattern_20260514.md
+# + feedback_f3_backport_wave_v2_eleven_trainers_landed_20260514.md.
+# ----------------------------------------------------------------------------
+
+# Cutoff: only memos dated 2026-05-14 or later are in scope. Earlier
+# memos are legacy and predate the canonical pattern.
+_CHECK_229_DATE_CUTOFF = "20260514"
+
+# Regex to detect bulk-edit claims in memo body. Matches phrases like
+# "10 trainers wired", "5 substrates rewritten", "13 recipes backfilled".
+_CHECK_229_BULK_EDIT_RE = re.compile(
+    r"\b(\d+)\s+(?:trainers?|substrates?|files?|recipes?|wrappers?|"
+    r"checks?|gates?)\s+"
+    r"(?:edited|wired|rewritten|backported|patched|landed|added|"
+    r"refactored|extracted|created)",
+    re.IGNORECASE,
+)
+
+# Tokens that count as a verdict table OR reproducer-script path
+# (either is sufficient to satisfy the gate).
+_CHECK_229_VERDICT_TABLE_TOKENS = (
+    "| trainer_id |",
+    "| trainer |",
+    "| verdict |",
+    "| Trainer |",
+    "| Verdict |",
+    "verdict_table",
+    "actionable",
+    "Actionable",
+    "ACTIONABLE",
+    "empirical verdict",
+    "Empirical verdict",
+    "verdict table",
+    "Verdict table",
+)
+_CHECK_229_REPRODUCER_PATH_TOKENS = (
+    ".omx/tmp/",
+    "_reproducer.py",
+    "tools/check_",
+)
+_CHECK_229_WAIVER_RE = re.compile(
+    r"#\s*PREMISE_VERIFICATION_WAIVED:\s*(?!<reason>)\S+"
+)
+_CHECK_229_FILE_WAIVER_RE = re.compile(
+    r"#\s*PREMISE_VERIFICATION_WAIVED_FILE:\s*(?!<reason>)\S+"
+)
+
+# Memo filename pattern for landing memos.
+_CHECK_229_MEMO_GLOB = "feedback_*_landed_*.md"
+
+
+def _check_229_memo_dir(repo_root: Path) -> Path | None:
+    """Resolve the canonical memory directory. The directory lives outside
+    the repo (in ``~/.claude/projects/<project>/memory/``) so we discover
+    it relative to the operator's home directory. Returns None if absent.
+    """
+    try:
+        home = Path.home()
+    except Exception:
+        return None
+    memory_dir = (
+        home / ".claude" / "projects"
+        / "-Users-adpena-Projects-pact" / "memory"
+    )
+    if memory_dir.is_dir():
+        return memory_dir
+    return None
+
+
+def _check_229_memo_date_suffix(path: Path) -> str | None:
+    """Extract the date suffix YYYYMMDD from a landing memo filename.
+    Returns None if not parseable.
+    """
+    name = path.stem  # e.g. feedback_xyz_landed_20260514
+    match = re.search(r"_(\d{8})$", name)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def check_subagent_landing_includes_premise_verification_evidence(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #229 — refuse subagent landing memos that claim >=3 bulk
+    edits without an empirical verdict table or reproducer-script path.
+
+    Per `feedback_prompt_premise_verification_before_edit_pattern_20260514.md`.
+    Initial wire-in is warn-only; strict-flip pending operator-routed
+    backfill sweep.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    memo_dir = _check_229_memo_dir(root)
+    if memo_dir is None:
+        if verbose:
+            print(
+                "  [premise-verification] OK "
+                "(memory dir not present; 0 memos scanned)"
+            )
+        return []
+    violations: list[str] = []
+    scanned = 0
+    skipped_pre_cutoff = 0
+    for memo in sorted(memo_dir.glob(_CHECK_229_MEMO_GLOB)):
+        date_suffix = _check_229_memo_date_suffix(memo)
+        if date_suffix is None:
+            continue
+        if date_suffix < _CHECK_229_DATE_CUTOFF:
+            skipped_pre_cutoff += 1
+            continue
+        try:
+            text = memo.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        # File-level waiver
+        if _CHECK_229_FILE_WAIVER_RE.search(text):
+            continue
+        # Per-line waiver
+        if _CHECK_229_WAIVER_RE.search(text):
+            continue
+        # Count bulk-edit claims
+        total_edits = sum(
+            int(m.group(1)) for m in _CHECK_229_BULK_EDIT_RE.finditer(text)
+        )
+        if total_edits < 3:
+            continue
+        # Acceptance: verdict-table token OR reproducer-path token in body
+        has_verdict_table = any(
+            tok in text for tok in _CHECK_229_VERDICT_TABLE_TOKENS
+        )
+        has_reproducer_path = any(
+            tok in text for tok in _CHECK_229_REPRODUCER_PATH_TOKENS
+        )
+        if has_verdict_table or has_reproducer_path:
+            continue
+        violations.append(
+            f"{memo.name}: landing memo claims {total_edits} bulk edits "
+            "without an empirical verdict table OR reproducer-script "
+            "path. Per CLAUDE.md premise-verification-before-edit "
+            "pattern, add a verdict table OR cite the reproducer at "
+            ".omx/tmp/<lane_id>_reproducer.py / tools/check_<lane>_*.py "
+            "OR carry a same-line `# PREMISE_VERIFICATION_WAIVED:<reason>` "
+            "waiver. Catalog #229 + "
+            "feedback_prompt_premise_verification_before_edit_pattern_20260514.md."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [premise-verification] {len(violations)} "
+                f"violation(s) across {scanned} memo(s) "
+                f"(skipped_pre_cutoff={skipped_pre_cutoff}):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [premise-verification] OK "
+                f"({scanned} memo(s) scanned, "
+                f"{skipped_pre_cutoff} legacy pre-cutoff exempt)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_subagent_landing_includes_premise_verification_evidence "
+            f"found {len(violations)} violation(s). Catalog #229 closes "
+            "the premise-verification-before-edit pattern self-protection:"
+            "\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #230 — check_bulk_rewrite_respects_sister_subagent_ownership_map
+#
+# Editor-vs-editor collision self-protection (2026-05-14). Bug class:
+# bulk-edit operations (SPDX header sweep / mass refactor / wide-edit /
+# bulk-rewrite) in subagent commit messages that do NOT reference the
+# recursive R2 ownership map / disjoint-scope declaration / sister-subagent
+# territory. Per
+# `feedback_editor_vs_editor_collision_patterns_in_parallel_waves_20260514.md`,
+# the F3-GTSCORERCACHE-WIRE-IN landing observed transient working-tree
+# wipes when OSS-RELEASE subagent's SPDX sweep captured F3's in-flight
+# substrate files. Without this gate, future parallel waves with
+# multiple editor subagents will silently revert sister-subagent edits.
+#
+# Scope: last 50 commits whose commit message body mentions a bulk-op
+# token (SPDX header sweep / SPDX sweep / bulk rewrite / mass refactor /
+# bulk import / scope sweep / bulk-edit / wide-edit). For each such
+# commit, the body MUST reference the ownership map OR a recursive R2
+# disjoint-scope marker. Acceptance: any of ownership map / disjoint
+# scope / sister-subagent / OWNS: / scope isolated / path-prefix
+# exclusion / recursive R2.
+#
+# Same-line waiver: ``# BULK_REWRITE_OWNERSHIP_WAIVED:<reason>`` on a
+# body line; placeholder rejected. The commit serializer log
+# (`.omx/state/commit-serializer.log`) is consulted so only TRUE
+# subagent commits are in scope; operator-direct commits are exempt
+# (operator owns the global scope by definition).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule" — legacy bulk-edit commits predate the pattern; strict-flip
+# pending operator-routed backfill.
+#
+# Sister of Catalog #117 (`check_subagent_commit_serializer_uses_lock`)
+# + Catalog #157 (`check_commit_serializer_pre_lock_hash_against_head`)
+# + Catalog #216 (`check_commit_serializer_post_stage_hash`). Together
+# they extinct the commit-vs-edit collision class at four surfaces:
+# commit-time-pre-pre-lock (#157) + commit-time-staged (#216) +
+# commit-time-lock-arbitration (#117) + edit-time-bulk-op (#230).
+#
+# Memory: feedback_editor_vs_editor_collision_patterns_in_parallel_waves_20260514.md.
+# ----------------------------------------------------------------------------
+
+# Bulk-operation tokens detected in commit message bodies (case-insensitive
+# substring search). Each token represents a high-risk wide-scope edit
+# that could capture sister-subagent files.
+_CHECK_230_BULK_OP_TOKENS = (
+    "spdx header sweep",
+    "spdx sweep",
+    "bulk rewrite",
+    "mass refactor",
+    "bulk import",
+    "scope sweep",
+    "bulk-edit",
+    "wide-edit",
+    "bulk-rewrite",
+)
+
+# Ownership-map / disjoint-scope tokens that satisfy the gate.
+_CHECK_230_OWNERSHIP_MAP_TOKENS = (
+    "ownership map",
+    "disjoint scope",
+    "sister-subagent",
+    "sister subagent",
+    "OWNS:",
+    "owns:",
+    "scope isolated",
+    "path-prefix exclusion",
+    "recursive R2",
+    "recursive r2",
+    "R2 ownership",
+)
+
+_CHECK_230_WAIVER_RE = re.compile(
+    r"#\s*BULK_REWRITE_OWNERSHIP_WAIVED:\s*(?!<reason>)\S+"
+)
+
+
+def _check_230_load_serializer_shas(
+    repo_root: Path, last_n_commits: int
+) -> set[str]:
+    """Load the set of subagent commit SHAs from the canonical commit
+    serializer log. Returns short-SHA prefixes for matching against
+    git log output.
+    """
+    log_path = repo_root / ".omx" / "state" / "commit-serializer.log"
+    if not log_path.is_file():
+        return set()
+    shas: set[str] = set()
+    try:
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            sha = row.get("commit_sha") or row.get("sha")
+            if isinstance(sha, str) and sha:
+                shas.add(sha[:9])
+    except OSError:
+        return set()
+    return shas
+
+
+def _check_230_iter_recent_commits(
+    repo_root: Path, last_n_commits: int
+) -> list[tuple[str, str]]:
+    """Return [(sha, body)] for the last N commits."""
+    try:
+        out = subprocess.run(
+            ["git", "log", f"-{last_n_commits}", "--format=%H%n%B%n---END---"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if out.returncode != 0:
+        return []
+    entries: list[tuple[str, str]] = []
+    for chunk in out.stdout.split("---END---"):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        lines = chunk.split("\n", 1)
+        sha = lines[0].strip()
+        body = lines[1] if len(lines) > 1 else ""
+        entries.append((sha, body))
+    return entries
+
+
+def check_bulk_rewrite_respects_sister_subagent_ownership_map(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+    last_n_commits: int = 50,
+) -> list[str]:
+    """Catalog #230 — refuse bulk-rewrite subagent commits that do NOT
+    reference the sister-subagent ownership map / disjoint-scope marker.
+
+    Per `feedback_editor_vs_editor_collision_patterns_in_parallel_waves_20260514.md`.
+    Initial wire-in is warn-only; strict-flip pending operator-routed
+    backfill.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    serializer_prefixes = _check_230_load_serializer_shas(root, last_n_commits)
+    if not serializer_prefixes:
+        if verbose:
+            print(
+                "  [bulk-rewrite-ownership] OK "
+                "(no subagent commits in serializer log)"
+            )
+        return []
+    violations: list[str] = []
+    scanned = 0
+    for sha, body in _check_230_iter_recent_commits(root, last_n_commits):
+        if sha[:9] not in serializer_prefixes:
+            continue
+        body_lower = body.lower()
+        bulk_op = next(
+            (tok for tok in _CHECK_230_BULK_OP_TOKENS if tok in body_lower),
+            None,
+        )
+        if bulk_op is None:
+            continue
+        scanned += 1
+        # Same-line waiver
+        if _CHECK_230_WAIVER_RE.search(body):
+            continue
+        # Acceptance: ownership-map token in body (case-insensitive)
+        respects = any(
+            tok.lower() in body_lower for tok in _CHECK_230_OWNERSHIP_MAP_TOKENS
+        )
+        if respects:
+            continue
+        violations.append(
+            f"commit {sha[:10]}: subagent bulk-op commit (token={bulk_op!r}) "
+            "without sister-subagent ownership-map reference. Per CLAUDE.md "
+            "+ editor-vs-editor-collision memo, declare the disjoint-scope "
+            "boundary in the commit body (recursive R2 / OWNS: <subtree> / "
+            "sister-subagent / path-prefix exclusion) OR carry a "
+            "`# BULK_REWRITE_OWNERSHIP_WAIVED:<reason>` waiver. "
+            "Catalog #230 + "
+            "feedback_editor_vs_editor_collision_patterns_in_parallel_waves_20260514.md."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [bulk-rewrite-ownership] {len(violations)} "
+                f"violation(s) across {scanned} subagent bulk-op commit(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [bulk-rewrite-ownership] OK "
+                f"({scanned} subagent bulk-op commit(s) scanned)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_bulk_rewrite_respects_sister_subagent_ownership_map "
+            f"found {len(violations)} violation(s). Catalog #230 closes "
+            "the editor-vs-editor collision class self-protection:"
+            "\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #231 — check_review_gate_hook_uses_retry_helper
+#
+# DuckDB-lock-fix self-protection (2026-05-14, lane
+# `lane_duckdb_lock_fix_review_gate_hook_20260514` op-routable #1).
+# Bug class: any future revision of ``tools/review_gate_hook.py`` that
+# replaces the canonical retry helper ``review_tracker._connect_duckdb``
+# with a bare ``duckdb.connect()`` call would re-introduce the
+# 80-300s commit stall observed empirically in F3-GTSCORERCACHE +
+# CATALOG-226-REFACTOR waves.
+#
+# The canonical fix routes the hook through:
+# 1. ``review_tracker._connect_duckdb`` (with retry_seconds=1.5 budget)
+# 2. ``review_tracker.load_entities_from_json_snapshot`` (JSON fallback)
+# 3. ``review_tracker._is_duckdb_lock_error`` (predicate)
+#
+# Per `feedback_duckdb_lock_fix_review_gate_hook_landed_20260514.md` op
+# decision #1 (RECOMMENDED YES). Without this gate, a future contributor
+# (or sister subagent refactoring the hook) could silently regress the
+# fix.
+#
+# Detection: parse ``tools/review_gate_hook.py`` with AST and check that
+# (a) at least ONE canonical retry-helper token is imported or
+# referenced, AND (b) NO bare ``duckdb.connect()`` Call node appears
+# OUTSIDE docstrings/comments. The AST-walk distinguishes docstring
+# mentions (string literals) from real Call expressions.
+#
+# Same-line waiver: ``# REVIEW_GATE_BARE_DUCKDB_OK:<reason>`` on the
+# bare-connect line; placeholder rejected.
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed
+# AND self-protected against" non-negotiable + "Strict-flip atomicity
+# rule" — live count at landing: 0 (the canonical fix is already
+# present in tools/review_gate_hook.py per the source landing memo).
+#
+# Sister of Catalog #131 (`check_no_bare_writes_to_shared_state`) +
+# Catalog #138 (`check_state_writers_strict_load_for_mutating_path`) +
+# Catalog #128 (`check_continual_learning_writes_use_lock`). Together
+# they extinct the bare-state-IO bug class across .omx/state writes
+# (#131), .omx/state strict loads (#138), continual-learning writes
+# (#128), and review-tracker reads (#231).
+#
+# Memory: feedback_duckdb_lock_fix_review_gate_hook_landed_20260514.md.
+# ----------------------------------------------------------------------------
+
+# Canonical retry-helper tokens. The hook must import or reference at
+# least one to satisfy the gate.
+_CHECK_231_CANONICAL_HELPER_TOKENS = (
+    "_connect_duckdb",
+    "connect_duckdb_with_retry",
+    "load_entities_from_json_snapshot",
+    "_is_duckdb_lock_error",
+)
+
+# Same-line waiver on a bare duckdb.connect Call line.
+_CHECK_231_WAIVER_RE = re.compile(
+    r"#\s*REVIEW_GATE_BARE_DUCKDB_OK:\s*(?!<reason>)\S+"
+)
+
+
+def _check_231_collect_bare_duckdb_connects(
+    src: str,
+) -> list[tuple[int, str]]:
+    """Walk the AST of the review-gate hook source and collect
+    ``duckdb.connect(...)`` Call nodes. Returns list of (lineno, source_line)
+    pairs. Docstrings and string literals are excluded by AST construction
+    (only Call nodes are inspected).
+
+    The canonical helper ``_connect_duckdb`` function may itself call
+    ``duckdb.connect(...)`` inside its body — we accept Call nodes that
+    appear INSIDE the canonical helper function definition by name.
+    """
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return []
+    source_lines = src.splitlines()
+    bare_calls: list[tuple[int, str]] = []
+
+    class _Visitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            # Track enclosing function name (so we can exempt the canonical
+            # helper itself).
+            self._enclosing_func: list[str] = []
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self._enclosing_func.append(node.name)
+            try:
+                self.generic_visit(node)
+            finally:
+                self._enclosing_func.pop()
+
+        def visit_AsyncFunctionDef(
+            self, node: ast.AsyncFunctionDef
+        ) -> None:
+            self._enclosing_func.append(node.name)
+            try:
+                self.generic_visit(node)
+            finally:
+                self._enclosing_func.pop()
+
+        def visit_Call(self, node: ast.Call) -> None:
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr == "connect"
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "duckdb"
+            ):
+                # Exempt if inside the canonical helper itself (which
+                # legitimately wraps duckdb.connect with retry).
+                if self._enclosing_func and any(
+                    tok in name for tok in _CHECK_231_CANONICAL_HELPER_TOKENS
+                    for name in self._enclosing_func
+                ):
+                    pass
+                else:
+                    lineno = node.lineno
+                    line = (
+                        source_lines[lineno - 1]
+                        if 0 <= lineno - 1 < len(source_lines)
+                        else ""
+                    )
+                    bare_calls.append((lineno, line))
+            self.generic_visit(node)
+
+    _Visitor().visit(tree)
+    return bare_calls
+
+
+def check_review_gate_hook_uses_retry_helper(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #231 — refuse any future ``tools/review_gate_hook.py``
+    revision that re-introduces a bare ``duckdb.connect()`` call outside
+    the canonical retry helper.
+
+    Per `feedback_duckdb_lock_fix_review_gate_hook_landed_20260514.md`
+    operator decision #1 (RECOMMENDED YES). STRICT-from-byte-one;
+    live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    hook_path = root / "tools" / "review_gate_hook.py"
+    if not hook_path.is_file():
+        if verbose:
+            print(
+                "  [review-gate-retry-helper] OK "
+                "(tools/review_gate_hook.py absent; 0 scanned)"
+            )
+        return []
+    try:
+        text = hook_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [f"tools/review_gate_hook.py: read error {exc!s}"]
+    violations: list[str] = []
+    # Requirement (a): at least one canonical retry-helper token
+    has_canonical_token = any(
+        tok in text for tok in _CHECK_231_CANONICAL_HELPER_TOKENS
+    )
+    if not has_canonical_token:
+        violations.append(
+            "tools/review_gate_hook.py: does not import or reference any "
+            "canonical retry-helper token ("
+            + ", ".join(_CHECK_231_CANONICAL_HELPER_TOKENS)
+            + "). Per Catalog #231, route the hook through "
+            "`review_tracker._connect_duckdb` + JSON-snapshot fallback. "
+            "Memory: "
+            "feedback_duckdb_lock_fix_review_gate_hook_landed_20260514.md."
+        )
+    # Requirement (b): no bare duckdb.connect Call outside canonical
+    # helper. Use AST to distinguish docstring mentions from real Calls.
+    bare_calls = _check_231_collect_bare_duckdb_connects(text)
+    for lineno, line in bare_calls:
+        if _CHECK_231_WAIVER_RE.search(line):
+            continue
+        violations.append(
+            f"tools/review_gate_hook.py:{lineno}: bare `duckdb.connect(...)` "
+            "Call detected; expected routing through canonical retry helper "
+            "`review_tracker._connect_duckdb` per Catalog #231. Either "
+            "delegate to the canonical helper OR carry a same-line "
+            "`# REVIEW_GATE_BARE_DUCKDB_OK:<reason>` waiver. Memory: "
+            "feedback_duckdb_lock_fix_review_gate_hook_landed_20260514.md."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [review-gate-retry-helper] {len(violations)} "
+                f"violation(s) in tools/review_gate_hook.py:"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [review-gate-retry-helper] OK "
+                "(canonical retry helper used; no bare duckdb.connect calls)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_review_gate_hook_uses_retry_helper "
+            f"found {len(violations)} violation(s). Catalog #231 closes "
+            "DuckDB-lock-fix op decision #1 self-protection:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
     return violations
 
 
