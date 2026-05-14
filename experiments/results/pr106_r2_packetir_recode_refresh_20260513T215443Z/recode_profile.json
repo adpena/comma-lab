@@ -6,8 +6,6 @@
   "best_lossless_candidate": {
     "applicable": true,
     "candidate_exact_eval_blockers": [
-      "runtime_decode_apply_proof_required_for_new_candidate_archive",
-      "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
       "exact_cuda_auth_eval_missing",
       "contest_auth_eval_adjudication_missing"
     ],
@@ -25,6 +23,7 @@
     "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
     "framing_meta_bytes": 6,
     "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+    "full_frame_inflate_output_parity_claim": true,
     "lossless_semantic_equivalence_proven": true,
     "name": "pr101_ranked_no_op_sidecar_format_0x02",
     "notes": [
@@ -33,15 +32,40 @@
     "promotion_eligible": false,
     "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
     "ready_for_exact_eval_dispatch": false,
+    "runtime_consumption_claim": true,
+    "runtime_consumption_proof": {
+      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "path": "experiments/results/pr106_r2_pr101_grammar_runtime_consumption_proof.json",
+      "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+      "runtime_all_score_affecting_sections_consumed": true,
+      "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+      "runtime_sidecar_apply_consumption_claim": true,
+      "runtime_sidecar_decode_consumption_claim": true,
+      "runtime_source_tree_sha256": "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f",
+      "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+      "score_claim": false,
+      "valid_for_candidate_archive": true
+    },
+    "runtime_decode_apply_proof_claim": true,
     "runtime_decoder_implemented": true,
+    "same_runtime_full_frame_parity_proof": {
+      "candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "device_axis_label": "local-cpu-streaming-runtime",
+      "full_frame_inflate_output_parity_claim": true,
+      "path": "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json",
+      "proof_scope": "same_runtime_streaming_full_frame_hash",
+      "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+      "score_claim": false,
+      "streaming_output_sha256_equal": true,
+      "streaming_output_total_bytes_equal": true,
+      "valid_for_candidate_archive": true
+    },
     "score_claim": false,
     "sidecar_format_id": "0x02"
   },
   "best_runtime_consumed_candidate": {
     "applicable": true,
     "candidate_exact_eval_blockers": [
-      "runtime_decode_apply_proof_required_for_new_candidate_archive",
-      "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
       "exact_cuda_auth_eval_missing",
       "contest_auth_eval_adjudication_missing"
     ],
@@ -59,6 +83,7 @@
     "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
     "framing_meta_bytes": 6,
     "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+    "full_frame_inflate_output_parity_claim": true,
     "lossless_semantic_equivalence_proven": true,
     "name": "pr101_ranked_no_op_sidecar_format_0x02",
     "notes": [
@@ -67,7 +92,34 @@
     "promotion_eligible": false,
     "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
     "ready_for_exact_eval_dispatch": false,
+    "runtime_consumption_claim": true,
+    "runtime_consumption_proof": {
+      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "path": "experiments/results/pr106_r2_pr101_grammar_runtime_consumption_proof.json",
+      "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+      "runtime_all_score_affecting_sections_consumed": true,
+      "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+      "runtime_sidecar_apply_consumption_claim": true,
+      "runtime_sidecar_decode_consumption_claim": true,
+      "runtime_source_tree_sha256": "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f",
+      "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+      "score_claim": false,
+      "valid_for_candidate_archive": true
+    },
+    "runtime_decode_apply_proof_claim": true,
     "runtime_decoder_implemented": true,
+    "same_runtime_full_frame_parity_proof": {
+      "candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "device_axis_label": "local-cpu-streaming-runtime",
+      "full_frame_inflate_output_parity_claim": true,
+      "path": "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json",
+      "proof_scope": "same_runtime_streaming_full_frame_hash",
+      "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+      "score_claim": false,
+      "streaming_output_sha256_equal": true,
+      "streaming_output_total_bytes_equal": true,
+      "valid_for_candidate_archive": true
+    },
     "score_claim": false,
     "sidecar_format_id": "0x02"
   },
@@ -75,8 +127,6 @@
   "best_runtime_decoder_implemented_candidate": {
     "applicable": true,
     "candidate_exact_eval_blockers": [
-      "runtime_decode_apply_proof_required_for_new_candidate_archive",
-      "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
       "exact_cuda_auth_eval_missing",
       "contest_auth_eval_adjudication_missing"
     ],
@@ -94,6 +144,7 @@
     "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
     "framing_meta_bytes": 6,
     "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+    "full_frame_inflate_output_parity_claim": true,
     "lossless_semantic_equivalence_proven": true,
     "name": "pr101_ranked_no_op_sidecar_format_0x02",
     "notes": [
@@ -102,7 +153,34 @@
     "promotion_eligible": false,
     "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
     "ready_for_exact_eval_dispatch": false,
+    "runtime_consumption_claim": true,
+    "runtime_consumption_proof": {
+      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "path": "experiments/results/pr106_r2_pr101_grammar_runtime_consumption_proof.json",
+      "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+      "runtime_all_score_affecting_sections_consumed": true,
+      "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+      "runtime_sidecar_apply_consumption_claim": true,
+      "runtime_sidecar_decode_consumption_claim": true,
+      "runtime_source_tree_sha256": "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f",
+      "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+      "score_claim": false,
+      "valid_for_candidate_archive": true
+    },
+    "runtime_decode_apply_proof_claim": true,
     "runtime_decoder_implemented": true,
+    "same_runtime_full_frame_parity_proof": {
+      "candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "device_axis_label": "local-cpu-streaming-runtime",
+      "full_frame_inflate_output_parity_claim": true,
+      "path": "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json",
+      "proof_scope": "same_runtime_streaming_full_frame_hash",
+      "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+      "score_claim": false,
+      "streaming_output_sha256_equal": true,
+      "streaming_output_total_bytes_equal": true,
+      "valid_for_candidate_archive": true
+    },
     "score_claim": false,
     "sidecar_format_id": "0x02"
   },
@@ -110,8 +188,6 @@
     {
       "applicable": true,
       "candidate_exact_eval_blockers": [
-        "runtime_decode_apply_proof_required_for_new_candidate_archive",
-        "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
         "exact_cuda_auth_eval_missing",
         "contest_auth_eval_adjudication_missing"
       ],
@@ -129,6 +205,7 @@
       "encoded_payload_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
       "framing_meta_bytes": 6,
       "framing_meta_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+      "full_frame_inflate_output_parity_claim": true,
       "lossless_semantic_equivalence_proven": true,
       "name": "pr101_ranked_no_op_sidecar_format_0x02",
       "notes": [
@@ -137,7 +214,34 @@
       "promotion_eligible": false,
       "rate_score_delta_if_runtime_consumed": -2.7966076031131196e-05,
       "ready_for_exact_eval_dispatch": false,
+      "runtime_consumption_claim": true,
+      "runtime_consumption_proof": {
+        "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+        "path": "experiments/results/pr106_r2_pr101_grammar_runtime_consumption_proof.json",
+        "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+        "runtime_all_score_affecting_sections_consumed": true,
+        "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+        "runtime_sidecar_apply_consumption_claim": true,
+        "runtime_sidecar_decode_consumption_claim": true,
+        "runtime_source_tree_sha256": "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f",
+        "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+        "score_claim": false,
+        "valid_for_candidate_archive": true
+      },
+      "runtime_decode_apply_proof_claim": true,
       "runtime_decoder_implemented": true,
+      "same_runtime_full_frame_parity_proof": {
+        "candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+        "device_axis_label": "local-cpu-streaming-runtime",
+        "full_frame_inflate_output_parity_claim": true,
+        "path": "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json",
+        "proof_scope": "same_runtime_streaming_full_frame_hash",
+        "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+        "score_claim": false,
+        "streaming_output_sha256_equal": true,
+        "streaming_output_total_bytes_equal": true,
+        "valid_for_candidate_archive": true
+      },
       "score_claim": false,
       "sidecar_format_id": "0x02"
     },
@@ -296,12 +400,11 @@
       "sidecar_format_id": null
     }
   ],
-  "created_at_utc": "2026-05-13T21:54:44Z",
+  "created_at_utc": "2026-05-14T03:47:07Z",
   "current_charged_sidecar_bytes": 575,
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "candidate_runtime_decoder_missing_for_noncurrent_rows",
-    "missing_no_op_runtime_consumption_proof_for_new_grammar",
     "missing_exact_contest_eval_for_any_candidate"
   ],
   "emitted_runtime_candidate_manifests": [
@@ -310,8 +413,10 @@
       "archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.archive.zip",
       "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
       "candidate_name": "pr101_ranked_no_op_sidecar_format_0x02",
+      "full_frame_inflate_output_parity_claim": true,
       "manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/pr101_ranked_no_op_sidecar_format_0x02.manifest.json",
       "ready_for_exact_eval_dispatch": false,
+      "runtime_consumption_claim": true,
       "score_claim": false
     },
     {
@@ -319,11 +424,21 @@
       "archive_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/current_pr100_dim_delta_brotli_q11.archive.zip",
       "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
       "candidate_name": "current_pr100_dim_delta_brotli_q11",
+      "full_frame_inflate_output_parity_claim": false,
       "manifest_path": "experiments/results/pr106_r2_packetir_recode_refresh_20260513T215443Z/runtime_candidates/current_pr100_dim_delta_brotli_q11.manifest.json",
       "ready_for_exact_eval_dispatch": false,
+      "runtime_consumption_claim": false,
       "score_claim": false
     }
   ],
+  "linked_proof_inputs": {
+    "runtime_consumption_proofs": [
+      "experiments/results/pr106_r2_pr101_grammar_runtime_consumption_proof.json"
+    ],
+    "same_runtime_full_frame_parity": [
+      "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
+    ]
+  },
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,
   "schema": "pr106_latent_sidecar_recode_profile_v1",

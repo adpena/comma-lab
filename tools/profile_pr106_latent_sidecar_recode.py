@@ -55,6 +55,162 @@ class LoadedSidecarSource(NamedTuple):
     archive_bytes: bytes | None = None
 
 
+def _load_json_file(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} did not contain a JSON object")
+    return payload
+
+
+def _index_runtime_consumption_proofs(paths: list[Path]) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        proof = _load_json_file(path)
+        archive = proof.get("archive")
+        if not isinstance(archive, dict):
+            raise ValueError(f"runtime proof has no archive object: {path}")
+        sha = archive.get("sha256")
+        if not isinstance(sha, str) or len(sha) != 64:
+            raise ValueError(f"runtime proof has no archive.sha256: {path}")
+        indexed[sha] = {"path": str(path), "proof": proof}
+    return indexed
+
+
+def _index_same_runtime_parity(paths: list[Path]) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        parity = _load_json_file(path)
+        candidate = parity.get("candidate_archive")
+        if not isinstance(candidate, dict):
+            raise ValueError(f"same-runtime parity proof has no candidate_archive: {path}")
+        sha = candidate.get("sha256")
+        if not isinstance(sha, str) or len(sha) != 64:
+            raise ValueError(f"same-runtime parity proof has no candidate_archive.sha256: {path}")
+        indexed[sha] = {"path": str(path), "proof": parity}
+    return indexed
+
+
+def _remove_blockers(blockers: Any, names: set[str]) -> list[str]:
+    if not isinstance(blockers, list):
+        return []
+    return [str(item) for item in blockers if str(item) not in names]
+
+
+def _attach_runtime_consumption_proof(
+    target: dict[str, Any],
+    *,
+    archive_sha256: str,
+    proofs_by_sha: dict[str, dict[str, Any]],
+) -> bool:
+    match = proofs_by_sha.get(archive_sha256)
+    if match is None:
+        return False
+    proof = match["proof"]
+    archive = proof.get("archive")
+    blockers = proof.get("blockers")
+    valid = (
+        isinstance(archive, dict)
+        and archive.get("sha256") == archive_sha256
+        and blockers == []
+        and proof.get("runtime_sidecar_decode_consumption_claim") is True
+        and proof.get("runtime_sidecar_apply_consumption_claim") is True
+        and proof.get("runtime_all_score_affecting_sections_consumed") is True
+        and proof.get("score_claim") is False
+        and proof.get("promotion_eligible") is False
+    )
+    summary = {
+        "path": match["path"],
+        "schema": proof.get("schema"),
+        "proof_scope": proof.get("proof_scope"),
+        "archive_sha256": archive_sha256,
+        "runtime_dir": proof.get("runtime_dir"),
+        "runtime_source_tree_sha256": (
+            proof.get("runtime_source_manifest", {}).get("runtime_source_tree_sha256")
+            if isinstance(proof.get("runtime_source_manifest"), dict)
+            else None
+        ),
+        "runtime_sidecar_decode_consumption_claim": proof.get(
+            "runtime_sidecar_decode_consumption_claim"
+        ),
+        "runtime_sidecar_apply_consumption_claim": proof.get(
+            "runtime_sidecar_apply_consumption_claim"
+        ),
+        "runtime_all_score_affecting_sections_consumed": proof.get(
+            "runtime_all_score_affecting_sections_consumed"
+        ),
+        "score_claim": proof.get("score_claim"),
+        "valid_for_candidate_archive": valid,
+    }
+    target["runtime_consumption_proof"] = summary
+    if not valid:
+        return False
+    target["runtime_consumption_claim"] = True
+    target["runtime_decode_apply_proof_claim"] = True
+    target["candidate_exact_eval_blockers"] = _remove_blockers(
+        target.get("candidate_exact_eval_blockers") or target.get("exact_eval_blockers"),
+        {"runtime_decode_apply_proof_required_for_new_candidate_archive"},
+    )
+    if "exact_eval_blockers" in target:
+        target["exact_eval_blockers"] = _remove_blockers(
+            target.get("exact_eval_blockers"),
+            {"runtime_decode_apply_proof_required_for_new_candidate_archive"},
+        )
+    return True
+
+
+def _attach_same_runtime_parity_proof(
+    target: dict[str, Any],
+    *,
+    archive_sha256: str,
+    parity_by_sha: dict[str, dict[str, Any]],
+) -> bool:
+    match = parity_by_sha.get(archive_sha256)
+    if match is None:
+        return False
+    parity = match["proof"]
+    candidate = parity.get("candidate_archive")
+    valid = (
+        isinstance(candidate, dict)
+        and candidate.get("sha256") == archive_sha256
+        and parity.get("full_frame_inflate_output_parity_claim") is True
+        and parity.get("streaming_output_sha256_equal") is True
+        and parity.get("streaming_output_total_bytes_equal") is True
+        and parity.get("contest_axis_claim") is False
+        and parity.get("score_claim") is False
+        and parity.get("promotion_eligible") is False
+    )
+    summary = {
+        "path": match["path"],
+        "schema": parity.get("schema"),
+        "proof_scope": parity.get("proof_scope"),
+        "candidate_archive_sha256": archive_sha256,
+        "device_axis_label": parity.get("device_axis_label"),
+        "full_frame_inflate_output_parity_claim": parity.get(
+            "full_frame_inflate_output_parity_claim"
+        ),
+        "streaming_output_sha256_equal": parity.get("streaming_output_sha256_equal"),
+        "streaming_output_total_bytes_equal": parity.get(
+            "streaming_output_total_bytes_equal"
+        ),
+        "score_claim": parity.get("score_claim"),
+        "valid_for_candidate_archive": valid,
+    }
+    target["same_runtime_full_frame_parity_proof"] = summary
+    if not valid:
+        return False
+    target["full_frame_inflate_output_parity_claim"] = True
+    target["candidate_exact_eval_blockers"] = _remove_blockers(
+        target.get("candidate_exact_eval_blockers") or target.get("exact_eval_blockers"),
+        {"full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing"},
+    )
+    if "exact_eval_blockers" in target:
+        target["exact_eval_blockers"] = _remove_blockers(
+            target.get("exact_eval_blockers"),
+            {"full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing"},
+        )
+    return True
+
+
 def _safe_candidate_stem(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", name).strip("._") or "candidate"
 
@@ -135,6 +291,12 @@ def load_sidecar_source(args: argparse.Namespace) -> LoadedSidecarSource:
 
 def build_report(args: argparse.Namespace) -> dict[str, Any]:
     loaded = load_sidecar_source(args)
+    runtime_proofs_by_sha = _index_runtime_consumption_proofs(
+        list(args.runtime_consumption_proof or [])
+    )
+    parity_by_sha = _index_same_runtime_parity(
+        list(args.same_runtime_full_frame_parity or [])
+    )
     sidecar_payload = loaded.sidecar_payload
     source = loaded.source
     dims, deltas = decode_brotli_dim_delta_sidecar_payload(sidecar_payload)
@@ -229,6 +391,28 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
                         candidate_archive_bytes=len(candidate_archive),
                         candidate_member_name=candidate_member.name,
                     )
+                    runtime_proof_ok = _attach_runtime_consumption_proof(
+                        row,
+                        archive_sha256=candidate_archive_sha,
+                        proofs_by_sha=runtime_proofs_by_sha,
+                    )
+                    parity_ok = _attach_same_runtime_parity_proof(
+                        row,
+                        archive_sha256=candidate_archive_sha,
+                        parity_by_sha=parity_by_sha,
+                    )
+                    if runtime_proof_ok:
+                        _attach_runtime_consumption_proof(
+                            emitted_manifest,
+                            archive_sha256=candidate_archive_sha,
+                            proofs_by_sha=runtime_proofs_by_sha,
+                        )
+                    if parity_ok:
+                        _attach_same_runtime_parity_proof(
+                            emitted_manifest,
+                            archive_sha256=candidate_archive_sha,
+                            parity_by_sha=parity_by_sha,
+                        )
                     manifest_path.write_text(
                         json.dumps(emitted_manifest, indent=2, sort_keys=True) + "\n",
                         encoding="utf-8",
@@ -246,6 +430,8 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
                             "manifest_path": str(manifest_path),
                             "score_claim": False,
                             "ready_for_exact_eval_dispatch": False,
+                            "runtime_consumption_claim": runtime_proof_ok,
+                            "full_frame_inflate_output_parity_claim": parity_ok,
                         }
                     )
         rows.append(row)
@@ -254,11 +440,18 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         (row for row in rows if row["applicable"] and row["runtime_decoder_implemented"]),
         None,
     )
-    dispatch_blockers = [
-        "candidate_runtime_decoder_missing_for_noncurrent_rows",
-        "missing_no_op_runtime_consumption_proof_for_new_grammar",
-        "missing_exact_contest_eval_for_any_candidate",
-    ]
+    any_decoder_missing_for_lossless_candidate = any(
+        row["applicable"] and not row["runtime_decoder_implemented"] for row in rows
+    )
+    any_runtime_consumed = any(
+        row.get("runtime_consumption_claim") is True for row in rows
+    )
+    dispatch_blockers = []
+    if any_decoder_missing_for_lossless_candidate:
+        dispatch_blockers.append("candidate_runtime_decoder_missing_for_noncurrent_rows")
+    if not any_runtime_consumed:
+        dispatch_blockers.append("missing_no_op_runtime_consumption_proof_for_new_grammar")
+    dispatch_blockers.append("missing_exact_contest_eval_for_any_candidate")
     if not emitted_candidate_manifests:
         dispatch_blockers.insert(0, "no_candidate_archive_emitted")
 
@@ -289,6 +482,12 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         "best_runtime_consumed_candidate": best_runtime,
         "best_runtime_consumed_candidate_legacy_name": True,
         "emitted_runtime_candidate_manifests": emitted_candidate_manifests,
+        "linked_proof_inputs": {
+            "runtime_consumption_proofs": [str(path) for path in args.runtime_consumption_proof or []],
+            "same_runtime_full_frame_parity": [
+                str(path) for path in args.same_runtime_full_frame_parity or []
+            ],
+        },
         "adversarial_claim_check": {
             "verdict": "planning_only_no_score_claim",
             "interpretation": (
@@ -366,6 +565,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Optional directory for byte-closed archive+manifest artifacts for "
             "candidates whose runtime decoder already exists. Emitted manifests "
             "remain score_claim=false and ready_for_exact_eval_dispatch=false."
+        ),
+    )
+    parser.add_argument(
+        "--runtime-consumption-proof",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Optional pr106_sidecar_runtime_decode_consumption_proof_v1 JSON. "
+            "When its archive SHA matches an emitted candidate and the proof "
+            "is blocker-free, the candidate row records runtime consumption "
+            "without claiming score or promotion."
+        ),
+    )
+    parser.add_argument(
+        "--same-runtime-full-frame-parity",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Optional pr106_same_runtime_streaming_frame_parity_v1 JSON. "
+            "When its candidate archive SHA matches an emitted candidate and "
+            "full-frame parity is true, the candidate row records local "
+            "same-runtime parity without claiming contest score."
         ),
     )
     return parser.parse_args(argv)

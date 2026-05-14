@@ -27,6 +27,9 @@ from tac.optimizer.exact_readiness import ACTIVE_FLOOR_SCORE  # noqa: E402
 from tac.repo_io import json_text, write_json  # noqa: E402
 
 DEFAULT_SCAN_ROOTS = (Path("experiments/results"), Path(".omx/research"))
+DEFAULT_SUPPRESSION_MANIFEST = (
+    Path(".omx/research") / "exact_ready_queue_retraction_manifest_20260510_codex.json"
+)
 
 
 def _markdown(payload: dict[str, object]) -> str:
@@ -110,7 +113,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dispatch-claims-path",
         type=Path,
-        default=REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md",
+        default=None,
+        help=(
+            "Dispatch-claim ledger path. Defaults to "
+            "<repo-root>/.omx/state/active_lane_dispatch_claims.md."
+        ),
     )
     parser.add_argument(
         "--active-floor-score",
@@ -126,7 +133,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--suppression-manifest",
         type=Path,
-        help="Read a durable suppression/retraction manifest and report only unresolved stale rows.",
+        help=(
+            "Read a durable suppression/retraction manifest and report only unresolved stale rows. "
+            "Defaults to .omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json "
+            "when that file exists."
+        ),
+    )
+    parser.add_argument(
+        "--no-default-suppression-manifest",
+        action="store_true",
+        help=(
+            "Run the raw stale-row audit even if the canonical retraction manifest exists. "
+            "Use this for suppression-manifest maintenance, not dispatch routing."
+        ),
     )
     parser.add_argument(
         "--write-suppression-manifest",
@@ -153,10 +172,15 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("queue path(s) missing: " + ", ".join(path.as_posix() for path in missing))
 
     resolved_queues = [path if path.is_absolute() else repo_root / path for path in queue_paths]
-    claims_path = (
+    dispatch_claims_path = (
         args.dispatch_claims_path
-        if args.dispatch_claims_path.is_absolute()
-        else repo_root / args.dispatch_claims_path
+        if args.dispatch_claims_path is not None
+        else Path(".omx/state/active_lane_dispatch_claims.md")
+    )
+    claims_path = (
+        dispatch_claims_path
+        if dispatch_claims_path.is_absolute()
+        else repo_root / dispatch_claims_path
     )
     payload = audit_exact_ready_queues(
         resolved_queues,
@@ -174,11 +198,20 @@ def main(argv: list[str] | None = None) -> int:
         )
         suppression_manifest = build_suppression_manifest(payload)
         write_json(suppression_manifest_path, suppression_manifest)
-    if args.suppression_manifest is not None:
+    suppression_arg = args.suppression_manifest
+    if (
+        suppression_arg is None
+        and not args.no_default_suppression_manifest
+        and args.write_suppression_manifest is None
+    ):
+        default_path = repo_root / DEFAULT_SUPPRESSION_MANIFEST
+        if default_path.is_file():
+            suppression_arg = default_path
+    if suppression_arg is not None:
         suppression_manifest_path = (
-            args.suppression_manifest
-            if args.suppression_manifest.is_absolute()
-            else repo_root / args.suppression_manifest
+            suppression_arg
+            if suppression_arg.is_absolute()
+            else repo_root / suppression_arg
         )
         try:
             suppression_manifest = load_suppression_manifest(suppression_manifest_path)

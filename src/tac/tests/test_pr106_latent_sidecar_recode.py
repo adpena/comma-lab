@@ -32,6 +32,12 @@ PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_PR101_ARCHIVE = (
     REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 )
+PR106_R2_PR101_RUNTIME_PROOF = (
+    REPO / "experiments/results/pr106_r2_pr101_grammar_runtime_consumption_proof.json"
+)
+PR106_R2_PR101_FULL_FRAME_PARITY = (
+    REPO / "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
+)
 
 
 def _sample_arrays(n: int = 12) -> tuple[np.ndarray, np.ndarray]:
@@ -251,5 +257,70 @@ def test_recode_profile_tool_emits_runtime_candidate_archives(tmp_path: Path) ->
     assert manifest["candidate_packet_ir_consumed_byte_proof"][
         "all_payload_bytes_accounted"
     ] is True
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_recode_profile_links_matching_runtime_and_parity_proofs(tmp_path: Path) -> None:
+    out = tmp_path / "profile.json"
+    emitted_dir = tmp_path / "runtime_candidates"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--sidecar-archive",
+            str(PR106_R2_ARCHIVE),
+            "--json-out",
+            str(out),
+            "--emit-runtime-candidates-dir",
+            str(emitted_dir),
+            "--runtime-consumption-proof",
+            str(PR106_R2_PR101_RUNTIME_PROOF),
+            "--same-runtime-full-frame-parity",
+            str(PR106_R2_PR101_FULL_FRAME_PARITY),
+        ],
+        check=True,
+    )
+
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "missing_no_op_runtime_consumption_proof_for_new_grammar" not in report[
+        "dispatch_blockers"
+    ]
+    assert "missing_exact_contest_eval_for_any_candidate" in report["dispatch_blockers"]
+    assert report["linked_proof_inputs"]["runtime_consumption_proofs"] == [
+        str(PR106_R2_PR101_RUNTIME_PROOF)
+    ]
+
+    row = next(
+        item
+        for item in report["candidate_rows"]
+        if item["name"] == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
+    assert row["runtime_consumption_claim"] is True
+    assert row["runtime_decode_apply_proof_claim"] is True
+    assert row["full_frame_inflate_output_parity_claim"] is True
+    assert row["runtime_consumption_proof"]["valid_for_candidate_archive"] is True
+    assert row["same_runtime_full_frame_parity_proof"]["valid_for_candidate_archive"] is True
+    assert "runtime_decode_apply_proof_required_for_new_candidate_archive" not in row[
+        "candidate_exact_eval_blockers"
+    ]
+    assert "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing" not in row[
+        "candidate_exact_eval_blockers"
+    ]
+    assert row["candidate_exact_eval_blockers"] == [
+        "exact_cuda_auth_eval_missing",
+        "contest_auth_eval_adjudication_missing",
+    ]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+    manifest = json.loads(
+        Path(row["emitted_candidate_manifest_path"]).read_text(encoding="utf-8")
+    )
+    assert manifest["runtime_consumption_claim"] is True
+    assert manifest["full_frame_inflate_output_parity_claim"] is True
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False

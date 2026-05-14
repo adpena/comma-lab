@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
@@ -12,6 +14,9 @@ from tac.optimizer.exact_ready_audit import (
     build_suppression_manifest,
     discover_exact_ready_queues,
 )
+
+REPO = Path(__file__).resolve().parents[3]
+AUDIT_TOOL = REPO / "tools" / "audit_exact_ready_queues.py"
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -165,6 +170,97 @@ def test_suppression_manifest_matches_terminal_score_floor_drift(
     assert suppressed["suppressed_ready_row_count"] == 1
     suppressed_row = suppressed["queues"][0]["suppressed_ready_rows"][0]
     assert suppressed_row["suppression"]["match_basis"] == "terminal_score_semantic"
+
+
+def test_audit_cli_applies_default_suppression_manifest(tmp_path: Path) -> None:
+    repo = tmp_path.resolve()
+    archive_sha = "9" * 64
+    queue = _ready_queue(
+        repo / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_pr101",  # FAKE_LANE_OK: synthetic terminal-evidence fixture.
+        archive_sha=archive_sha,
+    )
+    claims = _write_claims(
+        repo / ".omx/state/active_lane_dispatch_claims.md",
+        [
+            f"| 2026-05-10T00:00:00Z | test | lane_pr101 | modal | job1 |  | completed_contest_cuda_auth_eval_negative | archive_sha={archive_sha}; score_recomputed=41.3495 |"
+        ],
+    )
+    raw_payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=repo,
+        dispatch_claims_path=claims,
+    )
+    manifest = build_suppression_manifest(raw_payload)
+    _write_json(
+        repo / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json",
+        manifest,
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(AUDIT_TOOL),
+            "--repo-root",
+            str(repo),
+            "--format",
+            "json",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    out = json.loads(proc.stdout)
+
+    assert out["passed"] is True
+    assert out["stale_ready_row_count"] == 0
+    assert out["raw_stale_ready_row_count"] == 1
+    assert out["suppressed_ready_row_count"] == 1
+    assert str(out["suppression_manifest_path"]).endswith(
+        ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
+    )
+
+
+def test_audit_cli_can_run_raw_without_default_suppression(tmp_path: Path) -> None:
+    repo = tmp_path.resolve()
+    archive_sha = "7" * 64
+    queue = _ready_queue(
+        repo / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_pr101",  # FAKE_LANE_OK: synthetic terminal-evidence fixture.
+        archive_sha=archive_sha,
+    )
+    claims = _write_claims(
+        repo / ".omx/state/active_lane_dispatch_claims.md",
+        [
+            f"| 2026-05-10T00:00:00Z | test | lane_pr101 | modal | job1 |  | completed_contest_cuda_auth_eval_negative | archive_sha={archive_sha}; score_recomputed=41.3495 |"
+        ],
+    )
+    manifest = build_suppression_manifest(
+        audit_exact_ready_queues([queue], repo_root=repo, dispatch_claims_path=claims)
+    )
+    _write_json(
+        repo / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json",
+        manifest,
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(AUDIT_TOOL),
+            "--repo-root",
+            str(repo),
+            "--format",
+            "json",
+            "--no-default-suppression-manifest",
+        ],
+        text=True,
+        capture_output=True,
+    )
+    out = json.loads(proc.stdout)
+
+    assert proc.returncode == 2
+    assert out["passed"] is False
+    assert out["stale_ready_row_count"] == 1
 
 
 def test_audit_flags_active_same_lane_claim_before_dispatch(

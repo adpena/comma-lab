@@ -3,6 +3,10 @@
   "blockers": [],
   "candidate_archive_bytes": 186780,
   "candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+  "candidate_exact_eval_blockers": [
+    "exact_cuda_auth_eval_missing",
+    "contest_auth_eval_adjudication_missing"
+  ],
   "candidate_member_name": "0.bin",
   "candidate_name": "pr101_ranked_no_op_sidecar_format_0x02",
   "candidate_packet": {
@@ -114,18 +118,42 @@
   "contest_axis_claim": false,
   "dispatch_attempted": false,
   "exact_eval_blockers": [
-    "runtime_decode_apply_proof_required_for_new_candidate_archive",
-    "full_frame_same_runtime_parity_or_same_runtime_auth_eval_missing",
     "exact_cuda_auth_eval_missing",
     "contest_auth_eval_adjudication_missing"
   ],
-  "full_frame_inflate_output_parity_claim": false,
+  "full_frame_inflate_output_parity_claim": true,
   "lossless_semantic_equivalence_proven": true,
   "promotion_eligible": false,
   "proof_scope": "lossless_sidecar_compression_candidate_packet_ir_consumed_byte_accounting_not_runtime_inflate_not_score",
   "ready_for_exact_eval_dispatch": false,
-  "runtime_consumption_claim": false,
+  "runtime_consumption_claim": true,
+  "runtime_consumption_proof": {
+    "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+    "path": "experiments/results/pr106_r2_pr101_grammar_runtime_consumption_proof.json",
+    "proof_scope": "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame",
+    "runtime_all_score_affecting_sections_consumed": true,
+    "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+    "runtime_sidecar_apply_consumption_claim": true,
+    "runtime_sidecar_decode_consumption_claim": true,
+    "runtime_source_tree_sha256": "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f",
+    "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+    "score_claim": false,
+    "valid_for_candidate_archive": true
+  },
+  "runtime_decode_apply_proof_claim": true,
   "runtime_decoder_implemented": true,
+  "same_runtime_full_frame_parity_proof": {
+    "candidate_archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+    "device_axis_label": "local-cpu-streaming-runtime",
+    "full_frame_inflate_output_parity_claim": true,
+    "path": "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json",
+    "proof_scope": "same_runtime_streaming_full_frame_hash",
+    "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+    "score_claim": false,
+    "streaming_output_sha256_equal": true,
+    "streaming_output_total_bytes_equal": true,
+    "valid_for_candidate_archive": true
+  },
   "schema": "pr106_sidecar_recode_candidate_manifest_v1",
   "score_claim": false,
   "semantic_arrays": {
