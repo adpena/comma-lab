@@ -1,0 +1,288 @@
+{
+  "dispatch_runtime": "modal_cuda_uploaded_submission_dir",
+  "local_runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+  "local_runtime_tree_sha256": "781aad1c5530bab2b2cb7b7f5d102e97aad234fe819ec7e7a42c8496c7ec478f",
+  "local_static_release_surface_runtime": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 796,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive_manifest.json",
+        "sha256": "98e32c1dd0bea2813cb268bbcf871befe156b98a1d7796e790f2786392dcb01d"
+      },
+      {
+        "bytes": 11014,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.py",
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
+      },
+      {
+        "bytes": 1430,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh",
+        "sha256": "9c74de63416ac7d922f3aaee68556f1c77169d7ff1c548ebb736409cc5505167"
+      },
+      {
+        "bytes": 1122,
+        "relative_path": "report.txt",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/report.txt",
+        "sha256": "b3a9379b28b38cfa0026ba0c9e86c266db71a6f7869652ae57bde61aa65d6931"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "static_release_surface",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+    "runtime_file_count": 7,
+    "runtime_root": "<repo>/experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface",
+    "runtime_tree_sha256": "781aad1c5530bab2b2cb7b7f5d102e97aad234fe819ec7e7a42c8496c7ec478f",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "modal_cpu_runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+  "modal_cpu_runtime_tree_sha256": "3a4628224f5cf1d56d2eaed6c5a7a2984c7d867c2a60eff36a6103dbceb6fac8",
+  "modal_cpu_uploaded_submission_dir_runtime": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 796,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/archive_manifest.json",
+        "sha256": "98e32c1dd0bea2813cb268bbcf871befe156b98a1d7796e790f2786392dcb01d"
+      },
+      {
+        "bytes": 11014,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.py",
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
+      },
+      {
+        "bytes": 1430,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+        "sha256": "9c74de63416ac7d922f3aaee68556f1c77169d7ff1c548ebb736409cc5505167"
+      },
+      {
+        "bytes": 1122,
+        "relative_path": "report.txt",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/report.txt",
+        "sha256": "b3a9379b28b38cfa0026ba0c9e86c266db71a6f7869652ae57bde61aa65d6931"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+    "runtime_file_count": 7,
+    "runtime_root": "/tmp/modal_auth_eval_cpu/submission_dir",
+    "runtime_tree_sha256": "3a4628224f5cf1d56d2eaed6c5a7a2984c7d867c2a60eff36a6103dbceb6fac8",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "modal_cuda_uploaded_submission_dir_runtime": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 796,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/archive_manifest.json",
+        "sha256": "98e32c1dd0bea2813cb268bbcf871befe156b98a1d7796e790f2786392dcb01d"
+      },
+      {
+        "bytes": 11014,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
+      },
+      {
+        "bytes": 1430,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+        "sha256": "9c74de63416ac7d922f3aaee68556f1c77169d7ff1c548ebb736409cc5505167"
+      },
+      {
+        "bytes": 1122,
+        "relative_path": "report.txt",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
+        "sha256": "b3a9379b28b38cfa0026ba0c9e86c266db71a6f7869652ae57bde61aa65d6931"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+    "runtime_file_count": 7,
+    "runtime_root": "/tmp/modal_auth_eval/submission_dir",
+    "runtime_tree_sha256": "c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "modal_uploaded_submission_dir_runtime": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 796,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/archive_manifest.json",
+        "sha256": "98e32c1dd0bea2813cb268bbcf871befe156b98a1d7796e790f2786392dcb01d"
+      },
+      {
+        "bytes": 11014,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
+      },
+      {
+        "bytes": 1430,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+        "sha256": "9c74de63416ac7d922f3aaee68556f1c77169d7ff1c548ebb736409cc5505167"
+      },
+      {
+        "bytes": 1122,
+        "relative_path": "report.txt",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
+        "sha256": "b3a9379b28b38cfa0026ba0c9e86c266db71a6f7869652ae57bde61aa65d6931"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+    "runtime_file_count": 7,
+    "runtime_root": "/tmp/modal_auth_eval/submission_dir",
+    "runtime_tree_sha256": "c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "promotion_eligible": false,
+  "runtime_content_tree_sha256": "17d4abb7831a627525ae81bf86a825857a078b1b92529e1c62866b795ccf326b",
+  "runtime_tree_sha256": "c25a4c1e4ee047b7b669978bc4c139327e37db83592a8cda32d086a579577ccf",
+  "schema": "pr106_hlm1_runtime_custody_manifest_v1",
+  "score_claim": false
+}

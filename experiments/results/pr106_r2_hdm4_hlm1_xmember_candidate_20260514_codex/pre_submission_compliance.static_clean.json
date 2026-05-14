@@ -1,0 +1,337 @@
+{
+  "archive": {
+    "bytes": 186415,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 186315,
+        "crc": 921521461,
+        "file_size": 186315,
+        "local_header": {
+          "compress_size": 186315,
+          "compress_type": 0,
+          "crc32": 921521461,
+          "extra_len": 0,
+          "file_size": 186315,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "x",
+          "version_needed": 20
+        },
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip",
+    "sha256": "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_local_header_metadata_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_payload_readable:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f actual=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186415 actual=186415",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/contest_auth_eval.json missing; nonfinal compliance may pass, but this packet has no auth-eval custody and is not score/rank/promote evidence",
+      "name": "auth_eval_optional_missing",
+      "passed": false,
+      "severity": "warning"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=96fae1a1b5328e80aa77badc1bf7ba1fc658285d95cc3f1ae459ec49cfa92ffb",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['0bf32200050bed0400082960cda2ae54131ee8f7757ee4ef0437a3e15ef78d38', '96fae1a1b5328e80aa77badc1bf7ba1fc658285d95cc3f1ae459ec49cfa92ffb'] auth_eval_candidates={}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f actual=391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186415 actual=186415",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='x' actual='x'",
+      "name": "archive_manifest_member_0_name_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186315 actual=186315",
+      "name": "archive_manifest_member_0_file_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186315 actual=186315",
+      "name": "archive_manifest_member_0_compress_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=921521461 actual=921521461",
+      "name": "archive_manifest_member_0_crc_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946' actual='b5cf3f46f6d36e35e737c1c65223fab52442c3d21bc94094eaef0ee9bc825946'",
+      "name": "archive_manifest_member_0_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 11014,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.py",
+        "sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f"
+      },
+      {
+        "bytes": 1430,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/inflate.sh",
+        "sha256": "9c74de63416ac7d922f3aaee68556f1c77169d7ff1c548ebb736409cc5505167"
+      },
+      {
+        "bytes": 23637,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/codec.py",
+        "sha256": "9f3557e49f4ebf27c5fa89e11a2828f30e0213192c53c68fec982640b2355ddc"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 8240,
+        "relative_path": "src/pr101_grammar.py",
+        "repo_relative_path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface/src/pr101_grammar.py",
+        "sha256": "04c9fb70172aa3e7013fc17f584a91df48d6e521bf52cf8b726c803585d054c4"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "0bf32200050bed0400082960cda2ae54131ee8f7757ee4ef0437a3e15ef78d38",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "static_release_surface",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 5,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface",
+    "runtime_tree_sha256": "96fae1a1b5328e80aa77badc1bf7ba1fc658285d95cc3f1ae459ec49cfa92ffb",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}

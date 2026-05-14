@@ -1,0 +1,27 @@
+HDM4+HLM1 x-member exact-eval candidate surface
+
+lane_id            : hnerv_hlm1_xmember_exact_eval_20260514
+job_id             : exact_eval_hnerv_hlm1_xmember_modal_t4_20260514
+archive_sha256     : 391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f
+archive_size_bytes : 186415
+member_count       : 1
+member_name        : x
+source_archive_sha : 8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0
+source_archive_size: 186423
+
+Custody
+=======
+This surface is a byte-different rate-only successor to HDM4+HLM1. The ZIP
+member name changes from 0.bin to x; the member payload SHA is unchanged.
+The inflate wrapper accepts 0.bin or x and fails closed if both are present.
+
+Local proof status
+==================
+PacketIR identity, sidecar runtime consumption, HLM1 runtime consumption, and
+same-runtime full-frame local CPU streaming parity are recorded in this result
+directory. These are not contest score claims.
+
+Submission-readiness status
+===========================
+Exact [contest-CUDA] auth eval is still required before any score movement is
+accepted. CPU/Mac/local parity is advisory only.

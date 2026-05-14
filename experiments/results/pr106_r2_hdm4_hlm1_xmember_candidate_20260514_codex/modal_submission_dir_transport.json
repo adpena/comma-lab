@@ -1,0 +1,8 @@
+{
+  "promotion_eligible": false,
+  "schema": "pr106_hlm1_modal_submission_dir_transport_v1",
+  "score_claim": false,
+  "submission_dir": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/static_release_surface",
+  "transport_zip_bytes": 202367,
+  "transport_zip_sha256": "b32fce2c2ae329d050db344b652f38281a73034179457ef29722fa1033b8c848"
+}

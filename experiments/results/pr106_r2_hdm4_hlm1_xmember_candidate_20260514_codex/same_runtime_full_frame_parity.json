@@ -1,0 +1,74 @@
+{
+  "candidate": {
+    "batch_pairs": 32,
+    "camera_size": [
+      874,
+      1164
+    ],
+    "device": "cpu",
+    "elapsed_seconds": 34.65577729092911,
+    "eval_size": [
+      384,
+      512
+    ],
+    "format_id": "0x02",
+    "full_frame_digest": true,
+    "max_pairs": null,
+    "n_pairs_hashed": 600,
+    "n_pairs_total": 600,
+    "schema": "pr106_runtime_full_frame_streaming_digest_v1",
+    "score_claim": false,
+    "streaming_raw_sha256": "30bc014709737aa0a17aaef525183b13fefa6531ec3410ab84d91dc1199c387b",
+    "total_bytes": 3662409600,
+    "total_frames": 1200
+  },
+  "candidate_archive": {
+    "bytes": 186415,
+    "member_name": "x",
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex/pr106_r2_hdm4_hlm1_xmember_hlm1_latent_candidate.zip",
+    "sha256": "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f"
+  },
+  "contest_axis_claim": false,
+  "device_axis_label": "local-cpu-streaming-runtime",
+  "full_frame_inflate_output_parity_claim": true,
+  "prefix_parity_claim": false,
+  "promotion_eligible": false,
+  "proof_scope": "same_runtime_streaming_full_frame_hash",
+  "ready_for_exact_eval_dispatch": false,
+  "required_next_proof": "exact contest auth eval with archive/runtime custody and explicit [contest-CUDA]/[contest-CPU] axis labels",
+  "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+  "runtime_inflate_py_sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f",
+  "schema": "pr106_same_runtime_streaming_frame_parity_v1",
+  "score_claim": false,
+  "source": {
+    "batch_pairs": 32,
+    "camera_size": [
+      874,
+      1164
+    ],
+    "device": "cpu",
+    "elapsed_seconds": 34.6501594169531,
+    "eval_size": [
+      384,
+      512
+    ],
+    "format_id": "0x02",
+    "full_frame_digest": true,
+    "max_pairs": null,
+    "n_pairs_hashed": 600,
+    "n_pairs_total": 600,
+    "schema": "pr106_runtime_full_frame_streaming_digest_v1",
+    "score_claim": false,
+    "streaming_raw_sha256": "30bc014709737aa0a17aaef525183b13fefa6531ec3410ab84d91dc1199c387b",
+    "total_bytes": 3662409600,
+    "total_frames": 1200
+  },
+  "source_archive": {
+    "bytes": 186423,
+    "member_name": "0.bin",
+    "path": "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/pr106_r2_hdm4_exact_cuda_hlm1_latent_candidate.zip",
+    "sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0"
+  },
+  "streaming_output_sha256_equal": true,
+  "streaming_output_total_bytes_equal": true
+}
