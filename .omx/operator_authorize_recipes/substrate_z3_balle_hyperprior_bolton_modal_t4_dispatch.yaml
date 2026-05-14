@@ -183,9 +183,11 @@ notes: |
   test; full training (gated behind _full_main NotImplementedError) requires
   Phase 2 council approval.
 
-  PHASE 2 COUNCIL APPROVAL REQUIRED before --smoke=false dispatch. The
-  trainer's `_full_main` raises NotImplementedError pending council green-up;
-  smoke-only runs are operator-authorized.
+  PHASE 2 COUNCIL APPROVED 6/6 unanimous 2026-05-14 per
+  `.omx/research/z3_phase_2_council_20260514.md`
+  (Shannon LEAD + Dykstra CO-LEAD + Yousfi + Fridrich + Contrarian +
+  MacKay). Full dispatch (`--epochs 200+`) is authorized via this recipe;
+  `_full_main` implementation landed at commit 1aaa258dc.
 
   Predicted contest-CUDA score: 0.183-0.190 [prediction; first-principles-bound]
   (NOT a score claim — score authority requires CUDA + CPU paired auth eval
