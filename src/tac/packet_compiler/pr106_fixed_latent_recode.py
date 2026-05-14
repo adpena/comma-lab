@@ -11,6 +11,12 @@ in [-254, 254] and zigzag(delta) fits in 9 bits.  HLM1 stores low bytes with a
 deterministic Brotli choice and stores high-byte ones as a sparse delta-position
 stream.  It is pure codec machinery: no scorers, no dispatch, no score
 authority.
+
+HLM3 is a PR103-style probe grammar for the same raw layout.  It keeps the
+low-byte Brotli and raw fp16 metadata, but stores the high bytes with the
+project's reusable range coder plus a compact empirical model.  The compiler
+can prove raw-byte closure and materialize non-promotable candidates, but
+runtime support and exact CUDA evaluation remain separate gates.
 """
 
 from __future__ import annotations
@@ -25,7 +31,8 @@ from tac.repo_io import sha256_bytes
 
 HLM1_MAGIC = b"HLM1"
 HLM2_MAGIC = b"HLM2"
-HLM_FIXED_LATENT_MAGICS = (HLM1_MAGIC, HLM2_MAGIC)
+HLM3_MAGIC = b"HLM3"
+HLM_FIXED_LATENT_MAGICS = (HLM1_MAGIC, HLM2_MAGIC, HLM3_MAGIC)
 PR106_FIXED_LATENT_N = 600
 PR106_FIXED_LATENT_D = 28
 PR106_FIXED_LATENT_TOTAL = PR106_FIXED_LATENT_N * PR106_FIXED_LATENT_D
@@ -74,6 +81,9 @@ class PR106FixedLatentRecode:
     hi_nonzero_symbols: int
     hi_nonzero_symbol_count: int
     codec: str = "pr106_fixed_latent_hlm1"
+    hi_codec: str = "sparse_delta_positions"
+    hi_arithmetic_bytes: int | None = None
+    hi_histogram_bytes: int | None = None
 
     @property
     def candidate_bytes(self) -> int:
@@ -109,6 +119,9 @@ class PR106FixedLatentRecode:
             "lo_brotli_lgwin": self.lo_brotli_lgwin,
             "hi_nonzero_symbols": self.hi_nonzero_symbols,
             "hi_nonzero_symbol_count": self.hi_nonzero_symbol_count,
+            "hi_codec": self.hi_codec,
+            "hi_arithmetic_bytes": self.hi_arithmetic_bytes,
+            "hi_histogram_bytes": self.hi_histogram_bytes,
         }
 
 
@@ -125,11 +138,13 @@ def split_pr106_fixed_latent_raw(raw: bytes) -> tuple[bytes, bytes, bytes]:
 
 
 def decode_pr106_fixed_latent_raw(payload: bytes) -> bytes:
-    """Decode legacy Brotli, HLM1, or HLM2 fixed latents to raw."""
+    """Decode legacy Brotli, HLM1, HLM2, or HLM3 fixed latents to raw."""
     if payload.startswith(HLM1_MAGIC):
         return decode_hlm1_fixed_latent_raw(payload)
     if payload.startswith(HLM2_MAGIC):
         return decode_hlm2_fixed_latent_raw(payload)
+    if payload.startswith(HLM3_MAGIC):
+        return decode_hlm3_fixed_latent_raw(payload)
     raw = brotli.decompress(payload)
     split_pr106_fixed_latent_raw(raw)
     return raw
@@ -150,6 +165,11 @@ def encode_hlm_fixed_latents_from_brotli(
         )
     if normalized == "hlm2":
         return encode_hlm2_fixed_latents_from_brotli(
+            source_brotli,
+            brotli_candidates=brotli_candidates,
+        )
+    if normalized == "hlm3":
+        return encode_hlm3_fixed_latents_from_brotli(
             source_brotli,
             brotli_candidates=brotli_candidates,
         )
@@ -243,6 +263,56 @@ def encode_hlm2_fixed_latents_from_brotli(
     )
 
 
+def encode_hlm3_fixed_latents_from_brotli(
+    source_brotli: bytes,
+    *,
+    brotli_candidates: Iterable[tuple[int, int]] = DEFAULT_HLM1_BROTLI_CANDIDATES,
+) -> PR106FixedLatentRecode:
+    """Encode a legacy PR106 fixed-latent Brotli/HLM section as HLM3.
+
+    HLM3 is intentionally a compiler/profiler grammar first: it accepts any
+    uint8 high-byte stream, unlike HLM1/HLM2's binary sparse stream, and proves
+    exact raw-byte closure through PR103-style range coding.  Archive dispatch
+    remains fail-closed until an inflate-runtime decoder and exact eval land.
+    """
+    raw = decode_pr106_fixed_latent_raw(source_brotli)
+    lo, meta, hi = split_pr106_fixed_latent_raw(raw)
+    lo_choice = _best_brotli(lo, brotli_candidates)
+    hi_histogram = _hlm3_hi_histogram_q8(hi)
+    hi_arithmetic = _encode_hlm3_hi_arithmetic(hi, hi_histogram)
+    payload = _pack_hlm3(
+        lo_brotli=lo_choice.payload,
+        meta=meta,
+        hi_histogram=hi_histogram,
+        hi_arithmetic=hi_arithmetic,
+    )
+    decoded = decode_hlm3_fixed_latent_raw(payload)
+    source_sha = sha256_bytes(raw)
+    decoded_sha = sha256_bytes(decoded)
+    if decoded_sha != source_sha:
+        raise PR106FixedLatentRecodeError("HLM3 fixed-latent roundtrip mismatch")
+    hi_arr = np.frombuffer(hi, dtype=np.uint8)
+    return PR106FixedLatentRecode(
+        payload=payload,
+        source_brotli_bytes=len(source_brotli),
+        source_raw_bytes=len(raw),
+        source_raw_sha256=source_sha,
+        decoded_raw_sha256=decoded_sha,
+        lo_brotli_bytes=len(lo_choice.payload),
+        hi_delta_varint_bytes=0,
+        meta_raw_bytes=len(meta),
+        packet_overhead_bytes=4 + 2 + 256,
+        lo_brotli_quality=lo_choice.quality,
+        lo_brotli_lgwin=lo_choice.lgwin,
+        hi_nonzero_symbols=int(np.unique(hi_arr).size),
+        hi_nonzero_symbol_count=int(np.count_nonzero(hi_arr)),
+        codec="pr106_fixed_latent_hlm3",
+        hi_codec="pr103_range_coded_hi_bytes",
+        hi_arithmetic_bytes=len(hi_arithmetic),
+        hi_histogram_bytes=len(hi_histogram),
+    )
+
+
 def decode_hlm1_fixed_latent_raw(payload: bytes) -> bytes:
     """Decode an HLM1 fixed-latent payload to the legacy raw byte layout."""
     if not payload.startswith(HLM1_MAGIC):
@@ -295,6 +365,35 @@ def decode_hlm2_fixed_latent_raw(payload: bytes) -> bytes:
     if len(lo) != PR106_FIXED_LATENT_TOTAL:
         raise PR106FixedLatentRecodeError("HLM2 lo stream length mismatch")
     hi = _decode_sparse_hi_delta_positions(hi_delta_varint, count=None)
+    raw = lo + meta + hi
+    split_pr106_fixed_latent_raw(raw)
+    return raw
+
+
+def decode_hlm3_fixed_latent_raw(payload: bytes) -> bytes:
+    """Decode an HLM3 range-coded fixed-latent payload to raw byte layout."""
+    if not payload.startswith(HLM3_MAGIC):
+        raise PR106FixedLatentRecodeError("invalid HLM3 fixed-latent magic")
+    cursor = len(HLM3_MAGIC)
+    lo_len = _read_u16(payload, cursor, "lo_brotli_len")
+    cursor += 2
+    lo_brotli = _read_exact(payload, cursor, lo_len, "lo_brotli")
+    cursor += lo_len
+    meta = _read_exact(payload, cursor, PR106_FIXED_LATENT_META_BYTES, "meta")
+    cursor += PR106_FIXED_LATENT_META_BYTES
+    hi_histogram = _read_exact(payload, cursor, 256, "hi_histogram_q8")
+    cursor += 256
+    hi_arithmetic = payload[cursor:]
+    if not hi_arithmetic:
+        raise PR106FixedLatentRecodeError("HLM3 hi arithmetic stream is empty")
+
+    try:
+        lo = brotli.decompress(lo_brotli)
+    except brotli.error as exc:
+        raise PR106FixedLatentRecodeError(f"HLM3 Brotli decode failed: {exc}") from exc
+    if len(lo) != PR106_FIXED_LATENT_TOTAL:
+        raise PR106FixedLatentRecodeError("HLM3 lo stream length mismatch")
+    hi = _decode_hlm3_hi_arithmetic(hi_arithmetic, hi_histogram)
     raw = lo + meta + hi
     split_pr106_fixed_latent_raw(raw)
     return raw
@@ -357,6 +456,44 @@ def _pack_hlm2(
     return HLM2_MAGIC + len(lo_brotli).to_bytes(2, "little") + lo_brotli + meta + hi_delta_varint
 
 
+def _pack_hlm3(
+    *,
+    lo_brotli: bytes,
+    meta: bytes,
+    hi_histogram: bytes,
+    hi_arithmetic: bytes,
+) -> bytes:
+    if not lo_brotli:
+        raise PR106FixedLatentRecodeError("HLM3 lo_brotli must be non-empty")
+    if len(lo_brotli) > 0xFFFF:
+        raise PR106FixedLatentRecodeError(
+            f"HLM3 lo_brotli too large for u16 length: {len(lo_brotli)}"
+        )
+    if len(meta) != PR106_FIXED_LATENT_META_BYTES:
+        raise PR106FixedLatentRecodeError(
+            f"HLM3 meta bytes mismatch: got {len(meta)}, "
+            f"expected {PR106_FIXED_LATENT_META_BYTES}"
+        )
+    if len(hi_histogram) != 256:
+        raise PR106FixedLatentRecodeError(
+            f"HLM3 histogram must be 256 bytes, got {len(hi_histogram)}"
+        )
+    if not hi_arithmetic:
+        raise PR106FixedLatentRecodeError("HLM3 hi_arithmetic must be non-empty")
+    if len(hi_arithmetic) % 4 != 0:
+        raise PR106FixedLatentRecodeError(
+            f"HLM3 arithmetic stream length must be a uint32 multiple, got {len(hi_arithmetic)}"
+        )
+    return (
+        HLM3_MAGIC
+        + len(lo_brotli).to_bytes(2, "little")
+        + lo_brotli
+        + meta
+        + hi_histogram
+        + hi_arithmetic
+    )
+
+
 def _best_brotli(
     payload: bytes,
     candidates: Iterable[tuple[int, int]],
@@ -378,6 +515,52 @@ def _best_brotli(
     if not seen or best is None:
         raise PR106FixedLatentRecodeError("no Brotli candidates supplied")
     return best
+
+
+def _hlm3_hi_histogram_q8(hi: bytes) -> bytes:
+    arr = np.frombuffer(hi, dtype=np.uint8)
+    if arr.size != PR106_FIXED_LATENT_TOTAL:
+        raise PR106FixedLatentRecodeError("HLM3 hi stream length mismatch")
+    counts = np.bincount(arr, minlength=256).astype(np.float64)
+    if counts.sum() != PR106_FIXED_LATENT_TOTAL:
+        raise PR106FixedLatentRecodeError("HLM3 hi histogram count mismatch")
+    out = np.zeros(256, dtype=np.uint8)
+    positive = counts > 0
+    if not np.any(positive):
+        raise PR106FixedLatentRecodeError("HLM3 hi stream is empty")
+    scaled = np.rint(counts[positive] * 255.0 / counts.max()).astype(np.int64)
+    out[positive] = np.clip(scaled, 1, 255).astype(np.uint8)
+    return out.tobytes()
+
+
+def _encode_hlm3_hi_arithmetic(hi: bytes, histogram_q8: bytes) -> bytes:
+    arr = np.frombuffer(hi, dtype=np.uint8)
+    if arr.size != PR106_FIXED_LATENT_TOTAL:
+        raise PR106FixedLatentRecodeError("HLM3 hi stream length mismatch")
+    if len(histogram_q8) != 256:
+        raise PR106FixedLatentRecodeError("HLM3 histogram length mismatch")
+    from tac.packet_compiler.pr103_arithmetic_coding import encode_latent_hi_arithmetic
+
+    latents = (arr.astype(np.uint16) << 8).reshape(-1)
+    histogram = np.frombuffer(histogram_q8, dtype=np.uint8).astype(np.float64)
+    return encode_latent_hi_arithmetic(latents, histogram=histogram)
+
+
+def _decode_hlm3_hi_arithmetic(payload: bytes, histogram_q8: bytes) -> bytes:
+    if len(histogram_q8) != 256:
+        raise PR106FixedLatentRecodeError("HLM3 histogram length mismatch")
+    from tac.packet_compiler.pr103_arithmetic_coding import decode_latent_hi_arithmetic
+
+    histogram = np.frombuffer(histogram_q8, dtype=np.uint8).astype(np.float64)
+    try:
+        hi = decode_latent_hi_arithmetic(
+            payload,
+            histogram=histogram,
+            n_symbols=PR106_FIXED_LATENT_TOTAL,
+        )
+    except ValueError as exc:
+        raise PR106FixedLatentRecodeError(f"HLM3 arithmetic decode failed: {exc}") from exc
+    return hi.tobytes()
 
 
 def _encode_sparse_hi_delta_positions(hi: bytes) -> tuple[bytes, int, int]:

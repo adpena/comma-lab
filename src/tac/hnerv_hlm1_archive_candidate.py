@@ -11,6 +11,7 @@ from tac.hnerv_lowlevel_packer import read_packed_archive_view
 from tac.packet_compiler.pr106_fixed_latent_recode import (
     HLM1_MAGIC,
     HLM2_MAGIC,
+    HLM3_MAGIC,
     encode_hlm_fixed_latents_from_brotli,
 )
 from tac.repo_io import repo_relative, sha256_bytes, sha256_file, write_json
@@ -54,13 +55,18 @@ def build_hlm1_latent_archive_candidate(
             f"unsupported HLM1 candidate member name: {emitted_member_name!r}"
         )
     codec = latent_codec.lower()
-    if codec not in {"hlm1", "hlm2"}:
+    if codec not in {"hlm1", "hlm2", "hlm3"}:
         raise HnervHlm1ArchiveCandidateError(
             f"unsupported HLM latent codec: {latent_codec!r}"
         )
-    target_magic = HLM1_MAGIC if codec == "hlm1" else HLM2_MAGIC
+    target_magic = {
+        "hlm1": HLM1_MAGIC,
+        "hlm2": HLM2_MAGIC,
+        "hlm3": HLM3_MAGIC,
+    }[codec]
     source_is_hlm1 = packed.latents_and_sidecar_brotli.startswith(HLM1_MAGIC)
     source_is_hlm2 = packed.latents_and_sidecar_brotli.startswith(HLM2_MAGIC)
+    source_is_hlm3 = packed.latents_and_sidecar_brotli.startswith(HLM3_MAGIC)
     source_is_target_hlm = packed.latents_and_sidecar_brotli.startswith(target_magic)
     member_name_changed = emitted_member_name != view.archive.member_name
     recode = encode_hlm_fixed_latents_from_brotli(
@@ -77,6 +83,7 @@ def build_hlm1_latent_archive_candidate(
     candidate_archive_bytes: int | None = None
     candidate_payload_sha = ""
     ready_for_archive_preflight = False
+    decoder_section_preserved = False
     if not blockers:
         candidate_latent_section = (
             packed.latents_and_sidecar_brotli
@@ -98,7 +105,10 @@ def build_hlm1_latent_archive_candidate(
         candidate_archive_bytes = candidate_archive_path.stat().st_size
         candidate_payload_sha = sha256_bytes(candidate_payload)
         checked_view = read_packed_archive_view(candidate_archive_path)
-        if checked_view.packed.decoder_packed_brotli != packed.decoder_packed_brotli:
+        decoder_section_preserved = (
+            checked_view.packed.decoder_packed_brotli == packed.decoder_packed_brotli
+        )
+        if not decoder_section_preserved:
             blockers.append("candidate_decoder_section_changed")
         if checked_view.packed.latents_and_sidecar_brotli != candidate_latent_section:
             blockers.append(f"candidate_{codec}_latent_section_not_preserved")
@@ -116,6 +126,8 @@ def build_hlm1_latent_archive_candidate(
             and not allow_rate_regression
         ):
             blockers.append("candidate_archive_not_rate_positive")
+        if codec == "hlm3":
+            blockers.append("hlm3_inflate_runtime_decoder_missing")
         ready_for_archive_preflight = not blockers
 
     byte_delta = (
@@ -131,12 +143,20 @@ def build_hlm1_latent_archive_candidate(
             "pr106_hlm1_xmember_rate_repack"
             if member_name_changed and codec == "hlm1" and source_is_target_hlm
             else (
-                "pr106_hlm2_xmember_rate_repack"
+                f"pr106_{codec}_xmember_rate_repack"
                 if member_name_changed and source_is_target_hlm
                 else f"pr106_{codec}_fixed_latent_recode"
             )
         ),
-        "lane_id": LANE_ID if codec == "hlm1" else "hnerv_hlm2_fixed_latent_recode_exact_eval",
+        "lane_id": (
+            LANE_ID
+            if codec == "hlm1"
+            else (
+                "hnerv_hlm2_fixed_latent_recode_exact_eval"
+                if codec == "hlm2"
+                else "hnerv_hlm3_pr103_range_hi_probe"
+            )
+        ),
         "family": "hnerv_fixed_latent_recode",
         "pareto_scope": "hnerv_rate_only_exact_archive",
         "candidate_transform_kind": (
@@ -158,12 +178,20 @@ def build_hlm1_latent_archive_candidate(
         "source_payload_sha256": sha256_bytes(view.archive.payload),
         "source_payload_bytes": len(view.archive.payload),
         "source_latents_section_is_hlm1": source_is_hlm1,
+        "source_latents_section_is_hlm2": source_is_hlm2,
+        "source_latents_section_is_hlm3": source_is_hlm3,
         "source_decoder_section_sha256": sha256_bytes(packed.decoder_packed_brotli),
         "source_decoder_section_bytes": len(packed.decoder_packed_brotli),
         "source_latents_section_sha256": sha256_bytes(packed.latents_and_sidecar_brotli),
         "source_latents_section_bytes": len(packed.latents_and_sidecar_brotli),
         "source_latents_section_codec": (
-            "hlm1" if source_is_hlm1 else ("hlm2" if source_is_hlm2 else "legacy_brotli")
+            "hlm1"
+            if source_is_hlm1
+            else (
+                "hlm2"
+                if source_is_hlm2
+                else ("hlm3" if source_is_hlm3 else "legacy_brotli")
+            )
         ),
         "target_latents_section_codec": codec,
         "candidate_archive_path": (
@@ -204,7 +232,7 @@ def build_hlm1_latent_archive_candidate(
         "candidate_rate_score_delta_if_components_equal": (
             byte_delta * RATE_SCORE_PER_BYTE if byte_delta is not None else None
         ),
-        "decoder_section_preserved": candidate_payload is not None and not blockers,
+        "decoder_section_preserved": decoder_section_preserved,
         "zip_member_repack": {
             "enabled": member_name_changed,
             "source_member_name": view.archive.member_name,

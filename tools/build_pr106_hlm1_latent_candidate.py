@@ -37,11 +37,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--latent-codec",
-        choices=("hlm1", "hlm2"),
+        choices=("hlm1", "hlm2", "hlm3"),
         default="hlm1",
         help=(
             "Lossless fixed-latent HLM grammar to emit. HLM2 derives the "
-            "high-byte stream length and symbol count from packet boundaries."
+            "high-byte stream length and symbol count from packet boundaries. "
+            "HLM3 is a PR103-style range-coded high-byte probe and remains "
+            "fail-closed until runtime support lands."
         ),
     )
     parser.add_argument(

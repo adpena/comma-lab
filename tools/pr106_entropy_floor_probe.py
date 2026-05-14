@@ -23,7 +23,6 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
-import brotli
 import numpy as np
 
 try:
@@ -49,14 +48,15 @@ from tac.hnerv_lowlevel_packer import (  # noqa: E402
     read_strict_single_member_zip,
     sha256_bytes,
 )
-from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
-    PR106_SIDECAR_MAGIC,
-    parse_pr106_sidecar_packet,
-)
 from tac.packet_compiler.pr106_fixed_latent_recode import (  # noqa: E402
     HLM1_MAGIC,
     HLM2_MAGIC,
+    HLM3_MAGIC,
     decode_pr106_fixed_latent_raw,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_SIDECAR_MAGIC,
+    parse_pr106_sidecar_packet,
 )
 
 TOOL = "tools/pr106_entropy_floor_probe.py"
@@ -449,7 +449,11 @@ def build_report_from_payload(
         else (
             "hlm2_sparse_hi_delta_positions"
             if packed.latents_and_sidecar_brotli.startswith(HLM2_MAGIC)
-            else "brotli_fixed_latents_raw"
+            else (
+                "hlm3_pr103_range_coded_hi_bytes"
+                if packed.latents_and_sidecar_brotli.startswith(HLM3_MAGIC)
+                else "brotli_fixed_latents_raw"
+            )
         )
     )
 

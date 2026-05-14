@@ -1075,6 +1075,7 @@ def _codec_magic_hint(data: bytes) -> str | None:
         (b"HDM6", "HDM6 decoder codec"),
         (b"HDM4", "HDM4 decoder codec"),
         (b"HDM3", "HDM3 decoder codec"),
+        (b"HLM3", "HLM3 fixed-latent range codec"),
         (b"HLM2", "HLM2 fixed-latent codec"),
         (b"HLM1", "HLM1 fixed-latent codec"),
     ):
@@ -1175,14 +1176,14 @@ def _is_sha256(value: object) -> bool:
 
 __all__ = [
     "FIXED_DATE_TIME",
+    "PR101_DECODER_BLOB_LEN",
+    "PR101_LATENT_BLOB_LEN",
     "REPACKABLE_SECTIONS",
     "SCHEMA_VERSION",
     "BrotliRecodeChoice",
     "HnervLowlevelPackError",
     "PackedArchiveView",
     "PackedHnervPayload",
-    "PR101_DECODER_BLOB_LEN",
-    "PR101_LATENT_BLOB_LEN",
     "SingleMemberArchive",
     "brotli_recode_search",
     "build_lowlevel_brotli_repack_candidate",

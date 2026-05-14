@@ -14,20 +14,25 @@ import brotli
 import numpy as np
 import pytest
 
-from tac.hnerv_lowlevel_packer import read_packed_archive_view
 from tac.hnerv_hlm1_archive_candidate import build_hlm1_latent_archive_candidate
+from tac.hnerv_lowlevel_packer import read_packed_archive_view
 from tac.packet_compiler.pr106_fixed_latent_recode import (
     HLM1_MAGIC,
     HLM2_MAGIC,
+    HLM3_MAGIC,
+    PR106_FIXED_LATENT_D,
+    PR106_FIXED_LATENT_TOTAL,
     PR106FixedLatentRecodeError,
+    decode_hlm3_fixed_latent_raw,
     decode_pr106_fixed_latent_raw,
     encode_hlm1_fixed_latents_from_brotli,
     encode_hlm2_fixed_latents_from_brotli,
+    encode_hlm3_fixed_latents_from_brotli,
     split_pr106_fixed_latent_raw,
 )
 from tac.packet_compiler.pr106_hlm1_runtime_consumption import (
-    prove_pr106_hlm_runtime_consumption,
     prove_pr106_hlm1_runtime_consumption,
+    prove_pr106_hlm_runtime_consumption,
 )
 from tac.packet_compiler.pr106_runtime_consumption import load_pr106_runtime_codec
 
@@ -109,6 +114,46 @@ def test_hlm2_recode_derives_hi_metadata_and_saves_four_bytes_over_hlm1() -> Non
     assert hlm2.to_manifest()["raw_roundtrip_equal"] is True
 
 
+def test_hlm3_range_recode_roundtrips_tracked_pr106_fixed_latents() -> None:
+    view = read_packed_archive_view(PR106_R2_PR101_ARCHIVE)
+    source = view.packed.latents_and_sidecar_brotli
+    source_raw = brotli.decompress(source)
+
+    recode = encode_hlm3_fixed_latents_from_brotli(source)
+    manifest = recode.to_manifest()
+
+    assert recode.payload.startswith(HLM3_MAGIC)
+    assert recode.codec == "pr106_fixed_latent_hlm3"
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["raw_roundtrip_equal"] is True
+    assert manifest["hi_codec"] == "pr103_range_coded_hi_bytes"
+    assert manifest["hi_arithmetic_bytes"] > 0
+    assert manifest["hi_histogram_bytes"] == 256
+    assert decode_hlm3_fixed_latent_raw(recode.payload) == source_raw
+    assert decode_pr106_fixed_latent_raw(recode.payload) == source_raw
+
+
+def test_hlm3_range_recode_accepts_dense_non_binary_hi_stream() -> None:
+    lo = np.arange(PR106_FIXED_LATENT_TOTAL, dtype=np.uint16).astype(np.uint8).tobytes()
+    meta = np.zeros(PR106_FIXED_LATENT_D * 2, dtype=np.float16).tobytes()
+    hi = (np.arange(PR106_FIXED_LATENT_TOTAL, dtype=np.uint16) % 17).astype(np.uint8).tobytes()
+    source = brotli.compress(lo + meta + hi, quality=5)
+
+    recode = encode_hlm3_fixed_latents_from_brotli(
+        source,
+        brotli_candidates=((5, 16),),
+    )
+
+    assert recode.payload.startswith(HLM3_MAGIC)
+    assert recode.hi_codec == "pr103_range_coded_hi_bytes"
+    assert recode.hi_nonzero_symbols == 17
+    assert recode.hi_nonzero_symbol_count > 0
+    assert decode_hlm3_fixed_latent_raw(recode.payload) == lo + meta + hi
+    with pytest.raises(PR106FixedLatentRecodeError, match="binary hi symbols"):
+        encode_hlm1_fixed_latents_from_brotli(source, brotli_candidates=((5, 16),))
+
+
 def test_hlm2_archive_candidate_builder_recodes_existing_hlm1_source(
     tmp_path: Path,
 ) -> None:
@@ -141,6 +186,43 @@ def test_hlm2_archive_candidate_builder_recodes_existing_hlm1_source(
         == decode_pr106_fixed_latent_raw(source_view.packed.latents_and_sidecar_brotli)
     )
     assert (tmp_path / "out" / "hlm2_latent_archive_candidate_manifest.json").exists()
+
+
+def test_hlm3_archive_candidate_builder_is_byte_closed_but_fail_closed(
+    tmp_path: Path,
+) -> None:
+    source_view = read_packed_archive_view(PR106_R2_PR101_ARCHIVE)
+
+    manifest = build_hlm1_latent_archive_candidate(
+        source_archive=PR106_R2_PR101_ARCHIVE,
+        output_dir=tmp_path / "out",
+        source_label="PR106 R2 PR101 grammar",
+        latent_codec="hlm3",
+        allow_rate_regression=True,
+        repo_root=REPO,
+    )
+
+    candidate_archive = Path(manifest["candidate_archive_path"])
+    candidate_view = read_packed_archive_view(candidate_archive)
+
+    assert manifest["score_claim"] is False
+    assert manifest["dispatch_attempted"] is False
+    assert manifest["ready_for_archive_preflight"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["lane_id"] == "hnerv_hlm3_pr103_range_hi_probe"
+    assert manifest["target_latents_section_codec"] == "hlm3"
+    assert manifest["candidate_transform_kind"] == "hlm3_fixed_latent_recode"
+    assert manifest["decoder_section_preserved"] is True
+    assert manifest["hlm3_recode"]["raw_roundtrip_equal"] is True
+    assert manifest["hlm3_recode"]["hi_codec"] == "pr103_range_coded_hi_bytes"
+    assert "hlm3_inflate_runtime_decoder_missing" in manifest["archive_build_blockers"]
+    assert candidate_view.packed.decoder_packed_brotli == source_view.packed.decoder_packed_brotli
+    assert candidate_view.packed.latents_and_sidecar_brotli.startswith(HLM3_MAGIC)
+    assert (
+        decode_pr106_fixed_latent_raw(candidate_view.packed.latents_and_sidecar_brotli)
+        == brotli.decompress(source_view.packed.latents_and_sidecar_brotli)
+    )
+    assert (tmp_path / "out" / "hlm3_latent_archive_candidate_manifest.json").exists()
 
 
 def test_hlm1_archive_candidate_builder_writes_nonpromotable_manifest(
@@ -253,6 +335,40 @@ def test_hlm_archive_candidate_cli_accepts_hlm2_codec(tmp_path: Path) -> None:
     assert payload["ready_for_archive_preflight"] is True
     assert payload["target_latents_section_codec"] == "hlm2"
     assert payload["candidate_archive_byte_delta"] == -4
+
+
+def test_hlm_archive_candidate_cli_accepts_hlm3_probe_and_fails_closed(
+    tmp_path: Path,
+) -> None:
+    json_out = tmp_path / "result.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_pr106_hlm1_latent_candidate.py"),
+            "--source-archive",
+            str(PR106_R2_PR101_ARCHIVE),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--source-label",
+            "PR106 R2 PR101 grammar",
+            "--latent-codec",
+            "hlm3",
+            "--allow-rate-regression",
+            "--json-out",
+            str(json_out),
+            "--fail-if-blocked",
+        ],
+        check=False,
+        text=True,
+    )
+
+    payload = json.loads(json_out.read_text(encoding="utf-8"))
+    assert result.returncode == 2
+    assert payload["target_latents_section_codec"] == "hlm3"
+    assert payload["ready_for_archive_preflight"] is False
+    assert payload["score_claim"] is False
+    assert "hlm3_inflate_runtime_decoder_missing" in payload["archive_build_blockers"]
 
 
 def test_pr106_inflate_sh_uses_x_payload_and_refuses_ambiguous_payloads(
