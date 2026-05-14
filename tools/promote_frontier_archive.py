@@ -94,6 +94,11 @@ REFUSAL_CLASSES = (
     "target_path_collision",
     "score_value_missing",
     "archive_sha256_field_missing",
+    "archive_size_mismatch",
+    "sample_count_not_600",
+    "score_claim_invalid",
+    "axis_stamp_missing",
+    "axis_device_mismatch",
 )
 
 
@@ -116,6 +121,12 @@ class AxisEvidence:
     evidence_tag: str
     hardware_substrate: str
     n_samples: int | None = None
+    archive_size_bytes: int | None = None
+    device: str = ""
+    score_axis: str = ""
+    score_claim_valid: bool | None = None
+    exact_cuda_eval_complete: bool | None = None
+    evidence_semantics: str = ""
     raw_payload: dict[str, Any] = field(default_factory=dict)
 
     def as_contest_result(
@@ -246,6 +257,24 @@ def _extract_archive_sha(payload: Mapping[str, Any]) -> str:
     return ""
 
 
+def _extract_archive_size_bytes(payload: Mapping[str, Any]) -> int | None:
+    for key in ("archive_size_bytes", "archive_bytes", "archive_zip_bytes"):
+        value = payload.get(key)
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            continue
+    prov = payload.get("provenance")
+    if isinstance(prov, Mapping):
+        for key in ("archive_size_bytes", "archive_bytes", "archive_zip_bytes"):
+            value = prov.get(key)
+            try:
+                return int(value) if value is not None else None
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
 def parse_axis_evidence(eval_json_path: Path, axis: str) -> AxisEvidence:
     """Parse a contest_auth_eval JSON and return the typed AxisEvidence row.
 
@@ -287,6 +316,9 @@ def parse_axis_evidence(eval_json_path: Path, axis: str) -> AxisEvidence:
 
     n_samples_raw = payload.get("n_samples")
     n_samples = int(n_samples_raw) if isinstance(n_samples_raw, int) else None
+    prov = payload.get("provenance")
+    prov = prov if isinstance(prov, Mapping) else {}
+    device = str(payload.get("device") or prov.get("device") or "").strip().lower()
 
     return AxisEvidence(
         axis=axis,
@@ -296,6 +328,22 @@ def parse_axis_evidence(eval_json_path: Path, axis: str) -> AxisEvidence:
         evidence_tag=tag,
         hardware_substrate=hardware,
         n_samples=n_samples,
+        archive_size_bytes=_extract_archive_size_bytes(payload),
+        device=device,
+        score_axis=str(payload.get("score_axis") or prov.get("score_axis") or "").strip().lower(),
+        score_claim_valid=(
+            payload.get("score_claim_valid")
+            if isinstance(payload.get("score_claim_valid"), bool)
+            else None
+        ),
+        exact_cuda_eval_complete=(
+            payload.get("exact_cuda_eval_complete")
+            if isinstance(payload.get("exact_cuda_eval_complete"), bool)
+            else None
+        ),
+        evidence_semantics=str(
+            payload.get("evidence_semantics") or prov.get("evidence_semantics") or ""
+        ).strip().lower(),
         raw_payload=dict(payload),
     )
 
@@ -346,6 +394,46 @@ def _verify_axis_compliance(evidence: AxisEvidence) -> list[str]:
             f"hardware_not_contest_compliant:{evidence.hardware_substrate!r} "
             f"not in {sorted(allowed)} for {evidence.evidence_tag!r}"
         )
+    if evidence.n_samples != 600:
+        blockers.append(
+            f"sample_count_not_600:axis={evidence.axis} n_samples={evidence.n_samples!r}"
+        )
+    if evidence.score_claim_valid is not True:
+        blockers.append(
+            f"score_claim_invalid:axis={evidence.axis} "
+            f"score_claim_valid={evidence.score_claim_valid!r}"
+        )
+    if evidence.axis == "cpu":
+        if evidence.device and evidence.device != "cpu":
+            blockers.append(
+                f"axis_device_mismatch:axis=cpu device={evidence.device!r}"
+            )
+        if evidence.score_axis and evidence.score_axis not in {
+            "contest_cpu",
+            "contest-cpu",
+            "contest_cpu_gha",
+            "contest-cpu-gha",
+        }:
+            blockers.append(
+                f"axis_stamp_missing:axis=cpu score_axis={evidence.score_axis!r}"
+            )
+    elif evidence.axis == "cuda":
+        if evidence.device and evidence.device != "cuda":
+            blockers.append(
+                f"axis_device_mismatch:axis=cuda device={evidence.device!r}"
+            )
+        if evidence.score_axis != "contest_cuda":
+            blockers.append(
+                f"axis_stamp_missing:axis=cuda score_axis={evidence.score_axis!r}"
+            )
+        exact_stamp = (
+            evidence.exact_cuda_eval_complete is True
+            or evidence.evidence_semantics == "contest_cuda_exact_auth_eval"
+        )
+        if not exact_stamp:
+            blockers.append(
+                "axis_stamp_missing:axis=cuda exact_cuda_eval_complete/evidence_semantics"
+            )
 
     return blockers
 
@@ -362,6 +450,15 @@ def _verify_axis_pair(
         blockers.append(
             f"archive_sha256_mismatch:cpu={cpu.archive_sha256[:12]!r} "
             f"cuda={cuda.archive_sha256[:12]!r}"
+        )
+    if (
+        cpu.archive_size_bytes is not None
+        and cuda.archive_size_bytes is not None
+        and cpu.archive_size_bytes != cuda.archive_size_bytes
+    ):
+        blockers.append(
+            f"archive_size_mismatch:cpu={cpu.archive_size_bytes} "
+            f"cuda={cuda.archive_size_bytes}"
         )
 
     diff = abs(cpu.score_value - cuda.score_value)
@@ -459,7 +556,11 @@ def build_integrity_manifest(
                 "evidence_tag": cpu.evidence_tag,
                 "hardware_substrate": cpu.hardware_substrate,
                 "archive_sha256": cpu.archive_sha256,
+                "archive_size_bytes": cpu.archive_size_bytes,
                 "n_samples": cpu.n_samples,
+                "device": cpu.device,
+                "score_axis": cpu.score_axis,
+                "score_claim_valid": cpu.score_claim_valid,
             },
             "cuda": {
                 "eval_json_path": str(cuda.eval_json_path),
@@ -467,7 +568,13 @@ def build_integrity_manifest(
                 "evidence_tag": cuda.evidence_tag,
                 "hardware_substrate": cuda.hardware_substrate,
                 "archive_sha256": cuda.archive_sha256,
+                "archive_size_bytes": cuda.archive_size_bytes,
                 "n_samples": cuda.n_samples,
+                "device": cuda.device,
+                "score_axis": cuda.score_axis,
+                "score_claim_valid": cuda.score_claim_valid,
+                "exact_cuda_eval_complete": cuda.exact_cuda_eval_complete,
+                "evidence_semantics": cuda.evidence_semantics,
             },
         },
         "cpu_cuda_score_diff": abs(cpu.score_value - cuda.score_value),
@@ -566,6 +673,13 @@ def promote_archive(
             f"cpu_eval_sha={cpu.archive_sha256[:12]} or "
             f"cuda_eval_sha={cuda.archive_sha256[:12]}",
         )
+    for axis_name, evidence in (("cpu", cpu), ("cuda", cuda)):
+        if evidence.archive_size_bytes is not None and evidence.archive_size_bytes != archive_bytes:
+            raise FrontierPromotionRefused(
+                "archive_size_mismatch",
+                f"{axis_name} eval archive_size_bytes={evidence.archive_size_bytes} "
+                f"does not match archive bytes={archive_bytes}",
+            )
 
     # 5. Materialize target dir and copy bytes.
     target_resolved.mkdir(parents=True, exist_ok=True)

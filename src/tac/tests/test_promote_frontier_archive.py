@@ -69,6 +69,8 @@ def _cpu_eval_payload(*, sha256: str, score: float = 0.193) -> dict[str, Any]:
         "hardware": "github-actions-ubuntu-latest-x86_64",
         "lane_tag": "[contest-CPU GHA Linux x86_64]",
         "evidence_grade": "contest-CPU-1to1",
+        "score_axis": "contest_cpu",
+        "score_claim_valid": True,
     }
 
 
@@ -82,6 +84,10 @@ def _cuda_eval_payload(*, sha256: str, score: float = 0.226) -> dict[str, Any]:
         "hardware": "Tesla T4 (Vast.ai)",
         "lane_tag": "[contest-CUDA]",
         "evidence_grade": "contest-CUDA",
+        "score_axis": "contest_cuda",
+        "score_claim_valid": True,
+        "exact_cuda_eval_complete": True,
+        "evidence_semantics": "contest_cuda_exact_auth_eval",
     }
 
 
@@ -95,9 +101,13 @@ def stage(tmp_path: Path):
     inflate_sh = src / "inflate.sh"
     _write_inflate_sh(inflate_sh)
     cpu_path = src / "contest_auth_eval.cpu.json"
-    cpu_path.write_text(json.dumps(_cpu_eval_payload(sha256=sha)), encoding="utf-8")
+    cpu_payload = _cpu_eval_payload(sha256=sha)
+    cpu_payload["archive_size_bytes"] = archive.stat().st_size
+    cpu_path.write_text(json.dumps(cpu_payload), encoding="utf-8")
     cuda_path = src / "contest_auth_eval.cuda.json"
-    cuda_path.write_text(json.dumps(_cuda_eval_payload(sha256=sha)), encoding="utf-8")
+    cuda_payload = _cuda_eval_payload(sha256=sha)
+    cuda_payload["archive_size_bytes"] = archive.stat().st_size
+    cuda_path.write_text(json.dumps(cuda_payload), encoding="utf-8")
 
     target = tmp_path / "submissions_frontier" / "test_label"
     return {
@@ -122,6 +132,10 @@ def test_parse_axis_evidence_cpu_payload(stage):
     assert ev.hardware_substrate == "linux_x86_64_gha_cpu"
     assert ev.archive_sha256 == stage["archive_sha256"]
     assert ev.n_samples == 600
+    assert ev.archive_size_bytes == stage["archive_path"].stat().st_size
+    assert ev.device == "cpu"
+    assert ev.score_axis == "contest_cpu"
+    assert ev.score_claim_valid is True
 
 
 def test_parse_axis_evidence_cuda_payload(stage):
@@ -129,6 +143,10 @@ def test_parse_axis_evidence_cuda_payload(stage):
     assert ev.axis == "cuda"
     assert ev.evidence_tag == "[contest-CUDA]"
     assert ev.hardware_substrate == "linux_x86_64_t4"
+    assert ev.device == "cuda"
+    assert ev.score_axis == "contest_cuda"
+    assert ev.score_claim_valid is True
+    assert ev.exact_cuda_eval_complete is True
 
 
 def test_parse_axis_evidence_4090_hardware(stage, tmp_path):
@@ -374,6 +392,78 @@ def test_refuses_on_hardware_not_contest_compliant(stage):
     assert excinfo.value.refusal_class == "hardware_not_contest_compliant"
 
 
+def test_refuses_on_incomplete_sample_count(stage):
+    payload = _cuda_eval_payload(sha256=stage["archive_sha256"])
+    payload["archive_size_bytes"] = stage["archive_path"].stat().st_size
+    payload["n_samples"] = 12
+    stage["cuda_eval_path"].write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(FrontierPromotionRefused) as excinfo:
+        promote_archive(
+            archive_path=stage["archive_path"],
+            inflate_sh_path=stage["inflate_sh"],
+            contest_cpu_eval_path=stage["cpu_eval_path"],
+            contest_cuda_eval_path=stage["cuda_eval_path"],
+            label="x",
+            target_dir=stage["target_dir"],
+            repo_root=stage["tmp_path"],
+        )
+    assert excinfo.value.refusal_class == "sample_count_not_600"
+
+
+def test_refuses_on_score_claim_invalid(stage):
+    payload = _cpu_eval_payload(sha256=stage["archive_sha256"])
+    payload["archive_size_bytes"] = stage["archive_path"].stat().st_size
+    payload["score_claim_valid"] = False
+    stage["cpu_eval_path"].write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(FrontierPromotionRefused) as excinfo:
+        promote_archive(
+            archive_path=stage["archive_path"],
+            inflate_sh_path=stage["inflate_sh"],
+            contest_cpu_eval_path=stage["cpu_eval_path"],
+            contest_cuda_eval_path=stage["cuda_eval_path"],
+            label="x",
+            target_dir=stage["target_dir"],
+            repo_root=stage["tmp_path"],
+        )
+    assert excinfo.value.refusal_class == "score_claim_invalid"
+
+
+def test_refuses_on_cuda_missing_exact_stamp(stage):
+    payload = _cuda_eval_payload(sha256=stage["archive_sha256"])
+    payload["archive_size_bytes"] = stage["archive_path"].stat().st_size
+    payload.pop("exact_cuda_eval_complete")
+    payload.pop("evidence_semantics")
+    stage["cuda_eval_path"].write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(FrontierPromotionRefused) as excinfo:
+        promote_archive(
+            archive_path=stage["archive_path"],
+            inflate_sh_path=stage["inflate_sh"],
+            contest_cpu_eval_path=stage["cpu_eval_path"],
+            contest_cuda_eval_path=stage["cuda_eval_path"],
+            label="x",
+            target_dir=stage["target_dir"],
+            repo_root=stage["tmp_path"],
+        )
+    assert excinfo.value.refusal_class == "axis_stamp_missing"
+
+
+def test_refuses_on_archive_size_mismatch(stage):
+    payload = _cpu_eval_payload(sha256=stage["archive_sha256"])
+    payload["archive_size_bytes"] = stage["archive_path"].stat().st_size + 1
+    stage["cpu_eval_path"].write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(FrontierPromotionRefused) as excinfo:
+        promote_archive(
+            archive_path=stage["archive_path"],
+            inflate_sh_path=stage["inflate_sh"],
+            contest_cpu_eval_path=stage["cpu_eval_path"],
+            contest_cuda_eval_path=stage["cuda_eval_path"],
+            label="x",
+            target_dir=stage["target_dir"],
+            repo_root=stage["tmp_path"],
+        )
+    assert excinfo.value.refusal_class == "archive_size_mismatch"
+
+
 def test_refuses_on_target_dir_outside_repo(stage, tmp_path):
     """Refuse if target dir resolves outside the declared repo root."""
     other_root = tmp_path / "other_repo"
@@ -429,6 +519,7 @@ def test_axis_score_diff_above_noise_blocks(stage):
     """If CPU and CUDA scores differ by > noise_floor, refuse with axis_score_diff."""
     payload = _cpu_eval_payload(sha256=stage["archive_sha256"])
     payload["canonical_score_recomputed"] = 0.05  # CUDA stays at 0.226 → diff 0.176
+    payload["archive_size_bytes"] = stage["archive_path"].stat().st_size
     stage["cpu_eval_path"].write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(FrontierPromotionRefused) as excinfo:
         promote_archive(
