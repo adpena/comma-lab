@@ -87,6 +87,12 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
+
+# Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14).
+from tac.training_optimization import (
+    autocast_aware_forward as _autocast_aware_forward,
+    compile_with_fallback as _compile_with_fallback,
+)
 from tac.substrates.pr101_lc_v2_clone import (
     EnhancedCurriculumConfig,
     Pr101LcV2CloneConfig,
@@ -285,6 +291,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "--enable-torch-compile",
         action="store_true",
         help="Wrap renderer with torch.compile / Inductor (Catalog #179).",
+    )
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        action="store_true",
+        default=False,
+        help=(
+            "RESERVED: pre-compute GT scorer outputs once and reuse across "
+            "hot loop (O1, ~50%% scorer compute savings). Wire-in pending "
+            "per-substrate score_aware_loss API extension; currently "
+            "parsed-but-not-yet-consumed."
+        ),
     )
 
     # Full-CPU validation gate (Catalog #197 / E8) — opt-in for production
@@ -661,19 +678,25 @@ def _train_smoke_loop(
                     requires_grad=False,
                 )
                 z.requires_grad_(True)
-                rgb_pair = substrate(z) / 255.0  # [B, 2, 3, H, W] in [0, 1]
-                gt_0 = batch_pairs[:, 0].to(device) / 255.0
-                gt_1 = batch_pairs[:, 1].to(device) / 255.0
-                archive_bytes_proxy = torch.tensor(
-                    150_000.0, device=device
-                )
-                loss, parts = loss_fn(
-                    rgb_pair[:, 0],
-                    rgb_pair[:, 1],
-                    gt_0,
-                    gt_1,
-                    archive_bytes_proxy,
-                )
+                # Tier-1 O2: autocast wrap (no-op when flag=False).
+                with _autocast_aware_forward(
+                    enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                    dtype=torch.float16,
+                    device=device,
+                ):
+                    rgb_pair = substrate(z) / 255.0  # [B, 2, 3, H, W] in [0, 1]
+                    gt_0 = batch_pairs[:, 0].to(device) / 255.0
+                    gt_1 = batch_pairs[:, 1].to(device) / 255.0
+                    archive_bytes_proxy = torch.tensor(
+                        150_000.0, device=device
+                    )
+                    loss, parts = loss_fn(
+                        rgb_pair[:, 0],
+                        rgb_pair[:, 1],
+                        gt_0,
+                        gt_1,
+                        archive_bytes_proxy,
+                    )
 
                 # E4 WSD LR adjustment if enabled.
                 if enhanced_cfg.enable_wsd_lr_schedule:
@@ -854,6 +877,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # Build the substrate + curriculum.
     substrate = Pr101LcV2CloneSubstrate(Pr101LcV2CloneConfig()).to(device)
+    # Tier-1 O3: torch.compile wrap (no-op when flag=False).
+    substrate = _compile_with_fallback(
+        substrate,
+        enabled=bool(getattr(args, "enable_torch_compile", False)),
+        mode="default",
+        fallback_on_error=True,
+    )
     if args.curriculum == "pr95_faithful":
         if args.smoke:
             stage_epochs = _smoke_stage_epoch_overrides(args)

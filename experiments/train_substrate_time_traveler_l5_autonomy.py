@@ -137,6 +137,12 @@ from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 
+# Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14).
+from tac.training_optimization import (
+    autocast_aware_forward as _autocast_aware_forward,
+    compile_with_fallback as _compile_with_fallback,
+)
+
 # ---------------------------------------------------------------------------
 # Module paths + constants
 # ---------------------------------------------------------------------------
@@ -328,9 +334,16 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-auth-eval", action="store_true")
     p.add_argument("--skip-archive-build", action="store_true")
     p.add_argument("--enable-autocast-fp16", action="store_true",
-                   help="Catalog #172; deferred until canonical autocast wraps land.")
+                   help="Catalog #172; opt-in via canonical autocast_aware_forward.")
     p.add_argument("--enable-tf32", action="store_true",
                    help="Catalog #178; deferred until paired CPU/CUDA anchor lands.")
+    p.add_argument("--enable-torch-compile", action="store_true",
+                   default=False,
+                   help="Catalog #179; wrap substrate model with torch.compile.")
+    p.add_argument("--enable-gt-scorer-cache", action="store_true",
+                   default=False,
+                   help=("RESERVED (O1): GT-scorer-output cache; wire-in "
+                         "pending per-substrate score_aware_loss API extension."))
     return p
 
 
@@ -862,6 +875,13 @@ def _full_main(args: argparse.Namespace) -> int:
             output_width=EVAL_HW[1],
         )
         substrate = TimeTravelerSubstrate(cfg).to(device)
+        # Tier-1 O3: torch.compile wrap (no-op when flag=False).
+        substrate = _compile_with_fallback(
+            substrate,
+            enabled=bool(getattr(args, "enable_torch_compile", False)),
+            mode="default",
+            fallback_on_error=True,
+        )
         n_params = substrate.parameter_count()
         wm_bytes = substrate.estimate_world_model_bytes()
         print(
@@ -992,37 +1012,43 @@ def _full_main(args: argparse.Namespace) -> int:
                 if not batch_indices:
                     continue
 
-                # Render each pair; collect into a batch tensor.
-                rgb_0_list = []
-                rgb_1_list = []
-                gt_0_list = []
-                gt_1_list = []
-                residual_list = []
-                for pair_idx in batch_indices:
-                    rgb_0, rgb_1 = substrate.render_pair(pair_idx)
-                    rgb_0_list.append(rgb_0 * 255.0)
-                    rgb_1_list.append(rgb_1 * 255.0)
-                    gt_0_list.append(gt_pair_tensor[pair_idx, 0:1])
-                    gt_1_list.append(gt_pair_tensor[pair_idx, 1:2])
-                    residual_list.append(per_pair_side_info_float[pair_idx])
-
-                pred_a = torch.cat(rgb_0_list, dim=0)
-                pred_b = torch.cat(rgb_1_list, dim=0)
-                gt_a = torch.cat(gt_0_list, dim=0)
-                gt_b = torch.cat(gt_1_list, dim=0)
-                residual_batch = torch.stack(residual_list, dim=0)
-
-                # Closed-form rate proxy: world-model bytes + per-pair budget.
-                archive_bytes_proxy = torch.tensor(
-                    float(wm_bytes + n_pairs * args.per_pair_side_info_bytes),
+                # Tier-1 O2: autocast wrap (no-op when flag=False).
+                with _autocast_aware_forward(
+                    enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                    dtype=torch.float16,
                     device=device,
-                )
+                ):
+                    # Render each pair; collect into a batch tensor.
+                    rgb_0_list = []
+                    rgb_1_list = []
+                    gt_0_list = []
+                    gt_1_list = []
+                    residual_list = []
+                    for pair_idx in batch_indices:
+                        rgb_0, rgb_1 = substrate.render_pair(pair_idx)
+                        rgb_0_list.append(rgb_0 * 255.0)
+                        rgb_1_list.append(rgb_1 * 255.0)
+                        gt_0_list.append(gt_pair_tensor[pair_idx, 0:1])
+                        gt_1_list.append(gt_pair_tensor[pair_idx, 1:2])
+                        residual_list.append(per_pair_side_info_float[pair_idx])
 
-                loss, parts = loss_fn(
-                    pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
-                    predictive_residual=residual_batch,
-                    apply_eval_roundtrip=True, noise_std=args.noise_std,
-                )
+                    pred_a = torch.cat(rgb_0_list, dim=0)
+                    pred_b = torch.cat(rgb_1_list, dim=0)
+                    gt_a = torch.cat(gt_0_list, dim=0)
+                    gt_b = torch.cat(gt_1_list, dim=0)
+                    residual_batch = torch.stack(residual_list, dim=0)
+
+                    # Closed-form rate proxy: world-model bytes + per-pair budget.
+                    archive_bytes_proxy = torch.tensor(
+                        float(wm_bytes + n_pairs * args.per_pair_side_info_bytes),
+                        device=device,
+                    )
+
+                    loss, parts = loss_fn(
+                        pred_a, pred_b, gt_a, gt_b, archive_bytes_proxy,
+                        predictive_residual=residual_batch,
+                        apply_eval_roundtrip=True, noise_std=args.noise_std,
+                    )
 
                 if not torch.isfinite(loss):
                     nan_strike += 1

@@ -201,6 +201,15 @@ def build_argparser() -> argparse.ArgumentParser:
         action="store_true",
         help="Wrap the renderer with torch.compile (Inductor; Tier 2 engineering).",
     )
+    parser.add_argument(
+        "--enable-gt-scorer-cache",
+        action="store_true",
+        default=False,
+        help=(
+            "RESERVED (O1): GT-scorer-output cache; wire-in pending "
+            "per-substrate score_aware_loss API extension."
+        ),
+    )
     parser.add_argument("--smoke", action="store_true", help="Smoke path (CPU OK).")
     parser.add_argument(
         "--codebook-path",
@@ -1050,6 +1059,14 @@ def _full_main(args: argparse.Namespace) -> int:
             output_width=EVAL_HW[1],
         )
         renderer = DrivingPriorRenderer(renderer_cfg).to(device)
+        # Tier-1 O3: torch.compile wrap (no-op when flag=False).
+        from tac.training_optimization import compile_with_fallback as _compile_with_fallback
+        renderer = _compile_with_fallback(
+            renderer,
+            enabled=bool(getattr(args, "enable_torch_compile", False)),
+            mode="default",
+            fallback_on_error=True,
+        )
         ema = EMA(renderer, decay=args.ema_decay)
         _stage(f"ema_wired_decay_{args.ema_decay}")
 
@@ -1102,32 +1119,39 @@ def _full_main(args: argparse.Namespace) -> int:
             perm = train_indices[torch.randperm(n_train, device=device)]
             epoch_loss_sum = 0.0
             epoch_batches = 0
+            # Tier-1 O2: autocast wrap (no-op when flag=False).
+            from tac.training_optimization import autocast_aware_forward as _autocast_aware_forward
             for start in range(0, n_train, args.batch_size):
                 idx = perm[start : start + args.batch_size]
                 if idx.numel() == 0:
                     continue
-                # Render each pair separately and stack — DrivingPriorRenderer
-                # renders one pair at a time per its current API.
-                rgb_0_list: list[torch.Tensor] = []
-                rgb_1_list: list[torch.Tensor] = []
-                for pair_idx in idx.tolist():
-                    rgb_0_one, rgb_1_one = renderer.render_pair(int(pair_idx), n_pairs)
-                    rgb_0_list.append(rgb_0_one)
-                    rgb_1_list.append(rgb_1_one)
-                rgb_0 = torch.cat(rgb_0_list, dim=0) * 255.0  # to [0, 255] for scorer
-                rgb_1 = torch.cat(rgb_1_list, dim=0) * 255.0
-                gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
-                gt_0 = gt[:, 0]
-                gt_1 = gt[:, 1]
-                loss, _parts = loss_fn(
-                    rgb_0,
-                    rgb_1,
-                    gt_0,
-                    gt_1,
-                    archive_bytes_proxy,
-                    apply_eval_roundtrip=True,
-                    noise_std=args.noise_std,
-                )
+                with _autocast_aware_forward(
+                    enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                    dtype=torch.float16,
+                    device=device,
+                ):
+                    # Render each pair separately and stack — DrivingPriorRenderer
+                    # renders one pair at a time per its current API.
+                    rgb_0_list: list[torch.Tensor] = []
+                    rgb_1_list: list[torch.Tensor] = []
+                    for pair_idx in idx.tolist():
+                        rgb_0_one, rgb_1_one = renderer.render_pair(int(pair_idx), n_pairs)
+                        rgb_0_list.append(rgb_0_one)
+                        rgb_1_list.append(rgb_1_one)
+                    rgb_0 = torch.cat(rgb_0_list, dim=0) * 255.0  # to [0, 255] for scorer
+                    rgb_1 = torch.cat(rgb_1_list, dim=0) * 255.0
+                    gt = pair_tensor[idx]  # (B, 2, 3, H, W) in [0, 255]
+                    gt_0 = gt[:, 0]
+                    gt_1 = gt[:, 1]
+                    loss, _parts = loss_fn(
+                        rgb_0,
+                        rgb_1,
+                        gt_0,
+                        gt_1,
+                        archive_bytes_proxy,
+                        apply_eval_roundtrip=True,
+                        noise_std=args.noise_std,
+                    )
                 if not torch.isfinite(loss):
                     nan_strike += 1
                     print(

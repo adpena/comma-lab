@@ -114,6 +114,12 @@ from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
 
+# Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14).
+from tac.training_optimization import (
+    autocast_aware_forward as _autocast_aware_forward,
+    compile_with_fallback as _compile_with_fallback,
+)
+
 # ---------------------------------------------------------------------------
 # Module paths + constants
 # ---------------------------------------------------------------------------
@@ -446,6 +452,28 @@ def _build_parser() -> argparse.ArgumentParser:
         "--skip-archive-build",
         action="store_true",
         help="Skip building the archive.zip (e.g. for trainer-only smoke).",
+    )
+    # Tier-1 optimization CLI surface (TIER-1-OPT-BATCH 2026-05-14).
+    p.add_argument(
+        "--enable-autocast-fp16",
+        action="store_true",
+        default=False,
+        help="Wrap forward in torch.autocast(fp16) (Catalog #172; 1.5-2x speedup).",
+    )
+    p.add_argument(
+        "--enable-torch-compile",
+        action="store_true",
+        default=False,
+        help="Wrap substrate with torch.compile / Inductor (Catalog #179).",
+    )
+    p.add_argument(
+        "--enable-gt-scorer-cache",
+        action="store_true",
+        default=False,
+        help=(
+            "RESERVED (O1): GT-scorer-output cache; wire-in pending per-substrate "
+            "score_aware_loss API extension."
+        ),
     )
 
     return p
@@ -849,6 +877,13 @@ def _full_main(args: argparse.Namespace) -> int:
             output_width=EVAL_HW[1],
         )
         model = BalleRendererSubstrate(cfg).to(device)
+        # Tier-1 O3: torch.compile wrap (no-op when flag=False).
+        model = _compile_with_fallback(
+            model,
+            enabled=bool(getattr(args, "enable_torch_compile", False)),
+            mode="default",
+            fallback_on_error=True,
+        )
         print(f"[full] balle_renderer params: {model.num_parameters():,}")
         _stage("model_built")
 
@@ -903,21 +938,27 @@ def _full_main(args: argparse.Namespace) -> int:
                 idx = perm[start : start + batch_size]
                 if idx.numel() == 0:
                     continue
-                rgb_0, rgb_1, rate_components = model(idx)
-                # Frames live in [0,1]; the score-aware loss + eval-roundtrip
-                # expect [0, 255]. Multiply at the boundary so the substrate
-                # output is gradient-clean.
-                rgb_0_255 = rgb_0 * 255.0
-                rgb_1_255 = rgb_1 * 255.0
-                gt = pair_tensor[idx]  # (B, 2, 3, H, W) already in [0, 255]
-                gt_0 = gt[:, 0]
-                gt_1 = gt[:, 1]
-                loss, parts = loss_fn(
-                    rgb_0_255, rgb_1_255, gt_0, gt_1,
-                    archive_bytes_proxy, rate_components,
-                    apply_eval_roundtrip=True,
-                    noise_std=args.noise_std,
-                )
+                # Tier-1 O2: autocast wrap (no-op when flag=False).
+                with _autocast_aware_forward(
+                    enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                    dtype=torch.float16,
+                    device=device,
+                ):
+                    rgb_0, rgb_1, rate_components = model(idx)
+                    # Frames live in [0,1]; the score-aware loss + eval-roundtrip
+                    # expect [0, 255]. Multiply at the boundary so the substrate
+                    # output is gradient-clean.
+                    rgb_0_255 = rgb_0 * 255.0
+                    rgb_1_255 = rgb_1 * 255.0
+                    gt = pair_tensor[idx]  # (B, 2, 3, H, W) already in [0, 255]
+                    gt_0 = gt[:, 0]
+                    gt_1 = gt[:, 1]
+                    loss, parts = loss_fn(
+                        rgb_0_255, rgb_1_255, gt_0, gt_1,
+                        archive_bytes_proxy, rate_components,
+                        apply_eval_roundtrip=True,
+                        noise_std=args.noise_std,
+                    )
                 # NaN watchdog
                 if not torch.isfinite(loss):
                     nan_strike += 1
