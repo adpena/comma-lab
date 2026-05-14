@@ -64,10 +64,10 @@ HDM4_SPLIT_POINTS = (6, 9, 26, 28)
 HDM6_RECIPE_ID = 1
 HDM6_RECIPE_NAME = "hdm4_order_dp4_with_fixed_lgwin_tuning"
 HDM6_CHUNK_BROTLI_PARAMS = (
-    {"quality": 11, "lgwin": 18},
-    {"quality": 11, "lgwin": 16},
-    {"quality": 11, "lgwin": 16},
-    {"quality": 10, "lgwin": 16},
+    {"quality": 11, "lgwin": 18, "mode": brotli.MODE_GENERIC},
+    {"quality": 11, "lgwin": 16, "mode": brotli.MODE_GENERIC},
+    {"quality": 11, "lgwin": 16, "mode": brotli.MODE_GENERIC},
+    {"quality": 10, "lgwin": 16, "mode": brotli.MODE_GENERIC},
 )
 HDM5_SCHEMA_VERSION = 1
 
@@ -1306,11 +1306,12 @@ def encode_hdm6_q_brotli_tuned_fixture(
         q_stream = b"".join(record.q_zz_u8 for record in ordered_records[previous:split])
         quality = int(params["quality"])
         lgwin = int(params["lgwin"])
-        compressed = brotli.compress(q_stream, quality=quality, lgwin=lgwin)
+        mode = int(params.get("mode", brotli.MODE_GENERIC))
+        compressed = brotli.compress(q_stream, quality=quality, lgwin=lgwin, mode=mode)
         if len(compressed) > 0xFFFFFF:
             raise HnervDecoderRecodeError("HDM6 q Brotli chunk exceeds len24")
         compressed_parts.append(compressed)
-        params_by_chunk.append({"quality": quality, "lgwin": lgwin})
+        params_by_chunk.append({"quality": quality, "lgwin": lgwin, "mode": mode})
         previous = split
     scale_stream = parsed.scale_stream
     out = io.BytesIO()
@@ -1341,7 +1342,12 @@ def encode_hdm6_q_brotli_tuned_fixture(
             "objective": "minimize decoder section bytes including fixed runtime header",
             "quality_values_considered": list(range(12)),
             "lgwin_values_considered": list(range(10, 25)),
-            "mode_values_considered": ["generic", "text", "font"],
+            "mode_values_considered": [
+                {"name": "generic", "value": brotli.MODE_GENERIC},
+                {"name": "text", "value": brotli.MODE_TEXT},
+                {"name": "font", "value": brotli.MODE_FONT},
+            ],
+            "selected_mode_by_chunk": ["generic"] * len(params_by_chunk),
             "selected_by": "exhaustive_param_grid_probe_20260514",
             "baseline": "HDM4 recipe 1",
         },

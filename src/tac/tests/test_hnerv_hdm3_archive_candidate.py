@@ -217,10 +217,10 @@ def test_build_hdm6_archive_candidate_accepts_hdm4_source_and_saves_bytes(
     assert manifest["hdm4_stats"] == {}
     assert manifest["hdm6_stats"]["recipe_id"] == 1
     assert manifest["hdm6_stats"]["brotli_params_by_chunk"] == [
-        {"quality": 11, "lgwin": 18},
-        {"quality": 11, "lgwin": 16},
-        {"quality": 11, "lgwin": 16},
-        {"quality": 10, "lgwin": 16},
+        {"quality": 11, "lgwin": 18, "mode": brotli.MODE_GENERIC},
+        {"quality": 11, "lgwin": 16, "mode": brotli.MODE_GENERIC},
+        {"quality": 11, "lgwin": 16, "mode": brotli.MODE_GENERIC},
+        {"quality": 10, "lgwin": 16, "mode": brotli.MODE_GENERIC},
     ]
 
     candidate_archive = Path(manifest["candidate_archive_path"])

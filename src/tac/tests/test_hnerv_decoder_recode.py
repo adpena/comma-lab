@@ -279,11 +279,12 @@ def test_hdm6_tuned_q_brotli_fixture_roundtrips_with_fixed_recipe_params() -> No
     assert stats["recipe_id"] == 1
     assert stats["split_points"] == [6, 9, 26, 28]
     assert stats["brotli_params_by_chunk"] == [
-        {"quality": 11, "lgwin": 18},
-        {"quality": 11, "lgwin": 16},
-        {"quality": 11, "lgwin": 16},
-        {"quality": 10, "lgwin": 16},
+        {"quality": 11, "lgwin": 18, "mode": brotli.MODE_GENERIC},
+        {"quality": 11, "lgwin": 16, "mode": brotli.MODE_GENERIC},
+        {"quality": 11, "lgwin": 16, "mode": brotli.MODE_GENERIC},
+        {"quality": 10, "lgwin": 16, "mode": brotli.MODE_GENERIC},
     ]
+    assert stats["non_arbitrary_selection"]["selected_mode_by_chunk"] == ["generic"] * 4
     assert len(payload) == stats["header_bytes"] + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
 
 
