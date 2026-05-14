@@ -1,0 +1,61 @@
+Total: 42 anchors
+Dual-axis (ship-ready): 10
+Single-axis CPU-only: 1
+Single-axis CUDA-only: 21
+
+=== CUDA Pareto (top 15 by score) ===
+  score=0.206380  bytes= 186423  arch=hnerv_hlm1_fixed_latent_recode_exact_eval  sha=8801845d5099
+  score=0.206426  bytes= 186492  arch=hnerv_hdm4_q_brotli_split_exact_eval  sha=218ae16f3f13
+  score=0.206508  bytes= 186615  arch=pr106_r2_lowlevel_hdm3_sidecar_pr101_runtime_exact  sha=8cc7e3b21a5f
+  score=0.206517  bytes= 186629  arch=pr106_r2_pr101_grammar_lowlevel_repack_151b_cuda  sha=287e6edc6128
+  score=0.206618  bytes= 186780  arch=lane_pr106_latent_sidecar_r2_pr101_grammar  sha=c48631e11a9b
+  score=0.206634  bytes= 186832  arch=lane_c3_residual_pr106_sidecar_dispatch_ready  sha=eafb1a027f70
+  score=0.206634  bytes= 186832  arch=lane_wavelet_residual_pr106_sidecar_dispatch_ready  sha=ed90a2250e94
+  score=0.206634  bytes= 186832  arch=lane_c3_residual_pr106_sidecar_l2_sparse_aware_dis  sha=8e61ff2d5a42
+  score=0.206634  bytes= 186832  arch=lane_cool_chic_residual_pr106_sidecar_dispatch_rea  sha=d48600da99ba
+  score=0.206634  bytes= 186832  arch=lane_coord_mlp_residual_pr106_sidecar_dispatch_rea  sha=01df6f12e562
+  score=0.206634  bytes= 186832  arch=lane_siren_residual_pr106_sidecar_dispatch_ready  sha=f373b308b080
+  score=0.206646  bytes= 186822  arch=lane_pr106_latent_sidecar_r2  sha=7f926bc3e213
+  score=0.207394  bytes= 186808  arch=lane_pr106_latent_sidecar_r1  sha=947b85e8a69d
+  score=0.208983  bytes= 185578  arch=pr103_on_pr106  sha=ec0890c2d231
+  score=0.209365  bytes= 186088  arch=pr106_quantization_sweep  sha=626b1c76d318
+
+=== CPU Pareto (top 15 by score) ===
+  score=0.192848  bytes= 178262  arch=hnerv_ft_microcodec  sha=87ec7ca5f2f3
+  score=0.227827  bytes= 186423  arch=unknown__hnerv_hlm1_fixed_latent_recode_modal_cpu_  sha=8801845d5099
+  score=0.227875  bytes= 186492  arch=unknown__pr106_r2_lowlevel_hdm4_cpu_20260513T09525  sha=218ae16f3f13
+  score=0.227964  bytes= 186629  arch=pr101_lossy_coarsening  sha=287e6edc6128
+  score=0.228066  bytes= 186780  arch=lane_pr106_latent_sidecar_r2_pr101_grammar  sha=c48631e11a9b
+  score=0.228092  bytes= 186822  arch=lane_pr106_latent_sidecar_r2  sha=7f926bc3e213
+  score=0.228102  bytes= 186832  arch=lane_c3_residual_pr106_sidecar_dispatch_ready  sha=eafb1a027f70
+  score=0.228102  bytes= 186832  arch=lane_wavelet_residual_pr106_sidecar_dispatch_ready  sha=ed90a2250e94
+  score=0.228680  bytes= 186808  arch=lane_pr106_latent_sidecar_r1  sha=947b85e8a69d
+  score=0.229666  bytes= 185578  arch=pr103_on_pr106  sha=ec0890c2d231
+  score=1.037583  bytes= 694074  arch=unknown__contest_cpu_eval-lane_g_v3-25772267506  sha=9b20bdfca246
+
+=== Dual-axis (ship-ready) details ===
+  arch=hnerv_ft_microcodec                         bytes= 178262  CPU=0.192848  CUDA=0.226352  gap=+0.0335
+  arch=lane_pr106_latent_sidecar_r2_pr101_gramm    bytes= 186780  CPU=0.228066  CUDA=0.206618  gap=-0.0214
+  arch=lane_c3_residual_pr106_sidecar_dispatch_    bytes= 186832  CPU=0.228102  CUDA=0.206634  gap=-0.0215
+  arch=lane_wavelet_residual_pr106_sidecar_disp    bytes= 186832  CPU=0.228102  CUDA=0.206634  gap=-0.0215
+  arch=pr103_on_pr106                              bytes= 185578  CPU=0.229666  CUDA=0.208983  gap=-0.0207
+  arch=lane_pr106_latent_sidecar_r1                bytes= 186808  CPU=0.228680  CUDA=0.207394  gap=-0.0213
+  arch=lane_pr106_latent_sidecar_r2                bytes= 186822  CPU=0.228092  CUDA=0.206646  gap=-0.0214
+  arch=pr106_r2_pr101_grammar_lowlevel_repack_1    bytes= 186629  CPU=0.227964  CUDA=0.206517  gap=-0.0214
+  arch=hnerv_hdm4_q_brotli_split_exact_eval        bytes= 186492  CPU=0.227875  CUDA=0.206426  gap=-0.0214
+  arch=hnerv_hlm1_fixed_latent_recode_exact_eva    bytes= 186423  CPU=0.227827  CUDA=0.206380  gap=-0.0214
+
+=== Single-axis CUDA-only (need CPU pairing per CLAUDE.md ship-rule) ===
+  score=0.206508  bytes= 186615  arch=pr106_r2_lowlevel_hdm3_sidecar_pr101_runtime_exact  sha=8cc7e3b21a5f
+  score=0.206634  bytes= 186832  arch=lane_c3_residual_pr106_sidecar_l2_sparse_aware_dis  sha=8e61ff2d5a42
+  score=0.206634  bytes= 186832  arch=lane_cool_chic_residual_pr106_sidecar_dispatch_rea  sha=d48600da99ba
+  score=0.206634  bytes= 186832  arch=lane_coord_mlp_residual_pr106_sidecar_dispatch_rea  sha=01df6f12e562
+  score=0.206634  bytes= 186832  arch=lane_siren_residual_pr106_sidecar_dispatch_ready  sha=f373b308b080
+  score=0.209365  bytes= 186088  arch=pr106_quantization_sweep  sha=626b1c76d318
+  score=0.226503  bytes= 178258  arch=pr101_lossy_coarsening  sha=b83bf3488625
+  score=0.226560  bytes= 178279  arch=unknown__eval_work  sha=f220be035067
+  score=0.227767  bytes= 178207  arch=pr103_arithmetic_coding  sha=8460014d7085
+  score=0.227770  bytes= 178211  arch=pr103_arithmetic_coding  sha=578c8f4e86ea
+
+=== Single-axis CPU-only (need CUDA pairing per CLAUDE.md ship-rule) ===
+  score=1.037583  bytes= 694074  arch=unknown__contest_cpu_eval-lane_g_v3-25772267506  sha=9b20bdfca246

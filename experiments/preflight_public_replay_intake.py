@@ -53,6 +53,7 @@ SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE = re.compile(
     r"\s*\(\s*([rubfRUBF]*[\"'])(?P<payload>.{65536,}?)(?<!\\)\1",
     re.DOTALL,
 )
+RUNTIME_HYGIENE_FILE_NAMES = frozenset({".gitignore"})
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -234,10 +235,10 @@ def _runtime_source_payload_scan(
             if not path.is_file():
                 continue
             rel = path.relative_to(root).as_posix()
+            if path.name in RUNTIME_HYGIENE_FILE_NAMES or "__pycache__" in Path(rel).parts:
+                continue
             if any(part.startswith(".") or part.startswith("._") for part in Path(rel).parts):
                 violations.append(f"hidden runtime file: {root_label}/{rel}")
-                continue
-            if "__pycache__" in Path(rel).parts:
                 continue
             if path.suffix.lower() not in {".py", ".sh"}:
                 continue

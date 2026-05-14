@@ -829,6 +829,21 @@ def _terminal_claim_coverage_from_jsonl(evidence_path: Path) -> set[tuple[str, s
     return coverage
 
 
+_TERMINAL_DISPATCH_STATUS_PREFIXES = (
+    "completed",
+    "failed_",
+    "refused_dispatch",
+    "stopped_",
+    "stale_superseded",
+    "cancelled",
+    "preempted",
+)
+
+
+def _is_terminal_dispatch_status(status: str) -> bool:
+    return any(status.startswith(prefix) for prefix in _TERMINAL_DISPATCH_STATUS_PREFIXES)
+
+
 def _terminal_substrate_claims_missing_evidence(
     claim_rows: list[dict[str, str]],
     evidence_coverage: set[tuple[str, str, str]],
@@ -846,7 +861,7 @@ def _terminal_substrate_claims_missing_evidence(
             continue
         if platform != "modal":
             continue
-        if not status.startswith("failed_"):
+        if not _is_terminal_dispatch_status(status):
             continue
         if not (
             "substrate_" in job_id

@@ -275,6 +275,39 @@ def test_terminal_substrate_claims_require_exact_job_status_coverage() -> None:
     assert module._terminal_substrate_claims_missing_evidence(rows, exact) == []
 
 
+def test_terminal_substrate_claims_missing_evidence_detects_refused_dispatch() -> None:
+    module = _load_all_lanes_module()
+    rows = [
+        {
+            "timestamp_utc": "2026-05-13T20:59:07Z",
+            "platform": "modal",
+            "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+            "instance_job_id": "pending_smoke_t4",
+            "status": "refused_dispatch_operator_authorize_yN_gate_not_bypassable_from_subprocess",
+        }
+    ]
+
+    missing = module._terminal_substrate_claims_missing_evidence(rows, set())
+
+    assert missing
+    assert "refused_dispatch_operator_authorize_yN_gate_not_bypassable_from_subprocess" in missing[0]
+
+
+def test_terminal_substrate_claims_ignores_nonterminal_smoke_dispatched() -> None:
+    module = _load_all_lanes_module()
+    rows = [
+        {
+            "timestamp_utc": "2026-05-13T20:55:45Z",
+            "platform": "modal",
+            "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+            "instance_job_id": "pending_smoke_t4",
+            "status": "smoke_dispatched",
+        }
+    ]
+
+    assert module._terminal_substrate_claims_missing_evidence(rows, set()) == []
+
+
 def test_terminal_claim_coverage_from_jsonl_reads_exact_claims(tmp_path: Path) -> None:
     module = _load_all_lanes_module()
     evidence = tmp_path / "evidence.jsonl"

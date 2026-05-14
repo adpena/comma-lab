@@ -13,6 +13,11 @@ from pathlib import Path
 import brotli
 
 from tac.hnerv_lowlevel_packer import sha256_bytes, write_stored_single_member_zip
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_FORMAT_BROTLI,
+    PR106SidecarPacket,
+    emit_pr106_sidecar_packet,
+)
 from tac.repo_io import json_text
 
 REPO = Path(__file__).resolve().parents[3]
@@ -298,6 +303,86 @@ def test_lowlevel_exact_eval_packet_records_operator_approval_without_dispatch(
     assert "operator exact-CUDA approval" not in report
 
 
+def test_lowlevel_exact_eval_packet_copies_valid_auth_eval_and_clears_eval_blockers(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path)
+    auth_eval = tmp_path / "contest_auth_eval.json"
+    archive_bytes = fixture["candidate_archive"].stat().st_size
+    seg = 0.0001
+    pose = 0.0002
+    rate = archive_bytes / 37_545_489
+    score = 100.0 * seg + (10.0 * pose) ** 0.5 + 25.0 * rate
+    auth_eval.write_text(
+        json_text(
+            {
+                "provenance": {
+                    "archive_sha256": fixture["candidate_archive_sha256"],
+                    "archive_size_bytes": archive_bytes,
+                    "device": "cuda",
+                    "gpu_model": "Tesla T4",
+                    "gpu_t4_match": True,
+                },
+                "archive_size_bytes": archive_bytes,
+                "score_claim_valid": True,
+                "exact_cuda_eval_complete": True,
+                "lane_tag": "[contest-CUDA]",
+                "score_axis": "contest_cuda",
+                "score_recomputed_from_components": score,
+                "canonical_score": score,
+                "canonical_score_source": "score_recomputed_from_components",
+                "final_score": round(score, 2),
+                "avg_segnet_dist": seg,
+                "avg_posenet_dist": pose,
+                "rate_unscaled": rate,
+                "n_samples": 600,
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_dir = tmp_path / "auth_eval_packet"
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--auth-eval-json",
+            str(auth_eval),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(result_dir / "release_surface"),
+            "--now-utc",
+            "2026-05-07T12:00:00Z",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["static_packet_ready"] is True
+    assert packet["auth_eval"]["valid_exact_cuda_candidate_eval"] is True
+    assert packet["score_blockers"] == ["operator_score_claim_review_not_done"]
+    release_auth_eval = result_dir / "release_surface" / "contest_auth_eval.json"
+    assert release_auth_eval.is_file()
+    assert _sha256(release_auth_eval) == _sha256(auth_eval)
+    release_manifest = json.loads(
+        (result_dir / "release_surface" / "archive_manifest.json").read_text(encoding="utf-8")
+    )
+    assert release_manifest["auth_eval"]["valid_exact_cuda_candidate_eval"] is True
+    assert release_manifest["contest_auth_eval"]["exists"] is True
+    report = (result_dir / "release_surface" / "report.txt").read_text(encoding="utf-8")
+    assert "exact_cuda_eval_complete: true" in report
+    assert f"exact_cuda_score: {score}" in report
+
+
 def test_lowlevel_exact_eval_packet_surfaces_terminal_env_refusal_as_audit(
     tmp_path: Path,
     monkeypatch,
@@ -441,7 +526,57 @@ def test_lowlevel_exact_eval_packet_accepts_public_pr106_member_name(tmp_path: P
     assert release_manifest["archive"]["path"] == "archive.zip"
 
 
-def _write_lowlevel_fixture(root: Path, *, member_name: str = "x") -> dict[str, object]:
+def test_lowlevel_exact_eval_packet_accepts_pr106_sidecar_wrapper_payload(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path, member_name="0.bin", sidecar_wrapper=True)
+    result_dir = tmp_path / "pr106_sidecar_packet"
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(result_dir / "release_surface"),
+            "--lane-id",
+            "pr106_sidecar_fixture",
+            "--job-name",
+            "exact_eval_pr106_sidecar_fixture",
+            "--claims-path",
+            str(tmp_path / "claims.md"),
+            "--now-utc",
+            "2026-05-13T12:00:00Z",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["static_packet_ready"] is True
+    assert packet["static_blockers"] == []
+    assert packet["archive_identity"]["sha256"] == fixture["candidate_archive_sha256"]
+    assert packet["kkt_proof"]["status"] == "passed"
+    release_surface = result_dir / "release_surface"
+    assert _sha256(release_surface / "archive.zip") == fixture["candidate_archive_sha256"]
+    public_preflight = json.loads((result_dir / "public_replay_preflight.json").read_text(encoding="utf-8"))
+    assert public_preflight["ready_for_exact_eval_dispatch"] is True
+
+
+def _write_lowlevel_fixture(
+    root: Path,
+    *,
+    member_name: str = "x",
+    sidecar_wrapper: bool = False,
+) -> dict[str, object]:
     source_decoder_raw = (b"decoder-record-" * 3000) + b"source"
     latent_raw = b"latent-row-" * 2000
     source_decoder = brotli.compress(source_decoder_raw, quality=1)
@@ -450,8 +585,27 @@ def _write_lowlevel_fixture(root: Path, *, member_name: str = "x") -> dict[str, 
         candidate_decoder = brotli.compress(source_decoder_raw, quality=10, lgblock=16)
     assert len(candidate_decoder) < len(source_decoder)
     latents = brotli.compress(latent_raw, quality=5)
-    source_payload = _packed_payload(source_decoder, latents)
-    candidate_payload = _packed_payload(candidate_decoder, latents)
+    source_inner_payload = _packed_payload(source_decoder, latents)
+    candidate_inner_payload = _packed_payload(candidate_decoder, latents)
+    if sidecar_wrapper:
+        sidecar_payload = brotli.compress(b"fixture-sidecar-payload", quality=5)
+        source_payload = emit_pr106_sidecar_packet(
+            PR106SidecarPacket(
+                format_id=PR106_SIDECAR_FORMAT_BROTLI,
+                pr106_bytes=source_inner_payload,
+                sidecar_payload=sidecar_payload,
+            )
+        )
+        candidate_payload = emit_pr106_sidecar_packet(
+            PR106SidecarPacket(
+                format_id=PR106_SIDECAR_FORMAT_BROTLI,
+                pr106_bytes=candidate_inner_payload,
+                sidecar_payload=sidecar_payload,
+            )
+        )
+    else:
+        source_payload = source_inner_payload
+        candidate_payload = candidate_inner_payload
 
     source_archive = root / "source.zip"
     candidate_archive = root / "candidate.zip"
@@ -471,6 +625,8 @@ def _write_lowlevel_fixture(root: Path, *, member_name: str = "x") -> dict[str, 
         source_payload,
         candidate_payload,
         member_name=member_name,
+        source_inner_payload=source_inner_payload,
+        candidate_inner_payload=candidate_inner_payload,
     )
     result_json.write_text(json_text(result), encoding="utf-8")
     return {
@@ -518,15 +674,19 @@ def _candidate_result(
     candidate_payload: bytes,
     *,
     member_name: str,
+    source_inner_payload: bytes | None = None,
+    candidate_inner_payload: bytes | None = None,
 ) -> dict:
-    source_decoder_len = int.from_bytes(source_payload[1:4], "little")
-    candidate_decoder_len = int.from_bytes(candidate_payload[1:4], "little")
-    source_header = source_payload[:4]
-    candidate_header = candidate_payload[:4]
-    source_decoder = source_payload[4 : 4 + source_decoder_len]
-    candidate_decoder = candidate_payload[4 : 4 + candidate_decoder_len]
-    source_latents = source_payload[4 + source_decoder_len :]
-    candidate_latents = candidate_payload[4 + candidate_decoder_len :]
+    source_hnerv_payload = source_inner_payload or source_payload
+    candidate_hnerv_payload = candidate_inner_payload or candidate_payload
+    source_decoder_len = int.from_bytes(source_hnerv_payload[1:4], "little")
+    candidate_decoder_len = int.from_bytes(candidate_hnerv_payload[1:4], "little")
+    source_header = source_hnerv_payload[:4]
+    candidate_header = candidate_hnerv_payload[:4]
+    source_decoder = source_hnerv_payload[4 : 4 + source_decoder_len]
+    candidate_decoder = candidate_hnerv_payload[4 : 4 + candidate_decoder_len]
+    source_latents = source_hnerv_payload[4 + source_decoder_len :]
+    candidate_latents = candidate_hnerv_payload[4 + candidate_decoder_len :]
     source_archive_sha = _sha256(source_archive)
     candidate_archive_sha = _sha256(candidate_archive)
     source_payload_sha = sha256_bytes(source_payload)

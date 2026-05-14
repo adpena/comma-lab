@@ -34,6 +34,18 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
+      "note": "exact: PR106 R2 low-level exact-eval release-surface entrypoint is raw rebuildable custody copied from runtime source commit 31eef126; durable closure is in the packet manifest and compliance artifact.",
+      "path": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/exact_eval_release_surface/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: PR106 R2 low-level exact-eval release-surface entrypoint is raw rebuildable custody copied from runtime source commit 31eef126; durable closure is in the packet manifest and compliance artifact.",
+      "path": "experiments/results/pr106_r2_pr101_grammar_lowlevel_repack_20260513_codex/exact_eval_release_surface/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
       "note": "exact: A5 frame-conditional runtime packet scaffold is raw rebuildable custody; canonical signal is in tools/build_pr101_frame_conditional_runtime_packet.py and .omx/research/a5_frame_conditional_runtime_packet_20260508_codex.md.",
       "path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/packet/inflate.py"
     },

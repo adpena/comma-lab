@@ -279,6 +279,46 @@ def test_public_replay_preflight_blocks_source_embedded_payload_runtime(tmp_path
     assert payload["runtime"]["source_payload_scan"]["status"] == "failed"
 
 
+def test_public_replay_preflight_skips_gitignore_and_pycache_hygiene(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    runtime = tmp_path / "replay_submission"
+    inflate_sh = _write_runtime(runtime)
+    (runtime / ".gitignore").write_text("__pycache__/\n*.pyc\n", encoding="utf-8")
+    pycache = runtime / "__pycache__"
+    pycache.mkdir()
+    (pycache / "inflate.cpython-312.pyc").write_bytes(b"cache")
+    upstream = _write_upstream(tmp_path)
+    _write_x_archive(archive)
+
+    payload = module.build_preflight(archive, inflate_sh, upstream_dir=upstream)
+
+    assert payload["ready_for_exact_eval_dispatch"] is True
+    source_scan = payload["runtime"]["source_payload_scan"]
+    assert source_scan["status"] == "passed"
+    scanned_paths = {row["path"] for row in source_scan["files"]}
+    assert ".gitignore" not in scanned_paths
+    assert "__pycache__/inflate.cpython-312.pyc" not in scanned_paths
+
+
+def test_public_replay_preflight_still_blocks_hidden_runtime_sidecar(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    runtime = tmp_path / "replay_submission"
+    inflate_sh = _write_runtime(runtime)
+    (runtime / ".secret_payload").write_bytes(b"not hygiene")
+    upstream = _write_upstream(tmp_path)
+    _write_x_archive(archive)
+
+    payload = module.build_preflight(archive, inflate_sh, upstream_dir=upstream)
+
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "runtime_source_or_sidecar_payload" in _blocker_codes(payload)
+    assert payload["runtime"]["source_payload_scan"]["status"] == "failed"
+
+
 def test_public_replay_preflight_expected_runtime_tree_mismatch_fails_closed(
     tmp_path: Path,
 ) -> None:

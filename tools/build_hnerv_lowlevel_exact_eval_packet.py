@@ -30,7 +30,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.hnerv_lowlevel_packer import (  # noqa: E402
-    parse_ff_packed_brotli_hnerv,
+    read_packed_archive_view,
     read_strict_single_member_zip,
     sha256_bytes,
 )
@@ -73,6 +73,13 @@ TERMINAL_CLAIM_PREFIXES = (
     "stale_superseded",
     "stopped",
 )
+RUNTIME_SURFACE_SKIP_DIRS = frozenset(
+    {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", "__pycache__"}
+)
+RUNTIME_SURFACE_CUSTODY_FILENAMES = frozenset(
+    {"archive.zip", "archive_manifest.json", "contest_auth_eval.json", "report.txt"}
+)
+RUNTIME_SURFACE_CUSTODY_PREFIXES = ("pre_submission_compliance.",)
 BUILD_CODE_PATHS = (
     "tools/build_hnerv_lowlevel_exact_eval_packet.py",
     "src/tac/hnerv_lowlevel_packer.py",
@@ -160,7 +167,13 @@ def _packet_output_path(args: argparse.Namespace) -> Path:
 
 def _release_surface_status(release_dir: Path) -> dict[str, Any]:
     files: dict[str, dict[str, Any]] = {}
-    for rel in ("archive.zip", "inflate.sh", "report.txt", "archive_manifest.json"):
+    for rel in (
+        "archive.zip",
+        "inflate.sh",
+        "report.txt",
+        "archive_manifest.json",
+        "contest_auth_eval.json",
+    ):
         path = release_dir / rel
         full = _repo_path(path)
         files[rel] = {
@@ -302,6 +315,125 @@ def _inflate_wrapper_text(source_inflate: Path) -> str:
         "fi\n"
         'exec "$SOURCE_INFLATE" "$@"\n'
     )
+
+
+def _is_runtime_surface_skip(rel: Path) -> bool:
+    if any(part in RUNTIME_SURFACE_SKIP_DIRS for part in rel.parts):
+        return True
+    if any(part.startswith("._") for part in rel.parts):
+        return True
+    name = rel.name
+    if name in RUNTIME_SURFACE_CUSTODY_FILENAMES:
+        return True
+    if any(name.startswith(prefix) for prefix in RUNTIME_SURFACE_CUSTODY_PREFIXES):
+        return True
+    if name in {".DS_Store", "Thumbs.db", ".gitignore"}:
+        return True
+    if name.endswith((".pyc", ".pyo")):
+        return True
+    return False
+
+
+def _git_file_bytes(commit: str, repo_relative_path: str) -> bytes:
+    result = subprocess.run(
+        ["git", "show", f"{commit}:{repo_relative_path}"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "git show failed for "
+            f"{commit}:{repo_relative_path}: {result.stderr.decode(errors='replace')[-1000:]}"
+        )
+    return result.stdout
+
+
+def _copy_runtime_surface_from_commit(
+    *,
+    source_root: Path,
+    release_dir: Path,
+    source_commit: str,
+) -> list[dict[str, Any]]:
+    source_root_rel = _repo_rel(source_root)
+    listed = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", source_commit, "--", source_root_rel],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if listed.returncode != 0:
+        raise RuntimeError(
+            f"git ls-tree failed for {source_commit}:{source_root_rel}: {listed.stderr[-1000:]}"
+        )
+    copied: list[dict[str, Any]] = []
+    root_rel_path = Path(source_root_rel)
+    for repo_rel_text in sorted(row for row in listed.stdout.splitlines() if row.strip()):
+        repo_rel = Path(repo_rel_text)
+        try:
+            rel = repo_rel.relative_to(root_rel_path)
+        except ValueError:
+            continue
+        if _is_runtime_surface_skip(rel):
+            continue
+        data = _git_file_bytes(source_commit, repo_rel.as_posix())
+        target = release_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        target.chmod(0o755 if rel.suffix == ".sh" else 0o644)
+        copied.append(
+            {
+                "relative_path": rel.as_posix(),
+                "source_path": repo_rel.as_posix(),
+                "source_commit": source_commit,
+                "bytes": len(data),
+                "sha256": sha256_bytes(data),
+            }
+        )
+    if not (release_dir / "inflate.sh").is_file():
+        raise FileNotFoundError(
+            f"runtime surface copy from {source_commit}:{source_root_rel} did not produce inflate.sh"
+        )
+    return copied
+
+
+def _copy_runtime_surface(
+    *,
+    source_inflate: Path,
+    release_dir: Path,
+    source_commit: str | None = None,
+) -> list[dict[str, Any]]:
+    source_root = _repo_path(source_inflate).parent
+    if source_commit:
+        return _copy_runtime_surface_from_commit(
+            source_root=source_root,
+            release_dir=release_dir,
+            source_commit=source_commit,
+        )
+    copied: list[dict[str, Any]] = []
+    for source in sorted(source_root.rglob("*"), key=lambda item: item.relative_to(source_root).as_posix()):
+        if not source.is_file():
+            continue
+        rel = source.relative_to(source_root)
+        if _is_runtime_surface_skip(rel):
+            continue
+        target = release_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        if source.stat().st_mode & 0o111:
+            target.chmod(target.stat().st_mode | 0o755)
+        copied.append(
+            {
+                "relative_path": rel.as_posix(),
+                "source_path": _repo_rel(source),
+                "bytes": target.stat().st_size,
+                "sha256": sha256_file(target),
+            }
+        )
+    if not (release_dir / "inflate.sh").is_file():
+        raise FileNotFoundError(f"runtime surface copy did not produce inflate.sh from {source_root}")
+    return copied
 
 
 def _changed_sections(candidate_result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -449,9 +581,9 @@ def _validate_candidate_result(
     )
 
     try:
-        candidate_archive = read_strict_single_member_zip(_repo_path(archive))
+        candidate_view = read_packed_archive_view(_repo_path(archive))
+        candidate_archive = candidate_view.archive
         candidate_payload = candidate_archive.payload
-        parse_ff_packed_brotli_hnerv(candidate_payload)
     except Exception as exc:  # pragma: no cover - exact exception classes vary by bad input
         add("candidate_archive_strict_hnerv_parse", False, repr(exc))
         candidate_archive = None
@@ -706,11 +838,77 @@ def _payload_diff(candidate_result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _auth_eval_summary(
+    args: argparse.Namespace,
+    candidate_result: dict[str, Any],
+) -> dict[str, Any]:
+    path = args.auth_eval_json
+    if path is None:
+        return {
+            "provided": False,
+            "valid_exact_cuda_candidate_eval": False,
+            "blockers": ["auth_eval_json_not_provided"],
+        }
+    full = _repo_path(path)
+    if not full.is_file():
+        return {
+            "provided": True,
+            "path": _repo_rel(path),
+            "valid_exact_cuda_candidate_eval": False,
+            "blockers": ["auth_eval_json_missing"],
+        }
+    payload = read_json(full)
+    if not isinstance(payload, dict):
+        return {
+            "provided": True,
+            "path": _repo_rel(path),
+            "valid_exact_cuda_candidate_eval": False,
+            "blockers": ["auth_eval_json_not_object"],
+        }
+    provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
+    archive_sha = provenance.get("archive_sha256") or payload.get("archive_sha256")
+    archive_bytes = provenance.get("archive_size_bytes") or payload.get("archive_size_bytes")
+    blockers: list[str] = []
+    if archive_sha != candidate_result.get("candidate_archive_sha256"):
+        blockers.append("auth_eval_archive_sha256_mismatch")
+    if archive_bytes != candidate_result.get("candidate_archive_bytes"):
+        blockers.append("auth_eval_archive_bytes_mismatch")
+    if payload.get("score_claim_valid") is not True:
+        blockers.append("auth_eval_score_claim_valid_not_true")
+    if payload.get("exact_cuda_eval_complete") is not True:
+        blockers.append("auth_eval_exact_cuda_eval_complete_not_true")
+    if payload.get("lane_tag") != "[contest-CUDA]":
+        blockers.append("auth_eval_lane_tag_not_contest_cuda")
+    if payload.get("score_axis") != "contest_cuda":
+        blockers.append("auth_eval_score_axis_not_contest_cuda")
+    valid = not blockers
+    return {
+        "provided": True,
+        "path": _repo_rel(path),
+        "sha256": sha256_file(full),
+        "valid_exact_cuda_candidate_eval": valid,
+        "blockers": blockers,
+        "score_axis": payload.get("score_axis"),
+        "lane_tag": payload.get("lane_tag"),
+        "score_claim_valid": payload.get("score_claim_valid"),
+        "exact_cuda_eval_complete": payload.get("exact_cuda_eval_complete"),
+        "score": payload.get("score_recomputed_from_components")
+        or payload.get("canonical_score")
+        or payload.get("final_score"),
+        "final_score": payload.get("final_score"),
+        "avg_segnet_dist": payload.get("avg_segnet_dist"),
+        "avg_posenet_dist": payload.get("avg_posenet_dist"),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+    }
+
+
 def _release_surface_report(
     *,
     args: argparse.Namespace,
     now_utc: dt.datetime,
     candidate_result: dict[str, Any],
+    auth_eval: dict[str, Any],
 ) -> str:
     byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
     lines = [
@@ -729,6 +927,7 @@ def _release_surface_report(
         f"source_archive_sha256: {candidate_result.get('source_archive_sha256')}",
         f"source_archive_size_bytes: {candidate_result.get('source_archive_bytes')}",
         f"byte_delta_vs_source_archive: {byte_delta}",
+        f"runtime_source_commit: {args.runtime_source_commit or 'HEAD'}",
         f"candidate_manifest: {_repo_rel(args.result_dir / 'manifest.json')}",
         f"payload_section_diff: {_repo_rel(args.result_dir / 'payload_section_diff_vs_source.json')}",
         f"public_replay_preflight: {_repo_rel(args.result_dir / 'public_replay_preflight.json')}",
@@ -736,6 +935,17 @@ def _release_surface_report(
         f"{_remaining_required_report_text(operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda))}",
         "notes: This file intentionally records no score and no promotion claim.",
     ]
+    if auth_eval.get("valid_exact_cuda_candidate_eval") is True:
+        lines.extend(
+            [
+                f"exact_cuda_auth_eval_json: {auth_eval.get('path')}",
+                f"exact_cuda_score: {auth_eval.get('score')}",
+                f"exact_cuda_final_score: {auth_eval.get('final_score')}",
+                f"exact_cuda_avg_segnet_dist: {auth_eval.get('avg_segnet_dist')}",
+                f"exact_cuda_avg_posenet_dist: {auth_eval.get('avg_posenet_dist')}",
+                "exact_cuda_eval_complete: true",
+            ]
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -757,20 +967,32 @@ def build_release_surface(
     if not _repo_path(args.inflate_sh).is_file():
         raise FileNotFoundError(f"inflate.sh does not exist: {args.inflate_sh}")
 
+    auth_eval = _auth_eval_summary(args, candidate_result)
+    copied_runtime_files = _copy_runtime_surface(
+        source_inflate=args.inflate_sh,
+        release_dir=release_full,
+        source_commit=args.runtime_source_commit,
+    )
+
     archive_dst = release_full / "archive.zip"
     shutil.copyfile(_repo_path(args.archive), archive_dst)
     archive_dst.chmod(0o644)
 
-    inflate_dst = release_full / "inflate.sh"
-    inflate_dst.write_text(_inflate_wrapper_text(args.inflate_sh), encoding="utf-8")
-    inflate_dst.chmod(0o755)
-
     report_dst = release_full / "report.txt"
     report_dst.write_text(
-        _release_surface_report(args=args, now_utc=now_utc, candidate_result=candidate_result),
+        _release_surface_report(
+            args=args,
+            now_utc=now_utc,
+            candidate_result=candidate_result,
+            auth_eval=auth_eval,
+        ),
         encoding="utf-8",
     )
     report_dst.chmod(0o644)
+    auth_eval_dst = release_full / "contest_auth_eval.json"
+    if args.auth_eval_json is not None:
+        shutil.copyfile(_repo_path(args.auth_eval_json), auth_eval_dst)
+        auth_eval_dst.chmod(0o644)
 
     surface_manifest = {
         "schema": "hnerv_lowlevel_release_surface_manifest_v1",
@@ -781,6 +1003,8 @@ def build_release_surface(
         "score_claim": False,
         "dispatch_attempted": False,
         "remote_gpu_run": False,
+        "runtime_source_commit": args.runtime_source_commit,
+        "auth_eval": auth_eval,
         "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
         "approved_exact_eval_target": bool(args.operator_approved_exact_cuda),
         "approval_scope": (
@@ -804,12 +1028,18 @@ def build_release_surface(
         },
         "inflate_sh": {
             "path": "inflate.sh",
-            "delegates_to": _repo_rel(args.inflate_sh),
-            "wrapper_sha256": sha256_file(inflate_dst),
+            "source_path": _repo_rel(args.inflate_sh),
+            "sha256": sha256_file(release_full / "inflate.sh"),
         },
+        "copied_runtime_files": copied_runtime_files,
         "report": {
             "path": "report.txt",
             "sha256": sha256_file(report_dst),
+        },
+        "contest_auth_eval": {
+            "path": "contest_auth_eval.json",
+            "exists": auth_eval_dst.is_file(),
+            "sha256": sha256_file(auth_eval_dst) if auth_eval_dst.is_file() else None,
         },
         "manifest_links": {
             "candidate_manifest": {
@@ -829,9 +1059,16 @@ def build_release_surface(
                 "exists": _repo_path(_packet_output_path(args)).is_file(),
             },
         },
-        "remaining_required_for_score_or_dispatch": _remaining_required_for_score_or_dispatch(
-            operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda)
-        ),
+        "remaining_required_for_score_or_dispatch": [
+            item
+            for item in _remaining_required_for_score_or_dispatch(
+                operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda)
+            )
+            if not (
+                auth_eval.get("valid_exact_cuda_candidate_eval") is True
+                and item in {"exact_cuda_auth_eval", "contest_auth_eval_adjudication"}
+            )
+        ],
     }
     manifest_dst = release_full / "archive_manifest.json"
     manifest_dst.write_text(json_text(surface_manifest), encoding="utf-8")
@@ -1388,11 +1625,21 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     if not args.operator_approved_exact_cuda:
         submit_blockers.append("missing_operator_exact_cuda_approval")
 
-    score_blockers = [
-        "exact_cuda_auth_eval_not_run_for_candidate",
-        "contest_auth_eval_adjudication_not_run_for_candidate",
-        "operator_score_claim_review_not_done",
-    ]
+    auth_eval = _auth_eval_summary(args, candidate_result)
+    score_blockers = (
+        ["operator_score_claim_review_not_done"]
+        if auth_eval.get("valid_exact_cuda_candidate_eval") is True
+        else [
+            "exact_cuda_auth_eval_not_run_for_candidate",
+            "contest_auth_eval_adjudication_not_run_for_candidate",
+            "operator_score_claim_review_not_done",
+            *[
+                f"auth_eval_blocked:{blocker}"
+                for blocker in auth_eval.get("blockers", [])
+                if blocker != "auth_eval_json_not_provided"
+            ],
+        ]
+    )
     byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
     expected_delta = byte_delta * RATE_SCORE_PER_BYTE
     kkt_proof = _rate_only_raw_equivalent_kkt_proof(
@@ -1443,6 +1690,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             static_ready=static_ready,
         ),
         "score_blockers": score_blockers,
+        "auth_eval": auth_eval,
         "missing_env": missing_env,
         "lane_claim_preflight": claim_report,
         "archive_sha256": args.archive_sha256,
@@ -1563,8 +1811,18 @@ def _refresh_cmd(
         str(args.archive_bytes),
         "--baseline-json",
         args.baseline_json.as_posix(),
+        *(
+            ["--auth-eval-json", args.auth_eval_json.as_posix()]
+            if args.auth_eval_json is not None
+            else []
+        ),
         "--inflate-sh",
         args.inflate_sh.as_posix(),
+        *(
+            ["--runtime-source-commit", args.runtime_source_commit]
+            if args.runtime_source_commit
+            else []
+        ),
         "--upstream-dir",
         args.upstream_dir.as_posix(),
         "--result-dir",
@@ -1598,7 +1856,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive-sha256")
     parser.add_argument("--archive-bytes", type=int)
     parser.add_argument("--baseline-json", type=Path, default=DEFAULT_BASELINE_JSON)
+    parser.add_argument("--auth-eval-json", type=Path)
     parser.add_argument("--inflate-sh", type=Path, default=DEFAULT_INFLATE_SH)
+    parser.add_argument(
+        "--runtime-source-commit",
+        help=(
+            "Copy the release-surface runtime files from this git commit instead of HEAD. "
+            "Use for already-harvested exact evals whose runtime predates current source."
+        ),
+    )
     parser.add_argument("--upstream-dir", type=Path, default=DEFAULT_UPSTREAM_DIR)
     parser.add_argument("--result-dir", type=Path, default=DEFAULT_RESULT_DIR)
     parser.add_argument("--release-surface-dir", type=Path)
