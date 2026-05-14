@@ -295,6 +295,82 @@ def test_trigger_workflow_dispatch_returns_unique_new_run(trigger_tool, monkeypa
     assert msg == "ok"
 
 
+def test_trigger_workflow_dispatch_refuses_ambiguous_new_runs(trigger_tool, monkeypatch):
+    """Concurrent workflow_dispatch deltas are not safely attributable."""
+    call_state = {"step": 0}
+
+    def fake_run_gh(args):
+        cmd = " ".join(args)
+        if cmd.startswith("run list"):
+            if call_state["step"] == 0:
+                call_state["step"] = 1
+                return SimpleNamespace(
+                    returncode=0,
+                    stdout=json.dumps([{"databaseId": 100}]),
+                    stderr="",
+                )
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps(
+                    [
+                        {"databaseId": 201, "status": "queued", "createdAt": "x"},
+                        {"databaseId": 200, "status": "queued", "createdAt": "x"},
+                        {"databaseId": 100, "status": "completed", "createdAt": "x"},
+                    ]
+                ),
+                stderr="",
+            )
+        if cmd.startswith("workflow run"):
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        return SimpleNamespace(returncode=1, stdout="", stderr="unhandled")
+
+    monkeypatch.setattr(trigger_tool, "run_gh", fake_run_gh)
+    monkeypatch.setattr(trigger_tool.time, "sleep", lambda *_: None)
+
+    run_id, msg = trigger_tool.trigger_workflow_dispatch(
+        repo="foo/bar",
+        workflow_file="eval.yml",
+        submission_name="t1_balle_test",
+        submission_url="https://github.com/foo/bar/releases/download/tag/archive.zip",
+        runner="ubuntu-latest",
+        pr_number=None,
+    )
+
+    assert run_id is None
+    assert "ambiguous_concurrent_dispatch_new_run_ids=[200, 201]" in msg
+
+
+def test_trigger_workflow_dispatch_refuses_unparseable_pre_snapshot(
+    trigger_tool, monkeypatch
+):
+    """No pre-dispatch snapshot means no defensible run-list delta."""
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args):
+        calls.append(args)
+        cmd = " ".join(args)
+        if cmd.startswith("run list"):
+            return SimpleNamespace(returncode=0, stdout="not-json", stderr="")
+        if cmd.startswith("workflow run"):
+            raise AssertionError("workflow_dispatch must not fire without a pre snapshot")
+        return SimpleNamespace(returncode=1, stdout="", stderr="unhandled")
+
+    monkeypatch.setattr(trigger_tool, "run_gh", fake_run_gh)
+
+    run_id, msg = trigger_tool.trigger_workflow_dispatch(
+        repo="foo/bar",
+        workflow_file="eval.yml",
+        submission_name="t1_balle_test",
+        submission_url="https://github.com/foo/bar/releases/download/tag/archive.zip",
+        runner="ubuntu-latest",
+        pr_number=None,
+    )
+
+    assert run_id is None
+    assert "could not parse pre-dispatch run list" in msg
+    assert len(calls) == 1
+
+
 def test_trigger_build_run_url(trigger_tool):
     url = trigger_tool.build_run_url("adpena/comma_video_compression_challenge", 25588422622)
     assert (

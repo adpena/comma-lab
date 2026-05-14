@@ -121,6 +121,24 @@ def validate_archive_size_bytes(size: int) -> None:
         )
 
 
+def _parse_run_ids(stdout: str) -> set[int]:
+    """Parse ``gh run list --json databaseId`` output.
+
+    Run binding is custody-critical: if the pre/post run-list cannot be parsed,
+    callers must fail closed instead of guessing which workflow run belongs to
+    this archive.
+    """
+    rows = json.loads(stdout or "[]")
+    if not isinstance(rows, list):
+        raise ValueError("run list JSON must be an array")
+    run_ids: set[int] = set()
+    for row in rows:
+        if not isinstance(row, dict) or "databaseId" not in row:
+            raise ValueError(f"run list row missing databaseId: {row!r}")
+        run_ids.add(int(row["databaseId"]))
+    return run_ids
+
+
 def validate_label(label: str) -> None:
     if not isinstance(label, str) or not label.strip():
         raise SystemExit("VALIDATION_ERROR: --label must be a non-empty string")
@@ -261,13 +279,12 @@ def trigger_workflow_dispatch(
             "databaseId",
         ]
     )
-    pre_ids: set[int] = set()
-    if pre_runs.returncode == 0 and pre_runs.stdout.strip():
-        try:
-            for row in json.loads(pre_runs.stdout):
-                pre_ids.add(int(row["databaseId"]))
-        except (ValueError, json.JSONDecodeError, KeyError):
-            pre_ids = set()
+    if pre_runs.returncode != 0:
+        return None, f"could not capture pre-dispatch run list: stderr={pre_runs.stderr!r}"
+    try:
+        pre_ids = _parse_run_ids(pre_runs.stdout)
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        return None, f"could not parse pre-dispatch run list: {exc}"
 
     dispatch_args = [
         "workflow",
@@ -308,21 +325,17 @@ def trigger_workflow_dispatch(
         )
         if runs_q.returncode == 0 and runs_q.stdout.strip():
             try:
-                rows = json.loads(runs_q.stdout)
-            except json.JSONDecodeError:
-                rows = []
-            new_ids = [
-                int(row["databaseId"])
-                for row in rows
-                if int(row["databaseId"]) not in pre_ids
-            ]
+                current_ids = _parse_run_ids(runs_q.stdout)
+            except (ValueError, TypeError, json.JSONDecodeError):
+                current_ids = set()
+            new_ids = sorted(current_ids - pre_ids)
             if len(new_ids) == 1:
                 return new_ids[0], "ok"
             if len(new_ids) > 1:
                 # Ambiguous: another agent may have dispatched concurrently.
-                # Return the most recent one; harvest tool will fail-closed if
-                # the workflow log doesn't mention our submission_name.
-                return max(new_ids), "ambiguous_concurrent_dispatch_recent_id"
+                # Fail closed instead of binding dispatch_metadata.json to a
+                # run that might carry a different archive with the same label.
+                return None, f"ambiguous_concurrent_dispatch_new_run_ids={new_ids}"
         time.sleep(3)
     return None, "could not identify new run id within 60s"
 

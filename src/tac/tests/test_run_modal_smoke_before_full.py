@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from tools.run_modal_smoke_before_full import (
     _recipe_requests_smoke_only,
     _resolve_smoke_band,
     _smoke_validation_contract_from_recipe,
+    _spawn_smoke_dispatch,
     _validate_smoke_result,
     main,
 )
@@ -458,3 +460,40 @@ def test_smoke_wrapper_uses_explicit_noninteractive_authorization_flag() -> None
 
     assert '"tools/operator_authorize.py",' in text
     assert '"--yes",' in text
+
+
+def test_spawn_smoke_dispatch_threads_cost_band_gpu_override(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append({"cmd": list(cmd), "env": dict(kwargs["env"])})
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="✓ DISPATCHED via .spawn() - call_id=fc-test\ninstance_job_id=job-test\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    call_id, instance_job_id = _spawn_smoke_dispatch(
+        tmp_path / "unit_recipe.yaml",
+        epoch_env_var="UNIT_EPOCHS",
+        smoke_epochs=100,
+        smoke_gpu="T4",
+        smoke_timeout_hours=1.0,
+        operator_handle="codex:test",
+        repo_root=REPO_ROOT,
+    )
+
+    assert (call_id, instance_job_id) == ("fc-test", "job-test")
+    assert len(calls) == 1
+    cmd = calls[0]["cmd"]
+    assert cmd[cmd.index("--cost-band-epochs-override") + 1] == "100"
+    assert cmd[cmd.index("--cost-band-gpu-override") + 1] == "T4"
+    env = calls[0]["env"]
+    assert env["MODAL_GPU"] == "T4"
+    assert env["UNIT_EPOCHS"] == "100"

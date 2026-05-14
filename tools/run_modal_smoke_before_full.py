@@ -621,6 +621,8 @@ def _spawn_smoke_dispatch(
         str(smoke_timeout_hours),
         "--cost-band-epochs-override",
         str(smoke_epochs),
+        "--cost-band-gpu-override",
+        smoke_gpu,
     ]
     print(f"[smoke-before-full] dispatching SMOKE: {' '.join(cmd)}")
     proc = subprocess.run(

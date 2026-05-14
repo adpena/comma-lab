@@ -142,6 +142,122 @@ class CostBandPrediction:
     source: str  # "posterior" or "hand_calibrated_fallback"
 
 
+@dataclass(frozen=True)
+class CostBandRequest:
+    """Resolved operator-facing cost request for one authorization run."""
+
+    platform_key: str
+    gpu_key: str
+    epochs: int
+    all_flags_on: bool
+    fallback_p50_usd: float
+    context_label: str
+    full_run_platform_key: str
+    full_run_gpu_key: str
+    full_run_epochs: int
+    full_run_fallback_p50_usd: float
+
+    @property
+    def is_smoke_scaled(self) -> bool:
+        return self.context_label == "smoke_override"
+
+
+def _as_int_cost_epochs(raw_epochs: Any, *, field_name: str) -> int:
+    try:
+        epochs = int(raw_epochs)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be numeric; got {raw_epochs!r}") from None
+    if epochs < 0:
+        raise ValueError(f"{field_name} must be non-negative; got {epochs}")
+    return epochs
+
+
+def _smoke_scaled_fallback_p50(
+    *,
+    full_run_fallback_p50_usd: float,
+    full_run_epochs: int,
+    smoke_epochs: int,
+) -> float:
+    """Scale a full-run hand fallback down to the smoke epoch budget.
+
+    This fallback is only used when ``tac.cost_band_calibration.predict`` has no
+    empirical bucket and no hand stub for the smoke (platform, GPU, epochs)
+    tuple. It prevents a 100-epoch smoke authorization from inheriting a
+    full-run A100 p50 while still preserving the full-run p50 as separate
+    reference metadata in the banner/claim notes.
+    """
+
+    if full_run_fallback_p50_usd <= 0.0 or full_run_epochs <= 0:
+        return 0.0
+    return max(0.0, full_run_fallback_p50_usd * (smoke_epochs / full_run_epochs))
+
+
+def _resolve_cost_band_request(
+    recipe: "Recipe",
+    *,
+    cost_band_epochs_override: int | None = None,
+    cost_band_gpu_override: str | None = None,
+) -> CostBandRequest:
+    """Resolve the cost bucket and fallback used for the authorization banner."""
+
+    cost_cfg = recipe.raw.get("cost_band", {}) or {}
+    platform_key = str(_resolve_env_var(cost_cfg.get("platform_key"), recipe.platform))
+    full_run_gpu_key = str(_resolve_env_var(cost_cfg.get("gpu_key"), recipe.gpu or "T4"))
+    try:
+        full_run_epochs = _as_int_cost_epochs(
+            cost_cfg.get("epochs", 1000),
+            field_name="cost_band.epochs",
+        )
+    except ValueError:
+        raise
+    all_flags_on = bool(cost_cfg.get("all_flags_on", True))
+    full_run_fallback_p50 = float(
+        cost_cfg.get("hand_calibrated_fallback_p50_usd", 1.00)
+    )
+
+    if cost_band_epochs_override is None:
+        return CostBandRequest(
+            platform_key=platform_key,
+            gpu_key=full_run_gpu_key,
+            epochs=full_run_epochs,
+            all_flags_on=all_flags_on,
+            fallback_p50_usd=full_run_fallback_p50,
+            context_label="recipe_full",
+            full_run_platform_key=platform_key,
+            full_run_gpu_key=full_run_gpu_key,
+            full_run_epochs=full_run_epochs,
+            full_run_fallback_p50_usd=full_run_fallback_p50,
+        )
+
+    smoke_epochs = _as_int_cost_epochs(
+        cost_band_epochs_override,
+        field_name="--cost-band-epochs-override",
+    )
+    # Smoke-before-full changes the provider GPU with MODAL_GPU. Recipes that
+    # expose top-level `gpu: "${MODAL_GPU:-A100}"` resolve recipe.gpu to the
+    # smoke GPU, but an explicit CLI override wins when a caller supplies one.
+    smoke_gpu_key = (cost_band_gpu_override or recipe.gpu or full_run_gpu_key).strip()
+    if not smoke_gpu_key or smoke_gpu_key.lower() == "none":
+        smoke_gpu_key = full_run_gpu_key
+    smoke_fallback_p50 = _smoke_scaled_fallback_p50(
+        full_run_fallback_p50_usd=full_run_fallback_p50,
+        full_run_epochs=full_run_epochs,
+        smoke_epochs=smoke_epochs,
+    )
+    return CostBandRequest(
+        platform_key=platform_key,
+        gpu_key=smoke_gpu_key,
+        epochs=smoke_epochs,
+        all_flags_on=all_flags_on,
+        fallback_p50_usd=smoke_fallback_p50,
+        context_label="smoke_override",
+        full_run_platform_key=platform_key,
+        full_run_gpu_key=full_run_gpu_key,
+        full_run_epochs=full_run_epochs,
+        full_run_fallback_p50_usd=full_run_fallback_p50,
+    )
+
+
 def _predict_cost_band(
     platform_key: str,
     gpu_key: str,
@@ -183,7 +299,12 @@ def _predict_cost_band(
                     p90_cost_usd=float(payload["p90"]),
                     n_anchors=int(payload["n_anchors"]),
                     confidence_tag=str(payload["confidence_tag"]),
-                    source="posterior",
+                    source=(
+                        "posterior"
+                        if str(payload["confidence_tag"])
+                        in {"empirical_posterior", "weak_posterior"}
+                        else "hand_calibrated_fallback"
+                    ),
                 )
             # p50 == 0 -> cold-start bucket with no hand stub; use recipe fallback.
             return CostBandPrediction(
@@ -824,6 +945,7 @@ def _list_recipes() -> int:
 def _print_banner(
     recipe: Recipe,
     band: CostBandPrediction,
+    cost_request: CostBandRequest,
 ) -> None:
     """Print the operator confirmation banner."""
     print()
@@ -834,6 +956,23 @@ def _print_banner(
     print(f"  lane_id:                 {recipe.lane_id}")
     print(f"  platform:                {recipe.platform} ({recipe.gpu})")
     print(f"  cost band p10/p50/p90:   {_format_cost_band(band)}")
+    if cost_request.is_smoke_scaled:
+        print(
+            "  cost context:            smoke override "
+            f"{cost_request.platform_key}/{cost_request.gpu_key} x "
+            f"{cost_request.epochs} epochs"
+        )
+        print(
+            "                           full-run reference "
+            f"{cost_request.full_run_platform_key}/"
+            f"{cost_request.full_run_gpu_key} x "
+            f"{cost_request.full_run_epochs} epochs, "
+            f"fallback p50=${cost_request.full_run_fallback_p50_usd:.2f}"
+        )
+        print(
+            "                           cold-start fallback uses the smoke bucket "
+            "or smoke-scaled fallback, never the full-run p50"
+        )
     print("                           Source: tac.cost_band_calibration.predict()")
     print("                           Posterior: .omx/state/cost_band_posterior.jsonl")
     print(f"                           Confidence: {band.confidence_tag}")
@@ -1285,6 +1424,15 @@ def main(argv: list[str] | None = None) -> int:
             "dispatch. Used by smoke-before-full wrappers."
         ),
     )
+    parser.add_argument(
+        "--cost-band-gpu-override",
+        default=None,
+        help=(
+            "Override cost_band.gpu_key for this authorization. Used by "
+            "smoke-before-full wrappers when the smoke GPU differs from the "
+            "full-run recipe GPU."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.list:
@@ -1307,38 +1455,42 @@ def main(argv: list[str] | None = None) -> int:
             else direct_smoke_refusal
         )
 
-    # Cost-band prediction.
-    cost_cfg = recipe.raw.get("cost_band", {}) or {}
-    platform_key = str(_resolve_env_var(cost_cfg.get("platform_key"), recipe.platform))
-    gpu_key = str(_resolve_env_var(cost_cfg.get("gpu_key"), recipe.gpu or "T4"))
-    raw_epochs = (
-        args.cost_band_epochs_override
-        if args.cost_band_epochs_override is not None
-        else cost_cfg.get("epochs", 1000)
-    )
     try:
-        epochs = int(raw_epochs)
-    except (TypeError, ValueError):
+        cost_request = _resolve_cost_band_request(
+            recipe,
+            cost_band_epochs_override=args.cost_band_epochs_override,
+            cost_band_gpu_override=args.cost_band_gpu_override,
+        )
+    except ValueError as exc:
         if dispatch_refusal:
-            epochs = 0
+            cost_request = CostBandRequest(
+                platform_key=recipe.platform,
+                gpu_key=recipe.gpu,
+                epochs=0,
+                all_flags_on=True,
+                fallback_p50_usd=0.0,
+                context_label="refused",
+                full_run_platform_key=recipe.platform,
+                full_run_gpu_key=recipe.gpu,
+                full_run_epochs=0,
+                full_run_fallback_p50_usd=0.0,
+            )
         else:
             raise SystemExit(
-                "[operator-authorize] FATAL: dispatchable recipe has "
-                f"non-numeric cost_band.epochs={raw_epochs!r}; fix the recipe "
-                "before operator authorization"
+                f"[operator-authorize] FATAL: dispatchable recipe has invalid "
+                f"cost-band metadata: {exc}; fix the recipe before operator "
+                "authorization"
             ) from None
-    all_flags_on = bool(cost_cfg.get("all_flags_on", True))
-    fallback_p50 = float(cost_cfg.get("hand_calibrated_fallback_p50_usd", 1.00))
     band = _predict_cost_band(
-        platform_key=platform_key,
-        gpu_key=gpu_key,
-        epochs=epochs,
-        all_flags_on=all_flags_on,
-        hand_calibrated_fallback_p50_usd=fallback_p50,
+        platform_key=cost_request.platform_key,
+        gpu_key=cost_request.gpu_key,
+        epochs=cost_request.epochs,
+        all_flags_on=cost_request.all_flags_on,
+        hand_calibrated_fallback_p50_usd=cost_request.fallback_p50_usd,
     )
 
     # Print banner.
-    _print_banner(recipe, band)
+    _print_banner(recipe, band, cost_request)
 
     native_dispatch = _platform_has_native_dispatch(recipe.platform)
     if not dispatch_refusal and native_dispatch:
@@ -1394,10 +1546,22 @@ def main(argv: list[str] | None = None) -> int:
     instance_job_id = f"{recipe.name}_{_resolve_utc_label()}{args.label_suffix}"
     claim_created = False
     if not args.no_claim and native_dispatch:
+        cost_note = (
+            f"expected p50 cost ${band.p50_cost_usd:.2f} "
+            f"({band.confidence_tag})"
+        )
+        if cost_request.is_smoke_scaled:
+            cost_note += (
+                f"; smoke cost context {cost_request.platform_key}/"
+                f"{cost_request.gpu_key} x {cost_request.epochs}ep; "
+                f"full-run reference {cost_request.full_run_platform_key}/"
+                f"{cost_request.full_run_gpu_key} x "
+                f"{cost_request.full_run_epochs}ep fallback p50 "
+                f"${cost_request.full_run_fallback_p50_usd:.2f}"
+            )
         notes = (
             f"operator-authorized via tools/operator_authorize.py --recipe "
-            f"{recipe.name}; expected p50 cost ${band.p50_cost_usd:.2f} "
-            f"({band.confidence_tag})"
+            f"{recipe.name}; {cost_note}"
         )
         _claim_lane(
             lane_id=recipe.lane_id,

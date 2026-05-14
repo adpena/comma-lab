@@ -16,6 +16,104 @@ def _band() -> op.CostBandPrediction:
     )
 
 
+def test_cost_band_request_full_run_metadata_unchanged(monkeypatch) -> None:
+    monkeypatch.delenv("MODAL_GPU", raising=False)
+    recipe = op._load_recipe("substrate_sane_hnerv_modal_a100_dispatch")
+
+    request = op._resolve_cost_band_request(recipe)
+
+    assert request.context_label == "recipe_full"
+    assert request.platform_key == "modal"
+    assert request.gpu_key == "A100"
+    assert request.epochs == 2000
+    assert request.fallback_p50_usd == 8.00
+    assert request.full_run_gpu_key == "A100"
+    assert request.full_run_epochs == 2000
+    assert request.full_run_fallback_p50_usd == 8.00
+
+
+def test_cost_band_request_smoke_override_scales_cold_start_fallback(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("MODAL_GPU", "T4")
+    recipe = op._load_recipe("substrate_sane_hnerv_modal_a100_dispatch")
+
+    request = op._resolve_cost_band_request(
+        recipe,
+        cost_band_epochs_override=100,
+    )
+
+    assert request.context_label == "smoke_override"
+    assert request.is_smoke_scaled is True
+    assert request.platform_key == "modal"
+    assert request.gpu_key == "T4"
+    assert request.epochs == 100
+    assert request.fallback_p50_usd == pytest.approx(0.40)
+    assert request.full_run_gpu_key == "A100"
+    assert request.full_run_epochs == 2000
+    assert request.full_run_fallback_p50_usd == 8.00
+
+
+def test_operator_authorize_smoke_override_banner_and_claim_use_smoke_cost(
+    monkeypatch,
+    capsys,
+) -> None:
+    claim_calls: list[dict[str, object]] = []
+    predict_calls: list[dict[str, object]] = []
+
+    def fake_predict(**kwargs: object) -> op.CostBandPrediction:
+        predict_calls.append(kwargs)
+        p50 = float(kwargs["hand_calibrated_fallback_p50_usd"])
+        return op.CostBandPrediction(
+            p10_cost_usd=p50 * 0.5,
+            p50_cost_usd=p50,
+            p90_cost_usd=p50 * 2.0,
+            n_anchors=0,
+            confidence_tag="hand_calibrated_fallback",
+            source="hand_calibrated_fallback",
+        )
+
+    monkeypatch.setenv("MODAL_GPU", "T4")
+    monkeypatch.setattr(op, "_predict_cost_band", fake_predict)
+    monkeypatch.setattr(op, "_validate_declared_local_paths", lambda *_: None)
+    monkeypatch.setattr(op, "_validate_required_input_files", lambda *_: None)
+    monkeypatch.setattr(op, "_native_dispatch_preflight", lambda *_: None)
+    monkeypatch.setattr(op, "_claim_lane", lambda **kwargs: claim_calls.append(kwargs))
+    monkeypatch.setattr(op, "_run_dispatch", lambda *_args, **_kwargs: 0)
+
+    rc = op.main(
+        [
+            "--recipe",
+            "substrate_sane_hnerv_modal_a100_dispatch",
+            "--yes",
+            "--label-suffix",
+            "__smoke__100ep",
+            "--timeout-hours-override",
+            "1",
+            "--cost-band-epochs-override",
+            "100",
+        ]
+    )
+
+    assert rc == 0
+    assert len(predict_calls) == 1
+    assert predict_calls[0]["platform_key"] == "modal"
+    assert predict_calls[0]["gpu_key"] == "T4"
+    assert predict_calls[0]["epochs"] == 100
+    assert predict_calls[0]["all_flags_on"] is True
+    assert predict_calls[0]["hand_calibrated_fallback_p50_usd"] == pytest.approx(0.40)
+    out = capsys.readouterr().out
+    assert "cost band p10/p50/p90:   $0.20/$0.40/$0.80" in out
+    assert "cost context:            smoke override modal/T4 x 100 epochs" in out
+    assert "full-run reference modal/A100 x 2000 epochs, fallback p50=$8.00" in out
+    assert "cold-start fallback uses the smoke bucket" in out
+    assert len(claim_calls) == 1
+    notes = str(claim_calls[0]["notes"])
+    assert "expected p50 cost $0.40" in notes
+    assert "smoke cost context modal/T4 x 100ep" in notes
+    assert "full-run reference modal/A100 x 2000ep fallback p50 $8.00" in notes
+
+
 def test_operator_authorize_lists_recipes(capsys) -> None:
     rc = op.main(["--list"])
 
