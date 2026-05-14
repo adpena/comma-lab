@@ -8,7 +8,9 @@ from tools.run_modal_smoke_before_full import (
     _expected_auth_artifact_markers,
     _recipe_requests_smoke_only,
     _resolve_smoke_band,
+    _smoke_validation_contract_from_recipe,
     _validate_smoke_result,
+    main,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -124,6 +126,124 @@ def test_smoke_validation_accepts_current_output_marker() -> None:
     assert "lane_substrate_siren_results/output/contest_auth_eval_cuda.json" in diagnostic
 
 
+def test_training_artifact_contract_accepts_current_false_authority_manifest() -> None:
+    manifest = {
+        "lane_id": "lane_research_smoke",
+        "archive_bytes": 12,
+        "archive_sha256": "a" * 64,
+        "result": {"training_mode": "smoke", "archive_bytes": 12},
+        "research_only": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "lane_research_results/output/manifest.json": json.dumps(manifest),
+                "lane_research_results/output/archive.zip": b"PK\x03\x04payload",
+            },
+        },
+        required_artifact_markers=("lane_research_results/output/",),
+        validation_contract="training_artifact_v1",
+        required_lane_id="lane_research_smoke",
+    )
+
+    assert green is True
+    assert "research-only training_artifact_v1" in diagnostic
+    assert "score/promotion/readiness claims are false" in diagnostic
+
+
+def test_training_artifact_contract_rejects_stale_manifest_marker() -> None:
+    manifest = {
+        "lane_id": "lane_research_smoke",
+        "archive_bytes": 12,
+        "archive_sha256": "a" * 64,
+        "result": {"training_mode": "smoke"},
+        "research_only": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "experiments/results/old/manifest.json": json.dumps(manifest),
+                "lane_research_results/output/archive.zip": b"PK\x03\x04payload",
+            },
+        },
+        required_artifact_markers=("lane_research_results/output/",),
+        validation_contract="training_artifact_v1",
+        required_lane_id="lane_research_smoke",
+    )
+
+    assert green is False
+    assert "refusing stale evidence" in diagnostic
+
+
+def test_training_artifact_contract_rejects_score_authority_manifest() -> None:
+    manifest = {
+        "lane_id": "lane_research_smoke",
+        "archive_bytes": 12,
+        "archive_sha256": "a" * 64,
+        "result": {"training_mode": "smoke"},
+        "research_only": True,
+        "score_claim": True,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "lane_research_results/output/manifest.json": json.dumps(manifest),
+                "lane_research_results/output/archive.zip": b"PK\x03\x04payload",
+            },
+        },
+        validation_contract="training_artifact_v1",
+        required_lane_id="lane_research_smoke",
+    )
+
+    assert green is False
+    assert "false_authority_flags_not_false" in diagnostic
+
+
+def test_training_artifact_contract_rejects_missing_archive_sha() -> None:
+    manifest = {
+        "lane_id": "lane_research_smoke",
+        "archive_bytes": 12,
+        "result": {"training_mode": "smoke"},
+        "research_only": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "lane_research_results/output/manifest.json": json.dumps(manifest),
+                "lane_research_results/output/archive.zip": b"PK\x03\x04payload",
+            },
+        },
+        validation_contract="training_artifact_v1",
+        required_lane_id="lane_research_smoke",
+    )
+
+    assert green is False
+    assert "archive_sha256_invalid" in diagnostic
+
+
 def test_expected_auth_artifact_markers_parse_workspace_output_dir() -> None:
     recipe = """
 env_overrides:
@@ -159,6 +279,54 @@ def test_recipe_requests_smoke_only_reads_top_level_flag() -> None:
     assert _recipe_requests_smoke_only("# smoke_only: true in comment\n") is False
 
 
+def test_smoke_validation_contract_defaults_to_contest_cuda_auth_eval() -> None:
+    assert (
+        _smoke_validation_contract_from_recipe("lane_id: lane_x\n")
+        == "contest_cuda_auth_eval_v1"
+    )
+    assert (
+        _smoke_validation_contract_from_recipe(
+            "smoke_validation_contract: training_artifact_v1\n"
+        )
+        == "training_artifact_v1"
+    )
+
+
+def test_main_rejects_training_artifact_contract_without_recipe_smoke_only(
+    tmp_path: Path,
+) -> None:
+    recipe_dir = tmp_path / ".omx/operator_authorize_recipes"
+    recipe_dir.mkdir(parents=True)
+    (recipe_dir / "unsafe.yaml").write_text(
+        "schema_version: 1\n"
+        "name: unsafe\n"
+        "lane_id: lane_unsafe\n"
+        "smoke_validation_contract: training_artifact_v1\n",
+        encoding="utf-8",
+    )
+
+    rc = main(["--repo-root", str(tmp_path), "--recipe", "unsafe", "--smoke-only"])
+
+    assert rc == 8
+
+
+def test_main_rejects_unknown_smoke_validation_contract(tmp_path: Path) -> None:
+    recipe_dir = tmp_path / ".omx/operator_authorize_recipes"
+    recipe_dir.mkdir(parents=True)
+    (recipe_dir / "unknown.yaml").write_text(
+        "schema_version: 1\n"
+        "name: unknown\n"
+        "lane_id: lane_unknown_contract\n"
+        "smoke_only: true\n"
+        "smoke_validation_contract: typo_contract\n",
+        encoding="utf-8",
+    )
+
+    rc = main(["--repo-root", str(tmp_path), "--recipe", "unknown"])
+
+    assert rc == 7
+
+
 def test_s2sbs_recipe_is_smoke_only_scaffold_guard() -> None:
     text = (
         REPO_ROOT
@@ -166,6 +334,7 @@ def test_s2sbs_recipe_is_smoke_only_scaffold_guard() -> None:
     ).read_text(encoding="utf-8")
 
     assert _recipe_requests_smoke_only(text) is True
+    assert _smoke_validation_contract_from_recipe(text) == "training_artifact_v1"
 
 
 def test_pretrained_driving_prior_recipe_is_smoke_only_scaffold_guard() -> None:
@@ -176,6 +345,7 @@ def test_pretrained_driving_prior_recipe_is_smoke_only_scaffold_guard() -> None:
 
     assert _recipe_requests_smoke_only(text) is True
     assert "status: scaffold_only_no_full_dispatch" in text
+    assert _smoke_validation_contract_from_recipe(text) == "training_artifact_v1"
 
 
 def test_s2sbs_remote_script_does_not_emit_contest_cuda_claim() -> None:
@@ -195,6 +365,7 @@ def test_pr95plus_recipe_is_smoke_only_until_full_trainer_lands() -> None:
 
     assert _recipe_requests_smoke_only(text) is True
     assert "PR95PLUS_SMOKE: \"1\"" in text
+    assert _smoke_validation_contract_from_recipe(text) == "training_artifact_v1"
 
 
 def test_smoke_wrapper_uses_explicit_noninteractive_authorization_flag() -> None:

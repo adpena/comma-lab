@@ -124,6 +124,13 @@ SMOKE_WAIT_MARGIN_SECONDS = 300
 # untrained model scores ~1.0-3.0). Recipes can override this default by
 # declaring `predicted_band: [lo, hi]` — see _resolve_smoke_band.
 SMOKE_PLAUSIBLE_SCORE_BAND = (0.05, 5.0)
+DEFAULT_SMOKE_VALIDATION_CONTRACT = "contest_cuda_auth_eval_v1"
+SMOKE_VALIDATION_CONTRACTS = frozenset(
+    {
+        DEFAULT_SMOKE_VALIDATION_CONTRACT,
+        "training_artifact_v1",
+    }
+)
 
 
 def _resolve_recipe_path(recipe_name: str, repo_root: Path) -> Path:
@@ -223,6 +230,24 @@ def _recipe_requests_smoke_only(recipe_text: str) -> bool:
     return False
 
 
+def _smoke_validation_contract_from_recipe(recipe_text: str) -> str:
+    """Return the recipe-declared smoke validation contract.
+
+    Default remains the strict contest-CUDA auth-eval contract. Research-only
+    scaffold recipes may opt into ``training_artifact_v1`` so the smoke wrapper
+    can validate a fresh non-promotional manifest/archive without pretending it
+    is score evidence.
+    """
+
+    for raw in recipe_text.splitlines():
+        stripped = raw.split("#", 1)[0].strip()
+        if not stripped.startswith("smoke_validation_contract:"):
+            continue
+        value = stripped.split(":", 1)[1].strip().strip("\"'").lower()
+        return value or DEFAULT_SMOKE_VALIDATION_CONTRACT
+    return DEFAULT_SMOKE_VALIDATION_CONTRACT
+
+
 def _lane_id_from_recipe(recipe_text: str) -> str:
     for line in recipe_text.splitlines():
         if line.startswith("lane_id:"):
@@ -265,6 +290,155 @@ def _expected_auth_artifact_markers(
             seen.add(marker)
             out.append(marker)
     return tuple(out)
+
+
+def _artifact_matches_current_run(
+    key: str,
+    *,
+    required_artifact_markers: tuple[str, ...],
+) -> bool:
+    return not required_artifact_markers or any(
+        marker in key for marker in required_artifact_markers
+    )
+
+
+def _decode_json_artifact(raw: object) -> dict | None:
+    try:
+        if isinstance(raw, bytes):
+            payload = json.loads(raw.decode())
+        elif isinstance(raw, str):
+            payload = json.loads(raw)
+        else:
+            payload = raw
+    except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _artifact_size(raw: object) -> int:
+    if isinstance(raw, bytes):
+        return len(raw)
+    if isinstance(raw, str):
+        return len(raw.encode())
+    return 0
+
+
+def _validate_training_artifact_smoke_result(
+    result: dict,
+    *,
+    required_artifact_markers: tuple[str, ...] = (),
+    required_lane_id: str = "",
+) -> tuple[bool, str]:
+    """Validate a smoke-only research artifact without score authority."""
+
+    artifacts = result.get("artifacts", {})
+    manifest_keys_all = [
+        k for k in artifacts
+        if k.lower().endswith("manifest.json")
+    ]
+    manifest_keys = [
+        k for k in manifest_keys_all
+        if _artifact_matches_current_run(
+            k,
+            required_artifact_markers=required_artifact_markers,
+        )
+    ]
+    archive_keys_all = [
+        k for k in artifacts
+        if k.lower().endswith("archive.zip")
+    ]
+    archive_keys = [
+        k for k in archive_keys_all
+        if _artifact_matches_current_run(
+            k,
+            required_artifact_markers=required_artifact_markers,
+        )
+        and _artifact_size(artifacts[k]) > 0
+    ]
+    if not manifest_keys:
+        if manifest_keys_all and required_artifact_markers:
+            return False, (
+                "SMOKE training_artifact_v1 contained manifest.json files, "
+                "but none were from the current smoke output path; refusing "
+                f"stale evidence. required_markers={required_artifact_markers}; "
+                f"manifest_keys={sorted(manifest_keys_all)[:8]}"
+            )
+        return False, "SMOKE training_artifact_v1 missing current manifest.json"
+    if not archive_keys:
+        if archive_keys_all and required_artifact_markers:
+            return False, (
+                "SMOKE training_artifact_v1 contained archive.zip files, "
+                "but none were from the current smoke output path; refusing "
+                f"stale evidence. required_markers={required_artifact_markers}; "
+                f"archive_keys={sorted(archive_keys_all)[:8]}"
+            )
+        return False, "SMOKE training_artifact_v1 missing non-empty current archive.zip"
+
+    diagnostics: list[str] = []
+    for manifest_key in sorted(manifest_keys):
+        payload = _decode_json_artifact(artifacts[manifest_key])
+        if payload is None:
+            diagnostics.append(f"{manifest_key}:json_payload_not_object")
+            continue
+        if required_lane_id and payload.get("lane_id") != required_lane_id:
+            diagnostics.append(
+                f"{manifest_key}:lane_id={payload.get('lane_id')!r} expected={required_lane_id!r}"
+            )
+            continue
+        result_payload = payload.get("result")
+        result_payload = result_payload if isinstance(result_payload, dict) else {}
+        training_mode = payload.get("training_mode") or result_payload.get("training_mode")
+        if training_mode != "smoke":
+            diagnostics.append(f"{manifest_key}:training_mode={training_mode!r}")
+            continue
+        if payload.get("research_only") is not True:
+            diagnostics.append(f"{manifest_key}:research_only={payload.get('research_only')!r}")
+            continue
+        bad_false_flags = [
+            flag
+            for flag in (
+                "score_claim",
+                "score_claim_valid",
+                "promotion_eligible",
+                "ready_for_exact_eval_dispatch",
+            )
+            if payload.get(flag) is not False
+        ]
+        if bad_false_flags:
+            diagnostics.append(
+                f"{manifest_key}:false_authority_flags_not_false={bad_false_flags}"
+            )
+            continue
+        archive_bytes = payload.get("archive_bytes", result_payload.get("archive_bytes"))
+        try:
+            archive_bytes_int = int(archive_bytes)
+        except (TypeError, ValueError):
+            archive_bytes_int = 0
+        archive_sha = str(
+            payload.get("archive_sha256")
+            or result_payload.get("archive_sha256")
+            or ""
+        )
+        if archive_bytes_int <= 0:
+            diagnostics.append(f"{manifest_key}:archive_bytes={archive_bytes!r}")
+            continue
+        if len(archive_sha) != 64 or any(
+            char not in "0123456789abcdef" for char in archive_sha.lower()
+        ):
+            diagnostics.append(f"{manifest_key}:archive_sha256_invalid")
+            continue
+        archive_key = sorted(archive_keys)[0]
+        return True, (
+            "SMOKE GREEN [research-only training_artifact_v1; score_claim=false]: "
+            "rc=0, current manifest "
+            f"{manifest_key} + archive {archive_key}; research_only=true and "
+            "score/promotion/readiness claims are false"
+        )
+    return False, (
+        "SMOKE training_artifact_v1 manifest did not prove smoke-only "
+        "false-authority contract; diagnostics="
+        + "; ".join(diagnostics[:8])
+    )
 
 
 def _close_smoke_claim(
@@ -464,6 +638,8 @@ def _validate_smoke_result(
     *,
     plausible_band: tuple[float, float] = SMOKE_PLAUSIBLE_SCORE_BAND,
     required_artifact_markers: tuple[str, ...] = (),
+    validation_contract: str = DEFAULT_SMOKE_VALIDATION_CONTRACT,
+    required_lane_id: str = "",
 ) -> tuple[bool, str]:
     """Return ``(green, diagnostic)``.
 
@@ -483,6 +659,14 @@ def _validate_smoke_result(
         )
     if result.get("timed_out"):
         return False, "SMOKE timed_out=True (training did not finish in budget)"
+    if validation_contract == "training_artifact_v1":
+        return _validate_training_artifact_smoke_result(
+            result,
+            required_artifact_markers=required_artifact_markers,
+            required_lane_id=required_lane_id,
+        )
+    if validation_contract != DEFAULT_SMOKE_VALIDATION_CONTRACT:
+        return False, f"unknown smoke_validation_contract={validation_contract!r}"
     artifacts = result.get("artifacts", {})
     all_auth_keys = [
         k for k in artifacts
@@ -648,11 +832,13 @@ def main(argv: list[str] | None = None) -> int:
     epoch_env_var = _epoch_env_var_from_recipe(recipe_text)
     recipe_smoke_only = _recipe_requests_smoke_only(recipe_text)
     smoke_only = args.smoke_only or recipe_smoke_only
+    validation_contract = _smoke_validation_contract_from_recipe(recipe_text)
 
     if args.dry_run:
         print("[smoke-before-full] --dry-run; no Modal dispatch")
         print(f"[smoke-before-full] recipe={recipe_path}")
         print(f"[smoke-before-full] epoch_env_var={epoch_env_var or '<none>'}")
+        print(f"[smoke-before-full] smoke_validation_contract={validation_contract}")
         if recipe_smoke_only:
             print("[smoke-before-full] recipe declares smoke_only: true")
         print(
@@ -667,6 +853,23 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("[smoke-before-full] would dispatch FULL only after SMOKE GREEN")
         return 0
+
+    if validation_contract not in SMOKE_VALIDATION_CONTRACTS:
+        print(
+            "[smoke-before-full] FATAL: unknown smoke_validation_contract "
+            f"{validation_contract!r}; allowed={sorted(SMOKE_VALIDATION_CONTRACTS)}",
+            file=sys.stderr,
+        )
+        return 7
+
+    if validation_contract != DEFAULT_SMOKE_VALIDATION_CONTRACT and not recipe_smoke_only:
+        print(
+            "[smoke-before-full] FATAL: non-score smoke_validation_contract "
+            f"{validation_contract!r} requires recipe smoke_only: true; "
+            "otherwise a research-only smoke artifact could green-light paid full dispatch.",
+            file=sys.stderr,
+        )
+        return 8
 
     if recipe_smoke_only and args.full_only:
         print(
@@ -728,7 +931,8 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"[smoke-before-full] enforcing smoke score band {smoke_band} "
         f"(default={SMOKE_PLAUSIBLE_SCORE_BAND}; "
-        f"override_from_recipe={smoke_band != SMOKE_PLAUSIBLE_SCORE_BAND})"
+        f"override_from_recipe={smoke_band != SMOKE_PLAUSIBLE_SCORE_BAND}; "
+        f"validation_contract={validation_contract})"
     )
     artifact_markers = _expected_auth_artifact_markers(
         recipe_text,
@@ -738,6 +942,8 @@ def main(argv: list[str] | None = None) -> int:
         result,
         plausible_band=smoke_band,
         required_artifact_markers=artifact_markers,
+        validation_contract=validation_contract,
+        required_lane_id=_lane_id_from_recipe(recipe_text),
     )
     print(f"[smoke-before-full] SMOKE verdict: {diagnostic}")
     if not green:
@@ -793,9 +999,11 @@ __all__ = [
     "DEFAULT_SMOKE_GPU",
     "DEFAULT_SMOKE_TIMEOUT_HOURS",
     "SMOKE_PLAUSIBLE_SCORE_BAND",
+    "SMOKE_VALIDATION_CONTRACTS",
     "_epoch_env_var_from_recipe",
     "_resolve_recipe_path",
     "_resolve_smoke_band",
+    "_smoke_validation_contract_from_recipe",
     "_validate_smoke_result",
     "main",
 ]

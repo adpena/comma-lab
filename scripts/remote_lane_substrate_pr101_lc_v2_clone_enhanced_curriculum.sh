@@ -23,6 +23,7 @@ PR95PLUS_CURRICULUM="${PR95PLUS_CURRICULUM:-pr95_enhanced}"
 PR95PLUS_EPOCHS_MULTIPLIER="${PR95PLUS_EPOCHS_MULTIPLIER:-1.0}"
 PR95PLUS_SMOKE_EPOCHS="${PR95PLUS_SMOKE_EPOCHS:-100}"
 PR95PLUS_SMOKE="${PR95PLUS_SMOKE:-0}"
+PR95PLUS_SKIP_AUTH_EVAL="${PR95PLUS_SKIP_AUTH_EVAL:-1}"
 PR95PLUS_SEED="${PR95PLUS_SEED:-0}"
 PR95PLUS_GPU="${PR95PLUS_GPU:-${MODAL_GPU:-A100}}"
 PR95PLUS_CODEBOOK_PATH="${PR95PLUS_CODEBOOK_PATH:-}"
@@ -110,7 +111,7 @@ export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
 GIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "no-git")
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")
 DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1 || echo "no-driver")
-"$PYBIN" - "$PROVENANCE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_PLATFORM" "$GIT_HASH" "$GPU_NAME" "$DRIVER_VER" "$PR95PLUS_VIDEO_PATH" "$PR95PLUS_UPSTREAM_DIR" "$PR95PLUS_DEVICE" "$PR95PLUS_CURRICULUM" "$PR95PLUS_EPOCHS_MULTIPLIER" "$PR95PLUS_GPU" "$PR95PLUS_CODEBOOK_PATH" <<'PY'
+"$PYBIN" - "$PROVENANCE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_PLATFORM" "$GIT_HASH" "$GPU_NAME" "$DRIVER_VER" "$PR95PLUS_VIDEO_PATH" "$PR95PLUS_UPSTREAM_DIR" "$PR95PLUS_DEVICE" "$PR95PLUS_CURRICULUM" "$PR95PLUS_EPOCHS_MULTIPLIER" "$PR95PLUS_GPU" "$PR95PLUS_CODEBOOK_PATH" "$PR95PLUS_SKIP_AUTH_EVAL" <<'PY'
 import json, pathlib, sys, time
 import torch
 
@@ -129,7 +130,8 @@ import torch
     epochs_multiplier,
     gpu,
     codebook_path,
-) = sys.argv[1:15]
+    skip_auth_eval,
+) = sys.argv[1:16]
 payload = {
     "started_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "lane_id": lane_id,
@@ -148,6 +150,7 @@ payload = {
     "epochs_multiplier": float(epochs_multiplier),
     "gpu": gpu,
     "codebook_path": codebook_path,
+    "skip_auth_eval": skip_auth_eval.lower() in {"1", "true", "yes"},
     "score_claim": False,
     "promotion_eligible": False,
     "ready_for_exact_eval_dispatch": False,
@@ -182,8 +185,11 @@ TRAIN_ARGS=(
 if [ "$PR95PLUS_SMOKE" = "1" ] || [ "$PR95PLUS_SMOKE" = "true" ] || [ "$PR95PLUS_SMOKE" = "yes" ]; then
     TRAIN_ARGS+=(--smoke)
 fi
+if [ "$PR95PLUS_SKIP_AUTH_EVAL" = "1" ] || [ "$PR95PLUS_SKIP_AUTH_EVAL" = "true" ] || [ "$PR95PLUS_SKIP_AUTH_EVAL" = "yes" ]; then
+    TRAIN_ARGS+=(--skip-auth-eval)
+fi
 
-log "stage_4_trainer_invoke_begin curriculum=$PR95PLUS_CURRICULUM multiplier=$PR95PLUS_EPOCHS_MULTIPLIER smoke_epochs=$PR95PLUS_SMOKE_EPOCHS device=$PR95PLUS_DEVICE smoke=$PR95PLUS_SMOKE"
+log "stage_4_trainer_invoke_begin curriculum=$PR95PLUS_CURRICULUM multiplier=$PR95PLUS_EPOCHS_MULTIPLIER smoke_epochs=$PR95PLUS_SMOKE_EPOCHS device=$PR95PLUS_DEVICE smoke=$PR95PLUS_SMOKE skip_auth_eval=$PR95PLUS_SKIP_AUTH_EVAL"
 set +e
 "$PYBIN" "${TRAIN_ARGS[@]}" \
     2>&1 | tee -a "$LOG_DIR/run.log"

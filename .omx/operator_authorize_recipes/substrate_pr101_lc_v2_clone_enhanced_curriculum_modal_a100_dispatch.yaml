@@ -17,6 +17,7 @@ canary_status: canary
 # after the smoke anchor and `tools/operator_authorize.py` to refuse direct full
 # dispatch of this recipe.
 smoke_only: true
+smoke_validation_contract: training_artifact_v1
 
 cost_band:
   epochs: 29650
@@ -41,10 +42,11 @@ risk: |
 
   Smoke-only scaffold guard (Catalog #167): the operator-authorize wrapper
   routes through tools/run_modal_smoke_before_full.py which fires a
-  100-epoch ~$0.30 Modal T4 smoke, validates rc=0 + auth-eval JSON present
-  + score in the recipe smoke band, and then STOPS. The full 29,650-epoch
-  A100 dispatch is intentionally refused until `_full_main` is implemented
-  against real contest-video batches and a byte-closed archive export.
+  100-epoch ~$0.30 Modal T4 smoke, validates rc=0 + current-run
+  training_artifact_v1 manifest/archive proof with score_claim=false, and
+  then STOPS. The full 29,650-epoch A100 dispatch is intentionally refused
+  until `_full_main` is implemented against real contest-video batches and a
+  byte-closed archive export.
 
   Engineering wins (compounding speedup vs PR95 baseline):
   * E1 Muon at every stage (vs only Stage 8): ~2-4x convergence on hidden
@@ -88,6 +90,7 @@ env_overrides:
   PR95PLUS_EPOCHS_MULTIPLIER: "1.0"
   PR95PLUS_SMOKE_EPOCHS: "100"
   PR95PLUS_SMOKE: "1"
+  PR95PLUS_SKIP_AUTH_EVAL: "1"
   PR95PLUS_SEED: "0"
   PR95PLUS_GPU: "${MODAL_GPU:-A100}"
   PR95PLUS_CODEBOOK_PATH: ""

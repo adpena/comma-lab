@@ -29,6 +29,9 @@ filesystem validation in the operator wrapper.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import zipfile
 from typing import Any
 
 # CLAUDE.md Catalog #151 + #152: declare required flags so operator wrappers
@@ -167,9 +170,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
         DistillationConfig,
         DrivingPriorRenderer,
         DrivingPriorRendererConfig,
+        build_readiness_manifest,
         distill_codebook,
         pack_archive,
         parse_archive,
+        serialize_codebook,
     )
 
     print("[dpp-smoke] distilling synthetic codebook (deterministic; $0)")
@@ -211,8 +216,41 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "smoke_archive.bin").write_bytes(packed)
-    print(f"[dpp-smoke] wrote smoke archive: {out_dir / 'smoke_archive.bin'}")
+    archive_bin = out_dir / "archive_dir" / "0.bin"
+    archive_bin.parent.mkdir(parents=True, exist_ok=True)
+    archive_bin.write_bytes(packed)
+    archive_zip = out_dir / "archive.zip"
+    with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", packed)
+    smoke_archive = out_dir / "smoke_archive.bin"
+    smoke_archive.write_bytes(packed)
+    codebook_bytes = serialize_codebook(book)
+    codebook_path = out_dir / "codebook.bin"
+    codebook_path.write_bytes(codebook_bytes)
+    manifest = build_readiness_manifest(
+        archive_path=str(archive_zip),
+        codebook_path=str(codebook_path),
+        archive_bytes=len(packed),
+        codebook_bytes=len(codebook_bytes),
+    )
+    archive_sha256 = hashlib.sha256(packed).hexdigest()
+    manifest["archive_sha256"] = archive_sha256
+    manifest["training_mode"] = "smoke"
+    manifest["result"] = {
+        "training_mode": "smoke",
+        "archive_bytes": len(packed),
+        "archive_sha256": archive_sha256,
+        "archive_zip_path": str(archive_zip),
+        "archive_bin_path": str(archive_bin),
+        "codebook_path": str(codebook_path),
+    }
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    print(f"[dpp-smoke] wrote smoke archive: {smoke_archive}")
+    print(f"[dpp-smoke] wrote archive.zip: {archive_zip}")
+    print(f"[dpp-smoke] wrote manifest.json: {out_dir / 'manifest.json'}")
     return 0
 
 

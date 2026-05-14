@@ -6,6 +6,7 @@ summary: Pre-trained dashcam-prior side-lane (DP1) — MEDIUM-EV dual-purpose su
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
 smoke_only: true
+smoke_validation_contract: training_artifact_v1
 min_vram_gb: 16
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload

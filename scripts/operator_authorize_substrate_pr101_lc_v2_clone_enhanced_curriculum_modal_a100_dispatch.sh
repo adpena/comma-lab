@@ -6,9 +6,9 @@
 #
 # This wrapper routes through tools/run_modal_smoke_before_full.py per
 # Catalog #167 (check_substrate_dispatch_uses_smoke_before_full_pattern).
-# A 100-epoch ~$0.30 Modal T4 smoke fires FIRST, validates rc=0 + auth-eval
-# JSON present + score in plausible band, and only proceeds to the full
-# 29,650-epoch A100 dispatch on smoke-green.
+# A 100-epoch ~$0.30 Modal T4 smoke fires FIRST, validates rc=0 + current-run
+# training_artifact_v1 manifest/archive proof with score_claim=false, and then
+# stops because the recipe is smoke_only until the full trainer/export lands.
 #
 # Per Catalog #162 (check_operator_authorize_canonical_use) the full
 # dispatch ultimately delegates to tools/operator_authorize.py --recipe.

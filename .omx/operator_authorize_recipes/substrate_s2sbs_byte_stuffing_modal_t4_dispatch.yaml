@@ -25,6 +25,7 @@ canary_status: independent_substrate
 # emit a smoke-only anchor; a council-grade `_full_main` implementation is the path
 # to remove this descope flag.
 smoke_only: true
+smoke_validation_contract: training_artifact_v1
 
 cost_band:
   epochs: 2000
@@ -79,8 +80,9 @@ risk: |
 
   Smoke-before-full pattern (Catalog #167): the operator wrapper routes
   through `tools/run_modal_smoke_before_full.py` for a 100-epoch ~$0.15
-  Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON present, then
-  fires the 2000-epoch full dispatch only on smoke-green.
+  Modal T4 smoke FIRST, validates rc=0 + current-run training_artifact_v1
+  manifest/archive proof with score_claim=false, then stops because this
+  recipe is smoke_only until a downstream consumer and real full trainer land.
 
 envelope_status: "FITS $5 envelope at p50 fallback (smoke $0.15 + full $0.60)"
 
