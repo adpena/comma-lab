@@ -61,6 +61,7 @@ from tac.deploy.modal.auth_eval import (
     fail_closed_remote_exception_result,
     function_call_id,
     materialize_modal_artifacts,
+    modal_uploaded_submission_dir_runtime_manifest,
     prepare_modal_auth_eval_request,
     terminal_modal_auth_eval_claim,
     write_spawn_metadata,
@@ -179,6 +180,49 @@ _sha256_path = sha256_file
 
 def _json_bytes(payload: dict[str, Any]) -> bytes:
     return json_text(payload).encode("utf-8")
+
+
+def _expected_uploaded_runtime_tree_sha256(
+    *,
+    submission_dir_path: Path,
+    inflate_sh_rel: str,
+    remote_submission_dir: Path = REMOTE_OUT / "submission_dir",
+) -> tuple[str, str]:
+    from experiments.contest_auth_eval import _runtime_dependency_manifest
+
+    local_inflate_sh = (submission_dir_path / inflate_sh_rel).resolve()
+    local_manifest = _runtime_dependency_manifest(local_inflate_sh, Path("upstream"))
+    projected = modal_uploaded_submission_dir_runtime_manifest(
+        local_manifest,
+        remote_submission_dir=str(remote_submission_dir),
+    )
+    return (
+        str(projected.get("runtime_tree_sha256") or ""),
+        str(projected.get("runtime_content_tree_sha256") or ""),
+    )
+
+
+def _validate_uploaded_runtime_tree_expectation(
+    *,
+    expected_runtime_tree_sha256: str,
+    submission_dir_path: Path | None,
+    inflate_sh_rel: str,
+) -> None:
+    if not expected_runtime_tree_sha256 or submission_dir_path is None:
+        return
+    remote_tree_sha256, content_tree_sha256 = _expected_uploaded_runtime_tree_sha256(
+        submission_dir_path=submission_dir_path,
+        inflate_sh_rel=inflate_sh_rel,
+    )
+    if expected_runtime_tree_sha256 != remote_tree_sha256:
+        raise SystemExit(
+            "FATAL: --expected-runtime-tree-sha256 does not match the Modal "
+            "uploaded --submission-dir runtime tree. Modal extracts uploaded "
+            f"runtimes under {REMOTE_OUT / 'submission_dir'}, so the expected "
+            f"runtime_tree_sha256 is {remote_tree_sha256}; got "
+            f"{expected_runtime_tree_sha256}. "
+            f"runtime_content_tree_sha256={content_tree_sha256}"
+        )
 
 
 def _probe_cpu_environment() -> dict[str, Any]:
@@ -782,6 +826,11 @@ def main(
     submission_dir_zip_sha256 = prepared.submission_dir_zip_sha256
     out_dir = prepared.output_dir
     source_repo_commit = _local_git_commit()
+    _validate_uploaded_runtime_tree_expectation(
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        submission_dir_path=submission_dir_path,
+        inflate_sh_rel=inflate_sh_rel,
+    )
 
     local_summary = {
         "schema_version": 1,

@@ -423,6 +423,91 @@ def test_modal_uploaded_submission_dir_runtime_manifest_uses_remote_shape() -> N
     )
 
 
+def test_modal_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtime(
+    mod,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"archive bytes")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+
+    remote_hash = "b" * 64
+    content_hash = "c" * 64
+    monkeypatch.setattr(
+        mod,
+        "_expected_uploaded_runtime_tree_sha256",
+        lambda **_kwargs: (remote_hash, content_hash),
+    )
+    monkeypatch.setattr(
+        mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **_kwargs: pytest.fail("claim should not be recorded before hash validation"),
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        mod.main(
+            str(archive),
+            str(tmp_path / "out"),
+            inflate_sh="inflate.sh",
+            submission_dir=str(runtime),
+            expected_runtime_tree_sha256="a" * 64,
+            lane_id="lane_unit_modal_auth_eval_runtime_hash_guard",  # FAKE_LANE_OK:test-fixture lane_id
+            instance_job_id="job_unit_modal_auth_eval_runtime_hash_guard",
+        )
+
+    message = str(exc.value)
+    assert "uploaded --submission-dir runtime tree" in message
+    assert remote_hash in message
+    assert content_hash in message
+
+
+def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtime(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"archive bytes")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+
+    remote_hash = "d" * 64
+    content_hash = "e" * 64
+    monkeypatch.setattr(
+        cpu_mod,
+        "_expected_uploaded_runtime_tree_sha256",
+        lambda **_kwargs: (remote_hash, content_hash),
+    )
+    monkeypatch.setattr(
+        cpu_mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **_kwargs: pytest.fail("claim should not be recorded before hash validation"),
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cpu_mod.main(
+            str(archive),
+            str(tmp_path / "out"),
+            inflate_sh="inflate.sh",
+            submission_dir=str(runtime),
+            expected_runtime_tree_sha256="f" * 64,
+            lane_id="lane_unit_modal_cpu_auth_eval_runtime_hash_guard",  # FAKE_LANE_OK:test-fixture lane_id
+            instance_job_id="job_unit_modal_cpu_auth_eval_runtime_hash_guard",
+        )
+
+    message = str(exc.value)
+    assert "uploaded --submission-dir runtime tree" in message
+    assert remote_hash in message
+    assert content_hash in message
+
+
 def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):
     """Runtime zips skip host metadata files before hidden-path validation."""
     runtime = tmp_path / "runtime"
