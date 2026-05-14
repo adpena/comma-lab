@@ -42,8 +42,21 @@ except ImportError:  # pragma: no cover
     constriction = None  # type: ignore[assignment]
 
 try:  # pragma: no cover - optional in lite environments
-    import pyppmd
+    import pyppmd  # PYPPMD_LGPL_OK:public-PR86-archive-replay-decode-only-no-permissive-PPMd-binding-on-PyPI
 except ImportError:  # pragma: no cover
+    # pyppmd is LGPL-2.1-or-later and is now an OPTIONAL dep (pip install
+    # tac[pr86_replay]) per OSS v0.2.0-rc1 BLOCKER B1 (lane
+    # lane_pyppmd_to_constriction_migrate_20260514). Default `pip install
+    # tac` does NOT pull pyppmd, so this ImportError is the EXPECTED path
+    # outside the PR86/PR91 third-party-archive-replay forensic flow. The
+    # PR86 codec sets `pyppmd = None` here and `_require_pyppmd()` raises
+    # Pr86HpacReplayError("dependency_contract", "pyppmd_missing") at the
+    # call site for any code path that actually needs to decode an
+    # hpac.pt.ppmd wire-format member. Per CLAUDE.md "MPS auth eval is
+    # NOISE" / "Apples-to-apples evidence discipline" tag-discipline: the
+    # bytes pyppmd decodes are public-PR-author-emitted wire bytes; we have
+    # no permissive replacement (constriction lacks PPMd context modeling;
+    # all PyPI PPMd bindings are LGPL).
     pyppmd = None  # type: ignore[assignment]
 
 try:  # pragma: no cover - optional in lite environments

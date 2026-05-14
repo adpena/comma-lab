@@ -23,9 +23,19 @@ without explicit human approval.
   list into a full notices file covering all 11 runtime deps,
   the runtime/dev/cloud/viz extras, and the Modal worker image's additional
   pip-installs.
-- **One BLOCKER**: `pyppmd>=1.3,<2.0` is licensed under **LGPL-2.1-or-later**.
-  This is a copyleft license, outside the operator's stated "MIT and Apache 2.0
-  for all" policy. **Operator decision required before the drafts can promote.**
+- **One BLOCKER (RESOLVED 2026-05-14)**: `pyppmd>=1.3,<2.0` was licensed under
+  **LGPL-2.1-or-later**, outside the operator's "MIT and Apache 2.0 for all"
+  hard-dep policy. **Operator decision 2026-05-14**: implement Option 3 (mark
+  pyppmd OPTIONAL via `[project.optional-dependencies].pr86_replay`) — chosen
+  because empirical PyPI survey 2026-05-14 confirmed there is NO permissive
+  PPMd Python binding (every PPMd implementation is LGPL-derived from the
+  Igor Pavlov 7-Zip reference; `constriction` itself ships only RangeEncoder/
+  Decoder + ANS, not PPMd context modeling, so Option-2 "replace" was not
+  feasible without dropping PR86/PR91 third-party-archive replay capability).
+  Default `pip install tac` now carries no copyleft; PR86/PR91 replay flows
+  install `pip install tac[pr86_replay]` and accept the documented LGPL
+  obligation. See lane `lane_pyppmd_to_constriction_migrate_20260514` and
+  memory `feedback_pyppmd_to_constriction_migrate_landed_20260514.md`.
 - **One operator-confirm point**: copyright-holder identity for the MIT line.
   Defaulted to `Alejandro Peña` from `git config user.name`; the operator may
   prefer a different legal entity, project name, or "the comma_lab contributors"-style attribution.
@@ -100,9 +110,12 @@ A full notices file enumerating:
 - Project license policy statement ("MIT / Apache-2.0 / BSD / HPND / ISC /
   PSF / MPL-2.0 (dev only) / BSL-1.0 only; copyleft requires operator
   review").
-- **Runtime deps** (11 packages from `pyproject.toml [project] dependencies`):
-  torch, pydantic, numpy, click, brotli, constriction, pyppmd,
+- **Runtime deps** (10 packages from `pyproject.toml [project] dependencies`,
+  all permissive after BLOCKER B1 resolution 2026-05-14):
+  torch, pydantic, numpy, click, brotli, constriction,
   cryptography, cmaes, optuna.
+- **PR86/PR91 replay extra** (`[project.optional-dependencies].pr86_replay`,
+  added 2026-05-14): pyppmd (LGPL-2.1-or-later, opt-in only).
 - **Runtime extras** (7 packages from `[runtime]`): av, safetensors,
   opencv-python, timm, einops, segmentation-models-pytorch.
 - **Dev deps** (table form): pytest, pytest-timeout, pytest-subtests,
@@ -145,7 +158,7 @@ their well-known upstream repositories. These are explicitly flagged as
 | click 8.3.2 | yes | upstream-canonical: BSD-3-Clause (LICENSE.txt) |
 | brotli 1.2.0 | yes | metadata: `MIT` |
 | constriction 0.4.2 | yes | metadata: `MIT OR Apache-2.0 OR BSL-1.0` |
-| **pyppmd 1.3.1** | **yes** | **metadata: `LGPL-2.1-or-later` — BLOCKER** |
+| pyppmd 1.3.1 | yes (optional `[pr86_replay]` extra after 2026-05-14) | metadata: `LGPL-2.1-or-later` — BLOCKER B1 RESOLVED via Option 3 (opt-in extra) |
 | cryptography 46.0.4 | yes | upstream-canonical: Apache-2.0 OR BSD-3-Clause (LICENSE.APACHE + LICENSE.BSD) |
 | cmaes 0.13.0 | yes | upstream-canonical: MIT (LICENSE file in repo) |
 | optuna 4.8.0 | yes | classifier: `License :: OSI Approved :: MIT License` |
@@ -166,7 +179,72 @@ their well-known upstream repositories. These are explicitly flagged as
 
 ## BLOCKERS
 
-### B1 (HIGH): `pyppmd` is LGPL-2.1-or-later
+### B1 (HIGH, RESOLVED 2026-05-14 via Option 3): `pyppmd` is LGPL-2.1-or-later
+
+**Resolution (2026-05-14, lane `lane_pyppmd_to_constriction_migrate_20260514`):**
+The operator routed this BLOCKER as "Replace pyppmd with constriction OR
+permissive PPMd binding (cleanest re: policy)". Investigation surfaced two
+structural facts that rerouted the decision:
+
+1. **Constriction lacks PPMd context modeling.** It ships only RangeEncoder /
+   RangeDecoder + ANS coders; the PR86/PR91 wire-format `hpac.pt.ppmd` member
+   uses Igor-Pavlov-style PPMd context modeling that has no constriction
+   equivalent. Option 2a ("switch the PR86 inflate path to constriction") is
+   not a drop-in swap — it would require either rewriting the PR86 archive
+   format or dropping third-party PR86/PR91 archive replay capability.
+2. **No permissive PPMd Python binding exists on PyPI** (empirical survey
+   2026-05-14). Every package in the family (`pyppmd`, `pyppmd-gentee`,
+   `ppmd-cffi`, `zipfile-ppmd`) is LGPL-licensed because they all wrap the
+   LGPL Igor-Pavlov 7-Zip reference implementation. The `ppmd` PyPI package
+   is an unrelated PowerPoint-to-Markdown tool; `et-ppmdcommon` is unrelated
+   coursework. There is no clean-room MIT/BSD PPMd port available.
+
+**Therefore Option 3 (mark pyppmd OPTIONAL via `[project.optional-dependencies]
+.pr86_replay`) was implemented as the least-disruptive permissive-default
+path:**
+
+- `pyproject.toml`: `pyppmd>=1.3,<2.0` moved from `[project] dependencies` to
+  `[project.optional-dependencies].pr86_replay`. Default `pip install tac` now
+  carries no copyleft.
+- `experiments/modal_train_lane.py`: `pyppmd` removed from the default Modal
+  worker image's pip-install list (Modal workers do not run PR86/PR91 third-
+  party-archive replay; that is a local CPU forensic flow).
+- `tac.pr86_hpac_codec` and `tac.pr91_hpm1_codec`: live `import pyppmd` sites
+  annotated with `# PYPPMD_LGPL_OK:public-PR{86,91}-archive-replay-decode-only-
+  no-permissive-PPMd-binding-on-PyPI` waiver tokens so a future STRICT
+  preflight gate (`check_no_pyppmd_imports`) can refuse new pyppmd usage
+  without breaking the two existing fail-closed wire-format-decode call sites.
+- `THIRD_PARTY_NOTICES.md.draft`: pyppmd entry relocated from "Runtime
+  dependencies" to a new "PR86/PR91 replay extra" section with the LGPL
+  obligation documented inline.
+
+**Carry-forward operator-routable surfaces** (NOT done by this lane; surface
+back when convenient):
+
+- (a) **STRICT preflight gate `check_no_pyppmd_imports`** — sister gate to
+  `check_no_pyppmd_imports`, refuses any NEW `import pyppmd` / `from pyppmd`
+  outside the two grandfathered call sites. Per CLAUDE.md "Bugs must be
+  permanently fixed AND self-protected against" non-negotiable. Deferred
+  this commit because the dirty `src/tac/preflight.py` is owned by a
+  parallel sister subagent (RESUME-3-CRASHED); landing the gate in the
+  same commit would race their work.
+- (b) **Decision: drop PR86/PR91 third-party-archive replay entirely**?
+  This would let us delete pyppmd from the dep tree completely (including
+  the `[pr86_replay]` extra) and remove the two `import pyppmd` sites.
+  Cost: lose the ability to forensic-replay any future public PR86/PR91-
+  family archive. Recommendation: keep the optional extra; PR86/PR91
+  replay capability is a research-loop investment that should not be
+  abandoned on a license-policy preference alone.
+- (c) **Vendor a minimal MIT-licensed PPMd-decoder reimplementation**.
+  The 7-Zip reference is LGPL; clean-room PPMd reimplementations are rare.
+  This would be a dedicated engineering project (probably 1-2 weeks of
+  council-grade design + implementation + byte-parity validation). Surface
+  back if the operator decides the optional-extra approach is not enough
+  long-term.
+
+---
+
+### B1 historical context (preserved from original draft)
 
 **Source of finding:** `importlib.metadata.metadata("pyppmd").get("License")`
 returned the string `"LGPL-2.1-or-later"`.
@@ -214,13 +292,13 @@ PPMd streams.
    → Smallest behavior change; preserves capability; defers the strict policy
    compliance question.
 
-**My recommendation:** Option 1 (accept dynamically-linked LGPL as a documented
-exception). Pure-Python LGPL deps via PyPI are an industry-standard case where
-the LGPL obligations are practically satisfied by the install path, and the
-"MIT and Apache 2.0 for all" policy is best read as covering *project-authored
-code* and *vendored runtime code*, not pip-installed dynamic deps. The draft
-THIRD_PARTY_NOTICES.md is written to document `pyppmd` transparently regardless
-of which option is chosen.
+**My recommendation (superseded 2026-05-14 by operator decision):** Option 1
+(accept dynamically-linked LGPL as a documented exception) was the original
+recommendation. The operator chose a stronger posture (Option 3, opt-in extra)
+because Option 1 still pulls LGPL bytes into a default `pip install tac` and
+the operator's stated "MIT and Apache 2.0 for all" hard-dep policy is read
+strictly. Option 3 satisfies the strict policy while preserving PR86/PR91
+replay capability via opt-in.
 
 ---
 
@@ -233,8 +311,9 @@ Before promoting these drafts to `LICENSE` and `THIRD_PARTY_NOTICES.md`:
 - [ ] **Copyright year** — confirm `2026` vs `2024-2026` / `2025-2026` /
       etc.
 - [ ] **SPDX header** — add `SPDX-License-Identifier: MIT` to LICENSE? (y/n)
-- [ ] **`pyppmd` LGPL decision** — Option 1 (accept + document) /
-      Option 2 (replace) / Option 3 (make optional). See B1 above.
+- [x] **`pyppmd` LGPL decision** — RESOLVED 2026-05-14: Option 3 (make optional
+      via `[project.optional-dependencies].pr86_replay`). See B1 above; lane
+      `lane_pyppmd_to_constriction_migrate_20260514`.
 - [ ] **Modal-worker-image deps included in main notices?** — the draft includes
       a "Modal-only worker image deps" section. Operator may want this kept
       separate (in a `docs/` runbook) since they are not user-facing dependencies

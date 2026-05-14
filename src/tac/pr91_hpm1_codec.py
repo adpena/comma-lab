@@ -593,8 +593,16 @@ def _load_hpm1_packed_state_bytes(payload: Hpm1MaskPayload) -> tuple[bytes, Mapp
     if torch is None:  # pragma: no cover - optional dependency path
         raise Pr91Hpm1Error("dependency_contract", "torch_missing")
     try:
-        import pyppmd
+        import pyppmd  # PYPPMD_LGPL_OK:public-PR91-archive-replay-decode-only-no-permissive-PPMd-binding-on-PyPI
     except ImportError as exc:  # pragma: no cover - optional dependency path
+        # pyppmd is LGPL-2.1-or-later and is now an OPTIONAL dep (pip install
+        # tac[pr86_replay]) per OSS v0.2.0-rc1 BLOCKER B1 (lane
+        # lane_pyppmd_to_constriction_migrate_20260514). The fail-closed
+        # error message below is the canonical operator-routable signal: the
+        # caller asked us to decode wire-format `hpac` PPMd bytes from a
+        # third-party PR91 archive but the optional dep wasn't installed.
+        # Recovery: `pip install tac[pr86_replay]` (accepts the LGPL
+        # obligation for the replay tooling; see THIRD_PARTY_NOTICES.md).
         raise Pr91Hpm1Error("dependency_contract", "pyppmd_missing") from exc
     try:
         raw = pyppmd.decompress(

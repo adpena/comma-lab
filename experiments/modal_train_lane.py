@@ -71,7 +71,15 @@ image = (
         # entropy runtime deps. Added 2026-05-13 after PR95++ smoke crashed
         # at `import constriction` ModuleNotFoundError on Modal worker.
         "constriction>=0.4,<0.5",
-        "pyppmd>=1.3,<2.0",
+        # NOTE: `pyppmd` (LGPL-2.1-or-later) was removed from the default
+        # Modal worker image 2026-05-14 per OSS v0.2.0-rc1 BLOCKER B1 (lane
+        # lane_pyppmd_to_constriction_migrate_20260514). Modal workers do
+        # NOT run third-party PR86/PR91 replay (that is a local CPU forensic
+        # path consumed by tac.pr86_hpac_codec / tac.pr91_hpm1_codec). If a
+        # future Modal lane needs to decode hpac.pt.ppmd wire bytes, add
+        # `"pyppmd>=1.3,<2.0"` back to the lane-specific image (NOT this
+        # default image) and document the LGPL obligation in the lane
+        # runbook. Default image is permissive-only.
         "click",
         "nvidia-dali-cuda120==1.52.0",
         "tqdm",
