@@ -205,6 +205,91 @@ def _resolve_smoke_band(
     return (widened_lo, widened_hi)
 
 
+def _resolve_min_smoke_gpu(
+    recipe_text: str,
+    *,
+    smoke_gpu_default: str = DEFAULT_SMOKE_GPU,
+) -> str:
+    """Return the smoke GPU class the recipe requires (or the smoke default).
+
+    Catalog #215 (FIX-HARDEN-OPT 2026-05-14 P0): the SIREN smoke timeout on
+    2026-05-13 (label ``substrate_siren_modal_a100_dispatch_..._smoke``)
+    showed the smoke wrapper was defaulting to ``T4`` even though the recipe's
+    full-run GPU was ``A100``. T4 is too slow for compute-heavy substrates
+    (SIREN's coordinate-MLP forward, D4's residual-codec forward) at the same
+    epoch count the smoke runs (typically 100). The smoke phase then times
+    out and the operator never gets the cheap integration validation the
+    smoke-before-full pattern is designed to provide.
+
+    The fix: recipes can declare ``min_smoke_gpu: "<class>"`` at the YAML top
+    level. If declared, the smoke wrapper uses that class instead of the
+    smoke default. If absent, the smoke default applies (cheap T4 smoke).
+
+    The resolution honors the CLI ``--smoke-gpu`` flag IFF the CLI flag is
+    >= the recipe minimum; otherwise the recipe minimum wins (operator's
+    intent at recipe-design time is preserved against accidental ``--smoke-gpu
+    T4`` overrides). The class hierarchy is the canonical Modal pricing
+    ladder: ``T4 < L4 < A10G < L40S < A100 < H100``.
+    """
+    import re
+
+    m = re.search(
+        r'^min_smoke_gpu\s*:\s*"?([A-Za-z0-9_]+)"?\s*$',
+        recipe_text,
+        re.MULTILINE,
+    )
+    if not m:
+        return smoke_gpu_default
+    declared = m.group(1).strip()
+    # Reject placeholder / unknown classes; fall back to default rather than
+    # error so this enhancement is backward-compatible.
+    canonical = {"T4", "L4", "A10G", "L40S", "A100", "H100"}
+    if declared not in canonical:
+        return smoke_gpu_default
+    return declared
+
+
+def _smoke_gpu_class_at_least(declared: str, minimum: str) -> bool:
+    """Return True iff ``declared`` is >= ``minimum`` in Modal pricing class.
+
+    Used by ``_resolve_smoke_gpu`` to honor the operator's CLI ``--smoke-gpu``
+    override IFF the override is at least as powerful as the recipe minimum.
+    """
+    ladder = ["T4", "L4", "A10G", "L40S", "A100", "H100"]
+    try:
+        return ladder.index(declared) >= ladder.index(minimum)
+    except ValueError:
+        return False
+
+
+def _resolve_smoke_gpu(
+    recipe_text: str,
+    cli_smoke_gpu: str,
+    *,
+    smoke_gpu_default: str = DEFAULT_SMOKE_GPU,
+) -> tuple[str, str]:
+    """Return ``(resolved_gpu, rationale)`` for the smoke phase.
+
+    Per Catalog #215: prefer the recipe's ``min_smoke_gpu`` over the CLI
+    ``--smoke-gpu`` flag IFF the CLI flag is below the recipe minimum. This
+    means a recipe-declared minimum overrides a stale CLI default. If the
+    operator passes ``--smoke-gpu A100`` and the recipe declares ``min_smoke_gpu:
+    "T4"``, the CLI wins (operator may be paying for a more powerful smoke
+    deliberately). If the operator passes ``--smoke-gpu T4`` and the recipe
+    declares ``min_smoke_gpu: "A100"``, the recipe wins (recipe-design intent
+    preserved against accidental CLI downgrade).
+    """
+    recipe_min = _resolve_min_smoke_gpu(
+        recipe_text, smoke_gpu_default=smoke_gpu_default
+    )
+    if recipe_min == smoke_gpu_default:
+        # No recipe override; honor CLI.
+        return cli_smoke_gpu, "cli_smoke_gpu_no_recipe_min"
+    if _smoke_gpu_class_at_least(cli_smoke_gpu, recipe_min):
+        return cli_smoke_gpu, "cli_smoke_gpu_meets_recipe_min"
+    return recipe_min, "recipe_min_smoke_gpu_overrides_cli_downgrade"
+
+
 def _epoch_env_var_from_recipe(recipe_text: str) -> str | None:
     """Return the env var name the trainer reads for epoch count.
 
@@ -921,6 +1006,20 @@ def main(argv: list[str] | None = None) -> int:
     smoke_only = args.smoke_only or recipe_smoke_only
     validation_contract = _smoke_validation_contract_from_recipe(recipe_text)
 
+    # Catalog #215 (FIX-HARDEN-OPT 2026-05-14 P0): SIREN-class substrate
+    # smoke timeouts on T4 default. Recipes can declare `min_smoke_gpu`;
+    # honor it over the CLI default if the CLI is a downgrade.
+    resolved_smoke_gpu, smoke_gpu_rationale = _resolve_smoke_gpu(
+        recipe_text, args.smoke_gpu
+    )
+    if resolved_smoke_gpu != args.smoke_gpu:
+        print(
+            f"[smoke-before-full] Catalog #215: smoke GPU "
+            f"{args.smoke_gpu} -> {resolved_smoke_gpu} "
+            f"({smoke_gpu_rationale}); recipe-declared min_smoke_gpu wins "
+            f"over CLI downgrade to preserve smoke-phase compute parity."
+        )
+
     if args.dry_run:
         print("[smoke-before-full] --dry-run; no Modal dispatch")
         print(f"[smoke-before-full] recipe={recipe_path}")
@@ -931,7 +1030,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "[smoke-before-full] would dispatch SMOKE: "
             f"recipe={args.recipe} smoke_epochs={args.smoke_epochs} "
-            f"smoke_gpu={args.smoke_gpu} timeout_hours={args.smoke_timeout_hours}"
+            f"smoke_gpu={resolved_smoke_gpu} (rationale={smoke_gpu_rationale}) "
+            f"timeout_hours={args.smoke_timeout_hours}"
         )
         if smoke_only:
             print("[smoke-before-full] would stop after SMOKE because smoke-only is set")
@@ -982,7 +1082,7 @@ def main(argv: list[str] | None = None) -> int:
         recipe_path,
         epoch_env_var=epoch_env_var,
         smoke_epochs=args.smoke_epochs,
-        smoke_gpu=args.smoke_gpu,
+        smoke_gpu=resolved_smoke_gpu,
         smoke_timeout_hours=args.smoke_timeout_hours,
         operator_handle=args.operator_handle,
         repo_root=repo_root,

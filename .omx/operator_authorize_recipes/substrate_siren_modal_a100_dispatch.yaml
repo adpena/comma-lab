@@ -6,6 +6,13 @@ summary: SIREN coordinate-MLP naked replacement dispatch on Modal A100; residual
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
 min_vram_gb: 40
+# Catalog #215 (FIX-HARDEN-OPT 2026-05-14 P0): SIREN smoke timed out on T4
+# default 2026-05-13 (label substrate_siren_modal_a100_dispatch_..._smoke,
+# rc=124, 3601s wall-clock); operator intent at recipe-design time was A100
+# for both full and smoke phases because coordinate-MLP forward + scorer
+# forward at 100 epochs takes >1h on T4. Declaring min_smoke_gpu pins the
+# smoke phase to A100 too; the CLI --smoke-gpu T4 default is overridden.
+min_smoke_gpu: "A100"
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
