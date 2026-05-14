@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """sane_hnerv score-aware Lagrangian — L = alpha*B/N + beta*d_seg + gamma*sqrt(d_pose).
 
 The Fields-medal grand council 2026-05-12 score-domain Lagrangian per
@@ -31,7 +32,7 @@ import torch
 
 from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
-    score_pair_components,
+    score_pair_components_dispatch,
 )
 
 # Import lazily inside functions to avoid hot-path penalty when only the
@@ -105,6 +106,9 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         *,
         apply_eval_roundtrip: bool = True,
         noise_std: float = 0.5,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute the score-domain Lagrangian on a pair of rendered frames.
 
@@ -129,13 +133,16 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        seg_term, pose_term = self.score_pair_components(
+        seg_term, pose_term = self.score_pair_components_dispatch(
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )
 
         rate_term = self.weights.alpha_rate * archive_bytes_proxy / self.weights.contest_normalizer
@@ -156,7 +163,7 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         }
         return loss, parts
 
-    def score_pair_components(
+    def score_pair_components_dispatch(
         self,
         *,
         seg_scorer: torch.nn.Module,
@@ -165,17 +172,23 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         rgb_1_rt: torch.Tensor,
         gt_rgb_0: torch.Tensor,
         gt_rgb_1: torch.Tensor,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Call the canonical scorer-preprocess contract.
 
         Subclasses can override this method to make substrate-local ownership
         explicit while preserving the single canonical helper.
         """
-        return score_pair_components(
+        return score_pair_components_dispatch(
             seg_scorer=seg_scorer,
             pose_scorer=pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )

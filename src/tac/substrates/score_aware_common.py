@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Canonical scorer-input contract for substrate score-aware losses.
 
 Every full-renderer substrate loss must compare rendered frame pairs through
@@ -213,12 +214,123 @@ def _require_preprocess(scorer: torch.nn.Module, *, scorer_name: str) -> None:
         )
 
 
+def score_pair_components_dispatch(
+    *,
+    seg_scorer: torch.nn.Module,
+    pose_scorer: torch.nn.Module,
+    rgb_0_rt: torch.Tensor,
+    rgb_1_rt: torch.Tensor,
+    gt_rgb_0: torch.Tensor | None = None,
+    gt_rgb_1: torch.Tensor | None = None,
+    gt_pose_batch: torch.Tensor | None = None,
+    gt_seg_batch: torch.Tensor | None = None,
+    gt_seg_already_probs: bool | None = None,
+    class_weights: torch.Tensor | None = None,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Canonical dispatch entry point for substrate score-aware losses (F3).
+
+    Routes the call to :func:`score_pair_components_with_cache` when the
+    caller supplies precomputed GT scorer outputs (canonical F3 wire-in
+    per CLAUDE.md TIER-1-OPT-BATCH 2026-05-14), otherwise falls back to
+    :func:`score_pair_components` (the original GT-forward path).
+
+    The two paths are mathematically identical (the cache stores the same
+    tensors a direct GT forward would produce). The dispatcher is the
+    single canonical extension point for substrate `forward(...)` methods
+    so each trainer wires the cache through one consistent kwarg set
+    (`gt_pose_batch`/`gt_seg_batch`/`gt_seg_already_probs`).
+
+    Args:
+        seg_scorer / pose_scorer / rgb_0_rt / rgb_1_rt: required, same as
+            :func:`score_pair_components` and
+            :func:`score_pair_components_with_cache`.
+        gt_rgb_0 / gt_rgb_1: GT frame pair (required when cache args are
+            None; ignored when cache args are provided).
+        gt_pose_batch / gt_seg_batch / gt_seg_already_probs: precomputed
+            cache batch from
+            :meth:`tac.training_optimization.GTScorerCache.lookup`. Either
+            ALL THREE are non-None (cache path) or ALL THREE are None
+            (GT-forward fallback). Partial cache args raise
+            :class:`ScoreAwareScorerContractError`.
+        class_weights / segmentation_surrogate / segmentation_temperature
+        / fisher_rao_eps / sinkhorn_max_positions_per_chunk: forwarded
+            unchanged to whichever path runs.
+
+    Returns:
+        ``(seg_term, pose_term)`` tensors matching either canonical path.
+
+    Raises:
+        ScoreAwareScorerContractError: If the cache kwargs are partially
+            specified, or both gt_rgb_0/gt_rgb_1 and cache kwargs are None
+            (no GT signal at all).
+    """
+    cache_provided = (
+        gt_pose_batch is not None
+        and gt_seg_batch is not None
+        and gt_seg_already_probs is not None
+    )
+    cache_partially = (
+        gt_pose_batch is not None
+        or gt_seg_batch is not None
+        or gt_seg_already_probs is not None
+    )
+    if cache_partially and not cache_provided:
+        raise ScoreAwareScorerContractError(
+            "score_pair_components_dispatch received PARTIAL cache kwargs: "
+            f"gt_pose_batch={'set' if gt_pose_batch is not None else 'None'} "
+            f"gt_seg_batch={'set' if gt_seg_batch is not None else 'None'} "
+            f"gt_seg_already_probs={gt_seg_already_probs!r}. "
+            "Either supply ALL THREE (cache path) or NONE (GT-forward path)."
+        )
+
+    if cache_provided:
+        return score_pair_components_with_cache(
+            seg_scorer=seg_scorer,
+            pose_scorer=pose_scorer,
+            rgb_0_rt=rgb_0_rt,
+            rgb_1_rt=rgb_1_rt,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=bool(gt_seg_already_probs),
+            class_weights=class_weights,
+            segmentation_surrogate=segmentation_surrogate,
+            segmentation_temperature=segmentation_temperature,
+            fisher_rao_eps=fisher_rao_eps,
+            sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
+        )
+
+    if gt_rgb_0 is None or gt_rgb_1 is None:
+        raise ScoreAwareScorerContractError(
+            "score_pair_components_dispatch requires either GT cache batch "
+            "(gt_pose_batch/gt_seg_batch/gt_seg_already_probs) OR raw GT "
+            "frames (gt_rgb_0/gt_rgb_1); got neither."
+        )
+    return score_pair_components(
+        seg_scorer=seg_scorer,
+        pose_scorer=pose_scorer,
+        rgb_0_rt=rgb_0_rt,
+        rgb_1_rt=rgb_1_rt,
+        gt_rgb_0=gt_rgb_0,
+        gt_rgb_1=gt_rgb_1,
+        class_weights=class_weights,
+        segmentation_surrogate=segmentation_surrogate,
+        segmentation_temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
+    )
+
+
 __all__ = [
     "CONTEST_POSE_SQRT_WEIGHT",
     "CONTEST_RATE_WEIGHT",
     "CONTEST_SEG_WEIGHT",
     "ScoreAwareScorerContractError",
     "score_pair_components",
+    "score_pair_components_dispatch",
     "score_pair_components_with_cache",
     "stage_frame_pair",
 ]

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """ff_nerv score-aware Lagrangian — L = alpha*B/N + beta*d_seg + gamma*sqrt(d_pose).
 
 L0 SKETCH; mirrors the sane_hnerv reference. The Phase 2 trainer (L1
@@ -19,7 +20,7 @@ import torch
 
 from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
-    score_pair_components,
+    score_pair_components_dispatch,
 )
 
 
@@ -68,6 +69,9 @@ class FfnervScoreAwareLoss(torch.nn.Module):
         *,
         apply_eval_roundtrip: bool = True,
         noise_std: float = 0.5,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         if not apply_eval_roundtrip:
             raise ValueError(
@@ -81,13 +85,16 @@ class FfnervScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        seg_term, pose_term = score_pair_components(
+        seg_term, pose_term = score_pair_components_dispatch(
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )
 
         rate_term = (

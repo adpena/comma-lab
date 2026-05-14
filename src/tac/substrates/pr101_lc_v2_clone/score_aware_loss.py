@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """pr101_lc_v2_clone score-aware Lagrangian — same form as sane_hnerv.
 
 Per CLAUDE.md HNeRV parity discipline L6: the loss MUST be score-aware. The
@@ -28,7 +29,7 @@ import torch
 
 from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
-    score_pair_components,
+    score_pair_components_dispatch,
 )
 
 
@@ -105,6 +106,9 @@ class Pr101LcV2CloneScoreAwareLoss(torch.nn.Module):
         *,
         apply_eval_roundtrip: bool = True,
         noise_std: float = 0.5,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute the score-domain Lagrangian on a pair of rendered frames."""
         if not apply_eval_roundtrip:
@@ -122,13 +126,16 @@ class Pr101LcV2CloneScoreAwareLoss(torch.nn.Module):
         rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
         rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
 
-        seg_term, pose_term = score_pair_components(
+        seg_term, pose_term = score_pair_components_dispatch(
             seg_scorer=self.seg_scorer,
             pose_scorer=self.pose_scorer,
             rgb_0_rt=rgb_0_rt,
             rgb_1_rt=rgb_1_rt,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            gt_pose_batch=gt_pose_batch,
+            gt_seg_batch=gt_seg_batch,
+            gt_seg_already_probs=gt_seg_already_probs,
         )
 
         rate_term = (
