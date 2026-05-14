@@ -1896,6 +1896,18 @@ def preflight_all(
         check_dp1_composition_routes_through_canonical_helper(
             strict=True, verbose=verbose,
         )
+        # 2026-05-14 Catalog #213 - Comma2k19 chunk downloads route through
+        # the canonical local cache (``Comma2k19LocalCache``). STRICT @ 0
+        # at landing because the only file in scope with the URL literals
+        # is the canonical helper itself. The gate refuses any FUTURE
+        # caller under tools/scripts/experiments/src/tac that fetches
+        # Comma2k19 chunks via bare urlopen / requests / curl / wget /
+        # aria2c. Sister of #209 (frame-iterator routing) + #210 (codebook
+        # provenance). Memory:
+        # feedback_dp1_comma2k19_autoload_landed_20260514.md.
+        check_comma2k19_downloads_route_through_canonical_cache(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -49209,6 +49221,270 @@ def check_dp1_composition_routes_through_canonical_helper(
             "sane_hnerv; composition that bypasses ``compose_with`` "
             "loses byte-stable DPCOMP framing, license-tag propagation, "
             "and codebook-tampering detection.\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
+
+# =============================================================================
+# Catalog #213 - Comma2k19 downloads route through canonical local cache
+# (2026-05-14, lane_dp1_comma2k19_autoload_log_incremental_20260514)
+# =============================================================================
+
+_CHECK_213_COMMA2K19_URL_FRAGMENTS: tuple[str, ...] = (
+    "raw.githubusercontent.com/commaai/comma2k19",
+    "raw.githubusercontent.com/commaai/comma2k19/",
+    "github.com/commaai/comma2k19/raw",
+    "github.com/commaai/comma2k19/blob",
+    "github.com/commaai/comma2k19/archive",
+    "academictorrents.com/details/65a2fbc964078aff62076ff4e103f18b951c5ddb",
+    "academictorrents.com/download/65a2fbc964078aff62076ff4e103f18b951c5ddb",
+    "comma2k19.tar",
+    "comma2k19.zip",
+)
+_CHECK_213_DOWNLOAD_CALL_TOKENS: tuple[str, ...] = (
+    "urlopen",
+    "urlretrieve",
+    "requests.get",
+    "requests.post",
+    "requests.head",
+    "httpx.get",
+    "httpx.post",
+    "Session().get",
+    "wget ",
+    "curl ",
+    "aria2c ",
+    "transmission-cli",
+    "transmission-remote",
+)
+_CHECK_213_CANONICAL_CACHE_TOKENS: tuple[str, ...] = (
+    "Comma2k19LocalCache",
+    "from tac.substrates.pretrained_driving_prior.local_chunk_cache",
+    "from tac.substrates.pretrained_driving_prior import",
+    "local_chunk_cache",
+    ".fetch_chunk(",
+    ".fetch_chunks(",
+)
+_CHECK_213_SELF_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "src/tac/substrates/pretrained_driving_prior/local_chunk_cache.py",
+    "src/tac/substrates/pretrained_driving_prior/log_incremental_feeder.py",
+    "src/tac/substrates/pretrained_driving_prior/__init__.py",
+    "src/tac/preflight.py",
+)
+_CHECK_213_EXEMPT_PATH_FRAGMENTS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "build/lib/",
+    "reports/raw/",
+)
+_CHECK_213_WAIVER_TOKEN = "COMMA2K19_DOWNLOAD_OK"
+_CHECK_213_WAIVER_FILE_TOKEN = "COMMA2K19_DOWNLOAD_OK_FILE"
+
+
+def _check_213_iter_target_files(repo_root: Path) -> Iterator[Path]:
+    """Yield .py + .sh files that could fetch Comma2k19 outside the canonical cache.
+
+    Scope: ``src/tac/``, ``tools/``, ``experiments/``, ``scripts/``.
+    Skips tests, vendored intake clones, OSS export mirrors,
+    ``experiments/results/`` build artifacts, ``reports/raw/`` outputs.
+    """
+    scope_dirs = (
+        repo_root / "src" / "tac",
+        repo_root / "tools",
+        repo_root / "experiments",
+        repo_root / "scripts",
+    )
+    for scope_dir in scope_dirs:
+        if not scope_dir.exists():
+            continue
+        for ext in ("*.py", "*.sh"):
+            for path in scope_dir.rglob(ext):
+                rel = path.relative_to(repo_root).as_posix()
+                if any(frag in rel for frag in _CHECK_213_EXEMPT_PATH_FRAGMENTS):
+                    continue
+                if any(
+                    rel == frag or rel.endswith(frag)
+                    for frag in _CHECK_213_SELF_EXEMPT_PATH_FRAGMENTS
+                ):
+                    continue
+                if (
+                    "/tests/" in rel
+                    or path.name.startswith("test_")
+                    or path.name.endswith("_test.py")
+                ):
+                    continue
+                yield path
+
+
+def check_comma2k19_downloads_route_through_canonical_cache(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #213 - Comma2k19 chunk downloads must route through the canonical helper.
+
+    Per the 2026-05-14 operator directive "you can download the dataset
+    locally and configure the chunks dir to be fed dynamically cached with
+    a log incremental generator", the DP1 substrate now ships a canonical
+    auto-download cache:
+    :class:`tac.substrates.pretrained_driving_prior.Comma2k19LocalCache`.
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" non-negotiable, every Comma2k19 chunk fetch MUST route
+    through this helper so:
+
+    1. **Source-of-truth pinning** — the canonical URL list lives in ONE
+       place (``DEFAULT_CHUNK_MANIFEST`` in ``local_chunk_cache.py``);
+       ad-hoc curl/wget bypasses can silently point at a tampered mirror.
+    2. **SHA-256 integrity verification** — the cache verifies every
+       downloaded chunk against the pinned hash before use; bare downloads
+       cannot detect bit-flips or man-in-the-middle tampering.
+    3. **License-tag propagation** — the cache stamps every entry with
+       ``license="MIT"`` + ``source_url`` provenance, which Catalog #210
+       requires DP1 archives to carry.
+    4. **Disk-budget LRU eviction** — the cache caps disk usage at
+       ``max_disk_gb`` and evicts oldest-LRU entries to fit new downloads;
+       bare fetches can fill the worker disk and crash the dispatch.
+    5. **Resumable + idempotent** — partial downloads land in
+       ``<cache_dir>/.downloads/`` (NEVER ``/tmp`` per CLAUDE.md "Forbidden
+       /tmp paths") and are ``os.replace``-d atomically into place.
+
+    Bug class: any caller under ``tools/``, ``scripts/``, ``experiments/``,
+    or ``src/tac/`` that uses ``urllib.request.urlopen`` /
+    ``urllib.request.urlretrieve`` / ``requests.get`` / shell ``wget`` /
+    ``curl`` / ``aria2c`` against a Comma2k19 URL OUTSIDE the canonical
+    cache helper bypasses all 5 protections above. Refuses unless the
+    file also imports or invokes the canonical cache class
+    (``Comma2k19LocalCache``, ``.fetch_chunk(``, etc.).
+
+    Acceptance:
+
+    1. The file imports + uses :class:`Comma2k19LocalCache` (or one of
+       ``fetch_chunk`` / ``fetch_chunks`` / a ``local_chunk_cache``
+       module-level reference within a 30-line window of the download call).
+    2. Same-line waiver ``# COMMA2K19_DOWNLOAD_OK:<rationale>`` (placeholder
+       ``<reason>`` literal rejected so the gate's docstring cannot
+       self-waive).
+    3. File-level waiver
+       ``# COMMA2K19_DOWNLOAD_OK_FILE:<rationale>`` (in first 10 lines) for
+       legitimate one-off operator-reviewed download scripts (rare).
+
+    Self-exempt: the canonical implementation file
+    (``local_chunk_cache.py``), the log-incremental feeder that uses it,
+    the substrate ``__init__.py`` (re-exports), and ``preflight.py``
+    (carries the URL/token literals in the regex/docstring).
+
+    Per CLAUDE.md "Strict-flip atomicity rule" — STRICT @ 0 at landing.
+    Live count: 0 at the time of this gate landing — the canonical helper
+    is the ONLY file with the URL literals + download tokens (it's the
+    canonical source-of-truth + ``DEFAULT_CHUNK_MANIFEST`` table).
+
+    Sister of Catalog #209 (``check_no_contest_video_leakage_in_distillation_callers``,
+    which refuses non-canonical iterator construction at the distill side;
+    #213 refuses non-canonical fetches at the DOWNLOAD side) and Catalog
+    #210 (DP1 codebook provenance metadata; the cache provides the
+    ``license_tags`` source). Together they extinct the bug class
+    bidirectionally:
+
+    * #209: any caller of ``distill_codebook(frames=...)`` must use
+      ``Comma2k19FrameIterator``.
+    * #213: any caller that fetches Comma2k19 chunks must use
+      ``Comma2k19LocalCache``.
+    * #210: the resulting archive must carry the provenance the cache
+      stamped.
+
+    Per CLAUDE.md "Subagent coherence-by-default" non-negotiable: lane
+    ``lane_dp1_comma2k19_autoload_log_incremental_20260514``.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    violations: list[str] = []
+    for path in _check_213_iter_target_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Quick filter: file must reference at least one Comma2k19 URL fragment
+        # AND at least one download-call token.
+        has_url = any(frag in text for frag in _CHECK_213_COMMA2K19_URL_FRAGMENTS)
+        if not has_url:
+            continue
+        has_download = any(tok in text for tok in _CHECK_213_DOWNLOAD_CALL_TOKENS)
+        if not has_download:
+            # File mentions a Comma2k19 URL (e.g. in a comment / docstring)
+            # but doesn't perform a download call — accept silently.
+            continue
+        # File-level waiver?
+        head = "\n".join(text.splitlines()[:10])
+        if _CHECK_213_WAIVER_FILE_TOKEN + ":" in head:
+            trailing = head.split(_CHECK_213_WAIVER_FILE_TOKEN + ":", 1)[1]
+            rationale = trailing.split()[0] if trailing.strip() else ""
+            if rationale and rationale != "<reason>":
+                continue
+        # File-level canonical-helper presence accepts the whole file when
+        # at least one canonical cache token is used somewhere AND no bare
+        # download call exists on the same lines as a Comma2k19 URL.
+        # Per-line check: for each line that has BOTH a Comma2k19 URL
+        # fragment AND a download call token, require a same-line waiver
+        # OR a 30-line window with a canonical-cache token.
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            if not any(frag in line for frag in _CHECK_213_COMMA2K19_URL_FRAGMENTS):
+                continue
+            # Look for download call on this OR adjacent lines (±2 lines
+            # to handle multi-line argument lists).
+            window_lo = max(0, i - 2)
+            window_hi = min(len(lines), i + 3)
+            window_str = "\n".join(lines[window_lo:window_hi])
+            if not any(tok in window_str for tok in _CHECK_213_DOWNLOAD_CALL_TOKENS):
+                continue
+            # Same-line waiver?
+            if _CHECK_213_WAIVER_TOKEN + ":" in line:
+                trailing = line.split(_CHECK_213_WAIVER_TOKEN + ":", 1)[1]
+                rationale = trailing.split()[0] if trailing.strip() else ""
+                if rationale and rationale != "<reason>":
+                    continue
+            # Local-window canonical-cache token within ±30 lines?
+            local_lo = max(0, i - 15)
+            local_hi = min(len(lines), i + 16)
+            local_window = "\n".join(lines[local_lo:local_hi])
+            if any(tok in local_window for tok in _CHECK_213_CANONICAL_CACHE_TOKENS):
+                continue
+            rel = path.relative_to(root).as_posix()
+            violations.append(
+                f"{rel}:{i + 1}: downloads Comma2k19 chunk bytes outside "
+                f"the canonical helper (Catalog #213). Use "
+                f"``tac.substrates.pretrained_driving_prior.Comma2k19LocalCache."
+                f"fetch_chunk(...)`` instead of bare urlopen / requests / "
+                f"curl / wget / aria2c. Same-line "
+                f"``# COMMA2K19_DOWNLOAD_OK:<rationale>`` waiver available."
+            )
+            # Cap violations per file at 3 so a stencil-style file doesn't
+            # explode the report.
+            if len([v for v in violations if rel in v]) >= 3:
+                break
+
+    if verbose:
+        if violations:
+            print(
+                f"  [comma2k19-canonical-download] WARN: {len(violations)} "
+                f"non-canonical Comma2k19 fetch site(s) (strict={strict})"
+            )
+        else:
+            print("  [comma2k19-canonical-download] OK")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_comma2k19_downloads_route_through_canonical_cache: "
+            f"{len(violations)} site(s) fetch Comma2k19 outside the canonical "
+            "Comma2k19LocalCache helper (Catalog #213). The cache pins URLs, "
+            "verifies SHA-256, propagates license tags, applies LRU disk "
+            "budgeting, and never uses /tmp. Routing through it is the only "
+            "way DP1 archives meet Catalog #210 provenance requirements.\n  "
             + "\n  ".join(v[:300] for v in violations[:8])
         )
     return violations
