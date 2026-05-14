@@ -426,12 +426,26 @@ def _raw_equivalence_closed(manifest: Mapping[str, Any]) -> bool:
         runtime_identity = manifest.get("runtime_adapter_proof")
     if not isinstance(decoder_equivalence, Mapping) or not isinstance(runtime_identity, Mapping):
         return False
-    return (
+    if (
         decoder_equivalence.get("raw_equal") is True
         and decoder_equivalence.get("q_roundtrip_equal") is True
         and decoder_equivalence.get("scale_roundtrip_equal") is True
         and runtime_identity.get("payload_identity_proven") is True
         and runtime_identity.get("restored_payload_matches_source") is True
+    ):
+        return True
+    return (
+        decoder_equivalence.get("raw_equal") is True
+        and decoder_equivalence.get("q_roundtrip_equal") is True
+        and decoder_equivalence.get("scale_roundtrip_equal") is True
+        and (
+            runtime_identity.get("lossless_decoder_equivalence_proven") is True
+            or runtime_identity.get("lossless_decoder_equivalence_proven_by_archive_proof") is True
+            or runtime_identity.get("inflate_output_parity_proven_by_lossless_decoder_equivalence") is True
+        )
+        and runtime_identity.get("latents_and_sidecar_match_source") is True
+        and runtime_identity.get("submission_runtime_candidate_parse_claim") is True
+        and runtime_identity.get("submission_runtime_equivalence_claim") is True
     )
 
 

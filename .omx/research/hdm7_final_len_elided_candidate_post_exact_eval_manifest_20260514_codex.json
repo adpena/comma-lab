@@ -1,0 +1,61 @@
+{
+  "candidate_archive_bytes": 186405,
+  "candidate_archive_path": "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/pr106_r2_hdm6_hlm2_xmember_hdm7_archive_candidate.zip",
+  "candidate_archive_sha256": "df2e07084233fd38b01c46a4ffebe244391b01a8bf2e04392a4e0348463f1bbb",
+  "candidate_diff_audit": {
+    "blockers": [],
+    "rate_score_delta_if_components_equal": -0.000001997577,
+    "sections": [
+      {
+        "byte_delta": -3,
+        "candidate_bytes": 169984,
+        "candidate_section_sha256": "388d571fff65d5c2c4e3412445001a2f7b3528c0adb69c1c24a03c86af326feb",
+        "section_name": "inner_decoder_packed_brotli",
+        "source_bytes": 169987,
+        "source_section_sha256": "962767f3b532668121a2629aa4340928b03915b21d99cbc8d2d991cb2576a2cd"
+      }
+    ],
+    "total_byte_delta": -3
+  },
+  "candidate_id": "pr106_r2_hdm7_decoder_final_len_elided_3byte",
+  "candidate_payload_bytes": 186305,
+  "candidate_payload_sha256": "23115e4147952b3997d5736718736d620339ba9916132a89aa1594d072c90168",
+  "candidate_rate_score_delta_if_runtime_supported_and_components_equal": -0.000001997577,
+  "decoder_raw_equivalence": {
+    "contract": "hnerv_hdm_decoder_raw_equivalence_v1",
+    "decoder_recode_key": "hdm7",
+    "q_roundtrip_equal": true,
+    "raw_equal": true,
+    "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "scale_roundtrip_equal": true,
+    "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+  },
+  "dispatch_attempted": true,
+  "exact_cuda_auth_eval_json": "experiments/results/modal_auth_eval/hnerv_hdm7_hdm6_hlm2_modal_t4_retry1_20260514T090222Z/contest_auth_eval.json",
+  "exact_cuda_evidence_row": ".omx/research/hdm7_final_len_elided_exact_cuda_evidence_row_20260514_codex.json",
+  "exact_cuda_result_review_packet": ".omx/research/hdm7_final_len_elided_exact_cuda_result_review_20260514_codex.json",
+  "exact_cuda_score": 0.20636832361415344,
+  "lane_id": "hnerv_hdm7_final_len_elided_exact_eval",
+  "post_exact_eval_status": "exact_cuda_result_reviewed",
+  "pre_dispatch_candidate_manifest": "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/manifest.json",
+  "pre_dispatch_exact_eval_missing_superseded": true,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_adapter_proof": {
+    "inflate_output_parity_proven_by_lossless_decoder_equivalence": true,
+    "latents_and_sidecar_match_source": true,
+    "lossless_decoder_equivalence_proven": true,
+    "ready_for_public_runtime_inflate": true,
+    "restored_payload_matches_source": false,
+    "runtime_adapter_proof_path": "experiments/results/pr106_r2_hdm6_hlm2_hdm7_candidate_20260514_codex/runtime_adapter_proof.json",
+    "submission_runtime_candidate_parse_claim": true,
+    "submission_runtime_equivalence_claim": true
+  },
+  "runtime_content_tree_sha256": "7297cff60f68ea869b5132403d6105ea3743ecaffa00ac9eb9d4fa11161a3b40",
+  "runtime_tree_sha256": "fa24ef0048434801e8b266ce3d73bcdfd4beb58631622a16bfd18507359cc56f",
+  "schema": "hnerv_hdm_post_exact_eval_candidate_manifest_v1",
+  "score_axis": "contest_cuda",
+  "score_claim": false,
+  "source_archive_bytes": 186408,
+  "source_archive_sha256": "f3941568035d40bc7cb9e6fc0a108a5ec8bedf33f7ae14f6c060e92f7f247593",
+  "source_label": "PR106-R2-HDM6-HLM2-XMEMBER"
+}

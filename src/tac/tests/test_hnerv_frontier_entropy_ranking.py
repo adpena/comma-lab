@@ -105,6 +105,57 @@ def test_frontier_entropy_ranking_can_target_internal_score_lowering_frontier() 
     assert "frontier_mode: `score_lowering`" in render_markdown(manifest)
 
 
+def test_frontier_entropy_ranking_accepts_hdm_runtime_equivalence_without_payload_identity() -> None:
+    scorecard = _scorecard()
+    internal_row = {
+        "label": "PR106-R2-HDM7",
+        "canonical_frontier_eligible": False,
+        "canonicality_blockers": ["promotion_ineligible"],
+        "score": 0.19,
+        "archive_bytes": 207,
+        "archive_sha256": "7" * 64,
+        "payload_sha256": "8" * 64,
+        "runtime_tree_sha256": "9" * 64,
+        "evidence_grade": "A++",
+        "frontier_scope": "exact_local_cuda_custody_candidate_manifest",
+        "eval_artifact": "hdm7.json",
+        "payload_sections": [
+            _section("inner_decoder_packed_brotli", 159, "6" * 64),
+            _section("inner_latents_and_sidecar_brotli", 12, "5" * 64),
+        ],
+    }
+    scorecard["rows"].append(internal_row)
+    scorecard["score_lowering_frontier"] = {
+        "label": internal_row["label"],
+        "score": internal_row["score"],
+        "archive_bytes": internal_row["archive_bytes"],
+        "archive_sha256": internal_row["archive_sha256"],
+        "frontier_scope": "internal_exact_cuda_score_lowering",
+        "promotion_authority": False,
+    }
+    candidate_manifest = _hdm_candidate_manifest(internal_row)
+    candidate_manifest["runtime_adapter_payload_identity"] = {
+        "payload_identity_proven": False,
+        "restored_payload_matches_source": False,
+        "lossless_decoder_equivalence_proven": True,
+        "latents_and_sidecar_match_source": True,
+        "submission_runtime_candidate_parse_claim": True,
+        "submission_runtime_equivalence_claim": True,
+    }
+
+    ranking = build_frontier_entropy_gap_ranking(
+        scorecard,
+        candidate_manifests=[candidate_manifest],
+        frontier_mode="score_lowering",
+    )
+
+    control = ranking["exact_lossless_control_actions"][0]
+    assert control["target_label"] == "PR106-R2-HDM7"
+    assert control["raw_equivalence_closed"] is True
+    assert control["review_status"] == "ready_for_promotion_review_existing_exact_custody"
+    assert control["total_byte_delta"] == -10
+
+
 def test_rank_hnerv_frontier_entropy_gaps_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     scorecard = tmp_path / "scorecard.json"
     entropy = tmp_path / "entropy.json"

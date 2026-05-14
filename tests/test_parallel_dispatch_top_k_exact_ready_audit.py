@@ -30,7 +30,7 @@ def _write_archive(path: Path) -> tuple[int, str]:
     return len(raw), hashlib.sha256(raw).hexdigest()
 
 
-def test_parallel_dispatch_floor_preserves_hlm1_as_nonpromotional_reference() -> None:
+def test_parallel_dispatch_floor_preserves_active_nonpromotional_reference() -> None:
     spec = importlib.util.spec_from_file_location(
         "parallel_dispatch_top_k_floor_test",
         TOOL,
@@ -40,7 +40,7 @@ def test_parallel_dispatch_floor_preserves_hlm1_as_nonpromotional_reference() ->
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
 
-    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20637231876787215
+    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20636832361415344
     assert module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE == 0.20642625334307507
     assert module.DEFAULT_ACTIVE_FLOOR_SCORE == module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 
