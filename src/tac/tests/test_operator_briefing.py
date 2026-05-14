@@ -516,6 +516,49 @@ def test_dispatch_readiness_blocks_when_every_exact_packet_is_terminal(monkeypat
     assert "Phase 1 (pre-dispatch Pareto):              READY" not in text
 
 
+def test_dispatch_readiness_does_not_mark_predicted_phase7_rollup_ready(
+    tmp_path,
+    monkeypatch,
+):
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        mod,
+        "_exact_ready_queue_audit",
+        lambda: {"stale_ready_row_count": 0},
+    )
+    monkeypatch.setattr(mod, "_exact_eval_packet_summaries", lambda: [])
+    rollup = (
+        tmp_path
+        / "experiments/results/constrained_coord_search_pr101_bias_20260509T142645Z/rollup.json"
+    )
+    rollup.parent.mkdir(parents=True, exist_ok=True)
+    rollup.write_text(
+        json.dumps(
+            {
+                "lane_id": "lane_pr101_bias_constrained_coord_search",
+                "evidence_grade": "[predicted; constrained coord search on A1 substrate]",
+                "n_variants": 64,
+                "n_unique_inflates": 64,
+                "dispatch_blockers": [
+                    "claim lane lane_pr101_bias_constrained_coord_search before dispatch",
+                    "M5 Max coarse rank should run first ($0); promote top-5 to GHA",
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    readiness = mod._dispatch_readiness()
+    text = mod._format_dispatch_readiness()
+
+    phase7 = readiness["phase_7_constrained_coord_search"]
+    assert phase7["status"] == "BLOCKED"
+    assert phase7["n_rollups"] == 1
+    assert "latest rollup is not dispatch-ready" in phase7["reason"]
+    assert "Phase 7 (constrained-coord-search):         BLOCKED" in text
+
+
 def test_provider_readiness_formatter_preserves_proxy_boundary(monkeypatch):
     mod = _load_briefing_module()
     monkeypatch.setattr(

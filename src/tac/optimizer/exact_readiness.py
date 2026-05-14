@@ -549,6 +549,9 @@ def terminal_claim_result_conflicts(
             continue
         status = row["status"].lower()
         claim_id = f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
+        if status.startswith("refused_dispatch"):
+            blockers.append(f"same_lane_terminal_refused_dispatch_for_same_archive:{claim_id}")
+            continue
         if any(marker in status for marker in TERMINAL_NEGATIVE_STATUS_MARKERS):
             blockers.append(f"same_lane_terminal_negative_for_same_archive:{claim_id}")
             continue

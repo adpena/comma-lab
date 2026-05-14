@@ -648,6 +648,13 @@ def _terminal_evidence_from_blocker(blocker: str) -> dict[str, object] | None:
             "job_id": parts[3],
             "status": parts[4],
         }
+    if blocker.startswith("same_lane_terminal_refused_dispatch_for_same_archive:") and len(parts) >= 4:
+        return {
+            "kind": "terminal_refused_dispatch",
+            "lane_id": parts[1],
+            "job_id": parts[2],
+            "status": parts[3],
+        }
     return None
 
 
@@ -664,6 +671,19 @@ def _classify_blockers(blockers: Iterable[object]) -> tuple[str, str, list[str],
             [
                 "Do not redispatch this same lane/archive/runtime identity.",
                 "Reactivate only with a new archive SHA or a score-affecting runtime-tree change plus fresh custody.",
+            ],
+            terminal_evidence,
+        )
+    if any(
+        blocker.startswith("same_lane_terminal_refused_dispatch_for_same_archive:")
+        for blocker in blocker_text
+    ):
+        return (
+            "retracted_by_terminal_refused_dispatch",
+            "suppress_from_exact_ready_dispatch",
+            [
+                "Do not redispatch this same lane/archive identity after a terminal refused-dispatch finding.",
+                "Reactivate only with a new archive SHA, a score-affecting runtime-tree change, or a cleared refusal blocker.",
             ],
             terminal_evidence,
         )

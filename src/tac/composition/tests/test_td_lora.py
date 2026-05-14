@@ -174,6 +174,31 @@ def test_noop_init_still_seeds_adapter_gradients() -> None:
     )
 
 
+def test_no_base_noop_init_seeds_all_tied_adapter_branches() -> None:
+    _seed()
+    spec = TropicalLoRASpec(
+        in_features=6,
+        out_features=4,
+        rank=4,
+        num_branches=2,
+        include_base=False,
+    )
+    module = TropicalLoRAAdapter(spec)
+    x = torch.linspace(-1.0, 1.0, steps=18, dtype=torch.float32).reshape(3, 6)
+    out = module(x)
+    assert torch.allclose(out, torch.zeros_like(out), atol=1e-6)
+
+    out.sum().backward()
+    assert all(
+        bias.grad is not None and bias.grad.abs().sum() > 0
+        for bias in module.adapters_bias
+    )
+    assert all(
+        B.grad is not None and B.grad.abs().sum() > 0
+        for B in module.adapters_B
+    )
+
+
 def test_serialize_deserialize_roundtrip() -> None:
     _seed()
     spec = TropicalLoRASpec(

@@ -257,7 +257,7 @@ class TropicalLoRAAdapter(nn.Module):
         branch_outputs = [
             self.adapter_branch_output(x, i) for i in range(self.num_branches)
         ]
-        return torch.stack(branch_outputs, dim=0).max(dim=0).values
+        return self._tropical_residual(branch_outputs)
 
     def serialize_state(self, *, include_base_weights: bool | None = None) -> bytes:
         """Deterministic byte serialisation of the spec + adapter weights.

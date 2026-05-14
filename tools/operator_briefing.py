@@ -1168,6 +1168,64 @@ def _format_constrained_coord_search_status() -> str:
     return "\n".join(lines)
 
 
+def _constrained_coord_search_readiness() -> dict[str, object]:
+    """Classify Phase 7 without promoting prediction-only rollups to READY."""
+
+    glob_root = REPO_ROOT / "experiments" / "results"
+    candidates = sorted(
+        glob_root.glob("constrained_coord_search_pr101_bias_*/rollup.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not candidates:
+        return {
+            "status": "PENDING",
+            "reason": "sister subagent a8522fca grid not landed",
+            "n_rollups": 0,
+        }
+    latest = candidates[0]
+    rel = latest.relative_to(REPO_ROOT).as_posix()
+    try:
+        data = json.loads(latest.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return {
+            "status": "BLOCKED",
+            "reason": f"latest rollup parse failed: {type(exc).__name__} at {rel}",
+            "n_rollups": len(candidates),
+            "latest_rollup": rel,
+        }
+    blockers = data.get("dispatch_blockers")
+    blocker_list = blockers if isinstance(blockers, list) else []
+    evidence_grade = str(data.get("evidence_grade") or "").strip()
+    evidence_lower = evidence_grade.lower()
+    if blocker_list:
+        return {
+            "status": "BLOCKED",
+            "reason": (
+                f"{len(blocker_list)} dispatch blocker(s); latest rollup is not dispatch-ready"
+            ),
+            "n_rollups": len(candidates),
+            "latest_rollup": rel,
+            "evidence_grade": evidence_grade,
+            "dispatch_blockers": [str(blocker) for blocker in blocker_list],
+        }
+    if "predicted" in evidence_lower or "proxy" in evidence_lower:
+        return {
+            "status": "PENDING",
+            "reason": "prediction-only rollup; run M5/GHA or exact custody before dispatch",
+            "n_rollups": len(candidates),
+            "latest_rollup": rel,
+            "evidence_grade": evidence_grade,
+        }
+    return {
+        "status": "READY",
+        "reason": f"{len(candidates)} rollup(s); top-5 to GHA next",
+        "n_rollups": len(candidates),
+        "latest_rollup": rel,
+        "evidence_grade": evidence_grade,
+    }
+
+
 # Phase-8: dispatch readiness per phase 1-5+ (added 2026-05-09).
 # Compact roll-up of which phases have actionable next-step output, so the
 # operator can navigate "what should I dispatch next" without re-reading the
@@ -1236,18 +1294,7 @@ def _dispatch_readiness() -> dict[str, object]:
         n_comp = len(PHASE_5_COMPOSITION_LANES)
     except NameError:
         n_comp = 0
-    # Phase 7: constrained-coord-search
-    glob_root = REPO_ROOT / "experiments" / "results"
-    cc_rollups = sorted(
-        glob_root.glob("constrained_coord_search_pr101_bias_*/rollup.json"),
-        reverse=True,
-    )
-    if cc_rollups:
-        phase7_status = "READY"
-        phase7_reason = f"{len(cc_rollups)} rollup(s); top-5 to GHA next"
-    else:
-        phase7_status = "PENDING"
-        phase7_reason = "sister subagent a8522fca grid not landed"
+    phase7 = _constrained_coord_search_readiness()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
         "phase_1_exact_eval_packets": phase1,
@@ -1267,9 +1314,7 @@ def _dispatch_readiness() -> dict[str, object]:
             "reason": "compose-stacks tracked",
         },
         "phase_7_constrained_coord_search": {
-            "status": phase7_status,
-            "reason": phase7_reason,
-            "n_rollups": len(cc_rollups),
+            **phase7,
         },
         "recommendation": (
             "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "

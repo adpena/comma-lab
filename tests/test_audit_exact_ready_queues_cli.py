@@ -235,6 +235,68 @@ def test_cli_writes_suppression_manifest_and_reports_zero_unresolved(
     assert entry["terminal_evidence"]["job_id"] == "job1"
 
 
+def test_cli_blocks_and_classifies_terminal_refused_dispatch(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "9" * 64
+    queue = _write_json(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        {
+            "schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+            "dispatch_ready": [
+                {
+                    "candidate_id": "candidate",
+                    "lane_id": "lane",
+                    "ready_for_exact_eval_dispatch": True,
+                    "candidate_archive_sha256": archive_sha,
+                    "archive_bytes": 123,
+                }
+            ],
+        },
+    )
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        f"| 2026-05-10T00:00:00Z | test | lane | modal | job1 |  | refused_dispatch_missing_claim_or_custody | archive_sha={archive_sha}; blocker=missing_runtime_tree_sha |\n",
+        encoding="utf-8",
+    )
+    manifest = tmp_path / ".omx/research/exact_ready_suppressions.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL_PATH),
+            "--repo-root",
+            str(tmp_path),
+            "--queue",
+            str(queue),
+            "--dispatch-claims-path",
+            str(claims),
+            "--format",
+            "json",
+            "--write-suppression-manifest",
+            str(manifest),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.returncode == 0
+    payload = json.loads(proc.stdout)
+    assert payload["raw_stale_ready_row_count"] == 1
+    blockers = payload["queues"][0]["suppressed_ready_rows"][0]["blockers"]
+    assert any(
+        blocker.startswith("same_lane_terminal_refused_dispatch_for_same_archive:")
+        for blocker in blockers
+    )
+    saved = json.loads(manifest.read_text(encoding="utf-8"))
+    entry = saved["entries"][0]
+    assert entry["classification"] == "retracted_by_terminal_refused_dispatch"
+    assert entry["terminal_evidence"]["kind"] == "terminal_refused_dispatch"
+
+
 def test_cli_unmatched_suppression_manifest_leaves_residual_stale_row(
     tmp_path: Path,
 ) -> None:
