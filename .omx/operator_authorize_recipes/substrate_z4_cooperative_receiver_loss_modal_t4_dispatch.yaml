@@ -1,0 +1,176 @@
+schema_version: 1
+name: substrate_z4_cooperative_receiver_loss_modal_t4_dispatch
+lane_id: lane_z4_cooperative_receiver_loss_step2_20260514
+summary: |
+  Z4 cooperative-receiver loss substrate (Time-Traveler L5 staircase Step 2)
+  per `.omx/research/campaign_z4_cooperative_receiver_loss_20260514.md` and
+  `feedback_grand_council_maximize_value_landed_20260514.md`.
+
+  Mechanism (Atick & Redlich 1990 cooperative-receiver theorem):
+
+  Loss-only intervention on the Z3+A1 substrate. Trains against the contest's
+  ACTUAL scorer distortions via canonical score_pair_components (Catalog #164)
+  with a tunable pixel-MSE residual weight λ_pixel ∈ [0.0, 1.0]. The pure
+  cooperative-receiver regime (λ_pixel=0) is the Atick-Redlich H(X|W+A+P)
+  form; λ_pixel=1 recovers Z3 baseline (pixel-MSE-only) for ablation.
+
+  Per Time-Traveler peer-seat council (`feedback_grand_council_maximize_value_landed_20260514.md`
+  STAIRCASE 10/11): Step 2 cooperative-receiver loss is the dominant
+  marginal-value-per-byte intervention at the PR101+Z3 operating point
+  (pose marginal 2.71x SegNet's per CLAUDE.md operating-point-aware rule).
+
+  Predicted ΔS -0.005 to -0.010 vs Z3 baseline 0.193 → predicted score band
+  [0.180, 0.188] [mathematical-derivation; gradient-alignment-dominated].
+
+  Probe-disambiguator (Catalog #125 hook #6): λ_pixel sweep over [0.0, 0.5, 1.0]
+  arbitrates Atick-Redlich vs marginal-gradient-alignment hypotheses post-smoke.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: lane_z3_balle_hyperprior_bolton_campaign_20260514
+# Z4 is layered on top of Z3 (Balle hyperprior). Catalog #173 requires the
+# canary Z3 to have >= 1 successful contest-CUDA anchor before Z4 can fire.
+
+active_dispatch_contract: z4_cooperative_receiver_loss_substrate
+dispatch_contracts:
+  - id: z4_cooperative_receiver_loss_substrate
+    archive_role: monolithic_z4cr1_self_contained
+    builder_surface: experiments/train_substrate_z4_cooperative_receiver_loss.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 200
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.180, 0.188]
+smoke_score_band: [0.15, 0.30]
+predicted_delta: "-0.005 to -0.010 vs Z3 baseline 0.193 [mathematical-derivation; gradient-alignment-dominated]"
+predicted_delta_basis: ".omx/research/campaign_z4_cooperative_receiver_loss_20260514.md (Time-Traveler L5 staircase Step 2)"
+literature_anchor: |
+  Atick & Redlich (1990) "Towards a theory of early visual processing"
+    Neural Computation 2(3):308-320 (cooperative-receiver theorem);
+  Tishby & Zaslavsky (2017) "Opening the black box of deep neural networks via information"
+    (Information Bottleneck cooperative formulation);
+  Time-Traveler peer-seat council 2026-05-14: feedback_grand_council_maximize_value_landed_20260514.md;
+  Zen-floor field-medal council 2026-05-14: feedback_zen_floor_field_medal_grade_council_landed_20260514.md.
+
+risk: |
+  Z4 first-anchor dispatch. The substrate inherits Z3's byte grammar and
+  introduces ONLY a loss-axis change. The predicted [0.180, 0.188] band is
+  a mathematical derivation from the Atick-Redlich cooperative-receiver
+  theorem, not measurement.
+
+  Architectural risk:
+  - The cooperative-receiver loss gradient flow through the differentiable
+    scorer requires Catalog #187's patch_upstream_yuv6_globally to fire
+    BEFORE load_differentiable_scorers. The trainer enforces this in
+    _full_main; the smoke path bypasses the scorer entirely.
+  - lambda_pixel=0 (pure cooperative-receiver) may produce visually-poor
+    but scorer-good frames; the contest measures scorer-axis distortion
+    so this is by design. Smoke verifies the grammar; full training
+    verifies the loss-axis hypothesis.
+  - The probe-disambiguator (lambda_pixel sweep) is the pre-promotion test.
+    If lambda_pixel=0 does NOT beat lambda_pixel=1 by ΔS >= 0.003, the
+    cooperative-receiver hypothesis is refuted on this scorer.
+
+  Modal T4 training cost band: $0.50 smoke (200 epochs proxy); $5 full
+  (200 epochs scorer-aware). Per CLAUDE.md "Auth eval EVERYWHERE" the
+  dispatch MUST end with CUDA auth eval on the EMA shadow.
+
+envelope_status: "FITS $5 envelope at p50 fallback for smoke ($0.50); full dispatch $5"
+
+remote_driver: scripts/remote_lane_substrate_z4_cooperative_receiver_loss.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_z4_cooperative_receiver_loss.sh
+  cost_band_trainer: experiments/train_substrate_z4_cooperative_receiver_loss.py
+  cost_band_epochs: 200
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_z4_cooperative_receiver_loss.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/z4_cooperative_receiver_loss/__init__.py
+  - src/tac/substrates/z4_cooperative_receiver_loss/architecture.py
+  - src/tac/substrates/z4_cooperative_receiver_loss/archive.py
+  - src/tac/substrates/z4_cooperative_receiver_loss/inflate.py
+  - src/tac/substrates/z4_cooperative_receiver_loss/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+
+env_overrides:
+  Z4_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z4_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z4_OUTPUT_DIR: /workspace/pact/lane_substrate_z4_results/output
+  Z4_EPOCHS: "200"
+  Z4_BATCH_SIZE: "4"
+  Z4_LR: "5e-4"
+  Z4_LAMBDA_PIXEL: "0.0"
+  Z4_BETA_SEG: "100.0"
+  Z4_GAMMA_POSE: "3.1622776601683795"
+  Z4_ENABLE_AUTOCAST_FP16: "false"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_z4_cooperative_receiver_loss.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_z4_cooperative_receiver_loss.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  Z4 first-anchor dispatch recipe — REQUIRES PHASE 2 COUNCIL APPROVAL.
+
+  The _full_main body is currently NotImplementedError("Phase 2 council
+  approval required") per CLAUDE.md "Design decisions — non-negotiable":
+  loss-only intervention on top of A1+Z3 substrate is a council-grade
+  tradeoff because the predicted [0.180, 0.188] band overlaps Z3's
+  [0.188, 0.193] within tolerance. The council deliberation IS the test
+  of whether to allocate $5 GPU to disambiguate.
+
+  Stage 0B smoke ($0.50 Modal T4) is the gating empirical test:
+  - Archive bytes in [50_000, 200_000] AND smoke roundtrip passes → smoke green
+  - Otherwise → DEFERRED-pending-research per CLAUDE.md (NOT KILL)
+
+  Post-smoke probe-disambiguator: sweep λ_pixel ∈ [0.0, 0.5, 1.0] at fixed
+  β_seg + γ_pose. If λ_pixel=0 beats λ_pixel=1 by ΔS >= 0.003, the
+  Atick-Redlich cooperative-receiver hypothesis is CONFIRMED.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE": dispatch ends with CUDA auth eval
+  on EMA shadow. CUDA-only at this stage; paired CPU axis on Linux x86_64
+  required before frontier-claim language per CLAUDE.md "Submission auth
+  eval — BOTH CPU AND CUDA".
+
+  Cross-ref:
+    .omx/research/campaign_z4_cooperative_receiver_loss_20260514.md (campaign ledger)
+    feedback_grand_council_maximize_value_landed_20260514.md (Time-Traveler peer-seat)
+    feedback_zen_floor_field_medal_grade_council_landed_20260514.md (zen-floor band)
+    feedback_long_term_multi_year_campaigns_landed_20260514.md (C5 staircase)
+    src/tac/substrates/z4_cooperative_receiver_loss/__init__.py (Catalog #124 8 fields)
+    lane_z3_balle_hyperprior_bolton_campaign_20260514 (canary dependency)
+    lane_z5_predictive_coding_world_model_step3_20260514 (Step 3 sister)
