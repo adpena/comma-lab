@@ -133,33 +133,113 @@ class WynerZivFrame0Substrate(nn.Module):
         )
 
     def reconstruct_pair(
-        self, frame_1: torch.Tensor
+        self,
+        frame_1: torch.Tensor,
+        pair_indices: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Reconstruct (frame_0, frame_1) given frame_1.
 
         Args:
-            frame_1: ``(num_pairs, 3, H, W)`` RGB tensor in unit range.
+            frame_1: RGB tensor in unit range.
+
+                * If ``pair_indices`` is ``None``: shape must be
+                  ``(cfg.num_pairs, 3, H, W)`` — backward-compat full-batch
+                  reconstruction (forbidden for cfg.num_pairs >= 256 on T4
+                  per the 2026-05-14 OOM anchor; use mini-batched indexing
+                  instead).
+                * If ``pair_indices`` is provided: shape must be
+                  ``(len(pair_indices), 3, H, W)`` and ``pair_indices`` is a
+                  1-D long tensor selecting which trainable motion params +
+                  residual rows to use. This is the canonical path for
+                  training and OOM-bounded inflate batches.
+
+            pair_indices: optional ``(B,)`` long tensor in ``[0, cfg.num_pairs)``
+                selecting the per-pair motion params + residual to use for
+                this mini-batch. When provided the full ``cfg.num_pairs ==
+                frame_1.shape[0]`` invariant is replaced with the per-index
+                selection invariant. Gradients flow into the selected rows
+                of ``motion.se3_flat`` / ``motion.flow_uv`` /
+                ``residual_coarse`` only.
 
         Returns:
             (frame_0_reconstructed, frame_1_unchanged). Frame_1 is passed
             through untouched per the SegNet-frame-1-byte-identical
             invariant (SegNet sees only frame_1).
+
+        OOM safety: per the D4 OOM fix (Catalog #209 sister gate +
+        lane_d4_oom_fix_minibatch_reconstruct_20260514), callers that
+        operate on the full 600-pair contest dataset MUST mini-batch via
+        ``pair_indices`` because the full forward (warp + residual
+        upsample 48x64 -> 384x512) requires ~13 GB of activation memory
+        which exceeds T4 14.56 GB capacity.
         """
-        if frame_1.shape[0] != self.cfg.num_pairs:
-            raise ValueError(
-                f"frame_1 batch {frame_1.shape[0]} != cfg.num_pairs "
-                f"{self.cfg.num_pairs}"
+        if pair_indices is None:
+            # Backward-compat path: full-batch reconstruction.
+            if frame_1.shape[0] != self.cfg.num_pairs:
+                raise ValueError(
+                    f"frame_1 batch {frame_1.shape[0]} != cfg.num_pairs "
+                    f"{self.cfg.num_pairs}; pass pair_indices for "
+                    f"mini-batched reconstruction"
+                )
+            sel_se3_flat = (
+                self.motion.se3_flat
+                if self.motion.se3_flat is not None
+                else None
             )
-        # Get motion params from the trainable nn.Module.
+            sel_flow_uv = (
+                self.motion.flow_uv
+                if self.motion.flow_uv is not None
+                else None
+            )
+            sel_residual = self.residual_coarse
+        else:
+            if pair_indices.dim() != 1:
+                raise ValueError(
+                    f"pair_indices must be 1-D; got shape "
+                    f"{tuple(pair_indices.shape)}"
+                )
+            if pair_indices.numel() == 0:
+                raise ValueError("pair_indices must be non-empty")
+            if frame_1.shape[0] != pair_indices.shape[0]:
+                raise ValueError(
+                    f"frame_1 batch {frame_1.shape[0]} != "
+                    f"len(pair_indices) {pair_indices.shape[0]}"
+                )
+            # Validate the index range fails loud with a sane error before
+            # torch.index_select raises (which produces a less actionable
+            # CUDA-side assertion).
+            min_idx = int(pair_indices.min().item())
+            max_idx = int(pair_indices.max().item())
+            if min_idx < 0 or max_idx >= self.cfg.num_pairs:
+                raise ValueError(
+                    f"pair_indices range [{min_idx}, {max_idx}] outside "
+                    f"[0, {self.cfg.num_pairs})"
+                )
+            # torch.index_select preserves gradient flow into the selected
+            # rows of the parent nn.Parameter; sliced rows accumulate
+            # gradients via autograd's scatter-add path.
+            sel_se3_flat = (
+                self.motion.se3_flat.index_select(0, pair_indices)
+                if self.motion.se3_flat is not None
+                else None
+            )
+            sel_flow_uv = (
+                self.motion.flow_uv.index_select(0, pair_indices)
+                if self.motion.flow_uv is not None
+                else None
+            )
+            sel_residual = self.residual_coarse.index_select(0, pair_indices)
+
+        # Build motion structs from the selected (or full) parameter rows.
         if self.cfg.motion_mode == MotionModelMode.SE3_PARAMETRIC:
-            assert self.motion.se3_flat is not None
-            se3_params = SE3MotionParams.from_flat(self.motion.se3_flat)
+            assert sel_se3_flat is not None
+            se3_params = SE3MotionParams.from_flat(sel_se3_flat)
             flow_field = None
         else:
-            assert self.motion.flow_uv is not None
+            assert sel_flow_uv is not None
             se3_params = None
             flow_field = OpticalFlowField(
-                flow_uv=self.motion.flow_uv,
+                flow_uv=sel_flow_uv,
                 grid_h=self.cfg.flow_grid_h,
                 grid_w=self.cfg.flow_grid_w,
             )
@@ -168,7 +248,7 @@ class WynerZivFrame0Substrate(nn.Module):
             motion_mode=self.cfg.motion_mode,
             se3_params=se3_params,
             flow_field=flow_field,
-            residual=self.residual_coarse,
+            residual=sel_residual,
             output_hw=self.cfg.output_hw,
             clamp_unit=True,
         )

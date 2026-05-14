@@ -602,20 +602,30 @@ def _run_val_loop(
     archive_bytes_proxy: "torch.Tensor",
     device,
 ) -> float:
-    """Validation pass with EMA shadow + torch.inference_mode (Catalog #180)."""
+    """Validation pass with EMA shadow + torch.inference_mode (Catalog #180).
+
+    Per the D4 OOM fix (lane_d4_oom_fix_minibatch_reconstruct_20260514) the
+    val loop reconstructs each val pair via the per-pair pair_indices path
+    rather than once for all 600 pairs. torch.inference_mode keeps activation
+    memory bounded; per-pair reconstruct keeps peak memory at O(1) pairs.
+    """
     substrate.eval()
     losses: list[float] = []
+    device = gt_pair_tensor.device
     with torch.inference_mode():
-        # Batched val: rebuild full-pair reconstruction at the configured num_pairs.
-        # gt_pair_tensor shape: (N, 2, 3, H, W). substrate trained on first N.
-        f1_full = gt_pair_tensor[:, 1, :, :, :].contiguous()
-        f0_recon, f1_passthrough = substrate.reconstruct_pair(f1_full)
+        # gt_pair_tensor shape: (N, 2, 3, H, W) in [0, 255]; convert to unit
+        # range only the per-batch slice we need.
         for pair_idx in val_pair_indices:
             pair_idx = int(pair_idx)
-            rgb_0 = (f0_recon[pair_idx : pair_idx + 1] * 255.0).clamp(0.0, 255.0)
-            rgb_1 = (f1_passthrough[pair_idx : pair_idx + 1] * 255.0).clamp(0.0, 255.0)
-            gt_a = gt_pair_tensor[pair_idx : pair_idx + 1, 0]
-            gt_b = gt_pair_tensor[pair_idx : pair_idx + 1, 1]
+            idx_tensor = torch.tensor([pair_idx], device=device, dtype=torch.long)
+            f1_unit = gt_pair_tensor[idx_tensor, 1].contiguous() / 255.0
+            f0_recon, f1_passthrough = substrate.reconstruct_pair(
+                f1_unit, pair_indices=idx_tensor
+            )
+            rgb_0 = (f0_recon * 255.0).clamp(0.0, 255.0)
+            rgb_1 = (f1_passthrough * 255.0).clamp(0.0, 255.0)
+            gt_a = gt_pair_tensor[idx_tensor, 0]
+            gt_b = gt_pair_tensor[idx_tensor, 1]
             try:
                 loss, _ = loss_fn(
                     reconstructed_rgb_0=rgb_0,
@@ -788,6 +798,12 @@ def _full_main(args: argparse.Namespace) -> int:
         )
 
         # Pre-cache GT frame_1 batch tensor for forward pass.
+        # Per the D4 OOM fix (lane_d4_oom_fix_minibatch_reconstruct_20260514)
+        # we DO NOT call reconstruct_pair(gt_f1_all) once per epoch; that
+        # full-600-pair forward (warp + residual upsample 48x64 -> 384x512)
+        # needs ~13 GB activation memory and OOMs on T4 (14.56 GB capacity).
+        # Instead, reconstruct the mini-batch inside the inner loop via the
+        # new pair_indices kwarg so each backward releases its own graph.
         gt_f1_all = gt_pair_tensor[:, 1].contiguous() / 255.0  # unit-domain for reconstruct_pair
 
         for epoch in range(args.epochs):
@@ -795,20 +811,23 @@ def _full_main(args: argparse.Namespace) -> int:
             random.shuffle(train_indices_pool)
             epoch_losses: list[float] = []
 
-            # Full-pair forward (substrate is per-pair). We use the full n_pairs
-            # reconstruct_pair call because the substrate's residual_coarse has
-            # shape (n_pairs, ...) and motion params are per-pair. Compute loss
-            # over the training subset and skip the val pairs in the gradient path.
-            f0_recon, f1_unchanged = substrate.reconstruct_pair(gt_f1_all)
-
             # Shuffle and batch through training indices.
             for batch_start in range(0, len(train_indices_pool), args.batch_size):
                 batch_indices = train_indices_pool[batch_start : batch_start + args.batch_size]
                 if not batch_indices:
                     continue
-                batch_idx_tensor = torch.tensor(batch_indices, device=device)
-                rgb_0 = (f0_recon[batch_idx_tensor] * 255.0).clamp(0.0, 255.0)
-                rgb_1 = (f1_unchanged[batch_idx_tensor] * 255.0).clamp(0.0, 255.0)
+                batch_idx_tensor = torch.tensor(
+                    batch_indices, device=device, dtype=torch.long
+                )
+                # Mini-batch reconstruct: index motion params + residual for
+                # the selected pairs only; activation memory drops from
+                # O(600) to O(batch_size).
+                f1_batch = gt_f1_all.index_select(0, batch_idx_tensor)
+                f0_recon, f1_unchanged = substrate.reconstruct_pair(
+                    f1_batch, pair_indices=batch_idx_tensor
+                )
+                rgb_0 = (f0_recon * 255.0).clamp(0.0, 255.0)
+                rgb_1 = (f1_unchanged * 255.0).clamp(0.0, 255.0)
                 gt_0 = gt_pair_tensor[batch_idx_tensor, 0]
                 gt_1 = gt_pair_tensor[batch_idx_tensor, 1]
 
@@ -834,7 +853,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 nan_strike = 0
 
                 optimizer.zero_grad()
-                loss.backward(retain_graph=(batch_start + args.batch_size < len(train_indices_pool)))
+                # retain_graph no longer needed: each batch builds its own
+                # forward graph via mini-batched reconstruct_pair.
+                loss.backward()
                 torch.nn.utils.clip_grad_norm_(substrate.parameters(), args.grad_clip)
                 optimizer.step()
                 ema.update(substrate)
