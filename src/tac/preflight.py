@@ -1946,6 +1946,21 @@ def preflight_all(
         check_substrate_class_promotion_requires_tier_c_evidence(
             strict=False, verbose=verbose,
         )
+        # 2026-05-14 Catalog #233 - L1->L2 substrate-class promotion canonical
+        # 4-gate enforcement. Operationalizes the council Decision 8 binding
+        # verdict from the omnibus commit 7872c9f4b (PROCEED Option D, 11/11
+        # unanimous): substrate L2+ promotion REQUIRES (1) smoke green, (2)
+        # Tier C MDL density measured, (3) 100ep auth-eval anchor with
+        # byte-deterministic archive, (4) custody validated per Catalog #127.
+        # Initial wire-in is warn-only per CLAUDE.md "Strict-flip atomicity
+        # rule" + the council's operator-routable checkpoint #2 ("any
+        # L2-claimed lane WITHOUT all 4 gates is forensically reviewed and
+        # downgraded if necessary"). The operator-routed audit-and-downgrade
+        # sweep is the pre-condition for STRICT-flip. Memory:
+        # feedback_d8_l1_l2_promotion_canonical_strict_preflight_landed_20260514.md.
+        check_l1_to_l2_promotion_canonical_4_gate(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #220 - substrate scaffold byte addition without
         # operational score-improvement mechanism. Anchor: D1 R3 dispatch
         # produced score ~0.222 vs predicted [0.181, 0.188] because the L1
@@ -51431,6 +51446,507 @@ def check_substrate_class_promotion_requires_tier_c_evidence(
             f"found {len(violations)} L2+ class-shift lane(s) lacking Tier C "
             f"evidence (Catalog #227 — Tier C empirical revision self-protect):"
             f"\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #233 — check_l1_to_l2_promotion_canonical_4_gate
+#
+# Operationalize the council Decision 8 binding verdict from the omnibus
+# commit ``7872c9f4b`` ledger
+# (``.omx/research/grand_council_omnibus_design_decisions_20260514.md``,
+# lines 336-388, 11/11 unanimous PROCEED Option D).
+#
+# Decision 8 binding verdict (verbatim, lines 366-371):
+#
+#   PROCEED Option D. The L1 → L2 substrate-class promotion canonical:
+#     1. Smoke green (rc=0 + auth-eval JSON parseable).
+#     2. Tier C MDL density measured
+#        (`tools/mdl_scorer_conditional_ablation.py` on the smoke artifact).
+#     3. 100ep auth-eval anchor with byte-deterministic archive
+#        (sha256 stable across re-runs).
+#     4. Custody validated per Catalog #127 (`evidence_grade` matches axis +
+#        hardware).
+#     5. (Conditional) Probe-disambiguator built if 2+ defensible
+#        interpretations exist.
+#
+# This gate scans ``.omx/state/lane_registry.json`` for in-scope substrate
+# lanes at L2+ and refuses any lane whose registry evidence does NOT
+# demonstrate ALL FOUR mandatory gates.
+#
+# Bug class anchor: per the council ledger's math+rationale section
+# (lines 375-381), each gate is "structurally non-redundant" with the
+# others. Together they prevent THREE failure modes:
+#   - "substrate trained but never validated"  (smoke gate)
+#   - "substrate validated but within-class saturated"  (Tier C gate)
+#   - "score claim without custody"  (100ep auth-eval + Catalog #127 gates)
+#
+# Sister of:
+#   - Catalog #127 (`check_authoritative_tag_requires_custody_metadata`) —
+#     the per-call-site custody-validator routing gate; this gate is its
+#     lane-registry-level enforcement complement.
+#   - Catalog #220 (`check_substrate_l1_scaffold_no_byte_addition_without_
+#     operational_score_improvement_mechanism`) — refuses L1+ scaffolds
+#     that add bytes without operational mechanism; this gate refuses L2+
+#     promotion claims that lack the canonical 4-gate evidence.
+#   - Catalog #227 (`check_substrate_class_promotion_requires_tier_c_
+#     evidence`) — refuses L2+ class-shift lanes lacking Tier C; this gate
+#     extends to ALL L2+ substrate lanes (not only class-shift) and
+#     enforces 4 gates instead of the single Tier C gate.
+#
+# Per CLAUDE.md "Strict-flip atomicity rule" the initial wire-in is
+# warn-only because the council's operator-routable checkpoint #2 says
+# "any L2-claimed lane WITHOUT all 4 gates is forensically reviewed and
+# downgraded if necessary" — strict-flip lands after the operator-routed
+# audit-and-downgrade sweep brings live count to 0.
+#
+# Lane: lane_d8_l1_l2_promotion_canonical_strict_preflight_20260514.
+# ----------------------------------------------------------------------------
+
+# Substrate-id substring tokens that classify a lane as "substrate" for
+# this gate. Mirrors Catalog #220's in-scope set so the two gates audit
+# the same lane universe.
+_CHECK_233_IN_SCOPE_ID_SUBSTRINGS: tuple[str, ...] = (
+    "substrate_",
+    "_substrate_",
+    "_polytope_",
+    "_sidecar_",
+    "_overlay_",
+    # Known substrate id roots that don't carry the "substrate" word.
+    "yucr_",
+    "d1_segnet",
+    "d2_",
+    "d4_",
+    "lane_a1_",
+    "_hnerv_",
+    "_nerv_",
+    "_lora_",
+    "wavelet_residual",
+    "siren_residual",
+    "coord_mlp_residual",
+)
+
+# Lane-class / target-mode tokens that exempt a lane from contest-promotion
+# gating. Lanes whose explicit purpose is research-only or substrate-
+# engineering scaffold are NOT contest-promotion eligible regardless of
+# the 4-gate canonical, so the gate skips them. Aligned with Catalog #227
+# exemption tokens.
+_CHECK_233_EXEMPT_LANE_CLASS_TOKENS: tuple[str, ...] = (
+    "substrate_engineering",
+    "research_substrate",
+)
+
+_CHECK_233_EXEMPT_TARGET_MODE_TOKENS: tuple[str, ...] = (
+    "research_substrate",
+    "research_only",
+)
+
+# Same-line waiver pattern. Placeholder ``<reason>`` literal is rejected so
+# this gate's docstring example cannot self-waive.
+_CHECK_233_WAIVER_RE = re.compile(
+    r"#\s*L1_L2_PROMOTION_CANONICAL_OK:\s*([^\s<].*)"
+)
+_CHECK_233_WAIVER_INLINE_RE = re.compile(
+    r"L1_L2_PROMOTION_CANONICAL_OK:\s*([^\s<,;]+)"
+)
+_CHECK_233_WAIVER_PLACEHOLDER_REJECTS: frozenset[str] = frozenset({
+    "<reason>", "<rationale>",
+})
+
+# Gate 1 — Smoke green tokens. Acceptance: any of these signals appear in
+# evidence/notes. The acceptance is permissive because smoke evidence has
+# many canonical phrasings ("smoke rc=0", "smoke green", "smoke passed",
+# "smoke completed", or a parseable smoke JSON path). The hard contract
+# is that the substrate's smoke produced rc=0 AND emitted parseable
+# auth-eval JSON; the gate accepts any of the textual signals as proof
+# the operator/subagent observed that outcome.
+_CHECK_233_SMOKE_GREEN_TOKENS: tuple[str, ...] = (
+    "smoke_rc=0",
+    "smoke rc=0",
+    "smoke_green",
+    "smoke green",
+    "smoke passed",
+    "smoke_passed",
+    "smoke_complete",
+    "smoke complete",
+    "smoke_completed",
+    "smoke completed",
+    "smoke ok",
+    "smoke_ok",
+    "smoke_artifact",
+    "modal_smoke_done",
+    "auth_eval_score_claim_valid=true",
+)
+
+# Gate 2 — Tier C MDL density tokens. Aligned with Catalog #227 token set
+# but additionally accepts the canonical CLI invocation marker.
+_CHECK_233_TIER_C_TOKENS: tuple[str, ...] = (
+    "tier_c",
+    "tier c",
+    "Tier C",
+    "mdl_tier_c",
+    "tier_c_density",
+    "mdl_scorer_conditional_ablation",
+    "MDL_density",
+    "mdl_density",
+)
+
+# Gate 3 — 100ep auth-eval anchor tokens. Acceptance: any of these signals
+# proves a converged (non-smoke) auth-eval anchor landed on a byte-
+# deterministic archive. Smoke-only anchors (rc=0 but ≤5ep / N/A score)
+# do NOT satisfy this gate. The token "auth_eval_score_axis=contest_cuda"
+# OR "auth_eval_score_axis=contest_cpu" with non-empty score is the
+# canonical contract; we also accept "100ep" + "auth-eval" in the same
+# evidence body, AND any "[contest-CUDA]" or "[contest-CPU GHA Linux"
+# tag (which by definition implies a converged auth-eval anchor).
+_CHECK_233_AUTH_EVAL_100EP_TOKENS: tuple[str, ...] = (
+    "100ep",
+    "100_ep",
+    "100 epochs",
+    "auth_eval_score_axis=contest_cuda",
+    "auth_eval_score_axis=contest_cpu",
+    "auth_eval rc=0 contest_cuda",
+    "auth_eval rc=0 contest_cpu",
+    "[contest-CUDA]",
+    "[contest-CPU GHA Linux x86_64]",
+    "[contest-CPU GHA Linux",
+    "auth_eval_exact_cuda_complete",
+    "exact_eval_complete",
+    "auth_eval_complete",
+    "converged_auth_eval",
+    "converged auth-eval",
+    "converged auth_eval",
+)
+
+# Gate 4 — Catalog #127 custody validation tokens. The lane's evidence
+# must reference either the validator surface (validate_custody /
+# CustodyVerdict / etc.) OR carry an explicit axis+hardware-substrate
+# pair so a future audit can confirm the (tag, axis, hardware) triple
+# matches Catalog #127's semantics. We accept either explicit validator
+# routing OR a paired axis+hardware-substrate declaration.
+_CHECK_233_CUSTODY_VALIDATOR_TOKENS: tuple[str, ...] = (
+    "validate_custody",
+    "validate_custody_verdict",
+    "custody_match=true",
+    "custody_validated=true",
+    "custody_status=validated",
+    "evidence_grade=contest_cuda",
+    "evidence_grade=contest_cpu",
+    "evidence_grade=\"contest_cuda\"",
+    "evidence_grade=\"contest_cpu\"",
+    "hardware_substrate=linux_x86_64_t4",
+    "hardware_substrate=linux_x86_64_a100",
+    "hardware_substrate=linux_x86_64_a10g",
+    "hardware_substrate=linux_x86_64_h100",
+    "hardware_substrate=linux_x86_64_4090",
+    "hardware_substrate=linux_x86_64_l40s",
+    "hardware_substrate=linux_x86_64_l4",
+    "hardware_substrate=linux_x86_64_v100",
+    "hardware_substrate=linux_x86_64",
+    "Catalog #127",
+    "catalog_127",
+)
+
+
+def _check_233_lane_is_in_scope(lane_id: str) -> bool:
+    """Return True if the lane id matches a substrate-class pattern."""
+    if not lane_id:
+        return False
+    needle = lane_id.lower()
+    return any(token in needle for token in _CHECK_233_IN_SCOPE_ID_SUBSTRINGS)
+
+
+def _check_233_lane_is_exempt(lane: dict) -> bool:
+    """Return True if the lane is research-only / substrate-engineering scope.
+
+    These lanes are explicitly NOT contest-promotion eligible per HNeRV
+    parity discipline lessons 2 + 7; the 4-gate canonical does not apply.
+    """
+    lane_class = lane.get("lane_class", "")
+    if isinstance(lane_class, str):
+        for tok in _CHECK_233_EXEMPT_LANE_CLASS_TOKENS:
+            if tok in lane_class:
+                return True
+    target_modes = lane.get("target_modes") or []
+    if isinstance(target_modes, list):
+        for mode in target_modes:
+            if isinstance(mode, str):
+                for tok in _CHECK_233_EXEMPT_TARGET_MODE_TOKENS:
+                    if tok in mode:
+                        return True
+    notes = lane.get("notes") or ""
+    if isinstance(notes, str):
+        lower = notes.lower()
+        if "research_only=true" in lower:
+            return True
+        if "research_only:true" in lower:
+            return True
+        if "substrate_engineering_exception" in lower:
+            return True
+        for tok in _CHECK_233_EXEMPT_LANE_CLASS_TOKENS:
+            if f"lane_class={tok}" in lower or f"lane_class:{tok}" in lower:
+                return True
+    return False
+
+
+def _check_233_collect_lane_text(lane: dict) -> str:
+    """Concatenate every text field of a lane for token extraction.
+
+    Concatenates ``notes`` plus every gate's ``evidence`` string so a token
+    appearing in any of them satisfies the gate.
+    """
+    parts: list[str] = []
+    notes = lane.get("notes")
+    if isinstance(notes, str):
+        parts.append(notes)
+    gates = lane.get("gates") or {}
+    if isinstance(gates, dict):
+        for gate_name, gate in gates.items():
+            if isinstance(gate, dict):
+                ev = gate.get("evidence")
+                if isinstance(ev, str):
+                    parts.append(ev)
+    return "\n".join(parts)
+
+
+def _check_233_lane_has_waiver(text: str) -> tuple[bool, str]:
+    """Return (waived, reason). Placeholder literal rejected."""
+    if not text:
+        return False, ""
+    m = _CHECK_233_WAIVER_RE.search(text)
+    if m is None:
+        m = _CHECK_233_WAIVER_INLINE_RE.search(text)
+    if m is None:
+        return False, ""
+    reason = m.group(1).strip().rstrip(",;").strip()
+    if not reason or reason in _CHECK_233_WAIVER_PLACEHOLDER_REJECTS:
+        return False, ""
+    return True, reason
+
+
+def _check_233_text_contains_any_token(text: str, tokens: tuple[str, ...]) -> bool:
+    """Case-insensitive token-substring membership check."""
+    if not text:
+        return False
+    lower = text.lower()
+    for tok in tokens:
+        if tok.lower() in lower:
+            return True
+    return False
+
+
+def _check_233_evaluate_4_gates(text: str) -> tuple[bool, bool, bool, bool]:
+    """Return (smoke_green, tier_c_measured, auth_eval_100ep, custody_validated)
+    booleans for a lane's concatenated registry text.
+    """
+    smoke_green = _check_233_text_contains_any_token(
+        text, _CHECK_233_SMOKE_GREEN_TOKENS
+    )
+    tier_c_measured = _check_233_text_contains_any_token(
+        text, _CHECK_233_TIER_C_TOKENS
+    )
+    auth_eval_100ep = _check_233_text_contains_any_token(
+        text, _CHECK_233_AUTH_EVAL_100EP_TOKENS
+    )
+    custody_validated = _check_233_text_contains_any_token(
+        text, _CHECK_233_CUSTODY_VALIDATOR_TOKENS
+    )
+    return smoke_green, tier_c_measured, auth_eval_100ep, custody_validated
+
+
+def check_l1_to_l2_promotion_canonical_4_gate(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #233 — refuse L2+ substrate lanes lacking the council Decision 8
+    4-gate canonical evidence.
+
+    Per the council omnibus commit ``7872c9f4b`` Decision 8 binding verdict
+    (PROCEED Option D, 11/11 unanimous), L1 → L2 substrate-class promotion
+    requires ALL FOUR gates:
+
+    1. Smoke green (rc=0 + auth-eval JSON parseable).
+    2. Tier C MDL density measured
+       (``tools/mdl_scorer_conditional_ablation.py`` on the smoke artifact).
+    3. 100ep auth-eval anchor with byte-deterministic archive (sha256
+       stable across re-runs).
+    4. Custody validated per Catalog #127 (``evidence_grade`` matches
+       axis + hardware).
+
+    The (conditional) 5th gate — probe-disambiguator built if 2+ defensible
+    interpretations exist — is enforced separately via Catalog #125
+    (`check_subagent_landing_has_solver_wire_in`) hook #6 for landings
+    where the lane has multiple defensible interpretations. This gate
+    enforces only the 4 mandatory gates.
+
+    Acceptance per lane:
+      (a) Lane is out-of-scope (not a substrate-id pattern) → skipped.
+      (b) Lane is at level < 2 → skipped (gate is L1→L2 promotion gate).
+      (c) Lane is exempt via ``lane_class=substrate_engineering`` /
+          ``lane_class=research_substrate`` / ``target_modes`` containing
+          ``research_substrate`` or ``research_only`` / notes carrying
+          ``research_only=true`` or ``substrate_engineering_exception``.
+          These lanes are explicitly NOT contest-promotion eligible.
+      (d) Lane carries a same-line ``# L1_L2_PROMOTION_CANONICAL_OK:<reason>``
+          waiver in registry notes / evidence (placeholder ``<reason>``
+          literal rejected so the docstring cannot self-waive).
+      (e) ALL four gate tokens appear in the lane's concatenated text
+          (notes + every gate's evidence string).
+
+    Initial wire-in is warn-only per CLAUDE.md "Strict-flip atomicity rule"
+    + the council's operator-routable checkpoint #2 ("any L2-claimed lane
+    WITHOUT all 4 gates is forensically reviewed and downgraded"). The
+    operator-routed audit sweep is the pre-condition for STRICT-flip.
+
+    Sister of:
+      - Catalog #127 (the call-site custody validator routing gate)
+      - Catalog #220 (the L1 scaffold byte-addition gate)
+      - Catalog #227 (the L2+ class-shift Tier C evidence gate)
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-lane diagnostic.
+
+    Returns:
+        List of violation messages (one per refused lane).
+
+    Memory: feedback_d8_l1_l2_promotion_canonical_strict_preflight_landed_
+    20260514.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    if not registry_path.is_file():
+        if verbose:
+            print("  [catalog-233] OK (no lane_registry.json)")
+        return violations
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if verbose:
+            print(f"  [catalog-233] WARN registry read error: {exc}")
+        return violations
+
+    lanes = registry.get("lanes")
+    if not isinstance(lanes, list):
+        if verbose:
+            print("  [catalog-233] OK (registry has no lanes list)")
+        return violations
+
+    lanes_scanned = 0
+    in_scope_l2_lanes = 0
+    waived_lanes = 0
+    exempt_lanes = 0
+
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            continue
+        lane_id = str(lane.get("id", ""))
+        if not _check_233_lane_is_in_scope(lane_id):
+            continue
+        level = int(lane.get("level", 0) or 0)
+        if level < 2:
+            continue
+        lanes_scanned += 1
+        in_scope_l2_lanes += 1
+
+        # Exemption cascade.
+        if _check_233_lane_is_exempt(lane):
+            exempt_lanes += 1
+            if verbose:
+                print(
+                    f"  [catalog-233] EXEMPT lane={lane_id} "
+                    f"(research_only / substrate_engineering scope)"
+                )
+            continue
+
+        text = _check_233_collect_lane_text(lane)
+
+        # Same-line waiver cascade.
+        waived, reason = _check_233_lane_has_waiver(text)
+        if waived:
+            waived_lanes += 1
+            if verbose:
+                print(
+                    f"  [catalog-233] WAIVED lane={lane_id} reason={reason!r}"
+                )
+            continue
+
+        # 4-gate evaluation.
+        gates = _check_233_evaluate_4_gates(text)
+        smoke_green, tier_c, auth_100ep, custody = gates
+
+        if smoke_green and tier_c and auth_100ep and custody:
+            if verbose:
+                print(
+                    f"  [catalog-233] OK lane={lane_id} "
+                    f"all 4 canonical gates satisfied"
+                )
+            continue
+
+        # Build the violation message naming WHICH gates are missing.
+        missing: list[str] = []
+        if not smoke_green:
+            missing.append(
+                "(1) smoke green (rc=0 + auth-eval JSON parseable)"
+            )
+        if not tier_c:
+            missing.append(
+                "(2) Tier C MDL density measured "
+                "(tools/mdl_scorer_conditional_ablation.py)"
+            )
+        if not auth_100ep:
+            missing.append(
+                "(3) 100ep auth-eval anchor with byte-deterministic archive"
+            )
+        if not custody:
+            missing.append(
+                "(4) custody validated per Catalog #127 "
+                "(evidence_grade + axis + hardware)"
+            )
+
+        violations.append(
+            f"lane {lane_id!r} (L{level}) claims L2+ substrate-class "
+            f"promotion but is missing {len(missing)} of 4 canonical "
+            f"gates per council Decision 8 (omnibus commit 7872c9f4b, "
+            f"PROCEED Option D 11/11): "
+            + "; ".join(missing)
+            + ". Either (a) backfill the missing gate evidence into the "
+            "lane's registry notes / gate.evidence text, OR (b) downgrade "
+            "the lane to L1 if the 4-gate canonical cannot be satisfied "
+            "yet, OR (c) re-classify as research_only=true / "
+            "lane_class=substrate_engineering if the lane is "
+            "explicitly NOT contest-promotion eligible, OR (d) add a "
+            "same-line `# L1_L2_PROMOTION_CANONICAL_OK:<rationale>` "
+            "waiver to the lane's registry notes for council-reviewed "
+            "exception. Per CLAUDE.md \"Subagent coherence-by-default\" + "
+            "Catalog #127 (custody validator) + Catalog #220 (operational "
+            "mechanism) + Catalog #227 (Tier C evidence)."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-233] scanned={lanes_scanned} "
+            f"in_scope_L2={in_scope_l2_lanes} "
+            f"exempt={exempt_lanes} waived={waived_lanes} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_l1_to_l2_promotion_canonical_4_gate found "
+            f"{len(violations)} L2+ substrate lane(s) lacking the "
+            f"council Decision 8 4-gate canonical evidence "
+            f"(Catalog #233 — D8 L1→L2 promotion canonical):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
