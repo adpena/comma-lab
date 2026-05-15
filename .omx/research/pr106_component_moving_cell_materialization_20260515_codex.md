@@ -75,3 +75,56 @@ PYTHONPATH=src .venv/bin/python -m pytest -q \
   src/tac/tests/test_materialize_pr106_component_moving_cell_candidates.py
 # All checks passed
 ```
+
+## Runtime-Supported PR101 Grammar Recode - 2026-05-15
+
+Fresh review found a materialization bug: `_archive_for_arrays()` always
+emitted format `0x01` brotli sidecars even when the existing
+runtime-supported PR101 grammar (`0x02`) was smaller for the sparse
+component-moving corrections. This is a byte-closed compiler improvement, not a
+score claim.
+
+Code change:
+
+- `tools/materialize_pr106_component_moving_cell_candidates.py` now evaluates
+  `lossless_pr106_sidecar_recode_candidates(...)`, keeps only
+  `runtime_decoder_implemented=true` candidates with concrete format IDs, and
+  emits the smallest actual packet payload.
+- The candidate manifest records the selected recode and all runtime-supported
+  alternatives.
+- `src/tac/tests/test_materialize_pr106_component_moving_cell_candidates.py`
+  now asserts that sparse cell materialization selects format `0x02`.
+
+Regenerated artifacts:
+
+```bash
+PYTHONPATH=src .venv/bin/python tools/materialize_pr106_component_moving_cell_candidates.py \
+  --plan-json .omx/research/pr106_component_moving_cells_20260515_codex.json \
+  --output-dir experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex \
+  --singles 3 \
+  --prefixes 1,4,16
+```
+
+Byte movement against the earlier format-0x01 candidates:
+
+| candidate | old bytes | new bytes | byte delta | new archive SHA-256 |
+| --- | ---: | ---: | ---: | --- |
+| `latent_sidecar_row545_candidate100` | 186272 | 186258 | -14 | `ff90ed06afaa164b8fa838bfb2d4e21e520e4e6e605caf91876522bf0de922e5` |
+| `prefix_top_4` | 186289 | 186263 | -26 | `63df794c0f06136c46415155fc9638bbc83950a793cf81b31171a6970b466ccd` |
+| `prefix_top_16` | 186320 | 186278 | -42 | `4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365` |
+
+Runtime-consumption proof for the current strongest proxy candidate:
+
+```bash
+.venv/bin/python tools/prove_pr106_sidecar_runtime_consumption.py \
+  --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_16/archive.zip \
+  --runtime-dir submissions/pr106_latent_sidecar_r2_pr101_grammar \
+  --output-json experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_16/runtime_consumption.json
+```
+
+Result: `format_id=0x02`, `blockers=[]`,
+`runtime_sidecar_decode_consumption_claim=true`,
+`runtime_sidecar_apply_consumption_claim=true`, and
+`runtime_all_score_affecting_sections_consumed=true`. This is local runtime
+decode evidence only; exact paired `[contest-CUDA]` and `[contest-CPU]` evals
+remain required before any score language.

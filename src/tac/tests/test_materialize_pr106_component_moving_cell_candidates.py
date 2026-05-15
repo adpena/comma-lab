@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_NO_OP_DIM,
+    PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     decode_pr106_sidecar_packet_dim_delta,
     parse_pr106_sidecar_packet,
     read_single_stored_member_archive,
@@ -131,6 +132,13 @@ def test_materializes_single_and_prefix_component_cell_archives(tmp_path: Path) 
     assert int(dims[5]) == 24
     assert int(deltas[5]) == 2
     assert int(dims[7]) == PR106_NO_OP_DIM
+    assert packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR
+    assert single["semantic_packet"]["selected_recode"]["format_id"] == (
+        PR106_SIDECAR_FORMAT_PR101_GRAMMAR
+    )
+    assert single["semantic_packet"]["selected_recode"][
+        "runtime_decoder_implemented"
+    ] is True
     assert "component_cells_are_proxy_score_table_evidence" in single["dispatch_blockers"]
 
     prefix = read_json(tmp_path / "out" / "prefix_top_2" / "candidate_manifest.json")

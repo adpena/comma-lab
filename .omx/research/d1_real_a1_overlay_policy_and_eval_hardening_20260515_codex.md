@@ -572,3 +572,42 @@ CPU score remains about `0.1976`, and the measured static CUDA axis is far
 above the gate. The next D1 frontier move, if reopened, should be a
 per-pair action selector over channel/sign/amplitude or a CUDA-native xray
 selector; single-channel `green + +/-/off` is not enough.
+
+## Pair-Mask Rate-Aware Waterfill Guard - 2026-05-15
+
+`tools/build_d1_pair_mask_from_xray.py` now chooses pair-mask actions with a
+rate-aware prefix search instead of blindly enabling every positive linearized
+pair. It still ranks candidate per-pair signs by the linearized contest
+objective, but then evaluates the actual global
+`sqrt(10 * mean_pose_dist) + 100 * mean_seg_dist` for each prefix and subtracts
+the fixed pair-mask byte cost through the contest rate term. If no nonzero mask
+pays for its bytes, it emits an all-zero selector and records the skipped
+component-only prefix for audit.
+
+Regression guard:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/tests/test_build_d1_pair_mask_from_xray.py
+# 2 passed
+```
+
+Applied to the existing CPU600 positive/negative D1 xray with the observed
+pair-mask overhead (`185700 - 185379 = 321` bytes):
+
+```bash
+.venv/bin/python tools/build_d1_pair_mask_from_xray.py \
+  --baseline-xray experiments/results/d1_pair_component_xray_a1_baseline_cpu_20260515_codex/pair_component_xray.json \
+  --positive-xray experiments/results/d1_pair_component_xray_cert_sparse96_b3k_green_cpu_20260515_codex/pair_component_xray.json \
+  --negative-xray experiments/results/d1_pair_component_xray_negative_green_b3k_20260515_codex/pair_component_xray.json \
+  --rate-cost-bytes 321 \
+  --output-n-pairs 600 \
+  --output-json experiments/results/d1_pair_mask_selector_cpu600_posneg_rateaware_20260515_codex/pair_mask_600.json
+```
+
+Result: `potential_pairs=235`, `best_component_prefix_size=235`, but
+`active_pairs=0` after rate. The prior 235-pair mask had
+`predicted_component_no_rate_delta=-0.00019934154650622093`; the fixed 321-byte
+mask costs `0.000213740723952217` score, so the rate-aware selector correctly
+blocks the packet. This prevents another paid paired eval of a candidate whose
+own local model says it cannot pay for its selector bytes.

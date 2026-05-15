@@ -81,5 +81,63 @@ def test_build_d1_pair_mask_from_xray_selects_only_improving_pairs(tmp_path: Pat
     assert payload["positive_pairs"] == 2
     assert payload["negative_pairs"] == 1
     assert payload["objective"] == "contest_score_linearized_at_baseline_mean_pose_v1"
+    assert payload["selection_mode"] == "waterfill_prefix"
+    assert payload["potential_pairs"] == 3
+    assert payload["best_prefix_size"] == 3
+    assert payload["best_component_prefix_size"] == 3
     assert payload["predicted_component_no_rate_delta"] < 0.0
+    assert payload["predicted_total_delta_with_rate"] < 0.0
+    assert payload["predicted_score_lowering_after_rate"] is True
+    assert {row["selection_rank"] for row in payload["selected_pairs"]} == {1, 2, 3}
     assert payload["score_claim"] is False
+
+
+def test_build_d1_pair_mask_from_xray_blocks_mask_when_rate_cost_dominates(
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    baseline = tmp_path / "baseline.json"
+    positive = tmp_path / "positive.json"
+    _write_xray(
+        baseline,
+        [
+            {"pair_idx": 0, "pose_dist": 0.01, "seg_dist": 0.010},
+            {"pair_idx": 1, "pose_dist": 0.01, "seg_dist": 0.010},
+            {"pair_idx": 2, "pose_dist": 0.01, "seg_dist": 0.010},
+        ],
+    )
+    _write_xray(
+        positive,
+        [
+            {"pair_idx": 0, "pose_dist": 0.01, "seg_dist": 0.009},
+            {"pair_idx": 1, "pose_dist": 0.01, "seg_dist": 0.009},
+            {"pair_idx": 2, "pose_dist": 0.01, "seg_dist": 0.009},
+        ],
+    )
+    output = tmp_path / "mask.json"
+
+    rc = module.main(
+        [
+            "--baseline-xray",
+            str(baseline),
+            "--positive-xray",
+            str(positive),
+            "--rate-cost-bytes",
+            "400000",
+            "--output-json",
+            str(output),
+        ]
+    )
+
+    assert rc == 0
+    payload = read_json(output)
+    assert payload["potential_pairs"] == 3
+    assert payload["active_pairs"] == 0
+    assert payload["best_prefix_size"] == 0
+    assert payload["best_component_prefix_size"] == 3
+    assert payload["best_component_no_rate_delta"] < 0.0
+    assert payload["pair_signs"] == [0, 0, 0]
+    assert payload["selected_pairs"] == []
+    assert payload["predicted_component_no_rate_delta"] == 0.0
+    assert payload["predicted_total_delta_with_rate"] == 0.0
+    assert payload["predicted_score_lowering_after_rate"] is False

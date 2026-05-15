@@ -33,12 +33,11 @@ from tac.optimization.proxy_candidate_contract import (  # noqa: E402
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_LATENT_N_PAIRS,
     PR106_NO_OP_DIM,
-    PR106_SIDECAR_FORMAT_BROTLI,
     PR106SidecarPacket,
-    decode_brotli_dim_delta_sidecar_payload,
+    decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
-    encode_brotli_dim_delta_sidecar_payload,
+    lossless_pr106_sidecar_recode_candidates,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
     pr106_sidecar_manifest,
@@ -190,6 +189,65 @@ def _arrays_for_cells(
     return dims, deltas, applied, skipped
 
 
+def _best_runtime_supported_packet(
+    *,
+    source_payload: bytes,
+    dims: np.ndarray,
+    deltas: np.ndarray,
+) -> tuple[PR106SidecarPacket, bytes, dict[str, object]]:
+    alternatives: list[dict[str, object]] = []
+    best_packet: PR106SidecarPacket | None = None
+    best_packet_payload: bytes | None = None
+    best_diagnostic: dict[str, object] | None = None
+    for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas):
+        if (
+            not candidate.runtime_decoder_implemented
+            or candidate.sidecar_format_id is None
+            or not candidate.encoded_bytes
+        ):
+            continue
+        packet = PR106SidecarPacket(
+            format_id=int(candidate.sidecar_format_id),
+            pr106_bytes=source_payload,
+            sidecar_payload=candidate.encoded_bytes,
+            framing_meta=candidate.framing_meta_bytes or None,
+        )
+        packet_payload = emit_pr106_sidecar_packet(packet)
+        reparsed = parse_pr106_sidecar_packet(packet_payload)
+        reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(
+            reparsed
+        )
+        if not (
+            np.array_equal(reparsed_dims, dims)
+            and np.array_equal(reparsed_deltas, deltas)
+        ):
+            raise ValueError(
+                f"component-cell sidecar candidate {candidate.name} "
+                "failed semantic roundtrip"
+            )
+        diagnostic = {
+            "name": candidate.name,
+            "format_id": int(candidate.sidecar_format_id),
+            "runtime_decoder_implemented": True,
+            "sidecar_payload_bytes": len(candidate.encoded_bytes),
+            "framing_meta_bytes": len(candidate.framing_meta_bytes),
+            "charged_sidecar_bytes": candidate.charged_bytes,
+            "packet_payload_bytes": len(packet_payload),
+            "notes": list(candidate.notes),
+        }
+        alternatives.append(diagnostic)
+        if best_packet_payload is None or len(packet_payload) < len(best_packet_payload):
+            best_packet = packet
+            best_packet_payload = packet_payload
+            best_diagnostic = diagnostic
+    if best_packet is None or best_packet_payload is None or best_diagnostic is None:
+        raise ValueError("no runtime-supported PR106 sidecar recode candidate")
+    return best_packet, best_packet_payload, {
+        "selected": best_diagnostic,
+        "runtime_supported_alternatives": alternatives,
+    }
+
+
 def _archive_for_arrays(
     *,
     source_archive: Path,
@@ -197,20 +255,11 @@ def _archive_for_arrays(
     deltas: np.ndarray,
 ) -> tuple[bytes, dict[str, object]]:
     source_member = read_single_stored_member_archive(source_archive.read_bytes())
-    sidecar_payload = encode_brotli_dim_delta_sidecar_payload(dims, deltas, quality=11)
-    packet = PR106SidecarPacket(
-        format_id=PR106_SIDECAR_FORMAT_BROTLI,
-        pr106_bytes=source_member.payload,
-        sidecar_payload=sidecar_payload,
-        framing_meta=None,
+    packet, packet_payload, recode_diagnostics = _best_runtime_supported_packet(
+        source_payload=source_member.payload,
+        dims=dims,
+        deltas=deltas,
     )
-    packet_payload = emit_pr106_sidecar_packet(packet)
-    reparsed = parse_pr106_sidecar_packet(packet_payload)
-    reparsed_dims, reparsed_deltas = decode_brotli_dim_delta_sidecar_payload(
-        reparsed.sidecar_payload
-    )
-    if not (np.array_equal(reparsed_dims, dims) and np.array_equal(reparsed_deltas, deltas)):
-        raise ValueError("component-cell sidecar packet failed semantic roundtrip")
     candidate_member = type(source_member)(
         name=source_member.name,
         payload=packet_payload,
@@ -226,8 +275,15 @@ def _archive_for_arrays(
         "source_member_name": source_member.name,
         "source_member_sha256": sha256_hex(source_member.payload),
         "packet_payload_sha256": sha256_hex(packet_payload),
-        "sidecar_payload_bytes": len(sidecar_payload),
-        "sidecar_payload_sha256": sha256_hex(sidecar_payload),
+        "sidecar_payload_bytes": len(packet.sidecar_payload),
+        "sidecar_payload_sha256": sha256_hex(packet.sidecar_payload),
+        "sidecar_framing_meta_bytes": (
+            len(packet.framing_meta) if packet.framing_meta is not None else 0
+        ),
+        "selected_recode": recode_diagnostics["selected"],
+        "runtime_supported_recode_alternatives": recode_diagnostics[
+            "runtime_supported_alternatives"
+        ],
         "nonzero_correction_count": int(np.count_nonzero(dims != PR106_NO_OP_DIM)),
         "dim_sha256": sha256_hex(dims.astype(np.uint8).tobytes()),
         "delta_q_sha256": sha256_hex(deltas.astype(np.int8).tobytes()),
