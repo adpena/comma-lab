@@ -71,9 +71,11 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import random
 import shutil
 import sys
+import tempfile
 import time
 import zipfile
 from dataclasses import asdict
@@ -85,6 +87,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates._shared.trainer_skeleton import (
     build_optimized_training_context as _build_optimized_training_context,
 )
@@ -115,9 +120,6 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
-from tac.substrates._shared.smoke_auth_eval_gate import (
-    gate_auth_eval_call as _canon_gate_auth_eval_call,
-)
 from tac.substrates.d4_wyner_ziv_frame_0 import (
     MotionModelMode,
     WynerZivFrame0Config,
@@ -141,6 +143,42 @@ CONTEST_NORMALIZER = 37_545_489.0
 
 SUBSTRATE_TAG = "d4_wyner_ziv_frame_0"
 SUBSTRATE_LANE_ID = "lane_d4_wyner_ziv_frame_0_substrate_20260514"
+
+
+def _path_is_under(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _resolve_auth_eval_json_paths(
+    output_dir: Path,
+    *,
+    durable_root: Path | None = None,
+) -> tuple[Path, Path]:
+    """Return ``(gate_json, local_copy_json)`` for score-grade auth eval.
+
+    Modal trainers run from a writable ``/tmp/pact`` copy. The canonical
+    ``contest_auth_eval.py`` scorer refuses score-grade evidence paths under
+    temp storage, so the gate writes to a non-temp path and then the trainer
+    copies that JSON back into ``output_dir`` for artifact harvest.
+    """
+
+    local_copy_json = output_dir / "contest_auth_eval.json"
+    temp_root = Path(tempfile.gettempdir())
+    if not _path_is_under(local_copy_json, temp_root):
+        return local_copy_json, local_copy_json
+    root = durable_root
+    if root is None:
+        root = Path(
+            os.environ.get(
+                "D4_WYNER_ZIV_FRAME_0_AUTH_EVAL_ROOT",
+                "/root/d4_wyner_ziv_frame_0_auth_eval",
+            )
+        )
+    return root / output_dir.name / "contest_auth_eval.json", local_copy_json
 
 
 # ---------------------------------------------------------------------------
@@ -398,7 +436,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
     # Minimal pixel-MSE training loop (smoke only — no scorer load).
     opt = torch.optim.AdamW(substrate.parameters(), lr=args.lr)
     losses = []
-    for epoch in range(max(args.epochs, 3)):
+    for _epoch in range(max(args.epochs, 3)):
         opt.zero_grad()
         f0_pred, _ = substrate.reconstruct_pair(smoke_frame_1)
         loss = (f0_pred - smoke_frame_0_target).pow(2).mean()
@@ -622,9 +660,9 @@ def _build_archive_zip(
 def _run_val_loop(
     substrate: WynerZivFrame0Substrate,
     loss_fn,
-    gt_pair_tensor: "torch.Tensor",
+    gt_pair_tensor: torch.Tensor,
     val_pair_indices: list[int],
-    archive_bytes_proxy: "torch.Tensor",
+    archive_bytes_proxy: torch.Tensor,
     gt_cache,
     device,
 ) -> float:
@@ -720,7 +758,9 @@ def _full_main(args: argparse.Namespace) -> int:
     yuv6_token = patch_upstream_yuv6_globally()
     _stage("upstream_yuv6_patched")
 
-    auth_eval_json_path = args.output_dir / "auth_eval.json"
+    auth_eval_gate_json_path, auth_eval_json_path = _resolve_auth_eval_json_paths(
+        args.output_dir
+    )
     archive_zip_path = args.output_dir / "archive.zip"
     archive_zip_sha = ""
     archive_zip_size = 0
@@ -831,10 +871,9 @@ def _full_main(args: argparse.Namespace) -> int:
         # SE3: ~5KB after brotli; optical_flow: ~30-50KB.
         # Residual: 50-150KB after brotli.
         # Base: 178KB (A1/PR101 placeholder for proxy).
-        if motion_mode == MotionModelMode.SE3_PARAMETRIC:
-            motion_bytes_proxy = 5_000
-        else:
-            motion_bytes_proxy = 40_000
+        motion_bytes_proxy = (
+            5_000 if motion_mode == MotionModelMode.SE3_PARAMETRIC else 40_000
+        )
         residual_bytes_proxy = (
             cfg.residual_coarse_h * cfg.residual_coarse_w * 3 * n_pairs // 4
         )  # rough int8+brotli estimate
@@ -929,7 +968,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     k: v.detach().clone() for k, v in substrate.state_dict().items()
                 }
                 ema.apply(substrate)
-                ema_state_for_ckpt: dict[str, "torch.Tensor"] | None = None
+                ema_state_for_ckpt: dict[str, torch.Tensor] | None = None
                 try:
                     val_lag = _run_val_loop(
                         substrate, loss_fn, gt_pair_tensor, val_indices_pool,
@@ -1042,12 +1081,15 @@ def _full_main(args: argparse.Namespace) -> int:
                     archive_zip=archive_zip_path,
                     inflate_sh=submission_dir / "inflate.sh",
                     upstream_dir=args.upstream_dir,
-                    output_json=auth_eval_json_path,
+                    output_json=auth_eval_gate_json_path,
                     contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
                     substrate_tag=SUBSTRATE_TAG,
                     device=device,
                 )
                 if auth_result is not None:
+                    if auth_eval_gate_json_path != auth_eval_json_path:
+                        auth_eval_json_path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(auth_eval_gate_json_path, auth_eval_json_path)
                     _canon_require_contest_cuda_auth_eval_claim(
                         auth_eval_json_path,
                         archive_sha256=archive_zip_sha,
@@ -1106,6 +1148,8 @@ def _full_main(args: argparse.Namespace) -> int:
             ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md"
         ),
         "stage_log": stage_log,
+        "auth_eval_gate_json_path": str(auth_eval_gate_json_path),
+        "auth_eval_json_path": str(auth_eval_json_path),
         "hardware_substrate_cuda": _canon_detect_hardware_substrate(
             axis="cuda",
             substrate_tag=SUBSTRATE_TAG,
