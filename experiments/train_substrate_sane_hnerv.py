@@ -80,24 +80,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-# Canonical substrate-trainer helpers (CANON-DEDUP-1 landing, commit ac1cfc41).
-# Per CLAUDE.md "Beauty, simplicity, and developer experience": dedup the
-# trainer-skeleton boilerplate by importing the shared, byte-faithful helpers.
-from tac.substrates._shared.trainer_skeleton import (
-    decode_real_pairs as _canonical_decode_real_pairs,
-    device_or_die as _canonical_device_or_die,
-    git_head_sha as _git_head_sha,
-    pin_seeds as _pin_seeds,
-    sha256_bytes as _sha256_bytes,
-    torch_version_string as _torch_version_string,
-    utc_now_iso as _utc_now_iso,
-)
-from tac.substrates._shared.trainer_skeleton import (
-    detect_hardware_substrate as _canon_detect_hardware_substrate,
-)
-from tac.substrates._shared.trainer_skeleton import (
-    vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
-)
+from tac.substrate_registry import SubstrateContract, register_substrate
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
@@ -110,8 +93,41 @@ from tac.substrates._shared.smoke_auth_eval_gate import (
 from tac.substrates._shared.trainer_skeleton import (
     build_optimized_training_context as _canon_build_optimized_training_context,
 )
+
+# Canonical substrate-trainer helpers (CANON-DEDUP-1 landing, commit ac1cfc41).
+# Per CLAUDE.md "Beauty, simplicity, and developer experience": dedup the
+# trainer-skeleton boilerplate by importing the shared, byte-faithful helpers.
+from tac.substrates._shared.trainer_skeleton import (
+    decode_real_pairs as _canonical_decode_real_pairs,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    device_or_die as _canonical_device_or_die,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    git_head_sha as _git_head_sha,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    pin_seeds as _pin_seeds,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    sha256_bytes as _sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    torch_version_string as _torch_version_string,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    utc_now_iso as _utc_now_iso,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
+)
 from tac.training_optimization import (
     autocast_aware_forward as _autocast_aware_forward,
+)
+from tac.training_optimization import (
     compile_with_fallback as _compile_with_fallback,
 )
 
@@ -1084,7 +1100,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     f"[full] posterior_update: accepted={update.accepted} "
                     f"reason={update.reason!r}"
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 print(f"[full] posterior_update_locked failed: {exc}", file=sys.stderr)
 
         # 14. Cost-band anchor (best-effort; never fail the run on this).
@@ -1127,7 +1143,7 @@ def _full_main(args: argparse.Namespace) -> int:
                         f"append_failed_rc_{proc.returncode}:"
                         f"{(proc.stderr or proc.stdout)[-500:]}"
                     )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 cost_band_anchor_skip_reason = f"append_failed:{exc}"
                 print(f"[full] cost-band anchor append failed (non-fatal): {exc}", file=sys.stderr)
         else:
@@ -1190,6 +1206,90 @@ def _full_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). Decoration extincts
+# the Z3 v2 silent-drift bug class for this substrate by binding (a) the
+# trainer's claimed contract, (b) the recipe schema, (c) the lane registry,
+# and (d) the cost-band envelope into ONE source-of-truth that fails-loud at
+# decoration time if the contract violates canonical invariants.
+# ---------------------------------------------------------------------------
+
+SANE_HNERV_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="sane_hnerv",
+    lane_id="lane_substrate_sane_hnerv_20260512",
+    target_modes=("contest_one_video_replay", "research_substrate",),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "SHV1 monolithic single-file 0.bin: header + sane HNeRV decoder weights (fp16 + brotli; PR101-grammar-compatible) + per-frame embeddings"
+    ),
+    parser_section_manifest={
+        "header": "SHV1_magic_and_version",
+        "decoder_weights": "fp16_brotli_blob",
+        "frame_embeddings": "fp16_per_frame",
+    },
+    inflate_runtime_loc_budget=120,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av",),
+    export_format="fp16_brotli",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=1200,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
+    recipe_smoke_only=True,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="A100",
+    recipe_min_vram_gb=40,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="canary",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency=None,
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=100,
+    cost_band_gpu_key="A100",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=0.5,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token=None,
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "sane HNeRV is canary substrate; sensitivity captured by rate-distortion"
+        ),
+        "hook_bit_allocator_class": (
+            "fp16 brotli on weight blocks; no per-tensor bit allocator"
+        ),
+        "hook_probe_disambiguator": (
+            "single mechanism (sane HNeRV); no 2+ defensible interpretations"
+        ),
+    },
+)
+
+
+@register_substrate(SANE_HNERV_SUBSTRATE_CONTRACT)
+
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
