@@ -297,7 +297,11 @@ def build_packet(
         failure_class = "legitimate_score_regression_or_component_collapse"
     elif exact_cuda and score is not None:
         status = "exact_cuda_result_reviewed"
-        failure_class = "not_negative_against_supplied_baseline"
+        failure_class = (
+            "not_negative_against_supplied_baseline"
+            if baseline_score is not None
+            else "exact_cuda_result_reviewed_baseline_missing"
+        )
     elif exact_cpu and score is not None:
         status = "contest_cpu_result_reviewed"
         failure_class = "contest_cpu_public_leaderboard_anchor_cuda_pending"

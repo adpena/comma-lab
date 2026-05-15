@@ -1,5 +1,5 @@
 {
-  "baseline_score": null,
+  "baseline_score": 0.20636166502462222,
   "canonical_score": 0.22816528594942062,
   "cpu_leaderboard_reproduction_eligible": false,
   "custody": {
@@ -53,11 +53,11 @@
   },
   "exact_cpu_evidence": false,
   "exact_cuda_evidence": true,
-  "failure_class": "not_negative_against_supplied_baseline",
+  "failure_class": "legitimate_score_regression_or_component_collapse",
   "family_falsified": false,
   "job_id": "hdm8_even_frame_selector_modal_t4_20260514T111813Z",
   "lane_id": "hnerv_hdm8_even_frame_selector_exact_eval_20260514",
-  "measured_config_status": "exact_cuda_result_reviewed",
+  "measured_config_status": "measured_config_retired",
   "method_family_retired": false,
   "notes": [
     "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
@@ -65,7 +65,10 @@
   ],
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
-  "reactivation_criteria": [],
+  "reactivation_criteria": [
+    "requires exact-CUDA positive or neutral control before broad selector dispatch",
+    "requires calibrated transfer model explaining proxy-positive CUDA regressions"
+  ],
   "ready_for_exact_eval_dispatch": false,
   "review_requirements": {
     "contest_compliance_review_required": true,

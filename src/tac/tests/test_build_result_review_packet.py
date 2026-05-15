@@ -139,6 +139,28 @@ def test_requires_reactivation_criteria_for_negative_exact_cuda(tmp_path: Path) 
         )
 
 
+def test_exact_cuda_without_baseline_does_not_claim_not_negative(tmp_path: Path) -> None:
+    tool = _load_tool()
+    source = tmp_path / "contest_auth_eval.json"
+    source.write_text(json.dumps(_auth_eval_payload()), encoding="utf-8")
+
+    packet = tool.build_packet(
+        auth_eval_json=source,
+        technique="selector_probe",
+        lane_id="selector_probe_cuda",
+        job_id="job",
+        baseline_score=None,
+        reactivation_criteria=[],
+        reviewer="test",
+        dispatch_claims_path=None,
+    )
+
+    assert packet["measured_config_status"] == "exact_cuda_result_reviewed"
+    assert packet["failure_class"] == "exact_cuda_result_reviewed_baseline_missing"
+    assert packet["baseline_score"] is None
+    assert packet["score_claim_valid"] is True
+
+
 def test_proxy_or_cpu_packet_stays_non_rankable(tmp_path: Path) -> None:
     tool = _load_tool()
     payload = _auth_eval_payload()
