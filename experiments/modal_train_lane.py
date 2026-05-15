@@ -223,6 +223,7 @@ def _run_lane_inner(
         f"export T1_MOUNTED_CODE_GIT_BRANCH={mounted_code_git_branch}\n"
         f"export SCPP_MOUNTED_CODE_GIT_HEAD={mounted_code_git_head}\n"
         f"export SCPP_MOUNTED_CODE_GIT_BRANCH={mounted_code_git_branch}\n"
+        'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"\n'
         "export AUTH_EVAL_DEVICE=cpu\n"
         "export MODAL_AUTH_EVAL_ADVISORY_ONLY=1\n"
         "export SCORE_CLAIM=false\n"
@@ -386,6 +387,7 @@ def _run_lane_inner(
         # (the venv with torch/tac), not /usr/bin/python3 (system, no deps).
         "PATH": f"{bin_dir}:{ffmpeg_root}/bin:/root/.local/bin:{os.environ.get('PATH', '')}",
         "LD_LIBRARY_PATH": f"{ffmpeg_root}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}",
+        "CUBLAS_WORKSPACE_CONFIG": os.environ.get("CUBLAS_WORKSPACE_CONFIG", ":4096:8"),
         "TAC_UPSTREAM_DIR": str(workspace / "upstream"),
         "MODAL_RUNTIME": "1",
         "AUTH_EVAL_DEVICE": "cpu",

@@ -31,6 +31,13 @@ def test_modal_env_sh_also_fails_closed_for_sourced_lane_scripts() -> None:
     assert "export RUN_CONTEST_EVAL=0" in text
 
 
+def test_modal_env_sh_pins_cublas_workspace_for_gpu_determinism() -> None:
+    text = SOURCE.read_text()
+    expected = 'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"'
+    assert expected in text
+    assert '"CUBLAS_WORKSPACE_CONFIG": os.environ.get(' in text
+
+
 def test_modal_train_lane_copies_dispatch_claim_ledger_to_remote_workspace() -> None:
     text = SOURCE.read_text()
     assert "claim_ledger_bytes: bytes" in text
