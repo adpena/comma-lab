@@ -65,22 +65,24 @@ def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
 
 def _row_exact_eval_duplicate_key(row: Mapping[str, Any]) -> str | None:
     archive_sha = _row_archive_sha(row)
-    runtime_sha = None
-    for key in ("runtime_content_tree_sha256", "candidate_runtime_content_tree_sha256"):
-        value = row.get(key)
-        if is_sha256(value):
-            runtime_sha = str(value).lower()
-            break
-    if runtime_sha is None:
-        runtime_manifest = row.get("runtime_manifest")
-        if isinstance(runtime_manifest, Mapping):
-            value = runtime_manifest.get("runtime_content_tree_sha256")
-            if is_sha256(value):
-                runtime_sha = str(value).lower()
+    runtime_sha = _row_runtime_content_sha(row)
     score_axis = row.get("score_axis") or row.get("target_score_axis")
     if archive_sha is None or runtime_sha is None or not isinstance(score_axis, str):
         return None
     return f"{archive_sha}:{runtime_sha}:{score_axis}"
+
+
+def _row_runtime_content_sha(row: Mapping[str, Any]) -> str | None:
+    for key in ("runtime_content_tree_sha256", "candidate_runtime_content_tree_sha256"):
+        value = row.get(key)
+        if is_sha256(value):
+            return str(value).lower()
+    runtime_manifest = row.get("runtime_manifest")
+    if isinstance(runtime_manifest, Mapping):
+        value = runtime_manifest.get("runtime_content_tree_sha256")
+        if is_sha256(value):
+            return str(value).lower()
+    return None
 
 
 def _row_archive_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
@@ -177,6 +179,142 @@ def _packetir_exact_closure_blockers(
             if exact_eval_duplicate_key is not None:
                 label = "packetir_exact_closure_exact_eval_duplicate_key_match"
             blockers.append(f"{label}:{classification}:{duplicate_key}:{closure_path}")
+    return blockers, records
+
+
+def _discover_exact_cuda_result_review_records(
+    repo_root: Path,
+) -> dict[str, list[dict[str, Any]]]:
+    """Return exact-CUDA result-review records keyed by archive SHA.
+
+    Terminal claim notes are intentionally compact and can miss runtime-content
+    custody.  Result-review packets are the richer source of truth after eval
+    recovery, so exact-ready queues should consult them before redispatching a
+    same-archive packet whose wrapper runtime hash changed but whose consumed
+    runtime content did not.
+    """
+
+    records: dict[str, list[dict[str, Any]]] = {}
+    for path in sorted((repo_root / ".omx" / "research").glob("*result_review*.json")):
+        try:
+            payload = read_json(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        if payload.get("schema") != "tac_result_review_packet_v1":
+            continue
+        if payload.get("exact_cuda_evidence") is not True:
+            continue
+        if payload.get("score_claim_valid") is not True:
+            continue
+        custody = payload.get("custody")
+        if not isinstance(custody, Mapping):
+            continue
+        archive_sha = custody.get("archive_sha256")
+        if not is_sha256(archive_sha):
+            continue
+        runtime_custody = payload.get("runtime_custody")
+        runtime_content_sha = None
+        runtime_tree_sha = None
+        if isinstance(runtime_custody, Mapping):
+            value = runtime_custody.get("runtime_content_tree_sha256")
+            if is_sha256(value):
+                runtime_content_sha = str(value).lower()
+            value = runtime_custody.get("runtime_tree_sha256")
+            if is_sha256(value):
+                runtime_tree_sha = str(value).lower()
+        score_recomputation = payload.get("score_recomputation")
+        score = None
+        if isinstance(score_recomputation, Mapping):
+            raw_score = score_recomputation.get("recomputed_score")
+            if isinstance(raw_score, int | float):
+                score = float(raw_score)
+        if score is None and isinstance(payload.get("canonical_score"), int | float):
+            score = float(payload["canonical_score"])
+        score_axis = payload.get("score_axis")
+        if not isinstance(score_axis, str):
+            score_axis = "contest_cuda"
+        records.setdefault(str(archive_sha).lower(), []).append(
+            {
+                "review_path": repo_rel(path, repo_root),
+                "lane_id": payload.get("lane_id"),
+                "job_id": payload.get("job_id"),
+                "archive_sha256": str(archive_sha).lower(),
+                "archive_bytes": custody.get("archive_bytes"),
+                "runtime_tree_sha256": runtime_tree_sha,
+                "runtime_content_tree_sha256": runtime_content_sha,
+                "score_axis": score_axis,
+                "canonical_score": score,
+                "measured_config_status": payload.get("measured_config_status"),
+                "promotion_eligible": payload.get("promotion_eligible"),
+                "ready_for_exact_eval_dispatch": payload.get(
+                    "ready_for_exact_eval_dispatch"
+                ),
+                "score_claim": payload.get("score_claim"),
+                "technique": payload.get("technique"),
+            }
+        )
+    return records
+
+
+def _exact_cuda_result_review_blockers(
+    archive_sha: str | None,
+    result_review_records: Mapping[str, list[dict[str, Any]]],
+    *,
+    lane_id: str | None,
+    runtime_content_sha: str | None,
+    score_axis: str | None,
+    active_floor_score: float | None,
+) -> tuple[list[str], list[dict[str, Any]]]:
+    if archive_sha is None:
+        return [], []
+    records = list(result_review_records.get(archive_sha.lower(), []))
+    blockers: list[str] = []
+    for record in records:
+        record_axis = record.get("score_axis")
+        if (
+            isinstance(score_axis, str)
+            and isinstance(record_axis, str)
+            and record_axis != score_axis
+        ):
+            continue
+        record_lane = record.get("lane_id")
+        same_lane = isinstance(lane_id, str) and record_lane == lane_id
+        record_runtime_content = record.get("runtime_content_tree_sha256")
+        same_runtime_content = (
+            runtime_content_sha is not None
+            and isinstance(record_runtime_content, str)
+            and record_runtime_content == runtime_content_sha
+        )
+        if not same_lane and not same_runtime_content:
+            continue
+        review_path = str(record.get("review_path") or "<unknown>")
+        record_id = f"{record_lane}:{record.get('job_id')}:{review_path}"
+        score = record.get("canonical_score")
+        if isinstance(score, int | float) and active_floor_score is not None:
+            if score >= active_floor_score:
+                blockers.append(
+                    "result_review_exact_cuda_score_not_below_active_floor_"
+                    f"for_same_archive:{score:.12g}>={active_floor_score:.12g}:"
+                    f"{record_id}"
+                )
+            else:
+                blockers.append(
+                    "result_review_exact_cuda_score_already_below_active_floor_"
+                    f"for_same_archive:{score:.12g}<{active_floor_score:.12g}:"
+                    f"{record_id}"
+                )
+        if same_runtime_content:
+            blockers.append(
+                "result_review_exact_cuda_duplicate_runtime_content_for_same_archive:"
+                f"{runtime_content_sha}:{record_id}"
+            )
+        elif same_lane:
+            blockers.append(
+                "result_review_exact_cuda_duplicate_lane_archive_for_same_archive:"
+                f"{record_id}"
+            )
     return blockers, records
 
 
@@ -369,6 +507,7 @@ def audit_exact_ready_queue(
     candidate_ids: Iterable[str] | None = None,
     claim_ttl_hours: float = 24.0,
     packetir_closure_records: Mapping[str, list[dict[str, Any]]] | None = None,
+    result_review_records: Mapping[str, list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     """Return stale-row findings for one generated exact-ready queue."""
 
@@ -401,6 +540,11 @@ def audit_exact_ready_queue(
         packetir_closure_records
         if packetir_closure_records is not None
         else _discover_packetir_exact_closure_records(repo_root)
+    )
+    review_records = (
+        result_review_records
+        if result_review_records is not None
+        else _discover_exact_cuda_result_review_records(repo_root)
     )
     row_count = 0
     queue_dir = queue_path.parent
@@ -448,6 +592,18 @@ def audit_exact_ready_queue(
                 if closure_evidence:
                     custody_facts["packetir_exact_closure_records"] = closure_evidence
                 blockers.extend(closure_blockers)
+                row_axis = row.get("score_axis") or row.get("target_score_axis")
+                review_blockers, review_evidence = _exact_cuda_result_review_blockers(
+                    archive_sha,
+                    review_records,
+                    lane_id=lane_id.strip(),
+                    runtime_content_sha=_row_runtime_content_sha(row),
+                    score_axis=row_axis if isinstance(row_axis, str) else None,
+                    active_floor_score=active_floor_score,
+                )
+                if review_evidence:
+                    custody_facts["exact_cuda_result_review_records"] = review_evidence
+                blockers.extend(review_blockers)
                 for claim_lane_id in lane_aliases:
                     blockers.extend(
                         terminal_claim_result_conflicts(
@@ -527,6 +683,7 @@ def audit_exact_ready_queues(
     claim_ttl_hours: float = 24.0,
 ) -> dict[str, Any]:
     packetir_closure_records = _discover_packetir_exact_closure_records(repo_root)
+    result_review_records = _discover_exact_cuda_result_review_records(repo_root)
     queues = [
         audit_exact_ready_queue(
             path,
@@ -536,6 +693,7 @@ def audit_exact_ready_queues(
             candidate_ids=candidate_ids,
             claim_ttl_hours=claim_ttl_hours,
             packetir_closure_records=packetir_closure_records,
+            result_review_records=result_review_records,
         )
         for path in queue_paths
     ]
@@ -608,6 +766,25 @@ def _terminal_score_blocker_key(blocker: str) -> tuple[str, str, str, str] | Non
     return None
 
 
+def _result_review_score_blocker_key(blocker: str) -> tuple[str, str, str, str] | None:
+    parts = blocker.split(":")
+    if (
+        blocker.startswith(
+            "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:"
+        )
+        and len(parts) >= 5
+    ):
+        return ("review_score_not_below_active_floor", parts[2], parts[3], parts[4])
+    if (
+        blocker.startswith(
+            "result_review_exact_cuda_score_already_below_active_floor_for_same_archive:"
+        )
+        and len(parts) >= 5
+    ):
+        return ("review_score_already_below_active_floor", parts[2], parts[3], parts[4])
+    return None
+
+
 def _terminal_score_blocker_keys(blockers: object) -> tuple[tuple[str, str, str, str], ...]:
     if not isinstance(blockers, list):
         return ()
@@ -615,7 +792,13 @@ def _terminal_score_blocker_keys(blockers: object) -> tuple[tuple[str, str, str,
         sorted(
             key
             for blocker in blockers
-            if (key := _terminal_score_blocker_key(str(blocker))) is not None
+            if (
+                key := (
+                    _terminal_score_blocker_key(str(blocker))
+                    or _result_review_score_blocker_key(str(blocker))
+                )
+            )
+            is not None
         )
     )
 
@@ -665,6 +848,32 @@ def _terminal_evidence_from_blocker(blocker: str) -> dict[str, object] | None:
     ):
         return {
             "kind": "terminal_score_already_below_active_floor",
+            "score_comparison": parts[1],
+            "lane_id": parts[2],
+            "job_id": parts[3],
+            "status": parts[4],
+        }
+    if (
+        blocker.startswith(
+            "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:"
+        )
+        and len(parts) >= 5
+    ):
+        return {
+            "kind": "result_review_score_not_below_active_floor",
+            "score_comparison": parts[1],
+            "lane_id": parts[2],
+            "job_id": parts[3],
+            "status": parts[4],
+        }
+    if (
+        blocker.startswith(
+            "result_review_exact_cuda_score_already_below_active_floor_for_same_archive:"
+        )
+        and len(parts) >= 5
+    ):
+        return {
+            "kind": "result_review_score_already_below_active_floor",
             "score_comparison": parts[1],
             "lane_id": parts[2],
             "job_id": parts[3],
@@ -732,6 +941,51 @@ def _classify_blockers(blockers: Iterable[object]) -> tuple[str, str, list[str],
             [
                 "Do not duplicate-dispatch this already evaluated identity.",
                 "Use the terminal exact-CUDA artifact as the source of truth.",
+            ],
+            terminal_evidence,
+        )
+    if any(
+        blocker.startswith(
+            "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:"
+        )
+        for blocker in blocker_text
+    ):
+        return (
+            "retired_by_result_review_score_not_below_active_floor",
+            "suppress_from_exact_ready_dispatch",
+            [
+                "Do not redispatch this result-reviewed exact-CUDA configuration.",
+                "Reactivate only with a new charged-byte transform, score-affecting runtime-content change, or improved CUDA-calibrated objective.",
+            ],
+            terminal_evidence,
+        )
+    if any(
+        blocker.startswith(
+            "result_review_exact_cuda_score_already_below_active_floor_for_same_archive:"
+        )
+        for blocker in blocker_text
+    ):
+        return (
+            "already_evaluated_by_result_review_exact_cuda_success",
+            "suppress_duplicate_exact_ready_dispatch",
+            [
+                "Do not duplicate-dispatch this already result-reviewed exact-CUDA identity.",
+                "Use the exact result-review packet as the source of truth.",
+            ],
+            terminal_evidence,
+        )
+    if any(
+        blocker.startswith(
+            "result_review_exact_cuda_duplicate_runtime_content_for_same_archive:"
+        )
+        for blocker in blocker_text
+    ):
+        return (
+            "already_evaluated_by_result_review_runtime_content_duplicate",
+            "suppress_duplicate_exact_ready_dispatch",
+            [
+                "Do not redispatch a same-archive packet with the same consumed runtime content.",
+                "Reactivate only with a new archive SHA or a changed runtime-content tree plus fresh custody.",
             ],
             terminal_evidence,
         )

@@ -715,6 +715,83 @@ def test_audit_indexes_packetir_closure_with_duplicate_keys_only(
     )
 
 
+def test_audit_blocks_ready_row_closed_by_exact_cuda_result_review_runtime_content(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_result_review",  # FAKE_LANE_OK: synthetic review fixture.
+        archive_sha="a" * 64,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["dispatch_ready"][0]
+    archive_sha = row["archive_sha256"]
+    runtime_content_sha = "c" * 64
+    row["runtime_content_tree_sha256"] = runtime_content_sha
+    row["score_axis"] = "contest_cuda"
+    row["score_affecting_runtime_changed"] = True
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json(
+        tmp_path / ".omx/research/fixture_exact_cuda_result_review.json",
+        {
+            "schema": "tac_result_review_packet_v1",
+            "lane_id": "lane_result_review",
+            "job_id": "fixture_job",
+            "exact_cuda_evidence": True,
+            "score_axis": "contest_cuda",
+            "score_claim": False,
+            "score_claim_valid": True,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "custody": {
+                "archive_sha256": archive_sha,
+                "archive_bytes": row["archive_bytes"],
+                "n_samples": 600,
+            },
+            "runtime_custody": {
+                "runtime_tree_sha256": "d" * 64,
+                "runtime_content_tree_sha256": runtime_content_sha,
+            },
+            "score_recomputation": {
+                "available": True,
+                "recomputed_score": 0.2265,
+            },
+        },
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    result = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+        active_floor_score=0.2,
+    )
+
+    assert result["passed"] is False
+    assert result["stale_ready_row_count"] == 1
+    stale_row = result["queues"][0]["stale_ready_rows"][0]
+    assert stale_row["live_custody"]["exact_cuda_result_review_records"][0][
+        "runtime_content_tree_sha256"
+    ] == runtime_content_sha
+    assert any(
+        blocker.startswith(
+            "result_review_exact_cuda_score_not_below_active_floor_for_same_archive"
+        )
+        for blocker in stale_row["blockers"]
+    )
+    assert any(
+        blocker.startswith(
+            "result_review_exact_cuda_duplicate_runtime_content_for_same_archive"
+        )
+        for blocker in stale_row["blockers"]
+    )
+
+
 def test_audit_allows_ready_queue_after_infra_failure_same_archive(
     tmp_path: Path,
 ) -> None:

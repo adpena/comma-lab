@@ -3,10 +3,88 @@
     {
       "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
       "blockers": [
-        "ready_row_runtime_tree_sha_mismatch:84afb14b741a7250046e6956b00710be02615b8cc500551f77576546245dfaf2!=748b99d3bb63372eeff8f784cd0b9589a3b05c781e3517cd426810dfe48a5382"
+        "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:0.226503366766>=0.206355672294:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+        "result_review_exact_cuda_duplicate_lane_archive_for_same_archive:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json"
+      ],
+      "candidate_id": "bias_refine_cmaes_style_stdlib_0127_pr101_proxy_runtime_packet",
+      "classification": "retired_by_result_review_score_not_below_active_floor",
+      "dispatch_allowed": false,
+      "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+      "live_custody": {
+        "actual_archive_bytes": 178258,
+        "actual_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "actual_runtime_tree_sha256": "40def9339343b9fcb50bce211fb47a22f19332edd7e3ff7090733b9d15247ff2",
+        "archive_manifest_bytes": 178258,
+        "archive_manifest_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json",
+        "archive_manifest_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "archive_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/archive.zip",
+        "archive_zip_member_count": 1,
+        "archive_zip_strict": true,
+        "declared_inflate_sh_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/inflate.sh",
+        "exact_cuda_result_review_records": [
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.2265033667659732,
+            "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+            "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "d5d152cf0f4bad802139b087cd969a893e50b09e4dd30bdcfae94385ac8889f5",
+            "runtime_tree_sha256": "4b816c09c36a2c1e7d4a75ec0752cab92922f62e2f175c4ba69655bc2c865f4e",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_bias_refine_cmaes0050_cuda_review"
+          },
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.22657615737364284,
+            "job_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200",
+            "lane_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "5c1934507d4c4ad4b9ca2729a5c79e821936ab22a10a9b3e94085f4f187f4bfe",
+            "runtime_tree_sha256": "4045e17d3c82f068f115c3354200ade90a3d20ffc7b974382476caf708b9e96c",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_nonlocal_bias_refine_cmaes_0053_cuda_review"
+          }
+        ],
+        "inflate_sh": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/inflate.sh",
+        "report_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/report.txt",
+        "submission_dir": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet"
+      },
+      "operator_action": "suppress_from_exact_ready_dispatch",
+      "queue_path": ".omx/research/optimizer_guided_candidate_queues_20260510_codex/bias_refine_0127_exact_ready_queue.json",
+      "reactivation_criteria": [
+        "Do not redispatch this result-reviewed exact-CUDA configuration.",
+        "Reactivate only with a new charged-byte transform, score-affecting runtime-content change, or improved CUDA-calibrated objective."
+      ],
+      "ready_for_exact_eval_dispatch_in_raw_queue": true,
+      "runtime_tree_sha256": "40def9339343b9fcb50bce211fb47a22f19332edd7e3ff7090733b9d15247ff2",
+      "score_affecting_runtime_changed": true,
+      "terminal_evidence": {
+        "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+        "kind": "result_review_score_not_below_active_floor",
+        "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+        "score_comparison": "0.226503366766>=0.206355672294",
+        "status": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json"
+      }
+    },
+    {
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "blockers": [
+        "ready_row_runtime_tree_sha_mismatch:84afb14b741a7250046e6956b00710be02615b8cc500551f77576546245dfaf2!=748b99d3bb63372eeff8f784cd0b9589a3b05c781e3517cd426810dfe48a5382",
+        "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:0.226503366766>=0.206355672294:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+        "result_review_exact_cuda_duplicate_lane_archive_for_same_archive:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json"
       ],
       "candidate_id": "proxy_cmaes_0037_pr101_proxy_runtime_packet",
-      "classification": "retracted_stale_live_runtime_metadata",
+      "classification": "retired_by_result_review_score_not_below_active_floor",
       "dispatch_allowed": false,
       "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
       "live_custody": {
@@ -20,25 +98,67 @@
         "archive_zip_member_count": 1,
         "archive_zip_strict": true,
         "declared_inflate_sh_path": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/inflate.sh",
+        "exact_cuda_result_review_records": [
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.2265033667659732,
+            "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+            "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "d5d152cf0f4bad802139b087cd969a893e50b09e4dd30bdcfae94385ac8889f5",
+            "runtime_tree_sha256": "4b816c09c36a2c1e7d4a75ec0752cab92922f62e2f175c4ba69655bc2c865f4e",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_bias_refine_cmaes0050_cuda_review"
+          },
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.22657615737364284,
+            "job_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200",
+            "lane_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "5c1934507d4c4ad4b9ca2729a5c79e821936ab22a10a9b3e94085f4f187f4bfe",
+            "runtime_tree_sha256": "4045e17d3c82f068f115c3354200ade90a3d20ffc7b974382476caf708b9e96c",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_nonlocal_bias_refine_cmaes_0053_cuda_review"
+          }
+        ],
         "inflate_sh": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/inflate.sh",
         "report_path": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/report.txt",
         "submission_dir": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet"
       },
-      "operator_action": "retract_stale_exact_ready_row",
+      "operator_action": "suppress_from_exact_ready_dispatch",
       "queue_path": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/exact_eval_promotion/exact_ready_queue.json",
       "reactivation_criteria": [
-        "Do not dispatch the persisted raw queue row.",
-        "Regenerate the exact-ready queue from live packet custody before any future dispatch."
+        "Do not redispatch this result-reviewed exact-CUDA configuration.",
+        "Reactivate only with a new charged-byte transform, score-affecting runtime-content change, or improved CUDA-calibrated objective."
       ],
       "ready_for_exact_eval_dispatch_in_raw_queue": true,
       "runtime_tree_sha256": "748b99d3bb63372eeff8f784cd0b9589a3b05c781e3517cd426810dfe48a5382",
       "score_affecting_runtime_changed": true,
-      "terminal_evidence": null
+      "terminal_evidence": {
+        "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+        "kind": "result_review_score_not_below_active_floor",
+        "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+        "score_comparison": "0.226503366766>=0.206355672294",
+        "status": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json"
+      }
     },
     {
       "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
       "blockers": [
-        "same_lane_terminal_score_not_below_active_floor_for_same_archive:0.2265034315>=0.208981075582:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_exact_cuda_modal_20260510T165632Z:completed_contest_cuda_auth_eval"
+        "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:0.226503366766>=0.206355672294:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+        "result_review_exact_cuda_duplicate_lane_archive_for_same_archive:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+        "same_lane_terminal_score_not_below_active_floor_for_same_archive:0.2265034315>=0.206355672294:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_exact_cuda_modal_20260510T165632Z:completed_contest_cuda_auth_eval"
       ],
       "candidate_id": "bias_refine_cmaes_0050_pr101_proxy_runtime_packet",
       "classification": "retired_by_terminal_score_not_below_active_floor",
@@ -55,6 +175,40 @@
         "archive_zip_member_count": 1,
         "archive_zip_strict": true,
         "declared_inflate_sh_path": "experiments/results/kaggle_pr101_bias_refine_20260510_codex/pr101_bias_refine/proxy_runtime_packet/inflate.sh",
+        "exact_cuda_result_review_records": [
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.2265033667659732,
+            "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+            "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "d5d152cf0f4bad802139b087cd969a893e50b09e4dd30bdcfae94385ac8889f5",
+            "runtime_tree_sha256": "4b816c09c36a2c1e7d4a75ec0752cab92922f62e2f175c4ba69655bc2c865f4e",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_bias_refine_cmaes0050_cuda_review"
+          },
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.22657615737364284,
+            "job_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200",
+            "lane_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "5c1934507d4c4ad4b9ca2729a5c79e821936ab22a10a9b3e94085f4f187f4bfe",
+            "runtime_tree_sha256": "4045e17d3c82f068f115c3354200ade90a3d20ffc7b974382476caf708b9e96c",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_nonlocal_bias_refine_cmaes_0053_cuda_review"
+          }
+        ],
         "inflate_sh": "experiments/results/kaggle_pr101_bias_refine_20260510_codex/pr101_bias_refine/proxy_runtime_packet/inflate.sh",
         "report_path": "experiments/results/kaggle_pr101_bias_refine_20260510_codex/pr101_bias_refine/proxy_runtime_packet/report.txt",
         "submission_dir": "experiments/results/kaggle_pr101_bias_refine_20260510_codex/pr101_bias_refine/proxy_runtime_packet"
@@ -69,16 +223,18 @@
       "runtime_tree_sha256": "53e51052c71f97354ee1a48abddd006d98e87c795e714a0d5d4f8e0b5dc75a88",
       "score_affecting_runtime_changed": true,
       "terminal_evidence": {
-        "job_id": "pr101_bias_refine_exact_cuda_modal_20260510T165632Z",
-        "kind": "terminal_score_not_below_active_floor",
+        "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+        "kind": "result_review_score_not_below_active_floor",
         "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
-        "score_comparison": "0.2265034315>=0.208981075582",
-        "status": "completed_contest_cuda_auth_eval"
+        "score_comparison": "0.226503366766>=0.206355672294",
+        "status": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json"
       }
     },
     {
       "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
       "blockers": [
+        "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:0.226503366766>=0.206355672294:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+        "result_review_exact_cuda_duplicate_lane_archive_for_same_archive:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z:.omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
         "same_lane_terminal_negative_for_same_archive:pr101_kaggle_proxy_runtime_packet_exact_eval:pr101_kaggle_proxy_runtime_packet_exact_cuda_modal_20260510T194142Z:completed_contest_cuda_auth_eval_negative"
       ],
       "candidate_id": "proxy_cmaes_0037_pr101_proxy_runtime_packet",
@@ -96,6 +252,40 @@
         "archive_zip_member_count": 1,
         "archive_zip_strict": true,
         "declared_inflate_sh_path": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/inflate.sh",
+        "exact_cuda_result_review_records": [
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.2265033667659732,
+            "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+            "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "d5d152cf0f4bad802139b087cd969a893e50b09e4dd30bdcfae94385ac8889f5",
+            "runtime_tree_sha256": "4b816c09c36a2c1e7d4a75ec0752cab92922f62e2f175c4ba69655bc2c865f4e",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_bias_refine_cmaes0050_cuda_review"
+          },
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.22657615737364284,
+            "job_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200",
+            "lane_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "5c1934507d4c4ad4b9ca2729a5c79e821936ab22a10a9b3e94085f4f187f4bfe",
+            "runtime_tree_sha256": "4045e17d3c82f068f115c3354200ade90a3d20ffc7b974382476caf708b9e96c",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_nonlocal_bias_refine_cmaes_0053_cuda_review"
+          }
+        ],
         "inflate_sh": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/inflate.sh",
         "report_path": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/report.txt",
         "submission_dir": "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet"
@@ -110,10 +300,11 @@
       "runtime_tree_sha256": "84afb14b741a7250046e6956b00710be02615b8cc500551f77576546245dfaf2",
       "score_affecting_runtime_changed": true,
       "terminal_evidence": {
-        "job_id": "pr101_kaggle_proxy_runtime_packet_exact_cuda_modal_20260510T194142Z",
-        "kind": "terminal_exact_cuda_negative",
+        "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+        "kind": "result_review_score_not_below_active_floor",
         "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
-        "status": "completed_contest_cuda_auth_eval_negative"
+        "score_comparison": "0.226503366766>=0.206355672294",
+        "status": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json"
       }
     },
     {
@@ -195,11 +386,87 @@
         "lane_id": "pr106_q10_151byte_brotli",
         "status": "completed_contest_cuda_auth_eval_negative"
       }
+    },
+    {
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "blockers": [
+        "result_review_exact_cuda_score_not_below_active_floor_for_same_archive:0.226576157374>=0.206355672294:pr101_nonlocal_bias_refine_cmaes_0053_exact_eval:pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200:.omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json",
+        "result_review_exact_cuda_duplicate_runtime_content_for_same_archive:5c1934507d4c4ad4b9ca2729a5c79e821936ab22a10a9b3e94085f4f187f4bfe:pr101_nonlocal_bias_refine_cmaes_0053_exact_eval:pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200:.omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json"
+      ],
+      "candidate_id": "bias_refine_cmaes_0053_pr101_nonlocal_bias_runtime_packet",
+      "classification": "retired_by_result_review_score_not_below_active_floor",
+      "dispatch_allowed": false,
+      "lane_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval",
+      "live_custody": {
+        "actual_archive_bytes": 178258,
+        "actual_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "actual_runtime_tree_sha256": "db3d0baf4837cb887bb5543da41c13858e50460aaf0a162d408530058a2ca375",
+        "archive_manifest_bytes": 178258,
+        "archive_manifest_path": "experiments/results/pr101_nonlocal_sweeps_20260514_codex/packets/bias_refine_cmaes_0053/runtime_packet_manifest.json",
+        "archive_manifest_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "archive_path": "experiments/results/pr101_nonlocal_sweeps_20260514_codex/packets/bias_refine_cmaes_0053/archive.zip",
+        "archive_zip_member_count": 1,
+        "archive_zip_strict": true,
+        "declared_inflate_sh_path": "experiments/results/pr101_nonlocal_sweeps_20260514_codex/packets/bias_refine_cmaes_0053/inflate.sh",
+        "exact_cuda_result_review_records": [
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.2265033667659732,
+            "job_id": "pr101_bias_refine_cmaes0050_modal_t4_20260514T101122Z",
+            "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_bias_refine_cmaes0050_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "d5d152cf0f4bad802139b087cd969a893e50b09e4dd30bdcfae94385ac8889f5",
+            "runtime_tree_sha256": "4b816c09c36a2c1e7d4a75ec0752cab92922f62e2f175c4ba69655bc2c865f4e",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_bias_refine_cmaes0050_cuda_review"
+          },
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "canonical_score": 0.22657615737364284,
+            "job_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200",
+            "lane_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval",
+            "measured_config_status": "exact_cuda_result_reviewed",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "review_path": ".omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json",
+            "runtime_content_tree_sha256": "5c1934507d4c4ad4b9ca2729a5c79e821936ab22a10a9b3e94085f4f187f4bfe",
+            "runtime_tree_sha256": "4045e17d3c82f068f115c3354200ade90a3d20ffc7b974382476caf708b9e96c",
+            "score_axis": "contest_cuda",
+            "score_claim": false,
+            "technique": "pr101_nonlocal_bias_refine_cmaes_0053_cuda_review"
+          }
+        ],
+        "inflate_sh": "experiments/results/pr101_nonlocal_sweeps_20260514_codex/packets/bias_refine_cmaes_0053/inflate.sh",
+        "report_path": "experiments/results/pr101_nonlocal_sweeps_20260514_codex/packets/bias_refine_cmaes_0053/report.txt",
+        "submission_dir": "experiments/results/pr101_nonlocal_sweeps_20260514_codex/packets/bias_refine_cmaes_0053"
+      },
+      "operator_action": "suppress_from_exact_ready_dispatch",
+      "queue_path": "experiments/results/pr101_nonlocal_sweeps_20260514_codex/exact_ready/bias_refine_cmaes_0053_pr101_nonlocal_bias_runtime_packet.exact_ready_queue.json",
+      "reactivation_criteria": [
+        "Do not redispatch this result-reviewed exact-CUDA configuration.",
+        "Reactivate only with a new charged-byte transform, score-affecting runtime-content change, or improved CUDA-calibrated objective."
+      ],
+      "ready_for_exact_eval_dispatch_in_raw_queue": true,
+      "runtime_tree_sha256": "db3d0baf4837cb887bb5543da41c13858e50460aaf0a162d408530058a2ca375",
+      "score_affecting_runtime_changed": true,
+      "terminal_evidence": {
+        "job_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval_modal_t4_20260514T103200",
+        "kind": "result_review_score_not_below_active_floor",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0053_exact_eval",
+        "score_comparison": "0.226576157374>=0.206355672294",
+        "status": ".omx/research/pr101_nonlocal_bias_refine_cmaes_0053_exact_cuda_result_review_20260515_codex.json"
+      }
     }
   ],
-  "generated_at_utc": "2026-05-10T20:01:29Z",
-  "raw_stale_ready_row_count": 5,
+  "generated_at_utc": "2026-05-15T06:24:51Z",
+  "raw_stale_ready_row_count": 7,
   "schema": "optimizer_exact_ready_queue_suppression_manifest_v1",
   "source_audit_schema": "optimizer_exact_ready_queue_terminal_evidence_audit_v1",
-  "suppression_entry_count": 5
+  "suppression_entry_count": 7
 }
