@@ -13,5 +13,17 @@
   "selector_payload_bytes": 209,
   "selector_payload_bytes_fec3": 249,
   "source_payload_equal_to_fec3": true,
-  "expected_cpu_score_if_components_identical": 0.19207125247182248
+  "expected_cpu_score_if_components_identical": 0.19207125247182248,
+  "full_frame_streaming_parity": {
+    "artifact": "experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/fec3_fec5_full_streaming_parity.json",
+    "artifact_sha256": "4cbf229f10b22101e94bf15e608a3e6b0361e27ee7443126cdd10484fd09037b",
+    "contest_axis_claim": false,
+    "device_axis_label": "local-cpu-streaming-runtime",
+    "full_frame_inflate_output_parity_claim": true,
+    "n_pairs_hashed": 600,
+    "raw_bytes_hashed_per_archive": 3662409600,
+    "score_claim": false,
+    "streaming_raw_sha256": "fee5bef556fcde1d4f4353e66364174ba33c6d24fc48ec2d7ed1cae016ab069b",
+    "total_frames": 1200
+  }
 }

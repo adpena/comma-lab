@@ -34,6 +34,23 @@ Local parser verification:
 - FEC5 selector bit count: `1621`
 - FEC5 avg bits/pair: `2.7016666666666667`
 
+Full-frame streaming parity verification:
+
+- parity JSON:
+  `experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/fec3_fec5_full_streaming_parity.json`
+- parity JSON SHA-256:
+  `4cbf229f10b22101e94bf15e608a3e6b0361e27ee7443126cdd10484fd09037b`
+- schema: `pr101_same_runtime_streaming_frame_parity_v1`
+- proof scope: `same_runtime_streaming_full_frame_hash`
+- source/candidate streaming raw SHA-256:
+  `fee5bef556fcde1d4f4353e66364174ba33c6d24fc48ec2d7ed1cae016ab069b`
+- pairs hashed: `600/600`
+- frames hashed: `1200`
+- raw bytes hashed per archive: `3662409600`
+- `full_frame_inflate_output_parity_claim`: `true`
+- `contest_axis_claim`: `false`
+- `score_claim`: `false`
+
 ## Score Implication
 
 The FEC3 exact CPU score is `0.19209788683213053`. FEC5 preserves the selector
@@ -56,6 +73,7 @@ Commands run:
 .venv/bin/ruff check tools/build_pr101_frame_exploit_selector_packet.py src/tac/tests/test_frame_exploit_selector_packet.py
 PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_frame_exploit_selector_packet.py -q
 .venv/bin/python tools/build_pr101_frame_exploit_selector_packet.py --artifact-dir experiments/results/frame_exploit_segnet_posenet_20260514_pr101_mps600_codex --archive experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip --source-runtime experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec --output-dir experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex --selector-policy-mode compact_exact_k8 --compact-selector-codec fec5_fixed_huffman_k8 --lane-id lane_pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515 --overlay-artifact-dir experiments/results/frame_exploit_segnet_posenet_20260514_pr101_cpu_top16_topmodes_v2_codex
+PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/prove_pr101_selector_same_runtime_frame_parity.py --source-archive experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex/archive.zip --candidate-archive experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/archive.zip --runtime-dir experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/submission_dir --device cpu --batch-pairs 16 --output-json experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/fec3_fec5_full_streaming_parity.json
 ```
 
 Test result: `19 passed`.
@@ -65,6 +83,9 @@ Test result: `19 passed`.
 The `0.19209788683213053` artifact is legitimate `[contest-CPU]`, not
 `[contest-CUDA]`. FEC5 proves the current selector byte overhead was not fully
 minimized, but the remaining improvement is too small to break `<0.192` by
-itself. Further work must either improve component terms under exact CPU/CUDA
-or move to a different representation/selector family; more byte-only work in
-this exact K8 selector stream is unlikely to be decisive.
+itself. The full-frame parity proof makes the rate-only conclusion stronger:
+the component tensors/frames are identical under the FEC5 runtime, so the only
+expected score movement is the 40-byte rate reduction. Further work must either
+improve component terms under exact CPU/CUDA or move to a different
+representation/selector family; more byte-only work in this exact K8 selector
+stream is unlikely to be decisive.
