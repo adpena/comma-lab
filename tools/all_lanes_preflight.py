@@ -236,7 +236,7 @@ PR106_R2_RUNTIME_SOURCE_TREE_SHA256 = "f12c3a81a5a52c39d48d7528f1fab926acccab0ce
 PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "b779871e0bc528185e84f7972a4166a1689af550a88ee70fd26ca4c0553e1f71"
+PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "8ddce462a0d300f29ff9dddca8683cbe08bf97fc7959c296e06647ef12d4249b"
 PR106_R2_HLM1_XMEMBER_ARCHIVE = (
     REPO
     / "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex"
@@ -360,6 +360,13 @@ HNERV_SCORECARD_REQUIRED_EVALS = (
         REPO
         / "experiments/results/modal_auth_eval/"
         / "pr106_hdm8_fixed_meta_rank_elided_exact_cuda_20260515T002100Z/"
+        / "contest_auth_eval.json",
+    ),
+    (
+        "PR106-R2-HDM11-HLM3-MAGICLESS-FMT0B",
+        REPO
+        / "experiments/results/modal_auth_eval/"
+        / "pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z/"
         / "contest_auth_eval.json",
     ),
 )

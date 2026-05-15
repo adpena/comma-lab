@@ -106,6 +106,37 @@ def test_pr106_implicit_len_fixed_meta_rank_elided_profile_has_no_inner_length()
     assert sections[4].bytes == len(sidecar)
 
 
+def test_pr106_hdm9_hlm3_magicless_profile_splits_elided_sections_before_pr101_heuristic() -> None:
+    decoder_tail = b"d" * (
+        profile.PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+        - len(profile.PR106_HDM9_HLM2_DECODER_MAGIC)
+    )
+    latent_tail = b"l" * (
+        profile.PR106_HDM9_HLM3_LATENT_PAYLOAD_BYTES
+        - len(profile.PR106_HDM9_HLM3_LATENT_MAGIC)
+    )
+    sidecar = b"s" * profile.PR106_PR101_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+    payload = decoder_tail + latent_tail + sidecar
+
+    kind = profile.infer_profile_kind(
+        "auto",
+        Path("contains_pr101_name/pr106_hdm11_magicless_pr101.zip"),
+        "x",
+        payload,
+    )
+    sections = profile.profile_payload(kind, payload)
+
+    assert kind == profile.PR106_HDM9_HLM3_MAGICLESS_FIXED_PAYLOAD_KIND
+    assert [section.name for section in sections] == [
+        "inner_decoder_packed_brotli_hdm9_magicless_tail",
+        "inner_latents_and_sidecar_brotli_hlm3_magicless_tail",
+        "sidecar_payload_pr101_fixed_meta_noop_rank_elided",
+    ]
+    assert sections[0].bytes == len(decoder_tail)
+    assert sections[1].bytes == len(latent_tail)
+    assert sections[2].bytes == len(sidecar)
+
+
 def test_pr106_rank_elided_profile_splits_terminal_framing_meta() -> None:
     decoder = b"decoder-brotli-bytes"
     latents = b"latent-brotli-bytes"

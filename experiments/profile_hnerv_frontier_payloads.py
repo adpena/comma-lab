@@ -26,7 +26,12 @@ if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_HDM9_HLM2_DECODER_MAGIC,
+    PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES,
+    PR106_HDM9_HLM3_LATENT_MAGIC,
+    PR106_HDM9_HLM3_LATENT_PAYLOAD_BYTES,
     PR106_PR101_FIXED_META_PAYLOAD_BYTES,
+    PR106_PR101_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES,
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -45,6 +50,19 @@ PR103_MERGED_AC_LEN = 153_856
 PR103_LATENT_META_LEN = 112
 PR103_LO_LEN = 15_537
 PR103_HI_HIST_LEN = 15
+PR106_HDM9_HLM3_MAGICLESS_FIXED_PAYLOAD_KIND = (
+    "pr106_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided"
+)
+
+
+def pr106_hdm9_hlm3_magicless_payload_bytes() -> int:
+    return (
+        PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+        - len(PR106_HDM9_HLM2_DECODER_MAGIC)
+        + PR106_HDM9_HLM3_LATENT_PAYLOAD_BYTES
+        - len(PR106_HDM9_HLM3_LATENT_MAGIC)
+        + PR106_PR101_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+    )
 
 
 @dataclass(frozen=True)
@@ -100,6 +118,8 @@ def infer_profile_kind(kind: str, archive: Path, member_name: str, payload: byte
     text = f"{archive} {member_name}".lower()
     if payload[:1] == bytes([PR106_SIDECAR_MAGIC]):
         return "pr106_sidecar_wrapper"
+    if len(payload) == pr106_hdm9_hlm3_magicless_payload_bytes():
+        return PR106_HDM9_HLM3_MAGICLESS_FIXED_PAYLOAD_KIND
     if "pr101" in text or "hnerv_ft_microcodec" in text:
         return "pr101_microcodec"
     if "pr103" in text or "hnerv_lc_ac" in text:
@@ -128,6 +148,8 @@ def profile_payload(kind: str, payload: bytes) -> list[SectionProfile]:
     sections: list[SectionProfile] = []
     if kind == "pr106_sidecar_wrapper":
         return profile_pr106_sidecar_wrapper(payload)
+    if kind == PR106_HDM9_HLM3_MAGICLESS_FIXED_PAYLOAD_KIND:
+        return profile_pr106_hdm9_hlm3_magicless_fixed_payload(payload)
     if kind == "pr101_microcodec":
         decoder_end = PR101_DECODER_BLOB_LEN
         latent_end = decoder_end + PR101_LATENT_BLOB_LEN
@@ -159,6 +181,43 @@ def profile_payload(kind: str, payload: bytes) -> list[SectionProfile]:
             section("latents_and_sidecar_brotli", payload, 4 + dec_len, len(payload)),
         ]
     return [section("opaque_single_payload", payload, 0, len(payload))]
+
+
+def profile_pr106_hdm9_hlm3_magicless_fixed_payload(payload: bytes) -> list[SectionProfile]:
+    expected = pr106_hdm9_hlm3_magicless_payload_bytes()
+    if len(payload) != expected:
+        raise ValueError(
+            "PR106 HDM9/HLM3 magicless payload length mismatch: "
+            f"got {len(payload)} bytes; expected {expected}"
+        )
+    decoder_tail_bytes = PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES - len(
+        PR106_HDM9_HLM2_DECODER_MAGIC
+    )
+    latent_tail_bytes = PR106_HDM9_HLM3_LATENT_PAYLOAD_BYTES - len(
+        PR106_HDM9_HLM3_LATENT_MAGIC
+    )
+    latent_start = decoder_tail_bytes
+    sidecar_start = latent_start + latent_tail_bytes
+    return [
+        section(
+            "inner_decoder_packed_brotli_hdm9_magicless_tail",
+            payload,
+            0,
+            latent_start,
+        ),
+        section(
+            "inner_latents_and_sidecar_brotli_hlm3_magicless_tail",
+            payload,
+            latent_start,
+            sidecar_start,
+        ),
+        section(
+            "sidecar_payload_pr101_fixed_meta_noop_rank_elided",
+            payload,
+            sidecar_start,
+            len(payload),
+        ),
+    ]
 
 
 def profile_pr106_sidecar_wrapper(payload: bytes) -> list[SectionProfile]:

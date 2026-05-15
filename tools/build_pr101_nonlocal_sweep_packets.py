@@ -40,6 +40,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.optimizer.exact_readiness import (  # noqa: E402
+    ACTIVE_SCORE_FRONTIER_LABEL,
     ACTIVE_SCORE_FRONTIER_SCORE,
     promote_candidate_for_exact_eval,
 )
@@ -774,7 +775,7 @@ def write_summary(
         "generated_at_utc": utc_now(),
         "score_claim": False,
         "active_exact_cuda_anchor": {
-            "label": "PR106-R2-HDM8-HLM2-XMEMBER",
+            "label": ACTIVE_SCORE_FRONTIER_LABEL,
             "axis": "[contest-CUDA]",
             "score": ACTIVE_SCORE_FRONTIER_SCORE,
         },
