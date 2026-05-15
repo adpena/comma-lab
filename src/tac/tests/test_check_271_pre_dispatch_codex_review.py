@@ -20,7 +20,6 @@ import multiprocessing as mp
 import os
 import subprocess
 import sys
-import textwrap
 import time
 from pathlib import Path
 
@@ -34,6 +33,7 @@ HELPER_PATH = TOOLS_DIR / "run_codex_review_for_dispatch.py"
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
+import operator_authorize  # noqa: E402
 import run_codex_review_for_dispatch as helper  # noqa: E402
 
 # Make src/ importable for tac.preflight
@@ -44,7 +44,6 @@ from tac.preflight import (  # noqa: E402
     PreflightError,
     check_dispatch_runs_codex_adversarial_review_for_paid_dispatch,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -399,6 +398,22 @@ class TestCodexCompanionAvailability:
         if not __import__("shutil").which("node"):
             pytest.skip("node not in PATH")
         assert helper.codex_companion_available(script_path=str(fake)) is True
+
+
+class TestOperatorAuthorizeCodexReview:
+    def test_missing_codex_review_helper_is_fatal(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(operator_authorize, "REPO_ROOT", tmp_path)
+        monkeypatch.delenv("OPERATOR_AUTHORIZE_SKIP_CODEX_PRE_DISPATCH_REVIEW", raising=False)
+        monkeypatch.delenv("OPERATOR_AUTHORIZE_CODEX_PRE_DISPATCH_BYPASS_REASON", raising=False)
+
+        with pytest.raises(SystemExit, match="codex pre-dispatch helper not found"):
+            operator_authorize._run_codex_pre_dispatch_review(
+                "experiments/train_x.py",
+                ".omx/operator_authorize_recipes/x.yaml",
+                5.0,
+            )
 
 
 # ---------------------------------------------------------------------------

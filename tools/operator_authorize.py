@@ -466,6 +466,98 @@ def _run_local_pre_deploy_check(
         )
 
 
+def _run_codex_pre_dispatch_review(
+    trainer_path: str,
+    recipe_path: str,
+    estimated_cost_usd: float,
+) -> None:
+    """Invoke ``tools/run_codex_review_for_dispatch.py`` per Catalog #271.
+
+    Operator-approved 2026-05-15: wire codex adversarial-review automation
+    into the operator-authorize flow BEFORE every paid Modal/Lightning/Vast.ai
+    dispatch >$1 estimated cost. The codex review of Z3-G1 caught F1+F2
+    BEFORE FULL CUDA dispatched but AFTER $0.59 smoke spend - this gate moves
+    the review BEFORE smoke.
+
+    Sister of:
+    - Catalog #243 (local pre-deploy harness): same insertion point.
+    - Catalog #167 (smoke-before-full): same dispatch-wrapper canonical
+      routing META.
+    - Catalog #199 (paired-env operator bypass discipline): same paired-env
+      pattern.
+
+    Cost gate: only invokes codex when estimated cost > $1. Below threshold,
+    the helper returns 'advisory' without burning codex tokens.
+
+    Bypass via paired-env discipline (per CLAUDE.md "Comment-only contracts
+    are FORBIDDEN" + Catalog #199 sister rule):
+      OPERATOR_AUTHORIZE_SKIP_CODEX_PRE_DISPATCH_REVIEW=1
+      OPERATOR_AUTHORIZE_CODEX_PRE_DISPATCH_BYPASS_REASON=<text>
+
+    Bare ``OPERATOR_AUTHORIZE_SKIP_CODEX_PRE_DISPATCH_REVIEW=1`` (without
+    paired rationale) raises SystemExit per paired-env discipline.
+    """
+    if os.environ.get("OPERATOR_AUTHORIZE_SKIP_CODEX_PRE_DISPATCH_REVIEW") == "1":
+        reason = os.environ.get(
+            "OPERATOR_AUTHORIZE_CODEX_PRE_DISPATCH_BYPASS_REASON", ""
+        ).strip()
+        if not reason:
+            raise SystemExit(
+                "[operator-authorize] FATAL: "
+                "OPERATOR_AUTHORIZE_SKIP_CODEX_PRE_DISPATCH_REVIEW=1 requires "
+                "paired OPERATOR_AUTHORIZE_CODEX_PRE_DISPATCH_BYPASS_REASON="
+                "<text> (per CLAUDE.md paired-env discipline + Catalog #199 "
+                "+ #271 sister rule). Refusing to skip codex review without "
+                "rationale."
+            )
+        print(
+            f"[operator-authorize] [CODEX-PRE-DISPATCH-REVIEW BYPASS ACTIVE] "
+            f"reason={reason!r}; trainer={trainer_path}",
+            file=sys.stderr,
+        )
+        return
+    helper = REPO_ROOT / "tools/run_codex_review_for_dispatch.py"
+    if not helper.exists():
+        raise SystemExit(
+            "[operator-authorize] FATAL: codex pre-dispatch helper not found "
+            f"at {helper}; refusing paid dispatch before review. Restore the "
+            "helper or use OPERATOR_AUTHORIZE_SKIP_CODEX_PRE_DISPATCH_REVIEW=1 "
+            "with paired OPERATOR_AUTHORIZE_CODEX_PRE_DISPATCH_BYPASS_REASON=<text>."
+        )
+    cmd = [
+        _python_bin(),
+        str(helper),
+        "--trainer",
+        trainer_path,
+        "--recipe",
+        recipe_path,
+        "--estimated-cost-usd",
+        f"{estimated_cost_usd:.2f}",
+    ]
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    if result.returncode == 0:
+        return
+    if result.returncode == 13:
+        # Paired-env bypass invariant violated inside helper - propagate
+        raise SystemExit(
+            "[operator-authorize] FATAL: codex pre-dispatch review helper "
+            "refused due to paired-env bypass invariant violation (rc=13). "
+            "Set OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_VERDICT=1 with paired "
+            "OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_RATIONALE=<text> OR fix "
+            "the underlying findings."
+        )
+    raise SystemExit(
+        "[operator-authorize] FATAL: codex pre-dispatch adversarial review "
+        f"FAILED (exit {result.returncode}); aborting BEFORE GPU dispatch. "
+        "Per operator 2026-05-15 directive + Catalog #271 PRE-DISPATCH-CODEX-"
+        "REVIEW-AUTOMATION subagent: every paid dispatch (>$1) must pass a "
+        "fresh codex adversarial review BEFORE spending. Either fix the bug "
+        "class codex flagged OR set "
+        "OPERATOR_AUTHORIZE_SKIP_CODEX_PRE_DISPATCH_REVIEW=1 with paired "
+        "OPERATOR_AUTHORIZE_CODEX_PRE_DISPATCH_BYPASS_REASON=<text>."
+    )
+
+
 def _run_dispatch_protocol_complete(
     recipe: Recipe,
     trainer_path: str | None,
@@ -1870,6 +1962,19 @@ def main(argv: list[str] | None = None) -> int:
             native_dispatch=native_dispatch,
         )
         _run_local_pre_deploy_check(str(trainer), recipe.name)
+        # 2026-05-15 Catalog #271 - PRE-DISPATCH-CODEX-REVIEW-AUTOMATION
+        # operator-approved: wire codex adversarial-review BEFORE every paid
+        # Modal/Lightning/Vast.ai dispatch >$1. Catches bug classes the
+        # local pre-deploy harness misses (semantic / cross-file / archive-
+        # grammar drift) at the cheapest possible surface (BEFORE smoke).
+        # Cost gate: helper internally skips codex when estimated cost
+        # <= $1 (advisory verdict, no token burn). Paired-env bypass per
+        # Catalog #199 sister rule.
+        _run_codex_pre_dispatch_review(
+            str(trainer),
+            str(recipe.path),
+            float(band.p50_cost_usd),
+        )
     elif native_dispatch:
         _run_dispatch_protocol_complete(
             recipe,
