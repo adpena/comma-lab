@@ -357,11 +357,12 @@ def test_check_244_live_repo_violation_count_within_bound() -> None:
     assert len(violations) <= total_substrate_scripts
 
 
-def test_check_244_orchestrator_callsite_warn_only() -> None:
-    """Catalog #244 wire-in MUST be `strict=False` initially (warn-only) per
-    CLAUDE.md 'Strict-flip atomicity rule' because 31/36 legacy substrate
-    scripts lack the block at landing. Strict-flip pending the legacy
-    backfill wave.
+def test_check_244_orchestrator_callsite_strict_flipped() -> None:
+    """Catalog #244 wire-in MUST be `strict=True` per the 2026-05-15 strict-flip
+    by CATALOG-244-BACKFILL-31-DRIVERS subagent. All 31 legacy substrate
+    drivers were backfilled with the canonical 3-export block in the same
+    commit batch per CLAUDE.md "Strict-flip atomicity rule"; live count at
+    strict-flip: 0 (all 36 substrate drivers carry the block).
     """
     import re
 
@@ -376,8 +377,8 @@ def test_check_244_orchestrator_callsite_warn_only() -> None:
     # Filter out the function-def line (it's strict=False default) -
     # there should be exactly 1 callsite outside the def (the wire-in).
     assert matches, "no orchestrator callsite found"
-    # The wire-in callsite is `strict=False`
-    assert "False" in matches, (
-        f"orchestrator callsite must be strict=False (warn-only) initially; "
+    # The wire-in callsite is now `strict=True` post-strict-flip 2026-05-15.
+    assert "True" in matches, (
+        f"orchestrator callsite must be strict=True (strict-flipped 2026-05-15); "
         f"got matches={matches}"
     )

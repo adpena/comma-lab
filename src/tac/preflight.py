@@ -2074,16 +2074,17 @@ def preflight_all(
         # inputs.video pipeline. Companion fix: tac.substrate_registry.
         # driver_generator now AUTO-EMITS the block sourced from canonical
         # constants in tac.deploy.modal.runtime so contract-driven drivers
-        # cannot drift. Initial wire-in is WARN-ONLY per CLAUDE.md
-        # "Strict-flip atomicity rule" - 31/36 legacy substrate scripts are
-        # missing the block at landing time (they pre-date the META layer).
-        # Strict-flip pending the legacy backfill wave (each script either
-        # patched with the 3 exports OR carries a
-        # `# CANONICAL_NVML_BLOCK_OK:<reason>` waiver). Sister of Catalog
-        # #163 (bootstrap sentinel) + Catalog #224 (Modal image env block).
-        # Memory: feedback_meta_consolidation_critical_plus_poc_landed_20260515.md
+        # cannot drift. STRICT-FLIPPED 2026-05-15 by CATALOG-244-BACKFILL-31
+        # -DRIVERS subagent after all 31 legacy substrate drivers were
+        # backfilled with the canonical 3-export block in the same commit
+        # batch per CLAUDE.md "Strict-flip atomicity rule". Live count at
+        # strict-flip: 0 (all 36 substrate drivers carry the block).
+        # Sister of Catalog #163 (bootstrap sentinel) + Catalog #224
+        # (Modal image env block). Memory:
+        # feedback_meta_consolidation_critical_plus_poc_landed_20260515.md
+        # + feedback_catalog_244_backfill_31_drivers_landed_20260515.md.
         check_remote_lane_scripts_carry_canonical_nvml_block(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
         # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
@@ -53514,9 +53515,11 @@ def check_remote_lane_scripts_carry_canonical_nvml_block(
           waiver (placeholder ``<reason>`` / ``<rationale>`` literals
           rejected so the docstring example cannot self-waive).
 
-    WARN-ONLY initially (live count 31/36 missing at landing); strict-flip
-    pending the legacy backfill wave per CLAUDE.md "Strict-flip atomicity
-    rule".
+    STRICT-FLIPPED 2026-05-15 by CATALOG-244-BACKFILL-31-DRIVERS subagent
+    after all 31 legacy substrate drivers were backfilled with the canonical
+    3-export block in the same commit batch per CLAUDE.md "Strict-flip
+    atomicity rule". Live count at strict-flip: 0 (all 36 substrate drivers
+    carry the block).
     """
     root = (repo_root or Path.cwd()).resolve()
     scripts_dir = root / "scripts"

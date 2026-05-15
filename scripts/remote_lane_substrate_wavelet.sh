@@ -24,6 +24,19 @@
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity — non-negotiable".
 set -euo pipefail
 
+# === Catalog #244 / D1 incident anchor (commit 611495f26): canonical Modal/CUDA env hygiene ===
+# Per CLAUDE.md "Forbidden re-implementing remote bootstrap inline" + standing directive
+# 2026-05-15 ("all possible should be pulled into the decorator or similar reusable
+# and shareable tools and helpers and such"). Sister substrates D1/D4/Z3/Z4/Z5 carry
+# this block; backfilled to all 31 sister drivers via Catalog #244 strict-flip wave.
+# Future drivers should be auto-generated via tac.substrate_registry.driver_generator
+# (which AUTO-EMITS the block from canonical constants in tac.deploy.modal.runtime).
+# D1 dispatch 2026-05-15 (Modal T4 smoke) crashed at NVML 999 because the lane script
+# did not export DALI_DISABLE_NVML=1 before DALI imported NVML.
+export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
+export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-}"
 LANE_ID="lane_substrate_wavelet_20260512"
