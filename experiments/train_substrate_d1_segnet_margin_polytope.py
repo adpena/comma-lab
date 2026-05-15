@@ -1325,6 +1325,7 @@ def _full_main(args: argparse.Namespace) -> int:
     from tac.scorer import load_differentiable_scorers
     from tac.substrates.d1_segnet_margin_polytope import (
         D1PolytopeConfig,
+        analyze_d1_overlay_effect,
         build_readiness_manifest,
         compose_with_base,
         encode_polytope_payload,
@@ -1557,6 +1558,20 @@ def _full_main(args: argparse.Namespace) -> int:
             raise RuntimeError(
                 "D1 sidecar roundtrip failed: base sha truncation mismatch"
             )
+        overlay_diag = analyze_d1_overlay_effect(
+            parsed,
+            channel_policy=str(args.overlay_channel_policy),
+            amplitude_scale=float(args.overlay_amplitude_scale),
+            sign_policy=str(args.overlay_sign_policy),
+        )
+        print(
+            f"[{SUBSTRATE_TAG}-full] overlay_diag "
+            f"decoded_nonzero={overlay_diag.decoded_noise_nonzero_pixels} "
+            f"camera_nonzero={overlay_diag.camera_overlay_nonzero_pixels} "
+            f"integer_feasible={overlay_diag.integer_feasible_pixels} "
+            f"blockers={overlay_diag.dispatch_blockers}",
+            flush=True,
+        )
         _stage("d1_sidecar_roundtrip_verified")
 
         # ------------------------------------------------------------------
@@ -1593,6 +1608,9 @@ def _full_main(args: argparse.Namespace) -> int:
             d1_overhead_bytes=d1_overhead_bytes,
             config=cfg,
             runtime_overlay_consumed=True,
+            decoded_noise_nonzero_pixels=overlay_diag.decoded_noise_nonzero_pixels,
+            camera_overlay_nonzero_pixels=overlay_diag.camera_overlay_nonzero_pixels,
+            integer_feasible_pixels=overlay_diag.integer_feasible_pixels,
         )
         readiness["lane_id"] = SUBSTRATE_LANE_ID
         readiness["archive_zip_bytes"] = archive_zip_size
@@ -1603,6 +1621,7 @@ def _full_main(args: argparse.Namespace) -> int:
         readiness["overlay_channel_policy"] = str(args.overlay_channel_policy)
         readiness["overlay_amplitude_scale"] = float(args.overlay_amplitude_scale)
         readiness["overlay_sign_policy"] = str(args.overlay_sign_policy)
+        readiness["d1_overlay_diagnostics"] = overlay_diag.to_json_dict()
         readiness["estimated_overhead_bytes"] = estimate_overhead_bytes(
             config=cfg
         )
@@ -1686,6 +1705,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "overlay_channel_policy": str(args.overlay_channel_policy),
         "overlay_amplitude_scale": float(args.overlay_amplitude_scale),
         "overlay_sign_policy": str(args.overlay_sign_policy),
+        "d1_overlay_diagnostics": overlay_diag.to_json_dict(),
         "d1_overhead_bytes": d1_overhead_bytes,
         "d1_bin_sha256": d1_bin_sha,
         "archive_zip_bytes": archive_zip_size,

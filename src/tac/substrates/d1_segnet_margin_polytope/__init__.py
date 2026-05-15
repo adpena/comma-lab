@@ -136,6 +136,10 @@ from tac.substrates.d1_segnet_margin_polytope.archive import (
     parse_d1poly1_archive_bytes,
     update_d1poly1_meta,
 )
+from tac.substrates.d1_segnet_margin_polytope.diagnostics import (
+    D1OverlayDiagnostics,
+    analyze_d1_overlay_effect,
+)
 from tac.substrates.d1_segnet_margin_polytope.margin_map import (
     MARGIN_MAP_DEFAULT_RESOLUTION,
     MarginMapMode,
@@ -182,6 +186,7 @@ __all__ = [
     "POLYTOPE_DEFAULT_BUDGET_BITS",
     "POLYTOPE_LATTICE_LEVELS",
     "POLYTOPE_LATTICE_VALUES",
+    "D1OverlayDiagnostics",
     "D1PolytopeArchive",
     "D1PolytopeConfig",
     "D1PolytopeLossWeights",
@@ -191,6 +196,7 @@ __all__ = [
     "PolytopeAllocationResult",
     "_BaseArchiveDescriptor",
     "allocate_noise_within_polytope",
+    "analyze_d1_overlay_effect",
     "build_readiness_manifest",
     "compose_with_base",
     "compute_logit_margin_map",

@@ -102,6 +102,89 @@ def test_d1_policy_builder_materializes_channel_amplitude_sign_product(tmp_path:
     assert parsed.meta["overlay_amplitude_scale"] == 0.5
     assert parsed.meta["overlay_sign_policy"] == "negate_payload"
     assert Path(row["archive_zip"]).is_file()
+    assert row["d1_overlay_diagnostics"]["decoded_noise_nonzero_pixels"] > 0
+
+
+def test_d1_policy_builder_marks_decoded_zero_payload_blocker(tmp_path: Path) -> None:
+    module = _load_tool()
+    a1_bytes = b"synthetic-a1-base"
+    a1_path = tmp_path / "a1.bin"
+    a1_path.write_bytes(a1_bytes)
+    base_sha = hashlib.sha256(a1_bytes).hexdigest()
+    cfg = D1PolytopeConfig(margin_map_resolution=(8, 8), polytope_payload_bits=128)
+    zero_margin = torch.zeros(8, 8)
+    payload = encode_polytope_payload(
+        zero_margin,
+        jacobian_lipschitz=10.0,
+        budget_bits=128,
+    )
+    d1_path = tmp_path / "d1_zero.bin"
+    d1_path.write_bytes(
+        pack_archive(
+            margin_map=zero_margin,
+            polytope_payload=payload,
+            jacobian_lipschitz=10.0,
+            base_substrate_id="a1",
+            base_archive_sha256=base_sha,
+            base_archive_bytes=len(a1_bytes),
+            config=cfg,
+            extra_meta={},
+        )
+    )
+    out_dir = tmp_path / "out_zero"
+
+    rc = module.main(
+        [
+            "--d1-bin",
+            str(d1_path),
+            "--a1-bin",
+            str(a1_path),
+            "--output-dir",
+            str(out_dir),
+            "--policies",
+            "rgb",
+        ]
+    )
+
+    assert rc == 0
+    summary = read_json(out_dir / "d1_overlay_policy_candidates_manifest.json")
+    row = summary["candidates"][0]
+    assert row["d1_overlay_diagnostics"]["decoded_noise_nonzero_pixels"] == 0
+    assert "d1_decoded_polytope_payload_all_zero" in row["dispatch_blockers"]
+
+
+def test_d1_policy_builder_can_rebuild_payload_budget_sweep(tmp_path: Path) -> None:
+    module = _load_tool()
+    d1_path, a1_path = _write_d1_inputs(tmp_path)
+    out_dir = tmp_path / "out_sweep"
+
+    rc = module.main(
+        [
+            "--d1-bin",
+            str(d1_path),
+            "--a1-bin",
+            str(a1_path),
+            "--output-dir",
+            str(out_dir),
+            "--policies",
+            "rgb",
+            "--payload-budget-bits",
+            "512",
+            "--jacobian-lipschitz",
+            "1.0",
+        ]
+    )
+
+    assert rc == 0
+    summary = read_json(out_dir / "d1_overlay_policy_candidates_manifest.json")
+    assert summary["payload_budget_bits"] == [512]
+    assert summary["jacobian_lipschitz_values"] == [1.0]
+    row = summary["candidates"][0]
+    assert row["payload_budget_bits"] == 512
+    assert row["jacobian_lipschitz_override"] == 1.0
+    assert "budget_512_L_1" in row["candidate_id"]
+    parsed = parse_archive((Path(row["submission_dir"]) / "d1_polytope.bin").read_bytes())
+    assert parsed.meta["payload_sweep_candidate"] is True
 
 
 def test_d1_policy_builder_rejects_bad_amplitude_scale() -> None:

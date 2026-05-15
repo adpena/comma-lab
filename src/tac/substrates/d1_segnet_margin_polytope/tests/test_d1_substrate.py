@@ -771,6 +771,26 @@ def test_readiness_manifest_blocks_synthetic_smoke_base_even_with_overlay():
     ]
 
 
+def test_readiness_manifest_blocks_decoded_zero_overlay_payload():
+    cfg = D1PolytopeConfig()
+    manifest = build_readiness_manifest(
+        base_substrate_id="a1",
+        base_archive_bytes=178_162,
+        d1_overhead_bytes=43_296,
+        config=cfg,
+        runtime_overlay_consumed=True,
+        decoded_noise_nonzero_pixels=0,
+        camera_overlay_nonzero_pixels=0,
+        integer_feasible_pixels=0,
+    )
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "d1_decoded_polytope_payload_all_zero" in manifest["dispatch_blockers"]
+    assert "d1_camera_overlay_all_zero" in manifest["dispatch_blockers"]
+    assert "d1_no_integer_feasible_pixels_under_lipschitz_bound" in manifest[
+        "dispatch_blockers"
+    ]
+
+
 # ---------------------------------------------------------------------------
 # D1 substrate handle
 # ---------------------------------------------------------------------------

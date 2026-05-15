@@ -533,6 +533,9 @@ def build_readiness_manifest(
     predicted_score_band: tuple[float, float] = (0.181, 0.188),
     runtime_overlay_consumed: bool = True,
     base_archive_evidence_grade: str = "contest_archive",
+    decoded_noise_nonzero_pixels: int | None = None,
+    camera_overlay_nonzero_pixels: int | None = None,
+    integer_feasible_pixels: int | None = None,
 ) -> dict[str, object]:
     """Build a non-promotable readiness manifest for autopilot consumption.
 
@@ -564,6 +567,15 @@ def build_readiness_manifest(
         )
     if not base_is_contest:
         dispatch_blockers.append(f"base_archive_evidence_grade_not_contest:{base_grade}")
+    if decoded_noise_nonzero_pixels is not None and decoded_noise_nonzero_pixels <= 0:
+        overlay_ready = False
+        dispatch_blockers.append("d1_decoded_polytope_payload_all_zero")
+    if camera_overlay_nonzero_pixels is not None and camera_overlay_nonzero_pixels <= 0:
+        overlay_ready = False
+        dispatch_blockers.append("d1_camera_overlay_all_zero")
+    if integer_feasible_pixels is not None and integer_feasible_pixels <= 0:
+        overlay_ready = False
+        dispatch_blockers.append("d1_no_integer_feasible_pixels_under_lipschitz_bound")
     return {
         "d1poly_schema_version": D1POLY1_SCHEMA_VERSION,
         "base_substrate_id": base_substrate_id,
@@ -572,6 +584,9 @@ def build_readiness_manifest(
         "total_archive_bytes": int(base_archive_bytes + d1_overhead_bytes),
         "runtime_overlay_consumed": bool(runtime_overlay_consumed),
         "base_archive_evidence_grade": base_grade,
+        "decoded_noise_nonzero_pixels": decoded_noise_nonzero_pixels,
+        "camera_overlay_nonzero_pixels": camera_overlay_nonzero_pixels,
+        "integer_feasible_pixels": integer_feasible_pixels,
         "current_runtime_effect": (
             "d1_overlay_active" if overlay_ready else "base_renderer_plus_rate_only"
         ),
