@@ -64,9 +64,8 @@ import logging
 import os
 import time
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -149,7 +148,7 @@ def _ensure_log_dir(log_dir: Path) -> Path:
 
 def _log_file_for_today(log_dir: Path, now_utc: datetime | None = None) -> Path:
     """Return today's date-rotated JSONL log path."""
-    now = now_utc or datetime.now(tz=timezone.utc)
+    now = now_utc or datetime.now(tz=UTC)
     return log_dir / f"comma2k19_stream_log_{now:%Y%m%d}.jsonl"
 
 
@@ -270,6 +269,11 @@ class Comma2k19LocalStreamer:
     @property
     def ram_buffer_gb(self) -> float:
         return self._ram_buffer_bytes / (1 << 30)
+
+    @property
+    def dataset_sha256_manifest(self) -> dict[str, str]:
+        """Return the configured per-chunk SHA-256 manifest."""
+        return dict(self._sha256_manifest)
 
     def list_chunk_ids(self) -> list[str]:
         """Return the canonical chunk-id list for this streamer.
@@ -469,7 +473,7 @@ class Comma2k19LocalStreamer:
             "sha256_verified": bool(sha256_verified),
             "sha256_expected": sha256_expected,
             "sha256_observed": sha256_observed,
-            "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp_utc": datetime.now(tz=UTC).isoformat(),
             "duration_seconds": float(duration_seconds),
             "dispatch_label": self._dispatch_label,
             "kind": kind,
@@ -699,10 +703,10 @@ def summarize_stream_log(log_path: Path) -> dict[str, Any]:
 
 __all__ = [
     "CANONICAL_SOURCE_URL",
-    "Comma2k19LocalStreamer",
     "DATASET_LICENSE",
     "DEFAULT_LOG_DIR",
     "DEFAULT_RAM_BUFFER_GB",
+    "Comma2k19LocalStreamer",
     "SHA256MismatchError",
     "StreamAccessRecord",
     "StreamingError",

@@ -266,3 +266,73 @@ Stop only the measured config, not the family, if:
 - reactivation criteria name the next materially different config.
 
 Family-level kill is not currently justified.
+
+## Implementation Hardening Addendum - 2026-05-15T20:05Z
+
+Read-only DP1 audit confirmed the same honest status: DP1 can smoke, parse,
+probe, and package proxy artifacts, but it has not produced a real
+Comma2k19/Comma10k/BDD100K/Waymo-trained prior, deployment-grade packet, or
+legitimate contest CPU/CUDA score.
+
+Code hardening landed after the audit:
+
+1. `src/tac/substrates/pretrained_driving_prior/dataset_source.py`
+   introduces a typed `dp1_dataset_source_manifest.v1` contract. It records
+   source mode, chunk IDs, SHA-256 coverage, local `video.hevc` hashes, license
+   tags, distillation mode, seed, frame caps, and explicit reproducibility
+   blockers.
+2. `experiments/train_substrate_pretrained_driving_prior.py` now fails closed
+   on ambiguous real-source selection. Real `comma2k19` runs must choose
+   exactly one source mode: prebuilt codebook, explicit local chunks, local
+   cache, or streaming log. `bdd100k` remains rejected in the trainer because
+   it is not actually wired.
+3. Full DP1 provenance and archive metadata now include
+   `dataset_source_manifest`, so a later archive cannot silently detach from
+   the pretraining source used to build the codebook.
+4. `log_incremental_feeder.codebook_pca_quality_metric` is now directionally
+   consistent with plateau logic: it is a deficiency metric where lower is
+   better, and `marginal_improvement = previous - current` is positive when
+   the prior improves.
+5. Cache-mode schedule logs now include final-step chunk paths and SHA-256s;
+   streaming-mode schedule logs include the configured per-chunk SHA manifest
+   when available.
+
+Verification:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/substrates/pretrained_driving_prior/tests \
+  src/tac/tests/test_dp1_remote_driver_contract.py \
+  src/tac/tests/test_dp1_inflate_consumes_codebook.py \
+  src/tac/tests/test_check_209_dp1_contest_video_leakage_caller_check.py \
+  src/tac/tests/test_check_210_211_dp1_hardening.py \
+  src/tac/tests/test_check_213_comma2k19_canonical_download.py \
+  src/tac/tests/test_driving_prior_readiness.py
+# 281 passed in 66.37s
+```
+
+Current DP1 status after this patch:
+
+- `synthetic_test`: structural smoke/proxy only.
+- `comma2k19`: code path is now source-custody hardened, but no real trained
+  prior has been produced in this addendum.
+- `comma10k`: not a wired DP1 video-pretraining source; it is a segmentation
+  image dataset family and would need a separate source adapter/contract.
+- `bdd100k`: declared as future optional source, rejected by trainer until a
+  real adapter and license gate exist.
+- `waymo_open_dataset`: planning-only in readiness manifest; no trainer path.
+
+Next score-bearing DP1 action remains a no-claim, one-source real tiny run:
+
+```bash
+PYTHONPATH=src .venv/bin/python experiments/train_substrate_pretrained_driving_prior.py \
+  --device cpu --full-cpu --advisory-cpu-explicitly-waived \
+  --dataset-name comma2k19 \
+  --epochs 1 --batch-size 1 --max-pairs 4 --val-pair-count 1 \
+  --max-distillation-frames 128 --max-distillation-chunks 1 \
+  --skip-auth-eval \
+  --output-dir experiments/results/dp1_comma2k19_onechunk_cpu_advisory_<UTC>
+```
+
+This is still not a score claim. It is the first reproducibility-gated step
+toward a real pretrained prior artifact.

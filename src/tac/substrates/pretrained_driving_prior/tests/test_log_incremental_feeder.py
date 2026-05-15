@@ -16,10 +16,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Any
-from unittest.mock import patch
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pytest
 
 from tac.substrates.pretrained_driving_prior import (
@@ -36,6 +34,8 @@ from tac.substrates.pretrained_driving_prior.distillation import (
     _synthetic_dashcam_frames,
 )
 
+if TYPE_CHECKING:
+    import numpy as np
 
 # ---------------------------------------------------------------------------
 # Schedule shape
@@ -125,7 +125,6 @@ def _synthetic_cache(tmp_path: Path, n_chunks: int) -> Comma2k19LocalCache:
     # frames from the count.
     cache_dir.mkdir(parents=True, exist_ok=True)
     import json
-    import time
 
     meta: dict[str, Any] = {}
     for cid, entry in entries.items():
@@ -217,6 +216,10 @@ def test_log_incremental_distillation_records_provenance(tmp_path) -> None:
         # Cached chunk ids used at this step recorded.
         assert "cached_chunk_ids_used" in step.provenance
         assert len(step.provenance["cached_chunk_ids_used"]) == step.chunk_count
+        assert "chunk_sha256_manifest" in step.provenance
+        assert set(step.provenance["chunk_sha256_manifest"]) == set(
+            step.provenance["cached_chunk_ids_used"]
+        )
 
 
 def test_log_incremental_distillation_early_stops_on_plateau(tmp_path) -> None:
@@ -331,8 +334,21 @@ def test_codebook_pca_quality_metric_zero_basis() -> None:
 
     book = deterministic_zero_codebook()
     q = codebook_pca_quality_metric(book)
-    # Zero codebook has zero mean-abs.
-    assert q == 0.0
+    # The metric is a deficiency/loss: zero basis is worst.
+    assert q == 1.0
+
+
+def test_codebook_pca_quality_metric_richer_basis_is_lower() -> None:
+    from dataclasses import replace
+
+    from tac.substrates.pretrained_driving_prior import deterministic_zero_codebook
+
+    zero = deterministic_zero_codebook()
+    rich_basis = zero.road_plane_basis.copy()
+    rich_basis.fill(127)
+    rich = replace(zero, road_plane_basis=rich_basis)
+
+    assert codebook_pca_quality_metric(rich) < codebook_pca_quality_metric(zero)
 
 
 def test_codebook_pca_quality_metric_nonzero(tmp_path) -> None:
@@ -347,8 +363,7 @@ def test_codebook_pca_quality_metric_nonzero(tmp_path) -> None:
     )
     q = codebook_pca_quality_metric(book)
     assert 0.0 <= q <= 1.0
-    # The deterministic synthetic frames should yield SOMETHING in the basis.
-    # (Strictly we'd want >0 here but it depends on PCA on a low-rank matrix.)
+    # The deterministic synthetic frames should yield a bounded deficiency.
 
 
 # ---------------------------------------------------------------------------

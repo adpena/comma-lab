@@ -634,6 +634,103 @@ def _use_streamer(args: argparse.Namespace) -> bool:
     )
 
 
+def _validate_dataset_source_args(
+    args: argparse.Namespace,
+    *,
+    codebook_path: Path | None,
+) -> None:
+    """Fail closed on unsupported or ambiguous DP1 dataset-source modes."""
+    if args.dataset_name == "bdd100k":
+        raise SystemExit(
+            "ERROR: --dataset-name=bdd100k is declared as future/opt-in "
+            "planning surface but is not trainer-wired for DP1. Use "
+            "--dataset-name=comma2k19 for real pretraining or synthetic_test "
+            "for structural smoke."
+        )
+    if args.dataset_name not in {"synthetic_test", "comma2k19"}:
+        raise SystemExit(f"ERROR: unsupported DP1 dataset_name={args.dataset_name!r}")
+    if bool(getattr(args, "use_streamer", False)) and bool(args.cache_dir):
+        raise SystemExit(
+            "ERROR: --use-streamer and --cache-dir are mutually exclusive; "
+            "choose either streaming provenance or local-cache provenance."
+        )
+    if args.dataset_name == "comma2k19":
+        modes = [
+            bool(codebook_path is not None and codebook_path.is_file()),
+            bool(args.comma2k19_chunks_dir),
+            bool(_use_auto_download_cache(args)),
+            bool(_use_streamer(args)),
+        ]
+        if sum(int(flag) for flag in modes) != 1:
+            raise SystemExit(
+                "ERROR: real DP1 comma2k19 runs require exactly one source "
+                "mode: --codebook-path, --comma2k19-chunks-dir, cache-mode "
+                "(no chunks dir, log-incremental enabled), or --use-streamer."
+            )
+
+
+def _dp1_dataset_source_mode(
+    args: argparse.Namespace,
+    *,
+    codebook_path: Path | None,
+) -> str:
+    if codebook_path is not None and codebook_path.is_file():
+        return "prebuilt_codebook"
+    if args.dataset_name == "synthetic_test":
+        return "synthetic"
+    if bool(args.comma2k19_chunks_dir):
+        return "local_chunks"
+    if _use_streamer(args):
+        return "stream_log"
+    if _use_auto_download_cache(args):
+        return "local_cache"
+    return "unknown"
+
+
+def _build_dp1_dataset_source_manifest(
+    args: argparse.Namespace,
+    *,
+    book_metadata: dict[str, Any],
+    codebook_path: Path | None,
+    schedule_log: list[Any],
+) -> dict[str, Any]:
+    """Build and return the canonical DP1 dataset-source manifest."""
+    from tac.substrates.pretrained_driving_prior import (
+        STREAMER_DEFAULT_LOG_DIR,
+        build_dp1_dataset_source,
+        default_cache_dir,
+    )
+
+    source_mode = _dp1_dataset_source_mode(args, codebook_path=codebook_path)
+    source = build_dp1_dataset_source(
+        dataset_name=str(args.dataset_name),
+        source_mode=source_mode,
+        distillation_mode=(
+            "log_incremental"
+            if schedule_log
+            else ("prebuilt_codebook" if source_mode == "prebuilt_codebook" else "single_pass")
+        ),
+        seed=int(args.seed),
+        max_distillation_frames=int(args.max_distillation_frames),
+        max_distillation_chunks=int(args.max_distillation_chunks),
+        codebook_metadata=book_metadata,
+        chunks_dir=Path(args.comma2k19_chunks_dir) if args.comma2k19_chunks_dir else None,
+        cache_dir=(
+            Path(args.cache_dir)
+            if args.cache_dir
+            else (default_cache_dir() if source_mode == "local_cache" else None)
+        ),
+        stream_log_dir=(
+            Path(args.stream_log_dir)
+            if args.stream_log_dir
+            else (STREAMER_DEFAULT_LOG_DIR if source_mode == "stream_log" else None)
+        ),
+        codebook_path=codebook_path if codebook_path and codebook_path.is_file() else None,
+        schedule_log=schedule_log,
+    )
+    return source.to_dict()
+
+
 def _build_local_streamer(args: argparse.Namespace):
     """Construct the canonical Comma2k19LocalStreamer per Catalog #214.
 
@@ -984,6 +1081,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
         # 4. Codebook (load OR distill — both routed through Catalog #209)
         codebook_path = Path(args.codebook_path) if args.codebook_path else None
+        _validate_dataset_source_args(args, codebook_path=codebook_path)
         log_incremental_schedule_log: list[Any] = []
         if codebook_path is not None and codebook_path.is_file():
             from tac.substrates.pretrained_driving_prior import parse_codebook
@@ -1044,6 +1142,19 @@ def _full_main(args: argparse.Namespace) -> int:
                 f"[full] distilled codebook; provenance="
                 f"{book.metadata.get('dataset_provenance')!r}; "
                 f"frames_used={book.metadata.get('num_frames_used')}"
+            )
+        dataset_source_manifest = _build_dp1_dataset_source_manifest(
+            args,
+            book_metadata=dict(book.metadata),
+            codebook_path=codebook_path,
+            schedule_log=log_incremental_schedule_log,
+        )
+        book.metadata["dataset_source_manifest"] = dataset_source_manifest
+        if dataset_source_manifest["reproducibility_blockers"]:
+            print(
+                "[full] WARN dataset source reproducibility blockers: "
+                + ", ".join(dataset_source_manifest["reproducibility_blockers"]),
+                file=sys.stderr,
             )
         _stage("codebook_ready")
 
@@ -1381,6 +1492,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 "random_seed": book.metadata.get("random_seed", 0),
                 "basis_sha256": book.metadata.get("basis_sha256", ""),
                 "num_frames_used": book.metadata.get("num_frames_used", 0),
+                "dataset_source_manifest": dataset_source_manifest,
             }
             ema_state_torch = dict(ema_state_loaded)
             bin_bytes = pack_archive(
@@ -1608,6 +1720,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "ready_for_exact_eval_dispatch": False,
             "custody_status": "ci-rebuildable",
             "codebook_provenance": book.metadata,
+            "dataset_source_manifest": dataset_source_manifest,
             # Catalog #213 log-incremental schedule log (empty unless the
             # auto-download cache path fired). Each step is a continual-learning
             # anchor candidate per Catalog #128 (frame_count vs codebook_quality

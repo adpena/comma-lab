@@ -54,34 +54,34 @@ ranks against. The other 4 wire-in hooks are declared in the lane memory.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 logger = logging.getLogger(__name__)
 
 import numpy as np  # noqa: E402
 
-from tac.substrates.pretrained_driving_prior.codebook import (  # noqa: E402
-    DashcamCodebook,
-)
 from tac.substrates.pretrained_driving_prior.distillation import (  # noqa: E402
     DistillationConfig,
     distill_codebook,
 )
-from tac.substrates.pretrained_driving_prior.local_chunk_cache import (  # noqa: E402
-    Comma2k19LocalCache,
-)
 
+if TYPE_CHECKING:
+    from tac.substrates.pretrained_driving_prior.codebook import DashcamCodebook
+    from tac.substrates.pretrained_driving_prior.local_chunk_cache import (
+        Comma2k19LocalCache,
+    )
 
 __all__ = [
     "LogIncrementalSchedule",
     "ScheduleStepResult",
+    "codebook_pca_quality_metric",
     "log_incremental_distillation",
     "log_incremental_distillation_streaming",
-    "codebook_pca_quality_metric",
 ]
 
 
@@ -204,14 +204,13 @@ class ScheduleStepResult:
 
 
 def codebook_pca_quality_metric(book: DashcamCodebook) -> float:
-    """Default quality metric: codebook's road-plane basis spectral concentration.
+    """Default quality metric: road-plane basis deficiency, lower is better.
 
-    Returns the average per-element magnitude of the int8 road-plane basis.
-    Larger magnitude → more concentrated PCA directions → richer prior. The
-    metric is normalized to a stable [0, 1] range by dividing by 127 (the
-    int8 saturation level). The plateau detector compares the marginal
-    improvement of this metric between schedule steps; if it drops below
-    ``quality_plateau_threshold`` the schedule stops early.
+    Returns ``1 - mean_abs_basis / 127`` in a stable ``[0, 1]`` range. A zero
+    basis has quality ``1`` (worst); a high-energy distilled basis trends
+    toward ``0`` (better). The plateau detector computes
+    ``quality[step-1] - quality[step]``, so positive marginal values always
+    mean improvement.
 
     NOTE: this is a CHEAP proxy. For Phase 3 wiring the operator can plug
     in a real downstream-loss proxy (e.g. SegNet/PoseNet inference loss
@@ -220,9 +219,17 @@ def codebook_pca_quality_metric(book: DashcamCodebook) -> float:
     """
     arr = book.road_plane_basis.astype(np.float32)
     if arr.size == 0:
-        return 0.0
+        return 1.0
     mean_abs = float(np.abs(arr).mean())
-    return mean_abs / 127.0
+    return max(0.0, min(1.0, 1.0 - mean_abs / 127.0))
+
+
+def _sha256_path(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 def _chunk_id_window(
@@ -320,6 +327,10 @@ def log_incremental_distillation(
         chunk_paths: list[Path] = []
         for chunk_id in window:
             chunk_paths.append(cache.fetch_chunk(chunk_id))
+        chunk_sha256_manifest = {
+            chunk_id: _sha256_path(path)
+            for chunk_id, path in zip(window, chunk_paths, strict=True)
+        }
         # Build frame iterator.
         if frame_iterator_factory is None:
             frames_iter = _default_frame_iterator(
@@ -363,6 +374,8 @@ def log_incremental_distillation(
                 "cache_license": cache.DATASET_LICENSE,
                 "cache_source_url": cache.CANONICAL_SOURCE_URL,
                 "cached_chunk_ids_used": list(window),
+                "cached_chunk_paths_used": [str(path) for path in chunk_paths],
+                "chunk_sha256_manifest": chunk_sha256_manifest,
             }
         )
         step_result = ScheduleStepResult(
@@ -562,7 +575,14 @@ def log_incremental_distillation_streaming(
                 "streamer_is_synthetic": streamer.is_synthetic,
                 "streamer_ram_buffer_gb": streamer.ram_buffer_gb,
                 "streamed_chunk_ids_used": list(window),
-                "frames_streamed": int(len(cumulative_frames)),
+                "chunk_sha256_manifest": {
+                    str(chunk_id): str(sha256)
+                    for chunk_id, sha256 in getattr(
+                        streamer, "dataset_sha256_manifest", {}
+                    ).items()
+                    if chunk_id in window
+                },
+                "frames_streamed": len(cumulative_frames),
             }
         )
         step_result = ScheduleStepResult(

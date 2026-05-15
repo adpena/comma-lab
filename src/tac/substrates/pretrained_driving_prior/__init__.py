@@ -69,17 +69,6 @@ from tac.substrates.pretrained_driving_prior.archive import (
     parse_archive,
     parse_dp1_archive_bytes,
 )
-from tac.substrates.pretrained_driving_prior.composition import (
-    DPCOMP_HEADER_SIZE,
-    DPCOMP_MAGIC,
-    DPCOMP_SCHEMA_VERSION,
-    ComposedArchive,
-    compose_from_files,
-    compose_with,
-    decompose,
-    known_base_substrates,
-    verify_composition,
-)
 from tac.substrates.pretrained_driving_prior.codebook import (
     CODEBOOK_TOTAL_TARGET_BYTES_MAX,
     CODEBOOK_TOTAL_TARGET_BYTES_MIN,
@@ -93,6 +82,25 @@ from tac.substrates.pretrained_driving_prior.codebook import (
     parse_codebook,
     serialize_codebook,
     validate_codebook,
+)
+from tac.substrates.pretrained_driving_prior.composition import (
+    DPCOMP_HEADER_SIZE,
+    DPCOMP_MAGIC,
+    DPCOMP_SCHEMA_VERSION,
+    ComposedArchive,
+    compose_from_files,
+    compose_with,
+    decompose,
+    known_base_substrates,
+    verify_composition,
+)
+from tac.substrates.pretrained_driving_prior.dataset_source import (
+    DP1DatasetSource,
+    build_dp1_dataset_source,
+    collect_local_video_manifest,
+    final_step_chunk_ids,
+    final_step_chunk_sha256s,
+    is_sha256_hex,
 )
 from tac.substrates.pretrained_driving_prior.distillation import (
     Comma2k19FrameIterator,
@@ -117,10 +125,18 @@ from tac.substrates.pretrained_driving_prior.local_chunk_cache import (
 )
 from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
     CANONICAL_SOURCE_URL as STREAMER_CANONICAL_SOURCE_URL,
-    Comma2k19LocalStreamer,
+)
+from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
     DATASET_LICENSE as STREAMER_DATASET_LICENSE,
+)
+from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
     DEFAULT_LOG_DIR as STREAMER_DEFAULT_LOG_DIR,
+)
+from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
     DEFAULT_RAM_BUFFER_GB as STREAMER_DEFAULT_RAM_BUFFER_GB,
+)
+from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
+    Comma2k19LocalStreamer,
     SHA256MismatchError,
     StreamAccessRecord,
     StreamingError,
@@ -149,20 +165,22 @@ __all__ = [
     "COMMA2K19_LICENSE_SPDX",
     "COMMA2K19_REPO_URL",
     "DEFAULT_CHUNK_MANIFEST",
-    "DPCOMP_HEADER_SIZE",
-    "DPCOMP_MAGIC",
-    "DPCOMP_SCHEMA_VERSION",
     "DP1_HEADER_FMT",
     "DP1_HEADER_SIZE",
     "DP1_MAGIC",
     "DP1_SCHEMA_VERSION",
     "DP1_SECTION_ROLES",
+    "DPCOMP_HEADER_SIZE",
+    "DPCOMP_MAGIC",
+    "DPCOMP_SCHEMA_VERSION",
     "EVAL_HW",
     "LANE_CURVATURE_PCA_SHAPE",
-    "LogIncrementalSchedule",
     "ROAD_PLANE_BASIS_SHAPE",
-    "ScheduleStepResult",
     "SKY_HORIZON_PROFILE_SHAPE",
+    "STREAMER_CANONICAL_SOURCE_URL",
+    "STREAMER_DATASET_LICENSE",
+    "STREAMER_DEFAULT_LOG_DIR",
+    "STREAMER_DEFAULT_RAM_BUFFER_GB",
     "VEHICLE_APPEARANCE_BASIS_SHAPE",
     "Comma2k19CacheError",
     "Comma2k19ChunkManifestEntry",
@@ -171,6 +189,7 @@ __all__ = [
     "Comma2k19LocalStreamer",
     "ComposedArchive",
     "ContestVideoLeakageError",
+    "DP1DatasetSource",
     "DashcamCodebook",
     "DashcamPriorLoss",
     "DiskBudgetExceededError",
@@ -181,18 +200,28 @@ __all__ = [
     "DrivingPriorRenderer",
     "DrivingPriorRendererConfig",
     "DrivingPriorScoreAwareLoss",
+    "LogIncrementalSchedule",
     "PriorApplicationWeights",
+    "SHA256MismatchError",
+    "ScheduleStepResult",
+    "StreamAccessRecord",
+    "StreamingError",
     "aggregate_local_codebooks",
+    "build_dp1_dataset_source",
     "build_readiness_manifest",
     "check_no_contest_video_leakage",
     "codebook_pca_quality_metric",
     "codebook_to_torch_tensors",
+    "collect_local_video_manifest",
     "compose_from_files",
     "compose_with",
     "decompose",
     "default_cache_dir",
     "deterministic_zero_codebook",
     "distill_codebook",
+    "final_step_chunk_ids",
+    "final_step_chunk_sha256s",
+    "is_sha256_hex",
     "known_base_substrates",
     "log_incremental_distillation",
     "log_incremental_distillation_streaming",
@@ -207,11 +236,4 @@ __all__ = [
     "verify_chunk_sha256",
     "verify_composition",
     "write_codebook_to_disk",
-    "SHA256MismatchError",
-    "StreamAccessRecord",
-    "StreamingError",
-    "STREAMER_CANONICAL_SOURCE_URL",
-    "STREAMER_DATASET_LICENSE",
-    "STREAMER_DEFAULT_LOG_DIR",
-    "STREAMER_DEFAULT_RAM_BUFFER_GB",
 ]
