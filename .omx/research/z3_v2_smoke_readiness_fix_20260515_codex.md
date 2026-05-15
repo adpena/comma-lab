@@ -212,3 +212,67 @@ proves the hardened v2 direct-residual path emits a byte-smaller archive and
 survives Modal T4 packaging. The next score-bearing action is paired
 `[contest-CUDA]` and `[contest-CPU]` auth eval against this exact archive and
 runtime, followed by the normal result-review packet.
+
+## 2026-05-15 Full Dispatch Launched
+
+After the smoke anchor, Codex fixed the remaining config gate that kept this
+recipe marked `smoke_only: true` even though `_full_main` and the v2 runtime
+path were implemented. The full dispatch recipe now sets `smoke_only: false`,
+`smoke_validation_contract: contest_cuda_auth_eval_v1`, and
+`SMOKE_ONLY=0`.
+
+Verification before dispatch:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider \
+  src/tac/tests/test_operator_authorize_canonical_tool.py
+
+.venv/bin/python tools/local_pre_deploy_check.py \
+  --trainer experiments/train_substrate_z3_balle_hyperprior_bolton.py \
+  --recipe substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch --strict
+```
+
+Results:
+
+- operator-authorize tests: `18 passed`
+- local pre-deploy: `ALL 8 CHECKS PASSED. Safe to dispatch.`
+- worktree: clean at dispatch
+- claim summary before dispatch: `active=0`
+
+Launched full run:
+
+```bash
+SMOKE_ONLY=0 .venv/bin/python tools/operator_authorize.py \
+  --recipe substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch \
+  --agent codex-z3v2-full \
+  --label-suffix __full__1000ep \
+  --yes
+```
+
+Dispatch:
+
+- Modal call: `fc-01KRNQ2B8ZH6ASSAHCXMH0AMZX`
+- Instance/job id:
+  `substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep`
+- Hardware: Modal T4
+- Timeout: `1.5h`
+- Env contract includes:
+  `SMOKE_ONLY=0`,
+  `Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1`,
+  `Z3_BALLE_EPOCHS=1000`
+- Active claim at launch:
+  `lane_z3_balle_hyperprior_bolton_recover_20260514`
+  / `active_dispatch`
+
+Non-blocking recovery poll immediately after launch returned still-running.
+Canonical harvest command:
+
+```bash
+.venv/bin/python experiments/modal_recover_lane.py \
+  --call-id fc-01KRNQ2B8ZH6ASSAHCXMH0AMZX
+```
+
+No score claim exists until that recovery lands and the returned archive/runtime
+passes the exact result-review packet. If CUDA returns promising, the same
+archive/runtime must be replayed on the Linux CPU axis before any frontier or
+submission-ready language.
