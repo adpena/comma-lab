@@ -21,50 +21,50 @@ from tac.substrate_registry.driver_generator import (
 
 
 def _baseline_kwargs(**overrides: Any) -> dict[str, Any]:
-    base: dict[str, Any] = dict(
-        id="dgen_test",
-        lane_id="lane_dgen_test_20260515",
-        target_modes=("research_substrate",),
-        deployment_target="desktop_research",
-        council_verdict_provenance=None,
-        archive_grammar="g",
-        parser_section_manifest={"h": "magic"},
-        inflate_runtime_loc_budget=80,
-        runtime_dep_closure=("torch",),
-        export_format="fp16_brotli",
-        score_aware_loss="scorer_loss_terms_btchw",
-        bolt_on_loc_budget=200,
-        no_op_detector_planned=True,
-        archive_bytes_added=None,
-        score_improvement_mechanism_status="RESEARCH_ONLY",
-        runtime_overlay_consumed=False,
-        recipe_smoke_only=True,
-        recipe_research_only=True,
-        recipe_min_smoke_gpu="T4",
-        recipe_min_vram_gb=16,
-        recipe_pyav_decode_strategy="cpu_thread_async_upload",
-        recipe_canary_status="independent_substrate",
-        recipe_video_input_strategy="per_dispatch_local_copy",
-        recipe_canary_dependency=None,
-        cost_band_epochs=10,
-        cost_band_gpu_key="T4",
-        cost_band_platform_key="modal",
-        cost_band_p50_usd=0.10,
-        hook_sensitivity_contribution=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_pareto_constraint=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_bit_allocator_class=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_autopilot_ranker_class_shift_token=None,
-        hook_continual_learning_anchor_kind=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_probe_disambiguator=None,
-        catalog_compliance_declarations=("catalog_205_select_inflate_device_used",),
-        hook_not_applicable_rationale={
+    base: dict[str, Any] = {
+        "id": "dgen_test",
+        "lane_id": "lane_dgen_test_20260515",
+        "target_modes": ("research_substrate",),
+        "deployment_target": "desktop_research",
+        "council_verdict_provenance": None,
+        "archive_grammar": "g",
+        "parser_section_manifest": {"h": "magic"},
+        "inflate_runtime_loc_budget": 80,
+        "runtime_dep_closure": ("torch",),
+        "export_format": "fp16_brotli",
+        "score_aware_loss": "scorer_loss_terms_btchw",
+        "bolt_on_loc_budget": 200,
+        "no_op_detector_planned": True,
+        "archive_bytes_added": None,
+        "score_improvement_mechanism_status": "RESEARCH_ONLY",
+        "runtime_overlay_consumed": False,
+        "recipe_smoke_only": True,
+        "recipe_research_only": True,
+        "recipe_min_smoke_gpu": "T4",
+        "recipe_min_vram_gb": 16,
+        "recipe_pyav_decode_strategy": "cpu_thread_async_upload",
+        "recipe_canary_status": "independent_substrate",
+        "recipe_video_input_strategy": "per_dispatch_local_copy",
+        "recipe_canary_dependency": None,
+        "cost_band_epochs": 10,
+        "cost_band_gpu_key": "T4",
+        "cost_band_platform_key": "modal",
+        "cost_band_p50_usd": 0.10,
+        "hook_sensitivity_contribution": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_pareto_constraint": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_bit_allocator_class": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_autopilot_ranker_class_shift_token": None,
+        "hook_continual_learning_anchor_kind": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_probe_disambiguator": None,
+        "catalog_compliance_declarations": ("catalog_205_select_inflate_device_used",),
+        "hook_not_applicable_rationale": {
             "hook_sensitivity_contribution": "test",
             "hook_pareto_constraint": "test",
             "hook_bit_allocator_class": "test",
             "hook_continual_learning_anchor_kind": "test",
             "hook_probe_disambiguator": "test",
         },
-    )
+    }
     base.update(overrides)
     return base
 
@@ -108,6 +108,18 @@ def test_generate_driver_shell_has_canonical_bootstrap_sentinel() -> None:
     c = SubstrateContract(**_baseline_kwargs())
     src = generate_driver_shell(c)
     assert "REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source" in src
+
+
+def test_generate_driver_shell_has_canonical_modal_cuda_env_block() -> None:
+    """Catalog #224/#244: generated drivers carry the shared Modal/CUDA env block."""
+    c = SubstrateContract(**_baseline_kwargs())
+    src = generate_driver_shell(c)
+    assert 'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"' in src
+    assert 'export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"' in src
+    assert (
+        'export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"'
+        in src
+    )
 
 
 def test_generate_driver_shell_has_5min_heartbeat() -> None:

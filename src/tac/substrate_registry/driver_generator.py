@@ -7,6 +7,16 @@ remote driver shell script bytes. The output honors the canonical
   - ``set -euo pipefail`` (per Catalog #2).
   - ``REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1`` sentinel for the canonical
     bootstrap source (per Catalog #163).
+  - **Canonical Modal/CUDA env hygiene block (Catalog #224 / D1 incident
+    anchor)** — auto-emits ``DALI_DISABLE_NVML=1`` +
+    ``CUBLAS_WORKSPACE_CONFIG=:4096:8`` +
+    ``PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`` BEFORE bootstrap
+    or trainer code can import torch. D1 dispatch 2026-05-15T08:26:38Z
+    crashed at NVML 999 because the lane script lacked these exports;
+    sister lanes D4/Z3/Z4/Z5 had them. Bug class extincted STRUCTURALLY
+    here so future lane scripts cannot drift from the canonical pattern.
+    See Catalog #244 STRICT preflight gate
+    ``check_remote_lane_scripts_carry_canonical_nvml_block``.
   - 5-min heartbeat (per CLAUDE.md "Remote code parity — non-negotiable").
   - Dispatch-claim verification + terminal-status append (per CLAUDE.md
     "CROSS-AGENT DISPATCH COORDINATION").
@@ -22,11 +32,20 @@ existing remote driver to surface drift.
 
 from __future__ import annotations
 
-from tac.substrate_registry.contract import SubstrateContract
+from typing import TYPE_CHECKING
+
+from tac.deploy.modal.runtime import (
+    CUBLAS_WORKSPACE_CONFIG_VALUE,
+    DALI_DISABLE_NVML_VALUE,
+    PYTORCH_CUDA_ALLOC_CONF_VALUE,
+)
+
+if TYPE_CHECKING:
+    from tac.substrate_registry.contract import SubstrateContract
 
 __all__ = [
-    "generate_driver_shell",
     "default_driver_relpath",
+    "generate_driver_shell",
 ]
 
 
@@ -60,6 +79,14 @@ def generate_driver_shell(contract: SubstrateContract) -> str:
     e_dispatch = _env_var_for(sid, "DISPATCH_INSTANCE_JOB_ID")
     e_claims_path = _env_var_for(sid, "DISPATCH_CLAIMS_PATH")
 
+    # Catalog #224 / D1 incident anchor: canonical Modal/CUDA env hygiene
+    # values, sourced from the canonical tac.deploy.modal.runtime module so
+    # the driver-generator emit + the Modal image env block share one
+    # source-of-truth.
+    cublas_value = CUBLAS_WORKSPACE_CONFIG_VALUE
+    nvml_value = DALI_DISABLE_NVML_VALUE
+    alloc_value = PYTORCH_CUDA_ALLOC_CONF_VALUE
+
     return f"""#!/bin/bash
 # Remote lane script: substrate {sid} (auto-generated).
 #
@@ -82,6 +109,18 @@ def generate_driver_shell(contract: SubstrateContract) -> str:
 # Auth-eval gate per CLAUDE.md "Auth eval EVERYWHERE".
 
 set -euo pipefail
+
+# === Catalog #224 / D1 incident anchor: canonical Modal/CUDA env hygiene ===
+# Auto-emitted by tac.substrate_registry.driver_generator (Catalog #244 ensures
+# parity across every substrate driver). D1 dispatch (Modal T4 smoke) crashed
+# at "nvml error (999): A nvml internal driver error occurred" inside DALI
+# fn.experimental.inputs.video pipeline. Sister lanes D4/Z3/Z4/Z5 already had
+# these exports; D1 was the missing wire-in until commit 611495f26. Now the
+# substrate META layer driver_generator emits them STRUCTURALLY so no future
+# lane script can ship without them.
+export CUBLAS_WORKSPACE_CONFIG="${{CUBLAS_WORKSPACE_CONFIG:-{cublas_value}}}"
+export DALI_DISABLE_NVML="${{DALI_DISABLE_NVML:-{nvml_value}}}"
+export PYTORCH_CUDA_ALLOC_CONF="${{PYTORCH_CUDA_ALLOC_CONF:-{alloc_value}}}"
 
 WORKSPACE="${{WORKSPACE:-/workspace/pact}}"
 PYBIN="${{PYBIN:-}}"
