@@ -110,6 +110,8 @@ def _write_canonical_cpu_anchor(
                 "scorer_device": "cpu",
                 "score_axis": "contest_cpu",
                 "n_samples": 600,
+                "platform_system": "Linux",
+                "platform_machine": "x86_64",
             },
             indent=2,
         )
@@ -246,6 +248,9 @@ def test_validate_payload_all_4_checks_must_pass():
         "score_claim_valid": True,
         "archive_sha256": "deadbeef" * 8,
         "score": 0.21,
+        "score_axis": "contest_cuda",
+        "n_samples": 600,
+        "scorer_device": "cuda",
     }
     # All 4 checks pass
     assert (
@@ -272,6 +277,52 @@ def test_validate_payload_all_4_checks_must_pass():
     payload = {**base, "score": float("nan")}
     assert (
         _validate_payload_for_axis_and_sha(payload, canonical_axis="contest_cuda", archive_sha256="deadbeef" * 8)
+        is False
+    )
+    # Missing explicit score axis refuses reuse; axis cannot be inferred from grade.
+    payload = {**base}
+    del payload["score_axis"]
+    assert (
+        _validate_payload_for_axis_and_sha(payload, canonical_axis="contest_cuda", archive_sha256="deadbeef" * 8)
+        is False
+    )
+    # Wrong sample count refuses reuse.
+    payload = {**base, "n_samples": 599}
+    assert (
+        _validate_payload_for_axis_and_sha(payload, canonical_axis="contest_cuda", archive_sha256="deadbeef" * 8)
+        is False
+    )
+
+
+def test_validate_payload_requires_cpu_linux_x86_64_contract():
+    base = {
+        "evidence_grade": "contest-CPU",
+        "score_claim_valid": True,
+        "archive_sha256": "deadbeef" * 8,
+        "score": 0.192,
+        "score_axis": "contest_cpu",
+        "n_samples": 600,
+        "scorer_device": "cpu",
+        "platform_system": "Linux",
+        "platform_machine": "x86_64",
+    }
+    assert (
+        _validate_payload_for_axis_and_sha(base, canonical_axis="contest_cpu", archive_sha256="deadbeef" * 8) is True
+    )
+    assert (
+        _validate_payload_for_axis_and_sha(
+            {**base, "platform_system": "Darwin"},
+            canonical_axis="contest_cpu",
+            archive_sha256="deadbeef" * 8,
+        )
+        is False
+    )
+    assert (
+        _validate_payload_for_axis_and_sha(
+            {**base, "platform_machine": ""},
+            canonical_axis="contest_cpu",
+            archive_sha256="deadbeef" * 8,
+        )
         is False
     )
 
@@ -327,6 +378,8 @@ def test_lookup_ledger_finds_nested_harvest_result(tmp_path):
                 "evidence_grade": "[contest-CUDA]",
                 "score_claim_valid": True,
                 "score_axis": "contest_cuda",
+                "scorer_device": "cuda",
+                "n_samples": 600,
                 "archive_sha256": sha,
                 "eval_archive_size_bytes": 456,
                 "score": 0.234,
@@ -353,6 +406,8 @@ def test_lookup_ledger_preserves_falsey_numeric_zero_score(tmp_path):
                 "evidence_grade": "[contest-CUDA]",
                 "score_claim_valid": True,
                 "score_axis": "contest_cuda",
+                "scorer_device": "cuda",
+                "n_samples": 600,
                 "archive_sha256": sha,
                 "eval_archive_size_bytes": 789,
                 "score": 0,

@@ -182,12 +182,54 @@ def _score_claim_present(payload: dict[str, Any]) -> bool:
     return payload.get("score_claim") is True
 
 
+def _provenance(payload: dict[str, Any]) -> dict[str, Any]:
+    value = payload.get("provenance")
+    return value if isinstance(value, dict) else {}
+
+
 def _first_present(*pairs: tuple[dict[str, Any], str]) -> Any:
     """Return the first key that exists, preserving falsey values like 0."""
     for payload, key in pairs:
         if key in payload:
             return payload[key]
     return None
+
+
+def _payload_matches_axis_contract(payload: dict[str, Any], canonical_axis: str) -> bool:
+    """Require explicit axis/sample/device custody before reusing an anchor."""
+    provenance = _provenance(payload)
+    payload_axis = _normalize_axis(
+        str(_first_present((payload, "score_axis"), (provenance, "score_axis")) or "")
+    )
+    if payload_axis != canonical_axis:
+        return False
+    samples = _first_present((payload, "n_samples"), (payload, "samples"), (provenance, "n_samples"))
+    if samples != 600:
+        return False
+    device = str(
+        _first_present(
+            (payload, "scorer_device"),
+            (payload, "device"),
+            (provenance, "scorer_device"),
+            (provenance, "device"),
+        )
+        or ""
+    ).strip().lower()
+    if canonical_axis == _AXIS_CUDA:
+        return device == "cuda"
+    if canonical_axis == _AXIS_CPU:
+        platform_system = str(
+            _first_present((payload, "platform_system"), (provenance, "platform_system")) or ""
+        ).strip().lower()
+        platform_machine = str(
+            _first_present((payload, "platform_machine"), (provenance, "platform_machine")) or ""
+        ).strip().lower()
+        return (
+            device == "cpu"
+            and platform_system == "linux"
+            and platform_machine in {"x86_64", "amd64"}
+        )
+    return False
 
 
 def _validate_payload_for_axis_and_sha(
@@ -201,6 +243,8 @@ def _validate_payload_for_axis_and_sha(
         return False
     grade = payload.get("evidence_grade")
     if not _grade_matches_axis(grade, canonical_axis):
+        return False
+    if not _payload_matches_axis_contract(payload, canonical_axis):
         return False
     if not _score_claim_present(payload):
         return False
@@ -336,7 +380,31 @@ def _lookup_via_ledger(
                 (row, "score"),
                 (harvest_result, "score"),
             ),
-            "scorer_device": requested_axis_short,
+            "score_axis": _first_present(
+                (row, "score_axis"),
+                (harvest_result, "score_axis"),
+            ),
+            "n_samples": _first_present(
+                (row, "n_samples"),
+                (row, "samples"),
+                (harvest_result, "n_samples"),
+                (harvest_result, "samples"),
+            ),
+            "scorer_device": _first_present(
+                (row, "scorer_device"),
+                (row, "device"),
+                (harvest_result, "scorer_device"),
+                (harvest_result, "device"),
+            )
+            or requested_axis_short,
+            "platform_system": _first_present(
+                (row, "platform_system"),
+                (harvest_result, "platform_system"),
+            ),
+            "platform_machine": _first_present(
+                (row, "platform_machine"),
+                (harvest_result, "platform_machine"),
+            ),
             "dispatched_at_utc": row.get("dispatched_at_utc"),
         }
         if not _validate_payload_for_axis_and_sha(

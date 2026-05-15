@@ -44,7 +44,7 @@ def test_parser_marks_linux_cpu_as_contest_cpu_not_promotion_axis() -> None:
     assert record.evidence_grade == "contest-CPU"
     assert record.cpu_leaderboard_reproduction_eligible is True
     assert record.promotion_eligible is False
-    assert record.score_claim_valid is True
+    assert record.score_claim_valid is False
     assert record.rank_or_kill_eligible is False
     assert record.rate_unscaled == 0.004767
 
@@ -258,6 +258,7 @@ def test_parser_accepts_dispatcher_top_level_gha_cpu_custody_fields() -> None:
             "hardware": "github-actions-ubuntu-latest-x86_64",
             "lane_tag": "[contest-CPU]",
             "n_samples": 600,
+            "score_claim_valid": True,
         }
     )
 
@@ -467,4 +468,5 @@ def test_missing_contest_cuda_text_does_not_demote_linux_cpu_axis() -> None:
     assert record.evidence_grade == "contest-CPU"
     assert record.cpu_leaderboard_reproduction_eligible is True
     assert record.promotion_eligible is False
+    assert record.score_claim_valid is False
     assert record.rank_or_kill_eligible is False

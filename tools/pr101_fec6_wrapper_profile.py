@@ -35,6 +35,8 @@ DEFAULT_SOURCE_ARCHIVE = (
 SCHEMA = "pr101_fec6_wrapper_profile.v1"
 OUTER_MAGIC = b"FP11"
 SELECTOR_MAGIC = b"FEC6"
+MAX_ARCHIVE_BYTES = 20 * 1024 * 1024
+MAX_MEMBER_BYTES = 10 * 1024 * 1024
 FEC6_FIXED_K16_MODE_IDS = (
     "none",
     "frame0_blue_chroma_amp_1",
@@ -100,6 +102,11 @@ def _zip_compression_name(compress_type: int) -> str:
 
 
 def _read_single_member_payload(archive: Path) -> tuple[dict[str, Any], bytes]:
+    archive_size = archive.stat().st_size
+    if archive_size > MAX_ARCHIVE_BYTES:
+        raise ValueError(
+            f"archive too large for PR101/FEC6 forensic profiler: {archive_size} > {MAX_ARCHIVE_BYTES}"
+        )
     with zipfile.ZipFile(archive) as zf:
         infos = [info for info in zf.infolist() if not info.is_dir()]
         if len(infos) != 1:
@@ -108,6 +115,11 @@ def _read_single_member_payload(archive: Path) -> tuple[dict[str, Any], bytes]:
         member_name = info.filename
         if member_name.startswith("/") or ".." in Path(member_name).parts:
             raise ValueError(f"unsafe archive member name: {member_name!r}")
+        if info.file_size > MAX_MEMBER_BYTES:
+            raise ValueError(
+                f"archive member too large for PR101/FEC6 forensic profiler: "
+                f"{info.file_size} > {MAX_MEMBER_BYTES}"
+            )
         payload = zf.read(member_name)
     meta = {
         "member_name": member_name,
@@ -166,6 +178,12 @@ def parse_fec6_selector_payload(selector_payload: bytes) -> dict[str, Any]:
     n_pairs = struct.unpack_from("<H", selector_payload, 4)[0]
     index_payload = selector_payload[6:]
     codes, used_bits = decode_fec6_fixed_huffman_codes(index_payload, n_pairs=n_pairs)
+    expected_index_bytes = math.ceil(used_bits / 8)
+    if len(index_payload) != expected_index_bytes:
+        raise ValueError(
+            f"FEC6 compact selector has trailing zero bytes: "
+            f"index_bytes={len(index_payload)} expected={expected_index_bytes}"
+        )
     counts = Counter(codes)
     code_bits_total = sum(len(FEC6_FIXED_K16_CODE_BITS[code]) for code in codes)
     if code_bits_total != used_bits:
@@ -176,6 +194,7 @@ def parse_fec6_selector_payload(selector_payload: bytes) -> dict[str, Any]:
         "magic": "FEC6",
         "payload_bytes": len(selector_payload),
         "payload_sha256": sha256_bytes(selector_payload),
+        "selector_header_bytes": 6,
         "n_pairs": n_pairs,
         "palette_size": len(FEC6_FIXED_K16_MODE_IDS),
         "palette_mode_ids": list(FEC6_FIXED_K16_MODE_IDS),
@@ -184,7 +203,9 @@ def parse_fec6_selector_payload(selector_payload: bytes) -> dict[str, Any]:
         "selector_avg_bits_per_pair": code_bits_total / n_pairs if n_pairs else 0.0,
         "zero_padding_bits": len(index_payload) * 8 - used_bits,
         "entropy_floor_bytes": _shannon_floor_bytes(counts),
-        "gap_to_entropy_floor_bytes": len(selector_payload) - _shannon_floor_bytes(counts),
+        "gap_to_entropy_floor_bytes": len(index_payload) - _shannon_floor_bytes(counts),
+        "selector_index_gap_to_entropy_floor_bytes": len(index_payload) - _shannon_floor_bytes(counts),
+        "selector_payload_gap_to_entropy_floor_bytes": len(selector_payload) - _shannon_floor_bytes(counts),
         "code_histogram": {str(code): int(count) for code, count in sorted(counts.items())},
         "mode_histogram": {
             FEC6_FIXED_K16_MODE_IDS[code]: int(count) for code, count in sorted(counts.items())
@@ -257,6 +278,11 @@ def profile_archive(archive: Path, *, source_archive: Path | None = DEFAULT_SOUR
     profile: dict[str, Any] = {
         "schema": SCHEMA,
         "score_claim": False,
+        "score_claim_valid": False,
+        "score_axis": None,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "research_only": True,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": False,
         "archive": {
@@ -273,6 +299,9 @@ def profile_archive(archive: Path, *, source_archive: Path | None = DEFAULT_SOUR
             "source_payload_reference_match": None,
             "full_frame_parity_claim": False,
             "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
         },
     }
     if source_archive is not None:

@@ -489,9 +489,9 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     elif axis == "contest_cpu":
         # The official challenge accepts CPU evaluation as a first-class
         # leaderboard axis. CPU rows are still non-promotional until separate
-        # submission/compliance review, but the score itself is valid custody.
+        # submission/compliance review. Do not synthesize score-claim authority
+        # for older/advisory payloads that never explicitly asserted it.
         promotion_eligible = False
-        score_claim_valid = score_claim_valid or cpu_leaderboard_reproduction_eligible
     if has_promotion_blockers:
         promotion_eligible = False
     rank_or_kill_eligible = (

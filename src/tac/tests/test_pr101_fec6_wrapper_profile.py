@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import struct
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -42,6 +43,10 @@ def test_real_pr101_fec6_archive_profile_reconstructs_wrapper_offsets() -> None:
 
     assert profile["schema"] == "pr101_fec6_wrapper_profile.v1"
     assert profile["score_claim"] is False
+    assert profile["score_claim_valid"] is False
+    assert profile["promotion_eligible"] is False
+    assert profile["rank_or_kill_eligible"] is False
+    assert profile["research_only"] is True
     assert profile["dispatch_attempted"] is False
     assert profile["ready_for_exact_eval_dispatch"] is False
     assert profile["archive"]["member_name"] == "x"
@@ -75,6 +80,7 @@ def test_real_pr101_fec6_selector_profile_matches_manifest_counts() -> None:
     ]
 
     assert selector["payload_bytes"] == 249
+    assert selector["selector_header_bytes"] == 6
     assert selector["selector_index_bytes"] == 243
     assert selector["payload_sha256"] == "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca"
     assert selector["n_pairs"] == 600
@@ -82,7 +88,9 @@ def test_real_pr101_fec6_selector_profile_matches_manifest_counts() -> None:
     assert selector["selector_avg_bits_per_pair"] == 3.24
     assert selector["zero_padding_bits"] == 0
     assert selector["entropy_floor_bytes"] == 241
-    assert selector["gap_to_entropy_floor_bytes"] == 8
+    assert selector["gap_to_entropy_floor_bytes"] == 2
+    assert selector["selector_index_gap_to_entropy_floor_bytes"] == 2
+    assert selector["selector_payload_gap_to_entropy_floor_bytes"] == 8
     assert selector["code_histogram"] == {
         "0": 134,
         "1": 35,
@@ -111,9 +119,27 @@ def test_fec6_parser_rejects_nonzero_padding_bits() -> None:
         tool.parse_fec6_selector_payload(selector)
 
 
+def test_fec6_parser_rejects_trailing_zero_bytes_after_used_bits() -> None:
+    tool = _load_tool()
+    selector = b"FEC6" + struct.pack("<H", 1) + b"\x00\x00"
+
+    with pytest.raises(ValueError, match="trailing zero bytes"):
+        tool.parse_fec6_selector_payload(selector)
+
+
 def test_fp11_wrapper_rejects_truncated_source_payload() -> None:
     tool = _load_tool()
     wrapper = b"FP11" + struct.pack("<I", 99) + b"short"
 
     with pytest.raises(ValueError, match="truncated in source payload"):
         tool.parse_fp11_wrapper_payload(wrapper)
+
+
+def test_archive_reader_rejects_oversized_member(tmp_path: Path) -> None:
+    tool = _load_tool()
+    archive = tmp_path / "oversized.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", b"\x00" * (tool.MAX_MEMBER_BYTES + 1))
+
+    with pytest.raises(ValueError, match="archive member too large"):
+        tool._read_single_member_payload(archive)
