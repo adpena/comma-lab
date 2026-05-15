@@ -1358,7 +1358,9 @@ Ballé's specific contributions: brings 2018 entropy bottleneck + scale hyperpri
 
 ## Grand Council (advisory)
 
-Beyond the inner ten, the **grand council** is the broader bench: voices that contribute when their specialty is touched but don't sit at quintet-pact decision-making. Roster as of 2026-04-29:
+Beyond the inner ten, the **grand council** is the broader bench: voices that contribute when their specialty is touched but don't sit at quintet-pact decision-making. Roster as of 2026-05-15 (expanded from 12 → 20 seats per `feedback_grand_council_convergence_l5_staircase_comprehensive_plan_plus_roster_expansion_landed_20260515.md`):
+
+**Existing 12 seats (since 2026-04-29):**
 
 - **Stephen Boyd** — convex optimization at operational level (ADMM, proximal gradient, alternating projections at the algorithmic level beyond Dykstra's theory)
 - **Terence Tao** — pure mathematician omniscience; harmonic analysis, additive combinatorics, applied analysis; called when a mathematical question lacks first-principles grounding
@@ -1373,7 +1375,18 @@ Beyond the inner ten, the **grand council** is the broader bench: voices that co
 - **Jürgen Schmidhuber** — same lineage as Schmidhuber above (canonical seat)
 - **Jack-from-skunkworks** — internal SegNet+Rate research lineage
 
-Grand council members are CONSULTED on demand (when a deliberation invokes their specialty); not all decisions require their sign-off. Inner council quintet pact remains the binding-decision set.
+**8 new seats (2026-05-15 expansion based on L5 staircase paper authors + cooperative-receiver community + Time-Traveler's protégé):**
+
+- **Joseph J. Atick** — Atick-Redlich 1990 *"Towards a Theory of Early Visual Processing"* + *"Convergent algorithm for sensory receptive field development"*. Cooperative-receiver loss founder. Canonical voice for every Z4 deliberation + every "scorer-as-receiver" idea (Wunderkind Cluster B/E/G). Direct upstream of `tac.codec.cooperative_receiver.atick_redlich`.
+- **A. Norman Redlich** — Atick's co-author on the 1990s cooperative-receiver papers. Early visual processing theory + redundancy reduction in retina. Co-canonical with Atick for Z4.
+- **Rajesh P. N. Rao** — Rao-Ballard 1999 *"Predictive coding in the visual cortex"* + Rao 2010 *"Hierarchical Bayesian inference in networks of spiking neurons"*. Predictive-coding architect; canonical voice for Z5 + every temporal-codec deliberation.
+- **Dana H. Ballard** — Rao's co-author on the predictive-coding seminal paper. Embodied cognition + animate vision. Z5 co-canonical.
+- **Naftali Tishby (memorial seat)** — Tishby-Zaslavsky 2015 *"Deep learning and the information bottleneck principle"*. Cooperative-receiver theoretical framework via I(X;T)/I(T;Y) decomposition. Direct upstream of Z4+Z5 mathematical structure. Convened for every codec-as-IB deliberation.
+- **Noga Zaslavsky** — Tishby's collaborator on the IB framework. Currently active researcher (NYU Stern → MIT BCS); ML + cognitive science bridge. The active-living voice for the Tishby lineage.
+- **Aaron D. Wyner** — Wyner-Ziv 1976 source coding with side information theorem. Direct upstream of cooperative-receiver framing (decoder has side info = receiver cooperates). Canonical voice for any "scorer-weights-as-shared-prior" deliberation (Wunderkind G2-PARTIAL / G3 / B3-precomputed-table).
+- **Time-Traveler protégé** — *canonical identification PENDING operator decision per `feedback_grand_council_convergence_l5_staircase_comprehensive_plan_plus_roster_expansion_landed_20260515.md` Operator-routable #1*. Per the operator directive 2026-05-15 "her time, her genius colleague and former student and protege and upcoming boss who is transforming and revolutionizing the field": the seat is reserved for a specific person whose identity depends on which canonical Time-Traveler peer identity is adopted (3 candidates: Daubechies → Rudin / Koller → Ng / Rudin → her active Duke postdoc). The convergence subagent recommends Daubechies → Rudin as the BOLD-but-internally-consistent chain; the operator's next session resolves the canonical identification.
+
+Grand council members are CONSULTED on demand (when a deliberation invokes their specialty); not all decisions require their sign-off. Inner council quintet pact remains the binding-decision set. Per the standing rule from `feedback_grand_council_roster_expansion_l5_papers_cooperative_receiver_time_traveler_proteges_20260515.md`: every L5 staircase council deliberation invokes the canonical paper authors AS council members. Z4 deliberation summons Atick + Redlich + Tishby memorial + Zaslavsky + Wyner. Z5 deliberation summons Rao + Ballard + Tishby memorial + Time-Traveler peer + Time-Traveler protégé. Cross-paradigm deliberation summons all 8 new + the inner eleven.
 
 ## Required durable state
 

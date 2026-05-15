@@ -29068,6 +29068,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_grand_council_convergence_l5_staircase_20260515",
+      "name": "Grand Council convergence L5 staircase comprehensive plan + roster expansion",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "convergence council deliberation memo + CLAUDE.md edit landed 2026-05-15; 10 binding verdicts + 11-verb completeness matrix + 3 queued executable subagent tasks; roster expanded 12->20 Grand Council seats"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "round 1 clean (this convergence subagent); rounds 2+3 queued per CLAUDE.md Recursive adversarial review protocol BEFORE first new code-side dispatch from D.1/D.2/D.3"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_grand_council_convergence_l5_staircase_comprehensive_plan_plus_roster_expansion_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -29077,5 +29118,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T15:28:04Z"
+  "updated_at": "2026-05-15T15:52:23Z"
 }
