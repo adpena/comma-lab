@@ -15,11 +15,16 @@ from tac.substrates.d1_segnet_margin_polytope.margin_map import (
     upsample_margin_map_for_overlay,
 )
 from tac.substrates.d1_segnet_margin_polytope.overlay import (
+    D1_OVERLAY_AMPLITUDE_SCALES,
+    D1_OVERLAY_SIGN_POLICIES,
     _build_camera_resolution_overlay,
     _upsample_int8_levels_to_camera,
     apply_l2_overlay_for_video_list,
     apply_polytope_overlay_inplace,
+    attenuate_overlay_levels,
     channel_policy_weights,
+    normalize_overlay_amplitude_scale,
+    overlay_sign_for_pair,
     validate_polytope_margin_contract,
 )
 from tac.substrates.d1_segnet_margin_polytope.polytope_encoder import (
@@ -243,6 +248,120 @@ def test_apply_polytope_overlay_channel_policy_green_only(tmp_path):
 def test_channel_policy_weights_rejects_unknown():
     with pytest.raises(ValueError, match="overlay_channel_policy"):
         channel_policy_weights("cyan")
+
+
+def test_overlay_policy_constants_cover_noop_half_and_sign_schedules():
+    assert D1_OVERLAY_AMPLITUDE_SCALES == (0.0, 0.5, 1.0)
+    assert "payload" in D1_OVERLAY_SIGN_POLICIES
+    assert "negate_payload" in D1_OVERLAY_SIGN_POLICIES
+    assert "alternating_pairs" in D1_OVERLAY_SIGN_POLICIES
+
+
+def test_normalize_overlay_amplitude_scale_rejects_amplification():
+    assert normalize_overlay_amplitude_scale(0.5) == 0.5
+    with pytest.raises(ValueError, match=r"\[0, 1\]"):
+        normalize_overlay_amplitude_scale(1.25)
+    with pytest.raises(ValueError, match="finite"):
+        normalize_overlay_amplitude_scale(float("nan"))
+
+
+def test_attenuate_overlay_levels_preserves_lattice():
+    levels = np.array([[-2, -1, 0, 1, 2]], dtype=np.int8)
+    half = attenuate_overlay_levels(levels, amplitude_scale=0.5)
+    np.testing.assert_array_equal(
+        half, np.array([[-1, -1, 0, 1, 1]], dtype=np.int8)
+    )
+    zero = attenuate_overlay_levels(levels, amplitude_scale=0.0)
+    assert (zero == 0).all()
+
+
+def test_overlay_sign_policy_schedules_are_deterministic():
+    assert overlay_sign_for_pair("payload", 0) == 1
+    assert overlay_sign_for_pair("negate_payload", 0) == -1
+    assert overlay_sign_for_pair("alternating_pairs", 0) == 1
+    assert overlay_sign_for_pair("alternating_pairs", 1) == -1
+    with pytest.raises(ValueError, match="overlay_sign_policy"):
+        overlay_sign_for_pair("coinflip", 0)
+
+
+def test_apply_polytope_overlay_amplitude_zero_is_exact_noop(tmp_path):
+    raw = tmp_path / "0.raw"
+    n_pairs = 1
+    _write_synthetic_raw(raw, n_pairs=n_pairs)
+    original = raw.read_bytes()
+    flat = np.ones(96 * 128, dtype=np.int8)
+    diag = apply_polytope_overlay_inplace(
+        raw,
+        noise_levels_flat=flat,
+        encoder_grid_h=96,
+        encoder_grid_w=128,
+        n_pairs=n_pairs,
+        amplitude_scale=0.0,
+    )
+    assert diag["pairs_modified"] == 0
+    assert diag["bytes_changed"] == 0
+    assert diag["overlay_amplitude_scale"] == 0.0
+    assert raw.read_bytes() == original
+
+
+def test_apply_polytope_overlay_negate_payload_flips_frame_1_delta(tmp_path):
+    raw = tmp_path / "0.raw"
+    n_pairs = 1
+    _write_synthetic_raw(raw, n_pairs=n_pairs)
+    frame_bytes = 874 * 1164 * 3
+    flat = np.ones(96 * 128, dtype=np.int8)
+    diag = apply_polytope_overlay_inplace(
+        raw,
+        noise_levels_flat=flat,
+        encoder_grid_h=96,
+        encoder_grid_w=128,
+        n_pairs=n_pairs,
+        channel_policy="red",
+        sign_policy="negate_payload",
+    )
+    assert diag["pairs_modified"] == 1
+    assert diag["overlay_sign_policy"] == "negate_payload"
+    data = raw.read_bytes()
+    frame_0 = np.frombuffer(data[:frame_bytes], dtype=np.uint8).reshape(-1, 3)
+    frame_1 = np.frombuffer(data[frame_bytes:], dtype=np.uint8).reshape(-1, 3)
+    assert (frame_0 == 128).all()
+    assert (frame_1[:, 0] == 127).all()
+    assert (frame_1[:, 1] == 128).all()
+    assert (frame_1[:, 2] == 128).all()
+
+
+def test_apply_polytope_overlay_alternating_pairs_changes_frame_1_sign(tmp_path):
+    raw = tmp_path / "0.raw"
+    n_pairs = 2
+    _write_synthetic_raw(raw, n_pairs=n_pairs)
+    frame_bytes = 874 * 1164 * 3
+    flat = np.ones(96 * 128, dtype=np.int8)
+    diag = apply_polytope_overlay_inplace(
+        raw,
+        noise_levels_flat=flat,
+        encoder_grid_h=96,
+        encoder_grid_w=128,
+        n_pairs=n_pairs,
+        channel_policy="green",
+        sign_policy="alternating_pairs",
+    )
+    assert diag["pairs_modified"] == 2
+    data = raw.read_bytes()
+    pair0_frame1 = np.frombuffer(
+        data[frame_bytes:2 * frame_bytes], dtype=np.uint8
+    ).reshape(-1, 3)
+    pair1_frame0_start = 2 * frame_bytes
+    pair1_frame1_start = pair1_frame0_start + frame_bytes
+    pair1_frame0 = np.frombuffer(
+        data[pair1_frame0_start:pair1_frame1_start], dtype=np.uint8
+    ).reshape(-1, 3)
+    pair1_frame1 = np.frombuffer(
+        data[pair1_frame1_start:pair1_frame1_start + frame_bytes],
+        dtype=np.uint8,
+    ).reshape(-1, 3)
+    assert (pair0_frame1[:, 1] == 129).all()
+    assert (pair1_frame0 == 128).all()
+    assert (pair1_frame1[:, 1] == 127).all()
 
 
 def test_apply_polytope_overlay_inplace_size_mismatch_raises(tmp_path):

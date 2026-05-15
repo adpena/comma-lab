@@ -104,6 +104,8 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates.d1_segnet_margin_polytope.overlay import (
     D1_OVERLAY_CHANNEL_POLICIES,
+    D1_OVERLAY_SIGN_POLICIES,
+    normalize_overlay_amplitude_scale,
 )
 
 SUBSTRATE_TAG = "d1_polytope"
@@ -224,6 +226,30 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
         "default": "20.0",
     },
+    "--overlay-channel-policy": {
+        "env": "D1_POLYTOPE_OVERLAY_CHANNEL_POLICY",
+        "rationale": (
+            "Metadata-only runtime policy sweep over RGB channel projection; "
+            "default rgb preserves the original D1 L2 overlay behavior."
+        ),
+        "default": "rgb",
+    },
+    "--overlay-amplitude-scale": {
+        "env": "D1_POLYTOPE_OVERLAY_AMPLITUDE_SCALE",
+        "rationale": (
+            "Metadata-only runtime attenuation sweep in [0,1]; values below "
+            "1.0 cannot amplify beyond the encoder-certified safe lattice."
+        ),
+        "default": "1.0",
+    },
+    "--overlay-sign-policy": {
+        "env": "D1_POLYTOPE_OVERLAY_SIGN_POLICY",
+        "rationale": (
+            "Metadata-only runtime sign schedule sweep; default payload "
+            "preserves the encoded sign field."
+        ),
+        "default": "payload",
+    },
 }
 
 
@@ -306,6 +332,22 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=D1_OVERLAY_CHANNEL_POLICIES,
         default="rgb",
         help="D1 scalar overlay to RGB channel mapping.",
+    )
+    p.add_argument(
+        "--overlay-amplitude-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "D1 overlay attenuation in [0,1]; values below 1.0 materialize "
+            "metadata-only amplitude sweep candidates without amplifying "
+            "beyond the encoder-certified lattice."
+        ),
+    )
+    p.add_argument(
+        "--overlay-sign-policy",
+        choices=D1_OVERLAY_SIGN_POLICIES,
+        default="payload",
+        help="D1 overlay sign schedule.",
     )
 
     # Lagrangian weights (score-domain; HNeRV parity L6)
@@ -968,11 +1010,54 @@ def _channel_policy_weights(policy: str) -> np.ndarray:
     return np.asarray(weights_by_policy[policy], dtype=np.int16)
 
 
+def _normalize_overlay_amplitude_scale(amplitude_scale: float) -> float:
+    scale = float(amplitude_scale)
+    if not np.isfinite(scale):
+        raise ValueError(
+            f'overlay_amplitude_scale must be finite; got {{amplitude_scale!r}}'
+        )
+    if scale < 0.0 or scale > 1.0:
+        raise ValueError(
+            f'overlay_amplitude_scale={{scale}} out of range [0, 1]'
+        )
+    return scale
+
+
+def _overlay_sign_for_pair(sign_policy: str, pair_idx: int) -> int:
+    policy = sign_policy.strip().lower()
+    if policy == 'payload':
+        return 1
+    if policy == 'negate_payload':
+        return -1
+    if policy == 'alternating_pairs':
+        return 1 if int(pair_idx) % 2 == 0 else -1
+    raise ValueError(
+        f'unsupported D1 overlay_sign_policy={{sign_policy!r}}; '
+        "expected one of ['alternating_pairs', 'negate_payload', 'payload']"
+    )
+
+
+def _attenuate_overlay_levels(
+    overlay_hw: np.ndarray,
+    *,
+    amplitude_scale: float,
+) -> np.ndarray:
+    scale = _normalize_overlay_amplitude_scale(amplitude_scale)
+    if scale == 1.0:
+        return overlay_hw.astype(np.int8, copy=True)
+    values = overlay_hw.astype(np.int16)
+    magnitude = np.floor(np.abs(values).astype(np.float32) * scale + 0.5)
+    signed = np.sign(values).astype(np.int16) * magnitude.astype(np.int16)
+    return np.clip(signed, -2, 2).astype(np.int8)
+
+
 def _apply_overlay(
     raw_path: Path,
     overlay_hw: np.ndarray,
     *,
     channel_policy: str,
+    amplitude_scale: float,
+    sign_policy: str,
 ) -> dict[str, int]:
     actual_size = raw_path.stat().st_size
     pair_bytes = 2 * FRAME_BYTES
@@ -981,7 +1066,12 @@ def _apply_overlay(
             f'raw size {{actual_size}} is not a multiple of pair_bytes={{pair_bytes}}'
         )
     n_pairs = actual_size // pair_bytes
+    overlay_hw = _attenuate_overlay_levels(
+        overlay_hw, amplitude_scale=amplitude_scale
+    )
     nonzero_overlay_pixels = int(np.count_nonzero(overlay_hw))
+    weights = _channel_policy_weights(channel_policy)
+    _overlay_sign_for_pair(sign_policy, 0)
     if nonzero_overlay_pixels == 0:
         return {{
             'pairs_modified': 0,
@@ -990,12 +1080,15 @@ def _apply_overlay(
         }}
     overlay_flat = (
         overlay_hw[:, :, np.newaxis].astype(np.int16)
-        * _channel_policy_weights(channel_policy)
+        * weights
     ).reshape(-1)
+    overlay_flat_negative = -overlay_flat
     pairs_modified = 0
     bytes_changed = 0
     with raw_path.open('r+b') as fp:
         for pair_idx in range(n_pairs):
+            sign = _overlay_sign_for_pair(sign_policy, pair_idx)
+            pair_overlay = overlay_flat if sign > 0 else overlay_flat_negative
             frame_1_offset = (2 * pair_idx + 1) * FRAME_BYTES
             fp.seek(frame_1_offset)
             frame_1_bytes = fp.read(FRAME_BYTES)
@@ -1005,7 +1098,7 @@ def _apply_overlay(
                 )
             frame_1_arr = np.frombuffer(frame_1_bytes, dtype=np.uint8).copy()
             new_vals = np.clip(
-                frame_1_arr.astype(np.int16) + overlay_flat, 0, 255
+                frame_1_arr.astype(np.int16) + pair_overlay, 0, 255
             ).astype(np.uint8)
             changed = int(np.count_nonzero(new_vals != frame_1_arr))
             if changed:
@@ -1071,6 +1164,10 @@ def main(argv: list[str] | None = None) -> int:
     video_names = _read_file_list(args.file_list)
     total_pairs = 0
     total_bytes = 0
+    amplitude_scale = _normalize_overlay_amplitude_scale(
+        d1['meta'].get('overlay_amplitude_scale', 1.0)
+    )
+    sign_policy = str(d1['meta'].get('overlay_sign_policy', 'payload'))
     for video_name in video_names:
         stem = video_name.rsplit('.', 1)[0] if '.' in video_name else video_name
         dst_raw = output_dir / f'{{stem}}.raw'
@@ -1084,7 +1181,11 @@ def main(argv: list[str] | None = None) -> int:
             check=True,
         )
         diag = _apply_overlay(
-            dst_raw, overlay_hw, channel_policy=channel_policy
+            dst_raw,
+            overlay_hw,
+            channel_policy=channel_policy,
+            amplitude_scale=amplitude_scale,
+            sign_policy=sign_policy,
         )
         total_pairs += diag['pairs_modified']
         total_bytes += diag['bytes_changed']
@@ -1092,7 +1193,8 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f'[d1-inflate] OVERLAY_TOTAL pairs_modified={{total_pairs}} '
         f'bytes_changed={{total_bytes}} videos_processed={{len(video_names)}} '
-        f'channel_policy={{channel_policy}}',
+        f'channel_policy={{channel_policy}} '
+        f'amplitude_scale={{amplitude_scale}} sign_policy={{sign_policy}}',
         file=sys.stderr,
     )
     if total_bytes <= 0:
@@ -1422,6 +1524,8 @@ def _full_main(args: argparse.Namespace) -> int:
                 "requested_epochs": int(args.epochs),
                 "effective_margin_passes": int(effective_margin_passes),
                 "overlay_channel_policy": str(args.overlay_channel_policy),
+                "overlay_amplitude_scale": float(args.overlay_amplitude_scale),
+                "overlay_sign_policy": str(args.overlay_sign_policy),
                 "runtime_overlay_consumed": True,
                 "current_runtime_effect": "base_renderer_plus_d1_overlay",
                 "l2_projected_score_band_low": 0.181,
@@ -1494,6 +1598,9 @@ def _full_main(args: argparse.Namespace) -> int:
         readiness["d1_bin_sha256"] = d1_bin_sha
         readiness["n_pairs_used"] = int(n_pairs)
         readiness["margin_map_resolution"] = [margin_h, margin_w]
+        readiness["overlay_channel_policy"] = str(args.overlay_channel_policy)
+        readiness["overlay_amplitude_scale"] = float(args.overlay_amplitude_scale)
+        readiness["overlay_sign_policy"] = str(args.overlay_sign_policy)
         readiness["estimated_overhead_bytes"] = estimate_overhead_bytes(
             config=cfg
         )
@@ -1575,6 +1682,8 @@ def _full_main(args: argparse.Namespace) -> int:
             locals().get("effective_margin_passes", 1)
         ),
         "overlay_channel_policy": str(args.overlay_channel_policy),
+        "overlay_amplitude_scale": float(args.overlay_amplitude_scale),
+        "overlay_sign_policy": str(args.overlay_sign_policy),
         "d1_overhead_bytes": d1_overhead_bytes,
         "d1_bin_sha256": d1_bin_sha,
         "archive_zip_bytes": archive_zip_size,
@@ -1620,6 +1729,9 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    args.overlay_amplitude_scale = normalize_overlay_amplitude_scale(
+        args.overlay_amplitude_scale
+    )
 
     # Resolve paths
     args.a1_archive = Path(args.a1_archive).resolve()

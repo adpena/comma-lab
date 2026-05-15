@@ -951,6 +951,8 @@ def test_trainer_runtime_emits_d1_sidecar_verifier(tmp_path):
     inflate_py = (submission_dir / "inflate.py").read_text(encoding="utf-8")
     assert "_apply_overlay" in inflate_py
     assert "changed zero bytes" in inflate_py
+    assert "overlay_amplitude_scale" in inflate_py
+    assert "overlay_sign_policy" in inflate_py
 
     base_bytes = b"some-a1-base"
     base_path = tmp_path / "a1.bin"

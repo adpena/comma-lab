@@ -158,6 +158,12 @@ def main(argv: list[str] | None = None) -> int:
         channel_policy=str(
             d1_archive.meta.get("overlay_channel_policy", "rgb")
         ),
+        amplitude_scale=float(
+            d1_archive.meta.get("overlay_amplitude_scale", 1.0)
+        ),
+        sign_policy=str(
+            d1_archive.meta.get("overlay_sign_policy", "payload")
+        ),
     )
     print(
         f"[d1-inflate] OVERLAY_TOTAL pairs_modified="
@@ -168,7 +174,9 @@ def main(argv: list[str] | None = None) -> int:
         f"{overlay_diag['contract_nonzero_noise_pixels']} "
         f"contract_boundary_pixels="
         f"{overlay_diag['contract_boundary_pixels']} "
-        f"channel_policy={overlay_diag['channel_policy']}",
+        f"channel_policy={overlay_diag['channel_policy']} "
+        f"amplitude_scale={overlay_diag['overlay_amplitude_scale']} "
+        f"sign_policy={overlay_diag['overlay_sign_policy']}",
         file=sys.stderr,
     )
     if overlay_diag["total_bytes_changed"] <= 0:

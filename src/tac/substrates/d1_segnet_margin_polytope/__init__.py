@@ -145,7 +145,9 @@ from tac.substrates.d1_segnet_margin_polytope.margin_map import (
     quantize_margin_map_int8,
 )
 from tac.substrates.d1_segnet_margin_polytope.overlay import (
+    D1_OVERLAY_AMPLITUDE_SCALES,
     D1_OVERLAY_CHANNEL_POLICIES,
+    D1_OVERLAY_SIGN_POLICIES,
 )
 from tac.substrates.d1_segnet_margin_polytope.polytope_encoder import (
     POLYTOPE_DEFAULT_BUDGET_BITS,
@@ -173,7 +175,9 @@ __all__ = [
     "D1POLY_DEFAULT_BUDGET_BITS",
     "D1POLY_OVERHEAD_TARGET_BYTES_MAX",
     "D1POLY_OVERHEAD_TARGET_BYTES_MIN",
+    "D1_OVERLAY_AMPLITUDE_SCALES",
     "D1_OVERLAY_CHANNEL_POLICIES",
+    "D1_OVERLAY_SIGN_POLICIES",
     "MARGIN_MAP_DEFAULT_RESOLUTION",
     "POLYTOPE_DEFAULT_BUDGET_BITS",
     "POLYTOPE_LATTICE_LEVELS",

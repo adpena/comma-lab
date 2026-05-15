@@ -64,6 +64,14 @@ D1_OVERLAY_CHANNEL_POLICIES: tuple[str, ...] = (
     "rb_pos_g_neg",
 )
 
+D1_OVERLAY_SIGN_POLICIES: tuple[str, ...] = (
+    "payload",
+    "negate_payload",
+    "alternating_pairs",
+)
+
+D1_OVERLAY_AMPLITUDE_SCALES: tuple[float, ...] = (0.0, 0.5, 1.0)
+
 
 def channel_policy_weights(channel_policy: str) -> np.ndarray:
     """Return integer RGB weights for a D1 scalar overlay policy."""
@@ -83,6 +91,59 @@ def channel_policy_weights(channel_policy: str) -> np.ndarray:
             f"expected one of {sorted(weights_by_policy)}"
         )
     return np.asarray(weights_by_policy[policy], dtype=np.int16)
+
+
+def normalize_overlay_amplitude_scale(amplitude_scale: float) -> float:
+    """Validate D1 overlay attenuation.
+
+    Values are constrained to ``[0, 1]`` so metadata-only policy variants can
+    attenuate the decoded safe-polytope lattice but cannot amplify it beyond
+    the encoder-certified ``[-2, 2]`` perturbation budget.
+    """
+    scale = float(amplitude_scale)
+    if not np.isfinite(scale):
+        raise ValueError(
+            f"overlay_amplitude_scale must be finite; got {amplitude_scale!r}"
+        )
+    if scale < 0.0 or scale > 1.0:
+        raise ValueError(
+            f"overlay_amplitude_scale={scale} out of range [0, 1]"
+        )
+    return scale
+
+
+def overlay_sign_for_pair(sign_policy: str, pair_idx: int) -> int:
+    """Return the scalar sign multiplier for a pair under a D1 sign policy."""
+    policy = sign_policy.strip().lower()
+    if policy == "payload":
+        return 1
+    if policy == "negate_payload":
+        return -1
+    if policy == "alternating_pairs":
+        return 1 if int(pair_idx) % 2 == 0 else -1
+    raise ValueError(
+        f"unsupported D1 overlay_sign_policy={sign_policy!r}; "
+        f"expected one of {sorted(D1_OVERLAY_SIGN_POLICIES)}"
+    )
+
+
+def attenuate_overlay_levels(
+    overlay_hw: np.ndarray,
+    *,
+    amplitude_scale: float,
+) -> np.ndarray:
+    """Attenuate integer overlay levels while preserving the D1 lattice."""
+    if overlay_hw.dtype != np.int8:
+        raise ValueError(
+            f"attenuate_overlay_levels expects int8 overlay; got {overlay_hw.dtype}"
+        )
+    scale = normalize_overlay_amplitude_scale(amplitude_scale)
+    if scale == 1.0:
+        return overlay_hw.copy()
+    values = overlay_hw.astype(np.int16)
+    magnitude = np.floor(np.abs(values).astype(np.float32) * scale + 0.5)
+    signed = np.sign(values).astype(np.int16) * magnitude.astype(np.int16)
+    return np.clip(signed, -2, 2).astype(np.int8)
 
 
 def validate_polytope_margin_contract(
@@ -246,7 +307,9 @@ def apply_polytope_overlay_inplace(
     camera_h: int = _CAMERA_H,
     camera_w: int = _CAMERA_W,
     channel_policy: str = "rgb",
-) -> dict[str, int]:
+    amplitude_scale: float = 1.0,
+    sign_policy: str = "payload",
+) -> dict[str, int | float | str]:
     """Apply the polytope noise overlay to every frame_1 in the .raw video.
 
     Per ``upstream/modules.py:108``, SegNet operates on frame_1 only
@@ -288,6 +351,9 @@ def apply_polytope_overlay_inplace(
         encoder_grid_h=encoder_grid_h,
         encoder_grid_w=encoder_grid_w,
     )
+    overlay_hw = attenuate_overlay_levels(
+        overlay_hw, amplitude_scale=amplitude_scale
+    )
     nonzero_overlay_pixels = int(np.count_nonzero(overlay_hw))
     frame_bytes = camera_h * camera_w * 3
     expected_bytes = n_pairs * 2 * frame_bytes
@@ -298,6 +364,8 @@ def apply_polytope_overlay_inplace(
             f"{expected_bytes} (n_pairs={n_pairs} camera={camera_h}x"
             f"{camera_w})"
         )
+    weights = channel_policy_weights(channel_policy)
+    overlay_sign_for_pair(sign_policy, 0)
     if nonzero_overlay_pixels == 0:
         # No-op overlay — write nothing, but report so the no-op detector
         # surfaces the dead-bytes condition.
@@ -306,15 +374,24 @@ def apply_polytope_overlay_inplace(
             "bytes_changed": 0,
             "frame_bytes": frame_bytes,
             "nonzero_overlay_pixels": 0,
+            "channel_policy": channel_policy,
+            "overlay_amplitude_scale": normalize_overlay_amplitude_scale(
+                amplitude_scale
+            ),
+            "overlay_sign_policy": sign_policy,
         }
-    weights = channel_policy_weights(channel_policy)
     overlay_hwc = overlay_hw[:, :, np.newaxis].astype(np.int16) * weights
-    overlay_flat = overlay_hwc.reshape(-1)  # length frame_bytes
+    overlay_flat_positive = overlay_hwc.reshape(-1)  # length frame_bytes
+    overlay_flat_negative = -overlay_flat_positive
 
     pairs_modified = 0
     bytes_changed = 0
     with open(raw_path, "r+b") as fp:
         for pair_idx in range(n_pairs):
+            sign = overlay_sign_for_pair(sign_policy, pair_idx)
+            overlay_flat = (
+                overlay_flat_positive if sign > 0 else overlay_flat_negative
+            )
             # Frame layout: [frame_0 bytes][frame_1 bytes] per pair.
             frame_1_offset = (2 * pair_idx + 1) * frame_bytes
             fp.seek(frame_1_offset)
@@ -344,6 +421,10 @@ def apply_polytope_overlay_inplace(
         "frame_bytes": frame_bytes,
         "nonzero_overlay_pixels": nonzero_overlay_pixels,
         "channel_policy": channel_policy,
+        "overlay_amplitude_scale": normalize_overlay_amplitude_scale(
+            amplitude_scale
+        ),
+        "overlay_sign_policy": sign_policy,
     }
 
 
@@ -358,8 +439,10 @@ def apply_l2_overlay_for_video_list(
     margin_map_scale: float | None = None,
     archive_jacobian_lipschitz: float | None = None,
     channel_policy: str = "rgb",
+    amplitude_scale: float = 1.0,
+    sign_policy: str = "payload",
     n_pairs_per_video: int | None = None,
-) -> dict[str, int]:
+) -> dict[str, int | float | str]:
     """Apply the L2 polytope overlay across every video's .raw output.
 
     Walks the ``video_names`` list, locates each video's ``.raw`` file
@@ -447,6 +530,8 @@ def apply_l2_overlay_for_video_list(
             encoder_grid_w=encoder_grid_w,
             n_pairs=pairs,
             channel_policy=channel_policy,
+            amplitude_scale=amplitude_scale,
+            sign_policy=sign_policy,
         )
         total_pairs_modified += diag["pairs_modified"]
         total_bytes_changed += diag["bytes_changed"]
@@ -460,13 +545,22 @@ def apply_l2_overlay_for_video_list(
         ),
         "contract_boundary_pixels": int(contract_diag.get("boundary_pixels", 0)),
         "channel_policy": channel_policy,
+        "overlay_amplitude_scale": normalize_overlay_amplitude_scale(
+            amplitude_scale
+        ),
+        "overlay_sign_policy": sign_policy,
     }
 
 
 __all__ = [
+    "D1_OVERLAY_AMPLITUDE_SCALES",
     "D1_OVERLAY_CHANNEL_POLICIES",
+    "D1_OVERLAY_SIGN_POLICIES",
     "apply_l2_overlay_for_video_list",
     "apply_polytope_overlay_inplace",
+    "attenuate_overlay_levels",
     "channel_policy_weights",
+    "normalize_overlay_amplitude_scale",
+    "overlay_sign_for_pair",
     "validate_polytope_margin_contract",
 ]
