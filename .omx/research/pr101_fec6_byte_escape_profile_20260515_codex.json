@@ -1,0 +1,51 @@
+{
+  "schema": "pr101_fec6_byte_escape_profile_summary.v1",
+  "score_claim": false,
+  "dispatch_attempted": false,
+  "ready_for_exact_eval_dispatch": false,
+  "archive": {
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "bytes": 178517,
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "exact_results": {
+    "contest_cpu_score": 0.1920513168811056,
+    "contest_cuda_score": 0.22621002169349796,
+    "strict_bytes_to_sub_0_192_cpu_if_components_unchanged": 78
+  },
+  "byte_only_findings": {
+    "decoder_brotli": {
+      "current_bytes": 162164,
+      "best_bounded_recompress_bytes": 162162,
+      "realistic_saving_bytes": 2
+    },
+    "latent_lzma": {
+      "current_bytes": 15387,
+      "best_filter_sweep_bytes": 15387,
+      "realistic_saving_bytes": 0
+    },
+    "latent_sidecar": {
+      "current_bytes": 607,
+      "entropy_floor_estimate_bytes": 603,
+      "realistic_saving_bytes": 4
+    },
+    "fec6_selector": {
+      "current_payload_bytes": 249,
+      "entropy_floor_estimate_bytes": 241,
+      "realistic_saving_bytes": 8
+    },
+    "fp11_wrapper": {
+      "current_bytes": 10,
+      "hardcode_saving_bytes": 10
+    }
+  },
+  "conclusion": {
+    "same_frame_realistic_saving_upper_bound_bytes": 16,
+    "cannot_reach_sub_0_192_cpu_by_same_frame_bytes_only": true,
+    "next_required_mechanism": "component-changing CUDA-in-loop selector/waterfill or a new trained substrate"
+  },
+  "generated_by": {
+    "command": ".venv/bin/python tools/profile_pr101_fec6_escape_routes.py",
+    "tool": "tools/profile_pr101_fec6_escape_routes.py"
+  }
+}
