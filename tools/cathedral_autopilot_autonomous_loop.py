@@ -804,28 +804,47 @@ def rank_candidates(
         return c.predicted_score_delta
 
     def _effective_eig_per_dollar(c: CandidateRow) -> float:
-        # EIG/$ does not directly consume predicted_score_delta, so the Z1
-        # adjustment does not change the EIG/$ axis. We still apply a small
-        # MDL-density-aware modifier for the within-class-saturated cap so a
-        # candidate with EIG/$ = 100 but density 0.99 doesn't beat a class-
-        # shift candidate with EIG/$ = 5 and density 0.50.
         base = c.eig_per_dollar()
         if not apply_z1_empirical_revision:
             return base
-        # Apply the SAME 0.5 penalty factor used for the within-class-trending
-        # range, scaled to the EIG axis. Saturated candidates lose 90% of
-        # their EIG ranking; trending candidates lose 50%.
+        if base == float("inf"):
+            return base
+
+        # Preserve the existing Tier-A MDL-density EIG modifier so saturated
+        # within-class rows stay down-ranked even when their raw score delta
+        # already sits on the Z1 floor.
+        tier_a_eig = base
         if c.mdl_density is None:
-            return base
-        try:
-            d = float(c.mdl_density)
-        except (TypeError, ValueError):
-            return base
-        if d > MDL_DENSITY_WITHIN_CLASS_SATURATED_THRESHOLD:
-            return base * 0.10  # 90% penalty
-        if d > MDL_DENSITY_WITHIN_CLASS_TRENDING_THRESHOLD:
-            return base * MDL_DENSITY_WITHIN_CLASS_TRENDING_PENALTY_FACTOR
-        return base
+            tier_a_delta = c.predicted_score_delta
+        else:
+            try:
+                d = float(c.mdl_density)
+            except (TypeError, ValueError):
+                tier_a_delta = c.predicted_score_delta
+            else:
+                tier_a_delta = adjust_predicted_delta_for_mdl_density(
+                    c.predicted_score_delta, d
+                )
+                if d > MDL_DENSITY_WITHIN_CLASS_SATURATED_THRESHOLD:
+                    tier_a_eig = base * 0.10  # 90% penalty
+                elif d > MDL_DENSITY_WITHIN_CLASS_TRENDING_THRESHOLD:
+                    tier_a_eig = (
+                        base * MDL_DENSITY_WITHIN_CLASS_TRENDING_PENALTY_FACTOR
+                    )
+
+        # The default autopilot axis is EIG/$, so score-delta-only Z1 signals
+        # would otherwise be invisible in normal operation. Reweight the EIG
+        # prior by the same non-Tier-A score-delta adjustment chain used by the
+        # explicit predicted-score axis: Tier C, class-shift literature, and
+        # composition alpha.
+        full_delta = apply_z1_empirical_revision_to_candidate_delta(c)
+        tier_a_gain = max(0.0, -tier_a_delta)
+        full_gain = max(0.0, -full_delta)
+        if tier_a_gain > 0.0:
+            return tier_a_eig * (full_gain / tier_a_gain)
+        if full_gain > 0.0 and c.estimated_dispatch_cost_usd > 0.0:
+            return full_gain / c.estimated_dispatch_cost_usd
+        return tier_a_eig
 
     if rank_axis == "eig_per_dollar":
         if continual_posterior is None:

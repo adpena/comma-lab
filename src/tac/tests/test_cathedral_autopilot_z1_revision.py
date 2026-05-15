@@ -39,8 +39,10 @@ def _cand(
     cost_usd: float = 5.0,
     blockers: list[str] | None = None,
     mdl_density: float | None = None,
+    mdl_tier_c_density: float | None = None,
     lane_class: str | None = None,
     literature_anchor: str = "",
+    composition_alpha: float | None = None,
     notes: str = "",
 ) -> loop.CandidateRow:
     return loop.CandidateRow(
@@ -52,8 +54,10 @@ def _cand(
         blockers=list(blockers or []),
         notes=notes,
         mdl_density=mdl_density,
+        mdl_tier_c_density=mdl_tier_c_density,
         lane_class=lane_class,
         literature_anchor=literature_anchor,
+        composition_alpha=composition_alpha,
     )
 
 
@@ -286,6 +290,76 @@ def test_rank_eig_per_dollar_within_class_saturated_penalized() -> None:
     )  # base EIG/$ = 3.0 -> 3.0
     ranked = loop.rank_candidates([saturated, trending, across])
     assert [c.candidate_id for c in ranked] == ["across", "trending", "saturated"]
+
+
+def test_rank_eig_per_dollar_class_shift_reward_promotes_non_nerv() -> None:
+    """Default autopilot ranking must see class-shift rewards, not just the
+    explicit predicted_score_delta axis."""
+    hnerv_local = _cand(
+        "hnerv_local",
+        predicted_delta=-0.010,
+        eig=0.010,
+        cost_usd=1.0,
+        mdl_density=0.50,
+    )
+    c6_substrate = _cand(
+        "c6_mdl_ibps",
+        family="mdl_ibps",
+        predicted_delta=-0.005,
+        eig=0.005,
+        cost_usd=1.0,
+        mdl_density=0.50,
+        lane_class="substrate_class_shift",
+        literature_anchor="MDL-IBPS Information Bottleneck",
+    )
+    ranked = loop.rank_candidates([hnerv_local, c6_substrate])
+    assert [c.candidate_id for c in ranked] == ["c6_mdl_ibps", "hnerv_local"]
+
+
+def test_rank_eig_per_dollar_tier_c_signal_affects_default_axis() -> None:
+    """Tier-C across-class evidence must influence the default EIG/$ queue."""
+    within = _cand(
+        "tier_c_within",
+        predicted_delta=-0.020,
+        eig=0.020,
+        cost_usd=1.0,
+        mdl_tier_c_density=0.85,
+    )
+    across = _cand(
+        "tier_c_across",
+        family="mdl_ibps",
+        predicted_delta=-0.012,
+        eig=0.012,
+        cost_usd=1.0,
+        mdl_tier_c_density=0.13,
+    )
+    ranked = loop.rank_candidates([within, across])
+    assert [c.candidate_id for c in ranked] == ["tier_c_across", "tier_c_within"]
+
+
+def test_rank_eig_per_dollar_composition_alpha_affects_default_axis() -> None:
+    """Composition alpha must down-rank saturating stacks on default EIG/$."""
+    saturating = _cand(
+        "z3_x_c6_saturating",
+        family="substrate_composition",
+        predicted_delta=-0.030,
+        eig=0.030,
+        cost_usd=1.0,
+        composition_alpha=0.20,
+    )
+    additive = _cand(
+        "z3_x_c6_additive",
+        family="substrate_composition",
+        predicted_delta=-0.012,
+        eig=0.012,
+        cost_usd=1.0,
+        composition_alpha=1.00,
+    )
+    ranked = loop.rank_candidates([saturating, additive])
+    assert [c.candidate_id for c in ranked] == [
+        "z3_x_c6_additive",
+        "z3_x_c6_saturating",
+    ]
 
 
 def test_rank_with_z1_revision_does_not_mutate_rows() -> None:
