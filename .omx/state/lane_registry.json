@@ -29519,7 +29519,13 @@
           "evidence": "scripts/remote_lane_substrate_z3_g1_scorer_softmax_hyperprior_gating.sh + scripts/operator_authorize_substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch.sh + heartbeat + claim_lane_dispatch terminal hook"
         }
       },
-      "notes": ""
+      "notes": "FULL CPU paired ABORTED 2026-05-15 per operator-approved recommendation: smoke fc-01KRPKCXARWP7NBGJCXB2P9QEP returned 0.19869 [diagnostic-CPU] EXACTLY matching Z3 v2 baseline because production-safe direct-residual mode ships IDENTICAL Z3HV2 wire bytes regardless of training-time loss. Codex review bkrbqet3p F1 EMPIRICALLY CONFIRMED: G1 archive does not consume hyperprior/class bytes (empty hyperprior_weights_int8 + w_hat_int8 slots). FULL CUDA fc-01KRPMDRH2VNVKFFAYTWD4X0SD already dispatched (sunk cost approx $5-10); when harvested MUST be tagged DIRECT_RESIDUAL_Z3HV2_REPRODUCTION not G1 evidence; do NOT update autopilot ranking on this result; expected score approx 0.23171 [contest-CUDA] matching Z3 v2 paired CUDA. FULL CPU paired NOT FIRED \u2014 would have wasted $0.10-0.50 measuring identical Z3HV2 bytes already anchored at Z3 v2 contest-CPU 0.19778969 per dual-eval discipline. research_only=true until grammar fix lands. REACTIVATION CRITERIA: G1 entropy-coded sigma-table+class-index variant of wire grammar landed (~$5-10 + ~2 days substrate engineering per Z3-G1 sub c5b9f38d2 op-routables). CODEX-FIX-WAVE subagent a038fba in flight will land STRICT preflight gate (catalog # TBD via canonical-claim) that would have caught this BEFORE smoke spend.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "g1_entropy_coded_sigma_table_and_class_index_wire_grammar_landed",
+        "no_op_detector_byte_mutation_smoke_proves_g1_bytes_consumed_by_inflate",
+        "codex_fix_wave_a038fba_strict_preflight_gate_landed"
+      ]
     },
     {
       "id": "lane_z4_v2_wunderkind_e1_tier1_modal_paired_20260515",
@@ -29607,11 +29613,11 @@
       "id": "lane_canonical_dispatch_optimization_protocol_20260515",
       "name": "Canonical dispatch optimization protocol (Tier 1/2/3 umbrella)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/canonical_dispatch_optimization_protocol.py + Catalog #270 STRICT preflight gate (warn-only at landing per Strict-flip atomicity rule); 38 tests in src/tac/tests/test_check_270_dispatch_optimization_protocol_complete.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -29626,16 +29632,57 @@
           "evidence": ""
         },
         "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #270 check_dispatch_optimization_protocol_complete wired warn-only in preflight_all() per Strict-flip atomicity rule"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "premise verification per Catalog #229 (audit empirical anchors verified); META-meta gates #176/#118/#185/#159 all live count = 0 post-landing"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_canonical_dispatch_optimization_protocol_landed_20260515.md"
+        },
+        "deploy_runbook": {
           "status": false,
           "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_fix_wave_bkrbqet3p_4_findings_20260515",
+      "name": "Codex bkrbqet3p 4-finding fix wave",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "[empirical:G1 trainer + 4 STRICT preflight gates landed; Catalog #266 #267 STRICT@0; Catalog #268 #269 WARN-ONLY pending sister Phase 2]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "[empirical:src/tac/preflight.py Catalog #266 #267 STRICT @ 0; #268 #269 WARN-ONLY pending sister Phase 2]"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -29652,5 +29699,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T20:16:14Z"
+  "updated_at": "2026-05-15T20:31:10Z"
 }
