@@ -110,7 +110,6 @@ from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
 
-
 __all__ = [
     "GTScorerCache",
     "GTScorerCacheError",
@@ -137,11 +136,12 @@ class GTScorerCache:
     changes); the hot-loop reads it via :meth:`lookup`.
 
     Attributes:
-        gt_pose: CPU tensor shape ``(N, 2, 12)`` storing PoseNet 12-dim
-            pose output for each of the N pairs across both timesteps.
-            (PoseNet output uses first 6 dims for the contest pose
-            distance; the full 12-dim is cached so future Hinton-T20-style
-            distillation losses can share the same cache.)
+        gt_pose: CPU tensor shaped like the PoseNet output for each target
+            pair. Public contest PoseNet emits ``(N, 12)`` in current
+            trainer paths; some tests and experimental scorers emit
+            ``(N, 2, 12)``. Both are accepted because downstream score
+            helpers consume ``[..., :6]`` exactly as the direct scorer path
+            would.
         gt_seg: CPU tensor shape ``(N, K, H, W)`` where K is the SegNet
             class count (5 in the contest) storing either softmax probs
             or raw logits depending on :attr:`seg_already_probs`.
@@ -170,9 +170,10 @@ class GTScorerCache:
     _seg_bytes: int = field(init=False)
 
     def __post_init__(self) -> None:
-        if self.gt_pose.dim() != 3:
+        if self.gt_pose.dim() not in (2, 3):
             raise GTScorerCacheError(
-                "gt_pose must be 3D (N, 2, 12); got shape "
+                "gt_pose must be 2D or 3D PoseNet output (N, 12) or "
+                "(N, 2, 12); got shape "
                 f"{tuple(self.gt_pose.shape)}"
             )
         if self.gt_seg.dim() != 4:
@@ -256,7 +257,7 @@ class GTScorerCache:
             raise GTScorerCacheError(
                 f"lookup idx must be 1-D; got {idx.dim()}-D"
             )
-        if not (idx.dtype in (torch.long, torch.int32, torch.int64)):
+        if idx.dtype not in (torch.long, torch.int32, torch.int64):
             raise GTScorerCacheError(
                 f"lookup idx must be integer dtype; got {idx.dtype}"
             )

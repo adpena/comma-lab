@@ -42,7 +42,6 @@ from tac.training_optimization.scorer_cache import (
     build_gt_scorer_cache,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fake scorers for fast deterministic testing
 # ---------------------------------------------------------------------------
@@ -148,10 +147,24 @@ def test_gtscorercache_accepts_canonical_shapes() -> None:
     assert cache.gt_pose.shape == (4, 2, 12)
 
 
+def test_gtscorercache_accepts_flat_posenet_output_shape() -> None:
+    cache = GTScorerCache(
+        gt_pose=torch.zeros((4, 12)),
+        gt_seg=torch.zeros((4, 5, 8, 8)),
+        seg_already_probs=True,
+        segmentation_temperature=1.0,
+        is_pinned=False,
+    )
+    pose, seg = cache.lookup(torch.tensor([0, 3]), device=torch.device("cpu"))
+    assert cache.n_pairs == 4
+    assert pose.shape == (2, 12)
+    assert seg.shape == (2, 5, 8, 8)
+
+
 def test_gtscorercache_refuses_wrong_pose_dim() -> None:
-    with pytest.raises(GTScorerCacheError, match="3D"):
+    with pytest.raises(GTScorerCacheError, match="2D or 3D"):
         GTScorerCache(
-            gt_pose=torch.zeros((4, 12)),  # 2-D, not 3-D
+            gt_pose=torch.zeros((4, 12, 1, 1)),  # 4-D, not a PoseNet output
             gt_seg=torch.zeros((4, 5, 8, 8)),
             seg_already_probs=True,
             segmentation_temperature=1.0,
