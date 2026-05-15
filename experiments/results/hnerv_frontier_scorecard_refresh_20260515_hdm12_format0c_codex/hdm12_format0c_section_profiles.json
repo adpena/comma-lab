@@ -1,0 +1,40 @@
+[
+  {
+    "archive": "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip",
+    "archive_bytes": 186327,
+    "archive_sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+    "evidence_grade": "forensic_byte_profile",
+    "kind": "pr101_microcodec",
+    "member_bytes": 186227,
+    "member_name": "x",
+    "member_sha256": "852a4cb1231413cf1a8fc867e2a808de9ec78511d2ebf283df2c5b608cb4a749",
+    "score_claim": false,
+    "sections": [
+      {
+        "bytes": 162164,
+        "end": 162164,
+        "entropy_bits_per_byte": 7.998487,
+        "name": "decoder_compact_brotli_streams",
+        "sha256": "a8ab9ecf94875aab77074fc49dbfb3a4f2f3f86db1d6f044be05a733a8432edb",
+        "start": 0
+      },
+      {
+        "bytes": 15387,
+        "end": 177551,
+        "entropy_bits_per_byte": 7.985609,
+        "name": "latents_raw_lzma_delta_u8",
+        "sha256": "ecfed6148ab95b073c01b38fa142896c77c6ca94ee509a1cd7548b2ce95e96e6",
+        "start": 162164
+      },
+      {
+        "bytes": 8676,
+        "end": 186227,
+        "entropy_bits_per_byte": 7.977717,
+        "name": "sidecar_dim_delta_huffman_enum",
+        "sha256": "df4ca76c52aab3163fcb9c8ac1eea8a5c0bb27f39fe8b7015b1ae3670dae912a",
+        "start": 177551
+      }
+    ],
+    "zip_overhead_bytes": 100
+  }
+]

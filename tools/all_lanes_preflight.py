@@ -232,11 +232,11 @@ LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER = TOOLS / "dispatch_phase_a1_score_gradie
 PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2"
 PR106_R2_ARCHIVE_SHA256 = "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
-PR106_R2_RUNTIME_SOURCE_TREE_SHA256 = "f12c3a81a5a52c39d48d7528f1fab926acccab0ce1b86450978c6ae6e4bab357"
+PR106_R2_RUNTIME_SOURCE_TREE_SHA256 = "966e3446c7ad646306ef854fe4e88dea165802caf97de3743e763799fe305511"
 PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "94078eb83f0629fdeb94d39be9292633ad0014a1236729ba66eb96901610b1b5"
+PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "5506c0f62b5d58a1a3f873ed4c2d104e2b714be957dcd55af05131e50f01fbe3"
 PR106_FORMAT0C_XMEMBER_ARCHIVE = (
     REPO
     / "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex"
@@ -373,6 +373,13 @@ HNERV_SCORECARD_REQUIRED_EVALS = (
         REPO
         / "experiments/results/modal_auth_eval/"
         / "pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z/"
+        / "contest_auth_eval.json",
+    ),
+    (
+        "PR106-R2-HDM12-HLM3-MAGICLESS-FMT0C",
+        REPO
+        / "experiments/results/modal_auth_eval/"
+        / "pr106_format0c_exact_radix_paired_20260515T0918Z_cuda/"
         / "contest_auth_eval.json",
     ),
 )

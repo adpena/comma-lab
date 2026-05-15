@@ -450,6 +450,8 @@ def test_recode_profile_tool_emits_runtime_candidate_archives(tmp_path: Path) ->
     assert all(row["score_claim"] is False for row in emitted)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in emitted)
     assert "no_candidate_archive_emitted" not in report["dispatch_blockers"]
+    assert report["best_runtime_decoder_implemented_candidate"] is not None
+    assert report["best_runtime_consumed_candidate"] is None
     assert "exact_cuda_result_review_already_exists_for_candidate" in report[
         "dispatch_blockers"
     ]
@@ -505,6 +507,11 @@ def test_recode_profile_links_matching_runtime_and_parity_proofs(tmp_path: Path)
     assert report["linked_proof_inputs"]["runtime_consumption_proofs"] == [
         str(PR106_R2_PR101_RUNTIME_PROOF)
     ]
+    assert report["best_runtime_consumed_candidate"] is not None
+    assert (
+        report["best_runtime_consumed_candidate"]["name"]
+        == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
 
     row = next(
         item

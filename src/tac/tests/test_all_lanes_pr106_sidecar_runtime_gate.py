@@ -261,7 +261,7 @@ def test_hnerv_scorecard_gate_fails_closed_on_missing_required_eval(monkeypatch,
     assert "MISSING-HLM2" in output
 
 
-def test_hnerv_scorecard_required_evals_include_hdm11_score_lowering_frontier() -> None:
+def test_hnerv_scorecard_required_evals_include_hdm12_score_lowering_frontier() -> None:
     module = _load_all_lanes_module()
     required = dict(module.HNERV_SCORECARD_REQUIRED_EVALS)
 
@@ -279,6 +279,11 @@ def test_hnerv_scorecard_required_evals_include_hdm11_score_lowering_frontier() 
     assert (
         "pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z"
         in required["PR106-R2-HDM11-HLM3-MAGICLESS-FMT0B"].as_posix()
+    )
+    assert "PR106-R2-HDM12-HLM3-MAGICLESS-FMT0C" in required
+    assert (
+        "pr106_format0c_exact_radix_paired_20260515T0918Z_cuda"
+        in required["PR106-R2-HDM12-HLM3-MAGICLESS-FMT0C"].as_posix()
     )
 
 

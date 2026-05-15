@@ -588,8 +588,16 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     runtime_rows = [
         row for row in applicable_rows if row["runtime_decoder_implemented"]
     ]
+    runtime_consumed_rows = [
+        row for row in applicable_rows if row.get("runtime_consumption_claim") is True
+    ]
     best = min(applicable_rows, key=_candidate_rank, default=None)
     best_runtime = min(runtime_rows, key=_candidate_rank, default=None)
+    best_runtime_consumed = min(
+        runtime_consumed_rows,
+        key=_candidate_rank,
+        default=None,
+    )
     any_decoder_missing_for_lossless_candidate = any(
         row["applicable"] and not row["runtime_decoder_implemented"] for row in rows
     )
@@ -635,8 +643,8 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_rows": rows,
         "best_lossless_candidate": best,
         "best_runtime_decoder_implemented_candidate": best_runtime,
-        "best_runtime_consumed_candidate": best_runtime,
-        "best_runtime_consumed_candidate_legacy_name": True,
+        "best_runtime_consumed_candidate": best_runtime_consumed,
+        "best_runtime_consumed_candidate_legacy_name": False,
         "emitted_runtime_candidate_manifests": emitted_candidate_manifests,
         "linked_proof_inputs": {
             "runtime_consumption_proofs": [str(path) for path in args.runtime_consumption_proof or []],

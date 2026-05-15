@@ -1,0 +1,35 @@
+{
+  "candidate_count": 113,
+  "delta_radius": 2,
+  "dispatch_blockers": [
+    "dry_run_plan_only",
+    "requires_active_lane_claim_for_cuda_scoring",
+    "requires_real_cuda_score_table",
+    "requires_archive_build_from_table",
+    "requires_exact_cuda_auth_eval_on_built_archive"
+  ],
+  "dry_run_plan": true,
+  "expected_score_table_shape": [
+    600,
+    113
+  ],
+  "latent_dim": 28,
+  "manifest_schema": "pr106_latent_score_table_plan_v1",
+  "max_pairs": null,
+  "n_pairs": 600,
+  "objective": "100*seg_dist + sqrt(10*pose_dist), without rate constant",
+  "pair_marginal_semantics": "one latent perturbation scored against the official two-frame pair",
+  "producer": "experiments/build_pr106_latent_score_table.py",
+  "ready_for_builder": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requested_archive_member": "x",
+  "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+  "score_claim": false,
+  "sidecar_format_id": "0x0C",
+  "source_archive_member_bytes": 186227,
+  "source_archive_member_name": "x",
+  "source_archive_member_sha256": "852a4cb1231413cf1a8fc867e2a808de9ec78511d2ebf283df2c5b608cb4a749",
+  "source_archive_path": "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip",
+  "source_archive_sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+  "source_payload_kind": "pr106_sidecar_packet"
+}
