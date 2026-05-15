@@ -31,19 +31,17 @@ canonical refusal banners are written to stderr-equivalent ``print(...)``
 so the operator sees the contract enforced loud-and-clear inside the
 training log.
 
-Per CLAUDE.md "Forbidden score claims" non-negotiable: the helper REFUSES
-non-CUDA device (the ``device.type != "cuda"`` branch) because
-``contest_auth_eval.py`` is the only authoritative score-claim path and
-its CUDA axis is the canonical ``[contest-CUDA]`` anchor. Local-CPU
-attempts here are caught by Catalog #127 (`evidence_grade` validator)
-later in the lifecycle, but refusing at the call-site is cheaper.
+Per CLAUDE.md "Forbidden score claims" non-negotiable: implicit local CPU
+coercion is still refused, but the training device and auth-eval device are
+separate. Modal can train on CUDA while explicitly running auth eval on CPU
+to avoid NVDEC/DALI. A Linux x86_64 CPU auth-eval run may be valid
+``[contest-CPU]`` evidence, but it must never flow through CUDA claim fields.
 
 Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable:
-the gate scopes the CUDA path only. Linux-x86_64 CPU auth eval against
-a shippable archive is a SEPARATE workflow (operator-routed; runs on
-provider hardware, not local). The helper deliberately keeps the
-``device.type != "cuda"`` branch as a refusal so substrate trainers do
-not silently coerce local CPU runs into ``[contest-CPU]`` claims.
+the helper runs explicit ``auth_eval_device=cpu`` / ``AUTH_EVAL_DEVICE=cpu``
+requests and preserves their JSON custody on the payload's own score axis.
+Legacy CUDA-claim callers receive ``None`` for non-CUDA results by default;
+new CPU-aware callers can opt in with ``return_non_cuda_result=True``.
 
 Returns the canonical claim dict on success::
 
@@ -66,14 +64,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 __all__ = [
-    "AuthEvalGateRefusal",
     "AuthEvalGateError",
+    "AuthEvalGateRefusal",
     "format_smoke_skip_banner",
     "gate_auth_eval_call",
 ]
@@ -108,6 +107,12 @@ CPU_REFUSAL_REASON = (
     "device.type=='cuda'. Linux x86_64 CPU auth eval is a separate "
     "operator-routed workflow per CLAUDE.md `Submission auth eval` "
     "non-negotiable; refusing inline CPU coercion."
+)
+EXPLICIT_NON_CUDA_AUTH_EVAL_RESULT_REASON = (
+    "auth_eval_device is explicit and non-CUDA; contest_auth_eval result "
+    "was produced on its own score_axis and must not be consumed as a "
+    "contest-CUDA claim. Legacy CUDA-claim callers receive None unless "
+    "return_non_cuda_result=True."
 )
 SKIP_FLAG_REASON = (
     "--skip-auth-eval set; caller explicitly disabled the auth eval path"
@@ -179,6 +184,16 @@ def _detect_device_type(device: Any) -> str:
     return text or "cpu"
 
 
+def _explicit_auth_eval_device(auth_eval_device: str | None) -> str | None:
+    """Return the explicit auth-eval device, preferring arg over environment."""
+
+    if auth_eval_device is not None:
+        text = str(auth_eval_device).strip()
+        return text or None
+    text = os.environ.get("AUTH_EVAL_DEVICE", "").strip()
+    return text or None
+
+
 def gate_auth_eval_call(
     *,
     args: argparse.Namespace,
@@ -192,6 +207,8 @@ def gate_auth_eval_call(
     full_cpu_active: bool = False,
     required_score_axis: str = "contest_cuda",
     require_component_recompute: bool = True,
+    auth_eval_device: str | None = None,
+    return_non_cuda_result: bool = False,
     extra_argv: tuple[str, ...] | None = None,
 ) -> dict[str, object] | None:
     """Canonical gate: skip ``contest_auth_eval`` at smoke; run at full.
@@ -219,6 +236,13 @@ def gate_auth_eval_call(
         require_component_recompute: Forwarded to
             ``parse_auth_eval_score_claim``; default True matches
             ``[contest-CUDA]`` custody requirements.
+        auth_eval_device: Optional explicit auth-eval device. When omitted,
+            ``AUTH_EVAL_DEVICE`` is honored; when neither is set, the trainer
+            ``device`` is used for backward-compatible implicit CUDA gating.
+        return_non_cuda_result: When False, explicit CPU auth eval still runs
+            and writes ``output_json`` but returns ``None`` so legacy callers
+            that treat non-None as a CUDA claim cannot accidentally consume a
+            CPU score. CPU-aware callers may opt in to the structured result.
         extra_argv: Optional extra positional args appended to the
             ``contest_auth_eval.py`` invocation (per-substrate flags).
 
@@ -237,7 +261,13 @@ def gate_auth_eval_call(
 
     smoke = bool(getattr(args, "smoke", False))
     skip_auth_eval = bool(getattr(args, "skip_auth_eval", False))
-    device_type = _detect_device_type(device)
+    training_device_type = _detect_device_type(device)
+    explicit_eval_device = _explicit_auth_eval_device(auth_eval_device)
+    auth_eval_device_type = (
+        _detect_device_type(explicit_eval_device)
+        if explicit_eval_device is not None
+        else training_device_type
+    )
 
     # 1. Smoke ALWAYS skips (defense-in-depth even if --skip-auth-eval not set).
     if smoke:
@@ -265,17 +295,34 @@ def gate_auth_eval_call(
         _record_refusal(args, SKIP_FLAG_REASON)
         return None
 
-    # 4. Non-CUDA device: refuse the CUDA-axis path.
-    if device_type != "cuda":
+    # 4. Non-CUDA training device: refuse implicit local/advisory coercion.
+    # Explicit AUTH_EVAL_DEVICE=cpu is handled below as a real auth-eval run
+    # with its own score axis. This keeps CPU/GPU differences measurable
+    # without letting CPU evidence masquerade as CUDA evidence.
+    if explicit_eval_device is None and training_device_type != "cuda":
         print(
-            f"[{substrate_tag}] auth eval SKIPPED (device.type={device_type!r}; "
+            f"[{substrate_tag}] auth eval SKIPPED "
+            f"(device.type={training_device_type!r}; "
             "contest CUDA axis requires device.type='cuda').",
             flush=True,
         )
         _record_refusal(args, CPU_REFUSAL_REASON)
         return None
 
-    # 5. Run the canonical contest_auth_eval.py invocation.
+    # 5. Explicit auth-eval devices may be CPU or CUDA. MPS and other devices
+    # remain refused here because they are proxy axes, not contest auth-eval
+    # axes, and several provider paths cannot run them deterministically.
+    if auth_eval_device_type not in {"cpu", "cuda"}:
+        print(
+            f"[{substrate_tag}] auth eval SKIPPED "
+            f"(auth_eval_device={auth_eval_device_type!r}; only cpu/cuda "
+            "are canonical auth-eval devices).",
+            flush=True,
+        )
+        _record_refusal(args, CPU_REFUSAL_REASON)
+        return None
+
+    # 6. Run the canonical contest_auth_eval.py invocation.
     cmd = [
         sys.executable,
         str(contest_auth_eval_script),
@@ -286,7 +333,7 @@ def gate_auth_eval_call(
         "--upstream-dir",
         str(upstream_dir),
         "--device",
-        "cuda",
+        auth_eval_device_type,
         "--json-out",
         str(output_json),
     ]
@@ -301,10 +348,52 @@ def gate_auth_eval_call(
             f"stderr_tail={proc.stderr[-2000:]}"
         )
 
-    # 6. Parse + validate the score claim via the canonical parser.
-    from tac.auth_eval_result import parse_auth_eval_score_claim
+    # 7. Parse + validate the result. CUDA goes through the strict claim
+    # parser; CPU keeps its own axis and defaults to a None return for legacy
+    # callers that only understand CUDA claim dicts.
+    from tac.auth_eval_result import parse_auth_eval_score_claim, parse_finite_auth_eval_score
 
     payload = json.loads(output_json.read_text(encoding="utf-8"))
+    if auth_eval_device_type != "cuda":
+        parsed = parse_finite_auth_eval_score(
+            payload,
+            require_component_recompute=require_component_recompute,
+        )
+        if parsed is None:
+            raise AuthEvalGateError(
+                f"[{substrate_tag}] contest_auth_eval.py completed on "
+                f"{auth_eval_device_type} but did not produce a finite, "
+                "component-coherent score payload"
+            )
+        result = {
+            "auth_eval_json_path": str(output_json),
+            "auth_eval_score": float(parsed.score),
+            "auth_eval_cpu_score": (
+                float(parsed.score) if auth_eval_device_type == "cpu" else None
+            ),
+            "auth_eval_device": auth_eval_device_type,
+            "auth_eval_score_axis": str(
+                payload.get("score_axis") or f"diagnostic_{auth_eval_device_type}"
+            ),
+            "auth_eval_lane_tag": str(payload.get("lane_tag") or ""),
+            "auth_eval_evidence_grade": str(payload.get("evidence_grade") or ""),
+            "auth_eval_score_claim": payload.get("score_claim") is True,
+            "auth_eval_score_claim_valid": (
+                payload.get("score_claim_valid") is True
+            ),
+            "auth_eval_promotion_eligible": (
+                payload.get("promotion_eligible") is True
+            ),
+            "auth_eval_exact_cuda_complete": (
+                payload.get("exact_cuda_eval_complete") is True
+            ),
+            "auth_eval_cpu_leaderboard_reproduction_eligible": (
+                payload.get("cpu_leaderboard_reproduction_eligible") is True
+            ),
+        }
+        _record_refusal(args, EXPLICIT_NON_CUDA_AUTH_EVAL_RESULT_REASON)
+        return result if return_non_cuda_result else None
+
     claim = parse_auth_eval_score_claim(
         payload,
         required_score_axis=required_score_axis,

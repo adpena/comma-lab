@@ -22,16 +22,24 @@ from unittest import mock
 import pytest
 
 from tac.substrates._shared.smoke_auth_eval_gate import (
-    AuthEvalGateError,
-    AuthEvalGateRefusal,
     CPU_REFUSAL_REASON,
+    EXPLICIT_NON_CUDA_AUTH_EVAL_RESULT_REASON,
     FULL_CPU_REFUSAL_REASON,
     SKIP_FLAG_REASON,
     SMOKE_REFUSAL_REASON,
+    AuthEvalGateError,
+    AuthEvalGateRefusal,
     _detect_device_type,
     format_smoke_skip_banner,
     gate_auth_eval_call,
 )
+
+
+@pytest.fixture(autouse=True)
+def _clear_auth_eval_device_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests should not inherit provider wrapper auth-eval device settings."""
+
+    monkeypatch.delenv("AUTH_EVAL_DEVICE", raising=False)
 
 
 def _make_args(**kwargs) -> argparse.Namespace:
@@ -60,6 +68,27 @@ class _FakeClaim:
     def __init__(self, score: float, lane_tag: str = "[contest-CUDA]") -> None:
         self.score = score
         self.lane_tag = lane_tag
+
+
+def _coherent_score_payload(*, score_axis: str = "contest_cpu") -> dict[str, object]:
+    seg = 0.001
+    pose = 0.001
+    archive_bytes = 1000
+    score = 100.0 * seg + (10.0 * pose) ** 0.5 + 25.0 * archive_bytes / 37_545_489.0
+    return {
+        "canonical_score": score,
+        "avg_segnet_dist": seg,
+        "avg_posenet_dist": pose,
+        "archive_bytes": archive_bytes,
+        "score_axis": score_axis,
+        "lane_tag": "[contest-CPU]",
+        "evidence_grade": "contest-CPU",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "exact_cuda_eval_complete": False,
+        "cpu_leaderboard_reproduction_eligible": True,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -195,6 +224,60 @@ def test_gate_mps_device_refuses(tmp_path: Path) -> None:
     assert "device_type=cpu" in args.auth_eval_skipped_reason or "device_type" in args.auth_eval_skipped_reason
 
 
+def test_gate_explicit_env_cpu_runs_cpu_auth_eval_without_cuda_claim_return(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Modal can train on CUDA while explicitly running CPU auth eval."""
+
+    monkeypatch.setenv("AUTH_EVAL_DEVICE", "cpu")
+    args = _make_args(smoke=False, skip_auth_eval=False)
+    out_json = tmp_path / "auth_eval_cpu.json"
+    out_json.write_text(json.dumps(_coherent_score_payload()), encoding="utf-8")
+    fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+
+    with mock.patch.object(subprocess, "run", return_value=fake_proc) as run_mock:
+        out = gate_auth_eval_call(
+            args=args,
+            device="cuda",
+            **_gate_kwargs(tmp_path, output_json=out_json),
+        )
+
+    assert out is None
+    assert run_mock.call_count == 1
+    cmd = run_mock.call_args.args[0]
+    assert cmd[cmd.index("--device") + 1] == "cpu"
+    assert args.auth_eval_skipped_reason == EXPLICIT_NON_CUDA_AUTH_EVAL_RESULT_REASON
+
+
+def test_gate_explicit_env_cpu_can_return_axis_preserving_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CPU-aware callers can consume CPU auth eval without CUDA field aliases."""
+
+    monkeypatch.setenv("AUTH_EVAL_DEVICE", "cpu")
+    args = _make_args(smoke=False, skip_auth_eval=False)
+    out_json = tmp_path / "auth_eval_cpu.json"
+    out_json.write_text(json.dumps(_coherent_score_payload()), encoding="utf-8")
+    fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+
+    with mock.patch.object(subprocess, "run", return_value=fake_proc):
+        out = gate_auth_eval_call(
+            args=args,
+            device="cuda",
+            return_non_cuda_result=True,
+            **_gate_kwargs(tmp_path, output_json=out_json),
+        )
+
+    assert out is not None
+    assert out["auth_eval_device"] == "cpu"
+    assert out["auth_eval_score_axis"] == "contest_cpu"
+    assert out["auth_eval_cpu_score"] == pytest.approx(out["auth_eval_score"])
+    assert "auth_eval_cuda_score" not in out
+    assert out["auth_eval_cpu_leaderboard_reproduction_eligible"] is True
+
+
 # ---------------------------------------------------------------------------
 # Full / CUDA success path
 # ---------------------------------------------------------------------------
@@ -226,9 +309,10 @@ def test_gate_full_cuda_runs_subprocess(tmp_path: Path) -> None:
 def test_gate_full_cuda_proc_nonzero_raises(tmp_path: Path) -> None:
     args = _make_args()
     fake_proc = subprocess.CompletedProcess(args=[], returncode=2, stdout="x", stderr="y")
-    with mock.patch.object(subprocess, "run", return_value=fake_proc):
-        with pytest.raises(RuntimeError, match="contest_auth_eval.py failed"):
-            gate_auth_eval_call(args=args, device="cuda", **_gate_kwargs(tmp_path))
+    with mock.patch.object(
+        subprocess, "run", return_value=fake_proc
+    ), pytest.raises(RuntimeError, match=r"contest_auth_eval\.py failed"):
+        gate_auth_eval_call(args=args, device="cuda", **_gate_kwargs(tmp_path))
 
 
 def test_gate_full_cuda_invalid_claim_raises(tmp_path: Path) -> None:
@@ -238,13 +322,12 @@ def test_gate_full_cuda_invalid_claim_raises(tmp_path: Path) -> None:
     fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
     with mock.patch.object(subprocess, "run", return_value=fake_proc), mock.patch(
         "tac.auth_eval_result.parse_auth_eval_score_claim", return_value=None
-    ):
-        with pytest.raises(AuthEvalGateError, match="did not produce a valid"):
-            gate_auth_eval_call(
-                args=args,
-                device="cuda",
-                **_gate_kwargs(tmp_path, output_json=out_json),
-            )
+    ), pytest.raises(AuthEvalGateError, match="did not produce a valid"):
+        gate_auth_eval_call(
+            args=args,
+            device="cuda",
+            **_gate_kwargs(tmp_path, output_json=out_json),
+        )
 
 
 # ---------------------------------------------------------------------------
