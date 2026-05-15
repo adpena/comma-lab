@@ -69,6 +69,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Build a per-pair selector config from proxy JSON pair component arrays.",
     )
     parser.add_argument(
+        "--selector-config-json",
+        type=Path,
+        help=(
+            "Build a per-pair selector packet from an explicit selector config JSON. "
+            "The config must carry mode='selector', palette, selector_indices, and "
+            "score_claim=false."
+        ),
+    )
+    parser.add_argument(
         "--pack-selector-into-archive",
         action="store_true",
         help="Store selector config inside the archive payload so selector bytes are charged.",
@@ -261,6 +270,59 @@ def _selector_from_proxy_json(proxy_json: Path) -> tuple[dict[str, Any], dict[st
         "positive": selector_score < baseline_score,
         "compliance_risk": "selector_indices_are_video_side_information_until_packed_into_archive",
     }
+    config["proxy"] = proxy
+    return config, proxy
+
+
+def _selector_from_config_json(selector_config_json: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    config = read_json(selector_config_json)
+    if not isinstance(config, dict):
+        raise ValueError(f"{selector_config_json} must contain a JSON object")
+    if config.get("schema") != CONFIG_SCHEMA:
+        raise ValueError(
+            f"{selector_config_json} has schema {config.get('schema')!r}, "
+            f"expected {CONFIG_SCHEMA!r}"
+        )
+    if config.get("mode") != "selector":
+        raise ValueError(f"{selector_config_json} must carry mode='selector'")
+    if config.get("score_claim") is not False:
+        raise ValueError(f"{selector_config_json} must carry score_claim=false")
+    palette = config.get("palette")
+    selector_indices = config.get("selector_indices")
+    if not isinstance(palette, list) or not palette or not all(
+        isinstance(item, str) and item for item in palette
+    ):
+        raise ValueError(f"{selector_config_json} must carry a non-empty string palette")
+    if not isinstance(selector_indices, list) or len(selector_indices) != EXPECTED_SELECTOR_PAIRS:
+        raise ValueError(
+            f"{selector_config_json} must carry exactly {EXPECTED_SELECTOR_PAIRS} selector indices"
+        )
+    for index in selector_indices:
+        if not isinstance(index, int) or index < 0 or index >= len(palette):
+            raise ValueError(
+                f"{selector_config_json} selector index {index!r} is outside palette size "
+                f"{len(palette)}"
+            )
+    proxy = config.get("proxy")
+    if not isinstance(proxy, dict):
+        proxy = {
+            "present": True,
+            "path": repo_relative(selector_config_json, REPO_ROOT),
+            "axis": config.get("evidence_axis", "selector-config-json"),
+            "n_pairs": len(selector_indices),
+            "mode": "selector",
+            "positive": False,
+            "blocker": "selector_config_proxy_summary_missing",
+        }
+    else:
+        proxy = dict(proxy)
+        proxy.setdefault("present", True)
+        proxy.setdefault("path", repo_relative(selector_config_json, REPO_ROOT))
+        proxy.setdefault("mode", "selector")
+        proxy.setdefault("n_pairs", len(selector_indices))
+    config = dict(config)
+    config["palette"] = list(palette)
+    config["selector_indices"] = list(selector_indices)
     config["proxy"] = proxy
     return config, proxy
 
@@ -458,8 +520,9 @@ def _packet_build_command_template(
     runtime_template: Path,
     output_dir: Path,
     mode: str,
-    proxy_json: Path | None,
+    proxy_json: Path | None = None,
     selector_from_proxy_json: bool,
+    selector_config_json: Path | None,
     pack_selector_into_archive: bool,
     selector_codec: str,
     require_positive_proxy: bool,
@@ -488,6 +551,8 @@ def _packet_build_command_template(
         command.extend(["--proxy-json", repo_relative(proxy_json, REPO_ROOT)])
     if selector_from_proxy_json:
         command.append("--selector-from-proxy-json")
+    if selector_config_json is not None:
+        command.extend(["--selector-config-json", repo_relative(selector_config_json, REPO_ROOT)])
     if pack_selector_into_archive:
         command.append("--pack-selector-into-archive")
     if require_positive_proxy:
@@ -520,8 +585,9 @@ def build_packet(
     runtime_template: Path,
     output_dir: Path,
     mode: str,
-    proxy_json: Path | None,
+    proxy_json: Path | None = None,
     selector_from_proxy_json: bool = False,
+    selector_config_json: Path | None = None,
     pack_selector_into_archive: bool = False,
     selector_codec: str = "brotli",
     require_positive_proxy: bool = False,
@@ -536,6 +602,9 @@ def build_packet(
     runtime_template = runtime_template.resolve()
     output_dir = output_dir.resolve()
     proxy_json = proxy_json.resolve() if proxy_json is not None else None
+    selector_config_json = (
+        selector_config_json.resolve() if selector_config_json is not None else None
+    )
     cuda_component_reference_json = cuda_component_reference_json.resolve()
     candidate_exact_cuda_json = (
         candidate_exact_cuda_json.resolve() if candidate_exact_cuda_json is not None else None
@@ -546,7 +615,12 @@ def build_packet(
         raise FileNotFoundError(f"runtime template not found: {runtime_template}")
 
     selector_config: dict[str, Any] | None = None
-    if selector_from_proxy_json:
+    if selector_from_proxy_json and selector_config_json is not None:
+        raise SystemExit("--selector-from-proxy-json and --selector-config-json are mutually exclusive")
+    if selector_config_json is not None:
+        selector_config, proxy = _selector_from_config_json(selector_config_json)
+        mode = "selector"
+    elif selector_from_proxy_json:
         if proxy_json is None:
             raise SystemExit("--selector-from-proxy-json requires --proxy-json")
         selector_config, proxy = _selector_from_proxy_json(proxy_json)
@@ -719,6 +793,7 @@ def build_packet(
         mode=mode,
         proxy_json=proxy_json,
         selector_from_proxy_json=selector_from_proxy_json,
+        selector_config_json=selector_config_json,
         pack_selector_into_archive=pack_selector_into_archive,
         selector_codec=selector_codec,
         require_positive_proxy=require_positive_proxy,
@@ -737,6 +812,7 @@ def build_packet(
             runtime_template / "inflate.sh",
             archive,
             *([proxy_json] if proxy_json is not None else []),
+            *([selector_config_json] if selector_config_json is not None else []),
         ],
         artifact_paths=[
             archive_out,
@@ -863,6 +939,7 @@ def main(argv: list[str] | None = None) -> int:
         mode=args.mode,
         proxy_json=args.proxy_json,
         selector_from_proxy_json=args.selector_from_proxy_json,
+        selector_config_json=args.selector_config_json,
         pack_selector_into_archive=args.pack_selector_into_archive,
         selector_codec=args.selector_codec,
         require_positive_proxy=args.require_positive_proxy,

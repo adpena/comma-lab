@@ -1,0 +1,111 @@
+{
+  "baseline_score": 0.20636166502462222,
+  "canonical_score": 0.2064796628814009,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "custody": {
+    "archive_bytes": 186518,
+    "archive_sha256": "98fd0bd779404970f11ca616b5c98dcb3ec41f74fb0a4ffe6d4ce613684d1223",
+    "command": [
+      "/workspace/pact/experiments/contest_auth_eval.py",
+      "--archive",
+      "/tmp/modal_auth_eval/archive.zip",
+      "--inflate-sh",
+      "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+      "--upstream-dir",
+      "/workspace/pact/upstream",
+      "--video-names-file",
+      "/workspace/pact/upstream/public_test_video_names.txt",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/root/modal_auth_eval_work/eval_work",
+      "--inflate-timeout",
+      "1800",
+      "--evaluate-timeout",
+      "1800",
+      "--inflate-device",
+      "auto",
+      "--expected-runtime-tree-sha256",
+      "b15b4c9aacd9e94471ca7fbc28fbd26c7eb37a3abdc03ee0ce5e2c084345a5fa"
+    ],
+    "device": "cuda",
+    "gpu_model": "Tesla T4",
+    "inflate_script": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:hdm8_cuda_selector_probe",
+      "instance_job_id": "modal_hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z",
+      "lane_id": "lane_hdm8_cuda_selector_sparse_top001_20260515",
+      "notes": "Modal auth eval recovered; passed=True; result_json=/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z/modal_cuda_auth_eval_result.json; archive_sha=98fd0bd779404970f11ca616b5c98dcb3ec41f74fb0a4ffe6d4ce613684d1223; archive_bytes=186518; score_recomputed=0.2064796628814009; axis=cuda; hardware_substrate=linux_x86_64_t4; posterior_update=refused; posterior_n=67; posterior_reason=duplicate archive_sha256 '98fd0bd779404970f11ca616b5c98dcb3ec41f74fb0a4ffe6d4ce613684d1223' on axis 'cuda'; refused for idempotence",
+      "platform": "modal",
+      "predicted_eta_utc": "2026-05-15T03:10:23Z",
+      "status": "completed_contest_cuda_modal_auth_eval_recovered",
+      "timestamp_utc": "2026-05-15T03:10:23Z"
+    },
+    "latest_status": "completed_contest_cuda_modal_auth_eval_recovered",
+    "matching_claim_count": 4,
+    "terminal_status_recorded": true
+  },
+  "exact_cpu_evidence": false,
+  "exact_cuda_evidence": true,
+  "failure_class": "legitimate_score_regression_or_component_collapse",
+  "family_falsified": false,
+  "job_id": "modal_hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z",
+  "lane_id": "lane_hdm8_cuda_selector_sparse_top001_20260515",
+  "measured_config_status": "measured_config_retired",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "Use sparse selector probes to calibrate exact CUDA transfer; promote broader top-k selector only if an exact-CUDA sparse probe improves or is PoseNet-safe after charged bytes."
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex",
+  "runtime_custody": {
+    "external_dependency_roots": [],
+    "inflate_script_sha256": "e33bcaa52c23db210a92d47a4e960477b6a2743f08610e12a9e1e3d7174d9fc5",
+    "inflated_output_aggregate_sha256": "6885a46fa659814bcab7b5b46b98b77432923fc3dbf17949ecb0bf205952e2b9",
+    "inflated_output_manifest_sha256": "2923894261831481ae8064076d9ec372efd6078752ca2bb1162f3c8d51253e6d",
+    "payload_closure_fields_present": true,
+    "runtime_content_tree_sha256": "e425c09ab5fbcc4b42742a51441a34c5dfd33a8c64e079450edb55fd8b911cda",
+    "runtime_file_count": 6,
+    "runtime_files_listed": true,
+    "runtime_manifest_present": true,
+    "runtime_tree_sha256": "b15b4c9aacd9e94471ca7fbc28fbd26c7eb37a3abdc03ee0ce5e2c084345a5fa"
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_axis": "contest_cuda",
+  "score_claim": false,
+  "score_claim_valid": true,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 0.0,
+    "archive_bytes": 186518,
+    "available": true,
+    "avg_posenet_dist": 3.249e-05,
+    "avg_segnet_dist": 0.0006426,
+    "matches_reported": true,
+    "rate_term": 0.12419468021844116,
+    "recomputed_score": 0.2064796628814009,
+    "reported_score": 0.2064796628814009
+  },
+  "source_json_path": "experiments/results/modal_auth_eval/hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z/contest_auth_eval.json",
+  "source_json_sha256": "69d09829304663ba533e599d8b2fa8e047180e67e1aa5998df81e8bb676d713f",
+  "technique": "hdm8_cuda_selector_sparse_top001_exact_cuda_review",
+  "tool": "tools/build_result_review_packet.py"
+}

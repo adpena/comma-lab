@@ -453,6 +453,63 @@ def test_builder_can_pack_selector_into_archive(tmp_path: Path) -> None:
     ]
 
 
+def test_builder_can_pack_selector_from_explicit_config_json(tmp_path: Path) -> None:
+    builder = _builder()
+    inflate = _runtime()
+    config_path = tmp_path / "selector_config.json"
+    selector_indices = [0] * N_SELECTOR_PAIRS
+    selector_indices[3] = 1
+    selector_indices[17] = 1
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema": "hdm8_film_grain_sidecar_postfilter_config_v1",
+                "mode": "selector",
+                "palette": ["none", "even_bias:1"],
+                "selector_indices": selector_indices,
+                "score_claim": False,
+                "proxy": {
+                    "axis": "modal-t4-cuda-proxy-prefix",
+                    "n_pairs": N_SELECTOR_PAIRS,
+                    "mode": "selector",
+                    "baseline_score_proxy": 0.30,
+                    "mode_score_proxy": 0.29,
+                    "delta_vs_none": -0.01,
+                    "avg_posenet_dist": 0.0001,
+                    "avg_segnet_dist": 0.001,
+                    "baseline_avg_posenet_dist": 0.001,
+                    "baseline_avg_segnet_dist": 0.001,
+                    "positive": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = builder.build_packet(
+        archive=HDM8_ARCHIVE,
+        runtime_template=RUNTIME_DIR,
+        output_dir=tmp_path / "packet",
+        mode="ignored",
+        selector_config_json=config_path,
+        pack_selector_into_archive=True,
+        require_positive_proxy=True,
+    )
+    with zipfile.ZipFile(tmp_path / "packet" / "archive.zip") as zf:
+        payload = zf.read("x")
+    _format_id, _pr106, _sidecar, _framing, embedded = (
+        inflate.parse_sidecar_archive_with_selector(payload)
+    )
+
+    assert embedded is not None
+    assert embedded["selector_indices"][3] == 1
+    assert embedded["selector_indices"][17] == 1
+    assert manifest["postfilter_mode"] == "selector"
+    assert manifest["selector_packed_in_archive"] is True
+    assert manifest["cuda_component_risk_gate"]["passed"] is True
+    assert "--selector-config-json" in manifest["packet_build_command_template"]
+
+
 def test_builder_refuses_to_pack_incomplete_prefix_selector(tmp_path: Path) -> None:
     builder = _builder()
     proxy = tmp_path / "prefix_proxy.json"
