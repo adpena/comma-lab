@@ -30716,11 +30716,11 @@
       "id": "lane_nscs02_downsampled_renderer_inflate_upsample_20260515",
       "name": "NSCS02 Downsampled Renderer + Inflate Upsample",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "lane_nscs02_downsampled_renderer_inflate_upsample_20260515 implementation: substrate package (nscs02_downsampled_renderer) + submission tree + trainer + recipe + remote driver + 27 tests passing; archive_bytes_added=~165KB-220KB (5-stage decoder fp16+brotli; smaller than A1 174KB); score_improvement_mechanism_status=OPERATIONAL via inflate-time bicubic upsample (192,256)->(1164,874); runtime_overlay_consumed=true; operational_overlay=true; smoke=GREEN local; research_only=true until _full_main + paired CPU+CUDA auth-eval custody land"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30735,16 +30735,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "All 8 critical preflight gates pass with 0 NSCS02-specific violations: Catalog #124 (representation grammar) #220 (L1 OPERATIONAL) #240 (contest_cuda_chain) #244 (NVML block) #170 (min_vram_gb=12) #171 (video_input_strategy=per_dispatch_local_copy) #182 (target_modes=contest_one_video_replay+contest_generalized) #181 (pyav_decode_strategy=cpu_thread_async_upload)"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_nscs02_downsampled_renderer_inflate_upsample_build_landed_20260515.md committed in ~/.claude/projects/-Users-adpena-Projects-pact/memory/; documents canonical-vs-unique decision per layer (10 layers); 27 tests passing; 0 NSCS02-specific violations across 8 critical preflight gates; 6-hook wire-in declared per Catalog #125"
         },
         "deploy_runbook": {
           "status": false,
@@ -30757,11 +30757,11 @@
       "id": "lane_nscs01_nullspace_split_renderer_20260515",
       "name": "NSCS01 Nullspace Split Renderer",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "L1 SCAFFOLD landing 2026-05-15 (paths: src/tac/substrates/nscs01_nullspace_split_renderer/architecture.py + score_aware_loss.py + archive.py + inflate.py + registered_substrate.py); smoke_main verified end-to-end; archive roundtrip + 40/40 tests pass; full_main council-gated NotImplementedError per CLAUDE.md substrate-scaffolds-non-negotiable"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30776,20 +30776,20 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #220+#124+#240+#164 all pass at 0 nscs01-related violations; SubstrateContract validates"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/nscs01_nullspace_split_renderer_design_20260515.md (design memo) + lane registry entry; landing memo to be written by parent on harvest"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_nscs01_nullspace_split_renderer.sh + .omx/operator_authorize_recipes/substrate_nscs01_nullspace_split_renderer_modal_t4_dispatch.yaml + submissions/nscs01_nullspace_split_renderer/inflate.{sh,py} all in place; bash -n syntax-clean"
         }
       },
       "notes": ""
@@ -30798,11 +30798,11 @@
       "id": "lane_nscs03_end_to_end_balle_joint_codec_20260515",
       "name": "NSCS03 End-to-End Ball\u00e9 Joint Codec",
       "phase": 6.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Files landed: tac.substrates.nscs03_end_to_end_balle_joint_codec package (architecture+archive+score_aware_loss+inflate+__init__) + experiments train_substrate_nscs03 trainer (council-gated _full_main per substrate-engineering exception) + recipe substrate_nscs03_end_to_end_balle_joint_codec_modal_a100_dispatch.yaml (research_only=true) + remote driver + submissions inflate; lane_class=substrate_engineering; research_only=true; archive_bytes_added=substrate_state_dicts_~600KB+per_pair_latents_~25KB; score_improvement_mechanism_status=DEFERRED_pending_phase_2_council; archive_grammar=monolithic_0.bin_NS03_v1; parser_section_manifest=parse_archive_returns_NSCS03Archive; inflate_runtime_loc_budget=200_LOC_waiver; runtime_dep_closure=torch+brotli; export_format=brotli_state_dicts_int16_latents; score_aware_loss=joint_lagrangian_with_diff_rate; bolt_on_loc_budget=substrate_engineering_exception_~1700_LOC; no_op_detector_planned=executable_byte_mutation_smoke_in_tests"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30825,8 +30825,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "memory file pending; lane registered + recipe + remote driver + smoke trainer all landed in single commit batch"
         },
         "deploy_runbook": {
           "status": false,
@@ -30875,6 +30875,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_meat_on_the_bone_audit_20260515",
+      "name": "Meat-on-the-bone audit (unused research/engineering/problem-space/hardware/scorer-exploit enumeration)",
+      "phase": 6.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/meat_on_the_bone_audit_unused_exploits_20260515.json (manifest with 5 axes \u00d7 6-10 items + EV-ranked top-10 + 3 cross-cutting patterns; 11 PV verified)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_meat_on_the_bone_audit_unused_exploits_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_l5_staircase_v2_and_adversarial_apparatus_structural_fixes_20260515",
+      "name": "L5 staircase v2 + Adversarial-apparatus structural fixes",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/preflight.py Catalog #291 + CLAUDE.md META-ASSUMPTION section + Council-conduct Assumption-Adversary seat + Recursive-adversarial-review item 8 assumption-challenge axis + catalog table row"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #291 check_session_has_recent_meta_assumption_review wired into preflight_all warn-only; 31 tests pass; live count = 0"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_l5_staircase_v2_and_adversarial_apparatus_structural_fixes_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -30884,5 +30966,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T23:13:05Z"
+  "updated_at": "2026-05-15T23:51:40Z"
 }

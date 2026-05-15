@@ -2302,6 +2302,18 @@ def preflight_all(
         check_substrate_design_memo_has_canonical_vs_unique_decision_section(
             strict=False, verbose=verbose,
         )
+        # L5-STAIRCASE-V2-AND-ADVERSARIAL-APPARATUS-STRUCTURAL-FIXES (#291):
+        # every session must have a recent META-ASSUMPTION ADVERSARIAL REVIEW
+        # (every 7 days OR every 50 subagent landings, whichever first). The
+        # protection extincts the structural blindness that allowed
+        # canonicalization-by-default to suppress substrate-optimal
+        # engineering across the entire contest. Initial wire-in is WARN-ONLY
+        # per CLAUDE.md "Strict-flip atomicity rule" — live count at landing
+        # is 0 because today's ASSUMPTIONS-CHALLENGE-AUDIT is the first
+        # instance and is by definition recent.
+        check_session_has_recent_meta_assumption_review(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -56626,6 +56638,7 @@ def check_review_gate_hook_uses_retry_helper(
 # cannot self-waive.
 _CHECK_241_LEGACY_TOKEN = "LEGACY_SUBSTRATE_PRE_META_LAYER:"
 _CHECK_241_DECORATOR_TOKEN = "@register_substrate"
+_CHECK_241_REGISTERED_SUBSTRATE_IMPORT_TOKEN = ".registered_substrate import"
 _CHECK_241_HEADER_LOOKBACK_LINES = 25
 
 
@@ -56666,6 +56679,8 @@ def check_substrate_uses_register_decorator_or_explicitly_legacy_tagged(
             continue
         if _CHECK_241_DECORATOR_TOKEN in text:
             continue
+        if _CHECK_241_REGISTERED_SUBSTRATE_IMPORT_TOKEN in text:
+            continue
         # Header-only waiver scan (first ~25 lines).
         header = "\n".join(text.split("\n")[: _CHECK_241_HEADER_LOOKBACK_LINES])
         # Reject placeholder ``<rationale>`` literal.
@@ -56687,7 +56702,8 @@ def check_substrate_uses_register_decorator_or_explicitly_legacy_tagged(
             f"'# {_CHECK_241_LEGACY_TOKEN}<rationale>' waiver in its first "
             f"{_CHECK_241_HEADER_LOOKBACK_LINES} lines. Per Catalog #241, every "
             "substrate trainer must declare its META contract via "
-            "``@register_substrate(SubstrateContract(...))`` or be explicitly "
+            "``@register_substrate(SubstrateContract(...))`` in-file, import a "
+            "package-side ``registered_substrate`` module, or be explicitly "
             "tagged as legacy-pending-migration."
         )
     if verbose:
@@ -56726,6 +56742,8 @@ def check_register_substrate_contract_fields_canonical(
     """
     # Lazy import to avoid circular dep at preflight.py import time.
     try:
+        import importlib
+
         from tac.substrate_registry import (
             example_template as _example_template,  # noqa: F401  (force registration)
             validate_all_registered,
@@ -56734,7 +56752,19 @@ def check_register_substrate_contract_fields_canonical(
         if verbose:
             print(f"  [substrate-contract-fields] skipped (import failed: {exc})")
         return []
+    root = Path(repo_root or REPO_ROOT)
+    substrate_root = root / "src" / "tac" / "substrates"
+    import_errors: list[str] = []
+    if substrate_root.is_dir():
+        for path in sorted(substrate_root.glob("*/registered_substrate.py")):
+            package = path.parent.name
+            module_name = f"tac.substrates.{package}.registered_substrate"
+            try:
+                importlib.import_module(module_name)
+            except Exception as exc:  # pragma: no cover - exercised in live preflight
+                import_errors.append(f"{module_name}: import failed: {exc!r}")
     errors = validate_all_registered()
+    errors.extend(import_errors)
     if verbose:
         print(
             "  [substrate-contract-fields] validated "
@@ -61001,9 +61031,9 @@ def check_serializer_log_no_dropped_expected_content_sha_retry_pattern(
 #   - feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md
 #   - feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md
 #
-# Refuses substrate scaffold landing memos under
-# ``~/.claude/projects/-Users-adpena-Projects-pact/memory/`` whose filename
-# matches one of:
+# Refuses repo-local `.omx/research/*_design_<YYYYMMDD>.md` memos, plus
+# external memory memos only when ``memory_dir=...`` is passed explicitly, whose
+# filename matches one of:
 #   - ``feedback_*substrate*scaffold*landed_<YYYYMMDD>.md``
 #   - ``feedback_nscs<N>_landed_<YYYYMMDD>.md``
 #   - ``feedback_*substrate*v[0-9]+*landed_<YYYYMMDD>.md``
@@ -61026,7 +61056,9 @@ def check_serializer_log_no_dropped_expected_content_sha_retry_pattern(
 # Acceptance: pre-cutoff memos exempt by date filter; post-cutoff memos with
 # the literal section header pass; post-cutoff substrate scaffold memos
 # without the header are flagged. Memos that are neither substrate-scaffold
-# nor NSCS naming are out-of-scope by filename filter.
+# nor NSCS naming are out-of-scope by filename filter. External memory is
+# opt-in so clean clones and CI see the same default result as the operator
+# machine.
 #
 # WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule" — the live
 # count at landing is likely > 0 because 4 in-flight + just-completed
@@ -61090,9 +61122,14 @@ def _check_290_in_scope(filename: str) -> int | None:
     return None
 
 
-def _check_290_default_memory_dir() -> Path:
-    """Default memory directory location for the operator."""
-    return Path.home() / ".claude" / "projects" / "-Users-adpena-Projects-pact" / "memory"
+def _check_290_default_memory_dir() -> Path | None:
+    """No external memory scan by default.
+
+    Catalog #290 is a repository preflight gate; clean clones and CI must see
+    the same result as the operator machine. Pass ``memory_dir=...`` explicitly
+    when auditing local Claude memory.
+    """
+    return None
 
 
 def _check_290_default_research_dir(repo_root: Path | str | None = None) -> Path:
@@ -61128,8 +61165,8 @@ def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
     - In-repo ``.omx/research/*_design_<YYYYMMDD>.md`` memos are in scope:
       those are the active design surface subagents land before memory
       rollups exist.
-    - Memory memos that are neither substrate-scaffold nor NSCS naming are
-      out-of-scope by filename filter.
+    - External memory memos are scanned only when ``memory_dir`` is passed
+      explicitly; default behavior is clone-stable and repo-local.
 
     Sister of Catalog #220 (substrate L1 operational mechanism) + Catalog
     #229 (premise-verification-before-edit) + Catalog #241 (substrate META
@@ -61153,10 +61190,11 @@ def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
 
     violations: list[str] = []
     seen_dirs: set[Path] = set()
-    for target, surface in (
-        (memory_target, "memory"),
-        (research_target, "research"),
-    ):
+    target_surfaces: list[tuple[Path, str]] = []
+    if memory_target is not None:
+        target_surfaces.append((memory_target, "memory"))
+    target_surfaces.append((research_target, "research"))
+    for target, surface in target_surfaces:
         try:
             resolved_target = target.resolve()
         except OSError:
@@ -61218,6 +61256,311 @@ def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
             "'Bugs must be permanently fixed AND self-protected against' "
             "non-negotiables. Catalog #290 (KNOWLEDGE-PRESERVATION-WAVE; "
             "sister of Catalog #220 + #229 + #241).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #291 - check_session_has_recent_meta_assumption_review
+#
+# L5-STAIRCASE-V2-AND-ADVERSARIAL-APPARATUS-STRUCTURAL-FIXES 2026-05-15
+# self-protection per Adversarial-apparatus retrospective
+# (`feedback_adversarial_review_apparatus_blind_to_shared_assumption_failure_meta_meta_meta_meta_20260515.md`)
+# Fix 3.
+#
+# Anchor: NOT A SINGLE existing review apparatus (10+ codex reviews / multiple
+# grand councils / skunkworks councils / 3-clean-pass / 270+ STRICT preflight
+# gates / META-meta gates #118/#159/#176/#185 / Contrarian role) ever caught
+# the canonicalization-by-default reflex suppressing substrate-optimal
+# engineering across the entire contest. Operator catalysis was required.
+# Structural cause: every existing review type operates WITHIN shared
+# assumptions; none has explicit mandate to interrogate the BACKDROP.
+#
+# Mandate: every session must run a META-ASSUMPTION ADVERSARIAL REVIEW
+# periodically (every 50 landings OR every 7 days, whichever first). Output:
+# enumerate shared assumptions across recent work; per-assumption "if
+# violated, what would change?"; identify highest-EV violations; queue for
+# next dispatch wave.
+#
+# This gate scans the operator memory directory for the most-recent
+# `feedback_*meta_assumption*review*.md` OR
+# `feedback_assumptions_challenge_audit_*.md` file. Refuses any state where
+# (a) more than 7 days have elapsed since the most-recent META-ASSUMPTION
+# review OR (b) more than 50 subagent landings (counted from
+# `.omx/state/commit-serializer.log` events with outcome=committed) have
+# occurred since the most-recent META-ASSUMPTION review.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule" — live
+# count at landing: 0 because today's ASSUMPTIONS-CHALLENGE-AUDIT is the
+# first instance + most-recent. Strict-flip atomic with the first cycle
+# completion (i.e. when a future session actually triggers the recurring
+# protocol).
+#
+# Sister of:
+#   - Catalog #229 (premise-verification-before-edit; same per-discipline
+#     pattern at the verification surface; #291 is at the META-ASSUMPTION
+#     periodic surface)
+#   - Catalog #185 (LIVE_COUNT drift between CLAUDE.md text and gate
+#     empirical state; same drift-prevention pattern)
+#   - Catalog #290 (substrate scaffold canonical-vs-unique discipline; #290
+#     enforces per-design-memo while #291 enforces per-session)
+# ============================================================================
+
+# Gate triggers strict refusal when EITHER condition is met. Both serve as
+# orthogonal canaries: time-based catches sessions that touch many files
+# without committing; landings-based catches high-velocity sessions that
+# could otherwise drift far from the last review even within 7 days.
+_CHECK_291_MAX_DAYS_SINCE_LAST_REVIEW = 7
+_CHECK_291_MAX_LANDINGS_SINCE_LAST_REVIEW = 50
+
+# Filename patterns matching valid META-ASSUMPTION review memos.
+_CHECK_291_REVIEW_FILENAME_RE = re.compile(
+    r"^feedback_(?:.*meta_assumption.*review.*|"
+    r"assumptions_challenge_audit.*)_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+
+# Memo body must contain at least one of these tokens to count as a real
+# META-ASSUMPTION review (prevents an empty placeholder file from satisfying
+# the gate). Mirrors the canonical 18-assumption matrix vocabulary.
+_CHECK_291_REVIEW_BODY_TOKENS: tuple[str, ...] = (
+    "shared assumption",
+    "shared assumptions",
+    "assumption-violation",
+    "assumption violation",
+    "if violated",
+    "META-ASSUMPTION",
+    "meta-assumption",
+    "ASSUMPTIONS-CHALLENGE-AUDIT",
+)
+
+
+def _check_291_default_memory_dir() -> Path:
+    """Default memory directory location for the operator (mirrors #290)."""
+    return Path.home() / ".claude" / "projects" / "-Users-adpena-Projects-pact" / "memory"
+
+
+def _check_291_parse_date_suffix(suffix: str) -> tuple[int, int, int] | None:
+    """Parse YYYYMMDD into (Y, M, D); return None on malformed."""
+    if len(suffix) != 8:
+        return None
+    try:
+        year = int(suffix[0:4])
+        month = int(suffix[4:6])
+        day = int(suffix[6:8])
+    except ValueError:
+        return None
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        return None
+    return (year, month, day)
+
+
+def _check_291_find_most_recent_review(memory_dir: Path) -> tuple[Path, tuple[int, int, int]] | None:
+    """Return (path, (Y, M, D)) of the most-recent in-scope review memo, or None.
+
+    A memo counts only if its filename matches the regex AND its body
+    contains at least one canonical META-ASSUMPTION review token (prevents
+    placeholder-file gaming).
+    """
+    if not memory_dir.is_dir():
+        return None
+    best: tuple[Path, tuple[int, int, int]] | None = None
+    try:
+        candidates = sorted(memory_dir.iterdir())
+    except OSError:
+        return None
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        m = _CHECK_291_REVIEW_FILENAME_RE.match(entry.name)
+        if not m:
+            continue
+        date_tuple = _check_291_parse_date_suffix(m.group(1))
+        if date_tuple is None:
+            continue
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = body.lower()
+        if not any(tok.lower() in body_lower for tok in _CHECK_291_REVIEW_BODY_TOKENS):
+            continue  # placeholder file w/ matching name but no real content
+        if best is None or date_tuple > best[1]:
+            best = (entry, date_tuple)
+    return best
+
+
+def _check_291_count_subagent_landings_since(
+    serializer_log: Path, since_iso_utc: str
+) -> int:
+    """Count `outcome=committed` events in commit-serializer.log whose
+    ``written_at_utc`` (or ``started_at_utc`` fallback) is strictly after
+    ``since_iso_utc`` (an ISO-8601 UTC timestamp). Returns 0 on missing /
+    unreadable log (fail-OPEN; the time-since-last canary still fires).
+
+    The strictly-after semantics deliberately excludes the review memo's
+    own creation event and any sister-subagent commits in the same
+    session-batch, so the cadence cannot trip on its own landing.
+    """
+    if not serializer_log.is_file():
+        return 0
+    count = 0
+    try:
+        for line in serializer_log.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(row, dict):
+                continue
+            outcome = row.get("outcome")
+            if outcome != "committed":
+                continue
+            written = row.get("written_at_utc") or row.get("started_at_utc") or ""
+            if not isinstance(written, str):
+                continue
+            # Compare lexicographically on ISO-8601 (works because ISO-8601
+            # sorts in calendar order). Strictly greater so the review memo's
+            # own session-batch is not counted against itself.
+            if written > since_iso_utc:
+                count += 1
+    except OSError:
+        return 0
+    return count
+
+
+def check_session_has_recent_meta_assumption_review(
+    *,
+    memory_dir: Path | str | None = None,
+    serializer_log: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    now_utc: "_dt.datetime | None" = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #291 — refuse sessions that have drifted past the recurring
+    META-ASSUMPTION ADVERSARIAL REVIEW cadence.
+
+    Per CLAUDE.md "META-ASSUMPTION ADVERSARIAL REVIEW" non-negotiable:
+    every session must run the periodic META-ASSUMPTION review (every 7
+    days OR every 50 subagent landings, whichever first). The review
+    enumerates shared assumptions across recent work; per assumption asks
+    "if violated, what would change?"; identifies highest-EV violations;
+    queues for next dispatch wave.
+
+    Bug class: the structural blindness of EVERY existing review apparatus
+    (codex / grand council / skunkworks / 3-clean-pass / 270+ STRICT
+    preflight gates / META-meta-meta gates #118/#159/#176/#185 / Contrarian
+    veto) to canonicalization-by-default suppression. The 0.196-0.199
+    cluster across all substrates IS the empirical cost. Operator catalysis
+    was required to surface this; the gate is the structural protection so
+    future sessions do not repeat the blindness.
+
+    Acceptance: a recent in-scope review memo exists in the operator
+    memory dir AND (i) its date is within the last 7 days AND (ii) fewer
+    than 50 subagent landings have occurred since its date.
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    because today's ASSUMPTIONS-CHALLENGE-AUDIT is the FIRST instance and
+    is by definition recent — live count at landing: 0. Strict-flip atomic
+    with the first cycle completion.
+
+    Sister of Catalog #229 (premise-verification-before-edit) + Catalog
+    #185 (LIVE_COUNT drift) + Catalog #290 (substrate scaffold canonical-
+    vs-unique discipline).
+
+    Memory:
+    ``feedback_l5_staircase_v2_and_adversarial_apparatus_structural_fixes_landed_20260515.md``.
+    """
+    if memory_dir is None:
+        memory_target = _check_291_default_memory_dir()
+    elif isinstance(memory_dir, str):
+        memory_target = Path(memory_dir)
+    else:
+        memory_target = memory_dir
+
+    if serializer_log is None:
+        log_target = Path(repo_root or REPO_ROOT) / ".omx" / "state" / "commit-serializer.log"
+    elif isinstance(serializer_log, str):
+        log_target = Path(serializer_log)
+    else:
+        log_target = serializer_log
+
+    if now_utc is None:
+        now_utc_resolved = _dt.datetime.now(_dt.timezone.utc)
+    elif now_utc.tzinfo is None:
+        now_utc_resolved = now_utc.replace(tzinfo=_dt.timezone.utc)
+    else:
+        now_utc_resolved = now_utc
+
+    most_recent = _check_291_find_most_recent_review(memory_target)
+    violations: list[str] = []
+
+    if most_recent is None:
+        violations.append(
+            f"{memory_target}: no META-ASSUMPTION ADVERSARIAL REVIEW memo found "
+            "matching `feedback_*meta_assumption*review*.md` OR "
+            "`feedback_assumptions_challenge_audit_*.md` with canonical body "
+            "tokens. Per CLAUDE.md 'META-ASSUMPTION ADVERSARIAL REVIEW' non-"
+            "negotiable: every session must run the periodic review (every 7 "
+            "days OR every 50 subagent landings, whichever first)."
+        )
+    else:
+        memo_path, (y, m, d) = most_recent
+        # Time-since-last is measured in DAYS at calendar precision (the
+        # filename date suffix); landings-since-last is measured strictly
+        # after the memo file's mtime so the gate cannot trip on its own
+        # landing batch.
+        try:
+            review_date = _dt.datetime(y, m, d, tzinfo=_dt.timezone.utc)
+        except ValueError:
+            review_date = None
+        try:
+            mtime_iso = _dt.datetime.fromtimestamp(
+                memo_path.stat().st_mtime, _dt.timezone.utc
+            ).isoformat()
+        except OSError:
+            mtime_iso = f"{y:04d}-{m:02d}-{d:02d}T23:59:59+00:00"
+        if review_date is not None:
+            days_elapsed = (now_utc_resolved - review_date).days
+            if days_elapsed > _CHECK_291_MAX_DAYS_SINCE_LAST_REVIEW:
+                violations.append(
+                    f"{memo_path.name}: most-recent META-ASSUMPTION ADVERSARIAL "
+                    f"REVIEW is {days_elapsed} days old (max "
+                    f"{_CHECK_291_MAX_DAYS_SINCE_LAST_REVIEW} per CLAUDE.md "
+                    "'META-ASSUMPTION ADVERSARIAL REVIEW' non-negotiable cadence)."
+                )
+            landings = _check_291_count_subagent_landings_since(log_target, mtime_iso)
+            if landings > _CHECK_291_MAX_LANDINGS_SINCE_LAST_REVIEW:
+                violations.append(
+                    f"{memo_path.name}: {landings} subagent landings have occurred "
+                    f"since the most-recent META-ASSUMPTION ADVERSARIAL REVIEW "
+                    f"(max {_CHECK_291_MAX_LANDINGS_SINCE_LAST_REVIEW} per "
+                    "CLAUDE.md 'META-ASSUMPTION ADVERSARIAL REVIEW' non-negotiable "
+                    "cadence; fan-out velocity exceeded the assumption-drift "
+                    "guardrail)."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_session_has_recent_meta_assumption_review] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print("  [check_session_has_recent_meta_assumption_review] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_session_has_recent_meta_assumption_review found "
+            f"{len(violations)} META-ASSUMPTION review cadence violation(s). "
+            "Per CLAUDE.md 'META-ASSUMPTION ADVERSARIAL REVIEW' non-negotiable + "
+            "'Bugs must be permanently fixed AND self-protected against'. "
+            "Catalog #291 (L5-STAIRCASE-V2-AND-ADVERSARIAL-APPARATUS-STRUCTURAL-"
+            "FIXES; sister of Catalog #185 + #229 + #290).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
