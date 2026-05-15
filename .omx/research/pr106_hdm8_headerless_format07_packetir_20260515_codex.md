@@ -83,7 +83,16 @@ Dispatched exact `[contest-CUDA]` Modal T4 eval:
 - output_dir: `experiments/results/modal_auth_eval/pr106_hdm8_fmt07_t4_20260515T025608Z`
 - uploaded runtime tree sha256: `f1890b6c91215778f6344aeaf089ef64abecfb023c6473f06f304004552d0b08`
 - runtime content tree sha256: `f0d0b9cad9333a6c602aec7640e66b619e7d117dfeb11db67b1289052c0e2c4a`
-- current recovery status: `pending`
+- recovery status: `recovered`
+- avg_segnet_dist: `0.0006426`
+- avg_posenet_dist: `0.00003236`
+- archive bytes: `186380`
+- canonical score: `0.20635167714032537`
+- delta vs format `0x06`: `-0.0000013317179062443428`
+- result review: `.omx/research/pr106_hdm8_headerless_format07_exact_cuda_result_review_20260515_codex.json`
+- evidence row: `.omx/research/pr106_hdm8_headerless_format07_exact_cuda_evidence_row_20260515_codex.json`
+- exact closure JSON: `.omx/research/pr106_hdm8_headerless_format07_packetir_exact_closure_20260515_codex.json`
+- exact closure markdown: `.omx/research/pr106_hdm8_headerless_format07_packetir_exact_closure_20260515_codex.md`
 
 Recovery command:
 
@@ -96,19 +105,26 @@ Recovery command:
 ```bash
 .venv/bin/ruff check src/tac/packet_compiler/pr106_sidecar_packet.py src/tac/packet_compiler/pr106_runtime_consumption.py src/tac/packet_compiler/__init__.py submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py tools/profile_pr106_latent_sidecar_recode.py src/tac/tests/test_packet_compiler_pr106_sidecar_packet.py src/tac/tests/test_packet_compiler_pr106_runtime_consumption.py src/tac/tests/test_pr106_latent_sidecar_recode.py
 PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/tests/test_packet_compiler_pr106_sidecar_packet.py src/tac/tests/test_packet_compiler_pr106_runtime_consumption.py src/tac/tests/test_pr106_latent_sidecar_recode.py -q
+PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_result_review_packet.py --auth-eval-json experiments/results/modal_auth_eval/pr106_hdm8_fmt07_t4_20260515T025608Z/contest_auth_eval.json --technique pr106_hdm8_headerless_format07_packetir_cuda_review --lane-id lane_pr106_hdm8_headerless_fmt07_20260515 --job-id modal_pr106_hdm8_fmt07_t4_20260515T025608Z --baseline-score 0.2063530088582316 --reactivation-criteria 'Use format 0x07 as the canonical PR106/HDM8 sidecar wrapper only after exact CUDA closure and compliance review; do not spend further on wrapper-byte shaving unless paired with component movement.' --evidence-row-output .omx/research/pr106_hdm8_headerless_format07_exact_cuda_evidence_row_20260515_codex.json --output .omx/research/pr106_hdm8_headerless_format07_exact_cuda_result_review_20260515_codex.json
+PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_pr106_r2_packetir_exact_closure.py --lane-id lane_pr106_hdm8_headerless_fmt07_20260515 --candidate-result experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/emitted_candidates/pr101_headerless_implicit_len_fixed_meta_rank_elided_sidecar_format_0x07.manifest.json --candidate-archive experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/emitted_candidates/pr101_headerless_implicit_len_fixed_meta_rank_elided_sidecar_format_0x07.archive.zip --cuda-eval experiments/results/modal_auth_eval/pr106_hdm8_fmt07_t4_20260515T025608Z/contest_auth_eval.json --source-cuda-eval experiments/results/modal_auth_eval/pr106_hdm8_fmt06_t4_20260515T000000Z/contest_auth_eval.json --current-best-cuda-eval experiments/results/modal_auth_eval/pr106_hdm8_fmt06_t4_20260515T000000Z/contest_auth_eval.json --recode-profile experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/recode_profile.json --runtime-consumption-proof experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/runtime_consumption_0x07.json --full-frame-parity-proof experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/full_frame_parity_cpu_0x07.json --no-cpu-eval --output-json .omx/research/pr106_hdm8_headerless_format07_packetir_exact_closure_20260515_codex.json --output-md .omx/research/pr106_hdm8_headerless_format07_packetir_exact_closure_20260515_codex.md
 ```
 
 Result:
 
 - `ruff`: pass
 - pytest: `58 passed in 1.55s`
+- result review: `exact_cuda_result_reviewed score=0.20635167714032537`
+- exact closure: `classification=exact_measured_improves_packetir_source_cuda`
 
 ## Classification
 
-`score_claim=false`
+`score_claim=true` for the exact `[contest-CUDA]` result only.
 
 This is legitimate byte-closed PacketIR/rate work, but the effect size is tiny:
 two archive bytes, or about `0.0000013317` score if exact CUDA components match
-format `0x06`. It should be closed for parser/runtime correctness and exact
-custody, but it is not a local-minimum escape. The selector/film-grain frontier
-needs CUDA-conditioned component movement, not more wrapper-byte shaving.
+format `0x06`. Exact CUDA confirmed the predicted rate-only movement:
+`0.2063530088582316 -> 0.20635167714032537`.
+
+This should be closed for parser/runtime correctness and exact custody, but it
+is not a local-minimum escape. The selector/film-grain frontier needs
+CUDA-conditioned component movement, not more wrapper-byte shaving.
