@@ -98,6 +98,71 @@ def _index_same_runtime_parity(paths: list[Path]) -> dict[str, dict[str, Any]]:
     return indexed
 
 
+def _index_exact_result_reviews(paths: list[Path] | None = None) -> dict[str, list[dict[str, Any]]]:
+    indexed: dict[str, list[dict[str, Any]]] = {}
+    review_paths = (
+        sorted((REPO_ROOT / ".omx" / "research").glob("*result_review*.json"))
+        if paths is None
+        else paths
+    )
+    for path in review_paths:
+        try:
+            review = _load_json_file(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if review.get("schema") != "tac_result_review_packet_v1":
+            continue
+        if review.get("exact_cuda_evidence") is not True:
+            continue
+        if review.get("score_claim_valid") is not True:
+            continue
+        custody = review.get("custody")
+        if not isinstance(custody, dict):
+            continue
+        archive_sha = custody.get("archive_sha256")
+        if not isinstance(archive_sha, str) or len(archive_sha) != 64:
+            continue
+        score_recomputation = review.get("score_recomputation")
+        recomputed_score = None
+        if isinstance(score_recomputation, dict):
+            raw_score = score_recomputation.get("recomputed_score")
+            if isinstance(raw_score, int | float):
+                recomputed_score = float(raw_score)
+        if recomputed_score is None and isinstance(review.get("canonical_score"), int | float):
+            recomputed_score = float(review["canonical_score"])
+        runtime_custody = review.get("runtime_custody")
+        indexed.setdefault(archive_sha, []).append(
+            {
+                "path": str(path),
+                "schema": review.get("schema"),
+                "lane_id": review.get("lane_id"),
+                "job_id": review.get("job_id"),
+                "score_axis": review.get("score_axis"),
+                "canonical_score": recomputed_score,
+                "archive_sha256": archive_sha,
+                "archive_bytes": custody.get("archive_bytes"),
+                "runtime_tree_sha256": (
+                    runtime_custody.get("runtime_tree_sha256")
+                    if isinstance(runtime_custody, dict)
+                    else None
+                ),
+                "runtime_content_tree_sha256": (
+                    runtime_custody.get("runtime_content_tree_sha256")
+                    if isinstance(runtime_custody, dict)
+                    else None
+                ),
+                "measured_config_status": review.get("measured_config_status"),
+                "promotion_eligible": review.get("promotion_eligible"),
+                "ready_for_exact_eval_dispatch": review.get(
+                    "ready_for_exact_eval_dispatch"
+                ),
+                "score_claim": review.get("score_claim"),
+                "score_claim_valid": review.get("score_claim_valid"),
+            }
+        )
+    return indexed
+
+
 def _remove_blockers(blockers: Any, names: set[str]) -> list[str]:
     if not isinstance(blockers, list):
         return []
@@ -219,6 +284,29 @@ def _attach_same_runtime_parity_proof(
     return True
 
 
+def _attach_exact_result_review(
+    target: dict[str, Any],
+    *,
+    archive_sha256: str,
+    exact_reviews_by_sha: dict[str, list[dict[str, Any]]],
+) -> bool:
+    matches = exact_reviews_by_sha.get(archive_sha256)
+    if not matches:
+        return False
+    target["exact_cuda_result_reviews"] = matches
+    target["exact_cuda_auth_eval_claim"] = True
+    blockers = _remove_blockers(
+        target.get("candidate_exact_eval_blockers") or target.get("exact_eval_blockers"),
+        {"exact_cuda_auth_eval_missing"},
+    )
+    if "exact_cuda_result_review_already_exists" not in blockers:
+        blockers.append("exact_cuda_result_review_already_exists")
+    target["candidate_exact_eval_blockers"] = blockers
+    if "exact_eval_blockers" in target:
+        target["exact_eval_blockers"] = blockers
+    return True
+
+
 def _safe_candidate_stem(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", name).strip("._") or "candidate"
 
@@ -309,6 +397,14 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     parity_by_sha = _index_same_runtime_parity(
         list(args.same_runtime_full_frame_parity or [])
     )
+    explicit_review_paths = list(args.exact_result_review or [])
+    if explicit_review_paths:
+        exact_review_paths: list[Path] | None = explicit_review_paths
+    elif args.scan_default_exact_result_reviews:
+        exact_review_paths = None
+    else:
+        exact_review_paths = []
+    exact_reviews_by_sha = _index_exact_result_reviews(exact_review_paths)
     sidecar_payload = loaded.sidecar_payload
     source = loaded.source
     dims, deltas = decode_brotli_dim_delta_sidecar_payload(sidecar_payload)
@@ -425,6 +521,17 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
                             archive_sha256=candidate_archive_sha,
                             parity_by_sha=parity_by_sha,
                         )
+                    exact_review_ok = _attach_exact_result_review(
+                        row,
+                        archive_sha256=candidate_archive_sha,
+                        exact_reviews_by_sha=exact_reviews_by_sha,
+                    )
+                    if exact_review_ok:
+                        _attach_exact_result_review(
+                            emitted_manifest,
+                            archive_sha256=candidate_archive_sha,
+                            exact_reviews_by_sha=exact_reviews_by_sha,
+                        )
                     manifest_path.write_text(
                         json.dumps(emitted_manifest, indent=2, sort_keys=True) + "\n",
                         encoding="utf-8",
@@ -451,6 +558,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
                             "ready_for_exact_eval_dispatch": False,
                             "runtime_consumption_claim": runtime_proof_ok,
                             "full_frame_inflate_output_parity_claim": parity_ok,
+                            "exact_cuda_result_review_claim": exact_review_ok,
                         }
                     )
         rows.append(row)
@@ -470,7 +578,13 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         dispatch_blockers.append("candidate_runtime_decoder_missing_for_noncurrent_rows")
     if not any_runtime_consumed:
         dispatch_blockers.append("missing_no_op_runtime_consumption_proof_for_new_grammar")
-    dispatch_blockers.append("missing_exact_contest_eval_for_any_candidate")
+    any_exact_review = any(
+        row.get("exact_cuda_auth_eval_claim") is True for row in rows
+    )
+    if any_exact_review:
+        dispatch_blockers.append("exact_cuda_result_review_already_exists_for_candidate")
+    else:
+        dispatch_blockers.append("missing_exact_contest_eval_for_any_candidate")
     if not emitted_candidate_manifests:
         dispatch_blockers.insert(0, "no_candidate_archive_emitted")
 
@@ -506,6 +620,10 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             "same_runtime_full_frame_parity": [
                 str(path) for path in args.same_runtime_full_frame_parity or []
             ],
+            "exact_result_reviews": [
+                str(path) for path in args.exact_result_review or []
+            ],
+            "default_exact_result_review_scan": args.scan_default_exact_result_reviews,
         },
         "adversarial_claim_check": {
             "verdict": "planning_only_no_score_claim",
@@ -611,6 +729,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "When its candidate archive SHA matches an emitted candidate and "
             "full-frame parity is true, the candidate row records local "
             "same-runtime parity without claiming contest score."
+        ),
+    )
+    parser.add_argument(
+        "--exact-result-review",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Optional tac_result_review_packet_v1 JSON. When its archive SHA "
+            "matches an emitted candidate and it carries exact-CUDA evidence, "
+            "the profile records that exact eval already exists and removes "
+            "the stale exact_cuda_auth_eval_missing blocker."
+        ),
+    )
+    parser.add_argument(
+        "--no-default-exact-result-review-scan",
+        dest="scan_default_exact_result_reviews",
+        action="store_false",
+        default=True,
+        help=(
+            "Disable the default scan of .omx/research/*result_review*.json. "
+            "Use only for isolated tests that need an empty review index."
         ),
     )
     return parser.parse_args(argv)

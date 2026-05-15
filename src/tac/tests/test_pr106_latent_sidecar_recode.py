@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -343,7 +344,9 @@ def test_recode_profile_tool_emits_runtime_candidate_archives(tmp_path: Path) ->
     assert all(row["score_claim"] is False for row in emitted)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in emitted)
     assert "no_candidate_archive_emitted" not in report["dispatch_blockers"]
-    assert "missing_exact_contest_eval_for_any_candidate" in report["dispatch_blockers"]
+    assert "exact_cuda_result_review_already_exists_for_candidate" in report[
+        "dispatch_blockers"
+    ]
     pr101_emitted = next(
         row
         for row in emitted
@@ -390,7 +393,9 @@ def test_recode_profile_links_matching_runtime_and_parity_proofs(tmp_path: Path)
     assert "missing_no_op_runtime_consumption_proof_for_new_grammar" not in report[
         "dispatch_blockers"
     ]
-    assert "missing_exact_contest_eval_for_any_candidate" in report["dispatch_blockers"]
+    assert "exact_cuda_result_review_already_exists_for_candidate" in report[
+        "dispatch_blockers"
+    ]
     assert report["linked_proof_inputs"]["runtime_consumption_proofs"] == [
         str(PR106_R2_PR101_RUNTIME_PROOF)
     ]
@@ -425,3 +430,88 @@ def test_recode_profile_links_matching_runtime_and_parity_proofs(tmp_path: Path)
     assert manifest["full_frame_inflate_output_parity_claim"] is True
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_recode_profile_links_matching_exact_cuda_result_review(tmp_path: Path) -> None:
+    archive_bytes = PR106_R2_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_brotli_dim_delta_sidecar_payload(source_packet.sidecar_payload)
+    candidate = next(
+        item
+        for item in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+        if item.name == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
+    _candidate_member, candidate_archive = emit_pr106_sidecar_recode_candidate_archive(
+        member,
+        source_packet,
+        candidate,
+    )
+    candidate_sha256 = hashlib.sha256(candidate_archive).hexdigest()
+    review = {
+        "schema": "tac_result_review_packet_v1",
+        "lane_id": "test_pr106_recode_exact_review_join",
+        "job_id": "test-job",
+        "score_axis": "contest_cuda",
+        "exact_cuda_evidence": True,
+        "score_claim_valid": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "measured_config_status": "exact_cuda_result_reviewed",
+        "custody": {
+            "archive_sha256": candidate_sha256,
+            "archive_bytes": len(candidate_archive),
+        },
+        "runtime_custody": {
+            "runtime_tree_sha256": "a" * 64,
+            "runtime_content_tree_sha256": "b" * 64,
+        },
+        "score_recomputation": {
+            "available": True,
+            "recomputed_score": 0.2063310355127786,
+        },
+    }
+    review_path = tmp_path / "exact_review.json"
+    review_path.write_text(json.dumps(review), encoding="utf-8")
+    out = tmp_path / "profile.json"
+    emitted_dir = tmp_path / "runtime_candidates"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--sidecar-archive",
+            str(PR106_R2_ARCHIVE),
+            "--json-out",
+            str(out),
+            "--emit-runtime-candidates-dir",
+            str(emitted_dir),
+            "--no-default-exact-result-review-scan",
+            "--exact-result-review",
+            str(review_path),
+        ],
+        check=True,
+    )
+
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert "exact_cuda_result_review_already_exists_for_candidate" in report[
+        "dispatch_blockers"
+    ]
+    row = next(
+        item
+        for item in report["candidate_rows"]
+        if item["name"] == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
+    assert row["exact_cuda_auth_eval_claim"] is True
+    assert row["exact_cuda_result_reviews"][0]["archive_sha256"] == candidate_sha256
+    assert row["exact_cuda_result_reviews"][0]["canonical_score"] == 0.2063310355127786
+    assert "exact_cuda_auth_eval_missing" not in row["candidate_exact_eval_blockers"]
+    assert "exact_cuda_result_review_already_exists" in row[
+        "candidate_exact_eval_blockers"
+    ]
+    manifest = json.loads(
+        Path(row["emitted_candidate_manifest_path"]).read_text(encoding="utf-8")
+    )
+    assert manifest["exact_cuda_auth_eval_claim"] is True
+    assert manifest["exact_cuda_result_reviews"][0]["path"] == str(review_path)
