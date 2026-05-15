@@ -40,6 +40,8 @@ BATCH_SCHEMA = "tac_hnerv_packet_section_manifest_batch.v1"
 
 PARSER_AUTO = "auto"
 PARSER_PR101 = "pr101_microcodec_fixed"
+PARSER_PR101_FEC6 = "pr101_fec6_fixed_huffman_selector"
+PARSER_PR101_FEC6_SHORT = "pr101_fec6"
 PARSER_PR103 = "pr103_lc_ac"
 PARSER_PR106 = "pr106_ff_packed_hnerv"
 PARSER_A2K1 = "a2k1_variable_decoder_pr101"
@@ -64,6 +66,9 @@ PARSER_Z5PCWM1_SHORT = "z5pcwm1"
 PARSER_TT5L = "tt5l_time_traveler_l5_autonomy"
 PARSER_TT5L_SHORT = "tt5l"
 PARSER_ALIASES = {
+    PARSER_PR101_FEC6_SHORT: PARSER_PR101_FEC6,
+    "fec6_fixed_huffman_k16": PARSER_PR101_FEC6,
+    "pr101_frame_exploit_selector": PARSER_PR101_FEC6,
     PARSER_IBPS1_SHORT: PARSER_IBPS1,
     "c6_e4_mdl_ibps": PARSER_IBPS1,
     "mdl_ibps": PARSER_IBPS1,
@@ -95,6 +100,8 @@ PARSER_ALIASES = {
 PARSER_CHOICES = (
     PARSER_AUTO,
     PARSER_PR101,
+    PARSER_PR101_FEC6,
+    PARSER_PR101_FEC6_SHORT,
     PARSER_PR103,
     PARSER_PR106,
     PARSER_A2K1,
@@ -135,6 +142,16 @@ PR101_SECTION_ROLES = {
     "decoder_compact_brotli_streams": "decoder_weight_stream",
     "latents_raw_lzma_delta_u8": "latent_stream",
     "sidecar_dim_delta_huffman_enum": "sidecar_or_correction_stream",
+}
+PR101_FEC6_SECTION_ROLES = {
+    "fp11_magic": "control_or_metadata",
+    "source_len_u32le": "control_or_metadata",
+    "source_decoder_compact_brotli_streams": "decoder_weight_stream",
+    "source_latents_raw_lzma_delta_u8": "latent_stream",
+    "source_sidecar_dim_delta_huffman_enum": "sidecar_or_correction_stream",
+    "selector_len_u16le": "control_or_metadata",
+    "selector_fec6_fixed_huffman_k16_header": "entropy_model_or_range_stream",
+    "selector_fec6_fixed_huffman_k16_bitstream": "sidecar_or_correction_stream",
 }
 PR103_SECTION_ROLES = {
     "scales_fp16": "control_or_metadata",
@@ -188,6 +205,8 @@ WZ1_MAGIC_PREFIX = b"WZ1\x00"
 Z4CR1_MAGIC_PREFIX = b"Z4CR"
 Z5PCWM1_MAGIC_PREFIX = b"Z5WM"
 TT5L_MAGIC_PREFIX = b"TT5L"
+FP11_MAGIC_PREFIX = b"FP11"
+FEC6_MAGIC_PREFIX = b"FEC6"
 
 
 class HnervPacketSectionManifestError(ValueError):
@@ -447,6 +466,12 @@ def _infer_parser(
     if requested != PARSER_AUTO:
         return requested
     text = f"{label} {archive_path.as_posix()} {member_name}".lower()
+    if (
+        "pr101_fec6" in text
+        or "fec6_fixed_huffman" in text
+        or "frame_exploit_selector" in text
+    ):
+        return PARSER_PR101_FEC6
     if "pr106" in text or "belt_and_suspenders" in text:
         return PARSER_PR106
     if "pr103" in text or "hnerv_lc_ac" in text:
@@ -507,6 +532,8 @@ def _infer_parser(
         return PARSER_Z5PCWM1
     if payload.startswith(TT5L_MAGIC_PREFIX):
         return PARSER_TT5L
+    if payload.startswith(FP11_MAGIC_PREFIX):
+        return PARSER_PR101_FEC6
     if "pr101" in text or "hnerv_ft_microcodec" in text:
         return PARSER_PR101
     if len(payload) >= 4 and payload[0] == 0xFF:
@@ -562,6 +589,8 @@ def _parser_input_payload(
 def _parse_sections(parser_name: str, payload: bytes) -> list[dict[str, Any]]:
     if parser_name == PARSER_PR101:
         return _parse_pr101_sections(payload)
+    if parser_name == PARSER_PR101_FEC6:
+        return _parse_pr101_fec6_sections(payload)
     if parser_name == PARSER_PR103:
         return _parse_pr103_sections(payload)
     if parser_name == PARSER_PR106:
@@ -613,6 +642,95 @@ def _parse_pr101_sections(payload: bytes) -> list[dict[str, Any]]:
             role=PR101_SECTION_ROLES[name],
         )
         for index, (name, start, end) in enumerate(specs)
+    ]
+
+
+def _parse_pr101_fec6_sections(payload: bytes) -> list[dict[str, Any]]:
+    if len(payload) < 8:
+        raise HnervPacketSectionManifestError(
+            f"PR101 FEC6 payload too short for FP11 header: got {len(payload)} bytes"
+        )
+    if payload[:4] != FP11_MAGIC_PREFIX:
+        raise HnervPacketSectionManifestError("PR101 FEC6 payload missing FP11 magic")
+    source_len = int.from_bytes(payload[4:8], "little")
+    source_start = 8
+    source_end = source_start + source_len
+    selector_len_start = source_end
+    selector_start = selector_len_start + 2
+    if source_len < PR101_TOTAL_KNOWN_LEN:
+        raise HnervPacketSectionManifestError(
+            f"PR101 FEC6 source payload too short: expected at least {PR101_TOTAL_KNOWN_LEN}, got {source_len}"
+        )
+    if selector_start > len(payload):
+        raise HnervPacketSectionManifestError(
+            f"PR101 FEC6 payload truncated before selector length: source_len={source_len}"
+        )
+    selector_len = int.from_bytes(payload[selector_len_start:selector_start], "little")
+    selector_end = selector_start + selector_len
+    if selector_end != len(payload):
+        raise HnervPacketSectionManifestError(
+            f"PR101 FEC6 selector length mismatch: selector_len={selector_len} payload_bytes={len(payload)}"
+        )
+    if selector_len < 6:
+        raise HnervPacketSectionManifestError(
+            f"PR101 FEC6 selector payload too short: {selector_len}"
+        )
+    selector_magic = payload[selector_start : selector_start + 4]
+    if selector_magic != FEC6_MAGIC_PREFIX:
+        raise HnervPacketSectionManifestError(
+            f"PR101 FEC6 selector magic mismatch: {selector_magic!r}"
+        )
+    n_pairs = int.from_bytes(payload[selector_start + 4 : selector_start + 6], "little")
+    if n_pairs != 600:
+        raise HnervPacketSectionManifestError(
+            f"PR101 FEC6 selector n_pairs mismatch: expected 600, got {n_pairs}"
+        )
+    decoder_start = source_start
+    latent_start = decoder_start + PR101_DECODER_BLOB_LEN
+    source_sidecar_start = latent_start + PR101_LATENT_BLOB_LEN
+    specs = [
+        ("fp11_magic", 0, payload[:4]),
+        ("source_len_u32le", 4, payload[4:8]),
+        (
+            "source_decoder_compact_brotli_streams",
+            decoder_start,
+            payload[decoder_start:latent_start],
+        ),
+        (
+            "source_latents_raw_lzma_delta_u8",
+            latent_start,
+            payload[latent_start:source_sidecar_start],
+        ),
+        (
+            "source_sidecar_dim_delta_huffman_enum",
+            source_sidecar_start,
+            payload[source_sidecar_start:source_end],
+        ),
+        (
+            "selector_len_u16le",
+            selector_len_start,
+            payload[selector_len_start:selector_start],
+        ),
+        (
+            "selector_fec6_fixed_huffman_k16_header",
+            selector_start,
+            payload[selector_start : selector_start + 6],
+        ),
+        (
+            "selector_fec6_fixed_huffman_k16_bitstream",
+            selector_start + 6,
+            payload[selector_start + 6 : selector_end],
+        ),
+    ]
+    return [
+        _section_record(
+            index,
+            name=name,
+            offset=offset,
+            data=data,
+            role=PR101_FEC6_SECTION_ROLES[name],
+        )
+        for index, (name, offset, data) in enumerate(specs)
     ]
 
 
@@ -1349,6 +1467,8 @@ def _gate(blockers: Sequence[str]) -> dict[str, Any]:
 def _parser_confidence(parser_name: str) -> str:
     if parser_name == PARSER_PR101:
         return "fixed public PR101 offsets"
+    if parser_name == PARSER_PR101_FEC6:
+        return "FP11 wrapper plus FEC6 fixed-Huffman K16 selector payload"
     if parser_name == PARSER_PR103:
         return "existing PR103 lc_ac parser"
     if parser_name == PARSER_PR106:
@@ -1409,6 +1529,8 @@ __all__ = [
     "CPLX1_MAGIC",
     "D1POLY1_MAGIC_PREFIX",
     "DP1_MAGIC_PREFIX",
+    "FEC6_MAGIC_PREFIX",
+    "FP11_MAGIC_PREFIX",
     "IBPS1_MAGIC_PREFIX",
     "MANIFEST_SCHEMA",
     "PARSER_A2K1",
@@ -1421,6 +1543,7 @@ __all__ = [
     "PARSER_DP1",
     "PARSER_IBPS1",
     "PARSER_PR101",
+    "PARSER_PR101_FEC6",
     "PARSER_PR103",
     "PARSER_PR106",
     "PARSER_TT5L",

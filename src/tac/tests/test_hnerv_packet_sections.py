@@ -12,11 +12,14 @@ import pytest
 from tac.analysis.hnerv_packet_sections import (
     A2K1_MAGIC,
     CPLX1_MAGIC,
+    FEC6_MAGIC_PREFIX,
+    FP11_MAGIC_PREFIX,
     MANIFEST_SCHEMA,
     PARSER_A2K1,
     PARSER_AUTO,
     PARSER_CPLX1,
     PARSER_PR101,
+    PARSER_PR101_FEC6,
     PARSER_PR103,
     PARSER_PR106,
     PR101_DECODER_BLOB_LEN,
@@ -29,8 +32,8 @@ from tac.analysis.hnerv_packet_sections import (
 )
 from tac.hnerv_pr103_lc_ac_schema import PUBLIC_PR103_LAYOUT
 from tac.packet_compiler.pr106_sidecar_packet import (
-    PR106SidecarPacket,
     PR106_SIDECAR_FORMAT_BROTLI,
+    PR106SidecarPacket,
     emit_pr106_sidecar_packet,
 )
 from tac.repo_io import sha256_bytes
@@ -60,6 +63,51 @@ def test_pr101_manifest_records_archive_member_and_fixed_sections(tmp_path: Path
     ]
     assert manifest["sections"][1]["offset"] == PR101_DECODER_BLOB_LEN
     assert manifest["sections"][2]["length"] == 607
+    assert validate_packet_section_manifest(manifest) == []
+
+
+def test_pr101_fec6_manifest_records_fp11_wrapper_and_selector_sections(tmp_path: Path) -> None:
+    source_sidecar = b"s" * 607
+    source_payload = (
+        b"d" * PR101_DECODER_BLOB_LEN
+        + b"l" * PR101_LATENT_BLOB_LEN
+        + source_sidecar
+    )
+    selector_bits = b"\x80" * 243
+    selector_payload = FEC6_MAGIC_PREFIX + (600).to_bytes(2, "little") + selector_bits
+    payload = (
+        FP11_MAGIC_PREFIX
+        + len(source_payload).to_bytes(4, "little")
+        + source_payload
+        + len(selector_payload).to_bytes(2, "little")
+        + selector_payload
+    )
+    archive = tmp_path / "pr101_fec6.zip"
+    _stored_zip(archive, "x", payload)
+
+    manifest = build_packet_section_manifest(archive, label="PR101 FEC6", parser=PARSER_AUTO)
+
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser"]["name"] == PARSER_PR101_FEC6
+    assert [section["name"] for section in manifest["sections"]] == [
+        "fp11_magic",
+        "source_len_u32le",
+        "source_decoder_compact_brotli_streams",
+        "source_latents_raw_lzma_delta_u8",
+        "source_sidecar_dim_delta_huffman_enum",
+        "selector_len_u16le",
+        "selector_fec6_fixed_huffman_k16_header",
+        "selector_fec6_fixed_huffman_k16_bitstream",
+    ]
+    assert manifest["coverage"]["covers_payload"] is True
+    assert manifest["sections"][2]["offset"] == 8
+    assert manifest["sections"][5]["offset"] == 8 + len(source_payload)
+    assert manifest["sections"][6]["length"] == 6
+    assert manifest["sections"][7]["length"] == len(selector_bits)
+    assert (
+        manifest["sections"][7]["optimization_role"]
+        == "sidecar_or_correction_stream"
+    )
     assert validate_packet_section_manifest(manifest) == []
 
 
