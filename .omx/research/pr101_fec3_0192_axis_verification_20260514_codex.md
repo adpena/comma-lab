@@ -84,3 +84,64 @@ What remains open:
 
 Next score-lowering work should be CUDA-safe, byte-closed selector/grain
 engineering, not promotion of the CPU near-miss.
+
+## 2026-05-15 CUDA Axis Closure
+
+The matching detached Modal T4 CUDA eval completed after the CPU-axis
+verification.
+
+Artifacts:
+
+- output dir:
+  `experiments/results/modal_auth_eval/pr101_fec3_compact_exact_k8_cuda_20260515T000000Z`
+- Modal call id: `fc-01KRMFR42NV1XJAAGSA7YHDT59`
+- eval JSON:
+  `experiments/results/modal_auth_eval/pr101_fec3_compact_exact_k8_cuda_20260515T000000Z/contest_auth_eval.json`
+- eval JSON sha256:
+  `31c47970ce708de7d13268e83b940f6111459119dff0f5548beac99b41ec51de`
+- result JSON sha256:
+  `ee37d60672eea9f1789c26a5863c017ed751337f1172b7fee697a98f7883bd9b`
+- packet archive:
+  `experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex/archive.zip`
+- archive bytes: `178517`
+- archive sha256:
+  `8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409`
+- uploaded runtime tree sha256:
+  `40bfaea67aa506e27b763452c2871dd43fba174e4d6680e57a91801f1f5fa923`
+- samples: `600`
+- platform: Linux x86_64 T4 via Modal recovery
+
+CUDA components:
+
+- `avg_segnet_dist`: `0.00066299`
+- `avg_posenet_dist`: `0.00016893`
+- canonical formula score:
+  `0.22626723761043824`
+- evidence grade: `[contest-CUDA]`
+- exact CUDA complete: `true`
+- score claim: `true`
+- promotion eligible: `false`
+
+Classification:
+
+- The `0.19209788683213053` value is confirmed legitimate only on the
+  `[contest-CPU]` axis.
+- The same byte-closed archive on `[contest-CUDA]` scores
+  `0.22626723761043824`, so it is not a public leaderboard breakthrough and
+  not a sub-0.192 CUDA candidate.
+- The CPU/CUDA gap for this archive is `0.034169350778308`.
+- Relative to the prior PR101 CUDA anchor around `0.22650343150032118`, this
+  selector is still a small CUDA improvement (`-0.000236193889883`), so the
+  frame-exploit/selector family is not a no-op. The failure is magnitude and
+  CUDA transferability, not archive engineering.
+
+Updated answer to the operator question:
+
+- The `0.192` was a real CPU-axis result, not a hallucinated proxy.
+- It is not leaderboard-legit for the CUDA contest axis.
+- The FEC3 packet engineering is correct enough to charge the selector bytes,
+  preserve runtime custody, run exact CPU, and run exact CUDA.
+- The current K8 selector/grain/water-fill basin is not exhausted: it improved
+  PR101 CUDA slightly, but the CPU-winning modes do not transfer enough through
+  CUDA PoseNet/SegNet. Future work must be CUDA-in-loop, vectorized/sharded,
+  and byte-closed from the start.
