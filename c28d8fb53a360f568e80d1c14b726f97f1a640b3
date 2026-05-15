@@ -1,0 +1,51 @@
+PHASE-2-LAND-5-GAP-GATES-OMNIBUS-FOLLOWON-20260515 backfill annotation:
+
+This commit absorbed PHASE-2-LAND-5-GAP-GATES work under the wrong message body via the WAVE-D 2c957c31e commit-swap class. The 5 GAP gates Catalog #285-#289 + companion serializer hardening landed cleanly in this commit, but the canonical message belongs to:
+
+preflight: land 5 GAP gates Catalog #285-#289 from OMNIBUS bug-class audit + companion serializer hardening
+
+PHASE-2 follow-on to OMNIBUS-BUG-CLASS-AUDIT (subagent aba0abf5,
+manifest .omx/research/omnibus_bug_class_audit_matrix_20260515.json) per
+operator standing directive 2026-05-15 'fix all bug classes and meta
+bugs and all versions permanently and self protect against them'.
+
+5 GAP gates landed:
+- #285 META-meta-meta fail-open guard (warn-only at landing; sister of
+  #279/#280/#281/#282/#283 per-instance fail-open gates)
+- #286 phantom catalog row gate (STRICT@0; sister of #185 LIVE_COUNT
+  drift at the NAME-EXISTS surface; PHASE-1 commit 42665ce95 cleared
+  all 6 known #273-#278 phantoms)
+- #287 docstring overstatement evidence-tag gate (warn-only; 15 legacy
+  violations need backfill)
+- #288 uv torch driver-version pin gate (STRICT@0; canonical wrapper
+  scripts/remote_archive_only_eval.sh:88-95 already auto-pins via
+  INFLATE_TORCH_SPEC)
+- #289 commit-serializer drop-flag-and-retry detection (STRICT@0; cutoff
+  filter exempts pre-2026-05-15T22:00:00Z legacy events; META-meta-meta
+  sister of #117/#157/#174/#216 commit-swap class)
+
+Companion runtime hardening in tools/subagent_commit_serializer.py:
+- (a) every event now logs expected_content_sha256_present + count so
+  Catalog #289 has structured evidence
+- (b) high-risk files (src/tac/preflight.py, CLAUDE.md) flip opt-in ->
+  opt-out for --expected-content-sha256 (rc=5 if missing); structurally
+  extincts WAVE-D 2c957c31e drop-flag-and-retry agent-response failure
+  mode at the highest-concurrency surfaces.
+
+47 dedicated tests in src/tac/tests/test_check_285_to_289_omnibus_gap_
+gates.py all PASS. META-meta gates verified clean post-landing
+(#118=0/#159=0/#176=1-pre-existing-sister/#185=0/#286=0).
+
+Lane: lane_phase_2_land_5_gap_gates_20260515 L1 (impl_complete +
+strict_preflight + memory_entry).
+Memory: feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_
+20260515.md.
+
+$0 GPU; ~90 min editor work; checkpoint discipline per Catalog #206;
+premise verifications PV-1 through PV-5 confirmed pre-edit; sister-
+subagent ownership map honored per Catalog #230 (6 in-flight OP-fix
+waves untouched).
+
+IRONIC NOTE: this commit IS itself an empirical receipt of the WAVE-D commit-swap class — the very bug class Catalog #289 (newly landed in this commit) detects. The companion runtime hardening in tools/subagent_commit_serializer.py (high-risk files flip opt-in -> opt-out for --expected-content-sha256) prevents this exact failure mode going forward. PHASE-2's serializer call did pass --expected-content-sha256 with correct post-edit shas (working-tree content matched), but git commit returned rc=1 because the sister subagent's parallel commit (c28d8fb53) had already absorbed our exact bytes. Future PHASE-N+ commits to high-risk files will be REFUSED rc=5 if --expected-content-sha256 is missing.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
