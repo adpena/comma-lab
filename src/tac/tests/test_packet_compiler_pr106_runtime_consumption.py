@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -273,6 +274,12 @@ def test_pr106_runtime_source_manifest_is_deterministic_and_runtime_bound() -> N
     assert manifest_a == manifest_b
     assert manifest_a["schema"] == "pr106_runtime_source_manifest_v1"
     assert manifest_a["runtime_source_tree_sha256"] == PR106_R2_PR101_RUNTIME_TREE_SHA
+    assert manifest_a["required_files"] == [
+        "inflate.sh",
+        "inflate.py",
+        "src/codec.py",
+        "src/model.py",
+    ]
     files = manifest_a["files"]
     assert isinstance(files, list)
     paths = [item["path"] for item in files]
@@ -281,6 +288,15 @@ def test_pr106_runtime_source_manifest_is_deterministic_and_runtime_bound() -> N
     assert "src/pr101_grammar.py" in paths
     inflate_sh = next(item for item in files if item["path"] == "inflate.sh")
     assert inflate_sh["mode"] == "0755"
+
+
+def test_pr106_runtime_source_manifest_requires_inflate_sh(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    shutil.copytree(PR106_R2_PR101_RUNTIME, runtime)
+    (runtime / "inflate.sh").unlink()
+
+    with pytest.raises(ValueError, match=r"inflate.sh"):
+        pr106_runtime_source_manifest(runtime)
 
 
 def test_pr106_pr101_grammar_runtime_consumes_framing_meta_fail_closed() -> None:

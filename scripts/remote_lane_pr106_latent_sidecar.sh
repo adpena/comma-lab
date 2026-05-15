@@ -135,20 +135,29 @@ if [ "$PR106_LATENT_MODE" = "score_table" ] && [ -z "$PR106_LATENT_SCORE_TABLE_N
     fi
 fi
 
-BUILD_ARGS=(
-    experiments/build_pr106_latent_sidecar.py
-    --source-archive "$PR106_ARCHIVE" \
-    --output-dir "$BUILD_DIR" \
-    --top-k "$SIDECAR_TOP_K" \
-    --device cuda \
-    --search-mode "$PR106_LATENT_MODE" \
-    --delta-radius "$PR106_LATENT_DELTA_RADIUS"
-)
 if [ "$PR106_LATENT_MODE" = "score_table" ]; then
-    BUILD_ARGS+=(--score-table-npy "$PR106_LATENT_SCORE_TABLE_NPY")
+    BUILD_ARGS=(
+        tools/materialize_pr106_latent_score_table_candidate.py
+        --source-archive "$PR106_ARCHIVE"
+        --output-dir "$BUILD_DIR"
+        --top-k "$SIDECAR_TOP_K"
+        --delta-radius "$PR106_LATENT_DELTA_RADIUS"
+        --score-table-npy "$PR106_LATENT_SCORE_TABLE_NPY"
+        --python-executable "$PYBIN"
+    )
     if [ -n "$PR106_LATENT_SCORE_TABLE_MANIFEST" ]; then
         BUILD_ARGS+=(--score-table-manifest "$PR106_LATENT_SCORE_TABLE_MANIFEST")
     fi
+else
+    BUILD_ARGS=(
+        experiments/build_pr106_latent_sidecar.py
+        --source-archive "$PR106_ARCHIVE"
+        --output-dir "$BUILD_DIR"
+        --top-k "$SIDECAR_TOP_K"
+        --device cuda
+        --search-mode "$PR106_LATENT_MODE"
+        --delta-radius "$PR106_LATENT_DELTA_RADIUS"
+    )
 fi
 "$PYBIN" -u "${BUILD_ARGS[@]}" 2>&1 | tee -a "$LOG_DIR/run.log"
 SIDECAR_ARCHIVE="$BUILD_DIR/sidecar_archive.zip"

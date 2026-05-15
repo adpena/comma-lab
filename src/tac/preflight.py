@@ -2065,6 +2065,26 @@ def preflight_all(
         check_dispatch_wrappers_invoke_local_pre_deploy_check_first(
             strict=False, verbose=verbose,
         )
+        # 2026-05-15 Catalog #244 - META-CONSOLIDATION-CRITICAL-PLUS-POC:
+        # canonical Modal/CUDA env hygiene block (DALI_DISABLE_NVML +
+        # CUBLAS_WORKSPACE_CONFIG + PYTORCH_CUDA_ALLOC_CONF) MUST be exported
+        # by every scripts/remote_lane_substrate_*.sh. D1 incident anchor
+        # 2026-05-15 (commit 611495f26): substrate_d1_segnet_margin_polytope
+        # Modal T4 smoke crashed at NVML 999 inside DALI fn.experimental.
+        # inputs.video pipeline. Companion fix: tac.substrate_registry.
+        # driver_generator now AUTO-EMITS the block sourced from canonical
+        # constants in tac.deploy.modal.runtime so contract-driven drivers
+        # cannot drift. Initial wire-in is WARN-ONLY per CLAUDE.md
+        # "Strict-flip atomicity rule" - 31/36 legacy substrate scripts are
+        # missing the block at landing time (they pre-date the META layer).
+        # Strict-flip pending the legacy backfill wave (each script either
+        # patched with the 3 exports OR carries a
+        # `# CANONICAL_NVML_BLOCK_OK:<reason>` waiver). Sister of Catalog
+        # #163 (bootstrap sentinel) + Catalog #224 (Modal image env block).
+        # Memory: feedback_meta_consolidation_critical_plus_poc_landed_20260515.md
+        check_remote_lane_scripts_carry_canonical_nvml_block(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
         # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
         # returned auth_eval rc=2 because the trainer hand-wrote
@@ -53415,6 +53435,169 @@ def check_dispatch_wrappers_invoke_local_pre_deploy_check_first(
             f"check_dispatch_wrappers_invoke_local_pre_deploy_check_first: "
             f"{len(violations)} dispatch wrapper(s) bypass the local pre-deploy "
             f"harness per Catalog #243 WIRE-AND-INTEGRATE-ALL self-protection:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #244 (META-CONSOLIDATION-CRITICAL-PLUS-POC 2026-05-15)
+#
+# Refuses ``scripts/remote_lane_substrate_*.sh`` files that lack the canonical
+# Modal/CUDA env hygiene block (3 exports: DALI_DISABLE_NVML +
+# CUBLAS_WORKSPACE_CONFIG + PYTORCH_CUDA_ALLOC_CONF). D1 incident anchor
+# 2026-05-15: substrate_d1_segnet_margin_polytope_modal_t4_dispatch__smoke__50ep
+# crashed at "nvml error (999): A nvml internal driver error occurred" inside
+# DALI fn.experimental.inputs.video pipeline. Sister lanes D4/Z3/Z4/Z5 had the
+# 3 exports; D1 was the missing wire-in (commit 611495f26 patched D1 directly).
+# This is the 6th occurrence of the same NVML 999 bug class on Modal workers
+# in the 24h window preceding the gate landing.
+#
+# Companion runtime fix: ``tac.substrate_registry.driver_generator.generate_driver_shell``
+# now AUTO-EMITS the 3 exports immediately after ``set -euo pipefail``,
+# sourced from canonical constants in ``tac.deploy.modal.runtime``. New
+# substrate drivers regenerated through the META layer cannot ship without
+# the block. This STRICT preflight gate refuses ANY hand-written substrate
+# driver lacking the block, structurally extincting the bug class even at
+# the 31 legacy substrate drivers that pre-date the META layer.
+#
+# Per CLAUDE.md "Strict-flip atomicity rule" + "Forbidden premature KILL":
+# initial wire-in is WARN-ONLY because 31/36 legacy substrate scripts are
+# missing the block; strict-flip planned alongside the legacy backfill wave
+# (which will either patch each script with the 3 exports OR carry a
+# ``# CANONICAL_NVML_BLOCK_OK:<reason>`` waiver).
+#
+# Sister of Catalog #163 (`check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap`)
+# and Catalog #224 (`check_modal_training_image_includes_hard_runtime_deps`).
+# Together they extinct the Modal NVML 999 bug class at THREE surfaces:
+#   - Catalog #163: source-time canonical bootstrap sentinel.
+#   - Catalog #224: Modal image includes the canonical env block.
+#   - Catalog #244: every remote lane driver script exports the 3 vars.
+#
+# Cross-ref:
+#   feedback_meta_consolidation_critical_plus_poc_landed_20260515.md
+#   feedback_d1_modal_dispatch_council_omnibus_pri_2_landed_20260515.md
+#   src/tac/substrate_registry/driver_generator.py (auto-emit producer)
+#   src/tac/deploy/modal/runtime.py (canonical constants)
+#   commit 611495f26 (D1 patch — the empirical anchor)
+
+_CHECK_244_REMOTE_LANE_SUBSTRATE_GLOB = "remote_lane_substrate_*.sh"
+_CHECK_244_REQUIRED_TOKENS: tuple[str, ...] = (
+    "DALI_DISABLE_NVML",
+    "CUBLAS_WORKSPACE_CONFIG",
+    "PYTORCH_CUDA_ALLOC_CONF",
+)
+_CHECK_244_WAIVER_TOKEN = "CANONICAL_NVML_BLOCK_OK:"
+_CHECK_244_WAIVER_PLACEHOLDER_REJECT = ("<reason>", "<rationale>")
+
+
+def check_remote_lane_scripts_carry_canonical_nvml_block(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #244. Refuses ``scripts/remote_lane_substrate_*.sh`` that lack
+    the canonical Modal/CUDA env hygiene block (3 required exports:
+    ``DALI_DISABLE_NVML`` + ``CUBLAS_WORKSPACE_CONFIG`` +
+    ``PYTORCH_CUDA_ALLOC_CONF``). D1 dispatch 2026-05-15 (Modal T4 smoke)
+    crashed at NVML 999 because the lane script did not export
+    ``DALI_DISABLE_NVML`` before DALI imported NVML.
+
+    The companion fix in ``tac.substrate_registry.driver_generator`` AUTO-EMITS
+    the block for every contract-driven driver; this gate refuses any
+    hand-written script that omits it.
+
+    Acceptance per substrate driver:
+      (a) every required token appears in the file body, OR
+      (b) the file body carries a ``# CANONICAL_NVML_BLOCK_OK:<reason>``
+          waiver (placeholder ``<reason>`` / ``<rationale>`` literals
+          rejected so the docstring example cannot self-waive).
+
+    WARN-ONLY initially (live count 31/36 missing at landing); strict-flip
+    pending the legacy backfill wave per CLAUDE.md "Strict-flip atomicity
+    rule".
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    scanned = 0
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(
+                "  [check_remote_lane_scripts_carry_canonical_nvml_block] OK "
+                "(no scripts/ directory; 0 substrate driver(s) scanned)"
+            )
+        return violations
+
+    for wrapper in sorted(
+        scripts_dir.glob(_CHECK_244_REMOTE_LANE_SUBSTRATE_GLOB)
+    ):
+        rel = str(wrapper.relative_to(root))
+        try:
+            text = wrapper.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+
+        # Same-file waiver acceptance (substantive rationale required).
+        waived = False
+        for line in text.splitlines():
+            if _CHECK_244_WAIVER_TOKEN not in line:
+                continue
+            # Extract rationale after the marker
+            after = line.split(_CHECK_244_WAIVER_TOKEN, 1)[1].strip()
+            # Strip trailing comment whitespace / closing markers
+            after = after.rstrip(" \t#").strip()
+            if not after:
+                continue  # bare waiver without rationale - rejected
+            if after in _CHECK_244_WAIVER_PLACEHOLDER_REJECT:
+                continue  # placeholder rejected
+            waived = True
+            break
+        if waived:
+            continue
+
+        missing = [tok for tok in _CHECK_244_REQUIRED_TOKENS if tok not in text]
+        if missing:
+            violations.append(
+                f"{rel}: missing canonical Modal/CUDA env hygiene exports "
+                f"{missing}. D1 incident anchor 2026-05-15 (commit 611495f26): "
+                "substrate dispatch crashed at 'nvml error (999)' inside DALI "
+                "fn.experimental.inputs.video because the lane script did not "
+                "export DALI_DISABLE_NVML=1 before DALI imported NVML. Add the "
+                "3 exports (CUBLAS_WORKSPACE_CONFIG=:4096:8 + DALI_DISABLE_NVML=1 "
+                "+ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True) immediately "
+                "after `set -euo pipefail`, OR regenerate the driver via "
+                "tac.substrate_registry.driver_generator.generate_driver_shell "
+                "(which auto-emits the block per Catalog #244), OR add a "
+                "`# CANONICAL_NVML_BLOCK_OK:<rationale>` waiver."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_remote_lane_scripts_carry_canonical_nvml_block] "
+                f"{len(violations)} violation(s) across {scanned} "
+                f"substrate driver(s) (WARN-ONLY initially per Strict-flip "
+                "atomicity rule):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [check_remote_lane_scripts_carry_canonical_nvml_block] OK "
+                f"({scanned} substrate driver(s) scanned; 0 violation(s))"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_remote_lane_scripts_carry_canonical_nvml_block found "
+            f"{len(violations)} substrate driver script(s) missing the canonical "
+            "Modal/CUDA env hygiene block (DALI_DISABLE_NVML + "
+            "CUBLAS_WORKSPACE_CONFIG + PYTORCH_CUDA_ALLOC_CONF). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "non-negotiable, this protects against the D1 NVML 999 dispatch "
+            "failure class (commit 611495f26, 2026-05-15):\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

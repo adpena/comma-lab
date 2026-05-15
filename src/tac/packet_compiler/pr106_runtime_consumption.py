@@ -52,6 +52,12 @@ _RUNTIME_SOURCE_CANDIDATES = (
     "src/model.py",
     "src/pr101_grammar.py",
 )
+_RUNTIME_SOURCE_REQUIRED = (
+    "inflate.sh",
+    "inflate.py",
+    "src/codec.py",
+    "src/model.py",
+)
 
 
 @contextmanager
@@ -116,6 +122,13 @@ def pr106_runtime_source_manifest(runtime_dir: Path) -> dict[str, object]:
     """Return a deterministic hash over the runtime files used by this proof."""
 
     runtime_dir = Path(runtime_dir)
+    missing_required = [
+        rel for rel in _RUNTIME_SOURCE_REQUIRED if not (runtime_dir / rel).exists()
+    ]
+    if missing_required:
+        raise ValueError(
+            "runtime dir missing required source files: " + ", ".join(missing_required)
+        )
     files: list[dict[str, object]] = []
     for rel in _RUNTIME_SOURCE_CANDIDATES:
         path = runtime_dir / rel
@@ -138,6 +151,7 @@ def pr106_runtime_source_manifest(runtime_dir: Path) -> dict[str, object]:
     return {
         "schema": "pr106_runtime_source_manifest_v1",
         "runtime_dir": runtime_dir.as_posix(),
+        "required_files": list(_RUNTIME_SOURCE_REQUIRED),
         "files": files,
         "runtime_source_tree_sha256": sha256_hex(tree_payload),
     }

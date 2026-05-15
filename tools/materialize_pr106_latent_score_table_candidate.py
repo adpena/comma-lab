@@ -40,11 +40,13 @@ from tac.packet_compiler.pr106_latent_sidecar_selection import (  # noqa: E402
     latent_candidate_grid_npy_sha256,
     validate_score_table_manifest,
 )
+from tac.packet_compiler.pr106_runtime_consumption import pr106_runtime_source_manifest  # noqa: E402
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_LATENT_N_DIMS,
     PR106_LATENT_N_PAIRS,
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_MAGIC,
     emit_pr106_format0c_semantic_candidate_archive,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
@@ -120,6 +122,8 @@ class SourcePacketInfo:
     member_name: str
     payload_sha256: str
     format_id: int | None
+    packet_magic_present: bool
+    parse_error: str | None
 
 
 def default_run_id() -> str:
@@ -221,14 +225,19 @@ def _source_packet_info(source_archive: Path) -> SourcePacketInfo | None:
     if member is None:
         return None
     format_id: int | None = None
+    parse_error: str | None = None
     try:
         format_id = parse_pr106_sidecar_packet(member.payload).format_id
-    except ValueError:
-        format_id = None
+    except ValueError as exc:
+        parse_error = str(exc)
     return SourcePacketInfo(
         member_name=member.name,
         payload_sha256=sha256_hex(member.payload),
         format_id=format_id,
+        packet_magic_present=bool(
+            member.payload and member.payload[0] == PR106_SIDECAR_MAGIC
+        ),
+        parse_error=parse_error,
     )
 
 
@@ -236,6 +245,19 @@ def _source_packet_format_label(info: SourcePacketInfo | None) -> str | None:
     if info is None or info.format_id is None:
         return None
     return f"0x{info.format_id:02X}"
+
+
+def _resolve_runtime_dir_from_manifest(score_table_manifest: Path) -> Path:
+    manifest = _manifest_mapping(score_table_manifest)
+    runtime_dir = manifest.get("runtime_dir")
+    if not isinstance(runtime_dir, str) or not runtime_dir:
+        raise ValueError("score table manifest runtime_dir missing or invalid")
+    path = Path(runtime_dir)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    if not path.is_dir():
+        raise FileNotFoundError(f"score table manifest runtime_dir not found: {path}")
+    return path
 
 
 def audit_score_table_manifest(
@@ -305,7 +327,11 @@ def audit_score_table_manifest(
     )
     legacy_zero_bin_fallback_allowed = (
         source_member_name == "0.bin"
-        and (source_info is None or source_info.format_id in (None, PR106_SIDECAR_FORMAT_BROTLI))
+        and (
+            source_info is None
+            or not source_info.packet_magic_present
+            or source_info.format_id == PR106_SIDECAR_FORMAT_BROTLI
+        )
     )
     source_zero_bin_sha256_matches = (
         source_payload_sha256 is not None
@@ -363,6 +389,10 @@ def audit_score_table_manifest(
             "manifest_member_sha256": manifest.get("source_archive_member_sha256"),
             "manifest_zero_bin_sha256": manifest.get("source_zero_bin_sha256"),
             "source_sidecar_format_id": _source_packet_format_label(source_info),
+            "source_packet_magic_present": (
+                None if source_info is None else source_info.packet_magic_present
+            ),
+            "source_packet_parse_error": None if source_info is None else source_info.parse_error,
             "bytes_match": source_archive_bytes_match,
             "archive_sha256_match": source_archive_sha256_matches,
             "single_member_name_match": source_member_name_matches,
@@ -442,6 +472,8 @@ def _materialize_format0c_native(
         delta_radius=delta_radius,
         candidate_count=int(candidates.shape[0]),
     )
+    runtime_dir = _resolve_runtime_dir_from_manifest(score_table_manifest)
+    runtime_source = pr106_runtime_source_manifest(runtime_dir)
     dim_arr, delta_q_arr, diagnostics = choose_latent_corrections_from_score_table_file(
         score_table_npy,
         n_pairs=PR106_LATENT_N_PAIRS,
@@ -484,6 +516,10 @@ def _materialize_format0c_native(
         "source_archive_member_name": source_member.name,
         "source_archive_member_sha256": sha256_hex(source_member.payload),
         "source_sidecar_format_id": f"0x{source_packet.format_id:02X}",
+        "source_runtime": {
+            "runtime_dir": runtime_dir.as_posix(),
+            "runtime_source_manifest": runtime_source,
+        },
         "pr106_bin_bytes": len(source_packet.pr106_bytes),
         "pr106_bin_sha256": sha256_hex(source_packet.pr106_bytes),
         "sidecar_path": str(sidecar_bin_path),
@@ -605,6 +641,12 @@ def materialize_candidate(
             top_k=top_k,
         )
     else:
+        if source_info is not None and source_info.packet_magic_present and source_format_id is None:
+            raise RuntimeError(
+                "refusing to route unparsable PR106 PacketIR through the legacy "
+                "0.bin materializer: "
+                f"{source_info.parse_error or 'parse_error_unknown'}"
+            )
         if source_format_id not in (None, PR106_SIDECAR_FORMAT_BROTLI):
             raise RuntimeError(
                 "refusing to route non-0x01 PR106 PacketIR through the legacy "
@@ -691,6 +733,7 @@ def materialize_candidate(
         "audit_warnings": audit_warnings,
         "score_table_manifest_audit": score_table_manifest_audit,
         "builder_metadata_audit": builder_metadata_audit,
+        "source_runtime": build_metadata.get("source_runtime"),
         "source_archive": _artifact(source_archive),
         "score_table_npy": _artifact(npy_path),
         "score_table_manifest": _artifact(manifest_path),

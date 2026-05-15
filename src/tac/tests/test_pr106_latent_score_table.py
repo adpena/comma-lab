@@ -327,6 +327,7 @@ def test_remote_latent_lane_defaults_to_score_table_and_resume():
     assert 'LANE_ID="lane_pr106_latent_sidecar"' in text
     assert 'PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"' in text
     assert "experiments/build_pr106_latent_score_table.py" in text
+    assert "tools/materialize_pr106_latent_score_table_candidate.py" in text
     assert 'PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"' in text
     assert "--runtime-dir \"$PR106_RUNTIME_DIR\"" in text
     assert "tools/prove_pr106_sidecar_runtime_consumption.py" in text
@@ -340,7 +341,7 @@ def test_remote_latent_lane_defaults_to_score_table_and_resume():
     assert 'INFLATE_SH="$WORKSPACE/$PR106_RUNTIME_DIR/inflate.sh"' in text
     assert "Stage 1a RESUME: validating completed latent score table" in text
     assert "SCORE_TABLE_ARGS+=(--resume-checkpoint)" in text
-    assert "--search-mode \"$PR106_LATENT_MODE\"" in text
+    assert "--python-executable \"$PYBIN\"" in text
     assert "--score-table-manifest \"$PR106_LATENT_SCORE_TABLE_MANIFEST\"" in text
 
 

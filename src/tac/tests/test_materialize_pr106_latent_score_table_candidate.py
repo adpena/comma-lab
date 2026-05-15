@@ -362,6 +362,36 @@ def test_materializer_refuses_non_0x01_packet_ir_legacy_route(
         )
 
 
+def test_materializer_refuses_unparsable_packet_ir_legacy_route(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    source_archive = tmp_path / "archive.zip"
+    _stored_zip(source_archive, payload=b"\xfe\xffbad-packet-ir", member_name="0.bin")
+    npy = tmp_path / "score_table.npy"
+    npy.write_bytes(b"npy")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(manifest, _complete_score_table_manifest(source_archive, npy))
+
+    def fail_run(*_args, **_kwargs):
+        raise AssertionError("legacy builder subprocess must not run for bad PacketIR")
+
+    monkeypatch.setattr(module.subprocess, "run", fail_run)
+
+    with pytest.raises(RuntimeError, match="unparsable PR106 PacketIR"):
+        module.materialize_candidate(
+            source_archive=source_archive,
+            output_dir=tmp_path / "out",
+            score_table_root=tmp_path,
+            score_table_npy=npy,
+            score_table_manifest=manifest,
+            delta_radius=2,
+            top_k=600,
+            python_executable="python",
+        )
+
+
 def test_format0c_materializer_uses_native_packet_ir_not_legacy_builder(
     monkeypatch,
     tmp_path: Path,
@@ -415,6 +445,9 @@ def test_format0c_materializer_uses_native_packet_ir_not_legacy_builder(
     assert payload["builder"]["command"] == []
     metadata = read_json(output_dir / "build_metadata.json")
     assert metadata["materialization_engine"] == "format0c_packet_ir_native"
+    runtime_manifest = metadata["source_runtime"]["runtime_source_manifest"]
+    assert runtime_manifest["runtime_source_tree_sha256"]
+    assert "inflate.sh" in [item["path"] for item in runtime_manifest["files"]]
     assert metadata["score_table"]["score_table_manifest_validated"] is True
     assert metadata["semantic_materialization"]["composed_same_dim_pair_count"] == 1
     from tac.packet_compiler.pr106_sidecar_packet import (
@@ -435,6 +468,7 @@ def test_format0c_materializer_uses_native_packet_ir_not_legacy_builder(
     assert "requires_paired_contest_cpu_auth_eval_on_materialized_archive" in payload[
         "dispatch_blockers"
     ]
+    assert payload["source_runtime"]["runtime_source_manifest"] == runtime_manifest
 
 
 def test_materializer_downgrades_builder_exact_ready_claim(monkeypatch, tmp_path: Path) -> None:

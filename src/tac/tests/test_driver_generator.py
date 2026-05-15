@@ -110,18 +110,6 @@ def test_generate_driver_shell_has_canonical_bootstrap_sentinel() -> None:
     assert "REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source" in src
 
 
-def test_generate_driver_shell_has_canonical_modal_cuda_env_block() -> None:
-    """Catalog #224/#244: generated drivers carry the shared Modal/CUDA env block."""
-    c = SubstrateContract(**_baseline_kwargs())
-    src = generate_driver_shell(c)
-    assert 'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"' in src
-    assert 'export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"' in src
-    assert (
-        'export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"'
-        in src
-    )
-
-
 def test_generate_driver_shell_has_5min_heartbeat() -> None:
     """Per CLAUDE.md "Remote code parity"."""
     c = SubstrateContract(**_baseline_kwargs())
@@ -194,6 +182,80 @@ def test_generate_driver_shell_no_runtime_clock_drift() -> None:
     today = datetime.datetime.utcnow().strftime("%Y%m%d")
     extras = [m for m in re.findall(r"\b\d{8}\b", src) if m != "20260515"]
     assert today not in extras
+
+
+# ============================================================================
+# Catalog #224 / Catalog #244 — canonical Modal/CUDA env hygiene block tests.
+# Added 2026-05-15 by META-CONSOLIDATION-CRITICAL-PLUS-POC subagent. The block
+# extincts the D1 NVML 999 dispatch failure class structurally — every future
+# substrate driver auto-emits the 3 exports BEFORE bootstrap or trainer code
+# can import torch.
+# ============================================================================
+
+
+def test_generate_driver_shell_emits_canonical_nvml_block() -> None:
+    """Per Catalog #224 / Catalog #244: every generated driver MUST export the
+    canonical Modal/CUDA env hygiene block (DALI_DISABLE_NVML +
+    CUBLAS_WORKSPACE_CONFIG + PYTORCH_CUDA_ALLOC_CONF) BEFORE bootstrap or
+    trainer code can import torch. D1 incident anchor 2026-05-15.
+    """
+    c = SubstrateContract(**_baseline_kwargs())
+    src = generate_driver_shell(c)
+    # All 3 required exports
+    assert 'export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"' in src
+    assert 'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"' in src
+    assert (
+        'export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"'
+        in src
+    )
+    # Header comment cites the canonical anchor
+    assert "Catalog #224" in src
+    assert "Catalog #244" in src
+    assert "D1 incident anchor" in src or "D1 dispatch" in src
+
+
+def test_generate_driver_shell_nvml_block_appears_before_bootstrap_source() -> None:
+    """The canonical NVML block MUST appear BEFORE the canonical bootstrap
+    sentinel + source. If torch can be imported by bootstrap before the
+    exports land, the bug class re-emerges.
+    """
+    c = SubstrateContract(**_baseline_kwargs())
+    src = generate_driver_shell(c)
+    nvml_pos = src.find("export DALI_DISABLE_NVML=")
+    bootstrap_pos = src.find("REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source")
+    assert nvml_pos > 0, "NVML export not found"
+    assert bootstrap_pos > 0, "bootstrap source not found"
+    assert nvml_pos < bootstrap_pos, (
+        f"NVML block (pos={nvml_pos}) must appear BEFORE bootstrap source "
+        f"(pos={bootstrap_pos}) — D1 incident anchor"
+    )
+
+
+def test_generate_driver_shell_nvml_block_uses_canonical_constants() -> None:
+    """The driver-generator MUST source the values from
+    ``tac.deploy.modal.runtime`` so the Modal image env block + the
+    substrate driver share one source-of-truth.
+    """
+    from tac.deploy.modal.runtime import (
+        CUBLAS_WORKSPACE_CONFIG_VALUE,
+        DALI_DISABLE_NVML_VALUE,
+        PYTORCH_CUDA_ALLOC_CONF_VALUE,
+    )
+
+    c = SubstrateContract(**_baseline_kwargs())
+    src = generate_driver_shell(c)
+    assert (
+        f'export CUBLAS_WORKSPACE_CONFIG="${{CUBLAS_WORKSPACE_CONFIG:-{CUBLAS_WORKSPACE_CONFIG_VALUE}}}"'
+        in src
+    )
+    assert (
+        f'export DALI_DISABLE_NVML="${{DALI_DISABLE_NVML:-{DALI_DISABLE_NVML_VALUE}}}"'
+        in src
+    )
+    assert (
+        f'export PYTORCH_CUDA_ALLOC_CONF="${{PYTORCH_CUDA_ALLOC_CONF:-{PYTORCH_CUDA_ALLOC_CONF_VALUE}}}"'
+        in src
+    )
 
 
 def test_generate_driver_shell_references_recipe_path() -> None:
