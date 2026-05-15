@@ -469,28 +469,41 @@ class StageLog:
         return list(self._entries)
 
 
-def device_or_die(name: str, *, smoke: bool, substrate_tag: str):
+def device_or_die(
+    name: str,
+    *,
+    smoke: bool,
+    substrate_tag: str,
+    allow_full_cpu: bool = False,
+):
     """Resolve compute device or raise SystemExit.
 
     Args:
         name: One of {'cuda', 'cpu'}.
         smoke: True iff this is the smoke path (CPU permitted).
         substrate_tag: Short label used in error messages (e.g. 'cool_chic').
+        allow_full_cpu: Explicit advisory-only exception for trainers that
+            implement a coupled ``--full-cpu`` + waiver path.
 
     Per CLAUDE.md "MPS auth eval is NOISE" + "EMA — non-negotiable":
     cuda is the default for full training, cpu is permitted only with
-    --smoke, mps is FORBIDDEN.
+    --smoke or an explicit trainer-owned advisory exception, mps is FORBIDDEN.
     """
     import torch
 
     if name == "cpu":
-        if not smoke:
+        if not smoke and not allow_full_cpu:
             raise SystemExit(
                 f"[{substrate_tag}] --device cpu is permitted only with "
                 "--smoke per CLAUDE.md 'MPS auth eval is NOISE' + 'EMA — "
                 "non-negotiable' + full-training-needs-CUDA convention. "
                 "Use --device cuda for promotion-grade training. CPU smoke is "
                 "allowed only when deterministic-bytes acceptable."
+            )
+        if allow_full_cpu and smoke:
+            raise SystemExit(
+                f"[{substrate_tag}] allow_full_cpu=True is only valid for "
+                "full advisory runs, not smoke."
             )
         return torch.device("cpu")
     if name == "cuda":

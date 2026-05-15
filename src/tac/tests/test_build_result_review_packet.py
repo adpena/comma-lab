@@ -91,6 +91,20 @@ def test_builds_negative_exact_cuda_review_packet(tmp_path: Path) -> None:
     assert packet["runtime_custody"]["runtime_content_tree_sha256"] == "c" * 64
     assert packet["runtime_custody"]["inflate_script_sha256"] == "d" * 64
     assert packet["runtime_custody"]["inflated_output_aggregate_sha256"] == "f" * 64
+    assert packet["engineering_forensic_audit"] == {
+        "schema": "engineering_forensic_audit_v1",
+        "custody_reviewed": True,
+        "axis_reviewed": True,
+        "runtime_config_reviewed": True,
+        "archive_runtime_closure_reviewed": True,
+        "score_formula_reviewed": True,
+        "dispatch_claim_reviewed": True,
+        "engineering_or_config_bug_found": False,
+        "audit_blockers": [],
+        "classification_after_audit": "measured_config_retired_only",
+        "dead_or_family_falsification_allowed": False,
+        "measured_config_retirement_allowed": True,
+    }
     assert packet["dispatch_claim_state"]["matching_claim_count"] == 1
     assert packet["dispatch_claim_state"]["latest_status"] == "completed_score_0.351719"
     assert packet["dispatch_claim_state"]["terminal_status_recorded"] is True
@@ -117,6 +131,8 @@ def test_builds_negative_exact_cuda_review_packet(tmp_path: Path) -> None:
     )
     assert row["family_falsified"] is False
     assert row["method_family_retired"] is False
+    assert row["engineering_forensic_audit"]["engineering_or_config_bug_found"] is False
+    assert row["engineering_forensic_audit"]["measured_config_retirement_allowed"] is True
     assert "reactivation_required_before_new_dispatch" in row["dispatch_blockers"]
     assert row["exact_result_review_packet"] == ".omx/research/review.json"
 
@@ -159,6 +175,10 @@ def test_exact_cuda_without_baseline_does_not_claim_not_negative(tmp_path: Path)
     assert packet["failure_class"] == "exact_cuda_result_reviewed_baseline_missing"
     assert packet["baseline_score"] is None
     assert packet["score_claim_valid"] is True
+    assert (
+        packet["engineering_forensic_audit"]["classification_after_audit"]
+        == "exact_cuda_result_reviewed_no_negative_status_change"
+    )
 
 
 def test_proxy_or_cpu_packet_stays_non_rankable(tmp_path: Path) -> None:
@@ -184,6 +204,10 @@ def test_proxy_or_cpu_packet_stays_non_rankable(tmp_path: Path) -> None:
     assert packet["exact_cuda_evidence"] is False
     assert packet["promotion_eligible"] is False
     assert packet["method_family_retired"] is False
+    assert (
+        packet["engineering_forensic_audit"]["classification_after_audit"]
+        == "non_cuda_review_only"
+    )
 
 
 def test_contest_cpu_packet_is_reviewed_as_public_axis_not_cuda_promotion(tmp_path: Path) -> None:
@@ -214,6 +238,10 @@ def test_contest_cpu_packet_is_reviewed_as_public_axis_not_cuda_promotion(tmp_pa
     assert packet["exact_cpu_evidence"] is True
     assert packet["cpu_leaderboard_reproduction_eligible"] is True
     assert packet["promotion_eligible"] is False
+    assert (
+        packet["engineering_forensic_audit"]["classification_after_audit"]
+        == "contest_cpu_axis_reviewed_cuda_pending"
+    )
 
     row = tool.evidence_row_from_packet(
         packet,
@@ -225,3 +253,41 @@ def test_contest_cpu_packet_is_reviewed_as_public_axis_not_cuda_promotion(tmp_pa
     assert row["score_contest_cpu"] == packet["canonical_score"]
     assert row["score_contest_cuda"] is None
     assert "contest_cuda_pending_for_internal_promotion" in row["dispatch_blockers"]
+
+
+def test_negative_exact_cuda_with_engineering_blocker_stays_indeterminate(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    payload = _auth_eval_payload()
+    payload["provenance"].pop("inflate_runtime_manifest")
+    source = tmp_path / "contest_auth_eval.json"
+    source.write_text(json.dumps(payload), encoding="utf-8")
+
+    packet = tool.build_packet(
+        auth_eval_json=source,
+        technique="lossy_coarsening_analytical",
+        lane_id="lossy_coarsening_analytical_cuda",
+        job_id="job",
+        baseline_score=0.20898105277982337,
+        reactivation_criteria=["requires runtime closure review"],
+        reviewer="test",
+        dispatch_claims_path=None,
+    )
+
+    assert packet["measured_config_status"] == "indeterminate_engineering_or_config_blocker"
+    assert packet["failure_class"] == "indeterminate_engineering_or_config_blocker"
+    audit = packet["engineering_forensic_audit"]
+    assert audit["engineering_or_config_bug_found"] is True
+    assert audit["measured_config_retirement_allowed"] is False
+    assert "runtime_manifest_missing" in audit["audit_blockers"]
+    assert "terminal_dispatch_claim_missing_for_negative_cuda" in audit["audit_blockers"]
+
+    row = tool.evidence_row_from_packet(
+        packet,
+        review_packet_path=Path(".omx/research/review.json"),
+        timestamp_utc="2026-05-09T00:00:00Z",
+    )
+    assert row["evidence_grade"] == "[contest-CUDA reviewed]"
+    assert row["contest_dispatch_verdict"] == "indeterminate_engineering_or_config_blocker"
+    assert row["rank_or_kill_eligible"] is False

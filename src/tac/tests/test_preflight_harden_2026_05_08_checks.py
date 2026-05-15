@@ -160,6 +160,144 @@ def test_falsification_scope_true_value_warns(tmp_path: Path) -> None:
     assert any("LAST RESORT" in v for v in violations)
 
 
+def test_exact_negative_requires_engineering_forensic_review(tmp_path: Path) -> None:
+    """A scoped exact-negative still needs engineering/config audit custody.
+
+    Scope alone prevents class-level overreach; the forensic audit prevents
+    killing or retiring a result when the real issue is an axis/runtime/config
+    bug.
+    """
+    (tmp_path / "reports").mkdir(parents=True)
+    bad_path = tmp_path / "reports" / "cathedral_autopilot_evidence.jsonl"
+    bad_path.write_text(
+        json.dumps(
+            {
+                "technique": "cuda_negative_no_audit",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "family_falsified": False,
+                "falsification_scope": "measured_config_only",
+                "contest_dispatch_verdict": "measured_config_retired_exact_cuda_negative",
+            }
+        )
+        + "\n"
+    )
+    with pytest.raises(PreflightError) as exc_info:
+        check_evidence_row_has_falsification_scope_when_negative(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+    assert "engineering forensic audit" in str(exc_info.value)
+    assert "cuda_negative_no_audit" in str(exc_info.value)
+
+
+def test_exact_negative_with_engineering_forensic_review_passes(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "reports").mkdir(parents=True)
+    good_path = tmp_path / "reports" / "cathedral_autopilot_evidence.jsonl"
+    good_path.write_text(
+        json.dumps(
+            {
+                "technique": "cuda_negative_audited",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "family_falsified": False,
+                "method_family_retired": False,
+                "rank_or_kill_eligible": False,
+                "falsification_scope": "measured_config_only",
+                "contest_dispatch_verdict": "measured_config_retired_exact_cuda_negative",
+                "engineering_forensic_audit": {
+                    "schema": "engineering_forensic_audit_v1",
+                    "custody_reviewed": True,
+                    "axis_reviewed": True,
+                    "runtime_config_reviewed": True,
+                    "archive_runtime_closure_reviewed": True,
+                    "score_formula_reviewed": True,
+                    "dispatch_claim_reviewed": True,
+                    "engineering_or_config_bug_found": False,
+                    "classification_after_audit": "measured_config_retired_only",
+                },
+            }
+        )
+        + "\n"
+    )
+    assert check_evidence_row_has_falsification_scope_when_negative(
+        repo_root=tmp_path, strict=True, verbose=False
+    ) == []
+
+
+def test_exact_negative_with_legacy_result_review_packet_passes(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "reports").mkdir(parents=True)
+    (tmp_path / ".omx" / "research").mkdir(parents=True)
+    review_path = tmp_path / ".omx" / "research" / "review.json"
+    review_path.write_text(
+        json.dumps(
+            {
+                "schema": "tac_result_review_packet_v1",
+                "review_requirements": {
+                    "engineering_review_required": True,
+                    "contest_compliance_review_required": True,
+                },
+                "runtime_custody": {},
+                "score_recomputation": {},
+                "dispatch_claim_state": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    evidence_path = tmp_path / "reports" / "cathedral_autopilot_evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "technique": "cuda_negative_review_packet",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "family_falsified": False,
+                "falsification_scope": "measured_config_only",
+                "contest_dispatch_verdict": "measured_config_retired_exact_cuda_negative",
+                "exact_result_review_packet": ".omx/research/review.json",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    assert check_evidence_row_has_falsification_scope_when_negative(
+        repo_root=tmp_path, strict=True, verbose=False
+    ) == []
+
+
+def test_family_kill_with_engineering_bug_found_fails(tmp_path: Path) -> None:
+    (tmp_path / "reports").mkdir(parents=True)
+    bad_path = tmp_path / "reports" / "cathedral_autopilot_evidence.jsonl"
+    bad_path.write_text(
+        json.dumps(
+            {
+                "technique": "buggy_family_kill",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "family_falsified": True,
+                "falsification_scope": "family",
+                "engineering_forensic_audit": {
+                    "schema": "engineering_forensic_audit_v1",
+                    "custody_reviewed": True,
+                    "axis_reviewed": True,
+                    "runtime_config_reviewed": True,
+                    "archive_runtime_closure_reviewed": True,
+                    "score_formula_reviewed": True,
+                    "dispatch_claim_reviewed": True,
+                    "engineering_or_config_bug_found": True,
+                    "classification_after_audit": "indeterminate_engineering_or_config_blocker",
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(PreflightError) as exc_info:
+        check_evidence_row_has_falsification_scope_when_negative(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+    assert "engineering_or_config_bug_found=true" in str(exc_info.value)
+
+
 def test_falsification_scope_clean_passes(tmp_path: Path) -> None:
     """A row with family_falsified=False AND a non-empty falsification_scope
     must pass."""

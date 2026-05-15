@@ -54,6 +54,26 @@ DPP_UPSTREAM_DIR="${DPP_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 DPP_DEVICE="${DPP_DEVICE:-cuda}"
 DPP_DATASET_NAME="${DPP_DATASET_NAME:-comma2k19}"
 DPP_ENABLE_AUTOCAST_FP16="${DPP_ENABLE_AUTOCAST_FP16:-1}"
+DPP_ENABLE_GT_SCORER_CACHE="${DPP_ENABLE_GT_SCORER_CACHE:-0}"
+DPP_ENABLE_TORCH_COMPILE="${DPP_ENABLE_TORCH_COMPILE:-0}"
+DPP_SKIP_AUTH_EVAL="${DPP_SKIP_AUTH_EVAL:-0}"
+DPP_FULL_CPU="${DPP_FULL_CPU:-0}"
+DPP_ADVISORY_CPU_EXPLICITLY_WAIVED="${DPP_ADVISORY_CPU_EXPLICITLY_WAIVED:-0}"
+DPP_CACHE_DIR="${DPP_CACHE_DIR:-}"
+DPP_MAX_DISK_GB="${DPP_MAX_DISK_GB:-100.0}"
+DPP_LOG_INCREMENTAL_BASE="${DPP_LOG_INCREMENTAL_BASE:-2}"
+DPP_LOG_INCREMENTAL_MAX_CHUNKS="${DPP_LOG_INCREMENTAL_MAX_CHUNKS:-80}"
+DPP_LOG_INCREMENTAL_QUALITY_THRESHOLD="${DPP_LOG_INCREMENTAL_QUALITY_THRESHOLD:-0.005}"
+DPP_DISABLE_LOG_INCREMENTAL="${DPP_DISABLE_LOG_INCREMENTAL:-0}"
+DPP_USE_STREAMER="${DPP_USE_STREAMER:-0}"
+DPP_STREAM_LOG_DIR="${DPP_STREAM_LOG_DIR:-$LOG_DIR/stream_logs}"
+DPP_RAM_BUFFER_GB="${DPP_RAM_BUFFER_GB:-2.0}"
+DPP_STREAMER_FRAMES_PER_CHUNK="${DPP_STREAMER_FRAMES_PER_CHUNK:-256}"
+DPP_MAX_DISTILLATION_FRAMES="${DPP_MAX_DISTILLATION_FRAMES:-4096}"
+DPP_MAX_DISTILLATION_CHUNKS="${DPP_MAX_DISTILLATION_CHUNKS:-8}"
+DPP_MAX_PAIRS="${DPP_MAX_PAIRS:-600}"
+DPP_VAL_PAIR_COUNT="${DPP_VAL_PAIR_COUNT:-64}"
+DPP_VAL_EVERY_EPOCHS="${DPP_VAL_EVERY_EPOCHS:-50}"
 # Phase 2 Comma2k19 chunk path (Catalog #209-routed via Comma2k19FrameIterator).
 # Smoke path uses synthetic stub regardless; full path with --dataset-name=comma2k19
 # requires this to be set by the operator-authorize wrapper. Default empty so
@@ -156,6 +176,15 @@ cat > "$PROVENANCE" <<EOF
   "epochs": $DPP_EPOCHS,
   "batch_size": $DPP_BATCH_SIZE,
   "dataset_name": "$DPP_DATASET_NAME",
+  "comma2k19_chunks_dir_set": $(if [ -n "$DPP_COMMA2K19_CHUNKS_DIR" ]; then echo true; else echo false; fi),
+  "cache_dir_set": $(if [ -n "$DPP_CACHE_DIR" ]; then echo true; else echo false; fi),
+  "use_streamer": $(if [ "$DPP_USE_STREAMER" = "1" ]; then echo true; else echo false; fi),
+  "max_distillation_frames": $DPP_MAX_DISTILLATION_FRAMES,
+  "max_distillation_chunks": $DPP_MAX_DISTILLATION_CHUNKS,
+  "max_pairs": $DPP_MAX_PAIRS,
+  "val_pair_count": $DPP_VAL_PAIR_COUNT,
+  "enable_gt_scorer_cache": $(if [ "$DPP_ENABLE_GT_SCORER_CACHE" = "1" ]; then echo true; else echo false; fi),
+  "enable_torch_compile": $(if [ "$DPP_ENABLE_TORCH_COMPILE" = "1" ]; then echo true; else echo false; fi),
   "device": "$DPP_DEVICE",
   "platform": "$DISPATCH_PLATFORM",
   "instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
@@ -190,6 +219,13 @@ log "Stage 3: smoke distill + pack + parse"
 DPP_RUN_FULL="${DPP_RUN_FULL:-0}"
 if [ "$DPP_RUN_FULL" = "1" ]; then
     log "Stage 4: Phase 2 full training (DPP_RUN_FULL=1)"
+    if [ "$DPP_DATASET_NAME" = "comma2k19" ] \
+        && [ -z "$DPP_COMMA2K19_CHUNKS_DIR" ] \
+        && [ -z "$DPP_CACHE_DIR" ] \
+        && [ "$DPP_USE_STREAMER" != "1" ]; then
+        log "FATAL: DPP_RUN_FULL=1 with DPP_DATASET_NAME=comma2k19 requires one explicit dataset source: DPP_COMMA2K19_CHUNKS_DIR, DPP_CACHE_DIR, or DPP_USE_STREAMER=1"
+        exit 26
+    fi
     DPP_FULL_ARGS=(
         --video-path "$DPP_VIDEO_PATH"
         --output-dir "$DPP_OUTPUT_DIR"
@@ -198,12 +234,50 @@ if [ "$DPP_RUN_FULL" = "1" ]; then
         --epochs "$DPP_EPOCHS"
         --batch-size "$DPP_BATCH_SIZE"
         --dataset-name "$DPP_DATASET_NAME"
+        --max-disk-gb "$DPP_MAX_DISK_GB"
+        --log-incremental-base "$DPP_LOG_INCREMENTAL_BASE"
+        --log-incremental-max-chunks "$DPP_LOG_INCREMENTAL_MAX_CHUNKS"
+        --log-incremental-quality-threshold "$DPP_LOG_INCREMENTAL_QUALITY_THRESHOLD"
+        --max-distillation-frames "$DPP_MAX_DISTILLATION_FRAMES"
+        --max-distillation-chunks "$DPP_MAX_DISTILLATION_CHUNKS"
+        --max-pairs "$DPP_MAX_PAIRS"
+        --val-pair-count "$DPP_VAL_PAIR_COUNT"
+        --val-every-epochs "$DPP_VAL_EVERY_EPOCHS"
     )
     if [ -n "$DPP_COMMA2K19_CHUNKS_DIR" ]; then
         DPP_FULL_ARGS+=(--comma2k19-chunks-dir "$DPP_COMMA2K19_CHUNKS_DIR")
     fi
+    if [ -n "$DPP_CACHE_DIR" ]; then
+        DPP_FULL_ARGS+=(--cache-dir "$DPP_CACHE_DIR")
+    fi
+    if [ "$DPP_DISABLE_LOG_INCREMENTAL" = "1" ]; then
+        DPP_FULL_ARGS+=(--disable-log-incremental)
+    fi
+    if [ "$DPP_USE_STREAMER" = "1" ]; then
+        DPP_FULL_ARGS+=(
+            --use-streamer
+            --stream-log-dir "$DPP_STREAM_LOG_DIR"
+            --ram-buffer-gb "$DPP_RAM_BUFFER_GB"
+            --streamer-frames-per-chunk "$DPP_STREAMER_FRAMES_PER_CHUNK"
+        )
+    fi
     if [ "$DPP_ENABLE_AUTOCAST_FP16" = "1" ]; then
         DPP_FULL_ARGS+=(--enable-autocast-fp16)
+    fi
+    if [ "$DPP_ENABLE_GT_SCORER_CACHE" = "1" ]; then
+        DPP_FULL_ARGS+=(--enable-gt-scorer-cache)
+    fi
+    if [ "$DPP_ENABLE_TORCH_COMPILE" = "1" ]; then
+        DPP_FULL_ARGS+=(--enable-torch-compile)
+    fi
+    if [ "$DPP_SKIP_AUTH_EVAL" = "1" ]; then
+        DPP_FULL_ARGS+=(--skip-auth-eval)
+    fi
+    if [ "$DPP_FULL_CPU" = "1" ]; then
+        DPP_FULL_ARGS+=(--full-cpu)
+    fi
+    if [ "$DPP_ADVISORY_CPU_EXPLICITLY_WAIVED" = "1" ]; then
+        DPP_FULL_ARGS+=(--advisory-cpu-explicitly-waived)
     fi
     "$PYBIN" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py" \
         "${DPP_FULL_ARGS[@]}"

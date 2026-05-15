@@ -172,6 +172,29 @@ def test_device_or_die_cpu_without_smoke_raises() -> None:
     assert "--device cpu" in str(exc_info.value)
 
 
+def test_device_or_die_cpu_with_explicit_full_cpu_exception_returns_cpu() -> None:
+    import torch
+
+    d = ts.device_or_die(
+        "cpu",
+        smoke=False,
+        substrate_tag="testsub",
+        allow_full_cpu=True,
+    )
+    assert d == torch.device("cpu")
+
+
+def test_device_or_die_full_cpu_exception_is_not_smoke_flag() -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        ts.device_or_die(
+            "cpu",
+            smoke=True,
+            substrate_tag="testsub",
+            allow_full_cpu=True,
+        )
+    assert "allow_full_cpu=True" in str(exc_info.value)
+
+
 def test_device_or_die_unknown_raises() -> None:
     with pytest.raises(SystemExit) as exc_info:
         ts.device_or_die("mps", smoke=True, substrate_tag="testsub")

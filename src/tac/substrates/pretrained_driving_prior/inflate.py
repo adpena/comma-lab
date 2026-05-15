@@ -137,11 +137,10 @@ def inflate_one_video(
 ) -> int:
     """Inflate one DP1 archive's bytes into one contest ``.raw`` file.
 
-    Returns the number of frames written. The codebook is loaded but NOT
-    used to render (the renderer carries the contest-specific weights); the
-    codebook is structurally part of the archive so the renderer's training
-    loss could reference it. At inflate time the codebook is a no-op pass
-    through the parse step (its presence is required by the archive grammar).
+    Returns the number of frames written. The codebook is consumed by the
+    deterministic soft-prior transform before residual application, so charged
+    codebook bytes affect the inflated frames rather than serving as parse-only
+    provenance.
     """
     arc: DrivingPriorArchive = parse_archive(archive_bytes)
     render_device = select_inflate_device(device)
@@ -151,14 +150,32 @@ def inflate_one_video(
         output_width=arc.output_width,
         device=render_device,
     )
+    from tac.substrates.pretrained_driving_prior.prior_application import (
+        DashcamPriorLoss,
+        PriorApplicationWeights,
+    )
 
     int8_scale = float(arc.meta.get("residual_int8_scale", 64.0))
+    prior_inflate_strength = float(arc.meta.get("prior_inflate_strength", 1.0))
+    prior = DashcamPriorLoss(
+        arc.codebook,
+        PriorApplicationWeights(eval_resolution=(arc.output_height, arc.output_width)),
+        device=render_device,
+    ).to(render_device)
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
     frames_written = 0
     with torch.no_grad(), output_raw_path.open("wb") as fh:
         for pair_idx in range(arc.num_pairs):
             rgb_0, rgb_1 = renderer.render_pair(pair_idx, arc.num_pairs)
+            rgb_0 = prior.apply_soft_prior(
+                rgb_0,
+                strength=prior_inflate_strength,
+            )
+            rgb_1 = prior.apply_soft_prior(
+                rgb_1,
+                strength=prior_inflate_strength,
+            )
             rgb_0_c, rgb_1_c = _apply_per_pair_residual(
                 rgb_0,
                 rgb_1,

@@ -5172,7 +5172,7 @@ class TestEvidenceFalsificationScopeGuard:
     ) -> None:
         root = _stub_repo(tmp_path)
         _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", """
-            {"technique":"lossy_config","evidence_grade":"[contest-CUDA A-negative]","family_falsified":false,"falsification_scope":"measured_config_only"}
+            {"technique":"lossy_config","evidence_grade":"[contest-CUDA A-negative]","family_falsified":false,"falsification_scope":"measured_config_only","engineering_forensic_audit":{"schema":"engineering_forensic_audit_v1","custody_reviewed":true,"axis_reviewed":true,"runtime_config_reviewed":true,"archive_runtime_closure_reviewed":true,"score_formula_reviewed":true,"dispatch_claim_reviewed":true,"engineering_or_config_bug_found":false,"classification_after_audit":"measured_config_retired_only"}}
         """)
         assert check_evidence_row_has_falsification_scope_when_negative(
             repo_root=root,

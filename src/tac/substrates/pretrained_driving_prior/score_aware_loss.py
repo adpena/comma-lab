@@ -72,6 +72,8 @@ class DrivingPriorLossWeights:
     pose marginal at saturated operating points."""
     delta_prior: float = 0.05
     """Weight on the codebook soft-prior penalty."""
+    prior_inflate_strength: float = 1.0
+    """Strength for the decode-side codebook transform during training."""
     contest_normalizer: float = 37_545_489.0
 
 
@@ -153,8 +155,19 @@ class DrivingPriorScoreAwareLoss(torch.nn.Module):
             rgb_0 = rgb_0 + (torch.rand_like(rgb_0) - 0.5) * (2.0 * noise_std)
             rgb_1 = rgb_1 + (torch.rand_like(rgb_1) - 0.5) * (2.0 * noise_std)
 
-        rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
-        rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
+        # Match the decode-side contract: the archived codebook is not just a
+        # training regularizer; it applies a deterministic soft-prior transform
+        # before scorer-visible eval roundtrip.
+        rgb_0_prior = self.prior_loss.apply_soft_prior(
+            rgb_0,
+            strength=self.weights.prior_inflate_strength,
+        )
+        rgb_1_prior = self.prior_loss.apply_soft_prior(
+            rgb_1,
+            strength=self.weights.prior_inflate_strength,
+        )
+        rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0_prior)
+        rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1_prior)
 
         # F3 GTScorerCache routing per F3-BACKPORT-WAVE-V2 + Council omnibus
         # Decision 13 PROCEED Option C 2026-05-14. The dispatch helper picks

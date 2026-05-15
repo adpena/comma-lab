@@ -196,8 +196,8 @@ def parse_dp1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
 
     - ``dp1_header`` — 28-byte header (control_or_metadata; fixed layout)
     - ``codebook_blob`` — frozen dashcam-statistical prior distilled offline
-      from Comma2k19 (decoder_weight_stream — the codebook acts as a
-      fixed-decoder lookup that contributes to inflate-time frame reconstruction)
+      from Comma2k19 (decoder_weight_stream — the codebook feeds the
+      deterministic inflate-time soft-prior transform before residual decode)
     - ``renderer_blob`` — brotli-compressed FP16 state_dict of the small
       contest-video-overfit renderer (decoder_weight_stream — the score-affecting
       learned weights)

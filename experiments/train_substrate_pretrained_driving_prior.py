@@ -789,6 +789,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
     # detection.
     meta = {
         "residual_int8_scale": 64.0,
+        "prior_inflate_strength": 1.0,
         "hidden_dim": renderer_cfg.hidden_dim,
         "num_hidden_layers": renderer_cfg.num_hidden_layers,
         # Per Catalog #210: the codebook's own metadata is the
@@ -960,7 +961,10 @@ def _full_main(args: argparse.Namespace) -> int:
     # 1. Seeds + device
     _canon_pin_seeds(args.seed)
     device = _canon_device_or_die(
-        args.device, smoke=False, substrate_tag="pretrained_driving_prior"
+        args.device,
+        smoke=False,
+        substrate_tag="pretrained_driving_prior",
+        allow_full_cpu=bool(args.full_cpu),
     )
     _stage(f"device_resolved_{device}")
 
@@ -1348,7 +1352,7 @@ def _full_main(args: argparse.Namespace) -> int:
                         .clamp(-127.0, 127.0)
                         .to(torch.int8)
                     )
-                    pair_bytes = bytes(delta_q.tolist())
+                    pair_bytes = bytes((int(v) & 0xFF) for v in delta_q.tolist())
                     pair_bytes = (pair_bytes * (args.per_pair_bytes // 3 + 1))[
                         : args.per_pair_bytes
                     ]
@@ -1360,6 +1364,7 @@ def _full_main(args: argparse.Namespace) -> int:
             # reproducibility, and tampering detection.
             meta = {
                 "residual_int8_scale": 64.0,
+                "prior_inflate_strength": 1.0,
                 "hidden_dim": renderer_cfg.hidden_dim,
                 "num_hidden_layers": renderer_cfg.num_hidden_layers,
                 "best_val_lagrangian": best_val_lag if math.isfinite(best_val_lag) else None,
@@ -1425,6 +1430,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
                 substrate_tag="pretrained_driving_prior",
                 device=device,
+                full_cpu_active=bool(args.full_cpu),
             )
             if auth_result is not None:
                 contest_cuda_score = auth_result["auth_eval_cuda_score"]

@@ -259,6 +259,67 @@ def _dispatch_claim_state(
     }
 
 
+def _engineering_forensic_audit(
+    *,
+    exact_cuda: bool,
+    exact_cpu: bool,
+    regression: bool,
+    score_recompute: dict[str, Any],
+    runtime_custody: dict[str, Any],
+    dispatch_claim_state: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the engineering/config review gate for status changes.
+
+    This is intentionally a gate, not prose. A negative result may retire a
+    measured configuration only when the archive/runtime custody, score formula,
+    evidence axis, and dispatch claim are internally consistent. If one of
+    those surfaces is missing, the result stays indeterminate until the
+    engineering/config issue is resolved.
+    """
+    blockers: list[str] = []
+    score_available = bool(score_recompute.get("available"))
+    score_delta = _float_or_none(score_recompute.get("abs_delta_vs_reported"))
+    if not score_available:
+        blockers.append("score_formula_recompute_missing")
+    elif score_delta is not None and score_delta > 1e-6:
+        blockers.append("score_formula_recompute_mismatch_gt_1e-6")
+
+    if exact_cuda:
+        if not runtime_custody.get("runtime_manifest_present"):
+            blockers.append("runtime_manifest_missing")
+        if not runtime_custody.get("payload_closure_fields_present"):
+            blockers.append("runtime_payload_closure_missing")
+        if regression and not dispatch_claim_state.get("terminal_status_recorded"):
+            blockers.append("terminal_dispatch_claim_missing_for_negative_cuda")
+
+    bug_found = bool(blockers)
+    if regression and bug_found:
+        classification = "indeterminate_engineering_or_config_blocker"
+    elif regression:
+        classification = "measured_config_retired_only"
+    elif exact_cuda:
+        classification = "exact_cuda_result_reviewed_no_negative_status_change"
+    elif exact_cpu:
+        classification = "contest_cpu_axis_reviewed_cuda_pending"
+    else:
+        classification = "non_cuda_review_only"
+
+    return {
+        "schema": "engineering_forensic_audit_v1",
+        "custody_reviewed": True,
+        "axis_reviewed": True,
+        "runtime_config_reviewed": True,
+        "archive_runtime_closure_reviewed": True,
+        "score_formula_reviewed": True,
+        "dispatch_claim_reviewed": True,
+        "engineering_or_config_bug_found": bug_found,
+        "audit_blockers": blockers,
+        "classification_after_audit": classification,
+        "dead_or_family_falsification_allowed": False,
+        "measured_config_retirement_allowed": bool(regression and not bug_found),
+    }
+
+
 def build_packet(
     *,
     auth_eval_json: Path,
@@ -290,9 +351,27 @@ def build_packet(
         raise ValueError(
             "reactivation criteria are required for negative exact-CUDA review packets"
         )
+    score_recompute = _score_recompute(payload)
+    runtime_custody = _runtime_custody(payload)
+    dispatch_claim_state = _dispatch_claim_state(
+        claims_path=dispatch_claims_path,
+        lane_id=lane_id,
+        job_id=job_id,
+    )
+    engineering_forensic_audit = _engineering_forensic_audit(
+        exact_cuda=exact_cuda,
+        exact_cpu=exact_cpu,
+        regression=regression,
+        score_recompute=score_recompute,
+        runtime_custody=runtime_custody,
+        dispatch_claim_state=dispatch_claim_state,
+    )
     status = "indeterminate"
     failure_class = "indeterminate"
-    if regression:
+    if regression and engineering_forensic_audit["engineering_or_config_bug_found"]:
+        status = "indeterminate_engineering_or_config_blocker"
+        failure_class = "indeterminate_engineering_or_config_blocker"
+    elif regression:
         status = "measured_config_retired"
         failure_class = "legitimate_score_regression_or_component_collapse"
     elif exact_cuda and score is not None:
@@ -341,13 +420,10 @@ def build_packet(
             "inflate_script": str(_nested_get(payload, "provenance", "inflate_script") or ""),
             "command": _nested_get(payload, "provenance", "sys_argv") or [],
         },
-        "dispatch_claim_state": _dispatch_claim_state(
-            claims_path=dispatch_claims_path,
-            lane_id=lane_id,
-            job_id=job_id,
-        ),
-        "runtime_custody": _runtime_custody(payload),
-        "score_recomputation": _score_recompute(payload),
+        "dispatch_claim_state": dispatch_claim_state,
+        "runtime_custody": runtime_custody,
+        "score_recomputation": score_recompute,
+        "engineering_forensic_audit": engineering_forensic_audit,
         "review_requirements": {
             "engineering_review_required": True,
             "math_review_required": True,
@@ -473,6 +549,7 @@ def evidence_row_from_packet(
         ),
         "dispatch_blockers": blockers,
         "reactivation_criteria": packet.get("reactivation_criteria") or [],
+        "engineering_forensic_audit": packet.get("engineering_forensic_audit") or {},
         "source": (
             f"{source_json_path} reviewed_by={review_path}"
             if review_path else source_json_path

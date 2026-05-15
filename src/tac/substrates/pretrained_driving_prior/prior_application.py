@@ -144,6 +144,83 @@ class DashcamPriorLoss(torch.nn.Module):
         frac = (idx - idx_lo.float()).unsqueeze(1)
         return (1.0 - frac) * profile[idx_lo] + frac * profile[idx_hi]
 
+    def apply_soft_prior(
+        self,
+        rgb_pred: torch.Tensor,
+        *,
+        strength: float = 0.05,
+    ) -> torch.Tensor:
+        """Apply the frozen codebook as an inference-time RGB bias.
+
+        This is the decode-side counterpart of the training loss. It makes the
+        archived codebook a score-affecting runtime input instead of a
+        parse-only provenance blob: mutating the codebook changes the inflated
+        frames deterministically while scorer imports remain forbidden.
+        """
+        if rgb_pred.dim() != 4 or rgb_pred.shape[1] != 3:
+            raise ValueError(
+                f"rgb_pred must be (B, 3, H, W); got shape {tuple(rgb_pred.shape)}"
+            )
+        if strength < 0.0:
+            raise ValueError(f"strength must be >= 0; got {strength}")
+        if strength == 0.0:
+            return rgb_pred
+
+        byte_range = bool(rgb_pred.detach().amax() > 1.5)
+        rgb_unit = (rgb_pred / 255.0) if byte_range else rgb_pred
+        adjusted = rgb_unit.clamp(0.0, 1.0).clone()
+        b, _c, h_img, _w_img = adjusted.shape
+
+        road_start = 2 * h_img // 3
+        road_band = adjusted[:, :, road_start:, :]
+        road_recon = self._project_road_plane(road_band).clamp(0.0, 1.0)
+        road_blend = min(1.0, strength * self.weights.lambda_road_plane)
+        adjusted[:, :, road_start:, :] = torch.lerp(
+            road_band,
+            road_recon,
+            road_blend,
+        )
+
+        col_means = adjusted.mean(dim=3)
+        expected_profile = self._expected_sky_horizon(h_img, adjusted.device)
+        expected = expected_profile.t().unsqueeze(0).expand(b, -1, -1)
+        sky_blend = min(1.0, strength * self.weights.lambda_sky_horizon)
+        adjusted = (adjusted + sky_blend * (expected - col_means).unsqueeze(-1)).clamp(
+            0.0,
+            1.0,
+        )
+
+        veh_basis = self.vehicle_appearance_basis
+        veh_basis_flat = veh_basis.permute(0, 3, 1, 2).reshape(
+            veh_basis.shape[0], -1
+        )
+        basis_norm = veh_basis_flat.norm(dim=1, keepdim=True)
+        active = basis_norm.squeeze(-1) > 1e-6
+        if active.any():
+            veh_grid_h = veh_basis.shape[1]
+            veh_grid_w = veh_basis.shape[2]
+            active_basis = veh_basis_flat[active]
+            veh_small = F.interpolate(
+                adjusted,
+                size=(veh_grid_h, veh_grid_w),
+                mode="bilinear",
+                align_corners=False,
+            )
+            veh_flat = veh_small.reshape(b, -1)
+            coords = veh_flat @ active_basis.t()
+            recon = (coords @ active_basis).reshape(b, 3, veh_grid_h, veh_grid_w)
+            recon_full = F.interpolate(
+                recon,
+                size=(h_img, adjusted.shape[-1]),
+                mode="bilinear",
+                align_corners=False,
+            ).clamp(0.0, 1.0)
+            veh_blend = min(1.0, strength * self.weights.lambda_vehicle)
+            adjusted = torch.lerp(adjusted, recon_full, veh_blend)
+
+        adjusted = adjusted.clamp(0.0, 1.0)
+        return adjusted * 255.0 if byte_range else adjusted
+
     def forward(self, rgb_pred: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute the soft-prior penalty for predicted RGB.
 

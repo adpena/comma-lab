@@ -30975,92 +30975,92 @@ def check_evidence_row_has_falsification_scope_when_negative(
             reviewed_key_reasons.setdefault(key, audit_reason)
 
     for rel, lineno, row in evidence_rows:
-            if "family_falsified" not in row:
-                ff = None
-            else:
-                ff = row["family_falsified"]
-            scope = row.get("falsification_scope", "")
-            marker = _evidence_row_marker_text(row)
-            negative_or_retired = any(
-                token in marker
-                for token in (
-                    "a-negative",
-                    "exact-negative",
-                    "negative",
-                    "retired",
-                    "falsified",
-                )
+        if "family_falsified" not in row:
+            ff = None
+        else:
+            ff = row["family_falsified"]
+        scope = row.get("falsification_scope", "")
+        marker = _evidence_row_marker_text(row)
+        negative_or_retired = any(
+            token in marker
+            for token in (
+                "a-negative",
+                "exact-negative",
+                "negative",
+                "retired",
+                "falsified",
             )
-            requires_review = _evidence_row_requires_engineering_forensic_review(row)
-            if requires_review:
-                audit_ok = False
-                audit_reason = ""
-                audit = row.get("engineering_forensic_audit")
-                if isinstance(audit, dict):
-                    audit_ok, audit_reason = _engineering_forensic_audit_is_valid(audit)
-                if not audit_ok:
-                    audit_ok, audit_reason = (
-                        _result_review_packet_is_valid_for_forensic_review(
-                            root,
-                            row.get("exact_result_review_packet"),
-                        )
+        )
+        requires_review = _evidence_row_requires_engineering_forensic_review(row)
+        if requires_review:
+            audit_ok = False
+            audit_reason = ""
+            audit = row.get("engineering_forensic_audit")
+            if isinstance(audit, dict):
+                audit_ok, audit_reason = _engineering_forensic_audit_is_valid(audit)
+            if not audit_ok:
+                audit_ok, audit_reason = (
+                    _result_review_packet_is_valid_for_forensic_review(
+                        root,
+                        row.get("exact_result_review_packet"),
                     )
-                key = _evidence_row_forensic_key(row)
-                if not audit_ok and key is not None and key in reviewed_keys:
-                    audit_ok = True
-                    audit_reason = f"superseded_by_reviewed_duplicate:{reviewed_key_reasons[key]}"
-                if not audit_ok:
-                    technique = row.get("technique", "<unknown>")
-                    violations.append(
-                        f"{rel}:{lineno}: technique={technique!r} declares "
-                        "dead/falsified/exact-negative/rank-or-kill evidence "
-                        "without an engineering forensic audit or valid "
-                        f"exact_result_review_packet ({audit_reason}). Before "
-                        "declaring a lane dead/falsified, review custody, "
-                        "axis, runtime config, archive/runtime closure, score "
-                        "formula, and dispatch claim state."
-                    )
-                audit_obj = row.get("engineering_forensic_audit")
-                if (
-                    isinstance(audit_obj, dict)
-                    and audit_obj.get("engineering_or_config_bug_found") is True
-                    and (
-                        row.get("family_falsified") is True
-                        or row.get("method_family_retired") is True
-                        or row.get("rank_or_kill_eligible") is True
-                    )
-                ):
-                    technique = row.get("technique", "<unknown>")
-                    violations.append(
-                        f"{rel}:{lineno}: technique={technique!r} has "
-                        "engineering_or_config_bug_found=true but still sets "
-                        "family/method/rank-or-kill status. This must remain "
-                        "indeterminate until the engineering/config bug is fixed."
-                    )
+                )
+            key = _evidence_row_forensic_key(row)
+            if not audit_ok and key is not None and key in reviewed_keys:
+                audit_ok = True
+                audit_reason = f"superseded_by_reviewed_duplicate:{reviewed_key_reasons[key]}"
+            if not audit_ok:
+                technique = row.get("technique", "<unknown>")
+                violations.append(
+                    f"{rel}:{lineno}: technique={technique!r} declares "
+                    "dead/falsified/exact-negative/rank-or-kill evidence "
+                    "without an engineering forensic audit or valid "
+                    f"exact_result_review_packet ({audit_reason}). Before "
+                    "declaring a lane dead/falsified, review custody, "
+                    "axis, runtime config, archive/runtime closure, score "
+                    "formula, and dispatch claim state."
+                )
+            audit_obj = row.get("engineering_forensic_audit")
             if (
-                ff is False
-                and negative_or_retired
-                and not (isinstance(scope, str) and scope.strip())
+                isinstance(audit_obj, dict)
+                and audit_obj.get("engineering_or_config_bug_found") is True
+                and (
+                    row.get("family_falsified") is True
+                    or row.get("method_family_retired") is True
+                    or row.get("rank_or_kill_eligible") is True
+                )
             ):
                 technique = row.get("technique", "<unknown>")
                 violations.append(
                     f"{rel}:{lineno}: technique={technique!r} has "
-                    f"family_falsified=False but falsification_scope is "
-                    f"empty/missing. Per CLAUDE.md "
-                    f"forbidden_premature_class_level_falsification: every "
-                    f"negative non-family-falsifying row must NAME the tested config so "
-                    f"reactivation criteria are explicit."
+                    "engineering_or_config_bug_found=true but still sets "
+                    "family/method/rank-or-kill status. This must remain "
+                    "indeterminate until the engineering/config bug is fixed."
                 )
-            if ff is True:
-                technique = row.get("technique", "<unknown>")
-                violations.append(
-                    f"{rel}:{lineno}: technique={technique!r} sets "
-                    f"family_falsified=True - per CLAUDE.md \"KILL is the "
-                    f"LAST RESORT\", this requires research-path exhaustion + "
-                    f"grand-council consensus + reactivation criteria. "
-                    f"Default for one-config failure is "
-                    f"DEFERRED-pending-research."
-                )
+        if (
+            ff is False
+            and negative_or_retired
+            and not (isinstance(scope, str) and scope.strip())
+        ):
+            technique = row.get("technique", "<unknown>")
+            violations.append(
+                f"{rel}:{lineno}: technique={technique!r} has "
+                f"family_falsified=False but falsification_scope is "
+                f"empty/missing. Per CLAUDE.md "
+                f"forbidden_premature_class_level_falsification: every "
+                f"negative non-family-falsifying row must NAME the tested config so "
+                f"reactivation criteria are explicit."
+            )
+        if ff is True:
+            technique = row.get("technique", "<unknown>")
+            violations.append(
+                f"{rel}:{lineno}: technique={technique!r} sets "
+                f"family_falsified=True - per CLAUDE.md \"KILL is the "
+                f"LAST RESORT\", this requires research-path exhaustion + "
+                f"grand-council consensus + reactivation criteria. "
+                f"Default for one-config failure is "
+                f"DEFERRED-pending-research."
+            )
     if verbose:
         if violations:
             print(

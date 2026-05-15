@@ -44,10 +44,12 @@ predicted_delta_basis: ".omx/research/expert_team_hardware_physics_future_alien_
 literature_anchor: "NASA Goddard PASS-AI prior (§2.3) + Time-Traveler pre-trained prior (§6 #2). Cross-ref: Comma2k19 MIT (github.com/commaai/comma2k19)."
 
 risk: |
-  L0 SCAFFOLD recipe — full dispatch NOT enabled. The trainer's _full_main
-  raises NotImplementedError until Phase 2 council review approves the real
-  training design + the codebook is distilled against real Comma2k19 frames
-  (operator-gated).
+  Smoke-only recipe by default. The trainer's _full_main is now implemented,
+  but full dispatch is still NOT enabled by this recipe unless the operator
+  explicitly sets DPP_RUN_FULL=1 and supplies a deterministic dataset source
+  (DPP_COMMA2K19_CHUNKS_DIR, DPP_CACHE_DIR, or DPP_USE_STREAMER=1). Promotion
+  remains blocked until real codebook distillation, byte-closed runtime custody,
+  no-op consumption proof, and paired contest-CPU / contest-CUDA auth eval land.
 
   STRATEGIC NOTE (operator 2026-05-13): the contest scorer (FastViT-T12 +
   EfficientNet-B2) was already trained on driving data so it implicitly
@@ -105,6 +107,13 @@ env_overrides:
   DPP_DEVICE: cuda
   DPP_DATASET_NAME: comma2k19
   DPP_ENABLE_AUTOCAST_FP16: "1"
+  DPP_ENABLE_GT_SCORER_CACHE: "1"
+  DPP_ENABLE_TORCH_COMPILE: "0"
+  DPP_USE_STREAMER: "0"
+  DPP_MAX_DISTILLATION_FRAMES: "4096"
+  DPP_MAX_DISTILLATION_CHUNKS: "8"
+  DPP_MAX_PAIRS: "600"
+  DPP_VAL_PAIR_COUNT: "64"
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:
