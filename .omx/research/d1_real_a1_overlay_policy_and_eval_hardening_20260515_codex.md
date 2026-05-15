@@ -68,3 +68,38 @@ Materialized 24 real-A1 candidates. Smallest byte rows:
   with `d1_overlay_channel_rgb_amp_1_sign_payload` as the byte-minimal
   real-A1 D1 policy candidate.
 
+## Paired Eval Dispatch
+
+Candidate:
+
+- id: `d1_overlay_channel_rgb_amp_1_sign_payload`
+- archive bytes: `221666`
+- archive sha256:
+  `fe4191c6c86d690d22cb2bb749e354e0f7750eb5e6a037aff9b262ed11ceeb3a`
+- pair group: `d1_real_a1_rgb_amp1_payload_pair_20260515T1745Z`
+
+First dispatch attempt
+`d1_real_a1_rgb_amp1_payload_pair_20260515T1735Z` failed fast before auth eval:
+the paired planner passed the full local `submission_dir/inflate.sh` path while
+the Modal wrapper expects an inflate path relative to uploaded `--submission-dir`.
+Fix landed in `tools/dispatch_modal_paired_auth_eval.py`; paired plans now
+normalize this to `inflate.sh`.
+
+Retried paired dispatch:
+
+| axis | lane | Modal call id | status at 2026-05-15T17:35Z |
+| --- | --- | --- | --- |
+| `[contest-CUDA]` | `d1_real_a1_rgb_amp1_payload_contest_cuda` | `fc-01KRPB8K89XRD3Y9FMSJ099MG2` | pending recovery |
+| `[contest-CPU]` | `d1_real_a1_rgb_amp1_payload_contest_cpu` | `fc-01KRPB945WH0R90KHAR7Z1C3VW` | pending recovery |
+
+Recovery commands:
+
+```bash
+.venv/bin/python tools/recover_modal_auth_eval.py \
+  --output-dir experiments/results/modal_auth_eval/d1_real_a1_rgb_amp1_payload_paired_auth_20260515T1745Z_cuda
+
+.venv/bin/python tools/recover_modal_auth_eval.py \
+  --output-dir experiments/results/modal_auth_eval_cpu/d1_real_a1_rgb_amp1_payload_paired_auth_20260515T1745Z_cpu
+```
+
+Both recoveries returned `status=pending` at 2026-05-15T17:35Z. No score claim.
