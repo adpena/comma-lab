@@ -19,12 +19,11 @@ from tac.substrates.d1_segnet_margin_polytope.overlay import (
     _upsample_int8_levels_to_camera,
     apply_l2_overlay_for_video_list,
     apply_polytope_overlay_inplace,
+    validate_polytope_margin_contract,
 )
 from tac.substrates.d1_segnet_margin_polytope.polytope_encoder import (
-    POLYTOPE_LATTICE_VALUES,
     encode_polytope_payload,
 )
-
 
 # ---------------------------------------------------------------------------
 # Margin map shrink helpers
@@ -354,3 +353,29 @@ def test_overlay_produces_observable_bytes_changed(tmp_path):
     # nonzero noise; the overlay must apply some bytes.
     assert diag["total_pairs_modified"] >= 1
     assert diag["total_bytes_changed"] > 0
+
+
+def test_overlay_contract_rejects_lipschitz_mismatch():
+    margin_i8 = np.ones((2, 2), dtype=np.int8)
+    noise = np.ones(4, dtype=np.int8)
+    with pytest.raises(ValueError, match="jacobian_lipschitz mismatch"):
+        validate_polytope_margin_contract(
+            noise_levels_flat=noise,
+            margin_map_int8=margin_i8,
+            margin_map_scale=1.0,
+            archive_jacobian_lipschitz=10.0,
+            payload_jacobian_lipschitz=20.0,
+        )
+
+
+def test_overlay_contract_rejects_boundary_noise():
+    margin_i8 = np.array([[0, 2], [0, 3]], dtype=np.int8)
+    noise = np.array([1, 0, 0, -1], dtype=np.int8)
+    with pytest.raises(ValueError, match="boundary violation"):
+        validate_polytope_margin_contract(
+            noise_levels_flat=noise,
+            margin_map_int8=margin_i8,
+            margin_map_scale=1.0,
+            archive_jacobian_lipschitz=10.0,
+            payload_jacobian_lipschitz=10.0,
+        )

@@ -52,13 +52,10 @@ CLAUDE.md non-negotiables honored end-to-end:
   it (Catalog #168).
 * Dynamic ``hardware_substrate`` detection (Catalog #190).
 
-The ``_full_main`` path is **NotImplementedError-gated** until council
-approval per CLAUDE.md "Design decisions — non-negotiable": full GPU
-training composes the margin map computation + polytope encoder loop +
-end-of-train auth eval, which requires the inner-quintet sign-off before
-$1+ Modal T4 spend. ``_smoke_main`` covers the L1 SCAFFOLD wiring at
-$0 cost (synthetic margin map + polytope allocation + archive roundtrip
-in seconds).
+The ``_full_main`` path builds a byte-closed D1+A1 packet: one deterministic
+margin extraction pass, polytope encoding, fused overlay runtime, readiness
+manifest, and gated auth eval. ``_smoke_main`` remains the no-scorer CPU
+archive grammar smoke.
 
 Usage (smoke; CPU, no scorer load)::
 
@@ -68,10 +65,7 @@ Usage (smoke; CPU, no scorer load)::
         --output-dir experiments/results/d1_polytope_smoke_<utc> \\
         --epochs 3 --device cpu --smoke
 
-Usage (full; CUDA-required; threaded from operator wrapper; council-gated)::
-
-    # NOTE: full path raises NotImplementedError until inner-quintet
-    # council sign-off; smoke path is the L1 SCAFFOLD deliverable.
+Usage (full; CUDA-required; threaded from operator wrapper)::
 """
 # AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
 # TORCH_COMPILE_WAIVED:defer-until-per-substrate-canary-validates-Inductor-graph-breaks-and-score-axis-custody
@@ -83,7 +77,6 @@ import argparse
 import hashlib
 import json
 import math
-import os
 import platform
 import random
 import shutil
@@ -91,7 +84,6 @@ import subprocess
 import sys
 import time
 import zipfile
-from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -99,17 +91,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 # Canonical trainer skeleton helpers (Catalog #168 / #178 / #190).
+from datetime import UTC
+
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
 )
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
-)
-from tac.substrates._shared.trainer_skeleton import (
-    vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
-)
-from tac.substrates._shared.smoke_auth_eval_gate import (
-    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 
 SUBSTRATE_TAG = "d1_polytope"
@@ -346,8 +337,8 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 def _utc_now_iso() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from datetime import datetime
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -418,7 +409,7 @@ def _detect_hardware_substrate(device) -> str:
             detect_hardware_substrate as _canon_detect,
         )
         return str(_canon_detect(device))
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     os_name = platform.system().lower()
@@ -432,7 +423,7 @@ def _detect_hardware_substrate(device) -> str:
         if not torch.cuda.is_available():
             return f"linux_{arch}_unknown_cuda"
         name = torch.cuda.get_device_name(0).lower()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return f"linux_{arch}_unknown_cuda"
 
     if "t4" in name:
@@ -462,6 +453,7 @@ def _write_provenance(
     and used" — provenance JSON is consumed by harvest + autopilot.
     """
     provenance_path = output_dir / "provenance.json"
+    overlay_consumed = not bool(smoke)
     body: dict[str, Any] = {
         "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
         "started_at_utc": _utc_now_iso(),
@@ -479,10 +471,16 @@ def _write_provenance(
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
-        "current_runtime_effect": "base_renderer_plus_rate_only",
-        "runtime_overlay_consumed": False,
+        "current_runtime_effect": (
+            "synthetic_smoke_no_runtime"
+            if smoke
+            else "base_renderer_plus_d1_overlay"
+        ),
+        "runtime_overlay_consumed": overlay_consumed,
         "l2_projected_score_band": [0.181, 0.188],
-        "predicted_score_evidence_grade": "blocked_l1_noop_overlay",
+        "predicted_score_evidence_grade": (
+            "proxy_smoke" if smoke else "first-principles-bound"
+        ),
         "source_memo": (
             ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md"
         ),
@@ -539,7 +537,6 @@ def _smoke_main(args: argparse.Namespace) -> int:
         D1PolytopeConfig,
         build_readiness_manifest,
         compose_with_base,
-        compute_logit_margin_map_dummy,
         encode_polytope_payload,
         estimate_overhead_bytes,
         parse_archive,
@@ -695,23 +692,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
 
 def _write_runtime(submission_dir: Path) -> None:
-    """Emit contest-compliant inflate.sh + inflate.py + vendored A1 runtime.
+    """Emit contest-compliant fused D1+A1 inflate runtime.
 
-    L1 SCAFFOLD design verdict V3 (post-renderer no-op overlay): the D1
-    sidecar bytes are parsed and sha-bound at inflate time, but the
-    per-frame noise overlay is no-op-by-default until L2 INTEGRATION lands
-    a per-base adapter. This is deliberately fail-closed for score claims:
-    exact eval of the L1 packet would measure the base renderer plus rate
-    overhead, not a D1 score-lowering effect.
-
-    For the L1 dispatch we therefore vendor A1's existing canonical
-    inflate runtime (which already conforms to Catalog #146 with a 3-arg
-    inflate.sh + per-file 2-arg inflate.py loop) and emit a thin
-    inflate.sh that delegates to the A1 inflate after locating the A1
-    blob inside archive_dir. The D1 sidecar bytes ride along inside the
-    archive zip and are verified by a small stdlib-only runtime guard.
-    L2 INTEGRATION wires the polytope-aware noise overlay via a D1+A1 fused
-    inflate path (deferred per the council-grade L2 design verdicts).
+    The generated packet must be score-bearing: it first renders the frozen
+    A1 base archive, then consumes ``d1_polytope.bin`` and applies the
+    decoded polytope overlay to every frame_1 output. This intentionally
+    fails closed when the D1 sidecar is present but changes zero bytes, so
+    D1 cannot regress into a dead-rate sidecar again.
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
 
@@ -734,12 +721,13 @@ def _write_runtime(submission_dir: Path) -> None:
             if child.is_file() and child.suffix == ".py":
                 shutil.copy2(child, dst_src / child.name)
 
-    # Copy A1's inflate.py (the per-file 2-arg consumer).
+    # Copy A1's inflate.py as the local base renderer. The D1 driver below
+    # owns the contest 3-arg runtime contract and invokes this per file.
     a1_inflate_py = a1_canonical_dir / "inflate.py"
     if not a1_inflate_py.is_file():
         raise FileNotFoundError(f"A1 inflate.py missing: {a1_inflate_py}")
-    shutil.copy2(a1_inflate_py, submission_dir / "inflate.py")
-    (submission_dir / "inflate.py").chmod(0o755)
+    shutil.copy2(a1_inflate_py, submission_dir / "a1_inflate.py")
+    (submission_dir / "a1_inflate.py").chmod(0o755)
 
     d1_verify_py = (
         "#!/usr/bin/env python3\n"
@@ -773,7 +761,7 @@ def _write_runtime(submission_dir: Path) -> None:
         "    if pos != len(blob):\n"
         "        raise ValueError(f'D1 sidecar size mismatch: parsed={pos} actual={len(blob)}')\n"
         "    if base_id != 'a1':\n"
-        "        raise ValueError(f'D1 L1 runtime only supports a1 base; got {base_id!r}')\n"
+        "        raise ValueError(f'D1 fused runtime only supports a1 base; got {base_id!r}')\n"
         "    actual_sha = hashlib.sha256(base_path.read_bytes()).hexdigest()[:sha_len]\n"
         "    if actual_sha != expected_sha:\n"
         "        raise ValueError(f'base sha mismatch: {actual_sha} != {expected_sha}')\n"
@@ -785,49 +773,315 @@ def _write_runtime(submission_dir: Path) -> None:
     (submission_dir / "d1_verify.py").write_text(d1_verify_py, encoding="utf-8")
     (submission_dir / "d1_verify.py").chmod(0o755)
 
-    # Emit a Catalog #146-compliant 3-arg inflate.sh that:
-    # 1. Locates the A1 blob inside archive_dir (tries 'a1.bin' first,
-    #    falls back to 'x' for backward compatibility with the legacy
-    #    A1 archive layout).
-    # 2. Loops over the file list and invokes the A1 inflate.py per file.
-    # 3. The D1 sidecar bytes (d1_polytope.bin) are present inside the
-    #    archive and verified by d1_verify.py, but the overlay is not yet
-    #    applied by this L1 SCAFFOLD runtime.
+    d1_inflate_py = f"""#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import hashlib
+import os
+import struct
+import subprocess
+import sys
+from pathlib import Path
+
+import brotli
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+CAMERA_H = {CAMERA_HW[0]}
+CAMERA_W = {CAMERA_HW[1]}
+FRAME_BYTES = CAMERA_H * CAMERA_W * 3
+D1_FMT = '<4sBHHffBBIII'
+D1_SIZE = struct.calcsize(D1_FMT)
+D1_MAGIC = b'D1PY'
+PLY_FMT = '<4sBIfBf'
+PLY_SIZE = struct.calcsize(PLY_FMT)
+PLY_MAGIC = b'PLY1'
+
+
+def _read_file_list(file_list_path: Path) -> list[str]:
+    names = []
+    for line in file_list_path.read_text(encoding='utf-8').splitlines():
+        value = line.strip()
+        if value and not value.startswith('#'):
+            names.append(value)
+    if not names:
+        raise ValueError(f'file_list {{file_list_path}} is empty')
+    return names
+
+
+def _parse_d1_sidecar(path: Path) -> dict[str, object]:
+    blob = path.read_bytes()
+    if len(blob) < D1_SIZE:
+        raise ValueError(f'D1 sidecar too short: {{len(blob)}}')
+    (
+        magic,
+        version,
+        h,
+        w,
+        scale,
+        lipschitz,
+        base_len,
+        sha_len,
+        margin_len,
+        poly_len,
+        meta_len,
+    ) = struct.unpack(D1_FMT, blob[:D1_SIZE])
+    if magic != D1_MAGIC:
+        raise ValueError(f'bad D1 magic: {{magic!r}}')
+    if version != 1:
+        raise ValueError(f'unsupported D1 schema version: {{version}}')
+    pos = D1_SIZE
+    base_id = blob[pos:pos + base_len].decode('utf-8')
+    pos += base_len
+    expected_sha = blob[pos:pos + sha_len].decode('utf-8')
+    pos += sha_len
+    margin_blob = blob[pos:pos + margin_len]
+    pos += margin_len
+    poly_blob = blob[pos:pos + poly_len]
+    pos += poly_len
+    meta_blob = blob[pos:pos + meta_len]
+    pos += meta_len
+    if pos != len(blob):
+        raise ValueError(
+            f'D1 sidecar size mismatch: parsed={{pos}} actual={{len(blob)}}'
+        )
+    if not margin_blob or not poly_blob or not meta_blob:
+        raise ValueError('D1 sidecar has empty required section')
+    return {{
+        'height': int(h),
+        'width': int(w),
+        'scale': float(scale),
+        'lipschitz': float(lipschitz),
+        'base_id': base_id,
+        'expected_sha': expected_sha,
+        'margin_blob': margin_blob,
+        'poly_blob': poly_blob,
+    }}
+
+
+def _decode_margin(
+    margin_blob: bytes,
+    *,
+    height: int,
+    width: int,
+    scale: float,
+) -> np.ndarray:
+    if scale <= 0:
+        raise ValueError(f'D1 margin scale must be > 0; got {{scale}}')
+    raw = brotli.decompress(margin_blob)
+    expected = int(height) * int(width)
+    if len(raw) != expected:
+        raise ValueError(
+            f'D1 margin map size mismatch: got {{len(raw)}} expected {{expected}}'
+        )
+    margin_i8 = np.frombuffer(raw, dtype=np.int8).copy()
+    if np.count_nonzero(margin_i8 < 0):
+        raise ValueError('D1 margin map contains negative int8 values')
+    return margin_i8.reshape(int(height), int(width)).astype(np.float32) * float(scale)
+
+
+def _decode_overlay(
+    poly_blob: bytes,
+    *,
+    height: int,
+    width: int,
+    expected_lipschitz: float,
+    margin_hw: np.ndarray,
+) -> np.ndarray:
+    raw = brotli.decompress(poly_blob)
+    if len(raw) < PLY_SIZE:
+        raise ValueError(f'polytope payload too short: {{len(raw)}}')
+    magic, version, num_pixels, _lambda, lattice_levels, lipschitz = (
+        struct.unpack(PLY_FMT, raw[:PLY_SIZE])
+    )
+    if magic != PLY_MAGIC:
+        raise ValueError(f'bad polytope magic: {{magic!r}}')
+    if version != 1:
+        raise ValueError(f'unsupported polytope version: {{version}}')
+    if lattice_levels != 5:
+        raise ValueError(f'unsupported lattice_levels={{lattice_levels}}')
+    if lipschitz <= 0:
+        raise ValueError(f'bad jacobian_lipschitz={{lipschitz}}')
+    if not np.isclose(float(lipschitz), float(expected_lipschitz), rtol=1e-5, atol=1e-6):
+        raise ValueError(
+            f'D1 jacobian_lipschitz mismatch: archive={{expected_lipschitz}} '
+            f'payload={{lipschitz}}'
+        )
+    expected = int(height) * int(width)
+    if num_pixels != expected:
+        raise ValueError(
+            f'polytope pixel count {{num_pixels}} != D1 grid {{expected}}'
+        )
+    pos = PLY_SIZE
+    end = pos + num_pixels
+    if end != len(raw):
+        raise ValueError(
+            f'polytope payload size mismatch: header={{num_pixels}} '
+            f'remaining={{len(raw) - pos}}'
+        )
+    noise = np.frombuffer(raw[pos:end], dtype=np.int8).copy()
+    if np.count_nonzero(np.abs(noise) > 2):
+        raise ValueError('D1 lattice violation: noise outside [-2,2]')
+    margin_flat = margin_hw.reshape(-1)
+    boundary_violations = int(
+        np.count_nonzero((noise != 0) & (margin_flat <= 1e-6))
+    )
+    if boundary_violations:
+        raise ValueError(
+            f'D1 boundary violation: {{boundary_violations}} nonzero noise levels '
+            'on zero-margin pixels'
+        )
+    noise_2d = noise.reshape(int(height), int(width))
+    y_idx = (np.arange(CAMERA_H, dtype=np.int64) * int(height)) // CAMERA_H
+    x_idx = (np.arange(CAMERA_W, dtype=np.int64) * int(width)) // CAMERA_W
+    return noise_2d[y_idx[:, None], x_idx[None, :]].astype(np.int8, copy=True)
+
+
+def _apply_overlay(raw_path: Path, overlay_hw: np.ndarray) -> dict[str, int]:
+    actual_size = raw_path.stat().st_size
+    pair_bytes = 2 * FRAME_BYTES
+    if actual_size % pair_bytes != 0:
+        raise ValueError(
+            f'raw size {{actual_size}} is not a multiple of pair_bytes={{pair_bytes}}'
+        )
+    n_pairs = actual_size // pair_bytes
+    nonzero_overlay_pixels = int(np.count_nonzero(overlay_hw))
+    if nonzero_overlay_pixels == 0:
+        return {{
+            'pairs_modified': 0,
+            'bytes_changed': 0,
+            'nonzero_overlay_pixels': 0,
+        }}
+    overlay_flat = np.repeat(
+        overlay_hw[:, :, np.newaxis], 3, axis=2
+    ).astype(np.int16).reshape(-1)
+    pairs_modified = 0
+    bytes_changed = 0
+    with raw_path.open('r+b') as fp:
+        for pair_idx in range(n_pairs):
+            frame_1_offset = (2 * pair_idx + 1) * FRAME_BYTES
+            fp.seek(frame_1_offset)
+            frame_1_bytes = fp.read(FRAME_BYTES)
+            if len(frame_1_bytes) != FRAME_BYTES:
+                raise ValueError(
+                    f'short read at pair {{pair_idx}}: {{len(frame_1_bytes)}}'
+                )
+            frame_1_arr = np.frombuffer(frame_1_bytes, dtype=np.uint8).copy()
+            new_vals = np.clip(
+                frame_1_arr.astype(np.int16) + overlay_flat, 0, 255
+            ).astype(np.uint8)
+            changed = int(np.count_nonzero(new_vals != frame_1_arr))
+            if changed:
+                fp.seek(frame_1_offset)
+                fp.write(new_vals.tobytes())
+                pairs_modified += 1
+                bytes_changed += changed
+    return {{
+        'pairs_modified': pairs_modified,
+        'bytes_changed': bytes_changed,
+        'nonzero_overlay_pixels': nonzero_overlay_pixels,
+    }}
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog='inflate.py',
+        description='D1 fused A1+polytope overlay inflate',
+    )
+    parser.add_argument('archive_dir', type=Path)
+    parser.add_argument('output_dir', type=Path)
+    parser.add_argument('file_list', type=Path)
+    args = parser.parse_args(argv)
+
+    archive_dir = args.archive_dir.resolve()
+    output_dir = args.output_dir.resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    d1_path = archive_dir / 'd1_polytope.bin'
+    if not d1_path.is_file():
+        raise FileNotFoundError(f'D1 sidecar not found in {{archive_dir}}')
+    d1 = _parse_d1_sidecar(d1_path)
+    if d1['base_id'] != 'a1':
+        raise ValueError(f'D1 fused runtime only supports a1 base; got {{d1["base_id"]!r}}')
+    base_path = archive_dir / 'a1.bin'
+    if not base_path.is_file():
+        legacy = archive_dir / 'x'
+        if legacy.is_file():
+            base_path = legacy
+    if not base_path.is_file():
+        raise FileNotFoundError(f'A1 source blob not found in {{archive_dir}}')
+    actual_sha = hashlib.sha256(base_path.read_bytes()).hexdigest()
+    expected_sha = str(d1['expected_sha'])
+    if actual_sha[:len(expected_sha)] != expected_sha:
+        raise ValueError(
+            f'base sha mismatch: {{actual_sha[:len(expected_sha)]}} != {{expected_sha}}'
+        )
+
+    margin_hw = _decode_margin(
+        d1['margin_blob'],
+        height=int(d1['height']),
+        width=int(d1['width']),
+        scale=float(d1['scale']),
+    )
+    overlay_hw = _decode_overlay(
+        d1['poly_blob'],
+        height=int(d1['height']),
+        width=int(d1['width']),
+        expected_lipschitz=float(d1['lipschitz']),
+        margin_hw=margin_hw,
+    )
+    video_names = _read_file_list(args.file_list)
+    total_pairs = 0
+    total_bytes = 0
+    for video_name in video_names:
+        stem = video_name.rsplit('.', 1)[0] if '.' in video_name else video_name
+        dst_raw = output_dir / f'{{stem}}.raw'
+        subprocess.run(
+            [
+                os.environ.get('PYTHON', sys.executable),
+                str(HERE / 'a1_inflate.py'),
+                str(base_path),
+                str(dst_raw),
+            ],
+            check=True,
+        )
+        diag = _apply_overlay(dst_raw, overlay_hw)
+        total_pairs += diag['pairs_modified']
+        total_bytes += diag['bytes_changed']
+
+    print(
+        f'[d1-inflate] OVERLAY_TOTAL pairs_modified={{total_pairs}} '
+        f'bytes_changed={{total_bytes}} videos_processed={{len(video_names)}}',
+        file=sys.stderr,
+    )
+    if total_bytes <= 0:
+        raise RuntimeError(
+            'D1 sidecar was present but overlay changed zero bytes; refusing dead-rate packet'
+        )
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
+"""
+    (submission_dir / "inflate.py").write_text(d1_inflate_py, encoding="utf-8")
+    (submission_dir / "inflate.py").chmod(0o755)
+
+    # Emit a Catalog #146-compliant 3-arg inflate.sh that delegates to the
+    # fused D1 runtime. The runtime handles A1 rendering + D1 overlay.
     inflate_sh = (
         "#!/usr/bin/env bash\n"
         "# D1 SegNet margin polytope sidecar contest-compliant inflate.\n"
         "# Contract: $1=archive_dir $2=output_dir $3=file_list per Catalog #146.\n"
-        "# At L1 SCAFFOLD the sidecar bytes are parsed and base-sha verified,\n"
-        "# but the per-pixel polytope-aware noise overlay is not active;\n"
-        "# the render path below is A1's canonical loop.\n"
+        "# This is the fused D1+A1 runtime: render A1, then apply the\n"
+        "# polytope overlay from d1_polytope.bin to frame_1.\n"
         "set -euo pipefail\n"
         'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
         'DATA_DIR="$1"\n'
         'OUTPUT_DIR="$2"\n'
         'FILE_LIST="$3"\n'
-        'mkdir -p "$OUTPUT_DIR"\n'
-        'D1="${DATA_DIR}/d1_polytope.bin"\n'
-        'if [ ! -f "$D1" ]; then\n'
-        '  echo "ERROR: D1 sidecar not found in ${DATA_DIR}" >&2\n'
-        '  exit 1\n'
-        'fi\n'
-        '# Try a1.bin first (the new D1+A1 archive layout); fall back to x.\n'
-        'A1_SRC="${DATA_DIR}/a1.bin"\n'
-        'if [ ! -f "$A1_SRC" ]; then\n'
-        '  A1_SRC="${DATA_DIR}/x"\n'
-        'fi\n'
-        'if [ ! -f "$A1_SRC" ]; then\n'
-        '  echo "ERROR: A1 source blob not found in ${DATA_DIR}" >&2\n'
-        '  exit 1\n'
-        'fi\n'
-        '  "${PYTHON:-python3}" "$HERE/d1_verify.py" "$D1" "$A1_SRC"\n'
-        "while IFS= read -r line; do\n"
-        '  [ -z "$line" ] && continue\n'
-        '  BASE="${line%.*}"\n'
-        '  DST="${OUTPUT_DIR}/${BASE}.raw"\n'
-        '  printf "Inflating %s ... " "$line"\n'
-        '  "${PYTHON:-python3}" "$HERE/inflate.py" "$A1_SRC" "$DST"\n'
-        'done < "$FILE_LIST"\n'
+        'exec "${PYTHON:-python3}" "$HERE/inflate.py" "$DATA_DIR" "$OUTPUT_DIR" "$FILE_LIST"\n'
     )
     (submission_dir / "inflate.sh").write_text(inflate_sh, encoding="utf-8")
     (submission_dir / "inflate.sh").chmod(0o755)
@@ -888,10 +1142,10 @@ def _full_main(args: argparse.Namespace) -> int:
     6. Encode polytope payload via reverse-water-fill on per-pixel
        safe budget = margin / L (closed-form; no SGD).
     7. Pack D1POLY1 sidecar + compose with frozen A1 base.
-    8. Build archive.zip with both members, write contest runtime tree.
-    9. Refuse CUDA auth eval until the D1 overlay is actually consumed by
-       the runtime. L1 emits a byte-closed custody packet, not a score-
-       lowering candidate.
+    8. Build archive.zip with both members, write fused D1+A1 contest
+       runtime tree.
+    9. Gate auth eval only after the runtime consumes the D1 overlay and
+       the readiness manifest marks the packet exact-eval dispatchable.
     10. Update continual-learning posterior on success (Catalog #128).
     11. Write provenance.json with predicted/empirical bands.
 
@@ -903,10 +1157,10 @@ def _full_main(args: argparse.Namespace) -> int:
       averaged over pairs; ~200 KB → ~50 KB post-brotli). Per-pair would
       cost N_pairs × that and overflow the 3 KB Pareto budget per Catalog
       #170/#171.
-    * V3 Polytope-interior noise timing: POST-renderer. At L1 SCAFFOLD
-      the sidecar is parsed and base-sha verified, but no pixel overlay is
-      applied. Therefore L1 is a custody/proof artifact only. The D1 score
-      effect is blocked until L2 wires the per-base overlay adapter.
+    * V3 Polytope-interior noise timing: POST-renderer. The emitted
+      contest runtime renders frozen A1 first, then applies the decoded
+      D1 overlay to frame_1 and fails closed if the sidecar changes zero
+      bytes.
     * V4 D1 + YUCR composition order: D1 ALONE on A1 first (cleanest
       single-variable ablation — build subagent recommendation).
     * V5 EMA shadow scope: EMA the MARGIN MAP only (cheap; matches the
@@ -914,12 +1168,10 @@ def _full_main(args: argparse.Namespace) -> int:
       Default decay 0.997 per Catalog #88.
 
     The per-pixel rate savings is bounded above by the polytope-interior
-    fraction × per-pixel safe-bit budget; projected ΔS for D1-L2 on A1 is
-    [-0.012, -0.005] (deep-math memo §10). L1 does not claim that band and
-    does not dispatch exact eval, because current inflate output is A1 plus
-    rate overhead.
+    fraction × per-pixel safe-bit budget; projected ΔS for D1 on A1 is
+    [-0.012, -0.005] (deep-math memo §10). The projection is not a score
+    claim until paired contest-CPU and contest-CUDA exact eval land.
     """
-    import numpy as np
     import torch
 
     from tac.differentiable_eval_roundtrip import (
@@ -1028,12 +1280,19 @@ def _full_main(args: argparse.Namespace) -> int:
                 "in (0, 1) per CLAUDE.md EMA non-negotiable"
             )
 
-        # Batch over pairs; each "epoch" runs through the full pair set.
-        # Default cap epochs=args.epochs; with the closed-form encoder we
-        # converge in O(epochs * n_pairs / batch_size) SegNet forwards.
+        # D1 margin extraction is deterministic closed-form inference. Repeating
+        # identical frozen-scorer passes only burns wall-clock, so keep the
+        # legacy --epochs flag as custody metadata and run one effective pass.
+        effective_margin_passes = 1
+        if int(args.epochs) != effective_margin_passes:
+            print(
+                f"[{SUBSTRATE_TAG}-full] --epochs={args.epochs} requested; "
+                "D1 uses one deterministic margin pass",
+                flush=True,
+            )
         wall_clock_started = time.time()
         with torch.inference_mode():
-            for epoch in range(args.epochs):
+            for epoch in range(effective_margin_passes):
                 for batch_start in range(0, n_pairs, args.batch_size):
                     batch_indices = list(
                         range(
@@ -1120,11 +1379,13 @@ def _full_main(args: argparse.Namespace) -> int:
                 "git_head": _git_head_sha(),
                 "n_pairs_used": int(n_pairs),
                 "ema_decay": float(ema_decay),
-                "runtime_overlay_consumed": False,
-                "current_runtime_effect": "base_renderer_plus_rate_only",
+                "requested_epochs": int(args.epochs),
+                "effective_margin_passes": int(effective_margin_passes),
+                "runtime_overlay_consumed": True,
+                "current_runtime_effect": "base_renderer_plus_d1_overlay",
                 "l2_projected_score_band_low": 0.181,
                 "l2_projected_score_band_high": 0.188,
-                "predicted_score_evidence_grade": "blocked_l1_noop_overlay",
+                "predicted_score_evidence_grade": "first-principles-bound",
             },
         )
         d1_overhead_bytes = len(d1_blob)
@@ -1184,7 +1445,7 @@ def _full_main(args: argparse.Namespace) -> int:
             base_archive_bytes=base_bytes_len,
             d1_overhead_bytes=d1_overhead_bytes,
             config=cfg,
-            runtime_overlay_consumed=False,
+            runtime_overlay_consumed=True,
         )
         readiness["lane_id"] = SUBSTRATE_LANE_ID
         readiness["archive_zip_bytes"] = archive_zip_size
@@ -1205,15 +1466,13 @@ def _full_main(args: argparse.Namespace) -> int:
         # ------------------------------------------------------------------
         auth_eval_json_path = args.output_dir / "contest_auth_eval_cuda.json"
         if not bool(readiness.get("ready_for_exact_eval_dispatch")):
-            args.auth_eval_skipped_reason = "d1_l1_runtime_overlay_not_consumed"
+            args.auth_eval_skipped_reason = "d1_readiness_manifest_refused_dispatch"
             print(
                 f"[{SUBSTRATE_TAG}-auth-eval] SKIPPED: "
-                "D1 L1 runtime parses the sidecar but does not apply the "
-                "overlay, so exact eval would only measure A1 plus rate "
-                "overhead. Build the L2 overlay adapter before dispatch.",
+                "D1 readiness manifest refused exact-eval dispatch.",
                 flush=True,
             )
-            _stage("auth_eval_skipped_d1_l1_runtime_overlay_not_consumed")
+            _stage("auth_eval_skipped_readiness_manifest_refused_dispatch")
         else:
             auth_result = _canon_gate_auth_eval_call(
                 args=args,
@@ -1257,7 +1516,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 flush=True,
             )
             _stage("posterior_updated")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(
                 f"[{SUBSTRATE_TAG}-full] WARN posterior_update failed: {exc!r}",
                 flush=True,
@@ -1270,6 +1529,10 @@ def _full_main(args: argparse.Namespace) -> int:
         "started_at_utc": stage_log[0]["at"] if stage_log else _utc_now_iso(),
         "completed_at_utc": _utc_now_iso(),
         "n_pairs_used": int(n_pairs) if "n_pairs" in dir() else None,
+        "requested_epochs": int(args.epochs),
+        "effective_margin_passes": int(
+            locals().get("effective_margin_passes", 1)
+        ),
         "d1_overhead_bytes": d1_overhead_bytes,
         "d1_bin_sha256": d1_bin_sha,
         "archive_zip_bytes": archive_zip_size,
@@ -1278,16 +1541,16 @@ def _full_main(args: argparse.Namespace) -> int:
         "design_verdicts": {
             "v1_jacobian_lipschitz": float(args.jacobian_lipschitz),
             "v2_margin_map_scope": "per_frame_ema",
-            "v3_polytope_noise_timing": "post_renderer_overlay_blocked_at_l1",
+            "v3_polytope_noise_timing": "post_renderer_overlay_active",
             "v4_composition_order": "d1_alone_on_a1",
             "v5_ema_shadow_scope": "margin_map_only",
             "ema_decay": float(args.ema_decay),
         },
-        "runtime_overlay_consumed": False,
-        "current_runtime_effect": "base_renderer_plus_rate_only",
+        "runtime_overlay_consumed": True,
+        "current_runtime_effect": "base_renderer_plus_d1_overlay",
         "l2_projected_score_band_low": 0.181,
         "l2_projected_score_band_high": 0.188,
-        "predicted_score_evidence_grade": "blocked_l1_noop_overlay",
+        "predicted_score_evidence_grade": "first-principles-bound",
         "source_memo": (
             ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md"
         ),
@@ -1331,4 +1594,4 @@ if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
 
 
-__all__ = ["main", "TIER_1_OPERATOR_REQUIRED_FLAGS"]
+__all__ = ["TIER_1_OPERATOR_REQUIRED_FLAGS", "main"]

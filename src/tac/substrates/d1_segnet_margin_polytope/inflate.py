@@ -1,18 +1,8 @@
 # SPDX-License-Identifier: MIT
-"""D1 inflate runtime — sidecar margin-map dequant + L2 polytope overlay.
+"""D1 inflate runtime: verify sidecar/base, render base, apply overlay.
 
-Per HNeRV parity L4: inflate.py <= 200 LOC substrate-engineering waiver.
-NO scorer load (strict-scorer-rule). torch + numpy + brotli only.
-Catalog #146 CLI: ``inflate.py archive_dir output_dir file_list``.
-
-Steps: (1) locate ``d1_polytope.bin``; (2) verify base sha-truncated match;
-(3) delegate to base substrate's inflate to write .raw files; (4) L2
-INTEGRATION — apply polytope-interior noise overlay to every frame_1 in
-each output .raw via overlay.apply_l2_overlay_for_video_list. Operational
-score-improvement mechanism per Catalog #220 NON-NEGOTIABLE: byte addition
-must produce real frame changes, not dead bytes paying rate-term penalty.
-
-NO score claim. NO /tmp paths.
+Catalog #146 CLI: ``inflate.py archive_dir output_dir file_list``. No scorer
+load, no score claim, no /tmp paths.
 """
 
 from __future__ import annotations
@@ -37,12 +27,7 @@ def _read_file_list(file_list_path: Path) -> list[str]:
 
 
 def _locate_d1_archive(archive_dir: Path) -> Path:
-    """Locate the D1POLY1 0.bin sidecar inside ``archive_dir``.
-
-    Convention: substrate archives live as ``<substrate_id>.bin`` per
-    HNeRV parity L3 monolithic single-file rule. D1 sidecar lives as
-    ``d1_polytope.bin``. Fail-closed if absent.
-    """
+    """Locate the D1 sidecar and fail closed if absent."""
     candidate = archive_dir / "d1_polytope.bin"
     if not candidate.is_file():
         raise FileNotFoundError(
@@ -57,12 +42,7 @@ def _verify_base_archive_match(
     base_substrate_id: str,
     base_sha_truncated: str,
 ) -> Path:
-    """Locate the base substrate's archive and verify the truncated sha matches.
-
-    Returns the path to the base archive. Raises if missing or sha
-    mismatch (fail-closed per CLAUDE.md "Apples-to-apples evidence
-    discipline").
-    """
+    """Locate the base archive and verify the truncated sha matches."""
     candidate = archive_dir / f"{base_substrate_id}.bin"
     if not candidate.is_file():
         raise FileNotFoundError(
@@ -80,12 +60,7 @@ def _verify_base_archive_match(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Catalog #146 CLI: ``inflate.py <archive_dir> <output_dir> <file_list>``.
-
-    Delegates to ``tac.substrates.<base>.inflate.main`` then applies the
-    L2 polytope overlay to every frame_1 in each .raw output. Returns 0
-    on success, non-zero on failure.
-    """
+    """Catalog #146 CLI."""
     parser = argparse.ArgumentParser(
         prog="inflate", description="D1 sidecar inflate (Catalog #146)"
     )
@@ -177,14 +152,26 @@ def main(argv: list[str] | None = None) -> int:
         polytope_payload=d1_archive.polytope_payload,
         encoder_grid_h=d1_archive.height,
         encoder_grid_w=d1_archive.width,
+        margin_map_int8=d1_archive.margin_map_int8,
+        margin_map_scale=d1_archive.margin_map_scale,
+        archive_jacobian_lipschitz=d1_archive.jacobian_lipschitz,
     )
     print(
         f"[d1-inflate] OVERLAY_TOTAL pairs_modified="
         f"{overlay_diag['total_pairs_modified']} bytes_changed="
         f"{overlay_diag['total_bytes_changed']} videos_processed="
-        f"{overlay_diag['videos_processed']}",
+        f"{overlay_diag['videos_processed']} "
+        f"contract_nonzero_noise_pixels="
+        f"{overlay_diag['contract_nonzero_noise_pixels']} "
+        f"contract_boundary_pixels="
+        f"{overlay_diag['contract_boundary_pixels']}",
         file=sys.stderr,
     )
+    if overlay_diag["total_bytes_changed"] <= 0:
+        raise RuntimeError(
+            "D1 sidecar was present but overlay changed zero bytes; "
+            "refusing dead-rate packet"
+        )
     return 0
 
 

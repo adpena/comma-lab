@@ -22,11 +22,9 @@ from tac.substrates.d1_segnet_margin_polytope import (
     D1POLY1_HEADER_SIZE,
     D1POLY1_MAGIC,
     D1POLY1_SCHEMA_VERSION,
-    D1POLY_BASE_SUBSTRATE_IDS,
     D1POLY_DEFAULT_BASE_SUBSTRATE,
     POLYTOPE_LATTICE_LEVELS,
     POLYTOPE_LATTICE_VALUES,
-    D1PolytopeArchive,
     D1PolytopeConfig,
     D1PolytopeLossWeights,
     D1PolytopeSidecar,
@@ -49,7 +47,6 @@ from tac.substrates.d1_segnet_margin_polytope.architecture import (
     compose_with_base,
     estimate_overhead_bytes,
 )
-
 
 # ---------------------------------------------------------------------------
 # Config validation
@@ -308,8 +305,9 @@ def test_decode_polytope_payload_rejects_truncated_blob():
 
 
 def test_decode_polytope_payload_rejects_bad_magic():
-    import brotli  # type: ignore[import-not-found]
     import struct
+
+    import brotli  # type: ignore[import-not-found]
 
     bad_header = struct.pack("<4sBIfBf", b"XXXX", 1, 16, 0.0, 5, 10.0)
     blob = brotli.compress(bad_header + b"\x00" * 16, quality=9)
@@ -804,6 +802,13 @@ def test_inflate_locator_fails_when_d1_bin_absent(tmp_path):
         _locate_d1_archive(tmp_path)
 
 
+def test_default_a1_base_exposes_package_inflate_adapter():
+    import importlib
+
+    base_inflate = importlib.import_module("tac.substrates.a1.inflate")
+    assert hasattr(base_inflate, "main")
+
+
 def test_inflate_base_archive_sha_mismatch_refuses(tmp_path):
     from tac.substrates.d1_segnet_margin_polytope.inflate import (
         _verify_base_archive_match,
@@ -905,9 +910,13 @@ def test_trainer_runtime_emits_d1_sidecar_verifier(tmp_path):
     submission_dir = tmp_path / "submission"
     trainer._write_runtime(submission_dir)
     assert (submission_dir / "d1_verify.py").is_file()
+    assert (submission_dir / "a1_inflate.py").is_file()
     inflate_sh = (submission_dir / "inflate.sh").read_text(encoding="utf-8")
-    assert "d1_verify.py" in inflate_sh
-    assert "D1 sidecar not found" in inflate_sh
+    assert "$HERE/inflate.py" in inflate_sh
+    assert "polytope overlay" in inflate_sh
+    inflate_py = (submission_dir / "inflate.py").read_text(encoding="utf-8")
+    assert "_apply_overlay" in inflate_py
+    assert "changed zero bytes" in inflate_py
 
     base_bytes = b"some-a1-base"
     base_path = tmp_path / "a1.bin"
@@ -926,13 +935,148 @@ def test_trainer_runtime_emits_d1_sidecar_verifier(tmp_path):
     d1_path = tmp_path / "d1_polytope.bin"
     d1_path.write_bytes(blob)
     result = subprocess.run(
-        [sys.executable, str(submission_dir / "d1_verify.py"), str(d1_path), str(base_path)],
+        [
+            sys.executable,
+            str(submission_dir / "d1_verify.py"),
+            str(d1_path),
+            str(base_path),
+        ],
         capture_output=True,
         text=True,
         check=False,
     )
     assert result.returncode == 0
     assert "[d1-verify] parsed D1 sidecar" in result.stderr
+
+
+def test_generated_d1_runtime_applies_overlay_and_fails_closed(tmp_path):
+    import importlib
+
+    trainer = importlib.import_module(
+        "experiments.train_substrate_d1_segnet_margin_polytope"
+    )
+    submission_dir = tmp_path / "submission"
+    trainer._write_runtime(submission_dir)
+
+    # Replace the expensive A1 renderer with a deterministic one-pair raw
+    # writer. This keeps the test focused on the generated D1 driver.
+    fake_a1 = (
+        "from pathlib import Path\n"
+        "import sys\n"
+        "camera_h, camera_w = 874, 1164\n"
+        "frame_bytes = camera_h * camera_w * 3\n"
+        "Path(sys.argv[2]).write_bytes(bytes([128]) * (2 * frame_bytes))\n"
+    )
+    (submission_dir / "a1_inflate.py").write_text(
+        fake_a1, encoding="utf-8"
+    )
+
+    base_bytes = b"some-a1-base"
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "a1.bin").write_bytes(base_bytes)
+
+    cfg, mm, payload, _ = _make_dummy_archive_inputs()
+    blob = pack_archive(
+        margin_map=mm,
+        polytope_payload=payload,
+        jacobian_lipschitz=10.0,
+        base_substrate_id="a1",
+        base_archive_sha256=hashlib.sha256(base_bytes).hexdigest(),
+        base_archive_bytes=len(base_bytes),
+        config=cfg,
+        extra_meta={},
+    )
+    (archive_dir / "d1_polytope.bin").write_bytes(blob)
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    output_dir = tmp_path / "out"
+
+    import importlib.util
+
+    from tac.substrates.d1_segnet_margin_polytope.overlay import (
+        _build_camera_resolution_overlay,
+    )
+
+    spec = importlib.util.spec_from_file_location(
+        "generated_d1_inflate", submission_dir / "inflate.py"
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    generated_inflate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generated_inflate)
+    decoded = decode_polytope_payload(payload)
+    margin_hw = generated_inflate._decode_margin(
+        generated_inflate._parse_d1_sidecar(archive_dir / "d1_polytope.bin")[
+            "margin_blob"
+        ],
+        height=48,
+        width=64,
+        scale=parse_archive(blob).margin_map_scale,
+    )
+    np.testing.assert_array_equal(
+        generated_inflate._decode_overlay(
+            payload,
+            height=48,
+            width=64,
+            expected_lipschitz=10.0,
+            margin_hw=margin_hw,
+        ),
+        _build_camera_resolution_overlay(
+            noise_levels_flat=decoded.noise_levels,
+            encoder_grid_h=48,
+            encoder_grid_w=64,
+        ),
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(submission_dir / "inflate.py"),
+            str(archive_dir),
+            str(output_dir),
+            str(file_list),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "OVERLAY_TOTAL" in result.stderr
+    raw_bytes = (output_dir / "0.raw").read_bytes()
+    assert raw_bytes != bytes([128]) * len(raw_bytes)
+
+    zero_archive_dir = tmp_path / "archive_zero"
+    zero_archive_dir.mkdir()
+    (zero_archive_dir / "a1.bin").write_bytes(base_bytes)
+    zero_margin = torch.zeros_like(mm)
+    zero_blob = pack_archive(
+        margin_map=zero_margin,
+        polytope_payload=encode_polytope_payload(
+            zero_margin, jacobian_lipschitz=10.0, budget_bits=2000
+        ),
+        jacobian_lipschitz=10.0,
+        base_substrate_id="a1",
+        base_archive_sha256=hashlib.sha256(base_bytes).hexdigest(),
+        base_archive_bytes=len(base_bytes),
+        config=cfg,
+        extra_meta={},
+    )
+    (zero_archive_dir / "d1_polytope.bin").write_bytes(zero_blob)
+    zero_result = subprocess.run(
+        [
+            sys.executable,
+            str(submission_dir / "inflate.py"),
+            str(zero_archive_dir),
+            str(tmp_path / "out_zero"),
+            str(file_list),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert zero_result.returncode != 0
+    assert "changed zero bytes" in zero_result.stderr
 
 
 def test_d1_substrate_lane_class_marker_present():

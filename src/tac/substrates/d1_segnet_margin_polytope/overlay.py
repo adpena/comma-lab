@@ -42,7 +42,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-
 # Contest camera resolution per ``submissions/a1/inflate.py:34``.
 # Matches ``upstream/constants.py``; recorded here so the overlay does not
 # import from upstream (keeps the inflate runtime dependency closure
@@ -55,6 +54,85 @@ _FRAME_BYTES: int = _CAMERA_H * _CAMERA_W * 3
 
 # Contest expects 600 pairs (= 1200 frames) per video.
 _N_PAIRS_PER_VIDEO: int = 600
+
+
+def validate_polytope_margin_contract(
+    *,
+    noise_levels_flat: np.ndarray,
+    margin_map_int8: np.ndarray,
+    margin_map_scale: float,
+    archive_jacobian_lipschitz: float,
+    payload_jacobian_lipschitz: float,
+    boundary_eps: float = 1e-6,
+) -> dict[str, int | float]:
+    """Validate that decoded D1 overlay bytes match the margin/L contract.
+
+    This is an inflate-time safety guard, not a score claim. The current D1
+    lattice uses integer RGB deltas, while the scorer margin lives in logit
+    units, so this guard enforces the conservative invariants that are
+    dimensionally meaningful today: payload/header Lipschitz agreement, shape
+    agreement, valid lattice range, and no nonzero noise on quantized
+    boundary pixels.
+    """
+    if noise_levels_flat.dtype != np.int8:
+        raise ValueError(
+            f"D1 contract expects int8 noise levels; got {noise_levels_flat.dtype}"
+        )
+    if margin_map_int8.dtype != np.int8:
+        raise ValueError(
+            f"D1 contract expects int8 margin map; got {margin_map_int8.dtype}"
+        )
+    if noise_levels_flat.ndim != 1:
+        raise ValueError(
+            f"D1 contract expects flat noise levels; got {noise_levels_flat.shape}"
+        )
+    margin_flat = margin_map_int8.reshape(-1)
+    if margin_flat.size != noise_levels_flat.size:
+        raise ValueError(
+            "D1 contract shape mismatch: "
+            f"noise={noise_levels_flat.size} margin={margin_flat.size}"
+        )
+    if margin_map_scale <= 0:
+        raise ValueError(f"D1 margin_map_scale must be > 0; got {margin_map_scale}")
+    if archive_jacobian_lipschitz <= 0 or payload_jacobian_lipschitz <= 0:
+        raise ValueError(
+            "D1 jacobian_lipschitz values must be > 0; got "
+            f"archive={archive_jacobian_lipschitz} payload={payload_jacobian_lipschitz}"
+        )
+    if not np.isclose(
+        float(archive_jacobian_lipschitz),
+        float(payload_jacobian_lipschitz),
+        rtol=1e-5,
+        atol=1e-6,
+    ):
+        raise ValueError(
+            "D1 jacobian_lipschitz mismatch: "
+            f"archive={archive_jacobian_lipschitz} payload={payload_jacobian_lipschitz}"
+        )
+    lattice_violation_count = int(np.count_nonzero(np.abs(noise_levels_flat) > 2))
+    margin_float = margin_flat.astype(np.float32) * float(margin_map_scale)
+    boundary_mask = margin_float <= boundary_eps
+    boundary_violation_count = int(
+        np.count_nonzero((noise_levels_flat != 0) & boundary_mask)
+    )
+    if lattice_violation_count:
+        raise ValueError(
+            f"D1 lattice violation: {lattice_violation_count} levels outside [-2,2]"
+        )
+    if boundary_violation_count:
+        raise ValueError(
+            "D1 boundary violation: "
+            f"{boundary_violation_count} nonzero noise levels on zero-margin pixels"
+        )
+    return {
+        "noise_pixels": int(noise_levels_flat.size),
+        "nonzero_noise_pixels": int(np.count_nonzero(noise_levels_flat)),
+        "boundary_pixels": int(np.count_nonzero(boundary_mask)),
+        "boundary_violation_count": boundary_violation_count,
+        "lattice_violation_count": lattice_violation_count,
+        "archive_jacobian_lipschitz": float(archive_jacobian_lipschitz),
+        "payload_jacobian_lipschitz": float(payload_jacobian_lipschitz),
+    }
 
 
 def _upsample_int8_levels_to_camera(
@@ -247,6 +325,9 @@ def apply_l2_overlay_for_video_list(
     polytope_payload: bytes,
     encoder_grid_h: int,
     encoder_grid_w: int,
+    margin_map_int8: np.ndarray | None = None,
+    margin_map_scale: float | None = None,
+    archive_jacobian_lipschitz: float | None = None,
     n_pairs_per_video: int | None = None,
 ) -> dict[str, int]:
     """Apply the L2 polytope overlay across every video's .raw output.
@@ -284,6 +365,19 @@ def apply_l2_overlay_for_video_list(
     )
 
     polytope_result = decode_polytope_payload(polytope_payload)
+    contract_diag: dict[str, int | float] = {}
+    if (
+        margin_map_int8 is not None
+        and margin_map_scale is not None
+        and archive_jacobian_lipschitz is not None
+    ):
+        contract_diag = validate_polytope_margin_contract(
+            noise_levels_flat=polytope_result.noise_levels,
+            margin_map_int8=margin_map_int8,
+            margin_map_scale=float(margin_map_scale),
+            archive_jacobian_lipschitz=float(archive_jacobian_lipschitz),
+            payload_jacobian_lipschitz=float(polytope_result.jacobian_lipschitz),
+        )
     total_pairs_modified = 0
     total_bytes_changed = 0
     videos_processed = 0
@@ -330,10 +424,15 @@ def apply_l2_overlay_for_video_list(
         "total_pairs_modified": total_pairs_modified,
         "total_bytes_changed": total_bytes_changed,
         "videos_processed": videos_processed,
+        "contract_nonzero_noise_pixels": int(
+            contract_diag.get("nonzero_noise_pixels", 0)
+        ),
+        "contract_boundary_pixels": int(contract_diag.get("boundary_pixels", 0)),
     }
 
 
 __all__ = [
-    "apply_polytope_overlay_inplace",
     "apply_l2_overlay_for_video_list",
+    "apply_polytope_overlay_inplace",
+    "validate_polytope_margin_contract",
 ]
