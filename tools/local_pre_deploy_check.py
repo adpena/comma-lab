@@ -557,6 +557,53 @@ def check_recipe_status_consistent_with_trainer_state(trainer: Path, recipe: str
     )
 
 
+def check_dispatch_optimization_protocol(trainer: Path, recipe: str | None) -> tuple[bool, str]:
+    """8th check (operator-routed 2026-05-15 DISPATCH-OPTIMIZATION-PROTOCOL).
+
+    Routes through ``tools/canonical_dispatch_optimization_protocol.verify_dispatch_protocol_complete``
+    to compute the umbrella Tier 1/2/3 verdict. Per operator directive
+    2026-05-15 NON-NEGOTIABLE: *"remember the multiple deployments that
+    have failed over and over because of missing optimizations? we should
+    investigate and develop a protocol for those too and enforce best
+    practices and production hardened optimization, extreme optimization
+    and correctness and performance and scalability"*. Mirrors Catalog
+    #270 STRICT preflight gate at the 30s harness layer.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "tools"))
+    try:
+        import canonical_dispatch_optimization_protocol as proto_mod  # type: ignore[import-not-found]
+    except ImportError as exc:
+        return True, f"PASS-VACUOUS: protocol helper missing ({exc})"
+    finally:
+        try:
+            sys.path.remove(str(REPO_ROOT / "tools"))
+        except ValueError:
+            pass
+    verdict = proto_mod.verify_dispatch_protocol_complete(trainer, recipe)
+    if verdict.overall_pass:
+        return True, (
+            "PASS: dispatch optimization protocol Tier 1/2/3 all complete "
+            f"(tier1.signals={sum(verdict.tier1.pass_signals.values())}/"
+            f"{len(verdict.tier1.pass_signals)}; "
+            f"tier2.signals={sum(verdict.tier2.pass_signals.values())}/"
+            f"{len(verdict.tier2.pass_signals)}; "
+            f"tier3.signals={sum(verdict.tier3.pass_signals.values())}/"
+            f"{len(verdict.tier3.pass_signals)})"
+        )
+    head = "; ".join(verdict.blockers[:2])
+    return False, (
+        f"FAIL: dispatch optimization protocol failed — "
+        f"tier1={verdict.tier1.overall_pass} "
+        f"tier2={verdict.tier2.overall_pass} "
+        f"tier3={verdict.tier3.overall_pass}; "
+        f"first 2 of {len(verdict.blockers)} blockers: {head}. "
+        "Per Catalog #270 + CLAUDE.md 'Production-hardened dispatch "
+        "optimization protocol' non-negotiable. Run "
+        "`tools/canonical_dispatch_optimization_protocol.py --trainer "
+        f"{trainer.name} --recipe {recipe}` for full report."
+    )
+
+
 CHECKS = [
     ("py_compile", check_py_compile),
     ("trainer_importable", check_trainer_importable),
@@ -568,6 +615,9 @@ CHECKS = [
     # 7th check (operator-routed 2026-05-15 Phase 7) — recipe-vs-trainer-state
     # consistency surface; mirrors Catalog #240 STRICT preflight gate.
     ("recipe_status_consistent_with_trainer_state", "USES_RECIPE"),
+    # 8th check (operator-routed 2026-05-15 DISPATCH-OPTIMIZATION-PROTOCOL) —
+    # umbrella Tier 1/2/3 verdict; mirrors Catalog #270 STRICT preflight gate.
+    ("dispatch_optimization_protocol", "USES_PROTOCOL"),
 ]
 
 
@@ -610,6 +660,10 @@ def main() -> int:
         if fn == "USES_RECIPE":
             # 7th check needs both trainer + recipe.
             ok, msg = check_recipe_status_consistent_with_trainer_state(trainer, args.recipe)
+        elif fn == "USES_PROTOCOL":
+            # 8th check needs both trainer + recipe; routes through canonical
+            # dispatch optimization protocol helper.
+            ok, msg = check_dispatch_optimization_protocol(trainer, args.recipe)
         else:
             ok, msg = fn(trainer)
         marker = "✓" if ok else "✗"
