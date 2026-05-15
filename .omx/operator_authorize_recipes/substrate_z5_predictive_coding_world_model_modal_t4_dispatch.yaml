@@ -1,6 +1,18 @@
 schema_version: 1
 name: substrate_z5_predictive_coding_world_model_modal_t4_dispatch
 lane_id: lane_z5_predictive_coding_world_model_step3_20260514
+# CANONICALIZE-SUBSTRATE-CONTEST-CHAIN-SUBAGENT 2026-05-15: Z5 trainer's
+# `_full_main` raises NotImplementedError pending Phase 2 council approval
+# (experiments/train_substrate_z5_predictive_coding_world_model.py:360). Per
+# CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog
+# #220, the recipe MUST be tagged research_only=true so the contest-CUDA chain
+# audit (tools/local_pre_deploy_check.py + Catalog candidate gate) recognizes
+# it as transparently non-dispatchable. Removing this flag without first lifting
+# the NotImplementedError WILL result in Modal dispatch crashing pre-auth-eval
+# (Z3 v2 fc-01KRNHWD6AEMWGDJXBEY8GM0P3 bug class).
+research_only: true
+dispatch_blockers:
+  - phase_2_council_approval_required_to_lift_full_main_NotImplementedError
 summary: |
   Z5 predictive-coding world-model substrate (Time-Traveler L5 staircase Step 3)
   per `.omx/research/campaign_z5_predictive_coding_world_model_20260514.md` and
