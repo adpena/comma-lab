@@ -398,12 +398,12 @@ class TestScaffoldDiscipline:
         assert SCAFFOLD_ONLY is True
 
     def test_predicted_score_band_is_documented(self) -> None:
-        """The predicted delta S band must be in the package docstring."""
+        """The v1-vs-future predicted delta S split must be documented."""
         import tac.codecs.stc_dasher as mod
         assert mod.__doc__ is not None
         doc = mod.__doc__.lower()
-        # Predicted band [-0.010, -0.030] must be in module docstring
-        # (per grand reunion symposium memo).
+        assert "v1 scaffold: none" in doc
+        assert "post-viterbi inverse" in doc
         assert "-0.010" in doc and "-0.030" in doc
 
     def test_lane_id_documented(self) -> None:

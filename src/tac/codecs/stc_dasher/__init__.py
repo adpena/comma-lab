@@ -5,8 +5,9 @@ Per the Grand Reunion Fields-Grade Symposium 2026-05-15 Phase F binding
 verdict (Composite #6, Filler + MacKay + Shannon).
 
 Predicted score impact (rate-axis, substrate-agnostic):
-    [-0.010, -0.030]  [prediction; first-principles; STC achieves
-                       H(W|context) within 0.5%]
+    v1 scaffold: none; rate-negative byte-closed roundtrip/custody artifact.
+    post-Viterbi inverse: [-0.010, -0.030] [prediction; first-principles;
+                       STC achieves H(W|context) within 0.5%]
 
 Contract surfaces
 -----------------
