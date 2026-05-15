@@ -41,9 +41,7 @@ def _make_archive(path: Path, sections: dict[str, bytes]) -> None:
             zf.writestr(name, data)
 
 
-def _make_simple_inflate_sh(
-    path: Path, payload_section: str, output_filename: str = "0.mkv"
-) -> None:
+def _make_simple_inflate_sh(path: Path, payload_section: str, output_filename: str = "0.mkv") -> None:
     """Write a fake inflate.sh that copies the named ZIP section to output.
 
     The output BYTES depend on the section contents — so mutating the
@@ -63,9 +61,7 @@ def _make_simple_inflate_sh(
     path.chmod(0o755)
 
 
-def _make_dead_section_inflate_sh(
-    path: Path, output_filename: str = "0.mkv"
-) -> None:
+def _make_dead_section_inflate_sh(path: Path, output_filename: str = "0.mkv") -> None:
     """Inflate.sh that ALWAYS writes the same fixed bytes (ignoring archive).
 
     Any section mutation produces the SAME output — the section is dead
@@ -78,6 +74,28 @@ def _make_dead_section_inflate_sh(
         'OUTPUT_DIR="$2"\n'
         'mkdir -p "$OUTPUT_DIR"\n'
         f'echo -n "FIXED_DEAD_OUTPUT_BYTES" > "$OUTPUT_DIR/{output_filename}"\n'
+    )
+    path.write_text(body, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def _make_nondeterministic_inflate_sh(
+    path: Path,
+    output_filename: str = "0.mkv",
+) -> None:
+    """Inflate.sh whose output changes across identical baseline invocations."""
+    body = (
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'ARCHIVE_DIR="$1"\n'
+        'OUTPUT_DIR="$2"\n'
+        'COUNTER_FILE="$(dirname "$ARCHIVE_DIR")/nondeterministic_counter.txt"\n'
+        "COUNT=0\n"
+        'if [[ -f "$COUNTER_FILE" ]]; then COUNT="$(cat "$COUNTER_FILE")"; fi\n'
+        "COUNT=$((COUNT + 1))\n"
+        'echo "$COUNT" > "$COUNTER_FILE"\n'
+        'mkdir -p "$OUTPUT_DIR"\n'
+        f'printf "NONDET_%s" "$COUNT" > "$OUTPUT_DIR/{output_filename}"\n'
     )
     path.write_text(body, encoding="utf-8")
     path.chmod(0o755)
@@ -204,6 +222,8 @@ def test_verify_passed_when_section_is_consumed(helper, tmp_path):
     assert sr["member"] == "distinguishing"
     assert sr["mutations_changed_output"] > 0
     assert sr["passed"] is True
+    assert result["baseline_repeat_deterministic"] is True
+    assert result["baseline_inflated_output_sha256"] == result["baseline_repeat_inflated_output_sha256"]
 
 
 def test_verify_passed_when_member_byte_range_is_consumed(helper, tmp_path):
@@ -242,9 +262,7 @@ def test_verify_failed_when_section_is_dead_z3_g1_anchor(helper, tmp_path):
     inflate.sh ignores it (always outputs the same fixed bytes). Smoke
     MUST FAIL — the bytes are not operationally consumed."""
     archive = tmp_path / "archive.zip"
-    _make_archive(
-        archive, {"distinguishing": b"NEVER_READ_BY_INFLATE_BYTES"}
-    )
+    _make_archive(archive, {"distinguishing": b"NEVER_READ_BY_INFLATE_BYTES"})
     inflate_sh = tmp_path / "inflate.sh"
     _make_dead_section_inflate_sh(inflate_sh)
     output_json = tmp_path / "out.json"
@@ -260,6 +278,30 @@ def test_verify_failed_when_section_is_dead_z3_g1_anchor(helper, tmp_path):
     sr = result["section_results"][0]
     assert sr["mutations_changed_output"] == 0
     assert sr["passed"] is False
+
+
+def test_verify_infra_error_when_baseline_inflate_is_nondeterministic(
+    helper,
+    tmp_path,
+):
+    """Mutation differences are not evidence until identical baselines match."""
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"distinguishing": b"DISTINGUISHING_BYTES_HERE"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_nondeterministic_inflate_sh(inflate_sh)
+    output_json = tmp_path / "out.json"
+
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=["distinguishing"],
+        output_json=output_json,
+    )
+
+    assert result["verdict"] == "INFRASTRUCTURE_ERROR"
+    assert result["baseline_repeat_deterministic"] is False
+    assert "nondeterministic" in result["infrastructure_error_reason"]
+    assert result["baseline_inflated_output_sha256"] != result["baseline_repeat_inflated_output_sha256"]
 
 
 # ---------------------------------------------------------------------------
@@ -432,6 +474,9 @@ def test_output_json_schema_fields_present(helper, tmp_path):
         "inflate_sh_sha256",
         "distinguishing_bytes_paths",
         "section_results",
+        "baseline_inflated_output_sha256",
+        "baseline_repeat_inflated_output_sha256",
+        "baseline_repeat_deterministic",
         "overall_passed",
         "verdict",
         "elapsed_seconds",
@@ -454,10 +499,14 @@ def test_cli_main_returns_0_on_passed(helper, tmp_path):
 
     rc = helper.main(
         [
-            "--archive", str(archive),
-            "--inflate-sh", str(inflate_sh),
-            "--distinguishing-bytes-path", "x",
-            "--output-json", str(output_json),
+            "--archive",
+            str(archive),
+            "--inflate-sh",
+            str(inflate_sh),
+            "--distinguishing-bytes-path",
+            "x",
+            "--output-json",
+            str(output_json),
         ]
     )
     assert rc == 0
@@ -472,10 +521,14 @@ def test_cli_main_returns_0_on_member_byte_range_passed(helper, tmp_path):
 
     rc = helper.main(
         [
-            "--archive", str(archive),
-            "--inflate-sh", str(inflate_sh),
-            "--distinguishing-byte-range", "distinguishing_section=x@7:22",
-            "--output-json", str(output_json),
+            "--archive",
+            str(archive),
+            "--inflate-sh",
+            str(inflate_sh),
+            "--distinguishing-byte-range",
+            "distinguishing_section=x@7:22",
+            "--output-json",
+            str(output_json),
         ]
     )
     assert rc == 0
@@ -492,10 +545,14 @@ def test_cli_main_returns_1_on_failed(helper, tmp_path):
 
     rc = helper.main(
         [
-            "--archive", str(archive),
-            "--inflate-sh", str(inflate_sh),
-            "--distinguishing-bytes-path", "x",
-            "--output-json", str(output_json),
+            "--archive",
+            str(archive),
+            "--inflate-sh",
+            str(inflate_sh),
+            "--distinguishing-bytes-path",
+            "x",
+            "--output-json",
+            str(output_json),
         ]
     )
     assert rc == 1
@@ -505,10 +562,228 @@ def test_cli_main_returns_2_on_infra_error(helper, tmp_path):
     output_json = tmp_path / "out.json"
     rc = helper.main(
         [
-            "--archive", str(tmp_path / "missing.zip"),
-            "--inflate-sh", str(tmp_path / "missing.sh"),
-            "--distinguishing-bytes-path", "x",
-            "--output-json", str(output_json),
+            "--archive",
+            str(tmp_path / "missing.zip"),
+            "--inflate-sh",
+            str(tmp_path / "missing.sh"),
+            "--distinguishing-bytes-path",
+            "x",
+            "--output-json",
+            str(output_json),
         ]
     )
     assert rc == 2
+
+
+# ---------------------------------------------------------------------------
+# OP-2 regression: codex chunk 7 finding (TypeError on main mutation path)
+# ---------------------------------------------------------------------------
+#
+# Anchor: `.omx/research/codex_chunked_full_codebase_review_20260515.md`
+# chunk 7 finding #1 (HIGH, confidence 0.93). Pre-commit-8a91995c5 the
+# verifier's main mutation loop instantiated SectionResult without the
+# new required fields (target_basis / member / offset / length) raising
+# TypeError BEFORE emitting a valid proof artifact. Catalog #272 could
+# not accumulate real byte-mutation evidence as a result.
+#
+# Commit 8a91995c5 ("frontier: harden score-table and selector evidence
+# gates") fixed the issue by (a) threading MutationTarget through every
+# SectionResult instantiation site and (b) wiring the
+# `--distinguishing-byte-range` CLI flag so the new MutationTarget
+# plumbing is reachable from the public CLI.
+#
+# These regression tests pin the fix at THREE surfaces:
+#   1. SectionResult dataclass schema invariant (required fields).
+#   2. End-to-end run does NOT raise TypeError; emits valid proof.
+#   3. CLI byte-range flag is reachable and produces member_byte_range
+#      target_basis (not just declared dead-code).
+
+
+def test_regression_section_result_requires_target_basis_member_offset_length(helper):
+    """REGRESSION (codex chunk 7 finding #1): SectionResult MUST require
+    target_basis / member / offset / length. Pre-fix the dataclass DID
+    declare these fields but the main loop instantiated SectionResult
+    WITHOUT them — TypeError at runtime. This regression proves the
+    schema invariant holds: any caller missing the new fields gets a
+    deterministic TypeError naming the missing parameters."""
+    import dataclasses
+
+    fields = {f.name for f in dataclasses.fields(helper.SectionResult)}
+    required_new_fields = {"target_basis", "member", "offset", "length"}
+    assert required_new_fields <= fields, (
+        f"SectionResult missing required new fields: {required_new_fields - fields}"
+    )
+
+    # Pre-fix construction (without the 4 new fields) MUST raise TypeError
+    # naming the missing args. This is the EXACT shape the broken main
+    # loop was producing.
+    with pytest.raises(TypeError) as excinfo:
+        helper.SectionResult(
+            section="x",
+            section_size_bytes=1,
+            mutations_attempted=0,
+            mutations_changed_output=0,
+            passed=False,
+            first_changed_inflated_output_sha256=None,
+            baseline_inflated_output_sha256="abc",
+        )
+    msg = str(excinfo.value)
+    assert "missing" in msg
+    for fld in required_new_fields:
+        assert fld in msg, f"TypeError should name missing field {fld!r}; got: {msg!r}"
+
+
+def test_regression_main_path_does_not_raise_typeerror_on_zip_member_target(
+    helper, tmp_path
+):
+    """REGRESSION (codex chunk 7 finding #1): the verifier's main
+    mutation loop MUST NOT raise TypeError when instantiating
+    SectionResult for a ZIP-member target. Pre-fix this was the broken
+    code path that blocked Catalog #272 evidence accumulation."""
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"distinguishing": b"BYTES_THAT_GET_CONSUMED"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "distinguishing")
+    output_json = tmp_path / "proof.json"
+
+    # Pre-fix this raised TypeError before producing any output JSON.
+    # Post-fix it returns a valid result dict with section_results
+    # carrying all 4 new SectionResult fields.
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=["distinguishing"],
+        output_json=output_json,
+    )
+
+    assert result["verdict"] == "PASSED"
+    assert output_json.is_file(), (
+        "post-fix: proof JSON MUST be written to disk on the main mutation path"
+    )
+    sr = result["section_results"][0]
+    # All 4 new fields must be present and populated on the main path.
+    assert sr["target_basis"] == "zip_member"
+    assert sr["member"] == "distinguishing"
+    assert sr["offset"] is None
+    assert sr["length"] is None
+
+
+def test_regression_main_path_does_not_raise_typeerror_on_byte_range_target(
+    helper, tmp_path
+):
+    """REGRESSION (codex chunk 7 finding #1): the verifier's main
+    mutation loop MUST NOT raise TypeError when instantiating
+    SectionResult for a member-byte-range target. Pre-fix the new
+    MutationTarget plumbing was unreachable from the public CLI and the
+    SectionResult fields were not populated for byte-range targets."""
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"x": b"HEADER_DISTINGUISHING_PAYLOAD_TAIL"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "x")
+    output_json = tmp_path / "proof.json"
+
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=[],
+        distinguishing_byte_ranges=["distinguishing_section=x@7:22"],
+        output_json=output_json,
+    )
+
+    assert result["verdict"] == "PASSED"
+    assert output_json.is_file()
+    sr = result["section_results"][0]
+    # All 4 new fields must be present AND populated for byte-range path.
+    assert sr["target_basis"] == "member_byte_range"
+    assert sr["member"] == "x"
+    assert sr["offset"] == 7
+    assert sr["length"] == 22
+
+
+def test_regression_main_path_does_not_raise_typeerror_on_empty_section(
+    helper, tmp_path
+):
+    """REGRESSION (codex chunk 7 finding #1): the empty-section branch
+    of the main loop MUST also populate the 4 new SectionResult fields.
+    Pre-fix this branch was a separate SectionResult instantiation that
+    independently broke when the new required fields were added to the
+    dataclass."""
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"distinguishing": b"", "renderer": b"FILLER"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "renderer")
+    output_json = tmp_path / "proof.json"
+
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=["distinguishing"],
+        output_json=output_json,
+    )
+
+    assert result["verdict"] == "FAILED"
+    assert output_json.is_file()
+    sr = result["section_results"][0]
+    assert sr["target_basis"] == "zip_member"
+    assert sr["member"] == "distinguishing"
+    assert sr["offset"] is None
+    assert sr["length"] is None
+    assert sr["section_size_bytes"] == 0
+    assert sr["passed"] is False
+
+
+def test_regression_cli_byte_range_flag_is_reachable(helper, tmp_path):
+    """REGRESSION (codex chunk 7 finding #1): the codex finding noted
+    the new --distinguishing-byte-range plumbing was 'unreachable from
+    the public CLI', i.e. effectively dead code. Pin that the CLI flag
+    is wired and produces a member_byte_range proof artifact."""
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"x": b"HEADER_DISTINGUISHING_PAYLOAD_TAIL"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "x")
+    output_json = tmp_path / "proof.json"
+
+    rc = helper.main(
+        [
+            "--archive",
+            str(archive),
+            "--inflate-sh",
+            str(inflate_sh),
+            "--distinguishing-byte-range",
+            "distinguishing_section=x@7:22",
+            "--output-json",
+            str(output_json),
+        ]
+    )
+    assert rc == 0, "CLI byte-range flag MUST exit 0 on a passing run"
+    assert output_json.is_file()
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["verdict"] == "PASSED"
+    sr = payload["section_results"][0]
+    assert sr["target_basis"] == "member_byte_range"
+    assert sr["offset"] == 7
+    assert sr["length"] == 22
+
+
+def test_regression_cli_requires_at_least_one_target(helper, tmp_path):
+    """REGRESSION: CLI must require at least one of the two flags
+    (--distinguishing-bytes-path or --distinguishing-byte-range). Pre-fix
+    --distinguishing-bytes-path was `required=True`; post-fix BOTH are
+    optional but the CLI parser MUST refuse the all-empty call."""
+    output_json = tmp_path / "out.json"
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"x": b"data"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "x")
+
+    with pytest.raises(SystemExit):
+        helper.main(
+            [
+                "--archive",
+                str(archive),
+                "--inflate-sh",
+                str(inflate_sh),
+                "--output-json",
+                str(output_json),
+            ]
+        )

@@ -4655,7 +4655,14 @@
       "level": 2,
       "name": "A1 inflate-time bias correction sweep (PR101\u2192PR103 medal-delta replay on A1 substrate)",
       "notes": "Hypothesis: PR101 bias correction up[:,0,0].sub_(1.0); up[:,0,2].sub_(1.0); up[:,1,1].sub_(1.0) is already inherited by A1 (verified inflate.py:78-80). Sweep variants test: V0=remove (control), V1=baseline (=0.19284 contest-CPU GHA), V2-V5=magnitudes, V6=PR102 pattern up[:,0,0].add_(1.0)+DELTA_SCALE 0.0095, V7-V10=opposite-sign + zero-out. Plus V11-V12=per-pair latent correction sidecar resampled on A1's frozen substrate. $0 GPU (GHA-only). Predicted \u0394 -0.003 to -0.005 if A1's score-gradient-trained substrate has same numerical-bias optimum as PR101's QAT-finetuned substrate.",
-      "phase": 2.0
+      "phase": 2.0,
+      "research_only": true,
+      "reactivation_criteria": [
+        "declare distinguishing_feature_name='A1 inflate-time per-frame learned bias correction (PR101\u2192PR103 medal-delta replay)'",
+        "declare distinguishing_bytes_path='bias_correction_table_int8 (~16 KB sidecar)'",
+        "declare inflate_consumer_function='inflate.py::_apply_inflate_time_bias_correction'",
+        "generate byte_mutation_smoke_passes proof via tools/verify_distinguishing_feature_byte_mutation.py against an A1 archive that ships the table; OR keep research_only=true while sweep variants V0-V12 remain GHA-only with no shipped sidecar bytes"
+      ]
     },
     {
       "gates": {
@@ -4737,7 +4744,14 @@
       "level": 2,
       "name": "A1 SegNet boundary smoothing in inflate.py",
       "notes": "Per ab30efd domain catalog #1 EIG/$. archive_grammar=A1 monolithic 0.bin (unchanged); parser_section_manifest=A1 (unchanged); inflate_runtime_loc_budget=100 (current A1 + 3-12 LOC smoothing); runtime_dep_closure=torch+brotli (unchanged); export_format=monolithic_single_file_0_bin; score_aware_loss=N/A (inflate-time only, no training); bolt_on_loc_budget=12 LOC; no_op_detector_planned=true (variant byte change in inflate.py + ensure consumed by ground-truth render path).",
-      "phase": 1.0
+      "phase": 1.0,
+      "research_only": true,
+      "reactivation_criteria": [
+        "declare distinguishing_feature_name='A1 inflate-time SegNet boundary smoothing kernel'",
+        "declare distinguishing_bytes_path='smoothing_kernel_uint8 (~3 KB sidecar)'",
+        "declare inflate_consumer_function='inflate.py::_apply_segnet_boundary_smoothing'",
+        "generate byte_mutation_smoke_passes proof via tools/verify_distinguishing_feature_byte_mutation.py against an A1 archive that ships the kernel sidecar; OR keep research_only=true while the smoothing kernel remains an in-source 3-12 LOC inflate-time fix without shipped distinguishing bytes (per-line bolt_on_loc_budget)"
+      ]
     },
     {
       "gates": {
@@ -12878,7 +12892,14 @@
       "level": 2,
       "name": "PR106 latent sidecar r2 + PR101 grammar contest_cpu paired anchor",
       "notes": "",
-      "phase": 4.0
+      "phase": 4.0,
+      "research_only": true,
+      "reactivation_criteria": [
+        "declare distinguishing_feature_name='PR106 latent sidecar applied via PR101 monolithic grammar (paired contest_cpu+cuda anchor)'",
+        "declare distinguishing_bytes_path='pr106_latent_sidecar_int8 (~10-50 KB residual-size dependent)'",
+        "declare inflate_consumer_function='inflate.py::_apply_pr106_latent_sidecar_via_pr101_grammar'",
+        "generate byte_mutation_smoke_passes proof via tools/verify_distinguishing_feature_byte_mutation.py against the PR106-on-PR101-grammar archive sha; OR keep research_only=true until the paired CPU+CUDA anchor archive is built and the byte-mutation smoke produces a real proof artifact"
+      ]
     },
     {
       "gates": {
@@ -20058,7 +20079,14 @@
       "level": 2,
       "name": "B1 cell: nerv_enc_dec_separated x magic_codec on A1 substrate",
       "notes": "",
-      "phase": 2.0
+      "phase": 2.0,
+      "research_only": true,
+      "reactivation_criteria": [
+        "declare distinguishing_feature_name='NeRV encoder/decoder separated and composed with magic codec on A1 substrate'",
+        "declare distinguishing_bytes_path='nerv_enc_dec_blob_int8 + magic_codec_blob (cross-paradigm composition)'",
+        "declare inflate_consumer_function='inflate.py::_apply_nerv_enc_dec_then_magic_codec'",
+        "generate byte_mutation_smoke_passes proof via tools/verify_distinguishing_feature_byte_mutation.py against the B1 cross-paradigm composition archive; OR keep research_only=true until B1 produces a shipped archive whose distinguishing blobs are runtime-consumed (sister of single-substrate-anchor requirement per substrate-vs-codec-composition meta-pattern)"
+      ]
     },
     {
       "gates": {
@@ -22809,7 +22837,8 @@
       "level": 2,
       "name": "macOS-CPU substrate canvas sweep",
       "notes": "",
-      "phase": 2.0
+      "phase": 2.0,
+      "lane_class": "substrate_engineering"
     },
     {
       "gates": {
@@ -25498,7 +25527,13 @@
       "name": "PR101 FEC3 compact exact-K8 CPU overlay near-miss",
       "notes": "score_claim=false; promotion_eligible=false; exact_cuda_eval_complete=false; [contest-CPU] only. Misses <0.192 by about 9.8e-5; next action is byte-closed selector/source-payload byte saving or equivalent component gain followed by separate exact CPU and exact CUDA eval.",
       "phase": 3.0,
-      "research_only": false
+      "research_only": true,
+      "reactivation_criteria": [
+        "declare distinguishing_feature_name='PR101 frame-exploit selector with FEC-3 compact exact-K8 CPU overlay'",
+        "declare distinguishing_bytes_path='frame_exploit_selector_int8 + fec3_compact_exact_k8_overlay_blob'",
+        "declare inflate_consumer_function='inflate.py::_apply_pr101_frame_exploit_selector_fec3_overlay'",
+        "generate byte_mutation_smoke_passes proof via tools/verify_distinguishing_feature_byte_mutation.py against the PR101+FEC-3+K8 overlay archive; OR keep research_only=true while overlay misses <0.192 by ~9.8e-5 and next action is byte-closed selector/source-payload byte saving followed by separate paired CPU+CUDA eval per CLAUDE.md 'Submission auth eval \u2014 BOTH CPU AND CUDA' non-negotiable"
+      ]
     },
     {
       "gates": {
@@ -30142,6 +30177,212 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_op2_byte_mutation_verifier_typeerror_fix_20260515",
+      "name": "OP-2 byte-mutation verifier TypeError fix (regression-test-pinned; codex chunk 7 finding #1)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/verify_distinguishing_feature_byte_mutation.py post-commit-8a91995c5 + 6 dedicated regression tests in src/tac/tests/test_verify_distinguishing_feature_byte_mutation.py covering SectionResult required new fields invariant + main path no TypeError on zip_member/byte_range/empty branches + CLI byte-range flag reachable + CLI requires at least one target"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_op2_byte_mutation_verifier_typeerror_fix_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_op3_predicted_dispatch_risk_rank_candidates_wire_in_20260515",
+      "name": "OP-3 predicted_dispatch_risk rank_candidates wire-in (codex chunk 6)",
+      "phase": 6.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "predicted_dispatch_risk field on CandidateRow + adjust_predicted_delta_for_predicted_dispatch_risk + composition wire-in + JSONL loader landed at cathedral_autopilot_autonomous_loop.py; 18 dedicated tests + 254 sister regression tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_op4_7_8_batch_3_small_fixes_20260515",
+      "name": "OP-4/OP-7/OP-8 batch: paired-env auto-bypass + lock-depth thread-safety + n_artifacts==0 mislabeling",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_op6_claim_catalog_number_atomic_write_20260515",
+      "name": "OP-6 claim_catalog_number atomic temp+fsync+rename write",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/claim_catalog_number.py atomic _atomic_write_state + _read_state_strict + _lock_path + sibling-lockfile lock; CatalogStateCorruptError raised on empty/malformed state; CLI surface preserved"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_substrate_6_backfill_distinguishing_feature_20260515",
+      "name": "Substrate 6 backfill: Distinguishing-Feature Integration Contract violations resolved",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 lanes set research_only=true + reactivation_criteria via canonical fcntl-safe tools/lane_maturity.py set-field; 1 lane set lane_class=substrate_engineering; Catalog #272 live count 6\u21920 verified at 2026-05-15T22:14Z"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_substrate_6_backfill_distinguishing_feature_contract_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "lane_class": "substrate_engineering"
     }
   ],
   "level_rules": {
@@ -30151,5 +30392,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T22:07:45Z"
+  "updated_at": "2026-05-15T22:16:38Z"
 }
