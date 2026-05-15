@@ -1,0 +1,208 @@
+schema_version: 1
+name: substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch
+lane_id: lane_z3_g1_scorer_softmax_hyperprior_gating_20260515
+smoke_only: false
+smoke_validation_contract: contest_cuda_auth_eval_v1
+summary: |
+  Z3-G1 scorer-class-conditional gating substrate — Wunderkind G1
+  SUBSTITUTION-1:1 spec
+  (`feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md`).
+  Replaces Z3 v2's per-pair Ballé hyperprior MLP with a per-class sigma TABLE
+  (5 classes * 28 dims = 140 params, ~80B int8 brotli'd) indexed by SegNet's
+  per-pair dominant class (computed at compress-time only — Catalog #6
+  strict-scorer-rule preserved at inflate).
+
+  Mechanism:
+
+      For each pair p in range(600):
+          class_p = mode of SegNet(GT_frame_0_p).argmax(1)  in [0, 4]
+          sigma_p = sigma_table[class_p, :]   (28-dim per-dim scale)
+          AC-encode residual_p under N(0, sigma_p^2)
+
+  Production-safe form: ships direct-residual mode (matches Z3 v2 production
+  packet). The G1 sigma table + class indices are TRAINING-TIME diagnostics
+  until an entropy-coded decoder consumes them at inflate. This makes the
+  G1 packet IDENTICAL on the wire to Z3 v2 — the only difference is the
+  TRAINING-TIME loss function uses class-conditional sigmas.
+
+  Predicted ΔS = -0.005 to -0.015 vs A1 0.1928 [contest-CPU 1to1]
+  ``[prediction; first-principles-bound]``. Cost ~$5-10 (paired CPU+CUDA
+  Modal T4 anchor per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_smoke_gpu: "T4"
+min_vram_gb: 14
+video_input_strategy: per_dispatch_local_copy  # Catalog #171
+pyav_decode_strategy: cpu_thread_async_upload  # Catalog #181
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: substrate_a1
+# Z3-G1 is a BOLT-ON over the FROZEN A1 base — depends on A1's archive bytes
+# being available and unchanged. Per HNeRV parity discipline L7 the bolt-on
+# budget is <= 350 LOC; substrate-engineering exemption NOT used.
+
+active_dispatch_contract: z3_g1_scorer_class_gating_a1_base
+dispatch_contracts:
+  - id: z3_g1_scorer_class_gating_a1_base
+    archive_role: z3hv2_section_replaces_a1_latent_blob_with_g1_class_conditional_training
+    builder_surface: experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 1000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.178, 0.190]
+smoke_score_band: [0.180, 0.200]
+predicted_delta: "-0.005 to -0.015 vs A1 0.1928 [contest-CPU 1to1] [prediction; first-principles-bound]"
+predicted_delta_basis: |
+  Wunderkind G1 cooperative-receiver substitution: replaces Z3 v2's per-pair
+  hyperprior MLP (~1.8k params; ~1KB int8 brotli'd) with a per-class sigma
+  TABLE (5 * 28 = 140 params; ~80B int8 brotli'd). The class index per pair
+  ships as 1 byte (~200B brotli for 600 pairs). Math sanity:
+  - Bits saved by class conditioning: H(latent) - H(latent | class).
+  - For SegNet's 5-class output on driving scenes class entropy ~1.8 bits/pixel.
+  - Conditional latent entropy reduction estimated 5-15% of marginal latent
+    entropy (Ballé 2018 hyperprior achieves ~30%; G1 class-conditioning is
+    coarser ~5-15%).
+  - Rate basis: A1 archive rate ~0.20. 5-15% reduction = -0.010 to -0.030
+    rate-only. Predicted band -0.005 to -0.015 (haircut for distillation
+    imperfection + non-stationary class statistics).
+  Production-safe form ships direct-residual mode (identical wire to Z3 v2);
+  the training-time class-conditional sigma table influences how the AC coder
+  shapes residual statistics. Empirical confirmation requires paired CPU+CUDA
+  auth eval on the trained packet.
+literature_anchor: |
+  Wunderkind G1 SUBSTITUTION-1:1 spec
+  (`feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md`)
+  +
+  Ballé, Minnen, Singh, Hwang, Johnston (2018) "Variational image compression
+  with a scale hyperprior" ICLR 2018 arXiv:1802.01436;
+  Slepian-Wolf (1973) "Noiseless coding of correlated information sources";
+  Atick & Redlich (1990) "Towards a theory of early visual processing";
+  Hinton & Vinyals (2014) "Distilling the knowledge in a neural network".
+council_phase_5_prediction: 0.185
+
+risk: |
+  Z3-G1 first paired Modal T4 dispatch. Predicted band [0.178, 0.190] is a
+  first-principles synthesis (Wunderkind G1 spec + Ballé 2018 amortization +
+  conservative class-entropy estimate), NOT measurement.
+
+  The G1 substitution is contest-legal at compress-side only:
+  - COMPRESS: SegNet runs on GT frames to compute per-pair class indices
+    (FREE per CLAUDE.md "Strict scorer rule" rule #2).
+  - INFLATE: NO scorer load (production-safe direct-residual mode reuses
+    Z3 v2 grammar; G1 sigma table + class indices are training diagnostics).
+
+  Architectural risk:
+  - At A1's 99.29% scorer-conditional MDL density (Z1 ablation EUREKA finding)
+    the within-class encoder is structurally saturated. The G1 across-class
+    move depends on SegNet class actually disambiguating per-pair latent
+    statistics. If class membership is uncorrelated with residual entropy,
+    delta will be at the LOW end of the predicted band (~0).
+  - The production-safe direct-residual form means BYTE SAVINGS in the SHIPPED
+    archive equal Z3 v2's (the residual coder is the same). The G1 win comes
+    from TRAINING-TIME shaping of residual statistics under a class-conditional
+    prior. Empirical confirmation requires paired CPU+CUDA auth eval.
+
+  Modal T4 training is diagnostic unless the auth-eval contract itself records
+  score_axis=contest_cuda and score_claim_valid=true. CPU axis remains required
+  separately on Linux x86_64 before any frontier-claim language.
+
+envelope_status: "FITS $5-10 envelope per Phase B.1 council Tier 2 ($110-170 total)"
+
+remote_driver: scripts/remote_lane_substrate_z3_g1_scorer_softmax_hyperprior_gating.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --a1-archive-path
+    default_path: submissions/a1/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_z3_g1_scorer_softmax_hyperprior_gating.sh
+  cost_band_trainer: experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py
+  cost_band_epochs: 1000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/z3_g1_scorer_softmax_hyperprior_gating/__init__.py
+  - src/tac/substrates/z3_g1_scorer_softmax_hyperprior_gating/architecture.py
+  - src/tac/substrates/z3_g1_scorer_softmax_hyperprior_gating/score_aware_loss.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/__init__.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/architecture.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/archive_v2.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/inflate_v2.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/quant.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - submissions/a1/archive.zip
+
+env_overrides:
+  Z3_G1_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SMOKE_ONLY: "0"
+  Z3_G1_A1_ARCHIVE_PATH: /workspace/pact/submissions/a1/archive.zip
+  Z3_G1_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z3_G1_OUTPUT_DIR: /workspace/pact/lane_substrate_z3_g1_scorer_softmax_hyperprior_gating_results/output
+  Z3_G1_EPOCHS: "1000"
+  Z3_G1_UPSTREAM_DIR: /workspace/pact/upstream
+  Z3_G1_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_z3_g1_scorer_softmax_hyperprior_gating.sh
+  - submissions/a1/archive.zip
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  Z3-G1 scorer-class-conditional gating first-anchor FULL dispatch recipe.
+
+  Architecture: G1 substrate REPLACES Z3 v2's Z3HyperpriorMLP (1.8k params;
+  per-pair MLP) with Z3G1ScorerClassGatingHead (140 params; per-class lookup
+  table) for the TRAINING-TIME rate Lagrangian. The shipped archive packet
+  is identical to Z3 v2 production form (direct-residual Z3HV2 layout) so
+  the inflate runtime is unchanged.
+
+  Per Wunderkind G1 SUBSTITUTION-1:1 spec the byte savings predicted by the
+  G1 architecture require an entropy-coded sigma-table + class-index variant
+  of the Z3HV2 grammar (deferred to a follow-up subagent if this dispatch
+  shows positive ΔS). The current paired anchor measures the
+  TRAINING-TIME-class-conditional-loss effect on the shipped Z3HV2 direct
+  residual.
+
+  PHASE B.1 COUNCIL APPROVED 2026-05-15 (operator approved $110-170 Tier 2
+  envelope; PRI-2 $10 Z3-G1 variant per the Wunderkind candidate
+  prioritization).
+
+  Predicted contest-CUDA score: 0.178-0.190 [prediction; first-principles-bound]
+  (NOT a score claim — score authority requires CUDA + CPU paired auth eval
+  on 1:1 contest-CI hardware per CLAUDE.md "Submission auth eval — BOTH CPU
+  AND CUDA").
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md
+    feedback_grand_council_evidence_review_modal_failures_no_compromise_optimal_lowest_score_landed_20260515.md
+    src/tac/substrates/z3_g1_scorer_softmax_hyperprior_gating/__init__.py (substrate docstring)
+    feedback_z1_mdl_ablation_landed_20260514.md (the 99.29% saturation anchor)
