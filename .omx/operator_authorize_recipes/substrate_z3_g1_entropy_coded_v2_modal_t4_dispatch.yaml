@@ -1,0 +1,207 @@
+schema_version: 1
+name: substrate_z3_g1_entropy_coded_v2_modal_t4_dispatch
+lane_id: lane_z3_g1_entropy_coded_v2_20260515
+smoke_only: true
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - full_main_raises_NotImplementedError_until_real_training_export_auth_eval_path_lands
+  - remote_driver_missing_or_unverified
+  - predicted_cuda_band_unknown_until_same_archive_cuda_anchor_exists
+smoke_validation_contract: parser_and_synthetic_latent_smoke_v1
+summary: |
+  Z3-G1 entropy-coded v2 substrate — operator-approved 2026-05-15
+  reactivation of v1 (lane_z3_g1_scorer_softmax_hyperprior_gating_20260515,
+  research_only=true, deferred per F1 codex finding empirical confirmation).
+
+  v2 introduces a NEW magic + grammar (Z3G2) that REPLACES the empty Z3HV2
+  `hyperprior_weights_int8` + `w_hat_int8` slots with TWO entropy-coded
+  streams ACTUALLY shipped at the wire-byte level:
+
+      sigma_table_blob:    brotli(sigma_table_int8) ~300B
+      class_prior_cdf:     5*uint16 = 10B raw
+      class_index_blob:    constriction-Huffman(class_indices) ~200B
+
+  These bytes ARE consumed at inflate time (verified structurally by
+  ``tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py`` per Catalog
+  #139; PASSED locally pre-dispatch).
+
+  Predicted ΔS ∈ [-0.005, -0.015] vs A1 0.1928 [contest-CPU 1to1]
+  ``[prediction; first-principles-bound]``. Cost ~$5-10 (paired CPU+CUDA
+  Modal T4 anchor per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
+
+  Per Catalog #240 dispatch_enabled=true requires implementation_complete.
+  The current trainer full path is intentionally council-gated and raises
+  NotImplementedError, so this recipe is fail-closed as research_only=true
+  and dispatch_enabled=false until the real train/export/auth-eval path lands.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_smoke_gpu: "T4"
+min_vram_gb: 14
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: substrate_a1
+
+active_dispatch_contract: z3_g1_entropy_coded_v2_a1_base
+dispatch_contracts:
+  - id: z3_g1_entropy_coded_v2_a1_base
+    archive_role: z3g2_section_replaces_a1_latent_blob_with_entropy_coded_sigma_class_index
+    builder_surface: experiments/train_substrate_z3_g1_entropy_coded_v2.py
+    status: active_recipe_contract
+    exact_eval_path: blocked_until_full_train_export_auth_eval_path_lands
+
+cost_band:
+  epochs: 100
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 7.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_contest_cpu_band: [0.178, 0.190]
+predicted_contest_cuda_band: null
+predicted_band: null
+smoke_score_band: [0.180, 0.200]
+predicted_delta: "-0.005 to -0.015 vs A1 0.1928 [contest-CPU 1to1] [prediction; first-principles-bound]"
+predicted_delta_basis: |
+  v1 was a research-substrate trap: hyperprior_weights_int8 + w_hat_int8
+  shipped empty (b"") in the production-safe direct-residual mode, so
+  v1 packets were byte-identical to Z3 v2 baseline (smoke 0.19869 EXACTLY
+  matched Z3 v2 0.19869). v2 fixes this by introducing a new magic Z3G2
+  with entropy-coded sigma table + class-index slots that ACTUALLY ship.
+
+  Math sanity:
+  - v2 section size estimate: 1986B (vs A1 latent_blob 15387B)
+  - Bytes saved: ~13.4 KB
+  - Rate term reduction: 25 * 13400 / 37545489 ≈ -0.0089 rate-axis
+  - Distortion-axis impact: ~0 (same A1 decoder; per-pair sigma only
+    affects rate side at training time)
+  - Predicted band [-0.005, -0.015] (haircut for distillation imperfection
+    + non-stationary class statistics + sigma table quantization)
+
+  Smoke section size verified locally: 479B for synthetic inputs (well
+  within predicted band; full training will produce class-correlated
+  sigma table → similar section size).
+
+literature_anchor: |
+  Wunderkind G1 SUBSTITUTION-1:1 spec
+  (`feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md`)
+  + Ballé, Minnen, Singh, Hwang, Johnston (2018) "Variational image compression
+  with a scale hyperprior" ICLR 2018 arXiv:1802.01436
+  + Slepian-Wolf (1973) "Noiseless coding of correlated information sources"
+  + Atick & Redlich (1990) "Towards a theory of early visual processing"
+  + Hinton & Vinyals (2014) "Distilling the knowledge in a neural network"
+  + Witten, Neal, Cleary (1987) "Arithmetic coding for data compression"
+
+risk: |
+  Z3-G1 v2 first paired Modal T4 dispatch. Predicted band [0.178, 0.190]
+  is a first-principles synthesis (Wunderkind G1 spec + Ballé 2018 amortization
+  + conservative class-entropy estimate), NOT measurement.
+
+  Architectural risk:
+  - At A1's 99.29% scorer-conditional MDL density (Z1 ablation EUREKA finding)
+    the within-class encoder is structurally saturated. v2's across-class
+    move depends on SegNet class actually disambiguating per-pair latent
+    statistics. If class membership is uncorrelated with residual entropy,
+    delta will be at the LOW end of the predicted band (~0).
+  - The byte-mutation smoke per Catalog #139 PASSED LOCALLY on synthetic
+    inputs. Modal dispatch will additionally validate the auth-eval contract
+    on real A1-decoded latents.
+  - F1-class regression (v1's empty-slot trap) is structurally extincted
+    by the Z3G2 wire grammar (sigma_table_blob_len > 0 enforced at encode
+    time; distinguishing_feature_bytes > 0 reported in archive contract).
+
+envelope_status: "FITS $5-10 envelope per Phase B.1 council Tier 2 ($110-170 total)"
+
+remote_driver: scripts/remote_lane_substrate_z3_g1_entropy_coded_v2.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --a1-archive-path
+    default_path: submissions/a1/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_z3_g1_entropy_coded_v2.sh
+  cost_band_trainer: experiments/train_substrate_z3_g1_entropy_coded_v2.py
+  cost_band_epochs: 1000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_z3_g1_entropy_coded_v2.py
+
+# Per Catalog #191 — substrate-specific source files whose SHAs must remain
+# stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/z3_g1_entropy_coded_v2/__init__.py
+  - src/tac/substrates/z3_g1_entropy_coded_v2/architecture.py
+  - src/tac/substrates/z3_g1_entropy_coded_v2/score_aware_loss.py
+  - src/tac/substrates/z3_g1_entropy_coded_v2/archive.py
+  - src/tac/substrates/z3_g1_entropy_coded_v2/inflate_consumer.py
+  - src/tac/substrates/z3_g1_entropy_coded_v2/registered_substrate.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/__init__.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/architecture.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/quant.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - submissions/a1/archive.zip
+
+env_overrides:
+  Z3_G1_V2_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SMOKE_ONLY: "0"
+  Z3_G1_V2_A1_ARCHIVE_PATH: /workspace/pact/submissions/a1/archive.zip
+  Z3_G1_V2_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z3_G1_V2_OUTPUT_DIR: /workspace/pact/lane_substrate_z3_g1_entropy_coded_v2_results/output
+  Z3_G1_V2_EPOCHS: "1000"
+  Z3_G1_V2_UPSTREAM_DIR: /workspace/pact/upstream
+  Z3_G1_V2_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_z3_g1_entropy_coded_v2.sh
+  - submissions/a1/archive.zip
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_z3_g1_entropy_coded_v2.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py
+
+notes: |
+  Z3-G1 entropy-coded v2 research-only smoke recipe.
+
+  Architecture: v2 substrate REPLACES Z3 v2's empty-slot Z3HV2 packet with
+  a NEW Z3G2 packet that ACTUALLY ships entropy-coded sigma table + class
+  indices. The shipped archive packet differs from Z3 v2 by ~205B of
+  distinguishing-feature bytes (sigma_table_blob ~300B + class_prior_cdf 10B
+  + class_index_blob ~200B - residual_blob delta).
+
+  Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
+  v2 remains research_only=true because the full trainer/export/auth-eval
+  path is still council-gated. Its bytes are structurally live because:
+  (a) byte-mutation smoke PASSES locally per Catalog #139;
+  (b) inflate consumer ACTUALLY processes the bytes (per-pair sigma lookup
+      multiplies into latent reconstruction at line ~120 of inflate_consumer.py);
+  (c) SubstrateContract runtime_overlay_consumed=True declared at registration.
+
+  Dispatch remains BLOCKED until _full_main stops raising NotImplementedError,
+  the remote driver exists and passes strict predeploy, and the archive
+  promotion path emits paired CPU+CUDA auth-eval custody.
+
+  Predicted contest-CPU band: 0.178-0.190 [prediction; first-principles-bound].
+  Predicted contest-CUDA band: unknown until same-archive CUDA anchor exists.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
+  uses .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py.
+
+  Cross-ref:
+    .omx/research/wunderkind_g1_entropy_coded_v2_design_20260515.md (the design memo)
+    feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md (the F1 anchor + 3 reactivation criteria)
+    feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md (Wunderkind G1 prediction)
+    src/tac/substrates/z3_g1_entropy_coded_v2/__init__.py (substrate docstring)
+    tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py (Catalog #139 verifier)

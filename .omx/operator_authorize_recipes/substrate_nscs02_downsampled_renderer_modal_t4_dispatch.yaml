@@ -1,0 +1,145 @@
+schema_version: 1
+name: substrate_nscs02_downsampled_renderer_modal_t4_dispatch
+lane_id: lane_nscs02_downsampled_renderer_inflate_upsample_20260515
+smoke_only: true
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - full_main_raises_NotImplementedError_until_smoke_review_and_export_auth_eval_path_lands
+  - remote_driver_missing_or_unverified
+summary: NSCS02 downsampled-renderer + inflate-upsample first-anchor dispatch on Modal T4 (ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry; HIGHEST EV / LOWEST RISK individual shift; predicted ΔS [-0.010, -0.030] vs A1 baseline at $5-15).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_smoke_gpu: T4
+min_vram_gb: 12
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 100
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: T4
+  estimated_cost_usd_band: [5, 15]
+
+predicted_score_target: null
+predicted_delta: "ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry: ΔS [-0.010, -0.030] on A1 0.192847 baseline → [contest-CPU prediction] [0.162847, 0.182847]"
+predicted_delta_basis: ".omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json#NSCS02_DOWNSAMPLED_RENDERER_INFLATE_UPSAMPLE"
+literature_anchor: "Audit math basis: SegNet stride-2 stem (upstream/modules.py:103-109) discards half resolution before scoring; PoseNet preprocess interpolates to (384, 512); rendering at (192, 256) is the SCORE-INVISIBLE downscale floor."
+
+risk: |
+  ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 risk classification: LOW.
+
+  The NSCS02 hypothesis: both contest scorers internally interpolate
+  to (384, 512) inside `preprocess_input`. SegNet adds a stride-2
+  EfficientNet-B2 stem on top, halving again to (192, 256) effective
+  receptive field. Rendering at (192, 256) means EVERY pixel the
+  scorer sees was directly produced; no info loss vs rendering at
+  (384, 512) and letting SegNet stride-2 throw it away.
+
+  PoseNet does NOT have the stride-2 stem; FastViT-T12 sees the full
+  (384, 512) preprocessed input. NSCS02's risk is concentrated in the
+  PoseNet axis: bicubic upsample (192, 256) -> (384, 512) may
+  introduce anti-aliasing artifacts the FastViT pose head detects.
+  The audit's reactivation criterion is "If d_pose regression > 5e-4,
+  defer pending PoseNet sensitivity to upsampling-induced anti-aliasing".
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable,
+  this lane requires BOTH `[contest-CUDA]` (inline) AND `[contest-CPU]`
+  (Linux x86_64 separate dispatch) before promotion.
+
+  Smoke-before-full pattern (Catalog #167): after the full path lands, the
+  operator-authorize wrapper should route through `tools/run_modal_smoke_before_full.py`.
+  This landing is fail-closed: the local `--smoke` path is parser/runtime
+  evidence only and does not produce an auth-eval score claim.
+
+envelope_status: "FITS $20 envelope at p50 fallback (smoke $0.30 + full $5-15)"
+
+remote_driver: scripts/remote_lane_substrate_nscs02_downsampled_renderer.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_nscs02_downsampled_renderer.sh
+  cost_band_trainer: experiments/train_substrate_nscs02_downsampled_renderer.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 8
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_nscs02_downsampled_renderer.py
+
+env_overrides:
+  NSCS02_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  NSCS02_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  NSCS02_OUTPUT_DIR: /workspace/pact/lane_nscs02_results/output
+  NSCS02_EPOCHS: "100"
+  NSCS02_BATCH_SIZE: "8"
+  NSCS02_LR: "5e-4"
+  NSCS02_UPSAMPLE_MODE: "bicubic"
+  NSCS02_SEG_WEIGHT: "100.0"
+  NSCS02_POSE_WEIGHT: "1.0"
+  ENABLE_AUTOCAST_FP16: "true"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_nscs02_downsampled_renderer.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_nscs02_downsampled_renderer.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - tools/run_modal_smoke_before_full.py (Catalog #167)
+
+sentinel_files:
+  - experiments/train_substrate_nscs02_downsampled_renderer.py
+  - src/tac/substrates/nscs02_downsampled_renderer/architecture.py
+  - src/tac/substrates/nscs02_downsampled_renderer/archive.py
+  - src/tac/substrates/nscs02_downsampled_renderer/score_aware_loss.py
+  - src/tac/substrates/nscs02_downsampled_renderer/inflate.py
+  - submissions/nscs02_downsampled_renderer/inflate.py
+  - submissions/nscs02_downsampled_renderer/inflate.sh
+  - submissions/nscs02_downsampled_renderer/src/codec.py
+  - submissions/nscs02_downsampled_renderer/src/model.py
+
+notes: |
+  ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 first-anchor dispatch — the
+  HIGHEST EV / LOWEST RISK individual score-lowering shift per the
+  audit's Operator-Routable #3 (TIER 1 NSCS02 cost band $5-15).
+
+  Per the NEW operating mode UNIQUE-AND-COMPLETE-PER-METHOD (per
+  `feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md`):
+  this substrate is a focused unique-and-complete implementation
+  (architecture + score-aware loss + archive grammar + inflate runtime
+  + export contract bound into ONE coherent ~600 LOC package
+  reviewable in 30 seconds, mirroring the PR101 model).
+
+  Catalog #220 OPERATIONAL declaration: `score_improvement_mechanism_status=OPERATIONAL`
+  + `runtime_overlay_consumed=true` + `operational_overlay=true` —
+  the inflate-time bicubic upsample is the score-relevant runtime
+  consumption that converts the smaller archive bytes into score-
+  relevant frame-pixels. Sister of A1's inflate-time upsample
+  (which already exists at 384 -> 874); NSCS02 deepens the
+  downsample to 192 to exploit SegNet's stride-2 invisibility.
+
+  Catalog #240 (recipe-vs-trainer state consistency): trainer's
+  `_full_main` raises `NotImplementedError` pending smoke-before-full
+  validation and the real train/export/auth-eval path. This recipe is
+  therefore fail-closed with `research_only: true` and
+  `dispatch_enabled: false`; the local `--smoke` path remains useful as
+  parser/runtime evidence, but it is not a contest-CUDA dispatch recipe.
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'T4', 200) —
+  hand_calibrated_fallback p50 = $0.30 for the smoke; $5-15 envelope
+  for the full per the audit cost_estimate_usd entry.
+
+  Cross-ref:
+    .omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json
+    feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md
+    feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md
+    feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md

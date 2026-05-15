@@ -13,6 +13,7 @@ Sister of Catalog #229 (premise-verification-before-edit) + Catalog #220
 (operational-mechanism declaration) + Catalog #241 (substrate META layer
 contract).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,7 +24,6 @@ from tac.preflight import (
     PreflightError,
     check_substrate_design_memo_has_canonical_vs_unique_decision_section,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -58,6 +58,7 @@ def test_290_no_memory_dir_returns_empty(tmp_path: Path) -> None:
     """Gate returns [] when memory dir does not exist (not an error)."""
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "missing",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -69,6 +70,7 @@ def test_290_empty_memory_dir_returns_empty(tmp_path: Path) -> None:
     (tmp_path / "memory").mkdir()
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -85,6 +87,7 @@ def test_290_pre_cutoff_memo_without_section_exempt(tmp_path: Path) -> None:
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -106,6 +109,7 @@ def test_290_post_cutoff_memo_with_section_passes(tmp_path: Path) -> None:
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -122,12 +126,48 @@ def test_290_post_cutoff_memo_without_section_flagged(tmp_path: Path) -> None:
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
     assert len(violations) == 1
     assert "feedback_test_substrate_scaffold_landed_20260520.md" in violations[0]
     assert "Canonical-vs-unique" in violations[0] or "canonical-vs-unique" in violations[0]
+
+
+def test_290_research_design_memo_without_section_flagged(tmp_path: Path) -> None:
+    """Active `.omx/research/*_design_<date>.md` memos are in scope."""
+    research = tmp_path / ".omx" / "research"
+    _write(
+        research,
+        "wunderkind_g1_entropy_coded_v2_design_20260520.md",
+        "# Z3G2 Design\n\nNo required section here.\n",
+    )
+    violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
+        memory_dir=tmp_path / "missing_memory",
+        research_dir=research,
+        strict=False,
+        verbose=False,
+    )
+    assert len(violations) == 1
+    assert "wunderkind_g1_entropy_coded_v2_design_20260520.md" in violations[0]
+
+
+def test_290_research_design_memo_with_section_passes(tmp_path: Path) -> None:
+    """Research design memos pass only with the exact required header."""
+    research = tmp_path / ".omx" / "research"
+    _write(
+        research,
+        "nscs01_nullspace_split_renderer_design_20260520.md",
+        "# NSCS01\n\n## Canonical-vs-unique decision per layer\n\nRows.\n",
+    )
+    violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
+        memory_dir=tmp_path / "missing_memory",
+        research_dir=research,
+        strict=False,
+        verbose=False,
+    )
+    assert violations == []
 
 
 def test_290_section_header_case_insensitive(tmp_path: Path) -> None:
@@ -145,6 +185,7 @@ def test_290_section_header_case_insensitive(tmp_path: Path) -> None:
         )
         violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
             memory_dir=tmp_path / "memory",
+            research_dir=tmp_path / "missing_research",
             strict=False,
             verbose=False,
         )
@@ -161,6 +202,7 @@ def test_290_nscs_naming_pattern_in_scope(tmp_path: Path) -> None:
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -178,6 +220,7 @@ def test_290_substrate_v_n_naming_pattern_in_scope(tmp_path: Path) -> None:
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -194,6 +237,7 @@ def test_290_non_substrate_non_scaffold_memo_out_of_scope(tmp_path: Path) -> Non
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -211,6 +255,7 @@ def test_290_strict_mode_raises_on_violation(tmp_path: Path) -> None:
     with pytest.raises(PreflightError) as exc_info:
         check_substrate_design_memo_has_canonical_vs_unique_decision_section(
             memory_dir=tmp_path / "memory",
+            research_dir=tmp_path / "missing_research",
             strict=True,
             verbose=False,
         )
@@ -233,6 +278,7 @@ def test_290_strict_mode_silent_on_clean(tmp_path: Path) -> None:
     # Should not raise
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=True,
         verbose=False,
     )
@@ -250,6 +296,7 @@ def test_290_aggregates_multiple_violations(tmp_path: Path) -> None:
         )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -267,6 +314,7 @@ def test_290_string_memory_dir_accepted(tmp_path: Path) -> None:
     # Pass as str
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=str(tmp_path / "memory"),
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -283,6 +331,7 @@ def test_290_invalid_date_suffix_skipped(tmp_path: Path) -> None:
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -298,6 +347,7 @@ def test_290_unreadable_file_skipped(tmp_path: Path) -> None:
     # Should NOT crash; whether the body matches the section header is best-effort.
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=memory,
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )
@@ -319,6 +369,7 @@ def test_290_verbose_mode_output_clean(capsys: pytest.CaptureFixture[str], tmp_p
     )
     check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=True,
     )
@@ -336,6 +387,7 @@ def test_290_verbose_mode_output_dirty(capsys: pytest.CaptureFixture[str], tmp_p
     )
     check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=True,
     )
@@ -362,6 +414,7 @@ def test_290_section_inside_quoted_block_not_required(tmp_path: Path) -> None:
     )
     violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
         memory_dir=tmp_path / "memory",
+        research_dir=tmp_path / "missing_research",
         strict=False,
         verbose=False,
     )

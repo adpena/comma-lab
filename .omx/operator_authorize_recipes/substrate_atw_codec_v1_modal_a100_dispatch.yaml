@@ -1,0 +1,206 @@
+schema_version: 1
+name: substrate_atw_codec_v1_modal_a100_dispatch
+lane_id: lane_atw_codec_design_v1_20260515
+
+# DESIGN-TIME RESEARCH-ONLY recipe per CLAUDE.md "Substrate scaffolds MUST be
+# COMPLETE or RESEARCH-ONLY" + Catalog #220 + Catalog #240 cascade. The trainer's
+# _full_main raises NotImplementedError until Phase 2 council approval lifts the
+# pre-build substrate-engineering gate. dispatch_enabled:false ensures no Modal
+# spend can fire from this recipe at landing.
+research_only: true
+dispatch_enabled: false
+smoke_only: false  # research-only opt-out covers smoke too at landing
+smoke_validation_contract: contest_cuda_auth_eval_v1
+
+# Phase 2 council approval reactivation criteria documented in design memo §5.
+# Until two of four criteria fire (Z4-V2 successful anchor, Tao+Boyd Blahut-
+# Arimoto floor, WZ side-info empirical bit-savings, Z3-G1 anchor) the recipe
+# is research-only by construction.
+
+summary: |
+  ATW codec V1 (Atick-Tishby-Wyner cooperative-receiver codec) substrate per
+  the 2026-05-15 grand reunion symposium Phase D Composite #1
+  (`feedback_grand_reunion_fields_grade_passion_full_council_debrief_*_20260515.md`
+  lines 727-770). Composite of three foundational information-theoretic
+  frameworks: Atick & Redlich 1990 cooperative-receiver theorem + Tishby IB
+  Lagrangian + Wyner-Ziv source-coding-with-side-info-at-decoder.
+
+  Three-knob composition (κ_IB, λ_WZ, λ_pixel). Defaults (0, 1, 0) recover
+  the CLEAN ATW canonical mode. Knob-zero ablations recover four corner
+  regimes (Atick-only / ATW canonical / Tishby IB / Z3 baseline) — the
+  probe-disambiguator regime sweep (Catalog #125 hook #6) that arbitrates
+  the four hypotheses.
+
+  Predicted ΔS [-0.025, -0.050] vs A1 baseline 0.19285 [contest-CPU];
+  predicted score band [0.18, 0.21] [prediction; first-principles-bound
+  from IB+WZ theory]. CONSERVATIVE per typical 2-3x compression of
+  analytical bounds.
+
+  STACKS on Z4-V2 (β-only branch is Z4 verbatim) and on A1 substrate
+  (encoder/decoder/latent architecture inherited). Per Boyd's convex-
+  feasibility lens, ATW feasibility region is a SUBSET of Z3+A1 polytope —
+  any ATW Pareto-optimal point dominates Z3+Z4 at the same operating point.
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 16
+min_smoke_gpu: "A100"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: lane_z4_cooperative_receiver_loss_step2_20260514
+
+active_dispatch_contract: atw_codec_v1_substrate_research_only
+dispatch_contracts:
+  - id: atw_codec_v1_substrate_research_only
+    archive_role: monolithic_atw1_self_contained
+    builder_surface: experiments/train_substrate_atw_codec_v1.py
+    status: research_only_design_time
+    exact_eval_path: not_dispatchable_until_phase_2_council_approval
+
+cost_band:
+  epochs: 200
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.00
+  estimated_usd_max: 15.00
+  platform_key: modal
+  gpu_key: A100
+
+predicted_score_target: null
+predicted_band: [0.18, 0.21]
+smoke_score_band: null  # research-only at landing; no smoke score band claimed
+predicted_delta: "[-0.025, -0.050] vs A1 baseline 0.19285 [contest-CPU] [prediction; first-principles-bound from IB+WZ theory]"
+predicted_delta_basis: ".omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md §1 (3-paper math composition)"
+literature_anchor: |
+  Atick & Redlich (1990) "Towards a theory of early visual processing"
+    Neural Computation 2(3):308-320 (cooperative-receiver theorem);
+  Tishby, Pereira & Bialek (1999) "The information bottleneck method"
+    Proc. 37th Allerton Conf.;
+  Wyner & Ziv (1976) "The rate-distortion function for source coding with
+    side information at the decoder" IEEE Trans Info Theory 22(1):1-10;
+  Grand reunion symposium 2026-05-15: feedback_grand_reunion_fields_grade_passion_full_council_debrief_*_20260515.md
+    Composite #1 (lines 727-770);
+  Grand council evidence review 2026-05-15: feedback_grand_council_evidence_review_modal_failures_*_20260515.md
+    Phase B top-3 score-lowering paths.
+
+risk: |
+  ATW codec V1 is an L1 SCAFFOLD per CLAUDE.md "Substrate scaffolds MUST be
+  COMPLETE or RESEARCH-ONLY" + Catalog #220 cascade. The trainer's
+  _full_main raises NotImplementedError pending Phase 2 council approval.
+
+  When Phase 2 lifts the gate, the predicted [0.18, 0.21] band is verifiable
+  in $5-15 of Modal A100 spend per the design memo §6 cycle:
+
+  - $0 pre-smoke: WZ side-info bit-savings on A1 latents (Tao+Boyd 1hr CPU)
+  - $5 Modal A100 smoke: 100ep synthetic-data path validation
+  - $10 Modal A100 paired full anchor: 200ep real video + paired CPU+CUDA
+
+  Architectural risk:
+  - WZ side-info head is a TINY MLP placeholder at scaffold time; the
+    closed-form computation (predict z from scorer class prior via
+    Atick-Redlich whitening + ICA projection) lands at Phase 2 lift time.
+  - κ_IB > 0 is computationally expensive (requires posterior approximation
+    q(y|t)); scaffold supports the hyperparameter but ships κ_IB=0 default.
+  - Composition with Z3 hyperprior is theoretical (not jointly trained yet);
+    ATW V1 ships standalone; Z3+ATW joint training is V2.
+
+  Modal A100 cost band: $5 smoke; $10-15 full + paired auth eval. Per
+  CLAUDE.md "Auth eval EVERYWHERE" the dispatch MUST end with paired
+  CPU+CUDA auth eval per "Submission auth eval — BOTH CPU AND CUDA"
+  non-negotiable.
+
+envelope_status: "research_only_design_time_at_landing; $5-15 envelope upon Phase 2 council approval"
+
+remote_driver: scripts/remote_lane_substrate_atw_codec_v1.sh  # planned at Phase 2 lift
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_atw_codec_v1.sh  # planned at Phase 2 lift
+  cost_band_trainer: experiments/train_substrate_atw_codec_v1.py
+  cost_band_epochs: 200
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_atw_codec_v1.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/atw_codec_v1/__init__.py
+  - src/tac/substrates/atw_codec_v1/architecture.py
+  - src/tac/substrates/atw_codec_v1/archive.py
+  - src/tac/substrates/atw_codec_v1/inflate.py
+  - src/tac/substrates/atw_codec_v1/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+
+env_overrides:
+  ATW_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  ATW_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  ATW_OUTPUT_DIR: /workspace/pact/lane_substrate_atw_codec_v1_results/output
+  ATW_EPOCHS: "200"
+  ATW_BATCH_SIZE: "4"
+  ATW_LR: "5e-4"
+  ATW_KAPPA_IB: "0.0"
+  ATW_LAMBDA_WZ: "1.0"
+  ATW_LAMBDA_PIXEL: "0.0"
+  ATW_BETA_SEG: "100.0"
+  ATW_GAMMA_POSE: "3.1622776601683795"
+  LOCAL_CUDA_WORKER: "1"
+  SMOKE_ONLY: "0"
+  # Dispatch CANNOT fire because dispatch_enabled:false at top-level
+  # AND _full_main raises NotImplementedError. These env overrides are
+  # design-time placeholders for Phase 2 lift activation.
+
+dependencies:
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_atw_codec_v1.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  ATW codec V1 design-time research-only recipe — Phase 2 council approval
+  REQUIRED to lift research_only:true + dispatch_enabled:false flags.
+
+  research_only=true per CLAUDE.md HNeRV parity discipline lesson 2 (export-
+  first design opt-out) + Catalog #240 (recipe-vs-trainer-state consistency).
+
+  lane_class=substrate_engineering per HNeRV parity discipline lesson 7
+  (substrate engineering happens ONCE per architecture class; ATW codec is
+  the new class composing Atick-Redlich + Tishby IB + Wyner-Ziv).
+
+  Reactivation criteria (any TWO grant Phase 2 approval, per design memo §5):
+  1. Z4-V2 returns successful contest-CUDA anchor (fc-01KRPJVEMQ5S7Q8EKGKQWKCS93)
+     with ΔS in [-0.005, -0.010] vs A1.
+  2. Tao+Boyd Blahut-Arimoto analytical floor shows ATW theoretical gain
+     ≥ -0.020 vs A1 ($0, 2 hours CPU).
+  3. WZ side-info bit-savings empirically measured on A1 latents
+     ≥ 20% per-pair latent rate ($0, 1 hour CPU).
+  4. Z3-G1 substitution (Wunderkind G1, $10) returns successful CUDA anchor.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable: when
+  dispatched, modal_train_lane.py uses .spawn(); harvest within 24h via
+  tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval — BOTH CPU
+  AND CUDA": when dispatched, ends with paired CPU+CUDA auth eval on EMA
+  shadow. Use tools/dispatch_modal_paired_auth_eval.py with
+  --skip-axis-if-promotable-anchor-exists per Catalog #246.
+
+  Cross-ref:
+    .omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md (design memo)
+    feedback_grand_reunion_fields_grade_passion_full_council_debrief_*_20260515.md (Composite #1)
+    feedback_grand_council_evidence_review_modal_failures_*_20260515.md (Phase B top-3)
+    feedback_z4_atick_redlich_minimum_viable_landed_20260515.md (Z4 minimum viable)
+    feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md (G1 substitution)
+    src/tac/substrates/atw_codec_v1/__init__.py (Catalog #124 8 fields declared inline)
+    src/tac/substrates/z4_cooperative_receiver_loss/ (β-only branch sister)
+    src/tac/substrates/d4_wyner_ziv_frame_0/ (WZ-on-frame-0 sister)
+    src/tac/codec/cooperative_receiver/atick_redlich.py (canonical primitive ATW reuses)

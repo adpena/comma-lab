@@ -609,12 +609,16 @@ substrate X considering canonical helper Y?
 │   ├── YES → adopt the lower-scoring path (canonical OR unique)
 │   └── NO ↓
 ├── PRINCIPLED: does Y's design assumption fit X's mathematical structure?
-│   ├── YES (no obvious mismatch) → adopt canonical (default)
+│   ├── YES, obvious-fit proof → adopt canonical
 │   ├── NO (clear mathematical mismatch) → fork to UNIQUE-AND-DISTINCT
 │   └── UNCLEAR → run paired-comparison smoke OR fork with explicit rationale
 └── COUNCIL: when unsure + cost > $20 design work, summon council per
     CLAUDE.md "Design decisions — non-negotiable"
 ```
+
+Unclear is not "canonical by default." If there is no empirical win and no
+obvious-fit proof, default to a substrate-specific fork or a paired smoke that
+measures whether the canonical helper suppresses score signal.
 
 ### Size budget guidance per HNeRV parity discipline lesson 7
 

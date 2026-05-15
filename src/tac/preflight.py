@@ -61045,9 +61045,6 @@ def check_serializer_log_no_dropped_expected_content_sha_retry_pattern(
 #     was adopted vs forked)
 # ============================================================================
 
-import re as _re_check_290
-
-
 # Cutoff date suffix; memos dated before this are exempt.
 _CHECK_290_CUTOFF_DATE_SUFFIX_INT = 20260515
 
@@ -61058,17 +61055,21 @@ _CHECK_290_REQUIRED_SECTION_HEADER = "## canonical-vs-unique decision per layer"
 # Matches: feedback_*substrate*scaffold*landed_<YYYYMMDD>.md
 #          feedback_nscs<digits>_landed_<YYYYMMDD>.md
 #          feedback_*substrate*v<digits>*landed_<YYYYMMDD>.md
-_CHECK_290_SUBSTRATE_SCAFFOLD_FILENAME_RE = _re_check_290.compile(
+_CHECK_290_SUBSTRATE_SCAFFOLD_FILENAME_RE = re.compile(
     r"^feedback_.*substrate.*scaffold.*landed_(\d{8})\.md$",
-    _re_check_290.IGNORECASE,
+    re.IGNORECASE,
 )
-_CHECK_290_NSCS_FILENAME_RE = _re_check_290.compile(
+_CHECK_290_NSCS_FILENAME_RE = re.compile(
     r"^feedback_nscs\d+.*landed_(\d{8})\.md$",
-    _re_check_290.IGNORECASE,
+    re.IGNORECASE,
 )
-_CHECK_290_SUBSTRATE_V_N_FILENAME_RE = _re_check_290.compile(
+_CHECK_290_SUBSTRATE_V_N_FILENAME_RE = re.compile(
     r"^feedback_.*substrate.*_v\d+.*landed_(\d{8})\.md$",
-    _re_check_290.IGNORECASE,
+    re.IGNORECASE,
+)
+_CHECK_290_RESEARCH_DESIGN_FILENAME_RE = re.compile(
+    r"^.*_design_(\d{8})\.md$",
+    re.IGNORECASE,
 )
 
 
@@ -61078,6 +61079,7 @@ def _check_290_in_scope(filename: str) -> int | None:
         _CHECK_290_SUBSTRATE_SCAFFOLD_FILENAME_RE,
         _CHECK_290_NSCS_FILENAME_RE,
         _CHECK_290_SUBSTRATE_V_N_FILENAME_RE,
+        _CHECK_290_RESEARCH_DESIGN_FILENAME_RE,
     ):
         m = regex.match(filename)
         if m:
@@ -61093,9 +61095,17 @@ def _check_290_default_memory_dir() -> Path:
     return Path.home() / ".claude" / "projects" / "-Users-adpena-Projects-pact" / "memory"
 
 
+def _check_290_default_research_dir(repo_root: Path | str | None = None) -> Path:
+    """Default in-repo research design-memo directory."""
+    root = Path(repo_root or REPO_ROOT).resolve()
+    return root / ".omx" / "research"
+
+
 def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
     *,
     memory_dir: Path | str | None = None,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
@@ -61115,8 +61125,11 @@ def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
     - Pre-cutoff memos (date < 2026-05-15) are exempt by date filter.
     - In-scope memos with the literal header pass.
     - In-scope memos without the header are flagged.
-    - Memos that are neither substrate-scaffold nor NSCS naming are out-of-
-      scope by filename filter.
+    - In-repo ``.omx/research/*_design_<YYYYMMDD>.md`` memos are in scope:
+      those are the active design surface subagents land before memory
+      rollups exist.
+    - Memory memos that are neither substrate-scaffold nor NSCS naming are
+      out-of-scope by filename filter.
 
     Sister of Catalog #220 (substrate L1 operational mechanism) + Catalog
     #229 (premise-verification-before-edit) + Catalog #241 (substrate META
@@ -61126,45 +61139,65 @@ def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
     Lane: ``lane_knowledge_preservation_pr95_meta_level_lesson_20260515``.
     """
     if memory_dir is None:
-        target = _check_290_default_memory_dir()
+        memory_target = _check_290_default_memory_dir()
     elif isinstance(memory_dir, str):
-        target = Path(memory_dir)
+        memory_target = Path(memory_dir)
     else:
-        target = memory_dir
-
-    if not target.is_dir():
-        return []
+        memory_target = memory_dir
+    if research_dir is None:
+        research_target = _check_290_default_research_dir(repo_root)
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
 
     violations: list[str] = []
-    try:
-        candidates = sorted(target.iterdir())
-    except OSError:
-        return []
-
-    for entry in candidates:
-        if not entry.is_file():
-            continue
-        date_int = _check_290_in_scope(entry.name)
-        if date_int is None:
-            continue  # filename not in scope
-        if date_int < _CHECK_290_CUTOFF_DATE_SUFFIX_INT:
-            continue  # pre-cutoff memos exempt
+    seen_dirs: set[Path] = set()
+    for target, surface in (
+        (memory_target, "memory"),
+        (research_target, "research"),
+    ):
         try:
-            body = entry.read_text(encoding="utf-8", errors="replace")
+            resolved_target = target.resolve()
+        except OSError:
+            resolved_target = target
+        if resolved_target in seen_dirs:
+            continue
+        seen_dirs.add(resolved_target)
+        if not target.is_dir():
+            continue
+        try:
+            candidates = sorted(target.iterdir())
         except OSError:
             continue
-        if _CHECK_290_REQUIRED_SECTION_HEADER in body.lower():
-            continue
-        violations.append(
-            f"{entry.name}: substrate scaffold memo dated {date_int} is "
-            "missing the required '## Canonical-vs-unique decision per layer' "
-            "section header (case-insensitive). Per CLAUDE.md "
-            "'UNIQUE-AND-COMPLETE-PER-METHOD operating mode' non-negotiable: "
-            "every substrate scaffold landing memo dated >= 2026-05-15 MUST "
-            "document per-layer canonical-vs-unique decisions so a reviewer "
-            "can audit whether the substrate's optimal score path was "
-            "suppressed by reflex canonicalization."
-        )
+        for entry in candidates:
+            if not entry.is_file():
+                continue
+            date_int = _check_290_in_scope(entry.name)
+            if date_int is None:
+                continue  # filename not in scope
+            if date_int < _CHECK_290_CUTOFF_DATE_SUFFIX_INT:
+                continue  # pre-cutoff memos exempt
+            try:
+                body = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if _CHECK_290_REQUIRED_SECTION_HEADER in body.lower():
+                continue
+            try:
+                rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+            except ValueError:
+                rel = entry
+            violations.append(
+                f"{rel}: {surface} design/substrate memo dated {date_int} is "
+                "missing the required '## Canonical-vs-unique decision per layer' "
+                "section header (case-insensitive). Per CLAUDE.md "
+                "'UNIQUE-AND-COMPLETE-PER-METHOD operating mode' non-negotiable: "
+                "every substrate or codec design memo dated >= 2026-05-15 MUST "
+                "document per-layer canonical-vs-unique decisions so a reviewer "
+                "can audit whether the substrate's optimal score path was "
+                "suppressed by reflex canonicalization."
+            )
 
     if verbose:
         if violations:

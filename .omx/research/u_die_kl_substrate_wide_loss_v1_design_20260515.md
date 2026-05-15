@@ -197,4 +197,16 @@ All 8 premises confirmed pre-edit.
 
 ---
 
+## Canonical-vs-unique decision per layer
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Loss primitive | ADOPT as optional shared primitive | UNIWARD, DIE, and KL are reusable math terms; adoption must remain opt-in per substrate. |
+| Per-substrate weights | UNIQUE | Each substrate must sweep or justify α/β/γ because a universal default is exactly the canonicalization-suppression failure mode. |
+| Scorer routing | ADOPT guarded helper | Canonical scorer preprocessing is compliance hygiene and prevents known auth-eval drift. |
+| Training curriculum | UNIQUE per substrate | The helper does not prescribe epochs, EMA decay beyond repo non-negotiables, or phase schedule. |
+| Dispatch policy | UNIQUE fail-closed | No frontier claim until a substrate-specific smoke, Tier-C density, and exact custody complete. |
+
+---
+
 **Net assessment:** The U-DIE-KL composite is the canonical "substrate-agnostic training-side bolt-on" missing from the existing infrastructure. The three primitives (UNIWARD, DIE, KL) are individually canonical in this repo; combining them in a single torch-tensor loss helper makes the symposium #5 design directly consumable by every existing substrate trainer with a 3-line change. The helper itself adds NO archive bytes (per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable: this is research-only at landing because no per-substrate retraining has happened — Catalog #240 sister enforcement). All 8 premises verified pre-edit per Catalog #229.

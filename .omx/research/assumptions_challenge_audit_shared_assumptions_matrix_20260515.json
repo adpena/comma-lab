@@ -1,0 +1,426 @@
+{
+  "schema_version": "assumptions_challenge_audit_v1",
+  "subagent_id": "ASSUMPTIONS-CHALLENGE-AUDIT-BREAK-OUT-OF-LOCAL-MINIMA-20260515",
+  "lane_id": "lane_assumptions_challenge_audit_break_out_20260515",
+  "written_at_utc": "2026-05-15T22:43:30Z",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "evidence_grade": "research-design-memo",
+  "operator_directive_verbatim": "seems like there might be engineering and apples to apples and using stuff trained and engineered and wired up and integrated using the same assumptions and config might be an issue; we must push aggressively on the score lowering and break out of our local minima at 0.1928",
+  "frontier_anchor": {
+    "axis": "contest-CPU GHA Linux x86_64 1to1",
+    "score": 0.1928,
+    "archive_sha256_prefix": "87ec7ca5...492b5",
+    "substrate": "A1"
+  },
+  "cluster_context": {
+    "A1": {"contest_cpu": 0.19285, "contest_cuda_t4": 0.22635},
+    "Z3_v2": {"contest_cpu": 0.19870, "contest_cuda_t4": 0.23171},
+    "Z3_G1_v1": {"contest_cpu": 0.19869, "axis_note": "phantom-score-class corrected per Catalog #249"},
+    "D1_paired": {"contest_cpu": 0.19779, "diagnostic_only": true}
+  },
+  "time_traveler_floor_estimates": {
+    "practical_floor": [0.08, 0.15],
+    "asymptote_floor": [0.03, 0.07],
+    "source": "feedback_grand_council_tiered_parallel_plan_full_authority_20260514"
+  },
+
+  "shared_assumptions": [
+    {
+      "id": "SA01_2_frame_pose_pair_curriculum",
+      "name": "All substrates train on 2-frame pose-pair curriculum (seq_len=2)",
+      "sources": ["upstream/frame_utils.py:10 (seq_len=2)", "experiments/train_substrate_*.py shared pattern"],
+      "prevalence": "100% (mandated by upstream evaluator contract)",
+      "rationale": "Contest evaluate.py asserts batch shape [B, seq_len=2, H, W, 3]; PoseNet input is 2-frame YUV6 stack",
+      "hypothesized_local_minimum_impact": "FORCES every substrate into the same temporal-context size; rules out longer-context predictive models, video-clip codecs, or ego-motion smoothing; constrains rate-distortion to per-pair entropy floor",
+      "violation_difficulty": "HIGH (eval contract is rigid)",
+      "violation_path": "Train on N-frame curriculum (8/16/32) but EXPORT 2-frame pairs — temporal context lives compress-side only"
+    },
+    {
+      "id": "SA02_segnet_only_last_frame",
+      "name": "SegNet uses ONLY x[:, -1, ...] (last frame of pair)",
+      "sources": ["upstream/modules.py:108 (x[:, -1, ...])"],
+      "prevalence": "100% (canonical scorer architecture)",
+      "rationale": "SegNet is smp.Unet on single image; pair structure is for PoseNet only",
+      "hypothesized_local_minimum_impact": "frame[0] of each pair is in the SegNet NULLSPACE (changes to frame[0] do NOT cost SegNet distortion). We're paying full RGB rate for frame[0] but only PoseNet cares. ALL our substrates render frame[0] as if SegNet looks at it. This is ~7-15% archive bytes wasted on the wrong distortion. D4 partially exploits via Wyner-Ziv frame-0; D1 partially via geometric-nullspace; NONE of A1/Z3/Z3-G1 exploit it.",
+      "violation_difficulty": "MEDIUM (substrate-class shift)",
+      "violation_path": "frame[0] = pose-only-rendered (lossy RGB; only PoseNet target); frame[1] = SegNet-aware-rendered (high-fidelity RGB; SegNet+PoseNet target)"
+    },
+    {
+      "id": "SA03_segnet_stride_2_stem_blindspot",
+      "name": "SegNet stride-2 stem makes artifacts < (256, 192) invisible",
+      "sources": ["upstream/modules.py SegNet smp.Unet('tu-efficientnet_b2')", "CLAUDE.md verified scorer architecture"],
+      "prevalence": "100% (scorer architecture pinned)",
+      "rationale": "EfficientNet-B2 stride-2 stem loses half resolution at first layer",
+      "hypothesized_local_minimum_impact": "We could legally degrade frame[1] BELOW (256, 192) resolution as long as 5-class argmax is preserved. Yet ALL substrates render at (384, 512) full resolution. Free rate savings on the order of 4× pixel count.",
+      "violation_difficulty": "LOW (per-substrate render res config)",
+      "violation_path": "Render at (192, 256) → upsample bilinear at inflate; if SegNet argmax preserved, ZERO d_seg cost; ~75% rate reduction on rendered frames"
+    },
+    {
+      "id": "SA04_canonical_archive_zip_grammar",
+      "name": "Archive contract = single archive.zip with monolithic 0.bin (or sidecars APPENDED)",
+      "sources": ["submissions/exact_current/inflate.sh", "31/32 substrates ship 0.bin or 0.bin + sidecar bytes"],
+      "prevalence": "97% (forced by upstream zipfile reader)",
+      "rationale": "Contest treats archive.zip bytes as canonical rate term",
+      "hypothesized_local_minimum_impact": "Every substrate optimizes within ZIP-member byte budget; nobody has tried a non-ZIP container or multi-stage decode-from-tar.zst",
+      "violation_difficulty": "MEDIUM (must remain ZIP-readable but content can be anything)",
+      "violation_path": "ZIP wrapper around brotli-stream-of-typed-shards = any container fits"
+    },
+    {
+      "id": "SA05_inflate_at_camera_native_resolution",
+      "name": "Inflate emits frames at camera_size (1164, 874) full resolution",
+      "sources": ["upstream/frame_utils.py:11 (camera_size)", "submissions/*/inflate.py shared shape"],
+      "prevalence": "100% (upstream batch-shape assert)",
+      "rationale": "evaluate.py asserts comp shape == [seq_len, 874, 1164, 3]",
+      "hypothesized_local_minimum_impact": "We could decode at smaller resolution + bilinear-upsample at inflate, exploiting that BOTH scorers internally interpolate to (384, 512) anyway. The (1164, 874) intermediate is pure rate-domain waste.",
+      "violation_difficulty": "LOW (just upsample-on-the-fly in inflate)",
+      "violation_path": "Render at (384, 512) directly + decode-time bilinear-upsample to (874, 1164); minor PoseNet drift but rate savings >> SegNet/PoseNet cost"
+    },
+    {
+      "id": "SA06_strict_scorer_rule_no_inflate_time_scorer",
+      "name": "No PoseNet/SegNet at inflate time (would cost ~73MB rate)",
+      "sources": ["CLAUDE.md 'Strict scorer rule — non-negotiable'", "Catalog #6 check_no_scorer_load_at_inflate"],
+      "prevalence": "100% (preflight enforced)",
+      "rationale": "Including PoseNet+SegNet weights = 200× rate-class regression",
+      "hypothesized_local_minimum_impact": "We CAN ship a tiny scorer-distillation head (1-50KB) at inflate time per Wunderkind G1; this assumption is partially relaxable",
+      "violation_difficulty": "LOW (Wunderkind G1 already designed)",
+      "violation_path": "Ship 1KB SegNet-class distillation head + use it inflate-side as cooperative-receiver prior"
+    },
+    {
+      "id": "SA07_compress_inflate_split_no_joint_training",
+      "name": "Compress and inflate are separate processes (no end-to-end joint training)",
+      "sources": ["compress.sh / inflate.sh contract", "all substrates have separate train + emit_archive + inflate paths"],
+      "prevalence": "100%",
+      "rationale": "Contest contract; train-time can use anything but inflate-time gets archive bytes only",
+      "hypothesized_local_minimum_impact": "Every substrate trains weights, then quantizes for archive. The quantize→archive→dequantize→inflate roundtrip introduces drift NOT modeled in training. Joint differentiable end-to-end training (train through quantizer + ZIP entropy) would close this gap.",
+      "violation_difficulty": "MEDIUM-HIGH (requires differentiable archive entropy + STE)",
+      "violation_path": "End-to-end-trainable: rate term `bits = -log2(p_y(y))` differentiable through Ballé hyperprior; train through actual archive byte budget"
+    },
+    {
+      "id": "SA08_per_frame_independence",
+      "name": "Each pair is treated as independent (no temporal modeling beyond pair)",
+      "sources": ["submissions/*/inflate.py decode loop iterates pair-by-pair independently"],
+      "prevalence": "100%",
+      "rationale": "Inflate budget per-pair; no shared state across pairs allowed",
+      "hypothesized_local_minimum_impact": "600 pairs are completely independent. We have ZERO temporal coding. A predictive coder (Ha-Schmidhuber world model + residual) could exploit ego-motion smoothness for massive rate reduction.",
+      "violation_difficulty": "MEDIUM (predictive-coding world model substrate)",
+      "violation_path": "Z5 predictive coding world model already designed; not yet empirically anchored"
+    },
+    {
+      "id": "SA09_canonical_score_aware_loss_pattern",
+      "name": "All substrates use score_aware_common.score_pair_components canonical loss",
+      "sources": ["src/tac/substrates/_shared/score_aware_loss_real_scorer_test_kit.py", "Catalog #164"],
+      "prevalence": "97% (canonical loss helper)",
+      "rationale": "Catalog #164 + Catalog #226 force routing through canonical helper",
+      "hypothesized_local_minimum_impact": "ALL substrates compute loss as (seg + sqrt(10*pose)) at training time. But score formula is concave in pose. The square-root creates EXTREME marginal sensitivity at small pose values that the loss does NOT model correctly under proxy gradient. Z4 cooperative-receiver loss is the first attempt; needs more.",
+      "violation_difficulty": "MEDIUM (custom loss = trainer-specific; risks Catalog #164 violation)",
+      "violation_path": "Score-EXACT differentiable surrogate that includes the sqrt + the rate term inside one Lagrangian"
+    },
+    {
+      "id": "SA10_tier_1_engineering_primitives_uniform",
+      "name": "All substrates use same Tier-1 engineering (autocast/TF32/torch.compile/no_grad/F3 cache)",
+      "sources": ["src/tac/substrates/_shared/trainer_skeleton.py OPTIMIZATION_FLAGS_MANIFEST", "Catalog #172/#178/#179/#180/#228"],
+      "prevalence": "78-100% per primitive",
+      "rationale": "Canonical engineering; reduces per-substrate $/wall-clock",
+      "hypothesized_local_minimum_impact": "Engineering uniformity is good for reproducibility but creates apples-to-apples DEPENDENCY: every substrate reaches the same convergence point because the same lr schedule + EMA decay + gradient noise dominate. Different substrates may need different optimization regimes.",
+      "violation_difficulty": "LOW (per-substrate config)",
+      "violation_path": "Per-substrate-class hyperparameter sweep: predictive substrates need warmup, rate-only substrates can skip EMA, joint training needs gradient checkpointing"
+    },
+    {
+      "id": "SA11_dispatch_envelope_5_to_15_dollars",
+      "name": "Dispatch envelope $5-15 per smoke; never above $50/substrate",
+      "sources": ["CLAUDE.md GPU budget table; Long-burn directive"],
+      "prevalence": "Effective practice in 100% of dispatches",
+      "rationale": "Cost discipline + smoke-before-full pattern",
+      "hypothesized_local_minimum_impact": "Long-burn (>$50, >24h) substrates that need extensive convergence (e.g., Z5 world model from random init) are STRUCTURALLY UNDER-FUNDED. The empirical band [0.03, 0.07] of Time-Traveler asymptote requires multi-week training; we never go there.",
+      "violation_difficulty": "LOW (operator-decision)",
+      "violation_path": "Operator-funded long-burn campaign per CLAUDE.md 'Long-burn score-lowering campaign default' non-negotiable"
+    },
+    {
+      "id": "SA12_training_duration_100_to_1000_epochs",
+      "name": "All substrates train 100ep smoke / 1000ep full",
+      "sources": ["smoke_before_full canonical pattern", "operator-authorize recipes"],
+      "prevalence": "~100%",
+      "rationale": "Standardized convergence band based on HNeRV-class behavior",
+      "hypothesized_local_minimum_impact": "World-model substrates may need 10K-100K epochs; we never train that long. SUBSTRATES THAT WOULD ONLY CONVERGE AT >10K EPOCHS look identical to FALSIFIED at 1000ep.",
+      "violation_difficulty": "LOW (recipe field)",
+      "violation_path": "10K-epoch full-burn for predictive-coding/world-model substrates"
+    },
+    {
+      "id": "SA13_residual_on_a1_composition_pattern",
+      "name": "All sidecar substrates compose as residual on A1 archive (additive)",
+      "sources": ["pr106_*_residual_sidecar/", "a1_plus_*"],
+      "prevalence": "~80% of recent dispatches",
+      "rationale": "A1 is the verified frontier; sidecars stack additively",
+      "hypothesized_local_minimum_impact": "We've fixated on A1-as-base. Substantively-different base substrates (D4 frame-0, C6 MDL-IBPS, Z5 world model) get fewer composition cells. Reverse: A1 is DOMINATED at SegNet but D4 wins at PoseNet — base-switching is unexplored.",
+      "violation_difficulty": "MEDIUM (composition glue)",
+      "violation_path": "Switch base archive PER FRAME based on local SegNet/PoseNet sensitivity; rate-ladder archive selects best-base per pair"
+    },
+    {
+      "id": "SA14_ema_decay_0_997_uniform",
+      "name": "EMA decay 0.997 across all substrates (CLAUDE.md non-negotiable)",
+      "sources": ["CLAUDE.md 'EMA — NON-NEGOTIABLE'", "100% prevalence"],
+      "prevalence": "100% (mandated)",
+      "rationale": "0.997 is HNeRV-class proven; codebooks separately at 0.99",
+      "hypothesized_local_minimum_impact": "EMA decay tuned for HNeRV-class. Rate-only substrates (no scorer-aware loss; just entropy coder) may not need EMA at all. Codebook-VQ substrates may need 0.95-0.99. We treat 0.997 as universal but it's substrate-class-conditional.",
+      "violation_difficulty": "LOW (per-substrate)",
+      "violation_path": "Per-substrate-class EMA sweep (or no-EMA for entropy-only)"
+    },
+    {
+      "id": "SA15_modal_lightning_vastai_dispatch_only",
+      "name": "All dispatches via Modal/Lightning/Vast.ai; no GHA CI dispatching",
+      "sources": ["operator_authorize_recipes/* all use modal/lightning/vastai"],
+      "prevalence": "100%",
+      "rationale": "Cost + GPU access",
+      "hypothesized_local_minimum_impact": "GHA CI is FREE and Linux x86_64 (matches contest CPU axis 1to1). For CPU-only substrate exploration (e.g., classical wavelet codecs, deterministic byte coders), GHA CI is the natural canvas. We never use it.",
+      "violation_difficulty": "LOW (CI workflow)",
+      "violation_path": "GHA CI as zero-cost dev-loop for CPU-only substrates"
+    },
+    {
+      "id": "SA16_pose_pair_temporal_indexing_overlapping",
+      "name": "Pose pairs are SEQUENTIAL non-overlapping (frames 0-1, 2-3, ..., 1198-1199 = 600 pairs)",
+      "sources": ["upstream/frame_utils.py num_sequences = frames_per_file // seq_len", "auth_eval canonical 600 pairs"],
+      "prevalence": "100% (forced by upstream)",
+      "rationale": "Eval contract uses non-overlapping seq_len=2",
+      "hypothesized_local_minimum_impact": "We optimize for 600 fixed pair boundaries. The boundary positions are arbitrary and rate-coding can exploit OVERLAPPING-PAIR-AWARE codecs at training (e.g., predict frame[2k] from frame[2k-1] AND frame[2k+1] in one shared latent).",
+      "violation_difficulty": "MEDIUM (training-side only — eval still sees fixed pairs)",
+      "violation_path": "Train with overlapping windows + emit per-pair compressed bytes that share temporal context"
+    },
+    {
+      "id": "SA17_rgb_frame_output_format",
+      "name": "Inflate emits RGB frames (ONE representation type)",
+      "sources": ["evaluate.py asserts batch.shape ends in 3 (RGB channels)"],
+      "prevalence": "100%",
+      "rationale": "Contest scorer takes RGB",
+      "hypothesized_local_minimum_impact": "We could emit YUV4:2:0 directly + use 75% fewer chroma bytes; but inflate must convert back to RGB. Net rate savings depend on entropy coder. Nobody has tried this.",
+      "violation_difficulty": "LOW (inflate adds YUV→RGB)",
+      "violation_path": "YUV4:2:0 archive representation; inflate converts with simple matrix"
+    },
+    {
+      "id": "SA18_quantizer_uniform_per_channel",
+      "name": "Quantizers use uniform per-channel scale (block-FP, scalar, FP4)",
+      "sources": ["substrates use FakeQuantSTE / FakeQuantFP4 / Uint8STE; Catalog #161 quantize boundaries"],
+      "prevalence": "~95%",
+      "rationale": "Hardware-friendly; single-scale dequant",
+      "hypothesized_local_minimum_impact": "Different channels in renderer have wildly different sensitivity. UNIFORM per-channel quantization is suboptimal. Mixed-precision per-importance allocation (Hessian-weighted) could win 10-30% rate at zero distortion.",
+      "violation_difficulty": "MEDIUM (saliency map + variable-bit codec)",
+      "violation_path": "Per-tensor mixed-precision int4/int6/int8 allocation guided by Hessian saliency (sister of UNIWARD weighting)"
+    }
+  ],
+
+  "violating_experiments": [
+    {"violates_assumption": "SA01", "name": "8-frame curriculum compress-side", "predicted_delta_S": [-0.005, -0.020], "cost_usd": [10, 30], "risk": "MEDIUM"},
+    {"violates_assumption": "SA02", "name": "Pose-only frame[0] + SegNet-aware frame[1] split-render", "predicted_delta_S": [-0.010, -0.030], "cost_usd": [10, 25], "risk": "MEDIUM"},
+    {"violates_assumption": "SA03", "name": "Render frame[1] at (192,256) + bilinear upsample", "predicted_delta_S": [-0.005, -0.020], "cost_usd": [5, 15], "risk": "LOW"},
+    {"violates_assumption": "SA04", "name": "Tar.zst inside ZIP wrapper for typed shards", "predicted_delta_S": [-0.001, -0.005], "cost_usd": [2, 8], "risk": "LOW"},
+    {"violates_assumption": "SA05", "name": "Decode at (384,512) + inflate-time upsample", "predicted_delta_S": [-0.005, -0.015], "cost_usd": [5, 15], "risk": "LOW"},
+    {"violates_assumption": "SA06", "name": "1KB SegNet-distill head at inflate (Wunderkind G1)", "predicted_delta_S": [-0.005, -0.015], "cost_usd": [10, 20], "risk": "MEDIUM"},
+    {"violates_assumption": "SA07", "name": "End-to-end joint training through differentiable archive entropy", "predicted_delta_S": [-0.015, -0.040], "cost_usd": [30, 80], "risk": "MEDIUM-HIGH"},
+    {"violates_assumption": "SA08", "name": "Predictive coding world model (Z5)", "predicted_delta_S": [-0.030, -0.060], "cost_usd": [50, 200], "risk": "HIGH"},
+    {"violates_assumption": "SA09", "name": "Score-EXACT differentiable surrogate Lagrangian", "predicted_delta_S": [-0.005, -0.020], "cost_usd": [10, 30], "risk": "MEDIUM"},
+    {"violates_assumption": "SA10", "name": "Per-substrate-class hyperparameter regime", "predicted_delta_S": [-0.002, -0.010], "cost_usd": [5, 15], "risk": "LOW"},
+    {"violates_assumption": "SA11", "name": "Long-burn $200+ multi-week training", "predicted_delta_S": [-0.030, -0.080], "cost_usd": [200, 1000], "risk": "OPERATOR-DECISION"},
+    {"violates_assumption": "SA12", "name": "10K-epoch convergence regime", "predicted_delta_S": [-0.010, -0.040], "cost_usd": [50, 200], "risk": "MEDIUM"},
+    {"violates_assumption": "SA13", "name": "Rate-ladder per-pair best-base archive selector", "predicted_delta_S": [-0.005, -0.020], "cost_usd": [15, 40], "risk": "MEDIUM"},
+    {"violates_assumption": "SA14", "name": "Per-substrate-class EMA sweep (or no-EMA for entropy-only)", "predicted_delta_S": [0, -0.005], "cost_usd": [5, 15], "risk": "LOW"},
+    {"violates_assumption": "SA15", "name": "GHA CI as free zero-cost dev-loop", "predicted_delta_S": [-0.001, -0.005], "cost_usd": [0, 0], "risk": "LOW"},
+    {"violates_assumption": "SA16", "name": "Overlapping-window training; non-overlapping eval", "predicted_delta_S": [-0.003, -0.010], "cost_usd": [10, 25], "risk": "MEDIUM"},
+    {"violates_assumption": "SA17", "name": "YUV4:2:0 archive + inflate-time YUV→RGB", "predicted_delta_S": [-0.005, -0.015], "cost_usd": [5, 15], "risk": "LOW"},
+    {"violates_assumption": "SA18", "name": "Per-tensor mixed-precision Hessian-saliency-guided", "predicted_delta_S": [-0.010, -0.030], "cost_usd": [15, 40], "risk": "MEDIUM"}
+  ],
+
+  "proposed_substrate_class_shifts": [
+    {
+      "id": "NSCS01_NULLSPACE_SPLIT_RENDERER",
+      "name": "frame[0] pose-only / frame[1] SegNet-aware split renderer",
+      "violates": ["SA02_segnet_only_last_frame", "SA03_segnet_stride_2_stem", "SA10_tier_1_uniform"],
+      "math_basis": "SegNet ignores frame[0]; PoseNet uses both. Allocate ~70% rate budget to frame[1] (SegNet+PoseNet target) and ~30% to frame[0] (PoseNet target only). At PR106 op-point with marginal-pose 2.71×, frame[0] is rate-dominated by PoseNet sensitivity which has lower per-byte cost than SegNet.",
+      "predicted_delta_S": [-0.015, -0.045],
+      "cost_estimate_usd": [15, 35],
+      "wall_clock_h": [4, 12],
+      "composition_with_a1": "REPLACES A1 base (different base; A1 sidecars don't apply directly)",
+      "risk": "MEDIUM",
+      "reactivation_criteria_if_smoke_regresses": "If proxy regression > +0.01 at 100ep, defer pending council review of SegNet-stride-2-stem actual blindspot empirical bound"
+    },
+    {
+      "id": "NSCS02_DOWNSAMPLED_RENDERER_INFLATE_UPSAMPLE",
+      "name": "Render at (192, 256) + inflate-time bilinear upsample to (1164, 874)",
+      "violates": ["SA03_segnet_stride_2_stem", "SA05_inflate_at_camera_native", "SA17_rgb_format"],
+      "math_basis": "Both scorers internally interpolate to (384, 512). The (1164, 874) intermediate is lossy compute. SegNet stride-2 stem already discards half resolution. At (192, 256), 16× pixel reduction; if SegNet 5-class argmax + PoseNet 6-dim pose preserved, ZERO d_seg / d_pose cost.",
+      "predicted_delta_S": [-0.010, -0.030],
+      "cost_estimate_usd": [5, 15],
+      "wall_clock_h": [2, 6],
+      "composition_with_a1": "STACKS — A1's renderer just outputs at lower res; sidecar still applies",
+      "risk": "LOW",
+      "reactivation_criteria_if_smoke_regresses": "If d_pose regression > 5e-4, defer pending PoseNet sensitivity to upsampling-induced anti-aliasing"
+    },
+    {
+      "id": "NSCS03_END_TO_END_DIFFERENTIABLE_CODEC",
+      "name": "Joint differentiable train through Ballé-hyperprior + STE entropy",
+      "violates": ["SA04_archive_zip", "SA07_compress_inflate_split", "SA09_canonical_loss"],
+      "math_basis": "Rate term `bits = -log2(p_y(y))` differentiable through scale hyperprior per Ballé 2018. STE through quantizer makes archive byte budget a SCALAR LOSS TERM. Quantize→archive→dequant→inflate roundtrip drift VANISHES. Ballé empirical 5-15% rate savings; with cooperative-receiver loss could compound to 15-40%.",
+      "predicted_delta_S": [-0.020, -0.050],
+      "cost_estimate_usd": [40, 120],
+      "wall_clock_h": [12, 36],
+      "composition_with_a1": "FRESH SUBSTRATE — joint codec replaces both A1 base + sidecar",
+      "risk": "MEDIUM-HIGH",
+      "reactivation_criteria_if_smoke_regresses": "If proxy↔auth gap > 3× at 100ep, defer pending Ballé hyperprior-on-PR106-substrate empirical anchor"
+    },
+    {
+      "id": "NSCS04_PREDICTIVE_RECEIVER_WORLD_MODEL_RESIDUAL",
+      "name": "Z5+ predictive coding world model + residual codec",
+      "violates": ["SA08_per_frame_independence", "SA12_1000ep_full", "SA13_residual_on_a1"],
+      "math_basis": "Wyner-Ziv 1976 + Rao-Ballard 1999: side info at decoder = world model state. Encoder transmits prediction-error residuals only. R_{X|Y} = H(X|Y). Per Time-Traveler L5 staircase Step 3+, predicted sub-0.10 reachable.",
+      "predicted_delta_S": [-0.040, -0.080],
+      "cost_estimate_usd": [80, 300],
+      "wall_clock_h": [48, 168],
+      "composition_with_a1": "FRESH SUBSTRATE — replaces A1 entirely; world model lives compress AND inflate side",
+      "risk": "HIGH",
+      "reactivation_criteria_if_smoke_regresses": "If at 5000ep no visible convergence, council review of world model architecture"
+    },
+    {
+      "id": "NSCS05_RATE_LADDER_ARCHIVE_PER_PAIR_BEST_BASE",
+      "name": "Multi-base archive: pair selector picks best-substrate per pair at inflate",
+      "violates": ["SA13_residual_on_a1", "SA04_archive_zip"],
+      "math_basis": "A1 wins SegNet but D4 wins PoseNet at frame[0]. Ship 2-3 base substrates + per-pair selector (4 bits per pair × 600 pairs = 300 bytes overhead). At inflate, route each pair to its best base. Lower envelope than min(individual substrate costs).",
+      "predicted_delta_S": [-0.010, -0.030],
+      "cost_estimate_usd": [25, 60],
+      "wall_clock_h": [8, 24],
+      "composition_with_a1": "STACKS — A1 is one of N bases",
+      "risk": "MEDIUM",
+      "reactivation_criteria_if_smoke_regresses": "If selector overhead > savings, defer pending tighter selector entropy coding"
+    },
+    {
+      "id": "NSCS06_CARMACK_HOTZ_STRIP_EVERYTHING",
+      "name": "NO neural codec; deterministic byte-level encoder + Quantizr LUT + entropy coder",
+      "violates": ["SA09_canonical_loss", "SA10_tier_1_uniform", "SA14_EMA_uniform", "SA15_modal_dispatch"],
+      "math_basis": "Per Carmack-Hotz Symposium #5: contest scorer is just 100*seg + sqrt(10*pose) + 25*rate. If SegNet 5-class argmax + PoseNet 6-dim are determined by LARGE-SCALE structure (which they are per FastViT-T12 + EfficientNet-B2 stride-2 stem), then a hand-rolled coder targeting ONLY the structural bytes can win. Ditch the neural priors.",
+      "predicted_delta_S": [-0.05, +0.10],
+      "cost_estimate_usd": [5, 20],
+      "wall_clock_h": [4, 12],
+      "composition_with_a1": "FRESH — replaces neural baseline entirely",
+      "risk": "HIGH-VARIANCE",
+      "reactivation_criteria_if_smoke_regresses": "Per CLAUDE.md 'KILL is LAST RESORT': always defer; high-variance substrate; needs at least 3 architectural variants before any conclusion"
+    },
+    {
+      "id": "NSCS07_MIXTURE_OF_EXPERTS_PER_FRAME_ROUTING",
+      "name": "Per-frame routing: SegNet softmax → expert substrate selector",
+      "violates": ["SA13_residual_on_a1", "SA08_per_frame_independence", "SA17_rgb_format"],
+      "math_basis": "SegNet outputs 5-class logits. Frames dominated by 'road' class are smooth (low-frequency dominant) → wavelet substrate wins. Frames dominated by 'vehicle' class are textured → neural substrate wins. Route per-pair to expert sub-substrate; ship router (~20 bytes/pair).",
+      "predicted_delta_S": [-0.005, -0.020],
+      "cost_estimate_usd": [30, 80],
+      "wall_clock_h": [12, 36],
+      "composition_with_a1": "FRESH — A1 is one expert; D4 is another; classical wavelet third",
+      "risk": "MEDIUM",
+      "reactivation_criteria_if_smoke_regresses": "Per-frame router classification accuracy below 80% triggers review"
+    },
+    {
+      "id": "NSCS08_LONG_CONTEXT_TRAIN_SHORT_EXPORT",
+      "name": "8-32 frame curriculum compress-side; 2-frame pair export",
+      "violates": ["SA01_2_frame_pair", "SA10_tier_1_uniform"],
+      "math_basis": "2-frame pose pair is EVAL constraint, not training. Train with 8-32 frame context to learn ego-motion smoothness; freeze model; export 2-frame-pair-conditional inference. The temporal context lives in WEIGHT space, not BYTE space.",
+      "predicted_delta_S": [-0.005, -0.020],
+      "cost_estimate_usd": [15, 50],
+      "wall_clock_h": [12, 48],
+      "composition_with_a1": "STACKS — replaces A1 RENDERER weights; sidecars apply unchanged",
+      "risk": "LOW-MEDIUM",
+      "reactivation_criteria_if_smoke_regresses": "Council review of context-length convergence band"
+    },
+    {
+      "id": "NSCS09_DIRECT_SCORER_ACTIVATION_ARCHIVE",
+      "name": "Archive contains scorer ACTIVATIONS + tiny RGB residual; inflate reconstructs frames",
+      "violates": ["SA17_rgb_format", "SA06_strict_scorer_rule (partial)", "SA09_canonical_loss"],
+      "math_basis": "PoseNet+SegNet activations contain ALL the info contest cares about. Inflate ships scorer-class activations (rate-coded) + RGB-reconstruction-from-activations head (~1KB). Contest re-scores the reconstructed RGB. If reconstruction-from-activations fidelity is high enough, archive pays bytes only for the activations not the RGB.",
+      "predicted_delta_S": [-0.010, +0.10],
+      "cost_estimate_usd": [40, 100],
+      "wall_clock_h": [24, 72],
+      "composition_with_a1": "FRESH",
+      "risk": "HIGH-VARIANCE",
+      "reactivation_criteria_if_smoke_regresses": "If reconstruction RGB fails contest's batch shape assertion, defer pending Wunderkind G2 council"
+    },
+    {
+      "id": "NSCS10_PURE_DAUBECHIES_WAVELET_NO_NEURAL",
+      "name": "Pure wavelet codec (Daubechies db4) + arithmetic coder; no neural net at all",
+      "violates": ["SA09_canonical_loss", "SA14_EMA", "SA10_tier_1_uniform"],
+      "math_basis": "Per Symposium Daubechies-Mallat exchange: wavelet basis is OPTIMAL for natural-image compression at the rate-distortion frontier. JPEG2000 at 0.1bpp compares competitively to neural methods. Comma2k19 video frames are natural; multi-scale wavelet basis with arithmetic coding may match HNeRV-class at a fraction of the byte budget.",
+      "predicted_delta_S": [-0.005, +0.05],
+      "cost_estimate_usd": [3, 10],
+      "wall_clock_h": [2, 8],
+      "composition_with_a1": "FRESH",
+      "risk": "MEDIUM",
+      "reactivation_criteria_if_smoke_regresses": "Per Symposium Daubechies position; defer pending wavelet-basis-on-comma2k19 spectral analysis"
+    }
+  ],
+
+  "stack_of_stacks_composition_matrix": {
+    "description": "NxN matrix of pairwise composition predictions. Cell (i,j) = predicted compose-effect when shift i is stacked with shift j. STRONG_STACK = mutually orthogonal, additive ΔS expected; WEAK_STACK = partial overlap, expected ~50% additive; CONFLICT = same nullspace targeted, expected ~0 marginal; FRESH = both replace base, must pick one.",
+    "matrix": [
+      ["", "NSCS01", "NSCS02", "NSCS03", "NSCS04", "NSCS05", "NSCS06", "NSCS07", "NSCS08", "NSCS09", "NSCS10"],
+      ["NSCS01", "-", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "STRONG_STACK", "FRESH", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "FRESH"],
+      ["NSCS02", "STRONG_STACK", "-", "STRONG_STACK", "WEAK_STACK", "STRONG_STACK", "STRONG_STACK", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "STRONG_STACK"],
+      ["NSCS03", "STRONG_STACK", "STRONG_STACK", "-", "WEAK_STACK", "WEAK_STACK", "FRESH", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "FRESH"],
+      ["NSCS04", "WEAK_STACK", "WEAK_STACK", "WEAK_STACK", "-", "WEAK_STACK", "FRESH", "WEAK_STACK", "STRONG_STACK", "CONFLICT", "FRESH"],
+      ["NSCS05", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "WEAK_STACK", "-", "WEAK_STACK", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "WEAK_STACK"],
+      ["NSCS06", "FRESH", "STRONG_STACK", "FRESH", "FRESH", "WEAK_STACK", "-", "WEAK_STACK", "FRESH", "FRESH", "STRONG_STACK"],
+      ["NSCS07", "STRONG_STACK", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "STRONG_STACK", "WEAK_STACK", "-", "STRONG_STACK", "WEAK_STACK", "WEAK_STACK"],
+      ["NSCS08", "STRONG_STACK", "STRONG_STACK", "STRONG_STACK", "STRONG_STACK", "STRONG_STACK", "FRESH", "STRONG_STACK", "-", "WEAK_STACK", "FRESH"],
+      ["NSCS09", "WEAK_STACK", "WEAK_STACK", "WEAK_STACK", "CONFLICT", "WEAK_STACK", "FRESH", "WEAK_STACK", "WEAK_STACK", "-", "FRESH"],
+      ["NSCS10", "FRESH", "STRONG_STACK", "FRESH", "FRESH", "WEAK_STACK", "STRONG_STACK", "WEAK_STACK", "FRESH", "FRESH", "-"]
+    ],
+    "top_5_stack_combinations_by_strong_stack_count": [
+      {"combo": "NSCS02 + NSCS01 + NSCS07", "strong_stack_pairs": 3, "predicted_combined_delta_S": [-0.030, -0.080], "rationale": "Downsample (NSCS02) + nullspace split (NSCS01) + per-frame routing (NSCS07) all hit the SegNet-frame[0]-nullspace + low-res-blindspot orthogonally"},
+      {"combo": "NSCS01 + NSCS02 + NSCS08", "strong_stack_pairs": 3, "predicted_combined_delta_S": [-0.025, -0.080], "rationale": "Long-context training (NSCS08) + downsample (NSCS02) + nullspace split (NSCS01) leave score-component orthogonality intact"},
+      {"combo": "NSCS03 + NSCS02 + NSCS01", "strong_stack_pairs": 3, "predicted_combined_delta_S": [-0.040, -0.090], "rationale": "End-to-end joint codec (NSCS03) + downsample (NSCS02) + nullspace split (NSCS01) lets gradient route bytes optimally"},
+      {"combo": "NSCS05 + NSCS01 + NSCS02 + NSCS07", "strong_stack_pairs": 5, "predicted_combined_delta_S": [-0.025, -0.075], "rationale": "Rate-ladder (NSCS05) over per-pair-routed (NSCS07) over nullspace-split (NSCS01) over downsampled (NSCS02) — multi-axis composition"},
+      {"combo": "NSCS06 + NSCS10 + NSCS02", "strong_stack_pairs": 2, "predicted_combined_delta_S": [-0.005, +0.060], "rationale": "Pure-wavelet (NSCS10) + strip-everything (NSCS06) + downsample (NSCS02) is the radical-Daubechies-Carmack-Hotz axis"}
+    ]
+  },
+
+  "op_routables_for_next_dispatch_wave": [
+    {"id": "OR1_TIER0_PROBE_DISAMBIGUATOR_NSCS02", "cost_usd": 0, "wall_h": 1, "action": "Build probe: render A1 frames at (192, 256) + bilinear upsample; CPU eval on 0.mkv; verify ≤ +0.005 d_seg / +5e-5 d_pose"},
+    {"id": "OR2_TIER0_PROBE_DISAMBIGUATOR_NSCS01", "cost_usd": 0, "wall_h": 2, "action": "Build probe: A1 archive + frame[0] replaced by frame[1]-warp from PoseNet; measure d_seg + d_pose"},
+    {"id": "OR3_TIER1_NSCS02_DOWNSAMPLED_RENDERER", "cost_usd": "[5, 15]", "wall_h": "[2, 6]", "action": "Train A1 RENDERER variant at (192, 256); CPU+CUDA paired anchor; if ΔS < 0 → STACK with NSCS01 in OR4"},
+    {"id": "OR4_TIER1_NSCS01_NULLSPACE_SPLIT", "cost_usd": "[15, 35]", "wall_h": "[4, 12]", "action": "Build NULLSPACE_SPLIT_RENDERER substrate (frame[0] pose-only, frame[1] SegNet-aware); paired anchor"},
+    {"id": "OR5_TIER1_NSCS03_END_TO_END_BALLE", "cost_usd": "[40, 120]", "wall_h": "[12, 36]", "action": "Joint-train Ballé hyperprior + STE entropy + cooperative-receiver loss as ONE substrate"},
+    {"id": "OR6_TIER2_NSCS05_RATE_LADDER_BEST_BASE", "cost_usd": "[25, 60]", "wall_h": "[8, 24]", "action": "Multi-base archive: A1 + D4 + Z3 + per-pair selector"},
+    {"id": "OR7_OPERATOR_DECISION_TIER3_NSCS04_LONG_BURN", "cost_usd": "[80, 300]", "wall_h": "[48, 168]", "action": "Long-burn predictive-receiver world-model substrate Z5+ (operator $200/wave decision per CLAUDE.md Long-burn campaign default)"}
+  ],
+
+  "premise_verifications_per_catalog_229": [
+    {"id": "PV1", "premise": "A1 contest-CPU = 0.19285", "verified": true, "source": "MEMORY.md row 4 Phase A binding verdicts"},
+    {"id": "PV2", "premise": "Z3 v2 contest-CPU = 0.19870", "verified": true, "source": "MEMORY.md row 4 Phase A binding verdicts"},
+    {"id": "PV3", "premise": "Z3-G1 v1 = 0.19869 (phantom-score-class corrected per Catalog #249)", "verified": true, "source": "MEMORY.md row 4 + Catalog #249"},
+    {"id": "PV4", "premise": "D1 paired = 0.19779 (advisory CPU pattern)", "verified": true, "source": "MEMORY.md row 4 Phase A"},
+    {"id": "PV5", "premise": "Time-Traveler floor estimates: practical [0.08, 0.15] / asymptote [0.03, 0.07]", "verified": true, "source": "grand_council_tiered_parallel_plan_full_authority_20260514.md §5.11"},
+    {"id": "PV6", "premise": "32 substrate trainers exist under experiments/train_substrate_*.py", "verified": true, "source": "ls experiments/train_substrate_*.py | wc -l = 32"},
+    {"id": "PV7", "premise": "upstream/frame_utils.py defines seq_len=2 + camera_size=(1164, 874)", "verified": true, "source": "grep upstream/frame_utils.py:10-11"},
+    {"id": "PV8", "premise": "upstream/modules.py SegNet uses x[:, -1, ...] only", "verified": true, "source": "grep upstream/modules.py:108"},
+    {"id": "PV9", "premise": "upstream/public_test_video_names.txt contains only 0.mkv", "verified": true, "source": "cat upstream/public_test_video_names.txt"},
+    {"id": "PV10", "premise": "100% prevalence of EMA + archive_zip + 97% eval_roundtrip + differentiable_scorers", "verified": true, "source": "Phase 1 quantitative scan via grep"},
+    {"id": "PV11", "premise": "Sister subagents in flight: a7eae61a + ad013e3d + a87743ee + a9b69703 + aaf83696", "verified": true, "source": "operator prompt"}
+  ],
+
+  "wire_in_six_hooks_per_catalog_125": {
+    "sensitivity_map": "ACTIVE — every NSCS includes math_basis tracing to score-formula derivative",
+    "pareto_constraint": "ACTIVE — composition matrix encodes Pareto cells; STRONG/WEAK/CONFLICT cells map to feasibility region",
+    "bit_allocator_hook": "ACTIVE — NSCS05 rate-ladder + NSCS18 mixed-precision are direct bit-allocator candidates",
+    "cathedral_autopilot_dispatch_hook": "ACTIVE — op_routables_for_next_dispatch_wave is the autopilot consumer surface",
+    "continual_learning_posterior_update": "N/A_TEXT_ONLY — research-design memo; no empirical anchor produced; reactivates when first Tier 1 dispatch lands",
+    "probe_disambiguator": "ACTIVE — NSCS06 high-variance + NSCS09 high-variance + NSCS10 medium-variance are explicit probe candidates"
+  },
+
+  "sister_subagent_ownership_per_catalog_230": {
+    "in_flight_sister_subagents": ["a7eae61a (PHASE-2 GAP gates)", "ad013e3d (STC-DASHER scaffold)", "a87743ee (ATW-CODEC scaffold)", "a9b69703 (WUNDERKIND-G1-ENTROPY scaffold)", "aaf83696 (U-DIE-KL scaffold)"],
+    "this_subagent_scope": "READ-ONLY audit + WRITE-NEW to .omx/research/ + new memory file + lane registry mark via canonical helper",
+    "no_source_code_modifications": true,
+    "no_substrate_trainer_edits": true,
+    "no_canonical_helper_edits": true
+  },
+
+  "no_kills_per_claude_md_forbidden_premature_kill": {
+    "policy": "All 18 shared assumptions and 10 proposed substrate-class shifts get DEFERRED-pending-empirical-validation with reactivation criteria; ZERO kills. Per CLAUDE.md 'KILL is the LAST RESORT': KILL conversion requires research-path exhaustion + grand council CONSENSUS + reactivation criteria documented.",
+    "reactivation_criteria_per_proposal": "Each NSCS includes 'reactivation_criteria_if_smoke_regresses' field with specific empirical thresholds"
+  }
+}

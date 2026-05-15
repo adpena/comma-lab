@@ -140,6 +140,18 @@ land.
 
 ---
 
+## Canonical-vs-unique decision per layer
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Registry schema | ADOPT canonical | This layer exists to make custody, dispatch, and hook declarations machine-checkable. |
+| Substrate implementation | DO NOT FORCE CANONICAL | The registry records per-layer decisions; it must not require a substrate to inherit shared helpers when that suppresses score signal. |
+| Hook wiring | ADOPT canonical interface | Shared consumers need stable fields, but a substrate may supply unique hook implementations with rationale. |
+| Recipe generation | ADOPT fail-closed defaults | Generated dispatch recipes must preserve smoke/research-only blockers until implementation evidence exists. |
+| Review burden | UNIQUE per substrate | Every substrate memo still owns its own canonical-vs-unique table; the META layer is not a blanket approval. |
+
+---
+
 ## 3. The `@register_substrate(...)` decorator
 
 ```python
