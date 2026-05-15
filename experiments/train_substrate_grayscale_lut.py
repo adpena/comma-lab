@@ -72,29 +72,36 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from tac.substrate_registry import SubstrateContract, register_substrate
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _decode_real_pairs_canonical,
-    device_or_die as _device_or_die_canonical,
-    git_head_sha as _git_head_sha,
-    load_upstream_yuv420_to_rgb as _load_upstream_yuv420_to_rgb_canonical,
-    pin_seeds as _pin_seeds,
-    sha256_bytes as _sha256_bytes,
-    torch_version_string as _torch_version_string,
-    utc_now_iso as _utc_now_iso,
 )
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
-from tac.substrates._shared.smoke_auth_eval_gate import (
-    gate_auth_eval_call as _canon_gate_auth_eval_call,
+from tac.substrates._shared.trainer_skeleton import (
+    device_or_die as _device_or_die_canonical,
 )
-
-# Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14; CLAUDE.md
-# Catalog #172/#179). The O1 GT-scorer cache flag is declared but reserved
-# pending per-substrate score_aware_loss API extension.
-from tac.training_optimization import (
-    autocast_aware_forward as _autocast_aware_forward,
-    compile_with_fallback as _compile_with_fallback,
+from tac.substrates._shared.trainer_skeleton import (
+    git_head_sha as _git_head_sha,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    load_upstream_yuv420_to_rgb as _load_upstream_yuv420_to_rgb_canonical,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    pin_seeds as _pin_seeds,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    sha256_bytes as _sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    torch_version_string as _torch_version_string,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    utc_now_iso as _utc_now_iso,
 )
 
 # ---------------------------------------------------------------------------
@@ -1130,9 +1137,107 @@ def _full_main(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; first
+# POC migration landed by META-CONSOLIDATION-CRITICAL-PLUS-POC subagent
+# 2026-05-15). The decoration extincts the Z3 v2 silent-drift bug class for
+# this substrate by binding (a) the trainer's claimed contract, (b) the
+# recipe schema, (c) the lane registry, and (d) the cost-band envelope into
+# ONE source-of-truth that fails-loud at decoration time if the contract
+# violates canonical invariants.
+#
+# Field values are extracted from:
+#   - .omx/operator_authorize_recipes/substrate_grayscale_lut_modal_a100_dispatch.yaml
+#   - .omx/state/lane_registry.json (lane_substrate_grayscale_lut_20260512)
+#   - this trainer's TIER_1_OPERATOR_REQUIRED_FLAGS + AUTOCAST_FP16_WAIVED +
+#     TORCH_COMPILE_WAIVED markers + canonical hook usage (gate_auth_eval_call,
+#     patch_upstream_yuv6_globally, load_differentiable_scorers, EMA,
+#     pack_archive, inflate.sh emission)
+# ---------------------------------------------------------------------------
+
+GRAYSCALE_LUT_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="grayscale_lut",
+    lane_id="lane_substrate_grayscale_lut_20260512",
+    target_modes=("contest_one_video_replay", "research_substrate"),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "GLV1 monolithic single-file 0.bin: header (magic=GLV1, version=1) + "
+        "decoder weights (fp16 + brotli) + per-pair grayscale stream "
+        "(uint8 H/4 x W/4 + brotli; dominant rate term) + per-pair FiLM "
+        "embedding (fp16, 16-dim per pair)"
+    ),
+    parser_section_manifest={
+        "header": "GLV1_magic_and_version",
+        "decoder_weights": "fp16_brotli_blob",
+        "grayscale_stream": "uint8_brotli_per_pair",
+        "film_embeddings": "fp16_per_pair",
+    },
+    inflate_runtime_loc_budget=120,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av"),
+    export_format="fp16_brotli",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=1200,  # trainer is ~1144 LOC at landing
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,  # full substrate (not a sidecar)
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate_grayscale_lut_modal_a100_dispatch.yaml
+    recipe_smoke_only=False,
+    recipe_research_only=False,  # recipe declares contest-eligible (with research_substrate target also)
+    recipe_min_smoke_gpu="A100",  # Catalog #215: A100 full → A100 smoke parity
+    recipe_min_vram_gb=40,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="post_canary_dependent",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency="sane_hnerv",
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=2000,
+    cost_band_gpu_key="A100",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=5.50,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token=None,  # within-class baseline (Selfcomp PR#56 paradigm)
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "grayscale-LUT is a within-class substrate; sensitivity is the "
+            "rate-distortion frontier already captured by hook_pareto_constraint"
+        ),
+        "hook_bit_allocator_class": (
+            "grayscale stream is uint8 quantized at archive time, FiLM is fp16; "
+            "no per-tensor bit allocator (single-precision-per-substream)"
+        ),
+        "hook_probe_disambiguator": (
+            "single mechanism (analog grayscale + FiLM-conditioned colorization "
+            "decoder); no 2+ defensible interpretations"
+        ),
+    },
+)
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 
+
+@register_substrate(GRAYSCALE_LUT_SUBSTRATE_CONTRACT)
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.smoke:

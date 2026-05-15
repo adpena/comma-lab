@@ -90,6 +90,10 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
+
 # Canonical substrate-trainer helpers per CANON-DEDUP-1 (commit ac1cfc41).
 # Per CLAUDE.md "Beauty, simplicity, and developer experience" + the
 # 2026-05-13 dedup audit: substrate-agnostic byte-faithful utilities live
@@ -128,9 +132,6 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canonical_vendor_shared_inflate_runtime,
-)
-from tac.substrates._shared.smoke_auth_eval_gate import (
-    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 
 # ---------------------------------------------------------------------------
@@ -1162,6 +1163,100 @@ def _torch_version_string() -> str:
     return _canonical_torch_version_string()
 
 
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; second
+# POC migration landed by META-CONSOLIDATION-CRITICAL-PLUS-POC subagent
+# 2026-05-15). Wavelet-residual substrate per HNeRV parity discipline lesson
+# L7 (substrate_engineering exception).
+#
+# Field values are extracted from:
+#   - .omx/operator_authorize_recipes/substrate_wavelet_modal_a100_dispatch.yaml
+#   - .omx/state/lane_registry.json (lane_substrate_wavelet_20260512:
+#     research_only=true; substrate_engineering exception per HNeRV L7)
+#   - this trainer's TIER_1_OPERATOR_REQUIRED_FLAGS + canonical hook usage
+# ---------------------------------------------------------------------------
+
+from tac.substrate_registry import SubstrateContract, register_substrate
+
+WAVELET_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="wavelet",
+    lane_id="lane_substrate_wavelet_20260512",
+    target_modes=("research_substrate",),
+    deployment_target="desktop_research",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "WLV1 monolithic single-file 0.bin: header (magic=WLV1, version=1) + "
+        "synthesis weights (fp16 + brotli) + FiLM weights (fp16 + brotli) + "
+        "per-pair wavelet coefficient stream (Mallat 1989; numpy_inverse_dwt "
+        "compatible)"
+    ),
+    parser_section_manifest={
+        "header": "WLV1_magic_and_version",
+        "synthesis_sd": "fp16_brotli_blob",
+        "film_sd": "fp16_brotli_blob",
+        "wavelet_coeffs": "per_pair_quantized_stream",
+    },
+    inflate_runtime_loc_budget=140,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av", "numpy"),
+    export_format="fp16_brotli",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=1200,  # trainer is ~1173 LOC at landing
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220) - research_only opt-out
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) - research_only=true per registry notes
+    recipe_smoke_only=False,
+    recipe_research_only=True,
+    recipe_min_smoke_gpu="A100",
+    recipe_min_vram_gb=40,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="post_canary_dependent",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency="sane_hnerv",
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=2000,
+    cost_band_gpu_key="A100",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=10.0,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token=None,  # within-class baseline (Mallat 1989 wavelet)
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "wavelet substrate is research-only per HNeRV L7 substrate_engineering "
+            "exception; sensitivity-map contribution deferred until L2 INTEGRATION"
+        ),
+        "hook_bit_allocator_class": (
+            "wavelet coefficients use a single-precision quantizer; no per-tensor "
+            "bit allocator (single-band quantization)"
+        ),
+        "hook_probe_disambiguator": (
+            "single canonical Mallat 1989 wavelet basis; no 2+ defensible "
+            "interpretations to disambiguate"
+        ),
+    },
+)
+
+
+@register_substrate(WAVELET_SUBSTRATE_CONTRACT)
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.smoke:
