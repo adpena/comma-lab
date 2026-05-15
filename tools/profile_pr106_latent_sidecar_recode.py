@@ -30,6 +30,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     PR106SidecarPacket,
@@ -273,6 +274,7 @@ def load_sidecar_source(args: argparse.Namespace) -> LoadedSidecarSource:
         PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     }:
         # Re-encode to the canonical 0x01 byte source for candidate comparison;
         # the decoded arrays remain the semantic source of truth.
@@ -425,6 +427,13 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
                     row["emitted_candidate_archive_bytes"] = len(candidate_archive)
                     row["emitted_candidate_archive_sha256"] = candidate_archive_sha
                     row["emitted_candidate_manifest_path"] = str(manifest_path)
+                    source_archive_bytes = source.get("archive_bytes")
+                    if isinstance(source_archive_bytes, int):
+                        archive_delta = len(candidate_archive) - source_archive_bytes
+                        row["emitted_candidate_archive_delta_vs_source"] = archive_delta
+                        row["emitted_candidate_rate_score_delta_vs_source_archive"] = (
+                            25.0 * archive_delta / ARCHIVE_BYTES_DENOMINATOR
+                        )
                     emitted_candidate_manifests.append(
                         {
                             "candidate_name": candidate.name,
@@ -522,15 +531,18 @@ def render_markdown(report: dict[str, Any]) -> str:
         "",
         (
             "| candidate | charged bytes | delta bytes | rate delta if consumed | "
-            "runtime decoder | equivalence |"
+            "archive bytes | archive delta | archive rate delta | runtime decoder | equivalence |"
         ),
-        "|---|---:|---:|---:|---|---|",
+        "|---|---:|---:|---:|---:|---:|---:|---|---|",
     ]
     for row in report["candidate_rows"]:
         lines.append(
             f"| `{row['name']}` | {row['charged_sidecar_bytes']} | "
             f"{row['delta_bytes_vs_current_charged_sidecar']} | "
             f"{row['rate_score_delta_if_runtime_consumed']} | "
+            f"{row.get('emitted_candidate_archive_bytes')} | "
+            f"{row.get('emitted_candidate_archive_delta_vs_source')} | "
+            f"{row.get('emitted_candidate_rate_score_delta_vs_source_archive')} | "
             f"`{str(row['runtime_decoder_implemented']).lower()}` | "
             f"`{str(row['lossless_semantic_equivalence_proven']).lower()}` |"
         )

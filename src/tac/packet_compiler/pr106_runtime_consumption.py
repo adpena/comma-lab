@@ -26,6 +26,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     canonical_expected_sha256,
     emit_pr106_sidecar_packet,
@@ -166,6 +167,7 @@ def _decode_runtime_sidecar_payload(
         elif format_id in (
             PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         ):
             dim_arr, delta_q_arr = (
                 runtime_module.decode_pr101_fixed_meta_rank_elided_sidecar(sidecar_blob)

@@ -10,6 +10,8 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
   format_id=0x05 — PR101 grammar with fixed metadata and one rank byte elided
   format_id=0x06 — format_id=0x05 plus implicit PR106 byte length from the
                     fixed 526-byte sidecar tail
+  format_id=0x07 — format_id=0x06 with magic/format elided; this runtime
+                    derives the grammar from the fixed 526-byte sidecar tail
 
 All format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
 parser/decoder-consumption evidence only. Score components require exact
@@ -54,11 +56,13 @@ SIDECAR_FORMAT_BROTLI = 0x01
 SIDECAR_FORMAT_PR101_GRAMMAR = 0x02
 SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED = 0x05
 SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x06
+SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x07
 SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_BROTLI,
     SIDECAR_FORMAT_PR101_GRAMMAR,
     SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+    SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
 )
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
@@ -69,6 +73,7 @@ FIXED_META_RANK_BYTES = 1
 FIXED_META_NOOP_RANK_BYTES = 1
 FIXED_META_RANK_BYTE = b"\x00"
 FIXED_META_PAYLOAD_BYTES = 526
+HEADERLESS_INNER_FIRST_BYTE = 0xFF
 
 # PR101-grammar schema for this variant: n_pairs=600, n_dims=28,
 # deltas=(-2,-1,1,2), huff_min/max=(2,8), no-op sentinel=255.
@@ -98,8 +103,19 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
     if not bin_bytes:
         raise ValueError("empty archive")
     if bin_bytes[0] != SIDECAR_MAGIC:
-        raise ValueError(
-            f"sidecar magic mismatch: got 0x{bin_bytes[0]:02X}, expected 0x{SIDECAR_MAGIC:02X}"
+        if bin_bytes[0] != HEADERLESS_INNER_FIRST_BYTE:
+            raise ValueError(
+                "headerless implicit-len sidecar requires PR106 inner payload "
+                f"to start with 0x{HEADERLESS_INNER_FIRST_BYTE:02X}; "
+                f"got 0x{bin_bytes[0]:02X}"
+            )
+        if len(bin_bytes) < FIXED_META_PAYLOAD_BYTES + 1:
+            raise ValueError("headerless implicit-len sidecar truncated before payload")
+        return (
+            SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+            bin_bytes[:-FIXED_META_PAYLOAD_BYTES],
+            bin_bytes[-FIXED_META_PAYLOAD_BYTES:],
+            None,
         )
     format_id = bin_bytes[1]
     if format_id not in SUPPORTED_FORMATS:
@@ -293,7 +309,7 @@ def inflate(src_bin: str, dst_raw: str) -> int:
         if framing_meta is None:
             raise ValueError("framing_meta missing for format_id=0x02 payload")
         dim_arr, delta_q_arr = decode_pr101_grammar_sidecar(sidecar_blob, framing_meta)
-    else:  # fixed-meta rank-elided formats 0x05 and 0x06
+    else:  # fixed-meta rank-elided formats 0x05, 0x06, and 0x07
         dim_arr, delta_q_arr = decode_pr101_fixed_meta_rank_elided_sidecar(sidecar_blob)
 
     n_corrections = int((dim_arr != NO_OP_DIM).sum())
