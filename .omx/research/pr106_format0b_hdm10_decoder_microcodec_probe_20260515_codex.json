@@ -1,0 +1,249 @@
+{
+  "candidates": [
+    {
+      "candidate_archive_emitted": false,
+      "candidate_charged_decoder_tail_bytes": 169942,
+      "candidate_runtime_decoder_implemented": false,
+      "candidate_tail_sha256": "bb52791b058ddb9a000ebfc09ccbee5b08a0ac908c3438bae5956b9f320d09c8",
+      "charged_decoder_byte_delta_vs_current": -4,
+      "charged_decoder_bytes_drop": true,
+      "current_charged_decoder_tail_bytes": 169946,
+      "decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "dispatch_blockers": [
+        "would_move_exact_scale_mask_payload_bytes_into_runtime_source",
+        "requires_new_decoder_microcodec_runtime",
+        "no_candidate_archive_emitted",
+        "full_frame_inflate_output_parity_missing",
+        "exact_cuda_dispatch_forbidden_in_this_task"
+      ],
+      "lossless_raw_decoder_equivalence": true,
+      "name": "hdm10_fixed_scale_mask_runtime_constant",
+      "notes": [
+        "byte-positive but contest-compliance-risky",
+        "runtime_constant_scale_high_mask=81001c05"
+      ],
+      "rate_score_delta_if_components_equal": -2.6634358124886856e-06,
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reconstructed_hdm9_decoder_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+      "runtime_supported_now": false,
+      "score_claim": false,
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    {
+      "candidate_archive_emitted": false,
+      "candidate_charged_decoder_tail_bytes": 169945,
+      "candidate_runtime_decoder_implemented": false,
+      "candidate_tail_sha256": "533fa104c3bb543ddac5c240e5491596581f7cdaaec7ae7e3a45e44756a2f0da",
+      "charged_decoder_byte_delta_vs_current": -1,
+      "charged_decoder_bytes_drop": true,
+      "current_charged_decoder_tail_bytes": 169946,
+      "decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "dispatch_blockers": [
+        "requires_new_decoder_microcodec_runtime",
+        "fixed_popcount_is_payload_specific_runtime_constant",
+        "no_candidate_archive_emitted",
+        "full_frame_inflate_output_parity_missing",
+        "exact_cuda_dispatch_forbidden_in_this_task"
+      ],
+      "lossless_raw_decoder_equivalence": true,
+      "name": "hdm10_fixed_popcount_combinadic_scale_mask_rank",
+      "notes": [
+        "runtime would fix scale_high_popcount=7",
+        "combinadic_rank_width_bytes=3"
+      ],
+      "rate_score_delta_if_components_equal": -6.658589531221714e-07,
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reconstructed_hdm9_decoder_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+      "runtime_supported_now": false,
+      "score_claim": false,
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    {
+      "candidate_archive_emitted": false,
+      "candidate_charged_decoder_tail_bytes": 169946,
+      "candidate_runtime_decoder_implemented": false,
+      "candidate_tail_sha256": "dae307778b5ee6f656b118858bfa5a07f0871bf56ab72cd8002d7ee435ea19d6",
+      "charged_decoder_byte_delta_vs_current": 0,
+      "charged_decoder_bytes_drop": false,
+      "current_charged_decoder_tail_bytes": 169946,
+      "decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "dispatch_blockers": [
+        "no_charged_decoder_byte_drop",
+        "requires_new_decoder_microcodec_runtime",
+        "no_candidate_archive_emitted",
+        "full_frame_inflate_output_parity_missing"
+      ],
+      "lossless_raw_decoder_equivalence": true,
+      "name": "hdm10_generic_popcount_plus_combinadic_scale_mask_rank",
+      "notes": [
+        "stores popcount as charged byte",
+        "combinadic_rank_width_bytes=3"
+      ],
+      "rate_score_delta_if_components_equal": 0.0,
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reconstructed_hdm9_decoder_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+      "runtime_supported_now": false,
+      "score_claim": false,
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    {
+      "candidate_archive_emitted": false,
+      "candidate_charged_decoder_tail_bytes": 169946,
+      "candidate_runtime_decoder_implemented": true,
+      "candidate_tail_sha256": "668ccde915e1329994eb44096db66d0a73c486b33c70f6d91dfba1a86e01c71d",
+      "charged_decoder_byte_delta_vs_current": 0,
+      "charged_decoder_bytes_drop": false,
+      "current_charged_decoder_tail_bytes": 169946,
+      "decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "dispatch_blockers": [
+        "control_candidate_no_charged_decoder_byte_drop",
+        "no_candidate_archive_emitted"
+      ],
+      "lossless_raw_decoder_equivalence": true,
+      "name": "hdm9_current_tail_control",
+      "notes": [
+        "current active HDM9 decoder tail"
+      ],
+      "rate_score_delta_if_components_equal": 0.0,
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reconstructed_hdm9_decoder_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+      "runtime_supported_now": true,
+      "score_claim": false,
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    }
+  ],
+  "decision": {
+    "best_byte_positive_candidate": "hdm10_fixed_scale_mask_runtime_constant",
+    "best_byte_positive_delta_bytes": -4,
+    "best_without_exact_mask_constant_candidate": "hdm10_fixed_popcount_combinadic_scale_mask_rank",
+    "best_without_exact_mask_constant_delta_bytes": -1,
+    "charged_decoder_byte_positive_candidate_count": 2,
+    "contest_safe_byte_positive_candidate_count": 0,
+    "dispatch_blockers": [
+      "planning_probe_only_no_archive_emitted",
+      "no_hdm10_runtime_decoder_implemented",
+      "candidate_archive_manifest_missing",
+      "full_frame_inflate_output_parity_missing",
+      "score_claim_false_until_byte_closed_archive_runtime_exists",
+      "ready_for_exact_eval_dispatch_false_by_task_scope"
+    ],
+    "promotion_eligible": false,
+    "ready_for_archive_preflight": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_next": "Do not dispatch. The only byte-positive rows require a new runtime decoder and payload-specific constants; route through a separate PacketIR design review before any archive builder exists.",
+    "score_claim": false,
+    "verdict": "byte_positive_hdm10_planning_candidates_require_runtime_and_custody"
+  },
+  "dispatch_attempted": false,
+  "generated_at_utc": "2026-05-15T08:25:28.386506+00:00",
+  "hdm9_decoder": {
+    "charged_decoder_tail_bytes": 169946,
+    "charged_decoder_tail_sha256": "668ccde915e1329994eb44096db66d0a73c486b33c70f6d91dfba1a86e01c71d",
+    "decoder_payload_bytes": 169950,
+    "decoder_payload_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+    "q_chunk_rows": [
+      {
+        "brotli_decodable": true,
+        "charged_bytes": 130887,
+        "decoded_raw_bytes": 172368,
+        "decoded_raw_sha256": "429ea9e7e1a0a6bf7df7c4c7380b945833db1ea1062f96c1f8071ba5acda6625",
+        "index": 0,
+        "sha256": "bf8873d964fbb27f4e3fd5871a8fd3ac079ea8e161499620ca841f25fe1e96be"
+      },
+      {
+        "brotli_decodable": true,
+        "charged_bytes": 2769,
+        "decoded_raw_bytes": 3402,
+        "decoded_raw_sha256": "0932ac792e8cee24e4d2920b3b9cc2095863decac7248377c07e7f4a62fe78aa",
+        "index": 1,
+        "sha256": "b07942f7b87aae5264ef68ebac8e1128dedca95760e036768186eadadce8653e"
+      },
+      {
+        "brotli_decodable": true,
+        "charged_bytes": 4397,
+        "decoded_raw_bytes": 4801,
+        "decoded_raw_sha256": "06346e42abc30255f8f7889363b2ea40610604fcd6e98709fd92e419cf5340ae",
+        "index": 2,
+        "sha256": "af74f99bcf226d07d3dcb2166f5788d1f54ee780dd729345f19493fd883a9a13"
+      },
+      {
+        "brotli_decodable": true,
+        "charged_bytes": 31805,
+        "decoded_raw_bytes": 48387,
+        "decoded_raw_sha256": "337868748cd1e7f24d9047558ffb75c7b6b17f68c6aeba8ea568698879f68846",
+        "index": 3,
+        "sha256": "00ba9560f0351f7550c0fa0c9d2e3fc398d7067e06abcd5ea7e818a85a1ad6b0"
+      }
+    ],
+    "q_payload_bytes": 169858,
+    "q_payload_sha256": "c050f814a29dfbf614e0272ea3ff1d7c3c4fc1b9b84471315b06338fc449d105",
+    "raw_decoder_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "scale_high_mask_bytes": 4,
+    "scale_high_mask_hex": "81001c05",
+    "scale_high_mask_popcount": 7,
+    "scale_high_mask_positions": [
+      0,
+      7,
+      18,
+      19,
+      20,
+      24,
+      26
+    ],
+    "scale_low3_bytes": 84,
+    "scale_low3_sha256": "e5651e6d765ca981a1e3a7275a7d6dd08b289d272c373965b885d90a7e85bfda",
+    "scale_tail_bytes": 88
+  },
+  "member_layout": {
+    "format_id": "0x0B",
+    "member_decoder_tail_bytes": 169946,
+    "member_decoder_tail_offset": 0,
+    "member_latent_tail_bytes": 15770,
+    "member_latent_tail_offset": 169946,
+    "member_sidecar_bytes": 525,
+    "member_sidecar_offset": 185716,
+    "reconstructed_pr106_bytes": 185728,
+    "reconstructed_pr106_sha256": "0510e4ac73c04395fad9bd9c90790c6946c770f5dc0c62bdacd1fe7b48c558be",
+    "sidecar_payload_bytes": 525,
+    "sidecar_payload_sha256": "e0e992a3e88ed8ea75c733f4976b42ad52b582261a80214c862cf7baff2bbc2a"
+  },
+  "planning_only": true,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "research_only": true,
+  "schema": "pr106_format0b_hdm10_decoder_microcodec_probe_v1",
+  "score_claim": false,
+  "source": {
+    "archive_bytes": 186341,
+    "archive_path": "experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip",
+    "archive_sha256": "5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d",
+    "format_id": "0x0B",
+    "member_bytes": 186241,
+    "member_name": "x",
+    "member_sha256": "8e7c7fc6edf03de92edb4fc586c86cf748e82ee19d197196b9dc0d6342f6ab92"
+  },
+  "tool": "tools/probe_pr106_format0b_hdm10_decoder_microcodec.py",
+  "tool_run_manifest": {
+    "argv": [],
+    "canonical_payload_without_tool_manifest_sha256": "a5c9569b4d968c7d449bb6651ab7d93419711708ac5cb7c9d49b221964c44312",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 186341,
+        "path": "experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip",
+        "sha256": "5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d"
+      }
+    ],
+    "output_path": ".omx/research/pr106_format0b_hdm10_decoder_microcodec_probe_20260515_codex.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/probe_pr106_format0b_hdm10_decoder_microcodec.py"
+  }
+}
