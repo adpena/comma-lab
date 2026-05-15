@@ -986,7 +986,11 @@ def _run_terminal_dispatch_evidence_gate() -> tuple[bool, str]:
         return (
             False,
             "terminal substrate dispatch claims missing cathedral evidence rows:\n  "
-            + "\n  ".join(missing[:20]),
+            + "\n  ".join(missing[:20])
+            + "\nBackfill non-exact terminal rows with "
+            "`PYTHONPATH=src:upstream:$PWD .venv/bin/python "
+            "tools/backfill_terminal_claim_evidence.py`; exact CUDA rows must use "
+            "`tools/build_result_review_packet.py`.",
         )
     return True, "terminal substrate dispatch evidence: PASS"
 
