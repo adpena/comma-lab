@@ -10,6 +10,7 @@ import pytest
 
 from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     build_pr106_sidecar_recode_candidate_packet,
@@ -39,7 +40,10 @@ PR106_R2_PR101_ARCHIVE = (
 )
 PR106_R2_PR101_RUNTIME = REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_SHA = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_TREE_SHA = "a229d77c0c1101c8113bce0994c80bf3870285b86f6c12442870dd492de52fc7"
+PR106_R2_PR101_RUNTIME_TREE_SHA = "4e8e289226eb487150f4753389a89626ab4d3c5915044ceeb121b2da14862c17"
+PR106_HDM8_FORMAT07_ARCHIVE = (
+    REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
+)
 RUNTIME_CONSUMPTION_TOOL = REPO_ROOT / "tools" / "prove_pr106_sidecar_runtime_consumption.py"
 
 
@@ -359,6 +363,25 @@ def _headerless_implicit_len_fixed_meta_rank_elided_member_payload() -> bytes:
     return emit_pr106_sidecar_packet(headerless_packet)
 
 
+def _hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_member_payload() -> bytes:
+    hdm8_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_ARCHIVE.read_bytes())
+    hdm8_packet = parse_pr106_sidecar_packet(hdm8_member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(hdm8_packet)
+    inner_headerless = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }["pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08"]
+    inner_headerless_packet = build_pr106_sidecar_recode_candidate_packet(
+        hdm8_packet,
+        inner_headerless,
+    )
+    assert (
+        inner_headerless_packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    )
+    return emit_pr106_sidecar_packet(inner_headerless_packet)
+
+
 def test_pr106_pr101_runtime_accepts_fixed_meta_rank_elided_format() -> None:
     grammar_member = read_single_stored_member_archive(PR106_R2_PR101_ARCHIVE.read_bytes())
     runtime = load_pr106_sidecar_runtime(PR106_R2_PR101_RUNTIME)
@@ -403,6 +426,25 @@ def test_pr106_pr101_runtime_accepts_headerless_implicit_len_fixed_meta_rank_eli
     assert grammar_digest["format_id"] == "0x02"
     assert headerless_digest["combined_sha256"] == grammar_digest["combined_sha256"]
     assert headerless_digest["corrected_latents_sha256"] == grammar_digest[
+        "corrected_latents_sha256"
+    ]
+
+
+def test_pr106_pr101_runtime_accepts_hdm8_hlm2_inner_headerless_format() -> None:
+    hdm8_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_ARCHIVE.read_bytes())
+    runtime = load_pr106_sidecar_runtime(PR106_R2_PR101_RUNTIME)
+    inner_headerless_payload = _hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_member_payload()
+
+    inner_headerless_digest = runtime_sidecar_correction_digest(
+        runtime,
+        inner_headerless_payload,
+    )
+    headerless_digest = runtime_sidecar_correction_digest(runtime, hdm8_member.payload)
+
+    assert inner_headerless_digest["format_id"] == "0x08"
+    assert headerless_digest["format_id"] == "0x07"
+    assert inner_headerless_digest["combined_sha256"] == headerless_digest["combined_sha256"]
+    assert inner_headerless_digest["corrected_latents_sha256"] == headerless_digest[
         "corrected_latents_sha256"
     ]
 
@@ -505,6 +547,42 @@ def test_pr106_pr101_runtime_consumption_proves_headerless_implicit_len_sidecar(
     )
 
     assert manifest["format_id"] == "0x07"
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is True
+    assert manifest["runtime_sidecar_apply_consumption_claim"] is True
+    assert manifest["runtime_all_score_affecting_sections_consumed"] is True
+    consumed_sections = manifest["runtime_consumed_score_affecting_sections"]
+    assert consumed_sections["pr106_payload"] is True
+    assert consumed_sections["sidecar_payload"] is True
+    assert consumed_sections["framing_meta"] is None
+    assert manifest["score_claim"] is False
+
+
+def test_pr106_pr101_runtime_consumption_proves_hdm8_hlm2_inner_headerless_sidecar(
+    tmp_path: Path,
+) -> None:
+    hdm8_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_ARCHIVE.read_bytes())
+    inner_headerless_payload = _hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_member_payload()
+    archive = tmp_path / "hdm8_hlm2_inner_headerless_fixed_meta_rank_elided.zip"
+    archive.write_bytes(
+        emit_single_stored_member_archive(type(hdm8_member)(
+            name=hdm8_member.name,
+            payload=inner_headerless_payload,
+            date_time=hdm8_member.date_time,
+            external_attr=hdm8_member.external_attr,
+            create_system=hdm8_member.create_system,
+            flag_bits=hdm8_member.flag_bits,
+            comment=hdm8_member.comment,
+            extra=hdm8_member.extra,
+            archive_comment=hdm8_member.archive_comment,
+        ))
+    )
+
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=archive,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+    )
+
+    assert manifest["format_id"] == "0x08"
     assert manifest["runtime_sidecar_decode_consumption_claim"] is True
     assert manifest["runtime_sidecar_apply_consumption_claim"] is True
     assert manifest["runtime_all_score_affecting_sections_consumed"] is True

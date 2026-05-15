@@ -12,6 +12,7 @@ from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
@@ -619,6 +620,60 @@ def test_pr106_sidecar_headerless_implicit_len_fixed_meta_candidate_roundtrips()
     assert (headerless_deltas == deltas).all()
 
 
+def test_pr106_sidecar_hdm8_hlm2_inner_headerless_candidate_roundtrips() -> None:
+    source_archive = REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
+    archive_bytes = source_archive.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    candidates = lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    inner_headerless = {
+        candidate.name: candidate
+        for candidate in candidates
+    }["pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08"]
+
+    inner_headerless_packet = build_pr106_sidecar_recode_candidate_packet(
+        packet,
+        inner_headerless,
+    )
+    emitted = emit_pr106_sidecar_packet(inner_headerless_packet)
+    reparsed = parse_pr106_sidecar_packet(emitted)
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    proof = pr106_sidecar_consumed_byte_proof(reparsed)
+    manifest = pr106_sidecar_manifest(reparsed)
+
+    assert inner_headerless.sidecar_format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    )
+    assert inner_headerless.runtime_decoder_implemented is True
+    assert inner_headerless_packet.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    )
+    assert inner_headerless_packet.framing_meta is None
+    assert emitted.startswith(b"HDM8")
+    assert len(emitted) == len(member.payload) - 4
+    assert reparsed.pr106_bytes == packet.pr106_bytes
+    assert [row["name"] for row in proof["sections"]] == [
+        "pr106_hdm8_hlm2_payload_without_inner_header",
+        "sidecar_payload",
+    ]
+    assert proof["score_affecting_section_names"] == [
+        "pr106_hdm8_hlm2_payload_without_inner_header",
+        "sidecar_payload",
+    ]
+    assert proof["all_payload_bytes_accounted"] is True
+    assert manifest["derived_fixed_meta"]["hdm8_hlm2_inner_headerless_packet"] is True
+    assert manifest["derived_fixed_meta"]["hdm8_hlm2_fixed_lengths"] == {
+        "decoder_payload_bytes": 169974,
+        "latent_payload_bytes": 15776,
+        "decoder_magic": "HDM8",
+        "latent_magic": "HLM2",
+        "elided_inner_header_bytes": 4,
+    }
+    assert (reparsed_dims == dims).all()
+    assert (reparsed_deltas == deltas).all()
+
+
 def test_pr106_sidecar_fixed_meta_rank_elided_mutation_is_valid() -> None:
     archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
     member = read_single_stored_member_archive(archive_bytes)
@@ -696,6 +751,37 @@ def test_pr106_sidecar_headerless_implicit_len_fixed_meta_mutation_is_valid() ->
     assert mutation.old_delta_q != mutation.new_delta_q
     assert reparsed.pr106_bytes == headerless_packet.pr106_bytes
     assert reparsed.sidecar_payload != headerless_packet.sidecar_payload
+
+
+def test_pr106_sidecar_hdm8_hlm2_inner_headerless_mutation_is_valid() -> None:
+    source_archive = REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
+    archive_bytes = source_archive.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    inner_headerless = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }["pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08"]
+    inner_headerless_packet = build_pr106_sidecar_recode_candidate_packet(
+        packet,
+        inner_headerless,
+    )
+
+    mutated_packet, mutation = mutate_pr106_sidecar_semantic_correction(
+        inner_headerless_packet,
+        pair_index=0,
+    )
+    reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(mutated_packet))
+
+    assert mutated_packet.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    )
+    assert mutated_packet.framing_meta is None
+    assert mutation.section_name == "sidecar_payload"
+    assert mutation.old_delta_q != mutation.new_delta_q
+    assert reparsed.pr106_bytes == inner_headerless_packet.pr106_bytes
+    assert reparsed.sidecar_payload != inner_headerless_packet.sidecar_payload
 
 
 def test_pr106_sidecar_fixed_meta_rank_elided_rejects_bad_payload_length() -> None:
