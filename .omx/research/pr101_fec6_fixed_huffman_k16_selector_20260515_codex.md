@@ -132,3 +132,55 @@ older K8/FEC3 exact-CPU near-miss (`178517` bytes) but decodes to K16-selected
 frames. Exact CPU is required to decide whether the K16 component shift survives
 outside proxy space.
 
+## 2026-05-15 Exact CPU Recovery
+
+Recovered Modal CPU call `fc-01KRMNFH1BSMH37VCRCM8RVDPV`:
+
+- result review:
+  `.omx/research/pr101_fec6_fixed_huffman_k16_cpu_result_review_20260515_codex.json`
+- eval JSON:
+  `experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json`
+- eval JSON sha256:
+  `e82e1b46c61f72e17366e52e64bfa7ccdbbf8058f2363e80d4eb914a9485b6bd`
+- archive sha256:
+  `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`
+- archive bytes: `178517`
+- Modal CPU runtime tree sha256:
+  `f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166`
+- runtime content tree sha256:
+  `6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df`
+- samples: `600`
+- axis: `[contest-CPU]`
+- `avg_segnet_dist`: `0.00056029`
+- `avg_posenet_dist`: `0.00002943`
+- canonical formula score:
+  `0.1920513168811056`
+
+Formula check:
+
+```text
+100 * 0.00056029
++ sqrt(10 * 0.00002943)
++ 25 * 178517 / 37545489
+= 0.1920513168811056
+```
+
+Classification:
+
+- Legitimate score movement on the `[contest-CPU]` axis only.
+- `score_claim=false`; `promotion_eligible=false`.
+- FEC6 K16 improves the previous FEC3 K8 exact CPU near-miss
+  (`0.19209788683213053`) by `-0.0000465699510249`.
+- It still misses the operator `<0.192` threshold by
+  `0.0000513168811056`, about `77.1` archive bytes at unchanged components.
+- CUDA remains unclosed for FEC6 K16 at this point; the FEC3 K8 CUDA run scored
+  `0.22626723761043824`, so CPU-positive frame-exploit modes must not be
+  inferred to CUDA.
+
+Hardening landed after recovery:
+
+- `tools/build_pr101_frame_exploit_selector_packet.py` now emits a separate
+  `modal_cpu_uploaded_runtime_tree_sha256` and uses it for the CPU command
+  template.
+- Regression coverage in `src/tac/tests/test_frame_exploit_selector_packet.py`
+  asserts the CPU template does not reuse the CUDA Modal upload root hash.

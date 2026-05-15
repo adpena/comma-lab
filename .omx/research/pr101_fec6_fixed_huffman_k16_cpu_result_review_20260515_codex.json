@@ -1,0 +1,66 @@
+{
+  "schema": "contest_result_review_packet_v1",
+  "reviewed_at_utc": "2026-05-15T02:02:00Z",
+  "lane_id": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+  "classification": "legitimate_score_movement_on_contest_cpu_axis_only",
+  "score_axis": "contest_cpu",
+  "evidence_grade": "contest-CPU",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "archive": {
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "bytes": 178517
+  },
+  "runtime": {
+    "submission_dir": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "modal_cpu_runtime_tree_sha256": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166",
+    "runtime_content_tree_sha256": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+    "inflate_script_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+  },
+  "eval": {
+    "output_dir": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08",
+    "call_id": "fc-01KRMNFH1BSMH37VCRCM8RVDPV",
+    "contest_auth_eval_json": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+    "contest_auth_eval_sha256": "e82e1b46c61f72e17366e52e64bfa7ccdbbf8058f2363e80d4eb914a9485b6bd",
+    "result_json": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/modal_cpu_auth_eval_result.json",
+    "result_json_sha256": "34dccc75985ac255d903230099efd35c02d9edf076d4d11005171e3be4ff9fa4",
+    "provenance_json": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/provenance.json",
+    "provenance_sha256": "f6881de2fc521ba520a16680bff80ccd6296ab41aabeeba27e9969668ab2e2bc",
+    "inflated_outputs_manifest": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/inflated_outputs_manifest.json",
+    "inflated_outputs_manifest_sha256": "5cadb4566bf7f7d9bcec511c8066ade58530a1b0b8e0de55e18f10293a47b0c1",
+    "n_samples": 600,
+    "platform": "Linux x86_64 CPU via Modal",
+    "command_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu"
+  },
+  "components": {
+    "avg_segnet_dist": 0.00056029,
+    "avg_posenet_dist": 0.00002943,
+    "seg_contribution": 0.056028999999999995,
+    "pose_contribution": 0.017155174146594948,
+    "rate_contribution": 0.11886714273451067,
+    "score_recomputed_from_components": 0.1920513168811056,
+    "display_final_score": 0.19
+  },
+  "deltas": {
+    "baseline_name": "PR101 FEC3 compact_exact_k8 CPU overlay",
+    "baseline_score_contest_cpu": 0.19209788683213053,
+    "delta_score_vs_baseline": -0.000046569951024921785,
+    "remaining_score_to_sub_0_192": 0.00005131688110560084,
+    "remaining_bytes_equivalent_at_unchanged_components": 77.06869580258576
+  },
+  "adversarial_review": {
+    "formula_recomputed": true,
+    "archive_byte_term_checked": true,
+    "selector_bytes_charged_in_archive": true,
+    "same_runtime_full_frame_parity_against_fec3_k16": true,
+    "cpu_cuda_axis_separated": true,
+    "cuda_status": "not_yet_run_for_fec6_k16",
+    "known_risk": "FEC3 K8 exact CUDA scored 0.22626723761043824, so CPU-positive frame-exploit modes do not automatically transfer to CUDA."
+  },
+  "reactivation_criteria": [
+    "Run matching exact CUDA/T4 eval for FEC6 K16 before any CUDA frontier claim.",
+    "If targeting sub-0.192 CPU with unchanged components, save at least 78 additional archive bytes or find equivalent component movement.",
+    "For further film-grain/selector work, use CUDA-in-loop or paired CPU/CUDA component traces before promotion."
+  ]
+}
