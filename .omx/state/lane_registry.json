@@ -29388,14 +29388,15 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": "feedback_rudin_daubechies_autopilot_full_implementation_landed_20260515.md"
+          "evidence": "feedback_rudin_daubechies_autopilot_full_implementation_landed_20260515.md research_only=true (autopilot ranker not substrate; per Catalog #124 exemption cascade)"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true
     },
     {
       "id": "lane_rudin_daubechies_autopilot_phase_6_gosdt_dispatcher_20260515",
@@ -29487,5 +29488,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T16:50:38Z"
+  "updated_at": "2026-05-15T16:54:22Z"
 }

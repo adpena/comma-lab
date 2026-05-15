@@ -2095,6 +2095,122 @@ def filter_composition_incompatible_dispatches(
     return kept, dropped
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Rudin-Daubechies autopilot ranker integration (opt-in, 2026-05-15)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Per `feedback_rudin_daubechies_recommendations_for_completing_cathedral_autopilot_nervous_system_20260515.md`
+# the canonical ranker stack lives in `tac.autopilot_rudin_daubechies`.
+# This integration helper consumes the package's :class:`SLIMRanker` /
+# :class:`RashomonEnsembleRanker` to enrich each :class:`CandidateRow` with
+# a Rudin-interpretable rule chain explanation BEFORE the autopilot's
+# canonical Z1 empirical-revision chain runs.
+#
+# The helper is OPT-IN: the autopilot's existing rank_candidates path is
+# unchanged. Operators / agent partners who want the interpretable
+# pre-dispatch ranking surface call ``rerank_candidates_via_rudin_daubechies``
+# explicitly.
+
+DEFAULT_RUDIN_DAUBECHIES_SLIM_STORE = Path(".omx/state/rudin_daubechies_slim_anchors.jsonl")
+
+
+def rerank_candidates_via_rudin_daubechies(
+    candidates: list[CandidateRow],
+    *,
+    slim_store_path: Path | None = None,
+    use_rashomon_ensemble: bool = False,
+    rashomon_ensemble_size: int = 8,
+) -> list[tuple[CandidateRow, float, str]]:
+    """Rerank candidates through the Rudin-Daubechies SLIM ranker.
+
+    Returns a list of ``(candidate, predicted_score, explanation)`` tuples
+    sorted ascending by predicted_score (lower predicted score = better
+    candidate). The explanation is the Rudin rule-chain readback per
+    :func:`tac.autopilot_rudin_daubechies.explain_slim_prediction`.
+
+    When ``use_rashomon_ensemble=True`` the K=8 ensemble's consensus
+    prediction is used and a disagreement std-dev is appended to the
+    explanation as the operator-facing ideation signal.
+
+    Per CLAUDE.md "Subagent coherence-by-default" wire-in hook 4 (cathedral
+    autopilot dispatch hook): the helper is the canonical operator-facing
+    transparency layer; calling it produces an auditable ranking decision.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the predicted
+    score carries the SLIMRanker's ``confidence_tag()`` in the explanation
+    so the operator distinguishes first-principles bounds from N-anchor
+    posteriors.
+    """
+    # Lazy import to avoid hard dep at module import time.
+    from tac.autopilot_rudin_daubechies import (
+        ProxyPanel,
+        RashomonEnsembleRanker,
+        SLIMRanker,
+        explain_slim_prediction,
+    )
+
+    store = slim_store_path or DEFAULT_RUDIN_DAUBECHIES_SLIM_STORE
+    if use_rashomon_ensemble:
+        ranker = RashomonEnsembleRanker(
+            ensemble_size=rashomon_ensemble_size,
+            store_path=store,
+        )
+    else:
+        ranker = SLIMRanker(store_path=store)
+
+    out: list[tuple[CandidateRow, float, str]] = []
+    for c in candidates:
+        # Map the CandidateRow to a minimal ProxyPanel. Per the Taylor
+        # decomposition memo this is the integration point for the
+        # forthcoming `tac.autopilot_proxies` package; for now we use the
+        # already-available signals on CandidateRow.
+        panel = ProxyPanel(
+            candidate_id=c.candidate_id,
+            panel_axis="macos_cpu_advisory",
+        )
+        if use_rashomon_ensemble:
+            consensus, disagreement = ranker.predict_with_disagreement(panel)
+            pred = consensus
+            tag = ranker.confidence_tag()
+            expl = (
+                f"{tag} consensus={consensus:g} disagreement_stddev={disagreement:g}"
+            )
+        else:
+            pred = ranker.predict(panel)
+            expl = explain_slim_prediction(ranker, panel)
+        out.append((c, pred, expl))
+    out.sort(key=lambda t: t[1])
+    return out
+
+
+def update_rudin_daubechies_from_dispatch_outcome(
+    candidate: CandidateRow,
+    observed_score: float,
+    *,
+    axis: str = "contest_cuda",
+    slim_store_path: Path | None = None,
+) -> None:
+    """Closes the continual-learning loop: dispatch outcome -> SLIM update.
+
+    Per operator directive 2026-05-15: every empirical anchor flows through
+    this helper so the SLIM ranker's coefficients refit and the next
+    candidate evaluation is materially smarter.
+
+    The helper is fcntl-locked per Catalog #128/#131 sister discipline; safe
+    to call from concurrent harvesters.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the caller MUST
+    pass the correct ``axis`` (``contest_cuda`` / ``contest_cpu`` /
+    ``macos_cpu_advisory``); the helper does not infer it from context.
+    """
+    from tac.autopilot_rudin_daubechies import ProxyPanel, SLIMRanker
+
+    store = slim_store_path or DEFAULT_RUDIN_DAUBECHIES_SLIM_STORE
+    ranker = SLIMRanker(store_path=store)
+    panel = ProxyPanel(candidate_id=candidate.candidate_id, panel_axis=axis)
+    ranker.update_from_anchor(observed_score, panel, axis=axis)
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter

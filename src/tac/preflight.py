@@ -2234,6 +2234,31 @@ def preflight_all(
         check_no_stash_pop_conflict_markers_in_canonical_files(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #250-#255 — Rudin-Daubechies autopilot ranker
+        # self-protection per
+        # `feedback_rudin_daubechies_recommendations_for_completing_cathedral_autopilot_nervous_system_20260515.md`.
+        # All 6 gates STRICT-from-byte-one per CLAUDE.md "Bugs must be
+        # permanently fixed AND self-protected against" + "Strict-flip
+        # atomicity rule" — live count at landing: 0 (canonical helpers ship
+        # in the same commit batch; no callers exist outside the package).
+        check_slim_ranker_consumes_canonical_taylor_proxies(
+            strict=True, verbose=verbose,
+        )
+        check_falling_rule_list_canonical_use(
+            strict=True, verbose=verbose,
+        )
+        check_rashomon_ensemble_continual_update_locked(
+            strict=True, verbose=verbose,
+        )
+        check_compressive_landscape_canonical_use(
+            strict=True, verbose=verbose,
+        )
+        check_wavelet_multi_scale_ranker_contract(
+            strict=True, verbose=verbose,
+        )
+        check_gosdt_dispatcher_whiteboard_discipline(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 sister gate - train_renderer auth-eval
         # wiring must stay aligned with experiments/auth_eval_renderer.py.
         # Initial wire-in is warn-only because this is a renderer-side sister
@@ -56640,6 +56665,488 @@ def check_no_stash_pop_conflict_markers_in_canonical_files(
             f"{len(violations)} residual git conflict marker(s) (Catalog "
             "#248 — multi-sister stash-pop race self-protect):\n  "
             + "\n  ".join(v[:300] for v in violations[:10])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #250-255 — Rudin-Daubechies autopilot ranker self-protection
+# (RUDIN-DAUBECHIES-AUTOPILOT-FULL-IMPLEMENTATION-WAVELET-RASHOMON-FALLING-
+# RULE-LIST-CONTINUAL-LEARNING-20260515)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# These 6 gates self-protect the WAVELET-DECOMPOSED RASHOMON-ENSEMBLE
+# FALLING-RULE-LIST AUTOPILOT RANKER package per
+# `feedback_rudin_daubechies_recommendations_for_completing_cathedral_autopilot_nervous_system_20260515.md`.
+# They enforce the contract that the ranker stays interpretable
+# (Rudin's principle), multi-scale (Daubechies' principle), and continually
+# learning (operator directive 2026-05-15) at the SOURCE level — bypassing
+# the canonical helpers re-introduces the bug class.
+
+_CHECK_250_FORBIDDEN_FLOAT_COEF_TOKENS: tuple[str, ...] = (
+    "float_coef",
+    "non_integer_coef",
+    "lasso_coef",
+    "l1_relaxed_coef",
+    "round_to_int_post_fit",
+)
+
+_CHECK_250_CANONICAL_HELPER_TOKENS: tuple[str, ...] = (
+    "SLIMRanker",
+    "SLIMCoefficient",
+    "from tac.autopilot_rudin_daubechies",
+    "tac.autopilot_rudin_daubechies.slim_ranker",
+)
+
+_CHECK_250_SELF_EXEMPT_PATHS: tuple[str, ...] = (
+    "src/tac/autopilot_rudin_daubechies/",
+    "src/tac/preflight.py",
+    "/tests/",
+    "test_",
+)
+
+
+def check_slim_ranker_consumes_canonical_taylor_proxies(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #250 — refuses non-canonical SLIM coefficient construction.
+
+    The canonical SLIM ranker per Rudin's formulation requires INTEGER
+    coefficients in ``[-K, K]``. Bypassing the canonical
+    :class:`SLIMCoefficient` (which enforces the integer contract via
+    ``__post_init__``) by hand-rolling float coefficients re-introduces
+    the interpretability-loss bug class.
+
+    Refuses any source file under ``src/tac/``, ``tools/``, or
+    ``experiments/`` that mentions a SLIM-related token AND a forbidden
+    float-coef construction pattern UNLESS it carries a same-line
+    ``# SLIM_FLOAT_COEF_OK:<rationale>`` waiver.
+
+    STRICT-from-byte-one. Live count at landing: 0 (no callers exist
+    outside the canonical helper at landing).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    scanned = 0
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_250_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned += 1
+            for tok in _CHECK_250_FORBIDDEN_FLOAT_COEF_TOKENS:
+                if tok not in text:
+                    continue
+                # Per-line waiver scan.
+                for ln_no, line in enumerate(text.split("\n"), 1):
+                    if tok not in line:
+                        continue
+                    if "# SLIM_FLOAT_COEF_OK:" in line:
+                        rationale = line.split("# SLIM_FLOAT_COEF_OK:", 1)[1].strip()
+                        if rationale and rationale != "<rationale>":
+                            continue
+                    violations.append(
+                        f"{rel}:{ln_no}: forbidden float-coef token "
+                        f"{tok!r}; use SLIMCoefficient (integer contract) "
+                        "or add same-line waiver "
+                        "'# SLIM_FLOAT_COEF_OK:<concrete-rationale>'"
+                    )
+    if verbose:
+        print(
+            f"  [slim-ranker-canonical] scanned {scanned}; "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_slim_ranker_consumes_canonical_taylor_proxies "
+            f"found {len(violations)} violation(s). Catalog #250 enforces "
+            "Rudin's integer-coefficient SLIM contract; bypassing it "
+            "re-introduces the interpretability-loss bug class:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_251_NON_FALLING_PATTERNS: tuple[str, ...] = (
+    "ascending_rule_list",
+    "rising_rule_list",
+    "rules.append.*sort.*reverse=False",
+)
+
+_CHECK_251_SELF_EXEMPT_PATHS = _CHECK_250_SELF_EXEMPT_PATHS
+
+
+def check_falling_rule_list_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #251 — refuses non-falling rule-list patterns.
+
+    Per Rudin & Wang's "Falling Rule Lists" canonical formulation: rules
+    must be ordered with HIGHER-PRIORITY (lower predicted-band) rules
+    FIRST. Bypassing the canonical :class:`FallingRuleList` (which the
+    autopilot consumes as the operator-readable transparency layer) and
+    constructing an ascending or rising rule list re-introduces the
+    "first-rule-wins-but-it's-the-wrong-rule" bug class.
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    import re as _re
+
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_251_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for pattern in _CHECK_251_NON_FALLING_PATTERNS:
+                if _re.search(pattern, text):
+                    # Look for waiver on the matching line(s).
+                    for ln_no, line in enumerate(text.split("\n"), 1):
+                        if _re.search(pattern, line):
+                            if "# NON_FALLING_RULE_LIST_OK:" in line:
+                                rationale = line.split(
+                                    "# NON_FALLING_RULE_LIST_OK:", 1
+                                )[1].strip()
+                                if rationale and rationale != "<rationale>":
+                                    continue
+                            violations.append(
+                                f"{rel}:{ln_no}: non-falling rule list "
+                                f"pattern {pattern!r}; use canonical "
+                                "FallingRuleList or add waiver "
+                                "'# NON_FALLING_RULE_LIST_OK:<rationale>'"
+                            )
+    if verbose:
+        print(f"  [falling-rule-list-canonical] {len(violations)} violations")
+    if violations and strict:
+        raise PreflightError(
+            "check_falling_rule_list_canonical_use "
+            f"found {len(violations)} violation(s). Catalog #251 enforces "
+            "Rudin & Wang's falling-rule-list contract:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_252_FORBIDDEN_BARE_PERSIST_PATTERNS: tuple[str, ...] = (
+    "RashomonEnsembleRanker.*update_all.*store_path=None",
+)
+
+_CHECK_252_SELF_EXEMPT_PATHS = _CHECK_250_SELF_EXEMPT_PATHS
+
+
+def check_rashomon_ensemble_continual_update_locked(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #252 — Rashomon ensemble persisted updates must use the lock.
+
+    The canonical :class:`RashomonEnsembleRanker.update_all` writes to a
+    JSONL store under fcntl lock per Catalog #128/#131 sister discipline.
+    Producing a Rashomon ensemble WITHOUT the canonical store_path / lock_path
+    in production code (i.e. anywhere outside tests) means anchors are NOT
+    persisted — the continual-learning loop never closes.
+
+    Same-line waiver: ``# RASHOMON_NON_PERSISTED_OK:<rationale>``
+    (explicitly opt-in to ephemeral / smoke-only ensemble).
+
+    STRICT-from-byte-one. Live count at landing: 0 (only tests construct
+    ephemeral ensembles; production callers always pass store_path).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    import re as _re
+
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_252_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Combine multi-line patterns by collapsing whitespace inside
+            # the slice we scan.
+            normalized = _re.sub(r"\s+", " ", text)
+            for pattern in _CHECK_252_FORBIDDEN_BARE_PERSIST_PATTERNS:
+                if _re.search(pattern, normalized):
+                    # Per-line waiver scan against the original (un-normalized) text.
+                    waived = False
+                    for line in text.split("\n"):
+                        if "RashomonEnsembleRanker" in line and "store_path=None" in line:
+                            if "# RASHOMON_NON_PERSISTED_OK:" in line:
+                                rationale = line.split(
+                                    "# RASHOMON_NON_PERSISTED_OK:", 1
+                                )[1].strip()
+                                if rationale and rationale != "<rationale>":
+                                    waived = True
+                                    break
+                    if not waived:
+                        violations.append(
+                            f"{rel}: RashomonEnsembleRanker constructed with "
+                            "store_path=None outside tests; continual learning "
+                            "loop never closes. Per Catalog #252, pass "
+                            "store_path=<canonical-path> or add waiver "
+                            "'# RASHOMON_NON_PERSISTED_OK:<rationale>'"
+                        )
+    if verbose:
+        print(f"  [rashomon-ensemble-locked] {len(violations)} violations")
+    if violations and strict:
+        raise PreflightError(
+            "check_rashomon_ensemble_continual_update_locked "
+            f"found {len(violations)} violation(s). Catalog #252 enforces "
+            "fcntl-locked anchor persistence sister of Catalog #128/#131:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_253_FORBIDDEN_TOKENS: tuple[str, ...] = (
+    # Dense-anchor reconstruction (counter-design):
+    "dense_anchor_reconstruction",
+    "full_landscape_grid_search",
+)
+
+_CHECK_253_SELF_EXEMPT_PATHS = _CHECK_250_SELF_EXEMPT_PATHS
+
+
+def check_compressive_landscape_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #253 — refuses dense-anchor landscape reconstruction.
+
+    Per Daubechies' canonical compressive-sensing setup: a sparse signal
+    recovers from FEW measurements via L1 reconstruction. Bypassing the
+    canonical :class:`CompressiveSensingLandscapeRecovery` and demanding a
+    DENSE anchor grid (one anchor per landscape cell) defeats the
+    Daubechies discipline AND the cost-saving rationale.
+
+    Same-line waiver: ``# DENSE_ANCHOR_OK:<rationale>``.
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_253_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_253_FORBIDDEN_TOKENS:
+                if tok in text:
+                    for ln_no, line in enumerate(text.split("\n"), 1):
+                        if tok not in line:
+                            continue
+                        if "# DENSE_ANCHOR_OK:" in line:
+                            rationale = line.split("# DENSE_ANCHOR_OK:", 1)[1].strip()
+                            if rationale and rationale != "<rationale>":
+                                continue
+                        violations.append(
+                            f"{rel}:{ln_no}: dense-anchor reconstruction "
+                            f"token {tok!r}; use canonical "
+                            "CompressiveSensingLandscapeRecovery or add "
+                            "waiver '# DENSE_ANCHOR_OK:<rationale>'"
+                        )
+    if verbose:
+        print(
+            f"  [compressive-landscape-canonical] {len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_compressive_landscape_canonical_use "
+            f"found {len(violations)} violation(s). Catalog #253 enforces "
+            "Daubechies' compressive-sensing discipline:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_254_FORBIDDEN_TOKENS: tuple[str, ...] = (
+    "single_scale_rule_list_for_multi_scale_problem",
+    "fine_rule_overrides_coarse_gate",
+)
+
+_CHECK_254_SELF_EXEMPT_PATHS = _CHECK_250_SELF_EXEMPT_PATHS
+
+
+def check_wavelet_multi_scale_ranker_contract(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #254 — refuses single-scale ranker for multi-scale problems +
+    fine-rule overriding coarse-gate.
+
+    Per Daubechies' wavelet discipline: coarse-scale rules GATE finer-scale
+    rules. Bypassing the canonical
+    :class:`WaveletMultiScaleFallingRuleListRanker` and using a single-scale
+    rule list for a problem the operator declared multi-scale defeats the
+    hierarchical-planning discipline.
+
+    Same-line waiver: ``# SINGLE_SCALE_OK:<rationale>``.
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_254_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_254_FORBIDDEN_TOKENS:
+                if tok in text:
+                    for ln_no, line in enumerate(text.split("\n"), 1):
+                        if tok not in line:
+                            continue
+                        if "# SINGLE_SCALE_OK:" in line:
+                            rationale = line.split("# SINGLE_SCALE_OK:", 1)[1].strip()
+                            if rationale and rationale != "<rationale>":
+                                continue
+                        violations.append(
+                            f"{rel}:{ln_no}: forbidden multi-scale-bypass "
+                            f"token {tok!r}; use canonical "
+                            "WaveletMultiScaleFallingRuleListRanker or add "
+                            "waiver '# SINGLE_SCALE_OK:<rationale>'"
+                        )
+    if verbose:
+        print(
+            f"  [wavelet-multi-scale-ranker-contract] {len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_wavelet_multi_scale_ranker_contract "
+            f"found {len(violations)} violation(s). Catalog #254 enforces "
+            "Daubechies' coarse-gates-fine discipline:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_255_FORBIDDEN_TOKENS: tuple[str, ...] = (
+    "auto_promote_whiteboard_rule",
+    "promote_whiteboard_rule_without_operator_review",
+)
+
+_CHECK_255_SELF_EXEMPT_PATHS = _CHECK_250_SELF_EXEMPT_PATHS
+
+
+def check_gosdt_dispatcher_whiteboard_discipline(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #255 — refuses auto-promotion of whiteboard rules.
+
+    Per CLAUDE.md "Design decisions — non-negotiable": whiteboard rules
+    are DESIGN-time proposals; promotion to the canonical falling-rule
+    list requires an explicit operator decision via
+    :meth:`GOSDTDispatcher.promote_whiteboard_rule`. Auto-promotion based
+    on empirical hit-rate alone bypasses the council-grade decision gate
+    and re-introduces the "ranker silently changed under us" bug class.
+
+    Same-line waiver: ``# AUTO_PROMOTE_WHITEBOARD_OK:<rationale>``.
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_255_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_255_FORBIDDEN_TOKENS:
+                if tok in text:
+                    for ln_no, line in enumerate(text.split("\n"), 1):
+                        if tok not in line:
+                            continue
+                        if "# AUTO_PROMOTE_WHITEBOARD_OK:" in line:
+                            rationale = line.split(
+                                "# AUTO_PROMOTE_WHITEBOARD_OK:", 1
+                            )[1].strip()
+                            if rationale and rationale != "<rationale>":
+                                continue
+                        violations.append(
+                            f"{rel}:{ln_no}: auto-promotion of whiteboard "
+                            f"rule {tok!r} bypasses the council-grade "
+                            "decision gate; use "
+                            "GOSDTDispatcher.promote_whiteboard_rule "
+                            "(operator-gated) or add waiver "
+                            "'# AUTO_PROMOTE_WHITEBOARD_OK:<rationale>'"
+                        )
+    if verbose:
+        print(f"  [gosdt-whiteboard-discipline] {len(violations)} violations")
+    if violations and strict:
+        raise PreflightError(
+            "check_gosdt_dispatcher_whiteboard_discipline "
+            f"found {len(violations)} violation(s). Catalog #255 enforces "
+            "operator-gated promotion per CLAUDE.md 'Design decisions':\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
 
