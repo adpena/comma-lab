@@ -2032,6 +2032,39 @@ def preflight_all(
         check_substrate_l1_scaffold_no_byte_addition_without_operational_score_improvement_mechanism(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #240 - substrate contest-CUDA chain complete or
+        # research-only tagged. Sister of Catalog #220 at the recipe-vs-
+        # trainer-state surface. Anchors: Z3 v2 smoke
+        # fc-01KRNHWD6AEMWGDJXBEY8GM0P3 (substrate "built" but recipe smoke_only
+        # so v2 path never activates) + Z4 + Z5 (contest recipes existed
+        # without research_only tag while trainers' _full_main raised
+        # NotImplementedError; Modal would have crashed pre-auth-eval at
+        # $2-15 cost per smoke). Strict-from-byte-one per CLAUDE.md
+        # "Strict-flip atomicity rule" - Z4 + Z5 fix lands in same commit
+        # batch driving live count to 0 (14 DISPATCHABLE + 17
+        # RESEARCH_ONLY_TRANSPARENT, 0 violations).
+        # Memory: feedback_canonicalize_substrate_contest_cuda_chain_landed_20260515.md
+        check_substrate_contest_cuda_chain_complete_or_research_only_tagged(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-15 Catalog #243 - WIRE-AND-INTEGRATE-ALL: dispatch wrappers
+        # must invoke local pre-deploy harness before paid GPU dispatch.
+        # Anchors: Z3 v2 smoke fc-01KRNHEGC9ZE48Y68GGJHP7FXN ($2 wasted) + Z4
+        # smoke fc-01KRNHE942JSV7VRGXGR1FJGHQ ($2 wasted) both crashed on bug
+        # classes the local 30s harness would have caught (Z3 v2: archive ZIP
+        # member name `'x'` vs canonical `'0.bin'`; Z4: trainer didn't reach
+        # auth_eval stage). Operator directive: "shouldn't you run python
+        # compile locally before deploy to find those bugs". Companion runtime
+        # fix landed `_run_local_pre_deploy_check` in `tools/operator_authorize.py`
+        # between Catalog #152 required-input-files validation and
+        # `_native_dispatch_preflight`. Initial wire-in is WARN-ONLY per
+        # CLAUDE.md "Strict-flip atomicity rule" - legacy wrappers may bypass
+        # operator_authorize.py for historical reasons and should migrate
+        # incrementally. Strict-flip pending audit + backfill.
+        # Memory: feedback_wire_and_integrate_all_cross_stack_landed_20260515.md
+        check_dispatch_wrappers_invoke_local_pre_deploy_check_first(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
         # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
         # returned auth_eval rc=2 because the trainer hand-wrote
@@ -2111,6 +2144,21 @@ def preflight_all(
         # rule" — live count at landing: 0 (the canonical fix is already
         # present in the hook).
         check_review_gate_hook_uses_retry_helper(strict=True, verbose=verbose)
+        # 2026-05-15 Catalog #241 + #242 — META layer substrate contract +
+        # auto-wire (META-LAYER-SUBSTRATE-CONTRACT-AUTO-WIRE-SUBAGENT). Per
+        # `.omx/research/substrate_meta_layer_design_20260515.md` and
+        # `feedback_meta_layer_substrate_contract_landed_20260515.md`.
+        # Catalog #241 ships WARN-ONLY initially: 31 legacy substrate trainers
+        # exist at landing and migrate sequentially in a follow-up wave per
+        # CLAUDE.md "Forbidden premature KILL" + "Strict-flip atomicity rule".
+        # Catalog #242 ships STRICT-from-byte-one: only the example_template
+        # uses the decorator at landing and its contract is clean.
+        check_substrate_uses_register_decorator_or_explicitly_legacy_tagged(
+            strict=False, verbose=verbose,
+        )
+        check_register_substrate_contract_fields_canonical(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -53213,6 +53261,165 @@ def check_classify_dispatch_no_raw_ge_boundaries(
     return violations
 
 
+# ---------------------------------------------------------------------------
+# Catalog #243 - WIRE-AND-INTEGRATE-ALL: dispatch wrappers must invoke local
+# pre-deploy harness (tools/local_pre_deploy_check.py) before paid GPU dispatch
+# so the 30s py-compile + archive-grammar + auth-eval-reachability + canonical
+# inflate-device + deterministic-zip checks fire BEFORE the meter starts.
+#
+# Bug class anchor: 2026-05-15 Z3 v2 smoke `fc-01KRNHEGC9ZE48Y68GGJHP7FXN`
+# ($2 wasted) + Z4 smoke `fc-01KRNHE942JSV7VRGXGR1FJGHQ` ($2 wasted) both
+# crashed on bug classes the harness would have caught locally in 30s.
+# Operator directive: *"shouldn't you run python compile locally before deploy
+# to find those bugs"*. Companion runtime fix landed `_run_local_pre_deploy_check`
+# in `tools/operator_authorize.py` between Catalog #152 required-input-files
+# validation and `_native_dispatch_preflight`.
+#
+# Sister of Catalog #152 (`check_operator_wrapper_validates_required_input_files_pre_dispatch`
+# - same insertion point, sister bug class) + Catalog #167 (smoke-before-full
+# pattern - same dispatch-wrapper canonical-routing META).
+# ---------------------------------------------------------------------------
+
+_CHECK_243_LOCAL_PRE_DEPLOY_TOKEN = "tools/local_pre_deploy_check.py"
+_CHECK_243_OPERATOR_AUTHORIZE_TOKEN = "tools/operator_authorize.py"
+_CHECK_243_CANONICAL_HELPER_TOKEN = "_run_local_pre_deploy_check"
+_CHECK_243_DISPATCH_TOKENS = _CHECK_152_DISPATCH_TOKENS  # reuse Catalog #152 set
+_CHECK_243_EXCLUDED_PATH_MARKERS = _CHECK_152_EXCLUDED_PATH_MARKERS
+_CHECK_243_WAIVER_RE = re.compile(
+    r"#\s*LOCAL_PRE_DEPLOY_CHECK_BYPASS_OK:\s*\S+"
+)
+_CHECK_243_PLACEHOLDER_TOKEN = "<reason>"
+
+
+def check_dispatch_wrappers_invoke_local_pre_deploy_check_first(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #243 - WIRE-AND-INTEGRATE-ALL self-protection 2026-05-15.
+
+    Refuses any dispatch wrapper (a `.py` or `.sh` file under `tools/`,
+    `scripts/`, `experiments/`, or `src/tac/` that contains a
+    `_CHECK_152_DISPATCH_TOKENS` token) that BYPASSES the canonical
+    `tools/operator_authorize.py` (which now wires
+    `_run_local_pre_deploy_check` per WIRE-AND-INTEGRATE-ALL) AND does
+    NOT invoke `tools/local_pre_deploy_check.py` directly.
+
+    Acceptance:
+      (a) The wrapper invokes `tools/operator_authorize.py` (which threads
+          the local pre-deploy harness automatically).
+      (b) The wrapper invokes `tools/local_pre_deploy_check.py` directly
+          (e.g. as a manual --strict gate before its dispatch).
+      (c) Same-line `# LOCAL_PRE_DEPLOY_CHECK_BYPASS_OK:<rationale>` waiver
+          on the dispatch-token line (placeholder `<reason>` literal rejected
+          so this docstring's example cannot self-waive).
+
+    Sister of Catalog #152 (required-input-files validation - same canonical
+    insertion point, complementary bug class) + Catalog #167 (smoke-before-full
+    pattern - same dispatch-wrapper canonical-routing META).
+
+    Initial wire-in: warn-only per CLAUDE.md "Strict-flip atomicity rule" -
+    legacy wrappers may bypass operator_authorize.py for historical reasons
+    and should migrate incrementally. Strict-flip pending audit + backfill.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    scan_dirs = ["tools", "scripts", "experiments", "src/tac"]
+    self_exempt_paths = {
+        # The canonical helper itself
+        root / "tools" / "local_pre_deploy_check.py",
+        # The wrapper that invokes the helper
+        root / "tools" / "operator_authorize.py",
+        # The catalog that defines the constants
+        root / "src" / "tac" / "preflight.py",
+    }
+
+    for scan_dir in scan_dirs:
+        scan_root = root / scan_dir
+        if not scan_root.is_dir():
+            continue
+        for ext in ("*.py", "*.sh"):
+            for path in scan_root.rglob(ext):
+                # Skip self-exempt
+                if path in self_exempt_paths:
+                    continue
+                # Skip excluded paths (vendored intake, results, oss_export)
+                rel = str(path)
+                if any(marker in rel for marker in _CHECK_243_EXCLUDED_PATH_MARKERS):
+                    continue
+                # Skip test files
+                if "/tests/" in rel or path.name.startswith("test_") or path.name.endswith("_test.py"):
+                    continue
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    continue
+                # Quick filter: must contain at least one dispatch token
+                if not any(tok in text for tok in _CHECK_243_DISPATCH_TOKENS):
+                    continue
+                # Acceptance (a): routes through operator_authorize.py
+                if _CHECK_243_OPERATOR_AUTHORIZE_TOKEN in text:
+                    continue
+                # Acceptance (b): invokes local_pre_deploy_check.py directly
+                if _CHECK_243_LOCAL_PRE_DEPLOY_TOKEN in text:
+                    continue
+                # Acceptance (c): same-line waiver on each dispatch-token line
+                lines = text.splitlines()
+                all_lines_waived = True
+                violating_line_nos: list[int] = []
+                for line_no, line in enumerate(lines, start=1):
+                    if not any(tok in line for tok in _CHECK_243_DISPATCH_TOKENS):
+                        continue
+                    waiver_match = _CHECK_243_WAIVER_RE.search(line)
+                    if waiver_match:
+                        # Reject placeholder rationale to prevent self-waiver
+                        marker_text = waiver_match.group(0)
+                        if _CHECK_243_PLACEHOLDER_TOKEN in marker_text:
+                            all_lines_waived = False
+                            violating_line_nos.append(line_no)
+                            continue
+                        # Real rationale - this line is waived
+                        continue
+                    all_lines_waived = False
+                    violating_line_nos.append(line_no)
+                if all_lines_waived:
+                    continue
+                violations.append(
+                    f"[Check 243] {rel}:{','.join(str(n) for n in violating_line_nos[:3])} "
+                    f"contains dispatch token(s) but does NOT invoke "
+                    f"{_CHECK_243_OPERATOR_AUTHORIZE_TOKEN} OR "
+                    f"{_CHECK_243_LOCAL_PRE_DEPLOY_TOKEN} (per WIRE-AND-INTEGRATE-ALL "
+                    f"2026-05-15: every dispatch wrapper must run the 30s local "
+                    f"pre-deploy harness BEFORE GPU spending). Fix: route through "
+                    f"tools/operator_authorize.py (canonical) OR call "
+                    f"tools/local_pre_deploy_check.py --trainer <path> --strict "
+                    f"directly. Same-line waiver: "
+                    f"# LOCAL_PRE_DEPLOY_CHECK_BYPASS_OK:<rationale>"
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_dispatch_wrappers_invoke_local_pre_deploy_check_first] "
+                f"{len(violations)} violation(s) (warn-only initially per "
+                "Strict-flip atomicity rule)"
+            )
+        else:
+            print(
+                "  [check_dispatch_wrappers_invoke_local_pre_deploy_check_first] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            f"check_dispatch_wrappers_invoke_local_pre_deploy_check_first: "
+            f"{len(violations)} dispatch wrapper(s) bypass the local pre-deploy "
+            f"harness per Catalog #243 WIRE-AND-INTEGRATE-ALL self-protection:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
 def check_substrate_l1_scaffold_no_byte_addition_without_operational_score_improvement_mechanism(
     *,
     repo_root: Path | None = None,
@@ -53364,6 +53571,304 @@ def check_substrate_l1_scaffold_no_byte_addition_without_operational_score_impro
             f"lane(s) with >{_CHECK_220_BYTE_ADDITION_THRESHOLD_KB:.0f} KB byte "
             f"addition but no operational score-improvement mechanism declared "
             f"(Catalog #220 — D1 R3 self-protect):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #240 — check_substrate_contest_cuda_chain_complete_or_research_only_tagged
+#
+# CANONICALIZE-SUBSTRATE-CONTEST-CHAIN self-protection (2026-05-15).
+# Bug class: an operator-authorize recipe at
+# ``.omx/operator_authorize_recipes/substrate_<id>_modal_<gpu>_dispatch.yaml``
+# implicitly claims that its substrate is a contest-CUDA dispatch (no
+# ``smoke_only: true`` / ``research_only: true`` / ``dispatch_enabled: false``
+# flag), but the matching ``experiments/train_substrate_<id>.py`` trainer's
+# ``_full_main`` raises ``NotImplementedError`` (Phase 2 council-gated). Modal
+# dispatch reaches the trainer and crashes pre-auth-eval, burning $2-15 per
+# failed smoke. Empirical anchors:
+#
+# - Z3 v2 smoke ``fc-01KRNHWD6AEMWGDJXBEY8GM0P3`` (2026-05-15): smoke green BUT
+#   manifest shows ``"layout": "append_only_z3hp1_diagnostic"`` because the
+#   recipe is ``smoke_only: true / research_only: true`` so the v2
+#   latent-replacement code path NEVER ACTIVATES even though env→CLI wiring
+#   is intact. The substrate looks "built" but contributes nothing to
+#   contest-CUDA scoring on dispatch.
+# - Z4 + Z5 (pre-fix 2026-05-15): contest recipes existed without research_only
+#   tag, but trainers' ``_full_main`` raised NotImplementedError. Modal dispatch
+#   would have crashed pre-auth-eval at higher cost than smoke.
+#
+# Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lesson 2
+# (export-first design) + "Substrate scaffolds MUST be COMPLETE or RESEARCH-
+# ONLY" non-negotiable + Catalog #220 (sister gate at the L2-promotion-of-
+# substrate-with-byte-addition surface): every substrate recipe MUST be EITHER
+# (a) a fully-complete contest-CUDA dispatch (trainer ``_full_main``
+# implemented + auth_eval wired + recipe has cost_band + recipe declares
+# contest target_modes), OR (b) explicitly tagged research-only (``smoke_only:
+# true`` OR ``research_only: true`` OR ``dispatch_enabled: false`` at recipe
+# top-level).
+#
+# The gate scans every ``substrate_*.yaml`` recipe under
+# ``.omx/operator_authorize_recipes/`` and checks that EITHER:
+#   1. The matching trainer's ``_full_main`` is implemented (no
+#      ``raise NotImplementedError`` in the function body); OR
+#   2. The recipe carries one of the research-only flags listed above; OR
+#   3. The recipe has a same-line waiver
+#      ``# CONTEST_CUDA_CHAIN_PARTIAL_OK:<rationale>`` on the trainer's recipe
+#      file (placeholder ``<reason>`` literal rejected).
+#
+# Sister gates: Catalog #220 (L1+ substrate-scaffold-with-bytes-but-no-
+# operational-mechanism), Catalog #226 (trainer auth_eval canonical helper),
+# Catalog #167 (smoke-before-full pattern), Catalog #176 (operator-authorize
+# canonical), Catalog #205 / #218 (canonical-path-enforcement). Together they
+# extinct the "built-but-not-firing" bug class structurally.
+#
+# Strict-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" — Z4 + Z5
+# fix lands in the same commit batch driving live count to 0 (14
+# DISPATCHABLE_CONTEST_CUDA + 17 RESEARCH_ONLY_TRANSPARENT, 0 violations).
+#
+# Lane: lane_canonicalize_substrate_contest_chain_20260515.
+# Memory: feedback_canonicalize_substrate_contest_cuda_chain_landed_20260515.md.
+# Audit: .omx/research/substrate_contest_cuda_chain_audit_20260515.md.
+# Canonical pattern: .omx/research/canonical_substrate_contest_cuda_chain_pattern_20260515.md.
+# Audit JSON (machine-readable): .omx/state/substrate_contest_cuda_chain_audit.json.
+# ----------------------------------------------------------------------------
+
+# Recipe-level top-level YAML flags accepted as "transparently non-dispatchable".
+_CHECK_240_RESEARCH_ONLY_RECIPE_FLAG_PATTERNS: tuple[str, ...] = (
+    r"^\s*smoke_only:\s*true\b",
+    r"^\s*research_only:\s*true\b",
+    r"^\s*dispatch_enabled:\s*false\b",
+)
+
+# Same-line waiver pattern for the rare deliberate operator-approved partial
+# state. The waiver lives in the recipe YAML itself as a YAML comment.
+_CHECK_240_WAIVER_PATTERN: str = (
+    r"#\s*CONTEST_CUDA_CHAIN_PARTIAL_OK\s*:\s*([^\s].{1,200}?)(?:\s*#|$)"
+)
+_CHECK_240_WAIVER_PLACEHOLDER_REJECTS: tuple[str, ...] = (
+    "<reason>",
+    "<rationale>",
+)
+
+# Recipe filename suffix patterns — each provider/GPU combo. We strip these
+# to derive the substrate id from the recipe basename.
+_CHECK_240_RECIPE_SUFFIX_PATTERNS: tuple[str, ...] = (
+    r"_modal_(t4|a100|l40s|l4|h100|a10g)_(?:smoke_)?dispatch$",
+    r"_local_apple_silicon_dispatch$",
+    r"_vastai_(?:t4|a100|4090|l40s)_dispatch$",
+    r"_lightning_(?:t4|a100)_dispatch$",
+)
+
+
+def _check_240_recipe_id_from_path(recipe_path: Path) -> str:
+    """Extract substrate id from a recipe path.
+
+    e.g., ``substrate_z4_cooperative_receiver_loss_modal_t4_dispatch.yaml`` →
+          ``z4_cooperative_receiver_loss``.
+    """
+    basename = recipe_path.stem  # drop .yaml
+    if basename.startswith("substrate_"):
+        basename = basename[len("substrate_") :]
+    for pat in _CHECK_240_RECIPE_SUFFIX_PATTERNS:
+        basename = re.sub(pat, "", basename)
+    return basename
+
+
+def _check_240_recipe_is_research_only(text: str) -> bool:
+    """Return True if recipe top-level YAML declares research-only."""
+    for pat in _CHECK_240_RESEARCH_ONLY_RECIPE_FLAG_PATTERNS:
+        if re.search(pat, text, re.MULTILINE):
+            return True
+    return False
+
+
+def _check_240_recipe_has_waiver(text: str) -> tuple[bool, str]:
+    """Return (waived, rationale)."""
+    # Walk text line-by-line so $ in the regex anchors to end-of-line under
+    # MULTILINE; a single re.search(text, re.MULTILINE) is brittle when the
+    # waiver appears mid-document.
+    for line in text.splitlines():
+        match = re.search(_CHECK_240_WAIVER_PATTERN, line)
+        if match is None:
+            continue
+        rationale = match.group(1).strip()
+        if rationale in _CHECK_240_WAIVER_PLACEHOLDER_REJECTS:
+            continue
+        return True, rationale
+    return False, ""
+
+
+def _check_240_trainer_full_main_raises_notimplementederror(
+    trainer_path: Path,
+) -> tuple[bool, str]:
+    """Return (raises_not_impl, message).
+
+    Inspects the trainer's ``_full_main`` body (first ~3000 chars after the
+    def line). If ``_full_main`` does not exist OR does not raise
+    NotImplementedError, returns (False, msg).
+    """
+    if not trainer_path.is_file():
+        return False, f"trainer not found: {trainer_path.name}"
+    try:
+        text = trainer_path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False, f"trainer unreadable: {trainer_path.name}"
+
+    full_main_def = re.search(r"^def\s+_full_main\s*\([^)]*\)[^:]*:", text, re.M)
+    if full_main_def is None:
+        return False, "no _full_main"
+    body_start = full_main_def.end()
+    body = text[body_start : body_start + 3000]
+    if re.search(r"\braise\s+NotImplementedError\b", body):
+        return True, "_full_main raises NotImplementedError (Phase 2 council-gated)"
+    return False, "_full_main implemented"
+
+
+def check_substrate_contest_cuda_chain_complete_or_research_only_tagged(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #240 — refuse substrate recipes that implicitly claim contest-
+    CUDA dispatch capability while the trainer's ``_full_main`` is a
+    ``NotImplementedError`` stub.
+
+    Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+    non-negotiable + "HNeRV / leaderboard-implementation parity discipline"
+    lesson 2 + Catalog #220 (sister at L1+ substrate-byte-addition surface):
+    every substrate recipe MUST be EITHER (a) a complete contest-CUDA
+    dispatch (trainer ``_full_main`` implemented), OR (b) tagged research-only
+    via top-level YAML flag (``smoke_only: true`` / ``research_only: true`` /
+    ``dispatch_enabled: false``), OR (c) carry a same-line
+    ``# CONTEST_CUDA_CHAIN_PARTIAL_OK:<rationale>`` waiver.
+
+    Anchors:
+    - Z3 v2 smoke ``fc-01KRNHWD6AEMWGDJXBEY8GM0P3`` (2026-05-15): substrate
+      looks "built" but recipe is ``smoke_only: true`` so v2 path never
+      activates on Modal.
+    - Z4 + Z5 (pre-fix 2026-05-15): contest recipes existed without
+      research-only tag, but trainers' ``_full_main`` raised
+      NotImplementedError → Modal would have crashed pre-auth-eval at
+      $2-15 cost per smoke.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-recipe diagnostic.
+
+    Returns:
+        List of violation messages (one per refused recipe).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    recipes_dir = root / ".omx" / "operator_authorize_recipes"
+    trainers_dir = root / "experiments"
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(f"  [catalog-240] OK (no recipes dir at {recipes_dir})")
+        return violations
+
+    recipes_scanned = 0
+    recipes_research_only = 0
+    recipes_complete = 0
+    recipes_waived = 0
+    recipes_orphan = 0
+
+    for recipe_path in sorted(recipes_dir.glob("substrate_*.yaml")):
+        recipes_scanned += 1
+        substrate_id = _check_240_recipe_id_from_path(recipe_path)
+        try:
+            text = recipe_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError as exc:
+            if verbose:
+                print(f"  [catalog-240] WARN unreadable {recipe_path.name}: {exc}")
+            continue
+
+        # Acceptance path 1: recipe is research-only at top level.
+        if _check_240_recipe_is_research_only(text):
+            recipes_research_only += 1
+            if verbose:
+                print(
+                    f"  [catalog-240] OK {recipe_path.name} "
+                    "(recipe research-only/smoke-only/dispatch-disabled)"
+                )
+            continue
+
+        # Acceptance path 3: same-line waiver (rare).
+        waived, rationale = _check_240_recipe_has_waiver(text)
+        if waived:
+            recipes_waived += 1
+            if verbose:
+                print(
+                    f"  [catalog-240] WAIVED {recipe_path.name} "
+                    f"reason={rationale!r}"
+                )
+            continue
+
+        # Now check trainer state. If trainer is missing, the recipe is an
+        # orphan; orphan recipes are out of scope for THIS gate (they cannot
+        # fire any dispatch because operator_authorize.py refuses missing
+        # trainers earlier). They are surfaced separately by the audit.
+        trainer_path = trainers_dir / f"train_substrate_{substrate_id}.py"
+        if not trainer_path.is_file():
+            recipes_orphan += 1
+            if verbose:
+                print(
+                    f"  [catalog-240] OK {recipe_path.name} "
+                    f"(orphan recipe — no train_substrate_{substrate_id}.py)"
+                )
+            continue
+
+        # Acceptance path 2: trainer's _full_main is implemented.
+        raises_not_impl, msg = (
+            _check_240_trainer_full_main_raises_notimplementederror(trainer_path)
+        )
+        if not raises_not_impl:
+            recipes_complete += 1
+            if verbose:
+                print(
+                    f"  [catalog-240] OK {recipe_path.name} "
+                    f"(trainer {msg})"
+                )
+            continue
+
+        # VIOLATION: contest recipe + NotImplementedError trainer.
+        violations.append(
+            f"recipe {recipe_path.name!r} implicitly claims contest-CUDA "
+            f"dispatch (no smoke_only: true / research_only: true / "
+            f"dispatch_enabled: false flag), but the matching trainer "
+            f"experiments/train_substrate_{substrate_id}.py has "
+            f"`_full_main` raising NotImplementedError (Phase 2 council-"
+            f"gated). Modal dispatch would crash pre-auth-eval, burning "
+            f"$2-15 per smoke. Required: add `research_only: true` AND "
+            f"`dispatch_blockers: [phase_2_council_approval_required_to_lift_"
+            f"full_main_NotImplementedError]` to the recipe top level, OR "
+            f"implement `_full_main` in the trainer, OR carry a same-line "
+            f"`# CONTEST_CUDA_CHAIN_PARTIAL_OK:<rationale>` waiver. Per "
+            f"CLAUDE.md \"Substrate scaffolds MUST be COMPLETE or RESEARCH-"
+            f"ONLY\" non-negotiable + Catalog #240 (sister of Catalog #220)."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-240] scanned={recipes_scanned} "
+            f"complete={recipes_complete} research_only={recipes_research_only} "
+            f"waived={recipes_waived} orphan={recipes_orphan} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_contest_cuda_chain_complete_or_research_only_"
+            f"tagged found {len(violations)} substrate recipe(s) implicitly "
+            f"claiming contest-CUDA dispatch with NotImplementedError trainer "
+            f"`_full_main` (Catalog #240 — Z3 v2 / Z4 / Z5 self-protect):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
@@ -54491,6 +54996,143 @@ def check_review_gate_hook_uses_retry_helper(
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #241 + #242 — META layer substrate contract gates
+# (META-LAYER-SUBSTRATE-CONTRACT-AUTO-WIRE-SUBAGENT, 2026-05-15).
+# Memory: feedback_meta_layer_substrate_contract_landed_20260515.md
+# Design: .omx/research/substrate_meta_layer_design_20260515.md
+# ---------------------------------------------------------------------------
+
+# Tokens accepted to mark a substrate trainer as legacy-pre-META-layer.
+# Same-line on the file's first ~20 lines (filename comment block / module
+# docstring). Placeholder ``<rationale>`` literal is rejected so the gate
+# cannot self-waive.
+_CHECK_241_LEGACY_TOKEN = "LEGACY_SUBSTRATE_PRE_META_LAYER:"
+_CHECK_241_DECORATOR_TOKEN = "@register_substrate"
+_CHECK_241_HEADER_LOOKBACK_LINES = 25
+
+
+def check_substrate_uses_register_decorator_or_explicitly_legacy_tagged(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #241 — refuse ``experiments/train_substrate_*.py`` that neither
+    use ``@register_substrate(...)`` NOR carry a same-line waiver
+    ``# LEGACY_SUBSTRATE_PRE_META_LAYER:<rationale>`` in the file header.
+
+    Initial wire-in is WARN-ONLY (31 legacy substrates exist at landing;
+    migration is a follow-up wave per `.omx/research/substrate_meta_layer_design_20260515.md`
+    § 6). Strict-flip planned alongside the migration's final commit per
+    CLAUDE.md "Strict-flip atomicity rule".
+
+    Per CLAUDE.md "Forbidden premature KILL": legacy substrates that don't yet
+    use the decorator are TAGGED-PENDING-MIGRATION via the waiver, not killed.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    base = root / "experiments"
+    if not base.is_dir():
+        if verbose:
+            print("  [substrate-decorator-or-legacy] OK (no experiments dir; 0 scanned)")
+        return []
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(base.glob("train_substrate_*.py")):
+        scanned += 1
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{path}: read error {exc!s}")
+            continue
+        if _CHECK_241_DECORATOR_TOKEN in text:
+            continue
+        # Header-only waiver scan (first ~25 lines).
+        header = "\n".join(text.split("\n")[: _CHECK_241_HEADER_LOOKBACK_LINES])
+        # Reject placeholder ``<rationale>`` literal.
+        if _CHECK_241_LEGACY_TOKEN in header:
+            # Find the token and check its rationale isn't the placeholder.
+            idx = header.find(_CHECK_241_LEGACY_TOKEN)
+            rationale = header[idx + len(_CHECK_241_LEGACY_TOKEN) :].split("\n", 1)[0].strip()
+            if rationale and rationale != "<rationale>":
+                continue
+            violations.append(
+                f"{path}: carries '{_CHECK_241_LEGACY_TOKEN}' but rationale is empty or "
+                "placeholder '<rationale>'. Provide a concrete reason (e.g. "
+                "'pre-2026-05-15 migration backlog item #N')."
+            )
+            continue
+        violations.append(
+            f"{path}: substrate trainer does not use @register_substrate(...) "
+            "AND does not carry a same-line "
+            f"'# {_CHECK_241_LEGACY_TOKEN}<rationale>' waiver in its first "
+            f"{_CHECK_241_HEADER_LOOKBACK_LINES} lines. Per Catalog #241, every "
+            "substrate trainer must declare its META contract via "
+            "``@register_substrate(SubstrateContract(...))`` or be explicitly "
+            "tagged as legacy-pending-migration."
+        )
+    if verbose:
+        print(
+            f"  [substrate-decorator-or-legacy] scanned {scanned}; "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_uses_register_decorator_or_explicitly_legacy_tagged "
+            f"found {len(violations)} violation(s). Catalog #241 enforces META "
+            "layer adoption per `.omx/research/substrate_meta_layer_design_20260515.md`:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+def check_register_substrate_contract_fields_canonical(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #242 — every file that uses ``@register_substrate(...)`` MUST
+    register a contract that validates against ``SubstrateContract``.
+
+    The check imports ``tac.substrate_registry`` and inspects the in-memory
+    ``_REGISTERED_SUBSTRATES`` dict. Contracts that fail validation surface
+    here as preflight errors (in addition to the import-time error). This is
+    defense-in-depth: the import-time error is the primary surface; this gate
+    catches a registered-but-corrupted contract that may have escaped initial
+    validation through an out-of-band mutation.
+
+    STRICT-from-byte-one. Live count at landing: 0 (only the
+    ``example_template`` uses the decorator, and its contract is clean).
+    """
+    # Lazy import to avoid circular dep at preflight.py import time.
+    try:
+        from tac.substrate_registry import (
+            example_template as _example_template,  # noqa: F401  (force registration)
+            validate_all_registered,
+        )
+    except ImportError as exc:
+        if verbose:
+            print(f"  [substrate-contract-fields] skipped (import failed: {exc})")
+        return []
+    errors = validate_all_registered()
+    if verbose:
+        print(
+            "  [substrate-contract-fields] validated "
+            f"{len(errors)} error(s) across registered substrates"
+        )
+    if errors and strict:
+        raise PreflightError(
+            "check_register_substrate_contract_fields_canonical "
+            f"found {len(errors)} contract validation error(s). Catalog #242 "
+            "enforces SubstrateContract field-level invariants:\n  "
+            + "\n  ".join(e[:300] for e in errors[:5])
+        )
+    return errors
 
 
 if __name__ == "__main__":

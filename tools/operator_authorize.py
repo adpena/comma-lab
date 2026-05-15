@@ -391,6 +391,81 @@ def _validate_required_input_files(
         )
 
 
+def _run_local_pre_deploy_check(
+    trainer_path: str,
+    recipe_name: str,
+) -> None:
+    """Invoke ``tools/local_pre_deploy_check.py --strict`` per WIRE-AND-INTEGRATE-ALL.
+
+    Local 30-second pre-flight harness that catches bug classes BEFORE paid
+    Modal/Vast.ai dispatch (operator directive 2026-05-15: *"shouldn't you run
+    python compile locally before deploy to find those bugs"*). Empirical
+    anchors: Z3 v2 smoke ``fc-01KRNHEGC9ZE48Y68GGJHP7FXN`` ($2 wasted) + Z4
+    smoke ``fc-01KRNHE942JSV7VRGXGR1FJGHQ`` ($2 wasted) both crashed on bugs
+    that the harness would have caught.
+
+    Checks (per ``tools/local_pre_deploy_check.py``):
+      1. py-compile (syntax errors)
+      2. _full_main implemented (no NotImplementedError stub)
+      3. archive grammar (canonical ``0.bin`` member name)
+      4. auth-eval reachability (gate_auth_eval_call OR auth_eval_renderer)
+      5. canonical inflate device (Catalog #205)
+      6. deterministic ZIP (Catalog #19)
+
+    Bypass via ``OPERATOR_AUTHORIZE_SKIP_LOCAL_PRE_DEPLOY_CHECK=1`` (rare;
+    e.g. during gate development when the harness itself is being modified).
+    The bypass requires a paired ``OPERATOR_AUTHORIZE_LOCAL_PRE_DEPLOY_BYPASS_REASON=<text>``
+    so the audit trail captures rationale (per CLAUDE.md "Comment-only
+    contracts are FORBIDDEN" pattern + Catalog #199 paired-env discipline).
+    """
+    if os.environ.get("OPERATOR_AUTHORIZE_SKIP_LOCAL_PRE_DEPLOY_CHECK") == "1":
+        reason = os.environ.get(
+            "OPERATOR_AUTHORIZE_LOCAL_PRE_DEPLOY_BYPASS_REASON", ""
+        ).strip()
+        if not reason:
+            raise SystemExit(
+                "[operator-authorize] FATAL: OPERATOR_AUTHORIZE_SKIP_LOCAL_PRE_DEPLOY_CHECK=1 "
+                "requires paired OPERATOR_AUTHORIZE_LOCAL_PRE_DEPLOY_BYPASS_REASON=<text> "
+                "(per CLAUDE.md paired-env discipline + Catalog #199 sister rule). "
+                "Refusing to dispatch without rationale."
+            )
+        print(
+            f"[operator-authorize] [LOCAL-PRE-DEPLOY BYPASS ACTIVE] "
+            f"reason={reason!r}; trainer={trainer_path}",
+            file=sys.stderr,
+        )
+        return
+    harness = REPO_ROOT / "tools/local_pre_deploy_check.py"
+    if not harness.exists():
+        print(
+            f"[operator-authorize] WARN: local pre-deploy harness not found at "
+            f"{harness}; skipping pre-flight (operator should investigate)",
+            file=sys.stderr,
+        )
+        return
+    cmd = [
+        _python_bin(),
+        str(harness),
+        "--trainer",
+        trainer_path,
+        "--recipe",
+        recipe_name,
+        "--strict",
+    ]
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    if result.returncode != 0:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local pre-deploy harness FAILED "
+            f"(exit {result.returncode}); aborting BEFORE GPU dispatch. "
+            "Per operator 2026-05-15 directive + WIRE-AND-INTEGRATE-ALL "
+            "subagent (lane_wire_and_integrate_all_cross_stack_20260515): "
+            "every dispatch must pass tools/local_pre_deploy_check.py BEFORE "
+            "spending. Either fix the bug class the harness flagged OR set "
+            "OPERATOR_AUTHORIZE_SKIP_LOCAL_PRE_DEPLOY_CHECK=1 with paired "
+            "OPERATOR_AUTHORIZE_LOCAL_PRE_DEPLOY_BYPASS_REASON=<text>."
+        )
+
+
 def _normalize_declared_local_path(value: Any) -> str | None:
     """Return a repo-local path declared in a recipe, or ``None`` if non-local.
 
@@ -1723,13 +1798,15 @@ def main(argv: list[str] | None = None) -> int:
     # prompt/no-dispatch contract, but still before native provider preflight,
     # lane claim creation, or any GPU-metered work.
     required_files = recipe.raw.get("required_input_files", []) or []
+    # Recipe declares a trainer path under modal.cost_band_trainer or
+    # at top-level required_input_files_trainer. Resolve once for both the
+    # required-input validator (Catalog #152) AND the local pre-deploy
+    # harness (WIRE-AND-INTEGRATE-ALL 2026-05-15).
+    trainer = (
+        recipe.raw.get("modal", {}).get("cost_band_trainer")
+        or recipe.raw.get("required_input_files_trainer")
+    )
     if required_files:
-        # Recipe declares a trainer path under modal.cost_band_trainer or
-        # at top-level required_input_files_trainer.
-        trainer = (
-            recipe.raw.get("modal", {}).get("cost_band_trainer")
-            or recipe.raw.get("required_input_files_trainer")
-        )
         if trainer:
             _validate_required_input_files(str(trainer), recipe)
         else:
@@ -1738,6 +1815,16 @@ def main(argv: list[str] | None = None) -> int:
                 "no trainer path - skipping local validation",
                 file=sys.stderr,
             )
+
+    # Local pre-deploy check (WIRE-AND-INTEGRATE-ALL 2026-05-15). Catches bug
+    # classes (syntax errors, NotImplementedError stubs, non-canonical archive
+    # grammar, missing auth-eval invocation, inline cuda-fallback, bare ZIP
+    # writes) BEFORE the GPU meter starts. Empirical anchor: Z3 v2 + Z4 smoke
+    # crashes 2026-05-15 burned ~$4 on bug classes a 30s local check would
+    # have caught. Only runs for native-dispatch platforms (modal/vastai/local)
+    # since recipe-only platforms do not actually start trainer code.
+    if native_dispatch and trainer:
+        _run_local_pre_deploy_check(str(trainer), recipe.name)
 
     if native_dispatch:
         _native_dispatch_preflight(recipe)
