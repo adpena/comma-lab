@@ -81,6 +81,36 @@ unchanged (`avg_segnet_dist=0.0006426`, `avg_posenet_dist=0.00003236`) and the
 delta equals the 9-byte rate term. `src/tac/hnerv_frontier_defaults.py` now
 routes active non-promotional CUDA frontier comparisons to this recovered eval.
 
-The older scorecard JSON artifact still records the 2026-05-14 HDM8 row. It is
-superseded by this ledger and should be regenerated before any scorecard audit
-is used as the HNeRV source of truth for a release packet.
+The scorecard JSON artifact was regenerated after adding format-`0x05` profile
+support, and the scorecard audit now reports this row as the internal
+score-lowering frontier:
+
+```bash
+.venv/bin/python tools/audit_hnerv_frontier_scorecard.py \
+  --scorecard experiments/results/hnerv_frontier_scorecard_refresh_20260514_hdm8_codex/scorecard.json \
+  --required-eval PR106-R2-HDM4-HLM1=experiments/results/modal_auth_eval/hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513/contest_auth_eval.adjudicated.json \
+  --required-eval PR106-R2-HDM4-HLM1-XMEMBER=experiments/results/modal_auth_eval/hnerv_hlm1_xmember_modal_t4_20260514/contest_auth_eval.json \
+  --required-eval PR106-R2-HDM4-HLM2-XMEMBER=experiments/results/modal_auth_eval/hnerv_hlm2_xmember_modal_t4_20260514T065903Z/contest_auth_eval.json \
+  --required-eval PR106-R2-HDM7-HLM2-XMEMBER=experiments/results/modal_auth_eval/hnerv_hdm7_hdm6_hlm2_modal_t4_retry1_20260514T090222Z/contest_auth_eval.json \
+  --required-eval PR106-R2-HDM8-HLM2-XMEMBER=experiments/results/modal_auth_eval/pr106_hdm8_fixed_meta_rank_elided_exact_cuda_20260515T002100Z/contest_auth_eval.json
+```
+
+Result: `PASS (17 rows, 3 payload groups, 51 follow-up targets, internal score-lowering=PR106-R2-HDM8-HLM2-XMEMBER (0.2063556722940441))`.
+
+`tools/all_lanes_preflight.py` now requires the `0x05` exact eval path for the
+HDM8 scorecard gate, so the preflight surface cannot silently fall back to the
+older `0.20636166502462222` row.
+
+The same preflight refresh also updates the PR106 PR101-grammar runtime-source
+custody hash to the current four-file runtime manifest
+(`inflate.py`, `src/codec.py`, `src/model.py`, `src/pr101_grammar.py`):
+
+- runtime-source tree SHA-256:
+  `b779871e0bc528185e84f7972a4166a1689af550a88ee70fd26ca4c0553e1f71`
+- focused gate check:
+  `PR106 sidecar runtime-consumption proof: PASS (format_ids=0x01,0x02,0x02,0x02; PacketIR identity parse-emit accounts for every payload byte; runtime decodes/applies sidecar bytes; expected archive/runtime SHA custody is enforced; HLM2 runtime codec consumes the fixed-latent section; runtime-consumption manifests intentionally remain non-promotable; same-runtime full-frame parity manifest present [local-cpu-streaming-runtime; contest_axis_claim=false; score_claim=false]; score_claim=false; ready_for_exact_eval_dispatch=false)`
+- broad preflight status after refresh:
+  Gate #6 HNeRV scorecard PASS, Gate #26 PR106 sidecar runtime consumption PASS;
+  remaining failures are Gate #10 untracked source inventory, Gate #27 active
+  dispatch claims closed, Gate #28 operator briefing dispatch routing, and Gate
+  #29 terminal dispatch evidence coverage.

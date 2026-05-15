@@ -27,7 +27,9 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_SIDECAR_FORMAT_BROTLI,
+    PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     PR106_SIDECAR_MAGIC,
 )
 
@@ -179,37 +181,64 @@ def profile_pr106_sidecar_wrapper(payload: bytes) -> list[SectionProfile]:
     inner_decoder_end = inner_decoder_start + dec_len
     if inner_decoder_end > inner_end:
         raise ValueError("PR106 sidecar inner decoder section exceeds inner payload")
-    pos = inner_end
-    if pos + 2 > len(payload):
-        raise ValueError("PR106 sidecar wrapper missing sidecar length")
-    (sidecar_len,) = struct.unpack_from("<H", payload, pos)
-    sidecar_len_start = pos
-    pos += 2
-    sidecar_start = pos
-    sidecar_end = sidecar_start + sidecar_len
-    if sidecar_end > len(payload):
-        raise ValueError("PR106 sidecar wrapper sidecar payload truncated")
-    pos = sidecar_end
     rows = [
         section("pr106_sidecar_header_fe_fmt_len_u32", payload, 0, 6),
         section("inner_packed_header_ff_len24", payload, inner_start, inner_start + 4),
         section("inner_decoder_packed_brotli", payload, inner_decoder_start, inner_decoder_end),
         section("inner_latents_and_sidecar_brotli", payload, inner_decoder_end, inner_end),
-        section("sidecar_len_u16", payload, sidecar_len_start, sidecar_start),
     ]
+
+    pos = inner_end
+    if format_id in (PR106_SIDECAR_FORMAT_BROTLI, PR106_SIDECAR_FORMAT_PR101_GRAMMAR):
+        if pos + 2 > len(payload):
+            raise ValueError("PR106 sidecar wrapper missing sidecar length")
+        (sidecar_len,) = struct.unpack_from("<H", payload, pos)
+        sidecar_len_start = pos
+        pos += 2
+        sidecar_start = pos
+        sidecar_end = sidecar_start + sidecar_len
+        if sidecar_end > len(payload):
+            raise ValueError("PR106 sidecar wrapper sidecar payload truncated")
+        rows.append(section("sidecar_len_u16", payload, sidecar_len_start, sidecar_start))
+    elif format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+        if len(payload) - pos < 5:
+            raise ValueError("PR106 rank-elided sidecar truncated before framing meta")
+        sidecar_start = pos
+        sidecar_end = len(payload) - 5
+    elif format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+        sidecar_start = pos
+        sidecar_end = len(payload)
+    else:
+        raise ValueError(f"unsupported PR106 sidecar format_id=0x{format_id:02x}")
+
     if format_id == PR106_SIDECAR_FORMAT_BROTLI:
         if sidecar_end != len(payload):
             raise ValueError("PR106 brotli sidecar wrapper has trailing bytes")
         rows.append(section("sidecar_payload_brotli_dim_delta", payload, sidecar_start, sidecar_end))
         return rows
-    if format_id != PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
-        raise ValueError(f"unsupported PR106 sidecar format_id=0x{format_id:02x}")
-    rows.append(section("sidecar_payload_pr101_ranked_no_op", payload, sidecar_start, sidecar_end))
-    framing_start = sidecar_end
-    framing_end = framing_start + 6
-    if framing_end != len(payload):
-        raise ValueError("PR106 PR101-grammar sidecar wrapper framing/trailing mismatch")
-    rows.append(section("sidecar_framing_meta_pr101", payload, framing_start, framing_end))
+
+    if format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
+        rows.append(section("sidecar_payload_pr101_ranked_no_op", payload, sidecar_start, sidecar_end))
+        framing_start = sidecar_end
+        framing_end = framing_start + 6
+        if framing_end != len(payload):
+            raise ValueError("PR106 PR101-grammar sidecar wrapper framing/trailing mismatch")
+        rows.append(section("sidecar_framing_meta_pr101", payload, framing_start, framing_end))
+        return rows
+
+    if format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+        rows.append(section("sidecar_payload_pr101_rank_elided", payload, sidecar_start, sidecar_end))
+        rows.append(section("sidecar_framing_meta_pr101_rank_elided", payload, sidecar_end, len(payload)))
+        return rows
+
+    rows.append(
+        section(
+            "sidecar_payload_pr101_fixed_meta_rank_elided",
+            payload,
+            sidecar_start,
+            sidecar_end,
+        )
+    )
     return rows
 
 
