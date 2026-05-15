@@ -2,6 +2,8 @@ schema_version: 1
 name: substrate_sane_hnerv_modal_a100_dispatch
 lane_id: lane_substrate_sane_hnerv_20260512
 summary: sane_hnerv first-anchor dispatch on Modal A100 (Phase 1 first-anchor research).
+smoke_only: true
+smoke_validation_contract: training_artifact_v1
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -31,9 +33,13 @@ cost_band:
 predicted_delta: "-0.030 to -0.050 [predicted; council substrate design memo]"
 predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
 risk: |
-  Phase 1 first-anchor research dispatch on Modal A100. Trainer _full_main
-  wires 16 stages including auth eval at stage 12. Single-axis [contest-CUDA]
-  acceptable for first anchor; CPU axis required separately before promotion.
+  Phase 1 first-anchor research dispatch on Modal A100. The shared
+  modal_train_lane.py wrapper forces AUTH_EVAL_DEVICE=cpu and marks that
+  eval advisory-only because the training container does not provide NVDEC.
+  This recipe is therefore smoke_only with training_artifact_v1 validation:
+  it validates trainer/archive wiring only. Contest-CUDA/contest-CPU paired
+  exact eval must be launched through the canonical exact-eval dispatchers
+  after a byte-closed archive is harvested.
 envelope_status: "FITS $20 envelope at p50 fallback"
 
 remote_driver: scripts/remote_lane_substrate_sane_hnerv.sh

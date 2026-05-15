@@ -456,6 +456,18 @@ def test_pr95plus_recipe_is_smoke_only_until_full_trainer_lands() -> None:
     assert _smoke_validation_contract_from_recipe(text) == "training_artifact_v1"
 
 
+def test_sane_hnerv_modal_recipe_is_training_artifact_smoke_only() -> None:
+    text = (
+        REPO_ROOT
+        / ".omx/operator_authorize_recipes/substrate_sane_hnerv_modal_a100_dispatch.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert _recipe_requests_smoke_only(text) is True
+    assert _smoke_validation_contract_from_recipe(text) == "training_artifact_v1"
+    assert "AUTH_EVAL_DEVICE=cpu" in text
+    assert "canonical exact-eval dispatchers" in text
+
+
 def test_smoke_wrapper_uses_explicit_noninteractive_authorization_flag() -> None:
     text = (REPO_ROOT / "tools/run_modal_smoke_before_full.py").read_text(encoding="utf-8")
 

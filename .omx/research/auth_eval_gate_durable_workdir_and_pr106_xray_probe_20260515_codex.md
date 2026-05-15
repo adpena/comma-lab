@@ -15,7 +15,12 @@ This landing turns two repeated failure classes into executable guardrails:
 3. `scripts/remote_lane_substrate_sane_hnerv.sh` now surfaces the trainer's
    canonical `contest_auth_eval_cuda.json` path, with legacy `auth_eval.json`
    fallback.
-4. The PR106 CUDA latent-correction probe planner landed as false-authority
+4. `substrate_sane_hnerv_modal_a100_dispatch` is now explicitly
+   `smoke_only: true` with `smoke_validation_contract: training_artifact_v1`.
+   This matches `modal_train_lane.py`, which forces `AUTH_EVAL_DEVICE=cpu` and
+   advisory-only scoring because the training wrapper is not an exact-CUDA
+   evaluator. Full paired eval must be a separate exact-eval dispatch.
+5. The PR106 CUDA latent-correction probe planner landed as false-authority
    XRay-to-probe wiring. It consumes hard-pair hitlists and pair XRay JSON,
    chooses pair/mode rows under a byte budget, and refuses materialization or
    frontier language until a byte-closed archive plus paired CPU/CUDA eval
@@ -35,11 +40,12 @@ an explicit correction probe plan, while preserving false-authority fields.
 ```bash
 .venv/bin/python -m pytest \
   src/tac/tests/test_smoke_auth_eval_gate.py \
+  src/tac/tests/test_run_modal_smoke_before_full.py \
   src/tac/tests/test_remote_lane_substrate_sane_hnerv_script.py \
   src/tac/tests/test_build_pr106_cuda_latent_correction_probe.py -q
 ```
 
-Result: `29 passed`.
+Result: focused smoke/auth-eval suite passed after the recipe contract fix.
 
 ```bash
 .venv/bin/ruff check \
@@ -82,4 +88,3 @@ score-table actuator that consumes
 
 Until then the planner remains `score_claim=false`, `promotion_eligible=false`,
 and `ready_for_exact_eval_dispatch=false`.
-
