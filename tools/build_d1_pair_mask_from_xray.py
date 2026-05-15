@@ -11,6 +11,7 @@ for ``tools/build_d1_overlay_policy_candidates.py --sign-policies pair_mask``.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import math
@@ -26,6 +27,13 @@ _EVIDENCE_AXES = (
     "local_cuda_xray",
     "macos_cpu_advisory",
 )
+_EVIDENCE_AXIS_LABELS = {
+    "contest_cpu": "[contest-CPU]",
+    "contest_cuda": "[contest-CUDA]",
+    "local_cpu_xray": "[local-CPU xray]",
+    "local_cuda_xray": "[local-CUDA xray]",
+    "macos_cpu_advisory": "[macOS-CPU advisory]",
+}
 _XRAY_AXIS_BY_DIAGNOSTIC_DEVICE = {
     "cpu": "local_cpu_xray",
     "cuda": "local_cuda_xray",
@@ -41,6 +49,100 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _stable_json_sha256(payload: Any) -> str:
+    data = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def _require_int(value: Any, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{field} must be an integer; got {value!r}")
+    return int(value)
+
+
+def _require_positive_int(value: Any, *, field: str) -> int:
+    out = _require_int(value, field=field)
+    if out <= 0:
+        raise ValueError(f"{field} must be > 0; got {out}")
+    return out
+
+
+def _require_finite_nonnegative_float(value: Any, *, field: str) -> float:
+    try:
+        out = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} must be a finite nonnegative number") from exc
+    if not math.isfinite(out) or out < 0.0:
+        raise ValueError(f"{field} must be finite and >= 0; got {value!r}")
+    return out
+
+
+def _pack_pair_sign_mask_bytes(signs: list[int]) -> bytes:
+    if not signs:
+        raise ValueError("pair_signs must not be empty")
+    code_by_sign = {0: 0, 1: 1, -1: 2}
+    out = bytearray()
+    acc = 0
+    nbits = 0
+    for idx, raw in enumerate(signs):
+        sign = _require_int(raw, field=f"pair_signs[{idx}]")
+        if sign not in code_by_sign:
+            raise ValueError(f"pair_signs[{idx}] must be -1, 0, or 1; got {sign}")
+        acc |= code_by_sign[sign] << nbits
+        nbits += 2
+        if nbits == 8:
+            out.append(acc)
+            acc = 0
+            nbits = 0
+    if nbits:
+        out.append(acc)
+    return bytes(out)
+
+
+def _pair_mask_custody(
+    signs: list[int],
+    *,
+    measured_pairs: int,
+    expected_pairs: int | None,
+    partial_smoke_allowed: bool,
+) -> dict[str, Any]:
+    packed = _pack_pair_sign_mask_bytes(signs)
+    packed_b85 = base64.b85encode(packed).decode("ascii")
+    n_pairs = len(signs)
+    full_expected_length = expected_pairs is not None and n_pairs == expected_pairs
+    full_measured = full_expected_length and measured_pairs == n_pairs
+    if full_measured:
+        custody_scope = "full_measured_contest_selector"
+    elif full_expected_length:
+        custody_scope = "padded_full_length_unmeasured_pairs_disabled"
+    elif partial_smoke_allowed:
+        custody_scope = "partial_smoke_selector"
+    else:
+        custody_scope = "custom_length_selector"
+    return {
+        "custody_scope": custody_scope,
+        "n_pairs": n_pairs,
+        "measured_pairs": measured_pairs,
+        "expected_pairs": expected_pairs,
+        "full_expected_length": full_expected_length,
+        "full_measured": full_measured,
+        "partial_smoke_allowed": bool(partial_smoke_allowed),
+        "active_pairs": sum(1 for value in signs if value != 0),
+        "positive_pairs": sum(1 for value in signs if value > 0),
+        "negative_pairs": sum(1 for value in signs if value < 0),
+        "packed_raw_bytes": len(packed),
+        "packed_raw_sha256": hashlib.sha256(packed).hexdigest(),
+        "packed_base85_chars": len(packed_b85),
+        "score_bearing_runtime_keys": ["pair_mask_b85", "pair_mask_n"],
+        "pair_signs_sha256": _stable_json_sha256(signs),
+    }
 
 
 def _xray_axis_from_payload(payload: dict[str, Any], *, path: Path) -> str:
@@ -71,6 +173,7 @@ def _xray_axis_from_payload(payload: dict[str, Any], *, path: Path) -> str:
 
 
 def _xray_provenance(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    evidence_axis = _xray_axis_from_payload(payload, path=path)
     return {
         "path": str(path),
         "sha256": _sha256_file(path),
@@ -78,7 +181,8 @@ def _xray_provenance(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
         "label": payload.get("label"),
         "evidence_grade": payload.get("evidence_grade"),
         "device": payload.get("device"),
-        "evidence_axis": _xray_axis_from_payload(payload, path=path),
+        "evidence_axis": evidence_axis,
+        "evidence_axis_label": _EVIDENCE_AXIS_LABELS[evidence_axis],
         "n_pairs": payload.get("n_pairs"),
         "archive": payload.get("archive"),
     }
@@ -87,10 +191,12 @@ def _xray_provenance(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
 def _load_xray(path: Path) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
     payload = _read_json(path)
     schema = payload.get("schema")
-    if schema is not None and schema != "pair_component_error_xray_v1":
+    if schema != "pair_component_error_xray_v1":
         raise ValueError(
             f"{path} schema must be pair_component_error_xray_v1; got {schema!r}"
         )
+    if payload.get("score_claim") is not False:
+        raise ValueError(f"{path} must declare score_claim=false")
     provenance = _xray_provenance(path, payload)
     rows = payload.get("rows")
     if not isinstance(rows, list) or not rows:
@@ -99,22 +205,37 @@ def _load_xray(path: Path) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
     for idx, row in enumerate(rows):
         if not isinstance(row, dict):
             raise ValueError(f"{path} rows[{idx}] is not an object")
-        pair_idx = row.get("pair_idx", row.get("pair_index"))
-        if not isinstance(pair_idx, int):
-            raise ValueError(f"{path} rows[{idx}] missing integer pair_idx")
+        pair_idx = _require_int(
+            row.get("pair_idx", row.get("pair_index")),
+            field=f"{path} rows[{idx}] pair_idx",
+        )
         if pair_idx in out:
             raise ValueError(f"{path} duplicate pair_idx={pair_idx}")
+        _pose_seg(row)
         out[pair_idx] = row
-    if isinstance(provenance.get("n_pairs"), int) and provenance["n_pairs"] != len(out):
+    if "n_pairs" in payload:
+        declared_pairs = _require_positive_int(
+            payload.get("n_pairs"),
+            field=f"{path} n_pairs",
+        )
+        if declared_pairs != len(out):
+            raise ValueError(
+                f"{path} n_pairs={declared_pairs} does not match rows={len(out)}"
+            )
+    elif provenance.get("n_pairs") is not None:
         raise ValueError(
-            f"{path} n_pairs={provenance['n_pairs']} does not match rows={len(out)}"
+            f"{path} n_pairs must be an integer when present; got "
+            f"{provenance.get('n_pairs')!r}"
         )
     provenance["n_pairs"] = len(out)
     return out, provenance
 
 
 def _pose_seg(row: dict[str, Any]) -> tuple[float, float]:
-    return float(row["pose_dist"]), float(row["seg_dist"])
+    return (
+        _require_finite_nonnegative_float(row.get("pose_dist"), field="pose_dist"),
+        _require_finite_nonnegative_float(row.get("seg_dist"), field="seg_dist"),
+    )
 
 
 def _component_from_means(mean_pose: float, mean_seg: float) -> float:
@@ -259,22 +380,32 @@ def _load_rate_from_candidate_manifest(path: Path) -> tuple[int, int, dict[str, 
     payload = _read_json(path)
     archive_bytes = payload.get("archive_bytes")
     baseline_bytes = payload.get("source_base_archive_bytes")
-    if baseline_bytes is None:
-        baseline_bytes = payload.get("base_member_bytes")
-    if not isinstance(archive_bytes, int) or not isinstance(baseline_bytes, int):
+    if not isinstance(archive_bytes, int) or isinstance(archive_bytes, bool):
         raise ValueError(
-            f"{path} must contain integer archive_bytes and "
-            "source_base_archive_bytes/base_member_bytes"
+            f"{path} must contain integer archive_bytes"
         )
+    if not isinstance(baseline_bytes, int) or isinstance(baseline_bytes, bool):
+        raise ValueError(
+            f"{path} must contain integer source_base_archive_bytes for "
+            "manifest-sourced full-rate accounting"
+        )
+    archive_bytes = _require_positive_int(archive_bytes, field=f"{path} archive_bytes")
+    baseline_bytes = _require_positive_int(
+        baseline_bytes,
+        field=f"{path} source_base_archive_bytes",
+    )
     provenance = {
         "path": str(path),
         "sha256": _sha256_file(path),
+        "rate_accounting_source": "candidate_manifest_compressed_archive_bytes_v1",
         "candidate_id": payload.get("candidate_id"),
+        "archive_bytes": archive_bytes,
+        "source_base_archive_bytes": baseline_bytes,
         "archive_sha256": payload.get("archive_sha256"),
         "source_d1_bin_sha256": payload.get("source_d1_bin_sha256"),
         "base_member_sha256": payload.get("base_member_sha256"),
     }
-    return int(baseline_bytes), int(archive_bytes), provenance
+    return baseline_bytes, archive_bytes, provenance
 
 
 def build_pair_sign_mask(
@@ -313,6 +444,7 @@ def build_pair_sign_mask(
         raise ValueError(
             f"evidence_axis={evidence_axis!r} must be one of {_EVIDENCE_AXES}"
         )
+    evidence_axis_label = _EVIDENCE_AXIS_LABELS[evidence_axis]
     if rate_scope not in {"archive_delta", "incremental"}:
         raise ValueError("rate_scope must be 'archive_delta' or 'incremental'")
     if rate_scope == "archive_delta":
@@ -361,6 +493,10 @@ def build_pair_sign_mask(
     )
     baseline_component = _component_from_means(baseline_mean_pose, baseline_mean_seg)
     rate_penalty_score = _rate_score_from_bytes_delta(int(rate_cost_bytes))
+    if not math.isfinite(float(improvement_guard)) or float(improvement_guard) < 0.0:
+        raise ValueError(
+            f"improvement_guard must be finite and >= 0; got {improvement_guard}"
+        )
     if max_active_pairs is not None and max_active_pairs < 0:
         raise ValueError(f"max_active_pairs must be >= 0; got {max_active_pairs}")
     if min_net_improvement < 0:
@@ -534,14 +670,72 @@ def build_pair_sign_mask(
     total_delta_with_rate = component_delta + (
         rate_penalty_score if active_pairs else 0.0
     )
-    return {
-        "schema": "d1_pair_sign_mask_from_xray_v1",
-        "generated_at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    pair_mask_custody = _pair_mask_custody(
+        signs,
+        measured_pairs=measured_pairs,
+        expected_pairs=expected_pairs,
+        partial_smoke_allowed=partial_smoke_allowed,
+    )
+    compressed_rate_accounting = {
+        "schema": "d1_pair_mask_compressed_rate_accounting_v1",
+        "scope": rate_scope,
+        "source": (
+            "candidate_manifest"
+            if rate_source_manifest is not None
+            else (
+                "manual_full_archive_bytes"
+                if rate_scope == "archive_delta"
+                else "same_family_incremental_selector_bytes"
+            )
+        ),
+        "evidence_axis": evidence_axis,
+        "evidence_axis_label": evidence_axis_label,
+        "denominator_bytes": _CONTEST_ARCHIVE_DENOMINATOR_BYTES,
+        "formula": "25 * byte_delta / 37545489",
+        "rate_cost_bytes": int(rate_cost_bytes),
+        "rate_penalty_score": rate_penalty_score,
+        "baseline_archive_bytes": baseline_archive_bytes,
+        "candidate_archive_bytes": candidate_archive_bytes,
+        "archive_byte_delta": (
+            int(rate_cost_bytes) if rate_scope == "archive_delta" else None
+        ),
+        "incremental_rate_cost_bytes": (
+            int(rate_cost_bytes) if rate_scope == "incremental" else None
+        ),
+        "incremental_baseline_label": incremental_baseline_label,
+        "rate_source_manifest_sha256": (
+            rate_source_manifest.get("sha256")
+            if rate_source_manifest is not None
+            else None
+        ),
+        "pair_mask_packed_raw_bytes": pair_mask_custody["packed_raw_bytes"],
+        "pair_mask_packed_base85_chars": pair_mask_custody["packed_base85_chars"],
+    }
+    deterministic_provenance = {
+        "schema": "d1_pair_mask_selector_deterministic_provenance_v1",
         "objective": "contest_score_linearized_at_baseline_mean_pose_v1",
         "evidence_axis": evidence_axis,
         "xray_provenance": xray_provenance,
+        "pair_mask_custody": pair_mask_custody,
+        "compressed_rate_accounting": compressed_rate_accounting,
+        "selection_mode": mode,
+        "selected_pairs": selected_rows,
+        "pair_signs_sha256": pair_mask_custody["pair_signs_sha256"],
+    }
+    return {
+        "schema": "d1_pair_sign_mask_from_xray_v1",
+        "generated_at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "deterministic_provenance_sha256": _stable_json_sha256(
+            deterministic_provenance
+        ),
+        "deterministic_provenance": deterministic_provenance,
+        "objective": "contest_score_linearized_at_baseline_mean_pose_v1",
+        "evidence_axis": evidence_axis,
+        "evidence_axis_label": evidence_axis_label,
+        "xray_provenance": xray_provenance,
         "selection_mode": mode,
         "pair_signs": signs,
+        "pair_mask_custody": pair_mask_custody,
         "n_pairs": len(signs),
         "measured_pairs": measured_pairs,
         "active_pairs": active_pairs,
@@ -561,6 +755,7 @@ def build_pair_sign_mask(
         "improvement_guard": guard,
         "rate_cost_bytes": int(rate_cost_bytes),
         "rate_scope": rate_scope,
+        "compressed_rate_accounting": compressed_rate_accounting,
         "baseline_archive_bytes": baseline_archive_bytes,
         "candidate_archive_bytes": candidate_archive_bytes,
         "archive_byte_delta": (
@@ -661,7 +856,15 @@ def main(argv: list[str] | None = None) -> int:
             "--allow-negative-archive-delta requires --negative-archive-delta-rationale"
         )
     output_n_pairs = args.output_n_pairs
-    expected_pairs = None if args.allow_partial_smoke else int(args.expected_pairs)
+    expected_pairs = _require_positive_int(
+        int(args.expected_pairs),
+        field="--expected-pairs",
+    )
+    if output_n_pairs is not None:
+        output_n_pairs = _require_positive_int(
+            int(output_n_pairs),
+            field="--output-n-pairs",
+        )
     result = build_pair_sign_mask(
         baseline_rows=baseline_rows,
         positive_rows=positive_rows,

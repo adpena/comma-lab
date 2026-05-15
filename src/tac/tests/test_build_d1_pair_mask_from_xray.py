@@ -106,6 +106,18 @@ def test_build_d1_pair_mask_from_xray_selects_only_improving_pairs(tmp_path: Pat
     assert payload["predicted_score_lowering_after_rate"] is True
     assert {row["selection_rank"] for row in payload["selected_pairs"]} == {1, 2, 3}
     assert payload["score_claim"] is False
+    assert payload["evidence_axis_label"] == "[local-CPU xray]"
+    assert len(payload["deterministic_provenance_sha256"]) == 64
+    assert payload["compressed_rate_accounting"]["formula"] == "25 * byte_delta / 37545489"
+    assert payload["compressed_rate_accounting"]["evidence_axis_label"] == (
+        "[local-CPU xray]"
+    )
+    assert payload["pair_mask_custody"]["custody_scope"] == "custom_length_selector"
+    assert payload["pair_mask_custody"]["packed_raw_bytes"] == 2
+    assert payload["pair_mask_custody"]["score_bearing_runtime_keys"] == [
+        "pair_mask_b85",
+        "pair_mask_n",
+    ]
 
 
 def test_build_d1_pair_mask_from_xray_blocks_mask_when_rate_cost_dominates(
@@ -163,6 +175,13 @@ def test_build_d1_pair_mask_from_xray_blocks_mask_when_rate_cost_dominates(
     assert payload["predicted_component_no_rate_delta"] == 0.0
     assert payload["predicted_total_delta_with_rate"] == 0.0
     assert payload["predicted_score_lowering_after_rate"] is False
+    assert (
+        payload["pair_mask_custody"]["custody_scope"]
+        == "full_measured_contest_selector"
+    )
+    assert payload["compressed_rate_accounting"]["source"] == (
+        "same_family_incremental_selector_bytes"
+    )
 
 
 def test_build_d1_pair_mask_from_xray_blocks_a1_relative_full_rate_cost(
@@ -318,7 +337,97 @@ def test_build_d1_pair_mask_from_xray_uses_candidate_manifest_rate(
     assert payload["candidate_archive_bytes"] == 185593
     assert payload["archive_byte_delta"] == 7431
     assert payload["rate_source_manifest"]["candidate_id"] == "d1_pair_mask_unit"
+    assert payload["rate_source_manifest"]["rate_accounting_source"] == (
+        "candidate_manifest_compressed_archive_bytes_v1"
+    )
+    assert payload["compressed_rate_accounting"]["source"] == "candidate_manifest"
+    assert payload["compressed_rate_accounting"]["archive_byte_delta"] == 7431
     assert payload["active_pairs"] == 0
+
+
+def test_build_d1_pair_mask_from_xray_rejects_manifest_without_source_base_bytes(
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    baseline = tmp_path / "baseline.json"
+    positive = tmp_path / "positive.json"
+    rows = [{"pair_idx": 0, "pose_dist": 0.01, "seg_dist": 0.010}]
+    _write_xray(baseline, rows)
+    _write_xray(positive, rows)
+    manifest = tmp_path / "candidate_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_id": "d1_pair_mask_legacy",
+                "archive_bytes": 185593,
+                "base_member_bytes": 178162,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        module.main(
+            [
+                "--baseline-xray",
+                str(baseline),
+                "--positive-xray",
+                str(positive),
+                "--evidence-axis",
+                "local_cpu_xray",
+                "--rate-from-candidate-manifest",
+                str(manifest),
+                "--expected-pairs",
+                "1",
+                "--output-json",
+                str(tmp_path / "mask.json"),
+            ]
+        )
+    except ValueError as exc:
+        assert "source_base_archive_bytes" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("manifest full-rate fallback should fail closed")
+
+
+def test_build_d1_pair_mask_from_xray_rejects_nonfinite_component_rows(
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    baseline = tmp_path / "baseline.json"
+    positive = tmp_path / "positive.json"
+    _write_xray(
+        baseline,
+        [{"pair_idx": 0, "pose_dist": float("nan"), "seg_dist": 0.010}],
+    )
+    _write_xray(
+        positive,
+        [{"pair_idx": 0, "pose_dist": 0.01, "seg_dist": 0.009}],
+    )
+
+    try:
+        module.main(
+            [
+                "--baseline-xray",
+                str(baseline),
+                "--positive-xray",
+                str(positive),
+                "--evidence-axis",
+                "local_cpu_xray",
+                "--baseline-archive-bytes",
+                "1000",
+                "--candidate-archive-bytes",
+                "1001",
+                "--expected-pairs",
+                "1",
+                "--output-json",
+                str(tmp_path / "mask.json"),
+            ]
+        )
+    except ValueError as exc:
+        assert "pose_dist must be finite" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("nonfinite xray rows should fail closed")
 
 
 def test_build_d1_pair_mask_from_xray_rejects_negative_archive_delta_without_rationale(

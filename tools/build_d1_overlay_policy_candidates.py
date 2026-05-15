@@ -13,6 +13,7 @@ import argparse
 import base64
 import hashlib
 import json
+import math
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -45,6 +46,15 @@ from tac.substrates.d1_segnet_margin_polytope.overlay import (  # noqa: E402
     pack_pair_sign_mask,
 )
 
+_CONTEST_ARCHIVE_DENOMINATOR_BYTES = 37_545_489
+_EVIDENCE_AXIS_LABELS = {
+    "contest_cpu": "[contest-CPU]",
+    "contest_cuda": "[contest-CUDA]",
+    "local_cpu_xray": "[local-CPU xray]",
+    "local_cuda_xray": "[local-CUDA xray]",
+    "macos_cpu_advisory": "[macOS-CPU advisory]",
+}
+
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -66,6 +76,18 @@ def _json_default(value: Any) -> Any:
     if isinstance(value, Path):
         return value.as_posix()
     raise TypeError(f"cannot JSON encode {type(value).__name__}")
+
+
+def _stable_json_sha256(payload: Any) -> str:
+    return _sha256_bytes(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            default=_json_default,
+        ).encode("utf-8")
+    )
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -137,7 +159,7 @@ def _parse_lipschitz_values(raw: str) -> list[float]:
         if not item:
             continue
         value = float(item)
-        if value <= 0.0:
+        if not math.isfinite(value) or value <= 0.0:
             raise SystemExit(f"jacobian_lipschitz must be > 0; got {value}")
         values.append(value)
     return values
@@ -162,38 +184,130 @@ def _load_pair_sign_mask(
     *,
     expected_pairs: int,
     allow_partial_smoke: bool,
-) -> tuple[int, ...] | None:
+) -> tuple[tuple[int, ...], dict[str, Any]] | None:
     if path is None:
         return None
     if expected_pairs <= 0:
         raise SystemExit(f"--expected-pairs must be > 0; got {expected_pairs}")
     payload = json.loads(path.read_text(encoding="utf-8"))
+    selector_payload: dict[str, Any] | None = (
+        payload if isinstance(payload, dict) else None
+    )
     if isinstance(payload, list):
         raw_signs = payload
     elif isinstance(payload, dict):
         raw_signs = payload.get("pair_signs")
         if raw_signs is None:
             selector = payload.get("selector", {})
-            raw_signs = selector.get("pair_signs") if isinstance(selector, dict) else None
+            if isinstance(selector, dict):
+                selector_payload = selector
+                raw_signs = selector.get("pair_signs")
+            else:
+                raw_signs = None
     else:
         raw_signs = None
     if not isinstance(raw_signs, list) or not raw_signs:
         raise SystemExit(
             "--pair-sign-mask-json must contain a non-empty pair_signs list"
         )
-    signs = tuple(int(value) for value in raw_signs)
-    bad = [value for value in signs if value not in (-1, 0, 1)]
-    if bad:
-        raise SystemExit(
-            f"--pair-sign-mask-json values must be -1, 0, or 1; got {bad[:8]}"
-        )
+    signs_list: list[int] = []
+    for idx, value in enumerate(raw_signs):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise SystemExit(
+                "--pair-sign-mask-json values must be integer -1, 0, or 1; "
+                f"got {value!r} at index {idx}"
+            )
+        if value not in (-1, 0, 1):
+            raise SystemExit(
+                "--pair-sign-mask-json values must be -1, 0, or 1; "
+                f"got {value!r} at index {idx}"
+            )
+        signs_list.append(int(value))
+    signs = tuple(signs_list)
+    declared_n_pairs = (
+        selector_payload.get("n_pairs")
+        if selector_payload is not None and "n_pairs" in selector_payload
+        else None
+    )
+    if declared_n_pairs is not None:
+        if isinstance(declared_n_pairs, bool) or not isinstance(declared_n_pairs, int):
+            raise SystemExit("--pair-sign-mask-json n_pairs must be an integer")
+        if int(declared_n_pairs) != len(signs):
+            raise SystemExit(
+                "--pair-sign-mask-json n_pairs does not match pair_signs length: "
+                f"{declared_n_pairs} != {len(signs)}"
+            )
+    declared_active_pairs = (
+        selector_payload.get("active_pairs")
+        if selector_payload is not None and "active_pairs" in selector_payload
+        else None
+    )
+    active_pairs = sum(1 for value in signs if value != 0)
+    if declared_active_pairs is not None:
+        if isinstance(declared_active_pairs, bool) or not isinstance(
+            declared_active_pairs, int
+        ):
+            raise SystemExit("--pair-sign-mask-json active_pairs must be an integer")
+        if int(declared_active_pairs) != active_pairs:
+            raise SystemExit(
+                "--pair-sign-mask-json active_pairs does not match pair_signs: "
+                f"{declared_active_pairs} != {active_pairs}"
+            )
     if len(signs) != expected_pairs and not allow_partial_smoke:
         raise SystemExit(
             "--pair-sign-mask-json pair count mismatch: "
             f"got {len(signs)}, expected {expected_pairs}. Use "
             "--allow-partial-smoke only for non-contest local smoke packets."
         )
-    return signs
+    packed_b85 = pack_pair_sign_mask(signs)
+    packed_raw = base64.b85decode(packed_b85.encode("ascii"))
+    evidence_axis = (
+        selector_payload.get("evidence_axis")
+        if selector_payload is not None
+        else None
+    )
+    if evidence_axis is not None:
+        normalized_axis = str(evidence_axis).strip().lower().replace("-", "_")
+        if normalized_axis not in _EVIDENCE_AXIS_LABELS:
+            raise SystemExit(
+                "--pair-sign-mask-json evidence_axis is unsupported: "
+                f"{evidence_axis!r}"
+            )
+        evidence_axis = normalized_axis
+    mask_scope = (
+        "full_contest_selector"
+        if len(signs) == expected_pairs
+        else "partial_smoke_selector"
+    )
+    provenance = {
+        "schema": (
+            selector_payload.get("schema")
+            if selector_payload is not None
+            else "raw_pair_sign_list"
+        ),
+        "source_path": path,
+        "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "mask_scope": mask_scope,
+        "n_pairs": len(signs),
+        "expected_pairs": int(expected_pairs),
+        "full_expected_length": len(signs) == int(expected_pairs),
+        "partial_smoke_allowed": bool(allow_partial_smoke),
+        "active_pairs": active_pairs,
+        "positive_pairs": sum(1 for value in signs if value > 0),
+        "negative_pairs": sum(1 for value in signs if value < 0),
+        "pair_signs_sha256": _stable_json_sha256(list(signs)),
+        "packed_raw_bytes": len(packed_raw),
+        "packed_raw_sha256": hashlib.sha256(packed_raw).hexdigest(),
+        "packed_base85_chars": len(packed_b85),
+        "score_bearing_runtime_keys": ["pair_mask_b85", "pair_mask_n"],
+        "evidence_axis": evidence_axis,
+        "evidence_axis_label": (
+            _EVIDENCE_AXIS_LABELS[evidence_axis]
+            if isinstance(evidence_axis, str)
+            else None
+        ),
+    }
+    return signs, provenance
 
 
 def _scale_slug(scale: float) -> str:
@@ -446,11 +560,15 @@ def main(argv: list[str] | None = None) -> int:
     payload_budgets = _parse_budget_bits(args.payload_budget_bits)
     lipschitz_values = _parse_lipschitz_values(args.jacobian_lipschitz)
     margin_map_resolution = _parse_resolution(args.margin_map_resolution)
-    pair_sign_mask = _load_pair_sign_mask(
+    pair_sign_mask_result = _load_pair_sign_mask(
         args.pair_sign_mask_json,
         expected_pairs=int(args.expected_pairs),
         allow_partial_smoke=bool(args.allow_partial_smoke),
     )
+    pair_sign_mask: tuple[int, ...] | None = None
+    pair_sign_mask_provenance: dict[str, Any] | None = None
+    if pair_sign_mask_result is not None:
+        pair_sign_mask, pair_sign_mask_provenance = pair_sign_mask_result
     pair_sign_mask_b85: str | None = None
     pair_sign_mask_sha256: str | None = None
     pair_mask_label: str | None = None
@@ -560,6 +678,45 @@ def main(argv: list[str] | None = None) -> int:
                     source_base_archive_bytes = int(
                         source.meta.get("base_archive_bytes", base_member_bytes)
                     )
+                    archive_delta_vs_base_member_bytes = (
+                        len(archive_bytes) - base_member_bytes
+                    )
+                    archive_delta_vs_source_base_archive_bytes = (
+                        len(archive_bytes) - source_base_archive_bytes
+                    )
+                    compressed_rate_accounting = {
+                        "schema": "d1_policy_candidate_compressed_rate_accounting_v1",
+                        "archive_bytes_are_zip_compressed": True,
+                        "denominator_bytes": _CONTEST_ARCHIVE_DENOMINATOR_BYTES,
+                        "formula": "25 * byte_delta / 37545489",
+                        "archive_bytes": len(archive_bytes),
+                        "base_member_bytes": base_member_bytes,
+                        "source_base_archive_bytes": source_base_archive_bytes,
+                        "archive_delta_vs_base_member_bytes": (
+                            archive_delta_vs_base_member_bytes
+                        ),
+                        "archive_delta_vs_source_base_archive_bytes": (
+                            archive_delta_vs_source_base_archive_bytes
+                        ),
+                        "rate_penalty_vs_source_base_score": (
+                            25.0
+                            * float(archive_delta_vs_source_base_archive_bytes)
+                            / float(_CONTEST_ARCHIVE_DENOMINATOR_BYTES)
+                        ),
+                        "d1_sidecar_bytes": len(d1_variant),
+                        "pair_mask_packed_raw_bytes": (
+                            pair_sign_mask_provenance.get("packed_raw_bytes")
+                            if sign_policy == "pair_mask"
+                            and pair_sign_mask_provenance is not None
+                            else None
+                        ),
+                        "pair_mask_packed_base85_chars": (
+                            pair_sign_mask_provenance.get("packed_base85_chars")
+                            if sign_policy == "pair_mask"
+                            and pair_sign_mask_provenance is not None
+                            else None
+                        ),
+                    }
                     partial_smoke_blockers = (
                         ["d1_pair_mask_partial_smoke_not_contest_packet"]
                         if sign_policy == "pair_mask"
@@ -585,11 +742,12 @@ def main(argv: list[str] | None = None) -> int:
                         "base_member_sha256": a1_sha,
                         "source_base_archive_bytes": source_base_archive_bytes,
                         "archive_delta_vs_base_member_bytes": (
-                            len(archive_bytes) - base_member_bytes
+                            archive_delta_vs_base_member_bytes
                         ),
                         "archive_delta_vs_source_base_archive_bytes": (
-                            len(archive_bytes) - source_base_archive_bytes
+                            archive_delta_vs_source_base_archive_bytes
                         ),
+                        "compressed_rate_accounting": compressed_rate_accounting,
                         "d1_sidecar_bytes": len(d1_variant),
                         "d1_sidecar_sha256": _sha256_bytes(d1_variant),
                         "payload_budget_bits": payload_budget_bits,
@@ -648,6 +806,7 @@ def main(argv: list[str] | None = None) -> int:
                                 "label": pair_mask_label,
                                 "expected_pairs": int(args.expected_pairs),
                                 "partial_smoke_allowed": bool(args.allow_partial_smoke),
+                                "provenance": pair_sign_mask_provenance,
                             }
                             if sign_policy == "pair_mask"
                             else None
@@ -664,6 +823,26 @@ def main(argv: list[str] | None = None) -> int:
                             *partial_smoke_blockers,
                         ],
                     }
+                    row["deterministic_provenance_sha256"] = _stable_json_sha256(
+                        {
+                            "schema": "d1_overlay_policy_candidate_provenance_v1",
+                            "candidate_id": candidate_id,
+                            "source_d1_bin_sha256": row["source_d1_bin_sha256"],
+                            "a1_bin_sha256": row["a1_bin_sha256"],
+                            "archive_sha256": row["archive_sha256"],
+                            "d1_bin_sha256": row["d1_bin_sha256"],
+                            "policy_tuple": row["d1_meta_policy_tuple"],
+                            "payload_budget_bits": payload_budget_bits,
+                            "jacobian_lipschitz": jacobian_lipschitz,
+                            "margin_map_resolution": (
+                                list(margin_map_resolution)
+                                if margin_map_resolution is not None
+                                else None
+                            ),
+                            "pair_sign_mask": row["pair_sign_mask"],
+                            "compressed_rate_accounting": compressed_rate_accounting,
+                        }
+                    )
                     rows.append(row)
 
     best_by_effect: dict[str, dict[str, Any]] = {}
@@ -718,6 +897,7 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 "sha256": pair_sign_mask_sha256,
                 "label": pair_mask_label,
+                "provenance": pair_sign_mask_provenance,
             }
             if pair_sign_mask is not None
             else None
@@ -727,6 +907,32 @@ def main(argv: list[str] | None = None) -> int:
         "score_claim": False,
         "promotion_eligible": False,
     }
+    summary["deterministic_provenance_sha256"] = _stable_json_sha256(
+        {
+            "schema": "d1_overlay_policy_manifest_provenance_v1",
+            "source_d1_bin_sha256": summary["source_d1_bin_sha256"],
+            "a1_bin_sha256": summary["a1_bin_sha256"],
+            "channel_policies": summary["channel_policies"],
+            "amplitude_scales": summary["amplitude_scales"],
+            "sign_policies": summary["sign_policies"],
+            "payload_budget_bits": summary["payload_budget_bits"],
+            "jacobian_lipschitz_values": summary["jacobian_lipschitz_values"],
+            "margin_map_resolution": summary["margin_map_resolution"],
+            "pair_sign_mask": summary["pair_sign_mask"],
+            "candidates": [
+                {
+                    "candidate_id": row["candidate_id"],
+                    "archive_sha256": row["archive_sha256"],
+                    "archive_bytes": row["archive_bytes"],
+                    "d1_bin_sha256": row["d1_bin_sha256"],
+                    "deterministic_provenance_sha256": row[
+                        "deterministic_provenance_sha256"
+                    ],
+                }
+                for row in rows
+            ],
+        }
+    )
     _write_json(args.output_dir / "d1_overlay_policy_candidates_manifest.json", summary)
     print(json.dumps(summary, sort_keys=True, default=_json_default))
     return 0

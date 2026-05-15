@@ -292,6 +292,20 @@ def test_d1_policy_builder_materializes_pair_mask_policy(tmp_path: Path) -> None
     assert row["pair_sign_mask"]["positive_pairs"] == 2
     assert row["pair_sign_mask"]["expected_pairs"] == len(signs)
     assert row["pair_sign_mask"]["partial_smoke_allowed"] is False
+    assert row["pair_sign_mask"]["provenance"]["mask_scope"] == "full_contest_selector"
+    assert row["pair_sign_mask"]["provenance"]["source_sha256"] == hashlib.sha256(
+        mask_path.read_bytes()
+    ).hexdigest()
+    assert row["pair_sign_mask"]["provenance"]["packed_raw_bytes"] == 2
+    assert row["pair_sign_mask"]["provenance"]["packed_base85_chars"] == 3
+    assert row["compressed_rate_accounting"]["archive_bytes_are_zip_compressed"] is True
+    assert row["compressed_rate_accounting"]["pair_mask_packed_raw_bytes"] == 2
+    assert row["compressed_rate_accounting"]["pair_mask_packed_base85_chars"] == 3
+    assert len(row["deterministic_provenance_sha256"]) == 64
+    assert summary["pair_sign_mask"]["provenance"]["mask_scope"] == (
+        "full_contest_selector"
+    )
+    assert len(summary["deterministic_provenance_sha256"]) == 64
     assert row["d1_overlay_diagnostics"]["pair_mask_active_pairs"] == 3
     parsed = parse_archive((Path(row["submission_dir"]) / "d1_polytope.bin").read_bytes())
     assert parsed.meta["overlay_sign_policy"] == "pair_mask"
@@ -398,7 +412,43 @@ def test_d1_policy_builder_marks_partial_pair_mask_smoke(tmp_path: Path) -> None
     assert row["pair_sign_mask"]["n_pairs"] == 3
     assert row["pair_sign_mask"]["expected_pairs"] == 600
     assert row["pair_sign_mask"]["partial_smoke_allowed"] is True
+    assert row["pair_sign_mask"]["provenance"]["mask_scope"] == "partial_smoke_selector"
+    assert row["pair_sign_mask"]["provenance"]["full_expected_length"] is False
     assert "d1_pair_mask_partial_smoke_not_contest_packet" in row["dispatch_blockers"]
+
+
+def test_d1_policy_builder_rejects_noninteger_pair_mask_values(tmp_path: Path) -> None:
+    module = _load_tool()
+    d1_path, a1_path = _write_d1_inputs(tmp_path)
+    mask_path = tmp_path / "bad_pair_mask.json"
+    mask_path.write_text(
+        json.dumps({"pair_signs": [1, True, -1]}) + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        module.main(
+            [
+                "--d1-bin",
+                str(d1_path),
+                "--a1-bin",
+                str(a1_path),
+                "--output-dir",
+                str(tmp_path / "out_bad_mask"),
+                "--policies",
+                "green",
+                "--sign-policies",
+                "pair_mask",
+                "--pair-sign-mask-json",
+                str(mask_path),
+                "--expected-pairs",
+                "3",
+            ]
+        )
+    except SystemExit as exc:
+        assert "integer -1, 0, or 1" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("bool pair-mask values should fail closed")
 
 
 def test_d1_policy_builder_rejects_bad_amplitude_scale() -> None:
