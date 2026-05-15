@@ -104,6 +104,7 @@ def test_briefing_json_composite_has_all_three_keys():
         "tools/xray_archive_section_entropy_heatmap.py",
         "tools/xray_paired_cpu_cuda_axis_delta.py",
         "tools/xray_pair_component_errors.py",
+        "tools/xray_hardpair_hitlist.py",
         "tools/xray_substrate_classifier.py",
     }.issubset({row["tool"] for row in out["xray_tools"]})
     integration = out["cooperative_receiver_solver_integration"]

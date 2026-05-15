@@ -647,6 +647,7 @@ _EXPECTED_XRAY_TOOLS = frozenset(
         "tools/xray_cpu_cuda_drift_per_arch_class.py",
         "tools/xray_paired_cpu_cuda_axis_delta.py",
         "tools/xray_pair_component_errors.py",
+        "tools/xray_hardpair_hitlist.py",
         "tools/xray_substrate_classifier.py",
         "tools/xray_per_frame_difficulty_profile.py",
     }

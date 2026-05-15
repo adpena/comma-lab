@@ -1165,6 +1165,22 @@ XRAY_TOOLKIT = [
         ),
     },
     {
+        "tool": "tools/xray_hardpair_hitlist.py",
+        "purpose": (
+            "Deterministic hard-pair priority list from pair-component XRay "
+            "and paired CPU/CUDA axis deltas. Use to turn XRay diagnostics into "
+            "selector, film-grain, foveation, and latent-repair hitlists while "
+            "preserving false-authority status."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_hardpair_hitlist.py \\\n"
+            "  --pair-xray-json experiments/results/.../pair_component_xray.json \\\n"
+            "  --paired-axis-artifact experiments/results/.../paired_axis_delta.md \\\n"
+            "  --label candidate_hardpairs \\\n"
+            "  --output-dir experiments/results/hardpair_hitlist_candidate"
+        ),
+    },
+    {
         "tool": "tools/xray_substrate_classifier.py",
         "purpose": (
             "Classify archive payload grammar from magic bytes and layout "
