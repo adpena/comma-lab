@@ -1,0 +1,17 @@
+{
+  "archive_sha256": "13e6dd3bf26866bdb633e6ab9910f59c73d2ab6e7d21ccf6b22b2c0a9d49c523",
+  "archive_bytes": 178477,
+  "axis": "proxy_rate_only_until_exact_eval",
+  "byte_delta_vs_fec3": -40,
+  "compact_selector_codec": "fec5_fixed_huffman_k8",
+  "fec3_archive_sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+  "fec3_archive_bytes": 178517,
+  "pair_mode_ids_equal_to_fec3": true,
+  "score_claim": false,
+  "selector_avg_bits_per_pair": 2.7016666666666667,
+  "selector_code_bits_total": 1621,
+  "selector_payload_bytes": 209,
+  "selector_payload_bytes_fec3": 249,
+  "source_payload_equal_to_fec3": true,
+  "expected_cpu_score_if_components_identical": 0.19207125247182248
+}
