@@ -15,6 +15,9 @@ from tac.deploy.kaggle.source_bundle import (
     open_deterministic_tar_gz,
 )
 from tac.deploy.pr106_latent import (
+    DEFAULT_DELTA_RADIUS,
+    DEFAULT_RUNTIME_DIR,
+    FORMAT0C_ARCHIVE_MEMBER,
     REMOTE_SCRIPT,
     Pr106LatentScoreTableSpec,
     score_table_env,
@@ -61,7 +64,9 @@ class KagglePr106LatentBundleSpec:
     title: str = DEFAULT_KERNEL_TITLE
     dataset_ref: str | None = None
     source_dataset_ref: str | None = None
-    delta_radius: int = 1
+    archive_member: str = FORMAT0C_ARCHIVE_MEMBER
+    runtime_dir: str = DEFAULT_RUNTIME_DIR
+    delta_radius: int = DEFAULT_DELTA_RADIUS
     latent_dim: int = 28
     n_pairs: int = 600
     batch_pairs: int = 2
@@ -74,6 +79,8 @@ class KagglePr106LatentBundleSpec:
         return Pr106LatentScoreTableSpec(
             job_name=self.job_name,
             pr106_archive=self.pr106_archive_in_bundle,
+            archive_member=self.archive_member,
+            runtime_dir=self.runtime_dir,
             delta_radius=self.delta_radius,
             latent_dim=self.latent_dim,
             n_pairs=self.n_pairs,
@@ -126,6 +133,9 @@ def write_source_bundle(
         "pr106_archive": spec.pr106_archive_in_bundle,
         "job_name": spec.job_name,
         "lane_id": spec.score_table_spec().lane_id,
+        "archive_member": spec.archive_member,
+        "runtime_dir": spec.runtime_dir,
+        "delta_radius": spec.delta_radius,
         "score_claim": False,
     }
 
@@ -284,14 +294,15 @@ def _ensure_pr106_archive_zip(workspace: Path) -> None:
     if archive.is_file():
         return
     extracted = archive.with_suffix("")
-    payload = extracted / "0.bin"
+    archive_member = {spec.archive_member!r}
+    payload = extracted / archive_member
     if not payload.is_file():
         raise FileNotFoundError(
             f"required PR106 archive missing: {{archive}}; also missing extracted payload {{payload}}"
         )
     archive.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
-        info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+        info = zipfile.ZipInfo(archive_member, date_time=(1980, 1, 1, 0, 0, 0))
         info.compress_type = zipfile.ZIP_STORED
         info.external_attr = 0o644 << 16
         z.writestr(info, payload.read_bytes())

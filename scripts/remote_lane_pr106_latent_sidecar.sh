@@ -23,10 +23,10 @@ set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
 LANE_ID="lane_pr106_latent_sidecar"
-PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
+PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip}"
 SIDECAR_TOP_K="${SIDECAR_TOP_K:-600}"
 PR106_LATENT_MODE="${PR106_LATENT_MODE:-score_table}"
-PR106_LATENT_DELTA_RADIUS="${PR106_LATENT_DELTA_RADIUS:-1}"
+PR106_LATENT_DELTA_RADIUS="${PR106_LATENT_DELTA_RADIUS:-2}"
 PR106_LATENT_N_PAIRS="${PR106_LATENT_N_PAIRS:-600}"
 PR106_LATENT_DIM="${PR106_LATENT_DIM:-28}"
 PR106_LATENT_SCORE_TABLE_BATCH_PAIRS="${PR106_LATENT_SCORE_TABLE_BATCH_PAIRS:-2}"
@@ -37,7 +37,7 @@ PR106_LATENT_SCORE_TABLE_MANIFEST="${PR106_LATENT_SCORE_TABLE_MANIFEST:-}"
 PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"
 PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID:-${INSTANCE_JOB_ID:-}}"
 PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"
-PR106_ARCHIVE_MEMBER="${PR106_ARCHIVE_MEMBER:-}"
+PR106_ARCHIVE_MEMBER="${PR106_ARCHIVE_MEMBER:-x}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 
@@ -46,6 +46,80 @@ cd "$WORKSPACE"
 LOG_DIR="${PR106_LATENT_LOG_DIR:-$WORKSPACE/experiments/results/${LANE_ID}_$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$LOG_DIR"
 log() { echo "[lane-pr106-sidecar] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+
+# CPU source/runtime preflight before any CUDA work. This blocks stale PR106
+# packets, implicit member inference, and missing runtime trees before spend.
+SOURCE_PREFLIGHT_JSON="$LOG_DIR/source_preflight.json"
+PR106_ARCHIVE="$PR106_ARCHIVE" \
+PR106_ARCHIVE_MEMBER="$PR106_ARCHIVE_MEMBER" \
+PR106_RUNTIME_DIR="$PR106_RUNTIME_DIR" \
+PR106_SOURCE_PREFLIGHT_JSON="$SOURCE_PREFLIGHT_JSON" \
+"$PYBIN" - <<'PY'
+import hashlib
+import json
+import os
+import sys
+import zipfile
+from pathlib import Path
+
+archive = Path(os.environ["PR106_ARCHIVE"])
+archive_member = os.environ["PR106_ARCHIVE_MEMBER"]
+runtime_dir = Path(os.environ["PR106_RUNTIME_DIR"])
+output_json = Path(os.environ["PR106_SOURCE_PREFLIGHT_JSON"])
+errors: list[str] = []
+record: dict[str, object] = {
+    "schema": "pr106_latent_source_preflight_v1",
+    "pr106_archive": str(archive),
+    "archive_member": archive_member,
+    "runtime_dir": str(runtime_dir),
+}
+
+if not archive.is_file():
+    errors.append(f"missing PR106 archive: {archive}")
+else:
+    record["source_archive_bytes"] = archive.stat().st_size
+    record["source_archive_sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+    try:
+        with zipfile.ZipFile(archive) as zf:
+            names = zf.namelist()
+            record["zip_members"] = names
+            if archive_member not in names:
+                errors.append(
+                    f"archive member {archive_member!r} not found in {archive}; "
+                    f"members={names}"
+                )
+            else:
+                payload = zf.read(archive_member)
+                record["source_archive_member_bytes"] = len(payload)
+                record["source_archive_member_sha256"] = hashlib.sha256(payload).hexdigest()
+    except zipfile.BadZipFile as exc:
+        errors.append(f"invalid PR106 archive zip {archive}: {exc}")
+
+if not runtime_dir.is_dir():
+    errors.append(f"missing PR106 runtime dir: {runtime_dir}")
+else:
+    missing_runtime_files = [
+        str(path)
+        for path in (runtime_dir / "inflate.py", runtime_dir / "inflate.sh")
+        if not path.is_file()
+    ]
+    if missing_runtime_files:
+        errors.append(f"missing PR106 runtime files: {missing_runtime_files}")
+    record["runtime_files_checked"] = ["inflate.py", "inflate.sh"]
+
+record["ok"] = not errors
+record["errors"] = errors
+output_json.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+if errors:
+    for error in errors:
+        print(f"FATAL: {error}", file=sys.stderr)
+    raise SystemExit(3)
+print(
+    "[stage-0] source preflight OK: "
+    f"archive={archive} member={archive_member} runtime={runtime_dir}",
+    flush=True,
+)
+PY
 
 # Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
 # probe MUST come before any GPU-work marker including bare `nvidia-smi`.
@@ -64,32 +138,54 @@ trap "kill $HB_PID 2>/dev/null || true" EXIT
 
 # ── Stage 0: Provenance + CUDA preflight ──────────────────────────────────
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
-GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")
-"$PYBIN" -c "
-import json, time, sys, torch
+GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || true)
+GPU_NAME="${GPU_NAME:-no-gpu}"
+PR106_STAGE0_LANE_ID="$LANE_ID" \
+PR106_STAGE0_GIT_HASH="$GIT_HASH" \
+PR106_STAGE0_GPU_NAME="$GPU_NAME" \
+PR106_STAGE0_ARCHIVE="$PR106_ARCHIVE" \
+PR106_STAGE0_LATENT_MODE="$PR106_LATENT_MODE" \
+PR106_STAGE0_DELTA_RADIUS="$PR106_LATENT_DELTA_RADIUS" \
+PR106_STAGE0_SCORE_TABLE_LANE_ID="$PR106_LATENT_SCORE_TABLE_LANE_ID" \
+PR106_STAGE0_INSTANCE_JOB_ID="$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID" \
+PR106_STAGE0_RUNTIME_DIR="$PR106_RUNTIME_DIR" \
+PR106_STAGE0_ARCHIVE_MEMBER="$PR106_ARCHIVE_MEMBER" \
+PR106_STAGE0_SIDECAR_TOP_K="$SIDECAR_TOP_K" \
+PR106_STAGE0_PROVENANCE_JSON="$LOG_DIR/provenance.json" \
+"$PYBIN" - <<'PY'
+import json
+import os
+import sys
+import time
+
+import torch
+
 if not torch.cuda.is_available():
     sys.exit('FATAL: --device cuda required per CLAUDE.md MPS-auth-eval-is-NOISE')
 prov = {
-    'lane_id': '$LANE_ID',
+    'lane_id': os.environ['PR106_STAGE0_LANE_ID'],
     'predicted_band': [0.205, 0.208],
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-    'git_hash': '$GIT_HASH',
-    'gpu_name': '$GPU_NAME',
+    'git_hash': os.environ['PR106_STAGE0_GIT_HASH'],
+    'gpu_name': os.environ['PR106_STAGE0_GPU_NAME'],
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
-    'pr106_archive': '$PR106_ARCHIVE',
-    'latent_mode': '$PR106_LATENT_MODE',
-    'latent_delta_radius': int('$PR106_LATENT_DELTA_RADIUS'),
-    'latent_score_table_lane_id': '$PR106_LATENT_SCORE_TABLE_LANE_ID',
-    'latent_score_table_instance_job_id': '$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID',
-    'pr106_runtime_dir': '$PR106_RUNTIME_DIR',
-    'pr106_archive_member': '$PR106_ARCHIVE_MEMBER',
-    'sidecar_top_k': int('$SIDECAR_TOP_K'),
+    'pr106_archive': os.environ['PR106_STAGE0_ARCHIVE'],
+    'latent_mode': os.environ['PR106_STAGE0_LATENT_MODE'],
+    'latent_delta_radius': int(os.environ['PR106_STAGE0_DELTA_RADIUS']),
+    'latent_score_table_lane_id': os.environ['PR106_STAGE0_SCORE_TABLE_LANE_ID'],
+    'latent_score_table_instance_job_id': os.environ['PR106_STAGE0_INSTANCE_JOB_ID'],
+    'pr106_runtime_dir': os.environ['PR106_STAGE0_RUNTIME_DIR'],
+    'pr106_archive_member': os.environ['PR106_STAGE0_ARCHIVE_MEMBER'],
+    'sidecar_top_k': int(os.environ['PR106_STAGE0_SIDECAR_TOP_K']),
 }
-with open('$LOG_DIR/provenance.json', 'w') as f:
+with open(os.environ['PR106_STAGE0_PROVENANCE_JSON'], 'w') as f:
     json.dump(prov, f, indent=2)
-print(f'[stage-0] provenance written; CUDA={torch.cuda.is_available()}; top_k={prov[\"sidecar_top_k\"]}')
-"
+print(
+    f"[stage-0] provenance written; CUDA={torch.cuda.is_available()}; "
+    f"top_k={prov['sidecar_top_k']}"
+)
+PY
 
 # ── Stage 1: Build score table + PR106 sidecar archive ────────────────────
 log "=== Stage 1: build PR106 + latent-correction sidecar (mode=$PR106_LATENT_MODE, top_k=$SIDECAR_TOP_K) ==="

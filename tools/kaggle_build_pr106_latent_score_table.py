@@ -17,7 +17,6 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.deploy.claims import dispatch_claim_command  # noqa: E402
-from tac.deploy.pr106_latent import dispatch_claim_spec  # noqa: E402
 from tac.deploy.kaggle.pr106_latent_score_table import (  # noqa: E402
     DEFAULT_JOB_NAME,
     DEFAULT_KERNEL_SLUG,
@@ -28,12 +27,16 @@ from tac.deploy.kaggle.pr106_latent_score_table import (  # noqa: E402
     write_bundle,
     write_source_bundle,
 )
+from tac.deploy.pr106_latent import (  # noqa: E402
+    DEFAULT_DELTA_RADIUS,
+    DEFAULT_RUNTIME_DIR,
+    FORMAT0C_ARCHIVE_MEMBER,
+    FORMAT0C_SOURCE_ARCHIVE,
+    dispatch_claim_spec,
+)
 
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "experiments/kaggle_kernels"
-DEFAULT_PR106_ARCHIVE = (
-    REPO_ROOT
-    / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip"
-)
+DEFAULT_PR106_ARCHIVE = REPO_ROOT / FORMAT0C_SOURCE_ARCHIVE
 DEFAULT_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 DEFAULT_SOURCE_BUNDLE_ROOT = REPO_ROOT / "experiments/kaggle_datasets"
 
@@ -63,6 +66,8 @@ def build_spec(args: argparse.Namespace) -> KagglePr106LatentBundleSpec:
         delta_radius=args.delta_radius,
         latent_dim=args.latent_dim,
         n_pairs=args.n_pairs,
+        archive_member=args.archive_member,
+        runtime_dir=args.runtime_dir,
         batch_pairs=args.batch_pairs,
         candidate_batch_size=args.candidate_batch_size,
         sidecar_top_k=args.sidecar_top_k,
@@ -112,7 +117,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--pr106-archive", type=Path, default=DEFAULT_PR106_ARCHIVE)
     parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
-    parser.add_argument("--delta-radius", type=int, default=1)
+    parser.add_argument("--archive-member", default=FORMAT0C_ARCHIVE_MEMBER)
+    parser.add_argument("--runtime-dir", default=DEFAULT_RUNTIME_DIR)
+    parser.add_argument("--delta-radius", type=int, default=DEFAULT_DELTA_RADIUS)
     parser.add_argument("--latent-dim", type=int, default=28)
     parser.add_argument("--n-pairs", type=int, default=600)
     parser.add_argument("--batch-pairs", type=int, default=2)

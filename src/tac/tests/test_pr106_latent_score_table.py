@@ -370,8 +370,19 @@ def test_remote_latent_lane_defaults_to_score_table_and_resume():
 
     assert 'PR106_LATENT_MODE="${PR106_LATENT_MODE:-score_table}"' in text
     assert 'PR106_LATENT_SCORE_TABLE_RESUME="${PR106_LATENT_SCORE_TABLE_RESUME:-1}"' in text
+    assert (
+        'PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/'
+        "pr106_format0c_exact_radix_candidate_20260515_codex/candidates/"
+        "pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip}\""
+        in text
+    )
+    assert 'PR106_ARCHIVE_MEMBER="${PR106_ARCHIVE_MEMBER:-x}"' in text
+    assert 'PR106_LATENT_DELTA_RADIUS="${PR106_LATENT_DELTA_RADIUS:-2}"' in text
     assert 'LANE_ID="lane_pr106_latent_sidecar"' in text
     assert 'PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"' in text
+    assert "source preflight OK" in text
+    assert "pr106_latent_source_preflight_v1" in text
+    assert "archive member {archive_member!r} not found" in text
     assert "experiments/build_pr106_latent_score_table.py" in text
     assert "tools/materialize_pr106_latent_score_table_candidate.py" in text
     assert 'PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"' in text

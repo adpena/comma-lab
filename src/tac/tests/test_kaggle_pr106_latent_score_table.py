@@ -54,6 +54,8 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert "import tac.deploy.pr106_latent" in launcher
     assert "'PR106_LATENT_MODE': 'score_table'" in launcher
     assert "'PR106_LATENT_DELTA_RADIUS': '2'" in launcher
+    assert "'PR106_ARCHIVE_MEMBER': 'x'" in launcher
+    assert "'PR106_RUNTIME_DIR': 'submissions/pr106_latent_sidecar_r2_pr101_grammar'" in launcher
     assert "'PR106_LATENT_SCORE_TABLE_BATCH_PAIRS': '3'" in launcher
     assert "'PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE': '5'" in launcher
     assert "'PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID': 'kaggle_pr106_latent_test'" in launcher
@@ -62,6 +64,8 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert "torch==2.4.1+cu121" in launcher
     assert "PR106_LATENT_TORCH_FALLBACK_REEXEC" in launcher
     assert "PYTORCH_CUDA_ALLOC_CONF" in launcher
+    assert "archive_member = 'x'" in launcher
+    assert 'zipfile.ZipInfo(archive_member' in launcher
     compile(launcher, "run_kernel.py", "exec")
 
 
@@ -87,6 +91,9 @@ def test_write_source_bundle_contains_latent_runtime_contract_and_claim_ledger(t
     )
 
     assert manifest["schema"] == "kaggle_pr106_latent_source_bundle_v1"
+    assert manifest["archive_member"] == "x"
+    assert manifest["runtime_dir"] == "submissions/pr106_latent_sidecar_r2_pr101_grammar"
+    assert manifest["delta_radius"] == 2
     with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
         names = set(tar.getnames())
 
