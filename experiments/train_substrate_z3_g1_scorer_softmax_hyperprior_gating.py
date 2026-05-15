@@ -271,6 +271,39 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--enable-autocast-fp16", action="store_true")
     p.add_argument("--enable-torch-compile", action="store_true")
     p.add_argument("--enable-gt-scorer-cache", action="store_true")
+    # ------------------------------------------------------------------
+    # Codex review bkrbqet3p 2026-05-15 (F1 + F2) self-protection flags.
+    # Catalog #266 + #267. See `_validate_g1_research_only_flags`.
+    # ------------------------------------------------------------------
+    p.add_argument(
+        "--allow-uniform-class-fallback",
+        action="store_true",
+        help=(
+            "F2 (Catalog #267) opt-in: SegNet class derivation may "
+            "silently fall back to deterministic uniform class assignment "
+            "when scorer load/forward fails. Default False = FAIL-CLOSED "
+            "for full runs (raise SystemExit). Required-paired with "
+            "--research-only-direct-residual because uniform-class "
+            "assignment yields a synthetic class prior that does NOT "
+            "represent the substrate's intended scorer-class gating; the "
+            "produced archive is not a contest-promotion candidate."
+        ),
+    )
+    p.add_argument(
+        "--research-only-direct-residual",
+        action="store_true",
+        help=(
+            "F1 (Catalog #266) opt-in: explicitly acknowledge that the "
+            "G1 trainer currently emits a DIRECT-RESIDUAL Z3HV2 packet "
+            "(empty hyperprior_weights_int8 + w_hat_int8 slots) and the "
+            "learned sigma table + class indices land in g1_diagnostic.pt "
+            "OUTSIDE the archive, so any auth-eval measures the direct-"
+            "residual control NOT the advertised G1 scorer-class gating. "
+            "When set: stamps research_only=true, skips auth-eval, "
+            "labels artifact as `direct_residual_g1_diagnostic_control`. "
+            "When unset: full_main raises SystemExit before any GPU spend."
+        ),
+    )
     return p
 
 
@@ -281,6 +314,58 @@ def _validate_full_cpu_flags(args: argparse.Namespace) -> None:
             "ERROR: --full-cpu requires --advisory-cpu-explicitly-waived per "
             "Catalog #197 (paired-flag attestation that the CPU-axis bypass "
             "is intentional and non-promotable)"
+        )
+
+
+def _validate_g1_research_only_flags(args: argparse.Namespace) -> None:
+    """Codex bkrbqet3p F1 (Catalog #266) + F2 (Catalog #267) gating.
+
+    The G1 trainer currently produces a DIRECT-RESIDUAL Z3HV2 packet
+    (empty hyperprior_weights_int8 + w_hat_int8 slots — see
+    train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py:866-916).
+    The learned sigma table + class indices land in ``g1_diagnostic.pt``
+    OUTSIDE the archive; the runtime never consumes them. Any auth-eval
+    therefore measures a direct-residual Z3HV2 control, NOT the advertised
+    G1 scorer-class gating. Per codex review recommendation #1, the
+    trainer must EITHER (a) encode the sigma table + class indices into
+    ``0.bin`` AND verify the inflate consumes them via byte-mutation smoke
+    (Catalog #139), OR (b) force ``research_only=true``, skip auth-eval,
+    and label the artifact as a direct-residual control. Until path (a)
+    lands, the trainer requires ``--research-only-direct-residual`` for
+    full_main to run.
+
+    Sister F2 gate: ``--allow-uniform-class-fallback`` must be opt-in.
+    Without it, the silent ``except Exception`` path at line 662 is
+    fail-closed: any SegNet load / forward / video-decode failure raises
+    instead of producing a synthetic uniform class prior. With it, the
+    flag MUST be paired with ``--research-only-direct-residual`` because
+    a uniform class prior cannot represent the substrate's intended
+    scorer-class gating regardless of archive consumption.
+    """
+    if not args.research_only_direct_residual:
+        raise SystemExit(
+            "ERROR: G1 full_main requires --research-only-direct-residual "
+            "per Codex review bkrbqet3p F1 / Catalog #266. The current G1 "
+            "trainer emits a DIRECT-RESIDUAL Z3HV2 packet (empty "
+            "hyperprior_weights_int8 + w_hat_int8 slots; sigma table + "
+            "class indices in g1_diagnostic.pt OUTSIDE the archive). The "
+            "runtime never consumes the G1 bytes, so any auth-eval would "
+            "measure a direct-residual Z3HV2 control NOT the advertised "
+            "G1 scorer-class gating. Either land an inflate-time consumer "
+            "+ byte-mutation smoke (Catalog #139) before re-running, OR "
+            "pass --research-only-direct-residual to acknowledge the "
+            "trainer is producing a research-only direct-residual control."
+        )
+    if args.allow_uniform_class_fallback and not args.research_only_direct_residual:
+        # Defensive: above branch already covers, but make the pairing
+        # contract explicit for any future refactor that relaxes the
+        # outer gate.
+        raise SystemExit(
+            "ERROR: --allow-uniform-class-fallback requires "
+            "--research-only-direct-residual per Codex review bkrbqet3p "
+            "F2 / Catalog #267 (paired-flag attestation that the uniform "
+            "class prior is non-promotable and that the artifact is "
+            "labeled research_only=true)."
         )
 
 
@@ -660,15 +745,41 @@ def _full_main(args: argparse.Namespace) -> int:
             f"unique{int(class_indices.unique().numel())}"
         )
     except Exception as exc:
+        # Codex bkrbqet3p F2 / Catalog #267 fail-closed gate. The previous
+        # silent fallback to uniform class assignment converted scorer-load
+        # / video-decode / dependency failures into a synthetic class prior
+        # that flowed through archive build + auth-eval as if real. The new
+        # contract: full runs MUST fail-closed unless the operator opts in
+        # via --allow-uniform-class-fallback (which is itself paired with
+        # --research-only-direct-residual per _validate_g1_research_only_flags).
+        if not args.allow_uniform_class_fallback:
+            raise SystemExit(
+                "ERROR: SegNet per-pair class derivation failed: "
+                f"{exc!r}. Per Codex review bkrbqet3p F2 / Catalog #267, "
+                "the trainer is fail-closed. Either (a) fix the upstream "
+                "scorer / video / device error, OR (b) re-run with "
+                "--allow-uniform-class-fallback (only valid when paired "
+                "with --research-only-direct-residual; produces a "
+                "research-only synthetic-class-prior artifact tagged "
+                "research_only=true and excluded from contest promotion)."
+            ) from exc
+        # Operator-opt-in path: emit the uniform fallback BUT loudly stamp
+        # the artifact as research-only. The downstream archive build keeps
+        # research_only=true (already set elsewhere) and skips auth-eval
+        # via _g1_full_should_skip_auth_eval below.
         print(
-            f"[z3g1-full] WARN SegNet class derivation failed: {exc!r}; "
-            "falling back to uniform class assignment"
+            "[z3g1-full] OPERATOR-OPT-IN uniform class fallback "
+            f"(--allow-uniform-class-fallback): SegNet class derivation "
+            f"failed: {exc!r}. Class assignment is SYNTHETIC + non-promotable; "
+            "research_only=true; auth-eval will be skipped per Catalog #267."
         )
         class_indices = (
             torch.arange(n_pairs, device=device, dtype=torch.long)
             % args.num_scorer_classes
         )
-        _stage("class_indices_fallback_uniform")
+        # Mark on args so downstream archive + auth-eval gate can see it.
+        args._g1_uniform_class_fallback_active = True  # type: ignore[attr-defined]
+        _stage("class_indices_fallback_uniform_research_only")
 
     # Diagnostic: per-class histogram.
     histogram = torch.bincount(
@@ -927,7 +1038,33 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage("archive_zip_and_runtime_emitted")
 
         # ---- Step 9: CUDA auth eval via canonical gate ----
-        if not args.skip_auth_eval:
+        # Codex bkrbqet3p F1 (Catalog #266) + F2 (Catalog #267) auth-eval
+        # gate. Skip when (a) operator passed --skip-auth-eval; (b) the
+        # G1 archive is in direct-residual mode (always today — bytes are
+        # not consumed by inflate); (c) the uniform-class fallback fired
+        # (synthetic class prior cannot represent the substrate). The
+        # direct-residual branch is hard-wired ON for the current
+        # _v2_encode_section(hyperprior_weights_int8=b"", w_hat_int8=b"")
+        # build above, so we ALWAYS skip auth-eval until a real consumer
+        # lands. The skip stamps a research-only blocker into the
+        # downstream review-blockers list.
+        _g1_archive_consumes_hyperprior_bytes = False  # See line ~875 above
+        _g1_uniform_fallback_active = bool(
+            getattr(args, "_g1_uniform_class_fallback_active", False)
+        )
+        _g1_skip_auth_eval_reason: str | None = None
+        if args.skip_auth_eval:
+            _g1_skip_auth_eval_reason = "operator_set_--skip-auth-eval"
+        elif not _g1_archive_consumes_hyperprior_bytes:
+            _g1_skip_auth_eval_reason = (
+                "catalog_266_g1_archive_direct_residual_no_consumer_for_"
+                "hyperprior_or_class_bytes"
+            )
+        elif _g1_uniform_fallback_active:
+            _g1_skip_auth_eval_reason = (
+                "catalog_267_uniform_class_prior_synthetic_non_promotable"
+            )
+        if _g1_skip_auth_eval_reason is None:
             _stage("contest_auth_eval")
             result_json_path = out_dir / "contest_auth_eval_cuda.json"
             auth_result = _canon_gate_auth_eval_call(
@@ -951,6 +1088,15 @@ def _full_main(args: argparse.Namespace) -> int:
                     auth_result["auth_eval_score_claim_valid"]
                 )
                 auth_eval_exact_cuda_complete = True
+        else:
+            _stage(f"contest_auth_eval_SKIPPED_REASON_{_g1_skip_auth_eval_reason}")
+            # Stamp the skip reason onto args so downstream blocker logic
+            # surfaces it in result_review_blockers.
+            existing = str(getattr(args, "auth_eval_skipped_reason", "") or "")
+            sep = ";" if existing else ""
+            args.auth_eval_skipped_reason = (  # type: ignore[attr-defined]
+                f"{existing}{sep}{_g1_skip_auth_eval_reason}"
+            )
     finally:
         pass
 
@@ -1123,6 +1269,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.smoke:
         return _smoke_main(args)
+    # Codex bkrbqet3p F1 (Catalog #266) + F2 (Catalog #267) full-main
+    # gating: refuse to spend GPU until the operator opts into the
+    # research-only direct-residual contract.
+    _validate_g1_research_only_flags(args)
     return _full_main(args)
 
 

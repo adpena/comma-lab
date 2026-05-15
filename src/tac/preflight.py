@@ -2108,6 +2108,27 @@ def preflight_all(
         check_paired_dispatch_uses_anchor_skip_flag(
             strict=False, verbose=verbose,
         )
+        # 2026-05-15 Catalog #270 - canonical dispatch optimization protocol
+        # umbrella gate. Operator directive 2026-05-15 NON-NEGOTIABLE:
+        # *"remember the multiple deployments that have failed over and
+        # over because of missing optimizations? we should investigate
+        # and develop a protocol for those too and enforce best practices
+        # and production hardened optimization, extreme optimization and
+        # correctness and performance and scalability"*. Routes through
+        # tools/canonical_dispatch_optimization_protocol.verify_dispatch_protocol_complete
+        # which ANDs over Tier 1 (engineering primitives) + Tier 2
+        # (hardware correctness) + Tier 3 (substrate correctness). Sister
+        # of Catalogs #170/#171/#172/#178/#179/#180/#181/#182/#215 (Tier
+        # 1/2 declared canonical) + Catalog #240 (recipe-vs-trainer-state)
+        # + Catalog #244 (NVML env block) + Catalog #226/#249 (auth-eval
+        # canonical helper). Initial wire-in is WARN-ONLY per "Strict-flip
+        # atomicity rule" because legacy substrates have real Tier 1 gaps
+        # (e.g. Z3 Balle missing TF32 + canonical scorer loss); strict-
+        # flip planned alongside operator-routed Tier 1 backfill sweep.
+        # Memory: feedback_canonical_dispatch_optimization_protocol_landed_20260515.md.
+        check_dispatch_optimization_protocol_complete(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
         # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
         # returned auth_eval rc=2 because the trainer hand-wrote
@@ -57774,6 +57795,209 @@ def check_scorer_conditional_entropy_actually_uses_scorer_state(
             "'Bugs must be permanently fixed AND self-protected against' "
             "+ Catalog #269 (codex bkrbqet3p F4):\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #270 — Canonical dispatch optimization protocol (Tier 1/2/3 umbrella)
+# Operator directive 2026-05-15 NON-NEGOTIABLE HIGHEST EMPHASIS:
+# *"remember the multiple deployments that have failed over and over because
+# of missing optimizations? we should investigate and develop a protocol for
+# those too and enforce best practices and production hardened optimization,
+# extreme optimization and correctness and performance and scalability"*
+# ----------------------------------------------------------------------------
+
+_CHECK_270_WAIVER_MARKER = "# DISPATCH_OPTIMIZATION_PROTOCOL_OK:"
+_CHECK_270_PLACEHOLDER_RATIONALES = frozenset(("<rationale>", "<reason>", ""))
+# Mapping substrate-id → canonical recipe basename (extend as new substrates
+# land; missing mapping ⇒ trainer is checked recipe-less which yields advisory
+# but never fails the gate at landing time).
+_CHECK_270_TRAINER_GLOB = "experiments/train_substrate_*.py"
+_CHECK_270_RECIPE_DIR = (".omx", "operator_authorize_recipes")
+
+
+def _check_270_resolve_recipe_for_trainer(
+    trainer_path: Path, repo_root: Path
+) -> str | None:
+    """Best-effort recipe lookup for a substrate trainer.
+
+    Convention: ``experiments/train_substrate_<id>.py`` →
+    ``substrate_<id>_modal_<gpu>_dispatch.yaml`` (or ``smoke_dispatch.yaml``).
+    Returns the recipe NAME (without ``.yaml``) if unique, else ``None``
+    (gate then runs Tier 2/3 advisory-only).
+    """
+    name = trainer_path.name
+    m = re.match(r"^train_substrate_(.+)\.py$", name)
+    if not m:
+        return None
+    substrate_id = m.group(1)
+    recipe_dir = repo_root.joinpath(*_CHECK_270_RECIPE_DIR)
+    if not recipe_dir.is_dir():
+        return None
+    pattern = f"substrate_{substrate_id}_*.yaml"
+    candidates = sorted(recipe_dir.glob(pattern))
+    if len(candidates) == 1:
+        return candidates[0].stem
+    # Multiple recipes — prefer modal_t4 / modal_a100 dispatch recipes
+    for cand in candidates:
+        if "_modal_t4_dispatch" in cand.stem or "_modal_a100_dispatch" in cand.stem:
+            return cand.stem
+    return None
+
+
+def _check_270_text_has_waiver(text: str) -> bool:
+    head = "\n".join(text.splitlines()[:30])
+    if _CHECK_270_WAIVER_MARKER not in head:
+        return False
+    idx = head.find(_CHECK_270_WAIVER_MARKER)
+    rest = head[idx + len(_CHECK_270_WAIVER_MARKER):].splitlines()
+    if not rest:
+        return False
+    after = rest[0].strip()
+    return bool(after) and after not in _CHECK_270_PLACEHOLDER_RATIONALES
+
+
+def check_dispatch_optimization_protocol_complete(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #270 — umbrella dispatch optimization protocol gate.
+
+    Routes through the canonical
+    :func:`tools.canonical_dispatch_optimization_protocol.verify_dispatch_protocol_complete`
+    helper (Tier 1 engineering primitives + Tier 2 hardware correctness +
+    Tier 3 substrate correctness; conjunction = REFUSE on any tier
+    blocker). Per the standing directive *"all possible should be pulled
+    into the decorator or similar reusable and shareable tools and
+    helpers"*, this gate NEVER re-implements bug-class detection — it
+    consults the canonical helper which itself routes through existing
+    sister gates (#172/#178/#179/#180/#228 Tier 1; #244/#170/#171/#181/#182/#215
+    Tier 2; #240/#222/#226/#205/#249 Tier 3).
+
+    Empirical anchors driving the umbrella formula
+    ``protocol_complete = AND(tier1, tier2, tier3)``:
+
+    * D1 ``substrate_d1_segnet_margin_polytope`` Modal T4 smoke 2026-05-15
+      crashed at ``nvml error (999)`` (6 occurrences in 24h) because the
+      lane driver was missing the canonical 3-export Modal/CUDA env
+      block — the SAME bug class Catalog #244 closes; an umbrella gate
+      that ANDs over Tier 2 hardware correctness would have refused
+      dispatch BEFORE the spend.
+    * Z3 v2 + Z4 smoke pair 2026-05-15 ($2 each wasted) crashed on the
+      recipe-vs-trainer-state divergence Z3 v2 / Z4 / Z5 bug class
+      Catalog #240 closes — Tier 3 substrate correctness AND.
+    * T1 Balle ``fc-01KR955JSYQAVTTYZA48VAV7WJ`` 2026-05-10 timed out
+      rc=124 at 84,608s wall-clock for missing autocast fp16 + TF32 +
+      torch.compile — Tier 1 engineering primitives AND.
+    * D4 ``fc-01KRK9RKD3QV4C276Y5KXFMF65`` 2026-05-14 OOM'd at 121s on T4
+      from full-batch reconstruct_pair forward — Tier 1+3 cross-cut.
+
+    Acceptance: every dispatchable substrate trainer (matching glob
+    ``experiments/train_substrate_*.py``) MUST have
+    ``verify_dispatch_protocol_complete`` return ``overall_pass=True``,
+    OR carry a same-line :data:`_CHECK_270_WAIVER_MARKER` waiver in the
+    file's first 30 lines (placeholder rationales rejected). The recipe
+    is auto-resolved per :func:`_check_270_resolve_recipe_for_trainer`;
+    missing-recipe runs the protocol advisory-only at the recipe-side
+    layer.
+
+    Initial wire-in is **WARN-ONLY** per CLAUDE.md "Strict-flip atomicity
+    rule". Live count at landing varies by Tier 1 audit; strict-flip
+    planned alongside the operator-routed Tier 1 backfill sweep that
+    drives violations to 0.
+
+    Sister of Catalog #240 (recipe-vs-trainer-state) + Catalog #244
+    (NVML env block) + Catalog #170/#171/#181/#182/#215 (recipe schema)
+    + Catalog #172/#178/#179/#180 (Tier 1 trainer engineering primitives)
+    + Catalog #226/#249 (auth-eval canonical helper). Together with the
+    sister gates, Catalog #270 closes the bug-class meta-surface at the
+    UMBRELLA layer: a single conjunction that future dispatchers (any
+    subagent / autopilot loop / operator) can consult to decide whether
+    the trainer + recipe + lane driver state is production-hardened
+    enough to fire a paid dispatch.
+
+    Memory:
+    ``feedback_canonical_dispatch_optimization_protocol_landed_20260515.md``.
+    Lane: ``lane_canonical_dispatch_optimization_protocol_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    # Late import to avoid a circular dependency at module load.
+    try:
+        sys.path.insert(0, str(root / "tools"))
+        try:
+            import canonical_dispatch_optimization_protocol as proto_mod  # type: ignore[import-not-found]
+        finally:
+            try:
+                sys.path.remove(str(root / "tools"))
+            except ValueError:
+                pass
+    except ImportError as exc:
+        if verbose:
+            print(
+                f"check_dispatch_optimization_protocol_complete: "
+                f"canonical helper missing ({exc}); skipping"
+            )
+        return []
+
+    glob_pattern = _CHECK_270_TRAINER_GLOB
+    trainer_paths = sorted(root.glob(glob_pattern))
+    if not trainer_paths:
+        if verbose:
+            print(
+                f"check_dispatch_optimization_protocol_complete: no "
+                f"trainers matched {glob_pattern}; skipping"
+            )
+        return []
+    violations: list[str] = []
+    for trainer_path in trainer_paths:
+        try:
+            text = trainer_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            text = ""
+        if text and _check_270_text_has_waiver(text):
+            continue
+        recipe_name = _check_270_resolve_recipe_for_trainer(trainer_path, root)
+        try:
+            verdict = proto_mod.verify_dispatch_protocol_complete(
+                trainer_path, recipe_name, repo_root=root
+            )
+        except Exception as exc:  # pragma: no cover — defensive
+            violations.append(
+                f"{trainer_path.relative_to(root)}: protocol verifier raised "
+                f"{type(exc).__name__}: {exc}"
+            )
+            continue
+        if verdict.overall_pass:
+            continue
+        head_blockers = "\n    ".join(verdict.blockers[:3])
+        violations.append(
+            f"{trainer_path.relative_to(root)} (recipe={recipe_name}): "
+            f"protocol verdict overall_pass=False — "
+            f"tier1={verdict.tier1.overall_pass} "
+            f"tier2={verdict.tier2.overall_pass} "
+            f"tier3={verdict.tier3.overall_pass}; "
+            f"first 3 of {len(verdict.blockers)} blockers:\n    "
+            f"{head_blockers}"
+        )
+    if verbose:
+        print(
+            f"  [dispatch-optimization-protocol] {len(violations)} "
+            f"trainer(s) failed the umbrella verdict (of {len(trainer_paths)} scanned)"
+        )
+    if violations and strict:
+        raise PreflightError(
+            f"check_dispatch_optimization_protocol_complete found "
+            f"{len(violations)} violation(s). Per CLAUDE.md "
+            "'Production-hardened dispatch optimization protocol' "
+            "non-negotiable + Catalog #270 (umbrella over Tier 1/2/3 "
+            "dispatch-failure bug classes). Fix the per-tier blocker OR "
+            "carry the canonical waiver "
+            f"`{_CHECK_270_WAIVER_MARKER}<rationale>` in the trainer "
+            "header (first 30 lines).\n  "
+            + "\n  ".join(v[:600] for v in violations[:5])
         )
     return violations
 
