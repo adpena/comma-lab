@@ -34,6 +34,7 @@ PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE="${PR106_LATENT_SCORE_TABLE_CANDID
 PR106_LATENT_SCORE_TABLE_RESUME="${PR106_LATENT_SCORE_TABLE_RESUME:-1}"
 PR106_LATENT_SCORE_TABLE_NPY="${PR106_LATENT_SCORE_TABLE_NPY:-}"
 PR106_LATENT_SCORE_TABLE_MANIFEST="${PR106_LATENT_SCORE_TABLE_MANIFEST:-}"
+PR106_LATENT_ALLOW_PROVIDER_CLAIM_MIRROR="${PR106_LATENT_ALLOW_PROVIDER_CLAIM_MIRROR:-0}"
 PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"
 PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID:-${INSTANCE_JOB_ID:-}}"
 PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"
@@ -222,6 +223,31 @@ if [ "$PR106_LATENT_MODE" = "score_table" ] && [ -z "$PR106_LATENT_SCORE_TABLE_N
     if [ -z "$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID" ]; then
         log "FATAL: PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID is required for score_table mode"
         exit 3
+    fi
+    if [ "$PR106_LATENT_ALLOW_PROVIDER_CLAIM_MIRROR" = "1" ]; then
+        PR106_PROVIDER_CLAIM_LANE_ID="$PR106_LATENT_SCORE_TABLE_LANE_ID" \
+        PR106_PROVIDER_CLAIM_JOB_ID="$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID" \
+        PR106_PROVIDER_CLAIM_PLATFORM="$CLOUD_PLATFORM" \
+        "$PYBIN" - <<'PY'
+import os
+from pathlib import Path
+
+from tac.sidechannel_score_table import mirror_provider_local_active_claim
+
+row = mirror_provider_local_active_claim(
+    Path(".omx/state/active_lane_dispatch_claims.md"),
+    lane_id=os.environ["PR106_PROVIDER_CLAIM_LANE_ID"],
+    instance_job_id=os.environ["PR106_PROVIDER_CLAIM_JOB_ID"],
+    platform=os.environ["PR106_PROVIDER_CLAIM_PLATFORM"],
+    agent="provider-runtime:pr106-latent-score-table",
+    notes="provider-local mirror; local pre-dispatch claim remains source of truth",
+)
+print(
+    "[stage-1a] provider-local claim mirror active: "
+    f"lane_id={row['lane_id']} job={row['instance_job_id']} platform={row['platform']}",
+    flush=True,
+)
+PY
     fi
     SCORE_TABLE_DIR="$LOG_DIR/score_table"
     mkdir -p "$SCORE_TABLE_DIR"

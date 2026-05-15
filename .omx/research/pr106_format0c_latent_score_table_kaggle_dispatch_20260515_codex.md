@@ -87,3 +87,67 @@ a method negative.
   - command sets `PR106_EXPECTED_ARCHIVE_SHA256=000...000`; result `rc=3` before CUDA.
 - Good-source local smoke:
   - command uses default expected hashes; `source_preflight.json` records `ok=true`, then local host stops at the expected no-CUDA guard.
+
+## Harvest Result - kernel v4
+
+- instance_job_id: `kaggle_pr106_format0c_latent_score_table_retry_20260515T135531Z`
+- harvested_at: `2026-05-15T14:05Z`
+- evidence_dir: `reports/raw/kaggle_ingested/kaggle_pr106_format0c_latent_score_table_retry_20260515T135531Z`
+- status: `failed_kaggle_kernel_error`
+- failure: `ValueError: no active lane claim found for lane_id=lane_pr106_latent_sidecar instance_job_id=kaggle_pr106_format0c_latent_score_table_retry_20260515T135531Z`
+- score_table: none
+- score_claim: false
+- terminal_claim: recorded as `failed_kaggle_kernel_error`
+
+Classification: actuator/custody bug, not a method negative. The local
+pre-dispatch claim gate fired before Kaggle spend, but the isolated provider
+workspace revalidated against a bundled claim ledger that did not contain the
+fresh retry row. Remote scorer-table producers need a provider-local mirror of
+the already-approved dispatch claim before strict producer-side claim
+validation runs.
+
+## Hardening Delta - provider-local claim mirror
+
+- `tools/harvest_kaggle_pr106_latent_score_table.py` now has `--close-claim`,
+  classifies harvested failures/score tables, records lane/job metadata in the
+  harvest manifest, and appends a terminal Kaggle claim row from local harvest.
+- `tac.sidechannel_score_table.mirror_provider_local_active_claim(...)` prepends
+  a provider-local active row in isolated remote workspaces, then immediately
+  reuses the strict `verify_active_lane_claim(...)` path. Local launchers still
+  own the real pre-spend conflict check.
+- `scripts/remote_lane_pr106_latent_sidecar.sh` and
+  `scripts/remote_lane_pr106_yshift_sidechannel.sh` enable the mirror only when
+  explicit provider env flags are set.
+- Kaggle latent/yshift launchers set those provider flags for Kaggle kernels.
+
+## Verification - provider-local claim mirror
+
+- `.venv/bin/python -m pytest src/tac/tests/test_harvest_kaggle_pr106_latent_score_table.py src/tac/tests/test_kaggle_pr106_latent_score_table.py src/tac/tests/test_kaggle_pr106_yshift_score_table.py src/tac/tests/test_pr106_yshift_score_table.py::test_provider_local_claim_mirror_prepends_strict_active_row src/tac/tests/test_pr101_fec7_selector_entropy.py -q`
+  - result: `21 passed in 14.69s`
+- `.venv/bin/python -m pytest src/tac/tests/test_pr106_latent_score_table.py::test_adaptive_latent_table_retries_cuda_oom_without_changing_scores src/tac/tests/test_pr106_yshift_score_table.py::test_verify_active_lane_claim_accepts_newest_nonterminal src/tac/tests/test_pr106_yshift_score_table.py::test_verify_active_lane_claim_rejects_terminal_newest -q`
+  - result: `3 passed in 0.51s`
+- `.venv/bin/python -m ruff check tools/harvest_kaggle_pr106_latent_score_table.py src/tac/tests/test_harvest_kaggle_pr106_latent_score_table.py src/tac/sidechannel_score_table.py src/tac/deploy/kaggle/pr106_latent_score_table.py src/tac/deploy/kaggle/pr106_yshift_score_table.py src/tac/tests/test_kaggle_pr106_latent_score_table.py src/tac/tests/test_kaggle_pr106_yshift_score_table.py src/tac/tests/test_pr106_yshift_score_table.py src/tac/packet_compiler/pr101_fec7_selector.py tools/profile_pr101_fec7_selector_entropy.py src/tac/tests/test_pr101_fec7_selector_entropy.py`
+  - result: `All checks passed`
+- `bash -n scripts/remote_lane_pr106_latent_sidecar.sh scripts/remote_lane_pr106_yshift_sidechannel.sh`
+  - result: clean
+
+## Adversarial Review Follow-Up
+
+Euclid read-only review found three actionable custody/axis gaps and one stale
+reference string. All are patched in this landing:
+
+1. Kaggle score-table launchers no longer silently fall back to an expanded
+   source tree when `pact_pr106_*_source_bundle.tar.gz` is absent. The fallback
+   now requires an explicit local-dev env flag, so a provider run with
+   `source_bundle=None` fails before dependency install/upstream clone.
+2. Format0C score-table manifests must explicitly name member `x`; matching
+   member SHA alone no longer clears custody.
+3. `sub_0192_viability_guard` no longer treats provider-CUDA advisory labels as
+   `contest_cuda` by substring.
+4. Selector CUDA calibration now refers to the latest exact-reviewed PR106
+   PacketIR reference, currently format0C, instead of hardcoding format0B.
+
+Additional verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_kaggle_pr106_latent_score_table.py src/tac/tests/test_kaggle_pr106_yshift_score_table.py src/tac/tests/test_pr106_latent_sidecar.py::test_score_table_manifest_format0c_requires_member_sha256 src/tac/tests/test_materialize_pr106_latent_score_table_candidate.py::test_manifest_audit_blocks_format0c_without_explicit_x_member_name src/tac/tests/test_sub_0192_viability_guard.py::test_provider_cuda_advisory_label_is_not_treated_as_contest_cuda -q`
+  - result: `16 passed in 14.74s`

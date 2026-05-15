@@ -19,7 +19,7 @@ import pytest
 import torch
 
 from tac.repo_io import read_json
-from tac.sidechannel_score_table import is_cuda_oom
+from tac.sidechannel_score_table import is_cuda_oom, mirror_provider_local_active_claim
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "experiments/build_pr106_yshift_score_table.py"
@@ -250,6 +250,35 @@ def test_verify_active_lane_claim_rejects_terminal_newest(tmp_path):
 
     with pytest.raises(ValueError, match="terminal"):
         mod.verify_active_lane_claim(claims, lane_id="lane_a", instance_job_id="job1")
+
+
+def test_provider_local_claim_mirror_prepends_strict_active_row(tmp_path):
+    mod = _load_module()
+    claims = tmp_path / "claims.md"
+    claims.write_text(
+        "\n".join(
+            [
+                "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |",
+                "|---|---|---|---|---|---|---|---|",
+                "| 2026-05-06T10:02:00Z | codex | lane_a | kaggle | job1 |  | failed_cuda | newest stale in bundled ledger |",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    row = mirror_provider_local_active_claim(
+        claims,
+        lane_id="lane_a",
+        instance_job_id="job1",
+        platform="kaggle",
+        agent="provider-test",
+        notes="mirror for isolated provider workspace",
+    )
+
+    assert row["status"] == "active_dispatching"
+    assert row["agent"] == "provider-test"
+    assert row["notes"] == "mirror for isolated provider workspace"
+    assert mod.verify_active_lane_claim(claims, lane_id="lane_a", instance_job_id="job1") == row
 
 
 def _checkpoint_args(tmp_path: Path) -> SimpleNamespace:

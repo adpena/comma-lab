@@ -346,9 +346,11 @@ def audit_score_table_manifest(
         and source_info.format_id
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
     )
+    if format0c_requires_member_sha and manifest.get("source_archive_member_name") != source_member_name:
+        blockers.append("score_table_manifest_format0c_member_name_mismatch_or_missing")
     if format0c_requires_member_sha and not source_payload_sha256_matches:
         blockers.append("score_table_manifest_format0c_member_sha256_mismatch_or_missing")
-    if not source_member_name_matches:
+    if not format0c_requires_member_sha and not source_member_name_matches:
         blockers.append("score_table_manifest_source_archive_member_name_mismatch")
     if not source_archive_sha256_matches and not source_payload_identity_matches:
         blockers.append("score_table_manifest_source_archive_payload_mismatch_or_missing")

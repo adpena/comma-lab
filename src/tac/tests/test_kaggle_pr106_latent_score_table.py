@@ -53,6 +53,8 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert DEFAULT_SOURCE_BUNDLE_NAME in launcher
     assert "pact_pr106_latent_workspace" in launcher
     assert "import tac.deploy.pr106_latent" in launcher
+    assert "PR106_LATENT_ALLOW_EXPANDED_SOURCE_TREE" in launcher
+    assert "refusing expanded-source fallback" in launcher
     assert "'PR106_LATENT_MODE': 'score_table'" in launcher
     assert "'PR106_LATENT_DELTA_RADIUS': '2'" in launcher
     assert "'PR106_ARCHIVE_MEMBER': 'x'" in launcher
@@ -72,6 +74,7 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert '"TAC_UPSTREAM_COMMIT": upstream_commit' in launcher
     assert "PR106_LATENT_TORCH_FALLBACK_REEXEC" in launcher
     assert "PYTORCH_CUDA_ALLOC_CONF" in launcher
+    assert '"PR106_LATENT_ALLOW_PROVIDER_CLAIM_MIRROR": "1"' in launcher
     assert "archive_member = 'x'" in launcher
     assert 'zipfile.ZipInfo(archive_member' in launcher
     compile(launcher, "run_kernel.py", "exec")

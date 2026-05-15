@@ -329,6 +329,13 @@ def main() -> int:
     if bundle is not None:
         _safe_extract_tarball(bundle, WORKSPACE)
     else:
+        if os.environ.get("PR106_YSHIFT_ALLOW_EXPANDED_SOURCE_TREE") != "1":
+            raise FileNotFoundError(
+                f"required source bundle {{SOURCE_BUNDLE_NAME!r}} not found under "
+                f"{{[str(root) for root in _search_roots()]}}; refusing expanded-source fallback "
+                "for Kaggle custody. Set PR106_YSHIFT_ALLOW_EXPANDED_SOURCE_TREE=1 only for "
+                "local developer smoke tests."
+            )
         source_tree = _find_expanded_source_tree()
         if source_tree is None:
             raise FileNotFoundError(
@@ -355,6 +362,7 @@ def main() -> int:
     env.update({env_literal})
     env.update({{
         "CLOUD_PLATFORM": "kaggle",
+        "PR106_YSHIFT_ALLOW_PROVIDER_CLAIM_MIRROR": "1",
         "PYBIN": sys.executable,
         "PYTHONPATH": ":".join(part for part in pythonpath_parts if part),
         "TAC_UPSTREAM_DIR": str(upstream),

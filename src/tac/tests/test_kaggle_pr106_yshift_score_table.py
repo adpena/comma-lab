@@ -52,6 +52,8 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
     assert "SOURCE_TREE_NAME = SOURCE_BUNDLE_NAME.removesuffix" in launcher
     assert "pact_pr106_yshift_workspace" in launcher
     assert "import tac.deploy.pr106_yshift" in launcher
+    assert "PR106_YSHIFT_ALLOW_EXPANDED_SOURCE_TREE" in launcher
+    assert "refusing expanded-source fallback" in launcher
     assert "'PR106_YSHIFT_MODE': 'score_table'" in launcher
     assert "'PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID': 'kaggle_pr106_yshift_test'" in launcher
     assert "'PR106_YSHIFT_CANDIDATE_RADIUS': '4'" in launcher
@@ -64,6 +66,7 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
     assert "torch==2.4.1+cu121" in launcher
     assert "PR106_YSHIFT_TORCH_FALLBACK_REEXEC" in launcher
     assert "PYTORCH_CUDA_ALLOC_CONF" in launcher
+    assert '"PR106_YSHIFT_ALLOW_PROVIDER_CLAIM_MIRROR": "1"' in launcher
     assert "_ensure_torch_supports_visible_cuda()" in launcher
     assert "zipfile.ZipFile(archive, \"w\", compression=zipfile.ZIP_STORED)" in launcher
     compile(launcher, "run_kernel.py", "exec")

@@ -781,3 +781,19 @@ def test_score_table_manifest_format0c_requires_member_sha256(tmp_path: Path):
             delta_radius=1,
             candidate_count=57,
         )
+
+    manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_payload["source_archive_member_name"] = None
+    manifest_payload["source_archive_member_sha256"] = hashlib.sha256(source_payload).hexdigest()
+    manifest_path.write_text(json.dumps(manifest_payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="source_archive_member_name mismatch for format0C"):
+        build.validate_score_table_manifest(
+            manifest_path,
+            score_table_npy=table_path,
+            source_archive=source_archive,
+            n_pairs=600,
+            latent_dim=28,
+            delta_radius=1,
+            candidate_count=57,
+        )

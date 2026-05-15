@@ -203,6 +203,33 @@ def test_below_threshold_proxy_score_requires_validated_exact_claim(tmp_path: Pa
     assert "below_threshold_score_without_validated_exact_claim" in row["blockers"]
 
 
+def test_provider_cuda_advisory_label_is_not_treated_as_contest_cuda(tmp_path: Path) -> None:
+    module = _load_module()
+    artifact = tmp_path / "provider_cuda_advisory.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "provider_advisory_row",
+                "score_axis": "provider_cuda_kaggle_advisory",
+                "lane_tag": "[provider-CUDA:kaggle advisory]",
+                "canonical_score": 0.1919,
+                "remaining_byte_mass_bytes": 10_000,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    auto = module.build_report([artifact], axis="auto")["reviews"][0]
+    forced = module.build_report([artifact], axis="contest_cuda")["reviews"][0]
+
+    assert auto["axis"] == "unknown"
+    assert auto["current_score"] is None
+    assert "missing_current_score" in auto["blockers"]
+    assert forced["axis"] == "contest_cuda"
+    assert forced["current_score"] is None
+    assert "missing_current_score" in forced["blockers"]
+
+
 def test_below_threshold_exact_cpu_claim_can_clear_threshold_shortcut(tmp_path: Path) -> None:
     module = _load_module()
     artifact = tmp_path / "exact_cpu_below_threshold.json"

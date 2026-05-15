@@ -15,6 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.deploy.claims import DispatchClaimSpec, terminal_dispatch_claim  # noqa: E402
 from tac.deploy.kaggle.kaggle_output_ingest import (  # noqa: E402
     DEFAULT_EXCLUDE_OUTPUT_PATTERNS,
     download_kernel_outputs,
@@ -25,6 +26,8 @@ from tac.repo_io import json_text, write_json  # noqa: E402
 DEFAULT_KERNEL_REF = "adpena/comma-lab-pr106-latent-score-table"
 DEFAULT_DOWNLOAD_DIR = REPO_ROOT / "reports/raw/kaggle_pr106_latent_score_table_latest"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "reports/raw/kaggle_ingested"
+DEFAULT_LANE_ID = "lane_pr106_latent_sidecar"
+DEFAULT_AGENT = "codex:gpt-5.5"
 DEFAULT_INCLUDE_PATTERNS = (
     r"^pr106_latent_score_table/",
     r"^pact_pr106_latent_workspace/inputs/pr106_archive\.zip$",
@@ -40,12 +43,18 @@ def write_ingest_manifest(
     manifest_path: Path,
     run_id: str,
     kernel_ref: str,
+    lane_id: str,
+    instance_job_id: str,
+    terminal_claim_on_harvest: bool,
 ) -> dict[str, object]:
     payload = {
         "schema": "kaggle_pr106_latent_score_table_harvest_manifest_v1",
         "run_id": run_id,
         "slug": "pr106_latent_score_table",
         "kernel_ref": kernel_ref,
+        "lane_id": lane_id,
+        "instance_job_id": instance_job_id,
+        "terminal_claim_on_harvest": terminal_claim_on_harvest,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -55,10 +64,67 @@ def write_ingest_manifest(
     return payload
 
 
+def terminal_status_from_ingest_summary(summary: dict[str, object]) -> str:
+    """Classify a PR106 latent score-table harvest into a terminal claim status."""
+
+    if isinstance(summary.get("latest_failure"), dict):
+        return "failed_kaggle_kernel_error"
+    if isinstance(summary.get("latest_score_table"), dict):
+        return "completed_kaggle_score_table_harvested_no_score_claim"
+    return "failed_kaggle_no_score_table"
+
+
+def close_terminal_claim_from_summary(
+    *,
+    summary: dict[str, object],
+    lane_id: str,
+    instance_job_id: str,
+    agent: str,
+) -> dict[str, str]:
+    """Append the terminal dispatch claim row for a harvested Kaggle run."""
+
+    status = terminal_status_from_ingest_summary(summary)
+    evidence_dir = str(summary.get("evidence_dir") or "")
+    failure = summary.get("latest_failure")
+    if isinstance(failure, dict):
+        detail = f"failure={failure.get('error_type', 'UnknownError')}:{failure.get('message', '')}"
+    else:
+        score_table = summary.get("latest_score_table")
+        if isinstance(score_table, dict):
+            detail = (
+                "score_table="
+                f"{score_table.get('manifest_path', '')}; "
+                f"ready_for_builder={score_table.get('ready_for_builder')}"
+            )
+        else:
+            detail = "no failure object and no score_table_manifest found"
+    notes = (
+        "Kaggle PR106 latent score-table harvest; "
+        "score_claim=false; promotion_eligible=false; "
+        f"evidence={evidence_dir}; {detail}"
+    )
+    terminal_dispatch_claim(
+        repo_root=REPO_ROOT,
+        spec=DispatchClaimSpec(
+            lane_id=lane_id,
+            instance_job_id=instance_job_id,
+            agent=agent,
+            platform="kaggle",
+        ),
+        status=status,
+        notes=notes,
+    )
+    return {"status": status, "notes": notes}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kernel-ref", default=DEFAULT_KERNEL_REF)
     parser.add_argument("--run-id", default="")
+    parser.add_argument("--lane-id", default=DEFAULT_LANE_ID)
+    parser.add_argument("--instance-job-id", default="")
+    parser.add_argument("--claim-agent", default=DEFAULT_AGENT)
+    parser.add_argument("--close-claim", action="store_true")
     parser.add_argument("--download-dir", type=Path, default=DEFAULT_DOWNLOAD_DIR)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--manifest-output", type=Path)
@@ -81,11 +147,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     run_id = args.run_id or default_run_id()
+    instance_job_id = args.instance_job_id or run_id
     manifest_path = args.manifest_output or args.download_dir / "kaggle_pr106_latent_score_table_manifest.json"
     manifest = write_ingest_manifest(
         manifest_path=manifest_path,
         run_id=run_id,
         kernel_ref=args.kernel_ref,
+        lane_id=args.lane_id,
+        instance_job_id=instance_job_id,
+        terminal_claim_on_harvest=args.close_claim,
     )
     if not args.no_download:
         download_kernel_outputs(
@@ -99,7 +169,24 @@ def main(argv: list[str] | None = None) -> int:
         download_dir=args.download_dir,
         output_root=args.output_root,
     )
-    print(json_text({"manifest": manifest, "ingest_summary": summary}), end="")
+    terminal_claim: dict[str, str] | None = None
+    if args.close_claim:
+        terminal_claim = close_terminal_claim_from_summary(
+            summary=summary,
+            lane_id=args.lane_id,
+            instance_job_id=instance_job_id,
+            agent=args.claim_agent,
+        )
+    print(
+        json_text(
+            {
+                "manifest": manifest,
+                "ingest_summary": summary,
+                "terminal_claim": terminal_claim,
+            }
+        ),
+        end="",
+    )
     return 0
 
 

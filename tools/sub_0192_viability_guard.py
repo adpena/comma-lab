@@ -84,8 +84,16 @@ def _first_int(
     return None, None
 
 
+def _normalized_contest_axis_label(value: str) -> str:
+    return value.strip().lower().strip("[]").replace("-", "_")
+
+
+def _metadata_value_matches_axis(value: str, axis: str) -> bool:
+    normalized = _normalized_contest_axis_label(value)
+    return normalized == axis
+
+
 def _record_metadata_matches_axis(data: Mapping[str, Any], axis: str) -> bool:
-    expected = "cuda" if axis == "contest_cuda" else "cpu"
     fields: list[str] = []
     for path in (
         ("score_axis",),
@@ -99,8 +107,8 @@ def _record_metadata_matches_axis(data: Mapping[str, Any], axis: str) -> bool:
     ):
         value = _get_path(data, path)
         if isinstance(value, str):
-            fields.append(value.lower())
-    return any(expected in value for value in fields)
+            fields.append(value)
+    return any(_metadata_value_matches_axis(value, axis) for value in fields)
 
 
 def _has_exact_score_claim_for_axis(data: Mapping[str, Any], axis: str) -> bool:
@@ -158,10 +166,12 @@ def _score_paths(axis: str, data: Mapping[str, Any]) -> list[tuple[str, ...]]:
                 ("anchor", "cuda_score"),
             ]
         )
-    elif "cpu" in score_axis:
+    elif axis == "unknown":
+        paths = []
+    elif _metadata_value_matches_axis(score_axis, "contest_cpu"):
         paths.extend(_score_paths("contest_cpu", data))
     else:
-        paths.extend(_score_paths("contest_cuda", data))
+        paths = []
 
     if axis in {"contest_cpu", "contest_cuda"} and _record_metadata_matches_axis(data, axis):
         paths.extend(
@@ -191,9 +201,13 @@ def _axis_for_record(axis: str, data: Mapping[str, Any]) -> str:
     if axis != "auto":
         return axis
     score_axis = str(data.get("score_axis", "")).lower()
-    if "cpu" in score_axis:
+    if _metadata_value_matches_axis(score_axis, "contest_cpu"):
         return "contest_cpu"
-    if "cuda" in score_axis:
+    if _metadata_value_matches_axis(score_axis, "contest_cuda"):
+        return "contest_cuda"
+    if _record_metadata_matches_axis(data, "contest_cpu"):
+        return "contest_cpu"
+    if _record_metadata_matches_axis(data, "contest_cuda"):
         return "contest_cuda"
     if _as_float(_get_path(data, ("exact_results", "contest_cuda_score"))) is not None:
         return "contest_cuda"

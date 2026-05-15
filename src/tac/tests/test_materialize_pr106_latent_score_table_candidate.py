@@ -332,6 +332,33 @@ def test_manifest_audit_accepts_x_member_custody(tmp_path: Path) -> None:
     assert source["single_member_payload_sha256_match"] is True
 
 
+def test_manifest_audit_blocks_format0c_without_explicit_x_member_name(tmp_path: Path) -> None:
+    module = _load_tool()
+    source_archive, _base_dim0, _base_delta0 = _format0c_source_archive(tmp_path)
+    npy = tmp_path / "score_table.npy"
+    npy.write_bytes(b"npy")
+    with zipfile.ZipFile(source_archive) as zf:
+        payload = zf.read("x")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(
+        manifest,
+        {
+            **_complete_score_table_manifest(source_archive, npy),
+            "source_archive_member_name": None,
+            "source_archive_member_sha256": hashlib.sha256(payload).hexdigest(),
+            "source_zero_bin_sha256": None,
+        },
+    )
+
+    audit = module.audit_score_table_manifest(
+        source_archive=source_archive,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+    )
+
+    assert "score_table_manifest_format0c_member_name_mismatch_or_missing" in audit["blockers"]
+
+
 def test_materializer_refuses_non_0x01_packet_ir_legacy_route(
     monkeypatch,
     tmp_path: Path,

@@ -267,6 +267,11 @@ def validate_score_table_manifest(
         member_format_id
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
     )
+    if format0c_requires_member_sha and manifest.get("source_archive_member_name") != member.name:
+        raise ValueError(
+            "score table manifest source_archive_member_name mismatch for "
+            "format0C source archive"
+        )
     if format0c_requires_member_sha and not member_sha256_matches:
         raise ValueError(
             "score table manifest source_archive_member_sha256 mismatch for "

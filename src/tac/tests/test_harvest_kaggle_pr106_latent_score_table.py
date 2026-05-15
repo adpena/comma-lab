@@ -58,6 +58,9 @@ def test_harvester_writes_manifest_and_uses_latent_prefix(monkeypatch, tmp_path:
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
     assert manifest["kernel_ref"] == module.DEFAULT_KERNEL_REF
+    assert manifest["lane_id"] == module.DEFAULT_LANE_ID
+    assert manifest["instance_job_id"] == "run-test"
+    assert manifest["terminal_claim_on_harvest"] is False
     assert calls["download"]["include_patterns"] == [
         r"^pr106_latent_score_table/",
         r"^pact_pr106_latent_workspace/inputs/pr106_archive\.zip$",
@@ -94,3 +97,52 @@ def test_harvester_can_ingest_existing_download_without_api(monkeypatch, tmp_pat
 
     assert rc == 0
     assert calls["ingest"]["download_dir"] == tmp_path / "download"
+
+
+def test_terminal_status_from_ingest_summary_classifies_failures_and_score_tables() -> None:
+    module = _load_tool()
+
+    assert (
+        module.terminal_status_from_ingest_summary(
+            {"latest_failure": {"error_type": "ModuleNotFoundError"}}
+        )
+        == "failed_kaggle_kernel_error"
+    )
+    assert (
+        module.terminal_status_from_ingest_summary(
+            {"latest_score_table": {"manifest_path": "score_table_manifest.json"}}
+        )
+        == "completed_kaggle_score_table_harvested_no_score_claim"
+    )
+    assert module.terminal_status_from_ingest_summary({}) == "failed_kaggle_no_score_table"
+
+
+def test_close_claim_records_terminal_status_without_score_claim(monkeypatch, tmp_path: Path) -> None:
+    module = _load_tool()
+    calls: list[dict[str, object]] = []
+
+    def fake_terminal_dispatch_claim(**kwargs):
+        calls.append(kwargs)
+
+    monkeypatch.setattr(module, "terminal_dispatch_claim", fake_terminal_dispatch_claim)
+
+    terminal = module.close_terminal_claim_from_summary(
+        summary={
+            "evidence_dir": str(tmp_path / "evidence"),
+            "latest_score_table": {
+                "manifest_path": str(tmp_path / "evidence/score_table_manifest.json"),
+                "ready_for_builder": True,
+            },
+        },
+        lane_id="lane-test",
+        instance_job_id="job-test",
+        agent="codex-test",
+    )
+
+    assert terminal["status"] == "completed_kaggle_score_table_harvested_no_score_claim"
+    assert "score_claim=false" in terminal["notes"]
+    assert calls[0]["repo_root"] == module.REPO_ROOT
+    assert calls[0]["status"] == "completed_kaggle_score_table_harvested_no_score_claim"
+    assert calls[0]["spec"].lane_id == "lane-test"
+    assert calls[0]["spec"].instance_job_id == "job-test"
+    assert calls[0]["spec"].platform == "kaggle"

@@ -12,6 +12,7 @@ import gc
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -77,6 +78,67 @@ def verify_active_lane_claim(
 ) -> dict[str, str]:
     """Return the newest matching active claim row or raise ValueError."""
     return active_claim_row(
+        claims_path,
+        lane_id=lane_id,
+        instance_job_id=instance_job_id,
+    )
+
+
+def _claim_cell(text: str) -> str:
+    return text.replace("|", "/").replace("\n", " ").strip()
+
+
+def mirror_provider_local_active_claim(
+    claims_path: Path,
+    *,
+    lane_id: str,
+    instance_job_id: str,
+    platform: str,
+    agent: str = "provider-runtime",
+    notes: str = "provider-local mirror of pre-dispatch claim",
+) -> dict[str, str]:
+    """Prepend a provider-local active claim row for remote scorer producers.
+
+    Local launchers still own the real cross-agent conflict check before spend.
+    Remote kernels receive source bundles that can be stale relative to the live
+    local claim ledger, so the provider mirrors the already-claimed job into its
+    isolated workspace before strict producer-side claim validation runs.
+    """
+
+    lane_id = _claim_cell(lane_id)
+    instance_job_id = _claim_cell(instance_job_id)
+    platform = _claim_cell(platform)
+    agent = _claim_cell(agent)
+    notes = _claim_cell(notes)
+    if not lane_id:
+        raise ValueError("provider-local claim mirror requires lane_id")
+    if not instance_job_id:
+        raise ValueError("provider-local claim mirror requires instance_job_id")
+    if not platform:
+        raise ValueError("provider-local claim mirror requires platform")
+    claims_path.parent.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+    row = (
+        f"| {timestamp} | {agent} | {lane_id} | {platform} | {instance_job_id} |  | "
+        f"active_dispatching | {notes} |"
+    )
+    if claims_path.is_file():
+        existing = claims_path.read_text(encoding="utf-8")
+        claims_path.write_text(row + "\n" + existing, encoding="utf-8")
+    else:
+        claims_path.write_text(
+            "\n".join(
+                [
+                    "| timestamp_utc | agent | lane_id | platform | instance/job_id | "
+                    "predicted_eta_utc | status | notes |",
+                    "|---|---|---|---|---|---|---|---|",
+                    row,
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+    return verify_active_lane_claim(
         claims_path,
         lane_id=lane_id,
         instance_job_id=instance_job_id,

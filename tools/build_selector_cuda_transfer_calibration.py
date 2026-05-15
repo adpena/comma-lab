@@ -208,7 +208,7 @@ def build_calibration(selector_paths: list[Path], paired_axis_path: Path) -> dic
             "Build a CUDA-in-loop selector objective before broad water-fill dispatch.",
             "Continue PR101 CPU-only selector work only when the candidate changes components by more than the charged byte cost.",
             "Treat rate-only PR101 FEC6 polishing as insufficient for CUDA while the paired aggregate hashes differ.",
-            "Use PR106 format0B as the closed PacketIR reference; do not redispatch identical archives.",
+            "Use the latest exact-reviewed PR106 PacketIR reference (currently format0C) and do not redispatch identical archives.",
         ],
     }
 

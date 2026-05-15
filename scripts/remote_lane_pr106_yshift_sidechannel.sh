@@ -47,6 +47,7 @@ PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_YSHIFT_SCORE_TABLE_INSTANCE_JO
 PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS="${PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS:-8}"
 PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE="${PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE:-32}"
 PR106_YSHIFT_SCORE_TABLE_RESUME="${PR106_YSHIFT_SCORE_TABLE_RESUME:-1}"
+PR106_YSHIFT_ALLOW_PROVIDER_CLAIM_MIRROR="${PR106_YSHIFT_ALLOW_PROVIDER_CLAIM_MIRROR:-0}"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 
 if ! [[ "$PR106_YSHIFT_MODE" =~ ^(zero|score_table|gradient|brute_force)$ ]]; then
@@ -121,6 +122,31 @@ BUILD_DIR="$LOG_DIR/build"
 mkdir -p "$BUILD_DIR"
 if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ -z "$PR106_YSHIFT_SCORE_TABLE_NPY" ]; then
     log "=== Stage 1a: generate CUDA yshift score table ==="
+    if [ "$PR106_YSHIFT_ALLOW_PROVIDER_CLAIM_MIRROR" = "1" ]; then
+        PR106_PROVIDER_CLAIM_LANE_ID="$PR106_YSHIFT_SCORE_TABLE_LANE_ID" \
+        PR106_PROVIDER_CLAIM_JOB_ID="$PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID" \
+        PR106_PROVIDER_CLAIM_PLATFORM="${CLOUD_PLATFORM:-unknown}" \
+        "$PYBIN" - <<'PY'
+import os
+from pathlib import Path
+
+from tac.sidechannel_score_table import mirror_provider_local_active_claim
+
+row = mirror_provider_local_active_claim(
+    Path(".omx/state/active_lane_dispatch_claims.md"),
+    lane_id=os.environ["PR106_PROVIDER_CLAIM_LANE_ID"],
+    instance_job_id=os.environ["PR106_PROVIDER_CLAIM_JOB_ID"],
+    platform=os.environ["PR106_PROVIDER_CLAIM_PLATFORM"],
+    agent="provider-runtime:pr106-yshift-score-table",
+    notes="provider-local mirror; local pre-dispatch claim remains source of truth",
+)
+print(
+    "[stage-1a] provider-local claim mirror active: "
+    f"lane_id={row['lane_id']} job={row['instance_job_id']} platform={row['platform']}",
+    flush=True,
+)
+PY
+    fi
     SCORE_TABLE_DIR="$LOG_DIR/score_table"
     mkdir -p "$SCORE_TABLE_DIR"
     PR106_YSHIFT_SCORE_TABLE_NPY="$SCORE_TABLE_DIR/score_table.npy"
