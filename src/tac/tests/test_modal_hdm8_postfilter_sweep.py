@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "experiments" / "modal_hdm8_postfilter_sweep.py"
 
@@ -59,6 +58,17 @@ def test_parse_modes_from_proxy_json(tmp_path: Path) -> None:
         "none",
         "even_rgb_bias:2,-1,-1",
     ]
+
+
+def test_modal_runtime_dependency_mounts_include_import_closure() -> None:
+    mod = _load_module()
+
+    mounts = dict(mod._modal_runtime_dependency_mounts())
+
+    assert mounts["experiments/__init__.py"].endswith("/workspace/pact/experiments/__init__.py")
+    assert mounts["experiments/modal_auth_eval.py"].endswith(
+        "/workspace/pact/experiments/modal_auth_eval.py"
+    )
 
 
 def test_dry_run_writes_request_without_claim_or_remote(tmp_path: Path, monkeypatch) -> None:

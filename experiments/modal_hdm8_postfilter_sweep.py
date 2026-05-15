@@ -17,13 +17,25 @@ import time
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+import modal
+
+APP_NAME = "comma-hdm8-postfilter-sweep"
+AXIS = "modal-t4-cuda-proxy-prefix"
+REMOTE_REPO = Path("/workspace/pact")
+
+
+def _runtime_repo_root() -> Path:
+    remote_src = REMOTE_REPO / "src"
+    if remote_src.is_dir():
+        return REMOTE_REPO
+    return Path(__file__).resolve().parents[1]
+
+
+REPO_ROOT = _runtime_repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
-
-import modal
 
 from experiments import modal_auth_eval as modal_auth_eval_module
 from tac.deploy.claims import (
@@ -43,9 +55,6 @@ from tac.deploy.modal.auth_eval import (
 from tac.repo_io import read_json, write_json
 from tac.reproducibility import collect_source_transparency
 
-APP_NAME = "comma-hdm8-postfilter-sweep"
-AXIS = "modal-t4-cuda-proxy-prefix"
-REMOTE_REPO = Path("/workspace/pact")
 REMOTE_OUT = Path("/tmp/modal_hdm8_postfilter_sweep")
 REMOTE_WORK_ROOT = Path("/root/modal_hdm8_postfilter_sweep_work")
 REMOTE_PYTHONPATH = modal_auth_eval_module.REMOTE_PYTHONPATH
@@ -68,8 +77,31 @@ RECOVER_JSON_NAME = "modal_hdm8_postfilter_sweep_recover_summary.json"
 
 app = modal.App(APP_NAME)
 
+
+def _modal_runtime_dependency_mounts() -> tuple[tuple[str, str], ...]:
+    return (
+        (
+            "experiments/__init__.py",
+            str(REMOTE_REPO / "experiments/__init__.py"),
+        ),
+        (
+            "experiments/modal_auth_eval.py",
+            str(REMOTE_REPO / "experiments/modal_auth_eval.py"),
+        ),
+    )
+
+
+def _add_modal_runtime_dependency_mounts(image: modal.Image) -> modal.Image:
+    for local_path, remote_path in _modal_runtime_dependency_mounts():
+        image = image.add_local_file(  # MODAL_MANUAL_MOUNT_OK:remote module import closure
+            local_path,
+            remote_path=remote_path,
+        )
+    return image
+
+
 sweep_image = (
-    AUTH_EVAL_IMAGE
+    _add_modal_runtime_dependency_mounts(AUTH_EVAL_IMAGE)
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow HDM8 postfilter scorer sweep
         "tools/screen_hdm8_postfilter_sweep.py",
         remote_path=str(REMOTE_REPO / "tools/screen_hdm8_postfilter_sweep.py"),
