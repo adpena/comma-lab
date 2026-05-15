@@ -30511,11 +30511,11 @@
       "id": "lane_atw_codec_design_v1_20260515",
       "name": "ATW Codec V1 (Atick-Tishby-Wyner Cooperative-Receiver Codec) \u2014 design + scaffold",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "ATW codec V1 scaffold landed 2026-05-15: src/tac/substrates/atw_codec_v1/{__init__.py + architecture.py + archive.py + score_aware_loss.py + inflate.py} ~1100 LOC; experiments/train_substrate_atw_codec_v1.py (smoke runs, _full_main raises NotImplementedError per Catalog #220 cascade); 48/48 tests pass; design memo .omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md; recipe substrate_atw_codec_v1_modal_a100_dispatch.yaml with research_only:true + dispatch_enabled:false"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30530,16 +30530,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #124 + #220 + #240 verified 0 violations on ATW scaffold; dispatch fail-closed at design time"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_atw_codec_atick_tishby_wyner_v1_design_landed_20260515.md (in same commit batch) + .omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md design memo"
         },
         "deploy_runbook": {
           "status": false,
@@ -30552,11 +30552,11 @@
       "id": "lane_z3_g1_entropy_coded_v2_20260515",
       "name": "Z3-G1 entropy-coded v2: sigma-table + class-index variant of Z3HG1 wire grammar",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "v2 package complete: __init__ + architecture + score_aware_loss + archive + inflate_consumer + registered_substrate; trainer scaffold experiments/train_substrate_z3_g1_entropy_coded_v2.py; recipe .omx/operator_authorize_recipes/substrate_z3_g1_entropy_coded_v2_modal_t4_dispatch.yaml; byte-mutation verifier tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py PASSES locally (all 3 distinguishing-feature blobs proven consumed); 51/51 dedicated tests pass; SubstrateContract OPERATIONAL+runtime_overlay_consumed=True declared via @register_substrate per Catalog #220+#241+#242. score_improvement_mechanism_status=OPERATIONAL; archive_bytes_added=None (NET SAVINGS); distinguishing_feature_bytes>0 verified empirically. _full_main raises NotImplementedError until smoke + operator approval per HNeRV parity L2 + Catalog #240. NO score claim until paired CUDA+CPU auth eval per CLAUDE.md Submission auth eval BOTH non-negotiable."
         },
         "real_archive_empirical": {
           "status": false,
@@ -30571,16 +30571,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "preflight scope=dev returns no z3_g1_entropy_coded_v2 violations; 51 dedicated tests in src/tac/tests/test_z3_g1_entropy_coded_v2_scaffold.py pass; byte-mutation gate verifier passes (Catalog #139 contract); SubstrateContract registers cleanly (Catalog #241+#242 contract)"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_wunderkind_g1_entropy_coded_v2_z3g1_reactivation_landed_20260515.md (will land in same commit batch)"
         },
         "deploy_runbook": {
           "status": false,
@@ -30711,6 +30711,170 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_nscs02_downsampled_renderer_inflate_upsample_20260515",
+      "name": "NSCS02 Downsampled Renderer + Inflate Upsample",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_nscs01_nullspace_split_renderer_20260515",
+      "name": "NSCS01 Nullspace Split Renderer",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_nscs03_end_to_end_balle_joint_codec_20260515",
+      "name": "NSCS03 End-to-End Ball\u00e9 Joint Codec",
+      "phase": 6.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_knowledge_preservation_pr95_meta_level_lesson_20260515",
+      "name": "KNOWLEDGE-PRESERVATION META-level PR95 lesson",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Catalog #290 + CLAUDE.md non-negotiable + FORBIDDEN_PATTERN + AGENTS.md substrate-design section all landed; live count=1 warn-only"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #290 wired warn-only in preflight_all(); 18/18 tests pass"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_knowledge_preservation_pr95_meta_level_lesson_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -30720,5 +30884,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T22:51:12Z"
+  "updated_at": "2026-05-15T23:13:05Z"
 }
