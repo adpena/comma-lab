@@ -12,6 +12,7 @@ from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
@@ -42,7 +43,7 @@ PR106_R2_PR101_ARCHIVE = (
 )
 PR106_R2_PR101_RUNTIME = REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_SHA = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_TREE_SHA = "8ddce462a0d300f29ff9dddca8683cbe08bf97fc7959c296e06647ef12d4249b"
+PR106_R2_PR101_RUNTIME_TREE_SHA = "94078eb83f0629fdeb94d39be9292633ad0014a1236729ba66eb96901610b1b5"
 PR106_HDM8_FORMAT07_ARCHIVE = (
     REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
 )
@@ -422,6 +423,27 @@ def _hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_member_payload() -> bytes:
     return emit_pr106_sidecar_packet(magicless_packet)
 
 
+def _hdm9_hlm3_magicless_exact_radix_member_payload() -> bytes:
+    hdm8_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_ARCHIVE.read_bytes())
+    hdm8_packet = parse_pr106_sidecar_packet(hdm8_member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(hdm8_packet)
+    exact_radix = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }[
+        "pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c"
+    ]
+    exact_radix_packet = build_pr106_sidecar_recode_candidate_packet(
+        hdm8_packet,
+        exact_radix,
+    )
+    assert (
+        exact_radix_packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    return emit_pr106_sidecar_packet(exact_radix_packet)
+
+
 def test_pr106_pr101_runtime_accepts_fixed_meta_rank_elided_format() -> None:
     grammar_member = read_single_stored_member_archive(PR106_R2_PR101_ARCHIVE.read_bytes())
     runtime = load_pr106_sidecar_runtime(PR106_R2_PR101_RUNTIME)
@@ -722,6 +744,61 @@ def test_pr106_pr101_runtime_consumption_proves_hdm9_hlm3_magicless_sidecar(
     assert consumed_sections["sidecar_payload"] is True
     assert consumed_sections["framing_meta"] is None
     assert manifest["inner_pr106_payload_sha256_unchanged"] is True
+    assert manifest["score_claim"] is False
+
+
+def test_pr106_pr101_runtime_accepts_hdm9_hlm3_magicless_exact_radix_format() -> None:
+    hdm8_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_ARCHIVE.read_bytes())
+    runtime = load_pr106_sidecar_runtime(PR106_R2_PR101_RUNTIME)
+    exact_radix_payload = _hdm9_hlm3_magicless_exact_radix_member_payload()
+
+    exact_radix_digest = runtime_sidecar_correction_digest(runtime, exact_radix_payload)
+    headerless_digest = runtime_sidecar_correction_digest(runtime, hdm8_member.payload)
+
+    assert exact_radix_digest["format_id"] == "0x0C"
+    assert headerless_digest["format_id"] == "0x07"
+    assert exact_radix_digest["combined_sha256"] == headerless_digest["combined_sha256"]
+    assert exact_radix_digest["corrected_latents_sha256"] == headerless_digest[
+        "corrected_latents_sha256"
+    ]
+
+
+def test_pr106_pr101_runtime_consumption_proves_hdm9_hlm3_magicless_exact_radix_sidecar(
+    tmp_path: Path,
+) -> None:
+    hdm8_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_ARCHIVE.read_bytes())
+    exact_radix_payload = _hdm9_hlm3_magicless_exact_radix_member_payload()
+    archive = tmp_path / "hdm9_hlm3_magicless_exact_radix.zip"
+    archive.write_bytes(
+        emit_single_stored_member_archive(type(hdm8_member)(
+            name="x",
+            payload=exact_radix_payload,
+            date_time=hdm8_member.date_time,
+            external_attr=hdm8_member.external_attr,
+            create_system=hdm8_member.create_system,
+            flag_bits=hdm8_member.flag_bits,
+            comment=hdm8_member.comment,
+            extra=hdm8_member.extra,
+            archive_comment=hdm8_member.archive_comment,
+        ))
+    )
+
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=archive,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+    )
+
+    assert manifest["archive_member_name"] == "x"
+    assert manifest["format_id"] == "0x0C"
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is True
+    assert manifest["runtime_sidecar_apply_consumption_claim"] is True
+    assert manifest["runtime_all_score_affecting_sections_consumed"] is True
+    consumed_sections = manifest["runtime_consumed_score_affecting_sections"]
+    assert consumed_sections["pr106_payload"] is True
+    assert consumed_sections["sidecar_payload"] is True
+    assert consumed_sections["framing_meta"] is None
+    assert manifest["inner_pr106_payload_sha256_unchanged"] is True
+    assert manifest["contest_axis_claim"] is False
     assert manifest["score_claim"] is False
 
 

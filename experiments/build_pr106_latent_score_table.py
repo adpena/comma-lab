@@ -23,6 +23,7 @@ import argparse
 import importlib.util
 import os
 import time
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -45,19 +46,19 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
-prepend_paths(
-    REPO_ROOT / "submissions" / "pr106_latent_sidecar" / "src",
-    REPO_ROOT / "submissions" / "pr106_latent_sidecar",
-    REPO_ROOT / "experiments",
-)
-
-from build_pr106_latent_sidecar import DELTA_SCALE, NO_OP_DIM  # type: ignore[import-not-found]
-from codec import parse_packed_archive  # type: ignore[import-not-found]
-from model import HNeRVDecoder  # type: ignore[import-not-found]
+prepend_paths(REPO_ROOT / "experiments")
 
 from tac.packet_compiler.pr106_latent_sidecar_selection import (
     build_latent_candidate_grid,
     latent_candidate_grid_npy_sha256,
+)
+from tac.packet_compiler.pr106_runtime_consumption import (
+    _decode_runtime_sidecar_payload,
+    load_pr106_runtime_module,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_NO_OP_DIM,
+    parse_pr106_sidecar_packet,
 )
 from tac.repo_io import json_text, sha256_bytes, sha256_file
 from tac.sidechannel_score_table import (
@@ -80,12 +81,23 @@ from tac.sidechannel_score_table import (
 CAMERA_H = 874
 CAMERA_W = 1164
 EVAL_SIZE = (384, 512)
+DELTA_SCALE = 0.01
+NO_OP_DIM = PR106_NO_OP_DIM
+DEFAULT_RUNTIME_DIR = REPO_ROOT / "submissions" / "pr106_latent_sidecar_r2_pr101_grammar"
 SCORE_TABLE_NPY = "score_table.npy"
 SCORE_TABLE_MANIFEST = "score_table_manifest.json"
 CHECKPOINT_TABLE_NPY = "score_table.partial.npy"
 CHECKPOINT_MANIFEST = "score_table_checkpoint.json"
 
 completed_prefix_frames = completed_prefix_rows
+
+
+class SourceArchiveMember:
+    __slots__ = ("name", "payload")
+
+    def __init__(self, name: str, payload: bytes) -> None:
+        self.name = name
+        self.payload = payload
 
 
 def _load_distortion_net(device: torch.device):
@@ -114,11 +126,50 @@ def _load_gt_dataloader(
     )
 
 
-def _read_pr106_bytes(pr106_archive: Path) -> bytes:
-    import zipfile
-
+def _read_source_archive_member(
+    pr106_archive: Path,
+    *,
+    member_name: str | None = None,
+) -> SourceArchiveMember:
     with zipfile.ZipFile(pr106_archive) as z:
-        return z.read("0.bin")
+        names = [info.filename for info in z.infolist() if not info.is_dir()]
+        if member_name is not None:
+            if member_name not in names:
+                raise ValueError(
+                    f"archive member {member_name!r} not found in {pr106_archive}; "
+                    f"available members: {names!r}"
+                )
+            return SourceArchiveMember(name=member_name, payload=z.read(member_name))
+        if "0.bin" in names:
+            selected = "0.bin"
+        elif "x" in names:
+            selected = "x"
+        elif len(names) == 1:
+            selected = names[0]
+        else:
+            raise ValueError(
+                f"cannot infer PR106 archive member for {pr106_archive}; "
+                f"available members: {names!r}; pass --archive-member"
+            )
+        return SourceArchiveMember(name=selected, payload=z.read(selected))
+
+
+def _source_member_contract(source_member: SourceArchiveMember) -> dict[str, Any]:
+    try:
+        packet = parse_pr106_sidecar_packet(source_member.payload)
+    except Exception:
+        payload_kind = "raw_pr106_packed_archive"
+        sidecar_format_id = None
+    else:
+        payload_kind = "pr106_sidecar_packet"
+        sidecar_format_id = f"0x{int(packet.format_id):02X}"
+    return {
+        "source_archive_member_name": source_member.name,
+        "source_archive_member_bytes": len(source_member.payload),
+        "source_archive_member_sha256": sha256_bytes(source_member.payload),
+        "source_payload_kind": payload_kind,
+        "sidecar_format_id": sidecar_format_id,
+    }
 
 
 def _score_table_contract(
@@ -127,9 +178,12 @@ def _score_table_contract(
     candidates_np: np.ndarray,
     candidates_path: Path,
     n_pairs: int,
+    source_member: SourceArchiveMember | None = None,
 ) -> dict[str, Any]:
-    return {
+    contract = {
         "source_archive_sha256": sha256_file(args.pr106_archive),
+        "runtime_dir": str(getattr(args, "runtime_dir", DEFAULT_RUNTIME_DIR)),
+        "requested_archive_member": getattr(args, "archive_member", None),
         "candidate_grid_sha256": sha256_file(candidates_path),
         "candidate_grid_npy_sha256": latent_candidate_grid_npy_sha256(candidates_np),
         "delta_radius": int(args.delta_radius),
@@ -139,6 +193,9 @@ def _score_table_contract(
         "score_table_shape": [int(n_pairs), int(candidates_np.shape[0])],
         "max_pairs": None if args.max_pairs is None else int(args.max_pairs),
     }
+    if source_member is not None:
+        contract.update(_source_member_contract(source_member))
+    return contract
 
 
 def _validate_checkpoint_contract(manifest: dict[str, Any], contract: dict[str, Any]) -> None:
@@ -241,17 +298,45 @@ def _reuse_completed_score_table_if_valid(
     return True
 
 
-def _load_pr106_decoder(pr106_archive: Path, device: torch.device):
-    pr106_bytes = _read_pr106_bytes(pr106_archive)
-    decoder_sd, latents, meta = parse_packed_archive(pr106_bytes)
-    decoder = HNeRVDecoder(
+def _load_pr106_decoder(
+    pr106_archive: Path,
+    device: torch.device,
+    *,
+    runtime_dir: Path,
+    archive_member: str | None = None,
+):
+    source_member = _read_source_archive_member(pr106_archive, member_name=archive_member)
+    runtime = load_pr106_runtime_module(runtime_dir, "inflate.py", module_tag="latent_score_table")
+    try:
+        format_id, pr106_bytes, dim_arr, delta_q_arr = _decode_runtime_sidecar_payload(
+            runtime,
+            source_member.payload,
+        )
+    except Exception:
+        pr106_bytes = source_member.payload
+        decoder_sd, latents, meta = runtime.parse_packed_archive(pr106_bytes)
+        source_payload_kind = "raw_pr106_packed_archive"
+        sidecar_format_id = None
+    else:
+        decoder_sd, latents, meta = runtime.parse_packed_archive(pr106_bytes)
+        latents = runtime.apply_sidecar_corrections(latents, dim_arr, delta_q_arr)
+        source_payload_kind = "pr106_sidecar_packet"
+        sidecar_format_id = f"0x{int(format_id):02X}"
+    decoder = runtime.HNeRVDecoder(
         latent_dim=meta["latent_dim"],
         base_channels=meta["base_channels"],
         eval_size=tuple(meta["eval_size"]),
     ).to(device)
     decoder.load_state_dict(decoder_sd)
     decoder.eval()
-    return decoder, latents.to(device), meta, pr106_bytes
+    source_info = {
+        **_source_member_contract(source_member),
+        "source_payload_kind": source_payload_kind,
+        "sidecar_format_id": sidecar_format_id,
+        "source_inner_pr106_payload_sha256": sha256_bytes(pr106_bytes),
+        "runtime_dir": str(runtime_dir),
+    }
+    return decoder, latents.to(device), meta, pr106_bytes, source_info
 
 
 def apply_latent_candidates_torch(
@@ -432,11 +517,16 @@ def score_pair_batch_candidate_table_adaptive(
     return rows, telemetry
 
 
-def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict[str, Any]:
+def build_dry_run_plan(
+    args: argparse.Namespace,
+    candidates: np.ndarray,
+    *,
+    source_member: SourceArchiveMember | None = None,
+) -> dict[str, Any]:
     n_pairs = int(args.n_pairs)
     if args.max_pairs is not None:
         n_pairs = min(n_pairs, int(args.max_pairs))
-    return {
+    plan = {
         "manifest_schema": "pr106_latent_score_table_plan_v1",
         "producer": "experiments/build_pr106_latent_score_table.py",
         "score_claim": False,
@@ -445,6 +535,8 @@ def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict
         "ready_for_exact_eval_dispatch": False,
         "source_archive_path": str(args.pr106_archive),
         "source_archive_sha256": sha256_file(args.pr106_archive) if args.pr106_archive.is_file() else None,
+        "runtime_dir": str(args.runtime_dir),
+        "requested_archive_member": args.archive_member,
         "delta_radius": int(args.delta_radius),
         "latent_dim": int(args.latent_dim),
         "candidate_count": int(candidates.shape[0]),
@@ -461,6 +553,9 @@ def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict
             "requires_exact_cuda_auth_eval_on_built_archive",
         ],
     }
+    if source_member is not None:
+        plan.update(_source_member_contract(source_member))
+    return plan
 
 
 def build_score_table(args: argparse.Namespace) -> int:
@@ -474,9 +569,14 @@ def build_score_table(args: argparse.Namespace) -> int:
     n_pairs = int(args.n_pairs)
     if args.max_pairs is not None:
         n_pairs = min(n_pairs, int(args.max_pairs))
+    source_member = (
+        _read_source_archive_member(args.pr106_archive, member_name=args.archive_member)
+        if args.pr106_archive.is_file()
+        else None
+    )
 
     if args.dry_run_plan:
-        plan = build_dry_run_plan(args, candidates_np)
+        plan = build_dry_run_plan(args, candidates_np, source_member=source_member)
         manifest_path = args.out_dir / SCORE_TABLE_MANIFEST
         manifest_path.write_text(json_text(plan), encoding="utf-8")
         print(f"[latent-score-table] wrote dry-run plan {manifest_path}")
@@ -499,6 +599,7 @@ def build_score_table(args: argparse.Namespace) -> int:
         candidates_np=candidates_np,
         candidates_path=candidates_path,
         n_pairs=n_pairs,
+        source_member=source_member,
     )
     if args.resume_checkpoint and _reuse_completed_score_table_if_valid(args, contract=contract):
         return 0
@@ -508,7 +609,12 @@ def build_score_table(args: argparse.Namespace) -> int:
     torch.manual_seed(args.seed)
     started = time.time()
 
-    decoder, latents, meta, pr106_bytes = _load_pr106_decoder(args.pr106_archive, device)
+    decoder, latents, meta, pr106_bytes, source_info = _load_pr106_decoder(
+        args.pr106_archive,
+        device,
+        runtime_dir=args.runtime_dir,
+        archive_member=args.archive_member,
+    )
     if int(meta["n_pairs"]) < int(args.n_pairs):
         raise SystemExit(f"requested n_pairs={args.n_pairs}, but PR106 archive has {meta['n_pairs']}")
     if int(meta["latent_dim"]) != int(args.latent_dim):
@@ -614,7 +720,8 @@ def build_score_table(args: argparse.Namespace) -> int:
         "source_archive_path": str(args.pr106_archive),
         "source_archive_bytes": int(args.pr106_archive.stat().st_size),
         "source_archive_sha256": sha256_file(args.pr106_archive),
-        "source_zero_bin_sha256": sha256_bytes(pr106_bytes),
+        "source_inner_pr106_payload_sha256": sha256_bytes(pr106_bytes),
+        **source_info,
         "candidate_grid_path": str(candidates_path),
         "candidate_grid_sha256": sha256_file(candidates_path),
         "candidate_grid_npy_sha256": latent_candidate_grid_npy_sha256(candidates_np),
@@ -668,6 +775,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--pr106-archive", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument("--runtime-dir", type=Path, default=DEFAULT_RUNTIME_DIR,
+                        help="Submission runtime directory used to parse and render the archive.")
+    parser.add_argument("--archive-member", default=None,
+                        help="Optional ZIP member override. By default 0.bin, x, or a single member is inferred.")
     parser.add_argument("--delta-radius", type=int, default=1)
     parser.add_argument("--latent-dim", type=int, default=28)
     parser.add_argument("--n-pairs", type=int, default=600)

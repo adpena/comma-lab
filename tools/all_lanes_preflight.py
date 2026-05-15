@@ -236,7 +236,13 @@ PR106_R2_RUNTIME_SOURCE_TREE_SHA256 = "f12c3a81a5a52c39d48d7528f1fab926acccab0ce
 PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "8ddce462a0d300f29ff9dddca8683cbe08bf97fc7959c296e06647ef12d4249b"
+PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256 = "94078eb83f0629fdeb94d39be9292633ad0014a1236729ba66eb96901610b1b5"
+PR106_FORMAT0C_XMEMBER_ARCHIVE = (
+    REPO
+    / "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex"
+    / "candidates/pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip"
+)
+PR106_FORMAT0C_XMEMBER_ARCHIVE_SHA256 = "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7"
 PR106_R2_HLM1_XMEMBER_ARCHIVE = (
     REPO
     / "experiments/results/pr106_r2_hdm4_hlm1_xmember_candidate_20260514_codex"
@@ -2564,7 +2570,12 @@ def _pr106_sidecar_packet_ir_identity_failures(
         failures.append(f"{label}:packet_ir_consumed_byte_proof_missing")
         return failures
 
-    expected_score_sections = ["pr106_payload", "sidecar_payload"]
+    expected_pr106_section = (
+        "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic"
+        if expected_format_id == "0x0C"
+        else "pr106_payload"
+    )
+    expected_score_sections = [expected_pr106_section, "sidecar_payload"]
     if expected_format_id == "0x02":
         expected_score_sections.append("framing_meta")
     expected_payload_bytes = emitted_payload.get("bytes")
@@ -2727,6 +2738,14 @@ def _run_pr106_sidecar_runtime_consumption_gate() -> tuple[bool, str]:
             PR106_R2_PR101_RUNTIME,
             "0x02",
             PR106_R2_HLM2_XMEMBER_ARCHIVE_SHA256,
+            PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256,
+        ),
+        (
+            "r2_format0c_xmember_pr101_grammar",
+            PR106_FORMAT0C_XMEMBER_ARCHIVE,
+            PR106_R2_PR101_RUNTIME,
+            "0x0C",
+            PR106_FORMAT0C_XMEMBER_ARCHIVE_SHA256,
             PR106_R2_PR101_RUNTIME_SOURCE_TREE_SHA256,
         ),
     ):

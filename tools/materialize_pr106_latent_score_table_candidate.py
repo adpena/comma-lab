@@ -60,7 +60,10 @@ SCORE_TABLE_MANIFEST_REQUIRED_FIELDS = (
     "source_archive_path",
     "source_archive_bytes",
     "source_archive_sha256",
-    "source_zero_bin_sha256",
+    "source_archive_member_name",
+    "source_archive_member_sha256",
+    "source_payload_kind",
+    "runtime_dir",
     "candidate_grid_path",
     "candidate_grid_sha256",
     "candidate_grid_npy_sha256",
@@ -175,10 +178,16 @@ def _authority_flags(payload: Mapping[str, Any]) -> dict[str, object]:
     return {key: payload.get(key) for key in keys if key in payload}
 
 
-def _source_payload_sha256(source_archive: Path) -> str | None:
+def _source_member(source_archive: Path):
     try:
-        member = read_single_stored_member_archive(source_archive.read_bytes())
+        return read_single_stored_member_archive(source_archive.read_bytes())
     except Exception:
+        return None
+
+
+def _source_payload_sha256(source_archive: Path) -> str | None:
+    member = _source_member(source_archive)
+    if member is None:
         return None
     return sha256_hex(member.payload)
 
@@ -230,13 +239,26 @@ def audit_score_table_manifest(
 
     source_archive_sha256 = sha256_file(source_archive)
     source_archive_bytes = int(source_archive.stat().st_size)
-    source_payload_sha256 = _source_payload_sha256(source_archive)
+    source_member = _source_member(source_archive)
+    source_member_name = source_member.name if source_member is not None else None
+    source_payload_sha256 = (
+        sha256_hex(source_member.payload) if source_member is not None else None
+    )
     source_archive_sha256_matches = manifest.get("source_archive_sha256") == source_archive_sha256
     source_archive_bytes_match = manifest.get("source_archive_bytes") == source_archive_bytes
+    source_member_name_matches = manifest.get("source_archive_member_name") in (
+        None,
+        source_member_name,
+    )
     source_payload_sha256_matches = (
         source_payload_sha256 is not None
-        and manifest.get("source_zero_bin_sha256") == source_payload_sha256
+        and (
+            manifest.get("source_archive_member_sha256") == source_payload_sha256
+            or manifest.get("source_zero_bin_sha256") == source_payload_sha256
+        )
     )
+    if not source_member_name_matches:
+        blockers.append("score_table_manifest_source_archive_member_name_mismatch")
     if not source_archive_sha256_matches and not source_payload_sha256_matches:
         blockers.append("score_table_manifest_source_archive_payload_mismatch_or_missing")
     elif not source_archive_sha256_matches and source_payload_sha256_matches:
@@ -268,12 +290,16 @@ def audit_score_table_manifest(
             "path": repo_relative(source_archive, REPO_ROOT),
             "bytes": source_archive_bytes,
             "sha256": source_archive_sha256,
+            "single_member_name": source_member_name,
             "single_member_payload_sha256": source_payload_sha256,
             "manifest_bytes": manifest.get("source_archive_bytes"),
             "manifest_sha256": manifest.get("source_archive_sha256"),
+            "manifest_member_name": manifest.get("source_archive_member_name"),
+            "manifest_member_sha256": manifest.get("source_archive_member_sha256"),
             "manifest_zero_bin_sha256": manifest.get("source_zero_bin_sha256"),
             "bytes_match": source_archive_bytes_match,
             "archive_sha256_match": source_archive_sha256_matches,
+            "single_member_name_match": source_member_name_matches,
             "single_member_payload_sha256_match": source_payload_sha256_matches,
         },
         "warnings": warnings,

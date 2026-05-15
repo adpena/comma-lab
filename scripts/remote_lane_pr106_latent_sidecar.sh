@@ -36,6 +36,8 @@ PR106_LATENT_SCORE_TABLE_NPY="${PR106_LATENT_SCORE_TABLE_NPY:-}"
 PR106_LATENT_SCORE_TABLE_MANIFEST="${PR106_LATENT_SCORE_TABLE_MANIFEST:-}"
 PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"
 PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID:-${INSTANCE_JOB_ID:-}}"
+PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"
+PR106_ARCHIVE_MEMBER="${PR106_ARCHIVE_MEMBER:-}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 
@@ -80,6 +82,8 @@ prov = {
     'latent_delta_radius': int('$PR106_LATENT_DELTA_RADIUS'),
     'latent_score_table_lane_id': '$PR106_LATENT_SCORE_TABLE_LANE_ID',
     'latent_score_table_instance_job_id': '$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID',
+    'pr106_runtime_dir': '$PR106_RUNTIME_DIR',
+    'pr106_archive_member': '$PR106_ARCHIVE_MEMBER',
     'sidecar_top_k': int('$SIDECAR_TOP_K'),
 }
 with open('$LOG_DIR/provenance.json', 'w') as f:
@@ -116,7 +120,11 @@ if [ "$PR106_LATENT_MODE" = "score_table" ] && [ -z "$PR106_LATENT_SCORE_TABLE_N
         --candidate-batch-size "$PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE"
         --lane-id "$PR106_LATENT_SCORE_TABLE_LANE_ID"
         --instance-job-id "$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID"
+        --runtime-dir "$PR106_RUNTIME_DIR"
     )
+    if [ -n "$PR106_ARCHIVE_MEMBER" ]; then
+        SCORE_TABLE_ARGS+=(--archive-member "$PR106_ARCHIVE_MEMBER")
+    fi
     if [ "$PR106_LATENT_SCORE_TABLE_RESUME" = "1" ]; then
         SCORE_TABLE_ARGS+=(--resume-checkpoint)
     fi
@@ -153,28 +161,14 @@ log "stage 1 OK: archive bytes=$ARCHIVE_BYTES"
 
 # ── Stage 2: Local parser-roundtrip sanity ────────────────────────────────
 log "=== Stage 2: parser-roundtrip sanity (no GPU forward) ==="
-"$PYBIN" -c "
-import sys, zipfile
-sys.path.insert(0, '$WORKSPACE/submissions/pr106_latent_sidecar')
-from inflate import parse_sidecar_archive, decode_sidecar_corrections
-sys.path.insert(0, '$WORKSPACE/submissions/pr106_latent_sidecar/src')
-from codec import parse_packed_archive
-with zipfile.ZipFile('$SIDECAR_ARCHIVE') as z:
-    bin_bytes = z.read('0.bin')
-pr106_b, sidecar_b = parse_sidecar_archive(bin_bytes)
-sd, lat, meta = parse_packed_archive(pr106_b)
-dim, delta_q = decode_sidecar_corrections(sidecar_b)
-assert lat.shape == (600, 28), f'lat shape {lat.shape} != (600, 28)'
-assert dim.shape == (600,), f'dim shape {dim.shape} != (600,)'
-assert delta_q.shape == (600,), f'delta_q shape {delta_q.shape} != (600,)'
-n_corr = int((dim != 255).sum())
-print(f'parse OK: {len(sd)} tensors, latents shape {tuple(lat.shape)}, '
-      f'sidecar {n_corr}/600 pairs corrected, sidecar bytes {len(sidecar_b)}')
-" 2>&1 | tee -a "$LOG_DIR/run.log"
+"$PYBIN" -u tools/prove_pr106_sidecar_runtime_consumption.py \
+    --archive "$SIDECAR_ARCHIVE" \
+    --runtime-dir "$PR106_RUNTIME_DIR" \
+    --output-json "$LOG_DIR/runtime_consumption.json" 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Stage 3: Contest auth eval (CUDA T4) ─────────────────────────────────
 log "=== Stage 3: contest auth eval (CUDA) ==="
-INFLATE_SH="$WORKSPACE/submissions/pr106_latent_sidecar/inflate.sh"
+INFLATE_SH="$WORKSPACE/$PR106_RUNTIME_DIR/inflate.sh"
 EVAL_DIR="$LOG_DIR/eval"
 mkdir -p "$EVAL_DIR"
 "$PYBIN" -u experiments/contest_auth_eval.py \

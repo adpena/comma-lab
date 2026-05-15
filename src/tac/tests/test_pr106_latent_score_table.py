@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -18,6 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "experiments/build_pr106_latent_score_table.py"
 PR106_ARCHIVE = REPO_ROOT / (
     "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip"
+)
+PR106_FORMAT0C_ARCHIVE = REPO_ROOT / (
+    "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/"
+    "candidates/pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip"
 )
 REMOTE_SCRIPT = REPO_ROOT / "scripts/remote_lane_pr106_latent_sidecar.sh"
 
@@ -202,6 +207,19 @@ def test_latent_score_table_checkpoint_validates_contract(tmp_path):
         mod._load_score_table_checkpoint(args, contract=changed)
 
 
+def test_latent_score_table_member_reader_autodetects_x_member(tmp_path):
+    mod = _load_module()
+    archive = tmp_path / "candidate.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
+        z.writestr("x", b"\xfepr106-sidecar-packet")
+
+    member = mod._read_source_archive_member(archive)
+
+    assert member.name == "x"
+    assert member.payload == b"\xfepr106-sidecar-packet"
+    assert mod._source_member_contract(member)["source_archive_member_name"] == "x"
+
+
 def test_dry_run_plan_writes_candidate_grid_and_manifest(tmp_path):
     if not PR106_ARCHIVE.is_file():
         pytest.skip(f"missing PR106 archive at {PR106_ARCHIVE}")
@@ -241,7 +259,64 @@ def test_dry_run_plan_writes_candidate_grid_and_manifest(tmp_path):
     assert manifest["n_pairs"] == 2
     assert manifest["max_pairs"] == 2
     assert manifest["expected_score_table_shape"] == [2, 7]
+    assert manifest["source_archive_member_name"] == "0.bin"
+    assert manifest["runtime_dir"].endswith("submissions/pr106_latent_sidecar_r2_pr101_grammar")
     assert "requires_real_cuda_score_table" in manifest["dispatch_blockers"]
+
+
+def test_dry_run_plan_binds_format0c_x_member_and_runtime(tmp_path):
+    if not PR106_FORMAT0C_ARCHIVE.is_file():
+        pytest.skip(f"missing format0C archive at {PR106_FORMAT0C_ARCHIVE}")
+    out_dir = tmp_path / "format0c-plan"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--pr106-archive",
+            str(PR106_FORMAT0C_ARCHIVE),
+            "--out-dir",
+            str(out_dir),
+            "--delta-radius",
+            "1",
+            "--latent-dim",
+            "3",
+            "--n-pairs",
+            "5",
+            "--max-pairs",
+            "2",
+            "--dry-run-plan",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    manifest = read_json(out_dir / "score_table_manifest.json")
+    assert manifest["source_archive_member_name"] == "x"
+    assert manifest["source_payload_kind"] == "pr106_sidecar_packet"
+    assert manifest["source_archive_member_sha256"]
+    assert manifest["runtime_dir"].endswith("submissions/pr106_latent_sidecar_r2_pr101_grammar")
+    assert manifest["score_claim"] is False
+
+
+def test_load_pr106_decoder_applies_format0c_runtime_sidecar_cpu():
+    if not PR106_FORMAT0C_ARCHIVE.is_file():
+        pytest.skip(f"missing format0C archive at {PR106_FORMAT0C_ARCHIVE}")
+    mod = _load_module()
+
+    _, latents, meta, _, source_info = mod._load_pr106_decoder(
+        PR106_FORMAT0C_ARCHIVE,
+        torch.device("cpu"),
+        runtime_dir=mod.DEFAULT_RUNTIME_DIR,
+    )
+
+    assert source_info["source_archive_member_name"] == "x"
+    assert source_info["source_payload_kind"] == "pr106_sidecar_packet"
+    assert source_info["sidecar_format_id"] == "0x0C"
+    assert int(meta["n_pairs"]) == 600
+    assert tuple(latents.shape) == (600, int(meta["latent_dim"]))
 
 
 def test_remote_latent_lane_defaults_to_score_table_and_resume():
@@ -252,6 +327,10 @@ def test_remote_latent_lane_defaults_to_score_table_and_resume():
     assert 'LANE_ID="lane_pr106_latent_sidecar"' in text
     assert 'PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"' in text
     assert "experiments/build_pr106_latent_score_table.py" in text
+    assert 'PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"' in text
+    assert "--runtime-dir \"$PR106_RUNTIME_DIR\"" in text
+    assert "tools/prove_pr106_sidecar_runtime_consumption.py" in text
+    assert 'INFLATE_SH="$WORKSPACE/$PR106_RUNTIME_DIR/inflate.sh"' in text
     assert "Stage 1a RESUME: validating completed latent score table" in text
     assert "SCORE_TABLE_ARGS+=(--resume-checkpoint)" in text
     assert "--search-mode \"$PR106_LATENT_MODE\"" in text

@@ -22,9 +22,9 @@ def _load_tool():
     )
 
 
-def _stored_zip(path: Path, payload: bytes = b"payload") -> None:
+def _stored_zip(path: Path, payload: bytes = b"payload", *, member_name: str = "0.bin") -> None:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
-        info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+        info = zipfile.ZipInfo(member_name, date_time=(1980, 1, 1, 0, 0, 0))
         info.compress_type = zipfile.ZIP_STORED
         info.external_attr = 0o644 << 16
         zf.writestr(info, payload)
@@ -32,7 +32,8 @@ def _stored_zip(path: Path, payload: bytes = b"payload") -> None:
 
 def _complete_score_table_manifest(source_archive: Path, npy: Path) -> dict[str, object]:
     with zipfile.ZipFile(source_archive) as zf:
-        payload = zf.read("0.bin")
+        member_name = zf.namelist()[0]
+        payload = zf.read(member_name)
     return {
         "manifest_schema": "pr106_latent_score_table_manifest_v1",
         "producer": "experiments/build_pr106_latent_score_table.py",
@@ -44,6 +45,10 @@ def _complete_score_table_manifest(source_archive: Path, npy: Path) -> dict[str,
         "source_archive_path": str(source_archive),
         "source_archive_bytes": source_archive.stat().st_size,
         "source_archive_sha256": hashlib.sha256(source_archive.read_bytes()).hexdigest(),
+        "source_archive_member_name": member_name,
+        "source_archive_member_sha256": hashlib.sha256(payload).hexdigest(),
+        "source_payload_kind": "raw_pr106_packed_archive",
+        "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
         "source_zero_bin_sha256": hashlib.sha256(payload).hexdigest(),
         "candidate_grid_path": "candidate_grid.npy",
         "candidate_grid_sha256": "a" * 64,
@@ -260,6 +265,29 @@ def test_manifest_audit_clears_missing_custody_blocker_for_complete_manifest(
     assert payload["score_table_manifest_audit"]["missing_custody_fields"] == []
     assert "score_table_manifest_missing_custody_fields" not in payload["exact_eval_dispatch_blockers"]
     assert "requires_exact_cuda_auth_eval_on_materialized_archive" in payload["dispatch_blockers"]
+
+
+def test_manifest_audit_accepts_x_member_custody(tmp_path: Path) -> None:
+    module = _load_tool()
+    source_archive = tmp_path / "archive.zip"
+    _stored_zip(source_archive, payload=b"x-payload", member_name="x")
+    npy = tmp_path / "score_table.npy"
+    npy.write_bytes(b"npy")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(manifest, _complete_score_table_manifest(source_archive, npy))
+
+    audit = module.audit_score_table_manifest(
+        source_archive=source_archive,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+    )
+
+    assert audit["blockers"] == []
+    source = audit["source_archive"]
+    assert source["single_member_name"] == "x"
+    assert source["manifest_member_name"] == "x"
+    assert source["single_member_name_match"] is True
+    assert source["single_member_payload_sha256_match"] is True
 
 
 def test_materializer_downgrades_builder_exact_ready_claim(monkeypatch, tmp_path: Path) -> None:

@@ -640,7 +640,60 @@ def test_score_table_manifest_rejects_different_zero_bin_when_archive_sha_mismat
                 "remote_jobs_dispatched": False,
             }
         )
+        )
+
+
+def test_score_table_manifest_accepts_x_member_custody(tmp_path: Path):
+    """Score-table custody is member-name neutral; x is the canonical PacketIR member."""
+    build = _import_build_module()
+    score_table = np.zeros((600, 57), dtype=np.float32)
+    table_path = tmp_path / "score_table.npy"
+    np.save(table_path, score_table, allow_pickle=False)
+    candidates = build.build_latent_candidate_grid(latent_dim=28, delta_radius=1)
+    source_archive = tmp_path / "source_x.zip"
+    source_payload = b"packetir-x-payload"
+    with zipfile.ZipFile(source_archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo("x", date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        zf.writestr(info, source_payload)
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_latent_score_table_manifest_v1",
+                "producer": "experiments/build_pr106_latent_score_table.py",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "source_archive_sha256": hashlib.sha256(source_archive.read_bytes()).hexdigest(),
+                "source_archive_member_name": "x",
+                "source_archive_member_sha256": hashlib.sha256(source_payload).hexdigest(),
+                "score_table_npy_sha256": hashlib.sha256(table_path.read_bytes()).hexdigest(),
+                "candidate_grid_sha256": build.latent_candidate_grid_npy_sha256(candidates),
+                "n_pairs": 600,
+                "latent_dim": 28,
+                "delta_radius": 1,
+                "candidate_count": 57,
+                "score_table_shape": [600, 57],
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+            }
+        ),
+        encoding="utf-8",
     )
+
+    validated = build.validate_score_table_manifest(
+        manifest_path,
+        score_table_npy=table_path,
+        source_archive=source_archive,
+        n_pairs=600,
+        latent_dim=28,
+        delta_radius=1,
+        candidate_count=57,
+    )
+
+    assert validated["validated_source_archive_member_name_match"] is True
+    assert validated["validated_source_archive_member_sha256_match"] is True
 
     with pytest.raises(ValueError, match="source archive payload mismatch"):
         build.validate_score_table_manifest(

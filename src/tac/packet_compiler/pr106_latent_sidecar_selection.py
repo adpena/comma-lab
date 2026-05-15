@@ -251,14 +251,19 @@ def validate_score_table_manifest(
         raise ValueError("score table manifest must have ready_for_builder=true")
     archive_sha256 = hashlib.sha256(source_archive.read_bytes()).hexdigest()
     archive_sha256_matches = manifest.get("source_archive_sha256") == archive_sha256
+    member = read_single_stored_member_archive(source_archive.read_bytes())
+    member_name_matches = manifest.get("source_archive_member_name") in (None, member.name)
+    member_sha256 = sha256_hex(member.payload)
+    member_sha256_matches = manifest.get("source_archive_member_sha256") == member_sha256
     zero_bin_sha256_matches = False
     if not archive_sha256_matches:
         source_zero_bin_sha256 = manifest.get("source_zero_bin_sha256")
         if isinstance(source_zero_bin_sha256, str):
-            member = read_single_stored_member_archive(source_archive.read_bytes())
-            zero_bin_sha256_matches = sha256_hex(member.payload) == source_zero_bin_sha256
-        if not zero_bin_sha256_matches:
+            zero_bin_sha256_matches = member_sha256 == source_zero_bin_sha256
+        if not member_sha256_matches and not zero_bin_sha256_matches:
             raise ValueError("score table manifest source archive payload mismatch")
+    if not member_name_matches:
+        raise ValueError("score table manifest source archive member name mismatch")
     if manifest.get("score_table_npy_sha256") != hashlib.sha256(
         score_table_npy.read_bytes()
     ).hexdigest():
@@ -284,6 +289,8 @@ def validate_score_table_manifest(
         raise ValueError("score table manifest must not mark dispatch attempted")
     manifest = dict(manifest)
     manifest["validated_source_archive_sha256_match"] = archive_sha256_matches
+    manifest["validated_source_archive_member_name_match"] = member_name_matches
+    manifest["validated_source_archive_member_sha256_match"] = member_sha256_matches
     manifest["validated_source_zero_bin_sha256_match"] = zero_bin_sha256_matches
     return manifest
 

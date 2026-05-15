@@ -30,7 +30,7 @@ def test_pr106_sidecar_runtime_consumption_gate_passes_current_archives() -> Non
     passed, output = module._run_pr106_sidecar_runtime_consumption_gate()
 
     assert passed is True
-    assert "format_ids=0x01,0x02,0x02,0x02" in output
+    assert "format_ids=0x01,0x02,0x02,0x02,0x0C" in output
     assert "PacketIR identity parse-emit accounts for every payload byte" in output
     assert "runtime decodes/applies sidecar bytes" in output
     assert "expected archive/runtime SHA custody is enforced" in output
@@ -147,7 +147,10 @@ def test_pr106_sidecar_runtime_consumption_gate_threads_expected_archive_sha256(
         expected_runtime_source_tree_sha256: str | None = None,
     ) -> dict[str, object]:
         seen.append(expected_archive_sha256)
-        format_id = "0x01" if "pr101_grammar" not in str(runtime_dir) else "0x02"
+        if archive_path == module.PR106_FORMAT0C_XMEMBER_ARCHIVE:
+            format_id = "0x0C"
+        else:
+            format_id = "0x01" if "pr101_grammar" not in str(runtime_dir) else "0x02"
         expected_framing = True if format_id == "0x02" else None
         return {
             "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
@@ -241,6 +244,7 @@ def test_pr106_sidecar_runtime_consumption_gate_threads_expected_archive_sha256(
         module.PR106_R2_PR101_ARCHIVE_SHA256,
         module.PR106_R2_HLM1_XMEMBER_ARCHIVE_SHA256,
         module.PR106_R2_HLM2_XMEMBER_ARCHIVE_SHA256,
+        module.PR106_FORMAT0C_XMEMBER_ARCHIVE_SHA256,
     ]
     assert seen_hlm == [(module.PR106_R2_HLM2_XMEMBER_ARCHIVE, ("hlm2",))]
 

@@ -45,7 +45,9 @@ REQUIRED_REPO_PATHS: tuple[str, ...] = (
     "scripts/remote_lane_pr106_latent_sidecar.sh",
     "submissions/__init__.py",
     "submissions/pr106_latent_sidecar",
+    "submissions/pr106_latent_sidecar_r2_pr101_grammar",
     "tools/tool_bootstrap.py",
+    "tools/prove_pr106_sidecar_runtime_consumption.py",
 )
 
 

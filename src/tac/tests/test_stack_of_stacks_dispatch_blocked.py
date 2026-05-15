@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 from tac.composition.stack_of_stacks import (
@@ -106,6 +107,8 @@ def test_stack_of_stacks_single_arm_trainer_builds_exact_eval_canary(tmp_path: P
     assert '"research_only": false' in summary
     assert '"dispatch_blockers": []' in summary
     assert (output_dir / "submission_dir/archive.zip").is_file()
+    with zipfile.ZipFile(output_dir / "submission_dir/archive.zip", "r") as zf:
+        assert zf.namelist() == ["x"]
     inflate_sh = output_dir / "submission_dir/inflate.sh"
     assert inflate_sh.is_file()
     inflate_text = inflate_sh.read_text(encoding="utf-8")

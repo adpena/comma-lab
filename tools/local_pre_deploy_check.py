@@ -43,6 +43,7 @@ smoke + 30-60min wall-clock waiting for Modal to crash.
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
 import inspect
 import py_compile
@@ -59,11 +60,11 @@ ARCHIVE_BUILD_PATTERN = re.compile(
 )
 ARCHIVE_MEMBER_WAIVER = re.compile(r"#\s*ARCHIVE_MEMBER_OK:\s*\S")
 
-AUTH_EVAL_REACHABILITY_PATTERNS = [
-    re.compile(r"\bauth_eval_renderer\b"),
-    re.compile(r"\bgate_auth_eval_call\b"),
-    re.compile(r"\bcontest_auth_eval\b"),
-]
+AUTH_EVAL_CALL_NAMES = {
+    "_canon_gate_auth_eval_call",
+    "auth_eval_renderer",
+    "gate_auth_eval_call",
+}
 
 
 def _import_trainer_module(trainer: Path):
@@ -161,9 +162,36 @@ def check_archive_grammar(trainer: Path) -> tuple[bool, str]:
 def check_auth_eval_reachability(trainer: Path) -> tuple[bool, str]:
     """Refuse trainer with no auth_eval invocation (Z4 bug class)."""
     text = trainer.read_text()
-    for pat in AUTH_EVAL_REACHABILITY_PATTERNS:
-        if pat.search(text):
+    try:
+        tree = ast.parse(text, filename=str(trainer))
+    except SyntaxError as exc:
+        return False, f"FAIL: {trainer.name} cannot be parsed for auth_eval reachability: {exc}"
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        call_name = ""
+        if isinstance(func, ast.Name):
+            call_name = func.id
+        elif isinstance(func, ast.Attribute):
+            call_name = func.attr
+        if call_name in AUTH_EVAL_CALL_NAMES:
             return True, f"PASS: {trainer.name} invokes auth_eval (canonical helper)"
+        for arg in [*node.args, *[keyword.value for keyword in node.keywords]]:
+            if (
+                isinstance(arg, ast.Constant)
+                and isinstance(arg.value, str)
+                and "contest_auth_eval.py" in arg.value
+            ):
+                return True, f"PASS: {trainer.name} invokes contest_auth_eval.py"
+            if isinstance(arg, ast.List | ast.Tuple):
+                for element in arg.elts:
+                    if (
+                        isinstance(element, ast.Constant)
+                        and isinstance(element.value, str)
+                        and "contest_auth_eval.py" in element.value
+                    ):
+                        return True, f"PASS: {trainer.name} invokes contest_auth_eval.py"
     return (
         False,
         f"FAIL: {trainer.name} has no auth_eval invocation; "

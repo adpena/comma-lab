@@ -572,7 +572,7 @@ def _build_archive_from_compose(
     # Deterministic ZIP per Catalog #19.
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_STORED) as zf:
-        info = zipfile.ZipInfo(filename="0.bin", date_time=(2026, 5, 13, 0, 0, 0))
+        info = zipfile.ZipInfo(filename="x", date_time=(2026, 5, 13, 0, 0, 0))
         info.compress_type = zipfile.ZIP_STORED
         zf.writestr(info, composed_bytes)
     archive_path.write_bytes(buf.getvalue())

@@ -126,3 +126,52 @@ def test_jsonl_profile_rows_and_markdown_output(tmp_path: Path) -> None:
     assert report["frontier_eligible_count"] == 1
     assert report["not_frontier_eligible_count"] == 1
     assert report["reviews"][0]["archive_bytes_source"] == "anchor.archive_bytes"
+
+
+def test_forced_cuda_axis_does_not_fall_back_to_cpu_only_score(tmp_path: Path) -> None:
+    module = _load_module()
+    artifact = tmp_path / "cpu_only.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "paired_guard_regression",
+                "score_axis": "contest_cpu",
+                "exact_results": {"contest_cpu_score": 0.1919},
+                "remaining_byte_mass_bytes": 10_000,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    row = module.build_report([artifact], axis="contest_cuda")["reviews"][0]
+
+    assert row["axis"] == "contest_cuda"
+    assert row["current_score"] is None
+    assert row["frontier_eligible"] is False
+    assert "missing_current_score" in row["blockers"]
+
+
+def test_forced_axes_choose_matching_paired_score(tmp_path: Path) -> None:
+    module = _load_module()
+    artifact = tmp_path / "paired.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "paired_guard_regression",
+                "exact_results": {
+                    "contest_cpu_score": 0.1919,
+                    "contest_cuda_score": 0.2262,
+                },
+                "remaining_byte_mass_bytes": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cpu = module.build_report([artifact], axis="contest_cpu")["reviews"][0]
+    cuda = module.build_report([artifact], axis="contest_cuda")["reviews"][0]
+
+    assert cpu["current_score"] == 0.1919
+    assert cpu["current_score_source"] == "exact_results.contest_cpu_score"
+    assert cuda["current_score"] == 0.2262
+    assert cuda["current_score_source"] == "exact_results.contest_cuda_score"

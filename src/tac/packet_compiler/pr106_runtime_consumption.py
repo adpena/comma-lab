@@ -29,6 +29,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
@@ -184,6 +185,15 @@ def _decode_runtime_sidecar_payload(
         ):
             dim_arr, delta_q_arr = (
                 runtime_module.decode_pr101_fixed_meta_noop_rank_elided_sidecar(
+                    sidecar_blob
+                )
+            )
+        elif (
+            format_id
+            == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+        ):
+            dim_arr, delta_q_arr = (
+                runtime_module.decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar(
                     sidecar_blob
                 )
             )

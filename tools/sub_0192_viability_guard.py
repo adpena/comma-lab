@@ -84,6 +84,25 @@ def _first_int(
     return None, None
 
 
+def _record_metadata_matches_axis(data: Mapping[str, Any], axis: str) -> bool:
+    expected = "cuda" if axis == "contest_cuda" else "cpu"
+    fields: list[str] = []
+    for path in (
+        ("score_axis",),
+        ("evidence_grade",),
+        ("lane_tag",),
+        ("device_axis_label",),
+        ("auth_eval", "record", "score_axis"),
+        ("auth_eval", "record", "evidence_grade"),
+        ("exact_results", "score_axis"),
+        ("score_recomputation", "score_axis"),
+    ):
+        value = _get_path(data, path)
+        if isinstance(value, str):
+            fields.append(value.lower())
+    return any(expected in value for value in fields)
+
+
 def _score_paths(axis: str, data: Mapping[str, Any]) -> list[tuple[str, ...]]:
     score_axis = str(data.get("score_axis", "")).lower()
     paths: list[tuple[str, ...]] = []
@@ -93,18 +112,13 @@ def _score_paths(axis: str, data: Mapping[str, Any]) -> list[tuple[str, ...]]:
                 ("exact_results", "contest_cpu_score"),
                 ("anchor", "cpu_score"),
                 ("deltas", "paired_cpu_score_contest_cpu"),
-                ("score_recomputation", "recomputed_score"),
-                ("components", "score_recomputed_from_components"),
             ]
         )
     elif axis == "contest_cuda":
         paths.extend(
             [
-                ("score_recomputation", "recomputed_score"),
-                ("components", "score_recomputed_from_components"),
                 ("exact_results", "contest_cuda_score"),
                 ("anchor", "cuda_score"),
-                ("canonical_score",),
             ]
         )
     elif "cpu" in score_axis:
@@ -112,18 +126,21 @@ def _score_paths(axis: str, data: Mapping[str, Any]) -> list[tuple[str, ...]]:
     else:
         paths.extend(_score_paths("contest_cuda", data))
 
-    paths.extend(
-        [
-            ("score_recomputed_from_components",),
-            ("recomputed_score",),
-            ("reported_score",),
-            ("score",),
-            ("final_score",),
-            ("display_final_score",),
-            ("exact_results", "contest_cpu_score"),
-            ("baseline_score",),
-        ]
-    )
+    if axis in {"contest_cpu", "contest_cuda"} and _record_metadata_matches_axis(data, axis):
+        paths.extend(
+            [
+                ("score_recomputation", "recomputed_score"),
+                ("components", "score_recomputed_from_components"),
+                ("canonical_score",),
+                ("score_recomputed_from_components",),
+                ("recomputed_score",),
+                ("reported_score",),
+                ("score",),
+                ("final_score",),
+                ("display_final_score",),
+                ("baseline_score",),
+            ]
+        )
     seen: set[tuple[str, ...]] = set()
     unique: list[tuple[str, ...]] = []
     for path in paths:
