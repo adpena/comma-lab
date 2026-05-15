@@ -49162,6 +49162,15 @@ _CHECKPOINT_WAIVER_RE = re.compile(
     r"#\s*CHECKPOINT_DISCIPLINE_WAIVED:\s*([^\s<].*)"
 )
 
+_CHECKPOINT_BACKFILL_RE = re.compile(
+    r"\bcommit\s+([0-9a-f]{7,40})\b.*?"
+    r"#\s*CHECKPOINT_DISCIPLINE_BACKFILLED:\s*([^\s<].*)",
+    re.IGNORECASE,
+)
+_CHECKPOINT_BACKFILL_GLOBS = (
+    ".omx/research/*checkpoint*discipline*backfill*.md",
+)
+
 # Catalog #206 STRICT-flip cutoff (2026-05-14 per codex 3-findings MEDIUM #2).
 # Commits whose serializer-log ``started_at_utc`` is BEFORE this ISO-8601
 # UTC timestamp are exempt (legacy backfill window per CLAUDE.md
@@ -49302,8 +49311,9 @@ def _check_206_iter_recent_commit_bodies(
 
 def _check_206_body_has_checkpoint_signal(body: str) -> bool:
     """Return True if the commit body satisfies the discipline."""
+    body_folded = body.casefold()
     for tok in _CHECKPOINT_DISCIPLINE_TOKENS:
-        if tok in body:
+        if tok.casefold() in body_folded:
             # The waiver token MUST carry a non-empty reason.
             if tok == "CHECKPOINT_DISCIPLINE_WAIVED":
                 if _CHECKPOINT_WAIVER_RE.search(body):
@@ -49314,6 +49324,23 @@ def _check_206_body_has_checkpoint_signal(body: str) -> bool:
                 continue
             return True
     return False
+
+
+def _check_206_load_checkpoint_backfills(repo_root: Path) -> set[str]:
+    """Return commit-SHA prefixes with explicit checkpoint backfill evidence."""
+    out: set[str] = set()
+    for pattern in _CHECKPOINT_BACKFILL_GLOBS:
+        for path in repo_root.glob(pattern):
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for match in _CHECKPOINT_BACKFILL_RE.finditer(text):
+                reason = match.group(2).strip()
+                if not reason or reason.startswith("<"):
+                    continue
+                out.add(match.group(1).lower())
+    return out
 
 
 def check_subagent_dispatches_use_checkpoint_discipline(
@@ -49363,6 +49390,7 @@ def check_subagent_dispatches_use_checkpoint_discipline(
     started_at_map = _check_206_load_serializer_started_at(root, last_n_commits)
 
     bodies = _check_206_iter_recent_commit_bodies(root, last_n_commits)
+    checkpoint_backfills = _check_206_load_checkpoint_backfills(root)
     # The serializer log records short SHAs (9 chars); git log returns full
     # 40-char SHAs. Build a prefix-set for matching.
     serializer_prefixes = {s[:9] for s in serializer_shas}
@@ -49384,7 +49412,10 @@ def check_subagent_dispatches_use_checkpoint_discipline(
             skipped_pre_cutoff += 1
             continue
         scanned += 1
-        if _check_206_body_has_checkpoint_signal(body):
+        sha_lower = sha.lower()
+        if _check_206_body_has_checkpoint_signal(body) or any(
+            sha_lower.startswith(backfill_sha) for backfill_sha in checkpoint_backfills
+        ):
             continue
         violations.append(
             f"commit {sha[:10]} (subagent commit per serializer log, "

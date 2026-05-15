@@ -233,11 +233,19 @@ def _candidate_pair_capacity(spec: CandidateSpec) -> int:
     grammar = _normalize_grammar_light(spec.grammar)
     try:
         inner = _read_inner_member_for_capacity(spec.archive_path, grammar)
-        if grammar == "dp1" and len(inner) >= 28:
-            magic, _ver, num_pairs, *_rest = struct.unpack_from(
-                "<4sBHHHBIIII", inner, 0
+        if grammar == "dp1":
+            from tac.substrates.pretrained_driving_prior.archive import (
+                DP1_HEADER_FMT,
+                DP1_HEADER_SIZE,
+                DP1_MAGIC,
             )
-            if magic == b"DP1\x00":
+
+            if len(inner) < DP1_HEADER_SIZE:
+                return N_PAIRS
+            magic, _ver, num_pairs, *_rest = struct.unpack_from(
+                DP1_HEADER_FMT, inner, 0
+            )
+            if magic == DP1_MAGIC:
                 return max(1, min(N_PAIRS, int(num_pairs)))
         if grammar == "ibps1" and len(inner) >= 25:
             magic, _ver, _latent_dim, num_pairs, *_rest = struct.unpack_from(

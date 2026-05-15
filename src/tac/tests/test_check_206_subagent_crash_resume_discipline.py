@@ -27,6 +27,7 @@ from tac.preflight import (
     PreflightError,
     _check_206_body_has_checkpoint_signal,
     _check_206_iter_recent_commit_bodies,
+    _check_206_load_checkpoint_backfills,
     _check_206_load_serializer_commits,
     check_subagent_dispatches_use_checkpoint_discipline,
 )
@@ -154,6 +155,11 @@ def test_body_signal_recognizes_honored_phrase():
     assert _check_206_body_has_checkpoint_signal(body)
 
 
+def test_body_signal_recognizes_honored_phrase_case_insensitive():
+    body = "Checkpoint discipline honored per Catalog #206."
+    assert _check_206_body_has_checkpoint_signal(body)
+
+
 def test_body_signal_recognizes_waiver_with_reason():
     body = (
         "Small fix.\n# CHECKPOINT_DISCIPLINE_WAIVED:single-edit subagent, "
@@ -231,6 +237,20 @@ def test_load_serializer_commits_handles_bad_json(tmp_path):
     assert shas == {"aaaaaaaaa", "bbbbbbbbb"}
 
 
+def test_checkpoint_backfill_loader_accepts_reasoned_commit_lines(tmp_path):
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    (research / "subagent_checkpoint_discipline_backfill_20260515.md").write_text(
+        "- commit e9d1ced36aaecc38ee59a814b9c6d55a4d406985 — "
+        "# CHECKPOINT_DISCIPLINE_BACKFILLED:origin history commit audited from "
+        "serializer log and no unreported file edits remained\n"
+        "- commit badc0de — # CHECKPOINT_DISCIPLINE_BACKFILLED:<reason>\n"
+    )
+    assert _check_206_load_checkpoint_backfills(tmp_path) == {
+        "e9d1ced36aaecc38ee59a814b9c6d55a4d406985"
+    }
+
+
 # ── End-to-end: gate against synthetic repo ─────────────────────────────
 
 
@@ -264,6 +284,24 @@ def test_dirty_subagent_commit_flagged(tmp_path):
     )
     assert len(v) == 1
     assert "lacks checkpoint discipline trace" in v[0]
+
+
+def test_backfilled_subagent_commit_passes(tmp_path):
+    root = _make_repo_with_serializer_log(
+        tmp_path,
+        [("backfilled", "Commit body lacked checkpoint token.", True)],
+    )
+    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    research = root / ".omx" / "research"
+    research.mkdir(parents=True, exist_ok=True)
+    (research / "subagent_checkpoint_discipline_backfill_20260515.md").write_text(
+        f"- commit {sha} — # CHECKPOINT_DISCIPLINE_BACKFILLED:"
+        "synthetic historical backfill reviewed with no unreported WIP\n"
+    )
+    v = check_subagent_dispatches_use_checkpoint_discipline(
+        repo_root=root, strict=False, verbose=False
+    )
+    assert v == []
 
 
 def test_non_subagent_commit_not_flagged(tmp_path):
