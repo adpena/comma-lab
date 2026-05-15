@@ -253,7 +253,7 @@ def _candidate_pair_capacity(spec: CandidateSpec) -> int:
             )
             if magic == b"IBPS":
                 return max(1, min(N_PAIRS, int(num_pairs)))
-    except Exception:
+    except (OSError, KeyError, IndexError, zipfile.BadZipFile, struct.error):
         return N_PAIRS
     return N_PAIRS
 

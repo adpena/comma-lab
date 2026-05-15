@@ -244,6 +244,8 @@ def test_checkpoint_backfill_loader_accepts_reasoned_commit_lines(tmp_path):
         "- commit e9d1ced36aaecc38ee59a814b9c6d55a4d406985 — "
         "# CHECKPOINT_DISCIPLINE_BACKFILLED:origin history commit audited from "
         "serializer log and no unreported file edits remained\n"
+        "- commit fb38f3919 — # CHECKPOINT_DISCIPLINE_BACKFILLED:"
+        "short sha prefixes must not pass\n"
         "- commit badc0de — # CHECKPOINT_DISCIPLINE_BACKFILLED:<reason>\n"
     )
     assert _check_206_load_checkpoint_backfills(tmp_path) == {

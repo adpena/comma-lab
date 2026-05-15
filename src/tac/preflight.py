@@ -49163,7 +49163,7 @@ _CHECKPOINT_WAIVER_RE = re.compile(
 )
 
 _CHECKPOINT_BACKFILL_RE = re.compile(
-    r"\bcommit\s+([0-9a-f]{7,40})\b.*?"
+    r"\bcommit\s+([0-9a-f]{40})\b.*?"
     r"#\s*CHECKPOINT_DISCIPLINE_BACKFILLED:\s*([^\s<].*)",
     re.IGNORECASE,
 )
@@ -49327,7 +49327,7 @@ def _check_206_body_has_checkpoint_signal(body: str) -> bool:
 
 
 def _check_206_load_checkpoint_backfills(repo_root: Path) -> set[str]:
-    """Return commit-SHA prefixes with explicit checkpoint backfill evidence."""
+    """Return full commit SHAs with explicit checkpoint backfill evidence."""
     out: set[str] = set()
     for pattern in _CHECKPOINT_BACKFILL_GLOBS:
         for path in repo_root.glob(pattern):
@@ -49413,9 +49413,7 @@ def check_subagent_dispatches_use_checkpoint_discipline(
             continue
         scanned += 1
         sha_lower = sha.lower()
-        if _check_206_body_has_checkpoint_signal(body) or any(
-            sha_lower.startswith(backfill_sha) for backfill_sha in checkpoint_backfills
-        ):
+        if _check_206_body_has_checkpoint_signal(body) or sha_lower in checkpoint_backfills:
             continue
         violations.append(
             f"commit {sha[:10]} (subagent commit per serializer log, "
