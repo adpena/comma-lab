@@ -20,6 +20,7 @@ Recover:
     .venv/bin/python experiments/modal_component_sensitivity_shards.py recover \\
       --label pfp16_direct_fd_modal_a10g_20260501
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,7 +30,6 @@ import sys
 from pathlib import Path
 
 import modal
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXPECTED_PFP16_SHA256 = "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
@@ -64,10 +64,18 @@ image = (
         "timm",
     )
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path="/workspace/pact/src")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
-    .add_local_dir("upstream", remote_path="/workspace/pact/upstream")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
-    .add_local_dir("scripts", remote_path="/workspace/pact/scripts")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
-    .add_local_file("experiments/__init__.py", remote_path="/workspace/pact/experiments/__init__.py")  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_dir(
+        "src", remote_path="/workspace/pact/src"
+    )  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_dir(
+        "upstream", remote_path="/workspace/pact/upstream"
+    )  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_dir(
+        "scripts", remote_path="/workspace/pact/scripts"
+    )  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
+    .add_local_file(
+        "experiments/__init__.py", remote_path="/workspace/pact/experiments/__init__.py"
+    )  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow sensitivity-shard dispatcher; targeted upstream files; trainer-discovery N/A
         "experiments/profile_component_sensitivity.py",
         remote_path="/workspace/pact/experiments/profile_component_sensitivity.py",
@@ -231,9 +239,7 @@ def _run_component_sensitivity_inner(
 
         preflight["torch_cuda_available"] = bool(torch.cuda.is_available())
         preflight["torch_device_count"] = int(torch.cuda.device_count())
-        preflight["torch_device_name"] = (
-            torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
-        )
+        preflight["torch_device_name"] = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
     except Exception as exc:  # pragma: no cover - remote diagnostics
         preflight["torch_probe_error"] = repr(exc)
     (out_dir / "modal_component_sensitivity_preflight.json").write_text(
@@ -290,9 +296,7 @@ def _run_component_sensitivity_inner(
         "promotion_eligible": False,
         "score_source": "none:modal_diagnostic_component_sensitivity_non_promotable",
     }
-    (out_dir / "lightning_queue_metadata.json").write_text(
-        json.dumps(metadata, indent=2, sort_keys=True) + "\n"
-    )
+    (out_dir / "lightning_queue_metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     (out_dir / "diagnostic_component_sensitivity_inputs.json").write_text(
         json.dumps(
             {
@@ -420,9 +424,7 @@ def _run_component_sensitivity_inner(
             summary = json.loads(summary_path.read_text())
             validation["summary_sensitivity_source"] = summary.get("sensitivity_source")
             validation["summary_device"] = summary.get("device")
-            validation["certification_handoff_eligible"] = bool(
-                summary.get("certification_handoff_eligible")
-            )
+            validation["certification_handoff_eligible"] = bool(summary.get("certification_handoff_eligible"))
         except json.JSONDecodeError:
             validation["summary_parse_error"] = True
     (out_dir / "modal_component_sensitivity_validation.json").write_text(
@@ -513,6 +515,13 @@ def main(
         raise SystemExit("FATAL: --gpu must be A10G or T4")
     max_seconds = max(60, min(int(float(timeout_hours) * 3600), 6 * 3600))
 
+    # Catalog #245 — register every shard's call_id in the canonical ledger
+    # so the harvester can query unharvested shards by lane_id.
+    try:
+        from tac.deploy.modal.call_id_ledger import register_dispatched_call_id as _register_call_id
+    except Exception:  # pragma: no cover
+        _register_call_id = None  # type: ignore[assignment]
+
     call_ids: dict[int, str] = {}
     for shard_index in selected:
         call = fn.spawn(
@@ -526,6 +535,23 @@ def main(
         )
         call_ids[int(shard_index)] = call.object_id
         print(f"DISPATCHED shard={shard_index:02d}/{shard_count} gpu={gpu_norm} call_id={call.object_id}")
+        if _register_call_id is not None:
+            try:
+                _register_call_id(
+                    call_id=str(call.object_id),
+                    lane_id=f"lane_component_sensitivity_{label}",
+                    label=f"{label}_shard_{int(shard_index):02d}_of_{int(shard_count):02d}",
+                    platform="modal",
+                    gpu=gpu_norm,
+                    max_seconds=int(max_seconds),
+                    agent="claude",
+                    recipe="modal_component_sensitivity_shards",
+                )
+            except Exception as exc:  # pragma: no cover — best-effort wire-in
+                print(
+                    f"  WARNING: ledger registration failed for shard {shard_index}: {exc}",
+                    file=sys.stderr,
+                )
 
     _write_local_modal_metadata(
         label=label,
@@ -574,11 +600,7 @@ def recover(label: str) -> int:
             saved += 1
         (shard_dir / "modal_result_summary.json").write_text(
             json.dumps(
-                {
-                    key: value
-                    for key, value in result.items()
-                    if key != "artifacts"
-                },
+                {key: value for key, value in result.items() if key != "artifacts"},
                 indent=2,
                 sort_keys=True,
             )

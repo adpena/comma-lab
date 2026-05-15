@@ -164,6 +164,11 @@ src/tac.egg-info/
 .omx/state/**/*.json
 !.omx/state/artifact_classification_allowlist.json
 .omx/state/*.jsonl
+# Catalog #245 — committed canonical Modal call_id ledger (HISTORICAL_PROVENANCE)
+!.omx/state/modal_call_id_ledger.jsonl
+.omx/state/modal_call_id_ledger.jsonl.lock
+.omx/state/modal_call_id_ledger.jsonl.tmp.*
+.omx/state/modal_call_id_ledger.jsonl.corrupt.*
 .omx/state/RACE_MODE_ACTIVE.flag
 .omx/status/
 .omx/cache/

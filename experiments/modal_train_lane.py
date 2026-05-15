@@ -1369,4 +1369,36 @@ def main(
         metadata["cost_band_anchor"] = cost_band_anchor
     (sentinel_dir / "modal_metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     print(f"  call_id saved:  {sentinel_dir}/modal_call_id.txt")
+
+    # Catalog #245 — register dispatched call_id in the canonical ledger so
+    # the harvester + dashboards have a SINGLE QUERYABLE source-of-truth that
+    # does not depend on per-dispatch sentinel-file discovery (which is
+    # fragile to concurrent crashes / sister-subagent edits).
+    try:
+        from tac.deploy.modal.call_id_ledger import register_dispatched_call_id
+
+        register_dispatched_call_id(
+            call_id=call_id,
+            lane_id=resolved_lane_id,
+            label=label,
+            dispatched_at_utc=metadata["dispatched_at"],
+            platform="modal",
+            gpu=gpu,
+            max_seconds=max_seconds,
+            mounted_code_git_head=mounted_code_git_head,
+            agent="claude",
+        )
+        print(
+            "  ledger appended: .omx/state/modal_call_id_ledger.jsonl "
+            "(Catalog #245 canonical Modal call_id ledger)"
+        )
+    except Exception as exc:  # pragma: no cover — best-effort wire-in
+        # The per-dispatch sentinel files are still the authoritative
+        # source until the ledger wire-in becomes STRICT (Catalog #245
+        # initial wire-in is WARN-ONLY per "Strict-flip atomicity rule").
+        # Surface but do not abort the dispatch.
+        print(
+            f"  WARNING: failed to register call_id in canonical ledger: {exc}",
+            file=sys.stderr,
+        )
     print("\n  Use experiments/modal_recover_lane.py to fetch artifacts when complete.")

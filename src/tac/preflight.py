@@ -2086,6 +2086,21 @@ def preflight_all(
         check_remote_lane_scripts_carry_canonical_nvml_block(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #245 (MODAL-CALL-ID-LEDGER-CANONICAL-HELPER):
+        # every Modal `.spawn()` invocation MUST register the call_id in the
+        # canonical ledger at `.omx/state/modal_call_id_ledger.jsonl`. Per
+        # CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable, the
+        # canonical ledger replaces the per-dispatch sentinel-file glob walk
+        # with a single queryable JSONL surface (mirrors the
+        # `tac.deploy.lightning.active_jobs_state` pattern). STRICT-FLIPPED
+        # 2026-05-15 per "Strict-flip atomicity rule" — live count at landing:
+        # 0 (the only two existing producers — `experiments/modal_train_lane.py`
+        # + `experiments/modal_component_sensitivity_shards.py` — landed the
+        # canonical wire-in in the same commit batch). Memory:
+        # feedback_modal_call_id_ledger_canonical_landed_20260515.md.
+        check_modal_dispatches_register_call_id(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
         # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
         # returned auth_eval rc=2 because the trainer hand-wrote
@@ -36695,6 +36710,9 @@ _SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
     "lane_c_compliance_attestations",
     ".commit-lock",
     "commit-serializer",
+    # Catalog #245 — canonical Modal call_id ledger.
+    "modal_call_id_ledger",
+    "MODAL_CALL_ID_LEDGER_PATH",
 )
 
 _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
@@ -36704,6 +36722,7 @@ _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
     "_lightning_state_lock",
     "_active_jobs_lock",
     "_active_vms_lock",
+    "_ledger_lock",  # Catalog #245 (Modal call_id ledger)
     "FileLock",
 )
 
@@ -36738,6 +36757,11 @@ _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
     "load_active_jobs_strict",
     "load_active_vms_strict",
     "load_setup_first_seen_strict",
+    # Catalog #245 — canonical Modal call_id ledger helpers.
+    "register_dispatched_call_id",
+    "update_call_id_outcome",
+    "load_call_ids_strict",
+    "_append_event_locked",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
@@ -36757,6 +36781,7 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/deploy/lightning/lightning_dispatch.py",  # canonical (this lane)
     "src/tac/deploy/lightning/active_jobs_state.py",  # canonical (this lane)
     "src/tac/deploy/azure/active_vms_state.py",  # canonical (codex round 4 #133)
+    "src/tac/deploy/modal/call_id_ledger.py",  # canonical (Catalog #245)
     "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)
@@ -53601,6 +53626,170 @@ def check_remote_lane_scripts_carry_canonical_nvml_block(
             "'Bugs must be permanently fixed AND self-protected against' "
             "non-negotiable, this protects against the D1 NVML 999 dispatch "
             "failure class (commit 611495f26, 2026-05-15):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #245 (MODAL-CALL-ID-LEDGER-CANONICAL-HELPER 2026-05-15)
+# Modal .spawn() invocations must register the call_id in the canonical ledger.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Tokens that satisfy the registration requirement when present in the
+# local window around a `fn.spawn(` / `function.spawn(` call.
+_CHECK_245_REGISTRATION_TOKENS: tuple[str, ...] = (
+    "register_dispatched_call_id",
+    "from tac.deploy.modal.call_id_ledger import",
+    "tac.deploy.modal.call_id_ledger",
+    "MODAL_CALL_ID_LEDGER_PATH",
+)
+
+# Same-line waiver marker for explicit operator-approved opt-out.
+_CHECK_245_WAIVER_MARKER = "CALL_ID_LEDGER_REGISTRATION_OK"
+
+# Files that legitimately implement the canonical helper itself OR are
+# canonical CALLERS that already wrap the spawn surface (the wrapper is the
+# canonical registration point and counts as the registration).
+_CHECK_245_CANONICAL_FILES: tuple[str, ...] = (
+    "src/tac/deploy/modal/call_id_ledger.py",
+    "src/tac/deploy/modal/auth_eval.py",  # provides function_call_id helper
+    "src/tac/preflight.py",  # this gate's own pattern literals
+    "tools/backfill_modal_call_id_ledger.py",  # historical backfill helper
+)
+
+# Path markers that indicate a Modal-spawn-relevant file (prefilter).
+_CHECK_245_MODAL_FILE_MARKERS: tuple[str, ...] = (
+    "modal",
+    ".spawn(",
+)
+
+# Regex for `<expr>.spawn(...)` invocations on Modal Function objects. We
+# scope to `fn.spawn(` / `function.spawn(` / explicit Modal Function aliases
+# to avoid false positives on multiprocessing.Process.spawn / similar.
+_CHECK_245_SPAWN_RE = re.compile(
+    r"\b(?:fn|function|run_lane_training_\w+|"
+    r"run_lane_training|modal_fn|modal_func)\.spawn\s*\(",
+)
+
+
+def check_modal_dispatches_register_call_id(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #245 — Modal .spawn() invocations must register the call_id.
+
+    Refuses any source-code site under ``experiments/``, ``tools/``, ``scripts/``,
+    ``src/tac/`` that invokes ``fn.spawn(...)`` (or a recognized alias) on a
+    Modal ``Function`` object WITHOUT one of:
+
+    1. A reference to ``register_dispatched_call_id`` (or sister tokens) in
+       the local window around the spawn invocation, OR
+    2. A same-line ``# CALL_ID_LEDGER_REGISTRATION_OK:<rationale>`` waiver
+       (placeholder ``<rationale>`` literal rejected).
+
+    Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable: every
+    dispatch via ``modal_train_lane.py`` MUST be followed by a scheduled
+    harvest within 24h. Pre-Catalog #245, the per-dispatch sentinel files
+    (``modal_call_id.txt`` / ``modal_metadata.json``) were the only canonical
+    discovery surface — fragile O(N_dispatches) glob walks against an audit-
+    grade ledger. Catalog #245 makes the canonical JSONL ledger
+    (``.omx/state/modal_call_id_ledger.jsonl``) the single queryable source-
+    of-truth, and this gate refuses any new spawn surface that bypasses it.
+
+    Strict-flipped at landing per CLAUDE.md "Strict-flip atomicity rule": the
+    existing producers land the canonical wire-in in the same commit batch as
+    this gate; live count at landing is 0 across the production scan.
+
+    Memory: feedback_modal_call_id_ledger_canonical_landed_20260515.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "experiments",
+        root / "tools",
+        root / "scripts",
+        root / "src" / "tac",
+    ]
+    excluded_files = {root / p for p in _CHECK_245_CANONICAL_FILES}
+
+    violations: list[str] = []
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if py in excluded_files:
+                continue
+            # Skip tests
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            # Skip vendored intake / hosted exports / build artifacts
+            if (
+                "experiments/results/" in s
+                or "_intake_" in s
+                or "/.omx/oss_export/" in s
+                or "/build/lib/" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter — file must reference a Modal-spawn marker.
+            if not any(m in text for m in _CHECK_245_MODAL_FILE_MARKERS):
+                continue
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                m = _CHECK_245_SPAWN_RE.search(line)
+                if not m:
+                    continue
+                # Same-line waiver?
+                if _CHECK_245_WAIVER_MARKER in line:
+                    # Reject placeholder rationale per CLAUDE.md
+                    # "Forbidden empirical-claim-without-evidence-tag" pattern.
+                    waiver_idx = line.find(_CHECK_245_WAIVER_MARKER)
+                    after = line[
+                        waiver_idx + len(_CHECK_245_WAIVER_MARKER) :
+                    ].lstrip(":").strip()
+                    if after and after != "<rationale>" and after != "<reason>":
+                        continue
+                # ±100-line window scan for canonical token. Window is
+                # generous because dispatch wrappers commonly write
+                # per-dispatch sentinel files / metadata.json between the
+                # spawn site and the ledger registration call.
+                window_start = max(0, lineno - 100)
+                window_end = min(len(lines), lineno + 100)
+                window_text = "\n".join(lines[window_start:window_end])
+                if any(t in window_text for t in _CHECK_245_REGISTRATION_TOKENS):
+                    continue
+                rel = py.relative_to(root) if py.is_absolute() else py
+                violations.append(
+                    f"{rel}:{lineno + 1} — Modal .spawn() invocation "
+                    f"{line.strip()[:120]!r} does NOT register the call_id "
+                    "in the canonical ledger. Add "
+                    "`from tac.deploy.modal.call_id_ledger import "
+                    "register_dispatched_call_id; "
+                    "register_dispatched_call_id(call_id=..., lane_id=..., "
+                    "label=..., ...)` near the spawn site, OR carry a "
+                    "same-line `# CALL_ID_LEDGER_REGISTRATION_OK:<rationale>` "
+                    "waiver."
+                )
+
+    if verbose:
+        print(
+            f"check_modal_dispatches_register_call_id: "
+            f"{len(violations)} violations"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_dispatches_register_call_id found "
+            f"{len(violations)} Modal .spawn() invocation(s) that do not "
+            "register the call_id in the canonical ledger. Per CLAUDE.md "
+            "'Modal `.spawn()` HARVEST OR LOSE' non-negotiable + Catalog "
+            "#245 (canonical Modal call_id ledger):\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

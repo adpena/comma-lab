@@ -48,6 +48,16 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--from-ledger",
+        action="store_true",
+        help=(
+            "Catalog #245 — consume the canonical Modal call_id ledger at "
+            ".omx/state/modal_call_id_ledger.jsonl as the primary discovery "
+            "surface (instead of glob'ing experiments/results/lane_*_modal/). "
+            "Lists every dispatched call_id whose latest event is non-terminal."
+        ),
+    )
+    parser.add_argument(
         "--repo-root",
         type=Path,
         default=DEFAULT_REPO,
@@ -805,9 +815,41 @@ def harvest_modal_calls(
     return summary
 
 
+def _print_from_ledger_view(repo_root: Path) -> None:
+    """Catalog #245 — print the canonical ledger view of unharvested call_ids."""
+    try:
+        from tac.deploy.modal.call_id_ledger import (
+            MODAL_CALL_ID_LEDGER_PATH,
+            latest_status_by_call_id,
+            query_unharvested,
+        )
+    except Exception as exc:  # pragma: no cover
+        print(f"[from-ledger] FAILED to import call_id_ledger: {exc}")
+        return
+    ledger_path = MODAL_CALL_ID_LEDGER_PATH
+    print(f"[from-ledger] canonical ledger: {ledger_path}")
+    statuses = latest_status_by_call_id(path=ledger_path)
+    print(f"[from-ledger] total call_ids in ledger: {len(statuses)}")
+    unharvested = query_unharvested(path=ledger_path)
+    print(f"[from-ledger] unharvested call_ids: {len(unharvested)}")
+    for row in unharvested[:20]:
+        print(
+            f"  call_id={row.get('call_id', '?')} "
+            f"lane={row.get('lane_id', '?')} "
+            f"gpu={row.get('gpu', '?')} "
+            f"dispatched_at={row.get('dispatched_at_utc', '?')}"
+        )
+    if len(unharvested) > 20:
+        print(f"  ... and {len(unharvested) - 20} more")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repo_root = args.repo_root.resolve()
+    if args.from_ledger:
+        # Catalog #245 canonical ledger consumer surface. Always read-only.
+        _print_from_ledger_view(repo_root)
+        return 0
     if not args.execute:
         _print_plan(list_modal_lanes(repo_root=repo_root))
         return 0
