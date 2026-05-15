@@ -2,7 +2,7 @@
 
 Date: 2026-05-15
 Agent: codex
-Axis: no-score local proof packet; exact CUDA pending
+Axis: exact-CUDA reviewed PacketIR rate-only win
 
 ## Summary
 
@@ -12,8 +12,9 @@ elides the fixed `HDM9` decoder magic plus fixed `HLM3` latent magic. The
 submission runtime reconstructs those constants from committed grammar and fixed
 section lengths.
 
-This is a rate-only transform. It does not claim score movement until exact
-CUDA auth eval returns.
+Exact CUDA auth eval returned with the predicted rate-only improvement. The
+candidate is now the measured PR106 PacketIR reference inside this local basin,
+while still not a public leaderboard frontier claim.
 
 ## Candidate
 
@@ -30,6 +31,16 @@ CUDA auth eval returns.
   `-0.000005326871624977371`
 - Expected score if exact CUDA components match `0x0A`:
   `0.20632570864115363`
+- Exact `[contest-CUDA/T4]` score:
+  `0.20632570864115363`
+- Exact-CUDA result review:
+  `.omx/research/pr106_hdm11_hlm3_magicless_format0b_exact_cuda_result_review_20260515_codex.json`
+- Exact-CUDA evidence row:
+  `.omx/research/pr106_hdm11_hlm3_magicless_format0b_exact_cuda_evidence_row_20260515_codex.json`
+- Exact closure:
+  `.omx/research/pr106_hdm11_hlm3_magicless_format0b_packetir_exact_closure_20260515_codex.json`
+- Exact closure markdown:
+  `.omx/research/pr106_hdm11_hlm3_magicless_format0b_packetir_exact_closure_20260515_codex.md`
 
 ## Local Proofs
 
@@ -53,6 +64,15 @@ CUDA auth eval returns.
 - Total frames: `1200`
 - Total bytes hashed: `3662409600`
 
+- Same-runtime full-frame parity proof against PacketIR source `0x09`:
+  `experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/same_runtime_full_frame_parity_hdm9_fmt09_vs_hdm11_fmt0b.json`
+- Source format: `0x09`
+- Candidate format: `0x0B`
+- Shared streaming raw SHA-256:
+  `30bc014709737aa0a17aaef525183b13fefa6531ec3410ab84d91dc1199c387b`
+- Total frames: `1200`
+- Total bytes hashed: `3662409600`
+
 Profile row after proofs:
 
 ```json
@@ -63,9 +83,9 @@ Profile row after proofs:
   "runtime_consumption_claim": true,
   "full_frame_inflate_output_parity_claim": true,
   "candidate_exact_eval_blockers": [
-    "exact_cuda_auth_eval_missing",
-    "contest_auth_eval_adjudication_missing"
+    "exact_cuda_result_review_already_exists"
   ],
+  "exact_cuda_auth_eval_claim": true,
   "score_claim": false,
   "ready_for_exact_eval_dispatch": false
 }
@@ -82,7 +102,9 @@ Profile and emit archive:
   --md-out experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/profile.with_proofs.md \
   --emit-runtime-candidates-dir experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates \
   --runtime-consumption-proof experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/runtime_consumption_hdm11_magicless.json \
-  --same-runtime-full-frame-parity experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/same_runtime_full_frame_parity_hdm10_vs_hdm11.json
+  --same-runtime-full-frame-parity experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/same_runtime_full_frame_parity_hdm10_vs_hdm11.json \
+  --same-runtime-full-frame-parity experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/same_runtime_full_frame_parity_hdm9_fmt09_vs_hdm11_fmt0b.json \
+  --exact-result-review .omx/research/pr106_hdm11_hlm3_magicless_format0b_exact_cuda_result_review_20260515_codex.json
 ```
 
 Runtime consumption:
@@ -104,6 +126,18 @@ Full-frame parity:
   --device cpu \
   --batch-pairs 16 \
   --output-json experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/same_runtime_full_frame_parity_hdm10_vs_hdm11.json
+```
+
+PacketIR-source full-frame parity:
+
+```bash
+.venv/bin/python tools/prove_pr106_same_runtime_frame_parity.py \
+  --source-archive experiments/results/pr106_hdm9_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x09.archive.zip \
+  --candidate-archive experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip \
+  --runtime-dir submissions/pr106_latent_sidecar_r2_pr101_grammar \
+  --device cpu \
+  --batch-pairs 32 \
+  --output-json experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/same_runtime_full_frame_parity_hdm9_fmt09_vs_hdm11_fmt0b.json
 ```
 
 ## Verification
@@ -147,17 +181,29 @@ git diff --check
 
 Result: clean.
 
-## Exact-Eval Gate
+## Exact-Eval Result
 
-Next action is claimed Modal T4 exact CUDA eval for:
+Modal T4 exact CUDA eval completed and was recovered:
 
 - Lane: `lane_pr106_hdm11_hlm3_magicless_packetir_format0b_20260515`
-- Job id: `pr106_hdm11_hlm3_fmt0b_t4_20260515T082000Z` or newer timestamp
+- Job id: `pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z`
+- Modal call id: `fc-01KRN8Y3Q9JHZ826G263B0C32N`
+- Result artifact:
+  `experiments/results/modal_auth_eval/pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z/contest_auth_eval.json`
 - Archive SHA-256:
   `5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d`
-- Expected uploaded runtime tree SHA-256:
+- Archive bytes: `186341`
+- Score: `[contest-CUDA] 0.20632570864115363`
+- avg SegNet distance: `0.0006426`
+- avg PoseNet distance: `0.00003236`
+- Uploaded runtime tree SHA-256:
   `d82027132eeb2801bfab72d94ac003a291e6716b907d5d0cdc7e89e43de720b8`
+- Uploaded runtime content tree SHA-256:
+  `a5d2a8a5abd9844d277533f6321b6ad30e6c24bc7a61e3d124cb0e3f07a73191`
+- Closure classification: `exact_measured_improves_packetir_source_cuda`
+- Closure blockers: `[]`
+- Delta vs PacketIR source `0x09`: `-0.000007324448484335999`
+- Delta vs previous exact-CUDA `0x0A`: `-0.000005326871624966589`
 
-No promotion, leaderboard, or score-lowering claim should be made until the
-exact CUDA result review exists and binds archive, runtime tree, component
-distances, and dispatch claim.
+This should not be dispatched again for the same archive SHA. Future PR106
+PacketIR work needs either a materially larger byte delta or component movement.
