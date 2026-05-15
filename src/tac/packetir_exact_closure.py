@@ -658,11 +658,12 @@ def _runtime_score_affecting_sections_match(
     """Return whether runtime proof consumption covers PacketIR sections.
 
     Most PacketIR recodes preserve the same section names through runtime
-    decode. Formats 0x08, 0x09, and 0x0A deliberately elide the PR106 inner
-    header from fixed HDM8/HLM2, HDM9/HLM2, or HDM9/HLM3 payloads; the runtime
-    reconstructs that header and consumes the reconstructed generic
-    ``pr106_payload``. Accept that alias only when the proof binds the fixed
-    format and records unchanged inner PR106 semantics.
+    decode. Formats 0x08, 0x09, 0x0A, and 0x0B deliberately elide the PR106
+    inner header from fixed HDM8/HLM2, HDM9/HLM2, or HDM9/HLM3 payloads; 0x0B
+    also elides fixed HDM9/HLM3 section magics. The runtime reconstructs those
+    constants and consumes the reconstructed generic ``pr106_payload``. Accept
+    that alias only when the proof binds the fixed format and records unchanged
+    inner PR106 semantics.
     """
 
     if actual_sections == expected_sections:
@@ -684,6 +685,10 @@ def _runtime_score_affecting_sections_match(
         "0x0A": (
             "pr106_hdm9_hlm3_payload_without_inner_header",
             "format_0x0a_hdm9_hlm3_reconstructed_pr106_payload_alias",
+        ),
+        "0x0B": (
+            "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+            "format_0x0b_hdm9_hlm3_magicless_reconstructed_pr106_payload_alias",
         ),
     }
     alias = headerless_aliases.get(str(proof.get("format_id")))
@@ -727,6 +732,18 @@ def _full_frame_parity_summary(
     source = _as_mapping(data.get("source"))
     candidate_archive = _as_mapping(data.get("candidate_archive"))
     source_archive = _as_mapping(data.get("source_archive"))
+    runtime_source_manifest = _as_mapping(data.get("runtime_source_manifest"))
+    runtime_files = [
+        file
+        for file in runtime_source_manifest.get("files", [])
+        if isinstance(file, Mapping)
+    ]
+    runtime_file_sha256s = {
+        str(file.get("path")): str(file.get("sha256"))
+        for file in runtime_files
+        if file.get("path") and _first_str(file.get("sha256"))
+    }
+    runtime_inflate_py_sha = _first_str(data.get("runtime_inflate_py_sha256"))
     candidate_n_pairs_hashed = _first_int(candidate.get("n_pairs_hashed"))
     candidate_n_pairs_total = _first_int(candidate.get("n_pairs_total"))
     source_n_pairs_hashed = _first_int(source.get("n_pairs_hashed"))
@@ -745,6 +762,9 @@ def _full_frame_parity_summary(
         and data.get("score_claim") is False
         and data.get("contest_axis_claim") is False
         and data.get("ready_for_exact_eval_dispatch") is False
+        and isinstance(runtime_inflate_py_sha, str)
+        and bool(runtime_file_sha256s)
+        and runtime_file_sha256s.get("inflate.py") == runtime_inflate_py_sha
         and candidate_archive.get("sha256") == candidate_sha
         and candidate_archive.get("bytes") == candidate_bytes
         and source_archive.get("sha256") == source_sha
@@ -769,7 +789,19 @@ def _full_frame_parity_summary(
         "valid": valid,
         "schema": data.get("schema"),
         "runtime_dir": data.get("runtime_dir"),
-        "runtime_inflate_py_sha256": data.get("runtime_inflate_py_sha256"),
+        "runtime_inflate_py_sha256": runtime_inflate_py_sha,
+        "runtime_source_tree_sha256": runtime_source_manifest.get(
+            "runtime_source_tree_sha256"
+        ),
+        "runtime_source_files": [
+            {
+                "path": file.get("path"),
+                "sha256": file.get("sha256"),
+                "bytes": file.get("bytes"),
+            }
+            for file in runtime_files
+        ],
+        "runtime_file_sha256s": runtime_file_sha256s,
         "proof_scope": data.get("proof_scope"),
         "device_axis_label": data.get("device_axis_label"),
         "candidate_archive_sha256": candidate_archive.get("sha256"),
@@ -814,8 +846,19 @@ def _runtime_identity_matches_eval(
     consumption_inflate_py = runtime_consumption_summary.get("runtime_inflate_py_sha256")
     cuda_inflate_py = cuda_summary.get("runtime_inflate_py_sha256")
     cuda_runtime_files = _as_mapping(cuda_summary.get("runtime_file_sha256s"))
+    parity_runtime_files = _as_mapping(
+        full_frame_parity_summary.get("runtime_file_sha256s")
+    )
     consumption_runtime_files = _as_mapping(
         runtime_consumption_summary.get("runtime_file_sha256s")
+    )
+    parity_files_match_consumption = bool(parity_runtime_files) and all(
+        parity_runtime_files.get(path) == sha
+        for path, sha in consumption_runtime_files.items()
+    )
+    parity_files_match_cuda = bool(parity_runtime_files) and all(
+        cuda_runtime_files.get(path) == sha
+        for path, sha in parity_runtime_files.items()
     )
     consumption_files_match_cuda = bool(consumption_runtime_files) and all(
         cuda_runtime_files.get(path) == sha
@@ -828,6 +871,8 @@ def _runtime_identity_matches_eval(
         and inflate_py
         and inflate_py == consumption_inflate_py
         and inflate_py == cuda_inflate_py
+        and parity_files_match_consumption
+        and parity_files_match_cuda
         and consumption_files_match_cuda
         and isinstance(cuda_summary.get("runtime_content_tree_sha256"), str)
     )

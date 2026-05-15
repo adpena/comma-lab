@@ -29,6 +29,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     canonical_expected_sha256,
@@ -177,9 +178,9 @@ def _decode_runtime_sidecar_payload(
             dim_arr, delta_q_arr = (
                 runtime_module.decode_pr101_fixed_meta_rank_elided_sidecar(sidecar_blob)
             )
-        elif (
-            format_id
-            == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED
+        elif format_id in (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
         ):
             dim_arr, delta_q_arr = (
                 runtime_module.decode_pr101_fixed_meta_noop_rank_elided_sidecar(
@@ -416,6 +417,7 @@ def prove_pr106_same_runtime_full_frame_parity(
         candidate_archive_bytes,
         expected_member_name=expected_member_name,
     )
+    runtime_manifest = pr106_runtime_source_manifest(runtime_dir)
     runtime = load_pr106_sidecar_runtime(runtime_dir)
     source = runtime_full_frame_streaming_digest(
         runtime,
@@ -442,6 +444,7 @@ def prove_pr106_same_runtime_full_frame_parity(
             else "same_runtime_streaming_prefix_hash"
         ),
         "runtime_dir": runtime_dir.as_posix(),
+        "runtime_source_manifest": runtime_manifest,
         "runtime_inflate_py_sha256": sha256_hex((runtime_dir / "inflate.py").read_bytes()),
         "source_archive": {
             "path": source_archive_path.as_posix(),

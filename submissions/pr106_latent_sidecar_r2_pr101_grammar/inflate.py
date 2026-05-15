@@ -18,6 +18,8 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
                     raw scale tail recoded as low3 bytes + high-byte bitmask
   format_id=0x0A — HDM9/HLM3-specific form of format_id=0x09 with HLM2's
                     low-Brotli length and the fixed no-op rank byte elided
+  format_id=0x0B — format_id=0x0A with fixed HDM9/HLM3 section magic bytes
+                    elided and reconstructed by committed runtime grammar
 
 All format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
 parser/decoder-consumption evidence only. Score components require exact
@@ -51,7 +53,7 @@ HERE = Path(__file__).resolve().parent
 SRC_DIR = HERE / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from codec import parse_packed_archive  # type: ignore[import-not-found]
+from codec import decode_hdm9_decoder_raw, decode_hlm3_fixed_latents_raw, parse_packed_archive  # type: ignore[import-not-found]
 from model import HNeRVDecoder  # type: ignore[import-not-found]
 from pr101_grammar import RankedSidecarSchema, decode_ranked_no_op_sidecar  # type: ignore[import-not-found]
 
@@ -66,6 +68,7 @@ SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x07
 SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x08
 SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x09
 SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0A
+SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0B
 SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_BROTLI,
     SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -75,6 +78,7 @@ SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+    SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
 )
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
@@ -175,6 +179,64 @@ def reconstruct_hdm9_hlm3_inner_headerless_pr106_bytes(
     )
 
 
+def reconstruct_hdm9_hlm3_magicless_pr106_bytes(magicless_payload: bytes) -> bytes:
+    """Reconstruct fixed HDM9/HLM3 PR106 bytes from format_id=0x0B."""
+    expected_len = (
+        HDM9_HLM2_DECODER_PAYLOAD_BYTES
+        - len(HDM9_HLM2_DECODER_MAGIC)
+        + HDM9_HLM3_LATENT_PAYLOAD_BYTES
+        - len(HDM9_HLM3_LATENT_MAGIC)
+    )
+    if len(magicless_payload) != expected_len:
+        raise ValueError(
+            "HDM9/HLM3 magicless payload length mismatch: "
+            f"got {len(magicless_payload)} bytes; expected {expected_len}"
+        )
+    decoder_tail_bytes = HDM9_HLM2_DECODER_PAYLOAD_BYTES - len(HDM9_HLM2_DECODER_MAGIC)
+    decoder_tail = magicless_payload[:decoder_tail_bytes]
+    latent_tail = magicless_payload[decoder_tail_bytes:]
+    inner_without_header = (
+        HDM9_HLM2_DECODER_MAGIC + decoder_tail + HDM9_HLM3_LATENT_MAGIC + latent_tail
+    )
+    validate_hdm9_hlm3_inner_payload_structure(
+        inner_without_header,
+        context="format_id=0x0B magicless payload",
+    )
+    return reconstruct_hdm9_hlm3_inner_headerless_pr106_bytes(inner_without_header)
+
+
+def validate_hdm9_hlm3_inner_payload_structure(
+    inner_without_header: bytes,
+    *,
+    context: str,
+) -> None:
+    expected_len = HDM9_HLM2_DECODER_PAYLOAD_BYTES + HDM9_HLM3_LATENT_PAYLOAD_BYTES
+    if len(inner_without_header) != expected_len:
+        raise ValueError(
+            f"{context} length mismatch: got {len(inner_without_header)} bytes; "
+            f"expected {expected_len}"
+        )
+    decoder = inner_without_header[:HDM9_HLM2_DECODER_PAYLOAD_BYTES]
+    latents = inner_without_header[HDM9_HLM2_DECODER_PAYLOAD_BYTES:]
+    decode_hdm9_decoder_raw(decoder)
+    decode_hlm3_fixed_latents_raw(latents)
+
+
+def validate_headerless_pr106_bytes(pr106_bytes: bytes, *, context: str) -> None:
+    if len(pr106_bytes) < 4:
+        raise ValueError(f"{context} truncated before inner header")
+    if pr106_bytes[0] != HEADERLESS_INNER_FIRST_BYTE:
+        raise ValueError(
+            f"{context} requires PR106 inner payload to start with "
+            f"0x{HEADERLESS_INNER_FIRST_BYTE:02X}"
+        )
+    decoder_len = int.from_bytes(pr106_bytes[1:4], "little")
+    if decoder_len <= 0:
+        raise ValueError(f"{context} decoder length must be positive")
+    if 4 + decoder_len >= len(pr106_bytes):
+        raise ValueError(f"{context} decoder length leaves no latent payload")
+
+
 def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | None]:
     """Slice apart the wrapper and dispatch on format_id.
 
@@ -194,9 +256,14 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
         if bin_bytes[0] == HEADERLESS_INNER_FIRST_BYTE:
             if len(bin_bytes) < FIXED_META_PAYLOAD_BYTES + 1:
                 raise ValueError("headerless implicit-len sidecar truncated before payload")
+            pr106_bytes = bin_bytes[:-FIXED_META_PAYLOAD_BYTES]
+            validate_headerless_pr106_bytes(
+                pr106_bytes,
+                context="format_id=0x07 headerless packet",
+            )
             return (
                 SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
-                bin_bytes[:-FIXED_META_PAYLOAD_BYTES],
+                pr106_bytes,
                 bin_bytes[-FIXED_META_PAYLOAD_BYTES:],
                 None,
             )
@@ -218,6 +285,22 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
                         bin_bytes[-FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES:],
                         None,
                     )
+        expected_magicless_len = (
+            HDM9_HLM2_DECODER_PAYLOAD_BYTES
+            - len(HDM9_HLM2_DECODER_MAGIC)
+            + HDM9_HLM3_LATENT_PAYLOAD_BYTES
+            - len(HDM9_HLM3_LATENT_MAGIC)
+            + FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+        )
+        if len(bin_bytes) == expected_magicless_len:
+            return (
+                SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+                reconstruct_hdm9_hlm3_magicless_pr106_bytes(
+                    bin_bytes[:-FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES]
+                ),
+                bin_bytes[-FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES:],
+                None,
+            )
         if len(bin_bytes) < FIXED_META_PAYLOAD_BYTES + 1:
             raise ValueError("HDM8/HLM2 inner-headerless sidecar truncated before payload")
         inner_without_header = bin_bytes[:-FIXED_META_PAYLOAD_BYTES]
@@ -446,9 +529,9 @@ def inflate(src_bin: str, dst_raw: str) -> int:
         if framing_meta is None:
             raise ValueError("framing_meta missing for format_id=0x02 payload")
         dim_arr, delta_q_arr = decode_pr101_grammar_sidecar(sidecar_blob, framing_meta)
-    elif (
-        format_id
-        == SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED
+    elif format_id in (
+        SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+        SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     ):
         dim_arr, delta_q_arr = decode_pr101_fixed_meta_noop_rank_elided_sidecar(
             sidecar_blob

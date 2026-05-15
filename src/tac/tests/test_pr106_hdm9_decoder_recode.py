@@ -13,6 +13,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_HDM9_HLM3_LATENT_PAYLOAD_BYTES,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     decode_hdm9_decoder_to_hdm8_payload,
     decode_hlm3_latents_to_hlm2_payload,
     decode_pr106_sidecar_packet_dim_delta,
@@ -25,6 +26,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     read_single_stored_member_archive,
     recode_pr106_hdm8_hlm2_packet_to_hdm9,
     recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3,
+    recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3_magicless,
 )
 from tac.packetir_exact_closure import _runtime_score_affecting_sections_match
 
@@ -146,12 +148,89 @@ def test_hdm9_hlm3_recode_saves_three_more_bytes_and_runtime_decodes() -> None:
         "decoder_magic": "HDM9",
         "latent_magic": "HLM3",
         "elided_inner_header_bytes": 4,
+        "elided_section_magic_bytes": 0,
         "scale_low3_bytes": 84,
         "scale_high_mask_bytes": 4,
         "scale_high_base": 59,
         "elided_hlm2_lo_brotli_len_bytes": 2,
         "elided_noop_rank_bytes": 1,
     }
+
+
+def test_hdm9_hlm3_magicless_recode_saves_fixed_magic_bytes_and_runtime_decodes() -> None:
+    member = read_single_stored_member_archive(HDM8_FORMAT07_ARCHIVE.read_bytes())
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    source_dims, source_deltas = decode_pr106_sidecar_packet_dim_delta(source_packet)
+    hdm9_packet = recode_pr106_hdm8_hlm2_packet_to_hdm9(source_packet)
+    hdm10_source = dataclasses.replace(
+        hdm9_packet,
+        sidecar_payload=hdm9_packet.sidecar_payload[:-1],
+    )
+    hdm10_packet = recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3(hdm10_source)
+
+    hdm11_packet = recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3_magicless(
+        hdm10_source
+    )
+    emitted = emit_pr106_sidecar_packet(hdm11_packet)
+    reparsed = parse_pr106_sidecar_packet(emitted)
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    proof = pr106_sidecar_consumed_byte_proof(reparsed)
+    manifest = pr106_sidecar_manifest(reparsed)
+    inflate = _load_module(RUNTIME_INFLATE, "pr106_hdm11_runtime_inflate")
+
+    assert hdm11_packet.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
+    )
+    assert not emitted.startswith(b"HDM9")
+    assert len(emitted) == len(emit_pr106_sidecar_packet(hdm10_packet)) - 8
+    parsed = inflate.parse_sidecar_archive(emitted)
+    assert parsed[0] == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
+    )
+    assert parsed[1] == hdm11_packet.pr106_bytes
+    assert (reparsed_dims == source_dims).all()
+    assert (reparsed_deltas == source_deltas).all()
+    assert proof["score_affecting_section_names"] == [
+        "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+        "sidecar_payload",
+    ]
+    assert proof["all_payload_bytes_accounted"] is True
+    assert manifest["derived_fixed_meta"]["hdm9_hlm3_magicless_packet"] is True
+    assert manifest["derived_fixed_meta"]["hdm9_hlm3_fixed_lengths"][
+        "elided_section_magic_bytes"
+    ] == 8
+
+
+def test_hdm9_hlm3_magicless_parser_rejects_same_length_garbage() -> None:
+    member = read_single_stored_member_archive(HDM8_FORMAT07_ARCHIVE.read_bytes())
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    hdm9_packet = recode_pr106_hdm8_hlm2_packet_to_hdm9(source_packet)
+    hdm10_source = dataclasses.replace(
+        hdm9_packet,
+        sidecar_payload=hdm9_packet.sidecar_payload[:-1],
+    )
+    hdm11_packet = recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3_magicless(
+        hdm10_source
+    )
+    valid = emit_pr106_sidecar_packet(hdm11_packet)
+    sidecar_len = len(hdm11_packet.sidecar_payload)
+    same_length_garbage = b"\x00" * (len(valid) - sidecar_len) + valid[-sidecar_len:]
+    first_byte_ff_garbage = b"\xff\x00\x00\x00" + b"\x00" * 600
+    off_by_one = valid[:-1]
+    inflate = _load_module(RUNTIME_INFLATE, "pr106_hdm11_runtime_inflate_negative")
+
+    with pytest.raises(ValueError, match=r"HDM9 q-Brotli chunk|Brotli"):
+        parse_pr106_sidecar_packet(same_length_garbage)
+    with pytest.raises(ValueError, match=r"HDM9 q stream chunk|Brotli"):
+        inflate.parse_sidecar_archive(same_length_garbage)
+    with pytest.raises(ValueError, match="decoder length must be positive"):
+        parse_pr106_sidecar_packet(first_byte_ff_garbage)
+    with pytest.raises(ValueError, match="decoder length must be positive"):
+        inflate.parse_sidecar_archive(first_byte_ff_garbage)
+    with pytest.raises(ValueError):
+        parse_pr106_sidecar_packet(off_by_one)
+    with pytest.raises(ValueError):
+        inflate.parse_sidecar_archive(off_by_one)
 
 
 def test_hdm9_scale_high_mask_padding_fails_closed() -> None:
@@ -205,6 +284,22 @@ def test_packetir_closure_accepts_hdm9_hlm3_runtime_section_alias() -> None:
 
     assert result["matched"] is True
     assert result["mode"] == "format_0x0a_hdm9_hlm3_reconstructed_pr106_payload_alias"
+
+
+def test_packetir_closure_accepts_hdm9_hlm3_magicless_runtime_section_alias() -> None:
+    result = _runtime_score_affecting_sections_match(
+        expected_sections={
+            "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+            "sidecar_payload",
+        },
+        actual_sections={"pr106_payload", "sidecar_payload"},
+        proof={"format_id": "0x0B", "inner_pr106_payload_sha256_unchanged": True},
+    )
+
+    assert result["matched"] is True
+    assert result["mode"] == (
+        "format_0x0b_hdm9_hlm3_magicless_reconstructed_pr106_payload_alias"
+    )
 
 
 def _decoder_section(pr106_bytes: bytes) -> bytes:

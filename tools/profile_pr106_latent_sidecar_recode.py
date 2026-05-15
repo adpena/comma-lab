@@ -562,11 +562,30 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
                         }
                     )
         rows.append(row)
-    best = next((row for row in rows if row["applicable"]), None)
-    best_runtime = next(
-        (row for row in rows if row["applicable"] and row["runtime_decoder_implemented"]),
-        None,
-    )
+    def _candidate_rank(row: dict[str, Any]) -> tuple[int, int, int, str]:
+        if not row["applicable"]:
+            return (9, 10**12, 10**12, str(row["name"]))
+        emitted_bytes = row.get("emitted_candidate_archive_bytes")
+        if isinstance(emitted_bytes, int):
+            return (
+                0,
+                emitted_bytes,
+                int(row.get("charged_sidecar_bytes") or 10**12),
+                str(row["name"]),
+            )
+        return (
+            1,
+            int(row.get("charged_sidecar_bytes") or 10**12),
+            int(row.get("encoded_payload_bytes") or 10**12),
+            str(row["name"]),
+        )
+
+    applicable_rows = [row for row in rows if row["applicable"]]
+    runtime_rows = [
+        row for row in applicable_rows if row["runtime_decoder_implemented"]
+    ]
+    best = min(applicable_rows, key=_candidate_rank, default=None)
+    best_runtime = min(runtime_rows, key=_candidate_rank, default=None)
     any_decoder_missing_for_lossless_candidate = any(
         row["applicable"] and not row["runtime_decoder_implemented"] for row in rows
     )
