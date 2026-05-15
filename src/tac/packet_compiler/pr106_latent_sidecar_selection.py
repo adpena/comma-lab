@@ -24,7 +24,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_DEFAULT_MEMBER_NAME,
     PR106_LATENT_N_DIMS,
     PR106_NO_OP_DIM,
-    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_BROTLI,
     lossless_pr106_sidecar_recode_candidates,
     parse_pr106_sidecar_packet,
     read_single_stored_member_archive,
@@ -263,26 +263,26 @@ def validate_score_table_manifest(
         member_format_id = parse_pr106_sidecar_packet(member.payload).format_id
     except ValueError:
         member_format_id = None
-    format0c_requires_member_sha = (
-        member_format_id
-        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    packet_ir_requires_member_sha = (
+        member_format_id is not None
+        and member_format_id != PR106_SIDECAR_FORMAT_BROTLI
     )
-    if format0c_requires_member_sha and manifest.get("source_archive_member_name") != member.name:
+    if packet_ir_requires_member_sha and manifest.get("source_archive_member_name") != member.name:
         raise ValueError(
             "score table manifest source_archive_member_name mismatch for "
-            "format0C source archive"
+            f"PacketIR source archive format 0x{member_format_id:02X}"
         )
-    if format0c_requires_member_sha and not member_sha256_matches:
+    if packet_ir_requires_member_sha and not member_sha256_matches:
         raise ValueError(
             "score table manifest source_archive_member_sha256 mismatch for "
-            "format0C source archive"
+            f"PacketIR source archive format 0x{member_format_id:02X}"
         )
     zero_bin_sha256_matches = False
     if not archive_sha256_matches:
         source_zero_bin_sha256 = manifest.get("source_zero_bin_sha256")
         legacy_zero_bin_fallback_allowed = (
             member.name == PR106_DEFAULT_MEMBER_NAME
-            and not format0c_requires_member_sha
+            and not packet_ir_requires_member_sha
         )
         if isinstance(source_zero_bin_sha256, str) and legacy_zero_bin_fallback_allowed:
             zero_bin_sha256_matches = member_sha256 == source_zero_bin_sha256

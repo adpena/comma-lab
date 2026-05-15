@@ -118,6 +118,23 @@ def _format0c_source_archive(tmp_path: Path) -> tuple[Path, int, int]:
     return source_archive, int(dims[0]), int(deltas[0])
 
 
+def _format07_source_archive(tmp_path: Path) -> tuple[Path, int, int, int]:
+    from tac.packet_compiler.pr106_sidecar_packet import (
+        PR106_NO_OP_DIM,
+        decode_pr106_sidecar_packet_dim_delta,
+        parse_pr106_sidecar_packet,
+        read_single_stored_member_archive,
+    )
+
+    source_archive = tmp_path / "format07_x.zip"
+    source_archive.write_bytes(FORMAT07_FIXTURE.read_bytes())
+    fixture_member = read_single_stored_member_archive(source_archive.read_bytes())
+    fixture_packet = parse_pr106_sidecar_packet(fixture_member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(fixture_packet)
+    pair_idx = int(np.flatnonzero((dims != PR106_NO_OP_DIM) & (deltas != 0))[0])
+    return source_archive, pair_idx, int(dims[pair_idx]), int(deltas[pair_idx])
+
+
 def test_resolves_nested_kaggle_score_table_layout(tmp_path: Path) -> None:
     module = _load_tool()
     score_root = tmp_path / "download"
@@ -356,37 +373,106 @@ def test_manifest_audit_blocks_format0c_without_explicit_x_member_name(tmp_path:
         score_table_manifest=manifest,
     )
 
-    assert "score_table_manifest_format0c_member_name_mismatch_or_missing" in audit["blockers"]
+    assert "score_table_manifest_packetir_member_name_mismatch_or_missing" in audit[
+        "blockers"
+    ]
 
 
-def test_materializer_refuses_non_0x01_packet_ir_legacy_route(
+def test_manifest_audit_blocks_format07_without_explicit_member_sha(tmp_path: Path) -> None:
+    module = _load_tool()
+    source_archive, _pair_idx, _base_dim, _base_delta = _format07_source_archive(tmp_path)
+    npy = tmp_path / "score_table.npy"
+    npy.write_bytes(b"npy")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(
+        manifest,
+        {
+            **_complete_score_table_manifest(source_archive, npy),
+            "source_archive_member_sha256": None,
+            "source_zero_bin_sha256": hashlib.sha256(source_archive.read_bytes()).hexdigest(),
+        },
+    )
+
+    audit = module.audit_score_table_manifest(
+        source_archive=source_archive,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+    )
+
+    assert "score_table_manifest_packetir_member_sha256_mismatch_or_missing" in audit[
+        "blockers"
+    ]
+
+
+def test_format07_materializer_uses_native_packet_ir_not_legacy_builder(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
     module = _load_tool()
-    source_archive = tmp_path / "format07_x.zip"
-    source_archive.write_bytes(FORMAT07_FIXTURE.read_bytes())
+    source_archive, pair_idx, base_dim, base_delta = _format07_source_archive(tmp_path)
     npy = tmp_path / "score_table.npy"
-    npy.write_bytes(b"npy")
+    candidates = module.build_latent_candidate_grid(latent_dim=28, delta_radius=2)
+    table = np.full((600, int(candidates.shape[0])), 10.0, dtype=np.float32)
+    selected_delta = _compatible_score_table_delta(base_delta)
+    selected_index = 1 + base_dim * 4 + {-2: 0, -1: 1, 1: 2, 2: 3}[selected_delta]
+    table[pair_idx, selected_index] = 9.0
+    np.save(npy, table, allow_pickle=False)
+    with zipfile.ZipFile(source_archive) as zf:
+        member_name = zf.namelist()[0]
+        payload = zf.read(member_name)
     manifest = tmp_path / "score_table_manifest.json"
-    write_json(manifest, {"manifest_schema": "pr106_latent_score_table_manifest_v1"})
+    write_json(
+        manifest,
+        {
+            **_complete_score_table_manifest(source_archive, npy),
+            "source_archive_member_name": member_name,
+            "source_archive_member_sha256": hashlib.sha256(payload).hexdigest(),
+            "source_zero_bin_sha256": None,
+            "source_payload_kind": "pr106_sidecar_packet",
+            "delta_radius": 2,
+            "candidate_count": int(candidates.shape[0]),
+            "score_table_shape": [600, int(candidates.shape[0])],
+            "candidate_grid_sha256": module.latent_candidate_grid_npy_sha256(candidates),
+            "candidate_grid_npy_sha256": module.latent_candidate_grid_npy_sha256(candidates),
+        },
+    )
 
     def fail_run(*_args, **_kwargs):
         raise AssertionError("legacy builder subprocess must not run for PacketIR")
 
     monkeypatch.setattr(module.subprocess, "run", fail_run)
 
-    with pytest.raises(RuntimeError, match="refusing to route non-0x01"):
-        module.materialize_candidate(
-            source_archive=source_archive,
-            output_dir=tmp_path / "out",
-            score_table_root=tmp_path,
-            score_table_npy=npy,
-            score_table_manifest=manifest,
-            delta_radius=2,
-            top_k=600,
-            python_executable="python",
-        )
+    output_dir = tmp_path / "out"
+    materialization = module.materialize_candidate(
+        source_archive=source_archive,
+        output_dir=output_dir,
+        score_table_root=tmp_path,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+        delta_radius=2,
+        top_k=600,
+        python_executable="python",
+    )
+
+    assert materialization["builder"]["materialization_engine"] == "format07_packet_ir_native"
+    assert materialization["builder"]["command"] == []
+    metadata = read_json(output_dir / "build_metadata.json")
+    assert metadata["materialization_engine"] == "format07_packet_ir_native"
+    assert metadata["source_archive_member_name"] == member_name
+    assert metadata["semantic_materialization"]["composed_same_dim_pair_count"] == 1
+    from tac.packet_compiler.pr106_sidecar_packet import (
+        decode_pr106_sidecar_packet_dim_delta,
+        parse_pr106_sidecar_packet,
+        read_single_stored_member_archive,
+    )
+
+    member = read_single_stored_member_archive((output_dir / "sidecar_archive.zip").read_bytes())
+    assert member.name == member_name
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    assert int(dims[pair_idx]) == base_dim
+    assert int(deltas[pair_idx]) == base_delta + selected_delta
+    assert materialization["source_runtime"]["runtime_source_manifest"]
 
 
 def test_materializer_refuses_unparsable_packet_ir_legacy_route(

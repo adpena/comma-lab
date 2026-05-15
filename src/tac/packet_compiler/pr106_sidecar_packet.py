@@ -1428,6 +1428,51 @@ def encode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
     return encoded
 
 
+def encode_pr101_fixed_meta_rank_elided_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> bytes:
+    """Encode semantic corrections as a fixed-meta/rank-elided PR101 payload."""
+
+    _validate_fixed_meta_schema(schema)
+    dims, deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        dim_arr,
+        delta_q_arr,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    if int(dims.size) != int(schema.n_pairs):
+        raise ValueError(
+            f"fixed-meta rank-elided payload expects {schema.n_pairs} pairs; "
+            f"got {dims.size}"
+        )
+    ranked_payload, ranked_meta = encode_pr101_ranked_sidecar_payload(
+        dims,
+        deltas,
+        schema=schema,
+    )
+    if ranked_meta != _fixed_meta_framing_bytes():
+        raise ValueError("fixed-meta rank-elided payload requires canonical PR106 metadata")
+    encoded = (
+        ranked_payload[:PR106_PR101_FIXED_META_DIM_BYTES]
+        + ranked_payload[
+            PR106_PR101_FIXED_META_DIM_BYTES
+            + PR106_PR101_FIXED_META_RANK_BYTES :
+        ]
+    )
+    decoded_dims, decoded_deltas = (
+        decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta(
+            encoded,
+            schema=schema,
+        )
+    )
+    if not (np.array_equal(decoded_dims, dims) and np.array_equal(decoded_deltas, deltas)):
+        raise ValueError("fixed-meta rank-elided encode/decode semantic mismatch")
+    return encoded
+
+
 def decode_pr106_sidecar_packet_dim_delta(
     packet: PR106SidecarPacket,
     *,
@@ -3659,6 +3704,78 @@ def build_pr106_format0c_semantic_sidecar_packet(
     return packet, diagnostics
 
 
+def build_pr106_format07_semantic_sidecar_packet(
+    source_packet: PR106SidecarPacket,
+    selected_dim_arr: np.ndarray,
+    selected_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[PR106SidecarPacket, dict[str, object]]:
+    """Build a format-0x07 packet from score-table-selected semantic deltas."""
+
+    if (
+        source_packet.format_id
+        != PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    ):
+        raise ValueError(
+            "format07 semantic materialization requires source packet "
+            "format_id=0x07; got "
+            f"0x{source_packet.format_id:02X}"
+        )
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(
+        source_packet,
+        schema=schema,
+    )
+    composed_dims, composed_deltas, diagnostics = (
+        compose_pr106_sidecar_dim_delta_corrections(
+            base_dims,
+            base_deltas,
+            selected_dim_arr,
+            selected_delta_q_arr,
+            schema=schema,
+        )
+    )
+    allowed_deltas = {0, *[int(value) for value in schema.deltas]}
+    observed_deltas = {int(value) for value in composed_deltas.astype(np.int16).tolist()}
+    unsupported_deltas = sorted(observed_deltas - allowed_deltas)
+    if unsupported_deltas:
+        raise ValueError(
+            "format07 semantic materialization cannot represent composed delta "
+            f"values outside {sorted(allowed_deltas)}: {unsupported_deltas}"
+        )
+    sidecar_payload = encode_pr101_fixed_meta_rank_elided_sidecar_payload(
+        composed_dims,
+        composed_deltas,
+        schema=schema,
+    )
+    packet = PR106SidecarPacket(
+        format_id=source_packet.format_id,
+        pr106_bytes=source_packet.pr106_bytes,
+        sidecar_payload=sidecar_payload,
+        framing_meta=None,
+    )
+    reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(packet))
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(
+        reparsed,
+        schema=schema,
+    )
+    if not (
+        np.array_equal(reparsed_dims, composed_dims)
+        and np.array_equal(reparsed_deltas, composed_deltas)
+    ):
+        raise ValueError("format07 semantic materialization parse/reemit mismatch")
+    diagnostics = {
+        **diagnostics,
+        "semantic_materializer": "format07_packet_ir_native",
+        "source_format_id": f"0x{source_packet.format_id:02X}",
+        "output_format_id": f"0x{packet.format_id:02X}",
+        "output_sidecar_payload_bytes": len(sidecar_payload),
+        "output_sidecar_payload_sha256": sha256_hex(sidecar_payload),
+        "output_packet_payload_sha256": sha256_hex(emit_pr106_sidecar_packet(packet)),
+    }
+    return packet, diagnostics
+
+
 def emit_pr106_format0c_semantic_candidate_archive(
     source_member: StoredZipMember,
     source_packet: PR106SidecarPacket,
@@ -3683,6 +3800,30 @@ def emit_pr106_format0c_semantic_candidate_archive(
     candidate_member = replace(
         source_member,
         name="x",
+        payload=emit_pr106_sidecar_packet(candidate_packet),
+    )
+    candidate_archive = emit_single_stored_member_archive(candidate_member)
+    return candidate_member, candidate_archive, diagnostics
+
+
+def emit_pr106_format07_semantic_candidate_archive(
+    source_member: StoredZipMember,
+    source_packet: PR106SidecarPacket,
+    selected_dim_arr: np.ndarray,
+    selected_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[StoredZipMember, bytes, dict[str, object]]:
+    """Emit a single-member ZIP for a format-0x07 semantic candidate."""
+
+    candidate_packet, diagnostics = build_pr106_format07_semantic_sidecar_packet(
+        source_packet,
+        selected_dim_arr,
+        selected_delta_q_arr,
+        schema=schema,
+    )
+    candidate_member = replace(
+        source_member,
         payload=emit_pr106_sidecar_packet(candidate_packet),
     )
     candidate_archive = emit_single_stored_member_archive(candidate_member)

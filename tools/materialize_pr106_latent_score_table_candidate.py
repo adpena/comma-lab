@@ -46,8 +46,10 @@ from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_LATENT_N_PAIRS,
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_MAGIC,
     emit_pr106_format0c_semantic_candidate_archive,
+    emit_pr106_format07_semantic_candidate_archive,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
     pr106_sidecar_manifest,
@@ -341,16 +343,16 @@ def audit_score_table_manifest(
     source_payload_identity_matches = (
         source_payload_sha256_matches or source_zero_bin_sha256_matches
     )
-    format0c_requires_member_sha = (
+    packet_ir_requires_member_sha = (
         source_info is not None
-        and source_info.format_id
-        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+        and source_info.format_id is not None
+        and source_info.format_id != PR106_SIDECAR_FORMAT_BROTLI
     )
-    if format0c_requires_member_sha and manifest.get("source_archive_member_name") != source_member_name:
-        blockers.append("score_table_manifest_format0c_member_name_mismatch_or_missing")
-    if format0c_requires_member_sha and not source_payload_sha256_matches:
-        blockers.append("score_table_manifest_format0c_member_sha256_mismatch_or_missing")
-    if not format0c_requires_member_sha and not source_member_name_matches:
+    if packet_ir_requires_member_sha and manifest.get("source_archive_member_name") != source_member_name:
+        blockers.append("score_table_manifest_packetir_member_name_mismatch_or_missing")
+    if packet_ir_requires_member_sha and not source_payload_sha256_matches:
+        blockers.append("score_table_manifest_packetir_member_sha256_mismatch_or_missing")
+    if not packet_ir_requires_member_sha and not source_member_name_matches:
         blockers.append("score_table_manifest_source_archive_member_name_mismatch")
     if not source_archive_sha256_matches and not source_payload_identity_matches:
         blockers.append("score_table_manifest_source_archive_payload_mismatch_or_missing")
@@ -436,7 +438,49 @@ def audit_builder_metadata(build_metadata: Mapping[str, Any]) -> dict[str, objec
     }
 
 
-def _materialize_format0c_native(
+PACKET_IR_NATIVE_SCORE_TABLE_FORMATS = {
+    PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+}
+
+
+def _packet_ir_materialization_engine(format_id: int) -> str:
+    return f"format{format_id:02x}_packet_ir_native"
+
+
+def _emit_packet_ir_semantic_candidate_archive(
+    source_member: Any,
+    source_packet: Any,
+    dim_arr: Any,
+    delta_q_arr: Any,
+) -> tuple[Any, bytes, dict[str, object]]:
+    if (
+        source_packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    ):
+        return emit_pr106_format07_semantic_candidate_archive(
+            source_member,
+            source_packet,
+            dim_arr,
+            delta_q_arr,
+        )
+    if (
+        source_packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        return emit_pr106_format0c_semantic_candidate_archive(
+            source_member,
+            source_packet,
+            dim_arr,
+            delta_q_arr,
+        )
+    raise RuntimeError(
+        "native score-table materialization does not support source packet "
+        f"format_id=0x{source_packet.format_id:02X}"
+    )
+
+
+def _materialize_packet_ir_native(
     *,
     source_archive: Path,
     output_dir: Path,
@@ -446,19 +490,14 @@ def _materialize_format0c_native(
     top_k: int,
 ) -> dict[str, object]:
     source_archive_bytes = source_archive.read_bytes()
-    source_member = read_single_stored_member_archive(
-        source_archive_bytes,
-        expected_member_name="x",
-    )
+    source_member = read_single_stored_member_archive(source_archive_bytes)
     source_packet = parse_pr106_sidecar_packet(source_member.payload)
-    if (
-        source_packet.format_id
-        != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
-    ):
+    if source_packet.format_id not in PACKET_IR_NATIVE_SCORE_TABLE_FORMATS:
         raise RuntimeError(
-            "native score-table materialization only supports format0C source "
+            "native score-table materialization only supports PacketIR source "
             f"packets; got 0x{source_packet.format_id:02X}"
         )
+    materialization_engine = _packet_ir_materialization_engine(source_packet.format_id)
 
     candidates = build_latent_candidate_grid(
         latent_dim=PR106_LATENT_N_DIMS,
@@ -484,7 +523,7 @@ def _materialize_format0c_native(
         top_k=top_k,
     )
     candidate_member, candidate_archive, semantic_diagnostics = (
-        emit_pr106_format0c_semantic_candidate_archive(
+        _emit_packet_ir_semantic_candidate_archive(
             source_member,
             source_packet,
             dim_arr,
@@ -505,7 +544,7 @@ def _materialize_format0c_native(
     selected_delta_bytes = delta_q_arr.astype("int8", copy=False).tobytes()
     metadata: dict[str, object] = {
         "lane_id": "lane_pr106_latent_sidecar",
-        "materialization_engine": "format0c_packet_ir_native",
+        "materialization_engine": materialization_engine,
         "wall_clock_seconds": 0.0,
         "wall_clock_seconds_note": "deterministic_local_packet_ir_materialization",
         "device": "cpu",
@@ -541,7 +580,7 @@ def _materialize_format0c_native(
         "dispatch_blockers": [
             "requires_paired_contest_cuda_auth_eval",
             "requires_paired_contest_cpu_auth_eval",
-            "requires_runtime_decode_apply_proof_for_semantic_format0c_candidate",
+            "requires_runtime_decode_apply_proof_for_semantic_packetir_candidate",
             "requires_adjudicated_component_recompute_before_score_claim",
         ],
         "score_table": {
@@ -629,12 +668,10 @@ def materialize_candidate(
     builder_stderr = ""
     materialization_engine = "legacy_builder_subprocess"
 
-    if (
-        source_format_id
-        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
-    ):
-        materialization_engine = "format0c_packet_ir_native"
-        build_metadata = _materialize_format0c_native(
+    if source_format_id in PACKET_IR_NATIVE_SCORE_TABLE_FORMATS:
+        assert source_format_id is not None
+        materialization_engine = _packet_ir_materialization_engine(source_format_id)
+        build_metadata = _materialize_packet_ir_native(
             source_archive=source_archive,
             output_dir=output_dir,
             score_table_npy=npy_path,

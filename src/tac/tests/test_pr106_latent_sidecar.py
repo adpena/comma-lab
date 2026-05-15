@@ -575,6 +575,8 @@ def test_score_table_manifest_accepts_reframed_archive_with_same_zero_bin(tmp_pa
                 "source_archive_sha256": hashlib.sha256(
                     reframed_archive.read_bytes()
                 ).hexdigest(),
+                "source_archive_member_name": "0.bin",
+                "source_archive_member_sha256": hashlib.sha256(zero_bin).hexdigest(),
                 "source_zero_bin_sha256": hashlib.sha256(zero_bin).hexdigest(),
                 "score_table_npy_sha256": hashlib.sha256(table_path.read_bytes()).hexdigest(),
                 "candidate_grid_sha256": build.latent_candidate_grid_npy_sha256(candidates),
@@ -601,7 +603,8 @@ def test_score_table_manifest_accepts_reframed_archive_with_same_zero_bin(tmp_pa
     )
 
     assert validated["validated_source_archive_sha256_match"] is False
-    assert validated["validated_source_zero_bin_sha256_match"] is True
+    assert validated["validated_source_archive_member_sha256_match"] is True
+    assert validated["validated_source_zero_bin_sha256_match"] is False
 
 
 @pytest.mark.skipif(
@@ -695,7 +698,7 @@ def test_score_table_manifest_accepts_x_member_custody(tmp_path: Path):
     assert validated["validated_source_archive_member_name_match"] is True
     assert validated["validated_source_archive_member_sha256_match"] is True
 
-    with pytest.raises(ValueError, match="source archive payload mismatch"):
+    with pytest.raises(ValueError, match="PacketIR source archive"):
         build.validate_score_table_manifest(
             manifest_path,
             score_table_npy=table_path,
@@ -771,7 +774,7 @@ def test_score_table_manifest_format0c_requires_member_sha256(tmp_path: Path):
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="format0C source archive"):
+    with pytest.raises(ValueError, match="PacketIR source archive format 0x0C"):
         build.validate_score_table_manifest(
             manifest_path,
             score_table_npy=table_path,
@@ -787,7 +790,10 @@ def test_score_table_manifest_format0c_requires_member_sha256(tmp_path: Path):
     manifest_payload["source_archive_member_sha256"] = hashlib.sha256(source_payload).hexdigest()
     manifest_path.write_text(json.dumps(manifest_payload), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="source_archive_member_name mismatch for format0C"):
+    with pytest.raises(
+        ValueError,
+        match="source_archive_member_name mismatch for PacketIR source archive format 0x0C",
+    ):
         build.validate_score_table_manifest(
             manifest_path,
             score_table_npy=table_path,

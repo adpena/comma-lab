@@ -19,6 +19,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106SidecarPacket,
     canonicalize_brotli_dim_delta_sidecar_arrays,
@@ -26,6 +27,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     decode_pr101_ranked_sidecar_payload_to_dim_delta,
     decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_format0c_semantic_candidate_archive,
+    emit_pr106_format07_semantic_candidate_archive,
     emit_pr106_sidecar_packet,
     emit_pr106_sidecar_recode_candidate_archive,
     encode_brotli_dim_delta_sidecar_payload,
@@ -174,6 +176,16 @@ def _format0c_fixture_member_packet():
     return member, packet
 
 
+def _format07_fixture_member_packet():
+    member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_FIXTURE.read_bytes())
+    packet = parse_pr106_sidecar_packet(member.payload)
+    assert (
+        packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    )
+    return member, packet
+
+
 def test_format0c_semantic_materializer_composes_same_dim_delta() -> None:
     member, packet = _format0c_fixture_member_packet()
     base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(packet)
@@ -214,6 +226,69 @@ def test_format0c_semantic_materializer_rejects_second_dim_composition() -> None
 
     with pytest.raises(ValueError, match="would require two latent dimensions"):
         emit_pr106_format0c_semantic_candidate_archive(
+            member,
+            packet,
+            selected_dims,
+            selected_deltas,
+        )
+
+
+def test_format07_semantic_materializer_composes_same_dim_delta() -> None:
+    member, packet = _format07_fixture_member_packet()
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    pair_idx = int(
+        np.flatnonzero((base_dims != PR106_NO_OP_DIM) & (base_deltas != 0))[0]
+    )
+    selected_dims = np.full(base_dims.shape, PR106_NO_OP_DIM, dtype=np.uint8)
+    selected_deltas = np.zeros(base_deltas.shape, dtype=np.int8)
+    selected_dims[pair_idx] = base_dims[pair_idx]
+    selected_deltas[pair_idx] = _compatible_score_table_delta(int(base_deltas[pair_idx]))
+
+    candidate_member, candidate_archive, diagnostics = (
+        emit_pr106_format07_semantic_candidate_archive(
+            member,
+            packet,
+            selected_dims,
+            selected_deltas,
+        )
+    )
+
+    assert candidate_member.name == member.name
+    reparsed_member = read_single_stored_member_archive(candidate_archive)
+    reparsed = parse_pr106_sidecar_packet(reparsed_member.payload)
+    got_dims, got_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    assert reparsed.format_id == packet.format_id
+    assert got_dims[pair_idx] == base_dims[pair_idx]
+    assert int(got_deltas[pair_idx]) == int(base_deltas[pair_idx]) + int(
+        selected_deltas[pair_idx]
+    )
+    np.testing.assert_array_equal(
+        np.delete(got_dims, pair_idx),
+        np.delete(base_dims, pair_idx),
+    )
+    np.testing.assert_array_equal(
+        np.delete(got_deltas, pair_idx),
+        np.delete(base_deltas, pair_idx),
+    )
+    assert diagnostics["semantic_materializer"] == "format07_packet_ir_native"
+    assert diagnostics["composed_same_dim_pair_count"] == 1
+
+
+def test_format07_semantic_materializer_rejects_second_dim_composition() -> None:
+    member, packet = _format07_fixture_member_packet()
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    pair_idx = int(
+        np.flatnonzero((base_dims != PR106_NO_OP_DIM) & (base_deltas != 0))[0]
+    )
+    selected_dims = np.full(base_dims.shape, PR106_NO_OP_DIM, dtype=np.uint8)
+    selected_deltas = np.zeros(base_deltas.shape, dtype=np.int8)
+    selected_dims[pair_idx] = np.uint8((int(base_dims[pair_idx]) + 1) % 28)
+    selected_deltas[pair_idx] = _compatible_score_table_delta(
+        int(base_deltas[pair_idx])
+    )
+
+    with pytest.raises(ValueError, match="would require two latent dimensions"):
+        emit_pr106_format07_semantic_candidate_archive(
             member,
             packet,
             selected_dims,

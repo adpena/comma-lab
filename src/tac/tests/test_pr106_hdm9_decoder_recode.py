@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import dataclasses
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -360,5 +361,12 @@ def _load_module(path: Path, module_name: str):
     spec = importlib.util.spec_from_file_location(module_name, path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    old_codec = sys.modules.pop("codec", None)
+    old_path = list(sys.path)
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = old_path
+        if old_codec is not None:
+            sys.modules["codec"] = old_codec
     return module
