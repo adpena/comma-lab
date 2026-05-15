@@ -212,6 +212,8 @@
         ],
         "runtime_source_tree_sha256": "13417fceea39c52033dd798a7f74df65597c77e56ee12b04f0f46b0284483d97",
         "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+        "score_affecting_section_match_evidence": {},
+        "score_affecting_section_match_mode": "exact_section_names",
         "score_affecting_section_set_matches_packetir": true,
         "score_claim": false,
         "valid": true
@@ -625,6 +627,8 @@
       ],
       "runtime_source_tree_sha256": "13417fceea39c52033dd798a7f74df65597c77e56ee12b04f0f46b0284483d97",
       "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+      "score_affecting_section_match_evidence": {},
+      "score_affecting_section_match_mode": "exact_section_names",
       "score_affecting_section_set_matches_packetir": true,
       "score_claim": false,
       "valid": true
@@ -673,7 +677,7 @@
     "reactivate_if_a PacketIR candidate clears runtime_decoder_implemented plus exact CUDA closure and is not already measured"
   ],
   "ready_for_exact_eval_dispatch": false,
-  "recorded_at_utc": "2026-05-13T23:00:25+00:00",
+  "recorded_at_utc": "2026-05-15T05:44:57+00:00",
   "schema": "packetir_exact_eval_closure_v1",
   "schema_version": 2,
   "score_claim": false,
