@@ -569,11 +569,31 @@ def check_dispatch_optimization_protocol(trainer: Path, recipe: str | None) -> t
     and correctness and performance and scalability"*. Mirrors Catalog
     #270 STRICT preflight gate at the 30s harness layer.
     """
+    # F1 fix (codex review bklem3v5j HIGH 2026-05-15) per Catalog #279
+    # `check_local_pre_deploy_helper_import_failure_fails_closed`: this branch
+    # USED to return PASS-VACUOUS on ImportError, which silently bypassed the
+    # 8th gate when `tools/canonical_dispatch_optimization_protocol.py` was
+    # missing or an untracked working-tree-only file. Per CLAUDE.md "Bugs must
+    # be permanently fixed AND self-protected against" non-negotiable + sister
+    # Catalog #138 / #245 / #248 / #270 fail-closed-on-corrupt-state pattern,
+    # the harness MUST fail CLOSED here so a missing helper raises a strict
+    # exit-1 in operator-authorize, NOT a free pass.
     sys.path.insert(0, str(REPO_ROOT / "tools"))
     try:
         import canonical_dispatch_optimization_protocol as proto_mod  # type: ignore[import-not-found]
     except ImportError as exc:
-        return True, f"PASS-VACUOUS: protocol helper missing ({exc})"
+        return False, (
+            f"FAIL: Catalog #270 protocol helper unavailable "
+            f"(ImportError: {exc}); refused per fail-closed-on-import "
+            "discipline (Catalog #279). The 8th gate cannot be VACUOUS "
+            "because operator-authorize uses the harness exit code as its "
+            "gate; a missing helper would silently bypass Tier 1/2/3 "
+            "umbrella protection. Fix: ensure "
+            "`tools/canonical_dispatch_optimization_protocol.py` is "
+            "tracked in git AND importable from the active python "
+            "environment. Per CLAUDE.md 'Bugs must be permanently fixed "
+            "AND self-protected against' non-negotiable."
+        )
     finally:
         try:
             sys.path.remove(str(REPO_ROOT / "tools"))

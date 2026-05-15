@@ -2129,6 +2129,21 @@ def preflight_all(
         check_dispatch_optimization_protocol_complete(
             strict=False, verbose=verbose,
         )
+        # 2026-05-15 Catalog #271 - PRE-DISPATCH-CODEX-REVIEW-AUTOMATION.
+        # Operator-approved 2026-05-15: wire codex adversarial-review
+        # automation BEFORE every paid Modal/Lightning/Vast.ai dispatch >$1
+        # estimated cost. The codex review of Z3-G1 caught F1+F2 BEFORE FULL
+        # CUDA dispatched but AFTER $0.59 smoke spend - this gate moves the
+        # review BEFORE smoke. Sister of Catalog #243 (local pre-deploy
+        # harness) + Catalog #167 (smoke-before-full) + Catalog #199
+        # (paired-env operator bypass discipline). Initial wire-in is
+        # WARN-ONLY per "Strict-flip atomicity rule" - legacy wrappers may
+        # bypass operator_authorize.py for historical reasons; strict-flip
+        # pending audit + backfill. Memory:
+        # feedback_pre_dispatch_codex_review_automation_landed_20260515.md.
+        check_dispatch_runs_codex_adversarial_review_for_paid_dispatch(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
         # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
         # returned auth_eval rc=2 because the trainer hand-wrote
@@ -2160,6 +2175,58 @@ def preflight_all(
         # feedback_misleading_directory_name_phantom_score_class_permanent_fix_landed_20260515.md.
         check_no_misleading_device_named_output_directories(
             strict=False, verbose=verbose,
+        )
+        # 2026-05-15 Catalog #272 - DISTINGUISHING-FEATURE INTEGRATION
+        # CONTRACT. Per operator NON-NEGOTIABLE: "the thing that makes them
+        # special and smart is not actually engineered or wired or
+        # integrated correctly". Anchor: Z3-G1 trained a 1KB SegNet-class
+        # CDF but archive's `hyperprior_weights_int8` slot is `b""` - the
+        # smart thing was engineered, never wired. Smoke score == Z3 v2
+        # baseline to 5 decimals (empirical proof). Sister of Catalog #220
+        # (operational mechanism) + #139 (no-op detector) + #105 (no-op
+        # provenance) + #226 (auth_eval helper) + #240 (recipe-vs-trainer)
+        # + #249 (phantom-score directory). Initial wire-in is WARN-ONLY
+        # per CLAUDE.md "Strict-flip atomicity rule" because the 32-
+        # substrate-trainer audit at landing reveals N >= 14 substrate L2+
+        # lanes that have not yet declared the 4 contract fields. Strict-
+        # flip pending the operator-routed backfill sweep that closes
+        # every L2+ substrate lane via either contract declaration OR
+        # explicit research_only / substrate_engineering opt-out. Memory:
+        # feedback_distinguishing_feature_integration_contract_landed_20260515.md.
+        check_substrate_distinguishing_feature_integration_contract(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-15 Catalog #279 - codex bklem3v5j F1 fail-closed-on-import
+        # discipline for the 8th harness check (`check_dispatch_optimization_protocol`).
+        # The codex review caught that the prior `except ImportError: return
+        # PASS-VACUOUS` silently bypassed Catalog #270 umbrella protection
+        # when the canonical helper was missing. Operator-authorize uses the
+        # harness exit code as its gate; vacuous-pass on missing helper would
+        # let paid dispatch proceed with NO Tier 1/2/3 check. Sister of
+        # Catalog #138 (state-writers strict load) + Catalog #245 + #248
+        # fail-closed-on-corrupt-state pattern. STRICT-from-byte-one per
+        # CLAUDE.md "Strict-flip atomicity rule"; live count: 0 at landing.
+        # Memory:
+        # feedback_codex_fix_wave_2_dispatch_optimization_protocol_fail_open_landed_20260515.md.
+        check_local_pre_deploy_helper_import_failure_fails_closed(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-15 Catalog #280 - codex bklem3v5j F2 unresolved-recipe-
+        # blocks-unless-paired-waiver discipline for the canonical dispatch
+        # optimization protocol module. The prior recipe-less branch marked
+        # every Tier 2/3 recipe-side signal True (vacuous PASS) so a strict
+        # invocation with no recipe could return overall_pass=True while
+        # skipping min_vram_gb / target_modes / video_input_strategy /
+        # canary_status / hardware-routing / research-only checks. The fix
+        # blocks dispatch UNLESS the caller explicitly opts into advisory
+        # mode via paired --allow-no-recipe-advisory-mode +
+        # --no-recipe-rationale <text> (Catalog #199 sister discipline);
+        # even in advisory mode --strict exits nonzero per codex's
+        # explicit recommendation. STRICT-from-byte-one; live count: 0
+        # at landing. Memory:
+        # feedback_codex_fix_wave_2_dispatch_optimization_protocol_fail_open_landed_20260515.md.
+        check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver(
+            strict=True, verbose=verbose,
         )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
@@ -57997,6 +58064,799 @@ def check_dispatch_optimization_protocol_complete(
             "carry the canonical waiver "
             f"`{_CHECK_270_WAIVER_MARKER}<rationale>` in the trainer "
             "header (first 30 lines).\n  "
+            + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #271 - PRE-DISPATCH-CODEX-REVIEW-AUTOMATION 2026-05-15
+#
+# Operator-approved 2026-05-15: wire codex adversarial-review automation into
+# `tools/operator_authorize.py` BEFORE every paid Modal/Lightning/Vast.ai
+# dispatch >$1 estimated cost. The codex review of Z3-G1 caught F1+F2 BEFORE
+# FULL CUDA dispatched but AFTER $0.59 smoke spend - this gate moves the
+# review BEFORE smoke.
+#
+# Refuses any dispatch wrapper (a `.py` or `.sh` file under `tools/`,
+# `scripts/`, `experiments/`, or `src/tac/` that contains a
+# `_CHECK_152_DISPATCH_TOKENS` token) that does NOT route through the
+# canonical `tools/operator_authorize.py` (which now wires
+# `_run_codex_pre_dispatch_review` per Catalog #271) AND does NOT invoke
+# `tools/run_codex_review_for_dispatch.py` directly.
+#
+# Acceptance:
+#   (a) The wrapper invokes `tools/operator_authorize.py` (canonical routing
+#       which threads codex review automatically).
+#   (b) The wrapper invokes `tools/run_codex_review_for_dispatch.py`
+#       directly (e.g. as a manual gate before its dispatch).
+#   (c) Same-line `# CODEX_PRE_DISPATCH_REVIEW_BYPASS_OK:<rationale>` waiver
+#       on the dispatch-token line (placeholder `<reason>` literal rejected
+#       so this docstring's example cannot self-waive).
+#
+# Initial wire-in: warn-only per CLAUDE.md "Strict-flip atomicity rule" -
+# legacy wrappers may bypass operator_authorize.py for historical reasons
+# and should migrate incrementally. Strict-flip pending audit + backfill.
+#
+# Sister of Catalog #243 (local pre-deploy harness - same canonical insertion
+# point) + Catalog #167 (smoke-before-full pattern - same dispatch-wrapper
+# canonical-routing META) + Catalog #199 (paired-env operator bypass
+# discipline - same paired-env pattern).
+# ============================================================================
+
+_CHECK_271_CODEX_HELPER_TOKEN = "tools/run_codex_review_for_dispatch.py"
+_CHECK_271_OPERATOR_AUTHORIZE_TOKEN = "tools/operator_authorize.py"
+_CHECK_271_CANONICAL_HELPER_NAME = "_run_codex_pre_dispatch_review"
+_CHECK_271_DISPATCH_TOKENS = _CHECK_152_DISPATCH_TOKENS  # reuse Catalog #152
+_CHECK_271_EXCLUDED_PATH_MARKERS = _CHECK_152_EXCLUDED_PATH_MARKERS
+_CHECK_271_WAIVER_RE = re.compile(
+    r"#\s*CODEX_PRE_DISPATCH_REVIEW_BYPASS_OK:\s*\S+"
+)
+_CHECK_271_PLACEHOLDER_TOKEN = "<reason>"
+
+
+def check_dispatch_runs_codex_adversarial_review_for_paid_dispatch(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #271 - PRE-DISPATCH-CODEX-REVIEW-AUTOMATION self-protection.
+
+    Refuses any dispatch wrapper that bypasses both:
+      (1) `tools/operator_authorize.py` (canonical routing wiring
+          `_run_codex_pre_dispatch_review`), and
+      (2) `tools/run_codex_review_for_dispatch.py` (the canonical helper).
+
+    Acceptance:
+      (a) wrapper invokes operator_authorize.py
+      (b) wrapper invokes run_codex_review_for_dispatch.py directly
+      (c) same-line `# CODEX_PRE_DISPATCH_REVIEW_BYPASS_OK:<rationale>`
+          waiver (placeholder `<reason>` literal rejected to prevent
+          self-waiver).
+
+    Sister of Catalog #243 (local pre-deploy harness) + Catalog #167
+    (smoke-before-full) + Catalog #199 (paired-env operator bypass).
+
+    Initial wire-in: warn-only per CLAUDE.md "Strict-flip atomicity rule".
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    scan_dirs = ["tools", "scripts", "experiments", "src/tac"]
+    self_exempt_paths = {
+        # The canonical helper itself
+        root / "tools" / "run_codex_review_for_dispatch.py",
+        # The wrapper that invokes the helper
+        root / "tools" / "operator_authorize.py",
+        # The catalog that defines the constants
+        root / "src" / "tac" / "preflight.py",
+    }
+
+    for scan_dir in scan_dirs:
+        scan_root = root / scan_dir
+        if not scan_root.is_dir():
+            continue
+        for ext in ("*.py", "*.sh"):
+            for path in scan_root.rglob(ext):
+                if path in self_exempt_paths:
+                    continue
+                rel = str(path)
+                if any(
+                    marker in rel for marker in _CHECK_271_EXCLUDED_PATH_MARKERS
+                ):
+                    continue
+                if (
+                    "/tests/" in rel
+                    or path.name.startswith("test_")
+                    or path.name.endswith("_test.py")
+                ):
+                    continue
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    continue
+                # Quick filter: must contain at least one dispatch token
+                if not any(tok in text for tok in _CHECK_271_DISPATCH_TOKENS):
+                    continue
+                # Acceptance (a): routes through operator_authorize.py
+                if _CHECK_271_OPERATOR_AUTHORIZE_TOKEN in text:
+                    continue
+                # Acceptance (b): invokes codex helper directly
+                if _CHECK_271_CODEX_HELPER_TOKEN in text:
+                    continue
+                # Acceptance (c): same-line waiver on each dispatch-token line
+                lines = text.splitlines()
+                all_lines_waived = True
+                violating_line_nos: list[int] = []
+                for line_no, line in enumerate(lines, start=1):
+                    if not any(
+                        tok in line for tok in _CHECK_271_DISPATCH_TOKENS
+                    ):
+                        continue
+                    waiver_match = _CHECK_271_WAIVER_RE.search(line)
+                    if waiver_match:
+                        marker_text = waiver_match.group(0)
+                        if _CHECK_271_PLACEHOLDER_TOKEN in marker_text:
+                            all_lines_waived = False
+                            violating_line_nos.append(line_no)
+                            continue
+                        # Real rationale; this line is waived.
+                        continue
+                    all_lines_waived = False
+                    violating_line_nos.append(line_no)
+                if all_lines_waived:
+                    continue
+                violations.append(
+                    f"[Check 271] {rel}:"
+                    f"{','.join(str(n) for n in violating_line_nos[:3])} "
+                    f"contains dispatch token(s) but does NOT invoke "
+                    f"{_CHECK_271_OPERATOR_AUTHORIZE_TOKEN} OR "
+                    f"{_CHECK_271_CODEX_HELPER_TOKEN} (per Catalog #271 "
+                    f"PRE-DISPATCH-CODEX-REVIEW-AUTOMATION 2026-05-15: every "
+                    f"paid dispatch >$1 must run the codex adversarial review "
+                    f"BEFORE GPU spending). Fix: route through "
+                    f"tools/operator_authorize.py (canonical) OR call "
+                    f"tools/run_codex_review_for_dispatch.py --trainer <path> "
+                    f"--recipe <path> --estimated-cost-usd <X>. Same-line "
+                    f"waiver: # CODEX_PRE_DISPATCH_REVIEW_BYPASS_OK:<rationale>"
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_dispatch_runs_codex_adversarial_review_for_paid_dispatch] "
+                f"{len(violations)} violation(s) (warn-only initially per "
+                "Strict-flip atomicity rule)"
+            )
+        else:
+            print(
+                "  [check_dispatch_runs_codex_adversarial_review_for_paid_dispatch] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            f"check_dispatch_runs_codex_adversarial_review_for_paid_dispatch: "
+            f"{len(violations)} dispatch wrapper(s) bypass codex review per "
+            f"Catalog #271 PRE-DISPATCH-CODEX-REVIEW-AUTOMATION:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #272 — check_substrate_distinguishing_feature_integration_contract
+#
+# DISTINGUISHING-FEATURE INTEGRATION CONTRACT 2026-05-15 (per operator
+# NON-NEGOTIABLE *"the thing that makes them special and smart is not actually
+# engineered or wired or integrated correctly"*).
+#
+# Anchor: Z3-G1 trained a 1KB SegNet-class CDF (the "smart" distinguishing
+# thing) but the archive's `hyperprior_weights_int8` slot is `b""` — the
+# smart thing was engineered, never wired. Smoke score == Z3 v2 baseline to
+# 5 decimals (empirical proof at fc-01KRPKCXARWP7NBGJCXB2P9QEP).
+#
+# This is the per-substrate variant of Catalog #220 (operational mechanism)
+# and #139 (no-op detector). Where #220 catches "lane added bytes but no
+# operational mechanism declared" and #139 catches "some byte mutation
+# changes output (generic)", #272 catches "the bytes claimed as
+# DISTINGUISHING are actually consumed by inflate (specific)".
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# non-negotiable + "HNeRV / leaderboard-implementation parity discipline"
+# lessons 2/7/11. Sister of Catalog #220 / #139 / #105 / #226 / #240 / #249.
+# ----------------------------------------------------------------------------
+
+_CHECK_272_IN_SCOPE_ID_SUBSTRINGS: tuple[str, ...] = (
+    "substrate_",
+    "_substrate_",
+    "_polytope_",
+    "_sidecar_",
+    "_overlay_",
+    "yucr_",
+    "d1_segnet",
+    "d2_",
+    "d4_",
+    "lane_a1_",
+    "_hnerv_",
+    "_nerv_",
+    "_lora_",
+    "wavelet_residual",
+    "siren_residual",
+    "coord_mlp_residual",
+)
+
+_CHECK_272_REQUIRED_FIELDS: tuple[str, ...] = (
+    "distinguishing_feature_name",
+    "distinguishing_bytes_path",
+    "inflate_consumer_function",
+    "byte_mutation_smoke_passes",
+)
+
+_CHECK_272_RESEARCH_ONLY_TOKENS: tuple[str, ...] = (
+    "research_only=true",
+    "research-only=true",
+)
+
+_CHECK_272_SUBSTRATE_ENGINEERING_TOKENS: tuple[str, ...] = (
+    "lane_class=substrate_engineering",
+)
+
+_CHECK_272_WAIVER_PATTERN: str = (
+    r"#\s*DISTINGUISHING_FEATURE_CONTRACT_OK\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_272_WAIVER_PLACEHOLDER_REJECTS: tuple[str, ...] = (
+    "<reason>",
+    "<rationale>",
+)
+
+
+def _check_272_lane_is_in_scope(lane_id: str) -> bool:
+    """Return True if the lane id matches a substrate-class pattern."""
+    if not lane_id:
+        return False
+    needle = lane_id.lower()
+    return any(token in needle for token in _CHECK_272_IN_SCOPE_ID_SUBSTRINGS)
+
+
+def _check_272_collect_lane_text(lane: dict) -> str:
+    """Concatenate every text field of a lane for token extraction."""
+    parts: list[str] = []
+    notes = lane.get("notes")
+    if isinstance(notes, str):
+        parts.append(notes)
+    gates = lane.get("gates") or {}
+    if isinstance(gates, dict):
+        for _, gate in gates.items():
+            if isinstance(gate, dict):
+                ev = gate.get("evidence")
+                if isinstance(ev, str):
+                    parts.append(ev)
+    return "\n".join(parts)
+
+
+def _check_272_lane_is_research_only(lane: dict, text: str) -> bool:
+    """Lane is research-only via top-level field OR notes/evidence token."""
+    top = lane.get("research_only")
+    if isinstance(top, bool) and top:
+        return True
+    if isinstance(top, str) and top.lower() in ("true", "yes", "1"):
+        return True
+    lower = text.lower()
+    return any(tok in lower for tok in _CHECK_272_RESEARCH_ONLY_TOKENS)
+
+
+def _check_272_lane_is_substrate_engineering(lane: dict, text: str) -> bool:
+    top = lane.get("lane_class")
+    if isinstance(top, str) and top.strip().lower() == "substrate_engineering":
+        return True
+    lower = text.lower()
+    return any(
+        tok.lower() in lower for tok in _CHECK_272_SUBSTRATE_ENGINEERING_TOKENS
+    )
+
+
+def _check_272_lane_has_waiver(text: str) -> tuple[bool, str]:
+    """Return (waived, reason). Placeholder literal rejected."""
+    import re
+
+    if not text:
+        return False, ""
+    match = re.search(_CHECK_272_WAIVER_PATTERN, text)
+    if not match:
+        return False, ""
+    reason = match.group(1).strip().rstrip("#").strip()
+    if not reason:
+        return False, ""
+    if reason in _CHECK_272_WAIVER_PLACEHOLDER_REJECTS:
+        return False, ""
+    return True, reason
+
+
+def _check_272_lane_has_required_fields(lane: dict) -> tuple[bool, list[str]]:
+    """Return (all_present, missing_fields).
+
+    A field is "present" iff it is a top-level key on the lane and its
+    value is non-empty / non-False. For ``byte_mutation_smoke_passes``
+    bool True is acceptance, False is rejection (the sentinel that the
+    smoke ran but did not pass).
+    """
+    missing: list[str] = []
+    for field in _CHECK_272_REQUIRED_FIELDS:
+        if field not in lane:
+            missing.append(field)
+            continue
+        value = lane[field]
+        if value is None:
+            missing.append(field)
+            continue
+        if isinstance(value, bool):
+            if field == "byte_mutation_smoke_passes":
+                if not value:
+                    missing.append(field)
+            else:
+                missing.append(field)
+            continue
+        if isinstance(value, (list, tuple)) and len(value) == 0:
+            missing.append(field)
+            continue
+        if isinstance(value, str) and not value.strip():
+            missing.append(field)
+            continue
+        if isinstance(value, dict) and not value:
+            missing.append(field)
+            continue
+    return (not missing), missing
+
+
+def check_substrate_distinguishing_feature_integration_contract(
+    *,
+    repo_root: "Path | None" = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #272 — refuse L2+ substrate promotion without 4-field
+    Distinguishing-Feature Integration Contract.
+
+    Anchor: Z3-G1 trained a 1KB SegNet-class CDF but the archive's
+    ``hyperprior_weights_int8`` slot is ``b""`` — the smart thing was
+    engineered, never wired. Smoke score == Z3 v2 baseline to 5 decimals.
+
+    Refuses substrate L2+ lanes in ``.omx/state/lane_registry.json`` that
+    do NOT declare all 4 contract fields (distinguishing_feature_name /
+    distinguishing_bytes_path / inflate_consumer_function /
+    byte_mutation_smoke_passes), UNLESS the lane is ``research_only=true``
+    OR ``lane_class=substrate_engineering`` OR carries a same-line
+    ``# DISTINGUISHING_FEATURE_CONTRACT_OK:<rationale>`` waiver.
+
+    Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+    non-negotiable + HNeRV parity discipline lessons 2/7/11. Sister of
+    Catalog #220 / #139 / #105 / #226 / #240 / #249.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-lane diagnostic.
+
+    Returns:
+        List of violation messages (one per refused lane).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    if not registry_path.is_file():
+        if verbose:
+            print("  [catalog-272] OK (no lane_registry.json)")
+        return violations
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if verbose:
+            print(f"  [catalog-272] WARN registry read error: {exc}")
+        return violations
+
+    lanes = registry.get("lanes")
+    if not isinstance(lanes, list):
+        if verbose:
+            print("  [catalog-272] OK (registry has no lanes list)")
+        return violations
+
+    lanes_l2plus = 0
+
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            continue
+        lane_id = str(lane.get("id", ""))
+        if not _check_272_lane_is_in_scope(lane_id):
+            continue
+        level = int(lane.get("level", 0) or 0)
+        if level < 2:
+            continue
+        lanes_l2plus += 1
+        text = _check_272_collect_lane_text(lane)
+
+        if _check_272_lane_is_research_only(lane, text):
+            if verbose:
+                print(
+                    f"  [catalog-272] OK lane={lane_id} L{level} "
+                    "(research_only=true)"
+                )
+            continue
+        if _check_272_lane_is_substrate_engineering(lane, text):
+            if verbose:
+                print(
+                    f"  [catalog-272] OK lane={lane_id} L{level} "
+                    "(lane_class=substrate_engineering)"
+                )
+            continue
+        waived, reason = _check_272_lane_has_waiver(text)
+        if waived:
+            if verbose:
+                print(
+                    f"  [catalog-272] WAIVED lane={lane_id} L{level} "
+                    f"reason={reason!r}"
+                )
+            continue
+
+        all_present, missing = _check_272_lane_has_required_fields(lane)
+        if all_present:
+            if verbose:
+                print(
+                    f"  [catalog-272] OK lane={lane_id} L{level} "
+                    "(all 4 contract fields declared)"
+                )
+            continue
+
+        violations.append(
+            f"lane {lane_id!r} (L{level}) is in-scope substrate at L2+ "
+            f"but is missing {len(missing)}/4 Distinguishing-Feature "
+            f"Integration Contract fields: {missing}. Required: declare "
+            "all 4 fields via `python tools/lane_maturity.py set-field "
+            f"{lane_id} --field distinguishing_feature_name --value "
+            "'<human-readable name>'` (plus distinguishing_bytes_path / "
+            "inflate_consumer_function / byte_mutation_smoke_passes), OR "
+            "tag the lane research_only=true, OR declare lane_class="
+            "substrate_engineering, OR carry a same-line "
+            "`# DISTINGUISHING_FEATURE_CONTRACT_OK:<rationale>` waiver. "
+            "Anchor: Z3-G1 trained a 1KB SegNet-class CDF but archive's "
+            "`hyperprior_weights_int8` slot is `b\"\"` — the smart thing "
+            "was engineered, never wired. Per CLAUDE.md \"Substrate "
+            "scaffolds MUST be COMPLETE or RESEARCH-ONLY\" non-negotiable "
+            "+ Catalog #272."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-272] l2plus={lanes_l2plus} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_distinguishing_feature_integration_contract "
+            f"found {len(violations)} substrate L2+ lane(s) without the "
+            "4-field Distinguishing-Feature Integration Contract declared "
+            "(Catalog #272 — Z3-G1 self-protect):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #279 — check_local_pre_deploy_helper_import_failure_fails_closed
+#
+# Codex review bklem3v5j HIGH F1 (2026-05-15) self-protection per CLAUDE.md
+# "Bugs must be permanently fixed AND self-protected against" non-negotiable.
+#
+# Anchor: tools/local_pre_deploy_check.py:572-576 USED to convert ImportError
+# of canonical_dispatch_optimization_protocol into PASS-VACUOUS. Because
+# operator-authorize uses the harness's exit code as its gate, a missing or
+# untracked helper would silently bypass the 8th gate (Catalog #270 umbrella
+# Tier 1/2/3 protection) and allow paid dispatch with NO umbrella check.
+#
+# This META gate refuses any future state of tools/local_pre_deploy_check.py
+# where check_dispatch_optimization_protocol (or any sister 8th-or-later
+# harness check) returns PASS / True on ImportError of the protocol helper.
+# Sister of Catalog #138 (state_writers_strict_load) + Catalog #245 + #248
+# fail-closed-on-corrupt-state pattern.
+# ----------------------------------------------------------------------------
+
+_CHECK_279_TARGET_FILE = ("tools", "local_pre_deploy_check.py")
+_CHECK_279_FUNCTION_NAME = "check_dispatch_optimization_protocol"
+_CHECK_279_FORBIDDEN_TOKENS: tuple[str, ...] = (
+    "PASS-VACUOUS: protocol helper missing",
+    "return True, f\"PASS-VACUOUS",
+    "return True, \"PASS-VACUOUS",
+)
+_CHECK_279_REQUIRED_TOKENS: tuple[str, ...] = (
+    # The helper MUST return False (FAIL) on ImportError so the harness
+    # exit code propagates to operator-authorize.
+    "return False, (",
+    "fail-closed-on-import",
+    "Catalog #279",
+)
+_CHECK_279_WAIVER_MARKER = "# DISPATCH_PROTOCOL_IMPORT_FAILURE_ALLOW_VACUOUS_OK:"
+_CHECK_279_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+
+def _check_279_extract_function_body(text: str, fn_name: str) -> str:
+    """Return the source-text body of the named top-level function, or ''."""
+    pattern = re.compile(rf"^def\s+{re.escape(fn_name)}\s*\([^)]*\)[^:]*:", re.M)
+    m = pattern.search(text)
+    if m is None:
+        return ""
+    body_start = m.end()
+    # Body extends until next top-level def / class (or EOF). Use a heuristic
+    # that finds the next "^def " or "^class " or "^# ===" boundary.
+    rest = text[body_start:]
+    next_boundary = re.search(r"^(?:def\s|class\s|#\s*={3,})", rest, re.M)
+    if next_boundary is None:
+        return rest
+    return rest[: next_boundary.start()]
+
+
+def check_local_pre_deploy_helper_import_failure_fails_closed(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #279 — codex bklem3v5j F1 fail-closed-on-import self-protection.
+
+    Refuses any state of ``tools/local_pre_deploy_check.py`` where the 8th
+    harness check ``check_dispatch_optimization_protocol`` re-introduces the
+    PASS-VACUOUS-on-ImportError fail-open (codex review bklem3v5j HIGH
+    2026-05-15). The harness exit code is the operator-authorize gate; a
+    missing canonical helper MUST surface as a strict exit-1, not a free
+    pass. Sister of Catalog #138 (state_writers strict load) + Catalog
+    #245 + #248 (fail-closed-on-corrupt-state pattern) + Catalog #270
+    (umbrella protocol gate this self-protects).
+
+    Acceptance: the function body contains EITHER (a) all the
+    fail-closed canonical tokens (``return False, (``,
+    ``fail-closed-on-import``, ``Catalog #279``) AND none of the
+    forbidden vacuous-pass tokens, OR (b) a same-line / first-30-line
+    waiver ``# DISPATCH_PROTOCOL_IMPORT_FAILURE_ALLOW_VACUOUS_OK:<rationale>``
+    (placeholder rationales rejected so the docstring example cannot
+    self-waive).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    live count at landing: 0 (the F1 fix lands in the same commit batch).
+
+    Memory:
+    ``feedback_codex_fix_wave_2_dispatch_optimization_protocol_fail_open_landed_20260515.md``.
+    Lane: ``lane_codex_fix_wave_2_dispatch_protocol_fail_open_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target = root.joinpath(*_CHECK_279_TARGET_FILE)
+    if not target.is_file():
+        if verbose:
+            print(
+                f"check_local_pre_deploy_helper_import_failure_fails_closed: "
+                f"{target} not found; skipping"
+            )
+        return []
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        if verbose:
+            print(
+                f"check_local_pre_deploy_helper_import_failure_fails_closed: "
+                f"unreadable: {exc}"
+            )
+        return []
+
+    # File-level waiver scan — first 60 lines (broader than the function
+    # docstring window because the waiver may live near the imports).
+    head = "\n".join(text.splitlines()[:60])
+    if _CHECK_279_WAIVER_MARKER in head:
+        idx = head.find(_CHECK_279_WAIVER_MARKER)
+        rest = head[idx + len(_CHECK_279_WAIVER_MARKER):]
+        first_line = rest.splitlines()[0].strip() if rest else ""
+        if first_line and first_line not in _CHECK_279_WAIVER_PLACEHOLDERS:
+            return []
+
+    body = _check_279_extract_function_body(text, _CHECK_279_FUNCTION_NAME)
+    if not body:
+        # Function missing — that itself is a regression of the wire-in.
+        violation = (
+            f"{target.relative_to(root)}: function "
+            f"`{_CHECK_279_FUNCTION_NAME}` missing — Catalog #270 8th "
+            "harness check has been removed; F1 fix (Catalog #279) "
+            "cannot apply."
+        )
+        if strict:
+            raise PreflightError(
+                "check_local_pre_deploy_helper_import_failure_fails_closed: "
+                + violation
+            )
+        return [violation]
+
+    violations: list[str] = []
+    # Forbidden tokens: any occurrence is a hard violation (regression to
+    # the codex F1 vacuous-pass).
+    for tok in _CHECK_279_FORBIDDEN_TOKENS:
+        if tok in body:
+            violations.append(
+                f"{target.relative_to(root)}: function "
+                f"`{_CHECK_279_FUNCTION_NAME}` contains forbidden "
+                f"vacuous-pass token `{tok}` — codex F1 regression "
+                "(Catalog #279). The ImportError handler MUST return "
+                "False / FAIL so the harness exit code propagates to "
+                "operator-authorize."
+            )
+    # Required tokens: every one must be present.
+    for tok in _CHECK_279_REQUIRED_TOKENS:
+        if tok not in body:
+            violations.append(
+                f"{target.relative_to(root)}: function "
+                f"`{_CHECK_279_FUNCTION_NAME}` missing required "
+                f"fail-closed token `{tok}` — Catalog #279 contract."
+            )
+    if verbose:
+        print(
+            f"  [catalog-279] {len(violations)} violation(s) in "
+            f"{target.relative_to(root)}"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_local_pre_deploy_helper_import_failure_fails_closed "
+            f"found {len(violations)} violation(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected "
+            "against' non-negotiable + Catalog #279 (codex review "
+            "bklem3v5j HIGH F1 fail-closed-on-import discipline). "
+            "The 8th harness check MUST fail CLOSED on ImportError "
+            "of the canonical helper because the harness exit code "
+            "is the operator-authorize gate.\n  "
+            + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #280 — check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver
+#
+# Codex review bklem3v5j HIGH F2 (2026-05-15) self-protection. Anchor:
+# tools/canonical_dispatch_optimization_protocol.py:303-312 USED to mark every
+# Tier 2 recipe-field check True (vacuous PASS) when recipe_path is None;
+# tier3 had the same pattern. A strict CLI / preflight invocation with no
+# recipe could therefore return overall_pass=True while skipping
+# min_vram_gb / target_modes / video_input_strategy / canary_status /
+# hardware-routing / research-only checks.
+#
+# This META gate refuses any future state of the canonical protocol module
+# where the unresolved-recipe branch sets tier2/3 signals to True without
+# explicit paired-env discipline (--allow-no-recipe-advisory-mode +
+# --no-recipe-rationale per Catalog #199 sister discipline + Catalog #280
+# F2 fix). Sister of Catalog #199 (paired-env) + Catalog #270 (umbrella).
+# ----------------------------------------------------------------------------
+
+_CHECK_280_TARGET_FILE = ("tools", "canonical_dispatch_optimization_protocol.py")
+# Forbidden literal: the bare "vacuous" assignment that codex flagged.
+_CHECK_280_FORBIDDEN_PATTERNS: tuple[str, ...] = (
+    # Specific F2-anchor regression literals — refuse if these reappear
+    "verdict.pass_signals[\"recipe_declares_min_vram_gb\"] = True  # vacuous",
+    "verdict.pass_signals[\"recipe_declares_min_smoke_gpu\"] = True\n        verdict.pass_signals[\"recipe_declares_video_input_strategy\"] = True\n        verdict.pass_signals[\"recipe_declares_pyav_decode_strategy\"] = True\n        verdict.pass_signals[\"recipe_declares_target_modes\"] = True",
+)
+_CHECK_280_REQUIRED_TOKENS: tuple[str, ...] = (
+    # The fix MUST declare the paired-env kwargs on the verifier
+    "allow_no_recipe_advisory_mode: bool = False",
+    "no_recipe_rationale: str | None = None",
+    # The Tier 2 unresolved-recipe branch MUST add a blocker (not vacuous True)
+    "tier2_hardware: recipe unresolved",
+    # The Tier 3 unresolved-recipe branch MUST add a blocker
+    "tier3_substrate: recipe unresolved",
+    # The CLI MUST expose the paired flags
+    "--allow-no-recipe-advisory-mode",
+    "--no-recipe-rationale",
+    # The CLI MUST validate the paired-env discipline
+    "Per Catalog #280 F2 fix",
+)
+_CHECK_280_WAIVER_MARKER = "# DISPATCH_PROTOCOL_UNRESOLVED_RECIPE_VACUOUS_OK:"
+_CHECK_280_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+
+def check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #280 — codex bklem3v5j F2 unresolved-recipe-blocks self-protection.
+
+    Refuses any state of ``tools/canonical_dispatch_optimization_protocol.py``
+    where the unresolved-recipe branches of ``_verify_tier2`` /
+    ``_verify_tier3`` set per-signal True (vacuous PASS) without the paired-
+    env discipline (``--allow-no-recipe-advisory-mode`` AND
+    ``--no-recipe-rationale <text>``). Per codex's explicit recommendation:
+    even when advisory mode is opted into, ``--strict`` MUST exit nonzero
+    (advisory != pass).
+
+    Acceptance: the file contains all required fail-closed tokens AND none
+    of the F2-anchor forbidden literals, OR carries a file-level waiver
+    ``# DISPATCH_PROTOCOL_UNRESOLVED_RECIPE_VACUOUS_OK:<rationale>``
+    (placeholder rationales rejected).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    live count at landing: 0 (the F2 fix lands in the same commit batch).
+
+    Sister of Catalog #199 (operator_authorize_bypass_requires_session_budget,
+    the canonical paired-env discipline gate this gate's recommendation
+    derives from) + Catalog #270 (umbrella protocol gate this gate
+    self-protects).
+
+    Memory:
+    ``feedback_codex_fix_wave_2_dispatch_optimization_protocol_fail_open_landed_20260515.md``.
+    Lane: ``lane_codex_fix_wave_2_dispatch_protocol_fail_open_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target = root.joinpath(*_CHECK_280_TARGET_FILE)
+    if not target.is_file():
+        if verbose:
+            print(
+                f"check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver: "
+                f"{target} not found; skipping"
+            )
+        return []
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        if verbose:
+            print(
+                f"check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver: "
+                f"unreadable: {exc}"
+            )
+        return []
+
+    # File-level waiver scan — first 80 lines.
+    head = "\n".join(text.splitlines()[:80])
+    if _CHECK_280_WAIVER_MARKER in head:
+        idx = head.find(_CHECK_280_WAIVER_MARKER)
+        rest = head[idx + len(_CHECK_280_WAIVER_MARKER):]
+        first_line = rest.splitlines()[0].strip() if rest else ""
+        if first_line and first_line not in _CHECK_280_WAIVER_PLACEHOLDERS:
+            return []
+
+    violations: list[str] = []
+    for pat in _CHECK_280_FORBIDDEN_PATTERNS:
+        if pat in text:
+            short = pat.split("\n", 1)[0][:80]
+            violations.append(
+                f"{target.relative_to(root)}: contains forbidden F2-"
+                f"regression vacuous-True pattern starting with `{short}`"
+                " — codex F2 anchor (Catalog #280). The unresolved-"
+                "recipe branch MUST add a blocker, not silently pass."
+            )
+    for tok in _CHECK_280_REQUIRED_TOKENS:
+        if tok not in text:
+            violations.append(
+                f"{target.relative_to(root)}: missing required "
+                f"fail-closed token `{tok}` — Catalog #280 contract "
+                "(unresolved recipe must block unless paired-env "
+                "advisory-mode opt-in is supplied; advisory mode "
+                "still exits nonzero in --strict)."
+            )
+    if verbose:
+        print(
+            f"  [catalog-280] {len(violations)} violation(s) in "
+            f"{target.relative_to(root)}"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver "
+            f"found {len(violations)} violation(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected "
+            "against' non-negotiable + Catalog #280 (codex review "
+            "bklem3v5j HIGH F2 unresolved-recipe-blocks discipline). "
+            "An unresolved recipe MUST block tier 2/3 signals (not "
+            "silently pass) unless the caller explicitly opts in via "
+            "paired `--allow-no-recipe-advisory-mode "
+            "--no-recipe-rationale <text>` (Catalog #199 sister); "
+            "even in advisory mode --strict still exits nonzero per "
+            "codex's explicit recommendation.\n  "
             + "\n  ".join(v[:600] for v in violations[:5])
         )
     return violations

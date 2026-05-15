@@ -275,6 +275,9 @@ def _verify_tier2(
     trainer_path: Path,
     recipe_path: Path | None,
     lane_driver_path: Path | None,
+    *,
+    allow_no_recipe_advisory_mode: bool = False,
+    no_recipe_rationale: str | None = None,
 ) -> TierVerdict:
     """Tier 2 — hardware correctness.
 
@@ -283,10 +286,18 @@ def _verify_tier2(
         video_input_strategy / pyav_decode_strategy / target_modes
       - lane driver script (if present) must export DALI_DISABLE_NVML +
         CUBLAS_WORKSPACE_CONFIG + PYTORCH_CUDA_ALLOC_CONF
+
+    F2 fix (codex review bklem3v5j HIGH 2026-05-15) per Catalog #280: when
+    ``recipe_path is None`` the prior implementation marked every Tier 2
+    recipe-field check ``True`` (vacuous PASS) which made strict callers
+    silently approve dispatch with NO recipe-side coverage. Now the branch
+    BLOCKS dispatch unless the caller explicitly opted into advisory mode
+    via paired ``allow_no_recipe_advisory_mode=True`` AND a non-empty
+    ``no_recipe_rationale`` (Catalog #199 paired-env discipline).
     """
     verdict = TierVerdict(tier="tier2_hardware")
 
-    # Recipe-side fields (only check when a recipe is provided)
+    # Recipe-side fields
     if recipe_path is not None:
         recipe_text = _read_text_safe(recipe_path)
         for field_name in _TIER2_RECIPE_FIELDS:
@@ -301,15 +312,47 @@ def _verify_tier2(
                     "vocabulary."
                 )
     else:
-        verdict.advisory_notes if False else None
-        # No recipe was passed — Tier 2 recipe checks are skipped (the
-        # operator-authorize path always passes a recipe; standalone
-        # callers may not). Mark advisory.
-        verdict.pass_signals["recipe_declares_min_vram_gb"] = True  # vacuous
-        verdict.pass_signals["recipe_declares_min_smoke_gpu"] = True
-        verdict.pass_signals["recipe_declares_video_input_strategy"] = True
-        verdict.pass_signals["recipe_declares_pyav_decode_strategy"] = True
-        verdict.pass_signals["recipe_declares_target_modes"] = True
+        # No recipe was resolved. Per F2 fix (Catalog #280) this is BLOCKED
+        # unless the caller explicitly opts into advisory mode via paired
+        # discipline (Catalog #199 sister): both flag AND rationale required.
+        paired_waiver_active = bool(
+            allow_no_recipe_advisory_mode
+            and no_recipe_rationale
+            and no_recipe_rationale.strip()
+        )
+        if paired_waiver_active:
+            # Advisory-mode opt-in: mark signals as advisory-skipped (False
+            # in pass_signals so overall_pass remains gated, but no per-
+            # field blocker entry — the umbrella adds ONE explicit
+            # advisory-mode blocker so --strict callers exit nonzero).
+            for field_name in _TIER2_RECIPE_FIELDS:
+                verdict.pass_signals[f"recipe_declares_{field_name}"] = False
+            verdict.blockers.append(
+                "tier2_hardware: recipe unresolved AND advisory-mode "
+                f"explicitly opted in (--allow-no-recipe-advisory-mode "
+                f"--no-recipe-rationale {no_recipe_rationale!r}); Tier 2 "
+                "recipe-field checks SKIPPED. Per F2 (Catalog #280) "
+                "+ codex review bklem3v5j recommendation: --strict "
+                "remains nonzero whenever recipe-side checks are skipped "
+                "so the operator can intentionally route a recipe-less "
+                "advisory dispatch BUT cannot accidentally bypass the "
+                "umbrella. This row is the explicit acknowledgment."
+            )
+        else:
+            # Default: BLOCK every recipe-side signal so the umbrella
+            # refuses dispatch.
+            for field_name in _TIER2_RECIPE_FIELDS:
+                verdict.pass_signals[f"recipe_declares_{field_name}"] = False
+                verdict.blockers.append(
+                    f"tier2_hardware: recipe unresolved — cannot verify "
+                    f"`{field_name}` declaration (sister Catalog "
+                    "#170/#171/#181/#182/#215). Per F2 fix (Catalog #280) "
+                    "the prior vacuous-True default has been removed; "
+                    "supply an explicit recipe via `--recipe <name>` OR "
+                    "opt into advisory mode via paired "
+                    "`--allow-no-recipe-advisory-mode "
+                    "--no-recipe-rationale <text>` (Catalog #199 sister)."
+                )
 
     # Lane driver side (only check when a driver script exists)
     if lane_driver_path is not None:
@@ -340,6 +383,9 @@ def _verify_tier3(
     trainer_text: str,
     trainer_path: Path,
     recipe_path: Path | None,
+    *,
+    allow_no_recipe_advisory_mode: bool = False,
+    no_recipe_rationale: str | None = None,
 ) -> TierVerdict:
     """Tier 3 — substrate correctness.
 
@@ -405,7 +451,37 @@ def _verify_tier3(
         else:
             verdict.pass_signals["recipe_vs_trainer_state_consistent"] = True
     else:
-        verdict.pass_signals["recipe_vs_trainer_state_consistent"] = True
+        # F2 fix (codex review bklem3v5j HIGH 2026-05-15) per Catalog #280:
+        # an unresolved recipe means we CANNOT verify recipe-vs-trainer-state
+        # consistency. Default fail-closed; advisory-mode opt-in requires
+        # paired discipline.
+        paired_waiver_active = bool(
+            allow_no_recipe_advisory_mode
+            and no_recipe_rationale
+            and no_recipe_rationale.strip()
+        )
+        verdict.pass_signals["recipe_vs_trainer_state_consistent"] = False
+        if paired_waiver_active:
+            verdict.blockers.append(
+                "tier3_substrate: recipe unresolved AND advisory-mode "
+                f"explicitly opted in (--allow-no-recipe-advisory-mode "
+                f"--no-recipe-rationale {no_recipe_rationale!r}); recipe-"
+                "vs-trainer-state divergence check SKIPPED. Per F2 "
+                "(Catalog #280) + codex review bklem3v5j recommendation: "
+                "--strict remains nonzero whenever recipe-side checks "
+                "are skipped."
+            )
+        else:
+            verdict.blockers.append(
+                "tier3_substrate: recipe unresolved — cannot verify "
+                "recipe-vs-trainer-state consistency (Z3 v2 / Z4 / Z5 "
+                "bug class anchor; Catalog #240). Per F2 fix (Catalog "
+                "#280) the prior vacuous-True default has been removed; "
+                "supply an explicit recipe via `--recipe <name>` OR opt "
+                "into advisory mode via paired "
+                "`--allow-no-recipe-advisory-mode "
+                "--no-recipe-rationale <text>` (Catalog #199 sister)."
+            )
 
     # Phantom-score directory class (Catalog #249) — refuse hardcoded
     # `_cuda.json` filename in non-canonical-helper substrate trainers.
@@ -431,6 +507,8 @@ def verify_dispatch_protocol_complete(
     recipe: str | None = None,
     *,
     repo_root: str | Path | None = None,
+    allow_no_recipe_advisory_mode: bool = False,
+    no_recipe_rationale: str | None = None,
 ) -> ProtocolVerdict:
     """Compute the canonical dispatch optimization protocol verdict.
 
@@ -444,10 +522,22 @@ def verify_dispatch_protocol_complete(
             (``experiments/train_substrate_*.py``).
         recipe: Optional recipe NAME (without ``.yaml``); when supplied,
             Tier 2 recipe-field checks + Tier 3 recipe-vs-trainer-state
-            divergence checks fire. When omitted, the Tier 2 recipe checks
-            are vacuous (advisory note added).
+            divergence checks fire. When omitted, the Tier 2 + Tier 3
+            recipe-side signals are BLOCKED (overall_pass=False) UNLESS
+            the caller explicitly opts into advisory mode via paired
+            ``allow_no_recipe_advisory_mode=True`` AND a non-empty
+            ``no_recipe_rationale`` (Catalog #199 paired-env discipline +
+            Catalog #280 F2 fix per codex review bklem3v5j HIGH
+            2026-05-15). Even in advisory mode the umbrella verdict
+            preserves an explicit advisory-mode blocker so ``--strict``
+            callers exit nonzero.
         repo_root: Override repo root (defaults to module-resolved
             ``REPO_ROOT``).
+        allow_no_recipe_advisory_mode: Paired-env opt-in to permit
+            recipe-less advisory invocation. F2 fix per Catalog #280;
+            requires ``no_recipe_rationale`` to be a non-empty string.
+        no_recipe_rationale: Operator-supplied rationale string for the
+            advisory opt-in. Empty / ``None`` rejects the opt-in.
 
     Returns:
         :class:`ProtocolVerdict` with per-tier verdicts + overall pass/fail
@@ -480,19 +570,53 @@ def verify_dispatch_protocol_complete(
     lane_driver_path = _resolve_lane_driver_path(trainer_path, root)
 
     tier1 = _verify_tier1(trainer_text, trainer_path)
-    tier2 = _verify_tier2(trainer_text, trainer_path, recipe_path, lane_driver_path)
-    tier3 = _verify_tier3(trainer_text, trainer_path, recipe_path)
+    tier2 = _verify_tier2(
+        trainer_text,
+        trainer_path,
+        recipe_path,
+        lane_driver_path,
+        allow_no_recipe_advisory_mode=allow_no_recipe_advisory_mode,
+        no_recipe_rationale=no_recipe_rationale,
+    )
+    tier3 = _verify_tier3(
+        trainer_text,
+        trainer_path,
+        recipe_path,
+        allow_no_recipe_advisory_mode=allow_no_recipe_advisory_mode,
+        no_recipe_rationale=no_recipe_rationale,
+    )
 
     blockers = list(tier1.blockers) + list(tier2.blockers) + list(tier3.blockers)
     overall = tier1.overall_pass and tier2.overall_pass and tier3.overall_pass
 
     advisory: list[str] = []
     if recipe_path is None:
-        advisory.append(
-            "advisory: no recipe supplied — Tier 2 recipe-field checks + "
-            "Tier 3 recipe-vs-trainer-state checks were skipped. Pass a "
-            "recipe NAME via --recipe to enable full coverage."
+        # F2 fix (Catalog #280) — distinguish DEFAULT-FAIL-CLOSED vs
+        # OPERATOR-OPTED-IN-ADVISORY-MODE so the advisory log is honest.
+        paired_waiver_active = bool(
+            allow_no_recipe_advisory_mode
+            and no_recipe_rationale
+            and no_recipe_rationale.strip()
         )
+        if paired_waiver_active:
+            advisory.append(
+                f"advisory: recipe unresolved AND advisory-mode opted "
+                f"in (rationale={no_recipe_rationale!r}). Per Catalog "
+                "#280 + codex bklem3v5j F2 fix the umbrella retains "
+                "explicit blockers so --strict callers still exit "
+                "nonzero — advisory-mode is NOT a pass; it is an "
+                "operator-acknowledged skip."
+            )
+        else:
+            advisory.append(
+                "advisory: no recipe supplied — Tier 2 recipe-field "
+                "checks + Tier 3 recipe-vs-trainer-state checks now "
+                "FAIL CLOSED per F2 fix (Catalog #280). Pass a recipe "
+                "NAME via --recipe to enable full coverage, OR opt "
+                "into advisory mode via paired "
+                "`--allow-no-recipe-advisory-mode "
+                "--no-recipe-rationale <text>`."
+            )
     if lane_driver_path is None:
         advisory.append(
             "advisory: no lane driver script found — Tier 2 NVML/CUDA "
@@ -540,9 +664,52 @@ def main() -> int:
         action="store_true",
         help="Emit machine-readable JSON verdict to stdout instead of human report",
     )
+    # F2 fix (codex review bklem3v5j HIGH 2026-05-15) per Catalog #280:
+    # paired-env discipline for recipe-less advisory invocations. The
+    # paired flag REQUIRES a non-empty rationale; bare `--allow-no-recipe-
+    # advisory-mode` without `--no-recipe-rationale <text>` raises
+    # SystemExit. Even with both flags supplied, --strict still exits
+    # nonzero per codex's explicit recommendation (advisory != pass).
+    parser.add_argument(
+        "--allow-no-recipe-advisory-mode",
+        action="store_true",
+        help=(
+            "Opt into recipe-less advisory invocation. Per F2 fix "
+            "(Catalog #280) recipe-less is otherwise BLOCKED. Requires "
+            "paired --no-recipe-rationale <text>. --strict still exits "
+            "nonzero in advisory mode (operator-acknowledged skip)."
+        ),
+    )
+    parser.add_argument(
+        "--no-recipe-rationale",
+        type=str,
+        default=None,
+        help=(
+            "Operator-supplied rationale for recipe-less advisory mode "
+            "(Catalog #199 paired-env discipline)."
+        ),
+    )
     args = parser.parse_args()
 
-    verdict = verify_dispatch_protocol_complete(args.trainer, args.recipe)
+    # F2 fix paired-env validator: bare opt-in flag without rationale is
+    # SystemExit per Catalog #199 sister discipline + Catalog #280.
+    if args.allow_no_recipe_advisory_mode and not (
+        args.no_recipe_rationale and args.no_recipe_rationale.strip()
+    ):
+        print(
+            "FATAL: --allow-no-recipe-advisory-mode requires paired "
+            "--no-recipe-rationale <text>. Per Catalog #280 F2 fix + "
+            "Catalog #199 sister paired-env discipline. Refused.",
+            file=sys.stderr,
+        )
+        return 11
+
+    verdict = verify_dispatch_protocol_complete(
+        args.trainer,
+        args.recipe,
+        allow_no_recipe_advisory_mode=args.allow_no_recipe_advisory_mode,
+        no_recipe_rationale=args.no_recipe_rationale,
+    )
 
     if args.json:
         print(verdict.as_json())
