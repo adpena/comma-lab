@@ -269,6 +269,72 @@ def test_packetir_closure_tool_merges_hlm1_manifest_shape() -> None:
     ]
 
 
+def test_packetir_closure_tool_merges_format06_candidate_proof_shape() -> None:
+    mod = _load_closure_tool()
+    merged = mod._candidate_result_with_packetir_identity(
+        candidate_result={
+            "candidate_archive_byte_delta_vs_source": -13,
+            "candidate_archive_sha256": "a" * 64,
+            "candidate_archive_bytes": 186382,
+            "source_archive_sha256": "b" * 64,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "candidate_packet_ir_consumed_byte_proof": {
+                "all_payload_bytes_accounted": True,
+                "runtime_consumption_claim": False,
+                "score_affecting_section_names": ["pr106_payload", "sidecar_payload"],
+            },
+        },
+        packetir_identity=None,
+    )
+
+    assert merged["source_archive_bytes"] == 186395
+    assert merged["candidate_diff_audit"] == {
+        "blockers": [],
+        "total_byte_delta": -13,
+    }
+    assert merged["packet_ir_consumed_byte_proof"]["all_payload_bytes_accounted"] is True
+    assert merged["packet_ir_consumed_byte_proof"]["score_affecting_section_names"] == [
+        "pr106_payload",
+        "sidecar_payload",
+    ]
+
+
+def test_packetir_exact_closure_accepts_format06_manifest_without_source_bytes(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result_format06_shape(archive)
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 13, "contest_cuda", claim=True)
+    runtime_consumption = _runtime_consumption(archive)
+    runtime_consumption["runtime_consumed_score_affecting_sections"]["framing_meta"] = None
+    parity = _full_frame_parity(archive)
+    parity["source_archive"]["bytes"] = archive.stat().st_size + 13
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format06",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=parity,
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "exact_measured_improves_packetir_source_cuda"
+    assert closure["blockers"] == []
+    assert closure["archive"]["source_archive_bytes"] == archive.stat().st_size + 13
+    assert closure["archive"]["byte_delta_vs_packetir_source"] == -13
+    assert closure["packetir"]["runtime_consumption_proof"]["valid"] is True
+    assert closure["packetir"]["runtime_consumption_proof"][
+        "actual_score_affecting_sections"
+    ] == ["pr106_payload", "sidecar_payload"]
+    assert all(check["passed"] for check in closure["checks"])
+
+
 def _candidate_result(archive: Path) -> dict:
     archive_sha = _sha256_file(archive)
     archive_bytes = archive.stat().st_size
@@ -292,6 +358,27 @@ def _candidate_result(archive: Path) -> dict:
                 "pr106_payload",
                 "sidecar_payload",
                 "framing_meta",
+            ],
+        },
+    }
+
+
+def _candidate_result_format06_shape(archive: Path) -> dict:
+    archive_sha = _sha256_file(archive)
+    return {
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": archive.stat().st_size,
+        "source_archive_sha256": SHA_SOURCE,
+        "candidate_packet_ir_consumed_byte_proof": {
+            "all_payload_bytes_accounted": True,
+            "runtime_consumption_claim": False,
+            "unconsumed_trailing_bytes": 0,
+            "proof_scope": "packet_ir_parser_accounting_not_runtime_inflate_consumption",
+            "score_affecting_section_names": [
+                "pr106_payload",
+                "sidecar_payload",
             ],
         },
     }

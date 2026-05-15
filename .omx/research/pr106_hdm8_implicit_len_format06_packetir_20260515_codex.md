@@ -172,3 +172,40 @@ byte-closed compiler win inside the current HDM8 basin: a four-byte exact
 archive reduction against the current HDM8 `0x05` exact-CUDA reference, with
 runtime consumption, full-frame same-runtime parity, terminal dispatch-claim
 closure, and exact `[contest-CUDA]` score recovery.
+
+## PacketIR Exact Closure
+
+The generic PacketIR exact-closure verifier now accepts the real HDM8 format-06
+manifest shape:
+
+- `candidate_packet_ir_consumed_byte_proof` is normalized to the canonical
+  consumed-byte proof field.
+- missing source bytes are inferred from the supplied source `[contest-CUDA]`
+  eval artifact.
+- runtime proofs may carry non-score placeholders such as `framing_meta: null`
+  without forcing them into the score-affecting section set.
+
+Tracked closure artifacts:
+
+- JSON:
+  `.omx/research/pr106_hdm8_implicit_len_format06_packetir_exact_closure_20260515_codex.json`
+- Markdown:
+  `.omx/research/pr106_hdm8_implicit_len_format06_packetir_exact_closure_20260515_codex.md`
+
+Closure result:
+
+```json
+{
+  "classification": "exact_measured_improves_packetir_source_cuda",
+  "blockers": [],
+  "byte_delta_vs_packetir_source": -13,
+  "delta_vs_source_cuda": -0.00000865616639061928,
+  "delta_vs_current_best_cuda": -0.0000026634358125110502,
+  "runtime_consumption_valid": true,
+  "same_runtime_full_frame_parity_valid": true
+}
+```
+
+This is still not a new promotion claim. It is a closed evidence packet for an
+already measured exact CUDA candidate, and it blocks duplicate dispatch of the
+same archive/runtime/axis key.

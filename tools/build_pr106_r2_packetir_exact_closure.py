@@ -184,13 +184,32 @@ def _candidate_result_with_packetir_identity(
 
     result = dict(candidate_result)
     if "candidate_diff_audit" not in result:
-        byte_delta = result.get("candidate_archive_byte_delta")
+        byte_delta = (
+            result.get("candidate_archive_byte_delta_vs_source")
+            if isinstance(result.get("candidate_archive_byte_delta_vs_source"), int)
+            else result.get("candidate_archive_byte_delta")
+        )
         blockers = result.get("archive_build_blockers", [])
         if isinstance(byte_delta, int):
             result["candidate_diff_audit"] = {
                 "blockers": blockers if isinstance(blockers, list) else [],
                 "total_byte_delta": byte_delta,
             }
+    if (
+        "source_archive_bytes" not in result
+        and isinstance(result.get("candidate_archive_bytes"), int)
+        and isinstance(result.get("candidate_archive_byte_delta_vs_source"), int)
+    ):
+        result["source_archive_bytes"] = (
+            result["candidate_archive_bytes"]
+            - result["candidate_archive_byte_delta_vs_source"]
+        )
+    if "packet_ir_consumed_byte_proof" not in result and isinstance(
+        result.get("candidate_packet_ir_consumed_byte_proof"), dict
+    ):
+        result["packet_ir_consumed_byte_proof"] = result[
+            "candidate_packet_ir_consumed_byte_proof"
+        ]
     if "packet_ir_consumed_byte_proof" not in result and isinstance(packetir_identity, dict):
         packet = packetir_identity.get("packet")
         if isinstance(packet, dict):

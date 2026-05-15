@@ -65,16 +65,34 @@ def build_packetir_exact_closure(
     source_bytes = _first_int(candidate_result.get("source_archive_bytes"))
     candidate_archive = _archive_identity(candidate_archive_path, repo_root=repo_root)
     audit = _as_mapping(candidate_result.get("candidate_diff_audit"))
-    consumed = _as_mapping(candidate_result.get("packet_ir_consumed_byte_proof"))
+    consumed = _as_mapping(
+        candidate_result.get("packet_ir_consumed_byte_proof")
+        or candidate_result.get("candidate_packet_ir_consumed_byte_proof")
+    )
     expected_score_sections = tuple(
         str(item)
         for item in consumed.get("score_affecting_section_names") or []
         if isinstance(item, str) and item
     )
     byte_delta = _first_int(audit.get("total_byte_delta"))
+    if byte_delta is None:
+        byte_delta = _first_int(
+            candidate_result.get("candidate_archive_byte_delta_vs_source"),
+            candidate_result.get("candidate_archive_byte_delta"),
+        )
+    cuda_summary = _eval_summary(cuda_eval, required_axis="contest_cuda")
+    source_cuda_summary: dict[str, Any] | None = None
+    if source_cuda_eval is not None:
+        source_cuda_summary = _eval_summary(source_cuda_eval, required_axis="contest_cuda")
+        if source_sha is None:
+            source_sha = _first_str(source_cuda_summary.get("archive_sha256"))
+        if source_bytes is None:
+            source_bytes = _first_int(source_cuda_summary.get("archive_bytes"))
+    current_best_summary: dict[str, Any] | None = None
+    if current_best_cuda_eval is not None:
+        current_best_summary = _eval_summary(current_best_cuda_eval, required_axis="contest_cuda")
     if byte_delta is None and isinstance(candidate_bytes, int) and isinstance(source_bytes, int):
         byte_delta = candidate_bytes - source_bytes
-    cuda_summary = _eval_summary(cuda_eval, required_axis="contest_cuda")
 
     _check(
         checks,
@@ -231,9 +249,6 @@ def build_packetir_exact_closure(
             },
         )
 
-    source_cuda_summary: dict[str, Any] | None = None
-    if source_cuda_eval is not None:
-        source_cuda_summary = _eval_summary(source_cuda_eval, required_axis="contest_cuda")
     _check(
         checks,
         "source_cuda_eval_matches_packetir_source",
@@ -252,9 +267,6 @@ def build_packetir_exact_closure(
         },
     )
 
-    current_best_summary: dict[str, Any] | None = None
-    if current_best_cuda_eval is not None:
-        current_best_summary = _eval_summary(current_best_cuda_eval, required_axis="contest_cuda")
     _check(
         checks,
         "current_best_cuda_eval_is_valid_reference",
@@ -561,7 +573,11 @@ def _runtime_consumption_summary(
         if file.get("path") and _first_str(file.get("sha256"))
     }
     expected_sections = set(expected_score_affecting_sections)
-    actual_sections = {str(key) for key in consumed_sections}
+    actual_sections = {
+        str(key)
+        for key, value in consumed_sections.items()
+        if value is True
+    }
     runtime_inflate_py_sha = _first_str(data.get("runtime_inflate_py_sha256"))
     valid = (
         bool(data)
@@ -576,7 +592,7 @@ def _runtime_consumption_summary(
         and bool(consumed_sections)
         and bool(expected_sections)
         and actual_sections == expected_sections
-        and all(value is True for value in consumed_sections.values())
+        and all(consumed_sections.get(section) is True for section in expected_sections)
         and data.get("runtime_corrected_latents_digest_changed") is True
         and isinstance(runtime_inflate_py_sha, str)
         and bool(runtime_file_sha256s)
