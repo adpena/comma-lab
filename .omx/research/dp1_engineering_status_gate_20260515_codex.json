@@ -1,0 +1,132 @@
+{
+  "artifact_summary": {
+    "readiness": {
+      "archive_bytes": null,
+      "archive_sha256": null,
+      "evidence_grade": null,
+      "exists": true,
+      "path": "reports/cooperative_receiver/driving_prior_readiness.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "tac_2032_driving_prior_readiness.v1",
+      "score_claim": false
+    },
+    "smoke_manifest": {
+      "archive_bytes": 11924,
+      "archive_sha256": "e042d49c09a8e6e16dc0a2b00ef3b98bcccda1c04eb829684cc53c9ed6f0c764",
+      "evidence_grade": "[proxy]",
+      "exists": true,
+      "path": "experiments/results/dp1_smoke_v2_hardening/manifest.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "dp1_readiness_manifest_v1",
+      "score_claim": false
+    },
+    "tier_c": {
+      "archive_bytes": null,
+      "archive_sha256": null,
+      "evidence_grade": null,
+      "exists": true,
+      "path": "experiments/results/tier_c_real_scorer_fourway_codex_execute1_dp1fix_20260514/dp1_smoke_tier_c_real_scorer.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "tac_tier_c_real_scorer_archive_result_v1",
+      "score_claim": false
+    },
+    "tiny_full_manifest": {
+      "archive_bytes": 25914,
+      "archive_sha256": "e4918b420c7b40379e432a11beb5671430f96cbaf68fa7bae70423ae0af2fc0b",
+      "evidence_grade": "[proxy]",
+      "exists": true,
+      "path": "experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/manifest.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "dp1_readiness_manifest_v1",
+      "score_claim": false
+    },
+    "tiny_full_provenance": {
+      "archive_bytes": 25914,
+      "archive_sha256": "e4918b420c7b40379e432a11beb5671430f96cbaf68fa7bae70423ae0af2fc0b",
+      "evidence_grade": null,
+      "exists": true,
+      "path": "experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/provenance.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "dpp_phase_2_provenance_v1",
+      "score_claim": false
+    }
+  },
+  "blockers": [
+    "dp1_real_dataset_source_manifest_missing",
+    "dp1_trained_real_prior_missing",
+    "dp1_paired_contest_cpu_cuda_exact_eval_missing"
+  ],
+  "capabilities_confirmed": {
+    "exact_score_artifact_present": false,
+    "planning_manifest_present": true,
+    "real_dataset_source_ready": false,
+    "smoke_archive_materialized": true,
+    "tier_c_advisory_present": true,
+    "tiny_full_cpu_advisory_ran": true
+  },
+  "classification": "untrained_unpromoted_promising_substrate",
+  "dataset_source_manifest": null,
+  "engineering_status": "implemented_proxy_ready_untrained_real_prior_missing",
+  "false_claims": [],
+  "generated_at_utc": "2026-05-15T21:10:12Z",
+  "lane_family": "pretrained_driving_prior_dp1",
+  "next_gate": {
+    "blocked_by": [
+      "dp1_real_dataset_source_manifest_missing"
+    ],
+    "commands": [
+      [
+        "PYTHONPATH=src:upstream:$PWD",
+        ".venv/bin/python",
+        "experiments/train_substrate_pretrained_driving_prior.py",
+        "--device",
+        "cpu",
+        "--full-cpu",
+        "--advisory-cpu-explicitly-waived",
+        "--dataset-name",
+        "comma2k19",
+        "--comma2k19-chunks-dir",
+        "$DPP_COMMA2K19_CHUNKS_DIR",
+        "--epochs",
+        "1",
+        "--batch-size",
+        "1",
+        "--max-pairs",
+        "4",
+        "--val-pair-count",
+        "1",
+        "--max-distillation-frames",
+        "128",
+        "--max-distillation-chunks",
+        "1",
+        "--skip-auth-eval",
+        "--output-dir",
+        "experiments/results/dp1_comma2k19_onechunk_cpu_advisory_<UTC>"
+      ]
+    ],
+    "id": "dp1_comma2k19_onechunk_cpu_advisory_source_custody",
+    "purpose": "Produce the first real-source DP1 training/runtime custody artifact without a score claim.",
+    "status": "blocked_until_source_supplied",
+    "success_criteria": [
+      "dataset_source_manifest.schema=dp1_dataset_source_manifest.v1",
+      "dataset_name=comma2k19",
+      "chunk_sha256_coverage.complete=true or prebuilt_codebook source mode",
+      "score_claim=false",
+      "promotion_eligible=false",
+      "archive.zip and provenance.json written"
+    ]
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "dp1_engineering_status_gate_v1",
+  "score_axes_observed": [
+    "[macOS-CPU advisory only]"
+  ],
+  "score_claim": false
+}

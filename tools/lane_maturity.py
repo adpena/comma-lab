@@ -453,6 +453,16 @@ _SET_FIELD_TOP_LEVEL_ALLOWED = (
     "lane_class",            # Check 124 opt-out: substrate_engineering
     "research_only",         # Check 124 opt-out: research-only by construction
     "reactivation_criteria", # forbidden_premature_kill_without_research_exhaustion
+    # Catalog #272 — Distinguishing-Feature Integration Contract.
+    # Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+    # non-negotiable. Anchor 2026-05-15: Z3-G1 trained a 1KB SegNet-class
+    # CDF (the "smart" distinguishing thing) but the archive's
+    # `hyperprior_weights_int8` slot is `b""` — the smart thing was
+    # engineered, never wired. Smoke score == Z3 v2 baseline to 5 decimals.
+    "distinguishing_feature_name",       # Catalog #272: human-readable novel-contribution name
+    "distinguishing_bytes_path",         # Catalog #272: archive section(s) embodying the feature
+    "inflate_consumer_function",         # Catalog #272: inflate.py function(s) that read those bytes
+    "byte_mutation_smoke_passes",        # Catalog #272: PROOF (bool + evidence path) that mutation changes output
 )
 _SET_FIELD_DESIGN_EVIDENCE_ALLOWED = (
     "archive_grammar",
