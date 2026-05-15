@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import tarfile
 from pathlib import Path
@@ -54,6 +55,9 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert "pact_pr106_latent_workspace" in launcher
     assert "import tac.deploy.pr106_latent" in launcher
     assert "PR106_LATENT_ALLOW_EXPANDED_SOURCE_TREE" in launcher
+    assert "_find_verified_expanded_source_bundle_tree" in launcher
+    assert "verified expanded " in launcher
+    assert "source-bundle tree" in launcher
     assert "refusing expanded-source fallback" in launcher
     assert "'PR106_LATENT_MODE': 'score_table'" in launcher
     assert "'PR106_LATENT_DELTA_RADIUS': '2'" in launcher
@@ -78,6 +82,82 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert "archive_member = 'x'" in launcher
     assert 'zipfile.ZipInfo(archive_member' in launcher
     compile(launcher, "run_kernel.py", "exec")
+
+
+def test_launcher_accepts_verified_expanded_latent_source_bundle_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = b"payload"
+    payload_sha = hashlib.sha256(payload).hexdigest()
+    spec = KagglePr106LatentBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_latent_test",
+        expected_archive_sha256="a" * 64,
+        expected_archive_member_sha256=payload_sha,
+    )
+    launcher = render_launcher(spec)
+    script = tmp_path / "script.py"
+    script.write_text(launcher, encoding="utf-8")
+    namespace = {"__file__": str(script), "__name__": "generated_launcher"}
+    exec(compile(launcher, str(script), "exec"), namespace)
+
+    input_root = tmp_path / "input"
+    tree = input_root / DEFAULT_SOURCE_BUNDLE_NAME.removesuffix(".tar.gz")
+    for rel in (
+        "src/tac",
+        ".omx/state",
+        "experiments",
+        "scripts",
+        "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+        "inputs/pr106_archive",
+    ):
+        (tree / rel).mkdir(parents=True, exist_ok=True)
+    (tree / ".omx/state/active_lane_dispatch_claims.md").write_text("claims\n", encoding="utf-8")
+    (tree / "experiments/build_pr106_latent_score_table.py").write_text("pass\n", encoding="utf-8")
+    (tree / "scripts/remote_lane_pr106_latent_sidecar.sh").write_text("#!/bin/bash\n", encoding="utf-8")
+    (tree / "source_bundle_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "kaggle_pr106_latent_source_bundle_v1",
+                "job_name": "kaggle_pr106_latent_test",
+                "lane_id": "lane_pr106_latent_sidecar",
+                "archive_member": "x",
+                "expected_archive_sha256": "a" * 64,
+                "expected_archive_member_sha256": payload_sha,
+                "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+                "delta_radius": 2,
+                "upstream_commit": PINNED_UPSTREAM_COMMIT,
+                "score_claim": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tree / "inputs/pr106_archive/x").write_bytes(payload)
+
+    monkeypatch.setenv("CLOUD_INPUT_ROOT", str(input_root))
+
+    assert namespace["_find_verified_expanded_source_bundle_tree"]() == tree
+
+
+def test_launcher_rejects_arbitrary_expanded_latent_source_without_local_dev_flag(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = KagglePr106LatentBundleSpec(username="alice", job_name="kaggle_pr106_latent_test")
+    launcher = render_launcher(spec)
+    script = tmp_path / "script.py"
+    script.write_text(launcher, encoding="utf-8")
+    namespace = {"__file__": str(script), "__name__": "generated_launcher"}
+    exec(compile(launcher, str(script), "exec"), namespace)
+    arbitrary = tmp_path / "input" / "some_repo" / "src" / "tac"
+    arbitrary.mkdir(parents=True)
+    monkeypatch.setenv("CLOUD_INPUT_ROOT", str(tmp_path / "input"))
+    monkeypatch.delenv("PR106_LATENT_ALLOW_EXPANDED_SOURCE_TREE", raising=False)
+
+    assert namespace["_find_verified_expanded_source_bundle_tree"]() is None
+    assert namespace["_find_expanded_source_tree"]() == arbitrary.parent.parent
 
 
 def test_write_source_bundle_contains_latent_runtime_contract_and_claim_ledger(tmp_path: Path) -> None:
@@ -111,12 +191,46 @@ def test_write_source_bundle_contains_latent_runtime_contract_and_claim_ledger(t
     with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
         names = set(tar.getnames())
 
+    assert "source_bundle_manifest.json" in names
     assert "inputs/pr106_archive.zip" in names
     assert ".omx/state/active_lane_dispatch_claims.md" in names
     assert "src/tac/deploy/pr106_latent.py" in names
     assert "experiments/build_pr106_latent_score_table.py" in names
     assert "scripts/remote_lane_pr106_latent_sidecar.sh" in names
     assert "submissions/pr106_latent_sidecar/inflate.py" in names
+    assert "tools/materialize_pr106_latent_score_table_candidate.py" in names
+
+
+def test_latent_source_bundle_contains_remote_script_tool_closure(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    _claim_ledger(claims)
+    bundle = tmp_path / "bundle"
+    spec = KagglePr106LatentBundleSpec(username="alice", job_name="kaggle_pr106_latent_test")
+
+    write_source_bundle(
+        repo_root=REPO_ROOT,
+        output_path=bundle / DEFAULT_SOURCE_BUNDLE_NAME,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+
+    with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
+        names = set(tar.getnames())
+
+    assert "source_bundle_manifest.json" in names
+    remote_script = (REPO_ROOT / "scripts/remote_lane_pr106_latent_sidecar.sh").read_text(
+        encoding="utf-8"
+    )
+    invoked_tools = {
+        "tools/materialize_pr106_latent_score_table_candidate.py",
+        "tools/prove_pr106_sidecar_runtime_consumption.py",
+    }
+    for rel in invoked_tools:
+        assert rel in remote_script
+        assert rel in names
 
 
 def test_write_source_bundle_is_byte_reproducible_across_output_paths(tmp_path: Path) -> None:

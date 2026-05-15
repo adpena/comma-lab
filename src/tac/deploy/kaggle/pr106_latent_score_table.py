@@ -10,6 +10,7 @@ from pathlib import Path
 from tac.deploy.claims import active_claim_row
 from tac.deploy.kaggle.kaggle_kernel_builder import build_kernel_metadata
 from tac.deploy.kaggle.source_bundle import (
+    add_bytes_to_tar,
     add_path_to_tar,
     dataset_sources,
     open_deterministic_tar_gz,
@@ -32,6 +33,7 @@ DEFAULT_KERNEL_TITLE = "comma-lab PR106 latent score-table"
 DEFAULT_JOB_NAME = "kaggle_pr106_latent_score_table"
 DEFAULT_PR106_ARCHIVE_IN_BUNDLE = "inputs/pr106_archive.zip"
 DEFAULT_SOURCE_BUNDLE_NAME = "pact_pr106_latent_source_bundle.tar.gz"
+SOURCE_BUNDLE_MANIFEST = "source_bundle_manifest.json"
 PYTORCH_P100_FALLBACK_DEPS = (
     "torch==2.4.1+cu121",
     "torchvision==0.19.1+cu121",
@@ -53,6 +55,7 @@ REQUIRED_REPO_PATHS: tuple[str, ...] = (
     "submissions/pr106_latent_sidecar",
     "submissions/pr106_latent_sidecar_r2_pr101_grammar",
     "tools/tool_bootstrap.py",
+    "tools/materialize_pr106_latent_score_table_candidate.py",
     "tools/prove_pr106_sidecar_runtime_consumption.py",
 )
 
@@ -123,19 +126,9 @@ def write_source_bundle(
     if output_path.exists():
         output_path.unlink()
 
-    with open_deterministic_tar_gz(output_path) as tar:
-        for rel_path in REQUIRED_REPO_PATHS:
-            source = repo_root / rel_path
-            if not source.exists():
-                raise FileNotFoundError(f"required Kaggle source-bundle path missing: {rel_path}")
-            add_path_to_tar(tar, source, Path(rel_path))
-
-        add_path_to_tar(tar, claims_path, Path(".omx/state/active_lane_dispatch_claims.md"))
-        add_path_to_tar(tar, pr106_archive, Path(spec.pr106_archive_in_bundle))
-
-    return {
+    manifest = {
         "schema": "kaggle_pr106_latent_source_bundle_v1",
-        "source_bundle": output_path.name,
+        "source_bundle": spec.source_bundle_name,
         "required_repo_paths": list(REQUIRED_REPO_PATHS),
         "claim_ledger": ".omx/state/active_lane_dispatch_claims.md",
         "pr106_archive": spec.pr106_archive_in_bundle,
@@ -150,6 +143,23 @@ def write_source_bundle(
         "score_claim": False,
     }
 
+    with open_deterministic_tar_gz(output_path) as tar:
+        add_bytes_to_tar(
+            tar,
+            (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8"),
+            Path(SOURCE_BUNDLE_MANIFEST),
+        )
+        for rel_path in REQUIRED_REPO_PATHS:
+            source = repo_root / rel_path
+            if not source.exists():
+                raise FileNotFoundError(f"required Kaggle source-bundle path missing: {rel_path}")
+            add_path_to_tar(tar, source, Path(rel_path))
+
+        add_path_to_tar(tar, claims_path, Path(".omx/state/active_lane_dispatch_claims.md"))
+        add_path_to_tar(tar, pr106_archive, Path(spec.pr106_archive_in_bundle))
+
+    return manifest
+
 
 def render_launcher(spec: KagglePr106LatentBundleSpec) -> str:
     """Render the Kaggle script-kernel launcher."""
@@ -163,6 +173,7 @@ def render_launcher(spec: KagglePr106LatentBundleSpec) -> str:
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import shutil
 import subprocess
@@ -188,6 +199,7 @@ PYTORCH_CU121_INDEX_URL = {PYTORCH_CU121_INDEX_URL!r}
 UPSTREAM_REPO = "https://github.com/commaai/comma_video_compression_challenge.git"
 UPSTREAM_COMMIT = {spec.upstream_commit!r}
 SOURCE_BUNDLE_NAME = {spec.source_bundle_name!r}
+SOURCE_BUNDLE_MANIFEST = {SOURCE_BUNDLE_MANIFEST!r}
 SOURCE_TREE_NAME = SOURCE_BUNDLE_NAME.removesuffix(".tar.gz")
 WORKSPACE = Path("/kaggle/working/pact_pr106_latent_workspace")
 
@@ -273,6 +285,79 @@ def _find_expanded_source_tree() -> Path | None:
     return None
 
 
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _read_json_object(path: Path) -> dict:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{{path}} must contain a JSON object")
+    return payload
+
+
+def _is_verified_source_bundle_tree(source_tree: Path) -> bool:
+    archive = source_tree / {spec.pr106_archive_in_bundle!r}
+    extracted_payload = archive.with_suffix("") / {spec.archive_member!r}
+    required_dirs = (
+        source_tree / "src" / "tac",
+        source_tree / {spec.runtime_dir!r},
+    )
+    required_files = (
+        source_tree / SOURCE_BUNDLE_MANIFEST,
+        source_tree / ".omx" / "state" / "active_lane_dispatch_claims.md",
+        source_tree / "experiments" / "build_pr106_latent_score_table.py",
+        source_tree / {REMOTE_SCRIPT!r},
+    )
+    if source_tree.name != SOURCE_TREE_NAME:
+        return False
+    if not all(path.is_dir() for path in required_dirs):
+        return False
+    if not all(path.is_file() for path in required_files):
+        return False
+    try:
+        manifest = _read_json_object(source_tree / SOURCE_BUNDLE_MANIFEST)
+    except Exception:
+        return False
+    expected_manifest = {{
+        "schema": "kaggle_pr106_latent_source_bundle_v1",
+        "job_name": {spec.job_name!r},
+        "lane_id": {spec.score_table_spec().lane_id!r},
+        "archive_member": {spec.archive_member!r},
+        "expected_archive_sha256": {spec.expected_archive_sha256!r},
+        "expected_archive_member_sha256": {spec.expected_archive_member_sha256!r},
+        "runtime_dir": {spec.runtime_dir!r},
+        "delta_radius": {spec.delta_radius!r},
+        "upstream_commit": {spec.upstream_commit!r},
+        "score_claim": False,
+    }}
+    if any(manifest.get(key) != value for key, value in expected_manifest.items()):
+        return False
+    if archive.is_file() and extracted_payload.exists():
+        return False
+    if archive.is_file():
+        return _sha256_file(archive) == {spec.expected_archive_sha256!r}
+    archive_dir = archive.with_suffix("")
+    if not extracted_payload.is_file():
+        return False
+    extra_members = [p for p in archive_dir.iterdir() if p.name != {spec.archive_member!r}]
+    return not extra_members and _sha256_file(extracted_payload) == {spec.expected_archive_member_sha256!r}
+
+
+def _find_verified_expanded_source_bundle_tree() -> Path | None:
+    for root in _search_roots():
+        if not root.exists():
+            continue
+        for candidate in sorted(root.rglob(SOURCE_TREE_NAME)):
+            if candidate.is_dir() and _is_verified_source_bundle_tree(candidate):
+                return candidate
+    return None
+
+
 def _safe_extract_tarball(bundle: Path, destination: Path) -> None:
     if destination.exists():
         shutil.rmtree(destination)
@@ -296,14 +381,31 @@ def _copy_expanded_source_tree(source_tree: Path, destination: Path) -> None:
 
 def _ensure_pr106_archive_zip(workspace: Path) -> None:
     archive = workspace / {spec.pr106_archive_in_bundle!r}
-    if archive.is_file():
-        return
     extracted = archive.with_suffix("")
     archive_member = {spec.archive_member!r}
     payload = extracted / archive_member
+    if archive.is_file():
+        if payload.exists():
+            raise FileExistsError(f"ambiguous PR106 archive inputs: both {{archive}} and {{payload}} exist")
+        archive_sha = _sha256_file(archive)
+        if archive_sha != {spec.expected_archive_sha256!r}:
+            raise RuntimeError(
+                f"PR106 archive SHA mismatch after source-bundle staging: "
+                f"got {{archive_sha}} expected {spec.expected_archive_sha256}"
+            )
+        return
     if not payload.is_file():
         raise FileNotFoundError(
             f"required PR106 archive missing: {{archive}}; also missing extracted payload {{payload}}"
+        )
+    extra_members = [p for p in extracted.iterdir() if p.name != archive_member]
+    if extra_members:
+        raise RuntimeError(f"unexpected extracted PR106 archive members: {{[p.name for p in extra_members]}}")
+    payload_sha = _sha256_file(payload)
+    if payload_sha != {spec.expected_archive_member_sha256!r}:
+        raise RuntimeError(
+            f"PR106 archive member SHA mismatch after source-bundle staging: "
+            f"got {{payload_sha}} expected {spec.expected_archive_member_sha256}"
         )
     archive.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
@@ -311,6 +413,12 @@ def _ensure_pr106_archive_zip(workspace: Path) -> None:
         info.compress_type = zipfile.ZIP_STORED
         info.external_attr = 0o644 << 16
         z.writestr(info, payload.read_bytes())
+    archive_sha = _sha256_file(archive)
+    if archive_sha != {spec.expected_archive_sha256!r}:
+        raise RuntimeError(
+            f"reconstructed PR106 archive SHA mismatch: got {{archive_sha}} "
+            f"expected {spec.expected_archive_sha256}"
+        )
 
 
 def _ensure_git_lfs() -> None:
@@ -356,23 +464,31 @@ def main() -> int:
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     bundle = _find_source_bundle()
+    source_tree = None
+    source_tree_verified = False
     if bundle is not None:
         _safe_extract_tarball(bundle, WORKSPACE)
     else:
-        if os.environ.get("PR106_LATENT_ALLOW_EXPANDED_SOURCE_TREE") != "1":
+        source_tree = _find_verified_expanded_source_bundle_tree()
+        if source_tree is not None:
+            source_tree_verified = True
+            _copy_expanded_source_tree(source_tree, WORKSPACE)
+        elif os.environ.get("PR106_LATENT_ALLOW_EXPANDED_SOURCE_TREE") != "1":
             raise FileNotFoundError(
-                f"required source bundle {{SOURCE_BUNDLE_NAME!r}} not found under "
+                f"required source bundle {{SOURCE_BUNDLE_NAME!r}} or verified expanded "
+                f"source-bundle tree {{SOURCE_TREE_NAME!r}} not found under "
                 f"{{[str(root) for root in _search_roots()]}}; refusing expanded-source fallback "
                 "for Kaggle custody. Set PR106_LATENT_ALLOW_EXPANDED_SOURCE_TREE=1 only for "
                 "local developer smoke tests."
             )
-        source_tree = _find_expanded_source_tree()
-        if source_tree is None:
-            raise FileNotFoundError(
-                f"required source bundle {{SOURCE_BUNDLE_NAME!r}} or expanded tree "
-                f"{{SOURCE_TREE_NAME!r}} not found under {{[str(root) for root in _search_roots()]}}"
-            )
-        _copy_expanded_source_tree(source_tree, WORKSPACE)
+        else:
+            source_tree = _find_expanded_source_tree()
+            if source_tree is None:
+                raise FileNotFoundError(
+                    f"required source bundle {{SOURCE_BUNDLE_NAME!r}} or expanded tree "
+                    f"{{SOURCE_TREE_NAME!r}} not found under {{[str(root) for root in _search_roots()]}}"
+                )
+            _copy_expanded_source_tree(source_tree, WORKSPACE)
     workspace = WORKSPACE
     _ensure_pr106_archive_zip(workspace)
     sys.path.insert(0, str(workspace / "src"))
@@ -414,7 +530,9 @@ def main() -> int:
         "schema": "kaggle_pr106_latent_score_table_run_v1",
         "score_claim": False,
         "promotion_requires_adjudication": True,
-        "source_bundle": str(bundle),
+        "source_bundle": str(bundle) if bundle is not None else None,
+        "source_tree": str(source_tree) if source_tree is not None else None,
+        "source_tree_verified": source_tree_verified,
         "returncode": result.returncode,
         "job_name": {spec.job_name!r},
         "lane_id": env["PR106_LATENT_SCORE_TABLE_LANE_ID"],

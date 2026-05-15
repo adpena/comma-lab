@@ -48,6 +48,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 prepend_paths(REPO_ROOT / "experiments")
 
+from tac.deploy.pr106_latent import SCORE_TABLE_LANE_ID
 from tac.packet_compiler.pr106_latent_sidecar_selection import (
     build_latent_candidate_grid,
     latent_candidate_grid_npy_sha256,
@@ -820,7 +821,7 @@ def main() -> int:
                         default=REPO_ROOT / "upstream" / "videos")
     parser.add_argument("--claims-path", type=Path,
                         default=REPO_ROOT / ".omx" / "state" / "active_lane_dispatch_claims.md")
-    parser.add_argument("--lane-id", default="lane_pr106_latent_score_table")
+    parser.add_argument("--lane-id", default=SCORE_TABLE_LANE_ID)
     parser.add_argument("--instance-job-id", default="",
                         help="Required for real CUDA scoring; must match an active lane claim row.")
     parser.add_argument("--dry-run-plan", action="store_true",

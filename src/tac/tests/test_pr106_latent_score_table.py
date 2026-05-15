@@ -425,3 +425,31 @@ def test_remote_latent_lane_defines_log_before_nvdec_probe():
     probe_pos = text.index("probe MUST come before")
     assert log_pos < probe_pos
     assert "NVDEC/DALI probe failed" in text
+
+
+def test_latent_score_table_cli_defaults_to_canonical_lane_id(monkeypatch, tmp_path):
+    mod = _load_module()
+    captured = {}
+
+    def fake_build_score_table(args):
+        captured["lane_id"] = args.lane_id
+        captured["instance_job_id"] = args.instance_job_id
+        return 0
+
+    monkeypatch.setattr(mod, "build_score_table", fake_build_score_table)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_pr106_latent_score_table.py",
+            "--pr106-archive",
+            str(tmp_path / "archive.zip"),
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--dry-run-plan",
+        ],
+    )
+
+    assert mod.main() == 0
+    assert captured["lane_id"] == "lane_pr106_latent_sidecar"
+    assert captured["instance_job_id"] == ""

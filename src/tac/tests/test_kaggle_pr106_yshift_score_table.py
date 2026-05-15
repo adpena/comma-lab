@@ -53,6 +53,9 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
     assert "pact_pr106_yshift_workspace" in launcher
     assert "import tac.deploy.pr106_yshift" in launcher
     assert "PR106_YSHIFT_ALLOW_EXPANDED_SOURCE_TREE" in launcher
+    assert "_find_verified_expanded_source_bundle_tree" in launcher
+    assert "verified expanded " in launcher
+    assert "source-bundle tree" in launcher
     assert "refusing expanded-source fallback" in launcher
     assert "'PR106_YSHIFT_MODE': 'score_table'" in launcher
     assert "'PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID': 'kaggle_pr106_yshift_test'" in launcher
@@ -70,6 +73,72 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
     assert "_ensure_torch_supports_visible_cuda()" in launcher
     assert "zipfile.ZipFile(archive, \"w\", compression=zipfile.ZIP_STORED)" in launcher
     compile(launcher, "run_kernel.py", "exec")
+
+
+def test_launcher_accepts_verified_expanded_yshift_source_bundle_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = KagglePr106YshiftBundleSpec(username="alice", job_name="kaggle_pr106_yshift_test")
+    launcher = render_launcher(spec)
+    script = tmp_path / "script.py"
+    script.write_text(launcher, encoding="utf-8")
+    namespace = {"__file__": str(script), "__name__": "generated_launcher"}
+    exec(compile(launcher, str(script), "exec"), namespace)
+
+    input_root = tmp_path / "input"
+    tree = input_root / DEFAULT_SOURCE_BUNDLE_NAME.removesuffix(".tar.gz")
+    for rel in (
+        "src/tac",
+        ".omx/state",
+        "experiments",
+        "scripts",
+        "submissions/pr106_yshift_sidechannel",
+        "inputs/pr106_archive",
+    ):
+        (tree / rel).mkdir(parents=True, exist_ok=True)
+    (tree / ".omx/state/active_lane_dispatch_claims.md").write_text("claims\n", encoding="utf-8")
+    (tree / "experiments/build_pr106_yshift_score_table.py").write_text("pass\n", encoding="utf-8")
+    (tree / "scripts/remote_lane_pr106_yshift_sidechannel.sh").write_text("#!/bin/bash\n", encoding="utf-8")
+    (tree / "source_bundle_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "kaggle_pr106_yshift_source_bundle_v1",
+                "job_name": "kaggle_pr106_yshift_test",
+                "lane_id": "lane_pr106_yshift_score_table",
+                "candidate_radius": 3,
+                "score_step": 1.0,
+                "pr106_archive_sha256": "a" * 64,
+                "score_claim": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tree / "inputs/pr106_archive/0.bin").write_bytes(b"payload")
+
+    monkeypatch.setenv("CLOUD_INPUT_ROOT", str(input_root))
+
+    assert namespace["_find_verified_expanded_source_bundle_tree"]() == tree
+
+
+def test_launcher_rejects_arbitrary_expanded_yshift_source_without_local_dev_flag(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = KagglePr106YshiftBundleSpec(username="alice", job_name="kaggle_pr106_yshift_test")
+    launcher = render_launcher(spec)
+    script = tmp_path / "script.py"
+    script.write_text(launcher, encoding="utf-8")
+    namespace = {"__file__": str(script), "__name__": "generated_launcher"}
+    exec(compile(launcher, str(script), "exec"), namespace)
+    arbitrary = tmp_path / "input" / "some_repo" / "src" / "tac"
+    arbitrary.mkdir(parents=True)
+    monkeypatch.setenv("CLOUD_INPUT_ROOT", str(tmp_path / "input"))
+    monkeypatch.delenv("PR106_YSHIFT_ALLOW_EXPANDED_SOURCE_TREE", raising=False)
+
+    assert namespace["_find_verified_expanded_source_bundle_tree"]() is None
+    assert namespace["_find_expanded_source_tree"]() == arbitrary.parent.parent
 
 
 def test_write_source_bundle_contains_runtime_contract_and_claim_ledger(tmp_path: Path) -> None:
@@ -97,6 +166,7 @@ def test_write_source_bundle_contains_runtime_contract_and_claim_ledger(tmp_path
     with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
         names = set(tar.getnames())
 
+    assert "source_bundle_manifest.json" in names
     assert "inputs/pr106_archive.zip" in names
     assert ".omx/state/active_lane_dispatch_claims.md" in names
     assert "src/tac/deploy/pr106_yshift.py" in names

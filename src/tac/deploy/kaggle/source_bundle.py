@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gzip
+import io
 import tarfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -68,6 +69,21 @@ def add_path_to_tar(
         tar.add(source, arcname=str(arcname), recursive=False, filter=deterministic_tar_filter)
 
 
+def add_bytes_to_tar(
+    tar: tarfile.TarFile,
+    data: bytes,
+    arcname: Path,
+    *,
+    mode: int = 0o644,
+) -> None:
+    """Add in-memory bytes to a deterministic Kaggle source tarball."""
+    info = tarfile.TarInfo(str(arcname))
+    info.size = len(data)
+    info.mode = mode
+    deterministic_tar_filter(info)
+    tar.addfile(info, io.BytesIO(data))
+
+
 @contextmanager
 def open_deterministic_tar_gz(output_path: Path) -> Iterator[tarfile.TarFile]:
     """Open a reproducible gzip-compressed tar writer.
@@ -88,6 +104,7 @@ def open_deterministic_tar_gz(output_path: Path) -> Iterator[tarfile.TarFile]:
 
 __all__ = [
     "DatasetSourceSpec",
+    "add_bytes_to_tar",
     "add_path_to_tar",
     "dataset_sources",
     "deterministic_tar_filter",
