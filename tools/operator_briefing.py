@@ -1149,6 +1149,22 @@ XRAY_TOOLKIT = [
         ),
     },
     {
+        "tool": "tools/xray_pair_component_errors.py",
+        "purpose": (
+            "Per-pair PoseNet/SegNet and frame0/frame1 pixel-error tails from "
+            "an inflated raw output. Use before selector, film-grain, foveation, "
+            "or repair work so component-moving edits target hard pairs instead "
+            "of aggregate-score anecdotes."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_pair_component_errors.py \\\n"
+            "  --inflated-dir experiments/results/.../work/inflated \\\n"
+            "  --device cpu \\\n"
+            "  --label candidate \\\n"
+            "  --output-dir experiments/results/pair_component_xray_candidate"
+        ),
+    },
+    {
         "tool": "tools/xray_substrate_classifier.py",
         "purpose": (
             "Classify archive payload grammar from magic bytes and layout "
