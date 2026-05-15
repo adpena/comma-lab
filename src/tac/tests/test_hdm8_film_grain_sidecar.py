@@ -20,6 +20,7 @@ HDM8_ARCHIVE = (
     "exact_eval_static_release_surface/archive.zip"
 )
 CURRENT_PROXY = REPO / "experiments/results/hdm8_postfilter_sweep_20260514_codex/proxy_4pairs_cpu.json"
+N_SELECTOR_PAIRS = 600
 
 
 def _load_module(path: Path, name: str):
@@ -38,6 +39,38 @@ def _runtime():
 
 def _builder():
     return _load_module(BUILDER_PATH, "build_hdm8_film_grain_sidecar_packet_test")
+
+
+def _selector_proxy_payload(
+    *,
+    axis: str = "local-mps-proxy-prefix",
+    n_pairs: int = N_SELECTOR_PAIRS,
+    baseline_pose: float = 0.001,
+    candidate_pose: float = 0.0001,
+) -> dict[str, object]:
+    return {
+        "axis": axis,
+        "archive_bytes": 186395,
+        "n_pairs": n_pairs,
+        "modes": [
+            {
+                "mode": "none",
+                "score_proxy": 0.30,
+                "avg_posenet_dist": baseline_pose,
+                "avg_segnet_dist": 0.001,
+                "pair_posenet_dist": [baseline_pose] * n_pairs,
+                "pair_segnet_dist": [0.001] * n_pairs,
+            },
+            {
+                "mode": "even_bias:1",
+                "score_proxy": 0.20,
+                "avg_posenet_dist": candidate_pose,
+                "avg_segnet_dist": 0.001,
+                "pair_posenet_dist": [candidate_pose] * n_pairs,
+                "pair_segnet_dist": [0.001] * n_pairs,
+            },
+        ],
+    }
 
 
 def test_postfilter_config_is_fixed_runtime_contract(tmp_path: Path) -> None:
@@ -377,34 +410,7 @@ def test_builder_can_pack_selector_into_archive(tmp_path: Path) -> None:
     builder = _builder()
     inflate = _runtime()
     proxy = tmp_path / "pair_proxy.json"
-    proxy.write_text(
-        json.dumps(
-            {
-                "axis": "local-mps-proxy-prefix",
-                "archive_bytes": 186395,
-                "n_pairs": 2,
-                "modes": [
-                    {
-                        "mode": "none",
-                        "score_proxy": 0.30,
-                        "avg_posenet_dist": 0.001,
-                        "avg_segnet_dist": 0.001,
-                        "pair_posenet_dist": [0.001, 0.001],
-                        "pair_segnet_dist": [0.001, 0.001],
-                    },
-                    {
-                        "mode": "even_bias:1",
-                        "score_proxy": 0.20,
-                        "avg_posenet_dist": 0.0001,
-                        "avg_segnet_dist": 0.001,
-                        "pair_posenet_dist": [0.0001, 0.0001],
-                        "pair_segnet_dist": [0.001, 0.001],
-                    },
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
+    proxy.write_text(json.dumps(_selector_proxy_payload()), encoding="utf-8")
 
     manifest = builder.build_packet(
         archive=HDM8_ARCHIVE,
@@ -426,7 +432,7 @@ def test_builder_can_pack_selector_into_archive(tmp_path: Path) -> None:
     assert format_id == inflate.SIDECAR_FORMAT_PR101_SELECTOR_BROTLI
     assert embedded is not None
     assert embedded["mode"] == "selector"
-    assert embedded["selector_indices"] == [1, 1]
+    assert embedded["selector_indices"] == [1] * N_SELECTOR_PAIRS
     assert manifest["selector_packed_in_archive"] is True
     assert manifest["positive_proxy_candidate_for_cuda_probe"] is True
     assert manifest["ready_for_exact_cuda_after_positive_proxy"] is False
@@ -447,35 +453,32 @@ def test_builder_can_pack_selector_into_archive(tmp_path: Path) -> None:
     ]
 
 
+def test_builder_refuses_to_pack_incomplete_prefix_selector(tmp_path: Path) -> None:
+    builder = _builder()
+    proxy = tmp_path / "prefix_proxy.json"
+    proxy.write_text(
+        json.dumps(_selector_proxy_payload(axis="modal-t4-cuda-proxy-prefix", n_pairs=32)),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="exactly 600 pair indices"):
+        builder.build_packet(
+            archive=HDM8_ARCHIVE,
+            runtime_template=RUNTIME_DIR,
+            output_dir=tmp_path / "packet",
+            mode="ignored",
+            proxy_json=proxy,
+            selector_from_proxy_json=True,
+            pack_selector_into_archive=True,
+            require_positive_proxy=True,
+        )
+
+
 def test_builder_cuda_prefix_selector_component_gate_can_pass(tmp_path: Path) -> None:
     builder = _builder()
     proxy = tmp_path / "cuda_pair_proxy.json"
     proxy.write_text(
-        json.dumps(
-            {
-                "axis": "modal-t4-cuda-proxy-prefix",
-                "archive_bytes": 186395,
-                "n_pairs": 32,
-                "modes": [
-                    {
-                        "mode": "none",
-                        "score_proxy": 0.30,
-                        "avg_posenet_dist": 0.001,
-                        "avg_segnet_dist": 0.001,
-                        "pair_posenet_dist": [0.001] * 32,
-                        "pair_segnet_dist": [0.001] * 32,
-                    },
-                    {
-                        "mode": "even_bias:1",
-                        "score_proxy": 0.20,
-                        "avg_posenet_dist": 0.0001,
-                        "avg_segnet_dist": 0.001,
-                        "pair_posenet_dist": [0.0001] * 32,
-                        "pair_segnet_dist": [0.001] * 32,
-                    },
-                ],
-            }
-        ),
+        json.dumps(_selector_proxy_payload(axis="modal-t4-cuda-proxy-prefix")),
         encoding="utf-8",
     )
 
@@ -508,34 +511,7 @@ def test_builder_can_pack_uncompressed_selector_for_legacy_parser(tmp_path: Path
     builder = _builder()
     inflate = _runtime()
     proxy = tmp_path / "pair_proxy.json"
-    proxy.write_text(
-        json.dumps(
-            {
-                "axis": "local-mps-proxy-prefix",
-                "archive_bytes": 186395,
-                "n_pairs": 1,
-                "modes": [
-                    {
-                        "mode": "none",
-                        "score_proxy": 0.30,
-                        "avg_posenet_dist": 0.001,
-                        "avg_segnet_dist": 0.001,
-                        "pair_posenet_dist": [0.001],
-                        "pair_segnet_dist": [0.001],
-                    },
-                    {
-                        "mode": "even_bias:1",
-                        "score_proxy": 0.20,
-                        "avg_posenet_dist": 0.0001,
-                        "avg_segnet_dist": 0.001,
-                        "pair_posenet_dist": [0.0001],
-                        "pair_segnet_dist": [0.001],
-                    },
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
+    proxy.write_text(json.dumps(_selector_proxy_payload()), encoding="utf-8")
 
     builder.build_packet(
         archive=HDM8_ARCHIVE,
@@ -557,4 +533,4 @@ def test_builder_can_pack_uncompressed_selector_for_legacy_parser(tmp_path: Path
 
     assert format_id == inflate.SIDECAR_FORMAT_PR101_SELECTOR
     assert embedded is not None
-    assert embedded["selector_indices"] == [1]
+    assert embedded["selector_indices"] == [1] * N_SELECTOR_PAIRS

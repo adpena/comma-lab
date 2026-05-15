@@ -46,6 +46,7 @@ SIDECAR_MAGIC = 0xFE
 SIDECAR_FORMAT_PR101_GRAMMAR = 0x02
 SIDECAR_FORMAT_PR101_SELECTOR = 0x03
 SIDECAR_FORMAT_PR101_SELECTOR_BROTLI = 0x04
+EXPECTED_SELECTOR_PAIRS = 600
 DEFAULT_ARCHIVE = (
     REPO_ROOT
     / "experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/"
@@ -309,6 +310,13 @@ def _pack_selector_archive(
         "selector_indices": list(config["selector_indices"]),
         "score_claim": False,
     }
+    selector_count = len(selector_config["selector_indices"])
+    if selector_count != EXPECTED_SELECTOR_PAIRS:
+        raise ValueError(
+            "packed HDM8 selector must contain exactly "
+            f"{EXPECTED_SELECTOR_PAIRS} pair indices, got {selector_count}; "
+            "CUDA prefix sweeps are calibration evidence only"
+        )
     selector_bytes = json.dumps(
         selector_config,
         separators=(",", ":"),
