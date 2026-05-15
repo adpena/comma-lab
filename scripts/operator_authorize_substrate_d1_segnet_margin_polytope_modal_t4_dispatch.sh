@@ -35,6 +35,8 @@
 #                                             after >=3 successful anchors)
 #   D1_POLYTOPE_SKIP_MACOS_CPU_GATE=1        (skip the $0 macOS-CPU sanity
 #                                             gate, for CI / non-Darwin hosts)
+#   D1_POLYTOPE_MARGIN_H=96                  (shrunk L2 margin-map height)
+#   D1_POLYTOPE_MARGIN_W=128                 (shrunk L2 margin-map width)
 #
 # Cross-ref:
 #   feedback_macos_cpu_proxy_empirical_validation_landed_20260513.md

@@ -101,6 +101,10 @@ env_overrides:
   D1_POLYTOPE_DEVICE: cuda
   D1_POLYTOPE_PAYLOAD_BITS: "8000"
   D1_POLYTOPE_JACOBIAN_LIPSCHITZ: "20.0"
+  # Use the 16x-shrunk L2 margin-map path. Full 384x512 maps paid a
+  # measured ~43 KB sidecar tax; 96x128 is the cost-efficient D1 smoke target.
+  D1_POLYTOPE_MARGIN_H: "96"
+  D1_POLYTOPE_MARGIN_W: "128"
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:

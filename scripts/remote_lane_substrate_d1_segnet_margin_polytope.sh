@@ -49,6 +49,8 @@ D1_POLYTOPE_UPSTREAM_DIR="${D1_POLYTOPE_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 D1_POLYTOPE_DEVICE="${D1_POLYTOPE_DEVICE:-cuda}"
 D1_POLYTOPE_PAYLOAD_BITS="${D1_POLYTOPE_PAYLOAD_BITS:-8000}"
 D1_POLYTOPE_JACOBIAN_LIPSCHITZ="${D1_POLYTOPE_JACOBIAN_LIPSCHITZ:-20.0}"
+D1_POLYTOPE_MARGIN_H="${D1_POLYTOPE_MARGIN_H:-96}"
+D1_POLYTOPE_MARGIN_W="${D1_POLYTOPE_MARGIN_W:-128}"
 
 DISPATCH_INSTANCE_JOB_ID="${D1_POLYTOPE_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${D1_POLYTOPE_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -174,6 +176,8 @@ prov = {
     'device': '$D1_POLYTOPE_DEVICE',
     'polytope_payload_bits': $D1_POLYTOPE_PAYLOAD_BITS,
     'jacobian_lipschitz': $D1_POLYTOPE_JACOBIAN_LIPSCHITZ,
+    'margin_h': $D1_POLYTOPE_MARGIN_H,
+    'margin_w': $D1_POLYTOPE_MARGIN_W,
     'predicted_band': [0.181, 0.188],
     'predicted_basis': 'deep_math_geometry_manifolds_synthesis_20260514_d1_central_band',
 }
@@ -194,7 +198,7 @@ HEARTBEAT_PID=$!
 trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
 
 # Stage 4: invoke trainer.
-log "stage_4_trainer_invoke_begin epochs=$D1_POLYTOPE_EPOCHS device=$D1_POLYTOPE_DEVICE payload_bits=$D1_POLYTOPE_PAYLOAD_BITS L=$D1_POLYTOPE_JACOBIAN_LIPSCHITZ"
+log "stage_4_trainer_invoke_begin epochs=$D1_POLYTOPE_EPOCHS device=$D1_POLYTOPE_DEVICE payload_bits=$D1_POLYTOPE_PAYLOAD_BITS L=$D1_POLYTOPE_JACOBIAN_LIPSCHITZ margin=${D1_POLYTOPE_MARGIN_H}x${D1_POLYTOPE_MARGIN_W}"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
 "$PYBIN" experiments/train_substrate_d1_segnet_margin_polytope.py \
@@ -206,6 +210,8 @@ set +e
     --device "$D1_POLYTOPE_DEVICE" \
     --polytope-payload-bits "$D1_POLYTOPE_PAYLOAD_BITS" \
     --jacobian-lipschitz "$D1_POLYTOPE_JACOBIAN_LIPSCHITZ" \
+    --margin-h "$D1_POLYTOPE_MARGIN_H" \
+    --margin-w "$D1_POLYTOPE_MARGIN_W" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e
