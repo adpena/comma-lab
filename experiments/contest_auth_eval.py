@@ -1447,15 +1447,26 @@ def _auth_eval_evidence_contract(
             "score_axis": "contest_cpu",
             "evidence_semantics": "public_leaderboard_cpu_reproduction",
             "exact_cuda_eval_complete": False,
-            "score_claim": False,
+            "score_claim": True,
             "promotion_eligible": False,
-            "score_claim_valid": False,
+            "score_claim_valid": True,
             "rank_or_kill_eligible": False,
             "cpu_leaderboard_reproduction_eligible": True,
+            "promotion_blockers": [
+                "raw_auth_eval_does_not_verify_submission_policy_gates",
+                "pre_submission_compliance_check_not_recorded",
+                "result_review_packet_not_recorded",
+            ],
+            "rank_or_kill_blockers": [
+                "raw_auth_eval_not_rank_or_kill_authority",
+                "requires_adjudicated_cuda_cpu_policy_review",
+            ],
             "allowed_uses": [
+                "cpu_axis_score_claim",
                 "public_leaderboard_reproduction",
                 "cpu_cuda_drift_diagnosis",
                 "medal_band_context_with_matching_archive_runtime",
+                "submission_packet_input_after_compliance_review",
             ],
         }
     if device == "cpu" and n_samples == 600:

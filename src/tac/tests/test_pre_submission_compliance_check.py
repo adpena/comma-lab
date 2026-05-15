@@ -96,9 +96,9 @@ def _write_submission(
     cpu_auth = {
         **auth,
         "exact_cuda_eval_complete": False,
-        "score_claim": False,
+        "score_claim": True,
         "promotion_eligible": False,
-        "score_claim_valid": False,
+        "score_claim_valid": True,
         "rank_or_kill_eligible": False,
         "lane_tag": "[contest-CPU]",
         "score_axis": "contest_cpu",

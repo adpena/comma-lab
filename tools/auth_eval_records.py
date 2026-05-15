@@ -477,16 +477,23 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         gpu_t4_match=gpu_t4_match,
         gpu_model=gpu_model,
     )
-    if axis != "contest_cuda":
-        promotion_eligible = False
-        score_claim_valid = False
-    if has_promotion_blockers:
-        promotion_eligible = False
     cpu_leaderboard_reproduction_eligible = (
         _strict_bool(payload.get("cpu_leaderboard_reproduction_eligible"))
         if "cpu_leaderboard_reproduction_eligible" in payload
         else axis == "contest_cpu"
     ) and axis == "contest_cpu"
+
+    if axis not in {"contest_cuda", "contest_cpu"}:
+        promotion_eligible = False
+        score_claim_valid = False
+    elif axis == "contest_cpu":
+        # The official challenge accepts CPU evaluation as a first-class
+        # leaderboard axis. CPU rows are still non-promotional until separate
+        # submission/compliance review, but the score itself is valid custody.
+        promotion_eligible = False
+        score_claim_valid = score_claim_valid or cpu_leaderboard_reproduction_eligible
+    if has_promotion_blockers:
+        promotion_eligible = False
     rank_or_kill_eligible = (
         _strict_bool(payload.get("rank_or_kill_eligible"))
         if "rank_or_kill_eligible" in payload

@@ -328,10 +328,11 @@ def test_linux_cpu_auth_eval_contract_stays_non_promotional(cae):
 
     assert contract["lane_tag"] == "[contest-CPU]"
     assert contract["score_axis"] == "contest_cpu"
-    assert contract["score_claim"] is False
-    assert contract["score_claim_valid"] is False
+    assert contract["score_claim"] is True
+    assert contract["score_claim_valid"] is True
     assert contract["promotion_eligible"] is False
     assert contract["rank_or_kill_eligible"] is False
+    assert "pre_submission_compliance_check_not_recorded" in contract["promotion_blockers"]
 
 
 def test_evidence_contract_tags_cpu_as_leaderboard_reproduction(cae) -> None:
@@ -345,6 +346,7 @@ def test_evidence_contract_tags_cpu_as_leaderboard_reproduction(cae) -> None:
     assert contract["lane_tag"] == "[contest-CPU]"
     assert contract["score_axis"] == "contest_cpu"
     assert contract["cpu_leaderboard_reproduction_eligible"] is True
+    assert contract["score_claim_valid"] is True
     assert contract["promotion_eligible"] is False
     assert contract["rank_or_kill_eligible"] is False
 

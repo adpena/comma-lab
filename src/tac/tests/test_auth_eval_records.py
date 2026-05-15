@@ -44,7 +44,7 @@ def test_parser_marks_linux_cpu_as_contest_cpu_not_promotion_axis() -> None:
     assert record.evidence_grade == "contest-CPU"
     assert record.cpu_leaderboard_reproduction_eligible is True
     assert record.promotion_eligible is False
-    assert record.score_claim_valid is False
+    assert record.score_claim_valid is True
     assert record.rank_or_kill_eligible is False
     assert record.rate_unscaled == 0.004767
 
@@ -265,7 +265,7 @@ def test_parser_accepts_dispatcher_top_level_gha_cpu_custody_fields() -> None:
     assert record.score_axis == "contest_cpu"
     assert record.cpu_leaderboard_reproduction_eligible is True
     assert record.promotion_eligible is False
-    assert record.score_claim_valid is False
+    assert record.score_claim_valid is True
 
 
 def test_inflated_output_manifest_summary_reads_nested_provenance_payload() -> None:
@@ -386,7 +386,7 @@ def test_parser_keeps_cpu_artifact_out_of_rank_or_kill_even_if_payload_claims_tr
     assert record.score_axis == "contest_cpu"
     assert record.cpu_leaderboard_reproduction_eligible is True
     assert record.promotion_eligible is False
-    assert record.score_claim_valid is False
+    assert record.score_claim_valid is True
     assert record.rank_or_kill_eligible is False
 
 

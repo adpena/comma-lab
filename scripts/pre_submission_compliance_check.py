@@ -1244,14 +1244,14 @@ def inspect_contest_cpu_auth_eval(
         )
         _add(
             checks,
-            "contest_cpu_auth_eval_explicit_non_promotional",
+            "contest_cpu_auth_eval_explicit_score_claim_non_promotional",
             (
-                payload.get("score_claim") is False
+                payload.get("score_claim") is True
                 and payload.get("promotion_eligible") is False
-                and payload.get("score_claim_valid") is False
+                and payload.get("score_claim_valid") is True
                 and payload.get("rank_or_kill_eligible") is False
                 and not record.promotion_eligible
-                and not record.score_claim_valid
+                and record.score_claim_valid
                 and not record.rank_or_kill_eligible
             ),
             (
