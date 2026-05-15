@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
@@ -36,7 +38,7 @@ from tac.optimization.proxy_candidate_contract import (  # noqa: E402
 )
 from tac.packet_compiler.pr106_latent_sidecar_selection import (  # noqa: E402
     build_latent_candidate_grid,
-    choose_latent_corrections_from_score_table_file,
+    choose_latent_corrections_from_scores,
     latent_candidate_grid_npy_sha256,
     validate_score_table_manifest,
 )
@@ -44,10 +46,13 @@ from tac.packet_compiler.pr106_runtime_consumption import pr106_runtime_source_m
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_LATENT_N_DIMS,
     PR106_LATENT_N_PAIRS,
+    PR106_NO_OP_DIM,
+    PR106_PR101_RANKED_SCHEMA,
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_MAGIC,
+    decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_format0c_semantic_candidate_archive,
     emit_pr106_format07_semantic_candidate_archive,
     parse_pr106_sidecar_packet,
@@ -262,6 +267,13 @@ def _resolve_runtime_dir_from_manifest(score_table_manifest: Path) -> Path:
     return path
 
 
+def _public_runtime_source_manifest(runtime_dir: Path) -> dict[str, object]:
+    """Return runtime custody without serializing private absolute repo paths."""
+    manifest = dict(pr106_runtime_source_manifest(runtime_dir))
+    manifest["runtime_dir"] = repo_relative(runtime_dir, REPO_ROOT)
+    return manifest
+
+
 def audit_score_table_manifest(
     *,
     source_archive: Path,
@@ -448,6 +460,116 @@ def _packet_ir_materialization_engine(format_id: int) -> str:
     return f"format{format_id:02x}_packet_ir_native"
 
 
+def _packet_ir_compatible_score_table(
+    *,
+    score_table_npy: Path,
+    source_packet: Any,
+    delta_radius: int,
+) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
+    candidates = build_latent_candidate_grid(
+        latent_dim=PR106_LATENT_N_DIMS,
+        delta_radius=delta_radius,
+    )
+    loaded = np.load(score_table_npy, allow_pickle=False)
+    if not isinstance(loaded, np.ndarray):
+        raise TypeError(f"score table must be a .npy ndarray, got {type(loaded).__name__}")
+    if loaded.shape != (PR106_LATENT_N_PAIRS, len(candidates)):
+        raise ValueError(
+            "score table shape mismatch: expected "
+            f"({PR106_LATENT_N_PAIRS}, {len(candidates)}), got {loaded.shape}"
+        )
+    if not np.isfinite(loaded).all():
+        raise ValueError("score table contains NaN/Inf")
+
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(source_packet)
+    base_dims_i16 = base_dims.astype(np.int16, copy=False)
+    base_deltas_i16 = base_deltas.astype(np.int16, copy=False)
+    base_nonzero = (base_dims_i16 != PR106_NO_OP_DIM) & (base_deltas_i16 != 0)
+    format0c = (
+        source_packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    allowed_deltas = {int(value) for value in PR106_PR101_RANKED_SCHEMA.deltas}
+    if not format0c:
+        allowed_deltas.add(0)
+
+    compatible = np.zeros(loaded.shape, dtype=bool)
+    for candidate_idx, (candidate_dim_raw, candidate_delta_raw) in enumerate(candidates.tolist()):
+        candidate_dim = int(candidate_dim_raw)
+        candidate_delta = int(candidate_delta_raw)
+        if candidate_dim == PR106_NO_OP_DIM and candidate_delta == 0:
+            compatible[:, candidate_idx] = ~((~base_nonzero) & format0c)
+            continue
+        if candidate_delta == 0:
+            continue
+        into_base_noop = ~base_nonzero
+        same_dim = base_nonzero & (base_dims_i16 == candidate_dim)
+        composed_delta = base_deltas_i16 + candidate_delta
+        compatible[:, candidate_idx] = (into_base_noop | same_dim) & np.isin(
+            composed_delta,
+            list(allowed_deltas),
+        )
+
+    noop_cols = np.flatnonzero(
+        (candidates[:, 0] == PR106_NO_OP_DIM) & (candidates[:, 1] == 0)
+    )
+    if len(noop_cols) != 1:
+        raise ValueError("candidate grid must contain exactly one no-op row")
+    if not bool(compatible.any(axis=1).all()):
+        missing = np.flatnonzero(~compatible.any(axis=1)).tolist()
+        raise ValueError(
+            "source PacketIR grammar has no compatible score-table candidate for "
+            f"{len(missing)} pairs; first missing pair={missing[0] if missing else 'n/a'}"
+        )
+
+    original_best = loaded.argmin(axis=1)
+    original_best_compatible = compatible[np.arange(loaded.shape[0]), original_best]
+    masked_scores = loaded.astype(np.float64, copy=True)
+    finite_min = float(masked_scores.min())
+    finite_max = float(masked_scores.max())
+    incompatible_penalty = finite_max + max(abs(finite_max - finite_min), 1.0)
+    masked_scores[~compatible] = incompatible_penalty
+    diagnostics: dict[str, object] = {
+        "score_table_grammar_filter_schema": "pr106_packet_ir_score_table_compatibility_filter_v1",
+        "source_format_id": f"0x{source_packet.format_id:02X}",
+        "compatible_score_table_candidate_count": int(compatible.sum()),
+        "incompatible_score_table_candidate_count": int(compatible.size - compatible.sum()),
+        "pairs_with_incompatible_original_best": int((~original_best_compatible).sum()),
+        "noop_candidate_index": int(noop_cols[0]),
+    }
+    return masked_scores, candidates, diagnostics
+
+
+def _choose_packet_ir_compatible_corrections(
+    *,
+    score_table_npy: Path,
+    source_packet: Any,
+    delta_radius: int,
+    top_k: int,
+) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
+    score_table, candidates, filter_diagnostics = _packet_ir_compatible_score_table(
+        score_table_npy=score_table_npy,
+        source_packet=source_packet,
+        delta_radius=delta_radius,
+    )
+    dim_arr, delta_q_arr, diagnostics = choose_latent_corrections_from_scores(
+        score_table,
+        candidates,
+        top_k=top_k,
+        require_improvement=True,
+    )
+    diagnostics.update(
+        {
+            **filter_diagnostics,
+            "latent_dim": int(PR106_LATENT_N_DIMS),
+            "delta_radius": int(delta_radius),
+            "candidate_grid_sha256": latent_candidate_grid_npy_sha256(candidates),
+            "score_table_shape": [int(score_table.shape[0]), int(score_table.shape[1])],
+        }
+    )
+    return dim_arr, delta_q_arr, diagnostics
+
+
 def _emit_packet_ir_semantic_candidate_archive(
     source_member: Any,
     source_packet: Any,
@@ -514,11 +636,10 @@ def _materialize_packet_ir_native(
         candidate_count=int(candidates.shape[0]),
     )
     runtime_dir = _resolve_runtime_dir_from_manifest(score_table_manifest)
-    runtime_source = pr106_runtime_source_manifest(runtime_dir)
-    dim_arr, delta_q_arr, diagnostics = choose_latent_corrections_from_score_table_file(
-        score_table_npy,
-        n_pairs=PR106_LATENT_N_PAIRS,
-        latent_dim=PR106_LATENT_N_DIMS,
+    runtime_source = _public_runtime_source_manifest(runtime_dir)
+    dim_arr, delta_q_arr, diagnostics = _choose_packet_ir_compatible_corrections(
+        score_table_npy=score_table_npy,
+        source_packet=source_packet,
         delta_radius=delta_radius,
         top_k=top_k,
     )
@@ -558,7 +679,7 @@ def _materialize_packet_ir_native(
         "source_archive_member_sha256": sha256_hex(source_member.payload),
         "source_sidecar_format_id": f"0x{source_packet.format_id:02X}",
         "source_runtime": {
-            "runtime_dir": runtime_dir.as_posix(),
+            "runtime_dir": repo_relative(runtime_dir, REPO_ROOT),
             "runtime_source_manifest": runtime_source,
         },
         "pr106_bin_bytes": len(source_packet.pr106_bytes),

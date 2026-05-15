@@ -1,0 +1,46 @@
+{
+  "schema": "pr106_format0d_score_table_next_build.v1",
+  "score_claim": false,
+  "dispatch_attempted": false,
+  "ready_for_exact_eval_dispatch": false,
+  "source_archive": {
+    "bytes": 186327,
+    "sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+    "format": "0x0C"
+  },
+  "score_table": {
+    "path": "reports/raw/kaggle_ingested/kaggle_pr106_format0c_latent_score_table_repair2_20260515T204229Z/pr106_latent_score_table/latent_run/score_table/score_table.npy",
+    "sha256": "cbea7c7578a275044f162ff72b2fb502cac5ef4aa0b63eff7627da553bf8e935",
+    "shape": [600, 113],
+    "strict_improvement_pair_count_original": 570,
+    "best_improvement_mean": 0.0014046559808775783,
+    "best_improvement_max": 0.004085123538970947
+  },
+  "format0c_materialization_audit": {
+    "output_dir": "experiments/results/pr106_format0c_latent_score_table_materialized_grammar_filter_20260515_codex",
+    "strict_improvement_pair_count_after_grammar_filter": 0,
+    "pairs_with_incompatible_original_best": 570,
+    "compatible_score_table_candidate_count": 1337,
+    "incompatible_score_table_candidate_count": 66463,
+    "score_affecting_payload_changed": false,
+    "charged_bits_changed": false,
+    "materialized_archive_sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7"
+  },
+  "next_build": {
+    "format": "0x0D",
+    "layout": "format0C base plus additive extra-slot PR101 ranked/no-op stream",
+    "estimated_archive_delta_bytes": 550,
+    "estimated_rate_score_cost": 0.0003662224,
+    "runtime_semantics": "apply base format0C corrections, then apply extra correction stream as second additive latent pass"
+  },
+  "promotion_thresholds": {
+    "contest_cuda_source_score_to_beat": 0.20631638661580989,
+    "contest_cpu_source_score_to_beat": 0.22776488386973992,
+    "requires_paired_axes": true
+  },
+  "stop_continue": [
+    "do_not_rerun_format0c_for_this_table",
+    "continue_with_format0d_after_runtime_byte_mutation_proof",
+    "no_score_claim_until_paired_exact_eval"
+  ]
+}

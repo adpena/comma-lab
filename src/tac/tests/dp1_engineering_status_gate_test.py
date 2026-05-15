@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
 from types import ModuleType
 
@@ -161,9 +163,11 @@ def test_dp1_gate_recognizes_complete_real_comma2k19_source_manifest(
                 "chunk_ids": ["Chunk_A/video.hevc"],
                 "chunk_sha256_manifest": {"Chunk_A/video.hevc": "a" * 64},
                 "chunk_sha256_coverage": {
+                    "scope": "selected_chunks_only",
                     "chunk_count": 1,
                     "covered_count": 1,
-                    "complete": True,
+                    "complete_for_selected_chunks": True,
+                    "full_dataset_complete": False,
                 },
                 "reproducibility_blockers": [],
             },
@@ -176,3 +180,144 @@ def test_dp1_gate_recognizes_complete_real_comma2k19_source_manifest(
     assert status["engineering_status"] == "real_source_probe_ready_no_exact_score"
     assert status["next_gate"]["status"] == "executable_real_source_probe"
     assert status["next_gate"]["blocked_by"] == []
+
+
+def test_dp1_gate_preflights_real_local_chunk_custody_without_private_paths(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    paths = _base_artifacts(tmp_path)
+    chunks_root = tmp_path / "private" / "comma2k19" / "test_videos"
+    video = chunks_root / "dongle" / "route" / "40" / "video.hevc"
+    video.parent.mkdir(parents=True)
+    payload = b"real-ish dp1 chunk bytes"
+    video.write_bytes(payload)
+
+    status = tool.build_status(
+        **paths,
+        source_chunks_dir=chunks_root,
+        source_max_chunks=1,
+    )
+
+    custody = status["source_custody_preflight"]
+    expected_sha = hashlib.sha256(payload).hexdigest()
+    assert custody["status"] == "passed"
+    assert custody["chunk_count"] == 1
+    assert custody["total_size_bytes"] == len(payload)
+    assert custody["chunk_manifest"] == [
+        {
+            "relative_path": "dongle/route/40/video.hevc",
+            "size_bytes": len(payload),
+            "sha256": expected_sha,
+        }
+    ]
+    assert custody["path_kind"] == "relative_to_DPP_COMMA2K19_CHUNKS_DIR"
+    coverage = status["dataset_source_manifest"]["chunk_sha256_coverage"]
+    assert coverage["scope"] == "selected_chunks_only"
+    assert coverage["complete_for_selected_chunks"] is True
+    assert coverage["full_dataset_complete"] is False
+    assert str(chunks_root) not in json.dumps(custody, sort_keys=True)
+    assert str(chunks_root) not in json.dumps(
+        status["dataset_source_manifest"], sort_keys=True
+    )
+    assert status["capabilities_confirmed"]["real_dataset_source_ready"] is True
+    assert status["engineering_status"] == "real_source_probe_ready_no_exact_score"
+    assert status["next_gate"]["status"] == "executable_real_source_probe"
+    assert "$DPP_COMMA2K19_CHUNKS_DIR" in status["next_gate"]["commands"][0]
+    assert str(chunks_root) not in json.dumps(status["next_gate"], sort_keys=True)
+
+
+def test_dp1_gate_fails_closed_when_requested_real_chunks_dir_is_empty(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    paths = _base_artifacts(tmp_path)
+    chunks_root = tmp_path / "empty_chunks"
+    chunks_root.mkdir()
+    _write_json(
+        paths["tiny_full_provenance_path"],
+        {
+            "schema": "dpp_phase_2_provenance_v1",
+            "trainer": "experiments/train_substrate_pretrained_driving_prior.py",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dataset_source_manifest": {
+                "schema": "dp1_dataset_source_manifest.v1",
+                "dataset_name": "comma2k19",
+                "source_mode": "local_chunks",
+                "chunk_ids": ["stale/video.hevc"],
+                "chunk_sha256_manifest": {"stale/video.hevc": "b" * 64},
+                "chunk_sha256_coverage": {
+                    "scope": "selected_chunks_only",
+                    "chunk_count": 1,
+                    "covered_count": 1,
+                    "complete_for_selected_chunks": True,
+                    "full_dataset_complete": False,
+                },
+                "reproducibility_blockers": [],
+            },
+        },
+    )
+
+    status = tool.build_status(
+        **paths,
+        source_chunks_dir=chunks_root,
+        source_max_chunks=1,
+    )
+
+    assert status["source_custody_preflight"]["status"] == "blocked"
+    assert "dp1_real_chunks_missing_video_hevc" in status["blockers"]
+    assert status["capabilities_confirmed"]["real_dataset_source_ready"] is False
+    assert status["next_gate"]["status"] == "blocked_until_source_supplied"
+
+
+def test_dp1_gate_redacts_private_paths_from_existing_source_manifest(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    paths = _base_artifacts(tmp_path)
+    private_root = tmp_path / "private" / "chunks"
+    _write_json(
+        paths["tiny_full_provenance_path"],
+        {
+            "schema": "dpp_phase_2_provenance_v1",
+            "trainer": "experiments/train_substrate_pretrained_driving_prior.py",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dataset_source_manifest": {
+                "schema": "dp1_dataset_source_manifest.v1",
+                "dataset_name": "comma2k19",
+                "source_mode": "local_chunks",
+                "chunks_dir": str(private_root),
+                "cache_dir": str(tmp_path / "private" / "cache"),
+                "stream_log_dir": str(tmp_path / "private" / "stream_logs"),
+                "codebook_path": str(tmp_path / "private" / "codebook.bin"),
+                "chunk_ids": ["x/video.hevc"],
+                "chunk_sha256_manifest": {"x/video.hevc": "c" * 64},
+                "chunk_sha256_coverage": {
+                    "scope": "selected_chunks_only",
+                    "chunk_count": 1,
+                    "covered_count": 1,
+                    "complete_for_selected_chunks": True,
+                    "full_dataset_complete": False,
+                },
+                "reproducibility_blockers": [],
+            },
+        },
+    )
+
+    status = tool.build_status(**paths)
+    manifest_json = json.dumps(status["dataset_source_manifest"], sort_keys=True)
+
+    assert status["capabilities_confirmed"]["real_dataset_source_ready"] is True
+    assert str(tmp_path) not in manifest_json
+    assert status["dataset_source_manifest"]["chunks_dir"] == "<redacted:chunks_dir:set>"
+    assert status["dataset_source_manifest"]["cache_dir"] == "<redacted:cache_dir:set>"
+    assert status["dataset_source_manifest"]["stream_log_dir"] == (
+        "<redacted:stream_log_dir:set>"
+    )
+    assert status["dataset_source_manifest"]["codebook_path"] == (
+        "<redacted:codebook_path:set>"
+    )

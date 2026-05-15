@@ -142,6 +142,15 @@ def test_generate_mutations_n_capped_to_size(helper):
     assert len(muts) == 3
 
 
+def test_parse_byte_range_target_with_label(helper):
+    target = helper._parse_byte_range_target("decoder=x@4:16")
+    assert target.label == "decoder"
+    assert target.member == "x"
+    assert target.offset == 4
+    assert target.length == 16
+    assert target.target_basis == "member_byte_range"
+
+
 def test_hash_directory_contents_deterministic(helper, tmp_path):
     d = tmp_path / "dir"
     d.mkdir()
@@ -191,8 +200,36 @@ def test_verify_passed_when_section_is_consumed(helper, tmp_path):
     assert len(result["section_results"]) == 1
     sr = result["section_results"][0]
     assert sr["section"] == "distinguishing"
+    assert sr["target_basis"] == "zip_member"
+    assert sr["member"] == "distinguishing"
     assert sr["mutations_changed_output"] > 0
     assert sr["passed"] is True
+
+
+def test_verify_passed_when_member_byte_range_is_consumed(helper, tmp_path):
+    """Parser-section/member-offset proof: mutate only a byte range inside
+    the single ZIP member, not the whole member."""
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"x": b"HEADER_DISTINGUISHING_PAYLOAD_TAIL"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "x")
+    output_json = tmp_path / "out.json"
+
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=[],
+        distinguishing_byte_ranges=["distinguishing_section=x@7:22"],
+        output_json=output_json,
+    )
+    assert result["verdict"] == "PASSED"
+    sr = result["section_results"][0]
+    assert sr["section"] == "distinguishing_section"
+    assert sr["target_basis"] == "member_byte_range"
+    assert sr["member"] == "x"
+    assert sr["offset"] == 7
+    assert sr["length"] == 22
+    assert sr["mutations_changed_output"] > 0
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +371,24 @@ def test_verify_infra_error_when_section_not_in_archive(helper, tmp_path):
     assert "missing_section" in result["infrastructure_error_reason"]
 
 
+def test_verify_infra_error_when_byte_range_out_of_bounds(helper, tmp_path):
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"x": b"short"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "x")
+    output_json = tmp_path / "out.json"
+
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=[],
+        distinguishing_byte_ranges=["smart=x@2:99"],
+        output_json=output_json,
+    )
+    assert result["verdict"] == "INFRASTRUCTURE_ERROR"
+    assert "out of bounds" in result["infrastructure_error_reason"]
+
+
 # ---------------------------------------------------------------------------
 # Output JSON schema
 # ---------------------------------------------------------------------------
@@ -406,6 +461,26 @@ def test_cli_main_returns_0_on_passed(helper, tmp_path):
         ]
     )
     assert rc == 0
+
+
+def test_cli_main_returns_0_on_member_byte_range_passed(helper, tmp_path):
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"x": b"HEADER_DISTINGUISHING_PAYLOAD_TAIL"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_simple_inflate_sh(inflate_sh, "x")
+    output_json = tmp_path / "out.json"
+
+    rc = helper.main(
+        [
+            "--archive", str(archive),
+            "--inflate-sh", str(inflate_sh),
+            "--distinguishing-byte-range", "distinguishing_section=x@7:22",
+            "--output-json", str(output_json),
+        ]
+    )
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["section_results"][0]["target_basis"] == "member_byte_range"
 
 
 def test_cli_main_returns_1_on_failed(helper, tmp_path):

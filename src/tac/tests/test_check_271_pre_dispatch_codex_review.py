@@ -71,6 +71,19 @@ def tmp_repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _review_cache_key(repo_root: Path, recipe: Path, trainer: Path) -> str:
+    """Cache key matching the working-tree scoped helper."""
+    return helper._compute_cache_key(
+        helper._git_head_sha(repo_root),
+        helper._file_sha256(recipe),
+        helper._file_sha256(trainer),
+        dirty_tree_fingerprint=helper._git_dirty_tree_fingerprint(repo_root),
+        untracked_relevant_fingerprint=helper._git_untracked_relevant_fingerprint(
+            repo_root
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Verdict parsing tests
 # ---------------------------------------------------------------------------
@@ -443,10 +456,7 @@ class TestRunCodexReviewForDispatchEndToEnd:
         recipe = tmp_repo / ".omx" / "operator_authorize_recipes" / "substrate_xx_modal_t4_dispatch.yaml"
         trainer = tmp_repo / "experiments" / "train_substrate_xx.py"
         # Pre-seed cache with an approve result
-        git_sha = helper._git_head_sha(tmp_repo)
-        recipe_sha = helper._file_sha256(recipe)
-        trainer_sha = helper._file_sha256(trainer)
-        cache_key = helper._compute_cache_key(git_sha, recipe_sha, trainer_sha)
+        cache_key = _review_cache_key(tmp_repo, recipe, trainer)
         seed = helper.CodexReviewResult(
             verdict="approve",
             findings=[],
@@ -472,10 +482,7 @@ class TestRunCodexReviewForDispatchEndToEnd:
         recipe = tmp_repo / ".omx" / "operator_authorize_recipes" / "substrate_xx_modal_t4_dispatch.yaml"
         trainer = tmp_repo / "experiments" / "train_substrate_xx.py"
         # Pre-seed cache + force missing codex script -> still calls invoke path
-        git_sha = helper._git_head_sha(tmp_repo)
-        recipe_sha = helper._file_sha256(recipe)
-        trainer_sha = helper._file_sha256(trainer)
-        cache_key = helper._compute_cache_key(git_sha, recipe_sha, trainer_sha)
+        cache_key = _review_cache_key(tmp_repo, recipe, trainer)
         seed = helper.CodexReviewResult(
             verdict="approve",
             findings=[],
@@ -499,6 +506,30 @@ class TestRunCodexReviewForDispatchEndToEnd:
         # cache hit is False because we skipped; codex missing -> needs-attention
         assert result.cache_hit is False
         assert result.verdict == "needs-attention"
+
+    def test_nonzero_codex_companion_rc_is_invocation_error(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_repo: Path, tmp_cache: Path
+    ) -> None:
+        recipe = tmp_repo / ".omx" / "operator_authorize_recipes" / "substrate_xx_modal_t4_dispatch.yaml"
+        trainer = tmp_repo / "experiments" / "train_substrate_xx.py"
+        monkeypatch.setattr(helper, "codex_companion_available", lambda **_kwargs: True)
+        monkeypatch.setattr(
+            helper,
+            "invoke_codex_adversarial_review",
+            lambda **_kwargs: ("partial output before timeout", 0.25, 124),
+        )
+
+        result = helper.run_codex_review_for_dispatch(
+            trainer_path=trainer,
+            recipe_path=recipe,
+            repo_root=tmp_repo,
+            estimated_cost_usd=10.00,
+            cache_path=tmp_cache,
+        )
+
+        assert result.verdict == "invocation-error"
+        assert result.cache_hit is False
+        assert any("nonzero rc=124" in finding for finding in result.findings)
 
 
 # ---------------------------------------------------------------------------
@@ -706,10 +737,7 @@ class TestZ3G1RegressionGuard:
         cache_path = tmp_path / "cache.jsonl"
         # Pre-seed with a needs-attention verdict (mimics what codex would
         # have produced for Z3-G1's F1+F2 findings).
-        git_sha = helper._git_head_sha(tmp_repo)
-        recipe_sha = helper._file_sha256(recipe)
-        trainer_sha = helper._file_sha256(trainer)
-        cache_key = helper._compute_cache_key(git_sha, recipe_sha, trainer_sha)
+        cache_key = _review_cache_key(tmp_repo, recipe, trainer)
         seed = helper.CodexReviewResult(
             verdict="needs-attention",
             findings=[
@@ -750,10 +778,7 @@ class TestZ3G1RegressionGuard:
         )
         trainer = tmp_repo / "experiments" / "train_substrate_xx.py"
         cache_path = tmp_path / "cache.jsonl"
-        git_sha = helper._git_head_sha(tmp_repo)
-        recipe_sha = helper._file_sha256(recipe)
-        trainer_sha = helper._file_sha256(trainer)
-        cache_key = helper._compute_cache_key(git_sha, recipe_sha, trainer_sha)
+        cache_key = _review_cache_key(tmp_repo, recipe, trainer)
         seed = helper.CodexReviewResult(
             verdict="needs-attention",
             findings=["HIGH: x"],

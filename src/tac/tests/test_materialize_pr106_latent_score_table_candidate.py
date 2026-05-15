@@ -560,6 +560,8 @@ def test_format0c_materializer_uses_native_packet_ir_not_legacy_builder(
     assert metadata["materialization_engine"] == "format0c_packet_ir_native"
     runtime_manifest = metadata["source_runtime"]["runtime_source_manifest"]
     assert runtime_manifest["runtime_source_tree_sha256"]
+    assert runtime_manifest["runtime_dir"] == "submissions/pr106_latent_sidecar_r2_pr101_grammar"
+    assert metadata["source_runtime"]["runtime_dir"] == runtime_manifest["runtime_dir"]
     assert "inflate.sh" in [item["path"] for item in runtime_manifest["files"]]
     assert metadata["score_table"]["score_table_manifest_validated"] is True
     assert metadata["semantic_materialization"]["composed_same_dim_pair_count"] == 1
@@ -582,6 +584,80 @@ def test_format0c_materializer_uses_native_packet_ir_not_legacy_builder(
         "dispatch_blockers"
     ]
     assert payload["source_runtime"]["runtime_source_manifest"] == runtime_manifest
+
+
+def test_format0c_materializer_filters_incompatible_score_table_dims(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    source_archive, base_dim0, base_delta0 = _format0c_source_archive(tmp_path)
+    npy = tmp_path / "score_table.npy"
+    candidates = module.build_latent_candidate_grid(latent_dim=28, delta_radius=2)
+    table = np.full((600, int(candidates.shape[0])), 10.0, dtype=np.float32)
+    selected_delta = _compatible_score_table_delta(base_delta0)
+    compatible_index = 1 + base_dim0 * 4 + {-2: 0, -1: 1, 1: 2, 2: 3}[selected_delta]
+    incompatible_dim = (base_dim0 + 1) % 28
+    incompatible_index = 1 + incompatible_dim * 4 + {
+        -2: 0,
+        -1: 1,
+        1: 2,
+        2: 3,
+    }[selected_delta]
+    table[0, incompatible_index] = 8.0
+    table[0, compatible_index] = 9.0
+    np.save(npy, table, allow_pickle=False)
+    with zipfile.ZipFile(source_archive) as zf:
+        source_payload = zf.read("x")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(
+        manifest,
+        {
+            **_complete_score_table_manifest(source_archive, npy),
+            "source_archive_member_name": "x",
+            "source_archive_member_sha256": hashlib.sha256(source_payload).hexdigest(),
+            "source_zero_bin_sha256": None,
+            "source_payload_kind": "pr106_sidecar_packet",
+            "delta_radius": 2,
+            "candidate_count": int(candidates.shape[0]),
+            "score_table_shape": [600, int(candidates.shape[0])],
+            "candidate_grid_sha256": module.latent_candidate_grid_npy_sha256(candidates),
+            "candidate_grid_npy_sha256": module.latent_candidate_grid_npy_sha256(candidates),
+        },
+    )
+
+    def fail_run(*_args, **_kwargs):
+        raise AssertionError("legacy builder subprocess must not run for format0C")
+
+    monkeypatch.setattr(module.subprocess, "run", fail_run)
+
+    output_dir = tmp_path / "out"
+    materialization = module.materialize_candidate(
+        source_archive=source_archive,
+        output_dir=output_dir,
+        score_table_root=tmp_path,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+        delta_radius=2,
+        top_k=600,
+        python_executable="python",
+    )
+
+    metadata = read_json(output_dir / "build_metadata.json")
+    assert metadata["diagnostics"]["pairs_with_incompatible_original_best"] == 1
+    assert metadata["semantic_materialization"]["composed_same_dim_pair_count"] == 1
+    from tac.packet_compiler.pr106_sidecar_packet import (
+        decode_pr106_sidecar_packet_dim_delta,
+        parse_pr106_sidecar_packet,
+        read_single_stored_member_archive,
+    )
+
+    member = read_single_stored_member_archive((output_dir / "sidecar_archive.zip").read_bytes())
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    assert int(dims[0]) == base_dim0
+    assert int(deltas[0]) == base_delta0 + selected_delta
+    assert materialization["builder"]["materialization_engine"] == "format0c_packet_ir_native"
 
 
 def test_materializer_downgrades_builder_exact_ready_claim(monkeypatch, tmp_path: Path) -> None:

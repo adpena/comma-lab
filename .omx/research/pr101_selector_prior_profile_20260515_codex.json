@@ -1,0 +1,2954 @@
+{
+  "conclusion": {
+    "any_rule_plausibly_beats_sub0192": false,
+    "best_estimated_cpu_score": 0.19302922904569675,
+    "best_rule": "threshold_t127",
+    "best_rule_component_delta_vs_fec6": 0.001150369633449791,
+    "best_rule_family": "threshold_stump",
+    "best_rule_selector_mismatches": 455,
+    "blocker": "pair-index-only tiny rules do not preserve enough of the FEC6 selector's component gain; the rate saving is large enough, but component proxy loss is roughly an order of magnitude above the CPU allowance"
+  },
+  "dispatch_attempted": false,
+  "exact_cpu_reference": {
+    "archive_size_bytes": 178517,
+    "avg_posenet_dist": 2.943e-05,
+    "avg_segnet_dist": 0.00056029,
+    "required_same_component_saving_bytes_for_sub0192": 78,
+    "score": 0.1920513168811056,
+    "score_axis": "contest_cpu"
+  },
+  "fec6_reference": {
+    "archive_bytes": 178517,
+    "archive_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "histogram": {
+      "0": 134,
+      "1": 35,
+      "10": 7,
+      "11": 16,
+      "12": 6,
+      "13": 92,
+      "14": 17,
+      "15": 1,
+      "2": 129,
+      "3": 9,
+      "4": 25,
+      "5": 13,
+      "6": 11,
+      "7": 71,
+      "8": 10,
+      "9": 24
+    },
+    "member": {
+      "member_bytes": 178417,
+      "member_name": "x",
+      "member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+      "zip_compression": "stored"
+    },
+    "n_pairs": 600,
+    "selector_code_bits_total": 1944,
+    "selector_index_bytes": 243,
+    "selector_payload_bytes": 249,
+    "selector_payload_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca",
+    "source_payload_bytes": 178158,
+    "wrapper_overhead_bytes": 10
+  },
+  "hypothesis": "source-free/tiny pair-index-only selector prior for PR101/FEC6",
+  "inputs": {
+    "cpu_eval": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+    "fec6_archive": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "fec6_manifest": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packet_manifest.json",
+    "pair_rows_loaded": 13232,
+    "pair_rows_paths": [
+      "experiments/results/frame_exploit_segnet_posenet_20260514_pr101_mps600_codex/pair_component_rows.jsonl",
+      "experiments/results/frame_exploit_segnet_posenet_20260514_pr101_cpu_top16_topmodes_v2_codex/pair_component_rows.jsonl"
+    ],
+    "source_archive": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip"
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "research_only": true,
+  "rule_search": {
+    "candidate_count": 25541,
+    "families": [
+      "constant",
+      "periodic_table",
+      "equal-width pair-index buckets",
+      "threshold decision stumps",
+      "modulo decision stumps",
+      "linear_mod16",
+      "quadratic_mod16",
+      "hash_low_degree"
+    ],
+    "max_buckets": 64,
+    "max_period": 64,
+    "plausible_sub0192_rows": [],
+    "top_by_estimated_cpu_score": [
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282057391724417e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.001150369633449791,
+          "component_score_no_rate_proxy": 0.07239023423133917,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t127",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 127
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19302922904569675,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.2416666666666667,
+          "exact_match": false,
+          "mismatches": 455
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.281797854375175e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011507054289348617,
+          "component_score_no_rate_proxy": 0.07239057002682424,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t131",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 131
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19302956484118183,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.24,
+          "exact_match": false,
+          "mismatches": 456
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.281921608106586e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011509676581210881,
+          "component_score_no_rate_proxy": 0.07239083225601047,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t130",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 130
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19302982707036806,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.24,
+          "exact_match": false,
+          "mismatches": 456
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2817914015102667e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011516420790833454,
+          "component_score_no_rate_proxy": 0.07239150667697272,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t139",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 139
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303050149133033,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.24,
+          "exact_match": false,
+          "mismatches": 456
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2817959271559025e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011516468597562723,
+          "component_score_no_rate_proxy": 0.07239151145764565,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t140",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 140
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303050627200324,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.24,
+          "exact_match": false,
+          "mismatches": 456
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2820521418178336e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011516933957817777,
+          "component_score_no_rate_proxy": 0.07239155799367115,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t133",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 133
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303055280802875,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.24,
+          "exact_match": false,
+          "mismatches": 456
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2820079946418444e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011519583566825392,
+          "component_score_no_rate_proxy": 0.07239182295457192,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t138",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 138
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1930308177689295,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.23833333333333329,
+          "exact_match": false,
+          "mismatches": 457
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2821757518490816e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011520435709666405,
+          "component_score_no_rate_proxy": 0.07239190816885602,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t134",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 134
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303090298321363,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.23833333333333329,
+          "exact_match": false,
+          "mismatches": 457
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282025205919581e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011521335308709163,
+          "component_score_no_rate_proxy": 0.0723919981287603,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t141",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 141
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303099294311787,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.23833333333333329,
+          "exact_match": false,
+          "mismatches": 457
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282094114088826e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011522278867188013,
+          "component_score_no_rate_proxy": 0.07239209248460818,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t142",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 142
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1930310872989658,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.2366666666666667,
+          "exact_match": false,
+          "mismatches": 458
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282159735344218e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.001152289202262638,
+          "component_score_no_rate_proxy": 0.07239215380015201,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t137",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 137
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1930311486145096,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.23833333333333329,
+          "exact_match": false,
+          "mismatches": 457
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282628811177801e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.001152365073071815,
+          "component_score_no_rate_proxy": 0.07239222967096119,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t128",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 128
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1930312244853188,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.2416666666666667,
+          "exact_match": false,
+          "mismatches": 455
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2823380029753937e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011526375107425574,
+          "component_score_no_rate_proxy": 0.07239250210863193,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t135",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 135
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303149692298954,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.23833333333333329,
+          "exact_match": false,
+          "mismatches": 457
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2827340460812594e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.001152869484413288,
+          "component_score_no_rate_proxy": 0.07239273408230266,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t120",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 120
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303172889666026,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.245,
+          "exact_match": false,
+          "mismatches": 453
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.2827761089985566e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011529745648060086,
+          "component_score_no_rate_proxy": 0.07239283916269539,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t121",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 121
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303183397705298,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.245,
+          "exact_match": false,
+          "mismatches": 453
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282535743494464e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011531567694011008,
+          "component_score_no_rate_proxy": 0.07239302136729048,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t136",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 136
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303201618164806,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.23833333333333329,
+          "exact_match": false,
+          "mismatches": 457
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282885633382193e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011532915372736707,
+          "component_score_no_rate_proxy": 0.07239315613516305,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t126",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 126
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303215094952064,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.2416666666666667,
+          "exact_match": false,
+          "mismatches": 455
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.28288706219837e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0011532970416949784,
+          "component_score_no_rate_proxy": 0.07239316163958436,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t129",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 129
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303215645394195,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.24,
+          "exact_match": false,
+          "mismatches": 456
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282901001417334e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.001153298669025249,
+          "component_score_no_rate_proxy": 0.07239316326691463,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t123",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 123
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303215808127222,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.2433333333333333,
+          "exact_match": false,
+          "mismatches": 454
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.282886218490451e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.00115338382191435,
+          "component_score_no_rate_proxy": 0.07239324841980373,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "threshold_stump",
+        "name": "threshold_t118",
+        "params": {
+          "left": 2,
+          "right": 0,
+          "threshold": 118
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19303224323416132,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.2433333333333333,
+          "exact_match": false,
+          "mismatches": 454
+        },
+        "source_param_accounting": {
+          "learned_source_values": 3,
+          "risk": {
+            "learned_source_values": 3,
+            "learned_values_per_pair": 0.005,
+            "level": "low",
+            "reason": "small general pair-index rule, no per-pair data"
+          },
+          "runtime_source_literal_bytes_estimate": 74,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      }
+    ],
+    "top_by_selector_match": [
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.464306646719706e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0015937184236572977,
+          "component_score_no_rate_proxy": 0.07283358302154667,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b59",
+        "params": {
+          "buckets": 59,
+          "table": [
+            0,
+            2,
+            0,
+            0,
+            7,
+            13,
+            2,
+            0,
+            2,
+            2,
+            2,
+            2,
+            12,
+            0,
+            0,
+            2,
+            4,
+            0,
+            4,
+            0,
+            0,
+            0,
+            13,
+            0,
+            2,
+            2,
+            13,
+            13,
+            0,
+            2,
+            2,
+            0,
+            2,
+            0,
+            0,
+            2,
+            0,
+            2,
+            13,
+            2,
+            13,
+            0,
+            1,
+            0,
+            2,
+            7,
+            0,
+            0,
+            2,
+            0,
+            7,
+            13,
+            14,
+            13,
+            0,
+            0,
+            13,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19347257783590427,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.355,
+          "exact_match": false,
+          "mismatches": 387
+        },
+        "source_param_accounting": {
+          "learned_source_values": 59,
+          "risk": {
+            "learned_source_values": 59,
+            "learned_values_per_pair": 0.09833333333333333,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 188,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.452579002403884e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.00157569884730982,
+          "component_score_no_rate_proxy": 0.0728155634451992,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b61",
+        "params": {
+          "buckets": 61,
+          "table": [
+            0,
+            2,
+            2,
+            0,
+            7,
+            13,
+            0,
+            2,
+            7,
+            2,
+            2,
+            7,
+            0,
+            0,
+            0,
+            0,
+            4,
+            7,
+            13,
+            4,
+            0,
+            0,
+            13,
+            0,
+            0,
+            2,
+            2,
+            13,
+            0,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            2,
+            9,
+            2,
+            0,
+            2,
+            0,
+            2,
+            0,
+            13,
+            0,
+            2,
+            0,
+            4,
+            7,
+            13,
+            2,
+            13,
+            13,
+            0,
+            13,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1934545582595568,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.3533333333333334,
+          "exact_match": false,
+          "mismatches": 388
+        },
+        "source_param_accounting": {
+          "learned_source_values": 61,
+          "risk": {
+            "learned_source_values": 61,
+            "learned_values_per_pair": 0.10166666666666667,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 190,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.407637590290354e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0014759617950863418,
+          "component_score_no_rate_proxy": 0.07271582639297572,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b64",
+        "params": {
+          "buckets": 64,
+          "table": [
+            0,
+            2,
+            2,
+            13,
+            7,
+            13,
+            2,
+            2,
+            2,
+            7,
+            2,
+            7,
+            2,
+            0,
+            11,
+            0,
+            0,
+            2,
+            7,
+            13,
+            4,
+            0,
+            0,
+            0,
+            13,
+            0,
+            13,
+            2,
+            13,
+            13,
+            0,
+            2,
+            2,
+            2,
+            0,
+            2,
+            0,
+            0,
+            2,
+            0,
+            2,
+            13,
+            9,
+            2,
+            0,
+            2,
+            0,
+            13,
+            2,
+            7,
+            0,
+            0,
+            2,
+            0,
+            4,
+            13,
+            13,
+            13,
+            0,
+            0,
+            0,
+            13,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19335482120733333,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.3516666666666667,
+          "exact_match": false,
+          "mismatches": 389
+        },
+        "source_param_accounting": {
+          "learned_source_values": 64,
+          "risk": {
+            "learned_source_values": 64,
+            "learned_values_per_pair": 0.10666666666666667,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 201,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.3718448943697394e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0013572616981248203,
+          "component_score_no_rate_proxy": 0.0725971262960142,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b62",
+        "params": {
+          "buckets": 62,
+          "table": [
+            0,
+            2,
+            2,
+            0,
+            7,
+            13,
+            2,
+            2,
+            7,
+            2,
+            2,
+            7,
+            2,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
+            4,
+            0,
+            0,
+            13,
+            0,
+            0,
+            0,
+            2,
+            2,
+            7,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            13,
+            2,
+            13,
+            0,
+            2,
+            0,
+            2,
+            2,
+            7,
+            0,
+            2,
+            0,
+            2,
+            0,
+            13,
+            2,
+            13,
+            0,
+            0,
+            13,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1932361211103718,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.35,
+          "exact_match": false,
+          "mismatches": 390
+        },
+        "source_param_accounting": {
+          "learned_source_values": 62,
+          "risk": {
+            "learned_source_values": 62,
+            "learned_values_per_pair": 0.10333333333333333,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 190,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.453994916810643e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0015746755455820216,
+          "component_score_no_rate_proxy": 0.0728145401434714,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "periodic_table",
+        "name": "periodic_p59",
+        "params": {
+          "period": 59,
+          "table": [
+            2,
+            2,
+            13,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            13,
+            2,
+            0,
+            0,
+            0,
+            2,
+            2,
+            7,
+            2,
+            1,
+            11,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            13,
+            13,
+            0,
+            0,
+            2,
+            7,
+            0,
+            0,
+            7,
+            1,
+            2,
+            0,
+            7,
+            2,
+            0,
+            2,
+            13,
+            0,
+            0,
+            0,
+            2,
+            13,
+            0,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.193453534957829,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.3483333333333334,
+          "exact_match": false,
+          "mismatches": 391
+        },
+        "source_param_accounting": {
+          "learned_source_values": 59,
+          "risk": {
+            "learned_source_values": 59,
+            "learned_values_per_pair": 0.09833333333333333,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 185,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.422407559222999e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0014893822532295875,
+          "component_score_no_rate_proxy": 0.07272924685111896,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b63",
+        "params": {
+          "buckets": 63,
+          "table": [
+            0,
+            2,
+            2,
+            13,
+            7,
+            13,
+            2,
+            0,
+            2,
+            7,
+            2,
+            7,
+            2,
+            0,
+            0,
+            0,
+            2,
+            4,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            13,
+            0,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            13,
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            7,
+            0,
+            0,
+            2,
+            0,
+            2,
+            7,
+            13,
+            13,
+            0,
+            0,
+            0,
+            13,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19336824166547656,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.3466666666666667,
+          "exact_match": false,
+          "mismatches": 392
+        },
+        "source_param_accounting": {
+          "learned_source_values": 63,
+          "risk": {
+            "learned_source_values": 63,
+            "learned_values_per_pair": 0.105,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 192,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.493158601031609e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0016236926111726363,
+          "component_score_no_rate_proxy": 0.07286355720906201,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b60",
+        "params": {
+          "buckets": 60,
+          "table": [
+            0,
+            2,
+            0,
+            0,
+            7,
+            13,
+            0,
+            0,
+            2,
+            0,
+            2,
+            2,
+            0,
+            11,
+            0,
+            0,
+            4,
+            0,
+            4,
+            0,
+            0,
+            0,
+            13,
+            0,
+            0,
+            2,
+            2,
+            7,
+            2,
+            2,
+            6,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            13,
+            2,
+            0,
+            0,
+            0,
+            13,
+            2,
+            0,
+            0,
+            2,
+            0,
+            4,
+            7,
+            13,
+            2,
+            13,
+            13,
+            0,
+            13,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1935025520234196,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.3433333333333334,
+          "exact_match": false,
+          "mismatches": 394
+        },
+        "source_param_accounting": {
+          "learned_source_values": 60,
+          "risk": {
+            "learned_source_values": 60,
+            "learned_values_per_pair": 0.1,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 188,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.377807043572527e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0013763409372211516,
+          "component_score_no_rate_proxy": 0.07261620553511053,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b57",
+        "params": {
+          "buckets": 57,
+          "table": [
+            0,
+            2,
+            0,
+            2,
+            7,
+            13,
+            0,
+            2,
+            7,
+            2,
+            7,
+            2,
+            0,
+            0,
+            0,
+            2,
+            7,
+            13,
+            0,
+            0,
+            0,
+            0,
+            0,
+            13,
+            2,
+            13,
+            13,
+            0,
+            2,
+            2,
+            0,
+            2,
+            0,
+            0,
+            2,
+            0,
+            0,
+            13,
+            2,
+            0,
+            2,
+            0,
+            2,
+            0,
+            13,
+            0,
+            2,
+            0,
+            2,
+            13,
+            2,
+            13,
+            0,
+            0,
+            2,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19325520034946814,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.3416666666666667,
+          "exact_match": false,
+          "mismatches": 395
+        },
+        "source_param_accounting": {
+          "learned_source_values": 57,
+          "risk": {
+            "learned_source_values": 57,
+            "learned_values_per_pair": 0.095,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 182,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.458692719325048e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0016209855621932279,
+          "component_score_no_rate_proxy": 0.0728608501600826,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "periodic_table",
+        "name": "periodic_p58",
+        "params": {
+          "period": 58,
+          "table": [
+            0,
+            7,
+            2,
+            0,
+            2,
+            0,
+            2,
+            2,
+            0,
+            7,
+            2,
+            2,
+            0,
+            2,
+            0,
+            7,
+            2,
+            13,
+            2,
+            2,
+            0,
+            0,
+            2,
+            0,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            7,
+            0,
+            0,
+            7,
+            0,
+            13,
+            13,
+            2,
+            0,
+            0,
+            4,
+            0,
+            2,
+            0,
+            13,
+            0,
+            7,
+            2,
+            13,
+            2,
+            7
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1934998449744402,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33999999999999997,
+          "exact_match": false,
+          "mismatches": 396
+        },
+        "source_param_accounting": {
+          "learned_source_values": 58,
+          "risk": {
+            "learned_source_values": 58,
+            "learned_values_per_pair": 0.09666666666666666,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 181,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.389728015254908e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0014182170126072757,
+          "component_score_no_rate_proxy": 0.07265808161049665,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b54",
+        "params": {
+          "buckets": 54,
+          "table": [
+            0,
+            2,
+            0,
+            2,
+            13,
+            2,
+            0,
+            7,
+            2,
+            2,
+            2,
+            12,
+            0,
+            0,
+            2,
+            7,
+            13,
+            0,
+            0,
+            0,
+            13,
+            0,
+            2,
+            2,
+            13,
+            0,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            13,
+            2,
+            0,
+            2,
+            0,
+            2,
+            13,
+            0,
+            0,
+            0,
+            4,
+            7,
+            13,
+            13,
+            0,
+            0,
+            0,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19329707642485425,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33666666666666667,
+          "exact_match": false,
+          "mismatches": 398
+        },
+        "source_param_accounting": {
+          "learned_source_values": 54,
+          "risk": {
+            "learned_source_values": 54,
+            "learned_values_per_pair": 0.09,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 176,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.441976257979225e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0015497516944311673,
+          "component_score_no_rate_proxy": 0.07278961629232054,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "periodic_table",
+        "name": "periodic_p60",
+        "params": {
+          "period": 60,
+          "table": [
+            0,
+            0,
+            2,
+            7,
+            0,
+            13,
+            0,
+            7,
+            2,
+            0,
+            2,
+            0,
+            2,
+            0,
+            14,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            13,
+            0,
+            0,
+            2,
+            2,
+            2,
+            2,
+            0,
+            0,
+            13,
+            2,
+            0,
+            13,
+            7,
+            2,
+            2,
+            0,
+            2,
+            0,
+            0,
+            2,
+            13,
+            0,
+            2,
+            2,
+            0,
+            2,
+            13,
+            13,
+            7,
+            0,
+            7,
+            2,
+            0,
+            0,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19342861110667814,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33666666666666667,
+          "exact_match": false,
+          "mismatches": 398
+        },
+        "source_param_accounting": {
+          "learned_source_values": 60,
+          "risk": {
+            "learned_source_values": 60,
+            "learned_values_per_pair": 0.1,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 188,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.5002464765814994e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0016320843995424467,
+          "component_score_no_rate_proxy": 0.07287194899743182,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b58",
+        "params": {
+          "buckets": 58,
+          "table": [
+            0,
+            2,
+            0,
+            0,
+            7,
+            13,
+            2,
+            0,
+            2,
+            2,
+            7,
+            2,
+            0,
+            0,
+            0,
+            4,
+            2,
+            13,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            13,
+            2,
+            2,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            9,
+            2,
+            0,
+            0,
+            0,
+            2,
+            13,
+            0,
+            0,
+            2,
+            0,
+            4,
+            13,
+            14,
+            13,
+            0,
+            0,
+            13,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1935109438117894,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33666666666666667,
+          "exact_match": false,
+          "mismatches": 398
+        },
+        "source_param_accounting": {
+          "learned_source_values": 58,
+          "risk": {
+            "learned_source_values": 58,
+            "learned_values_per_pair": 0.09666666666666666,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 183,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.364917034123967e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0013698230706138959,
+          "component_score_no_rate_proxy": 0.07260968766850327,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b51",
+        "params": {
+          "buckets": 51,
+          "table": [
+            0,
+            2,
+            0,
+            7,
+            13,
+            2,
+            0,
+            2,
+            2,
+            7,
+            0,
+            0,
+            0,
+            2,
+            7,
+            13,
+            0,
+            0,
+            0,
+            13,
+            0,
+            2,
+            2,
+            0,
+            0,
+            2,
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            13,
+            2,
+            0,
+            0,
+            0,
+            2,
+            13,
+            0,
+            2,
+            0,
+            2,
+            13,
+            13,
+            13,
+            0,
+            0,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19324868248286087,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33499999999999996,
+          "exact_match": false,
+          "mismatches": 399
+        },
+        "source_param_accounting": {
+          "learned_source_values": 51,
+          "risk": {
+            "learned_source_values": 51,
+            "learned_values_per_pair": 0.085,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 169,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.4182117581925315e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0015081294407701534,
+          "component_score_no_rate_proxy": 0.07274799403865953,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b46",
+        "params": {
+          "buckets": 46,
+          "table": [
+            2,
+            2,
+            0,
+            7,
+            13,
+            2,
+            7,
+            2,
+            7,
+            0,
+            0,
+            0,
+            2,
+            0,
+            4,
+            0,
+            0,
+            13,
+            0,
+            2,
+            2,
+            0,
+            2,
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            2,
+            2,
+            0,
+            0,
+            2,
+            13,
+            0,
+            2,
+            0,
+            7,
+            13,
+            13,
+            0,
+            0,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19338698885301714,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33499999999999996,
+          "exact_match": false,
+          "mismatches": 399
+        },
+        "source_param_accounting": {
+          "learned_source_values": 46,
+          "risk": {
+            "learned_source_values": 46,
+            "learned_values_per_pair": 0.07666666666666666,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 156,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.4269787579432884e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0015097235795411001,
+          "component_score_no_rate_proxy": 0.07274958817743048,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b50",
+        "params": {
+          "buckets": 50,
+          "table": [
+            0,
+            2,
+            2,
+            7,
+            13,
+            0,
+            2,
+            7,
+            2,
+            2,
+            0,
+            0,
+            0,
+            2,
+            7,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            13,
+            0,
+            2,
+            2,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            13,
+            2,
+            0,
+            0,
+            0,
+            2,
+            7,
+            0,
+            2,
+            0,
+            2,
+            13,
+            14,
+            13,
+            0,
+            0,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19338858299178807,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33333333333333337,
+          "exact_match": false,
+          "mismatches": 400
+        },
+        "source_param_accounting": {
+          "learned_source_values": 50,
+          "risk": {
+            "learned_source_values": 50,
+            "learned_values_per_pair": 0.08333333333333333,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 165,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.401811758749318e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0014607855768207917,
+          "component_score_no_rate_proxy": 0.07270065017471017,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b49",
+        "params": {
+          "buckets": 49,
+          "table": [
+            0,
+            2,
+            2,
+            7,
+            13,
+            0,
+            2,
+            7,
+            2,
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            4,
+            0,
+            0,
+            13,
+            0,
+            0,
+            2,
+            13,
+            0,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            13,
+            0,
+            0,
+            2,
+            13,
+            0,
+            0,
+            0,
+            4,
+            13,
+            14,
+            13,
+            0,
+            0,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19333964498906775,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33166666666666667,
+          "exact_match": false,
+          "mismatches": 401
+        },
+        "source_param_accounting": {
+          "learned_source_values": 49,
+          "risk": {
+            "learned_source_values": 49,
+            "learned_values_per_pair": 0.08166666666666667,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 165,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.406790911659149e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0014751653542361687,
+          "component_score_no_rate_proxy": 0.07271502995212555,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "bucket_table",
+        "name": "equal_bucket_b53",
+        "params": {
+          "buckets": 53,
+          "table": [
+            0,
+            2,
+            0,
+            2,
+            13,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            4,
+            7,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
+            0,
+            2,
+            2,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            13,
+            2,
+            13,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            2,
+            4,
+            7,
+            13,
+            13,
+            0,
+            0,
+            0,
+            2,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19335402476648314,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33166666666666667,
+          "exact_match": false,
+          "mismatches": 401
+        },
+        "source_param_accounting": {
+          "learned_source_values": 53,
+          "risk": {
+            "learned_source_values": 53,
+            "learned_values_per_pair": 0.08833333333333333,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 170,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.439654582981196e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0015556306644813334,
+          "component_score_no_rate_proxy": 0.07279549526237071,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "periodic_table",
+        "name": "periodic_p55",
+        "params": {
+          "period": 55,
+          "table": [
+            0,
+            9,
+            0,
+            7,
+            2,
+            9,
+            0,
+            2,
+            13,
+            1,
+            0,
+            0,
+            0,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            7,
+            0,
+            2,
+            0,
+            0,
+            13,
+            2,
+            0,
+            2,
+            2,
+            0,
+            2,
+            1,
+            2,
+            0,
+            2,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            4,
+            2,
+            13,
+            7,
+            0,
+            2,
+            13
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1934344900767283,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33166666666666667,
+          "exact_match": false,
+          "mismatches": 401
+        },
+        "source_param_accounting": {
+          "learned_source_values": 55,
+          "risk": {
+            "learned_source_values": 55,
+            "learned_values_per_pair": 0.09166666666666666,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 174,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.450882819616178e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0015703254562344088,
+          "component_score_no_rate_proxy": 0.07281019005412379,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "periodic_table",
+        "name": "periodic_p56",
+        "params": {
+          "period": 56,
+          "table": [
+            13,
+            13,
+            7,
+            2,
+            0,
+            2,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
+            0,
+            13,
+            2,
+            7,
+            13,
+            0,
+            0,
+            13,
+            2,
+            0,
+            2,
+            2,
+            0,
+            0,
+            2,
+            7,
+            0,
+            7,
+            2,
+            0,
+            2,
+            0,
+            0,
+            13,
+            0,
+            13,
+            2,
+            0,
+            2,
+            0,
+            2,
+            2,
+            13,
+            0,
+            13,
+            7,
+            13,
+            9,
+            13,
+            2
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.1934491848684814,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33166666666666667,
+          "exact_match": false,
+          "mismatches": 401
+        },
+        "source_param_accounting": {
+          "learned_source_values": 56,
+          "risk": {
+            "learned_source_values": 56,
+            "learned_values_per_pair": 0.09333333333333334,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 183,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      },
+      {
+        "component_risk": {
+          "avg_posenet_dist_proxy": 3.4466330348076705e-05,
+          "avg_segnet_dist_proxy": 0.0005603875220306993,
+          "component_score_delta_no_rate_proxy_vs_fec6": 0.0016129471188485872,
+          "component_score_no_rate_proxy": 0.07285281171673796,
+          "evidence_grade": "pair-row proxy/advisory; not exact CPU/CUDA score evidence",
+          "missing_pair_mode_rows": 0
+        },
+        "family": "periodic_table",
+        "name": "periodic_p50",
+        "params": {
+          "period": 50,
+          "table": [
+            2,
+            2,
+            0,
+            0,
+            2,
+            0,
+            0,
+            7,
+            2,
+            2,
+            0,
+            2,
+            2,
+            0,
+            7,
+            2,
+            0,
+            0,
+            0,
+            2,
+            7,
+            0,
+            0,
+            7,
+            0,
+            13,
+            0,
+            13,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            2,
+            0,
+            2,
+            7,
+            2,
+            2,
+            0,
+            0,
+            1,
+            7,
+            2,
+            7,
+            0,
+            0,
+            2,
+            0
+          ]
+        },
+        "score_estimate": {
+          "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+          "archive_bytes_estimated_if_selector_source_rule": 178258,
+          "archive_saved_bytes_vs_fec6": 259,
+          "component_rows_complete_for_prediction": true,
+          "estimated_cpu_score_from_pair_rows": 0.19349180653109554,
+          "proxy_allows_sub0192_gate": false,
+          "score_if_fec6_components_unchanged": 0.19187885941224697
+        },
+        "selector_match": {
+          "accuracy": 0.33166666666666667,
+          "exact_match": false,
+          "mismatches": 401
+        },
+        "source_param_accounting": {
+          "learned_source_values": 50,
+          "risk": {
+            "learned_source_values": 50,
+            "learned_values_per_pair": 0.08333333333333333,
+            "level": "high",
+            "reason": "source table is small versus 600 pairs but still selector-like"
+          },
+          "runtime_source_literal_bytes_estimate": 162,
+          "source_bytes_are_not_archive_bytes": true
+        },
+        "verdict": "blocked_by_component_risk"
+      }
+    ]
+  },
+  "schema": "pr101_selector_prior_profile.v1",
+  "score_claim": false,
+  "source_rule_byte_accounting": {
+    "allowable_component_delta_for_sub0192": 0.00012114058775303249,
+    "archive_saved_bytes_vs_fec6": 259,
+    "compliance_constraint": "runtime source may contain only small general rules/models; no per-pair selector table or source-embedded 600-entry sequence",
+    "fec6_archive_bytes": 178517,
+    "removed_selector_payload_bytes": 249,
+    "removed_wrapper_overhead_bytes": 10,
+    "score_if_fec6_components_unchanged": 0.19187885941224697,
+    "source_archive_bytes_if_selector_removed": 178258,
+    "source_runtime_bytes_not_in_archive_score": true
+  },
+  "target_selector_component_proxy": {
+    "avg_posenet_dist_proxy": 2.943307625325057e-05,
+    "avg_segnet_dist_proxy": 0.0005603875220306993,
+    "component_score_no_rate_proxy": 0.07123986459788938,
+    "missing_pair_mode_rows": 0
+  }
+}

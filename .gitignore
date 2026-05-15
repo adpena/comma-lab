@@ -53,6 +53,8 @@ outputs/
 
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.
 .claude/*.lock
+.claude/settings.local.json
+.claude/worktrees/
 
 # LIVE_STATE pid/lock files (Catalog #113 META gate). Per
 # artifact_kind_registry.yaml LiveStateGuard rule: pid/lock files are

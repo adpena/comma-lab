@@ -65,6 +65,7 @@
     "exact_score_artifact_present": false,
     "planning_manifest_present": true,
     "real_dataset_source_ready": false,
+    "real_source_custody_preflight_passed": false,
     "smoke_archive_materialized": true,
     "tier_c_advisory_present": true,
     "tiny_full_cpu_advisory_ran": true
@@ -73,7 +74,7 @@
   "dataset_source_manifest": null,
   "engineering_status": "implemented_proxy_ready_untrained_real_prior_missing",
   "false_claims": [],
-  "generated_at_utc": "2026-05-15T21:10:12Z",
+  "generated_at_utc": "2026-05-15T21:41:34Z",
   "lane_family": "pretrained_driving_prior_dp1",
   "next_gate": {
     "blocked_by": [
@@ -111,15 +112,18 @@
     ],
     "id": "dp1_comma2k19_onechunk_cpu_advisory_source_custody",
     "purpose": "Produce the first real-source DP1 training/runtime custody artifact without a score claim.",
+    "source_root_env": "$DPP_COMMA2K19_CHUNKS_DIR",
     "status": "blocked_until_source_supplied",
     "success_criteria": [
       "dataset_source_manifest.schema=dp1_dataset_source_manifest.v1",
       "dataset_name=comma2k19",
-      "chunk_sha256_coverage.complete=true or prebuilt_codebook source mode",
+      "chunk_sha256_coverage.complete_for_selected_chunks=true or prebuilt_codebook source mode",
+      "source_custody_preflight.status=passed for local chunks",
       "score_claim=false",
       "promotion_eligible=false",
       "archive.zip and provenance.json written"
-    ]
+    ],
+    "verified_source_chunk_manifest_sha256": null
   },
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
@@ -128,5 +132,51 @@
   "score_axes_observed": [
     "[macOS-CPU advisory only]"
   ],
-  "score_claim": false
+  "score_claim": false,
+  "source_custody_preflight": {
+    "accepted_chunk_glob": "**/video.hevc",
+    "blockers": [
+      "dp1_source_chunks_dir_not_configured"
+    ],
+    "chunk_count": 0,
+    "chunk_manifest": [],
+    "chunk_manifest_sha256": null,
+    "dataset_name": "comma2k19",
+    "next_run_command": [
+      "PYTHONPATH=src:upstream:$PWD",
+      ".venv/bin/python",
+      "experiments/train_substrate_pretrained_driving_prior.py",
+      "--device",
+      "cpu",
+      "--full-cpu",
+      "--advisory-cpu-explicitly-waived",
+      "--dataset-name",
+      "comma2k19",
+      "--comma2k19-chunks-dir",
+      "$DPP_COMMA2K19_CHUNKS_DIR",
+      "--epochs",
+      "1",
+      "--batch-size",
+      "1",
+      "--max-pairs",
+      "4",
+      "--val-pair-count",
+      "1",
+      "--max-distillation-frames",
+      "128",
+      "--max-distillation-chunks",
+      "1",
+      "--skip-auth-eval",
+      "--output-dir",
+      "experiments/results/dp1_comma2k19_onechunk_cpu_advisory_<UTC>"
+    ],
+    "path_kind": "relative_to_DPP_COMMA2K19_CHUNKS_DIR",
+    "private_source_root_recorded": false,
+    "schema": "dp1_source_custody_timing_smoke_preflight_v1",
+    "source_max_chunks": 1,
+    "source_mode": "local_chunks",
+    "source_root_env": "$DPP_COMMA2K19_CHUNKS_DIR",
+    "status": "blocked_source_dir_not_configured",
+    "total_size_bytes": 0
+  }
 }

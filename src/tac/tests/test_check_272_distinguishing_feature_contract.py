@@ -21,6 +21,7 @@ import pytest
 from tac.preflight import (
     PreflightError,
     _check_272_collect_lane_text,
+    _check_272_lane_contract_status,
     _check_272_lane_has_required_fields,
     _check_272_lane_has_waiver,
     _check_272_lane_is_in_scope,
@@ -32,6 +33,15 @@ from tac.preflight import (
 )
 
 
+_FIXTURE_SHA = "a" * 64
+_FIXTURE_MUTATION_PROOF_PATH = (
+    "experiments/results/test/distinguishing_feature_byte_mutation_proof.json"
+)
+_FIXTURE_RUNTIME_PROOF_PATH = (
+    "experiments/results/test/parser_section_runtime_consumption_proof.json"
+)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -39,6 +49,15 @@ from tac.preflight import (
 
 def _write_registry(tmp_path: Path, lanes: list[dict]) -> Path:
     """Write a fixture lane_registry.json under tmp_path/.omx/state/."""
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            continue
+        if lane.get("byte_mutation_smoke_passes") == _FIXTURE_MUTATION_PROOF_PATH:
+            targets = lane.get("distinguishing_bytes_path")
+            _write_mutation_proof(tmp_path, targets=targets)
+        if lane.get("byte_mutation_smoke_passes") == _FIXTURE_RUNTIME_PROOF_PATH:
+            targets = lane.get("distinguishing_bytes_path")
+            _write_parser_section_runtime_proof(tmp_path, targets=targets)
     registry_dir = tmp_path / ".omx" / "state"
     registry_dir.mkdir(parents=True, exist_ok=True)
     registry = {"schema_version": 1, "lanes": lanes}
@@ -47,6 +66,85 @@ def _write_registry(tmp_path: Path, lanes: list[dict]) -> Path:
         json.dumps(registry, indent=2, sort_keys=True), encoding="utf-8"
     )
     return path
+
+
+def _normalize_targets(targets: object | None) -> list[str]:
+    if isinstance(targets, str):
+        return [targets]
+    if isinstance(targets, (list, tuple)):
+        return [str(t) for t in targets]
+    return ["hyperprior_weights_int8", "w_hat_int8"]
+
+
+def _write_mutation_proof(
+    root: Path,
+    *,
+    rel_path: str = _FIXTURE_MUTATION_PROOF_PATH,
+    targets: object | None = None,
+) -> str:
+    target_list = _normalize_targets(targets)
+    payload = {
+        "schema_version": 1,
+        "archive_sha256": _FIXTURE_SHA,
+        "archive_size_bytes": 1234,
+        "inflate_sh_sha256": _FIXTURE_SHA,
+        "distinguishing_bytes_paths": target_list,
+        "section_results": [
+            {
+                "section": target,
+                "target_basis": "zip_member",
+                "member": target,
+                "offset": None,
+                "length": None,
+                "section_size_bytes": 17,
+                "mutations_attempted": 2,
+                "mutations_changed_output": 1,
+                "passed": True,
+                "first_changed_inflated_output_sha256": _FIXTURE_SHA,
+                "baseline_inflated_output_sha256": _FIXTURE_SHA,
+            }
+            for target in target_list
+        ],
+        "overall_passed": True,
+        "verdict": "PASSED",
+        "elapsed_seconds": 0.01,
+    }
+    path = root / rel_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return rel_path
+
+
+def _write_parser_section_runtime_proof(
+    root: Path,
+    *,
+    rel_path: str = _FIXTURE_RUNTIME_PROOF_PATH,
+    targets: object | None = None,
+) -> str:
+    target_list = _normalize_targets(targets)
+    changed_sections = [
+        {
+            "section_name": target,
+            "new_sha256": _FIXTURE_SHA,
+            "runtime_consumed": True,
+            "offset": 4 + idx * 16,
+            "length": 16,
+        }
+        for idx, target in enumerate(target_list)
+    ]
+    payload = {
+        "schema": "tac_runtime_consumption_proof_v1",
+        "proof_kind": "tac_monolithic_runtime_consumption_probe_v1",
+        "ready_for_exact_eval_runtime": True,
+        "blockers": [],
+        "consumed_sections": changed_sections,
+        "changed_sections": changed_sections,
+        "score_claim": False,
+    }
+    path = root / rel_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return rel_path
 
 
 def _full_contract_lane(lane_id: str, level: int = 2) -> dict:
@@ -64,7 +162,7 @@ def _full_contract_lane(lane_id: str, level: int = 2) -> dict:
             "inflate.py::_unpack_hyperprior_cdf",
             "inflate.py::_class_conditional_range_decode",
         ],
-        "byte_mutation_smoke_passes": True,
+        "byte_mutation_smoke_passes": _FIXTURE_MUTATION_PROOF_PATH,
         "gates": {
             "impl_complete": {"satisfied": True, "evidence": "fixture"},
         },
@@ -113,9 +211,13 @@ def test_check_272_in_scope_classifier(lane_id, expected):
 # ---------------------------------------------------------------------------
 
 
-def test_required_fields_present_with_full_contract():
+def test_required_fields_present_with_full_contract(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
-    all_present, missing = _check_272_lane_has_required_fields(lane)
+    _write_mutation_proof(tmp_path, targets=lane["distinguishing_bytes_path"])
+    all_present, missing = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is True
     assert missing == []
 
@@ -127,70 +229,186 @@ def test_required_fields_missing_all_four():
     assert set(missing) == set(_CHECK_272_REQUIRED_FIELDS)
 
 
-def test_required_fields_partial_three_of_four():
+def test_required_fields_partial_three_of_four(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    _write_mutation_proof(tmp_path, targets=lane["distinguishing_bytes_path"])
     del lane["byte_mutation_smoke_passes"]
-    all_present, missing = _check_272_lane_has_required_fields(lane)
+    all_present, missing = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is False
     assert missing == ["byte_mutation_smoke_passes"]
 
 
-def test_required_fields_byte_mutation_false_rejected():
+def test_required_fields_byte_mutation_false_rejected(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
     lane["byte_mutation_smoke_passes"] = False
-    all_present, missing = _check_272_lane_has_required_fields(lane)
+    all_present, missing, proof_errors = _check_272_lane_contract_status(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is False
     assert missing == ["byte_mutation_smoke_passes"]
+    assert "self_attested_bool_rejected" in proof_errors
 
 
-def test_required_fields_byte_mutation_dict_evidence_accepted():
+def test_required_fields_byte_mutation_true_rejected_as_self_attested(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    lane["byte_mutation_smoke_passes"] = True
+    all_present, missing, proof_errors = _check_272_lane_contract_status(
+        lane,
+        repo_root=tmp_path,
+    )
+    assert all_present is False
+    assert missing == ["byte_mutation_smoke_passes"]
+    assert "self_attested_bool_rejected" in proof_errors
+
+
+def test_required_fields_byte_mutation_dict_evidence_path_accepted(tmp_path):
+    lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    rel_path = _write_mutation_proof(
+        tmp_path,
+        rel_path="experiments/results/test/custom_proof.json",
+        targets=lane["distinguishing_bytes_path"],
+    )
     lane["byte_mutation_smoke_passes"] = {
-        "evidence_path": "experiments/results/test/proof.json",
-        "passed": True,
+        "evidence_path": rel_path,
     }
-    all_present, _ = _check_272_lane_has_required_fields(lane)
+    all_present, _ = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is True
 
 
-def test_required_fields_byte_mutation_str_evidence_path_accepted():
+def test_required_fields_byte_mutation_str_evidence_path_accepted(tmp_path):
+    lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    rel_path = _write_mutation_proof(
+        tmp_path,
+        rel_path="experiments/results/test/string_proof.json",
+        targets=lane["distinguishing_bytes_path"],
+    )
+    lane["byte_mutation_smoke_passes"] = rel_path
+    all_present, _ = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
+    assert all_present is True
+
+
+def test_required_fields_byte_mutation_str_without_artifact_rejected(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
     lane["byte_mutation_smoke_passes"] = (
-        "experiments/results/test/distinguishing_feature_byte_mutation_proof.json"
+        "experiments/results/test/missing_proof.json"
     )
-    all_present, _ = _check_272_lane_has_required_fields(lane)
-    assert all_present is True
+    all_present, missing, proof_errors = _check_272_lane_contract_status(
+        lane,
+        repo_root=tmp_path,
+    )
+    assert all_present is False
+    assert missing == ["byte_mutation_smoke_passes"]
+    assert any("proof_artifact_missing" in err for err in proof_errors)
 
 
-def test_required_fields_empty_list_rejected():
+def test_required_fields_inline_proof_object_rejected_as_self_attested(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    lane["byte_mutation_smoke_passes"] = {
+        "schema_version": 1,
+        "verdict": "PASSED",
+        "overall_passed": True,
+        "section_results": [],
+    }
+    all_present, missing, proof_errors = _check_272_lane_contract_status(
+        lane,
+        repo_root=tmp_path,
+    )
+    assert all_present is False
+    assert missing == ["byte_mutation_smoke_passes"]
+    assert "inline_proof_object_requires_artifact_path" in proof_errors
+
+
+def test_required_fields_parser_section_runtime_proof_artifact_accepted(tmp_path):
+    lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    lane["distinguishing_bytes_path"] = ["decoder_packed_brotli"]
+    lane["byte_mutation_smoke_passes"] = _write_parser_section_runtime_proof(
+        tmp_path,
+        targets=lane["distinguishing_bytes_path"],
+    )
+    all_present, missing = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
+    assert all_present is True
+    assert missing == []
+
+
+def test_required_fields_parser_section_without_offsets_rejected(tmp_path):
+    lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    lane["distinguishing_bytes_path"] = ["decoder_packed_brotli"]
+    rel_path = _write_parser_section_runtime_proof(
+        tmp_path,
+        targets=lane["distinguishing_bytes_path"],
+    )
+    proof_path = tmp_path / rel_path
+    payload = json.loads(proof_path.read_text(encoding="utf-8"))
+    del payload["changed_sections"][0]["offset"]
+    proof_path.write_text(json.dumps(payload), encoding="utf-8")
+    lane["byte_mutation_smoke_passes"] = rel_path
+    all_present, missing, proof_errors = _check_272_lane_contract_status(
+        lane,
+        repo_root=tmp_path,
+    )
+    assert all_present is False
+    assert missing == ["byte_mutation_smoke_passes"]
+    assert any("offset_missing" in err for err in proof_errors)
+
+
+def test_required_fields_empty_list_rejected(tmp_path):
+    lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    _write_mutation_proof(tmp_path, targets=lane["distinguishing_bytes_path"])
     lane["distinguishing_bytes_path"] = []
-    all_present, missing = _check_272_lane_has_required_fields(lane)
+    all_present, missing = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is False
     assert missing == ["distinguishing_bytes_path"]
 
 
-def test_required_fields_empty_string_rejected():
+def test_required_fields_empty_string_rejected(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    _write_mutation_proof(tmp_path, targets=lane["distinguishing_bytes_path"])
     lane["distinguishing_feature_name"] = "   "
-    all_present, missing = _check_272_lane_has_required_fields(lane)
+    all_present, missing = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is False
     assert missing == ["distinguishing_feature_name"]
 
 
-def test_required_fields_none_rejected():
+def test_required_fields_none_rejected(tmp_path):
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    _write_mutation_proof(tmp_path, targets=lane["distinguishing_bytes_path"])
     lane["inflate_consumer_function"] = None
-    all_present, missing = _check_272_lane_has_required_fields(lane)
+    all_present, missing = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is False
     assert missing == ["inflate_consumer_function"]
 
 
-def test_required_fields_bool_string_field_rejected():
+def test_required_fields_bool_string_field_rejected(tmp_path):
     """bool values for str-typed fields are treated as missing."""
     lane = _full_contract_lane("lane_substrate_test_l2", level=2)
+    _write_mutation_proof(tmp_path, targets=lane["distinguishing_bytes_path"])
     lane["distinguishing_feature_name"] = True
-    all_present, missing = _check_272_lane_has_required_fields(lane)
+    all_present, missing = _check_272_lane_has_required_fields(
+        lane,
+        repo_root=tmp_path,
+    )
     assert all_present is False
     assert "distinguishing_feature_name" in missing
 
@@ -513,7 +731,7 @@ def test_z3_g1_anchor_passes_when_full_contract_declared(tmp_path):
             "inflate.py::_unpack_hyperprior_cdf",
             "inflate.py::_class_conditional_range_decode",
         ],
-        "byte_mutation_smoke_passes": True,
+        "byte_mutation_smoke_passes": _FIXTURE_MUTATION_PROOF_PATH,
         "gates": {},
     }
     _write_registry(tmp_path, [lane])
@@ -657,6 +875,7 @@ def test_waiver_with_partial_contract_accepted(tmp_path):
 
 
 def test_gate_ignores_non_dict_lane_entries(tmp_path):
+    _write_mutation_proof(tmp_path)
     registry_dir = tmp_path / ".omx" / "state"
     registry_dir.mkdir(parents=True)
     (registry_dir / "lane_registry.json").write_text(

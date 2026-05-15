@@ -462,7 +462,7 @@ _SET_FIELD_TOP_LEVEL_ALLOWED = (
     "distinguishing_feature_name",       # Catalog #272: human-readable novel-contribution name
     "distinguishing_bytes_path",         # Catalog #272: archive section(s) embodying the feature
     "inflate_consumer_function",         # Catalog #272: inflate.py function(s) that read those bytes
-    "byte_mutation_smoke_passes",        # Catalog #272: PROOF (bool + evidence path) that mutation changes output
+    "byte_mutation_smoke_passes",        # Catalog #272: proof artifact path; self-attested bool/string rejected
 )
 _SET_FIELD_DESIGN_EVIDENCE_ALLOWED = (
     "archive_grammar",

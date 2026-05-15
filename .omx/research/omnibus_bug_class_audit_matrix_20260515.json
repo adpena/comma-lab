@@ -1,0 +1,2195 @@
+{
+  "audit_lane_id": "lane_omnibus_bug_class_audit_20260515",
+  "audit_subagent_id": "OMNIBUS-BUG-CLASS-AUDIT-COMPREHENSIVE-ENUMERATION-20260515",
+  "audit_utc": "2026-05-15T21:35:00Z",
+  "cross_cutting_bug_classes": {
+    "commit_swap_class": {
+      "description": "Subagent commit body says X, diff contains Y because parallel sister subagent edits got absorbed under the wrong commit message.",
+      "fix_history": "Catalog #117 (serializer usage) + #157 (pre-lock hash) + #174 (--expected-content-sha256 mandatory) + #216 (post-stage hash, doc-only at #216) + #230 (bulk-rewrite ownership map) + #248 (residual conflict markers)",
+      "proposed_catalog_num": "TBD post-rebase",
+      "recurrences": [
+        {
+          "context": "2026-04-29 PM concurrent_subagent_commit_message_swap_20260429 (5 commits affected)"
+        },
+        {
+          "context": "2026-05-12 92aba3ca pre-pre-lock race"
+        },
+        {
+          "context": "2026-05-15 2c957c31e \u2014 agent dropped --expected-content-sha256 flag on retry after rc=4 (WAVE-D)"
+        }
+      ],
+      "structural_extinction_status": "PARTIAL \u2014 drop-flag-and-retry escape pattern remains (WAVE-D root cause); deferred gate `check_serializer_log_no_dropped_expected_content_sha_retry_pattern` proposed"
+    },
+    "diagnostic_cpu_phantom_score_class": {
+      "description": "Output JSON filename device-token (_cuda) does not match metadata device (cpu); upstream callers quote score from filename instead of metadata.",
+      "fix_history": "Catalog #249 lands STRICT preflight gate + runtime auto-redirect via _redirect_output_json_to_match_device; sister of #127 + #221 + #226",
+      "recurrences": [
+        {
+          "catalog_num": 249,
+          "context": "Z3 v2 FULL Modal A100 \u2014 contest_auth_eval_cuda.json contained device=cpu CPU-evaluated artifacts"
+        },
+        {
+          "context": "HISTORICAL-EVIDENCE-AUDIT a80299c4 \u2014 12 diagnostic_cpu_non_promotable + 9 mps_noise + 2 macos_advisory_promotion signatures"
+        }
+      ],
+      "structural_extinction_status": "COMPLETE at the source-code surface (#249 wired); historical artifacts remain forensic only"
+    },
+    "fail_open_guard_class": {
+      "description": "Every new dispatch/pre-deploy/review guard's v1 contains PASS-VACUOUS / silent-skip / advisory-as-pass branches that bypass strict gating.",
+      "fix_history": "Catalog #279 + #280 closed instances; Catalog #281+#282+#283 in flight (sister subagent a21e31a4)",
+      "proposed_catalog_num": 284,
+      "recurrences": [
+        {
+          "catalog_num": 270,
+          "context": "DISPATCH-OPTIMIZATION-PROTOCOL v1 unresolved-recipe vacuous PASS"
+        },
+        {
+          "catalog_num": 271,
+          "context": "PRE-DISPATCH-CODEX-REVIEW v1 cache-key + helper-import + verdict-parsing fail-open"
+        },
+        {
+          "catalog_num": 279,
+          "context": "local_pre_deploy_check.py ImportError returned PASS-VACUOUS"
+        },
+        {
+          "catalog_num": 280,
+          "context": "canonical_dispatch_optimization_protocol Tier 2/3 vacuous-True"
+        }
+      ],
+      "structural_extinction_status": "INCOMPLETE \u2014 META-meta-meta gate proposed (GAP-1) for AST-scan of new guard helpers"
+    },
+    "phantom_catalog_row_class": {
+      "description": "CLAUDE.md catalog row references function `check_X` that does not exist in src/tac/preflight.py.",
+      "fix_history": "Catalog #185 enforces the inverse direction (live count drift); GAP-2 proposed for design-direction enforcement",
+      "proposed_catalog_num": 285,
+      "recurrences": [
+        {
+          "catalog_num": 216,
+          "context": "WAVE-D forensic \u2014 referenced in CLAUDE.md ledger but no callable function"
+        },
+        {
+          "catalog_num": 273,
+          "context": "Rudin-Daubechies preflight composite phase 1 \u2014 function not defined"
+        },
+        {
+          "catalog_num": 274,
+          "context": "Rudin-Daubechies preflight composite phase 2 \u2014 function not defined"
+        },
+        {
+          "catalog_num": 275,
+          "context": "Rudin-Daubechies preflight composite phase 3 \u2014 function not defined"
+        },
+        {
+          "catalog_num": 276,
+          "context": "Rudin-Daubechies preflight composite phase 4 \u2014 function not defined"
+        },
+        {
+          "catalog_num": 277,
+          "context": "Rudin-Daubechies preflight composite phase 5 \u2014 function not defined"
+        },
+        {
+          "catalog_num": 278,
+          "context": "Rudin-Daubechies preflight composite phase 6 \u2014 function not defined"
+        }
+      ],
+      "structural_extinction_status": "INCOMPLETE \u2014 sister of #185 needed at design surface"
+    }
+  },
+  "forbidden_patterns_gaps": [
+    {
+      "deferred_proposal": "check_docstring_empirical_claims_have_evidence_tag \u2014 AST-scan docstrings + comments for 'saves N%' / 'improves N%' / 'verified' / 'beats baseline' tokens without [empirical:<path>] / [contest-CUDA] / [prediction] adjacency",
+      "gate": null,
+      "pattern": "empirical-claim-without-evidence-tag (docstring overstatement)"
+    },
+    {
+      "deferred_proposal": "check_no_unpinned_uv_torch_install \u2014 string-literal scan of `--with torch` invocations missing local-version suffix; require routing through scripts/remote_archive_only_eval.sh canonical wrapper",
+      "gate": null,
+      "pattern": "uv torch install without driver-version pin (cu13-vs-cu124)"
+    }
+  ],
+  "live_nonzero_rows": [
+    {
+      "catalog_num": 13,
+      "func_name": "preflight_dead_resolvers",
+      "live_count": 4
+    },
+    {
+      "catalog_num": 14,
+      "func_name": "preflight_loader_format_safety",
+      "live_count": 6
+    },
+    {
+      "catalog_num": 92,
+      "func_name": "check_evidence_row_archive_bytes_has_provenance",
+      "live_count": 1
+    },
+    {
+      "catalog_num": 95,
+      "func_name": "check_inflate_wire_format_no_dead_bytes",
+      "live_count": 411
+    },
+    {
+      "catalog_num": 97,
+      "func_name": "check_scores_have_lane_tag_paper_research",
+      "live_count": 83
+    },
+    {
+      "catalog_num": 102,
+      "func_name": "check_gate4_export_first",
+      "live_count": 22
+    },
+    {
+      "catalog_num": 106,
+      "func_name": "check_gate8_exact_evidence",
+      "live_count": 1
+    },
+    {
+      "catalog_num": 117,
+      "func_name": "check_subagent_commit_serializer_uses_lock",
+      "live_count": 10
+    },
+    {
+      "catalog_num": 119,
+      "func_name": "check_subagent_commits_have_co_author_trailer",
+      "live_count": 10
+    },
+    {
+      "catalog_num": 125,
+      "func_name": "check_subagent_landing_has_solver_wire_in",
+      "live_count": 1
+    },
+    {
+      "catalog_num": 126,
+      "func_name": "check_lane_pre_registered_before_work_starts",
+      "live_count": 65
+    },
+    {
+      "catalog_num": 134,
+      "func_name": "check_phase3_dispatch_gate_fail_closed",
+      "live_count": 6
+    },
+    {
+      "catalog_num": 142,
+      "func_name": "check_unsafe_test_only_restricted_to_test_paths",
+      "live_count": 3
+    },
+    {
+      "catalog_num": 151,
+      "func_name": "check_operator_wrapper_threads_trainer_tier_required_flags",
+      "live_count": 5
+    },
+    {
+      "catalog_num": 152,
+      "func_name": "check_operator_wrapper_validates_required_input_files_pre_dispatch",
+      "live_count": 17
+    },
+    {
+      "catalog_num": 153,
+      "func_name": "check_modal_dispatcher_uses_canonical_mount_builder",
+      "live_count": 4
+    },
+    {
+      "catalog_num": 168,
+      "func_name": "check_ast_walker_handles_both_assign_and_annassign",
+      "live_count": 1
+    },
+    {
+      "catalog_num": 176,
+      "func_name": "check_strict_preflight_callsites_have_claude_md_catalog_row",
+      "live_count": 3
+    },
+    {
+      "catalog_num": 188,
+      "func_name": "check_test_imports_use_tac_not_src_tac",
+      "live_count": 1
+    },
+    {
+      "catalog_num": 206,
+      "func_name": "check_subagent_dispatches_use_checkpoint_discipline",
+      "live_count": 5
+    },
+    {
+      "catalog_num": 208,
+      "func_name": "check_docs_no_local_absolute_paths",
+      "live_count": 5
+    },
+    {
+      "catalog_num": 221,
+      "func_name": "check_auth_eval_result_artifacts_fail_closed_for_score_claims",
+      "live_count": 2
+    },
+    {
+      "catalog_num": 233,
+      "func_name": "check_l1_to_l2_promotion_canonical_4_gate",
+      "live_count": 7
+    },
+    {
+      "catalog_num": 228,
+      "func_name": "check_substrate_trainer_consumes_f3_cache_when_flag_declared",
+      "live_count": 1
+    },
+    {
+      "catalog_num": 229,
+      "func_name": "check_subagent_landing_includes_premise_verification_evidence",
+      "live_count": 2
+    },
+    {
+      "catalog_num": 241,
+      "func_name": "check_substrate_uses_register_decorator_or_explicitly_legacy_tagged",
+      "live_count": 5
+    },
+    {
+      "catalog_num": 243,
+      "func_name": "check_dispatch_wrappers_invoke_local_pre_deploy_check_first",
+      "live_count": 88
+    },
+    {
+      "catalog_num": 249,
+      "func_name": "check_no_misleading_device_named_output_directories",
+      "live_count": 36
+    },
+    {
+      "catalog_num": 271,
+      "func_name": "check_dispatch_runs_codex_adversarial_review_for_paid_dispatch",
+      "live_count": 88
+    },
+    {
+      "catalog_num": 272,
+      "func_name": "check_substrate_distinguishing_feature_integration_contract",
+      "live_count": 6
+    },
+    {
+      "catalog_num": 270,
+      "func_name": "check_dispatch_optimization_protocol_complete",
+      "live_count": 26
+    }
+  ],
+  "matrix": [
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 1,
+      "func_name": "check_no_mps_fallback_default",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 2,
+      "func_name": "check_shell_set_e_present",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 3,
+      "func_name": "check_no_shell_zip_binary",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 4,
+      "func_name": "check_no_pipefail_grep_q_trap",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 5,
+      "func_name": "check_no_eval_roundtrip_false",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 6,
+      "func_name": "check_no_scorer_load_at_inflate",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 7,
+      "func_name": "check_training_scripts_have_auth_eval",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 8,
+      "func_name": "check_no_disable_eval_roundtrip_flag",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 9,
+      "func_name": "check_no_pack_sparse_delta_approved_outside_promotion_tool",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 10,
+      "func_name": "check_inflate_sh_handles_br_centrally",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 11,
+      "func_name": "check_remote_scripts_have_nvdec_probe",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 12,
+      "func_name": "preflight_arity",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 13,
+      "func_name": "preflight_dead_resolvers",
+      "gate_exists": true,
+      "live_count_at_audit": 4,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 14,
+      "func_name": "preflight_loader_format_safety",
+      "gate_exists": true,
+      "live_count_at_audit": 6,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 15,
+      "func_name": "check_no_brittle_six_line_waiver_lookback",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 16,
+      "func_name": "check_kl_distill_uses_roundtripped_frames",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 17,
+      "func_name": "check_eval_roundtrip_gate_called_after_output_dir_resolution",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 18,
+      "func_name": "check_nvdec_probe_has_error_classification",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 19,
+      "func_name": "check_archive_builders_use_deterministic_zip",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 91,
+      "func_name": "check_encoder_decoder_dequantization_roundtrip_tested",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 92,
+      "func_name": "check_evidence_row_archive_bytes_has_provenance",
+      "gate_exists": true,
+      "live_count_at_audit": 1,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 93,
+      "func_name": "check_build_manifest_archive_custody_clean",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 94,
+      "func_name": "check_admm_naming_matches_iterative_consensus_implementation",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 95,
+      "func_name": "check_inflate_wire_format_no_dead_bytes",
+      "gate_exists": true,
+      "live_count_at_audit": 411,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 96,
+      "func_name": "check_predispatch_retired_config_warning",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 97,
+      "func_name": "check_scores_have_lane_tag_paper_research",
+      "gate_exists": true,
+      "live_count_at_audit": 83,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 98,
+      "func_name": "check_pr101_tools_torch_load_allowlist",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 99,
+      "func_name": "check_gate1_representation_promotion_card",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 100,
+      "func_name": "check_gate2_no_naked_bytes",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 101,
+      "func_name": "check_gate3_parser_section_manifest",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 102,
+      "func_name": "check_gate4_export_first",
+      "gate_exists": true,
+      "live_count_at_audit": 22,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 103,
+      "func_name": "check_gate5_runtime_closure",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 104,
+      "func_name": "check_gate6_mask_pose_coupling",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 105,
+      "func_name": "check_gate7_no_op_provenance",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 106,
+      "func_name": "check_gate8_exact_evidence",
+      "gate_exists": true,
+      "live_count_at_audit": 1,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 107,
+      "func_name": "check_gate9_blocker_ownership",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 108,
+      "func_name": "check_gate10_stack_promotion",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 109,
+      "func_name": "check_public_pr_intake_clones_pristine",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 110,
+      "func_name": "check_recovery_metadata_append_only",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 111,
+      "func_name": "check_status_artifacts_no_stale_dirty_paths",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 112,
+      "func_name": "check_rebuild_commands_no_baked_runtime_state",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "30s per-gate cap",
+      "audit_status": "TIMEOUT",
+      "callable": true,
+      "catalog_num": 113,
+      "func_name": "check_artifact_lifecycle_compliance",
+      "gate_exists": true,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 114,
+      "func_name": "check_training_scripts_use_real_data_in_nonsmoke_mode",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 115,
+      "func_name": "check_packet_blocker_clearance_evidence_matches",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 117,
+      "func_name": "check_subagent_commit_serializer_uses_lock",
+      "gate_exists": true,
+      "live_count_at_audit": 10,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 118,
+      "func_name": "check_claude_md_catalog_no_duplicate_numbers",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 119,
+      "func_name": "check_subagent_commits_have_co_author_trailer",
+      "gate_exists": true,
+      "live_count_at_audit": 10,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 123,
+      "func_name": "check_no_weight_domain_saliency_on_score_gradient_substrate",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 124,
+      "func_name": "check_representation_lane_has_archive_grammar_at_design_time",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 125,
+      "func_name": "check_subagent_landing_has_solver_wire_in",
+      "gate_exists": true,
+      "live_count_at_audit": 1,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 126,
+      "func_name": "check_lane_pre_registered_before_work_starts",
+      "gate_exists": true,
+      "live_count_at_audit": 65,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 127,
+      "func_name": "check_authoritative_tag_requires_custody_metadata",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 128,
+      "func_name": "check_continual_learning_writes_use_lock",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 130,
+      "func_name": "check_no_tag_only_custody_validation",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 131,
+      "func_name": "check_no_bare_writes_to_shared_state",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 132,
+      "func_name": "check_locked_writes_preserve_deletions",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 133,
+      "func_name": "check_no_excluded_writers_in_check_131_accept_list",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 134,
+      "func_name": "check_phase3_dispatch_gate_fail_closed",
+      "gate_exists": true,
+      "live_count_at_audit": 6,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 135,
+      "func_name": "check_setup_first_seen_uses_transactional_update_inside_lock",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 136,
+      "func_name": "check_custody_gate_accept_tokens_concrete_only",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 137,
+      "func_name": "check_remote_dispatch_runbooks_no_local_cuda_probe_default",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 138,
+      "func_name": "check_state_writers_strict_load_for_mutating_path",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 139,
+      "func_name": "check_packet_compiler_no_op_proof_promotes_to_blocker",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 140,
+      "func_name": "check_state_writers_own_their_lock_end_to_end",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 141,
+      "func_name": "check_state_helper_paths_explicit",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 142,
+      "func_name": "check_unsafe_test_only_restricted_to_test_paths",
+      "gate_exists": true,
+      "live_count_at_audit": 3,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 143,
+      "func_name": "check_paid_job_register_before_submit",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 144,
+      "func_name": "check_setup_first_seen_no_split_transactions",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 145,
+      "func_name": "check_preflight_cli_default_scope_is_bounded_dev",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 146,
+      "func_name": "check_phase1_trainer_runtime_emits_contest_compliant_inflate",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 147,
+      "func_name": "check_lightning_submit_cancel_only_before_network",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 148,
+      "func_name": "check_vastai_tracker_strict_load",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 150,
+      "func_name": "check_phase_b_auth_memo_in_repo",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 151,
+      "func_name": "check_operator_wrapper_threads_trainer_tier_required_flags",
+      "gate_exists": true,
+      "live_count_at_audit": 5,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 152,
+      "func_name": "check_operator_wrapper_validates_required_input_files_pre_dispatch",
+      "gate_exists": true,
+      "live_count_at_audit": 17,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 153,
+      "func_name": "check_modal_dispatcher_uses_canonical_mount_builder",
+      "gate_exists": true,
+      "live_count_at_audit": 4,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 154,
+      "func_name": "check_experiments_results_gc_helper_is_canonical",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 156,
+      "func_name": "check_gc_helper_refuses_delete_on_tracked_paths",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 157,
+      "func_name": "check_commit_serializer_pre_lock_hash_against_head",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 158,
+      "func_name": "check_deterministic_compiler_canonical_use",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "SKIP_SELF_REF",
+      "callable": true,
+      "catalog_num": 159,
+      "func_name": "check_claude_md_catalog_text_matches_preflight_strict_value",
+      "gate_exists": true,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 161,
+      "func_name": "check_quantize_degenerate_range_clamped_correctly",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 162,
+      "func_name": "check_operator_authorize_canonical_use",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 163,
+      "func_name": "check_remote_lane_script_uses_sentinel_when_sourcing_bootstrap",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 164,
+      "func_name": "check_substrate_score_aware_loss_calls_preprocess_input_before_scorer",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 165,
+      "func_name": "check_modal_mount_builder_uses_mtime_stability_check",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 166,
+      "func_name": "check_modal_dispatch_verifies_worker_source_matches_head",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 167,
+      "func_name": "check_substrate_dispatch_uses_smoke_before_full_pattern",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 169,
+      "func_name": "check_compressai_primitives_registered_in_canonical_inventory",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 170,
+      "func_name": "check_substrate_recipes_declare_min_vram_gb_floor",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 171,
+      "func_name": "check_substrate_recipes_declare_video_input_strategy",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 172,
+      "func_name": "check_substrate_trainers_declare_autocast_fp16_support",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 173,
+      "func_name": "check_substrate_dispatch_honors_canary_first_ordering",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 168,
+      "func_name": "check_ast_walker_handles_both_assign_and_annassign",
+      "gate_exists": true,
+      "live_count_at_audit": 1,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 174,
+      "func_name": "check_subagent_commit_serializer_always_uses_expected_content_sha256",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 175,
+      "func_name": "check_cost_band_anchor_writers_declare_outcome",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 176,
+      "func_name": "check_strict_preflight_callsites_have_claude_md_catalog_row",
+      "gate_exists": true,
+      "live_count_at_audit": 3,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 177,
+      "func_name": "check_cost_band_posterior_rows_have_outcome_field",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 178,
+      "func_name": "check_substrate_trainers_declare_tf32_support",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 179,
+      "func_name": "check_substrate_trainers_declare_torch_compile_support",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 180,
+      "func_name": "check_substrate_trainers_use_no_grad_at_eval",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 181,
+      "func_name": "check_substrate_recipes_declare_pyav_decode_strategy",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 182,
+      "func_name": "check_substrate_recipes_declare_target_modes",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 183,
+      "func_name": "check_legacy_allowlist_backfill_cadence_ledger_current",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 184,
+      "func_name": "check_preflight_hook_codebase_default",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "SKIP_SELF_REF",
+      "callable": true,
+      "catalog_num": 185,
+      "func_name": "check_strict_flipped_catalog_entries_have_live_count_zero",
+      "gate_exists": true,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 186,
+      "func_name": "check_catalog_claim_committed_via_serializer",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 187,
+      "func_name": "check_hnerv_training_parity_guard",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 188,
+      "func_name": "check_test_imports_use_tac_not_src_tac",
+      "gate_exists": true,
+      "live_count_at_audit": 1,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 189,
+      "func_name": "check_shell_empty_arrays_guarded_under_set_u",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 190,
+      "func_name": "check_substrate_trainer_does_not_hardcode_hardware_substrate",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 191,
+      "func_name": "check_modal_dispatch_threads_sentinel_files_per_catalog_166",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 192,
+      "func_name": "check_macos_cpu_advisory_not_promoted_without_linux_verification",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 193,
+      "func_name": "check_substrate_trainers_do_not_use_finite_auth_eval_parser_for_claims",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 197,
+      "func_name": "check_full_cpu_requires_explicit_advisory_waiver",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 199,
+      "func_name": "check_operator_authorize_bypass_requires_session_budget",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 201,
+      "func_name": "check_modal_sentinel_files_are_in_mount_set",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 202,
+      "func_name": "check_catalog_202_bypass_requires_paired_env_attestation",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 203,
+      "func_name": "check_modal_training_image_includes_hard_runtime_deps",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 204,
+      "func_name": "check_pr95plus_modal_smoke_uses_durable_provider_output",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 206,
+      "func_name": "check_subagent_dispatches_use_checkpoint_discipline",
+      "gate_exists": true,
+      "live_count_at_audit": 5,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 207,
+      "func_name": "check_no_unguarded_rmtree_in_build_tools",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 205,
+      "func_name": "check_inflate_py_uses_canonical_select_inflate_device",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 208,
+      "func_name": "check_docs_no_local_absolute_paths",
+      "gate_exists": true,
+      "live_count_at_audit": 5,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 209,
+      "func_name": "check_no_contest_video_leakage_in_distillation_callers",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 210,
+      "func_name": "check_dp1_codebook_provenance_metadata_present",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 211,
+      "func_name": "check_dp1_composition_routes_through_canonical_helper",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 220,
+      "func_name": "check_substrate_l1_scaffold_no_byte_addition_without_operational_score_improvement_mechanism",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 219,
+      "func_name": "check_archive_promotion_blocked_by_mdl_density_above_threshold",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 221,
+      "func_name": "check_auth_eval_result_artifacts_fail_closed_for_score_claims",
+      "gate_exists": true,
+      "live_count_at_audit": 2,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 222,
+      "func_name": "check_scorer_loader_assignment_order",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 223,
+      "func_name": "check_substrate_auth_eval_invocations_use_current_cli",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 224,
+      "func_name": "check_modal_training_image_includes_hard_runtime_deps",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 227,
+      "func_name": "check_substrate_class_promotion_requires_tier_c_evidence",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 233,
+      "func_name": "check_l1_to_l2_promotion_canonical_4_gate",
+      "gate_exists": true,
+      "live_count_at_audit": 7,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 228,
+      "func_name": "check_substrate_trainer_consumes_f3_cache_when_flag_declared",
+      "gate_exists": true,
+      "live_count_at_audit": 1,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 229,
+      "func_name": "check_subagent_landing_includes_premise_verification_evidence",
+      "gate_exists": true,
+      "live_count_at_audit": 2,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 230,
+      "func_name": "check_bulk_rewrite_respects_sister_subagent_ownership_map",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 234,
+      "func_name": "check_subagent_commit_bodies_not_empty",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 235,
+      "func_name": "check_no_sha_prefix_length_mismatch_comparisons",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 231,
+      "func_name": "check_review_gate_hook_uses_retry_helper",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 226,
+      "func_name": "check_trainer_auth_eval_uses_canonical_helper",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 218,
+      "func_name": "check_substrate_reconstruct_methods_support_mini_batch",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 213,
+      "func_name": "check_comma2k19_downloads_route_through_canonical_cache",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 215,
+      "func_name": "check_modal_smoke_recipe_min_gpu_class_consistent",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 236,
+      "func_name": "check_catalog_233_gate_3_prose_negation_guard_present",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 237,
+      "func_name": "check_d9_fallback_semantic_disambiguator_present",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 239,
+      "func_name": "check_classify_dispatch_no_raw_ge_boundaries",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 240,
+      "func_name": "check_substrate_contest_cuda_chain_complete_or_research_only_tagged",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 241,
+      "func_name": "check_substrate_uses_register_decorator_or_explicitly_legacy_tagged",
+      "gate_exists": true,
+      "live_count_at_audit": 5,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 242,
+      "func_name": "check_register_substrate_contract_fields_canonical",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 244,
+      "func_name": "check_remote_lane_scripts_carry_canonical_nvml_block",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 243,
+      "func_name": "check_dispatch_wrappers_invoke_local_pre_deploy_check_first",
+      "gate_exists": true,
+      "live_count_at_audit": 88,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 246,
+      "func_name": "check_paired_dispatch_uses_anchor_skip_flag",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 248,
+      "func_name": "check_no_stash_pop_conflict_markers_in_canonical_files",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 245,
+      "func_name": "check_modal_dispatches_register_call_id",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 249,
+      "func_name": "check_no_misleading_device_named_output_directories",
+      "gate_exists": true,
+      "live_count_at_audit": 36,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 250,
+      "func_name": "check_slim_ranker_consumes_canonical_taylor_proxies",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 251,
+      "func_name": "check_falling_rule_list_canonical_use",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 252,
+      "func_name": "check_rashomon_ensemble_continual_update_locked",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 253,
+      "func_name": "check_compressive_landscape_canonical_use",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 254,
+      "func_name": "check_wavelet_multi_scale_ranker_contract",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 255,
+      "func_name": "check_gosdt_dispatcher_whiteboard_discipline",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 265,
+      "func_name": "check_symposium_impls_canonical_contract",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 266,
+      "func_name": "check_g1_substrate_archive_consumes_hyperprior_class_bytes_or_research_only",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 267,
+      "func_name": "check_substrate_scorer_class_derivation_fail_closed_or_explicit_opt_in",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 268,
+      "func_name": "check_theoretical_floor_rate_term_unit_calibrated",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 269,
+      "func_name": "check_scorer_conditional_entropy_actually_uses_scorer_state",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 271,
+      "func_name": "check_dispatch_runs_codex_adversarial_review_for_paid_dispatch",
+      "gate_exists": true,
+      "live_count_at_audit": 88,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 272,
+      "func_name": "check_substrate_distinguishing_feature_integration_contract",
+      "gate_exists": true,
+      "live_count_at_audit": 6,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 270,
+      "func_name": "check_dispatch_optimization_protocol_complete",
+      "gate_exists": true,
+      "live_count_at_audit": 26,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 279,
+      "func_name": "check_local_pre_deploy_helper_import_failure_fails_closed",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 273,
+      "func_name": "check_preflight_slim_risk_scorer_canonical_use",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 274,
+      "func_name": "check_preflight_falling_rule_list_canonical_use",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 275,
+      "func_name": "check_preflight_rashomon_ensemble_continual_update_locked",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 276,
+      "func_name": "check_preflight_compressive_landscape_canonical_use",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 277,
+      "func_name": "check_preflight_wavelet_multi_scale_contract",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 278,
+      "func_name": "check_preflight_gosdt_dispatcher_whiteboard_discipline",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 280,
+      "func_name": "check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    },
+    {
+      "audit_error": "",
+      "audit_status": "OK",
+      "callable": true,
+      "catalog_num": 90,
+      "func_name": "check_lane_registry_consistent",
+      "gate_exists": true,
+      "live_count_at_audit": 0,
+      "strict_at_zero_at_audit": true
+    }
+  ],
+  "phantom_catalog_rows": [
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 273,
+      "func_name": "check_preflight_slim_risk_scorer_canonical_use",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 274,
+      "func_name": "check_preflight_falling_rule_list_canonical_use",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 275,
+      "func_name": "check_preflight_rashomon_ensemble_continual_update_locked",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 276,
+      "func_name": "check_preflight_compressive_landscape_canonical_use",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 277,
+      "func_name": "check_preflight_wavelet_multi_scale_contract",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    },
+    {
+      "audit_error": "",
+      "audit_status": "NOT_DEFINED",
+      "callable": false,
+      "catalog_num": 278,
+      "func_name": "check_preflight_gosdt_dispatcher_whiteboard_discipline",
+      "gate_exists": false,
+      "live_count_at_audit": null,
+      "strict_at_zero_at_audit": false
+    }
+  ],
+  "proposed_gap_gates": [
+    {
+      "ev": "high \u2014 extincts 3rd recurrence of fail-open class structurally",
+      "gap_id": "GAP-1",
+      "gate": "check_new_dispatch_guard_helper_has_no_fail_open_anti_pattern",
+      "live_count_at_audit_estimate": "TBD \u22651 (Catalog #271 v1 was the anchor)",
+      "proposed_catalog": 284,
+      "purpose": "META-meta-meta gate refusing AST-detectable fail-open patterns in tools/*_dispatch_*.py / tools/*_pre_deploy_*.py / tools/*_review_*.py: (a) except ImportError returning anything other than False/raise/SystemExit; (b) functions where verdict-parsing precedes rc-check; (c) cache keys missing dirty-tree fingerprint when scope=working-tree; (d) missing-helper paths returning normally"
+    },
+    {
+      "ev": "high \u2014 currently 6 phantom rows would be caught",
+      "gap_id": "GAP-2",
+      "gate": "check_catalog_text_references_existing_gate_callable",
+      "live_count_at_audit": 6,
+      "live_violations": [
+        "#273",
+        "#274",
+        "#275",
+        "#276",
+        "#277",
+        "#278"
+      ],
+      "proposed_catalog": 285,
+      "purpose": "Refuses CLAUDE.md catalog rows referencing `check_X` that is NOT importable+callable as tac.preflight.check_X. Sister of Catalog #185 (drift between text + empirical) \u2014 #185 catches LIVE_COUNT drift, #285 catches NAME-EXISTS drift"
+    },
+    {
+      "ev": "high \u2014 operational regression detection",
+      "gap_id": "GAP-3",
+      "proposed_artifact": ".github/workflows/nightly_catalog_gate_regression.yml",
+      "purpose": "Continuous-regression CI workflow that runs every catalog gate's tests + every empirical bug fixture nightly. Posts daily green/red signal. <24h drift detection."
+    },
+    {
+      "ev": "medium \u2014 FORBIDDEN_PATTERN docstring-overstatement currently has no structural gate",
+      "gap_id": "GAP-4a",
+      "gate": "check_docstring_empirical_claims_have_evidence_tag",
+      "proposed_catalog": 286,
+      "purpose": "AST-scan docstrings + comments + .md docs for empirical-claim tokens without adjacent evidence tag"
+    },
+    {
+      "ev": "medium \u2014 FORBIDDEN_PATTERN cu13-vs-cu124 currently has no structural gate",
+      "gap_id": "GAP-4b",
+      "gate": "check_no_unpinned_uv_torch_install",
+      "proposed_catalog": 287,
+      "purpose": "String-literal scan of `--with torch` invocations missing local-version suffix; require routing through scripts/remote_archive_only_eval.sh canonical wrapper"
+    },
+    {
+      "ev": "high \u2014 extincts the WAVE-D root cause structurally",
+      "gap_id": "GAP-5",
+      "gate": "check_serializer_log_no_dropped_expected_content_sha_retry_pattern",
+      "proposed_catalog": 288,
+      "purpose": "Scan .omx/state/commit-serializer.log for: same message_head sequence within ~10-min window with \u22651 outcome=expected_content_sha_mismatch followed by outcome=committed lacking expected_content_sha_diffs AND nfiles\u22653 (the WAVE-D 2c957c31e pattern). Closes drop-flag-and-retry escape from Catalog #117/#157/#174"
+    }
+  ],
+  "schema_version": "omnibus_bug_class_audit_v1",
+  "scope": "READ-ONLY enumeration of CLAUDE.md Meta-bug class catalog (180 numbered rows) + FORBIDDEN_PATTERNS (18 entries) + cross-cutting bug classes from MEMORY.md feedback files + WAVE-D + HISTORICAL-EVIDENCE-AUDIT + this-session findings",
+  "summary": {
+    "catalog_rows_enumerated": 180,
+    "fix_landed_assumed": 174,
+    "gate_callable_count": 174,
+    "gate_exists_count": 174,
+    "live_count_nonzero_count": 31,
+    "phantom_catalog_rows_count": 6,
+    "strict_at_zero_at_audit_count": 140
+  }
+}

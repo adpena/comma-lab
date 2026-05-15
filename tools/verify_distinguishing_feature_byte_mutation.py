@@ -3,9 +3,11 @@
 
 Canonical helper for the Distinguishing-Feature Integration Contract
 (Catalog #272). Mutates one byte at every declared distinguishing-bytes
-offset of an archive, re-runs the inflate path, and confirms the
+target of an archive, re-runs the inflate path, and confirms the
 inflated output frames CHANGE (i.e. the bytes are operationally
-consumed, not dead-section padding).
+consumed, not dead-section padding). Targets may be a whole ZIP member
+or an explicit byte range inside a member for parser-section/offset
+proof on monolithic packets.
 
 This is the per-substrate-distinguishing-feature variant of
 ``_verify_runtime_consumes_payload_bytes_executable`` (Catalog #139's
@@ -29,6 +31,7 @@ Usage
         --inflate-sh <path/to/inflate.sh> \\
         --distinguishing-bytes-path <archive_section_name> \\
         [--distinguishing-bytes-path <another_section>] ... \\
+        [--distinguishing-byte-range label=member@offset:length] \\
         --output-json <experiments/results/<lane>/distinguishing_feature_byte_mutation_proof.json> \\
         [--mutation-offsets-per-section 4] \\
         [--epsilon-hash-bytes 0]
@@ -56,7 +59,11 @@ Output JSON schema
       "distinguishing_bytes_paths": [...],
       "section_results": [
         {
-          "section": "<name>",
+          "section": "<target label>",
+          "target_basis": "zip_member" | "member_byte_range",
+          "member": "<zip member name>",
+          "offset": <int or null>,
+          "length": <int or null>,
           "section_size_bytes": <int>,
           "mutations_attempted": <int>,
           "mutations_changed_output": <int>,
@@ -80,13 +87,11 @@ import hashlib
 import json
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 import zipfile
 from pathlib import Path
 from typing import Any
-
 
 SCHEMA_VERSION = 1
 DEFAULT_MUTATIONS_PER_SECTION = 4
@@ -95,6 +100,10 @@ DEFAULT_MUTATIONS_PER_SECTION = 4
 @dataclasses.dataclass
 class SectionResult:
     section: str
+    target_basis: str
+    member: str
+    offset: int | None
+    length: int | None
     section_size_bytes: int
     mutations_attempted: int
     mutations_changed_output: int
@@ -104,6 +113,29 @@ class SectionResult:
 
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
+
+
+@dataclasses.dataclass(frozen=True)
+class MutationTarget:
+    """One mutation target inside an archive ZIP."""
+
+    label: str
+    member: str
+    offset: int | None = None
+    length: int | None = None
+
+    @property
+    def target_basis(self) -> str:
+        if self.offset is None and self.length is None:
+            return "zip_member"
+        return "member_byte_range"
+
+    def slice_bytes(self, member_bytes: bytes) -> bytes:
+        if self.offset is None and self.length is None:
+            return member_bytes
+        assert self.offset is not None and self.length is not None
+        end = self.offset + self.length
+        return member_bytes[self.offset:end]
 
 
 def _sha256_file(path: Path) -> str:
@@ -132,6 +164,54 @@ def _read_archive_section(archive: Path, section: str) -> bytes:
         return zf.read(section)
 
 
+def _parse_byte_range_target(raw: str) -> MutationTarget:
+    """Parse ``label=member@offset:length`` or ``member@offset:length``."""
+    text = raw.strip()
+    if not text:
+        raise ValueError("empty distinguishing byte range")
+    if "=" in text:
+        label, spec = text.split("=", 1)
+        label = label.strip()
+    else:
+        label, spec = text, text
+    if "@" not in spec or ":" not in spec.rsplit("@", 1)[1]:
+        raise ValueError(
+            "byte range must be label=member@offset:length or member@offset:length"
+        )
+    member, range_spec = spec.rsplit("@", 1)
+    offset_s, length_s = range_spec.split(":", 1)
+    member = member.strip()
+    if not member:
+        raise ValueError(f"missing ZIP member in byte range {raw!r}")
+    try:
+        offset = int(offset_s, 10)
+        length = int(length_s, 10)
+    except ValueError as exc:
+        raise ValueError(f"non-integer byte range offset/length in {raw!r}") from exc
+    if offset < 0 or length <= 0:
+        raise ValueError(f"byte range must have offset >= 0 and length > 0: {raw!r}")
+    return MutationTarget(label=label or spec, member=member, offset=offset, length=length)
+
+
+def _build_mutation_targets(
+    distinguishing_bytes_paths: list[str],
+    distinguishing_byte_ranges: list[str] | None = None,
+) -> list[MutationTarget]:
+    targets = [
+        MutationTarget(label=path, member=path)
+        for path in distinguishing_bytes_paths
+    ]
+    for raw in distinguishing_byte_ranges or []:
+        targets.append(_parse_byte_range_target(raw))
+    return targets
+
+
+def _read_archive_target(archive: Path, target: MutationTarget) -> bytes:
+    with zipfile.ZipFile(archive, "r") as zf:
+        member_bytes = zf.read(target.member)
+    return target.slice_bytes(member_bytes)
+
+
 def _write_archive_with_mutated_section(
     src_archive: Path,
     dst_archive: Path,
@@ -139,15 +219,37 @@ def _write_archive_with_mutated_section(
     mutated_bytes: bytes,
 ) -> None:
     """Copy src_archive to dst_archive, replacing one section's bytes."""
-    with zipfile.ZipFile(src_archive, "r") as src_zf:
-        with zipfile.ZipFile(
-            dst_archive, "w", compression=zipfile.ZIP_STORED
-        ) as dst_zf:
-            for info in src_zf.infolist():
-                if info.filename == section:
+    _write_archive_with_mutated_target(
+        src_archive,
+        dst_archive,
+        MutationTarget(label=section, member=section),
+        mutated_bytes,
+    )
+
+
+def _write_archive_with_mutated_target(
+    src_archive: Path,
+    dst_archive: Path,
+    target: MutationTarget,
+    mutated_bytes: bytes,
+) -> None:
+    """Copy src_archive to dst_archive, replacing one target's bytes."""
+    with zipfile.ZipFile(src_archive, "r") as src_zf, zipfile.ZipFile(
+        dst_archive, "w", compression=zipfile.ZIP_STORED
+    ) as dst_zf:
+        for info in src_zf.infolist():
+            if info.filename == target.member:
+                if target.offset is None and target.length is None:
                     dst_zf.writestr(info.filename, mutated_bytes)
                 else:
-                    dst_zf.writestr(info, src_zf.read(info.filename))
+                    member_bytes = bytearray(src_zf.read(info.filename))
+                    assert target.offset is not None and target.length is not None
+                    start = target.offset
+                    end = start + target.length
+                    member_bytes[start:end] = mutated_bytes
+                    dst_zf.writestr(info.filename, bytes(member_bytes))
+            else:
+                dst_zf.writestr(info, src_zf.read(info.filename))
 
 
 def _hash_directory_contents(directory: Path) -> str:
@@ -235,6 +337,7 @@ def verify_distinguishing_feature_byte_mutation(
     inflate_sh: Path,
     distinguishing_bytes_paths: list[str],
     output_json: Path,
+    distinguishing_byte_ranges: list[str] | None = None,
     mutations_per_section: int = DEFAULT_MUTATIONS_PER_SECTION,
     file_list: Path | None = None,
     inflate_timeout_seconds: int = 600,
@@ -267,14 +370,51 @@ def verify_distinguishing_feature_byte_mutation(
     archive_sha = _sha256_file(archive)
     archive_size = archive.stat().st_size
     inflate_sha = _sha256_file(inflate_sh)
+    try:
+        mutation_targets = _build_mutation_targets(
+            distinguishing_bytes_paths,
+            distinguishing_byte_ranges,
+        )
+    except ValueError as exc:
+        result = _infra_error(
+            str(exc),
+            distinguishing_bytes_paths,
+            output_json,
+            started,
+            archive_sha=archive_sha,
+            archive_size_bytes=archive_size,
+            inflate_sh_sha256=inflate_sha,
+        )
+        return result
+    target_labels = [target.label for target in mutation_targets]
 
     # List sections and verify all declared distinguishing paths exist.
-    section_index = {name: size for name, size in _list_archive_sections(archive)}
-    missing = [p for p in distinguishing_bytes_paths if p not in section_index]
+    section_index = dict(_list_archive_sections(archive))
+    missing = [target.member for target in mutation_targets if target.member not in section_index]
     if missing:
         result = _infra_error(
-            f"distinguishing_bytes_paths not in archive: {missing}",
-            distinguishing_bytes_paths,
+            f"distinguishing target ZIP members not in archive: {missing}",
+            target_labels,
+            output_json,
+            started,
+            archive_sha=archive_sha,
+            archive_size_bytes=archive_size,
+            inflate_sh_sha256=inflate_sha,
+        )
+        return result
+    bad_ranges: list[str] = []
+    for target in mutation_targets:
+        if target.offset is None or target.length is None:
+            continue
+        member_size = section_index[target.member]
+        if target.offset + target.length > member_size:
+            bad_ranges.append(
+                f"{target.label} exceeds member {target.member!r} size {member_size}"
+            )
+    if bad_ranges:
+        result = _infra_error(
+            "distinguishing byte range out of bounds: " + "; ".join(bad_ranges),
+            target_labels,
             output_json,
             started,
             archive_sha=archive_sha,
@@ -321,14 +461,18 @@ def verify_distinguishing_feature_byte_mutation(
 
         # Per-section mutation runs.
         section_results: list[SectionResult] = []
-        for sec_idx, section in enumerate(distinguishing_bytes_paths):
-            section_bytes = _read_archive_section(archive, section)
+        for sec_idx, target in enumerate(mutation_targets):
+            section_bytes = _read_archive_target(archive, target)
             section_size = len(section_bytes)
             if section_size == 0:
                 # Empty distinguishing section: VIOLATION (Z3-G1 anchor).
                 section_results.append(
                     SectionResult(
-                        section=section,
+                        section=target.label,
+                        target_basis=target.target_basis,
+                        member=target.member,
+                        offset=target.offset,
+                        length=target.length,
                         section_size_bytes=0,
                         mutations_attempted=0,
                         mutations_changed_output=0,
@@ -339,7 +483,7 @@ def verify_distinguishing_feature_byte_mutation(
                 )
                 if verbose:
                     print(
-                        f"[dfic] section={section!r} EMPTY (0 bytes) "
+                        f"[dfic] target={target.label!r} EMPTY (0 bytes) "
                         "FAIL — distinguishing feature has zero bytes"
                     )
                 continue
@@ -352,8 +496,8 @@ def verify_distinguishing_feature_byte_mutation(
             first_changed_hash: str | None = None
             for m_idx, mutated in enumerate(mutations):
                 mut_archive = tmp / f"mut_{sec_idx}_{m_idx}_{archive.name}"
-                _write_archive_with_mutated_section(
-                    staged_archive, mut_archive, section, mutated,
+                _write_archive_with_mutated_target(
+                    staged_archive, mut_archive, target, mutated,
                 )
                 # Stage mutated archive and re-inflate.
                 mut_archive_dir = tmp / f"mut_archive_dir_{sec_idx}_{m_idx}"
@@ -371,7 +515,11 @@ def verify_distinguishing_feature_byte_mutation(
 
             section_results.append(
                 SectionResult(
-                    section=section,
+                    section=target.label,
+                    target_basis=target.target_basis,
+                    member=target.member,
+                    offset=target.offset,
+                    length=target.length,
                     section_size_bytes=section_size,
                     mutations_attempted=len(mutations),
                     mutations_changed_output=changed,
@@ -383,7 +531,8 @@ def verify_distinguishing_feature_byte_mutation(
             if verbose:
                 verdict = "PASS" if changed > 0 else "FAIL"
                 print(
-                    f"[dfic] section={section!r} size={section_size} "
+                    f"[dfic] target={target.label!r} basis={target.target_basis} "
+                    f"size={section_size} "
                     f"mutations={len(mutations)} changed={changed} "
                     f"verdict={verdict}"
                 )
@@ -395,7 +544,7 @@ def verify_distinguishing_feature_byte_mutation(
         "archive_sha256": archive_sha,
         "archive_size_bytes": archive_size,
         "inflate_sh_sha256": inflate_sha,
-        "distinguishing_bytes_paths": list(distinguishing_bytes_paths),
+        "distinguishing_bytes_paths": target_labels,
         "section_results": [s.to_dict() for s in section_results],
         "overall_passed": overall_passed,
         "verdict": "PASSED" if overall_passed else "FAILED",
@@ -450,9 +599,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--distinguishing-bytes-path",
         action="append",
-        required=True,
+        default=[],
         dest="distinguishing_bytes_paths",
         help="Archive section name (ZIP member). Repeat for multiple sections.",
+    )
+    parser.add_argument(
+        "--distinguishing-byte-range",
+        action="append",
+        default=[],
+        dest="distinguishing_byte_ranges",
+        help=(
+            "Byte range inside a ZIP member as label=member@offset:length "
+            "or member@offset:length. Repeat for parser-section evidence."
+        ),
     )
     parser.add_argument("--output-json", required=True, type=Path)
     parser.add_argument(
@@ -464,11 +623,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inflate-timeout-seconds", type=int, default=600)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
+    if not args.distinguishing_bytes_paths and not args.distinguishing_byte_ranges:
+        parser.error(
+            "at least one --distinguishing-bytes-path or "
+            "--distinguishing-byte-range is required"
+        )
 
     result = verify_distinguishing_feature_byte_mutation(
         archive=args.archive,
         inflate_sh=args.inflate_sh,
         distinguishing_bytes_paths=args.distinguishing_bytes_paths,
+        distinguishing_byte_ranges=args.distinguishing_byte_ranges,
         output_json=args.output_json,
         mutations_per_section=args.mutations_per_section,
         file_list=args.file_list,
