@@ -30470,11 +30470,11 @@
       "id": "lane_stc_dasher_scaffold_v1_20260515",
       "name": "STC-Dasher arithmetic-coding maximalism v1",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "STC-Dasher v1 scaffold package at tac.codecs.stc_dasher (__init__ + encoder + decoder) plus tools/build_stc_dasher_archive_v1.py plus 50 tests passing plus byte-closed scaffold smoke at experiments/results/stc_dasher_byte_closed_smoke_20260515T224936Z/"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30497,8 +30497,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_stc_dasher_scaffold_v1_arithmetic_maximalism_landed_20260515.md + .omx/research/stc_dasher_arithmetic_maximalism_v1_design_20260515.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -30634,11 +30634,11 @@
       "id": "lane_u_die_kl_substrate_wide_loss_v1_20260515",
       "name": "U-DIE-KL Substrate-Wide Loss V1",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/losses/u_die_kl.py (canonical helper) + src/tac/losses/__init__.py (re-export) + .omx/research/u_die_kl_substrate_wide_loss_v1_design_20260515.md (design memo) + src/tac/tests/test_u_die_kl_loss.py (57 tests pass)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30661,8 +30661,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/u_die_kl_substrate_wide_loss_v1_design_20260515.md (design memo) + feedback_u_die_kl_substrate_wide_loss_v1_landed_20260515.md (landing memo, this commit)"
         },
         "deploy_runbook": {
           "status": false,
@@ -30670,6 +30670,47 @@
         }
       },
       "notes": "Score-lowering scaffold per grand reunion symposium #5: UNIWARD (Fridrich) + DIE (Yousfi) + KL distillation (Hinton) substrate-agnostic training-side bolt-on. Predicted Delta-S [-0.005, -0.020] per substrate when retrained. archive_grammar=N/A (loss helper not codec). research_only=true at landing - no per-substrate retraining yet. Sister of compute_uniward_cost_map + kl_distill_segnet_only. lane_class=substrate_wide_loss_helper. target_modes=[substrate_engineering]"
+    },
+    {
+      "id": "lane_assumptions_challenge_audit_break_out_20260515",
+      "name": "Assumptions challenge audit + break out of local minima 0.1928",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "research-design memo + machine-readable JSON; .omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json (research_only=true; score_claim=false; promotion_eligible=false)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -30679,5 +30720,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T22:39:13Z"
+  "updated_at": "2026-05-15T22:51:12Z"
 }

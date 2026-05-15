@@ -25,6 +25,16 @@ from .cat_entropy_v2 import (
     CatEntropyV2Config,
     cat_entropy_v2,
 )
+from .u_die_kl import (
+    DEFAULT_DIE_CACHE_INTERVAL,
+    DEFAULT_KL_TEMPERATURE,
+    DEFAULT_UNIWARD_EPSILON,
+    UDIEKLConfig,
+    UDIEKLLoss,
+    compute_die_weight_map,
+    compute_uniward_weight_map,
+    kl_distill_segnet_term,
+)
 from .core import (
     DEFAULT_SEGNET_NUM_CLASSES,
     DEFAULT_SINKHORN_BLUR,
@@ -79,10 +89,13 @@ from .core import (
 )
 
 __all__ = [
+    "DEFAULT_DIE_CACHE_INTERVAL",
+    "DEFAULT_KL_TEMPERATURE",
     "DEFAULT_SEGNET_NUM_CLASSES",
     "DEFAULT_SINKHORN_BLUR",
     "DEFAULT_SINKHORN_ITERS",
     "DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK",
+    "DEFAULT_UNIWARD_EPSILON",
     "SEGMENTATION_SURROGATE_FISHER_RAO",
     "SEGMENTATION_SURROGATE_SINKHORN",
     "SEGMENTATION_SURROGATE_SOFT_COSINE",
@@ -90,6 +103,8 @@ __all__ = [
     "SINKHORN_MIN_BLUR",
     "CatEntropyV2Config",
     "ScorerProxyDiscriminator",
+    "UDIEKLConfig",
+    "UDIEKLLoss",
     "_apply_class_weights",
     "_default_categorical_cost_matrix",
     "_hwc_to_chw",
@@ -99,6 +114,8 @@ __all__ = [
     "boundary_aware_loss_cached",
     "cat_entropy_v2",
     "compute_boundary_mask",
+    "compute_die_weight_map",
+    "compute_uniward_weight_map",
     "dual_saliency_reconstruction_loss",
     "eval_scorer_loss",
     "feature_matching_loss",
@@ -106,6 +123,7 @@ __all__ = [
     "frequency_aware_loss",
     "kl_distill_scorer_loss",
     "kl_distill_segnet_only",
+    "kl_distill_segnet_term",
     "output_decorrelation_loss",
     "parse_class_weights_csv",
     "per_class_seg_distortion",
