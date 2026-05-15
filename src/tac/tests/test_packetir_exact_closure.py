@@ -335,6 +335,50 @@ def test_packetir_exact_closure_accepts_format06_manifest_without_source_bytes(
     assert all(check["passed"] for check in closure["checks"])
 
 
+def test_packetir_exact_closure_accepts_format08_hdm8_runtime_section_alias(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result(archive)
+    candidate_result["packet_ir_consumed_byte_proof"][
+        "score_affecting_section_names"
+    ] = [
+        "pr106_hdm8_hlm2_payload_without_inner_header",
+        "sidecar_payload",
+    ]
+    runtime_consumption = _runtime_consumption(archive)
+    runtime_consumption["format_id"] = "0x08"
+    runtime_consumption["inner_pr106_payload_sha256_unchanged"] = True
+    runtime_consumption["runtime_consumed_score_affecting_sections"] = {
+        "pr106_payload": True,
+        "sidecar_payload": True,
+        "framing_meta": None,
+    }
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format08",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "exact_measured_improves_packetir_source_cuda"
+    assert closure["blockers"] == []
+    proof = closure["packetir"]["runtime_consumption_proof"]
+    assert proof["valid"] is True
+    assert proof["score_affecting_section_match_mode"] == (
+        "format_0x08_hdm8_hlm2_reconstructed_pr106_payload_alias"
+    )
+    assert all(check["passed"] for check in closure["checks"])
+
+
 def _candidate_result(archive: Path) -> dict:
     archive_sha = _sha256_file(archive)
     archive_bytes = archive.stat().st_size

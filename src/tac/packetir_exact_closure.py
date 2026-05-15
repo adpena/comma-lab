@@ -578,6 +578,11 @@ def _runtime_consumption_summary(
         for key, value in consumed_sections.items()
         if value is True
     }
+    section_match = _runtime_score_affecting_sections_match(
+        expected_sections=expected_sections,
+        actual_sections=actual_sections,
+        proof=data,
+    )
     runtime_inflate_py_sha = _first_str(data.get("runtime_inflate_py_sha256"))
     valid = (
         bool(data)
@@ -591,8 +596,7 @@ def _runtime_consumption_summary(
         and data.get("runtime_all_score_affecting_sections_consumed") is True
         and bool(consumed_sections)
         and bool(expected_sections)
-        and actual_sections == expected_sections
-        and all(consumed_sections.get(section) is True for section in expected_sections)
+        and section_match["matched"] is True
         and data.get("runtime_corrected_latents_digest_changed") is True
         and isinstance(runtime_inflate_py_sha, str)
         and bool(runtime_file_sha256s)
@@ -632,7 +636,9 @@ def _runtime_consumption_summary(
         "runtime_consumed_score_affecting_sections": dict(consumed_sections),
         "expected_score_affecting_sections": sorted(expected_sections),
         "actual_score_affecting_sections": sorted(actual_sections),
-        "score_affecting_section_set_matches_packetir": actual_sections == expected_sections,
+        "score_affecting_section_set_matches_packetir": section_match["matched"],
+        "score_affecting_section_match_mode": section_match["mode"],
+        "score_affecting_section_match_evidence": section_match["evidence"],
         "runtime_corrected_latents_digest_changed": data.get(
             "runtime_corrected_latents_digest_changed"
         ),
@@ -640,6 +646,54 @@ def _runtime_consumption_summary(
         "score_claim": data.get("score_claim"),
         "contest_axis_claim": data.get("contest_axis_claim"),
         "ready_for_exact_eval_dispatch": data.get("ready_for_exact_eval_dispatch"),
+    }
+
+
+def _runtime_score_affecting_sections_match(
+    *,
+    expected_sections: set[str],
+    actual_sections: set[str],
+    proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return whether runtime proof consumption covers PacketIR sections.
+
+    Most PacketIR recodes preserve the same section names through runtime
+    decode. Format 0x08 deliberately elides the PR106 inner header from an
+    HDM8/HLM2 payload; the runtime reconstructs that header and consumes the
+    reconstructed generic ``pr106_payload``. Accept that alias only when the
+    proof binds the fixed HDM8/HLM2 format and records unchanged inner PR106
+    semantics.
+    """
+
+    if actual_sections == expected_sections:
+        return {
+            "matched": True,
+            "mode": "exact_section_names",
+            "evidence": {},
+        }
+    hdm8_expected = {"pr106_hdm8_hlm2_payload_without_inner_header", "sidecar_payload"}
+    generic_actual = {"pr106_payload", "sidecar_payload"}
+    if (
+        expected_sections == hdm8_expected
+        and actual_sections == generic_actual
+        and proof.get("format_id") == "0x08"
+        and proof.get("inner_pr106_payload_sha256_unchanged") is True
+    ):
+        return {
+            "matched": True,
+            "mode": "format_0x08_hdm8_hlm2_reconstructed_pr106_payload_alias",
+            "evidence": {
+                "expected_headerless_section": "pr106_hdm8_hlm2_payload_without_inner_header",
+                "runtime_consumed_reconstructed_section": "pr106_payload",
+                "inner_pr106_payload_sha256_unchanged": proof.get(
+                    "inner_pr106_payload_sha256_unchanged"
+                ),
+            },
+        }
+    return {
+        "matched": False,
+        "mode": "mismatch",
+        "evidence": {},
     }
 
 
