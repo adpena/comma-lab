@@ -8,7 +8,7 @@
 
 ## Decision
 
-Do not route broad proxy-ranked film-grain/selector/water-fill dispatch until a CUDA-in-loop selector control is positive or neutral, or a transfer model explains the current regressions.
+Do not route broad proxy-ranked film-grain/selector/water-fill dispatch until CUDA-in-loop selector controls are positive or neutral with no exact-CUDA regressions, and paired CPU/CUDA raw aggregate custody is explicit.
 
 ## Blockers
 
@@ -26,16 +26,16 @@ Do not route broad proxy-ranked film-grain/selector/water-fill dispatch until a 
 
 ## Exact-CUDA Selector Rows
 
-| technique | score delta | byte equivalent | outcome |
-|---|---:|---:|---|
-| `hdm8_cuda_selector_sparse_top001_exact_cuda_review` | 0.000117997857 | 177 | `cuda_regression` |
-| `hdm8_fixed_even_rgb_bias_m1_p05_p05_positive_control_exact_cuda_review` | 0.000423067182 | 635 | `cuda_regression` |
-| `hdm8_fixed_even_grain_chroma_1_positive_control_exact_cuda_review` | 0.000466466070 | 701 | `cuda_regression` |
-| `hdm8_fixed_even_rgb_bias_m05_p05_0_positive_control_exact_cuda_review` | 0.000512465845 | 770 | `cuda_regression` |
-| `hdm8_fixed_even_rgb_bias_0_p05_m05_positive_control_exact_cuda_review` | 0.000633681498 | 952 | `cuda_regression` |
-| `hdm8_cuda_selector_sparse_budget128_exact_cuda_review` | 0.001515513345 | 2276 | `cuda_regression` |
-| `hdm8_film_grain_selector_charged_mps_aggressive_v2_cuda_review` | 0.009748252358 | 14640 | `cuda_regression` |
-| `hdm8_even_frame_selector_cuda_review` | 0.021803620925 | 32745 | `cuda_regression` |
+| technique | axis | score delta | byte equivalent | outcome |
+|---|---|---:|---:|---|
+| `hdm8_cuda_selector_sparse_top001_exact_cuda_review` | `contest_cuda` | 0.000117997857 | 177 | `cuda_regression` |
+| `hdm8_fixed_even_rgb_bias_m1_p05_p05_positive_control_exact_cuda_review` | `contest_cuda` | 0.000423067182 | 635 | `cuda_regression` |
+| `hdm8_fixed_even_grain_chroma_1_positive_control_exact_cuda_review` | `contest_cuda` | 0.000466466070 | 701 | `cuda_regression` |
+| `hdm8_fixed_even_rgb_bias_m05_p05_0_positive_control_exact_cuda_review` | `contest_cuda` | 0.000512465845 | 770 | `cuda_regression` |
+| `hdm8_fixed_even_rgb_bias_0_p05_m05_positive_control_exact_cuda_review` | `contest_cuda` | 0.000633681498 | 952 | `cuda_regression` |
+| `hdm8_cuda_selector_sparse_budget128_exact_cuda_review` | `contest_cuda` | 0.001515513345 | 2276 | `cuda_regression` |
+| `hdm8_film_grain_selector_charged_mps_aggressive_v2_cuda_review` | `contest_cuda` | 0.009748252358 | 14640 | `cuda_regression` |
+| `hdm8_even_frame_selector_cuda_review` | `contest_cuda` | 0.021803620925 | 32745 | `cuda_regression` |
 
 ## Next Actions
 

@@ -114,4 +114,110 @@ def test_render_markdown_keeps_axis_and_no_dispatch_flags(tmp_path: Path) -> Non
 
     assert "score_claim: `false`" in markdown
     assert "ready_for_exact_eval_dispatch: `false`" in markdown
+    assert "| technique | axis | score delta | byte equivalent | outcome |" in markdown
+    assert "`contest_cuda`" in markdown
     assert "`neutral_fixture`" in markdown
+
+
+def test_mixed_cuda_regression_and_neutral_row_still_blocks_broad_dispatch(
+    tmp_path: Path,
+) -> None:
+    neutral = _write_json(
+        tmp_path / "neutral.json",
+        {
+            "canonical_score": 0.206,
+            "baseline_score": 0.206,
+            "exact_cuda_evidence": True,
+            "score_axis": "contest_cuda",
+            "score_recomputation": {},
+        },
+    )
+    regression = _write_json(
+        tmp_path / "regression.json",
+        {
+            "canonical_score": 0.207,
+            "baseline_score": 0.206,
+            "exact_cuda_evidence": True,
+            "score_axis": "contest_cuda",
+            "score_recomputation": {},
+        },
+    )
+    paired = _write_json(
+        tmp_path / "paired_axis.json",
+        {
+            "components": {
+                "dominant_score_delta_component": "rate",
+                "score_delta_byte_equivalent": 0.0,
+            },
+            "raw_output_comparison": {"aggregate_sha256_match": True},
+            "target_gaps": {},
+        },
+    )
+
+    decision = mod.build_calibration([neutral, regression], paired)["decision"]
+
+    assert decision["calibration_status"] == "blocked"
+    assert decision["ready_for_broad_waterfill_dispatch"] is False
+    assert "measured_selector_controls_transfer_negative_on_cuda" in decision["blockers"]
+
+
+def test_cpu_labeled_exact_flag_is_not_accepted_as_cuda_evidence(tmp_path: Path) -> None:
+    review = _write_json(
+        tmp_path / "cpu_flagged.json",
+        {
+            "canonical_score": 0.190,
+            "baseline_score": 0.206,
+            "exact_cuda_evidence": True,
+            "score_axis": "contest_cpu",
+            "score_recomputation": {},
+        },
+    )
+    paired = _write_json(
+        tmp_path / "paired_axis.json",
+        {
+            "components": {
+                "dominant_score_delta_component": "rate",
+                "score_delta_byte_equivalent": 0.0,
+            },
+            "raw_output_comparison": {"aggregate_sha256_match": True},
+            "target_gaps": {},
+        },
+    )
+
+    decision = mod.build_calibration([review], paired)["decision"]
+
+    assert decision["exact_cuda_selector_rows"] == 0
+    assert decision["non_cuda_exact_flag_rows"] == 1
+    assert decision["ready_for_broad_waterfill_dispatch"] is False
+    assert "non_cuda_selector_rows_marked_exact_cuda" in decision["blockers"]
+
+
+def test_missing_raw_aggregate_match_blocks_even_with_neutral_cuda_control(
+    tmp_path: Path,
+) -> None:
+    review = _write_json(
+        tmp_path / "neutral.json",
+        {
+            "canonical_score": 0.206,
+            "baseline_score": 0.206,
+            "exact_cuda_evidence": True,
+            "score_axis": "contest_cuda",
+            "score_recomputation": {},
+        },
+    )
+    paired = _write_json(
+        tmp_path / "paired_axis.json",
+        {
+            "components": {
+                "dominant_score_delta_component": "rate",
+                "score_delta_byte_equivalent": 0.0,
+            },
+            "raw_output_comparison": {},
+            "target_gaps": {},
+        },
+    )
+
+    decision = mod.build_calibration([review], paired)["decision"]
+
+    assert decision["ready_for_broad_waterfill_dispatch"] is False
+    assert "pr101_cpu_cuda_inflated_output_aggregate_match_missing" in decision["blockers"]

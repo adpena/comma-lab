@@ -62,11 +62,14 @@ def selector_row(path: Path) -> dict[str, Any]:
     baseline = float(payload["baseline_score"])
     delta = score - baseline
     recomputation = payload.get("score_recomputation") or {}
+    score_axis = payload.get("score_axis")
+    exact_cuda_flag = payload.get("exact_cuda_evidence") is True
     return {
         "path": repo_rel(path),
         "technique": payload.get("technique") or path.stem,
-        "score_axis": payload.get("score_axis"),
-        "exact_cuda_evidence": payload.get("exact_cuda_evidence") is True,
+        "score_axis": score_axis,
+        "exact_cuda_evidence_flag": exact_cuda_flag,
+        "exact_cuda_evidence": exact_cuda_flag and score_axis == "contest_cuda",
         "canonical_score": score,
         "baseline_score": baseline,
         "score_delta_vs_baseline": delta,
@@ -107,19 +110,28 @@ def paired_axis_summary(path: Path) -> dict[str, Any]:
 
 def calibration_decision(rows: list[dict[str, Any]], paired: dict[str, Any]) -> dict[str, Any]:
     exact_rows = [row for row in rows if row["exact_cuda_evidence"]]
+    non_cuda_exact_flag_rows = [
+        row
+        for row in rows
+        if row.get("exact_cuda_evidence_flag") is True and row.get("score_axis") != "contest_cuda"
+    ]
     neutral_or_positive = [row for row in exact_rows if row["score_delta_vs_baseline"] <= 0.0]
     regressions = [row for row in exact_rows if row["score_delta_vs_baseline"] > 0.0]
-    raw_mismatch = paired.get("raw_output_aggregate_sha256_match") is False
-    ready = bool(neutral_or_positive) and not raw_mismatch
+    raw_match = paired.get("raw_output_aggregate_sha256_match")
     blockers: list[str] = []
+    if non_cuda_exact_flag_rows:
+        blockers.append("non_cuda_selector_rows_marked_exact_cuda")
     if not neutral_or_positive:
         blockers.append("exact_cuda_positive_or_neutral_selector_control_missing")
     if regressions:
         blockers.append("measured_selector_controls_transfer_negative_on_cuda")
-    if raw_mismatch:
+    if raw_match is False:
         blockers.append("pr101_cpu_cuda_inflated_output_aggregate_mismatch")
+    elif raw_match is not True:
+        blockers.append("pr101_cpu_cuda_inflated_output_aggregate_match_missing")
     if paired.get("dominant_score_delta_component") in {"pose", "seg"}:
         blockers.append("cpu_cuda_gap_component_dominated_not_rate_limited")
+    ready = bool(neutral_or_positive) and not blockers and raw_match is True
     return {
         "ready_for_broad_waterfill_dispatch": ready,
         "ready_for_exact_eval_dispatch": False,
@@ -129,6 +141,7 @@ def calibration_decision(rows: list[dict[str, Any]], paired: dict[str, Any]) -> 
         "calibration_status": "blocked" if blockers else "calibrated",
         "blockers": blockers,
         "exact_cuda_selector_rows": len(exact_rows),
+        "non_cuda_exact_flag_rows": len(non_cuda_exact_flag_rows),
         "selector_regression_rows": len(regressions),
         "selector_positive_or_neutral_rows": len(neutral_or_positive),
         "best_score_delta_vs_baseline": min(
@@ -141,8 +154,9 @@ def calibration_decision(rows: list[dict[str, Any]], paired: dict[str, Any]) -> 
         ),
         "policy": (
             "Do not route broad proxy-ranked film-grain/selector/water-fill "
-            "dispatch until a CUDA-in-loop selector control is positive or "
-            "neutral, or a transfer model explains the current regressions."
+            "dispatch until CUDA-in-loop selector controls are positive or "
+            "neutral with no exact-CUDA regressions, and paired CPU/CUDA raw "
+            "aggregate custody is explicit."
         ),
     }
 
@@ -220,14 +234,15 @@ def render_markdown(payload: dict[str, Any]) -> str:
             "",
             "## Exact-CUDA Selector Rows",
             "",
-            "| technique | score delta | byte equivalent | outcome |",
-            "|---|---:|---:|---|",
+            "| technique | axis | score delta | byte equivalent | outcome |",
+            "|---|---|---:|---:|---|",
         ]
     )
     for row in payload["selector_rows"]:
         lines.append(
-            "| `{technique}` | {delta:.12f} | {bytes_} | `{outcome}` |".format(
+            "| `{technique}` | `{axis}` | {delta:.12f} | {bytes_} | `{outcome}` |".format(
                 technique=row["technique"],
+                axis=row["score_axis"],
                 delta=float(row["score_delta_vs_baseline"]),
                 bytes_=row["byte_equivalent_delta"],
                 outcome=row["outcome"],
@@ -250,6 +265,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--paired-axis-xray", type=Path, default=DEFAULT_PAIRED_AXIS_XRAY)
     parser.add_argument("--json-out", type=Path, default=DEFAULT_JSON_OUT)
     parser.add_argument("--md-out", type=Path, default=DEFAULT_MD_OUT)
+    parser.add_argument(
+        "--strict-blocked-exit",
+        action="store_true",
+        help="Exit nonzero when the calibration decision is blocked.",
+    )
     return parser.parse_args()
 
 
@@ -261,6 +281,8 @@ def main() -> int:
     args.json_out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     args.md_out.parent.mkdir(parents=True, exist_ok=True)
     args.md_out.write_text(render_markdown(payload), encoding="utf-8")
+    if args.strict_blocked_exit and payload["decision"]["calibration_status"] != "calibrated":
+        return 1
     return 0
 
 

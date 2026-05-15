@@ -11,7 +11,10 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
-from tac.hdm8_selector_cuda_gate import HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA
+from tac.hdm8_selector_cuda_gate import (
+    HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
+    SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA,
+)
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_ARCHIVE_BYTES,
     ACTIVE_FLOOR_SCORE,
@@ -150,6 +153,23 @@ def _hdm8_selector_gate(
     }
 
 
+def _selector_cuda_transfer_calibration() -> dict[str, object]:
+    return {
+        "schema": SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "decision": {
+            "calibration_status": "calibrated",
+            "ready_for_broad_waterfill_dispatch": True,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "blockers": [],
+        },
+    }
+
+
 def _mark_submission_as_hdm8_selector(
     submission: Path,
     *,
@@ -169,6 +189,7 @@ def _mark_submission_as_hdm8_selector(
                 archive_bytes=archive_bytes,
                 passed=gate_passed,
             ),
+            "selector_cuda_transfer_calibration": _selector_cuda_transfer_calibration(),
         }
     )
     manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

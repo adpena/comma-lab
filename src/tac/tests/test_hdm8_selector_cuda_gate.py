@@ -6,6 +6,7 @@ from pathlib import Path
 
 from tac.hdm8_selector_cuda_gate import (
     HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
+    SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA,
     build_hdm8_selector_cuda_component_gate,
     validate_hdm8_selector_cuda_component_gate,
     validate_hdm8_selector_cuda_gate_context,
@@ -190,4 +191,99 @@ def test_context_validator_requires_gate_for_hdm8_selector_manifest(tmp_path: Pa
     )
 
     assert "hdm8_selector_cuda_component_gate_missing" in blockers
+    assert any(
+        blocker.startswith("selector_cuda_transfer_calibration:")
+        for blocker in blockers
+    )
     assert facts["hdm8_selector_cuda_component_gate_required"] is True
+
+
+def _calibration(status: str = "calibrated", *, blockers: list[str] | None = None) -> dict:
+    return {
+        "schema": SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "decision": {
+            "calibration_status": status,
+            "ready_for_broad_waterfill_dispatch": status == "calibrated",
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "blockers": list(blockers or []),
+        },
+    }
+
+
+def test_context_validator_blocks_selector_when_transfer_calibration_blocked(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "2" * 64
+    gate = {
+        "schema": HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
+        "required": True,
+        "passed": True,
+        "status": "passed_exact_cuda_component_check",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": True,
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": 123,
+        "evidence_axis": "contest_cuda",
+        "blockers": [],
+    }
+    manifest = {
+        "schema": "hdm8_film_grain_sidecar_packet_manifest_v1",
+        "postfilter_mode": "selector",
+        "cuda_component_risk_gate": gate,
+        "selector_cuda_transfer_calibration": _calibration(
+            "blocked",
+            blockers=["measured_selector_controls_transfer_negative_on_cuda"],
+        ),
+    }
+
+    blockers, facts = validate_hdm8_selector_cuda_gate_context(
+        {"candidate_archive_sha256": archive_sha},
+        manifest,
+        expected_archive_sha256=archive_sha,
+    )
+
+    assert any(
+        "selector_cuda_transfer_calibration_status_not_calibrated:blocked" in blocker
+        for blocker in blockers
+    )
+    assert facts["selector_cuda_transfer_calibration_status"] == "blocked"
+
+
+def test_context_validator_accepts_selector_when_component_gate_and_calibration_pass(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "3" * 64
+    gate = {
+        "schema": HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
+        "required": True,
+        "passed": True,
+        "status": "passed_exact_cuda_component_check",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": True,
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": 123,
+        "evidence_axis": "contest_cuda",
+        "blockers": [],
+    }
+    manifest = {
+        "schema": "hdm8_film_grain_sidecar_packet_manifest_v1",
+        "postfilter_mode": "selector",
+        "cuda_component_risk_gate": gate,
+        "selector_cuda_transfer_calibration": _calibration(),
+    }
+
+    blockers, facts = validate_hdm8_selector_cuda_gate_context(
+        {"candidate_archive_sha256": archive_sha},
+        manifest,
+        expected_archive_sha256=archive_sha,
+    )
+
+    assert blockers == []
+    assert facts["selector_cuda_transfer_calibration_status"] == "calibrated"

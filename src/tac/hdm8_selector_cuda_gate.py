@@ -17,6 +17,10 @@ DEFAULT_HDM8_CUDA_REFERENCE_RESULT = Path(
     "hnerv_hdm8_fixed_lengths_modal_t4_retry2_20260514T095000Z/"
     "contest_auth_eval.json"
 )
+SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA = "selector_cuda_transfer_calibration_v1"
+DEFAULT_SELECTOR_CUDA_TRANSFER_CALIBRATION = Path(
+    ".omx/research/selector_cuda_transfer_calibration_20260515_codex.json"
+)
 CUDA_PREFIX_AXES = frozenset(
     {
         "modal-t4-cuda-proxy-prefix",
@@ -73,6 +77,117 @@ def _positive_int(value: Any) -> int | None:
 
 def _read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _selector_cuda_transfer_calibration_from_payload(
+    payload: Mapping[str, Any] | None,
+) -> Mapping[str, Any] | None:
+    if not isinstance(payload, Mapping):
+        return None
+    for key in (
+        "selector_cuda_transfer_calibration",
+        "cuda_transfer_calibration",
+    ):
+        value = payload.get(key)
+        if isinstance(value, Mapping):
+            return value
+    return None
+
+
+def _selector_cuda_transfer_calibration_path_from_payload(
+    payload: Mapping[str, Any] | None,
+) -> Path | str | None:
+    if not isinstance(payload, Mapping):
+        return None
+    for key in (
+        "selector_cuda_transfer_calibration_path",
+        "cuda_transfer_calibration_path",
+    ):
+        value = payload.get(key)
+        if isinstance(value, (str, Path)) and str(value).strip():
+            return value
+    policy = payload.get("cuda_transfer_policy")
+    if isinstance(policy, Mapping):
+        value = policy.get("selector_cuda_transfer_calibration_path")
+        if isinstance(value, (str, Path)) and str(value).strip():
+            return value
+    return None
+
+
+def _load_selector_cuda_transfer_calibration(
+    row: Mapping[str, Any] | None,
+    manifest: Mapping[str, Any] | None,
+    *,
+    repo_root: Path,
+) -> tuple[Mapping[str, Any] | None, str | None, list[str]]:
+    for payload in (manifest, row):
+        calibration = _selector_cuda_transfer_calibration_from_payload(payload)
+        if calibration is not None:
+            return calibration, "embedded", []
+    raw_path = (
+        _selector_cuda_transfer_calibration_path_from_payload(manifest)
+        or _selector_cuda_transfer_calibration_path_from_payload(row)
+        or DEFAULT_SELECTOR_CUDA_TRANSFER_CALIBRATION
+    )
+    path = _resolve(raw_path, repo_root=repo_root)
+    if path is None:
+        return None, None, ["selector_cuda_transfer_calibration_path_missing"]
+    rel = _repo_rel(path, repo_root)
+    if not path.is_file():
+        return None, rel, [f"selector_cuda_transfer_calibration_missing:{rel}"]
+    try:
+        payload = _read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, rel, [f"selector_cuda_transfer_calibration_json_invalid:{type(exc).__name__}"]
+    if not isinstance(payload, Mapping):
+        return None, rel, ["selector_cuda_transfer_calibration_not_object"]
+    return payload, rel, []
+
+
+def validate_selector_cuda_transfer_calibration(
+    calibration: Mapping[str, Any] | None,
+) -> list[str]:
+    """Return fail-closed blockers for selector CPU/proxy-to-CUDA calibration."""
+
+    if not isinstance(calibration, Mapping):
+        return ["selector_cuda_transfer_calibration_missing"]
+    blockers: list[str] = []
+    if calibration.get("schema") != SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA:
+        blockers.append("selector_cuda_transfer_calibration_schema_invalid")
+    if calibration.get("score_claim") is not False:
+        blockers.append("selector_cuda_transfer_calibration_score_claim_not_false")
+    if calibration.get("dispatch_attempted") is not False:
+        blockers.append("selector_cuda_transfer_calibration_dispatch_attempted_not_false")
+    decision = calibration.get("decision")
+    if not isinstance(decision, Mapping):
+        blockers.append("selector_cuda_transfer_calibration_decision_missing")
+        return blockers
+    if decision.get("calibration_status") != "calibrated":
+        blockers.append(
+            "selector_cuda_transfer_calibration_status_not_calibrated:"
+            f"{decision.get('calibration_status')}"
+        )
+    if decision.get("ready_for_broad_waterfill_dispatch") is not True:
+        blockers.append("selector_cuda_transfer_calibration_not_broad_dispatch_ready")
+    if decision.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("selector_cuda_transfer_calibration_exact_dispatch_flag_not_false")
+    if decision.get("score_claim") is not False:
+        blockers.append("selector_cuda_transfer_calibration_decision_score_claim_not_false")
+    if decision.get("promotion_eligible") is not False:
+        blockers.append(
+            "selector_cuda_transfer_calibration_decision_promotion_eligible_not_false"
+        )
+    if decision.get("rank_or_kill_eligible") is not False:
+        blockers.append(
+            "selector_cuda_transfer_calibration_decision_rank_or_kill_eligible_not_false"
+        )
+    decision_blockers = decision.get("blockers")
+    if isinstance(decision_blockers, list) and decision_blockers:
+        blockers.append(
+            "selector_cuda_transfer_calibration_has_blockers:"
+            + ",".join(str(item) for item in decision_blockers[:6])
+        )
+    return blockers
 
 
 def _score_from_auth_eval(payload: Mapping[str, Any]) -> float | None:
@@ -450,6 +565,17 @@ def validate_hdm8_selector_cuda_gate_context(
         gate,
         expected_archive_sha256=expected_archive_sha256,
     )
+    calibration, calibration_source, calibration_load_blockers = (
+        _load_selector_cuda_transfer_calibration(row, manifest, repo_root=Path.cwd())
+    )
+    calibration_blockers = [
+        *calibration_load_blockers,
+        *validate_selector_cuda_transfer_calibration(calibration),
+    ]
+    blockers.extend(
+        f"selector_cuda_transfer_calibration:{blocker}"
+        for blocker in calibration_blockers
+    )
     facts: dict[str, Any] = {
         "hdm8_selector_cuda_component_gate_required": True,
         "hdm8_selector_cuda_component_gate_status": gate.get("status")
@@ -461,21 +587,34 @@ def validate_hdm8_selector_cuda_gate_context(
         "hdm8_selector_cuda_component_gate_evidence_axis": gate.get("evidence_axis")
         if isinstance(gate, Mapping)
         else None,
+        "selector_cuda_transfer_calibration_required": True,
+        "selector_cuda_transfer_calibration_source": calibration_source,
+        "selector_cuda_transfer_calibration_status": (
+            (calibration.get("decision") or {}).get("calibration_status")
+            if isinstance(calibration, Mapping)
+            and isinstance(calibration.get("decision"), Mapping)
+            else None
+        ),
     }
     if isinstance(gate, Mapping):
         facts["hdm8_selector_cuda_component_gate"] = dict(gate)
+    if isinstance(calibration, Mapping):
+        facts["selector_cuda_transfer_calibration"] = dict(calibration)
     return blockers, facts
 
 
 __all__ = [
     "DEFAULT_HDM8_CUDA_REFERENCE_RESULT",
+    "DEFAULT_SELECTOR_CUDA_TRANSFER_CALIBRATION",
     "DEFAULT_MAX_POSE_DELTA",
     "DEFAULT_MAX_SCORE_DELTA",
     "DEFAULT_MAX_SEG_DELTA",
     "DEFAULT_MIN_CUDA_PREFIX_PAIRS",
     "HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA",
+    "SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA",
     "build_hdm8_selector_cuda_component_gate",
     "hdm8_selector_cuda_gate_required",
     "validate_hdm8_selector_cuda_component_gate",
     "validate_hdm8_selector_cuda_gate_context",
+    "validate_selector_cuda_transfer_calibration",
 ]

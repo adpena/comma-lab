@@ -116,7 +116,11 @@ def _discover_packetir_exact_closure_records(repo_root: Path) -> dict[str, list[
     """
 
     records: dict[str, list[dict[str, Any]]] = {}
-    for path in sorted((repo_root / "experiments" / "results").glob("**/closure.json")):
+    closure_paths = {
+        *sorted((repo_root / "experiments" / "results").glob("**/closure.json")),
+        *sorted((repo_root / ".omx" / "research").glob("*packetir*closure*.json")),
+    }
+    for path in sorted(closure_paths):
         try:
             payload = read_json(path)
         except (OSError, ValueError, json.JSONDecodeError):

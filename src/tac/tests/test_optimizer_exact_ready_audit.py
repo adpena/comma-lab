@@ -662,6 +662,64 @@ def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
     )
 
 
+def test_audit_indexes_packetir_closure_from_omx_research(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_packetir_omx_closure",  # FAKE_LANE_OK: synthetic closure fixture.
+        archive_sha="c" * 64,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    payload["dispatch_ready"][0]["runtime_content_tree_sha256"] = "b" * 64
+    payload["dispatch_ready"][0]["score_axis"] = "contest_cuda"
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json(
+        tmp_path / ".omx/research/pr106_packetir_exact_closure_20260515_codex.json",
+        {
+            "schema": "packetir_exact_eval_closure_v1",
+            "lane_id": "lane_packetir_omx_closure",
+            "classification": "exact_measured_improves_packetir_source_cuda",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "archive": {"candidate_archive_sha256": archive_sha},
+            "duplicate_dispatch_blockers": [
+                "same_candidate_archive_already_exact_evaluated",
+            ],
+            "exact_eval_duplicate_keys": [
+                {
+                    "archive_sha256": archive_sha,
+                    "runtime_content_tree_sha256": "b" * 64,
+                    "score_axis": "contest_cuda",
+                    "key": f"{archive_sha}:{'b' * 64}:contest_cuda",
+                }
+            ],
+        },
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    result = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["passed"] is False
+    row = result["queues"][0]["stale_ready_rows"][0]
+    assert row["live_custody"]["packetir_exact_closure_records"][0]["closure_path"] == (
+        ".omx/research/pr106_packetir_exact_closure_20260515_codex.json"
+    )
+    assert any(
+        blocker.startswith("packetir_exact_closure_duplicate_dispatch")
+        for blocker in row["blockers"]
+    )
+
+
 def test_audit_indexes_packetir_closure_with_duplicate_keys_only(
     tmp_path: Path,
 ) -> None:
