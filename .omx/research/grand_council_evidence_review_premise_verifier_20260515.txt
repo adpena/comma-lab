@@ -1,0 +1,45 @@
+GRAND COUNCIL EVIDENCE REVIEW — PREMISE VERIFICATION (Catalog #229)
+Subagent: GRAND-COUNCIL-EVIDENCE-REVIEW-MODAL-FAILURES-NO-COMPROMISE-OPTIMAL-LOWEST-SCORE-20260515
+Date: 2026-05-15
+
+Empirical premises verified pre-edit (per Catalog #229):
+
+PREMISE 1: "Z3 v2 paired CPU = 0.19870" — CONFIRMED
+Source: modal.functions.FunctionCall.from_id('fc-01KRP0KYTS8KFM4KGR0NMMPRAN').get(timeout=2)
+Artifact: contest_auth_eval.json — final_score=0.2 (recomputed full precision: 100*0.000614 + sqrt(10*3.243e-05) + 25*179130/37545489 = 0.06141 + 0.01801 + 0.11928 = 0.19870)
+Evidence grade: contest-CPU; lane_tag: [contest-CPU]; score_claim: False (per Catalog #221 CPU is diagnostic)
+delta vs A1 (0.19285 [contest-CPU]) = +0.00585 REGRESSION
+
+PREMISE 2: "Z3 v2 paired CUDA = 0.23171" — CONFIRMED
+Source: modal.functions.FunctionCall.from_id('fc-01KRP0J3E0RTDNH210RZTWMMXQ').get(timeout=2)
+Artifact: contest_auth_eval.json — final_score=0.23 (recomputed full precision: 100*0.000711 + sqrt(10*0.000171) + 25*179130/37545489 = 0.07111 + 0.04133 + 0.11928 = 0.23171)
+Evidence grade: contest-CUDA; gpu_model: Tesla T4; lane_tag: [contest-CUDA]; score_claim: True
+delta vs A1 (0.22635 [contest-CUDA T4]) = +0.00536 REGRESSION
+
+PREMISE 3: "Z3 v2 inline CUDA was phantom-score (CPU mislabeled as CUDA)" — CONFIRMED via parent metadata
+The training-wrapper's auth_eval ran with --device cpu (per modal_metadata.json: auth_eval_advisory_only=true, auth_eval_device=cpu)
+But the directory was named contest_auth_eval_cuda_work — directory NAME != axis ACTUALLY measured.
+Score 0.19869 reported by parent agent matches Z3 v2 paired CPU 0.19870 within rounding — confirming the inline anchor was CPU.
+
+PREMISE 4: "D1 smoke 100ep completed clean" — CONFIRMED
+Source: modal.functions.FunctionCall.from_id('fc-01KRNQVJWJH5AFV5W3TCGGTEFG').get(timeout=2)
+rc=0, elapsed_seconds=1811 (~30min). Artifact contest_auth_eval.json: final_score=0.2, seg=0.000560, pose=3.29e-5, bytes=185675
+Recomputed: 100*0.000560 + sqrt(10*3.286e-05) + 25*185675/37545489 = 0.05602 + 0.01813 + 0.12363 = 0.19779
+Evidence grade: B [diagnostic-auth-eval] — advisory only
+Note: pose 3.29e-5 matches CPU-pattern (very low pose-axis); confirms CPU-side smoke (T4 instance ran CPU-axis eval since the wrapper defaulted CPU)
+
+PREMISE 5: "Z4 lambda=0 smoke timed out at 60 min" — CONFIRMED
+Source: modal.functions.FunctionCall.from_id('fc-01KRNRTDNVNJHWRKGYYJV3S2XF').get(timeout=2)
+rc=124, elapsed_seconds=3600.93 (exact 60 min Modal soft timeout)
+Artifact trainer.log shows: "stage_4_trainer_begin epochs=100 lambda_pixel=0.0 smoke=0 autocast=false"
+No epoch-progress beyond stage_4_trainer_begin in 60 min — trainer is per-epoch slow, not crashed
+Bicubic-backward-non-deterministic warning present; deterministic-CUDA mode active
+
+PREMISE 6: "D4 smoke completion not in result cache" — CONFIRMED
+fc-01KRNYZ6V2N5N1NM5HD5K9V11D returns NotFoundError — call ID not in Modal cache (24h TTL expired or never existed)
+
+PREMISE 7: "Sister subagents in flight" — UNVERIFIED (no direct probe; per parent prompt)
+- a8e0f0b4 GRAND-COUNCIL-CONVERGENCE
+- ad8d106c PERMANENT-FIX-MISLEADING-DIRECTORY-NAME
+
+PREMISE 8: "A1 CPU = 0.19285, CUDA = 0.22635" — CONFIRMED via CLAUDE.md committed values

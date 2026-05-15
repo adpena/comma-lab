@@ -1,0 +1,483 @@
+{
+  "audit_date_utc": "2026-05-15T20:35:00Z",
+  "audit_manifest_path": ".omx/research/historical_evidence_audit_20260515.json",
+  "audit_subagent_id": "HISTORICAL-EVIDENCE-AUDIT-20260515",
+  "classification_breakdown": {
+    "diagnostic_cpu_non_promotable": 12,
+    "macos_advisory_promotion_class": 2,
+    "mps_noise_class": 9
+  },
+  "claude_md_non_negotiables_honored": [
+    "KILL is the LAST RESORT \u2014 every row DEFERRED-pending-re-verification with explicit reactivation criteria; ZERO KILLS",
+    "Apples-to-apples evidence discipline \u2014 every row re-tag preserves original axis disclosure verbatim",
+    "MPS auth eval is NOISE \u2014 MPS-derived rows tagged non-promotable",
+    "Submission auth eval \u2014 BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE \u2014 macOS-CPU advisory + diagnostic-CPU rows tagged non-promotable absent paired Linux x86_64 verification",
+    "HISTORICAL_PROVENANCE Catalog #110 + #113 \u2014 all edits are append-only; original row content NEVER mutated",
+    "Catalog #131 \u2014 lane registry edits routed through canonical tools/lane_maturity.py set-field helper (fcntl-locked)",
+    "Catalog #221 \u2014 fail-closed for score claims: every re-tagged row has score_claim=false, promotion_eligible=false, rank_or_kill_eligible=false",
+    "Catalog #249 \u2014 phantom-score directory class structurally hardened; future Z3-class dispatches consume the canonical helper",
+    "Subagent coherence-by-default \u2014 pre-flight CLAUDE.md + AGENTS.md read; lane pre-registered per Catalog #126; checkpoint discipline per Catalog #206"
+  ],
+  "lane_id": "lane_wave_b_23_row_corruption_remediation_20260515",
+  "manifest_kind": "historical_evidence_audit_remediation_phase1",
+  "remediation_date_utc": "2026-05-15T20:57:48.206430Z",
+  "remediation_kinds_summary": {
+    "append_only_section_in_place": 5,
+    "covered_via_canonical_sister_manifest": 2,
+    "lane_registry_set_field_notes_via_canonical_helper": 8,
+    "sister_audit_retagged_file": 8
+  },
+  "remediation_policy": "PER CLAUDE.md \"KILL is the LAST RESORT\" non-negotiable: every POTENTIALLY-CORRUPTED anchor remains DEFERRED-pending-re-verification with documented reactivation criteria. NO anchor is killed.",
+  "remediation_subagent_id": "WAVE-B-23-ROW-CORRUPTION-REMEDIATION-20260515",
+  "rows": [
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "line": 2,
+        "score": 0.19869,
+        "source": "MEMORY.md",
+        "source_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/MEMORY.md"
+      },
+      "remediation": {
+        "manifest_path": ".omx/research/historical_evidence_audit_20260515_remediated_phase1.json",
+        "rationale": "MEMORY.md is operator-owned auto-memory file (~470KB index). Per scope: APPEND-only edits permitted but in practice covered structurally via the canonical sister manifest tagged here. The 0.19869 (line 2) and 0.142 (line 194) values originate in feedback memos which ARE re-tagged in-place; MEMORY.md entries are summary-of-summary references that resolve via the source-of-truth memos.",
+        "reactivation_criteria": "when source-of-truth memos receive paired CUDA+CPU re-eval per CLAUDE.md non-negotiable, the MEMORY.md summary entries inherit the disclosure transitively.",
+        "remediation_kind": "covered_via_canonical_sister_manifest"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "line": 3,
+        "score": 0.19869,
+        "source": "memory_feedback",
+        "source_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md"
+      },
+      "remediation": {
+        "append_marker": "## 2026-05-15 audit re-tag (WAVE-B HISTORICAL-EVIDENCE-AUDIT a80299c4)",
+        "append_sha256": "0a06d9f496fe13aac54b58c93156e9f17633157f8a387e893985b79292288521",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "append_only_section_in_place",
+        "target_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "line": 10,
+        "score": 0.19869,
+        "source": "memory_feedback",
+        "source_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md"
+      },
+      "remediation": {
+        "append_marker": "## 2026-05-15 audit re-tag (WAVE-B HISTORICAL-EVIDENCE-AUDIT a80299c4)",
+        "append_sha256": "0a06d9f496fe13aac54b58c93156e9f17633157f8a387e893985b79292288521",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "append_only_section_in_place",
+        "target_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "line": 19,
+        "score": 0.19869,
+        "source": "memory_feedback",
+        "source_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md"
+      },
+      "remediation": {
+        "append_marker": "## 2026-05-15 audit re-tag (WAVE-B HISTORICAL-EVIDENCE-AUDIT a80299c4)",
+        "append_sha256": "0a06d9f496fe13aac54b58c93156e9f17633157f8a387e893985b79292288521",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "append_only_section_in_place",
+        "target_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::impl_complete"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::real_archive_empirical"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::contest_cuda"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::contest_cpu"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::strict_preflight"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::three_clean_review"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::memory_entry"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "diagnostic_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #221: diagnostic-CPU is non-promotable; if quoted as score claim it must be downgraded",
+        "corruption_signature": "diagnostic_cpu_non_promotable",
+        "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+        "line": 0,
+        "score": 0.19869,
+        "source": "lane_registry",
+        "source_path": "lane_registry::lane_z3_g1_scorer_softmax_hyperprior_gating_20260515::deploy_runbook"
+      },
+      "remediation": {
+        "append_marker": "[WAVE-B AUDIT RE-TAG 2026-05-15]",
+        "canonical_helper": "tools/lane_maturity.py set-field",
+        "reactivation_criteria": "paired Modal A100 (or sister) CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md non-negotiable",
+        "remediation_kind": "lane_registry_set_field_notes_via_canonical_helper",
+        "target_lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "macos_cpu_advisory",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #192: macOS-CPU advisory promoted without paired Linux x86_64 GHA verification",
+        "corruption_signature": "macos_advisory_promotion_class",
+        "line": 51,
+        "score": 0.213,
+        "source": "research_ledger",
+        "source_path": ".omx/research/local_hardware_aggressive_sweep_5_streams_LANDED_20260513.md"
+      },
+      "remediation": {
+        "reactivation_criteria": "paired Linux x86_64 contest-CPU eval (GHA / Vast.ai CPU instance / Modal CPU container) on the same archive bytes for macOS-CPU advisory rows; CUDA-built (not MPS-built) selector re-rank for selector configurations.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/local_hardware_aggressive_sweep_5_streams_LANDED_20260513_audit_retagged_20260515.md",
+        "sister_sha256": "3fa735c40e23b4986e9e8291fbd506cd595a259e9c84d0d761e836bdd8d27bab"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "macos_cpu_advisory",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "Catalog #192: macOS-CPU advisory promoted without paired Linux x86_64 GHA verification",
+        "corruption_signature": "macos_advisory_promotion_class",
+        "line": 104,
+        "score": 0.19286,
+        "source": "memory_feedback",
+        "source_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_a1_pr_submission_council_round_1_of_5_20260513.md"
+      },
+      "remediation": {
+        "append_marker": "## 2026-05-15 audit re-tag (WAVE-B HISTORICAL-EVIDENCE-AUDIT a80299c4)",
+        "append_sha256": "5732a8ef7a4be46f591522bce2ce3a8a12520e81606a89407c09cf972d878fd2",
+        "reactivation_criteria": "Linux x86_64 (GHA / Vast.ai CPU instance / Modal CPU container) paired re-eval on the same A1 archive bytes per CLAUDE.md \"Submission auth eval \u2014 BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE\" non-negotiable + Catalog #192",
+        "remediation_kind": "append_only_section_in_place",
+        "target_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_a1_pr_submission_council_round_1_of_5_20260513.md"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cuda",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 168,
+        "score": 0.9991,
+        "source": "memory_feedback",
+        "source_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_ibps1_parser_wave_p0_landed_20260514.md"
+      },
+      "remediation": {
+        "append_marker": "## 2026-05-15 audit re-tag (WAVE-B HISTORICAL-EVIDENCE-AUDIT a80299c4)",
+        "append_sha256": "8125a1820678d955fda684020361b3daa849cf5a4ef79a2f334c68cbd55712dd",
+        "classification_note": "audit false-positive: original line ALREADY tagged [5ep-architectural-only-proxy] synthetic byte-Shannon (NOT a contest-CUDA score). Disclosure preserved for forensic chain.",
+        "reactivation_criteria": "For real contest-axis MDL density, run tools/mdl_scorer_conditional_ablation.py on a real archive (not synthetic) per item #5 in original memo open-followups.",
+        "remediation_kind": "append_only_section_in_place",
+        "target_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_ibps1_parser_wave_p0_landed_20260514.md"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cpu",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 389,
+        "score": 0.20889,
+        "source": "research_ledger",
+        "source_path": ".omx/research/hdm8_frame0_postfilter_local_first_rss_sweep_20260514_codex.md"
+      },
+      "remediation": {
+        "reactivation_criteria": "CUDA-built (not MPS-proxy-built) selector re-rank before any frontier promotion. Score values themselves are 1:1 contest-compliant for those specific configurations.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/hdm8_frame0_postfilter_local_first_rss_sweep_20260514_codex_audit_retagged_20260515.md",
+        "sister_sha256": "3a1303bc77df21c3b537186279e1296525f90a9b09eebfec25a8f10bd97dcf4b"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cuda",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 23,
+        "score": 0.20664,
+        "source": "research_ledger",
+        "source_path": ".omx/research/local_hardware_aggressive_sweep_5_streams_LANDED_20260513.md"
+      },
+      "remediation": {
+        "reactivation_criteria": "paired Linux x86_64 contest-CPU eval (GHA / Vast.ai CPU instance / Modal CPU container) on the same archive bytes for macOS-CPU advisory rows; CUDA-built (not MPS-built) selector re-rank for selector configurations.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/local_hardware_aggressive_sweep_5_streams_LANDED_20260513_audit_retagged_20260515.md",
+        "sister_sha256": "3fa735c40e23b4986e9e8291fbd506cd595a259e9c84d0d761e836bdd8d27bab"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cuda",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 29,
+        "score": 0.20638,
+        "source": "research_ledger",
+        "source_path": ".omx/research/codex_coordination_shared_page_synthesis_20260513.md"
+      },
+      "remediation": {
+        "classification_note": "audit false-positive: row ALREADY tagged [contest-CUDA] with full SHA-256 custody. Disclosure preserved for forensic chain.",
+        "reactivation_criteria": "paired Linux x86_64 contest-CPU eval on the same archive bytes (SHA 8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0) closes the dual-axis disclosure. CUDA axis already authoritative.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/codex_coordination_shared_page_synthesis_20260513_audit_retagged_20260515.md",
+        "sister_sha256": "61cf6ee68534f4e255d4a2655efa1bd2f9e14452508b32eaf0c2484b6bf11264"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cuda",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 382,
+        "score": 0.20636,
+        "source": "research_ledger",
+        "source_path": ".omx/research/hdm8_frame0_postfilter_local_first_rss_sweep_20260514_codex.md"
+      },
+      "remediation": {
+        "reactivation_criteria": "CUDA-built (not MPS-proxy-built) selector re-rank before any frontier promotion. Score values themselves are 1:1 contest-compliant for those specific configurations.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/hdm8_frame0_postfilter_local_first_rss_sweep_20260514_codex_audit_retagged_20260515.md",
+        "sister_sha256": "3a1303bc77df21c3b537186279e1296525f90a9b09eebfec25a8f10bd97dcf4b"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "macos_cpu_advisory",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 22,
+        "score": 0.19286,
+        "source": "research_ledger",
+        "source_path": ".omx/research/local_hardware_aggressive_sweep_5_streams_LANDED_20260513.md"
+      },
+      "remediation": {
+        "reactivation_criteria": "paired Linux x86_64 contest-CPU eval (GHA / Vast.ai CPU instance / Modal CPU container) on the same archive bytes for macOS-CPU advisory rows; CUDA-built (not MPS-built) selector re-rank for selector configurations.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/local_hardware_aggressive_sweep_5_streams_LANDED_20260513_audit_retagged_20260515.md",
+        "sister_sha256": "3fa735c40e23b4986e9e8291fbd506cd595a259e9c84d0d761e836bdd8d27bab"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cuda",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 54,
+        "score": 0.19284,
+        "source": "research_ledger",
+        "source_path": ".omx/research/zen_floor_band_v2_post_z1_ablation_20260514.md"
+      },
+      "remediation": {
+        "classification_note": "audit false-positive: line value 0.19284 is the [contest-CPU-1to1] anchor 0.192848 cited in the row. Manifest axis=contest_cuda is also incorrect; line tags [contest-CPU-1to1].",
+        "reactivation_criteria": "Row anchors already authoritative. No re-verification required.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/zen_floor_band_v2_post_z1_ablation_20260514_audit_retagged_20260515.md",
+        "sister_sha256": "b3fee803c0d5179fc53d18b38c3093a6a2ea5afb9349f4e5a48b2122d9b5e9bd"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cuda",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 194,
+        "score": 0.142,
+        "source": "MEMORY.md",
+        "source_path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/MEMORY.md"
+      },
+      "remediation": {
+        "manifest_path": ".omx/research/historical_evidence_audit_20260515_remediated_phase1.json",
+        "rationale": "MEMORY.md is operator-owned auto-memory file (~470KB index). Per scope: APPEND-only edits permitted but in practice covered structurally via the canonical sister manifest tagged here. The 0.19869 (line 2) and 0.142 (line 194) values originate in feedback memos which ARE re-tagged in-place; MEMORY.md entries are summary-of-summary references that resolve via the source-of-truth memos.",
+        "reactivation_criteria": "when source-of-truth memos receive paired CUDA+CPU re-eval per CLAUDE.md non-negotiable, the MEMORY.md summary entries inherit the disclosure transitively.",
+        "remediation_kind": "covered_via_canonical_sister_manifest"
+      }
+    },
+    {
+      "audit_row": {
+        "axis": "contest_cuda",
+        "classification": "POTENTIALLY-CORRUPTED",
+        "classification_reason": "CLAUDE.md \"MPS auth eval is NOISE\" non-negotiable: 2-3x drift on PoseNet/SegNet vs CUDA",
+        "corruption_signature": "mps_noise_class",
+        "line": 257,
+        "score": 0.00033,
+        "source": "research_ledger",
+        "source_path": ".omx/research/segnet_posenet_frame_exploit_latest_research_20260514_codex.md"
+      },
+      "remediation": {
+        "classification_note": "audit false-positive: row value -0.0003377 is ALREADY tagged [MPS proxy] with [contest-CUDA] unknown. Row is a planning entry, not a score claim.",
+        "reactivation_criteria": "Byte-closed format_id=0x03 archive + exact CUDA auth eval + paired Linux x86_64 contest-CPU eval for any frontier promotion claim.",
+        "remediation_kind": "sister_audit_retagged_file",
+        "sister_path": ".omx/research/segnet_posenet_frame_exploit_latest_research_20260514_codex_audit_retagged_20260515.md",
+        "sister_sha256": "738de0cf64011d28c9c73aefb9ba7a06b64a9ab939a2918ea2709448377c6bd4"
+      }
+    }
+  ],
+  "rows_total": 23,
+  "six_hook_wire_in": {
+    "bit_allocator_hook": "NA \u2014 no per-tensor importance change",
+    "cathedral_autopilot_dispatch_hook": "ACTIVE \u2014 this manifest serves as the autopilot-consumable record that the 23 rows are non-promotable; autopilot SHOULD NOT rank these scores as contest-frontier candidates",
+    "continual_learning_posterior_update": "ACTIVE \u2014 the re-tag is the negative-anchor signal that prevents these rows from being added to the cost-band posterior as contest-axis anchors",
+    "pareto_constraint": "NA \u2014 no new Pareto constraint produced",
+    "probe_disambiguator": "NA \u2014 no 2+ defensible interpretation; remediation is structurally determined by manifest signature",
+    "sensitivity_map_contribution": "NA \u2014 re-tag is a forensic-only operation, no sensitivity-map signal produced"
+  },
+  "verdict": "NO_KILL_PER_CLAUDE_MD_KILL_LAST_RESORT_NON_NEGOTIABLE"
+}
